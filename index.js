@@ -73,40 +73,58 @@ app.get('/', (req, res) => {
  */
 app.post('/api/primeiro-acesso/iniciar', async (req, res) => {
   try {
+    console.log('🔍 Recebido:', req.body);
+
     const { cpf, data_nascimento } = req.body;
 
     const cpfLimpo = normalizarCpf(cpf);
     const dataNormalizada = parseDataNascimento(data_nascimento);
 
+    console.log('➡ CPF normalizado:', cpfLimpo);
+    console.log('➡ Data normalizada:', dataNormalizada);
+
     if (!cpfLimpo || !dataNormalizada) {
+      console.log('❌ CPF ou data inválidos');
       return res.status(400).json({ error: 'CPF ou data de nascimento inválidos.' });
     }
 
     const query = `
-      SELECT id, nome, cpf, data_nascimento, telefone1, telefone2, email1, email2, endereco, situacao, senha_hash
+      SELECT id, nome, cpf, data_nascimento, telefone1, telefone2,
+             email1, email2, endereco, situacao, senha_hash
       FROM filiados
       WHERE cpf = $1
     `;
+
+    console.log('📡 Rodando SELECT para CPF:', cpfLimpo);
+
     const result = await pool.query(query, [cpfLimpo]);
 
+    console.log('📦 Resultado do SELECT:', result.rows);
+
     if (result.rows.length === 0) {
+      console.log('❌ CPF não encontrado no banco');
       return res.status(404).json({ error: 'CPF não encontrado na base de filiados.' });
     }
 
     const filiado = result.rows[0];
 
     if (filiado.senha_hash) {
+      console.log('⚠ Já possui senha cadastrada');
       return res.status(400).json({ error: 'Este CPF já possui cadastro. Use a tela de login.' });
     }
 
-    const dataBanco = filiado.data_nascimento; // objeto Date do Postgres
-    const dataRequisicao = new Date(dataNormalizada);
+    console.log('📅 Data nascimento no banco:', filiado.data_nascimento);
+
+    const dataBanco = filiado.data_nascimento;
+    const dataReq = new Date(dataNormalizada);
+
+    console.log('➡ Comparando datas:', dataBanco, ' vs ', dataReq);
 
     if (!dataBanco || dataBanco.toISOString().slice(0, 10) !== dataNormalizada) {
+      console.log('❌ Data não confere');
       return res.status(400).json({ error: 'Data de nascimento não confere.' });
     }
 
-    // Retornamos dados para o usuário conferir e atualizar
     res.json({
       ok: true,
       id: filiado.id,
@@ -118,13 +136,15 @@ app.post('/api/primeiro-acesso/iniciar', async (req, res) => {
       email1: filiado.email1 || '',
       email2: filiado.email2 || '',
       endereco: filiado.endereco || '',
-      situacao: filiado.situacao || '',
+      situacao: filiado.situacao || ''
     });
+
   } catch (err) {
-    console.error('Erro em /api/primeiro-acesso/iniciar:', err);
+    console.error('💥 ERRO INTERNO DETECTADO:', err);
     res.status(500).json({ error: 'Erro interno ao iniciar primeiro acesso.' });
   }
 });
+
 
 /**
  * 2) Confirmar dados e definir senha
