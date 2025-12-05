@@ -1,4 +1,5 @@
 // index.js
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const bcrypt = require('bcryptjs');
@@ -113,31 +114,31 @@ app.post('/api/primeiro-acesso/iniciar', async (req, res) => {
       return res.status(400).json({ error: 'Este CPF já possui cadastro. Use a tela de login.' });
     }
 
-    console.log('📅 Data nascimento no banco:', filiado.data_nascimento);
+    console.log('📅 Data nascimento no banco (string):', filiado.data_nascimento);
 
-    const dataBanco = filiado.data_nascimento;
-    const dataReq = new Date(dataNormalizada);
+// No banco está como "dd/mm/aaaa"
+const dataBancoNormalizada = parseDataNascimento(filiado.data_nascimento); // vira "aaaa-mm-dd"
+console.log('➡ Datas normalizadas:', dataBancoNormalizada, ' vs ', dataNormalizada);
 
-    console.log('➡ Comparando datas:', dataBanco, ' vs ', dataReq);
+if (!dataBancoNormalizada || dataBancoNormalizada !== dataNormalizada) {
+  console.log('❌ Data não confere');
+  return res.status(400).json({ error: 'Data de nascimento não confere.' });
+}
 
-    if (!dataBanco || dataBanco.toISOString().slice(0, 10) !== dataNormalizada) {
-      console.log('❌ Data não confere');
-      return res.status(400).json({ error: 'Data de nascimento não confere.' });
-    }
+res.json({
+  ok: true,
+  id: filiado.id,
+  nome: filiado.nome,
+  cpf: filiado.cpf,
+  data_nascimento: dataBancoNormalizada, // "aaaa-mm-dd"
+  telefone1: filiado.telefone1 || '',
+  telefone2: filiado.telefone2 || '',
+  email1: filiado.email1 || '',
+  email2: filiado.email2 || '',
+  endereco: filiado.endereco || '',
+  situacao: filiado.situacao || '',
+});
 
-    res.json({
-      ok: true,
-      id: filiado.id,
-      nome: filiado.nome,
-      cpf: filiado.cpf,
-      data_nascimento: dataBanco.toISOString().slice(0, 10),
-      telefone1: filiado.telefone1 || '',
-      telefone2: filiado.telefone2 || '',
-      email1: filiado.email1 || '',
-      email2: filiado.email2 || '',
-      endereco: filiado.endereco || '',
-      situacao: filiado.situacao || ''
-    });
 
   } catch (err) {
     console.error('💥 ERRO INTERNO DETECTADO:', err);
@@ -193,10 +194,11 @@ app.post('/api/primeiro-acesso/confirmar', async (req, res) => {
       return res.status(400).json({ error: 'Este CPF já possui cadastro. Use a tela de login.' });
     }
 
-    const dataBanco = filiado.data_nascimento;
-    if (!dataBanco || dataBanco.toISOString().slice(0, 10) !== dataNormalizada) {
-      return res.status(400).json({ error: 'Data de nascimento não confere.' });
-    }
+    const dataBancoNormalizada = parseDataNascimento(filiado.data_nascimento);
+if (!dataBancoNormalizada || dataBancoNormalizada !== dataNormalizada) {
+  return res.status(400).json({ error: 'Data de nascimento não confere.' });
+}
+
 
     const senhaHash = await bcrypt.hash(senha, 12);
 
