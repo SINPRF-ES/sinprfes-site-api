@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: sinprfes-site-api
+    env: node
+    region: oregon
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    autoDeploy: true
+    healthCheckPath: "/health"
+    envVars:
+      - key: NODE_ENV
+        value: production
