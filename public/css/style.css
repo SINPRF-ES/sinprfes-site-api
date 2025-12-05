@@ -1,3 +1,9 @@
+/* =========================================================
+   SINPRF-ES — CSS COMPLETO
+   Versão revisada com layout 90%, diretoria ajustada e header corrigido
+   ========================================================= */
+
+/* Paleta de cores */
 :root {
   --azul-fundo: #00152b;
   --azul-card: #002445;
@@ -8,6 +14,7 @@
   --texto-fraco: #aeb5c3;
 }
 
+/* Reset básico */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -31,6 +38,20 @@ img {
   display: block;
 }
 
+/* =========================================================
+   LAYOUT PRINCIPAL — 90% DA LARGURA
+   ========================================================= */
+
+.container {
+  max-width: 90%;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+/* =========================================================
+   HEADER / TOPO
+   ========================================================= */
+
 .topbar {
   background: rgba(0, 0, 0, 0.7);
   color: var(--cinza);
@@ -41,12 +62,6 @@ img {
 
 .topbar strong {
   color: var(--amarelo);
-}
-
-.container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 16px 24px;
 }
 
 header {
@@ -68,8 +83,8 @@ header {
 }
 
 .brand-logo {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   border-radius: 20px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.12);
@@ -77,6 +92,13 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* NÃO corta mais a logo */
+  padding: 6px;
 }
 
 .brand-text h1 {
@@ -93,6 +115,8 @@ header {
   font-size: 12px;
   color: var(--cinza);
 }
+
+/* Navegação */
 
 nav {
   display: flex;
@@ -128,6 +152,10 @@ nav {
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
 }
+
+/* =========================================================
+   SEÇÕES / CARTÕES
+   ========================================================= */
 
 .page-content {
   margin-top: 10px;
@@ -183,6 +211,8 @@ nav {
   color: var(--amarelo);
 }
 
+/* Botões */
+
 .btn-row {
   display: flex;
   flex-wrap: wrap;
@@ -225,7 +255,9 @@ nav {
   color: #fff;
 }
 
-/* Diretoria – cards de membros */
+/* =========================================================
+   DIRETORIA — Grid e fotos maiores
+   ========================================================= */
 
 .board-group-title {
   font-size: 14px;
@@ -237,73 +269,64 @@ nav {
 
 .board-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 16px;
 }
 
 .member-card {
   background: rgba(0, 0, 0, 0.6);
-  border-radius: 16px;
-  padding: 10px 12px;
+  border-radius: 20px;
+  padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 13px;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
 }
 
 .member-photo {
-  flex: 0 0 56px;
-  width: 56px;
-  height: 56px;
+  flex: 0 0 90px;
+  width: 90px;
+  height: 90px;
   border-radius: 999px;
-  background: radial-gradient(circle at 30% 20%, #ffc107, #004b8d);
+  overflow: hidden;
+  background: #001427;
+  border: 2px solid rgba(255, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border: 2px solid rgba(0, 0, 0, 0.35);
-  overflow: hidden;
 }
 
-.member-photo span {
-  padding: 0 4px;
-  text-align: center;
+.member-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .member-info {
   flex: 1;
-  min-width: 0;
 }
 
 .member-name {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 2px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .member-role {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--amarelo);
-  margin-bottom: 4px;
 }
 
 .member-contact {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--texto-fraco);
   line-height: 1.4;
-  word-break: break-word;
 }
 
-.member-contact span {
-  display: block;
-}
-
-/* Filiados – tabela */
+/* =========================================================
+   FILIADOS — Tabela
+   ========================================================= */
 
 #filiados table {
   width: 100%;
@@ -321,7 +344,9 @@ nav {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* Rodapé padrão */
+/* =========================================================
+   RODAPÉ
+   ========================================================= */
 
 footer {
   margin-top: 24px;
@@ -333,7 +358,9 @@ footer {
   padding-bottom: 18px;
 }
 
-/* Responsivo */
+/* =========================================================
+   RESPONSIVIDADE
+   ========================================================= */
 
 @media (max-width: 640px) {
   .header-inner {
@@ -343,5 +370,18 @@ footer {
 
   nav {
     justify-content: flex-start;
+  }
+
+  .board-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .member-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .member-photo {
+    margin-bottom: 10px;
   }
 }
