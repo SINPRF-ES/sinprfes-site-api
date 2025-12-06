@@ -575,7 +575,7 @@ footer {
   /* Remove o vertical-align e o margin-right */
   margin: 4px 0 0 0; /* Pequena margem superior para o check não colar na linha */
   flex-shrink: 0; /* Garante que o checkbox não encolha */
-  width: auto;
+  width: auto !important;
 }
 
 /* Mensagens de retorno do formulário Filie-se */

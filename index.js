@@ -154,61 +154,62 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     MAIL_TO_FILIACAO,
   } = process.env;
 
-  // Normaliza valores (tira espaços)
-  const host = SMTP_HOST && SMTP_HOST.trim();
-  const port = SMTP_PORT && SMTP_PORT.toString().trim();
-  const user = SMTP_USER && SMTP_USER.trim();
-  const pass = SMTP_PASS && SMTP_PASS.trim();
-  const mailFrom = (MAIL_FROM && MAIL_FROM.trim()) || user;
-  const mailTo = MAIL_TO_FILIACAO && MAIL_TO_FILIACAO.trim();
-
-  // DEBUG: mostrar o que o Node está vendo
-  console.log('🛠 SMTP DEBUG:', {
-    host,
-    port,
-    user,
-    mailFrom,
-    mailTo,
-    hasPass: !!pass,
-  });
-
-  if (!host || !port || !user || !pass || !mailTo) {
-    console.warn('⚠️ SMTP não configurado; ficha de filiação NÃO será enviada por e-mail.');
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !MAIL_TO_FILIACAO) {
+    console.log('⚠️ SMTP não configurado; ficha de filiação NÃO será enviada por e-mail.');
+    console.log('🛠 SMTP DEBUG:', {
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      user: SMTP_USER,
+      mailFrom: MAIL_FROM,
+      mailTo: MAIL_TO_FILIACAO,
+      hasPass: !!SMTP_PASS,
+    });
     return;
   }
 
   const transporter = nodemailer.createTransport({
-    host,
-    port: Number(port),
-    secure: Number(port) === 587, // 587 = TLS
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT) || 587,
+    secure: false, // Gmail Workspace com STARTTLS na 587
     auth: {
-      user,
-      pass,
+      user: SMTP_USER,
+      pass: SMTP_PASS,
     },
   });
 
-  const subject = `Nova solicitação de filiação – ${dados.nome} (${dados.cpf})`;
+  const assunto = `Nova solicitação de filiação – ${dados.nome} (${dados.cpf})`;
 
-  await transporter.sendMail({
-    from: mailFrom,
-    to: mailTo,
-    subject,
-    text:
-      `Uma nova solicitação de filiação foi enviada.\n\n` +
-      `Nome: ${dados.nome}\n` +
-      `CPF: ${dados.cpf}\n` +
-      `Data de nascimento: ${dados.data_nascimento}\n` +
-      `Telefone: ${dados.telefone1}\n` +
-      `E-mail: ${dados.email1}\n\n` +
-      `Esta mensagem contém em anexo a ficha de filiação em PDF.`,
-    attachments: [
-      {
-        filename: 'ficha_filiacao_sinprf-es.pdf',
-        content: pdfBuffer,
-      },
-    ],
-  });
+  const corpoTexto =
+    `Nova solicitação de filiação recebida.\n\n` +
+    `Nome: ${dados.nome}\n` +
+    `CPF: ${dados.cpf}\n` +
+    `Data de nascimento: ${dados.data_nascimento}\n` +
+    `Telefone: ${dados.telefone1 || ''}\n` +
+    `E-mail: ${dados.email1 || ''}\n` +
+    `Endereço: ${dados.endereco || ''}\n\n` +
+    `Data da solicitação: ${dados.data_solicitacao}\n` +
+    `IP: ${dados.ip}\n` +
+    `User-Agent: ${dados.userAgent}\n`;
+
+  const mailOptions = {
+    from: MAIL_FROM || SMTP_USER,
+    to: MAIL_TO_FILIACAO,
+    subject: assunto,
+    text: corpoTexto,
+    attachments: pdfBuffer
+      ? [
+          {
+            filename: 'ficha_filiacao.pdf',
+            content: pdfBuffer,
+          },
+        ]
+      : [],
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log('✅ E-mail de filiação enviado com sucesso:', info.messageId);
 }
+
 
 
 
@@ -243,22 +244,50 @@ app.post('/api/filiese', async (req, res) => {
       telefone2,
       email1,
       email2,
+      email_pessoal,
+      email_funcional,
       endereco,
-      aceite,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      cep,
+      aceite_estatuto,
+      aceite_lgpd,
     } = req.body || {};
 
+    // Escolhe um e-mail principal (pessoal ou email1)
+    const emailPrincipal =
+      (email_pessoal || email1 || email_funcional || email2 || '').toString().trim();
+
     // Validações básicas
-    if (!nome || !cpf || !data_nascimento || !telefone1 || !email1 || !endereco) {
-      return res
-        .status(400)
-        .json({ error: 'Preencha todos os campos obrigatórios (nome, CPF, data, telefone, e-mail, endereço).' });
+    if (!nome || !cpf || !data_nascimento || !telefone1 || !emailPrincipal || !endereco) {
+      return res.status(400).json({
+        error:
+          'Preencha todos os campos obrigatórios (nome, CPF, data, telefone, e-mail, endereço).',
+      });
     }
 
-    if (!aceite) {
-      return res
-        .status(400)
-        .json({ error: 'É necessário aceitar o termo de autorização para prosseguir.' });
+    // Normaliza flags de aceite (podem vir como true/false, "on", "true", "1")
+    const aceitouEstatuto =
+      aceite_estatuto === true ||
+      aceite_estatuto === 'true' ||
+      aceite_estatuto === 'on' ||
+      aceite_estatuto === '1';
+
+    const aceitouLgpd =
+      aceite_lgpd === true ||
+      aceite_lgpd === 'true' ||
+      aceite_lgpd === 'on' ||
+      aceite_lgpd === '1';
+
+    if (!aceitouEstatuto || !aceitouLgpd) {
+      return res.status(400).json({
+        error: 'É obrigatório aceitar o Estatuto e a LGPD para prosseguir.',
+      });
     }
+
+    const agora = new Date().toISOString();
 
     const dados = {
       nome: String(nome).trim(),
@@ -266,10 +295,15 @@ app.post('/api/filiese', async (req, res) => {
       data_nascimento: String(data_nascimento).trim(),
       telefone1: String(telefone1).trim(),
       telefone2: (telefone2 || '').toString().trim(),
-      email1: String(email1).trim(),
-      email2: (email2 || '').toString().trim(),
+      email1: emailPrincipal,
+      email2: (email2 || email_funcional || '').toString().trim(),
       endereco: String(endereco).trim(),
-      data_solicitacao: new Date().toISOString(),
+      complemento: (complemento || '').toString().trim(),
+      bairro: (bairro || '').toString().trim(),
+      cidade: (cidade || '').toString().trim(),
+      uf: (uf || '').toString().trim(),
+      cep: (cep || '').toString().trim(),
+      data_solicitacao: agora,
       ip: req.ip,
       userAgent: req.headers['user-agent'] || '',
     };
@@ -280,8 +314,10 @@ app.post('/api/filiese', async (req, res) => {
       email: dados.email1,
     });
 
+    // Gera PDF (mantém sua função atual)
     const pdfBuffer = await gerarPdfFichaFiliacao(dados);
 
+    // Envia o e-mail com o PDF em anexo
     await enviarEmailFichaFiliacao(dados, pdfBuffer);
 
     return res.json({
@@ -295,7 +331,6 @@ app.post('/api/filiese', async (req, res) => {
       .json({ error: 'Erro interno ao processar sua solicitação de filiação.' });
   }
 });
-
 
 // ------------------------------------------------------
 // 1) PRIMEIRO ACESSO - INICIAR
