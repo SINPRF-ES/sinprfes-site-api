@@ -137,8 +137,7 @@
         <!-- Cônjuge e dependentes -->
         <h2>4. Cônjuge (opcional)</h2>
         <div class="form-grid">
-          <div class="form-group form-group-full">
-            <label for="conjuge_nome">Nome do cônjuge</label>
+          <div class="form-group"> <label for="conjuge_nome">Nome do cônjuge</label>
             <input type="text" id="conjuge_nome" name="conjuge_nome">
           </div>
 
@@ -181,30 +180,26 @@
 
         <hr class="form-separator">
 
-        <!-- LGPD e aceite -->
+                <!-- LGPD e aceite -->
         <h2>6. Termos e autorização</h2>
-        <div class="form-group form-group-full">
-          <label class="checkbox-label">
-            <input type="checkbox" id="aceite_estatuto" name="aceite_estatuto" required>
-            <span>
-              Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
-            </span>
-          </label>
-        </div>
 
-        <div class="form-group form-group-full">
-          <label class="checkbox-label">
+        <div class="terms-section">
+          <label class="terms-item">
+            <input type="checkbox" id="aceite_estatuto" name="aceite_estatuto" required>
+            Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
+          </label>
+
+          <label class="terms-item">
             <input type="checkbox" id="aceite_lgpd" name="aceite_lgpd" required>
-            <span>
-              Autorizo o tratamento dos meus dados pessoais, exclusivamente para fins sindicais,
-              nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
-            </span>
+            Autorizo o tratamento dos meus dados pessoais, exclusivamente para fins sindicais,
+            nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
           </label>
         </div>
 
         <p class="field-hint">
           * Campos obrigatórios.
         </p>
+
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">

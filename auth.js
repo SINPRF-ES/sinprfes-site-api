@@ -1,10 +1,8 @@
 // auth.js
 const jwt = require('jsonwebtoken');
 
-// Middleware que verifica o token JWT
 function auth(req, res, next) {
   const authHeader = req.headers.authorization || '';
-
   const [scheme, token] = authHeader.split(' ');
 
   if (scheme !== 'Bearer' || !token) {
@@ -13,15 +11,21 @@ function auth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // payload terá: { id, cpf, nome, iat, exp }
+
+    // Aqui preservamos TUDO que veio no token, incluindo perfil_acesso
     req.user = {
       id: payload.id,
       cpf: payload.cpf,
       nome: payload.nome,
+      perfil_acesso: payload.perfil_acesso || 'FILIADO',
     };
+
+    // Opcional: log de debug
+    // console.log('👤 Usuário autenticado:', req.user);
+
     next();
   } catch (err) {
-    console.error('Erro ao verificar JWT:', err.message);
+    console.error('💥 Erro ao validar token JWT:', err);
     return res.status(401).json({ error: 'Token inválido ou expirado.' });
   }
 }
