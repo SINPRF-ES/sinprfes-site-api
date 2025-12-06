@@ -1,72 +1,61 @@
-document.addEventListener("DOMContentLoaded", function () {
-  // Monta o HEADER dinâmico
-  var headerContainer = document.getElementById("site-header");
-  if (headerContainer) {
-    headerContainer.innerHTML = `
-      <div class="topbar">
-        Portal oficial do <strong>SINPRF-ES</strong> em construção. Em breve, mais serviços ao filiado.
-      </div>
+// public/js/main.js
 
-      <div class="container">
-        <header>
-          <div class="header-inner">
-            <div class="brand">
-              <div class="brand-logo">
-                <img src="/img/placeholder-sinprf.png" alt="Logomarca provisória do SINPRF-ES">
-              </div>
-              <div class="brand-text">
-                <h1><span>SINPRF</span>-ES</h1>
-                <p>Sindicato dos Policiais Rodoviários Federais no Espírito Santo</p>
-              </div>
-            </div>
+document.addEventListener('DOMContentLoaded', () => {
+  const headerEl = document.getElementById('site-header');
+  const footerEl = document.getElementById('site-footer');
 
-            <nav>
-              <a href="/" class="nav-link" data-nav="inicio">Início</a>
-              <a href="/diretoria.html" class="nav-link" data-nav="diretoria">Diretoria</a>
-              <a href="/noticias.html" class="nav-link" data-nav="noticias">Notícias</a>
-              <a href="/estatuto.html" class="nav-link" data-nav="estatuto">Estatuto</a>
-              <a href="/filiados.html" class="nav-link" data-nav="filiados">Filiados</a>
-              <a href="/contato.html" class="nav-link nav-cta" data-nav="contato">Fale conosco</a>
-            </nav>
+  const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+
+  // Mapeia qual link deve ficar ativo
+  function isActive(page) {
+    if (currentPath === '' && page === 'index.html') return 'active';
+    return currentPath === page ? 'active' : '';
+  }
+
+  // HEADER
+  if (headerEl) {
+    headerEl.innerHTML = `
+      <header class="site-header">
+        <div class="container header-content">
+          <div class="logo-area">
+            <a href="/index.html" class="logo-link">
+              <img src="/img/placeholder-sinprf.png" alt="SINPRF-ES" class="logo-img">
+              <span class="logo-text">
+                SINPRF-ES<br>
+                <small>Sindicato dos Policiais Rodoviários Federais no ES</small>
+              </span>
+            </a>
           </div>
-        </header>
-      </div>
+
+          <nav class="main-nav">
+            <a href="/index.html" class="${isActive('index.html')}">Início</a>
+            <a href="/diretoria.html" class="${isActive('diretoria.html')}">Diretoria</a>
+            <a href="/estatuto.html" class="${isActive('estatuto.html')}">Estatuto</a>
+            <a href="/noticias.html" class="${isActive('noticias.html')}">Notícias</a>
+            <a href="/contato.html" class="${isActive('contato.html')}">Contato</a>
+          </nav>
+
+          <div class="header-actions">
+            <a href="/filiese.html" class="btn btn-outline">Filie-se</a>
+            <a href="/acesso.html" class="btn btn-primary">Área restrita</a>
+          </div>
+        </div>
+      </header>
     `;
   }
 
-  // Monta o FOOTER dinâmico
-  var footerContainer = document.getElementById("site-footer");
-  if (footerContainer) {
-    footerContainer.innerHTML = `
-      <div class="container">
-        <footer>
-          © <span id="ano-atual"></span> SINPRF-ES — Sindicato dos Policiais Rodoviários Federais no Espírito Santo.
-          Portal em desenvolvimento. Conteúdos sujeitos a ajustes.
-        </footer>
-      </div>
+  // FOOTER
+  if (footerEl) {
+    const ano = new Date().getFullYear();
+    footerEl.innerHTML = `
+      <footer class="site-footer">
+        <div class="container footer-content">
+          <p>&copy; ${ano} SINPRF-ES – Sindicato dos Policiais Rodoviários Federais no Espírito Santo.</p>
+          <p class="footer-small">
+            Desenvolvido para uso institucional. Todos os direitos reservados.
+          </p>
+        </div>
+      </footer>
     `;
   }
-
-  // Atualiza ano no rodapé
-  var spanAno = document.getElementById("ano-atual");
-  if (spanAno) {
-    spanAno.textContent = new Date().getFullYear();
-  }
-
-  // Destacar item de menu da página atual
-  var path = window.location.pathname || "/";
-  var activeKey = "inicio";
-
-  if (path.includes("diretoria")) activeKey = "diretoria";
-  else if (path.includes("noticias")) activeKey = "noticias";
-  else if (path.includes("estatuto")) activeKey = "estatuto";
-  else if (path.includes("filiados")) activeKey = "filiados";
-  else if (path.includes("contato")) activeKey = "contato";
-
-  var links = document.querySelectorAll("nav a.nav-link");
-  links.forEach(function (link) {
-    if (link.dataset.nav === activeKey) {
-      link.classList.add("nav-link-active");
-    }
-  });
 });

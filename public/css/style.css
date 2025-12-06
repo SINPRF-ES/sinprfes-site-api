@@ -385,3 +385,166 @@ footer {
     margin-bottom: 10px;
   }
 }
+
+/* ========== HEADER / AÇÕES / BOTÕES ========== */
+
+.site-header {
+  background: #003366;
+  color: #fff;
+  padding: 10px 0;
+}
+
+.header-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: #fff;
+  gap: 10px;
+}
+
+.logo-img {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-text {
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.logo-text small {
+  font-weight: normal;
+  font-size: 11px;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.main-nav a {
+  color: #e0e7ff;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.main-nav a:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.main-nav a.active {
+  background: #f1c40f;
+  color: #003366;
+  font-weight: bold;
+}
+
+/* Ações à direita (Filie-se / Área restrita) */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Botões genéricos */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Botão preenchido (Área restrita) */
+.btn-primary {
+  background: #f1c40f;
+  color: #003366;
+  border-color: #f1c40f;
+}
+
+.btn-primary:hover {
+  background: #ffd950;
+  border-color: #ffd950;
+}
+
+/* Botão contornado (Filie-se) */
+.btn-outline {
+  background: transparent;
+  color: #f1c40f;
+  border-color: #f1c40f;
+}
+
+.btn-outline:hover {
+  background: rgba(241, 196, 15, 0.15);
+}
+
+/* FOOTER básico (caso ainda não exista) */
+.site-footer {
+  background: #f5f5f5;
+  padding: 16px 0;
+  margin-top: 40px;
+  border-top: 1px solid #ddd;
+}
+
+.footer-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  font-size: 13px;
+  color: #555;
+}
+
+.footer-small {
+  font-size: 12px;
+  color: #777;
+}
+
+/* Responsivo: header em telas pequenas */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .main-nav {
+    order: 3;
+  }
+
+  .header-actions {
+    order: 2;
+    align-self: stretch;
+    justify-content: flex-start;
+  }
+}
