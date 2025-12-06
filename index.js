@@ -180,16 +180,21 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
   const assunto = `Nova solicitação de filiação – ${dados.nome} (${dados.cpf})`;
 
   const corpoTexto =
-    `Nova solicitação de filiação recebida.\n\n` +
-    `Nome: ${dados.nome}\n` +
-    `CPF: ${dados.cpf}\n` +
-    `Data de nascimento: ${dados.data_nascimento}\n` +
-    `Telefone: ${dados.telefone1 || ''}\n` +
-    `E-mail: ${dados.email1 || ''}\n` +
-    `Endereço: ${dados.endereco || ''}\n\n` +
-    `Data da solicitação: ${dados.data_solicitacao}\n` +
-    `IP: ${dados.ip}\n` +
-    `User-Agent: ${dados.userAgent}\n`;
+  `Nova solicitação de filiação recebida.\n\n` +
+  `Nome: ${dados.nome}\n` +
+  `CPF: ${dados.cpf}\n` +
+  `Data de nascimento: ${dados.data_nascimento}\n` +
+  `Telefone principal: ${dados.telefone1 || ''}\n` +
+  `Telefone adicional: ${dados.telefone2 || ''}\n` +
+  `E-mail pessoal (principal): ${dados.email2 || ''}\n` +
+  `E-mail funcional: ${dados.email1 || ''}\n` +
+  `Endereço: ${dados.endereco || ''}\n` +
+  `Bairro: ${dados.bairro || ''}\n` +
+  `Cidade/UF: ${dados.cidade || ''} - ${dados.uf || ''}\n` +
+  `CEP: ${dados.cep || ''}\n\n` +
+  `Data da solicitação: ${dados.data_solicitacao}\n` +
+  `IP: ${dados.ip}\n` +
+  `User-Agent: ${dados.userAgent}\n`;
 
   const mailOptions = {
     from: MAIL_FROM || SMTP_USER,
@@ -239,12 +244,13 @@ app.post('/api/filiese', async (req, res) => {
     const dados = req.body || {};
 
     // campos obrigatórios
-    const obrigatorios = [
-      "nome", "cpf", "data_nascimento",
-      "telefone1", "email_pessoal",
-      "endereco", "bairro", "cidade", "uf", "cep",
-      "siape", "lotacao"
-    ];
+// Atenção: email2 = e-mail pessoal (obrigatório), email1 = funcional (opcional)
+const obrigatorios = [
+  "nome", "cpf", "data_nascimento",
+  "telefone1", "email2",
+  "endereco", "bairro", "cidade", "uf", "cep",
+  "siape", "lotacao"
+];
 
     for (const campo of obrigatorios) {
       if (!dados[campo] || String(dados[campo]).trim() === "") {
@@ -259,10 +265,11 @@ app.post('/api/filiese', async (req, res) => {
     }
 
     console.log("📥 Nova solicitação recebida:", {
-      nome: dados.nome,
-      cpf: dados.cpf,
-      email: dados.email_pessoal,
-    });
+  nome: dados.nome,
+  cpf: dados.cpf,
+  email_pessoal: dados.email2,
+  email_funcional: dados.email1,
+});
 
     // Gera PDF
     const pdfBuffer = await gerarPdfFichaFiliacao(dados);
