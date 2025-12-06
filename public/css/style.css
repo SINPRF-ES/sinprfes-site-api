@@ -1,7 +1,8 @@
 /* =========================================================
-   SINPRF-ES — CSS COMPLETO
-   Versão unificada: layout 90%, header fixo, diretoria com fotos grandes,
-   formulários (Filie-se) e melhoria de legibilidade geral.
+   SINPRF-ES — CSS COMPLETO (VERSÃO ATUALIZADA)
+   - Header fixo no topo
+   - Fonte maior (acessibilidade)
+   - Diretoria em 2 colunas (desktop) / 1 coluna (mobile)
    ========================================================= */
 
 /* Paleta de cores */
@@ -22,58 +23,28 @@
   padding: 0;
 }
 
-html, body {
-  min-height: 100%;
-}
-
-/* =========================================================
-   TIPOGRAFIA E FUNDO GERAL
-   ========================================================= */
-
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: radial-gradient(circle at top, #004b8d 0, #00152b 55%, #000814 100%);
   color: var(--texto-claro);
-  font-size: 16px;           /* fonte maior para melhor leitura */
+  min-height: 100vh;
+
+  /* Acessibilidade: fonte um pouco maior */
+  font-size: 17px;
   line-height: 1.65;
+
+  /* Espaço para o header fixo (ajusta se parecer muito ou pouco) */
+  padding-top: 90px;
 }
 
-/* Links e imagens */
 a {
   color: inherit;
-  text-decoration: none;
-}
-
-a:hover {
   text-decoration: none;
 }
 
 img {
   max-width: 100%;
   display: block;
-}
-
-/* Títulos */
-h1 {
-  font-size: 28px;
-  margin: 20px 0 10px;
-  color: #ffffff;
-}
-
-h2 {
-  font-size: 22px;
-  margin: 18px 0 8px;
-  color: #ffffff;
-}
-
-h3 {
-  font-size: 18px;
-  margin: 14px 0 6px;
-  color: #ffffff;
-}
-
-p {
-  margin-bottom: 8px;
 }
 
 /* =========================================================
@@ -86,18 +57,8 @@ p {
   padding: 0 16px 24px;
 }
 
-.page {
-  padding-top: 20px;
-}
-
-.page-intro {
-  font-size: 15px;
-  color: var(--texto-fraco);
-  margin-bottom: 16px;
-}
-
 /* =========================================================
-   HEADER / TOPO (novo padrão via main.js)
+   HEADER FIXO NO TOPO
    ========================================================= */
 
 .site-header {
@@ -105,10 +66,14 @@ p {
   color: #fff;
   padding: 10px 0;
 
-  /* Header fixo no topo ao rolar */
-  position: sticky;
+  /* Header sempre visível no topo */
+  position: fixed;
   top: 0;
-  z-index: 1000;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .header-content {
@@ -120,6 +85,7 @@ p {
   gap: 16px;
 }
 
+/* Logo + nome */
 .logo-area {
   display: flex;
   align-items: center;
@@ -143,12 +109,13 @@ p {
 .logo-text {
   font-weight: bold;
   line-height: 1.2;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .logo-text small {
   font-weight: normal;
-  font-size: 12px;
+  font-size: 11px;
+  opacity: 0.9;
 }
 
 /* Navegação principal */
@@ -162,9 +129,9 @@ p {
 .main-nav a {
   color: #e0e7ff;
   text-decoration: none;
-  font-size: 15px;
-  padding: 5px 10px;
-  border-radius: 999px;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
   transition: background 0.2s, color 0.2s;
 }
 
@@ -190,9 +157,9 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 18px;
+  padding: 6px 16px;
   border-radius: 999px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -205,7 +172,7 @@ p {
   transform: translateY(-1px);
 }
 
-/* Botão preenchido (Área restrita, botões de ação) */
+/* Botão preenchido (Área restrita) */
 .btn-primary {
   background: #f1c40f;
   color: #003366;
@@ -217,7 +184,7 @@ p {
   border-color: #ffd950;
 }
 
-/* Botão contornado (Filie-se, secundário) */
+/* Botão contornado (Filie-se) */
 .btn-outline {
   background: transparent;
   color: #f1c40f;
@@ -228,8 +195,30 @@ p {
   background: rgba(241, 196, 15, 0.15);
 }
 
+/* FOOTER básico (usado em todas as páginas públicas) */
+.site-footer {
+  background: rgba(0, 0, 0, 0.75);
+  padding: 16px 0;
+  margin-top: 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  font-size: 13px;
+  color: var(--texto-fraco);
+  text-align: center;
+}
+
+.footer-small {
+  font-size: 12px;
+  color: #777;
+}
+
 /* =========================================================
-   SEÇÕES / CARTÕES (home, páginas gerais)
+   SEÇÕES / CARTÕES
    ========================================================= */
 
 .page-content {
@@ -242,12 +231,11 @@ p {
   padding: 18px 18px 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
-  margin-bottom: 18px;
 }
 
 .section-title {
   font-size: 18px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -259,7 +247,7 @@ p {
 
 .section-subtitle {
   font-size: 14px;
-  color: var(--texto-fraco);
+  color: var(--cinza);
   margin-bottom: 10px;
 }
 
@@ -287,53 +275,58 @@ p {
   color: var(--amarelo);
 }
 
-/* Linhas de botões dentro de cartões */
+/* Linha de botões */
 .btn-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 /* =========================================================
-   DIRETORIA — Grid e fotos grandes
+   DIRETORIA — Grid e fotos maiores
    ========================================================= */
 
+/* Título de grupo (Diretoria Executiva, Conselho Fiscal, etc.) */
 .board-group-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--texto-claro);
-  margin-top: 18px;
+  margin-top: 14px;
   margin-bottom: 6px;
 }
 
+/* 2 colunas no desktop */
 .board-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 22px;
   margin-top: 16px;
 }
 
+/* Cartões — empilhados (foto em cima, texto embaixo) para evitar sobreposição */
 .member-card {
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.6);
   border-radius: 20px;
   padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 10px;
   font-size: 14px;
+  text-align: center;
 }
 
-/* Foto do diretor — agora grande (~300px de altura) */
+/* Foto do diretor: maior (até ~300px de altura) */
 .member-photo {
-  flex: 0 0 300px;
-  width: 300px;
+  width: 100%;
+  max-width: 300px;
   height: 300px;
-  border-radius: 18px;
+  border-radius: 24px;
   overflow: hidden;
   background: #001427;
-  border: 3px solid rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -346,29 +339,29 @@ p {
 }
 
 .member-info {
-  flex: 1;
+  width: 100%;
 }
 
 .member-name {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  margin-bottom: 4px;
 }
 
 .member-role {
   font-size: 14px;
   color: var(--amarelo);
-  margin-bottom: 4px;
+  margin-top: 2px;
 }
 
 .member-contact {
   font-size: 13px;
   color: var(--texto-fraco);
   line-height: 1.4;
+  margin-top: 6px;
 }
 
 /* =========================================================
-   FILIADOS — Tabela
+   FILIADOS — Tabela (ainda estática / futura integração)
    ========================================================= */
 
 #filiados table {
@@ -388,132 +381,17 @@ p {
 }
 
 /* =========================================================
-   FORMULÁRIOS (Filie-se e futuros)
+   RODAPÉ LEGACY (caso alguma página use <footer> diretamente)
    ========================================================= */
 
-.form-card {
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 20px;
-  padding: 18px 18px 22px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7);
-  margin-bottom: 20px;
-}
-
-.form-card h2 {
-  margin-top: 4px;
-  margin-bottom: 10px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 18px;
-  margin-bottom: 12px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.form-group-full {
-  grid-column: 1 / -1;
-}
-
-.form-group label {
-  font-size: 14px;
-  color: var(--texto-claro);
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(0, 0, 0, 0.45);
-  padding: 7px 10px;
-  font-size: 15px;
-  color: #f8f9fa;
-  outline: none;
-}
-
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-  color: #b0b8c5;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  border-color: var(--amarelo);
-  box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.5);
-}
-
-.form-separator {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-  margin: 16px 0;
-}
-
-.field-hint {
-  font-size: 13px;
-  color: var(--texto-fraco);
-  margin-top: 4px;
-}
-
-/* Dependentes (grid simples em 2 colunas) */
-.dependentes-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 18px;
-  margin-bottom: 10px;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--texto-claro);
-}
-
-.checkbox-label input[type="checkbox"] {
-  margin-top: 3px;
-}
-
-.form-actions {
-  margin-top: 14px;
-}
-
-/* Página Filie-se em específico */
-.filiese-page h1 {
-  margin-top: 10px;
-}
-
-/* =========================================================
-   RODAPÉ (novo padrão via main.js)
-   ========================================================= */
-
-.site-footer {
-  background: #f5f5f5;
-  padding: 16px 0;
-  margin-top: 40px;
-  border-top: 1px solid #ddd;
-}
-
-.footer-content {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 16px;
-  font-size: 13px;
-  color: #555;
-}
-
-.footer-small {
+footer {
+  margin-top: 24px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 12px;
-  color: #777;
+  color: var(--texto-fraco);
+  text-align: center;
+  padding-bottom: 18px;
 }
 
 /* =========================================================
@@ -521,16 +399,9 @@ p {
    ========================================================= */
 
 @media (max-width: 900px) {
-  .member-card {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .member-photo {
-    flex: 0 0 260px;
-    width: 260px;
-    height: 260px;
+  /* Diretoria: 1 coluna no mobile */
+  .board-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -549,30 +420,5 @@ p {
     order: 2;
     align-self: stretch;
     justify-content: flex-start;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dependentes-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .container {
-    max-width: 100%;
-    padding: 0 12px 20px;
-  }
-
-  .board-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .member-photo {
-    flex: 0 0 220px;
-    width: 220px;
-    height: 220px;
   }
 }
