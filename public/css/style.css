@@ -392,7 +392,13 @@ footer {
   background: #003366;
   color: #fff;
   padding: 10px 0;
+
+  /* Mantém o header fixo no topo ao rolar a página */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
+
 
 .header-content {
   max-width: 1100px;
