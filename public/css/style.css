@@ -577,3 +577,17 @@ footer {
   flex-shrink: 0; /* Garante que o checkbox não encolha */
   width: auto;
 }
+
+/* Mensagens de retorno do formulário Filie-se */
+.form-message {
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.form-message-success {
+  color: #4caf50;
+}
+
+.form-message-error {
+  color: #ff6b6b;
+}

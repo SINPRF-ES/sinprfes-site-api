@@ -1,65 +1,83 @@
 // public/js/filiese.js
-
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('filiese-form');
+  const form = document.getElementById('filiese-form');
+  if (!form) return;
 
-    if (form) {
-        form.addEventListener('submit', async (event) => {
-            // 1. IMPEDE O ENVIO PADRÃO E COLETA OS DADOS
-            event.preventDefault();
+  const messageBox = document.getElementById('filiese-message');
+  const API_URL = '/api/filiese'; // Se sua rota no backend tiver outro caminho, é só mudar aqui
 
-            const submitButton = form.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            submitButton.textContent = 'Gerando PDF e Enviando...'; 
-            
-            const formData = new FormData(form);
-            const data = {};
-            
-            // Converte FormData para objeto JSON, tratando checkboxes
-            formData.forEach((value, key) => {
-                if (key === 'aceite' || key === 'aceite_lgpd_opcional') {
-                   // Se o checkbox estiver marcado, o valor é 'on' ou true. 
-                   // A rota de backend só verifica a existência de 'aceite'.
-                   data[key] = true;
-                } else {
-                   data[key] = value;
-                }
-            });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault(); // impede o reload da página
 
-            // Adiciona campos não marcados para garantir que estejam presentes no objeto (específico para checkboxes)
-            if (!formData.has('aceite')) {
-                data['aceite'] = false; 
-            }
-            if (!formData.has('aceite_lgpd_opcional')) {
-                data['aceite_lgpd_opcional'] = false;
-            }
-
-
-            // 2. ENVIA OS DADOS PARA A ROTA DO SEU BACKEND
-            try {
-                // Rota que você já tem no seu index.js
-                const response = await fetch('/api/filiese', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                // 3. TRATAMENTO DA RESPOSTA
-                if (response.ok) {
-                    alert('Solicitação de filiação enviada com sucesso! Você receberá uma cópia no seu e-mail pessoal.');
-                    form.reset(); 
-                } else {
-                    const errorData = await response.json();
-                    alert(`Erro ao processar a solicitação: ${errorData.error || response.statusText}`);
-                }
-            } catch (error) {
-                console.error('Erro de conexão ou processamento:', error);
-                alert('Ocorreu um erro de rede. Tente novamente.');
-            } finally {
-                // 4. REATIVA O BOTÃO
-                submitButton.disabled = false;
-                submitButton.textContent = 'Enviar solicitação de filiação';
-            }
-        });
+    if (messageBox) {
+      messageBox.textContent = '';
+      messageBox.className = 'form-message';
     }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn ? submitBtn.textContent : '';
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+    }
+
+    // Lê todos os campos do formulário
+    const formData = new FormData(form);
+    const dados = Object.fromEntries(formData.entries());
+
+    // Checkboxes como booleano
+    dados.aceite_estatuto = !!form.aceite_estatuto?.checked;
+    dados.aceite_lgpd = !!form.aceite_lgpd?.checked;
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados),
+      });
+
+      let body = {};
+      try {
+        body = await response.json();
+      } catch (e) {
+        body = {};
+      }
+
+      if (!response.ok) {
+        const msg = body.error || 'Erro ao enviar solicitação de filiação. Tente novamente mais tarde.';
+        if (messageBox) {
+          messageBox.textContent = msg;
+          messageBox.classList.add('form-message-error');
+        } else {
+          alert(msg);
+        }
+      } else {
+        const msg = body.message || 'Solicitação enviada com sucesso. Em breve entraremos em contato.';
+        if (messageBox) {
+          messageBox.textContent = msg;
+          messageBox.classList.add('form-message-success');
+        } else {
+          alert(msg);
+        }
+        form.reset();
+      }
+    } catch (err) {
+      console.error('Erro ao enviar filiação:', err);
+      const msg = 'Não foi possível enviar sua solicitação. Verifique sua conexão e tente novamente.';
+      if (messageBox) {
+        messageBox.textContent = msg;
+        messageBox.classList.add('form-message-error');
+      } else {
+        alert(msg);
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText || 'Enviar solicitação de filiação';
+      }
+    }
+  });
 });

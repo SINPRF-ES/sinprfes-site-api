@@ -180,7 +180,7 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
   const transporter = nodemailer.createTransport({
     host,
     port: Number(port),
-    secure: Number(port) === 465, // 465 = SSL
+    secure: Number(port) === 587, // 587 = TLS
     auth: {
       user,
       pass,
@@ -627,6 +627,17 @@ app.get('/api/filiados', auth, async (req, res) => {
     console.error('💥 Erro em /api/filiados:', err);
     res.status(500).json({ error: 'Erro ao listar filiados.' });
   }
+});
+
+app.get('/debug-env', (req, res) => {
+  res.json({
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS ? '(definida)' : '(vazia)',
+    MAIL_FROM: process.env.MAIL_FROM,
+    MAIL_TO_FILIACAO: process.env.MAIL_TO_FILIACAO
+  });
 });
 
 
