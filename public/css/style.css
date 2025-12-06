@@ -554,86 +554,30 @@ footer {
 
 .filiese-page .terms-section {
   margin-top: 10px;
-  /* Garante alinhamento esquerdo para os labels filhos */
-  text-align: left; 
-}
-
-/* Cada termo em uma linha, usando Flexbox para alinhar check e texto */
-.filiese-page .terms-item {
-  display: flex; /* Transforma o label em container flexível */
-  align-items: flex-start; /* **MELHORIA:** Alinha o conteúdo (checkbox) ao topo */
-  gap: 8px; /* Espaçamento entre o checkbox e o texto */
-  
-  font-size: 0.9rem;
-  line-height: 1.4;
-  margin-bottom: 12px; /* Aumenta o espaçamento entre os itens */
-  width: 100%;
-}
-
-/* Estilo do input (checkbox) */
-.filiese-page .terms-item input[type="checkbox"] {
-  /* Remove o vertical-align e o margin-right */
-  margin: 4px 0 0 0; /* Pequena margem superior para o check não colar na linha */
-  flex-shrink: 0; /* Garante que o checkbox não encolha */
-  width: auto !important;
-}
-
-/* Mensagens de retorno do formulário Filie-se */
-.form-message {
-  margin-top: 10px;
-  font-size: 0.9rem;
-}
-
-.form-message-success {
-  color: #4caf50;
-}
-
-.form-message-error {
-  color: #ff6b6b;
-}
-
-/* =========================================================
-   Ajustes específicos da página de filiação (checklist)
-   ========================================================= */
-
-.checkbox-block {
-  display: block;              /* cancela qualquer flex/grid herdado de .form-group */
-  margin-top: 8px;
-}
-
-.checkbox-block .checkbox-label {
-  display: flex;
+  display: flex;               /* empilha os termos em coluna */
+  flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  max-width: 640px;            /* limita a largura do texto, não deixa ir pro canto direito */
+}
+
+/* Cada termo: checkbox + texto lado a lado */
+.filiese-page .terms-item {
+  display: flex;               /* transforma o label em flex-container */
+  align-items: flex-start;     /* alinha pelo topo */
+  gap: 8px;
   font-size: 0.9rem;
+  line-height: 1.4;
+  max-width: 720px;            /* não deixa o texto ir parar lá na lateral */
+  text-align: left;
 }
 
-.checkbox-block input[type="checkbox"] {
-  margin-top: 3px;             /* alinha o checkbox com a primeira linha do texto */
+/* Checkbox fixo à esquerda */
+.filiese-page .terms-item input[type="checkbox"] {
+  margin-top: 3px;             /* ajusta altura em relação à primeira linha do texto */
+  flex-shrink: 0;
 }
 
-.checkbox-block span {
-  flex: 1;                     /* texto ocupa o resto da linha, colado no checkbox */
-}
-
-/* Mensagem de retorno do formulário */
-.form-message {
-  margin-top: 8px;
-  font-size: 0.9rem;
-}
-
-.form-message.success {
-  color: #4caf50;
-}
-
-.form-message.error {
-  color: #ff6b6b;
-}
-
-/* Responsivo: formulário em 1 coluna no mobile */
-@media (max-width: 768px) {
-  .filiese-page .form-grid {
-    grid-template-columns: 1fr;
-  }
+/* Texto ocupa o resto da linha */
+.filiese-page .terms-item span {
+  flex: 1;
 }

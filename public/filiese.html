@@ -218,26 +218,51 @@
         <hr class="form-separator">
 
         <!-- ================================================================= -->
-        <!-- 6. ACEITES E LGPD -->
-        <!-- ================================================================= -->
-
+                <!-- LGPD e aceite -->
         <h2>6. Termos e autorização</h2>
 
-        <div class="form-group form-group-full checkbox-block">
-          <label class="checkbox-label">
-            <input type="checkbox" id="aceite_estatuto" name="aceite_estatuto" required>
-            <span>Li e aceito o Estatuto do SINPRF-ES e da FENAPRF.</span>
+        <div class="terms-section">
+          <label class="terms-item">
+            <input
+              type="checkbox"
+              id="aceite_estatuto"
+              name="aceite_estatuto"
+              required
+            >
+            <span>
+              Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
+            </span>
+          </label>
+
+          <label class="terms-item">
+            <input
+              type="checkbox"
+              id="aceite_lgpd"
+              name="aceite_lgpd"
+              required
+            >
+            <span>
+              Autorizo o tratamento dos meus dados pessoais, exclusivamente para fins sindicais,
+              nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
+            </span>
           </label>
         </div>
 
-        <div class="form-group form-group-full checkbox-block">
-          <label class="checkbox-label">
-            <input type="checkbox" id="aceite_lgpd" name="aceite_lgpd" required>
-            <span>Autorizo o tratamento dos meus dados pessoais conforme a LGPD.</span>
-          </label>
+        <p class="field-hint">
+          * Campos obrigatórios.
+        </p>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            Enviar solicitação de filiação
+          </button>
         </div>
 
-        <p class="field-hint">* Campos obrigatórios.</p>
+        <p class="field-hint">
+          Neste momento, o envio ainda não está integrado ao sistema.
+          Em breve, os dados serão processados automaticamente e gerarão um documento oficial em PDF.
+        </p>
+
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Enviar solicitação de filiação</button>
