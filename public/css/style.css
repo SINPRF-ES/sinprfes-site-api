@@ -591,3 +591,49 @@ footer {
 .form-message-error {
   color: #ff6b6b;
 }
+
+/* =========================================================
+   Ajustes específicos da página de filiação (checklist)
+   ========================================================= */
+
+.checkbox-block {
+  display: block;              /* cancela qualquer flex/grid herdado de .form-group */
+  margin-top: 8px;
+}
+
+.checkbox-block .checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 640px;            /* limita a largura do texto, não deixa ir pro canto direito */
+  font-size: 0.9rem;
+}
+
+.checkbox-block input[type="checkbox"] {
+  margin-top: 3px;             /* alinha o checkbox com a primeira linha do texto */
+}
+
+.checkbox-block span {
+  flex: 1;                     /* texto ocupa o resto da linha, colado no checkbox */
+}
+
+/* Mensagem de retorno do formulário */
+.form-message {
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.form-message.success {
+  color: #4caf50;
+}
+
+.form-message.error {
+  color: #ff6b6b;
+}
+
+/* Responsivo: formulário em 1 coluna no mobile */
+@media (max-width: 768px) {
+  .filiese-page .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
