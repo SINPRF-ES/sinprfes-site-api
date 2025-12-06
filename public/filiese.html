@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/main.js" defer></script>
-</head>
+  <script src="/js/filiese.js" defer></script> </head>
 <body>
 
   <div id="site-header"></div>
@@ -22,7 +22,6 @@
     <section class="form-card">
       <h2>1. Dados do servidor</h2>
       <form id="filiese-form">
-        <!-- Dados pessoais -->
         <div class="form-grid">
           <div class="form-group">
             <label for="nome">Nome completo *</label>
@@ -72,7 +71,6 @@
 
         <hr class="form-separator">
 
-        <!-- Contatos -->
         <h2>2. Contatos</h2>
         <div class="form-grid">
           <div class="form-group">
@@ -87,18 +85,15 @@
 
           <div class="form-group">
             <label for="email_funcional">E-mail funcional</label>
-            <input type="email" id="email_funcional" name="email_funcional">
-          </div>
+            <input type="email" id="email_funcional" name="email2"> </div>
 
           <div class="form-group">
             <label for="email_pessoal">E-mail pessoal *</label>
-            <input type="email" id="email_pessoal" name="email_pessoal" required>
-          </div>
+            <input type="email" id="email_pessoal" name="email1" required> </div>
         </div>
 
         <hr class="form-separator">
 
-        <!-- Endereço -->
         <h2>3. Endereço residencial</h2>
         <div class="form-grid">
           <div class="form-group form-group-full">
@@ -134,10 +129,10 @@
 
         <hr class="form-separator">
 
-        <!-- Cônjuge e dependentes -->
         <h2>4. Cônjuge (opcional)</h2>
         <div class="form-grid">
-          <div class="form-group"> <label for="conjuge_nome">Nome do cônjuge</label>
+          <div class="form-group"> 
+            <label for="conjuge_nome">Nome do cônjuge</label>
             <input type="text" id="conjuge_nome" name="conjuge_nome">
           </div>
 
@@ -180,17 +175,15 @@
 
         <hr class="form-separator">
 
-                <!-- LGPD e aceite -->
         <h2>6. Termos e autorização</h2>
 
         <div class="terms-section">
           <label class="terms-item">
-            <input type="checkbox" id="aceite_estatuto" name="aceite_estatuto" required>
-            Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
+            <input type="checkbox" id="aceite_estatuto" name="aceite" required> Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
           </label>
 
           <label class="terms-item">
-            <input type="checkbox" id="aceite_lgpd" name="aceite_lgpd" required>
+            <input type="checkbox" id="aceite_lgpd" name="aceite_lgpd_opcional">
             Autorizo o tratamento dos meus dados pessoais, exclusivamente para fins sindicais,
             nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
           </label>
