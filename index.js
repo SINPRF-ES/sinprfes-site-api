@@ -5,6 +5,8 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
+const PDFDocument = require('pdfkit');
+const nodemailer = require('nodemailer');
 
 const pool = require('./db');
 const auth = require('./auth');
@@ -17,24 +19,27 @@ app.use(express.json());
 // Servir arquivos estáticos da pasta "public"
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Função utilitária: normalizar CPF (remover pontos e traços)
+
+// ------------------------------------------------------
+// Funções utilitárias
+// ------------------------------------------------------
 function normalizarCpf(cpf) {
   if (!cpf) return null;
   return cpf.replace(/\D/g, '');
 }
 
-// Função utilitária: converter "dd/mm/aaaa" para "aaaa-mm-dd"
+// Converte datas de:
+//  - "dd/mm/aaaa" → "aaaa-mm-dd"
+//  - "aaaa-mm-dd" → mantém
 function parseDataNascimento(texto) {
   if (!texto) return null;
 
-  // Aceita "dd/mm/aaaa" ou "aaaa-mm-dd"
   if (texto.includes('/')) {
     const [dia, mes, ano] = texto.split('/');
     if (!dia || !mes || !ano) return null;
     return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
   }
 
-  // Se já vier como "aaaa-mm-dd", retornamos como está
   if (texto.includes('-')) {
     return texto;
   }
@@ -42,9 +47,174 @@ function parseDataNascimento(texto) {
   return null;
 }
 
-// ========================
-// Rotas públicas
-// ========================
+// ======================================================
+// UTILITÁRIOS – Ficha de filiação (PDF + envio por e-mail)
+// ======================================================
+
+function gerarPdfFichaFiliacao(dados) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    // Cabeçalho
+    doc
+      .fontSize(18)
+      .text('FICHA DE FILIAÇÃO', { align: 'center' })
+      .moveDown(0.3);
+    doc
+      .fontSize(14)
+      .text('SINPRF-ES – Sindicato dos Policiais Rodoviários Federais no Espírito Santo', {
+        align: 'center',
+      })
+      .moveDown(1);
+
+    doc
+      .fontSize(10)
+      .text(`Data da solicitação: ${new Date(dados.data_solicitacao).toLocaleString('pt-BR')}`)
+      .moveDown(1);
+
+    doc
+      .fontSize(12)
+      .text('DADOS PESSOAIS', { underline: true })
+      .moveDown(0.5);
+
+    const linha = (label, value) => {
+      doc.font('Helvetica-Bold').text(label, { continued: true });
+      doc.font('Helvetica').text(` ${value || ''}`);
+    };
+
+    linha('Nome completo:', dados.nome);
+    linha('CPF:', dados.cpf);
+    linha('Data de nascimento:', dados.data_nascimento);
+    linha('Telefone principal:', dados.telefone1);
+    linha('Telefone adicional:', dados.telefone2 || '-');
+    linha('E-mail principal:', dados.email1);
+    linha('E-mail adicional:', dados.email2 || '-');
+
+    doc.moveDown(0.7);
+    doc.font('Helvetica-Bold').text('Endereço completo:');
+    doc.font('Helvetica').text(dados.endereco || '').moveDown(1);
+
+    doc
+      .font('Helvetica-Bold')
+      .text('Declaração:')
+      .moveDown(0.3);
+    doc
+      .font('Helvetica')
+      .fontSize(11)
+      .text(
+        'Declaro, para todos os fins, que as informações aqui prestadas são verdadeiras e que ' +
+        'autorizo o tratamento dos meus dados pessoais pelo SINPRF-ES para as finalidades ' +
+        'ligadas à representação sindical, nos termos da legislação aplicável.',
+        { align: 'justify' }
+      )
+      .moveDown(2);
+
+    doc
+      .font('Helvetica')
+      .fontSize(11)
+      .text('Assinatura do filiado (via meio eletrônico):', { align: 'left' })
+      .moveDown(3);
+
+    doc
+      .fontSize(9)
+      .fillColor('#555555')
+      .text(
+        'Observações técnicas: esta ficha foi gerada eletronicamente pelo sistema do SINPRF-ES. ' +
+        'A confirmação jurídica da adesão pode estar vinculada a mecanismos adicionais de ' +
+        'validação de identidade (ex.: autenticação gov.br, conferência manual etc.).',
+        { align: 'justify' }
+      );
+
+    // Rodapé técnico
+    doc
+      .moveDown(2)
+      .fontSize(8)
+      .fillColor('#888888')
+      .text(
+        `IP de origem: ${dados.ip || '-'} | User-Agent: ${dados.userAgent || '-'} | CPF: ${dados.cpf}`,
+        { align: 'left' }
+      );
+
+    doc.end();
+  });
+}
+
+async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
+  const {
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USER,
+    SMTP_PASS,
+    MAIL_FROM,
+    MAIL_TO_FILIACAO,
+  } = process.env;
+
+  // Normaliza valores (tira espaços)
+  const host = SMTP_HOST && SMTP_HOST.trim();
+  const port = SMTP_PORT && SMTP_PORT.toString().trim();
+  const user = SMTP_USER && SMTP_USER.trim();
+  const pass = SMTP_PASS && SMTP_PASS.trim();
+  const mailFrom = (MAIL_FROM && MAIL_FROM.trim()) || user;
+  const mailTo = MAIL_TO_FILIACAO && MAIL_TO_FILIACAO.trim();
+
+  // DEBUG: mostrar o que o Node está vendo
+  console.log('🛠 SMTP DEBUG:', {
+    host,
+    port,
+    user,
+    mailFrom,
+    mailTo,
+    hasPass: !!pass,
+  });
+
+  if (!host || !port || !user || !pass || !mailTo) {
+    console.warn('⚠️ SMTP não configurado; ficha de filiação NÃO será enviada por e-mail.');
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port: Number(port),
+    secure: Number(port) === 465, // 465 = SSL
+    auth: {
+      user,
+      pass,
+    },
+  });
+
+  const subject = `Nova solicitação de filiação – ${dados.nome} (${dados.cpf})`;
+
+  await transporter.sendMail({
+    from: mailFrom,
+    to: mailTo,
+    subject,
+    text:
+      `Uma nova solicitação de filiação foi enviada.\n\n` +
+      `Nome: ${dados.nome}\n` +
+      `CPF: ${dados.cpf}\n` +
+      `Data de nascimento: ${dados.data_nascimento}\n` +
+      `Telefone: ${dados.telefone1}\n` +
+      `E-mail: ${dados.email1}\n\n` +
+      `Esta mensagem contém em anexo a ficha de filiação em PDF.`,
+    attachments: [
+      {
+        filename: 'ficha_filiacao_sinprf-es.pdf',
+        content: pdfBuffer,
+      },
+    ],
+  });
+}
+
+
+
+// ------------------------------------------------------
+// Rotas básicas
+// ------------------------------------------------------
 
 // Health check
 app.get('/health', (req, res) => {
@@ -59,19 +229,79 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ========================
-// Fluxo de PRIMEIRO ACESSO
-// ========================
+// ======================================================
+// ROTA – Solicitação de filiação (filiese.html)
+// ======================================================
 
-/**
- * 1) Iniciar primeiro acesso
- *    - Entrada: { cpf, data_nascimento }
- *    - Regra:
- *       - cpf deve existir na tabela filiados
- *       - senha_hash deve ser NULL (ainda não cadastrou senha)
- *       - data_nascimento deve bater com a do banco
- *    - Saída (se tudo ok): dados básicos para confirmação (do próprio filiado)
- */
+app.post('/api/filiese', async (req, res) => {
+  try {
+    const {
+      nome,
+      cpf,
+      data_nascimento,
+      telefone1,
+      telefone2,
+      email1,
+      email2,
+      endereco,
+      aceite,
+    } = req.body || {};
+
+    // Validações básicas
+    if (!nome || !cpf || !data_nascimento || !telefone1 || !email1 || !endereco) {
+      return res
+        .status(400)
+        .json({ error: 'Preencha todos os campos obrigatórios (nome, CPF, data, telefone, e-mail, endereço).' });
+    }
+
+    if (!aceite) {
+      return res
+        .status(400)
+        .json({ error: 'É necessário aceitar o termo de autorização para prosseguir.' });
+    }
+
+    const dados = {
+      nome: String(nome).trim(),
+      cpf: String(cpf).trim(),
+      data_nascimento: String(data_nascimento).trim(),
+      telefone1: String(telefone1).trim(),
+      telefone2: (telefone2 || '').toString().trim(),
+      email1: String(email1).trim(),
+      email2: (email2 || '').toString().trim(),
+      endereco: String(endereco).trim(),
+      data_solicitacao: new Date().toISOString(),
+      ip: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    };
+
+    console.log('📥 Nova solicitação de filiação recebida:', {
+      nome: dados.nome,
+      cpf: dados.cpf,
+      email: dados.email1,
+    });
+
+    const pdfBuffer = await gerarPdfFichaFiliacao(dados);
+
+    await enviarEmailFichaFiliacao(dados, pdfBuffer);
+
+    return res.json({
+      message:
+        'Solicitação de filiação enviada com sucesso. Sua ficha será analisada pelo sindicato.',
+    });
+  } catch (err) {
+    console.error('💥 Erro em /api/filiese:', err);
+    return res
+      .status(500)
+      .json({ error: 'Erro interno ao processar sua solicitação de filiação.' });
+  }
+});
+
+
+// ------------------------------------------------------
+// 1) PRIMEIRO ACESSO - INICIAR
+//    Entrada: { cpf, data_nascimento }
+//    Saída: dados para conferência (do próprio filiado)
+// ------------------------------------------------------
 app.post('/api/primeiro-acesso/iniciar', async (req, res) => {
   try {
     console.log('🔍 Recebido:', req.body);
@@ -116,50 +346,43 @@ app.post('/api/primeiro-acesso/iniciar', async (req, res) => {
 
     console.log('📅 Data nascimento no banco (string):', filiado.data_nascimento);
 
-// No banco está como "dd/mm/aaaa"
-const dataBancoNormalizada = parseDataNascimento(filiado.data_nascimento); // vira "aaaa-mm-dd"
-console.log('➡ Datas normalizadas:', dataBancoNormalizada, ' vs ', dataNormalizada);
+    // No banco está como "dd/mm/aaaa"
+    const dataBancoNormalizada = parseDataNascimento(filiado.data_nascimento);
+    console.log('➡ Datas normalizadas:', dataBancoNormalizada, ' vs ', dataNormalizada);
 
-if (!dataBancoNormalizada || dataBancoNormalizada !== dataNormalizada) {
-  console.log('❌ Data não confere');
-  return res.status(400).json({ error: 'Data de nascimento não confere.' });
-}
+    if (!dataBancoNormalizada || dataBancoNormalizada !== dataNormalizada) {
+      console.log('❌ Data não confere');
+      return res.status(400).json({ error: 'Data de nascimento não confere.' });
+    }
 
-res.json({
-  ok: true,
-  id: filiado.id,
-  nome: filiado.nome,
-  cpf: filiado.cpf,
-  data_nascimento: dataBancoNormalizada, // "aaaa-mm-dd"
-  telefone1: filiado.telefone1 || '',
-  telefone2: filiado.telefone2 || '',
-  email1: filiado.email1 || '',
-  email2: filiado.email2 || '',
-  endereco: filiado.endereco || '',
-  situacao: filiado.situacao || '',
-});
-
-
+    res.json({
+      ok: true,
+      id: filiado.id,
+      nome: filiado.nome,
+      cpf: filiado.cpf,
+      data_nascimento: dataBancoNormalizada, // "aaaa-mm-dd"
+      telefone1: filiado.telefone1 || '',
+      telefone2: filiado.telefone2 || '',
+      email1: filiado.email1 || '',
+      email2: filiado.email2 || '',
+      endereco: filiado.endereco || '',
+      situacao: filiado.situacao || '',
+    });
   } catch (err) {
-    console.error('💥 ERRO INTERNO DETECTADO:', err);
+    console.error('💥 ERRO INTERNO DETECTADO em /api/primeiro-acesso/iniciar:', err);
     res.status(500).json({ error: 'Erro interno ao iniciar primeiro acesso.' });
   }
 });
 
-
-/**
- * 2) Confirmar dados e definir senha
- *    - Entrada: { cpf, data_nascimento, telefone1, telefone2, email1, email2, endereco, senha }
- *    - Regra:
- *       - Revalidar CPF + data_nascimento
- *       - Atualizar dados de contato
- *       - Definir senha_hash
- */
+// ------------------------------------------------------
+// 2) PRIMEIRO ACESSO - CONFIRMAR E DEFINIR SENHA
+//    Entrada: { id, telefone1?, telefone2?, email1?, email2?, endereco?, senha }
+//    Regra: apenas id e senha são obrigatórios; demais campos são opcionais.
+// ------------------------------------------------------
 app.post('/api/primeiro-acesso/confirmar', async (req, res) => {
   try {
     const {
-      cpf,
-      data_nascimento,
+      id,
       telefone1,
       telefone2,
       email1,
@@ -168,73 +391,72 @@ app.post('/api/primeiro-acesso/confirmar', async (req, res) => {
       senha,
     } = req.body;
 
-    const cpfLimpo = normalizarCpf(cpf);
-    const dataNormalizada = parseDataNascimento(data_nascimento);
-
-    if (!cpfLimpo || !dataNormalizada) {
-      return res.status(400).json({ error: 'CPF ou data de nascimento inválidos.' });
+    if (!id || !senha) {
+      return res.status(400).json({ error: 'ID e senha são obrigatórios.' });
     }
 
-    if (!senha || senha.length < 6) {
-      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres.' });
-    }
+    // Gera hash da senha
+    const senhaHash = await bcrypt.hash(senha, 10);
 
-    const result = await pool.query(
-      `SELECT id, data_nascimento, senha_hash FROM filiados WHERE cpf = $1`,
-      [cpfLimpo]
-    );
+    const query = `
+      UPDATE filiados
+      SET telefone1   = $1,
+          telefone2   = $2,
+          email1      = $3,
+          email2      = $4,
+          endereco    = $5,
+          senha_hash  = $6,
+          atualizado_em = NOW()
+      WHERE id = $7
+      RETURNING id, nome, cpf, perfil_acesso;
+    `;
+
+    const result = await pool.query(query, [
+      telefone1 || '',
+      telefone2 || '',
+      email1 || '',
+      email2 || '',
+      endereco || '',
+      senhaHash,
+      id,
+    ]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'CPF não encontrado.' });
+      return res.status(400).json({ error: 'Filiado não encontrado.' });
     }
 
-    const filiado = result.rows[0];
+    const user = result.rows[0];
 
-    if (filiado.senha_hash) {
-      return res.status(400).json({ error: 'Este CPF já possui cadastro. Use a tela de login.' });
-    }
-
-    const dataBancoNormalizada = parseDataNascimento(filiado.data_nascimento);
-if (!dataBancoNormalizada || dataBancoNormalizada !== dataNormalizada) {
-  return res.status(400).json({ error: 'Data de nascimento não confere.' });
-}
-
-
-    const senhaHash = await bcrypt.hash(senha, 12);
-
-    await pool.query(
-      `
-      UPDATE filiados
-      SET telefone1 = $1,
-          telefone2 = $2,
-          email1    = $3,
-          email2    = $4,
-          endereco  = $5,
-          senha_hash = $6,
-          atualizado_em = NOW()
-      WHERE cpf = $7
-      `,
-      [telefone1, telefone2, email1, email2, endereco, senhaHash, cpfLimpo]
+    // Gera token JWT para já deixar logado após o primeiro acesso
+    const token = jwt.sign(
+      {
+        id: user.id,
+        cpf: user.cpf,
+        nome: user.nome,
+        perfil_acesso: user.perfil_acesso || 'FILIADO',
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
     );
 
-    res.json({ ok: true, message: 'Cadastro concluído com sucesso. Você já pode fazer login.' });
+    res.json({
+      status: 'ok',
+      message: 'Primeiro acesso concluído.',
+      token,
+    });
   } catch (err) {
-    console.error('Erro em /api/primeiro-acesso/confirmar:', err);
-    res.status(500).json({ error: 'Erro interno ao concluir primeiro acesso.' });
+    console.error('💥 Erro em /api/primeiro-acesso/confirmar:', err);
+    res.status(500).json({ error: 'Erro interno ao confirmar primeiro acesso.' });
   }
 });
 
-// ========================
+// ------------------------------------------------------
 // LOGIN + 2FA (Google Authenticator)
-// ========================
+// ------------------------------------------------------
 
-/**
- * Login
- * - Entrada: { cpf, senha, token2fa (opcional) }
- * - Regra:
- *    - Se existir twofa_secret, exigir token2fa válido
- *    - Gerar JWT se tudo ok
- */
+// Login:
+//  - Entrada: { cpf, senha, token2fa? }
+//  - Se twofa_secret estiver preenchido, token2fa passa a ser obrigatório.
 app.post('/api/login', async (req, res) => {
   try {
     const { cpf, senha, token2fa } = req.body;
@@ -245,7 +467,9 @@ app.post('/api/login', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, nome, cpf, senha_hash, twofa_secret FROM filiados WHERE cpf = $1`,
+      `SELECT id, nome, cpf, senha_hash, twofa_secret, perfil_acesso
+       FROM filiados
+       WHERE cpf = $1`,
       [cpfLimpo]
     );
 
@@ -256,7 +480,9 @@ app.post('/api/login', async (req, res) => {
     const user = result.rows[0];
 
     if (!user.senha_hash) {
-      return res.status(400).json({ error: 'Primeiro acesso não concluído. Use a opção de primeiro acesso.' });
+      return res.status(400).json({
+        error: 'Primeiro acesso não concluído. Use a opção de primeiro acesso.',
+      });
     }
 
     const senhaOk = await bcrypt.compare(senha, user.senha_hash);
@@ -264,7 +490,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'CPF ou senha inválidos.' });
     }
 
-    // Se o usuário já tiver 2FA configurado, exigir token2fa
+    // Se já tiver 2FA ativado, exige token
     if (user.twofa_secret) {
       if (!token2fa) {
         return res.status(401).json({ error: 'Token do Google Authenticator é obrigatório.' });
@@ -274,7 +500,7 @@ app.post('/api/login', async (req, res) => {
         secret: user.twofa_secret,
         encoding: 'base32',
         token: token2fa,
-        window: 1, // tolerância de 30s pra frente/tras
+        window: 1,
       });
 
       if (!valid2FA) {
@@ -282,20 +508,21 @@ app.post('/api/login', async (req, res) => {
       }
     }
 
-    // Gera o JWT
     const token = jwt.sign(
       {
         id: user.id,
         cpf: user.cpf,
         nome: user.nome,
+        perfil_acesso: user.perfil_acesso || 'FILIADO',
       },
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
 
-    // Atualiza ultimo_acesso
     await pool.query(
-      `UPDATE filiados SET ultimo_acesso = NOW() WHERE id = $1`,
+      `UPDATE filiados
+       SET ultimo_acesso = NOW()
+       WHERE id = $1`,
       [user.id]
     );
 
@@ -303,18 +530,17 @@ app.post('/api/login', async (req, res) => {
       ok: true,
       token,
       requires2fa: !!user.twofa_secret,
+      perfil_acesso: user.perfil_acesso || 'FILIADO',
     });
   } catch (err) {
-    console.error('Erro em /api/login:', err);
+    console.error('💥 Erro em /api/login:', err);
     res.status(500).json({ error: 'Erro interno no login.' });
   }
 });
 
-/**
- * Ativar 2FA (Google Authenticator)
- * - Rota protegida (precisa estar logado)
- * - Gera segredo e otpauth_url para configurar no app de Autenticador
- */
+// Ativar 2FA (opcional, mas recomendado)
+// - Rota protegida, precisa de JWT
+// - Gera segredo e URL para Google Authenticator
 app.post('/api/2fa/ativar', auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -324,7 +550,10 @@ app.post('/api/2fa/ativar', auth, async (req, res) => {
     });
 
     await pool.query(
-      `UPDATE filiados SET twofa_secret = $1, atualizado_em = NOW() WHERE id = $2`,
+      `UPDATE filiados
+       SET twofa_secret = $1,
+           atualizado_em = NOW()
+       WHERE id = $2`,
       [secret.base32, userId]
     );
 
@@ -332,31 +561,27 @@ app.post('/api/2fa/ativar', auth, async (req, res) => {
       ok: true,
       secret: secret.base32,
       otpauth_url: secret.otpauth_url,
-      message: '2FA ativado. Configure o app Google Authenticator com o QRCode ou chave informados.',
+      message: '2FA ativado. Configure o Google Authenticator com o QRCode ou a chave fornecida.',
     });
   } catch (err) {
-    console.error('Erro em /api/2fa/ativar:', err);
+    console.error('💥 Erro em /api/2fa/ativar:', err);
     res.status(500).json({ error: 'Erro ao ativar 2FA.' });
   }
 });
 
-// ========================
+// ------------------------------------------------------
 // Rotas protegidas (Área Restrita)
-// ========================
+// ------------------------------------------------------
 
-/**
- * Dados completos do próprio filiado (LGPD OK: só ele mesmo vê)
- */
+// Dados completos do próprio filiado
 app.get('/api/me', auth, async (req, res) => {
   try {
     const result = await pool.query(
-      `
-      SELECT nome, cpf, data_nascimento, telefone1, telefone2,
-             email1, email2, endereco, situacao,
-             ultimo_acesso, criado_em, atualizado_em
-      FROM filiados
-      WHERE id = $1
-      `,
+      `SELECT nome, cpf, data_nascimento, telefone1, telefone2,
+              email1, email2, endereco, situacao,
+              ultimo_acesso, criado_em, atualizado_em, perfil_acesso
+       FROM filiados
+       WHERE id = $1`,
       [req.user.id]
     );
 
@@ -366,37 +591,48 @@ app.get('/api/me', auth, async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Erro em /api/me:', err);
+    console.error('💥 Erro em /api/me:', err);
     res.status(500).json({ error: 'Erro ao buscar dados do filiado.' });
   }
 });
 
-/**
- * Lista resumida de filiados:
- * - Apenas nome + telefone1
- * - Nunca expõe CPF, e-mail ou endereço de terceiros
- */
+// Lista resumida de filiados:
+//  - FILIADO: vê apenas nome + telefone1
+//  - DIRETORIA / FUNCIONARIO: vê dados completos
 app.get('/api/filiados', auth, async (req, res) => {
   try {
-    const result = await pool.query(
-      `
-      SELECT nome, telefone1
-      FROM filiados
-      ORDER BY nome
-      `
-    );
+    let query;
+    const perfil = req.user.perfil_acesso || 'FILIADO';
 
+    if (perfil === 'DIRETORIA' || perfil === 'FUNCIONARIO') {
+      // Acesso ampliado
+      query = `
+        SELECT nome, cpf, data_nascimento, telefone1, telefone2,
+               email1, email2, endereco, situacao
+        FROM filiados
+        ORDER BY nome
+      `;
+    } else {
+      // Acesso padrão (LGPD-friendly)
+      query = `
+        SELECT nome, telefone1
+        FROM filiados
+        ORDER BY nome
+      `;
+    }
+
+    const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
-    console.error('Erro em /api/filiados:', err);
+    console.error('💥 Erro em /api/filiados:', err);
     res.status(500).json({ error: 'Erro ao listar filiados.' });
   }
 });
 
-// ========================
-// Inicialização do servidor
-// ========================
 
+// ------------------------------------------------------
+// Inicialização do servidor
+// ------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`SINPRF-ES rodando na porta ${PORT}`);
