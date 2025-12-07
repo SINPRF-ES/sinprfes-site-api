@@ -22,8 +22,9 @@
 
     <section class="form-card">
       <h2>1. Dados do servidor</h2>
-      <form id="filiese-form" novalidate>
-        <!-- Dados pessoais -->
+
+      <form id="filiese-form">
+        <!-- DADOS PESSOAIS -->
         <div class="form-grid">
           <div class="form-group">
             <label for="nome">Nome completo *</label>
@@ -31,8 +32,8 @@
               type="text"
               id="nome"
               name="nome"
-              required
               autocomplete="name"
+              required
             >
           </div>
 
@@ -52,7 +53,6 @@
               type="text"
               id="estado_civil"
               name="estado_civil"
-              autocomplete="off"
             >
           </div>
 
@@ -62,8 +62,8 @@
               type="date"
               id="data_nascimento"
               name="data_nascimento"
-              required
               autocomplete="bday"
+              required
             >
           </div>
 
@@ -74,9 +74,8 @@
               id="cpf"
               name="cpf"
               placeholder="000.000.000-00"
-              required
-              inputmode="numeric"
               autocomplete="off"
+              required
             >
           </div>
 
@@ -86,7 +85,6 @@
               type="text"
               id="rg"
               name="rg"
-              autocomplete="off"
             >
           </div>
 
@@ -96,8 +94,8 @@
               type="text"
               id="siape"
               name="siape"
-              required
               autocomplete="off"
+              required
             >
           </div>
 
@@ -107,8 +105,8 @@
               type="text"
               id="lotacao"
               name="lotacao"
-              required
               autocomplete="organization"
+              required
             >
           </div>
 
@@ -118,14 +116,13 @@
               type="text"
               id="grau_instrucao"
               name="grau_instrucao"
-              autocomplete="off"
             >
           </div>
         </div>
 
         <hr class="form-separator">
 
-        <!-- Contatos -->
+        <!-- CONTATOS -->
         <h2>2. Contatos</h2>
         <div class="form-grid">
           <div class="form-group">
@@ -134,8 +131,8 @@
               type="tel"
               id="telefone1"
               name="telefone1"
-              required
               autocomplete="tel"
+              required
             >
           </div>
 
@@ -154,7 +151,7 @@
             <input
               type="email"
               id="email_funcional"
-              name="email1"
+              name="email_funcional"
               autocomplete="email"
             >
           </div>
@@ -164,16 +161,16 @@
             <input
               type="email"
               id="email_pessoal"
-              name="email2"
-              required
+              name="email_pessoal"
               autocomplete="email"
+              required
             >
           </div>
         </div>
 
         <hr class="form-separator">
 
-        <!-- Endereço -->
+        <!-- ENDEREÇO -->
         <h2>3. Endereço residencial</h2>
         <div class="form-grid">
           <div class="form-group form-group-full">
@@ -182,8 +179,8 @@
               type="text"
               id="endereco"
               name="endereco"
-              required
               autocomplete="street-address"
+              required
             >
           </div>
 
@@ -193,7 +190,6 @@
               type="text"
               id="complemento"
               name="complemento"
-              autocomplete="address-line2"
             >
           </div>
 
@@ -204,7 +200,6 @@
               id="bairro"
               name="bairro"
               required
-              autocomplete="address-level3"
             >
           </div>
 
@@ -214,8 +209,8 @@
               type="text"
               id="cidade"
               name="cidade"
-              required
               autocomplete="address-level2"
+              required
             >
           </div>
 
@@ -225,7 +220,6 @@
               id="uf"
               name="uf"
               required
-              autocomplete="address-level1"
             >
               <option value="">Selecione</option>
               <option value="AC">AC</option>
@@ -265,25 +259,23 @@
               id="cep"
               name="cep"
               placeholder="00000-000"
-              required
-              inputmode="numeric"
               autocomplete="postal-code"
+              required
             >
           </div>
         </div>
 
         <hr class="form-separator">
 
-        <!-- Cônjuge e dependentes -->
+        <!-- CÔNJUGE -->
         <h2>4. Cônjuge (opcional)</h2>
         <div class="form-grid">
-          <div class="form-group form-group-full">
+          <div class="form-group">
             <label for="conjuge_nome">Nome do cônjuge</label>
             <input
               type="text"
               id="conjuge_nome"
               name="conjuge_nome"
-              autocomplete="off"
             >
           </div>
 
@@ -293,47 +285,48 @@
               type="date"
               id="conjuge_nascimento"
               name="conjuge_nascimento"
-              autocomplete="bday"
             >
           </div>
         </div>
 
+        <!-- DEPENDENTES -->
         <h2>5. Dependentes (opcional)</h2>
         <p class="field-hint">
           Preencha apenas se desejar registrar dependentes para fins de cadastro interno.
         </p>
+
         <div class="dependentes-grid">
           <div class="form-group">
-            <label>Nome do dependente 1</label>
-            <input type="text" name="dependente1_nome">
+            <label for="dependente1_nome">Nome do dependente 1</label>
+            <input type="text" id="dependente1_nome" name="dependente1_nome">
           </div>
           <div class="form-group">
-            <label>Data de nascimento</label>
-            <input type="date" name="dependente1_nascimento">
-          </div>
-
-          <div class="form-group">
-            <label>Nome do dependente 2</label>
-            <input type="text" name="dependente2_nome">
-          </div>
-          <div class="form-group">
-            <label>Data de nascimento</label>
-            <input type="date" name="dependente2_nascimento">
+            <label for="dependente1_nascimento">Data de nascimento</label>
+            <input type="date" id="dependente1_nascimento" name="dependente1_nascimento">
           </div>
 
           <div class="form-group">
-            <label>Nome do dependente 3</label>
-            <input type="text" name="dependente3_nome">
+            <label for="dependente2_nome">Nome do dependente 2</label>
+            <input type="text" id="dependente2_nome" name="dependente2_nome">
           </div>
           <div class="form-group">
-            <label>Data de nascimento</label>
-            <input type="date" name="dependente3_nascimento">
+            <label for="dependente2_nascimento">Data de nascimento</label>
+            <input type="date" id="dependente2_nascimento" name="dependente2_nascimento">
+          </div>
+
+          <div class="form-group">
+            <label for="dependente3_nome">Nome do dependente 3</label>
+            <input type="text" id="dependente3_nome" name="dependente3_nome">
+          </div>
+          <div class="form-group">
+            <label for="dependente3_nascimento">Data de nascimento</label>
+            <input type="date" id="dependente3_nascimento" name="dependente3_nascimento">
           </div>
         </div>
 
         <hr class="form-separator">
 
-        <!-- LGPD e aceite -->
+        <!-- TERMOS / LGPD -->
         <h2>6. Termos e autorização</h2>
 
         <div class="terms-section">
@@ -374,6 +367,7 @@
         </div>
 
         <p id="filiese-message" class="form-message"></p>
+
       </form>
     </section>
   </main>

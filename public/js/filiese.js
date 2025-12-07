@@ -2,90 +2,41 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("filiese-form");
-  const msgBox = document.getElementById("filiese-message");
-
-  if (!form) return;
+  const msg = document.getElementById("filiese-message");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    msg.textContent = "Enviando...";
 
-    msgBox.textContent = "";
-    msgBox.className = "form-message";
+    const dados = Object.fromEntries(new FormData(form).entries());
 
-    const formData = Object.fromEntries(new FormData(form));
-
-    // Garantir que os dois termos foram marcados
-    if (!formData.aceite_estatuto || !formData.aceite_lgpd) {
-      msgBox.textContent = "É necessário aceitar o Estatuto e a LGPD para prosseguir.";
-      msgBox.classList.add("error");
-      return;
-    }
-
-    // Campos realmente obrigatórios, alinhados com o backend
-    const obrigatorios = [
-      "nome",
-      "cpf",
-      "data_nascimento",
-      "telefone1",
-      "email_pessoal",
-      "endereco",
-      "bairro",
-      "cidade",
-      "uf",
-      "cep",
-      "siape",
-      "lotacao",
-    ];
-
-    for (const campo of obrigatorios) {
-      if (!formData[campo] || String(formData[campo]).trim() === "") {
-        msgBox.textContent = "Preencha todos os campos obrigatórios (*) antes de enviar.";
-        msgBox.classList.add("error");
-        return;
-      }
-    }
-
-    // Normalização leve de campos
-    formData.cpf = String(formData.cpf).trim();
-    formData.email_pessoal = String(formData.email_pessoal).trim();
-    formData.email_funcional = (formData.email_funcional || "").trim();
+    // Conversão para o padrão do backend
+    dados.email_pessoal = dados.email_pessoal || "";
+    dados.email_funcional = dados.email_funcional || "";
 
     try {
-      msgBox.textContent = "Enviando sua solicitação...";
-      msgBox.className = "form-message info";
-
-      const resp = await fetch("/api/filiese", {
+      const r = await fetch("/api/filiese", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dados),
       });
 
-      let data = {};
-      try {
-        data = await resp.json();
-      } catch {
-        // se o backend devolver algo não-JSON, evita crash
-      }
+      const json = await r.json();
 
-      if (!resp.ok) {
-        msgBox.textContent =
-          data.error ||
-          data.detailedMessage ||
-          "Erro ao enviar sua solicitação. Tente novamente.";
-        msgBox.classList.add("error");
+      if (!r.ok) {
+        msg.textContent = "❌ " + (json.error || "Erro no envio.");
+        msg.style.color = "red";
         return;
       }
 
-      msgBox.textContent =
-        data.message ||
-        "Solicitação enviada com sucesso. A equipe do SINPRF-ES entrará em contato.";
-      msgBox.classList.add("success");
+      msg.textContent = "✔ Solicitação enviada com sucesso!";
+      msg.style.color = "limegreen";
       form.reset();
 
     } catch (err) {
-      console.error("Erro no envio da ficha de filiação:", err);
-      msgBox.textContent = "Erro inesperado ao enviar. Tente novamente em alguns instantes.";
-      msgBox.classList.add("error");
+      msg.textContent = "❌ Falha ao enviar o formulário.";
+      msg.style.color = "red";
+      console.error(err);
     }
   });
 });
