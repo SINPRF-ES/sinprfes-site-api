@@ -7,242 +7,209 @@
 
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/main.js" defer></script>
-  <script src="/js/filiese.js" defer></script>
-</head>
-
+  <script src="/js/filiese.js" defer></script> </head>
 <body>
 
-<div id="site-header"></div>
+  <div id="site-header"></div>
 
-<main class="page container filiese-page">
+  <main class="page container filiese-page">
+    <h1>Filie-se ao SINPRF-ES</h1>
+    <p class="page-intro">
+      Preencha os dados abaixo para solicitar sua filiação ao Sindicato dos Policiais Rodoviários Federais
+      no Espírito Santo. Após o envio, sua solicitação será analisada e a secretaria entrará em contato.
+    </p>
 
-  <h1>Filie-se ao SINPRF-ES</h1>
-
-  <p class="page-intro">
-    Preencha os dados abaixo para solicitar sua filiação ao Sindicato dos Policiais Rodoviários Federais
-    no Espírito Santo. Após o envio, sua solicitação será analisada e nossa secretaria entrará em contato.
-  </p>
-
-  <section class="form-card">
-    <form id="filiese-form">
-
-      <!-- 1. Dados do servidor -->
+    <section class="form-card">
       <h2>1. Dados do servidor</h2>
-      <div class="form-grid">
+      <form id="filiese-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="nome">Nome completo *</label>
+            <input type="text" id="nome" name="nome" required>
+          </div>
 
-        <div class="form-group">
-          <label>Nome completo *</label>
-          <input type="text" name="nome" autocomplete="name" required>
+          <div class="form-group">
+            <label for="nacionalidade">Nacionalidade</label>
+            <input type="text" id="nacionalidade" name="nacionalidade">
+          </div>
+
+          <div class="form-group">
+            <label for="estado_civil">Estado civil</label>
+            <input type="text" id="estado_civil" name="estado_civil">
+          </div>
+
+          <div class="form-group">
+            <label for="data_nascimento">Data de nascimento *</label>
+            <input type="date" id="data_nascimento" name="data_nascimento" required>
+          </div>
+
+          <div class="form-group">
+            <label for="cpf">CPF *</label>
+            <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required>
+          </div>
+
+          <div class="form-group">
+            <label for="rg">RG</label>
+            <input type="text" id="rg" name="rg">
+          </div>
+
+          <div class="form-group">
+            <label for="siape">Matrícula SIAPE *</label>
+            <input type="text" id="siape" name="siape" required>
+          </div>
+
+          <div class="form-group">
+            <label for="lotacao">Lotação atual *</label>
+            <input type="text" id="lotacao" name="lotacao" required>
+          </div>
+
+          <div class="form-group">
+            <label for="grau_instrucao">Grau de instrução</label>
+            <input type="text" id="grau_instrucao" name="grau_instrucao">
+          </div>
         </div>
 
-        <div class="form-group">
-          <label>Nacionalidade</label>
-          <input type="text" name="nacionalidade" autocomplete="country-name">
+        <hr class="form-separator">
+
+        <h2>2. Contatos</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="telefone1">Telefone principal *</label>
+            <input type="tel" id="telefone1" name="telefone1" required>
+          </div>
+
+          <div class="form-group">
+            <label for="telefone2">Telefone adicional</label>
+            <input type="tel" id="telefone2" name="telefone2">
+          </div>
+
+          <div class="form-group">
+            <label for="email_funcional">E-mail funcional</label>
+            <input type="email" id="email_funcional" name="email2"> </div>
+
+          <div class="form-group">
+            <label for="email_pessoal">E-mail pessoal *</label>
+            <input type="email" id="email_pessoal" name="email1" required> </div>
         </div>
 
-        <div class="form-group">
-          <label>Estado civil</label>
-          <input type="text" name="estado_civil">
+        <hr class="form-separator">
+
+        <h2>3. Endereço residencial</h2>
+        <div class="form-grid">
+          <div class="form-group form-group-full">
+            <label for="endereco">Endereço completo *</label>
+            <input type="text" id="endereco" name="endereco" required>
+          </div>
+
+          <div class="form-group">
+            <label for="complemento">Complemento</label>
+            <input type="text" id="complemento" name="complemento">
+          </div>
+
+          <div class="form-group">
+            <label for="bairro">Bairro *</label>
+            <input type="text" id="bairro" name="bairro" required>
+          </div>
+
+          <div class="form-group">
+            <label for="cidade">Cidade *</label>
+            <input type="text" id="cidade" name="cidade" required>
+          </div>
+
+          <div class="form-group">
+            <label for="uf">UF *</label>
+            <input type="text" id="uf" name="uf" maxlength="2" placeholder="ES" required>
+          </div>
+
+          <div class="form-group">
+            <label for="cep">CEP *</label>
+            <input type="text" id="cep" name="cep" placeholder="00000-000" required>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label>Data de nascimento *</label>
-          <input type="date" name="data_nascimento" autocomplete="bday" required>
+        <hr class="form-separator">
+
+        <h2>4. Cônjuge (opcional)</h2>
+        <div class="form-grid">
+          <div class="form-group"> <label for="conjuge_nome">Nome do cônjuge</label>
+            <input type="text" id="conjuge_nome" name="conjuge_nome">
+          </div>
+
+          <div class="form-group">
+            <label for="conjuge_nascimento">Data de nascimento</label>
+            <input type="date" id="conjuge_nascimento" name="conjuge_nascimento">
+          </div>
         </div>
 
-        <div class="form-group">
-          <label>CPF *</label>
-          <input type="text" name="cpf" placeholder="000.000.000-00" autocomplete="off" required>
+        <h2>5. Dependentes (opcional)</h2>
+        <p class="field-hint">Preencha apenas se desejar registrar dependentes para fins de cadastro interno.</p>
+        <div class="dependentes-grid">
+          <div class="form-group">
+            <label>Nome do dependente 1</label>
+            <input type="text" name="dependente1_nome">
+          </div>
+          <div class="form-group">
+            <label>Data de nascimento</label>
+            <input type="date" name="dependente1_nascimento">
+          </div>
+
+          <div class="form-group">
+            <label>Nome do dependente 2</label>
+            <input type="text" name="dependente2_nome">
+          </div>
+          <div class="form-group">
+            <label>Data de nascimento</label>
+            <input type="date" name="dependente2_nascimento">
+          </div>
+
+          <div class="form-group">
+            <label>Nome do dependente 3</label>
+            <input type="text" name="dependente3_nome">
+          </div>
+          <div class="form-group">
+            <label>Data de nascimento</label>
+            <input type="date" name="dependente3_nascimento">
+          </div>
         </div>
 
-        <div class="form-group">
-          <label>RG</label>
-          <input type="text" name="rg">
+        <hr class="form-separator">
+
+        <h2>6. Termos e autorização</h2>
+
+        <div class="terms-section">
+          <label class="terms-item">
+            <input type="checkbox" id="aceite_estatuto" name="aceite" required> Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
+          </label>
+
+          <label class="terms-item">
+            <input type="checkbox" id="aceite_lgpd" name="aceite_lgpd">
+            Autorizo o tratamento dos meus dados pessoais, exclusivamente para fins sindicais,
+            nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
+          </label>
         </div>
 
-        <div class="form-group">
-          <label>Matrícula SIAPE *</label>
-          <input type="text" name="siape" required>
+        <p class="field-hint">
+          * Campos obrigatórios.
+        </p>
+        
+        <div id="filiese-message" class="field-hint" style="font-size: 1rem; font-weight: bold; text-align: center;"></div>
+
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            Enviar solicitação de filiação
+          </button>
         </div>
 
-        <div class="form-group">
-          <label>Lotação atual *</label>
-          <input type="text" name="lotacao" required>
-        </div>
+        <p class="field-hint">
+          Neste momento, o envio ainda não está integrado ao sistema.
+          Em breve, os dados serão processados automaticamente e gerarão um documento oficial em PDF.
+        </p>
+      </form>
+    </section>
+  </main>
 
-        <div class="form-group">
-          <label>Grau de instrução</label>
-          <input type="text" name="grau_instrucao">
-        </div>
-
-      </div>
-
-      <hr class="form-separator">
-
-      <!-- 2. Contatos -->
-      <h2>2. Contatos</h2>
-      <div class="form-grid">
-
-        <div class="form-group">
-          <label>Telefone principal *</label>
-          <input type="tel" name="telefone1" autocomplete="tel" required>
-        </div>
-
-        <div class="form-group">
-          <label>Telefone adicional</label>
-          <input type="tel" name="telefone2" autocomplete="tel">
-        </div>
-
-        <div class="form-group">
-          <label>E-mail funcional</label>
-          <input type="email" name="email1" autocomplete="email">
-        </div>
-
-        <div class="form-group">
-          <label>E-mail pessoal *</label>
-          <input type="email" name="email2" autocomplete="email" required>
-        </div>
-
-      </div>
-
-      <hr class="form-separator">
-
-      <!-- 3. Endereço -->
-      <h2>3. Endereço residencial</h2>
-
-      <div class="form-grid">
-
-        <div class="form-group form-group-full">
-          <label>Endereço completo *</label>
-          <input type="text" name="endereco" autocomplete="street-address" required>
-        </div>
-
-        <div class="form-group">
-          <label>Complemento</label>
-          <input type="text" name="complemento" autocomplete="address-line2">
-        </div>
-
-        <div class="form-group">
-          <label>Bairro *</label>
-          <input type="text" name="bairro" autocomplete="address-level3" required>
-        </div>
-
-        <div class="form-group">
-          <label>Cidade *</label>
-          <input type="text" name="cidade" autocomplete="address-level2" required>
-        </div>
-
-        <div class="form-group">
-          <label>UF *</label>
-          <select name="uf" required>
-            <option value="">Selecione</option>
-            <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
-            <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
-            <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
-            <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
-            <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
-            <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
-            <option>SP</option><option>SE</option><option>TO</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>CEP *</label>
-          <input type="text" name="cep" autocomplete="postal-code" placeholder="00000-000" required>
-        </div>
-
-      </div>
-
-      <hr class="form-separator">
-
-      <!-- 4. Cônjuge -->
-      <h2>4. Cônjuge (opcional)</h2>
-      <div class="form-grid">
-
-        <div class="form-group form-group-full">
-          <label>Nome do cônjuge</label>
-          <input type="text" name="conjuge_nome">
-        </div>
-
-        <div class="form-group">
-          <label>Data de nascimento</label>
-          <input type="date" name="conjuge_nascimento">
-        </div>
-
-      </div>
-
-      <hr class="form-separator">
-
-      <!-- Dependentes -->
-      <h2>5. Dependentes (opcional)</h2>
-
-      <div class="dependentes-grid">
-
-        <div class="form-group">
-          <label>Nome do dependente 1</label>
-          <input type="text" name="dependente1_nome">
-        </div>
-        <div class="form-group">
-          <label>Data de nascimento</label>
-          <input type="date" name="dependente1_nascimento">
-        </div>
-
-        <div class="form-group">
-          <label>Nome do dependente 2</label>
-          <input type="text" name="dependente2_nome">
-        </div>
-        <div class="form-group">
-          <label>Data de nascimento</label>
-          <input type="date" name="dependente2_nascimento">
-        </div>
-
-        <div class="form-group">
-          <label>Nome do dependente 3</label>
-          <input type="text" name="dependente3_nome">
-        </div>
-        <div class="form-group">
-          <label>Data de nascimento</label>
-          <input type="date" name="dependente3_nascimento">
-        </div>
-
-      </div>
-
-      <hr class="form-separator">
-
-      <!-- 6. Termos e autorização -->
-<h2>6. Termos e autorização</h2>
-
-<div class="terms-section">
-
-  <label class="terms-item">
-    <input type="checkbox" name="aceite_estatuto" required>
-    <span>Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.</span>
-  </label>
-
-  <label class="terms-item">
-    <input type="checkbox" name="aceite_lgpd" required>
-    <span>
-      Autorizo o tratamento dos meus dados pessoais exclusivamente para fins sindicais,
-      conforme a Lei Geral de Proteção de Dados.
-    </span>
-  </label>
-
-</div>
-
-<p class="field-hint">* Campos obrigatórios.</p>
-
-<div class="form-actions">
-  <button type="submit" class="btn btn-primary">Enviar solicitação de filiação</button>
-</div>
-
-<p id="filiese-message" class="form-message"></p>
-
-    </form>
-  </section>
-
-</main>
-
-<div id="site-footer"></div>
+  <div id="site-footer"></div>
 
 </body>
 </html>

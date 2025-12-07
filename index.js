@@ -144,6 +144,8 @@ function gerarPdfFichaFiliacao(dados) {
   });
 }
 
+// ... dentro de index.js (Substitua a sua função enviarEmailFichaFiliacao existente)
+
 async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
   const {
     SMTP_HOST,
@@ -154,69 +156,73 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     MAIL_TO_FILIACAO,
   } = process.env;
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !MAIL_TO_FILIACAO) {
-    console.log('⚠️ SMTP não configurado; ficha de filiação NÃO será enviada por e-mail.');
-    console.log('🛠 SMTP DEBUG:', {
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      user: SMTP_USER,
-      mailFrom: MAIL_FROM,
-      mailTo: MAIL_TO_FILIACAO,
-      hasPass: !!SMTP_PASS,
-    });
-    return;
+  const [host, port, user, pass, mailFrom, mailTo] = [
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USER,
+    SMTP_PASS,
+    MAIL_FROM,
+    MAIL_TO_FILIACAO,
+  ];
+
+  console.log('🛠 SMTP DEBUG:', {
+    host,
+    port,
+    user,
+    mailFrom,
+    mailTo,
+    hasPass: !!pass,
+  });
+
+  if (!host || !port || !user || !pass || !mailTo) {
+    console.error('❌ CONFIGURAÇÃO SMTP FALTANDO! Verifique seu arquivo .env.');
+    // Lançar um erro para que a rota /api/filiese o capture e responda ao frontend
+    throw new Error('Configuração de credenciais de e-mail (SMTP) está incompleta no servidor.');
   }
 
   const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT) || 587,
-    secure: false, // Gmail Workspace com STARTTLS na 587
+    host: host,
+    port: parseInt(port),
+    secure: parseInt(port) === 465, // Use 'true' se a porta for 465 (TLS/SSL)
     auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
+      user: user,
+      pass: pass,
     },
+    // Adiciona um timeout para não travar o sistema em caso de host inacessível
+    connectionTimeout: 10000, 
+    socketTimeout: 10000,
   });
 
-  const assunto = `Nova solicitação de filiação – ${dados.nome} (${dados.cpf})`;
-
-  const corpoTexto =
-  `Nova solicitação de filiação recebida.\n\n` +
-  `Nome: ${dados.nome}\n` +
-  `CPF: ${dados.cpf}\n` +
-  `Data de nascimento: ${dados.data_nascimento}\n` +
-  `Telefone principal: ${dados.telefone1 || ''}\n` +
-  `Telefone adicional: ${dados.telefone2 || ''}\n` +
-  `E-mail pessoal (principal): ${dados.email2 || ''}\n` +
-  `E-mail funcional: ${dados.email1 || ''}\n` +
-  `Endereço: ${dados.endereco || ''}\n` +
-  `Bairro: ${dados.bairro || ''}\n` +
-  `Cidade/UF: ${dados.cidade || ''} - ${dados.uf || ''}\n` +
-  `CEP: ${dados.cep || ''}\n\n` +
-  `Data da solicitação: ${dados.data_solicitacao}\n` +
-  `IP: ${dados.ip}\n` +
-  `User-Agent: ${dados.userAgent}\n`;
-
   const mailOptions = {
-    from: MAIL_FROM || SMTP_USER,
-    to: MAIL_TO_FILIACAO,
-    subject: assunto,
-    text: corpoTexto,
-    attachments: pdfBuffer
-      ? [
-          {
-            filename: 'ficha_filiacao.pdf',
-            content: pdfBuffer,
-          },
-        ]
-      : [],
+    from: mailFrom,
+    to: mailTo,
+    cc: dados.email1, // E-mail pessoal do filiado
+    subject: `[FILIAÇÃO] Nova Solicitação de ${dados.nome}`,
+    html: `
+      <p>Uma nova solicitação de filiação foi enviada por <b>${dados.nome}</b> (${dados.cpf}).</p>
+      <p>Os detalhes completos e a ficha de filiação estão anexados como PDF.</p>
+      <p><b>E-mail Pessoal (Cópia):</b> ${dados.email1}</p>
+      <p><b>Matrícula SIAPE:</b> ${dados.siape}</p>
+      <p><i>Este é um envio automático.</i></p>
+    `,
+    attachments: [
+      {
+        filename: `Filiacao_${dados.cpf}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ],
   };
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log('✅ E-mail de filiação enviado com sucesso:', info.messageId);
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ E-mail de filiação enviado com sucesso para ${mailTo} (Cópia para ${dados.email1})`);
+  } catch (emailError) {
+    console.error('❌ ERRO NO ENVIO DO E-MAIL (SMTP):', emailError);
+    // Lançar o erro para que a rota responda com 500
+    throw new Error(`Falha no envio do e-mail. Motivo: ${emailError.message}`);
+  }
 }
-
-
-
 
 // ------------------------------------------------------
 // Rotas básicas
