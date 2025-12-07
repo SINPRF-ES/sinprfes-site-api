@@ -1,48 +1,42 @@
-// public/js/filiese.js
-
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("filiese-form");
-  const msgBox = document.getElementById("filiese-message");
-
-  if (!form) return;
+  const messageBox = document.getElementById("filiese-message");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    msgBox.textContent = "";
-    msgBox.className = "form-message";
 
-    const formData = Object.fromEntries(new FormData(form));
+    messageBox.textContent = "Enviando sua solicitação...";
+    messageBox.style.color = "var(--amarelo)";
 
-    // validações extras antes do envio
-    if (!formData.aceite_estatuto || !formData.aceite_lgpd) {
-      msgBox.textContent = "É necessário aceitar os termos e a LGPD para enviar.";
-      msgBox.classList.add("error");
-      return;
-    }
+    const formData = new FormData(form);
+    const dados = Object.fromEntries(formData.entries());
 
     try {
-      const resp = await fetch("/api/filiese", {
+      const response = await fetch("/api/filiese", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(dados)
       });
 
-      const data = await resp.json();
+      const result = await response.json();
 
-      if (!resp.ok) {
-        msgBox.textContent = data.error || "Erro ao enviar.";
-        msgBox.classList.add("error");
+      if (!response.ok) {
+        messageBox.textContent = result.error || "Erro ao enviar.";
+        messageBox.style.color = "red";
         return;
       }
 
-      msgBox.textContent = data.message || "Solicitação enviada com sucesso!";
-      msgBox.classList.add("success");
+      messageBox.textContent = "Solicitação enviada com sucesso!";
+      messageBox.style.color = "#00c851";
+
       form.reset();
 
     } catch (err) {
       console.error("Erro no envio:", err);
-      msgBox.textContent = "Erro inesperado. Tente novamente.";
-      msgBox.classList.add("error");
+      messageBox.textContent = "Falha ao enviar. Tente novamente mais tarde.";
+      messageBox.style.color = "red";
     }
   });
 });
