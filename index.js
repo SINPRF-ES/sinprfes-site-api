@@ -156,14 +156,12 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     MAIL_TO_FILIACAO,
   } = process.env;
 
-  const [host, port, user, pass, mailFrom, mailTo] = [
-    SMTP_HOST,
-    SMTP_PORT,
-    SMTP_USER,
-    SMTP_PASS,
-    MAIL_FROM,
-    MAIL_TO_FILIACAO,
-  ];
+  const host = SMTP_HOST;
+  const port = parseInt(SMTP_PORT || '587', 10);
+  const user = SMTP_USER;
+  const pass = SMTP_PASS;
+  const mailFrom = MAIL_FROM || SMTP_USER;
+  const mailTo = MAIL_TO_FILIACAO;
 
   console.log('🛠 SMTP DEBUG:', {
     host,
@@ -175,51 +173,52 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
   });
 
   if (!host || !port || !user || !pass || !mailTo) {
-    console.error('❌ CONFIGURAÇÃO SMTP FALTANDO! Verifique seu arquivo .env.');
-    // Lançar um erro para que a rota /api/filiese o capture e responda ao frontend
-    throw new Error('Configuração de credenciais de e-mail (SMTP) está incompleta no servidor.');
+    console.error('❌ CONFIGURAÇÃO SMTP FALTANDO! Verifique as variáveis de ambiente.');
+    throw new Error('Configuração de e-mail (SMTP) está incompleta no servidor.');
   }
 
   const transporter = nodemailer.createTransport({
-    host: host,
-    port: parseInt(port),
-    secure: parseInt(port) === 465, // Use 'true' se a porta for 465 (TLS/SSL)
+    host,
+    port,
+    secure: port === 465, // 587 = STARTTLS, 465 = SSL
     auth: {
-      user: user,
-      pass: pass,
+      user,
+      pass,
     },
-    // Adiciona um timeout para não travar o sistema em caso de host inacessível
-    connectionTimeout: 10000, 
+    connectionTimeout: 10000,
     socketTimeout: 10000,
   });
 
   const mailOptions = {
     from: mailFrom,
     to: mailTo,
-    cc: dados.email1, // E-mail pessoal do filiado
-    subject: `[FILIAÇÃO] Nova Solicitação de ${dados.nome}`,
+    cc: dados.email2, // e-mail pessoal do filiado
+    subject: `[FILIAÇÃO] Nova solicitação de ${dados.nome}`,
     html: `
       <p>Uma nova solicitação de filiação foi enviada por <b>${dados.nome}</b> (${dados.cpf}).</p>
       <p>Os detalhes completos e a ficha de filiação estão anexados como PDF.</p>
-      <p><b>E-mail Pessoal (Cópia):</b> ${dados.email1}</p>
+      <p><b>E-mail pessoal (cópia):</b> ${dados.email2}</p>
       <p><b>Matrícula SIAPE:</b> ${dados.siape}</p>
-      <p><i>Este é um envio automático.</i></p>
+      <p><i>Este é um envio automático gerado pelo site do SINPRF-ES.</i></p>
     `,
-    attachments: [
-      {
-        filename: `Filiacao_${dados.cpf}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf',
-      },
-    ],
+    attachments: pdfBuffer
+      ? [
+          {
+            filename: `Filiacao_${dados.cpf}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          },
+        ]
+      : [],
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ E-mail de filiação enviado com sucesso para ${mailTo} (Cópia para ${dados.email1})`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(
+      `✅ E-mail de filiação enviado com sucesso para ${mailTo} (cópia para ${dados.email2}) – ID: ${info.messageId}`
+    );
   } catch (emailError) {
     console.error('❌ ERRO NO ENVIO DO E-MAIL (SMTP):', emailError);
-    // Lançar o erro para que a rota responda com 500
     throw new Error(`Falha no envio do e-mail. Motivo: ${emailError.message}`);
   }
 }
@@ -242,59 +241,88 @@ app.get('/', (req, res) => {
 });
 
 // ======================================================
-// ROTA – Solicitação de filiação
+// ROTA – Solicitação de filiação (filiese.html)
 // ======================================================
 
 app.post('/api/filiese', async (req, res) => {
   try {
     const dados = req.body || {};
 
-    // campos obrigatórios
-// Atenção: email2 = e-mail pessoal (obrigatório), email1 = funcional (opcional)
-const obrigatorios = [
-  "nome", "cpf", "data_nascimento",
-  "telefone1", "email2",
-  "endereco", "bairro", "cidade", "uf", "cep",
-  "siape", "lotacao"
-];
+    // Atenção: email2 = e-mail pessoal (obrigatório), email1 = funcional (opcional)
+    const obrigatorios = [
+      'nome',
+      'cpf',
+      'data_nascimento',
+      'telefone1',
+      'email2',
+      'endereco',
+      'bairro',
+      'cidade',
+      'uf',
+      'cep',
+      'siape',
+      'lotacao',
+    ];
 
     for (const campo of obrigatorios) {
-      if (!dados[campo] || String(dados[campo]).trim() === "") {
-        return res.status(400).json({ error: `Preencha o campo obrigatório: ${campo}` });
+      if (!dados[campo] || String(dados[campo]).trim() === '') {
+        return res
+          .status(400)
+          .json({ error: `Preencha o campo obrigatório: ${campo}` });
       }
     }
 
     if (!dados.aceite_estatuto || !dados.aceite_lgpd) {
       return res.status(400).json({
-        error: "É necessário aceitar o estatuto e a LGPD para continuar."
+        error: 'É necessário aceitar o Estatuto e a LGPD para continuar.',
       });
     }
 
-    console.log("📥 Nova solicitação recebida:", {
-  nome: dados.nome,
-  cpf: dados.cpf,
-  email_pessoal: dados.email2,
-  email_funcional: dados.email1,
-});
+    const agora = new Date().toISOString();
 
-    // Gera PDF
-    const pdfBuffer = await gerarPdfFichaFiliacao(dados);
+    const normalizados = {
+      nome: String(dados.nome).trim(),
+      cpf: String(dados.cpf).trim(),
+      data_nascimento: String(dados.data_nascimento).trim(),
+      telefone1: String(dados.telefone1).trim(),
+      telefone2: (dados.telefone2 || '').toString().trim(),
+      email1: (dados.email1 || '').toString().trim(), // funcional
+      email2: (dados.email2 || '').toString().trim(), // pessoal
+      endereco: String(dados.endereco).trim(),
+      complemento: (dados.complemento || '').toString().trim(),
+      bairro: (dados.bairro || '').toString().trim(),
+      cidade: (dados.cidade || '').toString().trim(),
+      uf: (dados.uf || '').toString().trim(),
+      cep: (dados.cep || '').toString().trim(),
+      siape: (dados.siape || '').toString().trim(),
+      lotacao: (dados.lotacao || '').toString().trim(),
+      data_solicitacao: agora,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    };
 
-    // Envia e-mail
-    await enviarEmailFichaFiliacao(dados, pdfBuffer);
-
-    return res.json({
-      message: "Solicitação enviada com sucesso. A equipe do SINPRF-ES entrará em contato."
+    console.log('📥 Nova solicitação de filiação recebida:', {
+      nome: normalizados.nome,
+      cpf: normalizados.cpf,
+      email_pessoal: normalizados.email2,
+      email_funcional: normalizados.email1,
     });
 
+    const pdfBuffer = await gerarPdfFichaFiliacao(normalizados);
+
+    await enviarEmailFichaFiliacao(normalizados, pdfBuffer);
+
+    return res.json({
+      message:
+        'Solicitação enviada com sucesso. Você receberá uma cópia no seu e-mail pessoal.',
+    });
   } catch (err) {
-    console.error("💥 Erro em /api/filiese:", err);
+    console.error('💥 Erro em /api/filiese:', err);
     return res.status(500).json({
-      error: "Erro interno ao processar sua solicitação de filiação."
+      error: 'Erro interno ao processar sua solicitação de filiação.',
     });
   }
 });
-
 
 // ------------------------------------------------------
 // 1) PRIMEIRO ACESSO - INICIAR

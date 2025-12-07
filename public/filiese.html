@@ -7,7 +7,8 @@
 
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/main.js" defer></script>
-  <script src="/js/filiese.js" defer></script> </head>
+  <script src="/js/filiese.js" defer></script>
+</head>
 <body>
 
   <div id="site-header"></div>
@@ -21,157 +22,286 @@
 
     <section class="form-card">
       <h2>1. Dados do servidor</h2>
-      <form id="filiese-form">
+      <form id="filiese-form" novalidate>
+        <!-- Dados pessoais -->
         <div class="form-grid">
           <div class="form-group">
             <label for="nome">Nome completo *</label>
-            <input type="text" id="nome" name="nome" required>
+            <input
+              type="text"
+              id="nome"
+              name="nome"
+              required
+              autocomplete="name"
+            >
           </div>
 
           <div class="form-group">
             <label for="nacionalidade">Nacionalidade</label>
-            <input type="text" id="nacionalidade" name="nacionalidade">
+            <input
+              type="text"
+              id="nacionalidade"
+              name="nacionalidade"
+              autocomplete="country-name"
+            >
           </div>
 
           <div class="form-group">
             <label for="estado_civil">Estado civil</label>
-            <input type="text" id="estado_civil" name="estado_civil">
+            <input
+              type="text"
+              id="estado_civil"
+              name="estado_civil"
+              autocomplete="off"
+            >
           </div>
 
           <div class="form-group">
             <label for="data_nascimento">Data de nascimento *</label>
-            <input type="date" id="data_nascimento" name="data_nascimento" required>
+            <input
+              type="date"
+              id="data_nascimento"
+              name="data_nascimento"
+              required
+              autocomplete="bday"
+            >
           </div>
 
           <div class="form-group">
             <label for="cpf">CPF *</label>
-            <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required>
+            <input
+              type="text"
+              id="cpf"
+              name="cpf"
+              placeholder="000.000.000-00"
+              required
+              inputmode="numeric"
+              autocomplete="off"
+            >
           </div>
 
           <div class="form-group">
             <label for="rg">RG</label>
-            <input type="text" id="rg" name="rg">
+            <input
+              type="text"
+              id="rg"
+              name="rg"
+              autocomplete="off"
+            >
           </div>
 
           <div class="form-group">
             <label for="siape">Matrícula SIAPE *</label>
-            <input type="text" id="siape" name="siape" required>
+            <input
+              type="text"
+              id="siape"
+              name="siape"
+              required
+              autocomplete="off"
+            >
           </div>
 
           <div class="form-group">
             <label for="lotacao">Lotação atual *</label>
-            <input type="text" id="lotacao" name="lotacao" required>
+            <input
+              type="text"
+              id="lotacao"
+              name="lotacao"
+              required
+              autocomplete="organization"
+            >
           </div>
 
           <div class="form-group">
             <label for="grau_instrucao">Grau de instrução</label>
-            <input type="text" id="grau_instrucao" name="grau_instrucao">
+            <input
+              type="text"
+              id="grau_instrucao"
+              name="grau_instrucao"
+              autocomplete="off"
+            >
           </div>
         </div>
 
         <hr class="form-separator">
 
+        <!-- Contatos -->
         <h2>2. Contatos</h2>
         <div class="form-grid">
           <div class="form-group">
             <label for="telefone1">Telefone principal *</label>
-            <input type="tel" id="telefone1" name="telefone1" required>
+            <input
+              type="tel"
+              id="telefone1"
+              name="telefone1"
+              required
+              autocomplete="tel"
+            >
           </div>
 
           <div class="form-group">
             <label for="telefone2">Telefone adicional</label>
-            <input type="tel" id="telefone2" name="telefone2">
+            <input
+              type="tel"
+              id="telefone2"
+              name="telefone2"
+              autocomplete="tel"
+            >
           </div>
 
           <div class="form-group">
             <label for="email_funcional">E-mail funcional</label>
-            <input type="email" id="email_funcional" name="email2"> </div>
+            <input
+              type="email"
+              id="email_funcional"
+              name="email1"
+              autocomplete="email"
+            >
+          </div>
 
           <div class="form-group">
             <label for="email_pessoal">E-mail pessoal *</label>
-            <input type="email" id="email_pessoal" name="email1" required> </div>
+            <input
+              type="email"
+              id="email_pessoal"
+              name="email2"
+              required
+              autocomplete="email"
+            >
+          </div>
         </div>
 
         <hr class="form-separator">
 
+        <!-- Endereço -->
         <h2>3. Endereço residencial</h2>
         <div class="form-grid">
           <div class="form-group form-group-full">
             <label for="endereco">Endereço completo *</label>
-            <input type="text" id="endereco" name="endereco" required>
+            <input
+              type="text"
+              id="endereco"
+              name="endereco"
+              required
+              autocomplete="street-address"
+            >
           </div>
 
           <div class="form-group">
             <label for="complemento">Complemento</label>
-            <input type="text" id="complemento" name="complemento">
+            <input
+              type="text"
+              id="complemento"
+              name="complemento"
+              autocomplete="address-line2"
+            >
           </div>
 
           <div class="form-group">
             <label for="bairro">Bairro *</label>
-            <input type="text" id="bairro" name="bairro" required>
+            <input
+              type="text"
+              id="bairro"
+              name="bairro"
+              required
+              autocomplete="address-level3"
+            >
           </div>
 
           <div class="form-group">
             <label for="cidade">Cidade *</label>
-            <input type="text" id="cidade" name="cidade" required>
+            <input
+              type="text"
+              id="cidade"
+              name="cidade"
+              required
+              autocomplete="address-level2"
+            >
           </div>
 
           <div class="form-group">
             <label for="uf">UF *</label>
-            <select id="uf" name="uf" required>
+            <select
+              id="uf"
+              name="uf"
+              required
+              autocomplete="address-level1"
+            >
               <option value="">Selecione</option>
-              <option value="AC">Acre</option>
-              <option value="AL">Alagoas</option>
-              <option value="AP">Amapá</option>
-              <option value="AM">Amazonas</option>
-              <option value="BA">Bahia</option>
-              <option value="CE">Ceará</option>
-              <option value="DF">Distrito Federal</option>
-              <option value="ES">Espírito Santo</option>
-              <option value="GO">Goiás</option>
-              <option value="MA">Maranhão</option>
-              <option value="MT">Mato Grosso</option>
-              <option value="MS">Mato Grosso do Sul</option>
-              <option value="MG">Minas Gerais</option>
-              <option value="PA">Pará</option>
-              <option value="PB">Paraíba</option>
-              <option value="PR">Paraná</option>
-              <option value="PE">Pernambuco</option>
-              <option value="PI">Piauí</option>
-              <option value="RJ">Rio de Janeiro</option>
-              <option value="RN">Rio Grande do Norte</option>
-              <option value="RS">Rio Grande do Sul</option>
-              <option value="RO">Rondônia</option>
-              <option value="RR">Roraima</option>
-              <option value="SC">Santa Catarina</option>
-              <option value="SP">São Paulo</option>
-              <option value="SE">Sergipe</option>
-              <option value="TO">Tocantins</option>
+              <option value="AC">AC</option>
+              <option value="AL">AL</option>
+              <option value="AP">AP</option>
+              <option value="AM">AM</option>
+              <option value="BA">BA</option>
+              <option value="CE">CE</option>
+              <option value="DF">DF</option>
+              <option value="ES">ES</option>
+              <option value="GO">GO</option>
+              <option value="MA">MA</option>
+              <option value="MT">MT</option>
+              <option value="MS">MS</option>
+              <option value="MG">MG</option>
+              <option value="PA">PA</option>
+              <option value="PB">PB</option>
+              <option value="PR">PR</option>
+              <option value="PE">PE</option>
+              <option value="PI">PI</option>
+              <option value="RJ">RJ</option>
+              <option value="RN">RN</option>
+              <option value="RS">RS</option>
+              <option value="RO">RO</option>
+              <option value="RR">RR</option>
+              <option value="SC">SC</option>
+              <option value="SP">SP</option>
+              <option value="SE">SE</option>
+              <option value="TO">TO</option>
             </select>
           </div>
 
           <div class="form-group">
             <label for="cep">CEP *</label>
-            <input type="text" id="cep" name="cep" placeholder="00000-000" required>
+            <input
+              type="text"
+              id="cep"
+              name="cep"
+              placeholder="00000-000"
+              required
+              inputmode="numeric"
+              autocomplete="postal-code"
+            >
           </div>
         </div>
 
         <hr class="form-separator">
 
+        <!-- Cônjuge e dependentes -->
         <h2>4. Cônjuge (opcional)</h2>
         <div class="form-grid">
-          <div class="form-group"> <label for="conjuge_nome">Nome do cônjuge</label>
-            <input type="text" id="conjuge_nome" name="conjuge_nome">
+          <div class="form-group form-group-full">
+            <label for="conjuge_nome">Nome do cônjuge</label>
+            <input
+              type="text"
+              id="conjuge_nome"
+              name="conjuge_nome"
+              autocomplete="off"
+            >
           </div>
 
           <div class="form-group">
             <label for="conjuge_nascimento">Data de nascimento</label>
-            <input type="date" id="conjuge_nascimento" name="conjuge_nascimento">
+            <input
+              type="date"
+              id="conjuge_nascimento"
+              name="conjuge_nascimento"
+              autocomplete="bday"
+            >
           </div>
         </div>
 
         <h2>5. Dependentes (opcional)</h2>
-        <p class="field-hint">Preencha apenas se desejar registrar dependentes para fins de cadastro interno.</p>
+        <p class="field-hint">
+          Preencha apenas se desejar registrar dependentes para fins de cadastro interno.
+        </p>
         <div class="dependentes-grid">
           <div class="form-group">
             <label>Nome do dependente 1</label>
@@ -203,26 +333,39 @@
 
         <hr class="form-separator">
 
+        <!-- LGPD e aceite -->
         <h2>6. Termos e autorização</h2>
 
         <div class="terms-section">
           <label class="terms-item">
-            <input type="checkbox" id="aceite_estatuto" name="aceite" required> Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
+            <input
+              type="checkbox"
+              id="aceite_estatuto"
+              name="aceite_estatuto"
+              required
+            >
+            <span>
+              Declaro que li e aceito o Estatuto do SINPRF-ES e da FENAPRF.
+            </span>
           </label>
 
           <label class="terms-item">
-            <input type="checkbox" id="aceite_lgpd" name="aceite_lgpd">
-            Autorizo o tratamento dos meus dados pessoais, exclusivamente para fins sindicais,
-            nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
+            <input
+              type="checkbox"
+              id="aceite_lgpd"
+              name="aceite_lgpd"
+              required
+            >
+            <span>
+              Autorizo o tratamento dos meus dados pessoais, exclusivamente para fins sindicais,
+              nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
+            </span>
           </label>
         </div>
 
         <p class="field-hint">
           * Campos obrigatórios.
         </p>
-        
-        <div id="filiese-message" class="field-hint" style="font-size: 1rem; font-weight: bold; text-align: center;"></div>
-
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">
@@ -230,10 +373,7 @@
           </button>
         </div>
 
-        <p class="field-hint">
-          Neste momento, o envio ainda não está integrado ao sistema.
-          Em breve, os dados serão processados automaticamente e gerarão um documento oficial em PDF.
-        </p>
+        <p id="filiese-message" class="form-message"></p>
       </form>
     </section>
   </main>

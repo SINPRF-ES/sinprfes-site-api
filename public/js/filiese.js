@@ -1,84 +1,131 @@
-// public/js/filiese.js
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('filiese-form');
+  if (!form) return;
 
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("filiese-form");
-  const messageBox = document.getElementById("filiese-message");
+  const messageBox = document.getElementById('filiese-message');
   const submitButton = form.querySelector('button[type="submit"]');
 
-  if (form) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      // VALIDAÇÃO CRÍTICA (FRONTEND)
-      // O campo email1 (pessoal) é obrigatório por HTML.
-      // Aqui, garantimos que o campo email2 (funcional) não bloqueie o envio se estiver vazio.
-      const email2Input = document.getElementById('email_funcional');
-      if (email2Input && email2Input.value === '') {
-          email2Input.setCustomValidity(''); // Remove qualquer validação pendente se estiver vazio
-      }
-      
-      // Valida o aceite do Estatuto (name="aceite")
-      const aceiteEstatuto = form.querySelector('input[name="aceite"]');
-      if (!aceiteEstatuto.checked) {
-          messageBox.textContent = "É obrigatório declarar que leu e aceita o Estatuto do SINPRF-ES.";
-          messageBox.style.color = "red";
-          submitButton.disabled = false;
-          submitButton.textContent = 'Enviar solicitação de filiação';
-          return;
-      }
-
-
-      // MENSAGEM DE CARREGAMENTO
-      messageBox.textContent = "Gerando PDF e Enviando...";
-      messageBox.style.color = "var(--amarelo)";
-      submitButton.disabled = true;
-      submitButton.textContent = 'Aguarde...';
-
-      const formData = new FormData(form);
-      const dados = Object.fromEntries(formData.entries());
-      
-      // TRATAMENTO DE CHECKBOXES
-      // Garante que o backend saiba se não foram marcados (false)
-      dados.aceite = formData.has('aceite');
-      dados.aceite_lgpd = formData.has('aceite_lgpd');
-
-      try {
-        const response = await fetch("/api/filiese", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(dados)
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          // Exibe erro retornado pelo backend
-          const errorMessage = result.error || "Erro desconhecido ao enviar.";
-          messageBox.textContent = `Falha: ${errorMessage}`;
-          messageBox.style.color = "red";
-          console.error("Erro do Backend:", result);
-          return;
-        }
-
-        // SUCESSO
-        messageBox.textContent = "Solicitação enviada com sucesso! Verifique seu e-mail pessoal para uma cópia.";
-        messageBox.style.color = "#00c851"; 
-
-        form.reset();
-        submitButton.textContent = 'Enviar solicitação de filiação';
-
-      } catch (err) {
-        // ERRO DE REDE/CONEXÃO
-        console.error("Erro no envio (Rede/Fetch):", err);
-        messageBox.textContent = "Falha ao enviar. Verifique sua conexão e tente novamente.";
-        messageBox.style.color = "red";
-        submitButton.textContent = 'Enviar solicitação de filiação';
-
-      } finally {
-        submitButton.disabled = false; // Reativa o botão
-      }
-    });
+  function setMessage(text, type = 'info') {
+    if (!messageBox) return;
+    messageBox.textContent = text;
+    messageBox.className = `form-message ${type}`;
+    messageBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // dispara validação nativa do navegador (required, e-mail, etc.)
+    if (!form.reportValidity()) {
+      return;
+    }
+
+    // garante as duas checkboxes marcadas
+    const estatuto = document.getElementById('aceite_estatuto');
+    const lgpd = document.getElementById('aceite_lgpd');
+
+    if (!estatuto.checked || !lgpd.checked) {
+      setMessage(
+        'É necessário aceitar o Estatuto e a LGPD para enviar a solicitação.',
+        'error'
+      );
+      return;
+    }
+
+    const formData = new FormData(form);
+
+    // Monta o payload exatamente com os nomes que o backend usa
+    const payload = {
+      nome: (formData.get('nome') || '').toString().trim(),
+      nacionalidade: (formData.get('nacionalidade') || '').toString().trim(),
+      estado_civil: (formData.get('estado_civil') || '').toString().trim(),
+      data_nascimento: (formData.get('data_nascimento') || '').toString().trim(),
+      cpf: (formData.get('cpf') || '').toString().trim(),
+      rg: (formData.get('rg') || '').toString().trim(),
+      siape: (formData.get('siape') || '').toString().trim(),
+      lotacao: (formData.get('lotacao') || '').toString().trim(),
+      grau_instrucao: (formData.get('grau_instrucao') || '').toString().trim(),
+
+      telefone1: (formData.get('telefone1') || '').toString().trim(),
+      telefone2: (formData.get('telefone2') || '').toString().trim(),
+
+      // email1 = funcional (opcional), email2 = pessoal (obrigatório)
+      email1: (formData.get('email1') || '').toString().trim(),
+      email2: (formData.get('email2') || '').toString().trim(),
+
+      endereco: (formData.get('endereco') || '').toString().trim(),
+      complemento: (formData.get('complemento') || '').toString().trim(),
+      bairro: (formData.get('bairro') || '').toString().trim(),
+      cidade: (formData.get('cidade') || '').toString().trim(),
+      uf: (formData.get('uf') || '').toString().trim(),
+      cep: (formData.get('cep') || '').toString().trim(),
+
+      conjuge_nome: (formData.get('conjuge_nome') || '').toString().trim(),
+      conjuge_nascimento: (formData.get('conjuge_nascimento') || '').toString().trim(),
+
+      dependente1_nome: (formData.get('dependente1_nome') || '').toString().trim(),
+      dependente1_nascimento: (formData.get('dependente1_nascimento') || '').toString().trim(),
+      dependente2_nome: (formData.get('dependente2_nome') || '').toString().trim(),
+      dependente2_nascimento: (formData.get('dependente2_nascimento') || '').toString().trim(),
+      dependente3_nome: (formData.get('dependente3_nome') || '').toString().trim(),
+      dependente3_nascimento: (formData.get('dependente3_nascimento') || '').toString().trim(),
+
+      // flags de aceite – sempre como boolean
+      aceite_estatuto: formData.has('aceite_estatuto'),
+      aceite_lgpd: formData.has('aceite_lgpd'),
+    };
+
+    // segurança extra: confirmar e-mail pessoal
+    if (!payload.email2) {
+      setMessage('Informe o seu e-mail pessoal para continuar.', 'error');
+      return;
+    }
+
+    try {
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Enviando...';
+      }
+
+      const response = await fetch('/api/filiese', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const msg =
+          data && data.error
+            ? data.error
+            : 'Não foi possível enviar sua solicitação. Tente novamente.';
+        setMessage(msg, 'error');
+        return;
+      }
+
+      // Sucesso
+      setMessage(
+        data.message ||
+          'Solicitação enviada com sucesso. Você receberá uma cópia por e-mail.',
+        'success'
+      );
+
+      // Limpa o formulário (menos o e-mail pessoal, se você quiser manter apague esta linha)
+      form.reset();
+    } catch (err) {
+      console.error('Erro ao enviar solicitação de filiação:', err);
+      setMessage(
+        'Ocorreu um erro ao enviar sua solicitação. Tente novamente em alguns instantes.',
+        'error'
+      );
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Enviar solicitação de filiação';
+      }
+    }
+  });
 });
