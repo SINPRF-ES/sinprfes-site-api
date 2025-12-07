@@ -1,131 +1,91 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('filiese-form');
+// public/js/filiese.js
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("filiese-form");
+  const msgBox = document.getElementById("filiese-message");
+
   if (!form) return;
 
-  const messageBox = document.getElementById('filiese-message');
-  const submitButton = form.querySelector('button[type="submit"]');
-
-  function setMessage(text, type = 'info') {
-    if (!messageBox) return;
-    messageBox.textContent = text;
-    messageBox.className = `form-message ${type}`;
-    messageBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  form.addEventListener('submit', async (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // dispara validação nativa do navegador (required, e-mail, etc.)
-    if (!form.reportValidity()) {
+    msgBox.textContent = "";
+    msgBox.className = "form-message";
+
+    const formData = Object.fromEntries(new FormData(form));
+
+    // Garantir que os dois termos foram marcados
+    if (!formData.aceite_estatuto || !formData.aceite_lgpd) {
+      msgBox.textContent = "É necessário aceitar o Estatuto e a LGPD para prosseguir.";
+      msgBox.classList.add("error");
       return;
     }
 
-    // garante as duas checkboxes marcadas
-    const estatuto = document.getElementById('aceite_estatuto');
-    const lgpd = document.getElementById('aceite_lgpd');
+    // Campos realmente obrigatórios, alinhados com o backend
+    const obrigatorios = [
+      "nome",
+      "cpf",
+      "data_nascimento",
+      "telefone1",
+      "email_pessoal",
+      "endereco",
+      "bairro",
+      "cidade",
+      "uf",
+      "cep",
+      "siape",
+      "lotacao",
+    ];
 
-    if (!estatuto.checked || !lgpd.checked) {
-      setMessage(
-        'É necessário aceitar o Estatuto e a LGPD para enviar a solicitação.',
-        'error'
-      );
-      return;
+    for (const campo of obrigatorios) {
+      if (!formData[campo] || String(formData[campo]).trim() === "") {
+        msgBox.textContent = "Preencha todos os campos obrigatórios (*) antes de enviar.";
+        msgBox.classList.add("error");
+        return;
+      }
     }
 
-    const formData = new FormData(form);
-
-    // Monta o payload exatamente com os nomes que o backend usa
-    const payload = {
-      nome: (formData.get('nome') || '').toString().trim(),
-      nacionalidade: (formData.get('nacionalidade') || '').toString().trim(),
-      estado_civil: (formData.get('estado_civil') || '').toString().trim(),
-      data_nascimento: (formData.get('data_nascimento') || '').toString().trim(),
-      cpf: (formData.get('cpf') || '').toString().trim(),
-      rg: (formData.get('rg') || '').toString().trim(),
-      siape: (formData.get('siape') || '').toString().trim(),
-      lotacao: (formData.get('lotacao') || '').toString().trim(),
-      grau_instrucao: (formData.get('grau_instrucao') || '').toString().trim(),
-
-      telefone1: (formData.get('telefone1') || '').toString().trim(),
-      telefone2: (formData.get('telefone2') || '').toString().trim(),
-
-      // email1 = funcional (opcional), email2 = pessoal (obrigatório)
-      email1: (formData.get('email1') || '').toString().trim(),
-      email2: (formData.get('email2') || '').toString().trim(),
-
-      endereco: (formData.get('endereco') || '').toString().trim(),
-      complemento: (formData.get('complemento') || '').toString().trim(),
-      bairro: (formData.get('bairro') || '').toString().trim(),
-      cidade: (formData.get('cidade') || '').toString().trim(),
-      uf: (formData.get('uf') || '').toString().trim(),
-      cep: (formData.get('cep') || '').toString().trim(),
-
-      conjuge_nome: (formData.get('conjuge_nome') || '').toString().trim(),
-      conjuge_nascimento: (formData.get('conjuge_nascimento') || '').toString().trim(),
-
-      dependente1_nome: (formData.get('dependente1_nome') || '').toString().trim(),
-      dependente1_nascimento: (formData.get('dependente1_nascimento') || '').toString().trim(),
-      dependente2_nome: (formData.get('dependente2_nome') || '').toString().trim(),
-      dependente2_nascimento: (formData.get('dependente2_nascimento') || '').toString().trim(),
-      dependente3_nome: (formData.get('dependente3_nome') || '').toString().trim(),
-      dependente3_nascimento: (formData.get('dependente3_nascimento') || '').toString().trim(),
-
-      // flags de aceite – sempre como boolean
-      aceite_estatuto: formData.has('aceite_estatuto'),
-      aceite_lgpd: formData.has('aceite_lgpd'),
-    };
-
-    // segurança extra: confirmar e-mail pessoal
-    if (!payload.email2) {
-      setMessage('Informe o seu e-mail pessoal para continuar.', 'error');
-      return;
-    }
+    // Normalização leve de campos
+    formData.cpf = String(formData.cpf).trim();
+    formData.email_pessoal = String(formData.email_pessoal).trim();
+    formData.email_funcional = (formData.email_funcional || "").trim();
 
     try {
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = 'Enviando...';
-      }
+      msgBox.textContent = "Enviando sua solicitação...";
+      msgBox.className = "form-message info";
 
-      const response = await fetch('/api/filiese', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+      const resp = await fetch("/api/filiese", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json().catch(() => ({}));
+      let data = {};
+      try {
+        data = await resp.json();
+      } catch {
+        // se o backend devolver algo não-JSON, evita crash
+      }
 
-      if (!response.ok) {
-        const msg =
-          data && data.error
-            ? data.error
-            : 'Não foi possível enviar sua solicitação. Tente novamente.';
-        setMessage(msg, 'error');
+      if (!resp.ok) {
+        msgBox.textContent =
+          data.error ||
+          data.detailedMessage ||
+          "Erro ao enviar sua solicitação. Tente novamente.";
+        msgBox.classList.add("error");
         return;
       }
 
-      // Sucesso
-      setMessage(
+      msgBox.textContent =
         data.message ||
-          'Solicitação enviada com sucesso. Você receberá uma cópia por e-mail.',
-        'success'
-      );
-
-      // Limpa o formulário (menos o e-mail pessoal, se você quiser manter apague esta linha)
+        "Solicitação enviada com sucesso. A equipe do SINPRF-ES entrará em contato.";
+      msgBox.classList.add("success");
       form.reset();
+
     } catch (err) {
-      console.error('Erro ao enviar solicitação de filiação:', err);
-      setMessage(
-        'Ocorreu um erro ao enviar sua solicitação. Tente novamente em alguns instantes.',
-        'error'
-      );
-    } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Enviar solicitação de filiação';
-      }
+      console.error("Erro no envio da ficha de filiação:", err);
+      msgBox.textContent = "Erro inesperado ao enviar. Tente novamente em alguns instantes.";
+      msgBox.classList.add("error");
     }
   });
 });

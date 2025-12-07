@@ -156,72 +156,89 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     MAIL_TO_FILIACAO,
   } = process.env;
 
-  const host = SMTP_HOST;
-  const port = parseInt(SMTP_PORT || '587', 10);
-  const user = SMTP_USER;
-  const pass = SMTP_PASS;
-  const mailFrom = MAIL_FROM || SMTP_USER;
-  const mailTo = MAIL_TO_FILIACAO;
-
-  console.log('🛠 SMTP DEBUG:', {
-    host,
-    port,
-    user,
-    mailFrom,
-    mailTo,
-    hasPass: !!pass,
-  });
-
-  if (!host || !port || !user || !pass || !mailTo) {
-    console.error('❌ CONFIGURAÇÃO SMTP FALTANDO! Verifique as variáveis de ambiente.');
-    throw new Error('Configuração de e-mail (SMTP) está incompleta no servidor.');
+  // Se algo essencial não estiver configurado, apenas loga e segue sem tentar enviar
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !MAIL_TO_FILIACAO) {
+    console.log('⚠️ SMTP não configurado; ficha de filiação NÃO será enviada por e-mail.');
+    console.log('🛠 SMTP DEBUG:', {
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      user: SMTP_USER,
+      mailFrom: MAIL_FROM,
+      mailTo: MAIL_TO_FILIACAO,
+      hasPass: !!SMTP_PASS,
+    });
+    return;
   }
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465, // 587 = STARTTLS, 465 = SSL
-    auth: {
-      user,
-      pass,
-    },
-    connectionTimeout: 10000,
-    socketTimeout: 10000,
+  // Log de debug completo
+  console.log('🛠 SMTP DEBUG:', {
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    user: SMTP_USER,
+    mailFrom: MAIL_FROM,
+    mailTo: MAIL_TO_FILIACAO,
+    hasPass: !!SMTP_PASS,
   });
 
+  const portNumber = Number(SMTP_PORT) || 587;
+  const isSecure = portNumber === 465; // 465 = SSL, 587 = STARTTLS (secure: false)
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: portNumber,
+    secure: isSecure, // true apenas se for 465
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+    tls: {
+      // Em provedores tipo Gmail/Workspace atrás de Render, muitas vezes precisa disso
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 20000,
+    socketTimeout: 20000,
+  });
+
+  const assunto = `Nova solicitação de filiação – ${dados.nome} (${dados.cpf})`;
+
+  const corpoTexto =
+    `Nova solicitação de filiação recebida.\n\n` +
+    `Nome: ${dados.nome}\n` +
+    `CPF: ${dados.cpf}\n` +
+    `E-mail: ${dados.email_pessoal || dados.email1 || ''}\n` +
+    `Telefone: ${dados.telefone1 || ''}\n` +
+    `Data de nascimento: ${dados.data_nascimento || ''}\n` +
+    `Data/hora da solicitação: ${dados.data_solicitacao || ''}\n` +
+    `IP: ${dados.ip || ''}\n` +
+    `User-Agent: ${dados.userAgent || ''}\n`;
+
   const mailOptions = {
-    from: mailFrom,
-    to: mailTo,
-    cc: dados.email2, // e-mail pessoal do filiado
-    subject: `[FILIAÇÃO] Nova solicitação de ${dados.nome}`,
-    html: `
-      <p>Uma nova solicitação de filiação foi enviada por <b>${dados.nome}</b> (${dados.cpf}).</p>
-      <p>Os detalhes completos e a ficha de filiação estão anexados como PDF.</p>
-      <p><b>E-mail pessoal (cópia):</b> ${dados.email2}</p>
-      <p><b>Matrícula SIAPE:</b> ${dados.siape}</p>
-      <p><i>Este é um envio automático gerado pelo site do SINPRF-ES.</i></p>
-    `,
+    from: MAIL_FROM || SMTP_USER,
+    to: MAIL_TO_FILIACAO,
+    subject: assunto,
+    text: corpoTexto,
     attachments: pdfBuffer
       ? [
           {
-            filename: `Filiacao_${dados.cpf}.pdf`,
+            filename: 'ficha_filiacao.pdf',
             content: pdfBuffer,
-            contentType: 'application/pdf',
           },
         ]
       : [],
   };
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(
-      `✅ E-mail de filiação enviado com sucesso para ${mailTo} (cópia para ${dados.email2}) – ID: ${info.messageId}`
-    );
-  } catch (emailError) {
-    console.error('❌ ERRO NO ENVIO DO E-MAIL (SMTP):', emailError);
-    throw new Error(`Falha no envio do e-mail. Motivo: ${emailError.message}`);
-  }
+  return transporter
+    .sendMail(mailOptions)
+    .then((info) => {
+      console.log('✅ E-mail de filiação enviado com sucesso:', info.messageId);
+      return info;
+    })
+    .catch((err) => {
+      console.error('💥 Erro ao enviar e-mail de filiação:', err);
+      throw err; // deixa a rota /api/filiese capturar e devolver 500
+    });
 }
+
 
 // ------------------------------------------------------
 // Rotas básicas
@@ -316,10 +333,15 @@ app.post('/api/filiese', async (req, res) => {
       message:
         'Solicitação enviada com sucesso. Você receberá uma cópia no seu e-mail pessoal.',
     });
-  } catch (err) {
-    console.error('💥 Erro em /api/filiese:', err);
+    } catch (err) {
+    console.error('#####################################################');
+    console.error('❌ ERRO CRÍTICO NO PROCESSAMENTO DA FILIAÇÃO (500):');
+    console.error(err); // log completo do erro (stack, mensagem, etc.)
+    console.error('#####################################################');
+
     return res.status(500).json({
-      error: 'Erro interno ao processar sua solicitação de filiação.',
+      error: 'Erro interno ao processar a solicitação de filiação.',
+      detailedMessage: err.message || 'Falha interna. Verifique o log no servidor.',
     });
   }
 });
