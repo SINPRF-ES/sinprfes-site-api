@@ -2,10 +2,10 @@
   "name": "sinprfes-site-api",
   "version": "1.0.0",
   "description": "Site institucional e API base do SINPRF-ES para deploy no Render",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [
     "sinprf-es",

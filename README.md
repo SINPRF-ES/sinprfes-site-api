@@ -1,114 +1,108 @@
-# SINPRF-ES - Site + API Base (Render)
+SINPRF-ES – Sistema de Filiação + Área Restrita + API
 
-Projeto base do site e API do SINPRF-ES, preparado para deploy na plataforma Render.
+Backend oficial do Sindicato dos Policiais Rodoviários Federais do Espírito Santo, incluindo:
 
----
+Site público (HTML + CSS + JS)
 
-## 1. Estrutura do projeto
+API em Node.js (Express)
 
-Arquivos principais:
+Banco PostgreSQL (Railway)
 
-- `index.js` — servidor Express (site + API básica)
-- `package.json` — dependências e scripts (`start` e `dev`)
-- `.env.example` — modelo de variáveis de ambiente
-- `.gitignore` — arquivos que não vão para o Git
-- `render.yaml` — configuração do serviço Web no Render
-- `README.md` — este guia
+Envio de e-mails + PDF automático
 
----
+Autenticação com JWT
 
-## 2. Como usar localmente
+Fluxo de primeiro acesso
 
-1. Instale as dependências:
+Preparado para integração futura com Login do gov.br
 
-   ```bash
-   npm install
-   ```
+🚀 Tecnologias utilizadas
 
-2. Copie o arquivo `.env.example` para `.env` e ajuste os valores:
+Node.js + Express
 
-   ```bash
-   cp .env.example .env
-   ```
+PostgreSQL (Railway)
 
-   - `PORT` — porta local (ex.: 3000)
-   - `DATABASE_URL` — URL do PostgreSQL (se quiser testar `/db-test`)
-   - `DB_SSL` — `true` se o provedor exigir SSL sem validar CA
+PDFKit (geração de PDF)
 
-3. Execute em modo desenvolvimento:
+Nodemailer (SMTP)
 
-   ```bash
-   npm run dev
-   ```
+Bcrypt + JWT
 
-4. Acesse no navegador:
+Arquitetura MVC + Services
 
-   - `http://localhost:3000/`
-   - `http://localhost:3000/health`
-   - `http://localhost:3000/db-test` (se tiver `DATABASE_URL` configurada)
+Hospedagem no Render
 
----
+Site estático via /public
 
-## 3. Scripts disponíveis
+📁 Estrutura da aplicação
 
-- `npm start` — executa `index.js` em modo "produção" (sem recarregar automaticamente)
-- `npm run dev` — executa com `nodemon`, recarregando ao salvar arquivos
+(Lembrete: esta estrutura é importante para organização e manutenção futura.)
 
----
+server.js
+app.js
+public/
+src/
+  controllers/
+  services/
+  middleware/
+  utils/
+  routes/
+scripts/
 
-## 4. Variáveis de ambiente
+⚙️ Como rodar localmente
+1. Instalar dependências
+npm install
 
-- `PORT` — porta do servidor. No Render, é definida automaticamente.
-- `DATABASE_URL` — string de conexão do PostgreSQL.
-- `DB_SSL` — use `true` para serviços que exigem SSL sem validação de certificado.
+2. Criar arquivo .env
+PORT=3000
 
-Exemplo de `DATABASE_URL`:
+DATABASE_URL=postgres://usuario:senha@host:porta/database
 
-```text
-postgres://usuario:senha@host:5432/nome_do_banco
-```
+JWT_SECRET=algumasegurançaforte
 
----
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=sinprfes@sinprfes.org.br
+SMTP_PASS=senha
+MAIL_FROM=sinprfes@sinprfes.org.br
+MAIL_TO_FILIACAO=sinprfes@sinprfes.org.br
 
-## 5. Rotas
+3. Rodar servidor
+node server.js
 
-- `GET /` — página inicial simples, apenas para confirmar que o servidor está rodando.
-- `GET /health` — rota de healthcheck (usada pelo Render para verificar se o serviço está no ar).
-- `GET /db-test` — testa conexão com o PostgreSQL (se `DATABASE_URL` estiver definida).
+📡 Endpoints principais
+Endpoint	Método	Descrição
+/api/primeiro-acesso/iniciar	POST	Inicia fluxo do primeiro acesso
+/api/primeiro-acesso/confirmar	POST	Conclui criação de senha
+/api/login	POST	Login + JWT
+/api/me	GET	Dados do usuário autenticado
+/api/filiese	POST	Solicitação de filiação + PDF + e-mail
+📨 Envio de e-mail + PDF
 
----
+Cada ficha enviada gera:
 
-## 6. Deploy no Render (resumo)
+PDF automático (PDFKit)
 
-1. Crie um repositório no GitHub e envie este projeto para lá.
-2. No painel do Render:
-   - Crie um novo **Web Service** a partir desse repositório.
-   - Confirme:
-     - `buildCommand = npm install`
-     - `startCommand = npm start`
-     - `healthCheckPath = /health`
-3. Configure as variáveis de ambiente no Render (em **Environment**):
-   - `NODE_ENV = production`
-   - `DATABASE_URL` (quando o banco estiver pronto)
-   - `DB_SSL = true` (se o banco exigir)
-4. Após o deploy:
-   - Acesse a URL gerada pelo Render.
-   - Teste as rotas `/`, `/health` e `/db-test`.
+E-mail enviado ao sindicato com anexo
 
----
+Se SMTP não estiver configurado, o sistema registra aviso no console.
 
-## 7. Guia de recuperação rápida (caso a conversa com a IA se perca)
+🔒 Segurança
 
-Se em algum momento você "perder" o histórico da conversa com a IA, basta informar que:
+Hash de senha com Bcrypt
 
-> "Já tenho um projeto chamado `sinprfes-site-api` com os arquivos: `index.js`, `package.json`, `.env.example`, `.gitignore`, `render.yaml` e `README.md`. O projeto foi preparado para deploy no Render, com rota `/health` e `/db-test`, e variáveis de ambiente `DATABASE_URL` e `DB_SSL`."
+JWT com expiração
 
-A partir disso, a IA pode continuar ajudando a:
+2FA opcional (Google Authenticator)
 
-- configurar o banco,
-- montar as tabelas de filiados/usuários,
-- criar rotas da área restrita,
-- ajustar DNS no Cloudflare,
-- e integrar com o domínio `sinprfes.org.br`.
+Preparado para Login gov.br
 
----
+📌 Scripts úteis
+Limpeza
+node scripts/cleanup.js
+
+📞 Suporte
+
+Em caso de dúvidas, fale com o desenvolvedor responsável (Marcelo Fávero Brandão).
+
+FIM DO README
