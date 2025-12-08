@@ -7,8 +7,6 @@ const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const PDFDocument = require('pdfkit');
 const nodemailer = require('nodemailer');
-const { enviarEmailFichaFiliacao } = require("./utils/email");
-const { gerarPdfFichaFiliacao } = require("./utils/pdf");
 
 const pool = require('./db');
 const auth = require('./auth');
@@ -135,7 +133,7 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     text:
       `Nova solicitação de filiação.\n\n` +
       `Nome: ${dados.nome}\nCPF: ${dados.cpf}\nE-mail pessoal: ${dados.email2}\n` +
-      `Telefone: ${dados.telefone1}\nSIAPE: ${dados.siape}\nLotação: ${dados.lotacao}\n`,
+      `Telefone: ${dados.telefone1}\n`,
     attachments: [
       { filename: 'ficha_filiacao.pdf', content: pdfBuffer }
     ]
@@ -168,7 +166,6 @@ app.post("/api/filiese", async (req, res) => {
       aceite_lgpd,
     } = req.body || {};
 
-    // 🔎 Validações
     if (!nome || !cpf || !data_nascimento || !telefone1 || !email1 || !endereco) {
       return res.status(400).json({ error: "Preencha todos os campos obrigatórios." });
     }
@@ -199,32 +196,18 @@ app.post("/api/filiese", async (req, res) => {
       email: dados.email1,
     });
 
-    // ----------- Geração do PDF -----------
     const pdfBuffer = await gerarPdfFichaFiliacao(dados);
-
-    // ----------- Envio do e-mail -----------
     await enviarEmailFichaFiliacao(dados, pdfBuffer);
 
     return res.json({
-      message: "Solicitação enviada! Sua ficha foi enviada ao SINPRF-ES.",
+      message: "Solicitação enviada! Sua ficha foi encaminhada ao SINPRF-ES.",
     });
+
   } catch (err) {
     console.error("💥 Erro em /api/filiese:", err);
     return res.status(500).json({
       error: "Erro interno ao processar sua solicitação.",
     });
-  }
-});
-
-
-    const pdfBuffer = await gerarPdfFichaFiliacao(normalizados);
-    await enviarEmailFichaFiliacao(normalizados, pdfBuffer);
-
-    return res.json({ message: "Solicitação enviada com sucesso." });
-
-  } catch (err) {
-    console.error("❌ ERRO FILIAÇÃO:", err);
-    return res.status(500).json({ error: "Erro interno.", details: err.message });
   }
 });
 
