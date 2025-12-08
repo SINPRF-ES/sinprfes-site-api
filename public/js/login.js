@@ -7,47 +7,118 @@ document.addEventListener("DOMContentLoaded", () => {
   const forgotForm = document.getElementById("forgot-form");
   const forgotMsg = document.getElementById("forgot-mensagem");
 
+  // Campo extra para 2FA (se existir no HTML)
+  const campo2fa = document.getElementById("campo-2fa");
+  const inputToken2fa = document.getElementById("login-token-2fa");
+
   // Util: normaliza CPF
   function normalizarCpf(cpf) {
     return (cpf || "").replace(/\D/g, "");
   }
 
   // ==========================
-  // LOGIN NORMAL
+  // AUTO-REDIRECT SE JÁ ESTIVER LOGADO
+  // ==========================
+  (async () => {
+    const tokenExistente = localStorage.getItem("token");
+    if (!tokenExistente) return;
+
+    try {
+      const resp = await fetch("/api/auth/me", {
+        headers: {
+          Authorization: "Bearer " + tokenExistente,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (resp.ok) {
+        // Token válido → pula o login e vai direto pra área do filiado
+        window.location.href = "/area-filiado.html";
+      } else if (resp.status === 401 || resp.status === 403) {
+        // Token inválido/expirado → limpa e deixa o usuário logar de novo
+        localStorage.removeItem("token");
+        localStorage.removeItem("perfil_acesso");
+      }
+    } catch (err) {
+      console.error("Erro ao verificar sessão existente:", err);
+      // Em caso de erro de rede, apenas não redireciona; o usuário vê o login normalmente
+    }
+  })();
+
+  // ==========================
+  // LOGIN NORMAL + 2FA
   // ==========================
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      loginMsg.textContent = "";
+      if (loginMsg) {
+        loginMsg.textContent = "";
+      }
 
       const cpfInput = document.getElementById("login-cpf");
       const senhaInput = document.getElementById("login-senha");
 
-      const cpf = normalizarCpf(cpfInput.value);
-      const senha = senhaInput.value;
+      const cpf = normalizarCpf(cpfInput ? cpfInput.value : "");
+      const senha = senhaInput ? senhaInput.value : "";
 
       if (!cpf || !senha) {
-        loginMsg.textContent = "Informe CPF e senha.";
+        if (loginMsg) {
+          loginMsg.textContent = "Informe CPF e senha.";
+        }
         return;
       }
 
+      // Monta payload básico
+      const payload = { cpf, senha };
+
+      // Se o campo 2FA estiver visível e preenchido, envia também
+      if (
+        campo2fa &&
+        campo2fa.style.display !== "none" &&
+        inputToken2fa &&
+        inputToken2fa.value.trim() !== ""
+      ) {
+        payload.token_2fa = inputToken2fa.value.trim();
+      }
+
       try {
-        const resp = await fetch("/api/login", {
+        const resp = await fetch("/api/auth/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ cpf, senha }),
+          body: JSON.stringify(payload),
         });
 
-        const data = await resp.json();
+        const data = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
-          loginMsg.textContent = data.error || "Erro ao realizar login.";
+          // Caso em que o backend exige 2FA
+          if (data && data.requires_2fa) {
+            if (campo2fa) {
+              campo2fa.style.display = "block";
+            }
+            if (loginMsg) {
+              loginMsg.textContent =
+                data.error ||
+                "Este usuário possui 2FA habilitado. Informe o código do aplicativo autenticador.";
+            }
+            // Foca no campo de 2FA, se existir
+            if (inputToken2fa) {
+              inputToken2fa.focus();
+            }
+            return;
+          }
+
+          if (loginMsg) {
+            loginMsg.textContent =
+              (data && data.error) ||
+              "Erro ao realizar login. Verifique seus dados e tente novamente.";
+          }
           return;
         }
 
-        // Salva token e perfil no localStorage
+        // Sucesso: salva token e perfil no localStorage
         if (data.token) {
           localStorage.setItem("token", data.token);
         }
@@ -55,11 +126,18 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("perfil_acesso", data.perfil_acesso);
         }
 
+        if (loginMsg) {
+          loginMsg.textContent =
+            data.message || "Login realizado com sucesso. Redirecionando...";
+        }
+
         // Redireciona para área do filiado
         window.location.href = "/area-filiado.html";
       } catch (err) {
         console.error("Erro no login:", err);
-        loginMsg.textContent = "Erro de comunicação com o servidor.";
+        if (loginMsg) {
+          loginMsg.textContent = "Erro de comunicação com o servidor.";
+        }
       }
     });
   }
@@ -70,13 +148,17 @@ document.addEventListener("DOMContentLoaded", () => {
   if (forgotForm) {
     forgotForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      forgotMsg.textContent = "";
+      if (forgotMsg) {
+        forgotMsg.textContent = "";
+      }
 
       const cpfInput = document.getElementById("forgot-cpf");
-      const cpf = normalizarCpf(cpfInput.value);
+      const cpf = normalizarCpf(cpfInput ? cpfInput.value : "");
 
       if (!cpf) {
-        forgotMsg.textContent = "Informe o CPF.";
+        if (forgotMsg) {
+          forgotMsg.textContent = "Informe o CPF.";
+        }
         return;
       }
 
@@ -89,26 +171,34 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ cpf }),
         });
 
-        const data = await resp.json();
+        const data = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
-          forgotMsg.textContent =
-            data.error || "Erro ao solicitar redefinição de senha.";
+          if (forgotMsg) {
+            forgotMsg.textContent =
+              (data && data.error) ||
+              "Erro ao solicitar redefinição de senha.";
+          }
           return;
         }
 
         // Mensagem padrão
-        let msg = data.message || "Solicitação registrada.";
+        let msg =
+          (data && data.message) || "Solicitação registrada.";
 
         // Se o backend devolver o e-mail de destino, inclui na mensagem
-        if (data.email_destino) {
+        if (data && data.email_destino) {
           msg += ` E-mail de destino: ${data.email_destino}.`;
         }
 
-        forgotMsg.textContent = msg;
+        if (forgotMsg) {
+          forgotMsg.textContent = msg;
+        }
       } catch (err) {
         console.error("Erro em esqueci minha senha:", err);
-        forgotMsg.textContent = "Erro de comunicação com o servidor.";
+        if (forgotMsg) {
+          forgotMsg.textContent = "Erro de comunicação com o servidor.";
+        }
       }
     });
   }

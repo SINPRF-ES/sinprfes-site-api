@@ -7,20 +7,35 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 // Rotas existentes
 const primeiroAcessoRoutes = require("./routes/primeiroAcesso.routes");
-const loginRoutes = require("./routes/login.routes");
+const loginRoutes = require("./routes/login.routes"); // ⚠️ login antigo
 const filieseRoutes = require("./routes/filiese.routes");
 const filiadosRoutes = require("./routes/filiados.routes");
-
-// 🔹 NOVA rota de senha
 const senhaRoutes = require("./routes/senha.routes");
 
-// Prefixos
+// 🔹 NOVO: rotas de autenticação (login novo + 2FA + /me)
+const authRoutes = require("./routes/auth.routes");
+
+// ==============================
+// Prefixos de API
+// ==============================
+
+// Primeiro acesso
 app.use("/api/primeiro-acesso", primeiroAcessoRoutes);
+
+// 🔥 Login novo e rotas modernas de autenticação
+app.use("/api/auth", authRoutes);
+
+// 🔥 Opcional: manter login antigo TEMPORARIAMENTE
+// (ideal remover depois para evitar confusão)
 app.use("/api", loginRoutes);
+
+// Filie-se
 app.use("/api", filieseRoutes);
+
+// Dados do filiado
 app.use("/api/filiados", filiadosRoutes);
 
-// 🔹 Aqui:
+// Recuperação e redefinição de senha
 app.use("/api/senha", senhaRoutes);
 
 app.get("/health", (_, res) => {

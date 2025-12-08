@@ -37,7 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <div class="header-actions">
             <a href="/filiese.html" class="btn btn-outline">Filie-se</a>
-            <a href="/login.html" class="btn btn-primary">Área do filiado</a>
+            <!-- 🔽 aqui é a mudança: agora aponta direto para a área do filiado -->
+            <a href="/area-filiado.html" class="btn btn-primary">Área do filiado</a>
           </div>
         </div>
       </header>

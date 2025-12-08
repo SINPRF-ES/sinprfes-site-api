@@ -43,6 +43,27 @@
           />
         </div>
 
+        <!-- CAMPO 2FA (aparece só quando o backend exigir) -->
+        <div
+          class="form-group form-group-full"
+          id="campo-2fa"
+          style="display: none; margin-top: 8px;"
+        >
+          <label for="login-token-2fa">Código de 2FA</label>
+          <input
+            type="text"
+            id="login-token-2fa"
+            name="token_2fa"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            placeholder="123456"
+          />
+          <p class="field-hint">
+            Abra o aplicativo autenticador (Google Authenticator ou similar) e
+            informe o código temporário exibido para o SINPRF-ES.
+          </p>
+        </div>
+
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">
             Entrar
