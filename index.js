@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const PDFDocument = require('pdfkit');
 const nodemailer = require('nodemailer');
+const { enviarEmailFichaFiliacao } = require("./utils/email");
+const { gerarPdfFichaFiliacao } = require("./utils/pdf");
 
 const pool = require('./db');
 const auth = require('./auth');
@@ -147,51 +149,73 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     });
 }
 
-// ------------------------------------------------------
-// ROTA – Filiação
-// ------------------------------------------------------
+// ======================================================
+// ROTA – Solicitação de filiação (filiese.html)
+// ======================================================
 
-app.post('/api/filiese', async (req, res) => {
+app.post("/api/filiese", async (req, res) => {
   try {
-    const dados = req.body || {};
+    const {
+      nome,
+      cpf,
+      data_nascimento,
+      telefone1,
+      telefone2,
+      email1,
+      email2,
+      endereco,
+      aceite_estatuto,
+      aceite_lgpd,
+    } = req.body || {};
 
-    const obrigatorios = [
-      'nome', 'cpf', 'data_nascimento',
-      'telefone1', 'email_pessoal',
-      'endereco', 'bairro', 'cidade',
-      'uf', 'cep', 'siape', 'lotacao'
-    ];
-
-    for (const campo of obrigatorios) {
-      if (!dados[campo] || dados[campo].trim() === '') {
-        return res.status(400).json({ error: `Preencha o campo obrigatório: ${campo}` });
-      }
+    // 🔎 Validações
+    if (!nome || !cpf || !data_nascimento || !telefone1 || !email1 || !endereco) {
+      return res.status(400).json({ error: "Preencha todos os campos obrigatórios." });
     }
 
-    if (!dados.aceite_estatuto || !dados.aceite_lgpd) {
-      return res.status(400).json({ error: 'É necessário aceitar o Estatuto e a LGPD.' });
+    if (!aceite_estatuto || !aceite_lgpd) {
+      return res.status(400).json({
+        error: "Você deve aceitar o Estatuto e a LGPD para continuar.",
+      });
     }
 
-    const normalizados = {
-      nome: dados.nome.trim(),
-      cpf: dados.cpf.trim(),
-      data_nascimento: dados.data_nascimento.trim(),
-      telefone1: dados.telefone1.trim(),
-      telefone2: (dados.telefone2 || "").trim(),
-      email1: (dados.email_funcional || "").trim(),  // funcional
-      email2: (dados.email_pessoal || "").trim(),     // pessoal
-      endereco: dados.endereco.trim(),
-      complemento: (dados.complemento || "").trim(),
-      bairro: dados.bairro.trim(),
-      cidade: dados.cidade.trim(),
-      uf: dados.uf.trim(),
-      cep: dados.cep.trim(),
-      siape: dados.siape.trim(),
-      lotacao: dados.lotacao.trim(),
+    const dados = {
+      nome: nome.trim(),
+      cpf: cpf.trim(),
+      data_nascimento,
+      telefone1,
+      telefone2: telefone2 || "",
+      email1,
+      email2: email2 || "",
+      endereco,
       data_solicitacao: new Date().toISOString(),
       ip: req.ip,
       userAgent: req.headers["user-agent"] || "",
     };
+
+    console.log("📥 Nova solicitação de filiação recebida:", {
+      nome: dados.nome,
+      cpf: dados.cpf,
+      email: dados.email1,
+    });
+
+    // ----------- Geração do PDF -----------
+    const pdfBuffer = await gerarPdfFichaFiliacao(dados);
+
+    // ----------- Envio do e-mail -----------
+    await enviarEmailFichaFiliacao(dados, pdfBuffer);
+
+    return res.json({
+      message: "Solicitação enviada! Sua ficha foi enviada ao SINPRF-ES.",
+    });
+  } catch (err) {
+    console.error("💥 Erro em /api/filiese:", err);
+    return res.status(500).json({
+      error: "Erro interno ao processar sua solicitação.",
+    });
+  }
+});
+
 
     const pdfBuffer = await gerarPdfFichaFiliacao(normalizados);
     await enviarEmailFichaFiliacao(normalizados, pdfBuffer);

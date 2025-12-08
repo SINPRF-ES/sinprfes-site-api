@@ -560,14 +560,10 @@ footer {
 .filiese-page .terms-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 0.95rem;
-  line-height: 1.4;
+  gap: 10px;
+  width: 100%;
 }
 
 .filiese-page .terms-item input[type="checkbox"] {
-  margin-top: 3px;
-  flex-shrink: 0;
+  margin-top: 4px;
 }
-
