@@ -228,7 +228,8 @@ img {
    ========================================================= */
 
 .page-content {
-  margin-top: 10px;
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 .card {
@@ -285,8 +286,55 @@ img {
 .btn-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  justify-content: center;  /* centraliza os botões */
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+/* Layout específico da página de contato */
+.contato-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* ALTERADO DE 1.6fr 1.1fr para dar mais espaço à coluna de contato */
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.contato-acao {
+  border-radius: 12px;
+  border: 1px solid #c9d2dd;
+  padding: 1.5rem 1.7rem;
+
+  background: #f2f6fc; /* fundo suave mas não branco */
+  color: #1a1a1a;
+
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+
+.contato-acao h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.6rem;
+  color: #003366;
+}
+
+.contato-acao p {
+  margin-bottom: 0.75rem;
+}
+
+.contato-divider {
+  border: none;
+  border-top: 1px dashed #c0c7d4;
+  margin: 1rem 0;
+}
+
+.contato-dica {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Responsivo para contato */
+@media (max-width: 768px) {
+  .contato-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* =========================================================
@@ -860,12 +908,6 @@ footer {
 @media (max-width: 768px) {
   .dashboard-layout {
     grid-template-columns: 1fr;
-  }
-
-  .sidebar-menu {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
   }
 
   .sidebar-item {

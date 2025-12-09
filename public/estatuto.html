@@ -5,10 +5,8 @@
   <title>Estatuto – SINPRF-ES</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- CSS global do site -->
   <link rel="stylesheet" href="/css/style.css">
 
-  <!-- Estilos específicos da página de Estatuto -->
   <style>
     html {
       scroll-behavior: smooth;
@@ -17,6 +15,13 @@
     body {
       background-color: #0b1724;
     }
+    
+    /* 1. SOBRESCRITA DA LARGURA DO CONTEÚDO PRINCIPAL (page-content) */
+    /* Remove a limitação de 960px do style.css para esta página */
+    .estatuto-page .page-content {
+        max-width: 100%; 
+    }
+
 
     .estatuto-page {
       padding: 2rem 1rem 3rem;
@@ -25,7 +30,8 @@
     .estatuto-card {
       background-color: #ffffff;
       color: #222222;
-      max-width: 960px;
+      width: 70vw;    /* DEFININDO A LARGURA: 70% da Viewport */
+      max-width: 80%; /* Garante que não use mais que 80% em telas grandes (desktop) */
       margin: 0 auto;
       padding: 2.5rem 2rem 3rem;
       border-radius: 12px;
@@ -61,20 +67,48 @@
       color: #555;
       margin-bottom: 0;
     }
-
-    /* Navegação por TÍTULOS (I, II, III...) */
-    .estatuto-nav {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      margin-top: 1rem;
-      padding: 0.75rem 0.25rem;
-      background: #ffffff;
-      border-bottom: 1px solid #dde3ea;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+    
+    /* Regra para desktop */
+    @media (min-width: 992px) {
+      .estatuto-nav {
+        flex-wrap: nowrap;
+        justify-content: center;
+      }
     }
+
+    /* Barra fixa dos títulos */
+.estatuto-nav {
+  position: fixed;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70vw;    /* DEFININDO A LARGURA: 70% da Viewport, igual ao cartão */
+  max-width: 80%; /* Garante harmonização em limites maiores, se necessário */
+  box-sizing: border-box;
+
+  margin: 0;
+  padding: 0.85rem 2rem;
+
+  background: #c8ddff !important; /* CORRIGIDO: Fundo azul claro */
+  border-bottom: 1px solid #c3d3e8;
+
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 0.5rem;
+  z-index: 1200;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+    /* Em telas grandes, todos em uma linha */
+@media (min-width: 992px) {
+  .estatuto-nav {
+    flex-wrap: nowrap;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
 
     .estatuto-nav-title {
       font-size: 0.8rem;
@@ -84,6 +118,7 @@
       color: #555;
       margin-right: 0.5rem;
       align-self: center;
+      white-space: nowrap;
     }
 
     .estatuto-nav a {
@@ -97,13 +132,16 @@
       color: #ffffff;
       opacity: 0.9;
       white-space: nowrap;
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
     }
 
     .estatuto-nav a:hover {
       opacity: 1;
       transform: translateY(-1px);
     }
-
+    
     /* Documento em si */
     .estatuto-documento {
       margin-top: 1.5rem;
@@ -111,6 +149,9 @@
       line-height: 1.75;
       font-size: 0.96rem;
       color: #222222;
+      /* AJUSTE: Adiciona um padding-top para compensar o espaço da barra fixa de navegação */
+      padding-top: 55px;
+      margin-top: 0;
     }
 
     .estatuto-documento h1 {
@@ -214,17 +255,24 @@
     /* Espaço para o scroll ancorado não ficar escondido sob o nav fixo */
     .estatuto-documento h2,
     .estatuto-documento h3 {
-      scroll-margin-top: 5.5rem;
+      scroll-margin-top: 130px;
     }
 
     /* Responsivo */
     @media (max-width: 768px) {
       .estatuto-card {
         padding: 1.7rem 1.1rem 2.2rem;
+        width: 95%; /* Prioriza largura total no mobile */
+        max-width: 95%; 
       }
 
       .estatuto-nav {
-        padding-right: 0;
+        padding-left: 10px;
+        padding-right: 10px;
+        top: 88px;
+        flex-wrap: wrap;
+        width: 95%; /* Prioriza largura total no mobile */
+        max-width: 95%;
       }
 
       .estatuto-nav a {
@@ -242,12 +290,17 @@
       .estatuto-documento h3 {
         font-size: 0.87rem;
       }
+
+      /* Novo ajuste de scroll margin para mobile */
+      .estatuto-documento h2,
+      .estatuto-documento h3 {
+          scroll-margin-top: 130px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- HEADER DINÂMICO -->
   <div id="site-header"></div>
 
   <div class="container estatuto-page">
@@ -262,22 +315,22 @@
             Texto integral do Estatuto do Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo,
             aprovado em Assembleia Geral Extraordinária em 11 de agosto de 2021.
           </p>
-
-          <nav class="estatuto-nav">
-            <span class="estatuto-nav-title">Ir para:</span>
-            <a href="#titulo1">Título I</a>
-            <a href="#titulo2">Título II</a>
-            <a href="#titulo3">Título III</a>
-            <a href="#titulo4">Título IV</a>
-            <a href="#titulo5">Título V</a>
-            <a href="#titulo6">Título VI</a>
-            <a href="#titulo7">Título VII</a>
-            <a href="#titulo8">Título VIII</a>
-            <a href="#titulo9">Título IX</a>
-            <a href="#titulo10">Título X</a>
-            <a href="#topo-estatuto">Topo</a>
-          </nav>
         </header>
+
+        <nav class="estatuto-nav">
+          <span class="estatuto-nav-title">Ir para:</span>
+          <a href="#titulo1">Título I</a>
+          <a href="#titulo2">Título II</a>
+          <a href="#titulo3">Título III</a>
+          <a href="#titulo4">Título IV</a>
+          <a href="#titulo5">Título V</a>
+          <a href="#titulo6">Título VI</a>
+          <a href="#titulo7">Título VII</a>
+          <a href="#titulo8">Título VIII</a>
+          <a href="#titulo9">Título IX</a>
+          <a href="#titulo10">Título X</a>
+          <a href="#topo-estatuto">Topo</a>
+        </nav>
 
         <article class="estatuto-documento">
           <h1 id="topo-estatuto">Estatuto do Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo</h1>
@@ -289,7 +342,6 @@
             que passa a vigorar com a redação a seguir:
           </div>
 
-          <!-- TÍTULO I -->
           <h2 id="titulo1">TÍTULO I<br>DOS PRINCÍPIOS FUNDAMENTAIS</h2>
 
           <p><span class="artigo">Art. 1º</span> O Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo - SINPRF/ES, unidade sindical de âmbito estadual, integrante do sistema federativo da categoria dos policiais da Polícia Rodoviária Federal, constitui-se em entidade representativa para fins de coordenação, proteção e defesa dos diretos e interesses da classe.</p>
@@ -300,7 +352,6 @@
 
           <p><span class="artigo">Art. 2º</span> O SINPRF/ES reger-se-á pela Constituição da República Federativa do Brasil, pela legislação pertinente, por este Estatuto e pelas normas complementares.</p>
 
-          <!-- TÍTULO II -->
           <h2 id="titulo2">TÍTULO II<br>DA DENOMINAÇÃO, CONSTITUIÇÃO, SEDE, FORO, BASE TERRITORIAL, DURAÇÃO, DISSOLUÇÃO E FINALIDADE</h2>
 
           <h3>CAPÍTULO I<br>DA DENOMINAÇÃO, CONSTITUIÇÃO, SEDE E FORO</h3>
@@ -368,7 +419,6 @@
 
           <div class="paragrafo"><strong>Parágrafo único.</strong> A assistência jurídica será prestada exclusivamente aos sindicalizados em dia com suas obrigações sindicais.</div>
 
-          <!-- TÍTULO III -->
           <h2 id="titulo3">TÍTULO III<br>DA ORGANIZAÇÃO E DA ADMINISTRAÇÃO</h2>
 
           <h3>CAPÍTULO I<br>DA ORGANIZAÇÃO SINDICAL</h3>
@@ -430,7 +480,6 @@
 
           <div class="paragrafo"><strong>§ 4º</strong> A diplomação e a posse dos sindicalizados eleitos para os cargos dos órgãos do sindicato, dar-se-á em Assembleia Geral, que ocorrerá até o dia 1º de fevereiro de cada triênio.</div>
 
-          <!-- TÍTULO IV -->
           <h2 id="titulo4">TÍTULO IV<br>DA ASSEMBLEIA GERAL</h2>
 
           <h3>CAPÍTULO I<br>DOS PODERES E DAS COMPETÊNCIAS</h3>
@@ -513,7 +562,6 @@
 
           <div class="paragrafo"><strong>Parágrafo único.</strong> Na hipótese de Assembleia Geral realizada de forma remota, deverão ser observados os requisitos de identificação do filiado, de segurança da informação e de ampla participação do sindicalizado, e produzirá todos os efeitos legais da assinatura presencial.</div>
 
-          <!-- TÍTULO V -->
           <h2 id="titulo5">TÍTULO V<br>DA DIRETORIA EXECUTIVA</h2>
 
           <h3>CAPÍTULO I<br>DOS PODERES DA DIRETORIA EXECUTIVA</h3>
@@ -685,7 +733,6 @@
 
           <div class="paragrafo"><strong>Parágrafo único.</strong> O Delegado Representante Federativo, e seu respectivo suplente, será inscrito e concorrerá na mesma chapa eleitoral, em conformidade com o Regulamento Eleitoral do Sistema Sindical Federativo.</div>
 
-          <!-- TÍTULO VI -->
           <h2 id="titulo6">TÍTULO VI<br>DO CONSELHO FISCAL</h2>
 
           <h3>CAPÍTULO I<br>DA COMPOSIÇÃO DOS CARGOS DO CONSELHO FISCAL</h3>
@@ -716,7 +763,6 @@
 
           <div class="paragrafo"><strong>Parágrafo único.</strong> As deliberações do Conselho Fiscal deverão ser tomadas por maioria de votos, com a presença obrigatória de todos os membros titulares.</div>
 
-          <!-- TÍTULO VII -->
           <h2 id="titulo7">TÍTULO VII<br>DA VACÂNCIA DOS CARGOS</h2>
 
           <h3>CAPÍTULO I</h3>
@@ -754,7 +800,6 @@
 
           <div class="paragrafo"><strong>Parágrafo único.</strong> Nessa hipótese, serão convocadas eleições dentro do prazo máximo de 90 dias para preenchimento dos cargos vagos.</div>
 
-          <!-- TÍTULO VIII -->
           <h2 id="titulo8">TÍTULO VIII<br>DA GESTÃO FINANCEIRA E PATRIMONIAL</h2>
 
           <h3>CAPÍTULO I<br>DO PATRIMÔNIO E DAS RECEITAS</h3>
@@ -790,7 +835,6 @@
 
           <p><span class="artigo">Art. 58.</span> Em casos urgentes e excepcionais, o Presidente do Sindicato poderá autorizar despesas não previstas no orçamento anual, desde que haja disponibilidade financeira, obedecidas as normas que regem a entidade.</p>
 
-          <!-- TÍTULO IX -->
           <h2 id="titulo9">TÍTULO IX<br>DOS SINDICALIZADOS DA CATEGORIA</h2>
 
           <h3>CAPÍTULO I<br>DOS DIREITOS DOS FILIADOS</h3>
@@ -854,7 +898,6 @@
 
           <p><span class="artigo">Art. 64.</span> Aplicam-se subsidiariamente a este Estatuto, em relação ao processamento de infrações na esfera sindical, as normas procedimentais relativas ao processo administrativo disciplinar dos servidores públicos federais.</p>
 
-          <!-- TÍTULO X -->
           <h2 id="titulo10">TÍTULO X<br>DAS DISPOSIÇÕES GERAIS E TRANSITÓRIAS</h2>
 
           <p><span class="artigo">Art. 65.</span> Serão nulos, de pleno direito, os atos praticados com objetivo de desvirtuar, impedir ou fraudar a aplicação dos preceitos contidos neste Estatuto e na legislação em vigor.</p>
@@ -875,7 +918,7 @@
 
           <p><span class="artigo">Art. 71.</span> As alterações na composição da Diretoria Executiva somente produzirão efeitos a partir do mandato que iniciar-se-á em 1º de fevereiro de 2022.</p>
 
-          <p><span class="artigo">Art. 72.</span> Este Estatuto, devidamente modificado e aprovado pela Assembleia Geral Regional do dia 11 de agosto de 2021, entra em vigor na data de seu registro no órgão competente.</p>
+          <p><span class="artigo">Art. 72.</span> Este Estatuto, devidamente modificado e aprovado pela Assembleia Geral Regional do dia 11 de agosto de 2ado de 2021, entra em vigor na data de seu registro no órgão competente.</p>
 
           <div class="assinaturas">
             <div style="font-style: italic;">Vitória/ES, 11 de agosto de 2021.</div>
@@ -897,7 +940,6 @@
     </main>
   </div>
 
-  <!-- FOOTER DINÂMICO -->
   <div id="site-footer"></div>
 
   <script src="/js/main.js"></script>
