@@ -3,11 +3,12 @@ const pool = require("../config/db");
 const { normalizarCpf } = require("../utils/format");
 
 /**
- * Busca filiado pelo CPF já normalizado (apenas dígitos).
+ * Busca filiado pelo CPF (já normalizando).
+ * Usado em autenticação, primeiro acesso etc.
  */
-async function buscarPorCpf(cpf) {
-  const cpfLimpo = normalizarCpf(cpf);
-  const result = await pool.query(
+async function buscarPorCpf(cpfRaw) {
+  const cpf = normalizarCpf(cpfRaw);
+  const { rows } = await pool.query(
     `
     SELECT
       id,
@@ -19,23 +20,31 @@ async function buscarPorCpf(cpf) {
       email1,
       email2,
       endereco,
+      lotacao,
       situacao,
       senha_hash,
       twofa_secret,
-      perfil_acesso
+      ultimo_acesso,
+      criado_em,
+      atualizado_em,
+      perfil_acesso,
+      avatar_url,
+      bloqueado
     FROM filiados
     WHERE cpf = $1
-    `,
-    [cpfLimpo]
+    LIMIT 1
+  `,
+    [cpf]
   );
-  return result.rows[0] || null;
+
+  return rows[0] || null;
 }
 
 /**
  * Busca filiado pelo ID.
  */
 async function buscarPorId(id) {
-  const result = await pool.query(
+  const { rows } = await pool.query(
     `
     SELECT
       id,
@@ -47,32 +56,55 @@ async function buscarPorId(id) {
       email1,
       email2,
       endereco,
+      lotacao,
       situacao,
       senha_hash,
       twofa_secret,
-      perfil_acesso
+      ultimo_acesso,
+      criado_em,
+      atualizado_em,
+      perfil_acesso,
+      avatar_url,
+      bloqueado
     FROM filiados
     WHERE id = $1
-    `,
+    LIMIT 1
+  `,
     [id]
   );
-  return result.rows[0] || null;
+
+  return rows[0] || null;
 }
 
 /**
- * Atualiza dados no primeiro acesso (confirmação).
+ * Atualiza o campo ultimo_acesso do filiado.
  */
-async function atualizarPrimeiroAcesso(id, cpf, dadosAtualizar) {
-  const {
-    telefone1,
-    telefone2,
-    email1,
-    email2,
-    endereco,
-    senha_hash,
-  } = dadosAtualizar;
+async function registrarUltimoAcesso(id) {
+  await pool.query(
+    `
+    UPDATE filiados
+    SET ultimo_acesso = NOW()
+    WHERE id = $1
+  `,
+    [id]
+  );
+}
 
-  const result = await pool.query(
+/**
+ * Atualiza dados básicos do próprio filiado ("Meus dados").
+ * Campos permitidos: telefone1, telefone2, email1, email2, endereco, lotacao.
+ */
+async function atualizarDadosProprios(id, dados) {
+  const {
+    telefone1 = null,
+    telefone2 = null,
+    email1 = null,
+    email2 = null,
+    endereco = null,
+    lotacao = null,
+  } = dados;
+
+  const { rows } = await pool.query(
     `
     UPDATE filiados
     SET
@@ -81,55 +113,121 @@ async function atualizarPrimeiroAcesso(id, cpf, dadosAtualizar) {
       email1    = $3,
       email2    = $4,
       endereco  = $5,
-      senha_hash = $6,
+      lotacao   = $6,
       atualizado_em = NOW()
-    WHERE id = $7 AND cpf = $8
-    RETURNING id, nome, cpf, perfil_acesso, situacao
-    `,
-    [telefone1, telefone2, email1, email2, endereco, senha_hash, id, cpf]
+    WHERE id = $7
+    RETURNING
+      id,
+      nome,
+      cpf,
+      data_nascimento,
+      telefone1,
+      telefone2,
+      email1,
+      email2,
+      endereco,
+      lotacao,
+      situacao,
+      perfil_acesso,
+      avatar_url,
+      bloqueado,
+      ultimo_acesso,
+      criado_em,
+      atualizado_em
+  `,
+    [telefone1, telefone2, email1, email2, endereco, lotacao, id]
   );
 
-  return result.rows[0] || null;
+  return rows[0] || null;
 }
 
 /**
- * Atualiza segredo 2FA.
+ * Atualização completa de um filiado (usada por ADMIN / DIRETORIA / FUNCIONARIO).
+ * Aqui já deve chegar algo filtrado pela controller quanto aos campos permitidos.
  */
-async function salvarTwoFaSecret(id, secretBase32) {
-  const result = await pool.query(
-    `
+async function atualizarFiliadoPorId(id, dados) {
+  const campos = [];
+  const valores = [];
+  let idx = 1;
+
+  function addCampo(campoSql, valor) {
+    campos.push(`${campoSql} = $${idx}`);
+    valores.push(valor);
+    idx++;
+  }
+
+  if (dados.nome !== undefined) addCampo("nome", dados.nome);
+  if (dados.cpf !== undefined) addCampo("cpf", normalizarCpf(dados.cpf));
+  if (dados.data_nascimento !== undefined)
+    addCampo("data_nascimento", dados.data_nascimento);
+  if (dados.telefone1 !== undefined) addCampo("telefone1", dados.telefone1);
+  if (dados.telefone2 !== undefined) addCampo("telefone2", dados.telefone2);
+  if (dados.email1 !== undefined) addCampo("email1", dados.email1);
+  if (dados.email2 !== undefined) addCampo("email2", dados.email2);
+  if (dados.endereco !== undefined) addCampo("endereco", dados.endereco);
+  if (dados.lotacao !== undefined) addCampo("lotacao", dados.lotacao);
+  if (dados.situacao !== undefined) addCampo("situacao", dados.situacao);
+  if (dados.perfil_acesso !== undefined)
+    addCampo("perfil_acesso", dados.perfil_acesso);
+
+  if (!campos.length) {
+    return await buscarPorId(id);
+  }
+
+  // campo de auditoria
+  campos.push(`atualizado_em = NOW()`);
+
+  valores.push(id);
+  const sql = `
     UPDATE filiados
-    SET twofa_secret = $1, atualizado_em = NOW()
-    WHERE id = $2
-    RETURNING id, nome, cpf, perfil_acesso
-    `,
-    [secretBase32, id]
-  );
-  return result.rows[0] || null;
+    SET ${campos.join(", ")}
+    WHERE id = $${idx}
+    RETURNING
+      id,
+      nome,
+      cpf,
+      data_nascimento,
+      telefone1,
+      telefone2,
+      email1,
+      email2,
+      endereco,
+      lotacao,
+      situacao,
+      perfil_acesso,
+      avatar_url,
+      bloqueado,
+      ultimo_acesso,
+      criado_em,
+      atualizado_em
+  `;
+
+  const { rows } = await pool.query(sql, valores);
+  return rows[0] || null;
 }
 
 /**
- * Atualiza último acesso.
+ * Lista filiados de acordo com o perfil de acesso.
+ *  - ADMIN/DIRETORIA/FUNCIONARIO: vê tudo
+ *  - FILIADO: vê apenas nome + telefone1 dos demais
  */
-async function registrarUltimoAcesso(id) {
-  await pool.query(
-    `
-    UPDATE filiados
-    SET ultimo_acesso = NOW()
-    WHERE id = $1
-    `,
-    [id]
-  );
-}
+async function listarParaPerfil(perfilAcesso, termoBusca = "") {
+  const filtro = termoBusca.trim();
+  let whereClause = "";
+  const params = [];
 
-/**
- * Lista filiados conforme perfil de acesso.
- * - FILIADO: apenas nome + telefone1 dos outros
- * - DIRETORIA / FUNCIONARIO / ADMIN: dados completos
- */
-async function listarParaPerfil(perfil) {
-  if (perfil === "DIRETORIA" || perfil === "FUNCIONARIO" || perfil === "ADMIN") {
-    const result = await pool.query(
+  if (filtro) {
+    params.push(`%${filtro.toLowerCase()}%`);
+    params.push(`%${filtro.toLowerCase()}%`);
+    whereClause = `
+      WHERE LOWER(nome) LIKE $1
+         OR REPLACE(cpf, '.', '') LIKE REPLACE($2, '.', '')
+    `;
+  }
+
+  // Quem pode ver tudo
+  if (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAcesso)) {
+    const { rows } = await pool.query(
       `
       SELECT
         id,
@@ -140,54 +238,101 @@ async function listarParaPerfil(perfil) {
         email1,
         email2,
         endereco,
+        lotacao,
         situacao,
         perfil_acesso
       FROM filiados
-      ORDER BY nome
-      `
+      ${whereClause}
+      ORDER BY nome ASC
+    `,
+      params
     );
-    return result.rows;
+
+    return rows;
   }
 
-  // Perfil normal
-  const result = await pool.query(
+  // FILIADO: visão reduzida
+  const { rows } = await pool.query(
     `
     SELECT
       id,
       nome,
       telefone1
     FROM filiados
-    WHERE situacao = 'Ativo'
-    ORDER BY nome
-    `
+    ${whereClause}
+    ORDER BY nome ASC
+  `,
+    params
   );
-  return result.rows;
+
+  return rows;
 }
 
 /**
- * Atualiza dados de contato de um filiado (telefones, e-mails, endereço).
- * Usado para o próprio filiado ou atualização limitada.
+ * Cria um novo filiado a partir do painel (ADMIN/DIRETORIA/FUNCIONARIO).
+ * Se não for ADMIN, força perfil_acesso = 'FILIADO'.
  */
-async function atualizarDadosContato(id, dados) {
+async function criarFiliadoInicial(dados, perfilCriador) {
+  const perfilUpper = (perfilCriador || "").toUpperCase();
+
+  let perfilNovo = (dados.perfil_acesso || "FILIADO").toUpperCase();
+  if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilUpper)) {
+    throw new Error("Perfil não autorizado para criar filiados.");
+  }
+
+  if (perfilUpper !== "ADMIN") {
+    // Diretoria/funcionário só podem criar FILIADO
+    perfilNovo = "FILIADO";
+  } else {
+    if (!["FILIADO", "FUNCIONARIO", "DIRETORIA", "ADMIN"].includes(perfilNovo)) {
+      perfilNovo = "FILIADO";
+    }
+  }
+
+  const cpfNormalizado = normalizarCpf(dados.cpf);
+
+  // Verifica se já existe CPF
+  const { rows: jaExiste } = await pool.query(
+    "SELECT id FROM filiados WHERE cpf = $1 LIMIT 1",
+    [cpfNormalizado]
+  );
+  if (jaExiste.length) {
+    const err = new Error("Já existe um filiado com este CPF.");
+    err.code = "CPF_DUPLICADO";
+    throw err;
+  }
+
   const {
+    nome,
+    data_nascimento = null,
     telefone1 = null,
     telefone2 = null,
     email1 = null,
     email2 = null,
     endereco = null,
+    lotacao = "SEDE",
   } = dados;
 
-  const result = await pool.query(
+  const { rows } = await pool.query(
     `
-    UPDATE filiados
-    SET
-      telefone1   = COALESCE($1, telefone1),
-      telefone2   = COALESCE($2, telefone2),
-      email1      = COALESCE($3, email1),
-      email2      = COALESCE($4, email2),
-      endereco    = COALESCE($5, endereco),
-      atualizado_em = NOW()
-    WHERE id = $6
+    INSERT INTO filiados
+      (nome, cpf, data_nascimento,
+       telefone1, telefone2,
+       email1, email2,
+       endereco, lotacao,
+       situacao,
+       perfil_acesso,
+       criado_em, atualizado_em,
+       bloqueado)
+    VALUES
+      ($1, $2, $3,
+       $4, $5,
+       $6, $7,
+       $8, $9,
+       $10,
+       $11,
+       NOW(), NOW(),
+       false)
     RETURNING
       id,
       nome,
@@ -198,87 +343,39 @@ async function atualizarDadosContato(id, dados) {
       email1,
       email2,
       endereco,
-      situacao,
-      perfil_acesso
-    `,
-    [telefone1, telefone2, email1, email2, endereco, id]
-  );
-
-  return result.rows[0] || null;
-}
-
-/**
- * Atualiza dados completos de um filiado.
- * Usado por DIRETORIA / FUNCIONARIO / ADMIN.
- */
-async function atualizarDadosCompleto(id, dados) {
-  const {
-    nome,
-    cpf,
-    data_nascimento,
-    telefone1,
-    telefone2,
-    email1,
-    email2,
-    endereco,
-    situacao,
-    perfil_acesso,
-  } = dados;
-
-  const result = await pool.query(
-    `
-    UPDATE filiados
-    SET
-      nome            = $1,
-      cpf             = $2,
-      data_nascimento = $3,
-      telefone1       = $4,
-      telefone2       = $5,
-      email1          = $6,
-      email2          = $7,
-      endereco        = $8,
-      situacao        = $9,
-      perfil_acesso   = $10,
-      atualizado_em   = NOW()
-    WHERE id = $11
-    RETURNING
-      id,
-      nome,
-      cpf,
-      data_nascimento,
-      telefone1,
-      telefone2,
-      email1,
-      email2,
-      endereco,
-      situacao,
-      perfil_acesso
-    `,
-    [
-      nome,
-      cpf,
-      data_nascimento,
-      telefone1,
-      telefone2,
-      email1,
-      email2,
-      endereco,
+      lotacao,
       situacao,
       perfil_acesso,
-      id,
+      avatar_url,
+      bloqueado,
+      ultimo_acesso,
+      criado_em,
+      atualizado_em
+  `,
+    [
+      nome,
+      cpfNormalizado,
+      data_nascimento,
+      telefone1,
+      telefone2,
+      email1,
+      email2,
+      endereco,
+      lotacao,
+      dados.situacao || "ATIVO",
+      perfilNovo,
     ]
   );
 
-  return result.rows[0] || null;
+  return rows[0];
 }
 
 module.exports = {
   buscarPorCpf,
   buscarPorId,
-  atualizarPrimeiroAcesso,
-  salvarTwoFaSecret,
   registrarUltimoAcesso,
+  atualizarDadosProprios,
+  atualizarFiliadoPorId,
   listarParaPerfil,
-  atualizarDadosContato,
-  atualizarDadosCompleto,
+  criarFiliadoInicial,
 };

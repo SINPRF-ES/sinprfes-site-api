@@ -85,6 +85,7 @@
         </section>
 
         <!-- ================== FILIADOS ================== -->
+                <!-- ================== FILIADOS ================== -->
         <section id="sec-filiados" class="af-section" aria-hidden="true">
           <div class="section-card">
             <h2 class="section-title">
@@ -95,6 +96,17 @@
               Consulte outros filiados. Você verá somente os dados permitidos para o seu perfil.
             </p>
 
+            <!-- Tutorial agora fica no topo -->
+            <div id="tutorial-diretoria" class="af-tutorial" hidden>
+              <h3 class="section-subtitle">Dica rápida para Diretoria</h3>
+              <p class="field-hint">
+                Como diretoria/funcionário, você pode editar os dados de qualquer filiado.
+                Clique em “Ver / editar dados completos”. Campos com fundo destacado
+                indicam que somente o perfil <strong>ADMIN</strong> pode alterar.
+              </p>
+            </div>
+
+            <!-- Busca + botão de novo filiado -->
             <div class="section-box">
               <div class="field-row">
                 <div class="field-group">
@@ -108,20 +120,19 @@
                     A busca ignora maiúsculas/minúsculas e pontuação do CPF.
                   </p>
                 </div>
+                <div class="field-group" style="align-self:flex-end; text-align:right;">
+                  <button type="button" id="btn-novo-filiado" class="btn btn-primary">
+                    Cadastrar novo filiado
+                  </button>
+                </div>
               </div>
             </div>
 
+            <!-- Aqui entra o formulário de novo filiado quando acionado -->
+            <div id="novo-filiado-container"></div>
+
             <div id="lista-filiados" class="af-lista-filiados" style="margin-top: 16px;">
               Carregando lista de filiados...
-            </div>
-
-            <div id="tutorial-diretoria" class="af-tutorial" hidden>
-              <h3 class="section-subtitle">Dica rápida para Diretoria</h3>
-              <p class="field-hint">
-                Como diretoria/funcionário, você pode editar os dados de qualquer filiado.
-                Clique no ícone de edição ao lado do nome. Campos com fundo destacado
-                indicam que somente o perfil <strong>ADMIN</strong> pode alterar.
-              </p>
             </div>
           </div>
         </section>

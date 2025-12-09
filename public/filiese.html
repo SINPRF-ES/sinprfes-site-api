@@ -17,14 +17,23 @@
     <h1>Filie-se ao SINPRF-ES</h1>
     <p class="page-intro">
       Preencha os dados abaixo para solicitar sua filiação ao Sindicato dos Policiais Rodoviários Federais
-      no Espírito Santo. Após o envio, sua solicitação será analisada e a secretaria entrará em contato.
+      no Espírito Santo. Após o envio, você receberá por e-mail um PDF com o pedido de filiação.
+    </p>
+
+    <p class="field-hint" style="margin-bottom: 16px;">
+      <strong>Importante:</strong> após receber o PDF, acesse
+      <a href="https://www.gov.br/governodigital/pt-br/identidade/assinatura-eletronica" target="_blank" rel="noopener noreferrer">
+        o portal de assinatura eletrônica do Gov.br
+      </a>,
+      assine o documento gerado e encaminhe o PDF assinado para
+      <strong>sinprfes@sinprfes.org.br</strong>.
     </p>
 
     <section class="form-card">
       <h2>1. Dados do servidor</h2>
 
       <form id="filiese-form">
-        <!-- DADOS PESSOAIS -->
+        <!-- DADOS PESSOAIS ENXUTOS -->
         <div class="form-grid">
           <div class="form-group">
             <label for="nome">Nome completo *</label>
@@ -34,25 +43,6 @@
               name="nome"
               autocomplete="name"
               required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="nacionalidade">Nacionalidade</label>
-            <input
-              type="text"
-              id="nacionalidade"
-              name="nacionalidade"
-              autocomplete="country-name"
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="estado_civil">Estado civil</label>
-            <input
-              type="text"
-              id="estado_civil"
-              name="estado_civil"
             >
           </div>
 
@@ -80,15 +70,6 @@
           </div>
 
           <div class="form-group">
-            <label for="rg">RG</label>
-            <input
-              type="text"
-              id="rg"
-              name="rg"
-            >
-          </div>
-
-          <div class="form-group">
             <label for="siape">Matrícula SIAPE *</label>
             <input
               type="text"
@@ -96,26 +77,6 @@
               name="siape"
               autocomplete="off"
               required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="lotacao">Lotação atual *</label>
-            <input
-              type="text"
-              id="lotacao"
-              name="lotacao"
-              autocomplete="organization"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="grau_instrucao">Grau de instrução</label>
-            <input
-              type="text"
-              id="grau_instrucao"
-              name="grau_instrucao"
             >
           </div>
         </div>
@@ -147,16 +108,6 @@
           </div>
 
           <div class="form-group">
-            <label for="email_funcional">E-mail funcional</label>
-            <input
-              type="email"
-              id="email_funcional"
-              name="email_funcional"
-              autocomplete="email"
-            >
-          </div>
-
-          <div class="form-group">
             <label for="email_pessoal">E-mail pessoal *</label>
             <input
               type="email"
@@ -166,21 +117,54 @@
               required
             >
           </div>
+
+          <div class="form-group">
+            <label for="email_funcional">E-mail funcional</label>
+            <input
+              type="email"
+              id="email_funcional"
+              name="email_funcional"
+              autocomplete="email"
+            >
+          </div>
         </div>
 
         <hr class="form-separator">
 
-        <!-- ENDEREÇO -->
+        <!-- ENDEREÇO (CEP + COMPLEMENTO) -->
         <h2>3. Endereço residencial</h2>
         <div class="form-grid">
+          <div class="form-group">
+            <label for="cep">CEP *</label>
+            <div style="display:flex; gap:8px;">
+              <input
+                type="text"
+                id="cep"
+                name="cep"
+                placeholder="00000000"
+                autocomplete="postal-code"
+                required
+                style="flex:1;"
+              >
+              <button type="button" id="btn-buscar-cep" class="btn btn-outline" style="white-space:nowrap;">
+                Buscar CEP
+              </button>
+            </div>
+            <p class="field-hint">
+              Digite o CEP (apenas números) e clique em "Buscar CEP" para preencher logradouro, cidade e UF.
+            </p>
+          </div>
+
           <div class="form-group form-group-full">
-            <label for="endereco">Endereço completo *</label>
+            <label for="endereco">Logradouro / Bairro *</label>
             <input
               type="text"
               id="endereco"
               name="endereco"
+              placeholder="Será preenchido pelo CEP"
               autocomplete="street-address"
               required
+              readonly
             >
           </div>
 
@@ -190,16 +174,7 @@
               type="text"
               id="complemento"
               name="complemento"
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="bairro">Bairro *</label>
-            <input
-              type="text"
-              id="bairro"
-              name="bairro"
-              required
+              placeholder="Apto, bloco, referência..."
             >
           </div>
 
@@ -211,63 +186,26 @@
               name="cidade"
               autocomplete="address-level2"
               required
+              readonly
             >
           </div>
 
           <div class="form-group">
             <label for="uf">UF *</label>
-            <select
-              id="uf"
-              name="uf"
-              required
-            >
-              <option value="">Selecione</option>
-              <option value="AC">AC</option>
-              <option value="AL">AL</option>
-              <option value="AP">AP</option>
-              <option value="AM">AM</option>
-              <option value="BA">BA</option>
-              <option value="CE">CE</option>
-              <option value="DF">DF</option>
-              <option value="ES">ES</option>
-              <option value="GO">GO</option>
-              <option value="MA">MA</option>
-              <option value="MT">MT</option>
-              <option value="MS">MS</option>
-              <option value="MG">MG</option>
-              <option value="PA">PA</option>
-              <option value="PB">PB</option>
-              <option value="PR">PR</option>
-              <option value="PE">PE</option>
-              <option value="PI">PI</option>
-              <option value="RJ">RJ</option>
-              <option value="RN">RN</option>
-              <option value="RS">RS</option>
-              <option value="RO">RO</option>
-              <option value="RR">RR</option>
-              <option value="SC">SC</option>
-              <option value="SP">SP</option>
-              <option value="SE">SE</option>
-              <option value="TO">TO</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="cep">CEP *</label>
             <input
               type="text"
-              id="cep"
-              name="cep"
-              placeholder="00000-000"
-              autocomplete="postal-code"
+              id="uf"
+              name="uf"
+              maxlength="2"
               required
+              readonly
             >
           </div>
         </div>
 
         <hr class="form-separator">
 
-        <!-- CÔNJUGE -->
+        <!-- CÔNJUGE (OPCIONAL) -->
         <h2>4. Cônjuge (opcional)</h2>
         <div class="form-grid">
           <div class="form-group">
@@ -289,7 +227,7 @@
           </div>
         </div>
 
-        <!-- DEPENDENTES -->
+        <!-- DEPENDENTES (OPCIONAIS) -->
         <h2>5. Dependentes (opcional)</h2>
         <p class="field-hint">
           Preencha apenas se desejar registrar dependentes para fins de cadastro interno.

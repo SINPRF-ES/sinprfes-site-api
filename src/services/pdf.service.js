@@ -40,7 +40,7 @@ function sanitizeForPdf(text) {
     "\u2018": "'", // ‘
     "\u2019": "'", // ’
     "\u201c": '"', // “
-    "\u201d": '"', // ”
+    "\u201d": '"', // ” 
     "\u2022": "-", // •
     "\u00a0": " ", // NBSP (espaço não quebrável)
   };
@@ -68,7 +68,6 @@ function sanitizeForPdf(text) {
 
   return s;
 }
-
 
 function gerarCodigoVerificacao(dados, tipo) {
   if (dados.codigoVerificacao) return dados.codigoVerificacao;
@@ -157,7 +156,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       });
     }
 
-        // Linha de topo de cabecalho (mesmo nivel para logo e QR)
+    // Linha de topo de cabecalho (mesmo nivel para logo e QR)
     let headerTopY = height - margin;
 
     // Cabecalho com brasao pequeno no topo esquerdo
@@ -175,7 +174,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       });
     }
 
-        // Titulo institucional (apenas 1a pagina)
+    // Titulo institucional (apenas 1a pagina)
     if (idx === 0) {
       const title1 = "Sindicato dos Policiais Rodoviarios Federais";
       const title2 = "no Estado do Espirito Santo";
@@ -205,7 +204,6 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
         size: 9,
       });
     }
-
 
     // Rodapé com informações de contato (sem travessão unicode)
     const footerLines = [
@@ -238,7 +236,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       size: 8,
     });
 
-      // QR code e codigo de verificacao apenas na primeira pagina
+    // QR code e codigo de verificacao apenas na primeira pagina
     if (idx === 0 && qrImage) {
       const qrSize = 70;
 
@@ -296,10 +294,9 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
 function gerarPdfFichaFiliacao(dados) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
-  size: "A4",
-  margins: { top: 140, bottom: 70, left: 70, right: 70 },
-});
-
+      size: "A4",
+      margins: { top: 140, bottom: 70, left: 70, right: 70 },
+    });
 
     const chunks = [];
     doc.on("data", (chunk) => chunks.push(chunk));
@@ -318,51 +315,95 @@ function gerarPdfFichaFiliacao(dados) {
     });
     doc.on("error", reject);
 
-    // Conteudo principal
-// Move um pouco para baixo para nao brigar com o cabecalho institucional
-doc.moveDown(2);
+    // ---------------- Conteudo principal ----------------
+    // Move um pouco para baixo para nao brigar com o cabecalho institucional
+    doc.moveDown(2);
 
-doc.font("Helvetica-Bold").fontSize(16).text("Ficha de Filiacao", {
-  align: "center",
-});
-doc.moveDown(1);
-
-
-    linha(doc);
-
-    doc.font("Helvetica").fontSize(12);
-    doc.text(`Nome: ${dados.nome || ""}`).moveDown(0.2);
-    doc.text(`CPF: ${dados.cpf || ""}`).moveDown(0.2);
-    doc.text(`Matricula: ${dados.matricula || ""}`).moveDown(0.2);
-    doc.text(`Lotacao: ${dados.lotacao || ""}`).moveDown(0.8);
+    doc.font("Helvetica-Bold").fontSize(16).text("Ficha de Filiacao", {
+      align: "center",
+    });
+    doc.moveDown(1);
 
     linha(doc);
 
-    doc
-      .fontSize(11)
-      .text(
-        "Os demais dados informados no formulario eletronico foram recebidos e registrados no sistema do SINPRF/ES.",
-        { align: "justify" }
-      )
-      .moveDown(1);
+    // Dados basicos do servidor
+    doc.font("Helvetica-Bold").fontSize(12).text("Dados do servidor:");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
 
-    doc
-      .fontSize(11)
-      .text(
-        "Assinado eletronicamente mediante uso de login e senha pessoais, nos termos do art. 10, § 2o, da MP nº 2.200-2/2001.",
-        { align: "justify" }
-      )
-      .moveDown(1);
+    const nome = sanitizeForPdf(dados.nome || "");
+    const cpf = sanitizeForPdf(dados.cpf || "");
+    const matricula =
+      sanitizeForPdf(dados.matricula || dados.siape || "");
+    const lotacao = sanitizeForPdf(dados.lotacao || "");
+
+    doc.text(`Nome: ${nome}`).moveDown(0.2);
+    doc.text(`CPF: ${cpf}`).moveDown(0.2);
+    doc.text(`Matricula SIAPE: ${matricula}`).moveDown(0.2);
+    if (lotacao) {
+      doc.text(`Lotacao: ${lotacao}`).moveDown(0.8);
+    } else {
+      doc.moveDown(0.6);
+    }
 
     linha(doc);
+
+    // Orientacoes para assinatura via Gov.br
+    doc.font("Helvetica-Bold").fontSize(12).text("Orientacoes para assinatura e envio:");
+    doc.moveDown(0.5);
+
+    doc.font("Helvetica").fontSize(11).text(
+      "Este documento foi gerado a partir dos dados informados no formulario eletronico de filiacao ao SINPRF-ES.",
+      { align: "justify" }
+    );
+    doc.moveDown(0.5);
+
+    doc.text(
+      "Para concluir o processo de filiacao, o(a) servidor(a) devera:",
+      { align: "justify" }
+    );
+    doc.moveDown(0.5);
+
+    doc.text(
+      "1) Acessar o portal de assinatura eletronica do Gov.br (https://www.gov.br/governodigital/pt-br/identidade/assinatura-eletronica);",
+      { align: "justify" }
+    );
+    doc.moveDown(0.3);
+
+    doc.text(
+      "2) Assinar eletronicamente este PDF;",
+      { align: "justify" }
+    );
+    doc.moveDown(0.3);
+
+    doc.text(
+      "3) Encaminhar o documento assinado para o e-mail sinprfes@sinprfes.org.br.",
+      { align: "justify" }
+    );
+    doc.moveDown(1);
+
+    linha(doc);
+
+    doc.font("Helvetica").fontSize(10).text(
+      "As informacoes completas prestadas no formulario online foram recebidas e registradas nos sistemas internos do SINPRF-ES.",
+      { align: "justify" }
+    );
+    doc.moveDown(1);
+
+    linha(doc);
+
+    // Rodape tecnico com IP / User-Agent
+    const ip = dados.ip || "-";
+    const ua = dados.userAgent || "-";
+    const cpfLog = dados.cpf || "-";
 
     doc
       .fontSize(8)
       .fillColor("#666")
       .text(
-        `IP de origem: ${dados.ip || "-"}  |  User-Agent: ${
-          dados.userAgent || "-"
-        }  |  CPF: ${dados.cpf || "-"}`
+        sanitizeForPdf(
+          `IP de origem: ${ip}  |  User-Agent: ${ua}  |  CPF: ${cpfLog}`
+        )
       );
 
     doc.end();
@@ -378,9 +419,9 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
   // 1) Gera o PDF principal com PDFKit
   const pdfPrincipalBuffer = await new Promise((resolve, reject) => {
     const doc = new PDFDocument({
-  size: "A4",
-  margins: { top: 140, bottom: 70, left: 70, right: 70 },
-});
+      size: "A4",
+      margins: { top: 140, bottom: 70, left: 70, right: 70 },
+    });
 
     const chunks = [];
 
@@ -389,17 +430,16 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
     doc.on("error", reject);
 
     // Titulo
-// Move um pouco para baixo para nao brigar com o cabecalho institucional
-doc.moveDown(2);
+    // Move um pouco para baixo para nao brigar com o cabecalho institucional
+    doc.moveDown(2);
 
-doc
-  .font("Helvetica-Bold")
-  .fontSize(16)
-  .text("Pedido de Ressarcimento", {
-    align: "center",
-  });
-doc.moveDown(1);
-
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(16)
+      .text("Pedido de Ressarcimento", {
+        align: "center",
+      });
+    doc.moveDown(1);
 
     linha(doc);
 

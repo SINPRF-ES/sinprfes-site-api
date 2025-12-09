@@ -1,11 +1,9 @@
 // src/services/email.service.js
-// ============================================================
-// Responsável por envio de e-mails de Filiação e Ressarcimento
-// ============================================================
-
 const nodemailer = require("nodemailer");
 
-// Cria transporter SMTP
+/**
+ * Cria transporter compartilhado.
+ */
 function criarTransporter() {
   const {
     SMTP_HOST,
@@ -14,23 +12,32 @@ function criarTransporter() {
     SMTP_PASS,
   } = process.env;
 
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-    throw new Error("❌ Config SMTP incompleta nas variáveis de ambiente.");
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    console.log("⚠️ SMTP não configurado corretamente; não será enviado e-mail.");
+    throw new Error("SMTP não configurado.");
   }
+
+  const portNumber = Number(SMTP_PORT) || 587;
+  const isSecure = portNumber === 465;
 
   return nodemailer.createTransport({
     host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
+    port: portNumber,
+    secure: isSecure,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 20000,
+    socketTimeout: 20000,
   });
 }
 
 /**
- * Envia e-mail de Filiação com PDF anexo
+ * Envia o e-mail para o sindicato com a ficha de filiação em PDF anexa.
  */
 async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
   const {
@@ -127,7 +134,57 @@ O PDF em anexo contém:
   console.log("📧 E-mail de ressarcimento enviado. MessageId:", info.messageId);
 }
 
+/**
+ * E-mail de boas-vindas para novo filiado criado no painel.
+ * Orienta a usar "Esqueci minha senha" para definir a senha.
+ */
+async function enviarEmailBoasVindasFiliado(dados) {
+  const { MAIL_FROM } = process.env;
+
+  if (!MAIL_FROM) {
+    console.log("⚠️ MAIL_FROM não configurado; não será enviado e-mail de boas-vindas.");
+    return;
+  }
+
+  if (!dados.email1) {
+    console.log("⚠️ Novo filiado sem email1; não será enviado e-mail de boas-vindas.");
+    return;
+  }
+
+  const transporter = criarTransporter();
+
+  const primeiroNome = (dados.nome || "").split(" ")[0] || "Colega";
+  const subject = `Bem-vindo ao SINPRF-ES – acesso à Área do Filiado`;
+
+  const corpo = `
+Olá, ${primeiroNome}!
+
+Seu cadastro foi criado no sistema do SINPRF-ES.
+
+Para definir sua senha de acesso à Área do Filiado, siga estes passos:
+
+1) Acesse https://sinprfes.org.br/login.html
+2) Clique em "Esqueci minha senha".
+3) Informe seu CPF ${dados.cpf || ""} e siga as instruções enviadas ao seu e-mail.
+
+Qualquer dúvida, fale com a secretaria do sindicato.
+
+SINPRF-ES
+`;
+
+  const mailOptions = {
+    from: MAIL_FROM,
+    to: dados.email1,
+    subject,
+    text: corpo,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log("📧 E-mail de boas-vindas enviado. MessageId:", info.messageId);
+}
+
 module.exports = {
   enviarEmailFichaFiliacao,
   enviarEmailRessarcimento,
+  enviarEmailBoasVindasFiliado,
 };

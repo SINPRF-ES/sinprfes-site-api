@@ -171,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ].join("||");
   }
 
-  function renderizarMeusDados(dados) {
+    function renderizarMeusDados(dados) {
     const {
       nome,
       cpf,
@@ -182,11 +182,30 @@ document.addEventListener("DOMContentLoaded", () => {
       email1,
       email2,
       endereco,
+      lotacao,
     } = dados;
 
-    const endStruct = parseEnderecoEstruturado(endereco);
-    const { logradouro, complemento, cidade, uf, cep } = endStruct;
-    const cepExistente = (cep || "").replace(/\D/g, "");
+    // tenta extrair CEP do endereço atual, se houver
+    let cepExistente = "";
+    if (endereco) {
+      const m = String(endereco).match(/\b(\d{5}-?\d{3})\b/);
+      if (m) cepExistente = m[1].replace(/\D/g, "");
+    }
+
+    // opções de lotação
+    const LOTACOES = [
+      "SEDE",
+      "1ª DEL (Viana)",
+      "2ª DEL (Serra)",
+      "3ª DEL (Guarapari)",
+      "4ª DEL (Linhares)",
+    ];
+    const lotacaoAtual = (lotacao || "SEDE").toUpperCase();
+    const opcoesLotacaoHtml = LOTACOES.map((rotulo) => {
+      const selected =
+        lotacaoAtual === rotulo.toUpperCase() ? "selected" : "";
+      return `<option value="${rotulo}" ${selected}>${rotulo}</option>`;
+    }).join("");
 
     conteudoMeusDados.innerHTML = `
       <div class="section-box">
@@ -281,6 +300,19 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
 
+          <!-- LOTAÇÃO -->
+          <div class="field-row">
+            <div class="field-group">
+              <label for="me-lotacao">Lotação</label>
+              <select id="me-lotacao">
+                ${opcoesLotacaoHtml}
+              </select>
+              <p class="field-hint">
+                Você pode atualizar sua lotação atual.
+              </p>
+            </div>
+          </div>
+
           <!-- Endereço vindo do ViaCEP (somente leitura) -->
           <div class="field-row">
             <div class="field-group">
@@ -289,7 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 type="text"
                 id="me-endereco"
                 placeholder="Será preenchido pelo CEP"
-                value="${logradouro || ""}"
+                value="${endereco || ""}"
                 readonly
               />
             </div>
@@ -302,7 +334,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 type="text"
                 id="me-complemento"
                 placeholder="Apto, bloco, sala, ponto de referência..."
-                value="${complemento || ""}"
               />
             </div>
             <div class="field-group">
@@ -311,7 +342,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 type="text"
                 id="me-cidade"
                 placeholder="Será preenchido pelo CEP"
-                value="${cidade || ""}"
                 readonly
               />
             </div>
@@ -322,7 +352,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 id="me-uf"
                 maxlength="2"
                 placeholder="UF"
-                value="${uf || ""}"
                 readonly
               />
             </div>
@@ -409,13 +438,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function montarEnderecoFinal() {
-      return montarEnderecoEstruturado({
-        logradouro: endInput.value.trim(),
-        complemento: compInput.value.trim(),
-        cidade: cidadeInput.value.trim(),
-        uf: ufInput.value.trim(),
-        cep: cepInput.value.trim(),
-      });
+      const cep = cepInput.value.trim();
+      const logradouro = endInput.value.trim();
+      const complemento = compInput.value.trim();
+      const cidade = cidadeInput.value.trim();
+      const uf = ufInput.value.trim().toUpperCase();
+
+      const partes = [];
+      if (logradouro) partes.push(logradouro);
+      if (complemento) partes.push(complemento);
+      if (cidade || uf) {
+        const cidadeUf = uf ? `${cidade} / ${uf}` : cidade;
+        if (cidadeUf) partes.push(cidadeUf);
+      }
+      if (cep) partes.push(`CEP ${cep}`);
+
+      return partes.join(" - ");
     }
 
     form.addEventListener("submit", async (e) => {
@@ -430,6 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
         email1: document.getElementById("me-email1").value || "",
         email2: document.getElementById("me-email2").value || "",
         endereco: montarEnderecoFinal(),
+        lotacao: document.getElementById("me-lotacao").value || "SEDE",
       };
 
       try {
@@ -453,6 +492,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
   function formatarCPF(cpf) {
     if (!cpf) return "";
     const only = String(cpf).replace(/\D/g, "");
@@ -474,14 +514,32 @@ document.addEventListener("DOMContentLoaded", () => {
       .toLowerCase();
   }
 
-  async function configurarBuscaFiliadosSeAindaNao() {
+    async function configurarBuscaFiliadosSeAindaNao() {
     if (listaFiliadosCarregada) return;
 
     const inputBusca = document.getElementById("busca-filiados");
     const listaEl = document.getElementById("lista-filiados");
     const tutorialDiretoria = document.getElementById("tutorial-diretoria");
+    const btnNovo = document.getElementById("btn-novo-filiado");
+    const novoContainer = document.getElementById("novo-filiado-container");
 
     if (!listaEl || !inputBusca) return;
+
+    // Configura visibilidade do botão "Novo filiado"
+    if (btnNovo) {
+      if (
+        perfilAcesso === "ADMIN" ||
+        perfilAcesso === "DIRETORIA" ||
+        perfilAcesso === "FUNCIONARIO"
+      ) {
+        btnNovo.addEventListener("click", () => {
+          abrirFormularioNovoFiliado(novoContainer);
+        });
+      } else {
+        // Filiado comum não vê o botão
+        btnNovo.style.display = "none";
+      }
+    }
 
     try {
       listaEl.textContent = "Carregando lista de filiados...";
@@ -492,8 +550,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!resp.ok) throw new Error("Falha ao carregar lista de filiados");
 
-      const lista = await resp.json();
-      dadosFiliadosCache = Array.isArray(lista) ? lista : [];
+      const payload = await resp.json();
+      const lista = Array.isArray(payload) ? payload : payload.filiados || [];
+
+      dadosFiliadosCache = lista;
       listaFiliadosCarregada = true;
 
       if (
@@ -513,8 +573,180 @@ document.addEventListener("DOMContentLoaded", () => {
       listaEl.textContent = "Erro ao carregar filiados.";
     }
   }
+    function abrirFormularioNovoFiliado(container) {
+    if (!container) return;
 
-  function atualizarListaFiliados(termo) {
+    if (
+      !["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAcesso || "")
+    ) {
+      alert("Você não tem permissão para cadastrar filiados.");
+      return;
+    }
+
+    // Toggle: se já estiver aberto, fecha
+    if (container.dataset.aberto === "1") {
+      container.innerHTML = "";
+      container.dataset.aberto = "0";
+      return;
+    }
+
+    container.dataset.aberto = "1";
+
+    container.innerHTML = `
+      <div class="section-box af-filiado-card">
+        <h3 class="section-subtitle">Cadastrar novo filiado</h3>
+        <form class="af-form-novo-filiado">
+          <div class="field-row">
+            <div class="field-group">
+              <label>Nome *</label>
+              <input type="text" name="nome" required />
+            </div>
+            <div class="field-group">
+              <label>CPF *</label>
+              <input type="text" name="cpf" required placeholder="Somente números" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label>E-mail principal *</label>
+              <input type="email" name="email1" required />
+            </div>
+            <div class="field-group">
+              <label>E-mail alternativo</label>
+              <input type="email" name="email2" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label>Telefone 1</label>
+              <input type="text" name="telefone1" />
+            </div>
+            <div class="field-group">
+              <label>Telefone 2</label>
+              <input type="text" name="telefone2" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label>Lotação</label>
+              <select name="lotacao">
+                <option value="SEDE">SEDE</option>
+                <option value="1ª DEL (Viana)">1ª DEL (Viana)</option>
+                <option value="2ª DEL (Serra)">2ª DEL (Serra)</option>
+                <option value="3ª DEL (Guarapari)">3ª DEL (Guarapari)</option>
+                <option value="4ª DEL (Linhares)">4ª DEL (Linhares)</option>
+              </select>
+            </div>
+
+            ${
+              // Só ADMIN escolhe perfil; os outros criam sempre FILIADO
+              perfilAcesso === "ADMIN"
+                ? `
+            <div class="field-group">
+              <label>Perfil de acesso</label>
+              <select name="perfil_acesso">
+                <option value="FILIADO">FILIADO</option>
+                <option value="FUNCIONARIO">FUNCIONÁRIO</option>
+                <option value="DIRETORIA">DIRETORIA</option>
+                <option value="ADMIN">ADMIN</option>
+              </select>
+            </div>
+            `
+                : `
+            <div class="field-group">
+              <label>Perfil de acesso</label>
+              <input type="text" value="FILIADO" readonly />
+            </div>
+            `
+            }
+          </div>
+
+          <div class="form-actions" style="margin-top: 10px;">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <button type="button" class="btn btn-outline" id="btn-cancelar-novo">
+              Cancelar
+            </button>
+            <span class="field-hint af-status-novo"></span>
+          </div>
+        </form>
+      </div>
+    `;
+
+    const form = container.querySelector(".af-form-novo-filiado");
+    const statusSpan = container.querySelector(".af-status-novo");
+    const btnCancelar = container.querySelector("#btn-cancelar-novo");
+
+    // máscaras
+    const cpfInput = form.querySelector('input[name="cpf"]');
+    if (cpfInput) {
+      cpfInput.addEventListener("input", () => {
+        cpfInput.value = cpfInput.value.replace(/\D/g, "").slice(0, 11);
+      });
+    }
+    aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
+    aplicarMascaraTelefone(form.querySelector('input[name="telefone2"]'));
+
+    btnCancelar.addEventListener("click", () => {
+      container.innerHTML = "";
+      container.dataset.aberto = "0";
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!statusSpan) return;
+      statusSpan.textContent = "Salvando...";
+
+      const fd = new FormData(form);
+      const payload = {};
+      fd.forEach((v, k) => {
+        payload[k] = v;
+      });
+
+      if (perfilAcesso !== "ADMIN") {
+        delete payload.perfil_acesso;
+      }
+
+      try {
+        const resp = await fetch("/api/filiados", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          const msg = data.message || "Erro ao criar filiado.";
+          throw new Error(msg);
+        }
+
+        statusSpan.textContent = "Filiado criado com sucesso.";
+
+        // adiciona na lista em memória e redesenha
+        if (data && data.filiado) {
+          dadosFiliadosCache.push(data.filiado);
+        }
+        const termoAtual =
+          document.getElementById("busca-filiados")?.value || "";
+        atualizarListaFiliados(termoAtual);
+
+        setTimeout(() => {
+          container.innerHTML = "";
+          container.dataset.aberto = "0";
+        }, 1200);
+      } catch (err) {
+        console.error(err);
+        statusSpan.textContent = err.message || "Erro ao criar filiado.";
+      }
+    });
+  }
+
+    function atualizarListaFiliados(termo) {
     const listaEl = document.getElementById("lista-filiados");
     if (!listaEl) return;
 
@@ -546,7 +778,12 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="af-filiado-linha">
             <div class="af-filiado-info">
               <strong>${f.nome || ""}</strong><br />
-              <span class="field-hint">CPF: ${formatarCPF(f.cpf)}</span>
+              <span class="field-hint">CPF: ${formatarCPF(f.cpf)}</span><br />
+              ${
+                f.lotacao
+                  ? `<span class="field-hint">Lotação: ${f.lotacao}</span>`
+                  : ""
+              }
             </div>
             <div class="af-filiado-contatos">
               <span>${f.telefone1 || ""}</span><br />
@@ -556,7 +793,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         if (!podeEditarTodos) {
-          // Filiado comum: só vê nome + telefones
+          // Filiado comum: só vê nome + telefones + lotação
           return `<div class="section-box af-filiado-card">${camposBasicos}</div>`;
         }
 
@@ -623,6 +860,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
 
                 <div class="field-row">
+                  <div class="field-group">
+                    <label>Lotação</label>
+                    <select name="lotacao">
+                      <option value="SEDE" ${
+                        f.lotacao === "SEDE" ? "selected" : ""
+                      }>SEDE</option>
+                      <option value="1ª DEL (Viana)" ${
+                        f.lotacao === "1ª DEL (Viana)" ? "selected" : ""
+                      }>1ª DEL (Viana)</option>
+                      <option value="2ª DEL (Serra)" ${
+                        f.lotacao === "2ª DEL (Serra)" ? "selected" : ""
+                      }>2ª DEL (Serra)</option>
+                      <option value="3ª DEL (Guarapari)" ${
+                        f.lotacao === "3ª DEL (Guarapari)" ? "selected" : ""
+                      }>3ª DEL (Guarapari)</option>
+                      <option value="4ª DEL (Linhares)" ${
+                        f.lotacao === "4ª DEL (Linhares)" ? "selected" : ""
+                      }>4ª DEL (Linhares)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="field-row">
                   <div class="field-group ${classeSomenteAdmin}">
                     <label>Perfil de acesso</label>
                     <select name="perfil_acesso">
@@ -659,7 +919,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     listaEl.innerHTML = html;
 
-    // Aplica máscara de telefone também nos formulários de edição de filiados
+    // Máscara de telefone nos formulários de edição
     const telInputs = listaEl.querySelectorAll(
       'input[name="telefone1"], input[name="telefone2"]'
     );
@@ -684,7 +944,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           });
 
-          // Se não for ADMIN, remove campos que ele não pode mudar
           if (perfilAcesso !== "ADMIN") {
             delete payload.cpf;
             delete payload.perfil_acesso;
