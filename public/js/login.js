@@ -7,6 +7,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const forgotForm = document.getElementById("forgot-form");
   const forgotMsg = document.getElementById("forgot-mensagem");
 
+    // CPF só com números (login e esqueci a senha)
+  const loginCpfInput = document.getElementById("login-cpf");
+  const forgotCpfInput = document.getElementById("forgot-cpf");
+
+  function aplicarMascaraCpf(input) {
+    if (!input) return;
+    input.addEventListener("input", () => {
+      // mantém só dígitos e limita a 11 caracteres
+      input.value = input.value.replace(/\D/g, "").slice(0, 11);
+    });
+  }
+
+  aplicarMascaraCpf(loginCpfInput);
+  aplicarMascaraCpf(forgotCpfInput);
+
   // Campo extra para 2FA (se existir no HTML)
   const campo2fa = document.getElementById("campo-2fa");
   const inputToken2fa = document.getElementById("login-token-2fa");

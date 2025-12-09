@@ -461,12 +461,13 @@ footer {
   margin: 14px 0 10px;
 }
 
-/* Grid principal: 2 colunas proporcionais */
+/* Grid principal em uma coluna só */
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;  /* tudo em uma coluna só */
   gap: 10px 24px;
 }
+
 
 /* Campos que devem ocupar a linha toda */
 .form-group-full {
@@ -673,5 +674,423 @@ footer {
   .btn-row .btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ============================================
+   TABELA DE FILIADOS (Admin)
+============================================ */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table-filiados {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.table-filiados th {
+  text-align: left;
+  padding: 8px;
+  background: rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+.table-filiados td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ============================================
+   MODAL DE EDIÇÃO
+============================================ */
+.modal-backdrop {
+  position: fixed;
+  top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 4000;
+}
+
+.modal-card {
+  width: 95%;
+  max-width: 500px;
+  background: rgba(0,0,0,0.75);
+  padding: 22px;
+  border-radius: 20px;
+  border:1px solid rgba(255,255,255,0.15);
+}
+
+/* ============================================
+   TUTORIAL FLUTUANTE
+============================================ */
+.tutorial-box {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0,0,0,0.75);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+  width: 260px;
+  z-index: 5000;
+  font-size: 14px;
+}
+
+/* ============================================
+   MOBILE
+============================================ */
+@media(max-width: 600px) {
+  .modal-card {
+    width: 94%;
+    padding: 18px;
+  }
+
+  .table-filiados th,
+  .table-filiados td {
+    padding: 6px;
+    font-size: 13px;
+  }
+}
+
+/* ===========================
+   Layout Área do Filiado
+=========================== */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.sidebar-menu {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 20px;
+  padding: 16px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+.sidebar-item {
+  border: none;
+  background: transparent;
+  color: #f5f5f5;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-item-active {
+  background: rgba(255, 204, 0, 0.18);
+  border: 1px solid rgba(255, 204, 0, 0.6);
+}
+
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ===========================
+   Modal simples
+=========================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+}
+
+.modal-content {
+  max-width: 520px;
+  width: 95%;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ===========================
+   Tutorial flutuante
+=========================== */
+.tutorial {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.78);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 14px 12px;
+  max-width: 280px;
+  font-size: 0.9rem;
+  z-index: 4500;
+}
+
+/* ===========================
+   Mobile
+=========================== */
+@media (max-width: 768px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-menu {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .sidebar-item {
+    flex: 1 1 calc(50% - 6px);
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
+  .dashboard-main {
+    margin-top: 8px;
+  }
+
+  .table-filiados th,
+  .table-filiados td {
+    font-size: 0.8rem;
+    padding: 6px;
+  }
+
+  .tutorial {
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
+}
+
+/* CEP nos "Meus dados" — ocupa mais espaço dentro do flex */
+#me-cep {
+  flex: 1 1 230px;  /* cresce e tem um mínimo confortável */
+}
+
+/* ===========================
+   Layout Área do Filiado (af-layout)
+=========================== */
+
+.af-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* Coluna esquerda (menu) */
+.af-sidebar {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 20px;
+  padding: 16px 14px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Título/subtítulo dentro do sidebar já usam .section-title/.section-subtitle */
+
+.af-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.af-nav-item {
+  border: none;
+  background: transparent;
+  color: #f5f5f5;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.af-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.af-nav-item.active {
+  background: rgba(255, 204, 0, 0.18);
+  border: 1px solid rgba(255, 204, 0, 0.6);
+}
+
+.af-sidebar-footer {
+  margin-top: 12px;
+}
+
+/* Coluna direita (conteúdo) */
+.af-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Cartões de filiados na aba "Filiados" */
+.af-filiado-card {
+  margin-bottom: 10px;
+}
+
+.af-filiado-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.af-filiado-info {
+  flex: 1 1 auto;
+}
+
+.af-filiado-contatos {
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+/* Campos que só ADMIN pode alterar */
+.af-only-admin {
+  border-left: 3px solid rgba(255, 204, 0, 0.8);
+  padding-left: 8px;
+}
+
+/* Tutorialzinho para diretoria */
+.af-tutorial {
+  margin-top: 16px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .af-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .af-sidebar {
+    order: 0;
+  }
+
+  .af-main {
+    order: 1;
+  }
+
+  .af-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .af-nav-item {
+    flex: 1 1 calc(50% - 6px);
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
+  .af-filiado-linha {
+    flex-direction: column;
+    text-align: left;
+  }
+
+  .af-filiado-contatos {
+    text-align: left;
+  }
+}
+
+/* ===========================
+   Área do Filiado – navegação em abas
+=========================== */
+
+.af-section {
+  display: none;
+}
+
+.af-section.active {
+  display: block;
+}
+
+/* ===== Layout unificado da Área do Filiado ===== */
+
+/* container geral das páginas internas (meus dados, ressarcimento, etc.) */
+.area-filiado-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* cada “cartão” de seção (meus dados, ressarcimento, etc.) */
+.area-filiado-main .section-card {
+  background: #050b16;           /* mesmo tom do resto do site */
+  border-radius: 18px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+/* títulos das seções */
+.area-filiado-main .section-card h2,
+.area-filiado-main .section-card h3 {
+  margin-bottom: 12px;
+}
+
+/* tudo empilhado na vertical */
+.area-filiado-main .field-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px 24px;
+  margin-bottom: 12px;
+}
+
+/* garante que cada campo ocupe a coluna toda */
+.area-filiado-main .field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.area-filiado-main .field-group label {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.area-filiado-main .field-group input,
+.area-filiado-main .field-group textarea,
+.area-filiado-main .field-group select {
+  width: 100%;
+}
+
+/* no mobile, cai tudo para uma coluna */
+@media (max-width: 900px) {
+  .area-filiado-main {
+    padding: 0 8px;
+  }
+  .area-filiado-main .field-row {
+    grid-template-columns: 1fr;
   }
 }

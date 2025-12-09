@@ -1,69 +1,56 @@
 // src/services/email.service.js
+// ============================================================
+// Responsável por envio de e-mails de Filiação e Ressarcimento
+// ============================================================
+
 const nodemailer = require("nodemailer");
 
-/**
- * Envia o e-mail para o sindicato com a ficha de filiação em PDF anexa.
- */
-async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
+// Cria transporter SMTP
+function criarTransporter() {
   const {
     SMTP_HOST,
     SMTP_PORT,
     SMTP_USER,
     SMTP_PASS,
-    MAIL_FROM,
-    MAIL_TO_FILIACAO,
   } = process.env;
 
-  const debug = {
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    user: SMTP_USER,
-    mailFrom: MAIL_FROM,
-    mailTo: MAIL_TO_FILIACAO,
-    hasPass: !!SMTP_PASS,
-  };
-  console.log("🛠 SMTP DEBUG:", debug);
-
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !MAIL_TO_FILIACAO) {
-    console.log("⚠️ SMTP não configurado corretamente; não será enviado e-mail.");
-    return;
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+    throw new Error("❌ Config SMTP incompleta nas variáveis de ambiente.");
   }
 
-  const portNumber = Number(SMTP_PORT) || 587;
-  const isSecure = portNumber === 465;
-
-  const transporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     host: SMTP_HOST,
-    port: portNumber,
-    secure: isSecure,
+    port: Number(SMTP_PORT),
+    secure: Number(SMTP_PORT) === 465,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 20000,
-    socketTimeout: 20000,
   });
+}
+
+/**
+ * Envia e-mail de Filiação com PDF anexo
+ */
+async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
+  const {
+    MAIL_FROM,
+    MAIL_TO_FILIACAO,
+  } = process.env;
+
+  if (!MAIL_FROM || !MAIL_TO_FILIACAO) {
+    throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
+  }
+
+  const transporter = criarTransporter();
+
+  const subject = `Ficha de Filiação - ${dados.nome || ""} (${dados.cpf || ""})`;
 
   const mailOptions = {
-    from: MAIL_FROM || SMTP_USER,
+    from: MAIL_FROM,
     to: MAIL_TO_FILIACAO,
-    subject: `Nova solicitação de filiação – ${dados.nome} (${dados.cpf})`,
-    text:
-      "Nova solicitação de filiação recebida pelo site do SINPRF-ES.\n\n" +
-      `Nome: ${dados.nome}\n` +
-      `CPF: ${dados.cpf}\n` +
-      `Data de nascimento: ${dados.data_nascimento}\n` +
-      `Telefone: ${dados.telefone1}\n` +
-      `E-mail pessoal: ${dados.email_pessoal}\n` +
-      `E-mail funcional: ${dados.email_funcional || "-"}\n` +
-      `Lotação: ${dados.lotacao || "-"}\n\n` +
-      `Endereço: ${dados.endereco}, ${dados.complemento || ""} - ${
-        dados.bairro
-      } - ${dados.cidade}/${dados.uf} - CEP ${dados.cep}\n\n` +
-      "Ficha completa em anexo (PDF).",
+    subject,
+    text: `Segue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.`,
     attachments: [
       {
         filename: "ficha_filiacao.pdf",
@@ -76,6 +63,71 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
   console.log("📧 E-mail de filiação enviado. MessageId:", info.messageId);
 }
 
+/**
+ * Envia o e-mail de pedido de ressarcimento:
+ *  - Apenas o PDF consolidado (pedido + anexos)
+ *  - Para o sindicato
+ *  - Com cópia para o filiado
+ */
+async function enviarEmailRessarcimento(dados, pdfBuffer) {
+  const {
+    MAIL_FROM,
+    MAIL_TO_RESSARCIMENTO,
+    MAIL_TO_FILIACAO,
+  } = process.env;
+
+  // Caixinha oficial do sindicato
+  const mailSindicato = MAIL_TO_RESSARCIMENTO || MAIL_TO_FILIACAO;
+
+  if (!MAIL_FROM || !mailSindicato) {
+    throw new Error("❌ MAIL_FROM ou MAIL_TO_RESSARCIMENTO não configurados.");
+  }
+
+  const transporter = criarTransporter();
+
+  const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
+
+  const corpoEmail = `
+Pedido de ressarcimento de despesas sindicais.
+
+Nome: ${dados.nome || ""}
+CPF: ${dados.cpf || ""}
+Período: ${dados.data_inicio || ""} a ${dados.data_fim || ""}
+Local: ${dados.local || ""}
+
+Valor de diárias: R$ ${(parseFloat(dados.valor_diarias || 0)).toFixed(2)}
+Valor de km: R$ ${(parseFloat(dados.valor_km || 0)).toFixed(2)}
+Outros gastos: R$ ${(parseFloat(dados.valor_outros || 0)).toFixed(2)}
+
+TOTAL: R$ ${(parseFloat(dados.valor_total || 0)).toFixed(2)}
+
+O PDF em anexo contém:
+ - resumo da atividade,
+ - quadro financeiro completo,
+ - dados bancários,
+ - declaração de assinatura eletrônica,
+ - comprovantes anexos incorporados.
+`;
+
+  const mailOptions = {
+    from: MAIL_FROM,
+    to: mailSindicato,
+    cc: dados.email_destino || undefined, // cópia para o filiado
+    subject,
+    text: corpoEmail,
+    attachments: [
+      {
+        filename: "pedido_ressarcimento.pdf",
+        content: pdfBuffer,
+      },
+    ],
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log("📧 E-mail de ressarcimento enviado. MessageId:", info.messageId);
+}
+
 module.exports = {
   enviarEmailFichaFiliacao,
+  enviarEmailRessarcimento,
 };

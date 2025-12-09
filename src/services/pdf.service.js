@@ -1,140 +1,632 @@
 // src/services/pdf.service.js
-const PDFDocument = require("pdfkit");
+// Serviço de geração de PDFs para Filiação e Ressarcimento
+// com layout institucional do SINPRF-ES.
 
-/**
- * Gera um PDF simples de ficha de filiação com os dados enviados.
- * Retorna um Buffer.
- */
+const PDFDocument = require("pdfkit");
+const fs = require("fs").promises;
+const path = require("path");
+const { PDFDocument: PDFLibDocument } = require("pdf-lib");
+const QRCode = require("qrcode");
+const crypto = require("crypto");
+
+// Caminho do logo (brasão) - ajuste se necessário no seu projeto
+const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");
+
+// URL base para verificação de documentos via QR Code
+const QR_BASE_URL =
+  process.env.QR_VERIFICATION_URL || "https://sinprfes.org.br/verificar";
+
+// ------------------------------------------------------------------
+// Utilitários
+// ------------------------------------------------------------------
+
+function linha(doc) {
+  doc
+    .moveTo(doc.page.margins.left, doc.y)
+    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+    .strokeColor("#cccccc")
+    .stroke()
+    .moveDown(0.5);
+}
+
+// Sanitiza texto para evitar caracteres que o pdf-lib não consegue codificar
+function sanitizeForPdf(text) {
+  if (!text) return "";
+  let s = String(text);
+
+  const replacements = {
+    "\u2013": "-", // –  EN DASH
+    "\u2014": "-", // —  EM DASH
+    "\u2018": "'", // ‘
+    "\u2019": "'", // ’
+    "\u201c": '"', // “
+    "\u201d": '"', // ”
+    "\u2022": "-", // •
+    "\u00a0": " ", // NBSP (espaço não quebrável)
+  };
+
+  s = s.replace(
+    /[\u2013\u2014\u2018\u2019\u201c\u201d\u2022\u00a0]/g,
+    (ch) => replacements[ch] || " "
+  );
+
+  // Mantém:
+  //  - \n e \r
+  //  - caracteres visíveis ASCII (32–126)
+  //  - acentos comuns em Latin-1 (160–255)
+  // Remove faixa 127–159 (onde está o 0x83) e demais estranhos.
+  s = s
+    .split("")
+    .filter((ch) => {
+      const code = ch.charCodeAt(0);
+      if (code === 10 || code === 13) return true; // \n \r
+      if (code >= 32 && code <= 126) return true;  // ASCII básico
+      if (code >= 160 && code <= 255) return true; // Latin-1 acentuado
+      return false;
+    })
+    .join("");
+
+  return s;
+}
+
+
+function gerarCodigoVerificacao(dados, tipo) {
+  if (dados.codigoVerificacao) return dados.codigoVerificacao;
+
+  const base = [
+    tipo || "DOC",
+    dados.id_filiado || "",
+    dados.cpf || "",
+    dados.criadoEm || new Date().toISOString(),
+  ].join("|");
+
+  return crypto
+    .createHash("sha256")
+    .update(base)
+    .digest("hex")
+    .slice(0, 12)
+    .toUpperCase();
+}
+
+async function carregarLogoBuffer() {
+  try {
+    const buf = await fs.readFile(LOGO_PATH);
+    return buf;
+  } catch (err) {
+    console.warn("⚠ Não foi possível carregar o logo em", LOGO_PATH);
+    return null;
+  }
+}
+
+async function gerarQrBuffer(url) {
+  try {
+    const buf = await QRCode.toBuffer(url, {
+      type: "png",
+      width: 120,
+      margin: 1,
+    });
+    return buf;
+  } catch (err) {
+    console.warn("⚠ Não foi possível gerar QRCode:", err.message);
+    return null;
+  }
+}
+
+// Aplica cabeçalho, marca d'água, numeração, carimbo e QR code
+async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
+  const { codigoVerificacao, tipoDocumento } = options;
+
+  const docPdf = await PDFLibDocument.load(pdfBuffer);
+  const pages = docPdf.getPages();
+  const total = pages.length;
+
+  const logoBuffer = await carregarLogoBuffer();
+  const urlBase = QR_BASE_URL.replace(/\/$/, "");
+  const verUrl = `${urlBase}/${codigoVerificacao}`;
+  const qrBuffer = await gerarQrBuffer(verUrl);
+
+  let logoImage = null;
+  let qrImage = null;
+
+  if (logoBuffer) {
+    logoImage = await docPdf.embedPng(logoBuffer);
+  }
+  if (qrBuffer) {
+    qrImage = await docPdf.embedPng(qrBuffer);
+  }
+
+  pages.forEach((page, idx) => {
+    const { width, height } = page.getSize();
+    const margin = 40;
+
+    // Marca d'água (brasão grande e translúcido)
+    if (logoImage) {
+      const wmScale = Math.min(
+        (width * 0.4) / logoImage.width,
+        (height * 0.4) / logoImage.height
+      );
+      const wmWidth = logoImage.width * wmScale;
+      const wmHeight = logoImage.height * wmScale;
+
+      page.drawImage(logoImage, {
+        x: (width - wmWidth) / 2,
+        y: (height - wmHeight) / 2,
+        width: wmWidth,
+        height: wmHeight,
+        opacity: 0.07,
+      });
+    }
+
+        // Linha de topo de cabecalho (mesmo nivel para logo e QR)
+    let headerTopY = height - margin;
+
+    // Cabecalho com brasao pequeno no topo esquerdo
+    let logoHeight = 0;
+    if (logoImage) {
+      const logoWidth = 50;
+      logoHeight = (logoImage.height / logoImage.width) * logoWidth;
+      const logoY = headerTopY - logoHeight; // topo do logo = headerTopY
+
+      page.drawImage(logoImage, {
+        x: margin,
+        y: logoY,
+        width: logoWidth,
+        height: logoHeight,
+      });
+    }
+
+        // Titulo institucional (apenas 1a pagina)
+    if (idx === 0) {
+      const title1 = "Sindicato dos Policiais Rodoviarios Federais";
+      const title2 = "no Estado do Espirito Santo";
+      const subtitle = "Fundado em 28 de marco de 1992";
+      const cnpj = "CNPJ nº 39.387.378/0001-25";
+
+      const baseY = height - margin - 20;
+
+      page.drawText(sanitizeForPdf(title1), {
+        x: margin + 60,
+        y: baseY,
+        size: 10,
+      });
+      page.drawText(sanitizeForPdf(title2), {
+        x: margin + 60,
+        y: baseY - 12,
+        size: 10,
+      });
+      page.drawText(sanitizeForPdf(subtitle), {
+        x: margin + 60,
+        y: baseY - 26,
+        size: 9,
+      });
+      page.drawText(sanitizeForPdf(cnpj), {
+        x: margin + 60,
+        y: baseY - 40,
+        size: 9,
+      });
+    }
+
+
+    // Rodapé com informações de contato (sem travessão unicode)
+    const footerLines = [
+      "Sede: Av. Nair de Azevedo Silva, 450, salas 14/20, Ed. Shopping Center Vitoria, Mario Cypreste, Vitoria/ES - CEP: 29.020-170",
+      "Sitio eletronico: www.sinprfes.org.br    |    Email: sinprfes@sinprfes.org.br    |    Telefones: (27) 99607-3073 / 99691-9312",
+    ];
+    const footerY = margin + 18;
+
+    footerLines.forEach((line, i) => {
+      page.drawText(sanitizeForPdf(line), {
+        x: margin,
+        y: footerY + i * 10,
+        size: 7,
+      });
+    });
+
+    // Numeração de páginas
+    const pageNumText = sanitizeForPdf(`Pagina ${idx + 1} de ${total}`);
+    page.drawText(pageNumText, {
+      x: width / 2 - pageNumText.length * 3,
+      y: margin - 4,
+      size: 8,
+    });
+
+    // Carimbo institucional
+    const carimbo = "Processado via SINPRF-ES";
+    page.drawText(sanitizeForPdf(carimbo), {
+      x: width - margin - 130,
+      y: margin - 4,
+      size: 8,
+    });
+
+      // QR code e codigo de verificacao apenas na primeira pagina
+    if (idx === 0 && qrImage) {
+      const qrSize = 70;
+
+      // Margem fixa à direita e topo alinhado ao topo do logo
+      const qrX = width - margin - qrSize;   // encostado na margem direita
+      const qrTopY = headerTopY;             // mesmo topo do cabecalho/logo
+      const qrY = qrTopY - qrSize;           // pdf-lib usa coordenada da base
+
+      page.drawImage(qrImage, {
+        x: qrX,
+        y: qrY,
+        width: qrSize,
+        height: qrSize,
+      });
+
+      const label = tipoDocumento || "Documento";
+
+      // Textos de verificacao logo abaixo do QR, alinhados à esquerda do QR
+      const textX = qrX - 160;
+      let textY = qrY - 14; // começa logo abaixo da imagem
+
+      page.drawText("Verificacao:", {
+        x: textX,
+        y: textY,
+        size: 8,
+      });
+
+      textY -= 12;
+      page.drawText(
+        sanitizeForPdf(`${label} - codigo: ${codigoVerificacao}`),
+        {
+          x: textX,
+          y: textY,
+          size: 8,
+        }
+      );
+
+      textY -= 12;
+      page.drawText(sanitizeForPdf(verUrl), {
+        x: textX,
+        y: textY,
+        size: 8,
+      });
+    }
+
+  });
+
+  const finalBytes = await docPdf.save();
+  return Buffer.from(finalBytes);
+}
+
+// ------------------------------------------------------------------
+// 1) Ficha de Filiação
+// ------------------------------------------------------------------
 function gerarPdfFichaFiliacao(dados) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const doc = new PDFDocument({
+  size: "A4",
+  margins: { top: 140, bottom: 70, left: 70, right: 70 },
+});
+
 
     const chunks = [];
     doc.on("data", (chunk) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("end", async () => {
+      try {
+        const buffer = Buffer.concat(chunks);
+        const codigo = gerarCodigoVerificacao(dados, "FILIACAO");
+        const finalBuffer = await aplicarLayoutInstitucional(buffer, {
+          codigoVerificacao: codigo,
+          tipoDocumento: "Ficha de Filiacao",
+        });
+        resolve(finalBuffer);
+      } catch (err) {
+        reject(err);
+      }
+    });
     doc.on("error", reject);
 
-    // Cabeçalho
-    doc
-      .fontSize(18)
-      .text("FICHA DE FILIAÇÃO", { align: "center" })
-      .moveDown(0.3);
+    // Conteudo principal
+// Move um pouco para baixo para nao brigar com o cabecalho institucional
+doc.moveDown(2);
+
+doc.font("Helvetica-Bold").fontSize(16).text("Ficha de Filiacao", {
+  align: "center",
+});
+doc.moveDown(1);
+
+
+    linha(doc);
+
+    doc.font("Helvetica").fontSize(12);
+    doc.text(`Nome: ${dados.nome || ""}`).moveDown(0.2);
+    doc.text(`CPF: ${dados.cpf || ""}`).moveDown(0.2);
+    doc.text(`Matricula: ${dados.matricula || ""}`).moveDown(0.2);
+    doc.text(`Lotacao: ${dados.lotacao || ""}`).moveDown(0.8);
+
+    linha(doc);
 
     doc
-      .fontSize(14)
-      .text(
-        "SINPRF-ES – Sindicato dos Policiais Rodoviários Federais no Espírito Santo",
-        { align: "center" }
-      )
-      .moveDown(1);
-
-    doc
-      .fontSize(10)
-      .text(
-        `Data da solicitação: ${new Date(
-          dados.data_solicitacao
-        ).toLocaleString("pt-BR")}`
-      )
-      .moveDown(1);
-
-    const linha = (label, v) => {
-      doc.font("Helvetica-Bold").text(label, { continued: true });
-      doc.font("Helvetica").text(` ${v || ""}`);
-    };
-
-    doc.fontSize(12).text("DADOS PESSOAIS", { underline: true }).moveDown(0.5);
-
-    linha("Nome completo:", dados.nome);
-    linha("CPF:", dados.cpf);
-    linha("Data de nascimento:", dados.data_nascimento);
-    linha("Telefone principal:", dados.telefone1);
-    linha("Telefone adicional:", dados.telefone2 || "-");
-    linha("E-mail pessoal:", dados.email_pessoal || "-");
-    linha("E-mail funcional:", dados.email_funcional || "-");
-
-    doc.moveDown(0.7);
-    doc.font("Helvetica-Bold").text("Endereço residencial:");
-    doc
-      .font("Helvetica")
-      .text(
-        `${dados.endereco} ${
-          dados.complemento ? " - " + dados.complemento : ""
-        }`
-      );
-    doc
-      .text(`${dados.bairro} - ${dados.cidade}/${dados.uf} - CEP ${dados.cep}`)
-      .moveDown(1);
-
-    if (dados.conjuge_nome) {
-      doc.font("Helvetica-Bold").text("Cônjuge:");
-      doc
-        .font("Helvetica")
-        .text(
-          `${dados.conjuge_nome} (${dados.conjuge_nascimento || "data não informada"})`
-        )
-        .moveDown(0.5);
-    }
-
-    // Dependentes (apenas se tiver)
-    const deps = [];
-    if (dados.dependente1_nome) {
-      deps.push(
-        `1) ${dados.dependente1_nome} (${
-          dados.dependente1_nascimento || "sem data"
-        })`
-      );
-    }
-    if (dados.dependente2_nome) {
-      deps.push(
-        `2) ${dados.dependente2_nome} (${
-          dados.dependente2_nascimento || "sem data"
-        })`
-      );
-    }
-    if (dados.dependente3_nome) {
-      deps.push(
-        `3) ${dados.dependente3_nome} (${
-          dados.dependente3_nascimento || "sem data"
-        })`
-      );
-    }
-
-    if (deps.length) {
-      doc.font("Helvetica-Bold").text("Dependentes:");
-      deps.forEach((linhaDep) => {
-        doc.font("Helvetica").text(linhaDep);
-      });
-      doc.moveDown(1);
-    }
-
-    doc.font("Helvetica-Bold").text("Declarações:").moveDown(0.3);
-    doc
-      .font("Helvetica")
       .fontSize(11)
       .text(
-        "O interessado declara que as informações são verdadeiras, que aceita o Estatuto do SINPRF-ES " +
-          "e autoriza o tratamento de seus dados pessoais para fins sindicais, nos termos da LGPD.",
+        "Os demais dados informados no formulario eletronico foram recebidos e registrados no sistema do SINPRF/ES.",
         { align: "justify" }
       )
-      .moveDown(2);
+      .moveDown(1);
 
     doc
-      .font("Helvetica")
       .fontSize(11)
-      .text("Assinatura do filiado (via meio eletrônico):")
-      .moveDown(3);
+      .text(
+        "Assinado eletronicamente mediante uso de login e senha pessoais, nos termos do art. 10, § 2o, da MP nº 2.200-2/2001.",
+        { align: "justify" }
+      )
+      .moveDown(1);
+
+    linha(doc);
 
     doc
       .fontSize(8)
-      .fillColor("#888")
+      .fillColor("#666")
       .text(
-        `IP de origem: ${dados.ip} | User-Agent: ${dados.userAgent} | CPF: ${dados.cpf}`
+        `IP de origem: ${dados.ip || "-"}  |  User-Agent: ${
+          dados.userAgent || "-"
+        }  |  CPF: ${dados.cpf || "-"}`
       );
 
     doc.end();
   });
 }
 
+// ------------------------------------------------------------------
+// 2) Pedido de Ressarcimento (com anexos incorporados)
+// ------------------------------------------------------------------
+async function gerarPdfRessarcimento(dados, anexos = []) {
+  const codigo = gerarCodigoVerificacao(dados, "RESSARCIMENTO");
+
+  // 1) Gera o PDF principal com PDFKit
+  const pdfPrincipalBuffer = await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+  size: "A4",
+  margins: { top: 140, bottom: 70, left: 70, right: 70 },
+});
+
+    const chunks = [];
+
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    // Titulo
+// Move um pouco para baixo para nao brigar com o cabecalho institucional
+doc.moveDown(2);
+
+doc
+  .font("Helvetica-Bold")
+  .fontSize(16)
+  .text("Pedido de Ressarcimento", {
+    align: "center",
+  });
+doc.moveDown(1);
+
+
+    linha(doc);
+
+    // Dados do filiado
+    doc.font("Helvetica-Bold").fontSize(12).text("Dados do Filiado:");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Nome: ${dados.nome || ""}`);
+    doc.text(`CPF: ${dados.cpf || ""}`);
+    doc.text(`Telefone: ${dados.telefone_contato || ""}`);
+    doc.text(`E-mail: ${dados.email_destino || ""}`);
+    doc.moveDown(1);
+
+    linha(doc);
+
+    // Atividade
+    doc.font("Helvetica-Bold").fontSize(12).text("Dados da Atividade:");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Periodo: ${dados.data_inicio || ""} a ${dados.data_fim || ""}`);
+    doc.text(`Local: ${dados.local || ""}`);
+    doc.moveDown(0.3);
+
+    doc.font("Helvetica-Bold").text("Descricao:");
+    doc.moveDown(0.2);
+    doc.font("Helvetica").fontSize(11).text(dados.descricao || "", {
+      align: "justify",
+    });
+    doc.moveDown(1);
+
+    linha(doc);
+
+    // Quadro financeiro
+    const diarias = parseFloat(dados.diarias || 0);
+    const valorDiarias = parseFloat(dados.valor_diarias || 0);
+    const km = parseFloat(dados.km_total || 0);
+    const valorKm = parseFloat(dados.valor_km || 0);
+    const valorOutros = parseFloat(dados.valor_outros || 0);
+    const valorTotal = parseFloat(dados.valor_total || 0);
+
+    doc.font("Helvetica-Bold").fontSize(12).text("Resumo Financeiro:");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+
+    doc.text(
+      `• Diarias: ${diarias.toFixed(1)} x R$ 500,00 = R$ ${valorDiarias.toFixed(
+        2
+      )}`
+    );
+    doc.text(
+      `• Km rodado: ${km.toFixed(1)} km x R$ 1,50 = R$ ${valorKm.toFixed(2)}`
+    );
+    doc.text(`• Outros gastos: R$ ${valorOutros.toFixed(2)}`);
+    doc.moveDown(0.5);
+
+    doc
+      .font("Helvetica-Bold")
+      .text(`TOTAL SOLICITADO: R$ ${valorTotal.toFixed(2)}`, {
+        underline: true,
+      })
+      .moveDown(1);
+
+    // Detalhamento dos outros gastos
+    if (dados.descricao_outros) {
+      doc.font("Helvetica-Bold").text("Detalhamento dos Outros Gastos:");
+      doc.moveDown(0.2);
+      doc.font("Helvetica").fontSize(10).text(dados.descricao_outros, {
+        align: "justify",
+      });
+      doc.moveDown(1);
+    }
+
+    linha(doc);
+
+    // Dados bancários
+    if (dados.banco || dados.agencia || dados.conta || dados.pix) {
+      doc.font("Helvetica-Bold").fontSize(12).text("Dados Bancarios:");
+      doc.moveDown(0.5);
+      doc.font("Helvetica").fontSize(11);
+
+      doc.text(
+        `Banco: ${dados.banco || "-"}   |   Agencia: ${
+          dados.agencia || "-"
+        }   |   Conta: ${dados.conta || "-"}`
+      );
+      if (dados.pix) {
+        doc.text(`Chave PIX: ${dados.pix}`);
+      }
+      doc.moveDown(1);
+
+      linha(doc);
+    }
+
+    // Declarações
+    doc
+      .font("Helvetica")
+      .fontSize(11)
+      .text(
+        "Declaro, para os devidos fins, que as informacoes prestadas sao verdadeiras e que as despesas informadas decorrem de atividade sindical, conforme Resolucao nº 01/2025 do SINPRF/ES.",
+        { align: "justify" }
+      );
+    doc.moveDown(0.8);
+
+    doc.text(
+      "Assinado eletronicamente mediante uso de login e senha pessoais na plataforma do SINPRF/ES, nos termos do art. 10, § 2o, da Medida Provisoria nº 2.200-2/2001 e da Resolucao nº 01/2025.",
+      { align: "justify" }
+    );
+    doc.moveDown(1);
+
+    linha(doc);
+
+    doc
+      .fontSize(8)
+      .fillColor("#666")
+      .text(
+        `IP de origem: ${dados.ip || "-"}  |  User-Agent: ${
+          dados.userAgent || "-"
+        }  |  CPF: ${dados.cpf || "-"}`
+      );
+
+    doc.end();
+  });
+
+  // 2) Se não houver anexos, apenas aplica layout institucional e retorna
+  if (!anexos.length) {
+    return await aplicarLayoutInstitucional(pdfPrincipalBuffer, {
+      codigoVerificacao: codigo,
+      tipoDocumento: "Pedido de Ressarcimento",
+    });
+  }
+
+  // 3) Se houver anexos, incorpora-os usando pdf-lib
+  const pdfDoc = await PDFLibDocument.load(pdfPrincipalBuffer);
+
+  // Página de sumário dos anexos
+  const sumarioPage = pdfDoc.addPage();
+  const { width: sw, height: sh } = sumarioPage.getSize();
+  let y = sh - 80;
+
+  sumarioPage.drawText("SUMARIO DOS ANEXOS", {
+    x: 70,
+    y,
+    size: 14,
+  });
+  y -= 30;
+
+  anexos.forEach((anexo, idx) => {
+    const nome = anexo.originalname || `Anexo ${idx + 1}`;
+    const linhaTexto = `${String(idx + 1).padStart(2, "0")} - ${nome}`;
+    sumarioPage.drawText(sanitizeForPdf(linhaTexto), {
+      x: 70,
+      y,
+      size: 10,
+    });
+    y -= 16;
+  });
+
+  // Incorporação de cada anexo
+  let contador = 1;
+  for (const anexo of anexos) {
+    try {
+      const buffer = await fs.readFile(anexo.path);
+      const mime = anexo.mimetype || "";
+      const nome = anexo.originalname || `Anexo ${contador}`;
+
+      // Página de abertura do anexo
+      const intro = pdfDoc.addPage();
+      const { width, height } = intro.getSize();
+      intro.drawText(`Anexo ${contador}`, {
+        x: 70,
+        y: height - 80,
+        size: 14,
+      });
+      intro.drawText(sanitizeForPdf(nome), {
+        x: 70,
+        y: height - 100,
+        size: 10,
+      });
+
+      if (mime === "application/pdf" || nome.toLowerCase().endsWith(".pdf")) {
+        const pdfAnexo = await PDFLibDocument.load(buffer);
+        const pages = await pdfDoc.copyPages(
+          pdfAnexo,
+          pdfAnexo.getPageIndices()
+        );
+        pages.forEach((p) => pdfDoc.addPage(p));
+      } else if (mime.startsWith("image/")) {
+        const page = pdfDoc.addPage();
+        const { width: pw, height: ph } = page.getSize();
+        let img;
+
+        if (mime.includes("jpeg") || mime.includes("jpg")) {
+          img = await pdfDoc.embedJpg(buffer);
+        } else {
+          img = await pdfDoc.embedPng(buffer);
+        }
+
+        const iw = img.width;
+        const ih = img.height;
+        const scale = Math.min((pw * 0.9) / iw, (ph * 0.9) / ih);
+        const w = iw * scale;
+        const h = ih * scale;
+
+        page.drawImage(img, {
+          x: (pw - w) / 2,
+          y: (ph - h) / 2,
+          width: w,
+          height: h,
+        });
+      }
+
+      contador++;
+    } catch (err) {
+      console.error("⚠ Erro ao incorporar anexo no PDF:", anexo, err);
+    }
+  }
+
+  const mergedBuffer = Buffer.from(await pdfDoc.save());
+
+  // 4) Aplica layout institucional (marca d'água, QR, numeração, etc.)
+  return await aplicarLayoutInstitucional(mergedBuffer, {
+    codigoVerificacao: codigo,
+    tipoDocumento: "Pedido de Ressarcimento",
+  });
+}
+
 module.exports = {
   gerarPdfFichaFiliacao,
+  gerarPdfRessarcimento,
 };
