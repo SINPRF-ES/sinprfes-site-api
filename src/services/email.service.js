@@ -3,6 +3,7 @@ const nodemailer = require("nodemailer");
 
 /**
  * Cria transporter compartilhado.
+ * Contém configurações de SMTP, segurança e timeouts.
  */
 function criarTransporter() {
   const {
@@ -31,7 +32,8 @@ function criarTransporter() {
     tls: {
       rejectUnauthorized: false,
     },
-    connectionTimeout: 20000,
+    // Mantém timeouts de 20 segundos para conexão/socket
+    connectionTimeout: 20000, 
     socketTimeout: 20000,
   });
 }
@@ -72,9 +74,9 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
 
 /**
  * Envia o e-mail de pedido de ressarcimento:
- *  - Apenas o PDF consolidado (pedido + anexos)
- *  - Para o sindicato
- *  - Com cópia para o filiado
+ * - Apenas o PDF consolidado (pedido + anexos)
+ * - Para o sindicato
+ * - Com cópia para o filiado
  */
 async function enviarEmailRessarcimento(dados, pdfBuffer) {
   const {
@@ -184,6 +186,7 @@ SINPRF-ES
 }
 
 module.exports = {
+  criarTransporter, // EXPORTADO para ser usado pelo senha.controller
   enviarEmailFichaFiliacao,
   enviarEmailRessarcimento,
   enviarEmailBoasVindasFiliado,

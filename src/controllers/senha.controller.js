@@ -2,7 +2,9 @@
 const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const nodemailer = require("nodemailer");
+// REMOVIDO: const nodemailer = require("nodemailer");
+// IMPORTAÇÃO DA FUNÇÃO CENTRALIZADA
+const { criarTransporter } = require("../services/email.service"); 
 
 /**
  * Util: obtém e-mail principal do filiado
@@ -12,41 +14,6 @@ function getEmailPrincipal(row) {
   if (row.email1 && row.email1.trim() !== "") return row.email1.trim();
   if (row.email2 && row.email2.trim() !== "") return row.email2.trim();
   return null;
-}
-
-/**
- * Util: cria transporter de e-mail com base nas variáveis de ambiente
- */
-function criarTransporter() {
-  const {
-    SMTP_HOST,
-    SMTP_PORT,
-    SMTP_USER,
-    SMTP_PASS,
-  } = process.env;
-
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    console.warn("⚠ SMTP não configurado corretamente. Não será possível enviar e-mails de reset de senha.");
-    return null;
-  }
-
-  const portNumber = Number(SMTP_PORT) || 587;
-  const isSecure = portNumber === 465;
-
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: portNumber,
-    secure: isSecure,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 20000,
-    socketTimeout: 20000,
-  });
 }
 
 /**
@@ -113,15 +80,18 @@ exports.solicitarResetSenha = async (req, res) => {
       token
     )}`;
 
-    const transporter = criarTransporter();
-    if (!transporter) {
-      console.warn("⚠ Não foi possível criar transporter SMTP. Reset não enviado.");
-      // Mesmo assim responde ok (pra não travar o usuário)
-      return res.json({
-        message:
-          "Não foi possível enviar o e-mail agora. Tente novamente mais tarde ou contate a secretaria.",
-        email_destino: null,
-      });
+    // Cria o transporter usando a função centralizada
+    let transporter;
+    try {
+        transporter = criarTransporter();
+    } catch (err) {
+        // Captura o erro 'SMTP não configurado.' do email.service
+        console.warn("⚠ Não foi possível criar transporter SMTP. Reset não enviado:", err.message);
+        return res.json({
+            message:
+                "Não foi possível enviar o e-mail agora. Tente novamente mais tarde ou contate a secretaria.",
+            email_destino: null,
+        });
     }
 
     const from = process.env.MAIL_FROM || process.env.SMTP_USER;
@@ -139,6 +109,8 @@ exports.solicitarResetSenha = async (req, res) => {
         `Atenciosamente,\nSINPRF-ES`,
     };
 
+    // O ETIMEDOUT (Connection timeout) acontece nesta linha.
+    // As configurações de timeout de 20s estão agora em email.service.js.
     const info = await transporter.sendMail(mailOptions);
     console.log("📧 E-mail de reset enviado:", info.messageId, "para", emailDestino);
 
