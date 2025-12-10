@@ -1519,16 +1519,53 @@ async function renderizarListaInscritosJogos(mainContent) {
 }
 
 
+// public/js/area-filiado.js
+
 function carregarJogosIntegracao() {
     const secJogos = document.getElementById("sec-jogos");
     if (!secJogos) return;
     
     const mainContent = secJogos.querySelector('.section-card');
 
-    if (PERFIS_GERENCIA_JOGOS.includes(perfilAcesso)) {
-        renderizarListaInscritosJogos(mainContent);
-    } else {
-        renderizarFormularioInscricaoJogos(mainContent);
+    // Limpa o conteúdo anterior da aba para não duplicar
+    mainContent.innerHTML = "";
+
+    // 1. Cria um container para o formulário e renderiza para TODOS
+    // (Assim, ADMIN, DIRETORIA e ORGANIZADOR também podem se inscrever)
+    const containerForm = document.createElement("div");
+    mainContent.appendChild(containerForm);
+    renderizarFormularioInscricaoJogos(containerForm);
+
+    // 2. Verifica se o usuário tem permissão para ver a lista de inscritos
+    // Perfis que podem ver a lista: todos, EXCETO 'FILIADO' comum.
+    const PERFIS_COM_ACESSO_A_LISTA = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
+
+    if (PERFIS_COM_ACESSO_A_LISTA.includes(perfilAcesso)) {
+        
+        // Adiciona uma linha divisória visual para separar o formulário da lista
+        const hr = document.createElement("hr");
+        hr.style.margin = "40px 0 20px 0";
+        hr.style.border = "0";
+        hr.style.borderTop = "2px solid #dde3ea";
+        mainContent.appendChild(hr);
+
+        // Título da seção administrativa
+        const headerAdmin = document.createElement("div");
+        headerAdmin.innerHTML = `
+            <h3 class="section-subtitle" style="color: #2980b9; margin-bottom: 15px;">
+                <span class="emoji">📋</span> Área de Gestão (Inscritos)
+            </h3>
+            <p class="field-hint">
+                Você está vendo esta lista porque possui perfil de <strong>${perfilAcesso}</strong>.
+            </p>
+        `;
+        mainContent.appendChild(headerAdmin);
+
+        // Cria o container da lista e chama a função de renderização
+        const containerLista = document.createElement("div");
+        mainContent.appendChild(containerLista);
+        
+        renderizarListaInscritosJogos(containerLista);
     }
 }
   // ---------------- Inicialização ----------------
