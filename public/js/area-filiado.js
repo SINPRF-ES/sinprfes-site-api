@@ -22,10 +22,6 @@ document.addEventListener("DOMContentLoaded", () => {
     console.warn("Não foi possível ler userInfo do localStorage:", e);
   }
 
-  // 🟢 NOVO: Opções de Situação Funcional (Constante)
-  const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
-
-
   // -------------------------
   // MÁSCARA GLOBAL DE TELEFONE
   // -------------------------
@@ -83,7 +79,13 @@ document.addEventListener("DOMContentLoaded", () => {
   navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const alvo = btn.dataset.target;
-      if (alvo) ativarSecao(alvo);
+      if (alvo) {
+        ativarSecao(alvo);
+        // 🟢 NOVO: Chamar função específica ao ativar a aba Jogos
+        if (alvo === 'sec-jogos') {
+            carregarJogosIntegracao();
+        }
+      }
     });
   });
 
@@ -101,6 +103,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const conteudoMeusDados = document.getElementById("area-filiado-conteudo");
   let dadosMeGlobal = null;
   
+  // 🟢 NOVO: Opções de Situação Funcional para o formulário de edição de filiados
+  const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
+
   async function carregarMeusDados() {
     if (!conteudoMeusDados) return;
 
@@ -1234,6 +1239,295 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   })();
 
+  // ---------------- JOGOS DE INTEGRAÇÃO (Pré-inscrição) ----------------
+  // Esta função é chamada ao clicar na aba 'Jogos'
+
+  function carregarJogosIntegracao() {
+      const secJogos = document.getElementById("sec-jogos");
+      if (!secJogos) return;
+      
+      const mainContent = secJogos.querySelector('.section-card'); // Assumindo que você tem um container principal dentro da seção
+
+      mainContent.innerHTML = `
+        <header class="section-header">
+          <div>
+            <h2 class="section-title">Jogos de Integração da PRF</h2>
+            <p class="section-subtitle">
+              Indique abaixo seu interesse em participar da delegação capixaba.
+            </p>
+          </div>
+        </header>
+
+        <form id="form-inscricao-jogos" class="formulario-jogos section-box">
+          <h3 class="section-subtitle">Manifestação de Interesse</h3>
+          <div class="field-group">
+            <label>
+              <input type="checkbox" id="interesse" />
+              Desejo participar dos Jogos de Integração da PRF
+            </label>
+          </div>
+
+          <h3 style="margin-top: 15px;">Modalidades de interesse</h3>
+          <div class="modalidades-grid">
+            <label><input type="checkbox" name="modalidades" value="natacao" /> Natação</label>
+            <label><input type="checkbox" name="modalidades" value="futebol" /> Futebol</label>
+            <label><input type="checkbox" name="modalidades" value="volei" /> Vôlei</label>
+            <label><input type="checkbox" name="modalidades" value="corrida" /> Corrida</label>
+            <label><input type="checkbox" name="modalidades" value="tiro" /> Tiro</label>
+            <label><input type="checkbox" name="modalidades" value="xadrez" /> Xadrez</label>
+          </div>
+
+          <div class="field-group" style="margin-top: 15px;">
+            <label for="obs">Observações adicionais</label>
+            <textarea id="obs" placeholder="Restrições, disponibilidade, observações..."></textarea>
+          </div>
+
+          <div class="form-actions" style="margin-top: 20px;">
+              <button class="btn btn-primary" type="submit">Enviar pré-inscrição</button>
+              <span id="jogos-status" class="field-hint" style="margin-left: 12px;"></span>
+          </div>
+        </form>
+      `;
+
+      const form = document.getElementById("form-inscricao-jogos");
+      const statusEl = document.getElementById("jogos-status");
+
+      form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          statusEl.textContent = "";
+
+          const interesse = document.getElementById("interesse").checked;
+          if (!interesse) {
+              statusEl.textContent = "Marque que deseja participar antes de enviar.";
+              return;
+          }
+
+          const modalidades = Array.from(
+              document.querySelectorAll("input[name='modalidades']:checked")
+          ).map(m => m.value);
+
+          const obs = document.getElementById("obs").value;
+
+          const payload = {
+              modalidades,
+              observacoes: obs
+          };
+
+          const token = localStorage.getItem("token");
+          if (!token) {
+              statusEl.textContent = "Sessão expirada! Faça login novamente.";
+              return;
+          }
+
+          statusEl.textContent = "Enviando...";
+
+          try {
+              const resp = await fetch("/api/jogos/inscricao", {
+                  method: "POST",
+                  headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify(payload),
+              });
+
+              const data = await resp.json().catch(() => ({}));
+
+              if (!resp.ok) {
+                  throw new Error(data.error || "Erro no envio da pré-inscrição.");
+              }
+
+              statusEl.textContent = "Pré-inscrição enviada com sucesso! Aguarde o contato da secretaria.";
+              form.reset(); // Limpa o formulário
+          } catch (err) {
+              console.error(err);
+              statusEl.textContent = "Falha ao enviar pré-inscrição. Tente novamente.";
+          }
+      });
+  }
+// public/js/area-filiado.js (COLE ESTE BLOCO NO FINAL)
+
+// ---------------- JOGOS DE INTEGRAÇÃO (Pré-inscrição e Gerenciamento) ----------------
+
+// Perfis autorizados a gerenciar a lista de inscritos
+const PERFIS_GERENCIA_JOGOS = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"]; 
+
+// 🟢 NOVA FUNÇÃO: Renderiza o formulário de inscrição (para filiado comum)
+function renderizarFormularioInscricaoJogos(mainContent) {
+    // 🟢 Situação Funcional: Opções para o formulário de CRIAÇÃO
+    const opcoesSituacaoHtml = SITUACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join('');
+
+    mainContent.innerHTML = `
+        <header class="section-header">
+          <div>
+            <h2 class="section-title">Jogos de Integração da PRF</h2>
+            <p class="section-subtitle">
+              Indique abaixo seu interesse em participar da delegação capixaba.
+            </p>
+          </div>
+        </header>
+
+        <form id="form-inscricao-jogos" class="formulario-jogos section-box">
+          <h3 class="section-subtitle">Manifestação de Interesse</h3>
+          <div class="field-group">
+            <label>
+              <input type="checkbox" id="interesse" />
+              Desejo participar dos Jogos de Integração da PRF
+            </label>
+          </div>
+
+          <h3 style="margin-top: 15px;">Modalidades de interesse</h3>
+          <div class="modalidades-grid">
+            <label><input type="checkbox" name="modalidades" value="natacao" /> Natação</label>
+            <label><input type="checkbox" name="modalidades" value="futebol" /> Futebol</label>
+            <label><input type="checkbox" name="modalidades" value="volei" /> Vôlei</label>
+            <label><input type="checkbox" name="modalidades" value="corrida" /> Corrida</label>
+            <label><input type="checkbox" name="modalidades" value="tiro" /> Tiro</label>
+            <label><input type="checkbox" name="modalidades" value="xadrez" /> Xadrez</label>
+          </div>
+
+          <div class="field-group" style="margin-top: 15px;">
+            <label for="obs">Observações adicionais</label>
+            <textarea id="obs" placeholder="Restrições, disponibilidade, observações..."></textarea>
+          </div>
+
+          <div class="form-actions" style="margin-top: 20px;">
+              <button class="btn btn-primary" type="submit">Enviar pré-inscrição</button>
+              <span id="jogos-status" class="field-hint" style="margin-left: 12px;"></span>
+          </div>
+        </form>
+      `;
+
+      const form = document.getElementById("form-inscricao-jogos");
+      const statusEl = document.getElementById("jogos-status");
+
+      form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          statusEl.textContent = "";
+
+          const interesse = document.getElementById("interesse").checked;
+          if (!interesse) {
+              statusEl.textContent = "Marque que deseja participar antes de enviar.";
+              return;
+          }
+
+          const modalidades = Array.from(
+              document.querySelectorAll("input[name='modalidades']:checked")
+          ).map(m => m.value);
+
+          const obs = document.getElementById("obs").value;
+
+          const payload = {
+              modalidades,
+              observacoes: obs
+          };
+
+          const token = localStorage.getItem("token");
+          if (!token) {
+              statusEl.textContent = "Sessão expirada! Faça login novamente.";
+              return;
+          }
+
+          statusEl.textContent = "Enviando...";
+
+          try {
+              const resp = await fetch("/api/jogos/inscricao", {
+                  method: "POST",
+                  headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify(payload),
+              });
+
+              const data = await resp.json().catch(() => ({}));
+
+              if (!resp.ok) {
+                  throw new Error(data.error || "Erro no envio da pré-inscrição.");
+              }
+
+              statusEl.textContent = "Pré-inscrição enviada com sucesso! Aguarde o contato da secretaria.";
+              form.reset(); // Limpa o formulário
+          } catch (err) {
+              console.error(err);
+              statusEl.textContent = "Falha ao enviar pré-inscrição. Tente novamente.";
+          }
+      });
+}
+
+// 🟢 NOVA FUNÇÃO: Renderiza a lista de inscritos para o ORGANIZADOR/ADMIN
+async function renderizarListaInscritosJogos(mainContent) {
+    const token = localStorage.getItem("token");
+    mainContent.innerHTML = '<h2>Lista de Pré-Inscrições</h2><p>Carregando dados...</p>';
+
+    try {
+        const resp = await fetch("/api/jogos/inscricoes", {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!resp.ok) throw new Error("Falha ao carregar lista de inscrições.");
+        
+        const data = await resp.json();
+        const lista = data.inscricoes || [];
+
+        if (lista.length === 0) {
+            mainContent.innerHTML = '<h2>Lista de Pré-Inscrições</h2><p>Nenhuma inscrição encontrada até o momento.</p>';
+            return;
+        }
+
+        // Montar a tabela/lista de visualização
+        const listaHtml = lista.map(insc => `
+            <tr>
+                <td>${insc.nome_filiado}</td>
+                <td>${formatarCPF(insc.cpf || insc.filiado_cpf)}</td>
+                <td>${insc.modalidades ? insc.modalidades.join(', ') : '-'}</td>
+                <td>${insc.telefone1 || '-'}</td>
+                <td>${insc.email1 || '-'}</td>
+                <td>${insc.observacoes || 'Nenhuma'}</td>
+            </tr>
+        `).join('');
+
+        mainContent.innerHTML = `
+            <h2>Inscrições Recebidas (${lista.length})</h2>
+            <p class="field-hint">Esta visualização está restrita a perfis de Gerência/Organização.</p>
+            <div style="overflow-x: auto;">
+                <table class="af-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Modalidades</th>
+                            <th>Telefone</th>
+                            <th>Email</th>
+                            <th>Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${listaHtml}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+    } catch (err) {
+        console.error("Erro ao carregar lista de jogos:", err);
+        mainContent.innerHTML = '<h2>Lista de Pré-Inscrições</h2><p style="color:red;">Erro ao carregar dados. Verifique o log do servidor.</p>';
+    }
+}
+
+
+function carregarJogosIntegracao() {
+    const secJogos = document.getElementById("sec-jogos");
+    if (!secJogos) return;
+    
+    const mainContent = secJogos.querySelector('.section-card');
+
+    if (PERFIS_GERENCIA_JOGOS.includes(perfilAcesso)) {
+        renderizarListaInscritosJogos(mainContent);
+    } else {
+        renderizarFormularioInscricaoJogos(mainContent);
+    }
+}
   // ---------------- Inicialização ----------------
-  carregarMeusDados();
+  carregarMeusDados(); 
 });
