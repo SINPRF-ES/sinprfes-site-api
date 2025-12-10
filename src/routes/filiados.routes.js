@@ -3,7 +3,6 @@ const express = require("express");
 const router = express.Router();
 
 const authMiddleware = require("../middlewares/auth");
-// 🟢 NOVO: Importar o middleware de permissão
 const requirePermission = require("../middlewares/requirePermission");
 
 const filiadosController = require("../controllers/filiados.controller");
@@ -13,7 +12,6 @@ const filiadosController = require("../controllers/filiados.controller");
 // ==============================================================================
 
 // Ver meus dados
-// Requer: VIEW_SELF (Filiados e todos os outros perfis possuem)
 router.get(
   "/me",
   authMiddleware,
@@ -22,7 +20,6 @@ router.get(
 );
 
 // Atualizar meus dados
-// Requer: EDIT_SELF (Filiados e todos os outros perfis possuem)
 router.put(
   "/me",
   authMiddleware,
@@ -30,17 +27,22 @@ router.put(
   filiadosController.atualizarMeusDados
 );
 
+// 🟢 NOVA ROTA: Desativar 2FA
+router.post(
+  "/2fa/desativar",
+  authMiddleware,
+  requirePermission("EDIT_SELF"),
+  filiadosController.desativar2fa
+);
+
 // ==============================================================================
 // ROTAS GERAIS DE FILIADOS
 // ==============================================================================
 
-// Listar filiados
-// Acesso: Aberto a todos os logados (authMiddleware).
-// O controller define internamente se retorna tudo (Admin/Staff) ou lista reduzida (Filiado).
+// Listar filiados (Aberto, filtro interno no controller)
 router.get("/", authMiddleware, filiadosController.listarFiliados);
 
-// Criar novo filiado
-// Requer: EDIT_FILIADO (Admin, Diretoria, Funcionário)
+// Criar novo filiado (Requer permissão especial)
 router.post(
   "/",
   authMiddleware,
@@ -53,7 +55,6 @@ router.post(
 // ==============================================================================
 
 // Atualizar outro filiado
-// Requer: EDIT_FILIADO (Admin, Diretoria, Funcionário)
 router.put(
   "/:id",
   authMiddleware,

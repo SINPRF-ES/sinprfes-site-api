@@ -8,6 +8,7 @@ const {
   atualizarDadosProprios,
   atualizarFiliadoPorId,
   criarFiliadoInicial,
+  salvarTwoFaSecret, // 🟢 Importado para desativar 2FA
 } = require("../services/filiados.service");
 const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
@@ -21,15 +22,21 @@ exports.getMe = async (req, res) => {
     const filiado = await buscarPorId(id);
 
     if (!filiado) {
-      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    return res.json(filiado);
+    // 🟢 SEGURANÇA: Remove senha e secret, retorna flag twofa_ativo
+    const { senha_hash, twofa_secret, ...dadosFiliado } = filiado;
+
+    return res.json({
+        ...dadosFiliado,
+        twofa_ativo: !!twofa_secret, 
+    });
   } catch (err) {
     log.error("FiliadosGetMeErro", err);
     return res
       .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨
+      .json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
   }
 };
 
@@ -55,7 +62,7 @@ exports.listarFiliados = async (req, res) => {
     log.error("FiliadosListarErro", err);
     return res
       .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS }); // ✨
+      .json({ message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
   }
 };
 
@@ -84,14 +91,14 @@ exports.atualizarMeusDados = async (req, res) => {
     log.info("FiliadoAtualizouProprios", { userId: id });
 
     return res.json({
-      message: Textos.SUCESSO.DADOS_ATUALIZADOS, // ✨
+      message: Textos.SUCESSO.DADOS_ATUALIZADOS,
       filiado: atualizado,
     });
   } catch (err) {
     log.error("FiliadosUpdateMeErro", err);
     return res
       .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
+      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
 
@@ -104,10 +111,9 @@ exports.atualizarFiliado = async (req, res) => {
     const idAlvo = parseInt(req.params.id, 10);
 
     if (Number.isNaN(idAlvo)) {
-      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO }); // ✨
+      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
     }
 
-    // Verifica permissão (agora redundante se usar middleware, mas seguro manter)
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"].includes(perfil)) {
         return res.status(403).json({ message: "Sem permissão." });
     }
@@ -138,7 +144,7 @@ exports.atualizarFiliado = async (req, res) => {
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
 
     if (!atualizado) {
-      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
     log.info("FiliadoEditadoPorAdmin", { 
@@ -148,14 +154,14 @@ exports.atualizarFiliado = async (req, res) => {
     });
 
     return res.json({
-      message: Textos.SUCESSO.DADOS_ATUALIZADOS, // ✨
+      message: Textos.SUCESSO.DADOS_ATUALIZADOS,
       filiado: atualizado,
     });
   } catch (err) {
     log.error("FiliadosUpdateAdminErro", err);
     return res
       .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
+      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
 
@@ -167,12 +173,12 @@ exports.criarFiliado = async (req, res) => {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
     
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilCriador)) {
-        return res.status(403).json({ message: Textos.FILIADOS.PERMISSAO_CRIAR }); // ✨
+        return res.status(403).json({ message: Textos.FILIADOS.PERMISSAO_CRIAR });
     }
 
     const body = req.body;
     if (!body.nome || !body.cpf || !body.email1) {
-      return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS }); // ✨
+      return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS });
     }
 
     const dadosNovo = {
@@ -200,7 +206,7 @@ exports.criarFiliado = async (req, res) => {
     } catch (err) {
       if (err.code === "CPF_DUPLICADO") {
         log.warn("FiliadoCriacaoDuplicada", { cpf: body.cpf });
-        return res.status(409).json({ message: Textos.FILIADOS.CPF_DUPLICADO }); // ✨
+        return res.status(409).json({ message: Textos.FILIADOS.CPF_DUPLICADO });
       }
       throw err;
     }
@@ -214,11 +220,41 @@ exports.criarFiliado = async (req, res) => {
     log.info("FiliadoCriado", { creatorId: req.user.id, newId: novo.id });
 
     return res.status(201).json({
-      message: Textos.SUCESSO.CRIADO_SUCESSO, // ✨
+      message: Textos.SUCESSO.CRIADO_SUCESSO,
       filiado: novo,
     });
   } catch (err) {
     log.error("FiliadosCriarErro", err);
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_FILIADO }); // ✨
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_FILIADO });
+  }
+};
+
+/**
+ * POST /api/filiados/2fa/desativar
+ * Permite que o filiado desative o 2FA.
+ */
+exports.desativar2fa = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const atualizado = await salvarTwoFaSecret(userId, null);
+
+    if (!atualizado) {
+      return res
+        .status(400)
+        .json({ message: "Não foi possível desativar o 2FA. Tente novamente." });
+    }
+
+    log.info("Filiado2FADesativado", { userId });
+
+    return res.json({
+      message: "Autenticação em duas etapas desativada com sucesso.",
+      twofa_ativo: false,
+    });
+  } catch (err) {
+    log.error("Filiado2FADesativarErro", err);
+    return res
+      .status(500)
+      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
