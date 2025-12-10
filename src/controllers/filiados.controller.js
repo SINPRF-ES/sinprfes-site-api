@@ -32,7 +32,14 @@ exports.getMe = async (req, res) => {
       telefone2: filiado.telefone2,
       email1: filiado.email1,
       email2: filiado.email2,
-      endereco: filiado.endereco,
+      // 🟢 CORREÇÃO: Usar as novas 6 colunas de endereço no retorno
+      logradouro_bairro: filiado.logradouro_bairro,
+      numero: filiado.numero,
+      complemento: filiado.complemento,
+      cidade: filiado.cidade,
+      uf: filiado.uf,
+      cep: filiado.cep,
+      // REMOVIDO: endereco (antigo)
       lotacao: filiado.lotacao,
       situacao: filiado.situacao,
       perfil_acesso: filiado.perfil_acesso,
@@ -77,22 +84,26 @@ exports.listarFiliados = async (req, res) => {
 /**
  * PUT /api/filiados/me
  * Atualiza dados básicos do próprio filiado:
- * - telefone1, telefone2
- * - email1, email2
- * - endereco (já montado no front)
- * - lotacao (pode alterar a própria lotação)
  */
 exports.atualizarMeusDados = async (req, res) => {
   try {
     const id = req.user.id;
 
+    // 🟢 CORREÇÃO: Extrair as 6 novas colunas do body
     const {
       telefone1,
       telefone2,
       email1,
       email2,
-      endereco,
       lotacao,
+      // NOVAS COLUNAS:
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
+      // REMOVIDO: endereco (antigo)
     } = req.body;
 
     const atualizado = await atualizarDadosProprios(id, {
@@ -100,8 +111,14 @@ exports.atualizarMeusDados = async (req, res) => {
       telefone2,
       email1,
       email2,
-      endereco,
       lotacao,
+      // PASSANDO AS 6 NOVAS COLUNAS PARA O SERVICE:
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
     });
 
     return res.json({
@@ -119,11 +136,6 @@ exports.atualizarMeusDados = async (req, res) => {
 /**
  * PUT /api/filiados/:id
  * Atualização feita por ADMIN / DIRETORIA / FUNCIONARIO.
- * Regras:
- *  - ADMIN pode alterar tudo (incluindo perfil_acesso).
- *  - DIRETORIA/FUNCIONARIO podem alterar todos os campos de cadastro,
- *    exceto perfil_acesso (não conseguem mudar perfil nem criar ADMIN).
- *  - FILIADO não deve atualizar outros filiados.
  */
 exports.atualizarFiliado = async (req, res) => {
   try {
@@ -148,10 +160,17 @@ exports.atualizarFiliado = async (req, res) => {
       telefone2,
       email1,
       email2,
-      endereco,
       lotacao,
       situacao,
       perfil_acesso,
+      // 🟢 CORREÇÃO: Extrair as 6 novas colunas do body
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
+      // REMOVIDO: endereco (antigo)
     } = req.body;
 
     const payload = {
@@ -162,9 +181,15 @@ exports.atualizarFiliado = async (req, res) => {
       telefone2,
       email1,
       email2,
-      endereco,
       lotacao,
       situacao,
+      // PASSANDO AS 6 NOVAS COLUNAS NO PAYLOAD:
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
     };
 
     // Só ADMIN pode mexer em perfil_acesso
@@ -196,12 +221,6 @@ exports.atualizarFiliado = async (req, res) => {
 /**
  * POST /api/filiados
  * Criação de novo filiado a partir do portal (ADMIN / DIRETORIA / FUNCIONARIO).
- *
- * Regras:
- *  - DIRETORIA e FUNCIONARIO só podem criar FILIADO.
- *  - ADMIN pode definir perfil_acesso (FILIADO/FUNCIONARIO/DIRETORIA/ADMIN).
- *  - Após criar, envia e-mail de boas-vindas para o filiado com orientação
- *    para usar "Esqueci minha senha" e definir a senha de acesso.
  */
 exports.criarFiliado = async (req, res) => {
   try {
@@ -220,10 +239,17 @@ exports.criarFiliado = async (req, res) => {
       telefone2,
       email1,
       email2,
-      endereco,
+      // REMOVIDO: endereco (antigo)
       lotacao,
       situacao,
       perfil_acesso,
+      // 🟢 CORREÇÃO: Extrair as 6 novas colunas do body
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
     } = req.body;
 
     if (!nome || !cpf || !email1) {
@@ -240,10 +266,16 @@ exports.criarFiliado = async (req, res) => {
       telefone2: telefone2 || null,
       email1: email1 || null,
       email2: email2 || null,
-      endereco: endereco || null,
       lotacao: lotacao || "SEDE",
       situacao: situacao || "ATIVO",
       perfil_acesso: perfil_acesso || "FILIADO",
+      // PASSANDO AS 6 NOVAS COLUNAS NO PAYLOAD:
+      logradouro_bairro: logradouro_bairro || null,
+      numero: numero || null,
+      complemento: complemento || null,
+      cidade: cidade || null,
+      uf: uf || null,
+      cep: cep || null,
     };
 
     let novo;
@@ -257,7 +289,6 @@ exports.criarFiliado = async (req, res) => {
     }
 
     // Tenta enviar o e-mail de boas-vindas,
-    // mas não falha a requisição se der erro no SMTP.
     try {
       await enviarEmailBoasVindasFiliado(novo);
     } catch (emailErr) {
