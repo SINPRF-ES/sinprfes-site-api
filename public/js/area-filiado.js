@@ -660,6 +660,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <label>Perfil de acesso</label>
               <select name="perfil_acesso">
                 <option value="FILIADO">FILIADO</option>
+                <option value="ORGANIZADOR">ORGANIZADOR (Jogos)</option>
                 <option value="FUNCIONARIO">FUNCIONÁRIO</option>
                 <option value="DIRETORIA">DIRETORIA</option>
                 <option value="ADMIN">ADMIN</option>
@@ -904,10 +905,12 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div class="field-group ${classeSomenteAdmin}">
                     <label>Perfil de acesso</label>
                     <select name="perfil_acesso">
-                      <option value="">(vazio)</option>
                       <option value="FILIADO" ${
                         f.perfil_acesso === "FILIADO" ? "selected" : ""
                       }>FILIADO</option>
+                      <option value="ORGANIZADOR" ${
+                        f.perfil_acesso === "ORGANIZADOR" ? "selected" : ""
+                      }>ORGANIZADOR (Jogos)</option>
                       <option value="FUNCIONARIO" ${
                         f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""
                       }>FUNCIONARIO</option>
