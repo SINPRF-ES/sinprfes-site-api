@@ -134,71 +134,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function parseEnderecoEstruturado(endereco) {
-    if (!endereco || !endereco.includes("||")) {
+  // NOVA FUNÇÃO: Quebra a string do banco em campos separados
+  function parseEnderecoSalvo(enderecoCompleto) {
+      if (!enderecoCompleto || typeof enderecoCompleto !== 'string') {
+          return {
+              logradouro: '',
+              numero: '',
+              complemento: '',
+              cidade: '',
+              uf: '',
+              cep: ''
+          };
+      }
+
+      // O novo formato concatenado (usado na função montarEnderecoFinal) é:
+      // Logradouro/Bairro | Número | Complemento | Cidade | UF | CEP
+
+      const partes = enderecoCompleto.split(' | ');
+
+      // Tenta extrair CEP do final (pode ter "CEP XXXXX-XXX")
+      let cep = '';
+      if (partes[5]) {
+          cep = partes[5].replace(/CEP\s*/, '').replace(/-/g, '');
+      }
+
+      // Tenta extrair Cidade (partes[3]) e UF (partes[4])
+      let cidade = partes[3] || '';
+      let uf = partes[4] || '';
+      
+      // Se não houver 6 partes, ou se o formato antigo "Rua X - Apto Y" for detectado
+      // O parser pode falhar se dados antigos (não estruturados) estiverem no DB.
+      // Neste caso, tratamos como uma string de logradouro não estruturada.
+      if (partes.length < 6 || !partes[1] || !partes[4]) {
+          // Trata como endereço antigo: logradouro é a string completa, o resto é vazio
+          return {
+              logradouro: enderecoCompleto, 
+              numero: '',
+              complemento: '',
+              cidade: '',
+              uf: '',
+              cep: ''
+          };
+      }
+      
       return {
-        logradouro: endereco || "",
-        numero: "", // Adicionado
-        complemento: "",
-        cidade: "",
-        uf: "",
-        cep: ""
+          logradouro: partes[0] || '',
+          numero: partes[1] || '',
+          complemento: partes[2] || '',
+          cidade: cidade,
+          uf: uf,
+          cep: cep
       };
-    }
-    const [logradouro = "", numero = "", complemento = "", cidade = "", uf = "", cep = ""] =
-      endereco.split("||");
-    return {
-      logradouro,
-      numero, // Adicionado
-      complemento,
-      cidade,
-      uf,
-      cep
-    };
   }
 
-  function montarEnderecoEstruturado({
-    logradouro,
-    numero, // Adicionado
-    complemento,
-    cidade,
-    uf,
-    cep,
-  }) {
-    return [
-      logradouro || "",
-      numero || "", // Adicionado
-      complemento || "",
-      cidade || "",
-      (uf || "").toUpperCase(),
-      cep || "",
-    ].join("||");
-  }
-    
-    // Utilitário para extrair o número/complemento de um endereço existente
-    function parseNumeroEComplemento(enderecoCompleto) {
-        if (!enderecoCompleto) {
-            return { numero: "", complemento: "" };
-        }
-        // Tentativa simplificada: o endereço está salvo como "logradouro - complemento - cidade / UF - CEP"
-        // Este é um fluxo arriscado, mas tentaremos obter as informações digitadas pelo usuário (que não vêm do ViaCEP)
-        
-        // Se o seu backend salva os dados brutos de número/complemento, use o parseEnderecoEstruturado
-        // Como o dado está sendo salvo como uma string concatenada ('Logradouro - Complemento - Cidade/UF - CEP XXXXX'),
-        // a única maneira segura é se o *frontend* manteve esses dados em cache ou se o *backend* devolveu a estrutura.
-        
-        // Pelo seu código PUT, você está enviando o 'montarEnderecoFinal' como string para o backend.
-        // Vamos assumir que os campos "número" e "complemento" não são preenchidos por dados antigos,
-        // pois o campo "complemento" anterior era um só, e o usuário preencherá o número/complemento novamente.
-        // Se o endereço for complexo, ele será exibido no campo 'me-endereco'.
-        return {
-            numero: "", // Sem dado para preencher automaticamente
-            complemento: "", // Sem dado para preencher automaticamente
-        };
-    }
 
-
-    function renderizarMeusDados(dados) {
+  function renderizarMeusDados(dados) {
     const {
       nome,
       cpf,
@@ -208,25 +198,19 @@ document.addEventListener("DOMContentLoaded", () => {
       telefone2,
       email1,
       email2,
-      endereco, // String concatenada vinda do banco
+      endereco: enderecoSalvo, // String concatenada vinda do banco
       lotacao,
     } = dados;
 
-    // Tenta extrair CEP da string de endereço salva
-    let cepExistente = "";
-    if (endereco) {
-      const m = String(endereco).match(/CEP\s*(\d{5}-?\d{3})/);
-      if (m) cepExistente = m[1].replace(/\D/g, "");
-    }
-    
-    // Tenta extrair Número e Complemento se a string de endereço foi salva com o novo formato (ex: 'Logradouro||Numero||Complemento||...')
+    // NOVO: Quebra a string do banco em 6 partes
     const {
-        numero: numeroExistente, 
+        logradouro: logradouroExistente,
+        numero: numeroExistente,
         complemento: complementoExistente,
         cidade: cidadeExistente,
         uf: ufExistente,
-        logradouro: logradouroExistente
-    } = parseEnderecoEstruturado(endereco);
+        cep: cepExistente
+    } = parseEnderecoSalvo(enderecoSalvo);
 
 
     // opções de lotação
@@ -441,7 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function consultarCep() {
       const cepLimpo = (cepInput.value || "").replace(/\D/g, "");
       if (cepLimpo.length !== 8) {
-        statusEl.textContent = "CEP inválido. Use 8 dígitos.";
+        statusEl.textContent = "CEP inválido. Use 8 dígitos (Ex.: 29000000).";
         return;
       }
 
@@ -470,8 +454,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         // Limpar número/complemento se o CEP foi mudado
-        if (numInput) numInput.value = "";
-        if (compInput) compInput.value = "";
+        // Mantemos os campos de número/complemento preenchíveis
+        // (Não limpamos para evitar perda de dados se o CEP for consultado várias vezes)
 
         statusEl.textContent = "CEP carregado com sucesso.";
       } catch (err) {
@@ -493,39 +477,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function montarEnderecoFinal() {
-      // Campos extraídos
+      // Pega os valores dos 5 campos
       const logradouroBairro = endInput.value.trim();
-      const numero = numInput.value.trim(); // NOVO
-      const complemento = compInput.value.trim(); // NOVO
+      const numero = numInput.value.trim();
+      const complemento = compInput.value.trim();
       const cidade = cidadeInput.value.trim();
       const uf = ufInput.value.trim().toUpperCase();
-      const cep = cepInput.value.trim();
+      const cep = cepInput.value.trim().replace(/\D/g, ""); // Garante que o CEP seja limpo
 
-
-      // O backend espera que o campo 'endereco' (que era um só)
-      // contenha todos os dados para ser salvo no DB.
-      // O novo formato concatenado usando ' - ' será:
-      // Logradouro, Bairro - Número - Complemento - Cidade/UF - CEP XXXXXXX
-
-      const partes = [];
-      
-      if (logradouroBairro) partes.push(logradouroBairro);
-      
-      // Adiciona o número (Nº)
-      if (numero) partes.push(numero); 
-      
-      // Adiciona o complemento (Apto, etc.)
-      if (complemento) partes.push(complemento); 
-
-      if (cidade || uf) {
-        const cidadeUf = uf ? `${cidade} / ${uf}` : cidade;
-        if (cidadeUf) partes.push(cidadeUf);
-      }
-      
-      if (cep) partes.push(`CEP ${cep}`);
-
-      // Retorna a string final que será salva no campo 'endereco' do DB
-      return partes.join(" - ");
+      // NOVO FORMATO PARA SALVAR NO SQL (usando ' | ' como separador único e forte)
+      // Ordem: Logradouro/Bairro | Número | Complemento | Cidade | UF | CEP (limpo)
+      return [
+        logradouroBairro,
+        numero,
+        complemento,
+        cidade,
+        uf,
+        cep
+      ].join(' | ');
     }
 
     form.addEventListener("submit", async (e) => {
@@ -539,7 +508,7 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("me-telefone2").value.replace(/\D/g, ""),
         email1: document.getElementById("me-email1").value || "",
         email2: document.getElementById("me-email2").value || "",
-        // NOVO: Monta a string completa do endereço
+        // NOVO: Envia a string padronizada com separadores fortes
         endereco: montarEnderecoFinal(), 
         lotacao: document.getElementById("me-lotacao").value || "SEDE",
       };
@@ -556,7 +525,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!resp.ok) throw new Error("Falha ao salvar");
 
-        // 🟢 Correção para recarregar dados novos
+        // Recarrega os dados do DB para atualizar a interface
         await carregarMeusDados(); 
         
         statusEl.textContent = "Dados atualizados com sucesso.";
