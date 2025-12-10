@@ -1,6 +1,7 @@
 // src/controllers/filiados.controller.js
 const pool = require("../config/db");
-const log = require("../utils/log"); // 🟢 LOGGER
+const log = require("../utils/log"); 
+const Textos = require("../utils/textos"); // 🟢 TEXTOS
 const {
   buscarPorId,
   listarParaPerfil,
@@ -20,17 +21,15 @@ exports.getMe = async (req, res) => {
     const filiado = await buscarPorId(id);
 
     if (!filiado) {
-      return res.status(404).json({ message: "Filiado não encontrado." });
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
     }
 
-    // Retorna os dados (código igual ao anterior, omitido para brevidade nos campos)
-    // ... (campos: nome, cpf, logradouro_bairro, numero, cep, etc...)
-    return res.json(filiado); // Simplificando aqui, mas mantenha a estrutura de campos individual
+    return res.json(filiado);
   } catch (err) {
     log.error("FiliadosGetMeErro", err);
     return res
       .status(500)
-      .json({ message: "Erro interno ao buscar informações do filiado." });
+      .json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨
   }
 };
 
@@ -42,7 +41,6 @@ exports.listarFiliados = async (req, res) => {
     const perfilAcesso = req.user.perfil_acesso || "FILIADO";
     const termoBusca = (req.query.q || "").toString();
 
-    // Log apenas se for uma busca, para não poluir
     if (termoBusca) {
         log.info("FiliadosBusca", { user: req.user.id, termo: termoBusca });
     }
@@ -57,7 +55,7 @@ exports.listarFiliados = async (req, res) => {
     log.error("FiliadosListarErro", err);
     return res
       .status(500)
-      .json({ message: "Erro interno ao listar filiados." });
+      .json({ message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS }); // ✨
   }
 };
 
@@ -69,7 +67,6 @@ exports.atualizarMeusDados = async (req, res) => {
     const id = req.user.id;
     const body = req.body;
 
-    // Extração dos 6 campos de endereço + contato
     const atualizado = await atualizarDadosProprios(id, {
       telefone1: body.telefone1,
       telefone2: body.telefone2,
@@ -87,14 +84,14 @@ exports.atualizarMeusDados = async (req, res) => {
     log.info("FiliadoAtualizouProprios", { userId: id });
 
     return res.json({
-      message: "Dados atualizados com sucesso.",
+      message: Textos.SUCESSO.DADOS_ATUALIZADOS, // ✨
       filiado: atualizado,
     });
   } catch (err) {
     log.error("FiliadosUpdateMeErro", err);
     return res
       .status(500)
-      .json({ message: "Erro interno ao atualizar seus dados." });
+      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
   }
 };
 
@@ -107,7 +104,7 @@ exports.atualizarFiliado = async (req, res) => {
     const idAlvo = parseInt(req.params.id, 10);
 
     if (Number.isNaN(idAlvo)) {
-      return res.status(400).json({ message: "ID inválido." });
+      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO }); // ✨
     }
 
     // Verifica permissão (agora redundante se usar middleware, mas seguro manter)
@@ -125,9 +122,7 @@ exports.atualizarFiliado = async (req, res) => {
       email1: body.email1,
       email2: body.email2,
       lotacao: body.lotacao,
-      // Uppercase na situação
       situacao: (body.situacao || "ATIVO").toUpperCase(),
-      // Endereço
       logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
@@ -136,7 +131,6 @@ exports.atualizarFiliado = async (req, res) => {
       cep: body.cep,
     };
 
-    // Só ADMIN mexe no perfil
     if (perfil === "ADMIN" && body.perfil_acesso) {
         payload.perfil_acesso = body.perfil_acesso.toUpperCase();
     }
@@ -144,10 +138,9 @@ exports.atualizarFiliado = async (req, res) => {
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
 
     if (!atualizado) {
-      return res.status(404).json({ message: "Filiado não encontrado." });
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
     }
 
-    // 🟢 LOG AUDITORIA
     log.info("FiliadoEditadoPorAdmin", { 
         adminId: req.user.id, 
         alvoId: idAlvo, 
@@ -155,14 +148,14 @@ exports.atualizarFiliado = async (req, res) => {
     });
 
     return res.json({
-      message: "Filiado atualizado com sucesso.",
+      message: Textos.SUCESSO.DADOS_ATUALIZADOS, // ✨
       filiado: atualizado,
     });
   } catch (err) {
     log.error("FiliadosUpdateAdminErro", err);
     return res
       .status(500)
-      .json({ message: "Erro interno ao atualizar filiado." });
+      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
   }
 };
 
@@ -172,14 +165,14 @@ exports.atualizarFiliado = async (req, res) => {
 exports.criarFiliado = async (req, res) => {
   try {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
-    // Verificação de permissão
+    
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilCriador)) {
-        return res.status(403).json({ message: "Sem permissão." });
+        return res.status(403).json({ message: Textos.FILIADOS.PERMISSAO_CRIAR }); // ✨
     }
 
     const body = req.body;
     if (!body.nome || !body.cpf || !body.email1) {
-      return res.status(400).json({ message: "Campos obrigatórios: nome, cpf, email1." });
+      return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS }); // ✨
     }
 
     const dadosNovo = {
@@ -193,7 +186,6 @@ exports.criarFiliado = async (req, res) => {
       lotacao: body.lotacao || "SEDE",
       situacao: (body.situacao || "ATIVO").toUpperCase(),
       perfil_acesso: body.perfil_acesso || "FILIADO",
-      // Endereço
       logradouro_bairro: body.logradouro_bairro || null,
       numero: body.numero || null,
       complemento: body.complemento || null,
@@ -208,12 +200,11 @@ exports.criarFiliado = async (req, res) => {
     } catch (err) {
       if (err.code === "CPF_DUPLICADO") {
         log.warn("FiliadoCriacaoDuplicada", { cpf: body.cpf });
-        return res.status(409).json({ message: err.message });
+        return res.status(409).json({ message: Textos.FILIADOS.CPF_DUPLICADO }); // ✨
       }
       throw err;
     }
 
-    // Email
     try {
       await enviarEmailBoasVindasFiliado(novo);
     } catch (emailErr) {
@@ -223,11 +214,11 @@ exports.criarFiliado = async (req, res) => {
     log.info("FiliadoCriado", { creatorId: req.user.id, newId: novo.id });
 
     return res.status(201).json({
-      message: "Filiado criado com sucesso.",
+      message: Textos.SUCESSO.CRIADO_SUCESSO, // ✨
       filiado: novo,
     });
   } catch (err) {
     log.error("FiliadosCriarErro", err);
-    return res.status(500).json({ message: "Erro interno ao criar filiado." });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_FILIADO }); // ✨
   }
 };

@@ -3,7 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
 const { normalizarCpf } = require("../utils/format");
-const log = require("../utils/log"); // 🟢 LOGGER
+const log = require("../utils/log");
+const Textos = require("../utils/textos"); // 🟢 TEXTOS
 
 const {
   buscarPorCpf,
@@ -35,28 +36,26 @@ exports.login = async (req, res) => {
     if (!cpf || !senha) {
       return res
         .status(400)
-        .json({ error: "Informe CPF e senha para entrar." });
+        .json({ error: Textos.AUTH.INFORME_CREDENCIAIS }); // ✨
     }
 
     const cpfNormalizado = normalizarCpf(cpf);
     const filiado = await buscarPorCpf(cpfNormalizado);
 
     if (!filiado || !filiado.senha_hash) {
-      // 🟡 LOG: Tentativa de login com credenciais inválidas
       log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "CredenciaisInvalidas" });
       return res
         .status(400)
-        .json({ error: "CPF ou senha inválidos." });
+        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS }); // ✨
     }
 
     // Verificação de Situação Funcional (Case Insensitive)
     if (filiado.situacao) {
       if (filiado.situacao.toUpperCase() !== "ATIVO") {
-        // 🟡 LOG: Tentativa de login de usuário inativo
         log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, situacao: filiado.situacao });
         return res
           .status(400)
-          .json({ error: "Seu cadastro não está ativo na base do sindicato." });
+          .json({ error: Textos.AUTH.CADASTRO_INATIVO }); // ✨
       }
     }
 
@@ -66,14 +65,14 @@ exports.login = async (req, res) => {
       log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "SenhaIncorreta" });
       return res
         .status(400)
-        .json({ error: "CPF ou senha inválidos." });
+        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS }); // ✨
     }
 
     // Se tiver 2FA cadastrado, exige o token
     if (filiado.twofa_secret) {
       if (!token_2fa) {
         return res.status(400).json({
-          error: "É necessário informar o código de 2FA.",
+          error: Textos.AUTH.CODIGO_2FA_REQUERIDO, // ✨
           requires_2fa: true,
         });
       }
@@ -88,7 +87,7 @@ exports.login = async (req, res) => {
       if (!valido) {
         log.warn("AuthLogin2FAFalha", { cpf: cpfNormalizado });
         return res.status(400).json({
-          error: "Código 2FA inválido.",
+          error: Textos.AUTH.CODIGO_2FA_INVALIDO, // ✨
         });
       }
     }
@@ -97,7 +96,6 @@ exports.login = async (req, res) => {
 
     const token = gerarToken(filiado);
 
-    // 🟢 LOG: Login com sucesso
     log.info("AuthLoginSucesso", { 
       userId: filiado.id, 
       perfil: filiado.perfil_acesso,
@@ -105,14 +103,13 @@ exports.login = async (req, res) => {
     });
 
     return res.json({
-      message: "Login realizado com sucesso.",
+      message: Textos.SUCESSO.LOGIN_REALIZADO, // ✨
       token,
       perfil_acesso: filiado.perfil_acesso || "FILIADO",
     });
   } catch (err) {
-    // 🔴 LOG: Erro interno
     log.error("AuthLoginErroInterno", err);
-    return res.status(500).json({ error: "Erro interno ao realizar login." });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN }); // ✨
   }
 };
 
@@ -129,19 +126,19 @@ exports.ativar2fa = async (req, res) => {
     if (!atualizado) {
       return res
         .status(400)
-        .json({ error: "Não foi possível ativar o 2FA." });
+        .json({ error: "Não foi possível ativar o 2FA." }); // Mantido, pois é uma mensagem específica de falha de DB
     }
 
     log.info("Auth2FAAtivado", { userId });
 
     return res.json({
-      message: "2FA ativado com sucesso. Configure no app autenticador.",
+      message: "2FA ativado com sucesso. Configure no app autenticador.", // Mantido
       secret_base32: secret.base32,
       otpauth_url: secret.otpauth_url,
     });
   } catch (err) {
     log.error("Auth2FAAtivarErro", err);
-    return res.status(500).json({ error: "Erro interno ao ativar 2FA." });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
   }
 };
 
@@ -151,18 +148,17 @@ exports.me = async (req, res) => {
     const filiado = await buscarPorId(userId);
 
     if (!filiado) {
-      return res.status(404).json({ error: "Filiado não encontrado." });
+      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
     }
 
     const { senha_hash, twofa_secret, ...limpo } = filiado;
     return res.json(limpo);
   } catch (err) {
     log.error("AuthMeErro", err);
-    return res.status(500).json({ error: "Erro interno ao carregar seus dados." });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨
   }
 };
 
-// Esta rota é redundante com filiados.controller.js, mas mantemos se estiver em uso
 exports.listarFiliados = async (req, res) => {
   try {
     const perfil = req.user.perfil_acesso || "FILIADO";
@@ -175,6 +171,6 @@ exports.listarFiliados = async (req, res) => {
     });
   } catch (err) {
     log.error("AuthListarFiliadosErro", err);
-    return res.status(500).json({ error: "Erro interno ao listar filiados." });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS }); // ✨
   }
 };

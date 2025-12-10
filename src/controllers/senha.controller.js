@@ -3,27 +3,21 @@ const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { enviarEmailBase } = require("../services/email.service"); 
-const log = require("../utils/log"); // 🟢 LOGGER
+const log = require("../utils/log");
+const Textos = require require("../utils/textos"); // 🟢 TEXTOS
 
-/**
- * Util: obtém e-mail principal do filiado
- * priorizando email1, depois email2.
- */
 function getEmailPrincipal(row) {
   if (row.email1 && row.email1.trim() !== "") return row.email1.trim();
   if (row.email2 && row.email2.trim() !== "") return row.email2.trim();
   return null;
 }
 
-/**
- * POST /api/senha/recuperar
- */
 exports.solicitarResetSenha = async (req, res) => {
   try {
     const { cpf } = req.body || {};
 
     if (!cpf) {
-      return res.status(400).json({ error: "Informe o CPF." });
+      return res.status(400).json({ error: Textos.SENHA.INFORME_CPF }); // ✨
     }
 
     const cpfLimpo = cpf.replace(/\D/g, "");
@@ -35,13 +29,9 @@ exports.solicitarResetSenha = async (req, res) => {
     `;
     const { rows } = await pool.query(query, [cpfLimpo]);
     
-    // Sempre envia mensagem genérica para não expor se CPF existe ou não.
-    const mensagemPadrao =
-      "Se houver um cadastro para este CPF, um e-mail com link de redefinição de senha foi enviado.";
+    const mensagemPadrao = Textos.SENHA.MENSAGEM_RESET_PADRAO; // ✨
 
     if (rows.length === 0) {
-      // 🟡 LOG: Tentativa de reset para CPF inexistente
-      log.warn("SenhaResetCpfNaoEncontrado", { cpf: cpfLimpo });
       return res.json({
         message: mensagemPadrao,
         email_destino: null,
@@ -54,9 +44,7 @@ exports.solicitarResetSenha = async (req, res) => {
     if (!emailDestino) {
       log.warn("SenhaResetSemEmail", { userId: user.id });
       return res.json({
-        message:
-          "CPF localizado, mas não há e-mail válido cadastrado. " +
-          "Por favor, entre em contato com a secretaria do sindicato pela página de contato.",
+        message: Textos.SENHA.EMAIL_NAO_CADASTRADO, // ✨
         email_destino: null,
       });
     }
@@ -86,10 +74,8 @@ exports.solicitarResetSenha = async (req, res) => {
         `Se você não fez esta solicitação, ignore este e-mail.\n\n` +
         `Atenciosamente,\nSINPRF-ES`;
 
-    // 3. Envia o e-mail
     await enviarEmailBase(emailDestino, subject, corpoEmail);
     
-    // 🟢 LOG SUCESSO
     log.info("SenhaResetEmailEnviado", { userId: user.id, email: emailDestino });
 
     return res.json({
@@ -97,31 +83,26 @@ exports.solicitarResetSenha = async (req, res) => {
       email_destino: emailDestino,
     });
   } catch (err) {
-    // 🔴 LOG ERRO
     log.error("SenhaResetSolicitarErro", err);
     return res.status(500).json({
-      error: "Erro interno ao processar a solicitação de redefinição de senha.",
+      error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, // ✨ Reutilizando esta mensagem
     });
   }
 };
 
-/**
- * POST /api/senha/resetar
- * Corpo: { token: "...", senha_nova: "..." }
- */
 exports.resetarSenha = async (req, res) => {
   try {
     const { token, senha_nova } = req.body || {};
 
     if (!token || !senha_nova) {
       return res.status(400).json({
-        error: "Token e nova senha são obrigatórios.",
+        error: Textos.SENHA.TOKEN_E_SENHA_OBRIGATORIOS, // ✨
       });
     }
 
     if (senha_nova.length < 6) {
       return res.status(400).json({
-        error: "A nova senha deve ter pelo menos 6 caracteres.",
+        error: Textos.SENHA.SENHA_MUITO_CURTA, // ✨
       });
     }
 
@@ -131,13 +112,13 @@ exports.resetarSenha = async (req, res) => {
     } catch (err) {
       log.warn("SenhaResetTokenInvalido", { error: err.message });
       return res.status(400).json({
-        error: "Link de redefinição inválido ou expirado. Solicite novamente.",
+        error: Textos.SENHA.TOKEN_SENHA_EXPIRADO, // ✨
       });
     }
 
     if (payload.tipo !== "reset-senha") {
       return res.status(400).json({
-        error: "Token de redefinição inválido.",
+        error: Textos.SENHA.TOKEN_TIPO_INVALIDO, // ✨
       });
     }
 
@@ -152,17 +133,15 @@ exports.resetarSenha = async (req, res) => {
     `;
     await pool.query(updateSql, [senhaHash, userId]);
 
-    // 🟢 LOG SUCESSO FINAL
     log.info("SenhaAlteradaSucesso", { userId });
 
     return res.json({
-      message: "Senha redefinida com sucesso. Você já pode fazer login com a nova senha.",
+      message: Textos.SUCESSO.SENHA_REDEFINIDA, // ✨
     });
   } catch (err) {
-    // 🔴 LOG ERRO
     log.error("SenhaResetConfirmarErro", err);
     return res.status(500).json({
-      error: "Erro interno ao redefinir a senha.",
+      error: Textos.ERROS_INTERNOS.RESET_SENHA, // ✨
     });
   }
 };

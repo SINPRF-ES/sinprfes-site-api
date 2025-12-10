@@ -1,6 +1,7 @@
 // src/controllers/jogos.controller.js
 const pool = require("../config/db");
-const log = require("../utils/log"); // 🟢 LOGGER
+const log = require("../utils/log"); 
+const Textos = require("../utils/textos"); // 🟢 TEXTOS
 
 const PERFIS_JOGOS_MANAGER = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
 
@@ -12,7 +13,7 @@ exports.registrarInscricao = async (req, res) => {
 
     if (!modalidades || modalidades.length === 0) {
       return res.status(400).json({
-        error: "Selecione pelo menos uma modalidade de interesse.",
+        error: "Selecione pelo menos uma modalidade de interesse.", // Mantida a string de validação específica.
       });
     }
     
@@ -34,20 +35,19 @@ exports.registrarInscricao = async (req, res) => {
       userId, filiadoNome, modalidadesTexto, obsLimpa,
     ]);
 
-    // 🟢 LOG
     log.info("JogosInscricao", { 
         userId, 
         modalidades: modalidadesTexto 
     });
 
     return res.status(200).json({
-      message: "Pré-inscrição registrada/atualizada com sucesso!",
+      message: Textos.SUCESSO.INSCRICAO_JOGOS_SUCESSO, // ✨
       inscricao: rows[0],
     });
   } catch (err) {
     log.error("JogosInscricaoErro", err);
     return res.status(500).json({
-      error: "Erro interno ao registrar a pré-inscrição.",
+      error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, // Reutilizando erro interno
     });
   }
 };
@@ -57,7 +57,7 @@ exports.listarInscricoes = async (req, res) => {
         const perfil = (req.user.perfil_acesso || "").toUpperCase();
         
         if (!PERFIS_JOGOS_MANAGER.includes(perfil)) {
-            return res.status(403).json({ error: "Acesso negado." });
+            return res.status(403).json({ error: "Acesso negado." }); // Mantida a string de validação específica.
         }
         
         const query = `
@@ -71,7 +71,6 @@ exports.listarInscricoes = async (req, res) => {
         
         const { rows } = await pool.query(query);
 
-        // 🟢 LOG (Opcional: logar quem visualizou a lista)
         log.info("JogosListagemVisualizada", { viewerId: req.user.id });
 
         return res.json({
@@ -82,7 +81,7 @@ exports.listarInscricoes = async (req, res) => {
     } catch (err) {
         log.error("JogosListagemErro", err);
         return res.status(500).json({
-            error: "Erro interno ao listar as inscrições."
+            error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS, // Reutilizando erro interno
         });
     }
 };
