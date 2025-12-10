@@ -12,9 +12,7 @@
 <body>
   <div id="site-header"></div>
 
-  <!-- adicionamos area-filiado-main para aplicar o grid unificado -->
   <main class="page container area-filiado-main">
-    <!-- este card é o “layout base” (sidebar + conteúdo), também marcado como section-card -->
     <section class="card af-layout section-card">
       <div class="af-sidebar">
         <h1 class="section-title">
@@ -48,9 +46,7 @@
       </div>
 
       <div class="af-main">
-        <!-- ================== MEUS DADOS ================== -->
         <section id="sec-meus-dados" class="af-section active">
-          <!-- wrapper visual da aba -->
           <div class="section-card">
             <h2 class="section-title">
               <span class="emoji">📋</span>
@@ -60,11 +56,14 @@
               Sempre confira se seus dados estão atualizados. Em caso de dúvida, fale com a secretaria do sindicato.
             </p>
 
+            <div id="alerta-endereco-desatualizado" class="section-box" 
+                 style="color: #c0392b; font-weight: bold; margin-bottom: 15px; display: none;">
+            </div>
+
             <div id="area-filiado-conteudo">
               Carregando seus dados...
             </div>
 
-            <!-- Bloco de segurança / 2FA -->
             <div class="section-box" style="margin-top: 20px;">
               <h3 class="section-subtitle" style="margin-bottom: 8px;">
                 Segurança da conta
@@ -84,8 +83,6 @@
           </div>
         </section>
 
-        <!-- ================== FILIADOS ================== -->
-                <!-- ================== FILIADOS ================== -->
         <section id="sec-filiados" class="af-section" aria-hidden="true">
           <div class="section-card">
             <h2 class="section-title">
@@ -96,7 +93,6 @@
               Consulte outros filiados. Você verá somente os dados permitidos para o seu perfil.
             </p>
 
-            <!-- Tutorial agora fica no topo -->
             <div id="tutorial-diretoria" class="af-tutorial" hidden>
               <h3 class="section-subtitle">Dica rápida para Diretoria</h3>
               <p class="field-hint">
@@ -106,7 +102,6 @@
               </p>
             </div>
 
-            <!-- Busca + botão de novo filiado -->
             <div class="section-box">
               <div class="field-row">
                 <div class="field-group">
@@ -128,7 +123,6 @@
               </div>
             </div>
 
-            <!-- Aqui entra o formulário de novo filiado quando acionado -->
             <div id="novo-filiado-container"></div>
 
             <div id="lista-filiados" class="af-lista-filiados" style="margin-top: 16px;">
@@ -137,9 +131,7 @@
           </div>
         </section>
 
-        <!-- ================== RESSARCIMENTO ================== -->
         <section id="sec-ressarcimento" class="af-section" aria-hidden="true">
-          <!-- wrapper visual da aba -->
           <div class="section-card">
             <h2 class="section-title">
               <span class="emoji">💸</span>
@@ -151,7 +143,6 @@
             </p>
 
             <form id="form-ressarcimento" class="form-grid">
-              <!-- DADOS DO FILIADO (autopreenchidos) -->
               <fieldset class="section-box">
                 <legend>Dados do filiado</legend>
                 <div class="field-row">
@@ -179,7 +170,6 @@
                 </div>
               </fieldset>
 
-              <!-- ATIVIDADE SINDICAL (datas → diárias automáticas) -->
               <fieldset class="section-box" style="margin-top: 16px;">
                 <legend>Dados da atividade sindical</legend>
 
@@ -234,7 +224,6 @@
                 </div>
               </fieldset>
 
-              <!-- KM RODADO -->
               <fieldset class="section-box" style="margin-top: 16px;">
                 <legend>Deslocamento com veículo próprio</legend>
                 <div class="field-row">
@@ -262,7 +251,6 @@
                 </div>
               </fieldset>
 
-              <!-- DADOS BANCÁRIOS -->
               <fieldset class="section-box" style="margin-top: 16px;">
                 <legend>Dados bancários para ressarcimento</legend>
                 <div class="field-row">
@@ -299,7 +287,6 @@
                 </div>
               </fieldset>
 
-              <!-- OUTROS GASTOS -->
               <fieldset class="section-box" style="margin-top: 16px;">
                 <legend>Outros gastos ressarcíveis</legend>
                 <div class="field-row">
@@ -330,7 +317,6 @@
                 </div>
               </fieldset>
 
-              <!-- ANEXOS -->
               <fieldset class="section-box" style="margin-top: 16px;">
                 <legend>Anexos (comprovantes)</legend>
                 <div class="field-row">
@@ -351,7 +337,6 @@
                 </div>
               </fieldset>
 
-              <!-- TOTAL E ENVIO -->
               <div class="section-box" style="margin-top: 16px;">
                 <div class="field-row">
                   <div class="field-group">
@@ -386,7 +371,6 @@
           </div>
         </section>
 
-        <!-- ================== JOGOS ================== -->
         <section id="sec-jogos" class="af-section" aria-hidden="true">
           <div class="section-card">
             <h2 class="section-title">

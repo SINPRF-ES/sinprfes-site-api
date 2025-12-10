@@ -2,41 +2,22 @@
 const pool = require("../config/db");
 const { normalizarCpf } = require("../utils/format");
 
+// Variável para listar todas as colunas necessárias nos SELECTs
+const FILIADO_COLUMNS = `
+  id, nome, cpf, data_nascimento, telefone1, telefone2, email1, email2,
+  logradouro_bairro, numero, complemento, cidade, uf, cep,
+  lotacao, situacao, senha_hash, twofa_secret, perfil_acesso, avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em
+`;
+
 /**
  * Busca filiado pelo CPF (já normalizando).
- * Usado em autenticação, primeiro acesso etc.
  */
 async function buscarPorCpf(cpfRaw) {
   const cpf = normalizarCpf(cpfRaw);
   const { rows } = await pool.query(
-    `
-    SELECT
-      id,
-      nome,
-      cpf,
-      data_nascimento,
-      telefone1,
-      telefone2,
-      email1,
-      email2,
-      endereco,
-      lotacao,
-      situacao,
-      senha_hash,
-      twofa_secret,
-      ultimo_acesso,
-      criado_em,
-      atualizado_em,
-      perfil_acesso,
-      avatar_url,
-      bloqueado
-    FROM filiados
-    WHERE cpf = $1
-    LIMIT 1
-  `,
+    `SELECT ${FILIADO_COLUMNS} FROM filiados WHERE cpf = $1 LIMIT 1`,
     [cpf]
   );
-
   return rows[0] || null;
 }
 
@@ -45,34 +26,9 @@ async function buscarPorCpf(cpfRaw) {
  */
 async function buscarPorId(id) {
   const { rows } = await pool.query(
-    `
-    SELECT
-      id,
-      nome,
-      cpf,
-      data_nascimento,
-      telefone1,
-      telefone2,
-      email1,
-      email2,
-      endereco,
-      lotacao,
-      situacao,
-      senha_hash,
-      twofa_secret,
-      ultimo_acesso,
-      criado_em,
-      atualizado_em,
-      perfil_acesso,
-      avatar_url,
-      bloqueado
-    FROM filiados
-    WHERE id = $1
-    LIMIT 1
-  `,
+    `SELECT ${FILIADO_COLUMNS} FROM filiados WHERE id = $1 LIMIT 1`,
     [id]
   );
-
   return rows[0] || null;
 }
 
@@ -92,7 +48,8 @@ async function registrarUltimoAcesso(id) {
 
 /**
  * Atualiza dados básicos do próprio filiado ("Meus dados").
- * Campos permitidos: telefone1, telefone2, email1, email2, endereco, lotacao.
+ * Campos permitidos: telefone1, telefone2, email1, email2,
+ * logradouro_bairro, numero, complemento, cidade, uf, cep, lotacao.
  */
 async function atualizarDadosProprios(id, dados) {
   const {
@@ -100,7 +57,13 @@ async function atualizarDadosProprios(id, dados) {
     telefone2 = null,
     email1 = null,
     email2 = null,
-    endereco = null,
+    // NOVOS CAMPOS DO ENDEREÇO INDIVIDUALMENTE:
+    logradouro_bairro = null,
+    numero = null,
+    complemento = null,
+    cidade = null,
+    uf = null,
+    cep = null,
     lotacao = null,
   } = dados;
 
@@ -110,40 +73,39 @@ async function atualizarDadosProprios(id, dados) {
     SET
       telefone1 = $1,
       telefone2 = $2,
-      email1    = $3,
-      email2    = $4,
-      endereco  = $5,
-      lotacao   = $6,
+      email1 = $3,
+      email2 = $4,
+      lotacao = $5,
+      logradouro_bairro = $6,
+      numero = $7,
+      complemento = $8,
+      cidade = $9,
+      uf = $10,
+      cep = $11,
       atualizado_em = NOW()
-    WHERE id = $7
-    RETURNING
-      id,
-      nome,
-      cpf,
-      data_nascimento,
+    WHERE id = $12
+    RETURNING ${FILIADO_COLUMNS}
+  `,
+    [
       telefone1,
       telefone2,
       email1,
       email2,
-      endereco,
       lotacao,
-      situacao,
-      perfil_acesso,
-      avatar_url,
-      bloqueado,
-      ultimo_acesso,
-      criado_em,
-      atualizado_em
-  `,
-    [telefone1, telefone2, email1, email2, endereco, lotacao, id]
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
+      id,
+    ]
   );
-
   return rows[0] || null;
 }
 
 /**
  * Atualização completa de um filiado (usada por ADMIN / DIRETORIA / FUNCIONARIO).
- * Aqui já deve chegar algo filtrado pela controller quanto aos campos permitidos.
  */
 async function atualizarFiliadoPorId(id, dados) {
   const campos = [];
@@ -151,9 +113,12 @@ async function atualizarFiliadoPorId(id, dados) {
   let idx = 1;
 
   function addCampo(campoSql, valor) {
-    campos.push(`${campoSql} = $${idx}`);
-    valores.push(valor);
-    idx++;
+    // Garante que campos vazios que não são string (ex: data_nascimento) não sejam adicionados
+    if (valor !== undefined && valor !== null) {
+      campos.push(`${campoSql} = $${idx}`);
+      valores.push(valor);
+      idx++;
+    }
   }
 
   if (dados.nome !== undefined) addCampo("nome", dados.nome);
@@ -164,7 +129,16 @@ async function atualizarFiliadoPorId(id, dados) {
   if (dados.telefone2 !== undefined) addCampo("telefone2", dados.telefone2);
   if (dados.email1 !== undefined) addCampo("email1", dados.email1);
   if (dados.email2 !== undefined) addCampo("email2", dados.email2);
-  if (dados.endereco !== undefined) addCampo("endereco", dados.endereco);
+  // NOVOS CAMPOS DO ENDEREÇO AQUI:
+  if (dados.logradouro_bairro !== undefined)
+    addCampo("logradouro_bairro", dados.logradouro_bairro);
+  if (dados.numero !== undefined) addCampo("numero", dados.numero);
+  if (dados.complemento !== undefined)
+    addCampo("complemento", dados.complemento);
+  if (dados.cidade !== undefined) addCampo("cidade", dados.cidade);
+  if (dados.uf !== undefined) addCampo("uf", dados.uf);
+  if (dados.cep !== undefined) addCampo("cep", dados.cep);
+
   if (dados.lotacao !== undefined) addCampo("lotacao", dados.lotacao);
   if (dados.situacao !== undefined) addCampo("situacao", dados.situacao);
   if (dados.perfil_acesso !== undefined)
@@ -182,24 +156,7 @@ async function atualizarFiliadoPorId(id, dados) {
     UPDATE filiados
     SET ${campos.join(", ")}
     WHERE id = $${idx}
-    RETURNING
-      id,
-      nome,
-      cpf,
-      data_nascimento,
-      telefone1,
-      telefone2,
-      email1,
-      email2,
-      endereco,
-      lotacao,
-      situacao,
-      perfil_acesso,
-      avatar_url,
-      bloqueado,
-      ultimo_acesso,
-      criado_em,
-      atualizado_em
+    RETURNING ${FILIADO_COLUMNS}
   `;
 
   const { rows } = await pool.query(sql, valores);
@@ -208,8 +165,6 @@ async function atualizarFiliadoPorId(id, dados) {
 
 /**
  * Lista filiados de acordo com o perfil de acesso.
- * - ADMIN/DIRETORIA/FUNCIONARIO: vê tudo
- * - FILIADO: vê apenas nome + telefone1 dos demais
  */
 async function listarParaPerfil(perfilAcesso, termoBusca = "") {
   const filtro = termoBusca.trim();
@@ -233,12 +188,16 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "") {
         id,
         nome,
         cpf,
-        data_nascimento,
         telefone1,
         telefone2,
         email1,
         email2,
-        endereco,
+        logradouro_bairro,
+        numero,
+        complemento,
+        cidade,
+        uf,
+        cep,
         lotacao,
         situacao,
         perfil_acesso
@@ -271,7 +230,6 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "") {
 
 /**
  * Cria um novo filiado a partir do painel (ADMIN/DIRETORIA/FUNCIONARIO).
- * Se não for ADMIN, força perfil_acesso = 'FILIADO'.
  */
 async function criarFiliadoInicial(dados, perfilCriador) {
   const perfilUpper = (perfilCriador || "").toUpperCase();
@@ -282,7 +240,6 @@ async function criarFiliadoInicial(dados, perfilCriador) {
   }
 
   if (perfilUpper !== "ADMIN") {
-    // Diretoria/funcionário só podem criar FILIADO
     perfilNovo = "FILIADO";
   } else {
     if (!["FILIADO", "FUNCIONARIO", "DIRETORIA", "ADMIN"].includes(perfilNovo)) {
@@ -310,7 +267,13 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     telefone2 = null,
     email1 = null,
     email2 = null,
-    endereco = null,
+    // NOVOS CAMPOS DO ENDEREÇO AQUI:
+    logradouro_bairro = null,
+    numero = null,
+    complemento = null,
+    cidade = null,
+    uf = null,
+    cep = null,
     lotacao = "SEDE",
   } = dados;
 
@@ -320,7 +283,8 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       (nome, cpf, data_nascimento,
        telefone1, telefone2,
        email1, email2,
-       endereco, lotacao,
+       logradouro_bairro, numero, complemento, cidade, uf, cep,
+       lotacao,
        situacao,
        perfil_acesso,
        criado_em, atualizado_em,
@@ -329,29 +293,13 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       ($1, $2, $3,
        $4, $5,
        $6, $7,
-       $8, $9,
-       $10,
-       $11,
+       $8, $9, $10, $11, $12, $13,
+       $14,
+       $15,
+       $16,
        NOW(), NOW(),
        false)
-    RETURNING
-      id,
-      nome,
-      cpf,
-      data_nascimento,
-      telefone1,
-      telefone2,
-      email1,
-      email2,
-      endereco,
-      lotacao,
-      situacao,
-      perfil_acesso,
-      avatar_url,
-      bloqueado,
-      ultimo_acesso,
-      criado_em,
-      atualizado_em
+    RETURNING ${FILIADO_COLUMNS}
   `,
     [
       nome,
@@ -361,7 +309,13 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       telefone2,
       email1,
       email2,
-      endereco,
+      // Valores das 6 novas colunas
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
       lotacao,
       dados.situacao || "ATIVO",
       perfilNovo,
