@@ -1,66 +1,105 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Notícias – SINPRF-ES</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/main.js" defer></script>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
 </head>
-<body>
 
+<body>
+  <!-- Header padrão (injetado via main.js) -->
   <div id="site-header"></div>
 
   <main class="page container">
     <h1>Notícias</h1>
 
-    <article id="jogos-2026" class="news-item card">
-        <header class="section-header">
-            <h2>Jogos de Integração da PRF</h2>
-            <p class="news-meta">2025-12-10 · Institucional</p>
-        </header>
+    <!-- Notícia: Jogos de Integração da PRF -->
+    <article id="jogos-2026" class="news-item card card-section">
+      <header class="section-header">
+        <h2>Jogos de Integração da PRF</h2>
+        <p class="news-meta">2025-12-10 · Institucional</p>
+      </header>
 
-        <div class="noticia-conteudo">
-            <p>
-                O Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo (SINPRF-ES)
-                iniciou a organização da delegação capixaba para participar dos próximos
-                <strong>Jogos de Integração da Polícia Rodoviária Federal (PRF)</strong>.
-            </p>
-            <p>
-                O evento reúne policiais rodoviários federais de todo o país em diversas modalidades esportivas,
-                promovendo integração, saúde, qualidade de vida e fortalecimento da categoria.
-            </p>
+      <div class="noticia-conteudo">
+        <p>
+          O Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo (SINPRF-ES)
+          iniciou a organização da delegação capixaba para participar dos próximos
+          <strong>Jogos de Integração da Polícia Rodoviária Federal (PRF)</strong>.
+        </p>
 
-            <h3>Objetivos da delegação capixaba</h3>
-            <ul>
-                <li>Estimular a prática esportiva entre os filiados;</li>
-                <li>Fortalecer integração entre unidades da PRF;</li>
-                <li>Representar o Espírito Santo com espírito esportivo e união;</li>
-                <li>Valorizar atletas experientes e incentivar novos participantes.</li>
-            </ul>
+        <p>
+          O evento reúne policiais rodoviários federais de todo o país em diversas modalidades esportivas,
+          promovendo integração, saúde, qualidade de vida e fortalecimento da categoria.
+        </p>
 
-            <p>
-                As inscrições serão feitas exclusivamente pela <strong>Área do Filiado</strong>,
-                mediante login no portal. O formulário de pré-inscrição permitirá indicar modalidades
-                de interesse, disponibilidade e observações adicionais.
-            </p>
+        <h3>Objetivos da delegação capixaba</h3>
+        <ul>
+          <li>Estimular a prática esportiva entre os filiados;</li>
+          <li>Fortalecer a integração entre unidades da PRF;</li>
+          <li>Representar o Espírito Santo com espírito esportivo, união e fair play;</li>
+          <li>Valorizar atletas experientes e incentivar novos participantes.</li>
+        </ul>
+
+        <p>
+          As inscrições serão feitas exclusivamente pela
+          <strong>Área do Filiado</strong>, mediante login no portal.
+          O formulário de pré-inscrição permitirá indicar modalidades de interesse,
+          disponibilidade e observações adicionais.
+        </p>
+      </div>
+
+      <!-- Galeria de fotos e vídeo -->
+      <section class="galeria-fotos">
+        <h2>Estruturas e espaços vistoriados</h2>
+        <p class="section-subtitle">
+          Alguns registros das visitas técnicas realizadas para preparação da delegação capixaba.
+        </p>
+
+        <div class="galeria-grid">
+          <!-- Foto 1 -->
+          <figure>
+            <img src="/img/jogos/j1.jpg" alt="Campo de futebol vistoriado para os jogos" />
+            <!-- <figcaption>Campo principal utilizado nas competições.</figcaption> -->
+          </figure>
+
+          <!-- Foto 2 -->
+          <figure>
+            <img src="/img/jogos/j2.jpg" alt="Ginásio poliesportivo em vistoria" />
+          </figure>
+
+          <!-- Foto 3 -->
+          <figure>
+            <img src="/img/jogos/j3.jpg" alt="Visão geral do ginásio interno" />
+          </figure>
+
+          <!-- Foto 4 -->
+          <figure>
+            <img src="/img/jogos/j4.jpg" alt="Área destinada às provas de tênis de mesa" />
+          </figure>
+
+          <!-- Foto 5 -->
+          <figure>
+            <img src="/img/jogos/j5.jpg" alt="Quadra preparada para jogos coletivos" />
+          </figure>
+
+          <!-- Vídeo (v1.mp4) -->
+          <figure class="video-container">
+            <video controls preload="metadata">
+              <source src="/img/jogos/v1.mp4" type="video/mp4" />
+              Seu navegador não suporta a reprodução de vídeo.
+            </video>
+            <!-- <figcaption>Registro em vídeo da vistoria técnica.</figcaption> -->
+          </figure>
         </div>
-
-        <section class="galeria-fotos">
-            <div class="galeria-grid">
-                <figure><img src="/img/jogos/j1.jpg" alt="Foto 1 dos jogos" /></figure>
-                <figure><img src="/img/jogos/j2.jpg" alt="Foto 2 dos jogos" /></figure>
-                <figure><img src="/img/jogos/j3.jpg" alt="Foto 3 dos jogos" /></figure>
-                <figure><img src="/img/jogos/j4.jpg" alt="Foto 4 dos jogos" /></figure>
-                <figure><img src="/img/jogos/j5.jpg" alt="Foto 5 dos jogos" /></figure>
-                <figure><img src="/img/jogos/j6.jpg" alt="Foto 6 dos jogos" /></figure>
-            </div>
-        </section>
+      </section>
     </article>
-    </main>
+  </main>
 
+  <!-- Rodapé padrão (injetado via main.js) -->
   <div id="site-footer"></div>
 
+  <script src="/js/main.js"></script>
 </body>
 </html>
