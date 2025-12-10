@@ -1,12 +1,14 @@
-// public/js/area-filiado.js
+// public/js/area-filiado.js (Completo e Corrigido)
 
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
   const userInfoRaw = localStorage.getItem("userInfo"); 
   let perfilAcesso = null;
   
-  // 1. Elemento para exibir o alerta de endereço (ID adicionado ao HTML)
   const alertaEnderecoEl = document.getElementById("alerta-endereco-desatualizado");
+
+  // 🟢 NOVO: Opções de Situação Funcional
+  const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
   if (!token) {
     window.location.href = "/login.html";
@@ -24,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // -------------------------
   // MÁSCARA GLOBAL DE TELEFONE
+  // ... (função aplicarMascaraTelefone inalterada)
   // -------------------------
   function aplicarMascaraTelefone(input) {
     if (!input) return;
@@ -60,7 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
   // ---- Navegação lateral ----
+  // ... (código da navegação inalterado)
   const navButtons = document.querySelectorAll(".af-nav-item");
   const sections = document.querySelectorAll(".af-section");
 
@@ -118,24 +123,21 @@ document.addEventListener("DOMContentLoaded", () => {
       // Atualiza o perfilAcesso global com base no cadastro
       perfilAcesso = dados.perfil_acesso || "FILIADO";
       
-      // 2. LÓGICA DE ALERTA: Verifica se o CEP (coluna nova) está vazio/nulo.
+      // LÓGICA DE ALERTA: Verifica se o CEP (coluna nova) está vazio/nulo.
       if (!dados.cep || dados.cep === "" || dados.cep === null) {
           if (alertaEnderecoEl) {
               alertaEnderecoEl.textContent = "Endereço desatualizado, favor atualizar seus dados de endereço.";
               alertaEnderecoEl.style.display = 'block';
               
-              // Opcional: Se for a aba "Meus Dados", foca o alerta
               if (document.querySelector('#sec-meus-dados.active')) {
                   alertaEnderecoEl.scrollIntoView({ behavior: 'smooth' });
               }
           }
       } else {
-          // Se o CEP está preenchido (dados no formato novo), esconde o alerta
           if (alertaEnderecoEl) {
               alertaEnderecoEl.style.display = 'none';
           }
       }
-      // FIM NOVA LÓGICA DE ALERTA
 
       // opcional: guarda também no localStorage
       try {
@@ -168,7 +170,6 @@ document.addEventListener("DOMContentLoaded", () => {
       telefone2,
       email1,
       email2,
-      // NOVAS COLUNAS DIRETAMENTE DO BANCO:
       logradouro_bairro,
       numero,
       complemento,
@@ -190,6 +191,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const opcoesLotacaoHtml = LOTACOES.map((rotulo) => {
       const selected =
         lotacaoAtual === rotulo.toUpperCase() ? "selected" : "";
+      return `<option value="${rotulo}" ${selected}>${rotulo}</option>`;
+    }).join("");
+
+    // 🟢 NOVO: Opções de Situação Funcional (para o formulário de edição de filiados)
+    const situacaoAtual = (situacao || "ATIVO").toUpperCase();
+    const opcoesSituacaoHtml = SITUACAO_OPCOES.map((rotulo) => {
+      const selected = situacaoAtual === rotulo.toUpperCase() ? "selected" : "";
       return `<option value="${rotulo}" ${selected}>${rotulo}</option>`;
     }).join("");
 
@@ -447,6 +455,7 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("me-telefone2").value.replace(/\D/g, ""),
         email1: document.getElementById("me-email1").value || "",
         email2: document.getElementById("me-email2").value || "",
+        
         // ENVIANDO NOVAS COLUNAS INDIVIDUALMENTE PARA O BACKEND:
         logradouro_bairro: endInput.value || "",
         numero: numInput.value || "",
@@ -631,6 +640,15 @@ document.addEventListener("DOMContentLoaded", () => {
               </select>
             </div>
 
+            <div class="field-group">
+              <label>Situação</label>
+              <select name="situacao">
+                ${opcoesSituacaoHtml}
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
             ${
               // Só ADMIN escolhe perfil; os outros criam sempre FILIADO
               perfilAcesso === "ADMIN"
@@ -764,11 +782,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const html = filtrados
       .map((f) => {
+        // 🟢 NOVO: Situação funcional
+        const situacaoFiliado = f.situacao || "ATIVO";
+        const opcoesSituacaoEditavel = SITUACAO_OPCOES.map(op => `
+          <option value="${op}" ${situacaoFiliado === op ? 'selected' : ''}>${op}</option>
+        `).join('');
+
+
         const camposBasicos = `
           <div class="af-filiado-linha">
             <div class="af-filiado-info">
               <strong>${f.nome || ""}</strong><br />
               <span class="field-hint">CPF: ${formatarCPF(f.cpf)}</span><br />
+              <span class="field-hint">Situação: ${f.situacao || 'ATIVO'}</span><br />
               ${
                 f.lotacao
                   ? `<span class="field-hint">Lotação: ${f.lotacao}</span>`
@@ -839,16 +865,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }" />
                   </div>
                 </div>
-
-                <div class="field-row">
-                  <div class="field-group">
-                    <label>Endereço</label>
-                    <textarea name="endereco" rows="2">${
-                      f.endereco || ""
-                    }</textarea>
-                  </div>
-                </div>
-
+                
                 <div class="field-row">
                   <div class="field-group">
                     <label>Lotação</label>
@@ -870,7 +887,15 @@ document.addEventListener("DOMContentLoaded", () => {
                       }>4ª DEL (Linhares)</option>
                     </select>
                   </div>
-                </div>
+                  
+                  <div class="field-group">
+                    <label>Situação Funcional</label>
+                    <select name="situacao">
+                      ${opcoesSituacaoEditavel}
+                    </select>
+                  </div>
+                  </div>
+
 
                 <div class="field-row">
                   <div class="field-group ${classeSomenteAdmin}">
@@ -934,6 +959,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           });
 
+          // 🟢 NOVO: Garantir que a situação é enviada no payload
+          payload.situacao = formData.get("situacao");
+          
           if (perfilAcesso !== "ADMIN") {
             delete payload.cpf;
             delete payload.perfil_acesso;
@@ -953,6 +981,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!resp.ok) throw new Error("Erro ao atualizar filiado");
 
+            // Opcional: Recarregar a lista para ver a mudança
+            carregarMeusDados(); 
+            
             statusSpan.textContent = "Alterações salvas.";
             setTimeout(() => (statusSpan.textContent = ""), 3000);
           } catch (err) {
@@ -965,6 +996,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------------- RESSARCIMENTO (formulário) ----------------
+  // ... (código de ressarcimento)
 
   function preencherFormularioRessarcimentoComDados(dados) {
     const nomeEl = document.getElementById("res-nome");

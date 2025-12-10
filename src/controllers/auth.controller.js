@@ -45,10 +45,13 @@ exports.login = async (req, res) => {
         .json({ error: "CPF ou senha inválidos." });
     }
 
-    if (filiado.situacao && filiado.situacao !== "Ativo") {
-      return res
-        .status(400)
-        .json({ error: "Seu cadastro não está ativo na base do sindicato." });
+    // 🟢 CORREÇÃO CRÍTICA: Verificação de Situação Funcional (Case Insensitive)
+    if (filiado.situacao) {
+      if (filiado.situacao.toUpperCase() !== "ATIVO") {
+        return res
+          .status(400)
+          .json({ error: "Seu cadastro não está ativo na base do sindicato." });
+      }
     }
 
     const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);

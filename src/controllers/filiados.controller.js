@@ -32,14 +32,14 @@ exports.getMe = async (req, res) => {
       telefone2: filiado.telefone2,
       email1: filiado.email1,
       email2: filiado.email2,
-      // 🟢 CORREÇÃO: Usar as novas 6 colunas de endereço no retorno
+      // 🟢 ENDEREÇO
       logradouro_bairro: filiado.logradouro_bairro,
       numero: filiado.numero,
       complemento: filiado.complemento,
       cidade: filiado.cidade,
       uf: filiado.uf,
       cep: filiado.cep,
-      // REMOVIDO: endereco (antigo)
+      // FIM ENDEREÇO
       lotacao: filiado.lotacao,
       situacao: filiado.situacao,
       perfil_acesso: filiado.perfil_acesso,
@@ -89,7 +89,6 @@ exports.atualizarMeusDados = async (req, res) => {
   try {
     const id = req.user.id;
 
-    // 🟢 CORREÇÃO: Extrair as 6 novas colunas do body
     const {
       telefone1,
       telefone2,
@@ -163,14 +162,13 @@ exports.atualizarFiliado = async (req, res) => {
       lotacao,
       situacao,
       perfil_acesso,
-      // 🟢 CORREÇÃO: Extrair as 6 novas colunas do body
+      // ENDEREÇO:
       logradouro_bairro,
       numero,
       complemento,
       cidade,
       uf,
       cep,
-      // REMOVIDO: endereco (antigo)
     } = req.body;
 
     const payload = {
@@ -182,8 +180,9 @@ exports.atualizarFiliado = async (req, res) => {
       email1,
       email2,
       lotacao,
-      situacao,
-      // PASSANDO AS 6 NOVAS COLUNAS NO PAYLOAD:
+      // 🟢 CORREÇÃO: Garante que a situação seja salva em UPPERCASE
+      situacao: (situacao || "ATIVO").toUpperCase(),
+      // ENDEREÇO:
       logradouro_bairro,
       numero,
       complemento,
@@ -243,7 +242,7 @@ exports.criarFiliado = async (req, res) => {
       lotacao,
       situacao,
       perfil_acesso,
-      // 🟢 CORREÇÃO: Extrair as 6 novas colunas do body
+      // ENDEREÇO:
       logradouro_bairro,
       numero,
       complemento,
@@ -267,9 +266,10 @@ exports.criarFiliado = async (req, res) => {
       email1: email1 || null,
       email2: email2 || null,
       lotacao: lotacao || "SEDE",
-      situacao: situacao || "ATIVO",
+      // 🟢 CORREÇÃO: Garante que a situação seja salva em UPPERCASE
+      situacao: (situacao || "ATIVO").toUpperCase(),
       perfil_acesso: perfil_acesso || "FILIADO",
-      // PASSANDO AS 6 NOVAS COLUNAS NO PAYLOAD:
+      // ENDEREÇO:
       logradouro_bairro: logradouro_bairro || null,
       numero: numero || null,
       complemento: complemento || null,
