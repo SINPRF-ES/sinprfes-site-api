@@ -32,7 +32,7 @@ exports.getMe = async (req, res) => {
       telefone2: filiado.telefone2,
       email1: filiado.email1,
       email2: filiado.email2,
-      // 🟢 ENDEREÇO
+      // ENDEREÇO
       logradouro_bairro: filiado.logradouro_bairro,
       numero: filiado.numero,
       complemento: filiado.complemento,

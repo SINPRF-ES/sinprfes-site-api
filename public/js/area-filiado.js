@@ -1,14 +1,12 @@
-// public/js/area-filiado.js (Completo e Corrigido)
+// public/js/area-filiado.js
 
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
   const userInfoRaw = localStorage.getItem("userInfo"); 
   let perfilAcesso = null;
   
+  // 1. Elemento para exibir o alerta de endereço (ID adicionado ao HTML)
   const alertaEnderecoEl = document.getElementById("alerta-endereco-desatualizado");
-
-  // 🟢 NOVO: Opções de Situação Funcional
-  const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
   if (!token) {
     window.location.href = "/login.html";
@@ -24,9 +22,12 @@ document.addEventListener("DOMContentLoaded", () => {
     console.warn("Não foi possível ler userInfo do localStorage:", e);
   }
 
+  // 🟢 NOVO: Opções de Situação Funcional (Constante)
+  const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
+
+
   // -------------------------
   // MÁSCARA GLOBAL DE TELEFONE
-  // ... (função aplicarMascaraTelefone inalterada)
   // -------------------------
   function aplicarMascaraTelefone(input) {
     if (!input) return;
@@ -63,9 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-
   // ---- Navegação lateral ----
-  // ... (código da navegação inalterado)
   const navButtons = document.querySelectorAll(".af-nav-item");
   const sections = document.querySelectorAll(".af-section");
 
@@ -101,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------- MEUS DADOS ----------------
   const conteudoMeusDados = document.getElementById("area-filiado-conteudo");
   let dadosMeGlobal = null;
-
+  
   async function carregarMeusDados() {
     if (!conteudoMeusDados) return;
 
@@ -134,10 +133,12 @@ document.addEventListener("DOMContentLoaded", () => {
               }
           }
       } else {
+          // Se o CEP está preenchido (dados no formato novo), esconde o alerta
           if (alertaEnderecoEl) {
               alertaEnderecoEl.style.display = 'none';
           }
       }
+      // FIM NOVA LÓGICA DE ALERTA
 
       // opcional: guarda também no localStorage
       try {
@@ -170,6 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
       telefone2,
       email1,
       email2,
+      // NOVAS COLUNAS DIRETAMENTE DO BANCO:
       logradouro_bairro,
       numero,
       complemento,
@@ -190,14 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lotacaoAtual = (lotacao || "SEDE").toUpperCase();
     const opcoesLotacaoHtml = LOTACOES.map((rotulo) => {
       const selected =
-        lotacaoAtual === rotulo.toUpperCase() ? "selected" : "";
-      return `<option value="${rotulo}" ${selected}>${rotulo}</option>`;
-    }).join("");
-
-    // 🟢 NOVO: Opções de Situação Funcional (para o formulário de edição de filiados)
-    const situacaoAtual = (situacao || "ATIVO").toUpperCase();
-    const opcoesSituacaoHtml = SITUACAO_OPCOES.map((rotulo) => {
-      const selected = situacaoAtual === rotulo.toUpperCase() ? "selected" : "";
+        rotulo.toUpperCase() === lotacaoAtual ? "selected" : "";
       return `<option value="${rotulo}" ${selected}>${rotulo}</option>`;
     }).join("");
 
@@ -591,6 +586,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     container.dataset.aberto = "1";
 
+    // 🟢 Situação Funcional: Opções para o formulário de CRIAÇÃO
+    const opcoesSituacaoHtml = SITUACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join('');
+
     container.innerHTML = `
       <div class="section-box af-filiado-card">
         <h3 class="section-subtitle">Cadastrar novo filiado</h3>
@@ -639,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <option value="4ª DEL (Linhares)">4ª DEL (Linhares)</option>
               </select>
             </div>
-
+            
             <div class="field-group">
               <label>Situação</label>
               <select name="situacao">
@@ -782,8 +780,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const html = filtrados
       .map((f) => {
-        // 🟢 NOVO: Situação funcional
-        const situacaoFiliado = f.situacao || "ATIVO";
+        // 🟢 Situação funcional do filiado sendo editado (Upper Case para segurança)
+        const situacaoFiliado = (f.situacao || "ATIVO").toUpperCase();
         const opcoesSituacaoEditavel = SITUACAO_OPCOES.map(op => `
           <option value="${op}" ${situacaoFiliado === op ? 'selected' : ''}>${op}</option>
         `).join('');
@@ -794,7 +792,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="af-filiado-info">
               <strong>${f.nome || ""}</strong><br />
               <span class="field-hint">CPF: ${formatarCPF(f.cpf)}</span><br />
-              <span class="field-hint">Situação: ${f.situacao || 'ATIVO'}</span><br />
+              <span class="field-hint">Situação: ${situacaoFiliado}</span><br />
               ${
                 f.lotacao
                   ? `<span class="field-hint">Lotação: ${f.lotacao}</span>`
@@ -865,7 +863,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }" />
                   </div>
                 </div>
-                
+
                 <div class="field-row">
                   <div class="field-group">
                     <label>Lotação</label>
@@ -920,6 +918,37 @@ document.addEventListener("DOMContentLoaded", () => {
                     </p>
                   </div>
                 </div>
+                
+                <div class="field-row">
+                    <div class="field-group">
+                      <label>Logradouro / Bairro</label>
+                      <input type="text" name="logradouro_bairro" value="${f.logradouro_bairro || ''}" />
+                    </div>
+                </div>
+
+                <div class="field-row" style="grid-template-columns: 1fr 2fr 1fr 1fr 1fr;">
+                  <div class="field-group">
+                    <label>Número</label>
+                    <input type="text" name="numero" value="${f.numero || ''}" />
+                  </div>
+                  <div class="field-group">
+                    <label>Complemento</label>
+                    <input type="text" name="complemento" value="${f.complemento || ''}" />
+                  </div>
+                  <div class="field-group">
+                    <label>CEP</label>
+                    <input type="text" name="cep" value="${f.cep || ''}" maxlength="8" />
+                  </div>
+                  <div class="field-group">
+                    <label>UF</label>
+                    <input type="text" name="uf" value="${f.uf || ''}" maxlength="2" />
+                  </div>
+                  <div class="field-group">
+                    <label>Cidade</label>
+                    <input type="text" name="cidade" value="${f.cidade || ''}" />
+                  </div>
+                </div>
+
 
                 <div class="form-actions" style="margin-top: 10px;">
                   <button type="submit" class="btn btn-primary">Salvar alterações</button>
@@ -952,15 +981,15 @@ document.addEventListener("DOMContentLoaded", () => {
           const formData = new FormData(form);
           const payload = {};
           formData.forEach((value, key) => {
-            if (key === "telefone1" || key === "telefone2") {
-              payload[key] = String(value).replace(/\D/g, "");
+            // Limpa telefones e CEP
+            if (key === "telefone1" || key === "telefone2" || key === 'cep') {
+               payload[key] = String(value).replace(/\D/g, "");
             } else {
               payload[key] = value;
             }
           });
 
-          // 🟢 NOVO: Garantir que a situação é enviada no payload
-          payload.situacao = formData.get("situacao");
+          // O campo 'situacao' já está no payload do form.
           
           if (perfilAcesso !== "ADMIN") {
             delete payload.cpf;
@@ -981,7 +1010,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!resp.ok) throw new Error("Erro ao atualizar filiado");
 
-            // Opcional: Recarregar a lista para ver a mudança
+            // Recarrega a lista para ver a mudança
             carregarMeusDados(); 
             
             statusSpan.textContent = "Alterações salvas.";
