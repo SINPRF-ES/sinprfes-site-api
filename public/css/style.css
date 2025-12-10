@@ -1136,3 +1136,75 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+/* ==========================
+   PÁGINA DE NOTÍCIAS
+   ========================== */
+
+/* Card principal da notícia */
+.noticia-card {
+  max-width: 960px;
+  margin: 1.5rem auto 3rem auto;
+}
+
+/* Cabeçalho da notícia (título + meta) */
+.noticia-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.noticia-header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.noticia-meta {
+  font-size: 0.85rem;
+  color: #a0aec0; /* cinza suave */
+}
+
+/* Corpo do texto da notícia */
+.noticia-corpo {
+  max-width: 900px;
+  margin: 0 auto 2rem auto;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.noticia-corpo p {
+  margin-bottom: 0.8rem;
+}
+
+/* Bloco de imagens da notícia */
+.noticia-galeria {
+  max-width: 900px;
+  margin: 0 auto 0 auto;
+}
+
+/* Cada imagem com respiro e borda suave */
+.noticia-galeria figure {
+  margin: 0 0 1.5rem 0;
+}
+
+.noticia-galeria img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Opcional: legenda sob fotos (se quiser usar) */
+.noticia-galeria figcaption {
+  font-size: 0.8rem;
+  color: #cbd5e0;
+  margin-top: 0.35rem;
+  text-align: left;
+}
+
+/* Em telas muito grandes, centraliza melhor o card na página */
+@media (min-width: 1200px) {
+  .noticia-card {
+    max-width: 980px;
+  }
+}

@@ -5,13 +5,14 @@
 
 const { gerarPdfRessarcimento } = require("../services/pdf.service");
 const { enviarEmailRessarcimento } = require("../services/email.service");
+const log = require("../utils/log"); // 🟢 LOGGER
 
 /**
  * Controller para criação de pedido de ressarcimento.
  * Recebe:
- *  - body (FormData -> campos do formulário)
- *  - files (anexos do multer)
- *  - user (do middleware auth)
+ * - body (FormData -> campos do formulário)
+ * - files (anexos do multer)
+ * - user (do middleware auth)
  */
 exports.criarRequerimento = async (req, res) => {
   try {
@@ -61,9 +62,10 @@ exports.criarRequerimento = async (req, res) => {
       criadoEm: new Date().toISOString(),
     };
 
-    console.log("📄 Novo pedido de ressarcimento recebido:", {
-      usuario,
-      pedido,
+    // 🟢 LOG SUCESSO PRELIMINAR (Recebido)
+    log.info("RessarcimentoRecebido", {
+      filiadoId: usuario.id,
+      valorTotal: pedido.valor_total,
       qtdAnexos: anexos.length,
     });
 
@@ -73,6 +75,9 @@ exports.criarRequerimento = async (req, res) => {
     // 2) Envia e-mail para sindicato + cópia para filiado
     await enviarEmailRessarcimento(pedido, pdfBuffer);
 
+    // 🟢 LOG SUCESSO FINAL
+    log.info("RessarcimentoProcessado", { filiadoId: usuario.id });
+
     // 3) Futuro: persistência em tabela "ressarcimentos"
 
     return res.status(200).json({
@@ -81,7 +86,8 @@ exports.criarRequerimento = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Erro ao registrar pedido de ressarcimento:", err);
+    // 🔴 LOG ERRO
+    log.error("RessarcimentoErro", err);
     return res
       .status(500)
       .json({ error: "Erro ao registrar pedido de ressarcimento." });

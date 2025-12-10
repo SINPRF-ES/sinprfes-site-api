@@ -3,6 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
 const { normalizarCpf } = require("../utils/format");
+const log = require("../utils/log"); // 🟢 LOGGER
+
 const {
   buscarPorCpf,
   buscarPorId,
@@ -40,14 +42,18 @@ exports.login = async (req, res) => {
     const filiado = await buscarPorCpf(cpfNormalizado);
 
     if (!filiado || !filiado.senha_hash) {
+      // 🟡 LOG: Tentativa de login com credenciais inválidas
+      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "CredenciaisInvalidas" });
       return res
         .status(400)
         .json({ error: "CPF ou senha inválidos." });
     }
 
-    // 🟢 CORREÇÃO CRÍTICA: Verificação de Situação Funcional (Case Insensitive)
+    // Verificação de Situação Funcional (Case Insensitive)
     if (filiado.situacao) {
       if (filiado.situacao.toUpperCase() !== "ATIVO") {
+        // 🟡 LOG: Tentativa de login de usuário inativo
+        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, situacao: filiado.situacao });
         return res
           .status(400)
           .json({ error: "Seu cadastro não está ativo na base do sindicato." });
@@ -57,6 +63,7 @@ exports.login = async (req, res) => {
     const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);
 
     if (!senhaOk) {
+      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "SenhaIncorreta" });
       return res
         .status(400)
         .json({ error: "CPF ou senha inválidos." });
@@ -79,6 +86,7 @@ exports.login = async (req, res) => {
       });
 
       if (!valido) {
+        log.warn("AuthLogin2FAFalha", { cpf: cpfNormalizado });
         return res.status(400).json({
           error: "Código 2FA inválido.",
         });
@@ -89,13 +97,21 @@ exports.login = async (req, res) => {
 
     const token = gerarToken(filiado);
 
+    // 🟢 LOG: Login com sucesso
+    log.info("AuthLoginSucesso", { 
+      userId: filiado.id, 
+      perfil: filiado.perfil_acesso,
+      ip: req.ip 
+    });
+
     return res.json({
       message: "Login realizado com sucesso.",
       token,
       perfil_acesso: filiado.perfil_acesso || "FILIADO",
     });
   } catch (err) {
-    console.error("💥 Erro em /api/auth/login:", err);
+    // 🔴 LOG: Erro interno
+    log.error("AuthLoginErroInterno", err);
     return res.status(500).json({ error: "Erro interno ao realizar login." });
   }
 };
@@ -116,13 +132,15 @@ exports.ativar2fa = async (req, res) => {
         .json({ error: "Não foi possível ativar o 2FA." });
     }
 
+    log.info("Auth2FAAtivado", { userId });
+
     return res.json({
       message: "2FA ativado com sucesso. Configure no app autenticador.",
       secret_base32: secret.base32,
       otpauth_url: secret.otpauth_url,
     });
   } catch (err) {
-    console.error("💥 Erro em /api/auth/2fa/ativar:", err);
+    log.error("Auth2FAAtivarErro", err);
     return res.status(500).json({ error: "Erro interno ao ativar 2FA." });
   }
 };
@@ -130,31 +148,24 @@ exports.ativar2fa = async (req, res) => {
 exports.me = async (req, res) => {
   try {
     const userId = req.user.id;
-
     const filiado = await buscarPorId(userId);
 
     if (!filiado) {
       return res.status(404).json({ error: "Filiado não encontrado." });
     }
 
-    // Não retornar hash nem segredo 2FA
-    const {
-      senha_hash,
-      twofa_secret,
-      ...limpo
-    } = filiado;
-
+    const { senha_hash, twofa_secret, ...limpo } = filiado;
     return res.json(limpo);
   } catch (err) {
-    console.error("💥 Erro em /api/auth/me:", err);
+    log.error("AuthMeErro", err);
     return res.status(500).json({ error: "Erro interno ao carregar seus dados." });
   }
 };
 
+// Esta rota é redundante com filiados.controller.js, mas mantemos se estiver em uso
 exports.listarFiliados = async (req, res) => {
   try {
     const perfil = req.user.perfil_acesso || "FILIADO";
-
     const lista = await listarParaPerfil(perfil);
 
     return res.json({
@@ -163,7 +174,7 @@ exports.listarFiliados = async (req, res) => {
       filiados: lista,
     });
   } catch (err) {
-    console.error("💥 Erro em /api/auth/filiados:", err);
+    log.error("AuthListarFiliadosErro", err);
     return res.status(500).json({ error: "Erro interno ao listar filiados." });
   }
 };

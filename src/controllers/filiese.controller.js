@@ -3,6 +3,7 @@
 
 const { gerarPdfFichaFiliacao } = require("../services/pdf.service");
 const { enviarEmailFichaFiliacao } = require("../services/email.service");
+const log = require("../utils/log"); // 🟢 LOGGER
 
 exports.enviarFichaFiliacao = async (req, res) => {
   try {
@@ -78,12 +79,19 @@ exports.enviarFichaFiliacao = async (req, res) => {
     // 2) Envia e-mail para sindicato + cópia para o filiado
     await enviarEmailFichaFiliacao(payloadPdfEmail, pdfBuffer);
 
+    // 🟢 LOG SUCESSO
+    log.info("FilieseSolicitacaoCriada", { 
+        cpf: cpfNumerico, 
+        nome: dados.nome 
+    });
+
     return res.status(201).json({
       message:
         "Solicitação de filiação registrada. Verifique o PDF enviado por e-mail, assine via Gov.br e encaminhe para sinprfes@sinprfes.org.br.",
     });
   } catch (err) {
-    console.error("❌ Erro ao processar ficha de filiação:", err);
+    // 🔴 LOG ERRO
+    log.error("FilieseSolicitacaoErro", err);
     return res
       .status(500)
       .json({ message: "Erro ao processar a solicitação de filiação." });

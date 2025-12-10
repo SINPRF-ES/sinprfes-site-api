@@ -2,8 +2,8 @@
 const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-// IMPORTAÇÃO DA NOVA FUNÇÃO BASE DE ENVIO
 const { enviarEmailBase } = require("../services/email.service"); 
+const log = require("../utils/log"); // 🟢 LOGGER
 
 /**
  * Util: obtém e-mail principal do filiado
@@ -28,20 +28,20 @@ exports.solicitarResetSenha = async (req, res) => {
 
     const cpfLimpo = cpf.replace(/\D/g, "");
 
-    // 1. LÓGICA REINSERIDA: Consulta o banco de dados pelo CPF
     const query = `
       SELECT id, nome, cpf, email1, email2
       FROM filiados
       WHERE cpf = $1
     `;
     const { rows } = await pool.query(query, [cpfLimpo]);
-    // ----------------------------------------------------
     
     // Sempre envia mensagem genérica para não expor se CPF existe ou não.
     const mensagemPadrao =
       "Se houver um cadastro para este CPF, um e-mail com link de redefinição de senha foi enviado.";
 
     if (rows.length === 0) {
+      // 🟡 LOG: Tentativa de reset para CPF inexistente
+      log.warn("SenhaResetCpfNaoEncontrado", { cpf: cpfLimpo });
       return res.json({
         message: mensagemPadrao,
         email_destino: null,
@@ -52,6 +52,7 @@ exports.solicitarResetSenha = async (req, res) => {
     const emailDestino = getEmailPrincipal(user);
 
     if (!emailDestino) {
+      log.warn("SenhaResetSemEmail", { userId: user.id });
       return res.json({
         message:
           "CPF localizado, mas não há e-mail válido cadastrado. " +
@@ -85,16 +86,19 @@ exports.solicitarResetSenha = async (req, res) => {
         `Se você não fez esta solicitação, ignore este e-mail.\n\n` +
         `Atenciosamente,\nSINPRF-ES`;
 
-    // 3. Envia o e-mail (Chamada ao serviço Resend)
+    // 3. Envia o e-mail
     await enviarEmailBase(emailDestino, subject, corpoEmail);
     
+    // 🟢 LOG SUCESSO
+    log.info("SenhaResetEmailEnviado", { userId: user.id, email: emailDestino });
+
     return res.json({
       message: mensagemPadrao,
       email_destino: emailDestino,
     });
   } catch (err) {
-    console.error("💥 Erro em POST /api/senha/recuperar:", err);
-    // Erro 500 agora capturará falhas de DB, JWT_SECRET ou falhas reais do Resend
+    // 🔴 LOG ERRO
+    log.error("SenhaResetSolicitarErro", err);
     return res.status(500).json({
       error: "Erro interno ao processar a solicitação de redefinição de senha.",
     });
@@ -104,8 +108,6 @@ exports.solicitarResetSenha = async (req, res) => {
 /**
  * POST /api/senha/resetar
  * Corpo: { token: "...", senha_nova: "..." }
- *
- * Valida o token e grava nova senha em senha_hash.
  */
 exports.resetarSenha = async (req, res) => {
   try {
@@ -127,7 +129,7 @@ exports.resetarSenha = async (req, res) => {
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      console.error("Token de reset inválido/expirado:", err);
+      log.warn("SenhaResetTokenInvalido", { error: err.message });
       return res.status(400).json({
         error: "Link de redefinição inválido ou expirado. Solicite novamente.",
       });
@@ -150,11 +152,15 @@ exports.resetarSenha = async (req, res) => {
     `;
     await pool.query(updateSql, [senhaHash, userId]);
 
+    // 🟢 LOG SUCESSO FINAL
+    log.info("SenhaAlteradaSucesso", { userId });
+
     return res.json({
       message: "Senha redefinida com sucesso. Você já pode fazer login com a nova senha.",
     });
   } catch (err) {
-    console.error("💥 Erro em POST /api/senha/resetar:", err);
+    // 🔴 LOG ERRO
+    log.error("SenhaResetConfirmarErro", err);
     return res.status(500).json({
       error: "Erro interno ao redefinir a senha.",
     });
