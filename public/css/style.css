@@ -1137,56 +1137,91 @@ footer {
   }
 }
 /* ==========================
-   PÁGINA DE NOTÍCIAS
+   PÁGINA DE NOTÍCIAS / JOGOS
    ========================== */
 
-/* Card principal da notícia */
-.noticia-card {
-  max-width: 960px;
-  margin: 1.5rem auto 3rem auto;
-}
-
-/* Cabeçalho da notícia (título + meta) */
-.noticia-header {
+/* Título "Notícias" no topo da página */
+.page.container > h1 {
   text-align: center;
   margin-bottom: 1.5rem;
 }
 
-.noticia-header h1 {
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
+/* Card de notícia em si */
+.news-item.card {
+  max-width: 960px;
+  margin: 0 auto 3rem auto;
 }
 
-.noticia-meta {
+/* Cabeçalho da notícia (título + meta) */
+.news-item .section-header {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.news-item .section-header h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.news-meta {
   font-size: 0.85rem;
   color: #a0aec0; /* cinza suave */
 }
 
 /* Corpo do texto da notícia */
-.noticia-corpo {
+.noticia-conteudo {
   max-width: 900px;
   margin: 0 auto 2rem auto;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
   line-height: 1.6;
 }
 
-.noticia-corpo p {
+.noticia-conteudo p {
   margin-bottom: 0.8rem;
 }
 
-/* Bloco de imagens da notícia */
-.noticia-galeria {
+.noticia-conteudo ul {
+  margin: 0.5rem 0 1rem 1.2rem;
+}
+
+/* Bloco de galeria de fotos (vale para notícias e jogos2026) */
+.galeria-fotos {
   max-width: 900px;
   margin: 0 auto 0 auto;
 }
 
-/* Cada imagem com respiro e borda suave */
-.noticia-galeria figure {
-  margin: 0 0 1.5rem 0;
+.galeria-fotos h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
 }
 
-.noticia-galeria img {
+/* Grid de imagens: com espaço entre elas */
+.galeria-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+/* Em telas maiores, 2 colunas; em telas bem grandes, 3 colunas */
+@media (min-width: 768px) {
+  .galeria-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .galeria-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Cada imagem com respiro e borda suave */
+.galeria-grid figure {
+  margin: 0;
+}
+
+.galeria-grid img {
   display: block;
   width: 100%;
   height: auto;
@@ -1194,17 +1229,9 @@ footer {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
-/* Opcional: legenda sob fotos (se quiser usar) */
-.noticia-galeria figcaption {
+/* Legenda opcional sob as fotos */
+.galeria-grid figcaption {
   font-size: 0.8rem;
   color: #cbd5e0;
   margin-top: 0.35rem;
-  text-align: left;
-}
-
-/* Em telas muito grandes, centraliza melhor o card na página */
-@media (min-width: 1200px) {
-  .noticia-card {
-    max-width: 980px;
-  }
 }
