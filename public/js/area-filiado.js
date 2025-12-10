@@ -1356,163 +1356,273 @@ document.addEventListener("DOMContentLoaded", () => {
 const PERFIS_GERENCIA_JOGOS = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"]; 
 
 // 🟢 NOVA FUNÇÃO ATUALIZADA: Renderiza o formulário com TODAS as modalidades
+// 🟢 FUNÇÃO ATUALIZADA: Layout Harmônico, Claro e Organizado
 function renderizarFormularioInscricaoJogos(mainContent) {
-    // 🟢 Situação Funcional: Opções para o formulário de CRIAÇÃO
-    // (Mantém a lógica anterior se estiver usando a constante SITUACAO_OPCOES, senão pode remover esta linha)
-    // const opcoesSituacaoHtml = SITUACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join('');
+    
+    // 1. Injetar CSS específico para deixar o formulário bonito
+    // Isso evita ter que mexer no style.css global agora.
+    const styleId = 'estilo-jogos-custom';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            /* Container principal */
+            .jogos-container {
+                max-width: 900px;
+                margin: 0 auto;
+            }
+            
+            /* Destaque do Checkbox Principal */
+            .destaque-adesao {
+                background-color: #f0f7ff; /* Azul bem clarinho */
+                border: 1px solid #cce5ff;
+                padding: 20px;
+                border-radius: 8px;
+                display: flex; /* Flexbox para alinhar */
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 30px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .destaque-adesao:hover {
+                background-color: #e6f2ff;
+            }
+            .destaque-adesao input[type="checkbox"] {
+                transform: scale(1.5); /* Aumenta o checkbox */
+                margin: 0;
+                cursor: pointer;
+            }
+            .destaque-adesao span {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #0056b3;
+            }
+
+            /* Cards das Categorias */
+            .categoria-card {
+                background: #fff;
+                border: 1px solid #e0e0e0;
+                border-radius: 10px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.03); /* Sombra suave */
+            }
+            
+            .categoria-titulo {
+                font-size: 1.1rem;
+                color: #2c3e50;
+                border-bottom: 2px solid #f0f0f0;
+                padding-bottom: 10px;
+                margin-bottom: 15px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            /* Grid de Opções */
+            .opcoes-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 12px;
+            }
+
+            /* Estilo de cada opção (label) */
+            .opcao-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.95rem;
+                color: #555;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 4px;
+            }
+            .opcao-item:hover {
+                background-color: #f9f9f9;
+                color: #000;
+            }
+            .opcao-item input {
+                cursor: pointer;
+            }
+
+            /* Área de Observação */
+            .obs-area textarea {
+                width: 100%;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                padding: 10px;
+                font-family: inherit;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     mainContent.innerHTML = `
-        <header class="section-header">
-          <div>
-            <h2 class="section-title">Jogos de Integração da PRF 2026</h2>
-            <p class="section-subtitle">
-              <strong>Poços de Caldas - MG</strong> (12 a 17/04/2026)<br/>
-              Selecione abaixo as modalidades que você tem interesse em disputar.
-            </p>
-          </div>
-        </header>
+        <div class="jogos-container">
+            <header class="section-header" style="text-align: center; margin-bottom: 30px;">
+                <h2 class="section-title" style="font-size: 1.8rem; color: #34495e;">
+                    Jogos de Integração da PRF 2026
+                </h2>
+                <p class="section-subtitle" style="font-size: 1.1rem; color: #7f8c8d;">
+                    📍 <strong>Poços de Caldas - MG</strong> (12 a 17/04/2026)
+                </p>
+            </header>
 
-        <form id="form-inscricao-jogos" class="formulario-jogos section-box">
-          <h3 class="section-subtitle">Manifestação de Interesse</h3>
-          <div class="field-group">
-            <label style="font-weight: bold; color: #2c3e50;">
-              <input type="checkbox" id="interesse" />
-              Desejo integrar a delegação do SINPRF-ES nos jogos
-            </label>
-          </div>
+            <form id="form-inscricao-jogos">
+                
+                <label class="destaque-adesao">
+                    <input type="checkbox" id="interesse" />
+                    <span>Desejo integrar a delegação do SINPRF-ES nos jogos</span>
+                </label>
 
-          <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                <div class="categoria-card">
+                    <div class="categoria-titulo">🏃 1. Atletismo (Masc. e Fem.)</div>
+                    <div class="opcoes-grid">
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Atletismo 100m" /> 100m</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Atletismo 400m" /> 400m</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Atletismo 1500m" /> 1500m</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Atletismo 5000m" /> 5000m</label>
+                    </div>
+                </div>
 
-          <h4 style="margin-bottom: 10px; color: #2980b9;">1. Atletismo (Masc. e Fem.)</h4>
-          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 15px;">
-            <label><input type="checkbox" name="modalidades" value="Atletismo 100m" /> 100m</label>
-            <label><input type="checkbox" name="modalidades" value="Atletismo 400m" /> 400m</label>
-            <label><input type="checkbox" name="modalidades" value="Atletismo 1500m" /> 1500m</label>
-            <label><input type="checkbox" name="modalidades" value="Atletismo 5000m" /> 5000m</label>
-          </div>
+                <div class="categoria-card">
+                    <div class="categoria-titulo">🏊 10. Natação (Masc. e Fem.)</div>
+                    <div class="opcoes-grid">
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Natação 50m Livre" /> 50m Livre</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Natação 50m Costas" /> 50m Costas</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Natação 50m Peito" /> 50m Peito</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Natação 50m Borboleta" /> 50m Borboleta</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Natação Rev. 4x50m Livre" /> Rev. 4x50m Livre</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Natação Rev. 2x50m Misto" /> Rev. 2x50m Misto</label>
+                    </div>
+                </div>
 
-          <h4 style="margin-bottom: 10px; color: #2980b9;">10. Natação (Masc. e Fem.)</h4>
-          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 15px;">
-            <label><input type="checkbox" name="modalidades" value="Natação 50m Livre" /> 50m Livre</label>
-            <label><input type="checkbox" name="modalidades" value="Natação 50m Costas" /> 50m Costas</label>
-            <label><input type="checkbox" name="modalidades" value="Natação 50m Peito" /> 50m Peito</label>
-            <label><input type="checkbox" name="modalidades" value="Natação 50m Borboleta" /> 50m Borboleta</label>
-            <label><input type="checkbox" name="modalidades" value="Natação Rev. 4x50m Livre" /> Rev. 4x50m Livre</label>
-            <label><input type="checkbox" name="modalidades" value="Natação Rev. 2x50m Misto" /> Rev. 2x50m Misto</label>
-          </div>
+                <div class="categoria-card">
+                    <div class="categoria-titulo">⚽🎾 Esportes de Quadra, Campo e Areia</div>
+                    <div class="opcoes-grid">
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Futebol Society (Livre)" /> Fut. Society (Livre)</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Futebol Society Master (55+)" /> Fut. Society (55+)</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Futsal (Livre)" /> Futsal (Livre)</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Voleibol (Livre)" /> Voleibol (Livre)</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Voleibol de Praia" /> Vôlei de Praia</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Futevôlei" /> Futevôlei</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Beach Tennis" /> Beach Tennis</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Tênis de Quadra" /> Tênis de Quadra</label>
+                    </div>
+                </div>
 
-          <h4 style="margin-bottom: 10px; color: #2980b9;">Esportes de Quadra, Campo e Areia</h4>
-          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-bottom: 15px;">
-            <label><input type="checkbox" name="modalidades" value="Futebol Society (Livre)" /> Futebol Society (Livre)</label>
-            <label><input type="checkbox" name="modalidades" value="Futebol Society Master (55+)" /> Futebol Society Master (55+)</label>
-            <label><input type="checkbox" name="modalidades" value="Futsal (Livre)" /> Futsal (Livre)</label>
-            <label><input type="checkbox" name="modalidades" value="Voleibol (Livre)" /> Voleibol (Livre)</label>
-            <label><input type="checkbox" name="modalidades" value="Voleibol de Praia" /> Vôlei de Praia (Masc/Mista)</label>
-            <label><input type="checkbox" name="modalidades" value="Futevôlei" /> Futevôlei</label>
-            <label><input type="checkbox" name="modalidades" value="Beach Tennis" /> Beach Tennis (Livre/Mista)</label>
-            <label><input type="checkbox" name="modalidades" value="Tênis de Quadra" /> Tênis de Quadra</label>
-          </div>
+                <div class="categoria-card">
+                    <div class="categoria-titulo">🎱🔫 Jogos de Salão, Lutas e Tiro</div>
+                    <div class="opcoes-grid">
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Tiro (NRA/IPSC)" /> Tiro (NRA/IPSC)</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Jiu-Jitsu" /> Jiu-Jitsu</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Tênis de Mesa" /> Tênis de Mesa</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Sinuca" /> Sinuca</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Xadrez" /> Xadrez</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Truco" /> Truco</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Canastra" /> Canastra</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Dominó" /> Dominó</label>
+                    </div>
+                </div>
 
-          <h4 style="margin-bottom: 10px; color: #2980b9;">Jogos de Salão, Lutas e Tiro</h4>
-          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 15px;">
-            <label><input type="checkbox" name="modalidades" value="Tiro (NRA/IPSC)" /> Tiro (NRA/IPSC)</label>
-            <label><input type="checkbox" name="modalidades" value="Jiu-Jitsu" /> Jiu-Jitsu</label>
-            <label><input type="checkbox" name="modalidades" value="Tênis de Mesa" /> Tênis de Mesa</label>
-            <label><input type="checkbox" name="modalidades" value="Sinuca" /> Sinuca</label>
-            <label><input type="checkbox" name="modalidades" value="Xadrez" /> Xadrez</label>
-            <label><input type="checkbox" name="modalidades" value="Truco" /> Truco</label>
-            <label><input type="checkbox" name="modalidades" value="Canastra" /> Canastra</label>
-            <label><input type="checkbox" name="modalidades" value="Dominó" /> Dominó</label>
-          </div>
+                <div class="categoria-card" style="background-color: #f9f9f9;">
+                    <div class="categoria-titulo" style="color: #666;">🏳️ Modalidades de Exibição (Sem pontuação)</div>
+                    <div class="opcoes-grid">
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Exibição: Peteca" /> Peteca</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Exibição: Damas" /> Damas</label>
+                        <label class="opcao-item"><input type="checkbox" name="modalidades" value="Exibição: Bocha" /> Bocha</label>
+                    </div>
+                </div>
 
-          <h4 style="margin-bottom: 10px; color: #7f8c8d;">Modalidades de Exibição (Sem pontuação)</h4>
-          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-bottom: 15px;">
-            <label><input type="checkbox" name="modalidades" value="Exibição: Peteca" /> Peteca</label>
-            <label><input type="checkbox" name="modalidades" value="Exibição: Damas" /> Damas</label>
-            <label><input type="checkbox" name="modalidades" value="Exibição: Bocha" /> Bocha</label>
-          </div>
+                <div class="categoria-card obs-area">
+                    <div class="categoria-titulo">📝 Observações Adicionais</div>
+                    <textarea id="obs" rows="3" placeholder="Detalhe aqui se possui restrições, se pretende levar acompanhantes, ou se tem preferência por dupla específica..."></textarea>
+                </div>
 
-          <div class="field-group" style="margin-top: 15px;">
-            <label for="obs">Observações adicionais</label>
-            <textarea id="obs" placeholder="Detalhe aqui se possui restrições, se pretende levar acompanhantes, ou se tem preferência por dupla específica..."></textarea>
-          </div>
+                <div class="form-actions" style="margin-top: 30px; text-align: center;">
+                    <button class="btn btn-primary btn-lg" type="submit" style="padding: 12px 30px; font-size: 1.1rem;">✅ Confirmar Pré-inscrição</button>
+                    <div id="jogos-status" class="field-hint" style="margin-top: 15px; font-weight: bold;"></div>
+                </div>
+            </form>
+        </div>
+    `;
 
-          <div class="form-actions" style="margin-top: 20px;">
-              <button class="btn btn-primary" type="submit">Enviar pré-inscrição</button>
-              <span id="jogos-status" class="field-hint" style="margin-left: 12px;"></span>
-          </div>
-        </form>
-      `;
+    const form = document.getElementById("form-inscricao-jogos");
+    const statusEl = document.getElementById("jogos-status");
 
-      const form = document.getElementById("form-inscricao-jogos");
-      const statusEl = document.getElementById("jogos-status");
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        statusEl.textContent = "";
 
-      form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          statusEl.textContent = "";
+        const interesse = document.getElementById("interesse").checked;
+        if (!interesse) {
+            statusEl.textContent = "⚠️ Por favor, marque a caixa 'Desejo integrar a delegação' no topo do formulário.";
+            statusEl.style.color = "#c0392b";
+            // Rola a página para o topo para ele ver o checkbox
+            document.getElementById("interesse").scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
 
-          const interesse = document.getElementById("interesse").checked;
-          if (!interesse) {
-              statusEl.textContent = "Por favor, marque a caixa 'Desejo integrar a delegação' antes de enviar.";
-              statusEl.style.color = "red";
-              return;
-          }
+        // Coleta todas as checkboxes marcadas
+        const modalidades = Array.from(
+            document.querySelectorAll("input[name='modalidades']:checked")
+        ).map(m => m.value);
 
-          // Coleta todas as checkboxes marcadas
-          const modalidades = Array.from(
-              document.querySelectorAll("input[name='modalidades']:checked")
-          ).map(m => m.value);
+        if (modalidades.length === 0) {
+            statusEl.textContent = "⚠️ Selecione pelo menos uma modalidade.";
+            statusEl.style.color = "#c0392b";
+            return;
+        }
 
-          if (modalidades.length === 0) {
-              statusEl.textContent = "Selecione pelo menos uma modalidade.";
-              statusEl.style.color = "red";
-              return;
-          }
+        const obs = document.getElementById("obs").value;
 
-          const obs = document.getElementById("obs").value;
+        const payload = {
+            modalidades,
+            observacoes: obs
+        };
 
-          const payload = {
-              modalidades,
-              observacoes: obs
-          };
+        const token = localStorage.getItem("token");
+        if (!token) {
+            statusEl.textContent = "Sessão expirada! Faça login novamente.";
+            return;
+        }
 
-          const token = localStorage.getItem("token");
-          if (!token) {
-              statusEl.textContent = "Sessão expirada! Faça login novamente.";
-              return;
-          }
+        // Feedback visual no botão
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        const txtOriginal = btnSubmit.textContent;
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "Enviando...";
 
-          statusEl.textContent = "Enviando...";
-          statusEl.style.color = "";
+        try {
+            const resp = await fetch("/api/jogos/inscricao", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+            });
 
-          try {
-              const resp = await fetch("/api/jogos/inscricao", {
-                  method: "POST",
-                  headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify(payload),
-              });
+            const data = await resp.json().catch(() => ({}));
 
-              const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.error || "Erro no envio da pré-inscrição.");
+            }
 
-              if (!resp.ok) {
-                  throw new Error(data.error || "Erro no envio da pré-inscrição.");
-              }
-
-              statusEl.textContent = "Pré-inscrição enviada com sucesso!";
-              statusEl.style.color = "green";
-              
-              // Opcional: não limpar o formulário para o usuário ver o que marcou, 
-              // ou limpar se preferir. Aqui mantive sem limpar para feedback visual.
-              // form.reset(); 
-          } catch (err) {
-              console.error(err);
-              statusEl.textContent = "Falha ao enviar pré-inscrição. Tente novamente.";
-              statusEl.style.color = "red";
-          }
-      });
+            statusEl.textContent = "🎉 Pré-inscrição realizada com sucesso! Aguarde o contato da secretaria.";
+            statusEl.style.color = "#27ae60"; // Verde sucesso
+            
+        } catch (err) {
+            console.error(err);
+            statusEl.textContent = "❌ Falha ao enviar. Tente novamente mais tarde.";
+            statusEl.style.color = "#c0392b";
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = txtOriginal;
+        }
+    });
 }
 
 // 🟢 NOVA FUNÇÃO: Renderiza a lista de inscritos para o ORGANIZADOR/ADMIN
