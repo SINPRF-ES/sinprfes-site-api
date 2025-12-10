@@ -48,5 +48,13 @@ app.use("/api/jogos", jogosRoutes);
 app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
+// ... imports
+const instagramRoutes = require("./routes/instagram.routes");
 
+// ... middlewares
+
+// Registre a rota (Pode ser pública)
+app.use("/api/instagram", instagramRoutes);
+
+// ... export
 module.exports = app;

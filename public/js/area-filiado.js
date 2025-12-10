@@ -1355,17 +1355,19 @@ document.addEventListener("DOMContentLoaded", () => {
 // Perfis autorizados a gerenciar a lista de inscritos
 const PERFIS_GERENCIA_JOGOS = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"]; 
 
-// 🟢 NOVA FUNÇÃO: Renderiza o formulário de inscrição (para filiado comum)
+// 🟢 NOVA FUNÇÃO ATUALIZADA: Renderiza o formulário com TODAS as modalidades
 function renderizarFormularioInscricaoJogos(mainContent) {
     // 🟢 Situação Funcional: Opções para o formulário de CRIAÇÃO
-    const opcoesSituacaoHtml = SITUACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join('');
+    // (Mantém a lógica anterior se estiver usando a constante SITUACAO_OPCOES, senão pode remover esta linha)
+    // const opcoesSituacaoHtml = SITUACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join('');
 
     mainContent.innerHTML = `
         <header class="section-header">
           <div>
-            <h2 class="section-title">Jogos de Integração da PRF</h2>
+            <h2 class="section-title">Jogos de Integração da PRF 2026</h2>
             <p class="section-subtitle">
-              Indique abaixo seu interesse em participar da delegação capixaba.
+              <strong>Poços de Caldas - MG</strong> (12 a 17/04/2026)<br/>
+              Selecione abaixo as modalidades que você tem interesse em disputar.
             </p>
           </div>
         </header>
@@ -1373,25 +1375,66 @@ function renderizarFormularioInscricaoJogos(mainContent) {
         <form id="form-inscricao-jogos" class="formulario-jogos section-box">
           <h3 class="section-subtitle">Manifestação de Interesse</h3>
           <div class="field-group">
-            <label>
+            <label style="font-weight: bold; color: #2c3e50;">
               <input type="checkbox" id="interesse" />
-              Desejo participar dos Jogos de Integração da PRF
+              Desejo integrar a delegação do SINPRF-ES nos jogos
             </label>
           </div>
 
-          <h3 style="margin-top: 15px;">Modalidades de interesse</h3>
-          <div class="modalidades-grid">
-            <label><input type="checkbox" name="modalidades" value="natacao" /> Natação</label>
-            <label><input type="checkbox" name="modalidades" value="futebol" /> Futebol</label>
-            <label><input type="checkbox" name="modalidades" value="volei" /> Vôlei</label>
-            <label><input type="checkbox" name="modalidades" value="corrida" /> Corrida</label>
-            <label><input type="checkbox" name="modalidades" value="tiro" /> Tiro</label>
-            <label><input type="checkbox" name="modalidades" value="xadrez" /> Xadrez</label>
+          <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+          <h4 style="margin-bottom: 10px; color: #2980b9;">1. Atletismo (Masc. e Fem.)</h4>
+          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 15px;">
+            <label><input type="checkbox" name="modalidades" value="Atletismo 100m" /> 100m</label>
+            <label><input type="checkbox" name="modalidades" value="Atletismo 400m" /> 400m</label>
+            <label><input type="checkbox" name="modalidades" value="Atletismo 1500m" /> 1500m</label>
+            <label><input type="checkbox" name="modalidades" value="Atletismo 5000m" /> 5000m</label>
+          </div>
+
+          <h4 style="margin-bottom: 10px; color: #2980b9;">10. Natação (Masc. e Fem.)</h4>
+          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 15px;">
+            <label><input type="checkbox" name="modalidades" value="Natação 50m Livre" /> 50m Livre</label>
+            <label><input type="checkbox" name="modalidades" value="Natação 50m Costas" /> 50m Costas</label>
+            <label><input type="checkbox" name="modalidades" value="Natação 50m Peito" /> 50m Peito</label>
+            <label><input type="checkbox" name="modalidades" value="Natação 50m Borboleta" /> 50m Borboleta</label>
+            <label><input type="checkbox" name="modalidades" value="Natação Rev. 4x50m Livre" /> Rev. 4x50m Livre</label>
+            <label><input type="checkbox" name="modalidades" value="Natação Rev. 2x50m Misto" /> Rev. 2x50m Misto</label>
+          </div>
+
+          <h4 style="margin-bottom: 10px; color: #2980b9;">Esportes de Quadra, Campo e Areia</h4>
+          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-bottom: 15px;">
+            <label><input type="checkbox" name="modalidades" value="Futebol Society (Livre)" /> Futebol Society (Livre)</label>
+            <label><input type="checkbox" name="modalidades" value="Futebol Society Master (55+)" /> Futebol Society Master (55+)</label>
+            <label><input type="checkbox" name="modalidades" value="Futsal (Livre)" /> Futsal (Livre)</label>
+            <label><input type="checkbox" name="modalidades" value="Voleibol (Livre)" /> Voleibol (Livre)</label>
+            <label><input type="checkbox" name="modalidades" value="Voleibol de Praia" /> Vôlei de Praia (Masc/Mista)</label>
+            <label><input type="checkbox" name="modalidades" value="Futevôlei" /> Futevôlei</label>
+            <label><input type="checkbox" name="modalidades" value="Beach Tennis" /> Beach Tennis (Livre/Mista)</label>
+            <label><input type="checkbox" name="modalidades" value="Tênis de Quadra" /> Tênis de Quadra</label>
+          </div>
+
+          <h4 style="margin-bottom: 10px; color: #2980b9;">Jogos de Salão, Lutas e Tiro</h4>
+          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 15px;">
+            <label><input type="checkbox" name="modalidades" value="Tiro (NRA/IPSC)" /> Tiro (NRA/IPSC)</label>
+            <label><input type="checkbox" name="modalidades" value="Jiu-Jitsu" /> Jiu-Jitsu</label>
+            <label><input type="checkbox" name="modalidades" value="Tênis de Mesa" /> Tênis de Mesa</label>
+            <label><input type="checkbox" name="modalidades" value="Sinuca" /> Sinuca</label>
+            <label><input type="checkbox" name="modalidades" value="Xadrez" /> Xadrez</label>
+            <label><input type="checkbox" name="modalidades" value="Truco" /> Truco</label>
+            <label><input type="checkbox" name="modalidades" value="Canastra" /> Canastra</label>
+            <label><input type="checkbox" name="modalidades" value="Dominó" /> Dominó</label>
+          </div>
+
+          <h4 style="margin-bottom: 10px; color: #7f8c8d;">Modalidades de Exibição (Sem pontuação)</h4>
+          <div class="modalidades-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-bottom: 15px;">
+            <label><input type="checkbox" name="modalidades" value="Exibição: Peteca" /> Peteca</label>
+            <label><input type="checkbox" name="modalidades" value="Exibição: Damas" /> Damas</label>
+            <label><input type="checkbox" name="modalidades" value="Exibição: Bocha" /> Bocha</label>
           </div>
 
           <div class="field-group" style="margin-top: 15px;">
             <label for="obs">Observações adicionais</label>
-            <textarea id="obs" placeholder="Restrições, disponibilidade, observações..."></textarea>
+            <textarea id="obs" placeholder="Detalhe aqui se possui restrições, se pretende levar acompanhantes, ou se tem preferência por dupla específica..."></textarea>
           </div>
 
           <div class="form-actions" style="margin-top: 20px;">
@@ -1410,13 +1453,21 @@ function renderizarFormularioInscricaoJogos(mainContent) {
 
           const interesse = document.getElementById("interesse").checked;
           if (!interesse) {
-              statusEl.textContent = "Marque que deseja participar antes de enviar.";
+              statusEl.textContent = "Por favor, marque a caixa 'Desejo integrar a delegação' antes de enviar.";
+              statusEl.style.color = "red";
               return;
           }
 
+          // Coleta todas as checkboxes marcadas
           const modalidades = Array.from(
               document.querySelectorAll("input[name='modalidades']:checked")
           ).map(m => m.value);
+
+          if (modalidades.length === 0) {
+              statusEl.textContent = "Selecione pelo menos uma modalidade.";
+              statusEl.style.color = "red";
+              return;
+          }
 
           const obs = document.getElementById("obs").value;
 
@@ -1432,6 +1483,7 @@ function renderizarFormularioInscricaoJogos(mainContent) {
           }
 
           statusEl.textContent = "Enviando...";
+          statusEl.style.color = "";
 
           try {
               const resp = await fetch("/api/jogos/inscricao", {
@@ -1449,11 +1501,16 @@ function renderizarFormularioInscricaoJogos(mainContent) {
                   throw new Error(data.error || "Erro no envio da pré-inscrição.");
               }
 
-              statusEl.textContent = "Pré-inscrição enviada com sucesso! Aguarde o contato da secretaria.";
-              form.reset(); // Limpa o formulário
+              statusEl.textContent = "Pré-inscrição enviada com sucesso!";
+              statusEl.style.color = "green";
+              
+              // Opcional: não limpar o formulário para o usuário ver o que marcou, 
+              // ou limpar se preferir. Aqui mantive sem limpar para feedback visual.
+              // form.reset(); 
           } catch (err) {
               console.error(err);
               statusEl.textContent = "Falha ao enviar pré-inscrição. Tente novamente.";
+              statusEl.style.color = "red";
           }
       });
 }
