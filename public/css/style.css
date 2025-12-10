@@ -443,41 +443,64 @@ img {
 }
 
 /* =========================================================
-   CORREÇÃO DE ALINHAMENTO DE FORMULÁRIOS
+   CORREÇÃO DE ALINHAMENTO (Formulários Meus Dados / Ressarcimento)
    ========================================================= */
 
-/* Regra Geral: Tenta colocar campos lado a lado automaticamente */
+/* 1. Regra Geral: Colunas Automáticas
+   Isso faz com que Nome e CPF fiquem lado a lado no desktop,
+   mas um embaixo do outro no celular. */
 .area-filiado-main .field-row {
   display: grid;
-  /* Cria colunas flexíveis: mínimo de 200px, máximo 1 fração do espaço */
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px 24px; /* Espaço entre linhas e colunas */
+  /* Cria colunas flexíveis: cada campo tenta ter pelo menos 250px */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px 24px;
   margin-bottom: 16px;
-  align-items: end; /* Alinha os campos pela base (bom para labels) */
+  align-items: end; /* Alinha labels e inputs pela base */
 }
 
-/* Regra Específica: Quando o HTML define colunas manualmente (ex: style="grid-template-columns:...") */
-/* Isso é CRUCIAL para a linha de Endereço (Número, Comp, UF) funcionar como desenhamos no JS */
+/* 2. Regra para Endereço (Número, Comp, UF)
+   O Javascript injeta um style="grid-template-columns: 1fr 2fr 1fr" inline.
+   Esta regra garante que o CSS não bloqueie isso no desktop. */
 .area-filiado-main .field-row[style] {
   display: grid !important;
-  /* O grid-template-columns será respeitado do HTML inline */
+  /* O grid-template-columns será respeitado do HTML gerado pelo JS */
 }
 
-/* Ajuste específico para o botão de Buscar CEP ficar ao lado do input */
-#me-cep {
-  width: 100%;
-  min-width: 150px;
-}
-/* O container do CEP precisa ser flex para o botão ficar ao lado */
+/* 3. Correção do botão "Buscar CEP"
+   Para ele ficar ao lado do input e não embaixo. */
 .field-group:has(#btn-buscar-cep) {
   flex-direction: row !important;
   align-items: flex-end;
   gap: 10px;
 }
+#me-cep {
+  width: 100%;
+  min-width: 150px; /* Garante tamanho mínimo para o input */
+}
+#btn-buscar-cep {
+  margin-bottom: 2px; /* Ajuste fino para alinhar com a linha do input */
+}
 
-/* Campos de Data (Ressarcimento) não devem esticar demais */
+/* 4. Ajuste para datas (Ressarcimento) não esticarem demais */
 input[type="date"] {
   max-width: 100%;
+}
+
+/* =========================================================
+   MOBILE (Celulares) - Força empilhamento
+   ========================================================= */
+@media (max-width: 768px) {
+  /* No celular, ignoramos tudo e forçamos 1 coluna */
+  .area-filiado-main .field-row,
+  .area-filiado-main .field-row[style] {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+  
+  /* O CEP pode quebrar linha no celular se a tela for muito pequena */
+  .field-group:has(#btn-buscar-cep) {
+    flex-wrap: wrap;
+  }
 }
 
 /* Itens da Lista de Filiados */
