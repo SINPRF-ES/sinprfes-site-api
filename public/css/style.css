@@ -445,9 +445,17 @@ img {
 /* Formulários Internos (Meus Dados, etc) */
 .area-filiado-main .field-row {
   display: grid;
-  grid-template-columns: 1fr;
+  /* 🟢 CORREÇÃO: Permite colunas automáticas (lado a lado) com largura mínima */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
   gap: 12px 24px;
   margin-bottom: 16px;
+  align-items: end; /* Alinha os campos pela base (útil se tiver botões) */
+}
+
+/* Garante que, se o HTML tiver um style="..." inline (ex: endereço), ele seja respeitado */
+.area-filiado-main .field-row[style] {
+  display: grid !important; 
+  /* O grid-template-columns será pego do atributo style do HTML */
 }
 
 /* Itens da Lista de Filiados */
@@ -631,9 +639,9 @@ img {
   .galeria-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
+/* 🟢 CORRIGIDO: Removemos a regra de field-row daqui */
 @media (max-width: 900px) {
   .board-grid { grid-template-columns: 1fr; }
-  .area-filiado-main .field-row { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -656,6 +664,9 @@ img {
   /* Forms */
   .form-grid, .dependentes-grid { grid-template-columns: 1fr; }
   .contato-grid { grid-template-columns: 1fr; }
+  
+  /* 🟢 ADICIONADO AQUI: Força 1 coluna apenas em telas menores que 768px */
+  .area-filiado-main .field-row { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 600px) {
