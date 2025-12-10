@@ -9,10 +9,16 @@ const {
 } = require("../services/filiados.service");
 const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
+// 🟢 NOVO: Importar o middleware de permissão e o arquivo de roles
+const requirePermission = require("../middlewares/requirePermission");
+const roles = require("../config/roles.config");
+
 
 /**
  * GET /api/filiados/me
  * Retorna os dados completos do usuário logado.
+ * (Esta rota não usa requirePermission diretamente, pois a permissão de visualização
+ * dos próprios dados é verificada internamente no auth.controller.js e pelo authMiddleware.)
  */
 exports.getMe = async (req, res) => {
   try {
@@ -60,10 +66,11 @@ exports.getMe = async (req, res) => {
 /**
  * GET /api/filiados
  * Lista filiados de acordo com o perfil de acesso.
- * Suporta ?q= para busca por nome/CPF.
+ * 🟢 Permissão requerida: VIEW_ALL
  */
 exports.listarFiliados = async (req, res) => {
   try {
+    // A verificação de permissão foi movida para a rota (requirePermission("VIEW_ALL"))
     const perfilAcesso = req.user.perfil_acesso || "FILIADO";
     const termoBusca = (req.query.q || "").toString();
 
@@ -84,10 +91,13 @@ exports.listarFiliados = async (req, res) => {
 /**
  * PUT /api/filiados/me
  * Atualiza dados básicos do próprio filiado:
+ * 🟢 Permissão requerida: EDIT_SELF
  */
 exports.atualizarMeusDados = async (req, res) => {
   try {
     const id = req.user.id;
+
+    // A verificação de permissão foi movida para a rota (requirePermission("EDIT_SELF"))
 
     const {
       telefone1,
@@ -135,6 +145,7 @@ exports.atualizarMeusDados = async (req, res) => {
 /**
  * PUT /api/filiados/:id
  * Atualização feita por ADMIN / DIRETORIA / FUNCIONARIO.
+ * 🟢 Permissão requerida: EDIT_FILIADO
  */
 exports.atualizarFiliado = async (req, res) => {
   try {
@@ -145,11 +156,14 @@ exports.atualizarFiliado = async (req, res) => {
       return res.status(400).json({ message: "ID inválido." });
     }
 
+    // 🔴 REMOVIDO: Verificação manual de perfil, agora feita pelo requirePermission("EDIT_FILIADO")
+    /*
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil)) {
       return res
         .status(403)
         .json({ message: "Você não tem permissão para alterar outros filiados." });
     }
+    */
 
     const {
       nome,
@@ -192,9 +206,11 @@ exports.atualizarFiliado = async (req, res) => {
     };
 
     // Só ADMIN pode mexer em perfil_acesso
+    // A permissão EDIT_FILIADO permite editar todos os campos, exceto o 'perfil_acesso'
     if (perfil === "ADMIN" && perfil_acesso) {
       const perfilNovo = perfil_acesso.toUpperCase();
-      if (["FILIADO", "FUNCIONARIO", "DIRETORIA", "ADMIN"].includes(perfilNovo)) {
+      // 🟢 NOVO: Usar a lista de perfis válidos da configuração (incluindo ORGANIZADOR)
+      if (roles.ADMIN_ASSIGNABLE_ROLES.includes(perfilNovo)) {
         payload.perfil_acesso = perfilNovo;
       }
     }
@@ -219,16 +235,21 @@ exports.atualizarFiliado = async (req, res) => {
 
 /**
  * POST /api/filiados
- * Criação de novo filiado a partir do portal (ADMIN / DIRETORIA / FUNCIONARIO).
+ * Criação de novo filiado a partir do portal.
+ * 🟢 Permissão requerida: EDIT_FILIADO
  */
 exports.criarFiliado = async (req, res) => {
   try {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
+    
+    // 🔴 REMOVIDO: Verificação manual de perfil, agora feita pelo requirePermission("EDIT_FILIADO")
+    /*
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilCriador)) {
       return res
         .status(403)
         .json({ message: "Você não tem permissão para criar filiados." });
     }
+    */
 
     const {
       nome,
