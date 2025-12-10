@@ -208,8 +208,8 @@ async function atualizarFiliadoPorId(id, dados) {
 
 /**
  * Lista filiados de acordo com o perfil de acesso.
- *  - ADMIN/DIRETORIA/FUNCIONARIO: vê tudo
- *  - FILIADO: vê apenas nome + telefone1 dos demais
+ * - ADMIN/DIRETORIA/FUNCIONARIO: vê tudo
+ * - FILIADO: vê apenas nome + telefone1 dos demais
  */
 async function listarParaPerfil(perfilAcesso, termoBusca = "") {
   const filtro = termoBusca.trim();
@@ -233,6 +233,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "") {
         id,
         nome,
         cpf,
+        data_nascimento,
         telefone1,
         telefone2,
         email1,
