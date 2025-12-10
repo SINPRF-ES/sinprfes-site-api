@@ -138,16 +138,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!endereco || !endereco.includes("||")) {
       return {
         logradouro: endereco || "",
+        numero: "", // Adicionado
         complemento: "",
         cidade: "",
         uf: "",
         cep: ""
       };
     }
-    const [logradouro = "", complemento = "", cidade = "", uf = "", cep = ""] =
+    const [logradouro = "", numero = "", complemento = "", cidade = "", uf = "", cep = ""] =
       endereco.split("||");
     return {
       logradouro,
+      numero, // Adicionado
       complemento,
       cidade,
       uf,
@@ -157,6 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function montarEnderecoEstruturado({
     logradouro,
+    numero, // Adicionado
     complemento,
     cidade,
     uf,
@@ -164,12 +167,36 @@ document.addEventListener("DOMContentLoaded", () => {
   }) {
     return [
       logradouro || "",
+      numero || "", // Adicionado
       complemento || "",
       cidade || "",
       (uf || "").toUpperCase(),
       cep || "",
     ].join("||");
   }
+    
+    // Utilitário para extrair o número/complemento de um endereço existente
+    function parseNumeroEComplemento(enderecoCompleto) {
+        if (!enderecoCompleto) {
+            return { numero: "", complemento: "" };
+        }
+        // Tentativa simplificada: o endereço está salvo como "logradouro - complemento - cidade / UF - CEP"
+        // Este é um fluxo arriscado, mas tentaremos obter as informações digitadas pelo usuário (que não vêm do ViaCEP)
+        
+        // Se o seu backend salva os dados brutos de número/complemento, use o parseEnderecoEstruturado
+        // Como o dado está sendo salvo como uma string concatenada ('Logradouro - Complemento - Cidade/UF - CEP XXXXX'),
+        // a única maneira segura é se o *frontend* manteve esses dados em cache ou se o *backend* devolveu a estrutura.
+        
+        // Pelo seu código PUT, você está enviando o 'montarEnderecoFinal' como string para o backend.
+        // Vamos assumir que os campos "número" e "complemento" não são preenchidos por dados antigos,
+        // pois o campo "complemento" anterior era um só, e o usuário preencherá o número/complemento novamente.
+        // Se o endereço for complexo, ele será exibido no campo 'me-endereco'.
+        return {
+            numero: "", // Sem dado para preencher automaticamente
+            complemento: "", // Sem dado para preencher automaticamente
+        };
+    }
+
 
     function renderizarMeusDados(dados) {
     const {
@@ -181,16 +208,26 @@ document.addEventListener("DOMContentLoaded", () => {
       telefone2,
       email1,
       email2,
-      endereco,
+      endereco, // String concatenada vinda do banco
       lotacao,
     } = dados;
 
-    // tenta extrair CEP do endereço atual, se houver
+    // Tenta extrair CEP da string de endereço salva
     let cepExistente = "";
     if (endereco) {
-      const m = String(endereco).match(/\b(\d{5}-?\d{3})\b/);
+      const m = String(endereco).match(/CEP\s*(\d{5}-?\d{3})/);
       if (m) cepExistente = m[1].replace(/\D/g, "");
     }
+    
+    // Tenta extrair Número e Complemento se a string de endereço foi salva com o novo formato (ex: 'Logradouro||Numero||Complemento||...')
+    const {
+        numero: numeroExistente, 
+        complemento: complementoExistente,
+        cidade: cidadeExistente,
+        uf: ufExistente,
+        logradouro: logradouroExistente
+    } = parseEnderecoEstruturado(endereco);
+
 
     // opções de lotação
     const LOTACOES = [
@@ -278,7 +315,6 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
 
-          <!-- CEP + busca via ViaCEP -->
           <div class="field-row">
             <div class="field-group">
               <label for="me-cep">CEP</label>
@@ -300,7 +336,6 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
 
-          <!-- LOTAÇÃO -->
           <div class="field-row">
             <div class="field-group">
               <label for="me-lotacao">Lotação</label>
@@ -313,7 +348,6 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
 
-          <!-- Endereço vindo do ViaCEP (somente leitura) -->
           <div class="field-row">
             <div class="field-group">
               <label for="me-endereco">Logradouro / Bairro</label>
@@ -321,28 +355,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 type="text"
                 id="me-endereco"
                 placeholder="Será preenchido pelo CEP"
-                value="${endereco || ""}"
+                value="${logradouroExistente || ""}"
                 readonly
               />
             </div>
           </div>
 
-          <div class="field-row">
+          <div class="field-row" style="grid-template-columns: 1fr 2fr 1fr;">
+            <div class="field-group">
+              <label for="me-numero">Número</label>
+              <input
+                type="text"
+                id="me-numero"
+                placeholder="Nº"
+                value="${numeroExistente}"
+              />
+            </div>
             <div class="field-group">
               <label for="me-complemento">Complemento</label>
               <input
                 type="text"
                 id="me-complemento"
                 placeholder="Apto, bloco, sala, ponto de referência..."
-              />
-            </div>
-            <div class="field-group">
-              <label for="me-cidade">Cidade</label>
-              <input
-                type="text"
-                id="me-cidade"
-                placeholder="Será preenchido pelo CEP"
-                readonly
+                value="${complementoExistente}"
               />
             </div>
             <div class="field-group">
@@ -352,11 +387,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 id="me-uf"
                 maxlength="2"
                 placeholder="UF"
+                value="${ufExistente}"
                 readonly
               />
             </div>
           </div>
-        </fieldset>
+          <div class="field-row">
+            <div class="field-group">
+              <label for="me-cidade">Cidade</label>
+              <input
+                type="text"
+                id="me-cidade"
+                placeholder="Será preenchido pelo CEP"
+                value="${cidadeExistente}"
+                readonly
+              />
+            </div>
+          </div>
+          </fieldset>
 
         <div class="form-actions" style="margin-top: 16px;">
           <button type="submit" class="btn btn-primary">Salvar meus dados</button>
@@ -371,7 +419,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const cepInput = form.querySelector("#me-cep");
     const endInput = form.querySelector("#me-endereco");
+    // NOVO:
+    const numInput = form.querySelector("#me-numero");
     const compInput = form.querySelector("#me-complemento");
+    // FIM NOVO
     const cidadeInput = form.querySelector("#me-cidade");
     const ufInput = form.querySelector("#me-uf");
     const btnCep = form.querySelector("#btn-buscar-cep");
@@ -390,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function consultarCep() {
       const cepLimpo = (cepInput.value || "").replace(/\D/g, "");
       if (cepLimpo.length !== 8) {
-        statusEl.textContent = "CEP inválido. Use 8 dígitos (Ex.: 29000000).";
+        statusEl.textContent = "CEP inválido. Use 8 dígitos.";
         return;
       }
 
@@ -417,6 +468,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.uf) {
           ufInput.value = data.uf;
         }
+        
+        // Limpar número/complemento se o CEP foi mudado
+        if (numInput) numInput.value = "";
+        if (compInput) compInput.value = "";
 
         statusEl.textContent = "CEP carregado com sucesso.";
       } catch (err) {
@@ -438,21 +493,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function montarEnderecoFinal() {
-      const cep = cepInput.value.trim();
-      const logradouro = endInput.value.trim();
-      const complemento = compInput.value.trim();
+      // Campos extraídos
+      const logradouroBairro = endInput.value.trim();
+      const numero = numInput.value.trim(); // NOVO
+      const complemento = compInput.value.trim(); // NOVO
       const cidade = cidadeInput.value.trim();
       const uf = ufInput.value.trim().toUpperCase();
+      const cep = cepInput.value.trim();
+
+
+      // O backend espera que o campo 'endereco' (que era um só)
+      // contenha todos os dados para ser salvo no DB.
+      // O novo formato concatenado usando ' - ' será:
+      // Logradouro, Bairro - Número - Complemento - Cidade/UF - CEP XXXXXXX
 
       const partes = [];
-      if (logradouro) partes.push(logradouro);
-      if (complemento) partes.push(complemento);
+      
+      if (logradouroBairro) partes.push(logradouroBairro);
+      
+      // Adiciona o número (Nº)
+      if (numero) partes.push(numero); 
+      
+      // Adiciona o complemento (Apto, etc.)
+      if (complemento) partes.push(complemento); 
+
       if (cidade || uf) {
         const cidadeUf = uf ? `${cidade} / ${uf}` : cidade;
         if (cidadeUf) partes.push(cidadeUf);
       }
+      
       if (cep) partes.push(`CEP ${cep}`);
 
+      // Retorna a string final que será salva no campo 'endereco' do DB
       return partes.join(" - ");
     }
 
@@ -467,7 +539,8 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("me-telefone2").value.replace(/\D/g, ""),
         email1: document.getElementById("me-email1").value || "",
         email2: document.getElementById("me-email2").value || "",
-        endereco: montarEnderecoFinal(),
+        // NOVO: Monta a string completa do endereço
+        endereco: montarEnderecoFinal(), 
         lotacao: document.getElementById("me-lotacao").value || "SEDE",
       };
 
@@ -483,6 +556,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!resp.ok) throw new Error("Falha ao salvar");
 
+        // 🟢 Correção para recarregar dados novos
+        await carregarMeusDados(); 
+        
         statusEl.textContent = "Dados atualizados com sucesso.";
         setTimeout(() => (statusEl.textContent = ""), 4000);
       } catch (err) {
