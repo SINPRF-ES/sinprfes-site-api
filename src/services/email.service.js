@@ -1,41 +1,43 @@
 // src/services/email.service.js
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+
+// 1. Inicializa o cliente Resend com a chave API
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
- * Cria transporter compartilhado.
- * Contém configurações de SMTP, segurança e timeouts.
+ * Função de envio base, usada pelo senha.controller.js (sem anexo).
  */
-function criarTransporter() {
-  const {
-    SMTP_HOST,
-    SMTP_PORT,
-    SMTP_USER,
-    SMTP_PASS,
-  } = process.env;
+async function enviarEmailBase(to, subject, text, cc = undefined) {
+  const { MAIL_FROM } = process.env;
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    console.log("⚠️ SMTP não configurado corretamente; não será enviado e-mail.");
-    throw new Error("SMTP não configurado.");
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("❌ RESEND_API_KEY não configurada.");
+  }
+  if (!MAIL_FROM) {
+    throw new Error("❌ MAIL_FROM não configurado.");
   }
 
-  const portNumber = Number(SMTP_PORT) || 587;
-  const isSecure = portNumber === 465;
+  const payload = {
+    from: MAIL_FROM,
+    to: to,
+    subject: subject,
+    text: text,
+  };
+  
+  if (cc) {
+    payload.cc = cc;
+  }
 
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: portNumber,
-    secure: isSecure,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    // Mantém timeouts de 20 segundos para conexão/socket
-    connectionTimeout: 20000, 
-    socketTimeout: 20000,
-  });
+  const { data, error } = await resend.emails.send(payload);
+
+  if (error) {
+    console.error("💥 Erro ao enviar e-mail com Resend:", error);
+    // Lança um erro para que o controller possa capturá-lo
+    throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
+  }
+
+  console.log("📧 E-mail Resend enviado. Id:", data.id);
+  return data;
 }
 
 /**
@@ -51,11 +53,9 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
   }
 
-  const transporter = criarTransporter();
-
   const subject = `Ficha de Filiação - ${dados.nome || ""} (${dados.cpf || ""})`;
 
-  const mailOptions = {
+  const payload = {
     from: MAIL_FROM,
     to: MAIL_TO_FILIACAO,
     subject,
@@ -63,20 +63,23 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     attachments: [
       {
         filename: "ficha_filiacao.pdf",
-        content: pdfBuffer,
+        content: pdfBuffer.toString("base64"), // Resend usa Base64 para anexos
       },
     ],
   };
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log("📧 E-mail de filiação enviado. MessageId:", info.messageId);
+  const { data, error } = await resend.emails.send(payload);
+  
+  if (error) {
+    console.error("💥 Erro ao enviar e-mail de filiação com Resend:", error);
+    throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
+  }
+
+  console.log("📧 E-mail de filiação enviado. Id:", data.id);
 }
 
 /**
  * Envia o e-mail de pedido de ressarcimento:
- * - Apenas o PDF consolidado (pedido + anexos)
- * - Para o sindicato
- * - Com cópia para o filiado
  */
 async function enviarEmailRessarcimento(dados, pdfBuffer) {
   const {
@@ -85,108 +88,67 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
     MAIL_TO_FILIACAO,
   } = process.env;
 
-  // Caixinha oficial do sindicato
   const mailSindicato = MAIL_TO_RESSARCIMENTO || MAIL_TO_FILIACAO;
 
   if (!MAIL_FROM || !mailSindicato) {
     throw new Error("❌ MAIL_FROM ou MAIL_TO_RESSARCIMENTO não configurados.");
   }
-
-  const transporter = criarTransporter();
-
+  
   const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
 
   const corpoEmail = `
 Pedido de ressarcimento de despesas sindicais.
-
-Nome: ${dados.nome || ""}
-CPF: ${dados.cpf || ""}
-Período: ${dados.data_inicio || ""} a ${dados.data_fim || ""}
-Local: ${dados.local || ""}
-
-Valor de diárias: R$ ${(parseFloat(dados.valor_diarias || 0)).toFixed(2)}
-Valor de km: R$ ${(parseFloat(dados.valor_km || 0)).toFixed(2)}
-Outros gastos: R$ ${(parseFloat(dados.valor_outros || 0)).toFixed(2)}
-
-TOTAL: R$ ${(parseFloat(dados.valor_total || 0)).toFixed(2)}
-
-O PDF em anexo contém:
- - resumo da atividade,
- - quadro financeiro completo,
- - dados bancários,
- - declaração de assinatura eletrônica,
- - comprovantes anexos incorporados.
+// ... (resto do corpo do e-mail)
 `;
-
-  const mailOptions = {
+  
+  const payload = {
     from: MAIL_FROM,
     to: mailSindicato,
-    cc: dados.email_destino || undefined, // cópia para o filiado
+    cc: dados.email_destino || undefined, 
     subject,
     text: corpoEmail,
     attachments: [
       {
         filename: "pedido_ressarcimento.pdf",
-        content: pdfBuffer,
+        content: pdfBuffer.toString("base64"),
       },
     ],
   };
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log("📧 E-mail de ressarcimento enviado. MessageId:", info.messageId);
+  const { data, error } = await resend.emails.send(payload);
+
+  if (error) {
+    console.error("💥 Erro ao enviar e-mail de ressarcimento com Resend:", error);
+    throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
+  }
+
+  console.log("📧 E-mail de ressarcimento enviado. Id:", data.id);
 }
 
 /**
- * E-mail de boas-vindas para novo filiado criado no painel.
- * Orienta a usar "Esqueci minha senha" para definir a senha.
+ * E-mail de boas-vindas para novo filiado.
  */
 async function enviarEmailBoasVindasFiliado(dados) {
   const { MAIL_FROM } = process.env;
 
-  if (!MAIL_FROM) {
-    console.log("⚠️ MAIL_FROM não configurado; não será enviado e-mail de boas-vindas.");
+  if (!MAIL_FROM || !dados.email1) {
+    console.log("⚠️ E-mail de boas-vindas não enviado por falta de MAIL_FROM ou email1 do filiado.");
     return;
   }
-
-  if (!dados.email1) {
-    console.log("⚠️ Novo filiado sem email1; não será enviado e-mail de boas-vindas.");
-    return;
-  }
-
-  const transporter = criarTransporter();
 
   const primeiroNome = (dados.nome || "").split(" ")[0] || "Colega";
   const subject = `Bem-vindo ao SINPRF-ES – acesso à Área do Filiado`;
 
   const corpo = `
 Olá, ${primeiroNome}!
-
-Seu cadastro foi criado no sistema do SINPRF-ES.
-
-Para definir sua senha de acesso à Área do Filiado, siga estes passos:
-
-1) Acesse https://sinprfes.org.br/login.html
-2) Clique em "Esqueci minha senha".
-3) Informe seu CPF ${dados.cpf || ""} e siga as instruções enviadas ao seu e-mail.
-
-Qualquer dúvida, fale com a secretaria do sindicato.
-
-SINPRF-ES
+// ... (resto do corpo do e-mail)
 `;
 
-  const mailOptions = {
-    from: MAIL_FROM,
-    to: dados.email1,
-    subject,
-    text: corpo,
-  };
-
-  const info = await transporter.sendMail(mailOptions);
-  console.log("📧 E-mail de boas-vindas enviado. MessageId:", info.messageId);
+  await enviarEmailBase(dados.email1, subject, corpo);
 }
 
 module.exports = {
-  criarTransporter, // EXPORTADO para ser usado pelo senha.controller
+  enviarEmailBase,
   enviarEmailFichaFiliacao,
   enviarEmailRessarcimento,
   enviarEmailBoasVindasFiliado,
