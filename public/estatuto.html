@@ -82,18 +82,18 @@
   top: 78px;
   left: 50%;
   transform: translateX(-50%);
-  width: 70vw;    /* DEFININDO A LARGURA: 70% da Viewport, igual ao cartão */
-  max-width: 80%; /* Garante harmonização em limites maiores, se necessário */
+  width: 70vw;
+  max-width: 80%;
   box-sizing: border-box;
 
   margin: 0;
   padding: 0.85rem 2rem;
 
-  background: #c8ddff !important; /* CORRIGIDO: Fundo azul claro */
-  border-bottom: 1px solid #c3d3e8;
+  background: #c8ddff !important;
+  border-bottom: 1px solid #dde3ea;
 
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: nowrap; /* Mantido para Desktop */
   justify-content: center;
   gap: 0.5rem;
   z-index: 1200;
@@ -270,13 +270,19 @@
         padding-left: 10px;
         padding-right: 10px;
         top: 88px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap; /* MANTIDO: Para não quebrar os botões */
         width: 95%; /* Prioriza largura total no mobile */
         max-width: 95%;
+        
+        /* 🟢 CORREÇÃO CRÍTICA: Permite rolagem horizontal */
+        overflow-x: auto; 
+        justify-content: flex-start; /* Alinha os itens à esquerda para iniciar a rolagem */
+        
       }
 
       .estatuto-nav a {
         font-size: 0.75rem;
+        flex-shrink: 0; /* Garante que os botões não encolham */
       }
 
       .estatuto-documento h1 {
