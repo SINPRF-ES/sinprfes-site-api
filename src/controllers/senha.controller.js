@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { enviarEmailBase } = require("../services/email.service"); 
 const log = require("../utils/log");
-const Textos = require require("../utils/textos"); // 🟢 TEXTOS
+const Textos = require ("../utils/textos"); // 🟢 TEXTOS
 
 function getEmailPrincipal(row) {
   if (row.email1 && row.email1.trim() !== "") return row.email1.trim();
