@@ -51,20 +51,23 @@ async function registrarUltimoAcesso(id) {
  * Campos permitidos: telefone1, telefone2, email1, email2,
  * logradouro_bairro, numero, complemento, cidade, uf, cep, lotacao.
  */
+// src/services/filiados.service.js (Trecho da função atualizarDadosProprios)
+// ...
+
 async function atualizarDadosProprios(id, dados) {
   const {
     telefone1 = null,
     telefone2 = null,
     email1 = null,
     email2 = null,
-    // NOVOS CAMPOS DO ENDEREÇO INDIVIDUALMENTE:
+    lotacao = null,
+    // NOVOS CAMPOS (Ordem de $6 a $11):
     logradouro_bairro = null,
     numero = null,
     complemento = null,
     cidade = null,
     uf = null,
     cep = null,
-    lotacao = null,
   } = dados;
 
   const { rows } = await pool.query(
@@ -87,23 +90,24 @@ async function atualizarDadosProprios(id, dados) {
     RETURNING ${FILIADO_COLUMNS}
   `,
     [
+      // PARÂMETROS ($1 a $11):
       telefone1,
       telefone2,
       email1,
       email2,
       lotacao,
-      logradouro_bairro,
-      numero,
-      complemento,
-      cidade,
-      uf,
-      cep,
-      id,
+      logradouro_bairro, // $6
+      numero,            // $7
+      complemento,       // $8
+      cidade,            // $9
+      uf,                // $10
+      cep,               // $11
+      id,                // $12 (WHERE)
     ]
   );
   return rows[0] || null;
 }
-
+// ...
 /**
  * Atualização completa de um filiado (usada por ADMIN / DIRETORIA / FUNCIONARIO).
  */
