@@ -25,7 +25,8 @@ const jogosRoutes = require("./routes/jogos.routes");
 // Prefixos de API
 // ==============================
 
-// REMOVER: app.use("/api/primeiro-acesso", primeiroAcessoRoutes);
+// Rota do app
+app.use('/api/status', require('./routes/statusRouter'));
 
 // Login novo e rotas modernas de autenticação (inclui /login, /2fa, /me etc.)
 app.use("/api/auth", authRoutes);

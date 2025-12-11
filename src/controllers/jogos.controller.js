@@ -1,7 +1,7 @@
 // src/controllers/jogos.controller.js
 const pool = require("../config/db");
 const log = require("../utils/log"); 
-const Textos = require("../utils/textos"); // 🟢 TEXTOS
+const Textos = require("../utils/textos");
 
 const PERFIS_JOGOS_MANAGER = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
 
@@ -9,46 +9,72 @@ exports.registrarInscricao = async (req, res) => {
   try {
     const userId = req.user.id;
     const filiadoNome = req.user.nome;
-    const { modalidades, observacoes } = req.body || {};
+    
+    // 🟢 NOVOS CAMPOS: sexo, qtd_familiares, familiares
+    const { modalidades, observacoes, familiares, qtd_familiares, sexo } = req.body || {};
 
     if (!modalidades || modalidades.length === 0) {
       return res.status(400).json({
-        error: "Selecione pelo menos uma modalidade de interesse.", // Mantida a string de validação específica.
+        error: "Selecione pelo menos uma modalidade de interesse.",
       });
     }
     
     const modalidadesTexto = Array.isArray(modalidades) ? modalidades : [];
     const obsLimpa = String(observacoes || "").trim();
+    const familiaresLimpo = String(familiares || "").trim();
+    const qtdFamiliaresInt = parseInt(qtd_familiares) || 0;
+    const sexoLimpo = String(sexo || "").trim();
 
+    // Query atualizada com os novos campos
     const query = `
       INSERT INTO pre_inscricoes_jogos (
-        filiado_id, nome_filiado, modalidades, observacoes, data_inscricao
-      ) VALUES ($1, $2, $3, $4, NOW())
+        filiado_id, nome_filiado, modalidades, observacoes, familiares, qtd_familiares, sexo, data_inscricao
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       ON CONFLICT (filiado_id) DO UPDATE SET
         modalidades = EXCLUDED.modalidades,
         observacoes = EXCLUDED.observacoes,
+        familiares = EXCLUDED.familiares,
+        qtd_familiares = EXCLUDED.qtd_familiares,
+        sexo = EXCLUDED.sexo,
         data_inscricao = NOW()
       RETURNING *
     `;
 
     const { rows } = await pool.query(query, [
-      userId, filiadoNome, modalidadesTexto, obsLimpa,
+      userId, 
+      filiadoNome, 
+      modalidadesTexto, 
+      obsLimpa, 
+      familiaresLimpo,
+      qtdFamiliaresInt,
+      sexoLimpo
     ]);
 
-    log.info("JogosInscricao", { 
-        userId, 
-        modalidades: modalidadesTexto 
-    });
+    log.info("JogosInscricao", { userId, modalidades: modalidadesTexto });
 
     return res.status(200).json({
-      message: Textos.SUCESSO.INSCRICAO_JOGOS_SUCESSO, // ✨
+      message: Textos.SUCESSO.INSCRICAO_JOGOS_SUCESSO,
       inscricao: rows[0],
     });
   } catch (err) {
     log.error("JogosInscricaoErro", err);
-    return res.status(500).json({
-      error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, // Reutilizando erro interno
-    });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+  }
+};
+
+exports.cancelarInscricao = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const query = `DELETE FROM pre_inscricoes_jogos WHERE filiado_id = $1`;
+    await pool.query(query, [userId]);
+
+    log.info("JogosInscricaoCancelada", { userId });
+
+    return res.json({ message: "Sua pré-inscrição foi cancelada com sucesso." });
+  } catch (err) {
+    log.error("JogosCancelarErro", err);
+    return res.status(500).json({ error: "Erro ao cancelar inscrição." });
   }
 };
 
@@ -57,31 +83,26 @@ exports.listarInscricoes = async (req, res) => {
         const perfil = (req.user.perfil_acesso || "").toUpperCase();
         
         if (!PERFIS_JOGOS_MANAGER.includes(perfil)) {
-            return res.status(403).json({ error: "Acesso negado." }); // Mantida a string de validação específica.
+            return res.status(403).json({ error: "Acesso negado." });
         }
         
         const query = `
             SELECT 
                 pi.*,
-                f.cpf, f.telefone1, f.email1
+                f.telefone1
             FROM pre_inscricoes_jogos pi
             JOIN filiados f ON pi.filiado_id = f.id
-            ORDER BY pi.data_inscricao DESC;
+            ORDER BY pi.nome_filiado ASC; 
         `;
         
         const { rows } = await pool.query(query);
 
         log.info("JogosListagemVisualizada", { viewerId: req.user.id });
 
-        return res.json({
-            total: rows.length,
-            inscricoes: rows
-        });
+        return res.json({ total: rows.length, inscricoes: rows });
 
     } catch (err) {
         log.error("JogosListagemErro", err);
-        return res.status(500).json({
-            error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS, // Reutilizando erro interno
-        });
+        return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
     }
 };
