@@ -47,41 +47,32 @@
 
       <div class="af-main">
         <section id="sec-meus-dados" class="af-section active">
-          <div class="section-card">
-            <h2 class="section-title">
-              <span class="emoji">📋</span>
-              <span>Meus dados cadastrais</span>
-            </h2>
-            <p class="section-subtitle">
-              Sempre confira se seus dados estão atualizados. Em caso de dúvida, fale com a secretaria do sindicato.
-            </p>
+  <div class="section-card">
+    <h2 class="section-title">
+      <span class="emoji">📋</span>
+      <span>Meus dados cadastrais</span>
+    </h2>
+    <p class="section-subtitle">
+      Sempre confira se seus dados estão atualizados. Em caso de dúvida, fale com a secretaria do sindicato.
+    </p>
 
-            <div id="alerta-endereco-desatualizado" class="section-box" 
-                 style="color: #c0392b; font-weight: bold; margin-bottom: 15px; display: none;">
-            </div>
+    <div
+      id="alerta-endereco-desatualizado"
+      class="section-box"
+      style="color: #c0392b; font-weight: bold; margin-bottom: 15px; display: none;"
+    >
+    </div>
 
-            <div id="area-filiado-conteudo">
-              Carregando seus dados...
-            </div>
+    <div id="area-filiado-conteudo">
+      Carregando seus dados...
+    </div>
 
-            <div class="section-box" style="margin-top: 20px;">
-              <h3 class="section-subtitle" style="margin-bottom: 8px;">
-                Segurança da conta
-              </h3>
-              <p class="field-hint" style="margin-bottom: 12px;">
-                Para aumentar a segurança da sua área do filiado, você pode ativar a
-                autenticação em duas etapas (2FA) com um aplicativo autenticador,
-                como o Google Authenticator.
-              </p>
+    <!-- NOVO: container dinâmico para a segurança da conta (2FA) -->
+    <div id="seguranca-container"></div>
 
-              <div class="form-actions">
-                <a href="/config-2fa.html" class="btn btn-primary">
-                  Ativar autenticação em duas etapas (2FA)
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
+  </div>
+</section>
+
 
         <section id="sec-filiados" class="af-section" aria-hidden="true">
           <div class="section-card">

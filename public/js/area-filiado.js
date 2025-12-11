@@ -21,113 +21,116 @@ document.addEventListener("DOMContentLoaded", () => {
   } catch (e) {
     console.warn("Não foi possível ler userInfo do localStorage:", e);
   }
-// Função para Desativar 2FA
-async function desativar2FA() {
-  if (!confirm("Tem certeza que deseja desativar a autenticação em duas etapas (2FA)?")) {
-    return;
-  }
-  
-  const token = localStorage.getItem("token");
-  const btn = document.getElementById("btn-desativar-2fa");
-  if (btn) btn.disabled = true;
-
-  try {
-    const response = await fetch("/api/filiados/2fa/desativar", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      // 🟢 Atualiza info no localStorage
-         const userInfoCom2FA = {
-             ...dados, // Usa os dados frescos do backend
-             perfil_acesso: dados.perfil_acesso || "FILIADO"
-         };
-         localStorage.setItem("userInfo", JSON.stringify(userInfoCom2FA));
-         
-         renderizarMeusDados(dados);
-         // 🟢 CHAMA A RENDERIZAÇÃO DE SEGURANÇA
-         renderizarSeguranca(dados); 
-         
-         preencherFormularioRessarcimentoComDados(dados);
-         configurarBuscaFiliadosSeAindaNao();
-      } else {
-      alert(data.message || "Falha ao desativar o 2FA.");
+  // Função para Desativar 2FA
+  async function desativar2FA() {
+    if (!confirm("Tem certeza que deseja desativar a autenticação em duas etapas (2FA)?")) {
+      return;
     }
-  } catch (error) {
-    console.error("Erro ao desativar 2FA:", error);
-    alert("Erro de conexão ao tentar desativar o 2FA.");
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
 
-function renderizarSeguranca(filiado) {
-    const twofaAtivo = filiado.twofa_ativo;
-    // Tenta encontrar o container específico para segurança ou usa um placeholder
-    // Sugiro que você crie um <div id="seguranca-container"></div> no HTML
-    // Se não tiver, vamos injetar no final da aba 'meus dados' via JS
-    
-    let container = document.getElementById('seguranca-container');
-    
-    // Fallback: Se não existir container no HTML, injeta no final do conteudo
+    const token = localStorage.getItem("token");
+    const btn = document.getElementById("btn-desativar-2fa");
+    if (btn) btn.disabled = true;
+
+    try {
+      const response = await fetch("/api/filiados/2fa/desativar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        alert(data.message || "Falha ao desativar o 2FA.");
+        return;
+      }
+
+      alert(data.message || "Autenticação em duas etapas desativada com sucesso.");
+      // Recarrega os dados do filiado, inclusive o flag twofa_ativo
+      await carregarMeusDados();
+    } catch (error) {
+      console.error("Erro ao desativar 2FA:", error);
+      alert("Erro de conexão ao tentar desativar o 2FA.");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function renderizarSeguranca(filiado) {
+    if (!filiado) return;
+
+    const twofaAtivo = !!filiado.twofa_ativo;
+
+    // Tenta encontrar o container específico para segurança
+    let container = document.getElementById("seguranca-container");
+
+    // Fallback: se não existir no HTML, cria dinamicamente
     if (!container) {
-        const conteudo = document.getElementById("area-filiado-conteudo");
-        if (conteudo) {
-            container = document.createElement('div');
-            container.id = 'seguranca-container';
-            conteudo.parentNode.appendChild(container); // Adiciona após o conteudo
-        } else {
-            return;
-        }
+      const conteudo = document.getElementById("area-filiado-conteudo");
+      if (conteudo && conteudo.parentNode) {
+        container = document.createElement("div");
+        container.id = "seguranca-container";
+        conteudo.parentNode.appendChild(container); // adiciona logo abaixo
+      } else {
+        return;
+      }
     }
 
-    let htmlContent = '';
+    let htmlContent = "";
 
     if (twofaAtivo) {
-        htmlContent = `
-            <div class="section-box" style="margin-top: 20px; border-left: 5px solid #27ae60;">
-                <h3 class="section-subtitle" style="margin-bottom: 8px; color: #27ae60;">
-                   ✅ Parabéns! Você está mais seguro.
-                </h3>
-                <p class="field-hint" style="margin-bottom: 12px;">
-carregarMeusDados()                </p>
-                <div class="form-actions">
-                    <button id="btn-desativar-2fa" class="btn btn-outline btn-sm" style="border-color: #27ae60; color: #27ae60;">
-                        Desativar 2FA
-                    </button>
-                </div>
-            </div>
-        `;
+      htmlContent = `
+        <div class="section-box" style="margin-top: 20px; border-left: 5px solid #27ae60;">
+          <h3 class="section-subtitle" style="margin-bottom: 8px; color: #27ae60;">
+            ✅ Parabéns! Você está mais seguro.
+          </h3>
+          <p class="field-hint" style="margin-bottom: 12px;">
+            Você já ativou a autenticação em duas etapas (2FA) nesta conta.
+            Ao fazer login, será solicitado um código gerado pelo seu aplicativo autenticador
+            (como Google Authenticator, Authy, etc.).
+          </p>
+          <div class="form-actions">
+            <button
+              id="btn-desativar-2fa"
+              class="btn btn-outline btn-sm"
+              style="border-color: #27ae60; color: #27ae60;"
+            >
+              Desativar autenticação em duas etapas (2FA)
+            </button>
+          </div>
+        </div>
+      `;
     } else {
-        htmlContent = `
-            <div class="section-box" style="margin-top: 20px; border-left: 5px solid #ffc107;">
-                <h3 class="section-subtitle" style="margin-bottom: 8px;">
-                   ⚠️ Segurança da conta
-                </h3>
-                <p class="field-hint" style="margin-bottom: 12px;">
-                    Para aumentar a segurança da sua área do filiado, você pode ativar a autenticação em duas etapas (2FA).
-                </p>
-                <div class="form-actions">
-                   <a href="/config-2fa.html" class="btn btn-primary btn-sm">
-                      Ativar autenticação em duas etapas (2FA)
-                   </a>
-                </div>
-            </div>
-        `;
+      htmlContent = `
+        <div class="section-box" style="margin-top: 20px; border-left: 5px solid #ffc107;">
+          <h3 class="section-subtitle" style="margin-bottom: 8px;">
+            ⚠️ Segurança da conta
+          </h3>
+          <p class="field-hint" style="margin-bottom: 12px;">
+            Para aumentar a segurança da sua área do filiado, você pode ativar a autenticação em duas etapas (2FA)
+            com um aplicativo autenticador, como o Google Authenticator.
+          </p>
+          <div class="form-actions">
+            <a href="/config-2fa.html" class="btn btn-primary btn-sm">
+              Ativar autenticação em duas etapas (2FA)
+            </a>
+          </div>
+        </div>
+      `;
     }
-    
+
     container.innerHTML = htmlContent;
 
     if (twofaAtivo) {
-        document.getElementById("btn-desativar-2fa")?.addEventListener("click", desativar2FA);
+      const btnDesativar = document.getElementById("btn-desativar-2fa");
+      if (btnDesativar) {
+        btnDesativar.addEventListener("click", desativar2FA);
+      }
     }
-}
+  }
+
   // -------------------------
   // MÁSCARA GLOBAL DE TELEFONE
   // -------------------------
@@ -262,6 +265,7 @@ carregarMeusDados()                </p>
       }
 
       renderizarMeusDados(dados);
+      renderizarSeguranca(dados);        // NOVO: atualiza o bloco de segurança (2FA)
       preencherFormularioRessarcimentoComDados(dados);
       configurarBuscaFiliadosSeAindaNao();
     } catch (err) {
