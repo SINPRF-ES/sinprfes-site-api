@@ -254,30 +254,34 @@ function renderizarFormulario(container) {
                 min-width: 300px;
                 width: auto;
                 white-space: normal;   /* pode quebrar linha */
-            }
+                }
 
-            /* Wrapper que expande a tabela além do card */
-            .tabela-full-wrapper {
-                position: relative;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 100vw;                 /* largura ampla */
-                max-width: 1600px;           /* opcional, só para não ficar exagerado em telas enormes */
-                padding: 0;
-                margin: 0;                   /* garante que não há deslocamento lateral extra */
-            }
+                /* Wrapper que expande a tabela além do card */
+                .tabela-full-wrapper {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    max-width: 1600px;
+    padding: 0;
+    margin: 0;
+}
 
-            /* Mantém a barra de rolagem só quando necessário */
-            .tabela-scroll {
-                overflow-x: auto;
-                padding-bottom: 12px;
-            }
+.tabela-scroll {
+    overflow-x: auto;
+    padding-bottom: 12px;
+    position: relative;   /* sticky header usa este container como referência */
+}
 
-            /* Ajusta a tabela dentro da área expandida */
-            .tabela-full-wrapper .tabela-jogos {
-                width: 100%;
-            }
+.tabela-full-wrapper .tabela-jogos {
+    width: 100%;
+}
 
+.tabela-jogos thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
             @media (max-width: 600px) {
                 .opcoes-grid {
                     grid-template-columns: 1fr;

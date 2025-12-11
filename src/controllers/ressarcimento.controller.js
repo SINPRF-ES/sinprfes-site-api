@@ -16,13 +16,27 @@ const log = require("../utils/log"); // 🟢 LOGGER
  */
 exports.criarRequerimento = async (req, res) => {
   try {
-    const usuario = req.user || {};   // id, cpf, nome — vindo do token
+    const usuario = req.user || {}; // id, cpf, nome, possivelmente email/email1/email2 — vindos do token
     const body = req.body || {};
     const anexos = req.files || [];
 
     // Normaliza campos numéricos (vírgula → ponto)
     const parseNumero = (v) =>
       parseFloat(String(v || "0").replace(",", ".")) || 0;
+
+    // Normalizador simples de e-mail
+    const normalizarEmail = (v) =>
+      (v || "").toString().trim().toLowerCase();
+
+    // E-mails do filiado (vindo do usuário autenticado ou corpo, se um dia você mandar por lá)
+    const email1 = normalizarEmail(
+      body.email1 || usuario.email1 || usuario.email
+    );
+    const email2 = normalizarEmail(body.email2 || usuario.email2);
+
+    // Define o e-mail de destino (cópia para o filiado)
+    const emailDestino =
+      normalizarEmail(body.email_destino) || email1 || email2 || "";
 
     // Monta objeto do pedido
     const pedido = {
@@ -32,7 +46,9 @@ exports.criarRequerimento = async (req, res) => {
       nome: body.nome || usuario.nome || "",
 
       // Contato / envio
-      email_destino: body.email_destino || "",
+      email_destino: emailDestino,
+      email1,               // 🟢 agora o service pode usar como fallback
+      email2,               // 🟢 idem
       telefone_contato: body.telefone_contato || "",
 
       // Atividade
@@ -67,24 +83,32 @@ exports.criarRequerimento = async (req, res) => {
       filiadoId: usuario.id,
       valorTotal: pedido.valor_total,
       qtdAnexos: anexos.length,
+      emailDestino: pedido.email_destino || "(vazio)",
+      email1: pedido.email1 || "(vazio)",
+      email2: pedido.email2 || "(vazio)",
     });
+
+    if (!pedido.email_destino) {
+      log.warn("RessarcimentoSemEmailDestino", {
+        filiadoId: usuario.id,
+      });
+      // continua mesmo assim: sindicato recebe, filiado talvez não receba cópia
+    }
 
     // 1) Gera PDF consolidado (pedido + anexos)
     const pdfBuffer = await gerarPdfRessarcimento(pedido, anexos);
 
-    // 2) Envia e-mail para sindicato + cópia para filiado
+    // 2) Envia e-mail para sindicato + cópia para filiado (se houver e-mail_destino/email1/email2)
     await enviarEmailRessarcimento(pedido, pdfBuffer);
 
     // 🟢 LOG SUCESSO FINAL
     log.info("RessarcimentoProcessado", { filiadoId: usuario.id });
 
-    // 3) Futuro: persistência em tabela "ressarcimentos"
-
     return res.status(200).json({
-      message:
-        "Solicitação de ressarcimento registrada. O sindicato recebeu o pedido e uma cópia foi enviada para o seu e-mail.",
+      message: pedido.email_destino
+        ? "Solicitação de ressarcimento registrada. O sindicato recebeu o pedido e uma cópia foi enviada para o seu e-mail."
+        : "Solicitação de ressarcimento registrada. O sindicato recebeu o pedido (sem envio de cópia por falta de e-mail cadastrado).",
     });
-
   } catch (err) {
     // 🔴 LOG ERRO
     log.error("RessarcimentoErro", err);

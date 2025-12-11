@@ -118,3 +118,41 @@ export function exibirAlertaFlutuante() {
         div.remove();
     });
 }
+// Adicione ao final do utils.js
+
+// Máscara Agência: Aceita até 4 dígitos + 1 verificador (Ex: 1234-5)
+export function aplicarMascaraAgencia(input) {
+    if (!input) return;
+    input.maxLength = 6; // 4 números + 1 hífen + 1 número
+    input.addEventListener("input", (e) => {
+        let v = e.target.value.replace(/\D/g, ""); // Remove tudo que não é número
+        
+        // Limita tamanho bruto (sem formatação) para 5 dígitos (4 da agência + 1 DV)
+        if (v.length > 5) v = v.slice(0, 5);
+
+        // Aplica o hífen antes do último dígito se tiver 5 números (12345 -> 1234-5)
+        // Se tiver menos, deixa só números ou aplica regra de 4 dígitos padrão
+        if (v.length > 4) {
+            v = v.replace(/^(\d{4})(\d)/, "$1-$2");
+        }
+        
+        e.target.value = v;
+    });
+}
+
+// Máscara Conta: Aceita números variáveis + 1 verificador (Ex: 12345-6 ou 12345678-9)
+export function aplicarMascaraConta(input) {
+    if (!input) return;
+    input.maxLength = 15; // Tamanho de segurança
+    input.addEventListener("input", (e) => {
+        let v = e.target.value.replace(/\D/g, ""); // Remove letras
+        
+        // Formata colocando hífen antes do último dígito
+        // Ex: 123456 -> 12345-6
+        if (v.length > 1) {
+            v = v.replace(/^(\d+)(\d{1})$/, "$1-$2");
+        }
+        
+        e.target.value = v;
+    });
+}

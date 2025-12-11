@@ -1,10 +1,33 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF } from './utils.js';
+import { apiFetch, aplicarMascaraTelefone, formatarCPF, aplicarMascaraAgencia, aplicarMascaraConta } from './utils.js';
+
+// Lista dos principais bancos brasileiros (Código COMPE - Nome)
+const LISTA_BANCOS = [
+    "001 - Banco do Brasil S.A.",
+    "033 - Banco Santander (Brasil) S.A.",
+    "104 - Caixa Econômica Federal",
+    "237 - Banco Bradesco S.A.",
+    "341 - Itaú Unibanco S.A.",
+    "260 - Nu Pagamentos S.A. (Nubank)",
+    "077 - Banco Inter S.A.",
+    "290 - PagSeguro Internet S.A.",
+    "380 - PicPay Serviços S.A.",
+    "323 - Mercado Pago",
+    "336 - Banco C6 S.A.",
+    "041 - Banco do Estado do Rio Grande do Sul S.A. (Banrisul)",
+    "021 - BANESTES S.A. Banco do Estado do Espírito Santo",
+    "756 - Banco Cooperativo do Brasil S.A. (Sicoob)",
+    "748 - Banco Cooperativo Sicredi S.A.",
+    "655 - Banco Votorantim S.A. (Neon)",
+    "212 - Banco Original S.A.",
+    "070 - BRB - Banco de Brasília S.A.",
+    "136 - Confederação Nacional das Cooperativas Centrais Unicred",
+    "Outros"
+];
 
 export async function inicializarRessarcimento() {
     const secRes = document.getElementById("sec-ressarcimento");
     if (!secRes) return;
 
-    // 🟢 CORREÇÃO: Agora a variável se chama 'container' desde o início
     const container = secRes.querySelector('.section-card');
     if (!container) return;
     
@@ -18,40 +41,23 @@ export async function inicializarRessarcimento() {
             /* Header Gradiente - CENTRALIZADO */
             .res-header {
                 background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
-                color: #fff;
-                padding: 25px;
-                border-radius: 12px;
-                border-left: 6px solid #27ae60;
-                margin-bottom: 25px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                text-align: center;
+                color: #fff; padding: 25px; border-radius: 12px;
+                border-left: 6px solid #27ae60; margin-bottom: 25px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center;
             }
             .res-title h2 { margin: 0; font-size: 1.5rem; color: #fff; }
             .res-subtitle { font-size: 0.95rem; color: #bdc3c7; margin-top: 5px; }
 
             /* Cards Brancos */
             .res-card {
-                background: #fff;
-                color: #333;
-                padding: 25px;
-                border-radius: 10px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                margin-bottom: 20px;
-                border: 1px solid #e0e0e0;
+                background: #fff; color: #333; padding: 25px;
+                border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                margin-bottom: 20px; border: 1px solid #e0e0e0;
             }
-            
-            /* Títulos dos Cards - CENTRALIZADOS */
             .res-card h3 {
-                color: #2c3e50;
-                font-size: 1.1rem;
-                border-bottom: 2px solid #f0f0f0;
-                padding-bottom: 10px;
-                margin-bottom: 20px;
-                font-weight: bold;
-                display: flex; 
-                align-items: center; 
-                justify-content: center;
-                gap: 8px;
+                color: #2c3e50; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0;
+                padding-bottom: 10px; margin-bottom: 20px; font-weight: bold;
+                display: flex; align-items: center; justify-content: center; gap: 8px;
             }
 
             /* Grids e Inputs */
@@ -70,31 +76,17 @@ export async function inicializarRessarcimento() {
             
             /* Total Centralizado */
             .total-box { 
-                background: #e8f8f5; 
-                border: 1px solid #27ae60; 
-                padding: 15px; 
-                border-radius: 8px; 
-                text-align: center; 
-                margin-top: 20px;
+                background: #e8f8f5; border: 1px solid #27ae60; padding: 15px; 
+                border-radius: 8px; text-align: center; margin-top: 20px;
             }
             .total-label { font-size: 0.9rem; color: #27ae60; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
             .total-value { font-size: 1.6rem; color: #27ae60; font-weight: 800; }
 
             /* Upload */
             .file-upload-wrapper { 
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                width: 100%;
-                border: 2px dashed #ccc; 
-                padding: 30px; 
-                text-align: center; 
-                border-radius: 8px; 
-                background: #fafafa; 
-                cursor: pointer; 
-                transition: 0.2s; 
-                box-sizing: border-box;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                width: 100%; border: 2px dashed #ccc; padding: 30px; text-align: center; 
+                border-radius: 8px; background: #fafafa; cursor: pointer; transition: 0.2s; box-sizing: border-box;
             }
             .file-upload-wrapper:hover { border-color: #27ae60; background: #f0fdf4; }
             .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
@@ -104,7 +96,9 @@ export async function inicializarRessarcimento() {
         document.head.appendChild(s);
     }
 
-    // 2. RENDERIZA O HTML (Usando a variável correta 'container')
+    // 2. RENDERIZA O HTML
+    const opcoesBancos = LISTA_BANCOS.map(b => `<option value="${b}">`).join('');
+
     container.innerHTML = `
         <div class="res-header">
             <div class="res-title">
@@ -122,7 +116,7 @@ export async function inicializarRessarcimento() {
                     <div class="res-group"><label>CPF</label><input type="text" id="res-cpf" readonly class="input-calc" placeholder="..."></div>
                 </div>
                 <div class="res-grid">
-                    <div class="res-group"><label>E-mail</label><input type="email" id="res-email" readonly class="input-calc"></div>
+                    <div class="res-group"><label>E-mail</label><input type="email" id="res-email" name="email_destino" readonly class="input-calc"></div>
                     <div class="res-group"><label>Telefone Contato</label><input type="text" id="res-telefone" name="telefone_contato"></div>
                 </div>
             </div>
@@ -142,22 +136,18 @@ export async function inicializarRessarcimento() {
 
             <div class="res-card">
                 <h3>🧮 Despesas</h3>
-                
                 <div class="res-grid">
                     <div class="res-group"><label>Qtd. Diárias</label><input type="text" id="res-diarias" name="diarias" readonly class="input-calc" value="0"></div>
                     <div class="res-group"><label>Valor Diárias (R$)</label><input type="text" id="res-valor-diarias" name="valor_diarias" readonly class="input-calc" value="0.00"></div>
                 </div>
-
                 <div class="res-grid">
                     <div class="res-group"><label>Km Rodados</label><input type="number" id="res-km" name="km_total" placeholder="0"></div>
                     <div class="res-group"><label>Valor Km (R$)</label><input type="text" id="res-valor-km" name="valor_km" readonly class="input-calc" value="0.00"></div>
                 </div>
-
                 <div class="res-grid">
                     <div class="res-group"><label>Outras Despesas (R$)</label><input type="number" id="res-valor-outros" name="valor_outros" step="0.01" placeholder="0.00"></div>
                     <div class="res-group"><label>Descrição Outros</label><input type="text" id="res-descricao-outros" name="descricao_outros" placeholder="Pedágio, etc"></div>
                 </div>
-
                 <div class="total-box">
                     <div class="total-label">Valor Total a Receber</div>
                     <div class="total-value">R$ <span id="text-valor-total">0,00</span></div>
@@ -167,12 +157,26 @@ export async function inicializarRessarcimento() {
 
             <div class="res-card">
                 <h3>🏦 Dados Bancários</h3>
-                <div class="res-grid">
-                    <div class="res-group"><label>Banco</label><input type="text" id="res-banco" name="banco" required></div>
-                    <div class="res-group"><label>Agência</label><input type="text" id="res-agencia" name="agencia" required></div>
-                    <div class="res-group"><label>Conta</label><input type="text" id="res-conta" name="conta" required></div>
+                
+                <div class="res-group" style="margin-bottom: 15px;">
+                    <label>Banco (Digite o nome ou código)</label>
+                    <input list="lista-bancos" id="res-banco" name="banco" required placeholder="Ex: Digite 'nu' para Nubank ou '001' para BB">
+                    <datalist id="lista-bancos">
+                        ${opcoesBancos}
+                    </datalist>
                 </div>
-                <div class="res-group"><label>PIX (Opcional)</label><input type="text" id="res-pix" name="pix"></div>
+
+                <div class="res-grid">
+                    <div class="res-group">
+                        <label>Agência</label>
+                        <input type="text" id="res-agencia" name="agencia" required placeholder="Ex: 1234-5">
+                    </div>
+                    <div class="res-group">
+                        <label>Conta</label>
+                        <input type="text" id="res-conta" name="conta" required placeholder="Ex: 12345-6">
+                    </div>
+                </div>
+                <div class="res-group"><label>PIX (Opcional)</label><input type="text" id="res-pix" name="pix" placeholder="CPF, E-mail ou Celular"></div>
             </div>
 
             <div class="res-card">
@@ -193,13 +197,19 @@ export async function inicializarRessarcimento() {
         </form>
     `;
 
-    // 3. LÓGICA
+    // 3. LÓGICA E MÁSCARAS
     const form = document.getElementById("form-ressarcimento");
     const tel = document.getElementById("res-telefone");
     const inputFile = document.getElementById("res-anexos");
     const fileList = document.getElementById("file-list");
+    
+    // Máscaras
+    const inpAgencia = document.getElementById("res-agencia");
+    const inpConta = document.getElementById("res-conta");
 
     aplicarMascaraTelefone(tel);
+    if(inpAgencia) aplicarMascaraAgencia(inpAgencia);
+    if(inpConta) aplicarMascaraConta(inpConta);
 
     // Upload visual
     inputFile.addEventListener("change", () => {
@@ -246,7 +256,7 @@ export async function inicializarRessarcimento() {
         try {
             const r = await apiFetch("/api/ressarcimentos", { method: "POST", body: fd });
             if(r.ok) { 
-                status.textContent = "✅ Enviado com sucesso!"; 
+                status.textContent = "✅ Enviado com sucesso! Cópia enviada ao seu e-mail."; 
                 status.style.color = "#27ae60";
                 form.reset(); 
                 fileList.innerHTML = "";
