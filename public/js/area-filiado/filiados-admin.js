@@ -1,4 +1,4 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF, normalizarTextoBusca } from './utils.js';
+import { apiFetch, aplicarMascaraTelefone, formatarCPF, normalizarTextoBusca, formatarTelefoneTexto } from './utils.js';
 
 let cacheLista = [];
 const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
@@ -143,7 +143,14 @@ function filtrarLista(termo) {
     el.innerHTML = res.map(f => {
         const situacao = (f.situacao || 'ATIVO').toUpperCase();
         const classeStatus = situacao === 'ATIVO' ? 'status-ativo' : (situacao === 'VETERANO' ? 'status-veterano' : 'status-pensionista');
-        const tels = [f.telefone1, f.telefone2].filter(Boolean).join(" / ");
+
+        // 🔵 Normalização e formatação dos telefones
+        const tel1Raw = (f.telefone1 || "").replace(/\D/g, "");
+        const tel2Raw = (f.telefone2 || "").replace(/\D/g, "");
+        const tels = [tel1Raw, tel2Raw]
+            .filter(t => t)                     // remove vazios
+            .map(formatarTelefoneTexto)         // exibe mascarado no card
+            .join(" / ");
         
         const header = `
             <div class="filiado-header">
@@ -183,8 +190,8 @@ function filtrarLista(termo) {
                             <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${disabledSeNaoAdmin} placeholder="Somente números"></div>
                             <div class="edit-group"><label>E-mail 1</label><input name="email1" value="${f.email1||''}"></div>
                             <div class="edit-group"><label>E-mail 2</label><input name="email2" value="${f.email2||''}"></div>
-                            <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${f.telefone1||''}"></div>
-                            <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${f.telefone2||''}"></div>
+                            <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${tel1Raw}"></div>
+                            <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${tel2Raw}"></div>
                             <div class="edit-group"><label>Lotação</label><input name="lotacao" value="${f.lotacao||''}"></div>
                             <div class="edit-group"><label>Situação</label>
                                 <select name="situacao">${SITUACAO_OPCOES.map(op => `<option value="${op}" ${op===situacao?'selected':''}>${op}</option>`).join('')}</select>

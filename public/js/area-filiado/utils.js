@@ -46,16 +46,42 @@ export async function apiFetch(url, options = {}) {
 // Máscaras e Formatação
 export function aplicarMascaraTelefone(input) {
     if (!input) return;
-    function formatar(v) {
-        v = v.replace(/\D/g, "").substring(0, 11);
-        if (v.length > 10) return v.replace(/^(\d\d)(\d{5})(\d{4}).*/, "($1) $2-$3");
-        if (v.length > 5) return v.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, "($1) $2-$3");
-        if (v.length > 2) return v.replace(/^(\d\d)(\d{0,5}).*/, "($1) $2");
-        return v.replace(/^(\d*)/, "($1");
+
+    function formatar(raw) {
+        let v = String(raw || "").replace(/\D/g, "").slice(0, 11);
+
+        // Se não tem número, não mostra nada (nem "(")
+        if (v.length === 0) {
+            return "";
+        }
+
+        // (XX
+        if (v.length <= 2) {
+            return `(${v}`;
+        }
+
+        // (XX) XXXX
+        if (v.length <= 6) {
+            return `(${v.slice(0, 2)}) ${v.slice(2)}`;
+        }
+
+        // Até 10 dígitos -> (XX) XXXX-XXXX
+        if (v.length <= 10) {
+            return `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+        }
+
+        // 11 dígitos -> (XX) XXXXX-XXXX
+        return `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7, 11)}`;
     }
+
+    // Normaliza o valor inicial, se já existir
     input.value = formatar(input.value);
-    input.addEventListener("input", (e) => { e.target.value = formatar(e.target.value); });
+
+    input.addEventListener("input", (e) => {
+        e.target.value = formatar(e.target.value);
+    });
 }
+
 
 export function formatarTelefoneTexto(v) {
     if (!v) return "-";
