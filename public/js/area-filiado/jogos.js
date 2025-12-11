@@ -7,7 +7,11 @@ export function inicializarJogos(perfilAcesso) {
     if (!secJogos) return;
     
     const mainContent = secJogos.querySelector('.section-card');
+    if (!mainContent) return;
     mainContent.innerHTML = "";
+
+    // Normaliza perfil em maiúsculas para evitar erro de comparação
+    const perfil = (perfilAcesso || "").toUpperCase();
 
     // 1. Container do Formulário (Visível para todos)
     const containerForm = document.createElement("div");
@@ -15,18 +19,18 @@ export function inicializarJogos(perfilAcesso) {
     renderizarFormulario(containerForm);
 
     // 2. Lista de Inscritos (Apenas para Gestores)
-    if (PERFIS_GERENCIA.includes(perfilAcesso)) {
+    if (PERFIS_GERENCIA.includes(perfil)) {
         const hr = document.createElement("hr");
-        hr.style.cssText = "margin: 50px 0 30px 0; border: 0; border-top: 2px solid #dde3ea";
+        hr.style.cssText = "margin: 32px 0 24px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.25)";
         mainContent.appendChild(hr);
 
         const headerAdmin = document.createElement("div");
         headerAdmin.innerHTML = `
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h3 class="section-subtitle" style="color: #2980b9; font-size: 1.8rem; font-weight: bold;">
-                    📋 Área de Gestão (Inscritos)
+            <div style="text-align: center; margin-bottom: 16px;">
+                <h3 class="section-subtitle" style="color: #f1c40f; font-size: 1.6rem; font-weight: bold;">
+                    📋 Área de Gestão – Inscritos nos Jogos
                 </h3>
-                <p class="field-hint">Visualização exclusiva para: <strong>${perfilAcesso}</strong></p>
+                <p class="field-hint">Visualização exclusiva para: <strong>${perfil}</strong></p>
             </div>`;
         mainContent.appendChild(headerAdmin);
 
@@ -39,17 +43,24 @@ export function inicializarJogos(perfilAcesso) {
 }
 
 function renderizarFormulario(container) {
-    // Injeta CSS específico para Jogos
+    // Injeta CSS específico para Jogos (apenas uma vez)
     if (!document.getElementById('style-jogos')) {
         const s = document.createElement('style'); 
         s.id='style-jogos';
         s.textContent = `
             .jogos-container { max-width: 100%; margin: 0 auto; }
+
+            /* Deixa a área de lista “expandir” para fora do padding do card */
+            .jogos-container-lista {
+                width: 100%;
+                margin: 0 -24px 0 -24px; /* compensa o padding do .section-card */
+                padding: 0 0 24px 0;
+            }
             
-            /* Cards brancos com texto escuro */
+            /* Cards brancos com texto escuro (formulário colorido, bem destacado) */
             .categoria-card { 
-                background: #fff; 
-                color: #333; 
+                background: #ffffff; 
+                color: #333333; 
                 border: 1px solid #e0e0e0; 
                 border-radius: 10px; 
                 padding: 25px; 
@@ -61,23 +72,41 @@ function renderizarFormulario(container) {
                 font-size: 1.2rem; 
                 color: #2c3e50; 
                 border-bottom: 2px solid #f0f0f0; 
-                padding-bottom: 10px; margin-bottom: 20px; 
+                padding-bottom: 10px; 
+                margin-bottom: 20px; 
                 font-weight: bold; 
             }
             
-            .opcoes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
-            
-            /* Checkbox grande e visível */
-            .destaque-adesao { 
-                background: #f0f7ff; color: #004085; 
-                border: 1px solid #b8daff; padding: 20px; border-radius: 8px; 
-                display: flex; align-items: center; gap: 15px; margin-bottom: 30px; cursor: pointer;
-                font-size: 1.1rem; font-weight: 600;
+            .opcoes-grid { 
+                display: grid; 
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+                gap: 15px; 
             }
-            .destaque-adesao input { transform: scale(1.5); cursor: pointer; }
+            
+            /* Checkbox grande e visível – box azul destacando adesão */
+            .destaque-adesao { 
+                background: #f0f7ff; 
+                color: #004085; 
+                border: 1px solid #b8daff; 
+                padding: 20px; 
+                border-radius: 8px; 
+                display: flex; 
+                align-items: center; 
+                gap: 15px; 
+                margin-bottom: 30px; 
+                cursor: pointer;
+                font-size: 1.1rem; 
+                font-weight: 600;
+            }
+            .destaque-adesao input { 
+                transform: scale(1.5); 
+                cursor: pointer; 
+            }
 
             /* Inputs e Textareas mais visíveis */
-            .categoria-card select, .categoria-card textarea, .categoria-card input[type="text"] {
+            .categoria-card select, 
+            .categoria-card textarea, 
+            .categoria-card input[type="text"] {
                 width: 100%;
                 padding: 12px;
                 border: 1px solid #ccc;
@@ -93,23 +122,53 @@ function renderizarFormulario(container) {
                 line-height: 1.5;
             }
 
-            /* Botões */
-            .btn-danger { background: transparent; border: 1px solid #c0392b; color: #c0392b; margin-left: 15px; } 
-            .btn-danger:hover { background: #c0392b; color: #fff; } 
+            /* Botão de cancelar inscrição com destaque em vermelho */
+            .btn-danger { 
+                background: transparent; 
+                border: 1px solid #c0392b; 
+                color: #c0392b; 
+                margin-left: 15px; 
+            } 
+            .btn-danger:hover { 
+                background: #c0392b; 
+                color: #fff; 
+            } 
 
-            /* Estilo da Tabela de Gestão */
-            .tabela-jogos { width: 100%; border-collapse: collapse; min-width: 800px; }
-            .tabela-jogos th { background: #003366; color: #fff; padding: 15px; text-align: left; vertical-align: top; }
+            /* Estilo da Tabela de Gestão com boa leitura */
+            .tabela-jogos { 
+                width: 100%; 
+                border-collapse: collapse; 
+                min-width: 800px; 
+            }
+            .tabela-jogos th { 
+                background: #003366; 
+                color: #ffffff; 
+                padding: 12px 14px; 
+                text-align: left; 
+                vertical-align: top; 
+                font-size: 0.9rem;
+            }
             .tabela-jogos td { 
-                padding: 12px 15px; 
-                border-bottom: 1px solid #ddd; 
-                color: #333; 
+                padding: 10px 14px; 
+                border-bottom: 1px solid #dddddd; 
+                color: #333333; 
                 vertical-align: top;
                 white-space: normal; /* Permite quebra de linha */
                 word-wrap: break-word;
+                font-size: 0.9rem;
             }
-            .tabela-jogos tr:nth-child(even) { background-color: #f9f9f9; }
-            .tabela-jogos tr:hover { background-color: #f1f1f1; }
+            .tabela-jogos tr:nth-child(even) { 
+                background-color: #f9f9f9; 
+            }
+            .tabela-jogos tr:hover { 
+                background-color: #f1f1f1; 
+            }
+
+            @media (max-width: 600px) {
+                .opcoes-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
         `;
         document.head.appendChild(s);
     }
@@ -117,8 +176,12 @@ function renderizarFormulario(container) {
     container.innerHTML = `
         <div class="jogos-container">
             <header style="text-align: center; margin-bottom: 30px;">
-                <h2 style="font-size: 2rem; color: #e67e22; margin-bottom: 5px;">🏅 Jogos de Integração PRF 2026</h2>
-                <p style="font-size: 1.1rem; color: #aaa;">📍 Poços de Caldas - MG (12 a 17/04/2026)</p>
+                <h2 style="font-size: 2rem; color: #e67e22; margin-bottom: 5px;">
+                    🏅 Jogos de Integração PRF 2026
+                </h2>
+                <p style="font-size: 1.1rem; color: #aaa;">
+                    📍 Poços de Caldas - MG (12 a 17/04/2026)
+                </p>
             </header>
 
             <form id="form-inscricao-jogos">
@@ -130,7 +193,9 @@ function renderizarFormulario(container) {
                 <div class="categoria-card">
                     <div class="categoria-titulo">👤 Dados do Participante</div>
                     <div style="max-width: 300px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">Sexo (Para categorias esportivas):</label>
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">
+                            Sexo (Para categorias esportivas):
+                        </label>
                         <select id="sexo">
                             <option value="">Selecione...</option>
                             <option value="Masculino">Masculino</option>
@@ -202,7 +267,9 @@ function renderizarFormulario(container) {
                     <div class="categoria-titulo">👨‍👩‍👧‍👦 Familiares</div>
                     
                     <div style="margin-bottom: 15px; max-width: 300px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Quantidade de familiares:</label>
+                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">
+                            Quantidade de familiares:
+                        </label>
                         <select id="qtd_familiares">
                             <option value="0">0 (Nenhum)</option>
                             <option value="1">1</option>
@@ -217,13 +284,19 @@ function renderizarFormulario(container) {
                         </select>
                     </div>
 
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Nomes dos familiares (um por linha):</label>
-                    <textarea id="familiares" rows="6" placeholder="Exemplo:\nMaria da Silva (Esposa)\nJoãozinho (Filho)"></textarea>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">
+                        Nomes dos familiares (um por linha):
+                    </label>
+                    <textarea id="familiares" rows="6" placeholder="Exemplo:
+Maria da Silva (Esposa)
+Joãozinho (Filho)"></textarea>
                 </div>
 
                 <div class="categoria-card">
                     <div class="categoria-titulo">📝 Observações Adicionais</div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Informações extras:</label>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">
+                        Informações extras:
+                    </label>
                     <textarea id="obs" rows="5" placeholder="Tamanho da camisa, restrições alimentares, dúvidas, etc..."></textarea>
                 </div>
 
@@ -245,47 +318,78 @@ function renderizarFormulario(container) {
     const statusEl = container.querySelector("#jogos-status");
     const btnCancelar = container.querySelector("#btn-cancelar-inscricao");
 
+    // Cancelar inscrição
     if (btnCancelar) {
         btnCancelar.addEventListener("click", async () => {
             if (!confirm("Tem certeza que deseja CANCELAR sua inscrição nos Jogos?")) return;
-            
+
             statusEl.textContent = "Cancelando...";
             statusEl.style.color = "orange";
-            
+
             try {
                 const r = await apiFetch("/api/jogos/inscricao", { method: "DELETE" });
-                if(r.ok) { 
-                    statusEl.textContent = "Inscrição cancelada com sucesso."; 
-                    statusEl.style.color = "red"; 
+
+                if (!r) {
+                    statusEl.textContent = "Erro de autenticação ou sessão expirada.";
+                    statusEl.style.color = "#c0392b";
+                    return;
+                }
+
+                if (r.ok) {
+                    statusEl.textContent = "Inscrição cancelada com sucesso.";
+                    statusEl.style.color = "red";
+
+                    // Limpa o formulário visualmente
                     form.reset();
-                    // Reseta selects manuais
-                    if(document.getElementById("sexo")) document.getElementById("sexo").value = "";
-                    if(document.getElementById("qtd_familiares")) document.getElementById("qtd_familiares").value = "0";
+                    const sexoSel = document.getElementById("sexo");
+                    const qtdFamSel = document.getElementById("qtd_familiares");
+                    if (sexoSel) sexoSel.value = "";
+                    if (qtdFamSel) qtdFamSel.value = "0";
+
+                    // Desmarca todas as modalidades marcadas
+                    form.querySelectorAll("input[name='modalidades']:checked")
+                        .forEach((chk) => (chk.checked = false));
+
+                    // Desmarca checkbox de interesse
+                    const interesse = document.getElementById("interesse");
+                    if (interesse) interesse.checked = false;
+
+                    // Se existir painel de lista (usuário com perfil de gestão), recarrega
+                    const containerLista = document.querySelector(".jogos-container-lista");
+                    if (containerLista) {
+                        renderizarLista(containerLista);
+                    }
                 } else {
-                    statusEl.textContent = "Erro ao cancelar.";
+                    const detalhes = await r.text().catch(() => "");
+                    console.error("Erro ao cancelar inscrição:", r.status, detalhes);
+                    statusEl.textContent = "Erro ao cancelar inscrição.";
+                    statusEl.style.color = "#c0392b";
                 }
             } catch (e) {
-                console.error(e);
+                console.error("Exceção ao cancelar inscrição:", e);
                 statusEl.textContent = "Erro de conexão.";
+                statusEl.style.color = "#c0392b";
             }
         });
     }
 
+    // Enviar inscrição
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         
         if (!form.querySelector("#interesse").checked) {
-             statusEl.textContent = "⚠️ Marque a caixa 'Desejo integrar a delegação' no topo.";
-             statusEl.style.color = "#c0392b";
-             form.querySelector("#interesse").scrollIntoView({behavior: "smooth", block: "center"});
-             return;
+            statusEl.textContent = "⚠️ Marque a caixa 'Desejo integrar a delegação' no topo.";
+            statusEl.style.color = "#c0392b";
+            form.querySelector("#interesse").scrollIntoView({behavior: "smooth", block: "center"});
+            return;
         }
 
-        const mods = Array.from(form.querySelectorAll("input[name='modalidades']:checked")).map(m => m.value);
+        const mods = Array.from(form.querySelectorAll("input[name='modalidades']:checked"))
+            .map(m => m.value);
         if (mods.length === 0) {
-             statusEl.textContent = "⚠️ Selecione ao menos uma modalidade.";
-             statusEl.style.color = "#c0392b";
-             return;
+            statusEl.textContent = "⚠️ Selecione ao menos uma modalidade.";
+            statusEl.style.color = "#c0392b";
+            return;
         }
 
         const sexo = form.querySelector("#sexo").value;
@@ -308,55 +412,98 @@ function renderizarFormulario(container) {
         statusEl.style.color = "#333";
         
         try {
-             const r = await apiFetch("/api/jogos/inscricao", { method: "POST", body: payload });
-             if(r.ok) {
-                 statusEl.textContent = "🎉 Inscrição confirmada com sucesso!";
-                 statusEl.style.color = "#27ae60";
-             } else {
-                 statusEl.textContent = "Erro ao salvar inscrição.";
-                 statusEl.style.color = "#c0392b";
-             }
+            const r = await apiFetch("/api/jogos/inscricao", { method: "POST", body: payload });
+            if (r && r.ok) {
+                statusEl.textContent = "🎉 Inscrição confirmada com sucesso!";
+                statusEl.style.color = "#27ae60";
+            } else {
+                statusEl.textContent = "Erro ao salvar inscrição.";
+                statusEl.style.color = "#c0392b";
+            }
         } catch(e) { 
             console.error(e); 
             statusEl.textContent = "Erro de conexão."; 
+            statusEl.style.color = "#c0392b";
         }
     });
 }
 
 async function renderizarLista(container) {
-    container.innerHTML = '<p style="color:#fff;">Carregando lista...</p>';
-    try {
-        const r = await apiFetch("/api/jogos/inscricoes");
-        if(!r.ok) throw new Error();
-        const data = await r.json();
-        const lista = data.inscricoes || [];
+    console.log("➡️ renderizarLista() iniciada");
 
-        if(lista.length === 0) { container.innerHTML = "<p style='text-align:center; color:#fff;'>Nenhuma inscrição encontrada.</p>"; return; }
+    container.innerHTML = '<p style="color:#fff;">Carregando lista...</p>';
+
+    let r;
+    try {
+        r = await apiFetch("/api/jogos/inscricoes");
+        console.log("Resposta bruta do fetch:", r);
+
+        if (!r) {
+            console.log("❌ apiFetch retornou null/undefined");
+            container.innerHTML = "<p style='color:#f88;'>Erro: resposta inválida.</p>";
+            return;
+        }
+
+        if (!r.ok) {
+            console.log("❌ Resposta HTTP não OK:", r.status);
+            const texto = await r.text().catch(() => "(sem detalhes)");
+            console.log("Corpo do erro:", texto);
+            container.innerHTML = `<p style='color:#f88;'>Erro ${r.status}: não foi possível carregar inscritos.</p>`;
+            return;
+        }
+
+        const data = await r.json().catch(e => {
+            console.log("❌ Erro ao fazer .json():", e);
+            return null;
+        });
+
+        console.log("📦 JSON retornado pelo servidor:", data);
+
+        if (!data) {
+            container.innerHTML = "<p style='color:#f88;'>Erro ao interpretar resposta.</p>";
+            return;
+        }
+
+        // Pode vir "inscricoes" ou uma lista direta
+        const lista = Array.isArray(data.inscricoes)
+            ? data.inscricoes
+            : Array.isArray(data)
+                ? data
+                : [];
+
+        console.log("📋 Lista interpretada:", lista);
+
+        if (lista.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:#fff;'>Nenhuma inscrição encontrada.</p>";
+            return;
+        }
 
         const totalTit = lista.length;
-        const totalFam = lista.reduce((acc, c) => acc + (parseInt(c.qtd_familiares)||0), 0);
-        
+        const totalFam = lista.reduce((acc, c) => acc + (parseInt(c.qtd_familiares) || 0), 0);
+
         const rows = lista.map(i => `
             <tr>
-                <td style="width: 25%;"><strong>${i.nome_filiado}</strong></td>
-                <td style="width: 10%;">${i.sexo||'-'}</td>
-                <td style="width: 15%; white-space:nowrap;">${formatarTelefoneTexto(i.telefone1)}</td>
-                <td style="width: 20%; font-size:0.9em;">${i.modalidades?.join(', ')||'-'}</td>
-                <td style="width: 5%; text-align:center; font-weight:bold;">${i.qtd_familiares||0}</td>
-                <td style="width: 25%; font-size:0.9em; line-height:1.4;">${i.familiares ? i.familiares.replace(/\n/g, "<br>") : ''}</td>
+                <td><strong>${i.nome_filiado || "-"}</strong></td>
+                <td>${i.sexo || "-"}</td>
+                <td>${formatarTelefoneTexto(i.telefone1) || "-"}</td>
+                <td>${(i.modalidades || []).join(", ")}</td>
+                <td style="text-align:center;">${i.qtd_familiares || 0}</td>
+                <td>${i.familiares ? i.familiares.replace(/\n/g, "<br>") : ""}</td>
             </tr>
-        `).join('');
+        `).join("");
+
+        console.log("🧱 HTML gerado para linhas:", rows);
 
         container.innerHTML = `
             <div style="background:#fff; color:#333; padding:20px; border-radius:10px; margin-bottom:20px; border:1px solid #ccc; font-size:1.1rem; text-align:center;">
-                <span style="display:inline-block; margin:0 10px;">👤 Titulares: <strong>${totalTit}</strong></span>
-                <span style="display:inline-block; margin:0 10px;">👨‍👩‍👧‍👦 Familiares: <strong>${totalFam}</strong></span>
-                <div style="margin-top:10px; border-top:1px solid #eee; padding-top:10px; color: #003366; font-size: 1.3rem;">
-                    <strong>TOTAL GERAL: ${totalTit+totalFam} Pessoas</strong>
+                <strong>${totalTit}</strong> titulares &nbsp;|&nbsp; 
+                <strong>${totalFam}</strong> familiares
+                <div style="margin-top:10px; border-top:1px solid #eee; padding-top:10px; color:#003366; font-size:1.3rem;">
+                    <strong>Total Geral: ${totalTit + totalFam} Pessoas</strong>
                 </div>
             </div>
-            
-            <div style="overflow-x:auto; width:100%; background: #fff; border-radius: 8px; border: 1px solid #ccc;">
+
+            <div style="overflow-x:auto; width:100%;">
                 <table class="tabela-jogos">
                     <thead>
                         <tr>
@@ -370,6 +517,14 @@ async function renderizarLista(container) {
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>
-            </div>`;
-    } catch(e) { container.innerHTML = "<p style='color:#fff;'>Erro ao carregar lista.</p>"; }
+            </div>
+        `;
+
+        console.log("✅ Tabela renderizada com sucesso!");
+
+    } catch (e) {
+        console.error("❌ Erro inesperado em renderizarLista:", e);
+        container.innerHTML = "<p style='color:#f88;'>Erro ao carregar lista.</p>";
+    }
 }
+

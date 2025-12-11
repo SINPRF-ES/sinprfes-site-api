@@ -1,4 +1,3 @@
-// navegacao.js
 export function configurarNavegacao(callbackMudanca) {
     const navButtons = document.querySelectorAll(".af-nav-item");
     const sections = document.querySelectorAll(".af-section");
@@ -7,18 +6,16 @@ export function configurarNavegacao(callbackMudanca) {
         btn.addEventListener("click", () => {
             const alvo = btn.dataset.target;
             
-            // Visual das abas
             navButtons.forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
 
-            // Conteúdo
             sections.forEach(s => {
                 const ativo = s.id === alvo;
                 s.classList.toggle("active", ativo);
-                s.setAttribute("aria-hidden", !ativo);
+                // Ajuste para garantir que o display: none/block funcione
+                s.style.display = ativo ? 'block' : 'none'; 
             });
 
-            // Avisa o maestro que mudou
             if (callbackMudanca) callbackMudanca(alvo);
         });
     });
