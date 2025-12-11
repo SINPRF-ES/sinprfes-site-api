@@ -1,14 +1,14 @@
 // src/controllers/filiados.controller.js
 const pool = require("../config/db");
 const log = require("../utils/log"); 
-const Textos = require("../utils/textos"); // 🟢 TEXTOS
+const Textos = require("../utils/textos"); 
 const {
   buscarPorId,
   listarParaPerfil,
   atualizarDadosProprios,
   atualizarFiliadoPorId,
   criarFiliadoInicial,
-  salvarTwoFaSecret, // 🟢 Importado para desativar 2FA
+  salvarTwoFaSecret, 
 } = require("../services/filiados.service");
 const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
@@ -25,7 +25,6 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    // 🟢 SEGURANÇA: Remove senha e secret, retorna flag twofa_ativo
     const { senha_hash, twofa_secret, ...dadosFiliado } = filiado;
 
     return res.json({
@@ -119,9 +118,28 @@ exports.atualizarFiliado = async (req, res) => {
     }
 
     const body = req.body;
+
+    // 🟢 VERIFICAÇÃO PROATIVA DE CPF DUPLICADO (EDIÇÃO)
+    // Se o CPF foi enviado, verificamos se pertence a OUTRA pessoa
+    if (body.cpf) {
+        const cpfLimpo = normalizarCpf(body.cpf);
+        const checkCpf = await pool.query(
+            "SELECT nome FROM filiados WHERE cpf = $1 AND id != $2 LIMIT 1",
+            [cpfLimpo, idAlvo]
+        );
+
+        if (checkCpf.rows.length > 0) {
+            const dono = checkCpf.rows[0].nome;
+            // Retorna 409 com o nome da pessoa
+            return res.status(409).json({ 
+                message: `Não foi possível atualizar. O CPF ${body.cpf} já está cadastrado para: ${dono}.` 
+            });
+        }
+    }
+
     const payload = {
       nome: body.nome,
-      cpf: body.cpf,
+      cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
       data_nascimento: body.data_nascimento,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
@@ -158,6 +176,11 @@ exports.atualizarFiliado = async (req, res) => {
       filiado: atualizado,
     });
   } catch (err) {
+    // Fallback caso a verificação proativa falhe (ex: race condition)
+    if (err.code === '23505' || err.code === 'ER_DUP_ENTRY' || (err.message && err.message.includes('duplicate'))) {
+        return res.status(409).json({ message: "CPF duplicado no sistema." });
+    }
+
     log.error("FiliadosUpdateAdminErro", err);
     return res
       .status(500)
@@ -181,9 +204,23 @@ exports.criarFiliado = async (req, res) => {
       return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS });
     }
 
+    // 🟢 VERIFICAÇÃO PROATIVA DE CPF DUPLICADO (CRIAÇÃO)
+    const cpfLimpo = normalizarCpf(body.cpf);
+    const checkCpf = await pool.query(
+        "SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1",
+        [cpfLimpo]
+    );
+
+    if (checkCpf.rows.length > 0) {
+        const dono = checkCpf.rows[0].nome;
+        return res.status(409).json({ 
+            message: `Impossível cadastrar. O CPF ${body.cpf} já pertence ao filiado: ${dono}.` 
+        });
+    }
+
     const dadosNovo = {
       nome: body.nome.trim(),
-      cpf: normalizarCpf(body.cpf),
+      cpf: cpfLimpo,
       data_nascimento: body.data_nascimento || null,
       telefone1: body.telefone1 || null,
       telefone2: body.telefone2 || null,
@@ -205,8 +242,7 @@ exports.criarFiliado = async (req, res) => {
       novo = await criarFiliadoInicial(dadosNovo, perfilCriador);
     } catch (err) {
       if (err.code === "CPF_DUPLICADO") {
-        log.warn("FiliadoCriacaoDuplicada", { cpf: body.cpf });
-        return res.status(409).json({ message: Textos.FILIADOS.CPF_DUPLICADO });
+        return res.status(409).json({ message: "CPF já cadastrado." });
       }
       throw err;
     }

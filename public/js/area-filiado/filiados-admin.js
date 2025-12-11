@@ -1,4 +1,4 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF, normalizarTextoBusca, formatarTelefoneTexto } from './utils.js';
+import { apiFetch, aplicarMascaraTelefone, formatarCPF, normalizarTextoBusca } from './utils.js';
 
 let cacheLista = [];
 const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
@@ -13,7 +13,7 @@ export async function inicializarFiliados(perfil) {
 
     perfilAtual = (perfil || "").toUpperCase();
 
-    // 1. INJEÇÃO DE CSS
+    // 1. INJEÇÃO DE CSS (Visual Restaurado)
     if (!document.getElementById('style-filiados-premium')) {
         const s = document.createElement('style');
         s.id = 'style-filiados-premium';
@@ -44,33 +44,23 @@ export async function inicializarFiliados(perfil) {
             .btn-save { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
             .btn-save:hover { background: #219150; }
             
-            /* Botão de busca de CEP */
-            .cep-wrapper {
-                position: relative;
-            }
-            .cep-wrapper input.campo-cep-admin {
-                width: 100%;
-                padding-right: 44px; /* espaço para o botão */
-            }
+            /* 🟢 RESTAURADO: Botão de busca de CEP dentro do input */
+            .cep-wrapper { position: relative; }
+            .cep-wrapper input { width: 100%; padding-right: 40px; box-sizing: border-box; } /* Espaço para o botão */
             .btn-buscar-cep-admin { 
-                border: 1px solid #ccc; 
-                background: #e9ecef; 
-                cursor: pointer; 
-                border-radius: 4px; 
-                font-size: 1.1rem;
-                transition: background 0.2s;
-                min-width: 32px;
-                height: 32px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
                 position: absolute;
-                right: 4px;
+                right: 5px;
                 top: 50%;
                 transform: translateY(-50%);
-                padding: 0;
+                border: none; 
+                background: transparent; 
+                cursor: pointer; 
+                font-size: 1.2rem;
+                padding: 5px;
+                color: #2980b9;
+                transition: transform 0.2s;
             }
-            .btn-buscar-cep-admin:hover { background: #dde2e6; }
+            .btn-buscar-cep-admin:hover { transform: translateY(-50%) scale(1.1); color: #1abc9c; }
             
             @media (max-width: 600px) { .filiado-header { flex-direction: column; } }
         `;
@@ -139,19 +129,11 @@ function filtrarLista(termo) {
     
     const podeEditar = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
     const ehAdmin = perfilAtual === "ADMIN";
-    const podeEditarCpf = ["ADMIN", "FUNCIONARIO", "DIRETORIA"].includes(perfilAtual); // 🔵 ADMIN, DIRETORIA e FUNCIONARIO podem editar CPF
 
     el.innerHTML = res.map(f => {
         const situacao = (f.situacao || 'ATIVO').toUpperCase();
         const classeStatus = situacao === 'ATIVO' ? 'status-ativo' : (situacao === 'VETERANO' ? 'status-veterano' : 'status-pensionista');
-
-        // Telefones normalizados
-        const tel1Raw = (f.telefone1 || "").replace(/\D/g, "");
-        const tel2Raw = (f.telefone2 || "").replace(/\D/g, "");
-        const tels = [tel1Raw, tel2Raw]
-            .filter(t => t)
-            .map(formatarTelefoneTexto)
-            .join(" / ");
+        const tels = [f.telefone1, f.telefone2].filter(Boolean).join(" / ");
         
         const header = `
             <div class="filiado-header">
@@ -167,9 +149,7 @@ function filtrarLista(termo) {
 
         if(!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}</div>`;
         
-        // CPF somente editável para ADMIN e FUNCIONARIO
-        const attrCpf = podeEditarCpf ? '' : 'disabled style="background:#eee; cursor:not-allowed;"';
-
+        const disabledSeNaoAdmin = (!ehAdmin) ? 'disabled style="background:#eee; cursor:not-allowed;"' : '';
         const adminSection = ehAdmin ? `
             <div class="edit-group admin-field">
                 <label>Perfil de Acesso (ADMIN)</label>
@@ -190,27 +170,18 @@ function filtrarLista(termo) {
                     <form class="form-edit-filiado" data-id="${f.id}" style="margin-top:15px;">
                         <div class="edit-grid">
                             <div class="edit-group"><label>Nome</label><input name="nome" value="${f.nome}"></div>
-                            <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${attrCpf} placeholder="Somente números"></div>
+                            <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${disabledSeNaoAdmin} placeholder="Somente números"></div>
                             <div class="edit-group"><label>E-mail 1</label><input name="email1" value="${f.email1||''}"></div>
                             <div class="edit-group"><label>E-mail 2</label><input name="email2" value="${f.email2||''}"></div>
-                            <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${tel1Raw}"></div>
-                            <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${tel2Raw}"></div>
+                            <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${f.telefone1||''}"></div>
+                            <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${f.telefone2||''}"></div>
                             <div class="edit-group"><label>Lotação</label><input name="lotacao" value="${f.lotacao||''}"></div>
                             <div class="edit-group"><label>Situação</label>
                                 <select name="situacao">${SITUACAO_OPCOES.map(op => `<option value="${op}" ${op===situacao?'selected':''}>${op}</option>`).join('')}</select>
                             </div>
-                            <div class="edit-group">
-                                <label>Endereço / Bairro</label>
-                                <input
-                                    name="logradouro_bairro"
-                                    value="${f.logradouro_bairro||''}"
-                                    readonly
-                                    style="background:#f8f9fa;"
-                                >
-                            </div>
+                            <div class="edit-group"><label>Endereço / Bairro</label><input name="logradouro_bairro" value="${f.logradouro_bairro||''}"></div>
                             ${adminSection}
                         </div>
-                        
                         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin-top:10px;">
                              <div class="edit-group"><label>Nº</label><input name="numero" value="${f.numero||''}"></div>
                              <div class="edit-group"><label>Compl.</label><input name="complemento" value="${f.complemento||''}"></div>
@@ -218,30 +189,13 @@ function filtrarLista(termo) {
                              <div class="edit-group">
                                  <label>CEP</label>
                                  <div class="cep-wrapper">
-                                     <input class="campo-cep-admin" name="cep" value="${f.cep||''}" maxlength="8" placeholder="00000000">
+                                     <input name="cep" value="${f.cep||''}" maxlength="8" placeholder="00000000">
                                      <button type="button" class="btn-buscar-cep-admin" title="Buscar Endereço">🔍</button>
                                  </div>
                              </div>
                              
-                             <div class="edit-group">
-                                <label>Cidade</label>
-                                <input
-                                    name="cidade"
-                                    value="${f.cidade||''}"
-                                    readonly
-                                    style="background:#f8f9fa;"
-                                >
-                             </div>
-                             <div class="edit-group">
-                                <label>UF</label>
-                                <input
-                                    name="uf"
-                                    value="${f.uf||''}"
-                                    maxlength="2"
-                                    readonly
-                                    style="background:#f8f9fa; text-transform:uppercase;"
-                                >
-                             </div>
+                             <div class="edit-group"><label>Cidade</label><input name="cidade" value="${f.cidade||''}"></div>
+                             <div class="edit-group"><label>UF</label><input name="uf" value="${f.uf||''}" maxlength="2"></div>
                         </div>
                         <button type="submit" class="btn-save">💾 Salvar Alterações</button>
                     </form>
@@ -252,11 +206,9 @@ function filtrarLista(termo) {
     // Listeners para os formulários gerados
     if(podeEditar) {
         el.querySelectorAll("form.form-edit-filiado").forEach(frm => {
-            // Máscaras de Telefone
             aplicarMascaraTelefone(frm.querySelector('input[name="telefone1"]'));
             aplicarMascaraTelefone(frm.querySelector('input[name="telefone2"]'));
 
-            // Máscara de CPF (somente se o campo não estiver disabled)
             const inputCpf = frm.querySelector('input[name="cpf"]');
             if (inputCpf && !inputCpf.disabled) {
                 inputCpf.addEventListener('input', (e) => {
@@ -268,7 +220,6 @@ function filtrarLista(termo) {
                 });
             }
 
-            // 🟢 LÓGICA DE BUSCA DE CEP NA EDIÇÃO
             const inputCep = frm.querySelector('input[name="cep"]');
             const btnCep = frm.querySelector('.btn-buscar-cep-admin');
             
@@ -282,9 +233,8 @@ function filtrarLista(termo) {
                 btnCep.addEventListener('click', async () => {
                     const cepVal = inputCep.value.replace(/\D/g, "");
                     if(cepVal.length !== 8) return alert("CEP inválido. Digite 8 números.");
-                    
                     const originalText = btnCep.innerText;
-                    btnCep.innerText = "...";
+                    btnCep.innerText = "⏳"; // Ícone de ampulheta ou ...
                     
                     try {
                         const r = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
@@ -293,13 +243,9 @@ function filtrarLista(termo) {
                             alert("CEP não encontrado."); 
                         } else {
                             const enderecoCompleto = [d.logradouro, d.bairro].filter(Boolean).join(", ");
-                            const campoLogradouroBairro = frm.querySelector('input[name="logradouro_bairro"]');
-                            const campoCidade = frm.querySelector('input[name="cidade"]');
-                            const campoUf = frm.querySelector('input[name="uf"]');
-
-                            if (campoLogradouroBairro) campoLogradouroBairro.value = enderecoCompleto;
-                            if (campoCidade) campoCidade.value = d.localidade || "";
-                            if (campoUf) campoUf.value = d.uf || "";
+                            frm.querySelector('input[name="logradouro_bairro"]').value = enderecoCompleto;
+                            frm.querySelector('input[name="cidade"]').value = d.localidade;
+                            frm.querySelector('input[name="uf"]').value = d.uf;
                         }
                     } catch (e) { 
                         alert("Erro ao buscar CEP."); 
@@ -307,16 +253,8 @@ function filtrarLista(termo) {
                         btnCep.innerText = originalText; 
                     }
                 });
-
-                // opcional: buscar também ao sair do campo
-                inputCep.addEventListener('blur', () => {
-                    if (inputCep.value.replace(/\D/g, "").length === 8) {
-                        btnCep.click();
-                    }
-                });
             }
 
-            // Submit
             frm.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 const id = frm.dataset.id;
@@ -331,14 +269,11 @@ function filtrarLista(termo) {
                     else payload[k] = v;
                 });
 
-                // 🔵 Agora: CPF pode ser alterado por ADMIN e FUNCIONARIO.
-                // Somente ADMIN pode alterar perfil_acesso.
-                if (!ehAdmin) {
-                    delete payload.perfil_acesso;
-                }
+                if(!ehAdmin) { delete payload.cpf; delete payload.perfil_acesso; }
                 
                 try {
                     const r = await apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
+                    
                     if(r.ok) { 
                         alert("Salvo com sucesso!");
                         const idx = cacheLista.findIndex(i => i.id == id);
@@ -346,7 +281,14 @@ function filtrarLista(termo) {
                             cacheLista[idx] = { ...cacheLista[idx], ...payload };
                             filtrarLista(document.getElementById("busca-filiados").value);
                         }
-                    } else { alert("Erro ao salvar."); }
+                    } else { 
+                        let erroMsg = "Erro ao salvar.";
+                        try {
+                            const errData = await r.json();
+                            if (errData.message) erroMsg = errData.message;
+                        } catch(eJson) {}
+                        alert(erroMsg); 
+                    }
                 } catch(ex) { alert("Erro de conexão."); }
                 finally { btn.disabled = false; btn.innerText = txtOriginal; }
             });
@@ -366,7 +308,7 @@ function abrirNovoFiliado(container) {
                     <div><label style="font-weight:bold; display:block; margin-bottom:5px;">CPF *</label><input name="cpf" required placeholder="Somente números" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;"></div>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                    <div><label style="font-weight:bold; display:block; margin-bottom:5px;">E-mail *</label><input name="email1" type="email" required style="width:100%; padding:10px; border:1px solid:#ccc; border-radius:4px;"></div>
+                    <div><label style="font-weight:bold; display:block; margin-bottom:5px;">E-mail *</label><input name="email1" type="email" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;"></div>
                     <div><label style="font-weight:bold; display:block; margin-bottom:5px;">Situação</label>
                         <select name="situacao" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">${SITUACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join('')}</select>
                     </div>
@@ -378,16 +320,10 @@ function abrirNovoFiliado(container) {
             </form>
         </div>`;
     
-    // Máscara de CPF no formulário de criação
-    const inputCpf = container.querySelector('input[name="cpf"]');
-    if(inputCpf) {
-        inputCpf.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-            if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-            else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
-            else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
-            e.target.value = v;
-        });
+    // Máscara CPF Novo
+    const inpCpf = container.querySelector('input[name="cpf"]');
+    if (inpCpf) {
+        inpCpf.addEventListener('input', (e) => e.target.value = e.target.value.replace(/\D/g, "").slice(0, 11));
     }
 
     container.querySelector("#btn-cancelar-novo").addEventListener("click", () => container.innerHTML = "");
@@ -397,7 +333,7 @@ function abrirNovoFiliado(container) {
         const fd = new FormData(e.target);
         const payload = Object.fromEntries(fd.entries());
         payload.perfil_acesso = "FILIADO";
-        payload.cpf = payload.cpf.replace(/\D/g, ""); // Limpa CPF antes de enviar
+        payload.cpf = payload.cpf.replace(/\D/g, "");
         
         try {
             const r = await apiFetch("/api/filiados", { method: "POST", body: payload });
@@ -411,7 +347,12 @@ function abrirNovoFiliado(container) {
                 filtrarLista("");
             } 
             else { 
-                const d = await r.json(); alert(d.message || "Erro."); 
+                let erroMsg = "Erro ao criar.";
+                try {
+                    const d = await r.json();
+                    if(d.message) erroMsg = d.message;
+                } catch(e){}
+                alert(erroMsg); 
             }
         } catch(ex) { alert("Erro de conexão."); }
     });
