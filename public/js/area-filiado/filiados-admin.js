@@ -139,17 +139,18 @@ function filtrarLista(termo) {
     
     const podeEditar = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
     const ehAdmin = perfilAtual === "ADMIN";
+    const podeEditarCpf = ["ADMIN", "FUNCIONARIO", "DIRETORIA"].includes(perfilAtual); // 🔵 ADMIN, DIRETORIA e FUNCIONARIO podem editar CPF
 
     el.innerHTML = res.map(f => {
         const situacao = (f.situacao || 'ATIVO').toUpperCase();
         const classeStatus = situacao === 'ATIVO' ? 'status-ativo' : (situacao === 'VETERANO' ? 'status-veterano' : 'status-pensionista');
 
-        // 🔵 Normalização e formatação dos telefones
+        // Telefones normalizados
         const tel1Raw = (f.telefone1 || "").replace(/\D/g, "");
         const tel2Raw = (f.telefone2 || "").replace(/\D/g, "");
         const tels = [tel1Raw, tel2Raw]
-            .filter(t => t)                     // remove vazios
-            .map(formatarTelefoneTexto)         // exibe mascarado no card
+            .filter(t => t)
+            .map(formatarTelefoneTexto)
             .join(" / ");
         
         const header = `
@@ -166,7 +167,9 @@ function filtrarLista(termo) {
 
         if(!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}</div>`;
         
-        const disabledSeNaoAdmin = (!ehAdmin) ? 'disabled style="background:#eee; cursor:not-allowed;"' : '';
+        // CPF somente editável para ADMIN e FUNCIONARIO
+        const attrCpf = podeEditarCpf ? '' : 'disabled style="background:#eee; cursor:not-allowed;"';
+
         const adminSection = ehAdmin ? `
             <div class="edit-group admin-field">
                 <label>Perfil de Acesso (ADMIN)</label>
@@ -187,7 +190,7 @@ function filtrarLista(termo) {
                     <form class="form-edit-filiado" data-id="${f.id}" style="margin-top:15px;">
                         <div class="edit-grid">
                             <div class="edit-group"><label>Nome</label><input name="nome" value="${f.nome}"></div>
-                            <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${disabledSeNaoAdmin} placeholder="Somente números"></div>
+                            <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${attrCpf} placeholder="Somente números"></div>
                             <div class="edit-group"><label>E-mail 1</label><input name="email1" value="${f.email1||''}"></div>
                             <div class="edit-group"><label>E-mail 2</label><input name="email2" value="${f.email2||''}"></div>
                             <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${tel1Raw}"></div>
@@ -253,7 +256,7 @@ function filtrarLista(termo) {
             aplicarMascaraTelefone(frm.querySelector('input[name="telefone1"]'));
             aplicarMascaraTelefone(frm.querySelector('input[name="telefone2"]'));
 
-            // Máscara de CPF (Admin)
+            // Máscara de CPF (somente se o campo não estiver disabled)
             const inputCpf = frm.querySelector('input[name="cpf"]');
             if (inputCpf && !inputCpf.disabled) {
                 inputCpf.addEventListener('input', (e) => {
@@ -328,7 +331,11 @@ function filtrarLista(termo) {
                     else payload[k] = v;
                 });
 
-                if(!ehAdmin) { delete payload.cpf; delete payload.perfil_acesso; }
+                // 🔵 Agora: CPF pode ser alterado por ADMIN e FUNCIONARIO.
+                // Somente ADMIN pode alterar perfil_acesso.
+                if (!ehAdmin) {
+                    delete payload.perfil_acesso;
+                }
                 
                 try {
                     const r = await apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });

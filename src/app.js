@@ -20,6 +20,7 @@ const ressarcimentoRoutes = require("./routes/ressarcimento.routes");
 
 // 🟢 CORREÇÃO: Importar a rota de Jogos (adicionada recentemente)
 const jogosRoutes = require("./routes/jogos.routes");
+app.use("/api/jogos", jogosRoutes);
 
 // ==============================
 // Prefixos de API

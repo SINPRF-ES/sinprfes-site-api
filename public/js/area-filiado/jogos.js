@@ -10,15 +10,14 @@ export function inicializarJogos(perfilAcesso) {
     if (!mainContent) return;
     mainContent.innerHTML = "";
 
-    // Normaliza perfil em maiúsculas para evitar erro de comparação
     const perfil = (perfilAcesso || "").toUpperCase();
 
-    // 1. Container do Formulário (Visível para todos)
+    // 1. Container do Formulário (visível para todos)
     const containerForm = document.createElement("div");
     mainContent.appendChild(containerForm);
     renderizarFormulario(containerForm);
 
-    // 2. Lista de Inscritos (Apenas para Gestores)
+    // 2. Lista de Inscritos (somente gestão)
     if (PERFIS_GERENCIA.includes(perfil)) {
         const hr = document.createElement("hr");
         hr.style.cssText = "margin: 32px 0 24px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.25)";
@@ -43,10 +42,10 @@ export function inicializarJogos(perfilAcesso) {
 }
 
 function renderizarFormulario(container) {
-    // Injeta CSS específico para Jogos (apenas uma vez)
+    // CSS específico dos Jogos (tabela + formulário + resumo)
     if (!document.getElementById('style-jogos')) {
         const s = document.createElement('style'); 
-        s.id='style-jogos';
+        s.id = 'style-jogos';
         s.textContent = `
             .jogos-container { max-width: 100%; margin: 0 auto; }
 
@@ -122,7 +121,7 @@ function renderizarFormulario(container) {
                 line-height: 1.5;
             }
 
-            /* Botão de cancelar inscrição com destaque em vermelho */
+            /* Botão de cancelar inscrição em vermelho */
             .btn-danger { 
                 background: transparent; 
                 border: 1px solid #c0392b; 
@@ -134,34 +133,149 @@ function renderizarFormulario(container) {
                 color: #fff; 
             } 
 
-            /* Estilo da Tabela de Gestão com boa leitura */
+            /* Painel resumo da inscrição do filiado */
+            .jogos-resumo-card {
+                background: #0b1728;
+                border-radius: 12px;
+                border: 1px solid rgba(255,255,255,0.15);
+                padding: 14px 16px;
+                margin-top: 16px;
+                font-size: 0.9rem;
+                color: #e0e7ff;
+                text-align: left;
+            }
+            .jogos-resumo-card strong {
+                color: #f1c40f;
+            }
+            .jogos-resumo-card small {
+                color: #a0aec0;
+            }
+
+            /* Tabela com bordas em amarelo e tema escuro */
             .tabela-jogos { 
                 width: 100%; 
                 border-collapse: collapse; 
-                min-width: 800px; 
+                min-width: 820px; 
+                background-color: transparent;
+                border: 1px solid var(--amarelo);      /* borda externa */
             }
+
+            /* Cabeçalho */
             .tabela-jogos th { 
                 background: #003366; 
                 color: #ffffff; 
-                padding: 12px 14px; 
-                text-align: left; 
-                vertical-align: top; 
-                font-size: 0.9rem;
+                padding: 10px 12px; 
+                text-align: center !important;   /* centraliza TODOS os títulos */
+                vertical-align: middle !important;
+                font-size: 0.85rem;
+                border-bottom: 2px solid var(--amarelo);  /* linha de separação mais forte */
             }
+
+            /* Células */
             .tabela-jogos td { 
-                padding: 10px 14px; 
-                border-bottom: 1px solid #dddddd; 
-                color: #333333; 
-                vertical-align: top;
-                white-space: normal; /* Permite quebra de linha */
+                padding: 8px 12px; 
+                border-top: 1px solid rgba(241,196,15,0.25);   /* linhas horizontais internas */
+                border-right: 1px solid rgba(241,196,15,0.20); /* linhas verticais internas */
+                color: var(--texto-claro);
+                background-color: rgba(0, 0, 0, 0.2);
+                vertical-align: middle !important;
+                white-space: normal;
                 word-wrap: break-word;
-                font-size: 0.9rem;
+                font-size: 0.85rem;
             }
-            .tabela-jogos tr:nth-child(even) { 
-                background-color: #f9f9f9; 
+
+            /* Remove borda à direita na última coluna para não “engrossar” a borda externa */
+            .tabela-jogos th:last-child,
+            .tabela-jogos td:last-child {
+                border-right: none;
             }
-            .tabela-jogos tr:hover { 
-                background-color: #f1f1f1; 
+
+            /* Zebra */
+            .tabela-jogos tr:nth-child(even) td { 
+                background-color: rgba(0, 0, 0, 0.4); 
+            }
+
+            /* Hover */
+            .tabela-jogos tr:hover td { 
+                background-color: rgba(0, 24, 69, 0.6); 
+            }
+
+            /* Somente o título da primeira coluna (Nome) centralizado */
+            .tabela-jogos th:first-child {
+                text-align: center;
+            }
+
+            /* Os nomes em si alinhados à esquerda */
+            .tabela-jogos td:first-child {
+                text-align: left;
+            }
+
+            /* Coluna 1 (Nome) – largura mínima para o maior nome */
+            .tabela-jogos th:nth-child(1),
+            .tabela-jogos td:nth-child(1) {
+                white-space: nowrap;   /* nunca quebra o nome */
+                width: 1%;             /* deixa o browser usar o mínimo necessário */
+            }
+
+            /* Coluna 2 (Sexo) – pequena e centralizada */
+            .tabela-jogos th:nth-child(2),
+            .tabela-jogos td:nth-child(2) {
+                text-align: center;
+                width: 80px;           /* suficiente para "Masculino"/"Feminino" */
+                white-space: nowrap;
+            }
+
+            /* Coluna 3 (Telefone) – largura fixa para (27) 99999-9999 */
+            .tabela-jogos th:nth-child(3),
+            .tabela-jogos td:nth-child(3) {
+                text-align: center;
+                width: 140px;
+                white-space: nowrap;
+            }
+
+            /* Coluna 5 (Fam.) – bem estreita e centralizada */
+            .tabela-jogos th:nth-child(5),
+            .tabela-jogos td:nth-child(5) {
+                text-align: center;
+                width: 60px;
+                white-space: nowrap;
+            }
+
+            /* Coluna 6 (Nomes Familiares) – mínima para o maior conjunto de nomes */
+            .tabela-jogos th:nth-child(6),
+            .tabela-jogos td:nth-child(6) {
+                white-space: nowrap;   /* mantém tudo em uma linha */
+                width: 1%;             /* mínimo necessário para o maior texto */
+            }
+
+            /* Coluna 4 (Modalidades) – coluna elástica que absorve o espaço restante */
+            .tabela-jogos th:nth-child(4),
+            .tabela-jogos td:nth-child(4) {
+                min-width: 300px;
+                width: auto;
+                white-space: normal;   /* pode quebrar linha */
+            }
+
+            /* Wrapper que expande a tabela além do card */
+            .tabela-full-wrapper {
+                position: relative;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 100vw;                 /* largura ampla */
+                max-width: 1600px;           /* opcional, só para não ficar exagerado em telas enormes */
+                padding: 0;
+                margin: 0;                   /* garante que não há deslocamento lateral extra */
+            }
+
+            /* Mantém a barra de rolagem só quando necessário */
+            .tabela-scroll {
+                overflow-x: auto;
+                padding-bottom: 12px;
+            }
+
+            /* Ajusta a tabela dentro da área expandida */
+            .tabela-full-wrapper .tabela-jogos {
+                width: 100%;
             }
 
             @media (max-width: 600px) {
@@ -310,6 +424,9 @@ Joãozinho (Filho)"></textarea>
                     </button>
 
                     <div id="jogos-status" class="field-hint" style="margin-top: 15px; font-weight: bold; font-size: 1rem;"></div>
+
+                    <!-- Painel de resumo da inscrição do próprio filiado -->
+                    <div id="jogos-resumo-inscricao" class="jogos-resumo-card" style="display:none; margin-top: 12px;"></div>
                 </div>
             </form>
         </div>`;
@@ -317,6 +434,11 @@ Joãozinho (Filho)"></textarea>
     const form = container.querySelector("#form-inscricao-jogos");
     const statusEl = container.querySelector("#jogos-status");
     const btnCancelar = container.querySelector("#btn-cancelar-inscricao");
+
+    // Carregar inscrição existente do próprio filiado (se houver)
+    carregarMinhaInscricao(form, statusEl).catch(e => {
+        console.error("Erro ao carregar inscrição atual:", e);
+    });
 
     // Cancelar inscrição
     if (btnCancelar) {
@@ -346,15 +468,16 @@ Joãozinho (Filho)"></textarea>
                     if (sexoSel) sexoSel.value = "";
                     if (qtdFamSel) qtdFamSel.value = "0";
 
-                    // Desmarca todas as modalidades marcadas
-                    form.querySelectorAll("input[name='modalidades']:checked")
-                        .forEach((chk) => (chk.checked = false));
-
-                    // Desmarca checkbox de interesse
                     const interesse = document.getElementById("interesse");
                     if (interesse) interesse.checked = false;
 
-                    // Se existir painel de lista (usuário com perfil de gestão), recarrega
+                    const resumoEl = document.getElementById("jogos-resumo-inscricao");
+                    if (resumoEl) {
+                        resumoEl.style.display = "none";
+                        resumoEl.innerHTML = "";
+                    }
+
+                    // Se existir painel de lista (gestão), recarrega
                     const containerLista = document.querySelector(".jogos-container-lista");
                     if (containerLista) {
                         renderizarLista(containerLista);
@@ -416,6 +539,15 @@ Joãozinho (Filho)"></textarea>
             if (r && r.ok) {
                 statusEl.textContent = "🎉 Inscrição confirmada com sucesso!";
                 statusEl.style.color = "#27ae60";
+
+                // Recarrega o resumo do próprio filiado
+                await carregarMinhaInscricao(form, statusEl);
+
+                // Atualiza lista de gestão, se existir
+                const containerLista = document.querySelector(".jogos-container-lista");
+                if (containerLista) {
+                    renderizarLista(containerLista);
+                }
             } else {
                 statusEl.textContent = "Erro ao salvar inscrição.";
                 statusEl.style.color = "#c0392b";
@@ -426,6 +558,80 @@ Joãozinho (Filho)"></textarea>
             statusEl.style.color = "#c0392b";
         }
     });
+}
+
+/**
+ * Carrega a inscrição do próprio filiado (GET /api/jogos/inscricao)
+ * e:
+ *   - pré-preenche o formulário
+ *   - mostra um resumo numa caixinha logo abaixo dos botões,
+ *     incluindo Observações adicionais.
+ */
+async function carregarMinhaInscricao(form, statusEl) {
+    try {
+        const r = await apiFetch("/api/jogos/inscricao", { method: "GET" });
+
+        // Se o backend retornar 404, apenas não mostra nada
+        if (!r || !r.ok) {
+            return;
+        }
+
+        const data = await r.json().catch(() => null);
+        if (!data) return;
+
+        const interesse = form.querySelector("#interesse");
+        const sexoEl = form.querySelector("#sexo");
+        const qtdFamEl = form.querySelector("#qtd_familiares");
+        const famEl = form.querySelector("#familiares");
+        const obsEl = form.querySelector("#obs");
+
+        if (interesse) interesse.checked = true;
+        if (sexoEl) sexoEl.value = data.sexo || "";
+        if (qtdFamEl) qtdFamEl.value = String(data.qtd_familiares || "0");
+        if (famEl) famEl.value = data.familiares || "";
+        if (obsEl) obsEl.value = data.observacoes || "";
+
+        // marca modalidades
+        const mods = Array.isArray(data.modalidades) ? data.modalidades : [];
+        form.querySelectorAll("input[name='modalidades']").forEach(chk => {
+            chk.checked = mods.includes(chk.value);
+        });
+
+        // Monta resumo (incluindo observações adicionais)
+        const resumo = document.getElementById("jogos-resumo-inscricao");
+        if (resumo) {
+            const listaMods = mods.length ? mods.join(", ") : "Nenhuma modalidade marcada.";
+            const listaFam = (data.familiares || "").trim()
+                ? data.familiares.replace(/\n/g, "<br>")
+                : "Sem familiares cadastrados.";
+            const obs = (data.observacoes || "").trim()
+                ? data.observacoes.replace(/\n/g, "<br>")
+                : "Sem observações adicionais.";
+
+            resumo.innerHTML = `
+                <div style="margin-bottom:4px;">
+                    <strong>Situação atual da sua inscrição:</strong>
+                </div>
+                <div style="margin-bottom:6px;">
+                    <small>Você já possui inscrição registrada. Pode ajustar o formulário acima e clicar em <strong>Confirmar Inscrição</strong> para atualizar.</small>
+                </div>
+                <div style="margin-top:6px;">
+                    <strong>Modalidades:</strong><br>${listaMods}
+                </div>
+                <div style="margin-top:6px;">
+                    <strong>Familiares (${data.qtd_familiares || 0}):</strong><br>${listaFam}
+                </div>
+                <div style="margin-top:6px;">
+                    <strong>Observações adicionais:</strong><br>${obs}
+                </div>
+            `;
+            resumo.style.display = "block";
+        }
+
+    } catch (e) {
+        console.error("Erro ao carregar minha inscrição:", e);
+        // não exibe erro para o usuário; apenas não mostra resumo
+    }
 }
 
 async function renderizarLista(container) {
@@ -464,7 +670,6 @@ async function renderizarLista(container) {
             return;
         }
 
-        // Pode vir "inscricoes" ou uma lista direta
         const lista = Array.isArray(data.inscricoes)
             ? data.inscricoes
             : Array.isArray(data)
@@ -487,36 +692,75 @@ async function renderizarLista(container) {
                 <td>${i.sexo || "-"}</td>
                 <td>${formatarTelefoneTexto(i.telefone1) || "-"}</td>
                 <td>${(i.modalidades || []).join(", ")}</td>
-                <td style="text-align:center;">${i.qtd_familiares || 0}</td>
+                <td>${i.qtd_familiares || 0}</td>
                 <td>${i.familiares ? i.familiares.replace(/\n/g, "<br>") : ""}</td>
+                <td>${i.observacoes ? i.observacoes.replace(/\n/g, "<br>") : ""}</td>
             </tr>
         `).join("");
 
         console.log("🧱 HTML gerado para linhas:", rows);
 
         container.innerHTML = `
-            <div style="background:#fff; color:#333; padding:20px; border-radius:10px; margin-bottom:20px; border:1px solid #ccc; font-size:1.1rem; text-align:center;">
-                <strong>${totalTit}</strong> titulares &nbsp;|&nbsp; 
-                <strong>${totalFam}</strong> familiares
-                <div style="margin-top:10px; border-top:1px solid #eee; padding-top:10px; color:#003366; font-size:1.3rem;">
-                    <strong>Total Geral: ${totalTit + totalFam} Pessoas</strong>
+            <div class="tabela-full-wrapper">
+                
+                <!-- Resumo superior -->
+                <div style="
+                    background:#003366; 
+                    color:#fff; 
+                    padding:16px 20px; 
+                    border-radius:10px; 
+                    margin: 0 0 20px 0; 
+                    border:1px solid var(--amarelo); 
+                    font-size:1rem; 
+                    text-align:center;
+                ">
+                    <div style="font-size:1.1rem; font-weight:600;">
+                        Inscritos: <strong>${totalTit}</strong> titulares &nbsp;+&nbsp; <strong>${totalFam}</strong> familiares
+                    </div>
+                    <div style="
+                        margin-top:10px; 
+                        border-top:1px solid rgba(255,255,255,0.3); 
+                        padding-top:10px; 
+                        color:var(--amarelo); 
+                        font-size:1.3rem;
+                    ">
+                        <strong>Total Geral: ${totalTit + totalFam} Pessoas</strong>
+                    </div>
                 </div>
-            </div>
 
-            <div style="overflow-x:auto; width:100%;">
-                <table class="tabela-jogos">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>Sexo</th>
-                            <th>Telefone</th>
-                            <th>Modalidades</th>
-                            <th>Fam.</th>
-                            <th>Nomes Familiares</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
+                <!-- Tabela com rolagem horizontal, ocupando largura ampla -->
+                <div class="tabela-scroll">
+                    <table class="tabela-jogos">
+                        <colgroup>
+                            <!-- Nome: mínimo suficiente para maior nome -->
+                            <col style="min-width: 180px;">
+                            <!-- Sexo: largura fixa pequena -->
+                            <col style="width: 90px;">
+                            <!-- Telefone: largura fixa padrão -->
+                            <col style="width: 130px;">
+                            <!-- Modalidades: pega o espaço “flex” -->
+                            <col style="width: auto;">
+                            <!-- Fam.: pequena, numérica -->
+                            <col style="width: 60px;">
+                            <!-- Nomes Familiares: coluna de texto com largura mínima -->
+                            <col style="min-width: 200px;">
+                            <!-- Observações: também texto, com largura mínima -->
+                            <col style="min-width: 200px;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Sexo</th>
+                                <th>Telefone</th>
+                                <th>Modalidades</th>
+                                <th>Fam.</th>
+                                <th>Nomes Familiares</th>
+                                <th>Obs.</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
             </div>
         `;
 
@@ -527,4 +771,3 @@ async function renderizarLista(container) {
         container.innerHTML = "<p style='color:#f88;'>Erro ao carregar lista.</p>";
     }
 }
-

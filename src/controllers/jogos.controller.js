@@ -1,4 +1,3 @@
-// src/controllers/jogos.controller.js
 const pool = require("../config/db");
 const log = require("../utils/log"); 
 const Textos = require("../utils/textos");
@@ -78,31 +77,62 @@ exports.cancelarInscricao = async (req, res) => {
   }
 };
 
-exports.listarInscricoes = async (req, res) => {
-    try {
-        const perfil = (req.user.perfil_acesso || "").toUpperCase();
-        
-        if (!PERFIS_JOGOS_MANAGER.includes(perfil)) {
-            return res.status(403).json({ error: "Acesso negado." });
-        }
-        
-        const query = `
-            SELECT 
-                pi.*,
-                f.telefone1
-            FROM pre_inscricoes_jogos pi
-            JOIN filiados f ON pi.filiado_id = f.id
-            ORDER BY pi.nome_filiado ASC; 
-        `;
-        
-        const { rows } = await pool.query(query);
+// 🔵 NOVO: obter a inscrição do PRÓPRIO filiado logado
+exports.obterMinhaInscricao = async (req, res) => {
+  try {
+    const userId = req.user.id;
 
-        log.info("JogosListagemVisualizada", { viewerId: req.user.id });
+    const query = `
+      SELECT 
+        pi.*,
+        f.telefone1
+      FROM pre_inscricoes_jogos pi
+      JOIN filiados f ON pi.filiado_id = f.id
+      WHERE pi.filiado_id = $1
+      LIMIT 1;
+    `;
 
-        return res.json({ total: rows.length, inscricoes: rows });
+    const { rows } = await pool.query(query, [userId]);
 
-    } catch (err) {
-        log.error("JogosListagemErro", err);
-        return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
+    if (rows.length === 0) {
+      // Nenhuma inscrição ainda
+      return res.status(404).json({ error: "Nenhuma pré-inscrição encontrada para este usuário." });
     }
+
+    log.info("JogosMinhaInscricaoVisualizada", { userId });
+
+    return res.json(rows[0]);
+  } catch (err) {
+    log.error("JogosMinhaInscricaoErro", err);
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
+  }
+};
+
+exports.listarInscricoes = async (req, res) => {
+  try {
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    
+    if (!PERFIS_JOGOS_MANAGER.includes(perfil)) {
+      return res.status(403).json({ error: "Acesso negado." });
+    }
+    
+    const query = `
+      SELECT 
+        pi.*,
+        f.telefone1
+      FROM pre_inscricoes_jogos pi
+      JOIN filiados f ON pi.filiado_id = f.id
+      ORDER BY pi.nome_filiado ASC; 
+    `;
+    
+    const { rows } = await pool.query(query);
+
+    log.info("JogosListagemVisualizada", { viewerId: req.user.id });
+
+    return res.json({ total: rows.length, inscricoes: rows });
+
+  } catch (err) {
+    log.error("JogosListagemErro", err);
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
+  }
 };
