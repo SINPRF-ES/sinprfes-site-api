@@ -1,217 +1,170 @@
-// public/js/filiese.js
-
 document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("filiese-form");
-  const msgEl = document.getElementById("filiese-message");
+    
+    // --- MÁSCARAS ---
+    const inputCpf = document.getElementById("cpf");
+    const inputCep = document.getElementById("cep");
+    const inputTel1 = document.getElementById("telefone1");
+    const inputTel2 = document.getElementById("telefone2");
 
-  if (!form) return;
-
-  // -------------------------
-  // Máscaras
-  // -------------------------
-  function aplicarMascaraCPF(input) {
-    if (!input) return;
-    input.addEventListener("input", () => {
-      let v = input.value.replace(/\D/g, "").slice(0, 11);
-      if (v.length > 9) {
-        v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4");
-      } else if (v.length > 6) {
-        v = v.replace(/(\d{3})(\d{3})(\d{0,3})/, "$1.$2.$3");
-      } else if (v.length > 3) {
-        v = v.replace(/(\d{3})(\d{0,3})/, "$1.$2");
-      }
-      input.value = v;
-    });
-  }
-
-  function aplicarMascaraTelefone(input) {
-    if (!input) return;
-
-    function formatar(valor) {
-      let v = String(valor || "").replace(/\D/g, "");
-
-      if (!v) return "";
-
-      if (v.length > 11) v = v.slice(0, 11);
-
-      if (v.length <= 10) {
-        if (v.length >= 1) v = "(" + v;
-        if (v.length >= 3) v = v.slice(0, 3) + ") " + v.slice(3);
-        if (v.length > 9) v = v.slice(0, 9) + "-" + v.slice(9);
-      } else {
-        v = "(" + v.slice(0, 2) + ") " + v.slice(2);
-        if (v.length > 10) v = v.slice(0, 10) + "-" + v.slice(10);
-      }
-
-      return v;
+    if(inputCpf) {
+        inputCpf.addEventListener("input", e => {
+            let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+            if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+            else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+            e.target.value = v;
+        });
     }
 
-    input.value = formatar(input.value);
-
-    input.addEventListener("input", () => {
-      input.value = formatar(input.value);
-    });
-  }
-
-  aplicarMascaraCPF(document.getElementById("cpf"));
-  aplicarMascaraTelefone(document.getElementById("telefone1"));
-  aplicarMascaraTelefone(document.getElementById("telefone2"));
-
-  // -------------------------
-  // CEP / ViaCEP
-  // -------------------------
-  const cepInput = document.getElementById("cep");
-  const btnCep = document.getElementById("btn-buscar-cep");
-  const endInput = document.getElementById("endereco");
-  const cidadeInput = document.getElementById("cidade");
-  const ufInput = document.getElementById("uf");
-
-  if (cepInput) {
-    cepInput.addEventListener("input", () => {
-      cepInput.value = cepInput.value.replace(/\D/g, "").slice(0, 8);
-    });
-  }
-
-  async function consultarCep() {
-    const cepLimpo = (cepInput.value || "").replace(/\D/g, "");
-    if (cepLimpo.length !== 8) {
-      mostrarMensagem("CEP inválido. Use 8 dígitos.", true);
-      return;
+    if(inputCep) {
+        inputCep.addEventListener("input", e => {
+            e.target.value = e.target.value.replace(/\D/g, "").slice(0, 8).replace(/^(\d{5})(\d)/, "$1-$2");
+        });
     }
 
-    try {
-      mostrarMensagem("Consultando CEP...", false);
+    const maskTel = e => {
+        let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+        if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+        else if (v.length > 5) v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+        else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+        e.target.value = v;
+    };
+    if(inputTel1) inputTel1.addEventListener("input", maskTel);
+    if(inputTel2) inputTel2.addEventListener("input", maskTel);
 
-      const resp = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      if (!resp.ok) throw new Error("Erro ao consultar ViaCEP");
 
-      const data = await resp.json();
-      if (data.erro) {
-        mostrarMensagem("CEP não encontrado.", true);
-        return;
-      }
+    // --- 🟢 NOVO: VALIDAÇÃO DE DATAS (Ano máx 4 dígitos) ---
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    const hoje = new Date().toISOString().split("T")[0]; // YYYY-MM-DD de hoje
 
-      const logradouroBairro = [data.logradouro, data.bairro]
-        .filter(Boolean)
-        .join(", ");
+    dateInputs.forEach(input => {
+        // Define o máximo no HTML para ajudar a UI do navegador
+        input.setAttribute("max", "9999-12-31");
 
-      if (logradouroBairro) endInput.value = logradouroBairro;
-      if (data.localidade) cidadeInput.value = data.localidade;
-      if (data.uf) ufInput.value = data.uf;
+        // 1. Impede digitar mais de 4 dígitos no ano
+        input.addEventListener("input", (e) => {
+            const valor = e.target.value;
+            if (!valor) return;
 
-      mostrarMensagem("CEP carregado com sucesso.", false);
-    } catch (err) {
-      console.error("Erro ao consultar CEP:", err);
-      mostrarMensagem("Erro ao consultar CEP. Tente novamente.", true);
-    }
-  }
+            const partes = valor.split("-"); // [Ano, Mes, Dia]
+            const ano = partes[0];
 
-  if (btnCep) {
-    btnCep.addEventListener("click", (e) => {
-      e.preventDefault();
-      consultarCep();
+            if (ano.length > 4) {
+                // Corta o ano para 4 dígitos e remonta a data
+                const anoCorrigido = ano.slice(0, 4);
+                e.target.value = `${anoCorrigido}-${partes[1]}-${partes[2]}`;
+            }
+        });
+
+        // 2. Validação lógica ao sair do campo (Blur)
+        input.addEventListener("blur", (e) => {
+            const valor = e.target.value;
+            if (!valor) return;
+
+            const ano = parseInt(valor.split("-")[0]);
+            
+            // Regra: Ano deve ser > 1900
+            if (ano < 1900) {
+                alert("Ano inválido. Por favor, verifique a data.");
+                e.target.value = "";
+                return;
+            }
+
+            // Regra: Se for campo de nascimento, não pode ser no futuro
+            if (input.id.includes("nascimento") && valor > hoje) {
+                alert("A data de nascimento não pode ser no futuro.");
+                e.target.value = "";
+            }
+        });
     });
-  }
-  if (cepInput) {
-    cepInput.addEventListener("blur", () => {
-      if (cepInput.value.trim()) consultarCep();
-    });
-  }
 
-  // -------------------------
-  // Mensagens
-  // -------------------------
-  function mostrarMensagem(texto, erro = false) {
-    if (!msgEl) return;
-    msgEl.textContent = texto;
-    msgEl.style.color = erro ? "#c0392b" : "#2ecc71";
-  }
 
-  // -------------------------
-  // Envio do formulário
-  // -------------------------
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+    // --- BUSCA CEP ---
+    const btnCep = document.getElementById("btn-buscar-cep");
+    
+    const buscarCep = async () => {
+        const cep = inputCep.value.replace(/\D/g, "");
+        if(cep.length !== 8) return alert("Digite um CEP válido com 8 números.");
+        
+        const originalText = btnCep.innerText;
+        btnCep.innerText = "⏳";
+        btnCep.disabled = true;
 
-    mostrarMensagem("Enviando solicitação...", false);
-
-    const payload = {
-      nome: document.getElementById("nome").value.trim(),
-      data_nascimento: document.getElementById("data_nascimento").value,
-      cpf: document.getElementById("cpf").value.replace(/\D/g, ""),
-      siape: document.getElementById("siape").value.trim(),
-
-      telefone1: document.getElementById("telefone1").value.replace(/\D/g, ""),
-      telefone2: document
-        .getElementById("telefone2")
-        .value.replace(/\D/g, ""),
-
-      email_pessoal: document.getElementById("email_pessoal").value.trim(),
-      email_funcional: document.getElementById("email_funcional").value.trim(),
-
-      cep: document.getElementById("cep").value.replace(/\D/g, ""),
-      endereco: document.getElementById("endereco").value.trim(),
-      complemento: document.getElementById("complemento").value.trim(),
-      cidade: document.getElementById("cidade").value.trim(),
-      uf: document.getElementById("uf").value.trim(),
-
-      conjuge_nome: document.getElementById("conjuge_nome").value.trim(),
-      conjuge_nascimento:
-        document.getElementById("conjuge_nascimento").value,
-
-      dependente1_nome:
-        document.getElementById("dependente1_nome").value.trim(),
-      dependente1_nascimento:
-        document.getElementById("dependente1_nascimento").value,
-      dependente2_nome:
-        document.getElementById("dependente2_nome").value.trim(),
-      dependente2_nascimento:
-        document.getElementById("dependente2_nascimento").value,
-      dependente3_nome:
-        document.getElementById("dependente3_nome").value.trim(),
-      dependente3_nascimento:
-        document.getElementById("dependente3_nascimento").value,
-
-      aceite_estatuto: document.getElementById("aceite_estatuto").checked,
-      aceite_lgpd: document.getElementById("aceite_lgpd").checked,
+        try {
+            const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const d = await r.json();
+            if(!d.erro) {
+                document.getElementById("logradouro").value = d.logradouro;
+                document.getElementById("bairro").value = d.bairro;
+                document.getElementById("cidade").value = d.localidade;
+                document.getElementById("uf").value = d.uf;
+                document.getElementById("numero").focus();
+            } else {
+                alert("CEP não encontrado.");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Erro ao buscar CEP.");
+        } finally {
+            btnCep.innerText = originalText;
+            btnCep.disabled = false;
+        }
     };
 
-    if (!payload.aceite_estatuto || !payload.aceite_lgpd) {
-      mostrarMensagem(
-        "É necessário aceitar o Estatuto e a autorização de dados.",
-        true
-      );
-      return;
+    if(btnCep) btnCep.addEventListener("click", buscarCep);
+    if(inputCep) inputCep.addEventListener("blur", () => {
+        if(inputCep.value.replace(/\D/g,"").length === 8) buscarCep();
+    });
+
+
+    // --- ENVIO DO FORMULÁRIO ---
+    const form = document.getElementById("filiese-form");
+    const msgContainer = document.getElementById("msg-container");
+    const btnSubmit = document.getElementById("btn-submit");
+
+    if(form) {
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = "ENVIANDO...";
+            msgContainer.style.display = "none";
+            msgContainer.className = "status-msg";
+
+            const fd = new FormData(form);
+            const payload = Object.fromEntries(fd.entries());
+            
+            // Limpa formatação antes de enviar
+            payload.cpf = payload.cpf.replace(/\D/g, "");
+            payload.cep = payload.cep.replace(/\D/g, "");
+            payload.telefone1 = payload.telefone1.replace(/\D/g, "");
+            if(payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
+
+            try {
+                const res = await fetch("/api/filiese", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if(res.ok) {
+                    msgContainer.innerHTML = `✅ <strong>Sucesso!</strong> ${data.message}`;
+                    msgContainer.classList.add("status-success");
+                    form.reset();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    throw new Error(data.message || "Erro desconhecido.");
+                }
+            } catch(err) {
+                msgContainer.innerHTML = `❌ <strong>Erro:</strong> ${err.message}`;
+                msgContainer.classList.add("status-error");
+            } finally {
+                msgContainer.style.display = "block";
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "ENVIAR SOLICITAÇÃO";
+            }
+        });
     }
-
-    try {
-      const resp = await fetch("/api/filiese", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!resp.ok) {
-        throw new Error("Falha ao enviar solicitação");
-      }
-
-      const data = await resp.json().catch(() => ({}));
-
-      mostrarMensagem(
-        data.message ||
-          "Solicitação registrada com sucesso. Verifique seu e-mail para baixar o PDF, assinar via Gov.br e enviar para sinprfes@sinprfes.org.br.",
-        false
-      );
-
-      form.reset();
-    } catch (err) {
-      console.error(err);
-      mostrarMensagem(
-        "Erro ao enviar solicitação. Tente novamente mais tarde.",
-        true
-      );
-    }
-  });
 });

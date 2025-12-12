@@ -5,7 +5,7 @@ const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
- * Função de envio base, usada pelo senha.controller.js (sem anexo).
+ * Função de envio base
  */
 async function enviarEmailBase(to, subject, text, cc = undefined) {
   const { MAIL_FROM } = process.env;
@@ -32,7 +32,6 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
 
   if (error) {
     console.error("💥 Erro ao enviar e-mail com Resend:", error);
-    // Lança um erro para que o controller possa capturá-lo
     throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
   }
 
@@ -53,17 +52,30 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
   }
 
+  // 🟢 CORREÇÃO ROBUSTA (Igual ao Ressarcimento)
+  // Tenta extrair o e-mail de várias fontes e garante que é string limpa
+  const emailFiliado =
+    (dados.email_destino && String(dados.email_destino).trim()) ||
+    (dados.email_pessoal && String(dados.email_pessoal).trim()) ||
+    (dados.email && String(dados.email).trim()) ||
+    "";
+
+  if (!emailFiliado) {
+    console.warn("⚠️ Aviso: Ficha de filiação será enviada sem cópia para o solicitante (e-mail não identificado).");
+  }
+
   const subject = `Ficha de Filiação - ${dados.nome || ""} (${dados.cpf || ""})`;
 
   const payload = {
     from: MAIL_FROM,
-    to: MAIL_TO_FILIACAO,
+    to: MAIL_TO_FILIACAO, // Destino principal: Sindicato
+    cc: emailFiliado || undefined, // Cópia: Filiado
     subject,
-    text: `Segue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.`,
+    text: `Prezado(a),\n\nSegue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.\n\nPor favor, assine e devolva este documento.\n\nAtenciosamente,\nSINPRF-ES`,
     attachments: [
       {
         filename: "ficha_filiacao.pdf",
-        content: pdfBuffer.toString("base64"), // Resend usa Base64 para anexos
+        content: pdfBuffer.toString("base64"),
       },
     ],
   };
@@ -75,16 +87,12 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
   }
 
-  console.log("📧 E-mail de filiação enviado. Id:", data.id);
+  console.log("📧 DEBUG_CC_FILIACAO:", { emailFiliado });
+  console.log("📧 E-mail de filiação enviado. ID:", data.id, "Cópia para:", emailFiliado);
 }
 
 /**
- * Envia o e-mail de pedido de ressarcimento:
- */
-/**
- * Envia o e-mail de pedido de ressarcimento:
- *  - TO: sindicato (MAIL_TO_RESSARCIMENTO ou MAIL_TO_FILIACAO)
- *  - CC: filiado (se houver e-mail disponível)
+ * Envia o e-mail de pedido de ressarcimento
  */
 async function enviarEmailRessarcimento(dados, pdfBuffer) {
   const {
@@ -97,17 +105,12 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
     throw new Error("❌ RESEND_API_KEY não configurada.");
   }
 
-  // E-mail institucional que SEMPRE receberá o pedido
   const mailSindicato = MAIL_TO_RESSARCIMENTO || MAIL_TO_FILIACAO;
 
   if (!MAIL_FROM || !mailSindicato) {
     throw new Error("❌ MAIL_FROM ou MAIL_TO_RESSARCIMENTO não configurados.");
   }
 
-  // Tenta descobrir e-mail do filiado:
-  // 1) campo específico do pedido (email_destino)
-  // 2) e-mail 1 do cadastro
-  // 3) e-mail 2 do cadastro
   const emailFiliado =
     (dados.email_destino && String(dados.email_destino).trim()) ||
     (dados.email1 && String(dados.email1).trim()) ||
@@ -115,11 +118,7 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
     "";
 
   if (!emailFiliado) {
-    // Apenas log – não impede o envio para o sindicato
-    console.warn(
-      "⚠️ RessarcimentoSemEmailDestino",
-      JSON.stringify({ filiadoId: dados.id_filiado })
-    );
+    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ filiadoId: dados.id_filiado }));
   }
 
   const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
@@ -142,18 +141,16 @@ Atenciosamente,
 SINPRF-ES
 `;
 
-  // Monta payload para Resend
   const payload = {
     from: MAIL_FROM,
     to: mailSindicato,
-    // copia opcional para o filiado
     cc: emailFiliado || undefined,
     subject,
     text: corpoEmail,
     attachments: [
       {
         filename: "pedido_ressarcimento.pdf",
-        content: pdfBuffer.toString("base64"), // Resend exige Base64 para anexos
+        content: pdfBuffer.toString("base64"),
       },
     ],
   };
@@ -171,7 +168,6 @@ SINPRF-ES
   });
 }
 
-
 /**
  * E-mail de boas-vindas para novo filiado.
  */
@@ -188,7 +184,20 @@ async function enviarEmailBoasVindasFiliado(dados) {
 
   const corpo = `
 Olá, ${primeiroNome}!
-// ... (resto do corpo do e-mail)
+
+Seja muito bem-vindo(a) ao SINPRF-ES. É uma honra tê-lo(a) conosco.
+
+Seu cadastro foi realizado com sucesso em nosso sistema.
+Você já pode acessar a Área do Filiado para atualizar seus dados, consultar informações e utilizar nossos serviços.
+
+Para o primeiro acesso:
+1. Acesse o site do sindicato (Área do Filiado).
+2. Utilize seu CPF e a senha provisória ou solicite a recuperação de senha ("Esqueci minha senha").
+
+Em caso de dúvidas, entre em contato conosco.
+
+Atenciosamente,
+Diretoria SINPRF-ES
 `;
 
   await enviarEmailBase(dados.email1, subject, corpo);

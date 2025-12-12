@@ -1,14 +1,15 @@
-// src/controllers/filiese.controller.js
-// Controlador do formulário de filiação
-
 const { gerarPdfFichaFiliacao } = require("../services/pdf.service");
 const { enviarEmailFichaFiliacao } = require("../services/email.service");
-const log = require("../utils/log"); // 🟢 LOGGER
+const log = require("../utils/log");
 
 exports.enviarFichaFiliacao = async (req, res) => {
   try {
     const ip = req.ip || req.connection?.remoteAddress || "";
     const userAgent = req.get("user-agent") || "";
+
+    // Normalizador de e-mail (iguais ao ressarcimento)
+    const normalizarEmail = (v) =>
+      (v || "").toString().trim().toLowerCase();
 
     const dados = {
       ...req.body,
@@ -17,16 +18,17 @@ exports.enviarFichaFiliacao = async (req, res) => {
       criadoEm: new Date().toISOString(),
     };
 
-    // Validação mínima de campos obrigatórios
+    // 1. Validação de campos obrigatórios
     const obrigatorios = [
       "nome",
       "cpf",
       "data_nascimento",
-      "siape",
       "telefone1",
       "email_pessoal",
       "cep",
-      "endereco",
+      "logradouro",
+      "numero",
+      "bairro",
       "cidade",
       "uf",
     ];
@@ -39,61 +41,77 @@ exports.enviarFichaFiliacao = async (req, res) => {
       }
     }
 
-    // Normaliza e monta alguns campos auxiliares
+    // 2. Normalização de dados básicos
     const cpfNumerico = String(dados.cpf).replace(/\D/g, "");
+    const cpfFormatado = cpfNumerico.replace(
+      /(\d{3})(\d{3})(\d{3})(\d{2})/,
+      "$1.$2.$3-$4"
+    );
 
-    const enderecoCompleto = [
-      dados.endereco || "",
-      dados.complemento || "",
-      `${dados.cidade || ""}/${(dados.uf || "").toUpperCase()}`,
-      dados.cep ? `CEP ${dados.cep}` : "",
-    ]
-      .filter(Boolean)
-      .join(" - ");
+    // Normaliza e-mail pessoal
+    const emailPessoal = normalizarEmail(dados.email_pessoal);
 
+    // 3. Monta o payload que vai para o PDF e para o serviço de email
     const payloadPdfEmail = {
-      // dados principais
       nome: dados.nome,
-      cpf: cpfNumerico,
-      matricula: dados.siape,
+      cpf: cpfFormatado,
+      matricula: dados.siape || "",
       lotacao: dados.lotacao || "",
 
-      // contato
-      email_pessoal: dados.email_pessoal,
-      email_funcional: dados.email_funcional,
+      // Contatos
+      email_destino: emailPessoal,    // filiado (cc)
+      email_pessoal: emailPessoal,    // redundante para segurança
+      email_funcional: normalizarEmail(dados.email_funcional || ""),
       telefone1: dados.telefone1,
-      telefone2: dados.telefone2,
+      telefone2: dados.telefone2 || "",
 
-      // endereco
-      enderecoCompleto,
+      // Endereço
+      logradouro: dados.logradouro,
+      numero: dados.numero,
+      complemento: dados.complemento || "",
+      bairro: dados.bairro,
+      cidade: dados.cidade,
+      uf: dados.uf,
+      cep: dados.cep,
 
-      // info técnica
+      // Metadados
       ip,
       userAgent,
       criadoEm: dados.criadoEm,
     };
 
-    // 1) Gera PDF da ficha de filiação
+    // DEBUG crítico: garante que estamos enviando e-mail corretamente normalizado
+    log.info("DEBUG_FILIACAO_EMAIL", {
+      email_destino: payloadPdfEmail.email_destino,
+      email_pessoal: payloadPdfEmail.email_pessoal,
+      email_funcional: payloadPdfEmail.email_funcional,
+    });
+
+    // 4. Gera o PDF
     const pdfBuffer = await gerarPdfFichaFiliacao(payloadPdfEmail);
 
-    // 2) Envia e-mail para sindicato + cópia para o filiado
+    // 5. Envia e-mail
+    log.info("EnviandoFichaFiliacao", {
+      nome: dados.nome,
+      emailSindicato: process.env.MAIL_TO_FILIACAO,
+      emailCopia: payloadPdfEmail.email_destino,
+    });
+
     await enviarEmailFichaFiliacao(payloadPdfEmail, pdfBuffer);
 
-    // 🟢 LOG SUCESSO
-    log.info("FilieseSolicitacaoCriada", { 
-        cpf: cpfNumerico, 
-        nome: dados.nome 
+    log.info("FilieseSolicitacaoCriada", {
+      cpf: cpfNumerico,
+      nome: dados.nome,
     });
 
     return res.status(201).json({
       message:
-        "Solicitação de filiação registrada. Verifique o PDF enviado por e-mail, assine via Gov.br e encaminhe para sinprfes@sinprfes.org.br.",
+        "Sua ficha de filiação foi gerada e enviada para o seu e-mail. Por favor, verifique sua caixa de entrada (e spam), assine o documento e nos devolva.",
     });
   } catch (err) {
-    // 🔴 LOG ERRO
     log.error("FilieseSolicitacaoErro", err);
     return res
       .status(500)
-      .json({ message: "Erro ao processar a solicitação de filiação." });
+      .json({ message: "Erro interno ao processar a solicitação." });
   }
 };
