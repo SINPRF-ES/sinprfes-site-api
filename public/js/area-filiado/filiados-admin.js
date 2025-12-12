@@ -1,4 +1,10 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF, normalizarTextoBusca } from './utils.js';
+import {
+    apiFetch,
+    aplicarMascaraTelefone,
+    formatarCPF,
+    normalizarTextoBusca,
+    formatarTelefoneTexto
+} from './utils.js';
 
 let cacheLista = [];
 const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
@@ -88,7 +94,7 @@ export async function inicializarFiliados(perfil) {
             const novoInput = campoBusca.cloneNode(true);
             campoBusca.parentNode.replaceChild(novoInput, campoBusca);
             novoInput.addEventListener("input", (e) => filtrarLista(e.target.value));
-            if(novoInput.value) setTimeout(() => filtrarLista(novoInput.value), 100);
+            if (novoInput.value) setTimeout(() => filtrarLista(novoInput.value), 100);
         }
         
         handlersConfigurados = true;
@@ -98,14 +104,14 @@ export async function inicializarFiliados(perfil) {
     try {
         listaEl.innerHTML = `<p style="color:#fff; text-align:center;">Carregando base de dados...</p>`;
         const r = await apiFetch("/api/filiados");
-        if(r && r.ok) {
+        if (r && r.ok) {
             const d = await r.json();
             cacheLista = d.filiados || d || [];
             filtrarLista(document.getElementById("busca-filiados")?.value || "");
         } else { 
             listaEl.innerHTML = `<p style="color:#e74c3c; text-align:center;">Erro ao carregar lista.</p>`; 
         }
-    } catch(e) { 
+    } catch (e) { 
         console.error(e);
         listaEl.innerHTML = `<p style="color:#e74c3c; text-align:center;">Erro de conexão.</p>`; 
     }
@@ -113,7 +119,7 @@ export async function inicializarFiliados(perfil) {
 
 function filtrarLista(termo) {
     const el = document.getElementById("lista-filiados");
-    if(!el) return;
+    if (!el) return;
 
     const t = normalizarTextoBusca(termo || "");
     const res = cacheLista.filter(f => {
@@ -122,7 +128,7 @@ function filtrarLista(termo) {
         return nome.includes(t) || cpf.includes(t);
     });
     
-    if(!res.length) { 
+    if (!res.length) { 
         el.innerHTML = `<div style="background:#fff; color:#333; padding:20px; border-radius:8px; text-align:center;">Nenhum filiado encontrado.</div>`; 
         return; 
     }
@@ -130,11 +136,20 @@ function filtrarLista(termo) {
     const podeEditar = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
     const ehAdmin = perfilAtual === "ADMIN";
 
+    // ✅ REGRA: CPF editável por ADMIN, DIRETORIA e FUNCIONARIO
+    const podeEditarCpf = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+
     el.innerHTML = res.map(f => {
         const situacao = (f.situacao || 'ATIVO').toUpperCase();
-        const classeStatus = situacao === 'ATIVO' ? 'status-ativo' : (situacao === 'VETERANO' ? 'status-veterano' : 'status-pensionista');
-        const tels = [f.telefone1, f.telefone2].filter(Boolean).join(" / ");
-        
+        const classeStatus =
+            situacao === 'ATIVO' ? 'status-ativo'
+            : (situacao === 'VETERANO' ? 'status-veterano' : 'status-pensionista');
+
+        // Telefones: exibição no card com máscara (sem depender do input)
+        const tel1Raw = String(f.telefone1 || "").replace(/\D/g, "");
+        const tel2Raw = String(f.telefone2 || "").replace(/\D/g, "");
+        const tels = [tel1Raw, tel2Raw].filter(Boolean).map(formatarTelefoneTexto).join(" / ");
+
         const header = `
             <div class="filiado-header">
                 <div>
@@ -147,9 +162,13 @@ function filtrarLista(termo) {
                 </div>
             </div>`;
 
-        if(!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}</div>`;
+        if (!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}</div>`;
         
-        const disabledSeNaoAdmin = (!ehAdmin) ? 'disabled style="background:#eee; cursor:not-allowed;"' : '';
+        // ✅ CPF disabled somente para quem NÃO pode editar CPF
+        const disabledCpf = (!podeEditarCpf)
+            ? 'disabled style="background:#eee; cursor:not-allowed;"'
+            : '';
+
         const adminSection = ehAdmin ? `
             <div class="edit-group admin-field">
                 <label>Perfil de Acesso (ADMIN)</label>
@@ -170,11 +189,11 @@ function filtrarLista(termo) {
                     <form class="form-edit-filiado" data-id="${f.id}" style="margin-top:15px;">
                         <div class="edit-grid">
                             <div class="edit-group"><label>Nome</label><input name="nome" value="${f.nome}"></div>
-                            <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${disabledSeNaoAdmin} placeholder="Somente números"></div>
+                            <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${disabledCpf} placeholder="Somente números"></div>
                             <div class="edit-group"><label>E-mail 1</label><input name="email1" value="${f.email1||''}"></div>
                             <div class="edit-group"><label>E-mail 2</label><input name="email2" value="${f.email2||''}"></div>
-                            <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${f.telefone1||''}"></div>
-                            <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${f.telefone2||''}"></div>
+                            <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${tel1Raw}"></div>
+                            <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${tel2Raw}"></div>
                             <div class="edit-group"><label>Lotação</label><input name="lotacao" value="${f.lotacao||''}"></div>
                             <div class="edit-group"><label>Situação</label>
                                 <select name="situacao">${SITUACAO_OPCOES.map(op => `<option value="${op}" ${op===situacao?'selected':''}>${op}</option>`).join('')}</select>
@@ -204,11 +223,13 @@ function filtrarLista(termo) {
     }).join("");
 
     // Listeners para os formulários gerados
-    if(podeEditar) {
+    if (podeEditar) {
         el.querySelectorAll("form.form-edit-filiado").forEach(frm => {
+            // Máscaras telefone (com normalização do valor inicial via utils.js)
             aplicarMascaraTelefone(frm.querySelector('input[name="telefone1"]'));
             aplicarMascaraTelefone(frm.querySelector('input[name="telefone2"]'));
 
+            // Máscara CPF só se não estiver disabled
             const inputCpf = frm.querySelector('input[name="cpf"]');
             if (inputCpf && !inputCpf.disabled) {
                 inputCpf.addEventListener('input', (e) => {
@@ -232,9 +253,9 @@ function filtrarLista(termo) {
             if (btnCep && inputCep) {
                 btnCep.addEventListener('click', async () => {
                     const cepVal = inputCep.value.replace(/\D/g, "");
-                    if(cepVal.length !== 8) return alert("CEP inválido. Digite 8 números.");
+                    if (cepVal.length !== 8) return alert("CEP inválido. Digite 8 números.");
                     const originalText = btnCep.innerText;
-                    btnCep.innerText = "⏳"; // Ícone de ampulheta ou ...
+                    btnCep.innerText = "⏳";
                     
                     try {
                         const r = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
@@ -264,20 +285,25 @@ function filtrarLista(termo) {
 
                 const fd = new FormData(frm);
                 const payload = {};
-                fd.forEach((v,k) => {
-                    if(k.includes('telefone') || k === 'cep' || k === 'cpf') payload[k] = v.replace(/\D/g,"");
+                fd.forEach((v, k) => {
+                    if (k.includes('telefone') || k === 'cep' || k === 'cpf') payload[k] = v.replace(/\D/g, "");
                     else payload[k] = v;
                 });
 
-                if(!ehAdmin) { delete payload.cpf; delete payload.perfil_acesso; }
-                
+                // ✅ perfil_acesso: somente ADMIN pode enviar
+                if (!ehAdmin) delete payload.perfil_acesso;
+
+                // ✅ CPF: ADMIN/DIRETORIA/FUNCIONARIO podem enviar
+                const podeEditarCpfNoSubmit = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+                if (!podeEditarCpfNoSubmit) delete payload.cpf;
+
                 try {
                     const r = await apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
                     
-                    if(r.ok) { 
+                    if (r.ok) { 
                         alert("Salvo com sucesso!");
                         const idx = cacheLista.findIndex(i => i.id == id);
-                        if(idx !== -1) {
+                        if (idx !== -1) {
                             cacheLista[idx] = { ...cacheLista[idx], ...payload };
                             filtrarLista(document.getElementById("busca-filiados").value);
                         }
@@ -285,19 +311,23 @@ function filtrarLista(termo) {
                         let erroMsg = "Erro ao salvar.";
                         try {
                             const errData = await r.json();
-                            if (errData.message) erroMsg = errData.message;
-                        } catch(eJson) {}
+                            if (errData?.message) erroMsg = errData.message;
+                        } catch (eJson) {}
                         alert(erroMsg); 
                     }
-                } catch(ex) { alert("Erro de conexão."); }
-                finally { btn.disabled = false; btn.innerText = txtOriginal; }
+                } catch (ex) {
+                    alert("Erro de conexão.");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = txtOriginal;
+                }
             });
         });
     }
 }
 
 function abrirNovoFiliado(container) {
-    if(container.innerHTML !== "") { container.innerHTML = ""; return; } 
+    if (container.innerHTML !== "") { container.innerHTML = ""; return; } 
     
     container.innerHTML = `
         <div class="section-box" style="background:#fff; color:#333; padding:25px; border-radius:12px; margin-bottom:25px; border-left:6px solid #2980b9; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
@@ -320,10 +350,16 @@ function abrirNovoFiliado(container) {
             </form>
         </div>`;
     
-    // Máscara CPF Novo
+    // Máscara CPF Novo (mantendo comportamento anterior)
     const inpCpf = container.querySelector('input[name="cpf"]');
     if (inpCpf) {
-        inpCpf.addEventListener('input', (e) => e.target.value = e.target.value.replace(/\D/g, "").slice(0, 11));
+        inpCpf.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+            if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+            else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+            e.target.value = v;
+        });
     }
 
     container.querySelector("#btn-cancelar-novo").addEventListener("click", () => container.innerHTML = "");
@@ -333,27 +369,31 @@ function abrirNovoFiliado(container) {
         const fd = new FormData(e.target);
         const payload = Object.fromEntries(fd.entries());
         payload.perfil_acesso = "FILIADO";
-        payload.cpf = payload.cpf.replace(/\D/g, "");
+        payload.cpf = (payload.cpf || "").replace(/\D/g, "");
         
         try {
             const r = await apiFetch("/api/filiados", { method: "POST", body: payload });
-            if(r && r.ok) { 
-                alert("Criado!"); container.innerHTML=""; 
+            if (r && r.ok) { 
+                alert("Criado!");
+                container.innerHTML = ""; 
+
                 const l = document.getElementById("lista-filiados");
-                l.innerHTML = "<p style='color:#fff; text-align:center;'>Atualizando...</p>";
+                if (l) l.innerHTML = "<p style='color:#fff; text-align:center;'>Atualizando...</p>";
+
                 const r2 = await apiFetch("/api/filiados");
                 const d2 = await r2.json();
                 cacheLista = d2.filiados || d2;
                 filtrarLista("");
-            } 
-            else { 
+            } else { 
                 let erroMsg = "Erro ao criar.";
                 try {
                     const d = await r.json();
-                    if(d.message) erroMsg = d.message;
-                } catch(e){}
+                    if (d?.message) erroMsg = d.message;
+                } catch (eJson) {}
                 alert(erroMsg); 
             }
-        } catch(ex) { alert("Erro de conexão."); }
+        } catch (ex) {
+            alert("Erro de conexão.");
+        }
     });
 }
