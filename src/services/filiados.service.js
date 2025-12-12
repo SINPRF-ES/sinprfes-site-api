@@ -6,7 +6,8 @@ const { normalizarCpf } = require("../utils/format");
 const FILIADO_COLUMNS = `
   id, nome, cpf, data_nascimento, telefone1, telefone2, email1, email2,
   logradouro_bairro, numero, complemento, cidade, uf, cep,
-  lotacao, situacao, senha_hash, twofa_secret, perfil_acesso, avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em
+  lotacao, situacao, senha_hash, twofa_secret, perfil_acesso, avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
+  arquivado_em, arquivado_por, arquivado_motivo
 `;
 
 /**
@@ -48,12 +49,7 @@ async function registrarUltimoAcesso(id) {
 
 /**
  * Atualiza dados básicos do próprio filiado ("Meus dados").
- * Campos permitidos: telefone1, telefone2, email1, email2,
- * logradouro_bairro, numero, complemento, cidade, uf, cep, lotacao.
  */
-// src/services/filiados.service.js (Trecho da função atualizarDadosProprios)
-// ...
-
 async function atualizarDadosProprios(id, dados) {
   const {
     telefone1 = null,
@@ -61,7 +57,6 @@ async function atualizarDadosProprios(id, dados) {
     email1 = null,
     email2 = null,
     lotacao = null,
-    // NOVOS CAMPOS (Ordem de $6 a $11):
     logradouro_bairro = null,
     numero = null,
     complemento = null,
@@ -90,24 +85,23 @@ async function atualizarDadosProprios(id, dados) {
     RETURNING ${FILIADO_COLUMNS}
   `,
     [
-      // PARÂMETROS ($1 a $11):
       telefone1,
       telefone2,
       email1,
       email2,
       lotacao,
-      logradouro_bairro, // $6
-      numero,            // $7
-      complemento,       // $8
-      cidade,            // $9
-      uf,                // $10
-      cep,               // $11
-      id,                // $12 (WHERE)
+      logradouro_bairro,
+      numero,
+      complemento,
+      cidade,
+      uf,
+      cep,
+      id,
     ]
   );
   return rows[0] || null;
 }
-// ...
+
 /**
  * Atualização completa de um filiado (usada por ADMIN / DIRETORIA / FUNCIONARIO).
  */
@@ -117,7 +111,6 @@ async function atualizarFiliadoPorId(id, dados) {
   let idx = 1;
 
   function addCampo(campoSql, valor) {
-    // Garante que campos vazios que não são string (ex: data_nascimento) não sejam adicionados
     if (valor !== undefined && valor !== null) {
       campos.push(`${campoSql} = $${idx}`);
       valores.push(valor);
@@ -133,7 +126,7 @@ async function atualizarFiliadoPorId(id, dados) {
   if (dados.telefone2 !== undefined) addCampo("telefone2", dados.telefone2);
   if (dados.email1 !== undefined) addCampo("email1", dados.email1);
   if (dados.email2 !== undefined) addCampo("email2", dados.email2);
-  // NOVOS CAMPOS DO ENDEREÇO AQUI:
+
   if (dados.logradouro_bairro !== undefined)
     addCampo("logradouro_bairro", dados.logradouro_bairro);
   if (dados.numero !== undefined) addCampo("numero", dados.numero);
@@ -152,7 +145,6 @@ async function atualizarFiliadoPorId(id, dados) {
     return await buscarPorId(id);
   }
 
-  // campo de auditoria
   campos.push(`atualizado_em = NOW()`);
 
   valores.push(id);
@@ -169,20 +161,38 @@ async function atualizarFiliadoPorId(id, dados) {
 
 /**
  * Lista filiados de acordo com o perfil de acesso.
+ * Por padrão, NÃO retorna arquivados.
+ *
+ * options:
+ * - incluirArquivados: boolean  -> retorna arquivados + não arquivados
+ * - somenteArquivados: boolean  -> retorna apenas arquivados
  */
-async function listarParaPerfil(perfilAcesso, termoBusca = "") {
+async function listarParaPerfil(perfilAcesso, termoBusca = "", options = {}) {
   const filtro = termoBusca.trim();
-  let whereClause = "";
   const params = [];
+  const wheres = [];
+
+  // Arquivamento (regra padrão)
+  const incluirArquivados = !!options.incluirArquivados;
+  const somenteArquivados = !!options.somenteArquivados;
+
+  if (!incluirArquivados) {
+    if (somenteArquivados) wheres.push(`arquivado_em IS NOT NULL`);
+    else wheres.push(`arquivado_em IS NULL`);
+  }
 
   if (filtro) {
     params.push(`%${filtro.toLowerCase()}%`);
     params.push(`%${filtro.toLowerCase()}%`);
-    whereClause = `
-      WHERE LOWER(nome) LIKE $1
-         OR REPLACE(cpf, '.', '') LIKE REPLACE($2, '.', '')
-    `;
+    const pNome = `$${params.length - 1}`;
+    const pCpf = `$${params.length}`;
+    wheres.push(`
+      (LOWER(nome) LIKE ${pNome}
+       OR REPLACE(cpf, '.', '') LIKE REPLACE(${pCpf}, '.', ''))
+    `);
   }
+
+  const whereClause = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
 
   // Quem pode ver tudo
   if (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAcesso)) {
@@ -204,7 +214,10 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "") {
         cep,
         lotacao,
         situacao,
-        perfil_acesso
+        perfil_acesso,
+        arquivado_em,
+        arquivado_por,
+        arquivado_motivo
       FROM filiados
       ${whereClause}
       ORDER BY nome ASC
@@ -215,7 +228,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "") {
     return rows;
   }
 
-  // FILIADO: visão reduzida
+  // FILIADO: visão reduzida (também respeita arquivamento por padrão)
   const { rows } = await pool.query(
     `
     SELECT
@@ -271,7 +284,6 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     telefone2 = null,
     email1 = null,
     email2 = null,
-    // NOVOS CAMPOS DO ENDEREÇO AQUI:
     logradouro_bairro = null,
     numero = null,
     complemento = null,
@@ -292,7 +304,8 @@ async function criarFiliadoInicial(dados, perfilCriador) {
        situacao,
        perfil_acesso,
        criado_em, atualizado_em,
-       bloqueado)
+       bloqueado,
+       arquivado_em, arquivado_por, arquivado_motivo)
     VALUES
       ($1, $2, $3,
        $4, $5,
@@ -302,7 +315,8 @@ async function criarFiliadoInicial(dados, perfilCriador) {
        $15,
        $16,
        NOW(), NOW(),
-       false)
+       false,
+       NULL, NULL, NULL)
     RETURNING ${FILIADO_COLUMNS}
   `,
     [
@@ -313,7 +327,6 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       telefone2,
       email1,
       email2,
-      // Valores das 6 novas colunas
       logradouro_bairro,
       numero,
       complemento,
@@ -329,6 +342,52 @@ async function criarFiliadoInicial(dados, perfilCriador) {
   return rows[0];
 }
 
+/**
+ * Arquiva um filiado (preserva histórico).
+ * Observação: também marca bloqueado=true para impedir acesso ao portal enquanto arquivado.
+ */
+async function arquivarFiliadoPorId(idAlvo, userId, motivo = null) {
+  const { rows } = await pool.query(
+    `
+    UPDATE filiados
+    SET
+      arquivado_em = NOW(),
+      arquivado_por = $2,
+      arquivado_motivo = $3,
+      bloqueado = true,
+      atualizado_em = NOW()
+    WHERE id = $1
+    RETURNING ${FILIADO_COLUMNS}
+  `,
+    [idAlvo, userId, motivo]
+  );
+
+  return rows[0] || null;
+}
+
+/**
+ * Desarquiva um filiado.
+ * Observação: não altera situacao; desbloqueia acesso (bloqueado=false) por padrão.
+ */
+async function desarquivarFiliadoPorId(idAlvo, userId) {
+  const { rows } = await pool.query(
+    `
+    UPDATE filiados
+    SET
+      arquivado_em = NULL,
+      arquivado_por = NULL,
+      arquivado_motivo = NULL,
+      bloqueado = false,
+      atualizado_em = NOW()
+    WHERE id = $1
+    RETURNING ${FILIADO_COLUMNS}
+  `,
+    [idAlvo]
+  );
+
+  return rows[0] || null;
+}
+
 module.exports = {
   buscarPorCpf,
   buscarPorId,
@@ -337,4 +396,6 @@ module.exports = {
   atualizarFiliadoPorId,
   listarParaPerfil,
   criarFiliadoInicial,
+  arquivarFiliadoPorId,
+  desarquivarFiliadoPorId,
 };

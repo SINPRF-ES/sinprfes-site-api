@@ -11,7 +11,6 @@ const filiadosController = require("../controllers/filiados.controller");
 // ROTAS DO PRÓPRIO USUÁRIO (/me)
 // ==============================================================================
 
-// Ver meus dados
 router.get(
   "/me",
   authMiddleware,
@@ -19,7 +18,6 @@ router.get(
   filiadosController.getMe
 );
 
-// Atualizar meus dados
 router.put(
   "/me",
   authMiddleware,
@@ -27,7 +25,6 @@ router.put(
   filiadosController.atualizarMeusDados
 );
 
-// 🟢 NOVA ROTA: Desativar 2FA
 router.post(
   "/2fa/desativar",
   authMiddleware,
@@ -39,10 +36,8 @@ router.post(
 // ROTAS GERAIS DE FILIADOS
 // ==============================================================================
 
-// Listar filiados (Aberto, filtro interno no controller)
 router.get("/", authMiddleware, filiadosController.listarFiliados);
 
-// Criar novo filiado (Requer permissão especial)
 router.post(
   "/",
   authMiddleware,
@@ -54,12 +49,26 @@ router.post(
 // ROTAS ESPECÍFICAS POR ID
 // ==============================================================================
 
-// Atualizar outro filiado
 router.put(
   "/:id",
   authMiddleware,
   requirePermission("EDIT_FILIADO"),
   filiadosController.atualizarFiliado
+);
+
+// ✅ NOVO: Arquivar / Desarquivar
+router.post(
+  "/:id/arquivar",
+  authMiddleware,
+  requirePermission("EDIT_FILIADO"),
+  filiadosController.arquivarFiliado
+);
+
+router.post(
+  "/:id/desarquivar",
+  authMiddleware,
+  requirePermission("EDIT_FILIADO"),
+  filiadosController.desarquivarFiliado
 );
 
 module.exports = router;
