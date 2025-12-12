@@ -17,16 +17,8 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
     throw new Error("❌ MAIL_FROM não configurado.");
   }
 
-  const payload = {
-    from: MAIL_FROM,
-    to: to,
-    subject: subject,
-    text: text,
-  };
-  
-  if (cc) {
-    payload.cc = cc;
-  }
+  const payload = { from: MAIL_FROM, to, subject, text };
+  if (cc) payload.cc = cc;
 
   const { data, error } = await resend.emails.send(payload);
 
@@ -43,17 +35,12 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
  * Envia o e-mail para o sindicato com a ficha de filiação em PDF anexa.
  */
 async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
-  const {
-    MAIL_FROM,
-    MAIL_TO_FILIACAO,
-  } = process.env;
+  const { MAIL_FROM, MAIL_TO_FILIACAO } = process.env;
 
   if (!MAIL_FROM || !MAIL_TO_FILIACAO) {
     throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
   }
 
-  // 🟢 CORREÇÃO ROBUSTA (Igual ao Ressarcimento)
-  // Tenta extrair o e-mail de várias fontes e garante que é string limpa
   const emailFiliado =
     (dados.email_destino && String(dados.email_destino).trim()) ||
     (dados.email_pessoal && String(dados.email_pessoal).trim()) ||
@@ -68,20 +55,15 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
 
   const payload = {
     from: MAIL_FROM,
-    to: MAIL_TO_FILIACAO, // Destino principal: Sindicato
-    cc: emailFiliado || undefined, // Cópia: Filiado
+    to: MAIL_TO_FILIACAO,
+    cc: emailFiliado || undefined,
     subject,
     text: `Prezado(a),\n\nSegue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.\n\nPor favor, assine e devolva este documento.\n\nAtenciosamente,\nSINPRF-ES`,
-    attachments: [
-      {
-        filename: "ficha_filiacao.pdf",
-        content: pdfBuffer.toString("base64"),
-      },
-    ],
+    attachments: [{ filename: "ficha_filiacao.pdf", content: pdfBuffer.toString("base64") }],
   };
 
   const { data, error } = await resend.emails.send(payload);
-  
+
   if (error) {
     console.error("💥 Erro ao enviar e-mail de filiação com Resend:", error);
     throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
@@ -95,11 +77,7 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
  * Envia o e-mail de pedido de ressarcimento
  */
 async function enviarEmailRessarcimento(dados, pdfBuffer) {
-  const {
-    MAIL_FROM,
-    MAIL_TO_RESSARCIMENTO,
-    MAIL_TO_FILIACAO,
-  } = process.env;
+  const { MAIL_FROM, MAIL_TO_RESSARCIMENTO, MAIL_TO_FILIACAO } = process.env;
 
   if (!process.env.RESEND_API_KEY) {
     throw new Error("❌ RESEND_API_KEY não configurada.");
@@ -118,7 +96,7 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
     "";
 
   if (!emailFiliado) {
-    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ filiadoId: dados.id_filiado }));
+    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ filiadoId: dados.id_filiado || dados.id }));
   }
 
   const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
@@ -131,9 +109,7 @@ Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma d
 Resumo do pedido:
 - Período da atividade: ${dados.data_inicio || "-"} a ${dados.data_fim || "-"}
 - Local / destino: ${dados.local || "-"}
-- Valor total solicitado: R$ ${(dados.valor_total || 0).toFixed
-    ? dados.valor_total.toFixed(2)
-    : Number(dados.valor_total || 0).toFixed(2)}
+- Valor total solicitado: R$ ${(dados.valor_total || 0).toFixed ? dados.valor_total.toFixed(2) : Number(dados.valor_total || 0).toFixed(2)}
 
 Este e-mail foi gerado automaticamente. Em anexo, segue o PDF consolidado com os dados do pedido, para sua conferência.
 
@@ -147,12 +123,7 @@ SINPRF-ES
     cc: emailFiliado || undefined,
     subject,
     text: corpoEmail,
-    attachments: [
-      {
-        filename: "pedido_ressarcimento.pdf",
-        content: pdfBuffer.toString("base64"),
-      },
-    ],
+    attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
   };
 
   const { data, error } = await resend.emails.send(payload);
@@ -203,9 +174,104 @@ Diretoria SINPRF-ES
   await enviarEmailBase(dados.email1, subject, corpo);
 }
 
+// --------------------------
+// Jogos (confirmação / cancelamento)
+// --------------------------
+
+function extrairEmailDestino(obj = {}) {
+  return (
+    (obj.email_destino && String(obj.email_destino).trim()) ||
+    (obj.email1 && String(obj.email1).trim()) ||
+    (obj.email2 && String(obj.email2).trim()) ||
+    ""
+  );
+}
+
+async function enviarEmailConfirmacaoInscricaoJogos(payload) {
+  const filiado = payload?.filiado || payload || {};
+  const inscricao = payload?.inscricao || payload || {};
+
+  const filiadoId = filiado.id || filiado.id_filiado || payload?.id || payload?.id_filiado;
+
+  const emailDestino = extrairEmailDestino(filiado);
+  if (!emailDestino) {
+    console.warn("⚠️ EmailJogosConfirmacao: filiado sem email1/email2.", JSON.stringify({ filiadoId }));
+    return;
+  }
+
+  const primeiroNome = (filiado.nome || "").split(" ")[0] || "Colega";
+  const subject = `Confirmação de Pré-inscrição - Jogos`;
+
+  const modalidadesTexto = Array.isArray(inscricao.modalidades)
+    ? inscricao.modalidades.join(", ")
+    : (inscricao.modalidades || "-");
+
+  const corpo = `
+Olá, ${primeiroNome}!
+
+Sua pré-inscrição para os Jogos foi registrada com sucesso.
+
+Resumo:
+- Modalidades: ${modalidadesTexto}
+- Observações: ${inscricao.observacoes || "-"}
+- Familiares: ${inscricao.familiares || "-"}
+- Qtd. familiares: ${Number.isFinite(Number(inscricao.qtd_familiares)) ? Number(inscricao.qtd_familiares) : 0}
+- Sexo: ${inscricao.sexo || "-"}
+
+Este e-mail foi gerado automaticamente.
+
+Atenciosamente,
+SINPRF-ES
+`;
+
+  await enviarEmailBase(emailDestino, subject, corpo);
+}
+
+async function enviarEmailCancelamentoInscricaoJogos(payload) {
+  const filiado = payload?.filiado || payload || {};
+  const inscricao = payload?.inscricao || payload || {};
+
+  const filiadoId = filiado.id || filiado.id_filiado || payload?.id || payload?.id_filiado;
+
+  const emailDestino = extrairEmailDestino(filiado);
+  if (!emailDestino) {
+    console.warn("⚠️ EmailJogosCancelamento: filiado sem email1/email2.", JSON.stringify({ filiadoId }));
+    return;
+  }
+
+  const primeiroNome = (filiado.nome || "").split(" ")[0] || "Colega";
+  const subject = `Cancelamento de Pré-inscrição - Jogos`;
+
+  const modalidadesTexto = Array.isArray(inscricao.modalidades)
+    ? inscricao.modalidades.join(", ")
+    : (inscricao.modalidades || "-");
+
+  const corpo = `
+Olá, ${primeiroNome}!
+
+Sua pré-inscrição para os Jogos foi cancelada com sucesso.
+
+(Referência da inscrição anterior)
+- Modalidades: ${modalidadesTexto}
+- Observações: ${inscricao.observacoes || "-"}
+- Familiares: ${inscricao.familiares || "-"}
+- Qtd. familiares: ${Number.isFinite(Number(inscricao.qtd_familiares)) ? Number(inscricao.qtd_familiares) : 0}
+- Sexo: ${inscricao.sexo || "-"}
+
+Este e-mail foi gerado automaticamente.
+
+Atenciosamente,
+SINPRF-ES
+`;
+
+  await enviarEmailBase(emailDestino, subject, corpo);
+}
+
 module.exports = {
   enviarEmailBase,
   enviarEmailFichaFiliacao,
   enviarEmailRessarcimento,
   enviarEmailBoasVindasFiliado,
+  enviarEmailConfirmacaoInscricaoJogos,
+  enviarEmailCancelamentoInscricaoJogos,
 };

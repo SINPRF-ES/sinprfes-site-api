@@ -1,7 +1,11 @@
 // src/controllers/filiados.controller.js
+const path = require("path");
+const fs = require("fs");
+
 const pool = require("../config/db");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
+
 const {
   buscarPorId,
   listarParaPerfil,
@@ -12,8 +16,13 @@ const {
   arquivarFiliadoPorId,
   desarquivarFiliadoPorId,
 } = require("../services/filiados.service");
+
 const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
+
+function perfilGestao(perfil) {
+  return ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"].includes((perfil || "").toUpperCase());
+}
 
 /**
  * GET /api/filiados/me
@@ -27,13 +36,6 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    // Se estiver arquivado, nega acesso ao portal por padrão (além de bloqueado=true no arquivamento)
-    if (filiado.arquivado_em) {
-      return res.status(403).json({
-        message: "Cadastro arquivado. Acesso ao portal indisponível. Contate o sindicato.",
-      });
-    }
-
     const { senha_hash, twofa_secret, ...dadosFiliado } = filiado;
 
     return res.json({
@@ -42,40 +44,31 @@ exports.getMe = async (req, res) => {
     });
   } catch (err) {
     log.error("FiliadosGetMeErro", err);
-    return res
-      .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
   }
 };
 
 /**
  * GET /api/filiados
- * Query params:
- * - q
- * - incluirArquivados=1  -> inclui arquivados
- * - arquivados=1         -> somente arquivados (quando incluirArquivados não estiver ativo)
+ * Query:
+ *  - q: termo de busca
+ *  - incluirArquivados=1: inclui arquivados (somente perfis de gestão)
  */
 exports.listarFiliados = async (req, res) => {
   try {
-    const perfilAcesso = req.user.perfil_acesso || "FILIADO";
+    const perfilAcesso = (req.user.perfil_acesso || "FILIADO").toUpperCase();
     const termoBusca = (req.query.q || "").toString();
 
-    const incluirArquivados =
-      req.query.incluirArquivados === "1" ||
-      req.query.incluirArquivados === "true";
+    const incluirArquivados = String(req.query.incluirArquivados || "").trim() === "1";
 
-    const somenteArquivados =
-      req.query.arquivados === "1" ||
-      req.query.arquivados === "true";
+    // Somente perfis de gestão podem listar arquivados
+    const incluirArquivadosEfetivo = incluirArquivados && perfilGestao(perfilAcesso);
 
     if (termoBusca) {
       log.info("FiliadosBusca", { user: req.user.id, termo: termoBusca });
     }
 
-    const lista = await listarParaPerfil(perfilAcesso, termoBusca, {
-      incluirArquivados,
-      somenteArquivados,
-    });
+    const lista = await listarParaPerfil(perfilAcesso, termoBusca, incluirArquivadosEfetivo);
 
     return res.json({
       total: lista.length,
@@ -83,9 +76,7 @@ exports.listarFiliados = async (req, res) => {
     });
   } catch (err) {
     log.error("FiliadosListarErro", err);
-    return res
-      .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
   }
 };
 
@@ -95,7 +86,7 @@ exports.listarFiliados = async (req, res) => {
 exports.atualizarMeusDados = async (req, res) => {
   try {
     const id = req.user.id;
-    const body = req.body;
+    const body = req.body || {};
 
     const atualizado = await atualizarDadosProprios(id, {
       telefone1: body.telefone1,
@@ -119,9 +110,7 @@ exports.atualizarMeusDados = async (req, res) => {
     });
   } catch (err) {
     log.error("FiliadosUpdateMeErro", err);
-    return res
-      .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
 
@@ -137,11 +126,11 @@ exports.atualizarFiliado = async (req, res) => {
       return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
     }
 
-    if (!["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"].includes(perfil)) {
+    if (!perfilGestao(perfil)) {
       return res.status(403).json({ message: "Sem permissão." });
     }
 
-    const body = req.body;
+    const body = req.body || {};
 
     // 🟢 VERIFICAÇÃO PROATIVA DE CPF DUPLICADO (EDIÇÃO)
     if (body.cpf) {
@@ -162,13 +151,13 @@ exports.atualizarFiliado = async (req, res) => {
     const payload = {
       nome: body.nome,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
-      data_nascimento: body.data_nascimento,
+      data_nascimento: body.data_nascimento, // esperado: yyyy-MM-dd
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email1: body.email1,
       email2: body.email2,
       lotacao: body.lotacao,
-      situacao: (body.situacao || "ATIVO").toUpperCase(),
+      situacao: body.situacao ? String(body.situacao).toUpperCase() : undefined,
       logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
@@ -177,8 +166,9 @@ exports.atualizarFiliado = async (req, res) => {
       cep: body.cep,
     };
 
+    // Somente ADMIN altera perfil_acesso
     if (perfil === "ADMIN" && body.perfil_acesso) {
-      payload.perfil_acesso = body.perfil_acesso.toUpperCase();
+      payload.perfil_acesso = String(body.perfil_acesso).toUpperCase();
     }
 
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
@@ -187,10 +177,11 @@ exports.atualizarFiliado = async (req, res) => {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    log.info("FiliadoEditadoPorAdmin", {
-      adminId: req.user.id,
+    log.info("FiliadoEditadoPorGestao", {
+      atorId: req.user.id,
       alvoId: idAlvo,
-      campos: Object.keys(payload),
+      atorPerfil: perfil,
+      campos: Object.keys(payload).filter((k) => payload[k] !== undefined),
     });
 
     return res.json({
@@ -198,18 +189,13 @@ exports.atualizarFiliado = async (req, res) => {
       filiado: atualizado,
     });
   } catch (err) {
-    if (
-      err.code === "23505" ||
-      err.code === "ER_DUP_ENTRY" ||
-      (err.message && err.message.includes("duplicate"))
-    ) {
+    // fallback (race-condition): constraint única no CPF
+    if (err && (err.code === "23505" || err.code === "ER_DUP_ENTRY" || (err.message && err.message.includes("duplicate")))) {
       return res.status(409).json({ message: "CPF duplicado no sistema." });
     }
 
-    log.error("FiliadosUpdateAdminErro", err);
-    return res
-      .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    log.error("FiliadosUpdateGestaoErro", err);
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
 
@@ -224,16 +210,14 @@ exports.criarFiliado = async (req, res) => {
       return res.status(403).json({ message: Textos.FILIADOS.PERMISSAO_CRIAR });
     }
 
-    const body = req.body;
+    const body = req.body || {};
     if (!body.nome || !body.cpf || !body.email1) {
       return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS });
     }
 
+    // 🟢 VERIFICAÇÃO PROATIVA DE CPF DUPLICADO (CRIAÇÃO)
     const cpfLimpo = normalizarCpf(body.cpf);
-    const checkCpf = await pool.query(
-      "SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1",
-      [cpfLimpo]
-    );
+    const checkCpf = await pool.query("SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
 
     if (checkCpf.rows.length > 0) {
       const dono = checkCpf.rows[0].nome;
@@ -243,7 +227,7 @@ exports.criarFiliado = async (req, res) => {
     }
 
     const dadosNovo = {
-      nome: body.nome.trim(),
+      nome: String(body.nome).trim(),
       cpf: cpfLimpo,
       data_nascimento: body.data_nascimento || null,
       telefone1: body.telefone1 || null,
@@ -305,24 +289,22 @@ exports.arquivarFiliado = async (req, res) => {
       return res.status(403).json({ message: "Sem permissão." });
     }
 
-    const motivo = (req.body && req.body.motivo) ? String(req.body.motivo) : null;
+    const motivo = String(req.body?.motivo || "").trim();
+    if (!motivo) {
+      return res.status(400).json({ message: "Motivo é obrigatório para arquivar." });
+    }
 
-    const atualizado = await arquivarFiliadoPorId(idAlvo, req.user.id, motivo);
+    const atualizado = await arquivarFiliadoPorId(idAlvo, {
+      atorId: req.user.id,
+      atorPerfil: perfil,
+      motivo,
+    });
 
     if (!atualizado) {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    log.info("FiliadoArquivado", {
-      userId: req.user.id,
-      alvoId: idAlvo,
-      motivo,
-    });
-
-    return res.json({
-      message: "Cadastro arquivado com sucesso.",
-      filiado: atualizado,
-    });
+    return res.json({ message: "Cadastro arquivado com sucesso.", filiado: atualizado });
   } catch (err) {
     log.error("FiliadosArquivarErro", err);
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -345,23 +327,81 @@ exports.desarquivarFiliado = async (req, res) => {
       return res.status(403).json({ message: "Sem permissão." });
     }
 
-    const atualizado = await desarquivarFiliadoPorId(idAlvo, req.user.id);
+    const atualizado = await desarquivarFiliadoPorId(idAlvo, {
+      atorId: req.user.id,
+      atorPerfil: perfil,
+    });
 
     if (!atualizado) {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    log.info("FiliadoDesarquivado", {
-      userId: req.user.id,
-      alvoId: idAlvo,
-    });
+    return res.json({ message: "Cadastro desarquivado com sucesso.", filiado: atualizado });
+  } catch (err) {
+    log.error("FiliadosDesarquivarErro", err);
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+  }
+};
+
+/**
+ * POST /api/filiados/me/avatar  (upload)
+ * Requer multipart/form-data (campo: avatar)
+ */
+exports.uploadAvatarMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Arquivo não enviado (campo 'avatar')." });
+    }
+
+    const publicUrl = `/uploads/avatars/${req.file.filename}`;
+    const atualizado = await atualizarFiliadoPorId(userId, { avatar_url: publicUrl });
 
     return res.json({
-      message: "Cadastro desarquivado com sucesso.",
+      message: "Avatar atualizado com sucesso.",
+      avatar_url: publicUrl,
       filiado: atualizado,
     });
   } catch (err) {
-    log.error("FiliadosDesarquivarErro", err);
+    log.error("FiliadosUploadAvatarMeErro", err);
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+  }
+};
+
+/**
+ * POST /api/filiados/:id/avatar (upload por gestão)
+ */
+exports.uploadAvatarPorId = async (req, res) => {
+  try {
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil)) {
+      return res.status(403).json({ message: "Sem permissão." });
+    }
+
+    const idAlvo = parseInt(req.params.id, 10);
+    if (Number.isNaN(idAlvo)) {
+      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Arquivo não enviado (campo 'avatar')." });
+    }
+
+    const publicUrl = `/uploads/avatars/${req.file.filename}`;
+    const atualizado = await atualizarFiliadoPorId(idAlvo, { avatar_url: publicUrl });
+
+    if (!atualizado) {
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    }
+
+    return res.json({
+      message: "Avatar atualizado com sucesso.",
+      avatar_url: publicUrl,
+      filiado: atualizado,
+    });
+  } catch (err) {
+    log.error("FiliadosUploadAvatarPorIdErro", err);
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
@@ -376,9 +416,7 @@ exports.desativar2fa = async (req, res) => {
     const atualizado = await salvarTwoFaSecret(userId, null);
 
     if (!atualizado) {
-      return res
-        .status(400)
-        .json({ message: "Não foi possível desativar o 2FA. Tente novamente." });
+      return res.status(400).json({ message: "Não foi possível desativar o 2FA. Tente novamente." });
     }
 
     log.info("Filiado2FADesativado", { userId });
@@ -389,8 +427,6 @@ exports.desativar2fa = async (req, res) => {
     });
   } catch (err) {
     log.error("Filiado2FADesativarErro", err);
-    return res
-      .status(500)
-      .json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };

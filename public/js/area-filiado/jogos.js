@@ -821,7 +821,7 @@ async function renderizarLista(container) {
 
     const rows = lista
       .map((i) => {
-        const idade = calcularIdade2026(i.data_nascimento);
+        const idade = calcularIdade2026(i.data_nascimento ?? i.ano_nascimento ?? i.nascimento ?? i.dataNascimento ?? i.anoNascimento);
         return `
           <tr>
             <td><strong>${i.nome_filiado || "-"}</strong></td>

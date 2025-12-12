@@ -15,15 +15,18 @@ const ressarcimentoRoutes = require("./routes/ressarcimento.routes");
 const jogosRoutes = require("./routes/jogos.routes");
 const instagramRoutes = require("./routes/instagram.routes");
 
-// 🟢 NOVO: Rota de Publicações (Google Drive)
-const publicacoesRoutes = require("./routes/publicacoes.routes"); 
+// 🟢 Rota de Publicações (Google Drive)
+const publicacoesRoutes = require("./routes/publicacoes.routes");
+
+// 🟣 NOVO: Rota de Votações
+const votacoesRoutes = require("./routes/votacoes.routes");
 
 // ==============================
 // REGISTRO DE ROTAS (Prefixos)
 // ==============================
 
 // Rota de status do servidor
-app.use('/api/status', require('./routes/statusRouter'));
+app.use("/api/status", require("./routes/statusRouter"));
 
 // Autenticação (Login, 2FA, Me)
 app.use("/api/auth", authRoutes);
@@ -46,8 +49,11 @@ app.use("/api/jogos", jogosRoutes);
 // Instagram (Feed)
 app.use("/api/instagram", instagramRoutes);
 
-// 🟢 NOVO: Registrar rota de publicações
+// Publicações
 app.use("/api/publicacoes", publicacoesRoutes);
+
+// 🟣 NOVO: Votações
+app.use("/api/votacoes", votacoesRoutes);
 
 // Health Check simples
 app.get("/health", (_, res) => {

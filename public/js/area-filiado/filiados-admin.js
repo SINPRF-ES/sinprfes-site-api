@@ -13,29 +13,71 @@ const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 let perfilAtual = null;
 let handlersConfigurados = false;
 
+// Helpers
+function toDateInputValue(v) {
+  // Aceita: yyyy-MM-dd, yyyy-MM-ddTHH:mm..., dd/MM/yyyy ou null
+  if (!v) return "";
+  const s = String(v).trim();
+  const mBr = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (mBr) return `${mBr[3]}-${mBr[2]}-${mBr[1]}`;
+  const mIso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (mIso) return `${mIso[1]}-${mIso[2]}-${mIso[3]}`;
+  return "";
+}
+
+function avatarHtml(avatarUrl, nome) {
+  const safeNome = (nome || "").toString();
+  // Avatar em public/img -> servido como /img/...
+  const src = avatarUrl || "/img/avatar-placeholder.png";
+  return `<img class="avatar-mini" src="${src}" alt="Avatar ${safeNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
+}
+
+function escapeHtml(v) {
+  return String(v ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 export async function inicializarFiliados(perfil) {
   const listaEl = document.getElementById("lista-filiados");
   if (!listaEl) return;
 
   perfilAtual = (perfil || "").toString().trim().toUpperCase();
 
-  // 1) CSS
+  // 1) CSS (premium + robusto + arquivamento + avatar)
   if (!document.getElementById("style-filiados-premium")) {
     const s = document.createElement("style");
     s.id = "style-filiados-premium";
     s.textContent = `
+      .search-box-container { background:#003366; padding:20px; border-radius:12px; margin-bottom:25px; box-shadow:0 4px 10px rgba(0,0,0,0.2); color:#fff; }
+
       .filiado-card { background:#fff; border-left:5px solid #ccc; border-radius:8px; padding:20px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); color:#333; transition:transform 0.2s; }
       .filiado-card:hover { transform: translateY(-2px); box-shadow:0 5px 15px rgba(0,0,0,0.1); }
       .status-ativo { border-left-color:#27ae60; }
       .status-veterano { border-left-color:#f39c12; }
       .status-pensionista { border-left-color:#8e44ad; }
-      .status-arquivado { border-left-color:#7f8c8d; }
+      .status-arquivado { border-left-color:#7f8c8d; opacity: 0.96; }
 
-      .filiado-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; }
-      .filiado-nome { font-size:1.2rem; font-weight:700; color:#003366; }
+      /* HEADER robusto (não quebra com 2 telefones) */
+      .filiado-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:15px; }
+      .filiado-left { display:flex; align-items:flex-start; gap:12px; min-width: 240px; flex: 1; }
+      .filiado-info-main { flex: 1; min-width: 200px; }
+      .filiado-info-extra { text-align:right; min-width: 180px; }
+      .filiado-nome { font-size:1.2rem; font-weight:700; color:#003366; line-height:1.2; margin-bottom:4px; }
       .filiado-meta { font-size:0.9rem; color:#666; margin-top:4px; }
-      .filiado-badge { background:#eee; padding:4px 8px; border-radius:4px; font-size:0.8rem; font-weight:700; text-transform:uppercase; display:inline-block; }
+      .filiado-badge { background:#eee; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; text-transform:uppercase; display:inline-block; margin-bottom:4px; }
       .badge-arquivado { background:#ecf0f1; color:#2c3e50; border:1px solid #bdc3c7; margin-left:8px; }
+      .filiado-phones { margin-top:5px; font-size:0.9rem; color:#555; white-space:normal; }
+
+      /* Avatar */
+      .avatar-mini { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid #e9ecef; background:#f8f9fa; }
+      .avatar-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+      .avatar-preview { width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #e9ecef; background:#f8f9fa; }
+      .btn-upload-avatar { background:#34495e; color:#fff; border:none; padding:8px 10px; border-radius:5px; cursor:pointer; font-weight:700; }
+      .btn-upload-avatar:hover { background:#2c3e50; }
 
       details.edit-area { margin-top:15px; border-top:1px solid #eee; padding-top:15px; }
       summary.btn-editar-toggle { cursor:pointer; color:#2980b9; font-weight:600; list-style:none; display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:4px; transition:background 0.2s; }
@@ -63,21 +105,38 @@ export async function inicializarFiliados(perfil) {
       .row-filtros label { font-size:0.9rem; display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
 
       .cep-wrapper { position:relative; }
-      .cep-wrapper input { width:100%; padding-right:40px; box-sizing:border-box; }
+      .cep-wrapper input { width:100%; padding-right:44px; box-sizing:border-box; }
       .btn-buscar-cep-admin {
-        position:absolute; right:5px; top:50%; transform:translateY(-50%);
-        border:none; background:transparent; cursor:pointer; font-size:1.2rem; padding:5px; color:#2980b9; transition:transform 0.2s;
+        border: 1px solid #ccc;
+        background: #e9ecef;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 1.1rem;
+        transition: background 0.2s;
+        min-width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        right: 4px;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 0;
       }
-      .btn-buscar-cep-admin:hover { transform:translateY(-50%) scale(1.1); color:#1abc9c; }
+      .btn-buscar-cep-admin:hover { background: #dde2e6; }
 
-      @media (max-width:600px){ .filiado-header{flex-direction:column;} }
+      @media (max-width:650px){
+        .filiado-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .filiado-info-extra { text-align: left; margin-top: 5px; width: 100%; min-width: 0; }
+        .filiado-left { min-width: 0; }
+      }
     `;
     document.head.appendChild(s);
   }
 
   // 2) Listeners (uma vez)
   if (!handlersConfigurados) {
-    // Botão novo filiado
     const btnNovo = document.getElementById("btn-novo-filiado");
     const containerNovo = document.getElementById("novo-filiado-container");
 
@@ -92,7 +151,6 @@ export async function inicializarFiliados(perfil) {
       }
     }
 
-    // Campo busca
     const campoBusca = document.getElementById("busca-filiados");
     if (campoBusca) {
       const novoInput = campoBusca.cloneNode(true);
@@ -101,7 +159,7 @@ export async function inicializarFiliados(perfil) {
       novoInput.addEventListener("input", (e) => filtrarLista(e.target.value));
       if (novoInput.value) setTimeout(() => filtrarLista(novoInput.value), 100);
 
-      // ✅ Toggle "Mostrar arquivados" – injeção garantida (independe de classes do container)
+      // Toggle "Mostrar arquivados"
       if (!document.getElementById("chk-incluir-arquivados")) {
         const filtros = document.createElement("div");
         filtros.className = "row-filtros";
@@ -111,7 +169,6 @@ export async function inicializarFiliados(perfil) {
             Mostrar arquivados
           </label>
         `;
-
         novoInput.insertAdjacentElement("afterend", filtros);
 
         filtros.querySelector("#chk-incluir-arquivados").addEventListener("change", () => {
@@ -183,37 +240,37 @@ function filtrarLista(termo) {
           : situacao === "VETERANO"
           ? "status-veterano"
           : "status-pensionista";
-
       const classeStatus = arquivado ? "status-arquivado" : classeStatusBase;
 
-      // Telefones (card)
       const tel1Raw = String(f.telefone1 || "").replace(/\D/g, "");
       const tel2Raw = String(f.telefone2 || "").replace(/\D/g, "");
       const tels = [tel1Raw, tel2Raw].filter(Boolean).map(formatarTelefoneTexto).join(" / ");
 
-      const badgeArquivado = arquivado
-        ? `<span class="filiado-badge badge-arquivado">ARQUIVADO</span>`
+      const badgeArquivado = arquivado ? `<span class="filiado-badge badge-arquivado">ARQUIVADO</span>` : "";
+      const motivoHtml = arquivado
+        ? `<div class="filiado-meta">Motivo: ${escapeHtml(f.arquivado_motivo || "-")}</div>`
         : "";
 
       const header = `
         <div class="filiado-header">
-          <div>
-            <div class="filiado-nome">${f.nome} ${badgeArquivado}</div>
-            <div class="filiado-meta">CPF: ${formatarCPF(f.cpf)} &bull; ${f.lotacao || "SEDE"}</div>
-            ${arquivado ? `<div class="filiado-meta">Motivo: ${f.arquivado_motivo || "-"}</div>` : ""}
+          <div class="filiado-left">
+            ${avatarHtml(f.avatar_url, f.nome)}
+            <div class="filiado-info-main">
+              <div class="filiado-nome">${escapeHtml(f.nome)} ${badgeArquivado}</div>
+              <div class="filiado-meta">CPF: ${formatarCPF(f.cpf)} &bull; ${escapeHtml(f.lotacao || "SEDE")}</div>
+              ${motivoHtml}
+            </div>
           </div>
-          <div style="text-align:right;">
+          <div class="filiado-info-extra">
             <span class="filiado-badge" style="background:${classeStatusBase === "status-ativo" ? "#e8f8f5" : "#fef9e7"}; color:#333;">${situacao}</span>
-            <div style="margin-top:5px; font-size:0.9rem; color:#555;">📞 ${tels || "-"}</div>
+            <div class="filiado-phones">📞 ${tels || "-"}</div>
           </div>
         </div>
       `;
 
       if (!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}</div>`;
 
-      // Inputs: se arquivado, desabilita (evita edição acidental)
-      const disabledCpf =
-        !podeEditarCpf || arquivado ? 'disabled style="background:#eee; cursor:not-allowed;"' : "";
+      const disabledCpf = !podeEditarCpf || arquivado ? 'disabled style="background:#eee; cursor:not-allowed;"' : "";
       const disabledAll = arquivado ? 'disabled style="background:#eee; cursor:not-allowed;"' : "";
 
       const adminSection = ehAdmin
@@ -231,6 +288,8 @@ function filtrarLista(termo) {
         `
         : "";
 
+      const dnValue = toDateInputValue(f.data_nascimento);
+
       return `
         <div class="filiado-card ${classeStatus}">
           ${header}
@@ -238,34 +297,59 @@ function filtrarLista(termo) {
             <summary class="btn-editar-toggle">✏️ Editar dados completos <span class="seta" style="margin-left:5px;">▼</span></summary>
             <form class="form-edit-filiado" data-id="${f.id}" data-arquivado="${arquivado ? "1" : "0"}" style="margin-top:15px;">
               <div class="edit-grid">
-                <div class="edit-group"><label>Nome</label><input name="nome" value="${f.nome}" ${disabledAll}></div>
+                <div class="edit-group"><label>Nome</label><input name="nome" value="${escapeHtml(f.nome)}" ${disabledAll}></div>
                 <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${disabledCpf} placeholder="Somente números"></div>
-                <div class="edit-group"><label>E-mail 1</label><input name="email1" value="${f.email1 || ""}" ${disabledAll}></div>
-                <div class="edit-group"><label>E-mail 2</label><input name="email2" value="${f.email2 || ""}" ${disabledAll}></div>
+
+                <div class="edit-group"><label>Data de Nascimento</label><input name="data_nascimento" type="date" value="${dnValue}" ${disabledAll}></div>
+
+                <div class="edit-group"><label>E-mail 1</label><input name="email1" value="${escapeHtml(f.email1 || "")}" ${disabledAll}></div>
+                <div class="edit-group"><label>E-mail 2</label><input name="email2" value="${escapeHtml(f.email2 || "")}" ${disabledAll}></div>
                 <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${tel1Raw}" ${disabledAll}></div>
                 <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${tel2Raw}" ${disabledAll}></div>
-                <div class="edit-group"><label>Lotação</label><input name="lotacao" value="${f.lotacao || ""}" ${disabledAll}></div>
+                <div class="edit-group"><label>Lotação</label><input name="lotacao" value="${escapeHtml(f.lotacao || "")}" ${disabledAll}></div>
                 <div class="edit-group"><label>Situação</label>
                   <select name="situacao" ${disabledAll}>
                     ${SITUACAO_OPCOES.map((op) => `<option value="${op}" ${op === situacao ? "selected" : ""}>${op}</option>`).join("")}
                   </select>
                 </div>
-                <div class="edit-group"><label>Endereço / Bairro</label><input name="logradouro_bairro" value="${f.logradouro_bairro || ""}" ${disabledAll}></div>
+
+                <div class="edit-group">
+                  <label>Endereço / Bairro</label>
+                  <input name="logradouro_bairro" value="${escapeHtml(f.logradouro_bairro || "")}" ${disabledAll} ${arquivado ? "" : 'readonly style="background:#f8f9fa;"'}>
+                </div>
+
                 ${adminSection}
               </div>
 
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin-top:10px;">
-                <div class="edit-group"><label>Nº</label><input name="numero" value="${f.numero || ""}" ${disabledAll}></div>
-                <div class="edit-group"><label>Compl.</label><input name="complemento" value="${f.complemento || ""}" ${disabledAll}></div>
+                <div class="edit-group"><label>Nº</label><input name="numero" value="${escapeHtml(f.numero || "")}" ${disabledAll}></div>
+                <div class="edit-group"><label>Compl.</label><input name="complemento" value="${escapeHtml(f.complemento || "")}" ${disabledAll}></div>
+
                 <div class="edit-group">
                   <label>CEP</label>
                   <div class="cep-wrapper">
-                    <input name="cep" value="${f.cep || ""}" maxlength="8" placeholder="00000000" ${disabledAll}>
+                    <input class="campo-cep-admin" name="cep" value="${String(f.cep || "").replace(/\D/g, "")}" maxlength="8" placeholder="00000000" ${disabledAll}>
                     <button type="button" class="btn-buscar-cep-admin" title="Buscar Endereço" ${arquivado ? "disabled" : ""}>🔍</button>
                   </div>
                 </div>
-                <div class="edit-group"><label>Cidade</label><input name="cidade" value="${f.cidade || ""}" ${disabledAll}></div>
-                <div class="edit-group"><label>UF</label><input name="uf" value="${f.uf || ""}" maxlength="2" ${disabledAll}></div>
+
+                <div class="edit-group">
+                  <label>Cidade</label>
+                  <input name="cidade" value="${escapeHtml(f.cidade || "")}" ${disabledAll} ${arquivado ? "" : 'readonly style="background:#f8f9fa;"'}>
+                </div>
+                <div class="edit-group">
+                  <label>UF</label>
+                  <input name="uf" value="${escapeHtml(f.uf || "")}" maxlength="2" ${disabledAll} ${arquivado ? "" : 'readonly style="background:#f8f9fa; text-transform:uppercase;"'}>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;">
+                <label style="font-size:0.8rem; color:#666; font-weight:bold;">Avatar (foto)</label>
+                <div class="avatar-actions">
+                  <img class="avatar-preview" src="${f.avatar_url || "/img/avatar-placeholder.png"}" onerror="this.src='/img/avatar-placeholder.png'">
+                  <input type="file" name="avatar_file" accept="image/*" ${arquivado ? "disabled" : ""}>
+                  <button type="button" class="btn-upload-avatar" ${arquivado ? "disabled" : ""}>Enviar foto</button>
+                </div>
               </div>
 
               ${!arquivado ? `<button type="submit" class="btn-save">💾 Salvar Alterações</button>` : ""}
@@ -291,11 +375,9 @@ function filtrarLista(termo) {
       const arquivado = frm.dataset.arquivado === "1";
       const id = frm.dataset.id;
 
-      // Máscaras telefone (utils já aplica formatação inicial também)
       aplicarMascaraTelefone(frm.querySelector('input[name="telefone1"]'));
       aplicarMascaraTelefone(frm.querySelector('input[name="telefone2"]'));
 
-      // Máscara CPF (somente se editável)
       const inputCpf = frm.querySelector('input[name="cpf"]');
       if (inputCpf && !inputCpf.disabled) {
         inputCpf.addEventListener("input", (e) => {
@@ -307,7 +389,6 @@ function filtrarLista(termo) {
         });
       }
 
-      // CEP + ViaCEP (apenas se não arquivado)
       const inputCep = frm.querySelector('input[name="cep"]');
       const btnCep = frm.querySelector(".btn-buscar-cep-admin");
 
@@ -323,7 +404,7 @@ function filtrarLista(termo) {
           if (cepVal.length !== 8) return alert("CEP inválido. Digite 8 números.");
 
           const originalText = btnCep.innerText;
-          btnCep.innerText = "⏳";
+          btnCep.innerText = "...";
 
           try {
             const r = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
@@ -345,23 +426,69 @@ function filtrarLista(termo) {
             btnCep.innerText = originalText;
           }
         });
+
+        inputCep.addEventListener("blur", () => {
+          if (inputCep.value.replace(/\D/g, "").length === 8) btnCep.click();
+        });
       }
 
-      // Arquivar / Desarquivar
+      const btnAvatar = frm.querySelector(".btn-upload-avatar");
+      const inputAvatar = frm.querySelector('input[name="avatar_file"]');
+      const imgPreview = frm.querySelector(".avatar-preview");
+
+      if (!arquivado && inputAvatar && imgPreview) {
+        inputAvatar.addEventListener("change", () => {
+          const file = inputAvatar.files && inputAvatar.files[0];
+          if (file) imgPreview.src = URL.createObjectURL(file);
+        });
+      }
+
+      if (!arquivado && btnAvatar && inputAvatar) {
+        btnAvatar.addEventListener("click", async () => {
+          const file = inputAvatar.files && inputAvatar.files[0];
+          if (!file) return alert("Selecione uma foto (arquivo) antes de enviar.");
+
+          const fd = new FormData();
+          fd.append("avatar", file);
+
+          const original = btnAvatar.innerText;
+          btnAvatar.disabled = true;
+          btnAvatar.innerText = "Enviando...";
+
+          try {
+            const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
+            const d = await r.json().catch(() => ({}));
+
+            if (r.ok) {
+              const idx = cacheLista.findIndex((i) => String(i.id) === String(id));
+              if (idx !== -1) {
+                const novoAvatar = d.avatar_url || d.filiado?.avatar_url || cacheLista[idx].avatar_url || null;
+                cacheLista[idx].avatar_url = novoAvatar;
+              }
+              filtrarLista(document.getElementById("busca-filiados")?.value || "");
+              alert("Foto enviada com sucesso.");
+            } else {
+              alert(d.message || d.error || "Não foi possível enviar a foto.");
+            }
+          } catch {
+            alert("Erro de conexão ao enviar foto.");
+          } finally {
+            btnAvatar.disabled = false;
+            btnAvatar.innerText = original;
+          }
+        });
+      }
+
       frm.querySelectorAll("button[data-action]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const action = btn.dataset.action;
 
           if (action === "arquivar") {
-            const motivo =
-              prompt("Motivo do arquivamento (ex.: desligado, óbito, a pedido):") || "";
+            const motivo = prompt("Motivo do arquivamento (ex.: desligado, óbito, a pedido):") || "";
             if (!confirm("Confirmar arquivamento deste cadastro?")) return;
 
             try {
-              const r = await apiFetch(`/api/filiados/${id}/arquivar`, {
-                method: "POST",
-                body: { motivo },
-              });
+              const r = await apiFetch(`/api/filiados/${id}/arquivar`, { method: "POST", body: { motivo } });
 
               if (r.ok) {
                 alert("Cadastro arquivado.");
@@ -383,10 +510,7 @@ function filtrarLista(termo) {
             if (!confirm("Confirmar desarquivamento deste cadastro?")) return;
 
             try {
-              const r = await apiFetch(`/api/filiados/${id}/desarquivar`, {
-                method: "POST",
-                body: {},
-              });
+              const r = await apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST", body: {} });
 
               if (r.ok) {
                 alert("Cadastro desarquivado.");
@@ -406,7 +530,6 @@ function filtrarLista(termo) {
         });
       });
 
-      // Submit (somente se não arquivado)
       frm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -425,31 +548,29 @@ function filtrarLista(termo) {
         const fd = new FormData(frm);
         const payload = {};
         fd.forEach((v, k) => {
+          if (k === "avatar_file") return;
           if (k.includes("telefone") || k === "cep" || k === "cpf") payload[k] = String(v).replace(/\D/g, "");
           else payload[k] = v;
         });
 
-        // perfil_acesso: somente ADMIN
-        const ehAdmin = perfilAtual === "ADMIN";
         if (!ehAdmin) delete payload.perfil_acesso;
 
-        // cpf: ADMIN/DIRETORIA/FUNCIONARIO
         const podeEditarCpfNoSubmit = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
         if (!podeEditarCpfNoSubmit) delete payload.cpf;
 
         try {
           const r = await apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
+          const d = await r.json().catch(() => ({}));
 
           if (r.ok) {
             alert("Salvo com sucesso!");
-            await carregarLista();
+            const idx = cacheLista.findIndex((i) => String(i.id) === String(id));
+            if (idx !== -1) cacheLista[idx] = { ...cacheLista[idx], ...payload };
+            filtrarLista(document.getElementById("busca-filiados")?.value || "");
+          } else if (r.status === 409) {
+            alert(d.message || "CPF já cadastrado para outro filiado.");
           } else {
-            let erroMsg = "Erro ao salvar.";
-            try {
-              const errData = await r.json();
-              if (errData?.message) erroMsg = errData.message;
-            } catch {}
-            alert(erroMsg);
+            alert(d.message || "Erro ao salvar.");
           }
         } catch {
           alert("Erro de conexão.");
@@ -507,7 +628,6 @@ function abrirNovoFiliado(container) {
     </div>
   `;
 
-  // Máscara de CPF no formulário de criação
   const inputCpf = container.querySelector('input[name="cpf"]');
   if (inputCpf) {
     inputCpf.addEventListener("input", (e) => {
@@ -535,18 +655,14 @@ function abrirNovoFiliado(container) {
 
     try {
       const r = await apiFetch("/api/filiados", { method: "POST", body: payload });
+      const d = await r.json().catch(() => ({}));
 
       if (r && r.ok) {
         alert("Criado!");
         container.innerHTML = "";
         await carregarLista();
       } else {
-        let msg = "Erro ao criar.";
-        try {
-          const d = await r.json();
-          if (d?.message) msg = d.message;
-        } catch {}
-        alert(msg);
+        alert(d.message || d.error || "Erro ao criar.");
       }
     } catch {
       alert("Erro de conexão.");
