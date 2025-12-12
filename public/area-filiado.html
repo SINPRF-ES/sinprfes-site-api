@@ -30,6 +30,9 @@
           <button class="af-nav-item" data-target="sec-filiados">
             Filiados
           </button>
+          <button class="af-nav-item" data-target="sec-publicacoes">
+            Publicações
+          </button>
           <button class="af-nav-item" data-target="sec-ressarcimento">
             Ressarcimento
           </button>
@@ -47,32 +50,29 @@
 
       <div class="af-main">
         <section id="sec-meus-dados" class="af-section active">
-  <div class="section-card">
-    <h2 class="section-title">
-      <span class="emoji">📋</span>
-      <span>Meus dados cadastrais</span>
-    </h2>
-    <p class="section-subtitle">
-      Sempre confira se seus dados estão atualizados. Em caso de dúvida, fale com a secretaria do sindicato.
-    </p>
+          <div class="section-card">
+            <h2 class="section-title">
+              <span class="emoji">📋</span>
+              <span>Meus dados cadastrais</span>
+            </h2>
+            <p class="section-subtitle">
+              Sempre confira se seus dados estão atualizados. Em caso de dúvida, fale com a secretaria do sindicato.
+            </p>
 
-    <div
-      id="alerta-endereco-desatualizado"
-      class="section-box"
-      style="color: #c0392b; font-weight: bold; margin-bottom: 15px; display: none;"
-    >
-    </div>
+            <div
+              id="alerta-endereco-desatualizado"
+              class="section-box"
+              style="color: #c0392b; font-weight: bold; margin-bottom: 15px; display: none;"
+            >
+            </div>
 
-    <div id="area-filiado-conteudo">
-      Carregando seus dados...
-    </div>
+            <div id="area-filiado-conteudo">
+              Carregando seus dados...
+            </div>
 
-    <!-- NOVO: container dinâmico para a segurança da conta (2FA) -->
-    <div id="seguranca-container"></div>
-
-  </div>
-</section>
-
+            <div id="seguranca-container"></div>
+          </div>
+        </section>
 
         <section id="sec-filiados" class="af-section" aria-hidden="true">
           <div class="section-card">
@@ -122,6 +122,10 @@
           </div>
         </section>
 
+        <section id="sec-publicacoes" class="af-section" aria-hidden="true" style="display: none;">
+            <div class="section-card"></div>
+        </section>
+
         <section id="sec-ressarcimento" class="af-section" aria-hidden="true">
           <div class="section-card">
             <h2 class="section-title">
@@ -132,233 +136,7 @@
               Preencha os dados abaixo para solicitar ressarcimento de despesas
               decorrentes de atividade sindical, conforme Resolução nº 01/2025.
             </p>
-
-            <form id="form-ressarcimento" class="form-grid">
-              <fieldset class="section-box">
-                <legend>Dados do filiado</legend>
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-nome">Nome</label>
-                    <input type="text" id="res-nome" readonly />
-                  </div>
-                  <div class="field-group">
-                    <label for="res-cpf">CPF</label>
-                    <input type="text" id="res-cpf" readonly />
-                  </div>
-                </div>
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-email">E-mail para envio do comprovante</label>
-                    <input type="email" id="res-email" />
-                    <p class="field-hint">
-                      Usaremos este e-mail para enviar uma cópia em PDF da sua solicitação.
-                    </p>
-                  </div>
-                  <div class="field-group">
-                    <label for="res-telefone">Telefone para contato</label>
-                    <input type="text" id="res-telefone" />
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="section-box" style="margin-top: 16px;">
-                <legend>Dados da atividade sindical</legend>
-
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-data-inicio">Data de início</label>
-                    <input type="date" id="res-data-inicio" required />
-                  </div>
-                  <div class="field-group">
-                    <label for="res-data-fim">Data de término</label>
-                    <input type="date" id="res-data-fim" required />
-                  </div>
-                </div>
-
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-local">Local da atividade (município/UF)</label>
-                    <input
-                      type="text"
-                      id="res-local"
-                      placeholder="Ex.: Vitória/ES"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-descricao">Descrição resumida da atividade</label>
-                    <textarea
-                      id="res-descricao"
-                      rows="3"
-                      placeholder="Informe qual foi a atividade sindical, evento, reunião, deslocamento, etc."
-                      required
-                    ></textarea>
-                  </div>
-                </div>
-
-                <div class="field-row">
-                  <div class="field-group">
-                    <label>Diárias calculadas</label>
-                    <input type="text" id="res-diarias" readonly />
-                    <p class="field-hint">
-                      Cálculo automático: dias cheios + 70% do dia de retorno, com base nas
-                      datas informadas.
-                    </p>
-                  </div>
-                  <div class="field-group">
-                    <label>Valor de diárias (R$)</label>
-                    <input type="text" id="res-valor-diarias" readonly />
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="section-box" style="margin-top: 16px;">
-                <legend>Deslocamento com veículo próprio</legend>
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-km">Quilometragem total (km)</label>
-                    <input
-                      type="number"
-                      id="res-km"
-                      min="0"
-                      step="0.1"
-                      placeholder="Ex.: 350"
-                    />
-                    <p class="field-hint">
-                      Informe o total rodado, já somando <strong>ida e volta</strong> e
-                      eventuais deslocamentos internos.
-                    </p>
-                  </div>
-                  <div class="field-group">
-                    <label>Valor de km (R$)</label>
-                    <input type="text" id="res-valor-km" readonly />
-                    <p class="field-hint">
-                      Cálculo automático: R$ 1,50 por km.
-                    </p>
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="section-box" style="margin-top: 16px;">
-                <legend>Dados bancários para ressarcimento</legend>
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-banco">Banco</label>
-                    <input
-                      type="text"
-                      id="res-banco"
-                      placeholder="Ex.: Banco do Brasil"
-                    />
-                  </div>
-                  <div class="field-group">
-                    <label for="res-agencia">Agência</label>
-                    <input type="text" id="res-agencia" placeholder="Ex.: 1234-5" />
-                  </div>
-                  <div class="field-group">
-                    <label for="res-conta">Conta corrente</label>
-                    <input type="text" id="res-conta" placeholder="Ex.: 12345-6" />
-                  </div>
-                </div>
-
-                <div class="field-row">
-                  <div class="field-group" style="flex: 1 1 100%;">
-                    <label for="res-pix">Chave PIX (opcional)</label>
-                    <input
-                      type="text"
-                      id="res-pix"
-                      placeholder="Se preferir receber por PIX, informe a chave."
-                    />
-                    <p class="field-hint">
-                      Informe agência/conta <strong>ou</strong> chave PIX, conforme sua preferência.
-                    </p>
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="section-box" style="margin-top: 16px;">
-                <legend>Outros gastos ressarcíveis</legend>
-                <div class="field-row">
-                  <div class="field-group">
-                    <label for="res-valor-outros">Valor total de outros gastos (R$)</label>
-                    <input
-                      type="number"
-                      id="res-valor-outros"
-                      min="0"
-                      step="0.01"
-                      placeholder="0,00"
-                    />
-                    <p class="field-hint">
-                      Some aqui valores de estacionamento, passagens, Uber, táxi, etc.
-                    </p>
-                  </div>
-                  <div class="field-group">
-                    <label for="res-descricao-outros">Descrição dos outros gastos</label>
-                    <textarea
-                      id="res-descricao-outros"
-                      rows="4"
-                      placeholder="Ex.: 2 pedágios na BR-101, estacionamento no aeroporto, passagem rodoviária Vitória x Colatina, 2 corridas de Uber..."
-                    ></textarea>
-                    <p class="field-hint">
-                      Detalhe aqui o que compõe o valor total informado ao lado.
-                    </p>
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="section-box" style="margin-top: 16px;">
-                <legend>Anexos (comprovantes)</legend>
-                <div class="field-row">
-                  <div class="field-group" style="flex: 1 1 100%;">
-                    <label for="res-anexos">Notas fiscais, comprovantes, passagens, etc.</label>
-                    <input
-                      type="file"
-                      id="res-anexos"
-                      name="anexos"
-                      multiple
-                      accept=".pdf,image/*"
-                    />
-                    <p class="field-hint">
-                      Você pode anexar mais de um arquivo. O sindicato usará esses documentos
-                      para conferência. Em etapa posterior, podemos consolidar tudo em um único PDF.
-                    </p>
-                  </div>
-                </div>
-              </fieldset>
-
-              <div class="section-box" style="margin-top: 16px;">
-                <div class="field-row">
-                  <div class="field-group">
-                    <label>Total estimado do ressarcimento (R$)</label>
-                    <input type="text" id="res-valor-total" readonly />
-                    <p class="field-hint">
-                      Soma automática: diárias + km + outros gastos.
-                    </p>
-                  </div>
-                </div>
-                <p class="field-hint">
-                  Ao enviar esta solicitação, você declara que as informações prestadas são verdadeiras
-                  e autoriza o SINPRF/ES a utilizá-las para fins de análise e pagamento de ressarcimento,
-                  conforme Resolução nº 01/2025.
-                </p>
-                <p class="field-hint">
-                  O documento será considerado assinado eletronicamente:
-                  <strong>
-                    “Assinado eletronicamente mediante uso de login e senha pessoais na plataforma
-                    do SINPRF/ES, nos termos do art. 10, § 2º, da MP nº 2.200-2/2001 e da Resolução nº 01/2025.”
-                  </strong>
-                </p>
-              </div>
-
-              <div class="form-actions" style="margin-top: 16px;">
-                <button type="submit" class="btn btn-primary">
-                  Enviar pedido de ressarcimento
-                </button>
-                <span id="res-status" class="field-hint" style="margin-left: 12px;"></span>
-              </div>
-            </form>
+            <div class="section-card">Carregando formulário...</div>
           </div>
         </section>
 

@@ -6,57 +6,52 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../public")));
 
-// Rotas existentes
-// REMOVER: const primeiroAcessoRoutes = require("./routes/primeiroAcesso.routes");
+// --- IMPORTAÇÃO DAS ROTAS ---
 const filieseRoutes = require("./routes/filiese.routes");
 const filiadosRoutes = require("./routes/filiados.routes");
 const senhaRoutes = require("./routes/senha.routes");
-
-// 🔹 NOVO: rotas de autenticação (login novo + 2FA + /me)
 const authRoutes = require("./routes/auth.routes");
-
-// 🔹 NOVO: rota de ressarcimento
 const ressarcimentoRoutes = require("./routes/ressarcimento.routes");
-
-// 🟢 CORREÇÃO: Importar a rota de Jogos (adicionada recentemente)
 const jogosRoutes = require("./routes/jogos.routes");
-app.use("/api/jogos", jogosRoutes);
+const instagramRoutes = require("./routes/instagram.routes");
+
+// 🟢 NOVO: Rota de Publicações (Google Drive)
+const publicacoesRoutes = require("./routes/publicacoes.routes"); 
 
 // ==============================
-// Prefixos de API
+// REGISTRO DE ROTAS (Prefixos)
 // ==============================
 
-// Rota do app
+// Rota de status do servidor
 app.use('/api/status', require('./routes/statusRouter'));
 
-// Login novo e rotas modernas de autenticação (inclui /login, /2fa, /me etc.)
+// Autenticação (Login, 2FA, Me)
 app.use("/api/auth", authRoutes);
 
-// Filie-se
+// Filie-se (Público)
 app.use("/api", filieseRoutes);
 
-// Dados do filiado
+// Gestão de Filiados
 app.use("/api/filiados", filiadosRoutes);
 
-// Recuperação e redefinição de senha
+// Senha
 app.use("/api/senha", senhaRoutes);
 
-// 🔹 Rota de ressarcimentos
+// Ressarcimentos
 app.use("/api/ressarcimentos", ressarcimentoRoutes);
 
-// 🟢 REGISTRAR a rota de Jogos
+// Jogos
 app.use("/api/jogos", jogosRoutes);
 
+// Instagram (Feed)
+app.use("/api/instagram", instagramRoutes);
+
+// 🟢 NOVO: Registrar rota de publicações
+app.use("/api/publicacoes", publicacoesRoutes);
+
+// Health Check simples
 app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
-// ... imports
-const instagramRoutes = require("./routes/instagram.routes");
 
-// ... middlewares
-
-// Registre a rota (Pode ser pública)
-app.use("/api/instagram", instagramRoutes);
-
-// ... export
 module.exports = app;

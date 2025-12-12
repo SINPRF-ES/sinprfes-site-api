@@ -5,6 +5,8 @@ import { carregarMeusDados } from './area-filiado/meus-dados.js';
 import { inicializarFiliados } from './area-filiado/filiados-admin.js'; 
 import { inicializarRessarcimento } from './area-filiado/ressarcimento.js';
 import { inicializarJogos } from './area-filiado/jogos.js';
+// 🟢 NOVO: Importar módulo de publicações
+import { inicializarPublicacoes } from './area-filiado/publicacoes.js';
 
 console.log("Sistema Área do Filiado: Iniciando...");
 
@@ -18,7 +20,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Tenta pegar do cache, mas define um padrão seguro
     let userInfo = obterUserInfo();
-    // 🟢 Correção: Verifica ambas as chaves possíveis para garantir
     let perfil = userInfo.perfil_acesso || userInfo.perfil || "FILIADO";
     perfil = perfil.toUpperCase();
 
@@ -40,6 +41,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         else if (abaAlvo === 'sec-filiados') inicializarFiliados(perfil);
         else if (abaAlvo === 'sec-ressarcimento') inicializarRessarcimento();
         else if (abaAlvo === 'sec-jogos') inicializarJogos(perfil);
+        // 🟢 NOVO: Gatilho da aba de publicações
+        else if (abaAlvo === 'sec-publicacoes') inicializarPublicacoes();
     });
 
     // 4. Configura Logout
@@ -55,7 +58,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // 5. Inicialização Inteligente
-    // Carrega "Meus Dados" primeiro para pegar o perfil mais recente do banco
     try {
         const dadosFrescos = await carregarMeusDados();
         if (dadosFrescos && dadosFrescos.perfil_acesso) {
@@ -70,7 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Erro ao atualizar perfil:", err);
     }
 
-    // Se o usuário já estiver em outra aba (por refresh), carrega ela agora com o perfil correto
+    // Se o usuário já estiver em outra aba (por refresh), carrega ela agora
     const abaAtiva = document.querySelector(".af-section.active");
     if (abaAtiva && abaAtiva.id !== 'sec-meus-dados') {
         const btnAtivo = document.querySelector(`.af-nav-item[data-target="${abaAtiva.id}"]`);
