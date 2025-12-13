@@ -381,3 +381,14 @@ function renderizarFormularioMeusDados(dados, container) {
         }
     });
 }
+
+// Padronização de nomenclatura (frontend)
+function labelSituacaoFuncional(valor) {
+  return `Situação funcional do servidor: ${(valor || 'ATIVO').toString().toUpperCase()}`;
+}
+
+function labelEstadoCadastro(filiado) {
+  const raw = (filiado && (filiado.estado_cadastro || (filiado.arquivado_em ? 'ARQUIVADO' : 'CADASTRO_ATIVO'))) || 'CADASTRO_ATIVO';
+  const txt = raw === 'CADASTRO_ATIVO' ? 'CADASTRO ATIVO' : 'ARQUIVADO';
+  return `Estado do cadastro: ${txt}`;
+}

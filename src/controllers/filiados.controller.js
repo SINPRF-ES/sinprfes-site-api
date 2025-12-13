@@ -304,7 +304,7 @@ exports.arquivarFiliado = async (req, res) => {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    return res.json({ message: "Cadastro arquivado com sucesso.", filiado: atualizado });
+    return res.json({ message: "Estado do cadastro alterado para: ARQUIVADO.", filiado: atualizado });
   } catch (err) {
     log.error("FiliadosArquivarErro", err);
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -336,7 +336,7 @@ exports.desarquivarFiliado = async (req, res) => {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    return res.json({ message: "Cadastro desarquivado com sucesso.", filiado: atualizado });
+    return res.json({ message: "Estado do cadastro alterado para: CADASTRO ATIVO.", filiado: atualizado });
   } catch (err) {
     log.error("FiliadosDesarquivarErro", err);
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });

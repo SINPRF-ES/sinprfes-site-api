@@ -1,3 +1,8 @@
+
+// Base da API (localhost vs produção)
+const API_BASE = (window.location.hostname === "localhost")
+  ? "http://localhost:3000"
+  : "https://api.sinprfes.org.br";
 // utils.js
 
 export function obterToken() {
@@ -31,7 +36,7 @@ export async function apiFetch(url, options = {}) {
         options.body = JSON.stringify(options.body);
     }
 
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch((url && url.startsWith('/')) ? (API_BASE + url) : url, { ...options, headers });
 
     if (response.status === 401) {
         alert("Sessão expirada. Faça login novamente.");

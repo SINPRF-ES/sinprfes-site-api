@@ -43,7 +43,7 @@ module.exports = async (req, res, next) => {
 
     // ✅ Arquivamento administrativo (separado da situação funcional)
     if (userDb.arquivado_em) {
-      return res.status(403).json({ error: "Cadastro arquivado. Acesso indisponível. Contate o sindicato." });
+      return res.status(403).json({ error: "Estado do cadastro: ARQUIVADO. Acesso indisponível. Contate o sindicato." });
     }
 
     // Preferir dados do banco (autoridade) em vez do payload antigo

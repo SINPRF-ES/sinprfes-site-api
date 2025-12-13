@@ -1,6 +1,7 @@
 // src/services/filiados.service.js
 const pool = require("../config/db");
 const { normalizarCpf } = require("../utils/format");
+const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 
 // Colunas completas (retornadas nos UPDATE/INSERT/GET internos)
 const FILIADO_COLUMNS = `
@@ -20,7 +21,7 @@ async function buscarPorCpf(cpfRaw) {
     `SELECT ${FILIADO_COLUMNS} FROM filiados WHERE cpf = $1 LIMIT 1`,
     [cpf]
   );
-  return rows[0] || null;
+  return anexarEstadoCadastro(rows[0]) || null;
 }
 
 /**
@@ -31,7 +32,7 @@ async function buscarPorId(id) {
     `SELECT ${FILIADO_COLUMNS} FROM filiados WHERE id = $1 LIMIT 1`,
     [id]
   );
-  return rows[0] || null;
+  return anexarEstadoCadastro(rows[0]) || null;
 }
 
 /**
@@ -138,7 +139,7 @@ async function atualizarDadosProprios(id, dados) {
     vals
   );
 
-  return rows[0] || null;
+  return anexarEstadoCadastro(rows[0]) || null;
 }
 
 /**
@@ -196,7 +197,7 @@ async function atualizarFiliadoPorId(id, dados) {
     valores
   );
 
-  return rows[0] || null;
+  return anexarEstadoCadastro(rows[0]) || null;
 }
 
 /**
@@ -253,7 +254,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     `,
       params
     );
-    return rows;
+    return anexarEstadoCadastroLista(rows);
   }
 
   // filiado: devolve só diretório (inclui avatar para exibição)
@@ -267,7 +268,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   `
   );
 
-  return rows;
+  return anexarEstadoCadastroLista(rows);
 }
 
 /**
@@ -345,7 +346,7 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       ]
     );
 
-    return rows[0];
+    return anexarEstadoCadastro(rows[0]);
   } catch (err) {
     if (err && err.code === "23505") {
       err.code = "CPF_DUPLICADO";
@@ -471,7 +472,7 @@ async function salvarTwoFaSecret(userId, secret) {
   `,
     [secret, userId]
   );
-  return rows[0] || null;
+  return anexarEstadoCadastro(rows[0]) || null;
 }
 
 module.exports = {
