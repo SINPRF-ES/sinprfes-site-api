@@ -124,9 +124,9 @@ export async function inicializarRessarcimento() {
             <div class="res-card">
                 <h3>📅 Detalhes da Atividade</h3>
                 <div class="res-grid">
-                    <div class="res-group"><label>Data Início</label><input type="date" id="res-data-inicio" name="data_inicio" required></div>
-                    <div class="res-group"><label>Data Fim</label><input type="date" id="res-data-fim" name="data_fim" required></div>
-                    <div class="res-group"><label>Local / Destino</label><input type="text" id="res-local" name="local" required placeholder="Ex: Brasília - DF"></div>
+                    <div class="res-group"><label>Data Início</label><input type="date" id="res-data-inicio" name="data_inicio"></div>
+                    <div class="res-group"><label>Data Fim</label><input type="date" id="res-data-fim" name="data_fim"></div>
+                    <div class="res-group"><label>Local / Destino</label><input type="text" id="res-local" name="local" placeholder="Ex: Brasília - DF"></div>
                 </div>
                 <div class="res-group">
                     <label>Descrição da Missão / Motivo</label>
@@ -160,7 +160,7 @@ export async function inicializarRessarcimento() {
                 
                 <div class="res-group" style="margin-bottom: 15px;">
                     <label>Banco (Digite o nome ou código)</label>
-                    <input list="lista-bancos" id="res-banco" name="banco" required placeholder="Ex: Digite 'nu' para Nubank ou '001' para BB">
+                    <input list="lista-bancos" id="res-banco" name="banco" placeholder="Ex: Digite 'nu' para Nubank ou '001' para BB">
                     <datalist id="lista-bancos">
                         ${opcoesBancos}
                     </datalist>
@@ -169,11 +169,11 @@ export async function inicializarRessarcimento() {
                 <div class="res-grid">
                     <div class="res-group">
                         <label>Agência</label>
-                        <input type="text" id="res-agencia" name="agencia" required placeholder="Ex: 1234-5">
+                        <input type="text" id="res-agencia" name="agencia" placeholder="Ex: 1234-5">
                     </div>
                     <div class="res-group">
                         <label>Conta</label>
-                        <input type="text" id="res-conta" name="conta" required placeholder="Ex: 12345-6">
+                        <input type="text" id="res-conta" name="conta" placeholder="Ex: 12345-6">
                     </div>
                 </div>
                 <div class="res-group"><label>PIX (Opcional)</label><input type="text" id="res-pix" name="pix" placeholder="CPF, E-mail ou Celular"></div>
