@@ -29,7 +29,7 @@ app.use(
 app.options("*", cors());
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.join(process.cwd(), "public")));
 
 // --- IMPORTAÇÃO DAS ROTAS ---
 const filieseRoutes = require("./routes/filiese.routes");

@@ -56,27 +56,12 @@ export async function inicializarFiliados(perfil) {
             details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
             .seta { transition: transform 0.2s; display:inline-block; }
 
-            /* =========================================================
-               Tela de edição em 2 colunas + campos longos span-2
-               ========================================================= */
-            .edit-grid {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 15px;
-                margin-top: 15px;
-            }
+            .edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
             .edit-group { display: flex; flex-direction: column; }
             .edit-group label { font-size: 0.8rem; color: #666; margin-bottom: 4px; font-weight: bold; }
             .edit-group input, .edit-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; color: #333; background: #fff; font-size: 0.95rem; }
             .edit-group input:focus, .edit-group select:focus { border-color: #2980b9; outline: none; }
             .admin-field input, .admin-field select { background-color: #fff8e1; border-color: #f1c40f; }
-            .edit-group.span-2 { grid-column: span 2; }
-
-            @media (max-width: 900px) {
-                .edit-grid { grid-template-columns: 1fr; }
-                .edit-group.span-2 { grid-column: span 1; }
-            }
-
             .btn-save { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
             .btn-save:hover { background: #219150; }
 
@@ -85,79 +70,35 @@ export async function inicializarFiliados(perfil) {
             .avatar-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
             .avatar-preview { width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #e9ecef; background:#f8f9fa; }
 
-            /* =========================================================
-               Bloco de endereço: 3 linhas lógicas
-               Linha 1: CEP+busca | Cidade | UF
-               Linha 2: Logradouro (100%)
-               Linha 3: Número (menor) | Complemento (maior)
-               ========================================================= */
-            .endereco-grid{
-                display:grid;
-                grid-template-columns: minmax(220px, 1fr) minmax(180px, 1fr) 90px;
-                gap: 10px;
-                margin-top: 10px;
-                align-items: end;
-            }
-            .endereco-grid .span-all{ grid-column: 1 / -1; }
-
-            /* Linha 3: mantém "Nº" primeiro, mas menor, e "Compl." maior */
-            .endereco-linha3{
-                grid-column: 1 / -1;
-                display: grid;
-                grid-template-columns: 120px 1fr; /* Nº menor | Complemento maior */
-                gap: 10px;
-                align-items: end;
-            }
-
-            @media (max-width: 900px){
-                .endereco-grid{
-                    grid-template-columns: 1fr;
-                }
-                .endereco-grid .span-all{
-                    grid-column: auto;
-                }
-                .endereco-linha3{
-                    grid-template-columns: 1fr; /* empilha no mobile */
-                }
-            }
-
-            /* CEP (input + botão em colunas) */
-            .cep-wrapper{
-                display: grid;
-                grid-template-columns: 1fr 40px;
-                gap: 6px;
-                align-items: stretch;
-            }
-            .cep-wrapper input.campo-cep-admin{
-                width: 100%;
-                height: 38px;
-                padding-right: 12px;
-            }
-            .cep-wrapper .btn-buscar-cep-admin{
-                width: 40px;
-                min-width: 40px;
-                height: 38px;
-                border: 1px solid #d0d7de;
-                border-radius: 6px;
-                background: #f1f3f5;
+            /* Botão de busca de CEP */
+            .cep-wrapper { position: relative; }
+            .cep-wrapper input.campo-cep-admin { width: 100%; padding-right: 44px; }
+            .btn-buscar-cep-admin {
+                border: 1px solid #ccc;
+                background: #e9ecef;
                 cursor: pointer;
+                border-radius: 4px;
+                font-size: 1.1rem;
+                transition: background 0.2s;
+                min-width: 32px;
+                height: 32px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                position: static;
-                right: auto;
-                top: auto;
-                bottom: auto;
-                transform: none;
+                position: absolute;
+                right: 4px;
+                top: 50%;
+                transform: translateY(-50%);
                 padding: 0;
             }
-            .cep-wrapper .btn-buscar-cep-admin:hover { background: #dde2e6; }
+            .btn-buscar-cep-admin:hover { background: #dde2e6; }
 
+            
             .row-filtros { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
             .row-filtros label { font-size:0.9rem; display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; color:#fff; }
             .row-filtros select { background:#fff; color:#333; }
 
-            @media (max-width: 600px) { .filiado-header { flex-direction: column; } }
+@media (max-width: 600px) { .filiado-header { flex-direction: column; } }
         `;
         document.head.appendChild(s);
     }
@@ -239,11 +180,11 @@ async function carregarLista() {
 
     try {
         listaEl.innerHTML = `<p style="color:#fff; text-align:center;">Carregando base de dados...</p>`;
-        const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
+        const estado = (document.getElementById("filtro-estado-cadastro")?.value || "VIGENTES").toUpperCase();
 
         let url = "/api/filiados";
         if (estado === "TODOS") url = "/api/filiados?incluirArquivados=1";
-        if (estado === "ARQUIVADOS") url = "/api/filiados?incluirArquivados=1";
+        if (estado === "ARQUIVADOS") url = "/api/filiados?arquivados=1";
 
         const r = await apiFetch(url);
         if (r && r.ok) {
@@ -286,7 +227,7 @@ function filtrarLista(termo) {
         res = res.filter((f) => String((f?.estado_cadastro || (f?.arquivado_em ? "ARQUIVADO" : "CADASTRO_ATIVO"))).toUpperCase() === "CADASTRO_ATIVO");
     }
 
-    if (!res.length) {
+if (!res.length) {
         el.innerHTML = `<div style="background:#fff; color:#333; padding:20px; border-radius:8px; text-align:center;">Nenhum filiado encontrado.</div>`;
         return;
     }
@@ -318,23 +259,7 @@ function filtrarLista(termo) {
                 </div>
             </div>`;
 
-        const isArquivado = String((f?.estado_cadastro || (f?.arquivado_em ? "ARQUIVADO" : "CADASTRO_ATIVO"))).toUpperCase() === "ARQUIVADO";
-        const arquivadoInfo = isArquivado ? `
-            <div class="af-archived-banner" style="margin-top:10px; padding:10px 12px; background:#fff3cd; border:1px solid #ffeeba; border-radius:8px; color:#5a4a00;">
-                <strong>Cadastro arquivado</strong>${f?.arquivado_em ? ` • ${new Date(f.arquivado_em).toLocaleString('pt-BR')}` : ``}
-                ${f?.arquivado_motivo ? `<div style="margin-top:6px; font-size:12px;"><strong>Motivo:</strong> ${String(f.arquivado_motivo)}</div>` : ``}
-            </div>` : ``;
-
-        // Ações (somente para quem pode editar)
-        const acoesArquivamento = podeEditar ? `
-            <div class="af-archive-actions" style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-                ${isArquivado
-                    ? `<button type="button" class="btn btn-outline btn-desarquivar-filiado" data-id="${f.id}">📤 Desarquivar</button>`
-                    : `<button type="button" class="btn btn-outline btn-arquivar-filiado" data-id="${f.id}">📥 Arquivar</button>`
-                }
-            </div>` : ``;
-
-        if (!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}${arquivadoInfo}</div>`;
+        if (!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}</div>`;
 
         const attrCpf = podeEditarCpf ? '' : 'disabled style="background:#eee; cursor:not-allowed;"';
 
@@ -355,13 +280,11 @@ function filtrarLista(termo) {
         return `
             <div class="filiado-card ${classeStatus}">
                 ${header}
-                ${arquivadoInfo}
-                ${acoesArquivamento}
                 <details class="edit-area">
                     <summary class="btn-editar-toggle">✏️ Editar dados completos <span class="seta" style="margin-left:5px;">▼</span></summary>
                     <form class="form-edit-filiado" data-id="${f.id}" style="margin-top:15px;">
                         <div class="edit-grid">
-                            <div class="edit-group span-2"><label>Nome</label><input name="nome" value="${f.nome || ''}"></div>
+                            <div class="edit-group"><label>Nome</label><input name="nome" value="${f.nome || ''}"></div>
                             <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${attrCpf} placeholder="Somente números"></div>
 
                             <div class="edit-group"><label>Data de Nascimento</label><input name="data_nascimento" type="date" value="${dnValue}"></div>
@@ -374,49 +297,33 @@ function filtrarLista(termo) {
                             <div class="edit-group"><label>Situação</label>
                                 <select name="situacao">${SITUACAO_OPCOES.map(op => `<option value="${op}" ${op === situacao ? 'selected' : ''}>${op}</option>`).join('')}</select>
                             </div>
-
+                            <div class="edit-group">
+                                <label>Endereço / Bairro</label>
+                                <input name="logradouro_bairro" value="${f.logradouro_bairro || ''}" readonly style="background:#f8f9fa;">
+                            </div>
                             ${adminSection}
                         </div>
 
-                        <!-- BLOCO DE ENDEREÇO (3 linhas lógicas) -->
-                        <div class="endereco-grid">
-                            <!-- Linha 1 -->
-                            <div class="edit-group">
-                                <label>CEP</label>
-                                <div class="cep-wrapper">
-                                    <input class="campo-cep-admin" name="cep" value="${(f.cep || '').toString().replace(/\D/g, '')}" maxlength="8" placeholder="00000000">
-                                    <button type="button" class="btn-buscar-cep-admin" title="Buscar Endereço">🔍</button>
-                                </div>
-                            </div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin-top:10px;">
+                             <div class="edit-group"><label>Nº</label><input name="numero" value="${f.numero || ''}"></div>
+                             <div class="edit-group"><label>Compl.</label><input name="complemento" value="${f.complemento || ''}"></div>
 
-                            <div class="edit-group">
+                             <div class="edit-group">
+                                 <label>CEP</label>
+                                 <div class="cep-wrapper">
+                                     <input class="campo-cep-admin" name="cep" value="${(f.cep || '').toString().replace(/\D/g, '')}" maxlength="8" placeholder="00000000">
+                                     <button type="button" class="btn-buscar-cep-admin" title="Buscar Endereço">🔍</button>
+                                 </div>
+                             </div>
+
+                             <div class="edit-group">
                                 <label>Cidade</label>
                                 <input name="cidade" value="${f.cidade || ''}" readonly style="background:#f8f9fa;">
-                            </div>
-
-                            <div class="edit-group">
+                             </div>
+                             <div class="edit-group">
                                 <label>UF</label>
                                 <input name="uf" value="${f.uf || ''}" maxlength="2" readonly style="background:#f8f9fa; text-transform:uppercase;">
-                            </div>
-
-                            <!-- Linha 2 -->
-                            <div class="edit-group span-all">
-                                <label>Logradouro</label>
-                                <input name="logradouro_bairro" value="${f.logradouro_bairro || ''}" readonly style="background:#f8f9fa;">
-                            </div>
-
-                            <!-- Linha 3: Nº primeiro (menor), Compl. depois (maior) -->
-                            <div class="endereco-linha3">
-                                <div class="edit-group">
-                                    <label>Nº</label>
-                                    <input name="numero" value="${f.numero || ''}">
-                                </div>
-
-                                <div class="edit-group">
-                                    <label>Compl.</label>
-                                    <input name="complemento" value="${f.complemento || ''}">
-                                </div>
-                            </div>
+                             </div>
                         </div>
 
                         <div style="margin-top:14px;">
@@ -425,7 +332,6 @@ function filtrarLista(termo) {
                                 <img class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" onerror="this.src='/img/avatar-placeholder.png'">
                                 <input type="file" name="avatar_file" accept="image/*">
                                 <button type="button" class="btn-upload-avatar">Enviar foto</button>
-                                <button type="button" class="btn-remove-avatar" style="background:#c0392b; color:#fff; border:none; padding:8px 10px; border-radius:5px; cursor:pointer; font-weight:700;">Remover foto</button>
                             </div>
                         </div>
 
@@ -543,42 +449,7 @@ function filtrarLista(termo) {
                 });
             }
 
-            // Remover avatar (DELETE /:id/avatar)
-            const btnRemoverAvatar = frm.querySelector(".btn-remove-avatar");
-            if (btnRemoverAvatar) {
-                btnRemoverAvatar.addEventListener("click", async () => {
-                    const id = frm.dataset.id;
-                    if (!id) return;
-
-                    if (!confirm("Remover a foto deste cadastro?")) return;
-
-                    const original = btnRemoverAvatar.innerText;
-                    btnRemoverAvatar.disabled = true;
-                    btnRemoverAvatar.innerText = "Removendo...";
-
-                    try {
-                        const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
-                        const d = await r.json().catch(() => ({}));
-
-                        if (r.ok) {
-                            // Atualiza cache e re-render
-                            const idx = cacheLista.findIndex(i => String(i.id) === String(id));
-                            if (idx !== -1) cacheLista[idx].avatar_url = null;
-
-                            filtrarLista(document.getElementById("busca-filiados")?.value || "");
-                            alert(d.message || "Foto removida com sucesso.");
-                        } else {
-                            alert(d.message || d.error || "Não foi possível remover a foto.");
-                        }
-                    } catch (e) {
-                        alert("Erro de conexão ao remover foto.");
-                    } finally {
-                        btnRemoverAvatar.disabled = false;
-                        btnRemoverAvatar.innerText = original;
-                    }
-                });
-            }
-
+            // Submit
             frm.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 const id = frm.dataset.id;
@@ -618,61 +489,6 @@ function filtrarLista(termo) {
                 } finally {
                     btn.disabled = false;
                     btn.innerText = txtOriginal;
-                }
-            });
-        });
-
-        // Arquivar / Desarquivar (ações administrativas)
-        el.querySelectorAll(".btn-arquivar-filiado").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-                const id = btn.dataset.id;
-                const motivo = prompt("Informe o motivo do arquivamento (obrigatório):");
-                if (!motivo || !motivo.trim()) {
-                    alert("Motivo é obrigatório.");
-                    return;
-                }
-
-                try {
-                    btn.disabled = true;
-                    const r = await apiFetch(`/api/filiados/${id}/arquivar`, {
-                        method: "POST",
-                        body: { motivo: motivo.trim() },
-                    });
-                    const d = await r.json().catch(() => ({}));
-
-                    if (r && r.ok) {
-                        alert(d.message || "Arquivado com sucesso.");
-                        await carregarLista();
-                    } else {
-                        alert(d.message || d.error || "Erro ao arquivar.");
-                    }
-                } catch (e) {
-                    alert("Erro de conexão ao arquivar.");
-                } finally {
-                    btn.disabled = false;
-                }
-            });
-        });
-
-        el.querySelectorAll(".btn-desarquivar-filiado").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-                const id = btn.dataset.id;
-
-                try {
-                    btn.disabled = true;
-                    const r = await apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST" });
-                    const d = await r.json().catch(() => ({}));
-
-                    if (r && r.ok) {
-                        alert(d.message || "Desarquivado com sucesso.");
-                        await carregarLista();
-                    } else {
-                        alert(d.message || d.error || "Erro ao desarquivar.");
-                    }
-                } catch (e) {
-                    alert("Erro de conexão ao desarquivar.");
-                } finally {
-                    btn.disabled = false;
                 }
             });
         });

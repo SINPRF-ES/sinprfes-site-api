@@ -285,7 +285,6 @@ function renderizarFormularioMeusDados(dados, container) {
     const inputFile = document.getElementById("me-avatar-file");
     const previewContainer = document.getElementById("avatar-preview");
     const btnSalvarFoto = document.getElementById("btn-salvar-foto");
-    const btnRemoverFoto = document.getElementById("btn-remover-foto");
 
     // 1. Preview local ao selecionar
     inputFile.addEventListener("change", () => {
@@ -325,11 +324,8 @@ function renderizarFormularioMeusDados(dados, container) {
             btnSalvarFoto.disabled = false;
             btnSalvarFoto.innerText = originalText;
         }
-        
+        const btnRemoverFoto = document.getElementById("btn-remover-foto");
 
-    });
-
-    // 3. Remover foto (sempre disponível)
 btnRemoverFoto.addEventListener("click", async () => {
   if (!confirm("Remover a foto de perfil?")) return;
 
@@ -355,6 +351,7 @@ btnRemoverFoto.addEventListener("click", async () => {
   }
 });
 
+    });
 
     // --- CEP ---
     const cepInput = document.getElementById("me-cep");

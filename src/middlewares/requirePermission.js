@@ -1,30 +1,41 @@
-// src/middlewares/requirePermission.js
-const roles = require("../config/roles.config");
+const rolesConfig = require("../config/roles.config");
 
 /**
- * Middleware de ACL (Access Control List).
- * Verifica se o perfil do usuário (req.user.perfil_acesso) possui a permissão requerida.
- * * Uso: router.get("/rota-protegida", authMiddleware, requirePermission("PERMISSAO_REQUERIDA"), controller.funcao);
+ * requirePermission("SOME_PERMISSION")
+ * - Exige que o auth middleware tenha populado req.user
+ * - Lê perfil a partir de req.user.perfil_acesso (fonte de verdade do seu auth.js)
+ * - Suporta curinga "*" no roles.config (ex.: ADMIN: ["*"])
  */
 function requirePermission(permission) {
   return (req, res, next) => {
-    // 1. Obtém o perfil do usuário logado (garantido pelo authMiddleware)
-    const role = (req.user.perfil_acesso || "FILIADO").toUpperCase();
+    const user = req.user;
 
-    // 2. Valida se o perfil existe no nosso mapa de roles
-    if (!roles[role]) {
-      return res.status(403).json({ error: "Perfil de acesso inválido ou desconhecido." });
+    // auth.js popula req.user com { id, cpf, nome, perfil_acesso }
+    const perfilAcesso = user && (user.perfil_acesso || user.perfil || user.role);
+
+    if (!user || !perfilAcesso) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
-    const permissions = roles[role];
+    const perfil = String(perfilAcesso).toUpperCase();
+    const permissoes = rolesConfig[perfil];
 
-    // 3. Verifica se tem permissão global ('*') ou a permissão específica
-    if (permissions.includes("*") || permissions.includes(permission)) {
-      return next();
+    if (!Array.isArray(permissoes)) {
+      return res.status(403).json({
+        error: "Perfil sem permissões configuradas.",
+      });
     }
 
-    // 4. Acesso negado
-    return res.status(403).json({ error: "Acesso negado. Permissão insuficiente." });
+    // ✅ CURINGA: perfil com "*" tem todas as permissões
+    if (permissoes.includes("*")) return next();
+
+    // ✅ Permissão específica
+    if (permissoes.includes(permission)) return next();
+
+    return res.status(403).json({
+      error: "Permissão insuficiente.",
+      permissionRequired: permission,
+    });
   };
 }
 
