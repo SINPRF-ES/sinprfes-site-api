@@ -1,7 +1,6 @@
-# Ignora tudo no diretório raiz
-/*
-
-# Cria exceções para as pastas que você quer manter
-!/public/
-!/src/
-!.gitignore
+node_modules
+.env
+npm-debug.log*
+.DS_Store
+frontend
+tmp
