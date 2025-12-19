@@ -106,16 +106,3 @@ node scripts/cleanup.js
 Em caso de dúvidas, fale com o desenvolvedor responsável (Marcelo Fávero Brandão).
 
 FIM DO README
-
-## Padrão de imports do backend
-Este backend está em **CommonJS** (uso de `require()` / `module.exports`).
-
-- Padrão adotado: **imports sem extensão** (ex.: `require("./routes/auth.routes")`).
-- Por que: é compatível com o resolver do Node em CommonJS e reduz ruído em diffs.
-
-### Alternativa (se migrar para ESM)
-Se no futuro o projeto migrar para `"type": "module"`, recomenda-se:
-- padronizar imports com **extensão explícita** (`.js`), pois o ESM é mais rígido.
-
-### Recomendação prática
-Não misturar estilos. Se decidir mudar para “sempre .js”, faça de forma global e com testes.

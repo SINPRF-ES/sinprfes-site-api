@@ -92,11 +92,23 @@ exports.criarVotacao = async ({ criadoPor, titulo, descricao, abreEm, encerraEm,
 
     const opRows = [];
     for (let i = 0; i < opcoes.length; i++) {
-      const texto = (opcoes[i] || "").toString().trim();
-      if (!texto) continue;
-      const oRes = await client.query(insertO, [votacao.id, texto, i + 1]);
-      opRows.push(oRes.rows[0]);
-    }
+  const opcao = opcoes[i];
+
+  if (!opcao || typeof opcao !== "object") continue;
+
+  const texto = (opcao.texto || "").toString().trim();
+  if (!texto) continue;
+
+  const ordem = Number.isFinite(opcao.ordem) ? opcao.ordem : i + 1;
+
+  const oRes = await client.query(insertO, [
+    votacao.id,
+    texto,
+    ordem,
+  ]);
+
+  opRows.push(oRes.rows[0]);
+}
 
     if (opRows.length < 2) {
       throw new Error("Informe pelo menos 2 opções válidas.");

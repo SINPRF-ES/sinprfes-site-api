@@ -11,30 +11,66 @@ const requirePermission = require("../middlewares/requirePermission");
 
 const filiadosController = require("../controllers/filiados.controller");
 
+const sharp = require("sharp");
+
 // =============================================================================
 // Upload (avatar)
 // =============================================================================
 const avatarsDir = path.join(process.cwd(), "public", "uploads", "avatars");
 fs.mkdirSync(avatarsDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarsDir),
-  filename: (req, file, cb) => {
-    const ext = (path.extname(file.originalname) || "").toLowerCase();
-    const safeExt = [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext) ? ext : ".jpg";
-    const who = req.params.id ? `id${req.params.id}` : `me${req.user?.id || "0"}`;
-    cb(null, `${who}-${Date.now()}${safeExt}`);
-  },
-});
-
 const upload = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // aceita original maior
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith("image/")) return cb(null, true);
     return cb(new Error("Arquivo inválido. Envie uma imagem."), false);
   },
 });
+
+async function converterAvatarParaWebp(req, res, next) {
+  try {
+    if (!req.file || !req.file.buffer) return next();
+
+    const who = req.params.id ? `id${req.params.id}` : `me${req.user?.id || "0"}`;
+    const filename = `${who}-${Date.now()}.webp`;
+    const outPath = path.join(avatarsDir, filename);
+
+    let quality = 82;
+    let buffer = await sharp(req.file.buffer)
+      .rotate()
+      .resize(512, 512, { fit: "cover" })
+      .webp({ quality })
+      .toBuffer();
+
+    const MAX = 2 * 1024 * 1024;
+    while (buffer.length > MAX && quality > 55) {
+      quality -= 7;
+      buffer = await sharp(req.file.buffer)
+        .rotate()
+        .resize(512, 512, { fit: "cover" })
+        .webp({ quality })
+        .toBuffer();
+    }
+
+    if (buffer.length > MAX) {
+      return res.status(413).json({
+        error: "Não foi possível otimizar a imagem abaixo de 2MB.",
+      });
+    }
+
+    await fs.promises.writeFile(outPath, buffer);
+
+    req.file.filename = filename;
+    req.file.path = outPath;
+    req.file.mimetype = "image/webp";
+    req.file.size = buffer.length;
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
 
 // =============================================================================
 // ROTAS DO PRÓPRIO USUÁRIO (/me)
@@ -43,7 +79,9 @@ router.get("/me", authMiddleware, filiadosController.getMe);
 
 router.put("/me", authMiddleware, filiadosController.atualizarMeusDados);
 
-router.post("/me/avatar", authMiddleware, upload.single("avatar"), filiadosController.uploadAvatarMe);
+router.post("/me/avatar", authMiddleware, upload.single("avatar"), converterAvatarParaWebp, filiadosController.uploadAvatarMe);
+
+router.delete("/me/avatar", authMiddleware, filiadosController.removerAvatarMe);
 
 router.post("/2fa/desativar", authMiddleware, filiadosController.desativar2fa);
 
@@ -77,7 +115,15 @@ router.post(
   authMiddleware,
   requirePermission("EDIT_FILIADO"),
   upload.single("avatar"),
+  converterAvatarParaWebp,
   filiadosController.uploadAvatarPorId
+);
+
+router.delete(
+  "/:id/avatar",
+  authMiddleware,
+  requirePermission("EDIT_FILIADO"),
+  filiadosController.removerAvatarPorId
 );
 
 router.post(

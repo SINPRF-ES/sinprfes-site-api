@@ -151,7 +151,7 @@ exports.atualizarFiliado = async (req, res) => {
     const payload = {
       nome: body.nome,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
-      data_nascimento: body.data_nascimento, // esperado: yyyy-MM-dd
+      data_nascimento: body.data_nascimento === "" ? null : body.data_nascimento, // esperado: yyyy-MM-dd
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email1: body.email1,
@@ -427,6 +427,57 @@ exports.desativar2fa = async (req, res) => {
     });
   } catch (err) {
     log.error("Filiado2FADesativarErro", err);
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+  }
+};
+exports.removerAvatarMe = async (req, res) => {
+  try {
+    const id = req.user.id;
+    const antes = await buscarPorId(id);
+    if (!antes) {
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    }
+
+    await atualizarFiliadoPorId(id, { avatar_url: null });
+
+    try {
+      if (antes.avatar_url?.startsWith("/uploads/avatars/")) {
+        const file = path.join(process.cwd(), "public", antes.avatar_url);
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+      }
+    } catch {}
+
+    return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
+  } catch (err) {
+    log.error("RemoverAvatarMeErro", err);
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+  }
+};
+
+exports.removerAvatarPorId = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
+    }
+
+    const antes = await buscarPorId(id);
+    if (!antes) {
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    }
+
+    await atualizarFiliadoPorId(id, { avatar_url: null });
+
+    try {
+      if (antes.avatar_url?.startsWith("/uploads/avatars/")) {
+        const file = path.join(process.cwd(), "public", antes.avatar_url);
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+      }
+    } catch {}
+
+    return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
+  } catch (err) {
+    log.error("RemoverAvatarPorIdErro", err);
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };

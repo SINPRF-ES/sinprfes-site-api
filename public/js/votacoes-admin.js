@@ -1,4 +1,4 @@
-import { apiFetch } from "./utils.js";
+import { apiFetch } from "./area-filiado/utils.js";
 
 const listaEl = document.getElementById("lista-votacoes");
 const formCriar = document.getElementById("form-criar-votacao");

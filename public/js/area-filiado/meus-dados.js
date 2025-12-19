@@ -186,7 +186,12 @@ function renderizarFormularioMeusDados(dados, container) {
                     <button type="button" id="btn-salvar-foto" class="btn btn-primary" style="display:none; padding: 6px 12px; font-size: 0.85rem;">
                         ⬆️ Enviar Foto Agora
                     </button>
-                    <div style="font-size:0.85rem; color:#666;">Formatos: JPG, PNG. Máx 5MB.</div>
+                    <div style="font-size:0.85rem; color:#666;">Formatos: JPG ou PNG</div>
+                    <button type="button" id="btn-remover-foto"
+                    class="btn btn-outline"
+                    style="padding:6px 12px; font-size:0.85rem;">
+                        🗑️ Remover Foto
+                    </button>
                 </div>
             </div>
         </div>
@@ -319,6 +324,33 @@ function renderizarFormularioMeusDados(dados, container) {
             btnSalvarFoto.disabled = false;
             btnSalvarFoto.innerText = originalText;
         }
+        const btnRemoverFoto = document.getElementById("btn-remover-foto");
+
+btnRemoverFoto.addEventListener("click", async () => {
+  if (!confirm("Remover a foto de perfil?")) return;
+
+  btnRemoverFoto.disabled = true;
+  const txt = btnRemoverFoto.innerText;
+  btnRemoverFoto.innerText = "Removendo...";
+
+  try {
+    const r = await apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
+    if (r.ok) {
+      alert("Foto removida com sucesso!");
+      previewContainer.innerHTML = `<div class="avatar-fallback">👤</div>`;
+      inputFile.value = "";
+      btnSalvarFoto.style.display = "none";
+    } else {
+      alert("Erro ao remover foto.");
+    }
+  } catch {
+    alert("Erro de conexão.");
+  } finally {
+    btnRemoverFoto.disabled = false;
+    btnRemoverFoto.innerText = txt;
+  }
+});
+
     });
 
     // --- CEP ---

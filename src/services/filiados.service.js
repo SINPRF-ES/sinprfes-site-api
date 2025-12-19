@@ -164,7 +164,13 @@ async function atualizarFiliadoPorId(id, dados) {
 
   addCampo("nome", dados.nome);
   addCampo("cpf", dados.cpf);
-  addCampo("data_nascimento", dados.data_nascimento);
+  if (dados.data_nascimento !== undefined) {
+  // Converte '' -> NULL no lado do SQL
+  campos.push(`data_nascimento = NULLIF($${idx}, '')`);
+  valores.push(dados.data_nascimento);
+  idx += 1;
+}
+
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
   addCampo("email1", dados.email1);

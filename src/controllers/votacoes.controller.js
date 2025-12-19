@@ -95,30 +95,51 @@ exports.votar = async (req, res) => {
     const id = parseId(req);
     if (!id) return res.status(400).json({ error: "ID inválido." });
 
-    const { opcao_id, device_id, biometria_confirmada } = req.body || {};
-    const opcaoId = Number(opcao_id);
+    const body = req.body || {};
+
+    // Aceita snake_case (Thunder/legacy) e camelCase (app)
+    const rawOpcaoId =
+      body.opcao_id ??
+      body.opcaoId ??
+      body.opcao ??
+      body.opcaoID;
+
+    const opcaoId = Number(rawOpcaoId);
+
+    const deviceId = body.device_id ?? body.deviceId ?? null;
+    const biometriaConfirmada =
+      body.biometria_confirmada ?? body.biometriaConfirmada ?? false;
 
     if (!Number.isFinite(opcaoId) || opcaoId <= 0) {
-      return res.status(400).json({ error: "Opção inválida." });
+      return res.status(400).json({
+        error: "Opção inválida.",
+        debug: {
+          recebido: rawOpcaoId,
+          esperado: "opcao_id (number) ou opcaoId (number)",
+        },
+      });
     }
 
     const result = await service.registrarVoto({
       votacaoId: id,
       opcaoId,
       userId: req.user.id,
-      deviceId: device_id ? String(device_id) : null,
-      biometriaConfirmada: Boolean(biometria_confirmada),
+      deviceId: deviceId ? String(deviceId) : null,
+      biometriaConfirmada: Boolean(biometriaConfirmada),
       ip: req.ip,
       userAgent: req.headers["user-agent"] || null,
     });
 
     return res.status(201).json(result);
   } catch (err) {
-    // erros esperados com mensagem amigável
     const msg = err?.message || "Erro ao registrar voto.";
-    const code = msg.includes("já votou") || msg.includes("encerrada") || msg.includes("não está aberta")
-      ? 400
-      : 500;
+    const code =
+      msg.includes("já votou") ||
+      msg.includes("encerrada") ||
+      msg.includes("não está aberta") ||
+      msg.toLowerCase().includes("opção inválida")
+        ? 400
+        : 500;
 
     console.error("VotacoesVotarErro:", err);
     return res.status(code).json({ error: msg });

@@ -39,6 +39,9 @@ const authRoutes = require("./routes/auth.routes");
 const ressarcimentoRoutes = require("./routes/ressarcimento.routes");
 const jogosRoutes = require("./routes/jogos.routes");
 const instagramRoutes = require("./routes/instagram.routes");
+const pushRoutes = require("./routes/push.routes");
+const eventosRoutes = require("./routes/eventos.routes");
+const eventoVotacoesRoutes = require("./routes/eventoVotacoes.routes");
 
 // 🟢 Rota de Publicações (Google Drive)
 const publicacoesRoutes = require("./routes/publicacoes.routes");
@@ -79,6 +82,13 @@ app.use("/api/publicacoes", publicacoesRoutes);
 
 // 🟣 NOVO: Votações
 app.use("/api/votacoes", votacoesRoutes);
+
+// Push de votações
+app.use("/api/push", pushRoutes);
+
+// Push de eventos
+app.use("/api/eventos", eventosRoutes);
+app.use("/api/eventos", eventoVotacoesRoutes); // vai usar subrotas /:id/votacoes
 
 // Health Check simples
 app.get("/health", (_, res) => {

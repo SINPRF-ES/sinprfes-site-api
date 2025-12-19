@@ -8,6 +8,9 @@ const controller = require("../controllers/auth.controller");
 router.post("/login", controller.login);
 
 // Ativar 2FA (precisa estar logado)
+// 🟢 CORREÇÃO AUTOMÁTICA: rota para validar login com 2FA (App chama /api/auth/2fa)
+router.post("/2fa", controller.login);
+
 router.post("/2fa/ativar", authMiddleware, controller.ativar2fa);
 
 // Dados do próprio usuário

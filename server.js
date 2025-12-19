@@ -1,9 +1,8 @@
-// server.js
 require("dotenv").config();
+const { logDbSafeInfo } = require("./src/utils/dbLog");
 const app = require("./src/app");
 
-const PORT = process.env.PORT || 3000;
+logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 
-app.listen(PORT, () => {
-  console.log(`SINPRF-ES rodando na porta ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));
