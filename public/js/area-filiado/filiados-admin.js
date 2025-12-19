@@ -32,137 +32,9 @@ export async function inicializarFiliados(perfil) {
 
     perfilAtual = (perfil || "").toUpperCase();
 
-    // 1. INJEÇÃO DE CSS
-    if (!document.getElementById('style-filiados-premium')) {
-        const s = document.createElement('style');
-        s.id = 'style-filiados-premium';
-        s.textContent = `
-            .search-box-container { background: #003366; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); color: white; }
-            .filiado-card { background: #fff; border-left: 5px solid #ccc; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: #333; transition: transform 0.2s; }
-            .filiado-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-            .status-ativo { border-left-color: #27ae60; }
-            .status-veterano { border-left-color: #f39c12; }
-            .status-pensionista { border-left-color: #8e44ad; }
-            .filiado-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
-            .filiado-left { display:flex; align-items:flex-start; gap:12px; }
-            .avatar-mini { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid #e9ecef; background:#f8f9fa; }
-            .filiado-nome { font-size: 1.2rem; font-weight: bold; color: #003366; }
-            .filiado-meta { font-size: 0.9rem; color: #666; margin-top: 4px; }
-            .filiado-badge { background: #eee; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
-
-            details.edit-area { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
-            summary.btn-editar-toggle { cursor: pointer; color: #2980b9; font-weight: 600; list-style: none; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 4px; transition: background 0.2s; }
-            summary.btn-editar-toggle:hover { background: #f0f7ff; }
-            details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
-            .seta { transition: transform 0.2s; display:inline-block; }
-
-            /* =========================================================
-               Tela de edição em 2 colunas + campos longos span-2
-               ========================================================= */
-            .edit-grid {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 15px;
-                margin-top: 15px;
-            }
-            .edit-group { display: flex; flex-direction: column; }
-            .edit-group label { font-size: 0.8rem; color: #666; margin-bottom: 4px; font-weight: bold; }
-            .edit-group input, .edit-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; color: #333; background: #fff; font-size: 0.95rem; }
-            .edit-group input:focus, .edit-group select:focus { border-color: #2980b9; outline: none; }
-            .admin-field input, .admin-field select { background-color: #fff8e1; border-color: #f1c40f; }
-            .edit-group.span-2 { grid-column: span 2; }
-
-            @media (max-width: 900px) {
-                .edit-grid { grid-template-columns: 1fr; }
-                .edit-group.span-2 { grid-column: span 1; }
-            }
-
-            .btn-save { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
-            .btn-save:hover { background: #219150; }
-
-            .btn-upload-avatar { background:#34495e; color:#fff; border:none; padding:8px 10px; border-radius:5px; cursor:pointer; font-weight:700; }
-            .btn-upload-avatar:hover { background:#2c3e50; }
-            .avatar-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-            .avatar-preview { width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #e9ecef; background:#f8f9fa; }
-
-            /* =========================================================
-               Bloco de endereço: 3 linhas lógicas
-               Linha 1: CEP+busca | Cidade | UF
-               Linha 2: Logradouro (100%)
-               Linha 3: Número (menor) | Complemento (maior)
-               ========================================================= */
-            .endereco-grid{
-                display:grid;
-                grid-template-columns: minmax(220px, 1fr) minmax(180px, 1fr) 90px;
-                gap: 10px;
-                margin-top: 10px;
-                align-items: end;
-            }
-            .endereco-grid .span-all{ grid-column: 1 / -1; }
-
-            /* Linha 3: mantém "Nº" primeiro, mas menor, e "Compl." maior */
-            .endereco-linha3{
-                grid-column: 1 / -1;
-                display: grid;
-                grid-template-columns: 120px 1fr; /* Nº menor | Complemento maior */
-                gap: 10px;
-                align-items: end;
-            }
-
-            @media (max-width: 900px){
-                .endereco-grid{
-                    grid-template-columns: 1fr;
-                }
-                .endereco-grid .span-all{
-                    grid-column: auto;
-                }
-                .endereco-linha3{
-                    grid-template-columns: 1fr; /* empilha no mobile */
-                }
-            }
-
-            /* CEP (input + botão em colunas) */
-            .cep-wrapper{
-                display: grid;
-                grid-template-columns: 1fr 40px;
-                gap: 6px;
-                align-items: stretch;
-            }
-            .cep-wrapper input.campo-cep-admin{
-                width: 100%;
-                height: 38px;
-                padding-right: 12px;
-            }
-            .cep-wrapper .btn-buscar-cep-admin{
-                width: 40px;
-                min-width: 40px;
-                height: 38px;
-                border: 1px solid #d0d7de;
-                border-radius: 6px;
-                background: #f1f3f5;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: static;
-                right: auto;
-                top: auto;
-                bottom: auto;
-                transform: none;
-                padding: 0;
-            }
-            .cep-wrapper .btn-buscar-cep-admin:hover { background: #dde2e6; }
-
-            .row-filtros { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-            .row-filtros label { font-size:0.9rem; display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; color:#fff; }
-            .row-filtros select { background:#fff; color:#333; }
-
-            @media (max-width: 600px) { .filiado-header { flex-direction: column; } }
-        `;
-        document.head.appendChild(s);
-    }
-
-    // 2. CONFIGURAÇÃO DE LISTENERS
+    // 1. CSS
+    // Estilos do módulo foram movidos para o arquivo global style.css (seção "FILIADOS ADMIN").
+// 2. CONFIGURAÇÃO DE LISTENERS
     if (!handlersConfigurados) {
         const btnNovo = document.getElementById("btn-novo-filiado");
         const containerNovo = document.getElementById("novo-filiado-container");
@@ -350,394 +222,414 @@ function filtrarLista(termo) {
                 </select>
             </div>` : '';
 
-        const dnValue = toDateInputValue(f.data_nascimento);
+        const editForm = `
+            <details class="edit-area">
+                <summary class="btn-editar-toggle">✏️ Editar dados completos <span class="seta">▲</span></summary>
 
-        return `
-            <div class="filiado-card ${classeStatus}">
-                ${header}
                 ${arquivadoInfo}
                 ${acoesArquivamento}
-                <details class="edit-area">
-                    <summary class="btn-editar-toggle">✏️ Editar dados completos <span class="seta" style="margin-left:5px;">▼</span></summary>
-                    <form class="form-edit-filiado" data-id="${f.id}" style="margin-top:15px;">
-                        <div class="edit-grid">
-                            <div class="edit-group span-2"><label>Nome</label><input name="nome" value="${f.nome || ''}"></div>
-                            <div class="edit-group"><label>CPF</label><input name="cpf" value="${formatarCPF(f.cpf)}" ${attrCpf} placeholder="Somente números"></div>
 
-                            <div class="edit-group"><label>Data de Nascimento</label><input name="data_nascimento" type="date" value="${dnValue}"></div>
-
-                            <div class="edit-group"><label>E-mail 1</label><input name="email1" value="${f.email1 || ''}"></div>
-                            <div class="edit-group"><label>E-mail 2</label><input name="email2" value="${f.email2 || ''}"></div>
-                            <div class="edit-group"><label>Tel 1</label><input name="telefone1" value="${tel1Raw}"></div>
-                            <div class="edit-group"><label>Tel 2</label><input name="telefone2" value="${tel2Raw}"></div>
-                            <div class="edit-group"><label>Lotação</label><input name="lotacao" value="${f.lotacao || ''}"></div>
-                            <div class="edit-group"><label>Situação</label>
-                                <select name="situacao">${SITUACAO_OPCOES.map(op => `<option value="${op}" ${op === situacao ? 'selected' : ''}>${op}</option>`).join('')}</select>
-                            </div>
-
-                            ${adminSection}
+                <form class="edit-form" data-id="${f.id}">
+                    <div class="edit-grid">
+                        <div class="edit-group">
+                            <label>Nome</label>
+                            <input name="nome" value="${escapeHtml(f.nome || '')}">
                         </div>
 
-                        <!-- BLOCO DE ENDEREÇO (3 linhas lógicas) -->
-                        <div class="endereco-grid">
-                            <!-- Linha 1 -->
+                        <div class="edit-group">
+                            <label>CPF</label>
+                            <input name="cpf" value="${escapeHtml(f.cpf || '')}" ${attrCpf}>
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Data de Nascimento</label>
+                            <input type="date" name="data_nascimento" value="${escapeHtml(toDateInputValue(f.data_nascimento))}">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>E-mail 1</label>
+                            <input name="email1" value="${escapeHtml(f.email1 || '')}">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>E-mail 2</label>
+                            <input name="email2" value="${escapeHtml(f.email2 || '')}">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Tel 1</label>
+                            <input name="telefone1" value="${escapeHtml(f.telefone1 || '')}" class="campo-telefone">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Tel 2</label>
+                            <input name="telefone2" value="${escapeHtml(f.telefone2 || '')}" class="campo-telefone">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Lotação</label>
+                            <input name="lotacao" value="${escapeHtml(f.lotacao || 'SEDE')}">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Situação</label>
+                            <select name="situacao">
+                                ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || 'ATIVO').toUpperCase() === op ? 'selected' : ''}>${op}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        ${adminSection}
+
+                        <div class="edit-group span-2">
+                            <label>Logradouro</label>
+                            <input name="endereco" value="${escapeHtml(f.endereco || '')}">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Bairro</label>
+                            <input name="bairro" value="${escapeHtml(f.bairro || '')}">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Perfil</label>
+                            <select name="perfil">
+                                <option value="FILIADO" ${f.perfil === 'FILIADO' ? 'selected' : ''}>FILIADO</option>
+                                <option value="ORGANIZADOR" ${f.perfil === 'ORGANIZADOR' ? 'selected' : ''}>ORGANIZADOR</option>
+                                <option value="FUNCIONARIO" ${f.perfil === 'FUNCIONARIO' ? 'selected' : ''}>FUNCIONARIO</option>
+                                <option value="DIRETORIA" ${f.perfil === 'DIRETORIA' ? 'selected' : ''}>DIRETORIA</option>
+                                <option value="ADMIN" ${f.perfil === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
+                            </select>
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Nº</label>
+                            <input name="numero" value="${escapeHtml(f.numero || '')}">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Compl.</label>
+                            <input name="complemento" value="${escapeHtml(f.complemento || '')}">
+                        </div>
+
+                        <div class="edit-group endereco-grid span-2">
                             <div class="edit-group">
                                 <label>CEP</label>
                                 <div class="cep-wrapper">
-                                    <input class="campo-cep-admin" name="cep" value="${(f.cep || '').toString().replace(/\D/g, '')}" maxlength="8" placeholder="00000000">
-                                    <button type="button" class="btn-buscar-cep-admin" title="Buscar Endereço">🔍</button>
+                                    <input class="campo-cep-admin" name="cep" value="${escapeHtml(f.cep || '')}" placeholder="00000000">
+                                    <button type="button" class="btn-buscar-cep-admin" title="Buscar CEP">🔎</button>
                                 </div>
                             </div>
 
                             <div class="edit-group">
                                 <label>Cidade</label>
-                                <input name="cidade" value="${f.cidade || ''}" readonly style="background:#f8f9fa;">
+                                <input name="cidade" value="${escapeHtml(f.cidade || '')}">
                             </div>
 
                             <div class="edit-group">
                                 <label>UF</label>
-                                <input name="uf" value="${f.uf || ''}" maxlength="2" readonly style="background:#f8f9fa; text-transform:uppercase;">
+                                <input name="uf" value="${escapeHtml(f.uf || '')}">
                             </div>
 
-                            <!-- Linha 2 -->
                             <div class="edit-group span-all">
                                 <label>Logradouro</label>
-                                <input name="logradouro_bairro" value="${f.logradouro_bairro || ''}" readonly style="background:#f8f9fa;">
+                                <input name="logradouro" value="${escapeHtml(f.logradouro || '')}">
                             </div>
 
-                            <!-- Linha 3: Nº primeiro (menor), Compl. depois (maior) -->
                             <div class="endereco-linha3">
                                 <div class="edit-group">
                                     <label>Nº</label>
-                                    <input name="numero" value="${f.numero || ''}">
+                                    <input name="numero_endereco" value="${escapeHtml(f.numero_endereco || f.numero || '')}">
                                 </div>
-
                                 <div class="edit-group">
                                     <label>Compl.</label>
-                                    <input name="complemento" value="${f.complemento || ''}">
+                                    <input name="complemento_endereco" value="${escapeHtml(f.complemento_endereco || f.complemento || '')}">
                                 </div>
                             </div>
                         </div>
 
-                        <div style="margin-top:14px;">
-                            <label style="font-size:0.8rem; color:#666; font-weight:bold;">Avatar (foto)</label>
+                        <div class="edit-group span-2">
+                            <label>Avatar (foto)</label>
                             <div class="avatar-actions">
-                                <img class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" onerror="this.src='/img/avatar-placeholder.png'">
-                                <input type="file" name="avatar_file" accept="image/*">
+                                <img class="avatar-preview" src="${escapeHtml(f.avatar_url || '/img/avatar-placeholder.png')}" alt="Preview avatar" onerror="this.src='/img/avatar-placeholder.png'">
+                                <input type="file" name="avatar" accept="image/*">
                                 <button type="button" class="btn-upload-avatar">Enviar foto</button>
-                                <button type="button" class="btn-remove-avatar" style="background:#c0392b; color:#fff; border:none; padding:8px 10px; border-radius:5px; cursor:pointer; font-weight:700;">Remover foto</button>
+                                <button type="button" class="btn btn-danger btn-remover-avatar" data-id="${f.id}">Remover foto</button>
                             </div>
                         </div>
+                    </div>
 
-                        <button type="submit" class="btn-save">💾 Salvar Alterações</button>
-                    </form>
-                </details>
-            </div>`;
+                    <button type="submit" class="btn-save">💾 Salvar Alterações</button>
+                </form>
+            </details>
+        `;
+
+        return `<div class="filiado-card ${classeStatus}">${header}${editForm}</div>`;
     }).join("");
 
-    if (podeEditar) {
-        el.querySelectorAll("form.form-edit-filiado").forEach(frm => {
-            // Máscaras
-            aplicarMascaraTelefone(frm.querySelector('input[name="telefone1"]'));
-            aplicarMascaraTelefone(frm.querySelector('input[name="telefone2"]'));
+    // Listeners dos forms (delegação)
+    configurarListenersEdicao();
+}
 
-            // Máscara de CPF (somente se não disabled)
-            const inputCpf = frm.querySelector('input[name="cpf"]');
-            if (inputCpf && !inputCpf.disabled) {
-                inputCpf.addEventListener('input', (e) => {
-                    let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-                    if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-                    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
-                    else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
-                    e.target.value = v;
-                });
-            }
+function configurarListenersEdicao() {
+    const root = document.getElementById("lista-filiados");
+    if (!root) return;
 
-            // CEP
-            const inputCep = frm.querySelector('input[name="cep"]');
-            const btnCep = frm.querySelector('.btn-buscar-cep-admin');
+    // Delegação para submit
+    root.querySelectorAll("form.edit-form").forEach((form) => {
+        if (form.dataset.bound === "1") return;
+        form.dataset.bound = "1";
 
-            if (inputCep) {
-                inputCep.addEventListener('input', (e) => {
-                    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 8);
-                });
-            }
-
-            if (btnCep && inputCep) {
-                btnCep.addEventListener('click', async () => {
-                    const cepVal = inputCep.value.replace(/\D/g, "");
-                    if (cepVal.length !== 8) return alert("CEP inválido. Digite 8 números.");
-
-                    const originalText = btnCep.innerText;
-                    btnCep.innerText = "...";
-
-                    try {
-                        const r = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
-                        const d = await r.json();
-                        if (d.erro) {
-                            alert("CEP não encontrado.");
-                        } else {
-                            const enderecoCompleto = [d.logradouro, d.bairro].filter(Boolean).join(", ");
-                            const campoLogradouroBairro = frm.querySelector('input[name="logradouro_bairro"]');
-                            const campoCidade = frm.querySelector('input[name="cidade"]');
-                            const campoUf = frm.querySelector('input[name="uf"]');
-
-                            if (campoLogradouroBairro) campoLogradouroBairro.value = enderecoCompleto;
-                            if (campoCidade) campoCidade.value = d.localidade || "";
-                            if (campoUf) campoUf.value = d.uf || "";
-                        }
-                    } catch (e) {
-                        alert("Erro ao buscar CEP.");
-                    } finally {
-                        btnCep.innerText = originalText;
-                    }
-                });
-
-                inputCep.addEventListener('blur', () => {
-                    if (inputCep.value.replace(/\D/g, "").length === 8) btnCep.click();
-                });
-            }
-
-            // Upload avatar
-            const btnAvatar = frm.querySelector(".btn-upload-avatar");
-            const inputAvatar = frm.querySelector('input[name="avatar_file"]');
-            const imgPreview = frm.querySelector(".avatar-preview");
-
-            if (inputAvatar && imgPreview) {
-                inputAvatar.addEventListener("change", () => {
-                    const file = inputAvatar.files && inputAvatar.files[0];
-                    if (file) imgPreview.src = URL.createObjectURL(file);
-                });
-            }
-
-            if (btnAvatar && inputAvatar) {
-                btnAvatar.addEventListener("click", async () => {
-                    const id = frm.dataset.id;
-                    const file = inputAvatar.files && inputAvatar.files[0];
-                    if (!file) return alert("Selecione uma foto (arquivo) antes de enviar.");
-
-                    const fd = new FormData();
-                    fd.append("avatar", file);
-
-                    const original = btnAvatar.innerText;
-                    btnAvatar.disabled = true;
-                    btnAvatar.innerText = "Enviando...";
-
-                    try {
-                        const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
-                        const d = await r.json().catch(() => ({}));
-                        if (r.ok) {
-                            const idx = cacheLista.findIndex(i => String(i.id) === String(id));
-                            if (idx !== -1) cacheLista[idx].avatar_url = d.avatar_url || d.filiado?.avatar_url || cacheLista[idx].avatar_url;
-                            filtrarLista(document.getElementById("busca-filiados")?.value || "");
-                            alert("Foto enviada com sucesso.");
-                        } else {
-                            alert(d.message || d.error || "Não foi possível enviar a foto.");
-                        }
-                    } catch (e) {
-                        alert("Erro de conexão ao enviar foto.");
-                    } finally {
-                        btnAvatar.disabled = false;
-                        btnAvatar.innerText = original;
-                    }
-                });
-            }
-
-            // Remover avatar (DELETE /:id/avatar)
-            const btnRemoverAvatar = frm.querySelector(".btn-remove-avatar");
-            if (btnRemoverAvatar) {
-                btnRemoverAvatar.addEventListener("click", async () => {
-                    const id = frm.dataset.id;
-                    if (!id) return;
-
-                    if (!confirm("Remover a foto deste cadastro?")) return;
-
-                    const original = btnRemoverAvatar.innerText;
-                    btnRemoverAvatar.disabled = true;
-                    btnRemoverAvatar.innerText = "Removendo...";
-
-                    try {
-                        const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
-                        const d = await r.json().catch(() => ({}));
-
-                        if (r.ok) {
-                            // Atualiza cache e re-render
-                            const idx = cacheLista.findIndex(i => String(i.id) === String(id));
-                            if (idx !== -1) cacheLista[idx].avatar_url = null;
-
-                            filtrarLista(document.getElementById("busca-filiados")?.value || "");
-                            alert(d.message || "Foto removida com sucesso.");
-                        } else {
-                            alert(d.message || d.error || "Não foi possível remover a foto.");
-                        }
-                    } catch (e) {
-                        alert("Erro de conexão ao remover foto.");
-                    } finally {
-                        btnRemoverAvatar.disabled = false;
-                        btnRemoverAvatar.innerText = original;
-                    }
-                });
-            }
-
-            frm.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                const id = frm.dataset.id;
-                const btn = frm.querySelector(".btn-save");
-                const txtOriginal = btn.innerText;
-                btn.disabled = true; btn.innerText = "Salvando...";
-
-                const fd = new FormData(frm);
-                const payload = {};
-                fd.forEach((v, k) => {
-                    if (k === "avatar_file") return; // não vai no PUT
-                    if (k.includes('telefone') || k === 'cep' || k === 'cpf') payload[k] = String(v).replace(/\D/g, "");
-                    else payload[k] = v;
-                });
-
-                // Somente ADMIN pode alterar perfil_acesso.
-                if (!ehAdmin) delete payload.perfil_acesso;
-
-                try {
-                    const r = await apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
-                    const d = await r.json().catch(() => ({}));
-
-                    if (r.ok) {
-                        alert("Salvo com sucesso!");
-                        const idx = cacheLista.findIndex(i => String(i.id) === String(id));
-                        if (idx !== -1) {
-                            cacheLista[idx] = { ...cacheLista[idx], ...payload };
-                            filtrarLista(document.getElementById("busca-filiados")?.value || "");
-                        }
-                    } else if (r.status === 409) {
-                        alert(d.message || "CPF já cadastrado para outro filiado.");
-                    } else {
-                        alert(d.message || "Erro ao salvar.");
-                    }
-                } catch (ex) {
-                    alert("Erro de conexão.");
-                } finally {
-                    btn.disabled = false;
-                    btn.innerText = txtOriginal;
-                }
-            });
+        // Máscaras
+        form.querySelectorAll(".campo-telefone").forEach(inp => {
+            inp.addEventListener("input", () => aplicarMascaraTelefone(inp));
+            aplicarMascaraTelefone(inp);
         });
 
-        // Arquivar / Desarquivar (ações administrativas)
-        el.querySelectorAll(".btn-arquivar-filiado").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-                const id = btn.dataset.id;
-                const motivo = prompt("Informe o motivo do arquivamento (obrigatório):");
-                if (!motivo || !motivo.trim()) {
-                    alert("Motivo é obrigatório.");
+        // Buscar CEP
+        const btnCep = form.querySelector(".btn-buscar-cep-admin");
+        if (btnCep) {
+            btnCep.addEventListener("click", async () => {
+                const cepInput = form.querySelector("input[name='cep']");
+                const cep = (cepInput?.value || "").replace(/\D/g, "");
+                if (!cep || cep.length !== 8) {
+                    alert("CEP inválido. Informe 8 dígitos.");
                     return;
                 }
-
-                try {
-                    btn.disabled = true;
-                    const r = await apiFetch(`/api/filiados/${id}/arquivar`, {
-                        method: "POST",
-                        body: { motivo: motivo.trim() },
-                    });
-                    const d = await r.json().catch(() => ({}));
-
-                    if (r && r.ok) {
-                        alert(d.message || "Arquivado com sucesso.");
-                        await carregarLista();
-                    } else {
-                        alert(d.message || d.error || "Erro ao arquivar.");
-                    }
-                } catch (e) {
-                    alert("Erro de conexão ao arquivar.");
-                } finally {
-                    btn.disabled = false;
-                }
+                await buscarCepEPreencher(form, cep);
             });
+        }
+
+        // Upload avatar
+        const btnUpload = form.querySelector(".btn-upload-avatar");
+        if (btnUpload) {
+            btnUpload.addEventListener("click", async () => {
+                const id = form.dataset.id;
+                const fileInput = form.querySelector("input[type='file'][name='avatar']");
+                const file = fileInput?.files?.[0];
+                if (!file) {
+                    alert("Selecione um arquivo de imagem antes de enviar.");
+                    return;
+                }
+                await uploadAvatar(id, file, form);
+            });
+        }
+
+        // Remover avatar
+        const btnRemover = form.querySelector(".btn-remover-avatar");
+        if (btnRemover) {
+            btnRemover.addEventListener("click", async () => {
+                const id = btnRemover.dataset.id;
+                if (!id) return;
+                if (!confirm("Deseja remover a foto do avatar deste usuário?")) return;
+                await removerAvatar(id, form);
+            });
+        }
+
+        // Submit do form
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            await salvarEdicao(form);
+        });
+    });
+
+    // Arquivar / Desarquivar (delegação)
+    root.querySelectorAll(".btn-arquivar-filiado").forEach((btn) => {
+        if (btn.dataset.bound === "1") return;
+        btn.dataset.bound = "1";
+        btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            const motivo = prompt("Informe a justificativa para arquivar o cadastro:");
+            if (!motivo) return;
+            await arquivarFiliado(id, motivo);
+        });
+    });
+
+    root.querySelectorAll(".btn-desarquivar-filiado").forEach((btn) => {
+        if (btn.dataset.bound === "1") return;
+        btn.dataset.bound = "1";
+        btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            const motivo = prompt("Informe a justificativa para desarquivar o cadastro:");
+            if (!motivo) return;
+            await desarquivarFiliado(id, motivo);
+        });
+    });
+}
+
+async function salvarEdicao(form) {
+    const id = form.dataset.id;
+    if (!id) return;
+
+    const data = new FormData(form);
+    const payload = {};
+
+    for (const [k, v] of data.entries()) {
+        if (k === "avatar") continue;
+        payload[k] = (typeof v === "string") ? v.trim() : v;
+    }
+
+    // Normalizações
+    if (payload.telefone1) payload.telefone1 = payload.telefone1.replace(/\D/g, "");
+    if (payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
+    if (payload.cpf) payload.cpf = payload.cpf.replace(/\D/g, "");
+    if (payload.cep) payload.cep = payload.cep.replace(/\D/g, "");
+
+    try {
+        const r = await apiFetch(`/api/filiados/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
         });
 
-        el.querySelectorAll(".btn-desarquivar-filiado").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-                const id = btn.dataset.id;
-
-                try {
-                    btn.disabled = true;
-                    const r = await apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST" });
-                    const d = await r.json().catch(() => ({}));
-
-                    if (r && r.ok) {
-                        alert(d.message || "Desarquivado com sucesso.");
-                        await carregarLista();
-                    } else {
-                        alert(d.message || d.error || "Erro ao desarquivar.");
-                    }
-                } catch (e) {
-                    alert("Erro de conexão ao desarquivar.");
-                } finally {
-                    btn.disabled = false;
-                }
-            });
-        });
+        if (r && r.ok) {
+            alert("Alterações salvas com sucesso.");
+            await carregarLista();
+        } else {
+            const err = await safeJson(r);
+            alert(err?.message || "Erro ao salvar alterações.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Erro de conexão ao salvar alterações.");
     }
 }
 
-function abrirNovoFiliado(container) {
-    if (!container) return;
-    if (container.innerHTML !== "") { container.innerHTML = ""; return; }
-
-    container.innerHTML = `
-        <div class="section-box" style="background:#fff; color:#333; padding:25px; border-radius:12px; margin-bottom:25px; border-left:6px solid #2980b9; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-            <h3 style="color:#003366; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:20px;">👤 Cadastrar Novo Filiado</h3>
-            <form id="form-novo-filiado">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                    <div><label style="font-weight:bold; display:block; margin-bottom:5px;">Nome *</label><input name="nome" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;"></div>
-                    <div><label style="font-weight:bold; display:block; margin-bottom:5px;">CPF *</label><input name="cpf" required placeholder="Somente números" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;"></div>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                    <div><label style="font-weight:bold; display:block; margin-bottom:5px;">E-mail *</label><input name="email1" type="email" required style="width:100%; padding:10px; border:1px solid:#ccc; border-radius:4px;"></div>
-                    <div><label style="font-weight:bold; display:block; margin-bottom:5px;">Situação</label>
-                        <select name="situacao" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">${SITUACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join('')}</select>
-                    </div>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button class="btn btn-primary" style="flex:1; padding:12px;">Criar Cadastro</button>
-                    <button type="button" id="btn-cancelar-novo" class="btn btn-outline" style="flex:0 0 100px; color:#333; border-color:#999;">Cancelar</button>
-                </div>
-            </form>
-        </div>`;
-
-    // Máscara de CPF no formulário de criação
-    const inputCpf = container.querySelector('input[name="cpf"]');
-    if (inputCpf) {
-        inputCpf.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-            if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-            else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
-            else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
-            e.target.value = v;
-        });
-    }
-
-    container.querySelector("#btn-cancelar-novo").addEventListener("click", () => container.innerHTML = "");
-
-    container.querySelector("form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        const payload = Object.fromEntries(fd.entries());
-        payload.perfil_acesso = "FILIADO";
-        payload.cpf = String(payload.cpf || "").replace(/\D/g, "");
-
-        try {
-            const r = await apiFetch("/api/filiados", { method: "POST", body: payload });
-            const d = await r.json().catch(() => ({}));
-
-            if (r && r.ok) {
-                alert("Criado!");
-                container.innerHTML = "";
-                await carregarLista();
-            } else {
-                alert(d.message || d.error || "Erro.");
-            }
-        } catch (ex) {
-            alert("Erro de conexão.");
+async function buscarCepEPreencher(form, cep) {
+    try {
+        const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const d = await r.json();
+        if (d?.erro) {
+            alert("CEP não encontrado.");
+            return;
         }
-    });
+
+        // Preenche com os nomes usados no seu formulário
+        const cidade = form.querySelector("input[name='cidade']");
+        const uf = form.querySelector("input[name='uf']");
+        const logradouro = form.querySelector("input[name='logradouro']");
+
+        if (cidade) cidade.value = d.localidade || "";
+        if (uf) uf.value = d.uf || "";
+        if (logradouro) logradouro.value = d.logradouro || "";
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao consultar CEP.");
+    }
+}
+
+async function uploadAvatar(id, file, form) {
+    try {
+        const fd = new FormData();
+        fd.append("avatar", file);
+
+        const r = await apiFetch(`/api/auth/avatar/${id}`, {
+            method: "POST",
+            body: fd
+        });
+
+        if (r && r.ok) {
+            const d = await r.json();
+            alert(d?.message || "Foto enviada com sucesso.");
+
+            // Atualiza preview
+            const img = form.querySelector(".avatar-preview");
+            if (img) img.src = d?.avatar_url || img.src;
+
+            // Recarrega lista (garante refletir no card)
+            await carregarLista();
+        } else {
+            const err = await safeJson(r);
+            alert(err?.message || "Erro ao enviar foto.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Erro de conexão ao enviar foto.");
+    }
+}
+
+async function removerAvatar(id, form) {
+    try {
+        const r = await apiFetch(`/api/auth/avatar/${id}`, { method: "DELETE" });
+
+        if (r && r.ok) {
+            const d = await r.json();
+            alert(d?.message || "Foto removida.");
+
+            // Atualiza preview
+            const img = form.querySelector(".avatar-preview");
+            if (img) img.src = "/img/avatar-placeholder.png";
+
+            // Recarrega lista
+            await carregarLista();
+        } else {
+            const err = await safeJson(r);
+            alert(err?.message || "Erro ao remover foto.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Erro de conexão ao remover foto.");
+    }
+}
+
+async function arquivarFiliado(id, motivo) {
+    try {
+        const r = await apiFetch(`/api/filiados/${id}/arquivar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ motivo })
+        });
+
+        if (r && r.ok) {
+            const d = await r.json();
+            alert(d?.message || "Cadastro arquivado.");
+            await carregarLista();
+        } else {
+            const err = await safeJson(r);
+            alert(err?.message || "Erro ao arquivar cadastro.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Erro de conexão ao arquivar cadastro.");
+    }
+}
+
+async function desarquivarFiliado(id, motivo) {
+    try {
+        const r = await apiFetch(`/api/filiados/${id}/desarquivar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ motivo })
+        });
+
+        if (r && r.ok) {
+            const d = await r.json();
+            alert(d?.message || "Cadastro desarquivado.");
+            await carregarLista();
+        } else {
+            const err = await safeJson(r);
+            alert(err?.message || "Erro ao desarquivar cadastro.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Erro de conexão ao desarquivar cadastro.");
+    }
+}
+
+function abrirNovoFiliado(containerNovo) {
+    if (!containerNovo) return;
+    containerNovo.style.display = containerNovo.style.display === "none" ? "block" : "none";
+}
+
+function escapeHtml(str) {
+    return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+async function safeJson(r) {
+    try { return await r.json(); } catch { return null; }
 }
