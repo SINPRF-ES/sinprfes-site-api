@@ -93,7 +93,7 @@ async function atualizarDadosProprios(id, dados) {
   const paramVals = [];
   let p = 1;
   for (const c of campos) {
-    if (c === "atualizado_em = $"+(p)) {
+    if (c === "atualizado_em = $" + p) {
       // não vai acontecer, pois usamos add("atualizado_em","NOW()") e isso geraria param.
     }
   }
@@ -164,12 +164,14 @@ async function atualizarFiliadoPorId(id, dados) {
 
   addCampo("nome", dados.nome);
   addCampo("cpf", dados.cpf);
+
+  // ✅ PATCH: tipar explicitamente como date no SQL (evita "expression is of type text")
   if (dados.data_nascimento !== undefined) {
-  // Converte '' -> NULL no lado do SQL
-  campos.push(`data_nascimento = NULLIF($${idx}, '')`);
-  valores.push(dados.data_nascimento);
-  idx += 1;
-}
+    // Converte '' -> NULL no lado do SQL e faz cast para DATE
+    campos.push(`data_nascimento = NULLIF($${idx}, '')::date`);
+    valores.push(dados.data_nascimento);
+    idx += 1;
+  }
 
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
