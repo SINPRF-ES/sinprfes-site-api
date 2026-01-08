@@ -151,7 +151,7 @@ exports.atualizarFiliado = async (req, res) => {
     const payload = {
       nome: body.nome,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
-      data_nascimento: body.data_nascimento === "" ? null : body.data_nascimento, // esperado: yyyy-MM-dd
+      data_nascimento: body.data_nascimento === "" ? undefined : body.data_nascimento, // esperado: yyyy-MM-dd
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email1: body.email1,
