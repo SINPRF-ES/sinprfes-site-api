@@ -1,4 +1,4 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF } from './utils.js';
+import { apiFetch, aplicarMascaraTelefone, formatarCPF, aplicarMascaraCEP } from './utils.js';
 import { renderizarSeguranca } from './seguranca.js';
 import { preencherFormularioRessarcimentoComDados } from './ressarcimento.js';
 
@@ -281,7 +281,11 @@ function renderizarFormularioMeusDados(dados, container) {
     aplicarMascaraTelefone(document.getElementById("me-telefone1"));
     aplicarMascaraTelefone(document.getElementById("me-telefone2"));
 
-    // --- UPLOAD DE AVATAR (Lógica nova no visual antigo) ---
+    // ✅ PATCH: máscara do CEP em tempo real (apenas números, máx 8)
+    const cepInput = document.getElementById("me-cep");
+    aplicarMascaraCEP(cepInput);
+
+    // --- UPLOAD DE AVATAR ---
     const inputFile = document.getElementById("me-avatar-file");
     const previewContainer = document.getElementById("avatar-preview");
     const btnSalvarFoto = document.getElementById("btn-salvar-foto");
@@ -293,12 +297,11 @@ function renderizarFormularioMeusDados(dados, container) {
         if (file) {
             const urlLocal = URL.createObjectURL(file);
             previewContainer.innerHTML = `<img src="${urlLocal}" style="width:100%; height:100%; object-fit:cover;" />`;
-            // Mostra o botão de enviar foto
             btnSalvarFoto.style.display = "inline-block";
         }
     });
 
-    // 2. Enviar foto para o backend (Endpoint /avatar)
+    // 2. Enviar foto para o backend
     btnSalvarFoto.addEventListener("click", async () => {
         const file = inputFile.files && inputFile.files[0];
         if (!file) return;
@@ -314,8 +317,8 @@ function renderizarFormularioMeusDados(dados, container) {
             const r = await apiFetch("/api/filiados/me/avatar", { method: "POST", body: fd });
             if (r.ok) {
                 alert("Foto atualizada com sucesso!");
-                btnSalvarFoto.style.display = "none"; // Esconde após sucesso
-                inputFile.value = ""; // Limpa input
+                btnSalvarFoto.style.display = "none";
+                inputFile.value = "";
             } else {
                 alert("Erro ao enviar foto.");
             }
@@ -325,41 +328,37 @@ function renderizarFormularioMeusDados(dados, container) {
             btnSalvarFoto.disabled = false;
             btnSalvarFoto.innerText = originalText;
         }
-        
-
     });
 
-    // 3. Remover foto (sempre disponível)
-btnRemoverFoto.addEventListener("click", async () => {
-  if (!confirm("Remover a foto de perfil?")) return;
+    // 3. Remover foto
+    btnRemoverFoto.addEventListener("click", async () => {
+      if (!confirm("Remover a foto de perfil?")) return;
 
-  btnRemoverFoto.disabled = true;
-  const txt = btnRemoverFoto.innerText;
-  btnRemoverFoto.innerText = "Removendo...";
+      btnRemoverFoto.disabled = true;
+      const txt = btnRemoverFoto.innerText;
+      btnRemoverFoto.innerText = "Removendo...";
 
-  try {
-    const r = await apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
-    if (r.ok) {
-      alert("Foto removida com sucesso!");
-      previewContainer.innerHTML = `<div class="avatar-fallback">👤</div>`;
-      inputFile.value = "";
-      btnSalvarFoto.style.display = "none";
-    } else {
-      alert("Erro ao remover foto.");
-    }
-  } catch {
-    alert("Erro de conexão.");
-  } finally {
-    btnRemoverFoto.disabled = false;
-    btnRemoverFoto.innerText = txt;
-  }
-});
+      try {
+        const r = await apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
+        if (r.ok) {
+          alert("Foto removida com sucesso!");
+          previewContainer.innerHTML = `<div class="avatar-fallback">👤</div>`;
+          inputFile.value = "";
+          btnSalvarFoto.style.display = "none";
+        } else {
+          alert("Erro ao remover foto.");
+        }
+      } catch {
+        alert("Erro de conexão.");
+      } finally {
+        btnRemoverFoto.disabled = false;
+        btnRemoverFoto.innerText = txt;
+      }
+    });
 
-
-    // --- CEP ---
-    const cepInput = document.getElementById("me-cep");
+    // --- CEP (busca via ViaCEP) ---
     const buscarCep = async () => {
-        const val = cepInput.value.replace(/\D/g, "");
+        const val = (cepInput?.value || "").replace(/\D/g, "");
         if (val.length !== 8) return alert("CEP inválido");
         try {
             const r = await fetch(`https://viacep.com.br/ws/${val}/json/`);
@@ -396,7 +395,6 @@ btnRemoverFoto.addEventListener("click", async () => {
             uf: document.getElementById("me-uf").value,
             cep: document.getElementById("me-cep").value.replace(/\D/g, ""),
             lotacao: document.getElementById("me-lotacao").value,
-            // (Avatar não vai aqui, pois foi enviado separado ou mantido)
         };
 
         try {
