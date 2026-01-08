@@ -1,4 +1,12 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF, normalizarTextoBusca, formatarTelefoneTexto } from './utils.js';
+import {
+  apiFetch,
+  aplicarMascaraTelefone,
+  formatarCPF,
+  normalizarTextoBusca,
+  formatarTelefoneTexto,
+  aplicarMascaraCPF,
+  aplicarMascaraCEP
+} from './utils.js';
 
 let cacheLista = [];
 const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
