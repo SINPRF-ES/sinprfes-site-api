@@ -69,11 +69,12 @@ function renderizarFormularioMeusDados(dados, container) {
             }
             .profile-name h2 { margin: 0; font-size: 1.5rem; color: #fff; }
             .profile-meta { font-size: 0.95rem; color: #ccdceb; margin-top: 5px; display:flex; flex-wrap:wrap; gap:8px; }
-            .profile-badge {
-                background: rgba(255,255,255,0.1);
-                padding: 5px 12px;
-                border-radius: 20px;
-                font-size: 0.85rem;
+            .status-badge {
+                font-weight: bold;
+                padding: 8px 14px;
+                border-radius: 8px;
+                font-size: 0.95rem;
+                background: rgba(255,255,255,0.12);
                 border: 1px solid rgba(255,255,255,0.2);
                 display:inline-block;
             }
@@ -124,7 +125,7 @@ function renderizarFormularioMeusDados(dados, container) {
             }
             .field-row { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:12px; }
             .field-group { display:flex; flex-direction:column; gap:6px; }
-            
+
             /* Avatar Row Renovado */
             .avatar-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
             .avatar-preview {
@@ -137,7 +138,7 @@ function renderizarFormularioMeusDados(dados, container) {
             }
             .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
             .avatar-fallback { font-size: 32px; color:#6c757d; }
-            
+
             /* Botão de Upload Invisível mas clicável */
             .avatar-actions { display: flex; flex-direction: column; gap: 8px; }
             .btn-upload-label {
@@ -154,88 +155,59 @@ function renderizarFormularioMeusDados(dados, container) {
     }
 
     const avatarUrlSafe = (avatar_url || "").toString().trim();
+    const avatarImg = avatarUrlSafe
+        ? `<img src="${avatarUrlSafe}" alt="Avatar" onerror="this.remove();">`
+        : `<div class="avatar-fallback">👤</div>`;
 
     container.innerHTML = `
-      <div class="profile-header">
-        <div class="profile-name">
-            <h2>${nome || "Usuário"}</h2>
-            <div class="profile-meta">
-                <span class="profile-badge">CPF: ${formatarCPF(cpf)}</span>
-                <span class="profile-badge">Perfil: ${perfil_acesso || "FILIADO"}</span>
+        <div class="profile-header">
+            <div class="profile-name">
+                <h2>${nome || ""}</h2>
+                <div class="profile-meta">
+                    <span>CPF: <strong>${formatarCPF(cpf || "")}</strong></span>
+                    <span>Perfil: <strong>${(perfil_acesso || "").toUpperCase()}</strong></span>
+                </div>
             </div>
-        </div>
-        <div style="text-align:right;">
-            <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">Situação</div>
-            <div style="font-weight:bold; color:${corStatus}; font-size:1.2rem; background:#fff; padding:4px 10px; border-radius:4px; margin-top:4px;">
+            <div class="status-badge" style="border-left: 6px solid ${corStatus};">
                 ${iconeStatus} ${situacaoUpper}
             </div>
         </div>
-      </div>
-
-      <form id="form-meus-dados">
-        <div class="data-card">
-            <h3>🖼️ Foto de Perfil</h3>
-            <div class="avatar-row">
-                <div class="avatar-preview" id="avatar-preview">
-                    ${avatarUrlSafe ? `<img src="${avatarUrlSafe}" alt="Avatar" id="img-avatar-real" />` : `<div class="avatar-fallback">👤</div>`}
-                </div>
-                <div class="avatar-actions">
-                    <label for="me-avatar-file" class="btn-upload-label">📁 Alterar Foto...</label>
-                    <input type="file" id="me-avatar-file" accept="image/*">
-                    
-                    <button type="button" id="btn-salvar-foto" class="btn btn-primary" style="display:none; padding: 6px 12px; font-size: 0.85rem;">
-                        ⬆️ Enviar Foto Agora
-                    </button>
-                    <div style="font-size:0.85rem; color:#666;">Formatos: JPG ou PNG</div>
-                    <button type="button" id="btn-remover-foto"
-                    class="btn btn-outline"
-                    style="padding:6px 12px; font-size:0.85rem;">
-                        🗑️ Remover Foto
-                    </button>
-                </div>
-            </div>
-        </div>
 
         <div class="data-card">
-            <h3>📞 Contatos</h3>
-            <div class="form-grid">
+            <h3>📌 Contato</h3>
+            <form id="form-meus-dados">
                 <div class="field-row">
                     <div class="field-group">
-                        <label>Tel 1</label>
-                        <input type="text" id="me-telefone1" value="${telefone1 || ""}" placeholder="(00) 00000-0000" />
+                        <label>Telefone 1</label>
+                        <input type="text" id="me-telefone1" value="${telefone1 || ""}" />
                     </div>
                     <div class="field-group">
-                        <label>Tel 2</label>
-                        <input type="text" id="me-telefone2" value="${telefone2 || ""}" placeholder="Opcional" />
+                        <label>Telefone 2</label>
+                        <input type="text" id="me-telefone2" value="${telefone2 || ""}" />
                     </div>
                 </div>
+
                 <div class="field-row">
                     <div class="field-group">
-                        <label>E-mail 1</label>
+                        <label>Email 1</label>
                         <input type="email" id="me-email1" value="${email1 || ""}" />
                     </div>
                     <div class="field-group">
-                        <label>E-mail 2</label>
+                        <label>Email 2</label>
                         <input type="email" id="me-email2" value="${email2 || ""}" />
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="data-card">
-            <h3>📍 Endereço</h3>
-            <div class="form-grid">
-                <div class="field-row">
-                    <div class="field-group" style="flex:1;">
+                <h3 style="margin-top:25px;">🏠 Endereço</h3>
+
+                <div class="field-row" style="grid-template-columns: 2fr 60px;">
+                    <div class="field-group">
                         <label>CEP</label>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <input type="text" id="me-cep" value="${cep || ""}" style="width:140px;" maxlength="8" />
-                            <button type="button" id="btn-buscar-cep" class="btn btn-outline" style="color:#003366; border-color:#003366;">🔍</button>
-                        </div>
+                        <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
                     </div>
-                    <div class="field-group" style="flex:2;">
-                        <label>Lotação</label>
-                        <select id="me-lotacao">${opcoes}</select>
+                    <div class="field-group" style="justify-content:flex-end;">
+                        <label style="visibility:hidden;">Buscar</label>
+                        <button type="button" class="btn btn-secondary" id="btn-buscar-cep" style="padding: 10px 12px;">🔎</button>
                     </div>
                 </div>
 
@@ -267,23 +239,96 @@ function renderizarFormularioMeusDados(dados, container) {
                         <input type="text" id="me-cidade" value="${cidade || ""}" readonly />
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="form-actions">
-            <span id="meus-dados-status" class="field-hint" style="margin-right: 15px; font-weight:bold;"></span>
-            <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">💾 Salvar Dados</button>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label>Lotação</label>
+                        <select id="me-lotacao">
+                            ${opcoes}
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label></label>
+                        <input type="text" value="" style="visibility:hidden;" />
+                    </div>
+                </div>
+
+                <div class="field-row" style="grid-template-columns: 1fr;">
+                    <div class="field-group">
+                        <label>Foto de perfil</label>
+                        <div class="avatar-row">
+                            <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
+                            <div class="avatar-actions">
+                                <label class="btn-upload-label" for="me-avatar-file">Selecionar foto</label>
+                                <input type="file" id="me-avatar-file" accept="image/*" />
+                                <div style="display:flex; gap:10px;">
+                                    <button type="button" class="btn btn-primary" id="btn-salvar-foto" style="display:none;">Salvar Foto</button>
+                                    <button type="button" class="btn btn-danger" id="btn-remover-foto">Remover</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <span id="meus-dados-status" class="field-hint" style="margin-right: 15px; font-weight:bold;"></span>
+                    <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">💾 Salvar Dados</button>
+                </div>
+              </form>
         </div>
-      </form>
     `;
 
     // --- MÁSCARAS ---
     aplicarMascaraTelefone(document.getElementById("me-telefone1"));
     aplicarMascaraTelefone(document.getElementById("me-telefone2"));
 
-    // ✅ PATCH: máscara do CEP em tempo real (apenas números, máx 8)
+    // ✅ NOVO: máscara do CEP em tempo real (só números, máx 8)
     const cepInput = document.getElementById("me-cep");
     aplicarMascaraCEP(cepInput);
+
+    // --- CEP ---
+    document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);
+    cepInput.addEventListener("blur", () => {
+        if (cepInput.value && cepInput.value.replace(/\D/g, "").length === 8) buscarCep();
+    });
+
+    // --- SUBMIT DADOS (PUT /me) ---
+    document.getElementById("form-meus-dados").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const status = document.getElementById("meus-dados-status");
+        status.textContent = "Salvando...";
+
+        const payload = {
+            telefone1: document.getElementById("me-telefone1").value.replace(/\D/g, ""),
+            telefone2: document.getElementById("me-telefone2").value.replace(/\D/g, ""),
+            email1: document.getElementById("me-email1").value,
+            email2: document.getElementById("me-email2").value,
+            logradouro_bairro: document.getElementById("me-endereco").value,
+            numero: document.getElementById("me-numero").value,
+            complemento: document.getElementById("me-complemento").value,
+            cidade: document.getElementById("me-cidade").value,
+            uf: document.getElementById("me-uf").value,
+            cep: document.getElementById("me-cep").value.replace(/\D/g, ""),
+            lotacao: document.getElementById("me-lotacao").value,
+            // (Avatar não vai aqui, pois foi enviado separado ou mantido)
+        };
+
+        try {
+            const r = await apiFetch("/api/filiados/me", { method: "PUT", body: payload });
+            if (r.ok) {
+                await carregarMeusDados();
+                alert("Dados salvos com sucesso!");
+            } else {
+                status.textContent = "Erro ao salvar.";
+                try {
+                    const d = await r.json();
+                    if (d?.message) alert(d.message);
+                } catch {}
+            }
+        } catch (e) {
+            status.textContent = "Erro de conexão.";
+        }
+    });
 
     // --- UPLOAD DE AVATAR ---
     const inputFile = document.getElementById("me-avatar-file");
@@ -355,64 +400,29 @@ function renderizarFormularioMeusDados(dados, container) {
         btnRemoverFoto.innerText = txt;
       }
     });
+}
 
-    // --- CEP (busca via ViaCEP) ---
-    const buscarCep = async () => {
-        const val = (cepInput?.value || "").replace(/\D/g, "");
-        if (val.length !== 8) return alert("CEP inválido");
-        try {
-            const r = await fetch(`https://viacep.com.br/ws/${val}/json/`);
-            const d = await r.json();
-            if (d.erro) return alert("CEP não encontrado");
-            document.getElementById("me-endereco").value = `${d.logradouro || ""}${d.bairro ? ", " + d.bairro : ""}`.trim();
-            document.getElementById("me-cidade").value = d.localidade || "";
-            document.getElementById("me-uf").value = d.uf || "";
-        } catch (e) {
-            console.error(e);
+async function buscarCep() {
+    const cep = (document.getElementById("me-cep").value || "").replace(/\D/g, "");
+    if (cep.length !== 8) {
+        alert("Informe um CEP válido (8 dígitos).");
+        return;
+    }
+
+    try {
+        const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const d = await r.json();
+        if (d?.erro) {
+            alert("CEP não encontrado.");
+            return;
         }
-    };
 
-    document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);
-    cepInput.addEventListener("blur", () => {
-        if (cepInput.value && cepInput.value.replace(/\D/g, "").length === 8) buscarCep();
-    });
-
-    // --- SUBMIT DADOS (PUT /me) ---
-    document.getElementById("form-meus-dados").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const status = document.getElementById("meus-dados-status");
-        status.textContent = "Salvando...";
-
-        const payload = {
-            telefone1: document.getElementById("me-telefone1").value.replace(/\D/g, ""),
-            telefone2: document.getElementById("me-telefone2").value.replace(/\D/g, ""),
-            email1: document.getElementById("me-email1").value,
-            email2: document.getElementById("me-email2").value,
-            logradouro_bairro: document.getElementById("me-endereco").value,
-            numero: document.getElementById("me-numero").value,
-            complemento: document.getElementById("me-complemento").value,
-            cidade: document.getElementById("me-cidade").value,
-            uf: document.getElementById("me-uf").value,
-            cep: document.getElementById("me-cep").value.replace(/\D/g, ""),
-            lotacao: document.getElementById("me-lotacao").value,
-        };
-
-        try {
-            const r = await apiFetch("/api/filiados/me", { method: "PUT", body: payload });
-            if (r.ok) {
-                await carregarMeusDados();
-                alert("Dados salvos com sucesso!");
-            } else {
-                status.textContent = "Erro ao salvar.";
-                try {
-                    const d = await r.json();
-                    if (d?.message) alert(d.message);
-                } catch {}
-            }
-        } catch (e) {
-            status.textContent = "Erro de conexão.";
-        }
-    });
+        document.getElementById("me-endereco").value = d.logradouro || "";
+        document.getElementById("me-cidade").value = d.localidade || "";
+        document.getElementById("me-uf").value = d.uf || "";
+    } catch (e) {
+        alert("Erro ao buscar CEP.");
+    }
 }
 
 // Padronização de nomenclatura (frontend)
