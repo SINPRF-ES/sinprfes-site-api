@@ -1,4 +1,12 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF, aplicarMascaraCEP } from './utils.js';
+import {
+  apiFetch,
+  aplicarMascaraTelefone,
+  formatarCPF,
+  normalizarTextoBusca,
+  formatarTelefoneTexto,
+  aplicarMascaraCPF,
+  aplicarMascaraCEP
+} from './utils.js';
 import { renderizarSeguranca } from './seguranca.js';
 import { preencherFormularioRessarcimentoComDados } from './ressarcimento.js';
 
