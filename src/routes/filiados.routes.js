@@ -1,11 +1,10 @@
 // src/routes/filiados.routes.js
 const express = require("express");
+const router = express.Router();
 const path = require("path");
 const fs = require("fs");
+
 const multer = require("multer");
-
-const router = express.Router();
-
 const authMiddleware = require("../middlewares/auth");
 const requirePermission = require("../middlewares/requirePermission");
 
@@ -34,12 +33,12 @@ async function converterAvatarParaWebp(req, res, next) {
 
     const who = req.params.id ? `id${req.params.id}` : `me${req.user?.id || "0"}`;
     const filename = `${who}-${Date.now()}.webp`;
-    const outPath = path.join(avatarsDir, filename);
+    const outPath = path.join(avatarsDir, filename); // mantido por compatibilidade, mas não será usado
 
     let quality = 82;
     let buffer = await sharp(req.file.buffer)
       .rotate()
-      .resize(512, 512, { fit: "cover" })
+      .resize(200, 200, { fit: "cover" })
       .webp({ quality })
       .toBuffer();
 
@@ -48,7 +47,7 @@ async function converterAvatarParaWebp(req, res, next) {
       quality -= 7;
       buffer = await sharp(req.file.buffer)
         .rotate()
-        .resize(512, 512, { fit: "cover" })
+        .resize(200, 200, { fit: "cover" })
         .webp({ quality })
         .toBuffer();
     }
@@ -59,10 +58,9 @@ async function converterAvatarParaWebp(req, res, next) {
       });
     }
 
-    await fs.promises.writeFile(outPath, buffer);
-
+    // Não persiste em disco (filesystem do Render é efêmero). Mantém em memória para upload no storage.
+    req.file.buffer = buffer;
     req.file.filename = filename;
-    req.file.path = outPath;
     req.file.mimetype = "image/webp";
     req.file.size = buffer.length;
 
@@ -79,7 +77,13 @@ router.get("/me", authMiddleware, filiadosController.getMe);
 
 router.put("/me", authMiddleware, filiadosController.atualizarMeusDados);
 
-router.post("/me/avatar", authMiddleware, upload.single("avatar"), converterAvatarParaWebp, filiadosController.uploadAvatarMe);
+router.post(
+  "/me/avatar",
+  authMiddleware,
+  upload.single("avatar"),
+  converterAvatarParaWebp,
+  filiadosController.uploadAvatarMe
+);
 
 router.delete("/me/avatar", authMiddleware, filiadosController.removerAvatarMe);
 
