@@ -1,10 +1,12 @@
 // src/controllers/filiados.controller.js
 const path = require("path");
 const fs = require("fs");
-const { uploadBuffer, removerPorPublicId } = require("../services/cloudinary.service");
+const { uploadAvatarBuffer, deleteAvatarByPublicId } = require("../services/cloudinary.service");
+
 const pool = require("../config/db");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
+
 const {
   buscarPorId,
   listarParaPerfil,
@@ -15,6 +17,7 @@ const {
   arquivarFiliadoPorId,
   desarquivarFiliadoPorId,
 } = require("../services/filiados.service");
+
 const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
 
@@ -188,7 +191,12 @@ exports.atualizarFiliado = async (req, res) => {
     });
   } catch (err) {
     // fallback (race-condition): constraint única no CPF
-    if (err && (err.code === "23505" || err.code === "ER_DUP_ENTRY" || (err.message && err.message.includes("duplicate")))) {
+    if (
+      err &&
+      (err.code === "23505" ||
+        err.code === "ER_DUP_ENTRY" ||
+        (err.message && err.message.includes("duplicate")))
+    ) {
       return res.status(409).json({ message: "CPF duplicado no sistema." });
     }
 
@@ -355,26 +363,26 @@ exports.uploadAvatarMe = async (req, res) => {
 
     const antes = await buscarPorId(userId);
 
-    // Upload no Cloudinary
-    const result = await uploadBuffer(req.file.buffer, {
-      folder: "sinprfes/avatars",
-      resource_type: "image",
-      overwrite: true,
-    });
+    // public_id estável por filiado (mantém URL previsível e evita gerar múltiplas variações)
+    const publicId = `sinprfes/avatars/filiado_${userId}`;
 
-    // Remove avatar anterior no Cloudinary
-    if (antes?.avatar_public_id) {
-      await removerPorPublicId(antes.avatar_public_id);
+    // Se havia avatar anterior com public_id diferente (legado), remove para evitar lixo
+    if (antes?.avatar_public_id && antes.avatar_public_id !== publicId) {
+      try {
+        await deleteAvatarByPublicId(antes.avatar_public_id);
+      } catch {}
     }
 
+    const up = await uploadAvatarBuffer(req.file.buffer, publicId);
+
     const atualizado = await atualizarFiliadoPorId(userId, {
-      avatar_url: result.secure_url,
-      avatar_public_id: result.public_id,
+      avatar_url: up.avatar_url,
+      avatar_public_id: up.avatar_public_id,
     });
 
     return res.json({
       message: "Avatar atualizado com sucesso.",
-      avatar_url: result.secure_url,
+      avatar_url: up.avatar_url,
       filiado: atualizado,
     });
   } catch (err) {
@@ -382,6 +390,7 @@ exports.uploadAvatarMe = async (req, res) => {
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
+
 /**
  * POST /api/filiados/:id/avatar (upload por gestão)
  */
@@ -397,20 +406,34 @@ exports.uploadAvatarPorId = async (req, res) => {
       return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
     }
 
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
       return res.status(400).json({ message: "Arquivo não enviado (campo 'avatar')." });
     }
 
-    const publicUrl = `/uploads/avatars/${req.file.filename}`;
-    const atualizado = await atualizarFiliadoPorId(idAlvo, { avatar_url: publicUrl });
-
-    if (!atualizado) {
+    const antes = await buscarPorId(idAlvo);
+    if (!antes) {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
+    const publicId = `sinprfes/avatars/filiado_${idAlvo}`;
+
+    // Se havia avatar anterior com public_id diferente (legado), remove para evitar lixo
+    if (antes?.avatar_public_id && antes.avatar_public_id !== publicId) {
+      try {
+        await deleteAvatarByPublicId(antes.avatar_public_id);
+      } catch {}
+    }
+
+    const up = await uploadAvatarBuffer(req.file.buffer, publicId);
+
+    const atualizado = await atualizarFiliadoPorId(idAlvo, {
+      avatar_url: up.avatar_url,
+      avatar_public_id: up.avatar_public_id,
+    });
+
     return res.json({
       message: "Avatar atualizado com sucesso.",
-      avatar_url: publicUrl,
+      avatar_url: up.avatar_url,
       filiado: atualizado,
     });
   } catch (err) {
@@ -443,6 +466,7 @@ exports.desativar2fa = async (req, res) => {
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
+
 exports.removerAvatarMe = async (req, res) => {
   try {
     const id = req.user.id;
@@ -452,9 +476,19 @@ exports.removerAvatarMe = async (req, res) => {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
+    // Preferencial: remove no Cloudinary quando houver public_id
     if (antes.avatar_public_id) {
-      const { removerPorPublicId } = require("../services/cloudinary.service");
-      await removerPorPublicId(antes.avatar_public_id);
+      try {
+        await deleteAvatarByPublicId(antes.avatar_public_id);
+      } catch {}
+    } else {
+      // Fallback legado: remove do disco, se existir
+      try {
+        if (antes.avatar_url?.startsWith("/uploads/avatars/")) {
+          const file = path.join(process.cwd(), "public", antes.avatar_url);
+          if (fs.existsSync(file)) fs.unlinkSync(file);
+        }
+      } catch {}
     }
 
     await atualizarFiliadoPorId(id, {
@@ -481,14 +515,22 @@ exports.removerAvatarPorId = async (req, res) => {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    await atualizarFiliadoPorId(id, { avatar_url: null });
+    // Preferencial: remove no Cloudinary quando houver public_id
+    if (antes.avatar_public_id) {
+      try {
+        await deleteAvatarByPublicId(antes.avatar_public_id);
+      } catch {}
+    } else {
+      // Fallback legado: remove do disco, se existir
+      try {
+        if (antes.avatar_url?.startsWith("/uploads/avatars/")) {
+          const file = path.join(process.cwd(), "public", antes.avatar_url);
+          if (fs.existsSync(file)) fs.unlinkSync(file);
+        }
+      } catch {}
+    }
 
-    try {
-      if (antes.avatar_url?.startsWith("/uploads/avatars/")) {
-        const file = path.join(process.cwd(), "public", antes.avatar_url);
-        if (fs.existsSync(file)) fs.unlinkSync(file);
-      }
-    } catch {}
+    await atualizarFiliadoPorId(id, { avatar_url: null, avatar_public_id: null });
 
     return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
   } catch (err) {
