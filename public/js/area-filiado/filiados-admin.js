@@ -531,7 +531,8 @@ async function uploadAvatar(id, file, form) {
         const fd = new FormData();
         fd.append("avatar", file);
 
-        const r = await apiFetch(`/api/auth/avatar/${id}`, {
+        // ✅ ROTA CORRETA (gestão): /api/filiados/:id/avatar
+        const r = await apiFetch(`/api/filiados/${id}/avatar`, {
             method: "POST",
             body: fd
         });
@@ -558,7 +559,8 @@ async function uploadAvatar(id, file, form) {
 
 async function removerAvatar(id, form) {
     try {
-        const r = await apiFetch(`/api/auth/avatar/${id}`, { method: "DELETE" });
+        // ✅ ROTA CORRETA (gestão): /api/filiados/:id/avatar
+        const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
 
         if (r && r.ok) {
             const d = await r.json();
