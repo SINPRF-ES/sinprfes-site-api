@@ -11,6 +11,15 @@ import {
 let cacheLista = [];
 const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
+// opções fixas de lotação (select)
+const LOTACAO_OPCOES = [
+  "SEDE",
+  "DEL 01 - Viana",
+  "DEL 02 - Serra",
+  "DEL 03 - Guarapari",
+  "DEL 04 - Linhares."
+];
+
 // Variáveis de estado
 let perfilAtual = null;
 let handlersConfigurados = false;
@@ -42,7 +51,7 @@ export async function inicializarFiliados(perfil) {
 
     // 1. CSS
     // Estilos do módulo foram movidos para o arquivo global style.css (seção "FILIADOS ADMIN").
-// 2. CONFIGURAÇÃO DE LISTENERS
+    // 2. CONFIGURAÇÃO DE LISTENERS
     if (!handlersConfigurados) {
         const btnNovo = document.getElementById("btn-novo-filiado");
         const containerNovo = document.getElementById("novo-filiado-container");
@@ -52,6 +61,13 @@ export async function inicializarFiliados(perfil) {
                 btnNovo.style.display = "inline-block";
                 const novoBtn = btnNovo.cloneNode(true);
                 btnNovo.parentNode.replaceChild(novoBtn, btnNovo);
+
+                // ✅ Renderiza form de novo filiado (uma vez) e só alterna visibilidade no click
+                if (containerNovo) {
+                    renderizarFormularioNovoFiliado(containerNovo);
+                    containerNovo.style.display = "none";
+                }
+
                 novoBtn.addEventListener("click", () => abrirNovoFiliado(containerNovo));
             } else {
                 btnNovo.style.display = 'none';
@@ -230,6 +246,8 @@ function filtrarLista(termo) {
                 </select>
             </div>` : '';
 
+        const lotacaoAtual = (f.lotacao || "SEDE").toString();
+
         const editForm = `
             <details class="edit-area">
                 <summary class="btn-editar-toggle">✏️ Editar dados completos <span class="seta">▲</span></summary>
@@ -276,7 +294,12 @@ function filtrarLista(termo) {
 
                         <div class="edit-group">
                             <label>Lotação</label>
-                            <input name="lotacao" value="${escapeHtml(f.lotacao || 'SEDE')}">
+                            <select name="lotacao">
+                                ${LOTACAO_OPCOES.map(op => {
+                                    const selected = (lotacaoAtual === op) ? 'selected' : '';
+                                    return `<option value="${escapeHtml(op)}" ${selected}>${escapeHtml(op)}</option>`;
+                                }).join("")}
+                            </select>
                         </div>
 
                         <div class="edit-group">
@@ -531,7 +554,6 @@ async function uploadAvatar(id, file, form) {
         const fd = new FormData();
         fd.append("avatar", file);
 
-        // ✅ ROTA CORRETA (gestão): /api/filiados/:id/avatar
         const r = await apiFetch(`/api/filiados/${id}/avatar`, {
             method: "POST",
             body: fd
@@ -545,7 +567,6 @@ async function uploadAvatar(id, file, form) {
             const img = form.querySelector(".avatar-preview");
             if (img) img.src = d?.avatar_url || img.src;
 
-            // Recarrega lista (garante refletir no card)
             await carregarLista();
         } else {
             const err = await safeJson(r);
@@ -559,18 +580,15 @@ async function uploadAvatar(id, file, form) {
 
 async function removerAvatar(id, form) {
     try {
-        // ✅ ROTA CORRETA (gestão): /api/filiados/:id/avatar
         const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
 
         if (r && r.ok) {
             const d = await r.json();
             alert(d?.message || "Foto removida.");
 
-            // Atualiza preview
             const img = form.querySelector(".avatar-preview");
             if (img) img.src = "/img/avatar-placeholder.png";
 
-            // Recarrega lista
             await carregarLista();
         } else {
             const err = await safeJson(r);
@@ -629,6 +647,240 @@ async function desarquivarFiliado(id, motivo) {
 function abrirNovoFiliado(containerNovo) {
     if (!containerNovo) return;
     containerNovo.style.display = containerNovo.style.display === "none" ? "block" : "none";
+}
+
+// ✅ NOVO: formulário “Novo Filiado” integrado ao backend existente (POST /api/filiados)
+function renderizarFormularioNovoFiliado(containerNovo) {
+    if (!containerNovo) return;
+
+    // Evita re-render repetido
+    if (containerNovo.dataset.rendered === "1") return;
+    containerNovo.dataset.rendered = "1";
+
+    const lotacoes = LOTACAO_OPCOES.map(op => `<option value="${escapeHtml(op)}">${escapeHtml(op)}</option>`).join("");
+    const situacoes = SITUACAO_OPCOES.map(op => `<option value="${op}" ${op === "ATIVO" ? "selected" : ""}>${op}</option>`).join("");
+
+    const perfilAcessoSelect = (perfilAtual === "ADMIN")
+        ? `
+          <div class="edit-group">
+            <label>Perfil de Acesso</label>
+            <select name="perfil_acesso">
+              <option value="FILIADO" selected>FILIADO</option>
+              <option value="ORGANIZADOR">ORGANIZADOR</option>
+              <option value="FUNCIONARIO">FUNCIONARIO</option>
+              <option value="DIRETORIA">DIRETORIA</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+          </div>`
+        : `<input type="hidden" name="perfil_acesso" value="FILIADO">`;
+
+    containerNovo.innerHTML = `
+      <div class="filiado-card" style="margin-top:14px;">
+        <div class="filiado-header" style="margin-bottom:10px;">
+          <div class="filiado-left">
+            <div>
+              <div class="filiado-nome">➕ Novo Filiado</div>
+              <div class="filiado-meta">Preencha os dados mínimos para criação (Nome, CPF, Email1).</div>
+            </div>
+          </div>
+        </div>
+
+        <form id="form-novo-filiado" class="edit-form">
+          <div class="edit-grid">
+            <div class="edit-group">
+              <label>Nome *</label>
+              <input name="nome" required>
+            </div>
+
+            <div class="edit-group">
+              <label>CPF *</label>
+              <input name="cpf" id="novo-cpf" required>
+            </div>
+
+            <div class="edit-group">
+              <label>Data de Nascimento</label>
+              <input type="date" name="data_nascimento">
+            </div>
+
+            <div class="edit-group">
+              <label>Email 1 *</label>
+              <input type="email" name="email1" required>
+            </div>
+
+            <div class="edit-group">
+              <label>Email 2</label>
+              <input type="email" name="email2">
+            </div>
+
+            <div class="edit-group">
+              <label>Tel 1</label>
+              <input name="telefone1" id="novo-tel1" class="campo-telefone">
+            </div>
+
+            <div class="edit-group">
+              <label>Tel 2</label>
+              <input name="telefone2" id="novo-tel2" class="campo-telefone">
+            </div>
+
+            <div class="edit-group">
+              <label>Lotação</label>
+              <select name="lotacao">
+                ${lotacoes}
+              </select>
+            </div>
+
+            <div class="edit-group">
+              <label>Situação</label>
+              <select name="situacao">
+                ${situacoes}
+              </select>
+            </div>
+
+            ${perfilAcessoSelect}
+
+            <div class="edit-group">
+              <label>CEP</label>
+              <div class="cep-wrapper">
+                <input name="cep" id="novo-cep" placeholder="00000000">
+                <button type="button" class="btn-buscar-cep-admin" id="btn-buscar-cep-novo" title="Buscar CEP">🔎</button>
+              </div>
+            </div>
+
+            <div class="edit-group">
+              <label>UF</label>
+              <input name="uf" id="novo-uf" readonly style="background:#f7f7f7;">
+            </div>
+
+            <div class="edit-group span-2">
+              <label>Cidade</label>
+              <input name="cidade" id="novo-cidade" readonly style="background:#f7f7f7;">
+            </div>
+
+            <div class="edit-group span-2">
+              <label>Logradouro/Bairro</label>
+              <input name="logradouro_bairro" id="novo-logradouro" readonly style="background:#f7f7f7;">
+            </div>
+
+            <div class="edit-group">
+              <label>Nº</label>
+              <input name="numero" id="novo-numero">
+            </div>
+
+            <div class="edit-group">
+              <label>Compl.</label>
+              <input name="complemento" id="novo-complemento">
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+            <button type="button" class="btn btn-outline" id="btn-cancelar-novo">Cancelar</button>
+            <button type="submit" class="btn-save">✅ Criar Filiado</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    // Máscaras
+    const cpfEl = containerNovo.querySelector("#novo-cpf");
+    if (cpfEl) aplicarMascaraCPF(cpfEl);
+
+    const cepEl = containerNovo.querySelector("#novo-cep");
+    if (cepEl) aplicarMascaraCEP(cepEl);
+
+    const tel1 = containerNovo.querySelector("#novo-tel1");
+    if (tel1) {
+        tel1.addEventListener("input", () => aplicarMascaraTelefone(tel1));
+        aplicarMascaraTelefone(tel1);
+    }
+    const tel2 = containerNovo.querySelector("#novo-tel2");
+    if (tel2) {
+        tel2.addEventListener("input", () => aplicarMascaraTelefone(tel2));
+        aplicarMascaraTelefone(tel2);
+    }
+
+    // Buscar CEP (ViaCEP)
+    const btnBuscarCep = containerNovo.querySelector("#btn-buscar-cep-novo");
+    if (btnBuscarCep) {
+        btnBuscarCep.addEventListener("click", async () => {
+            const cep = (cepEl?.value || "").replace(/\D/g, "");
+            if (cep.length !== 8) {
+                alert("CEP inválido. Informe 8 dígitos.");
+                return;
+            }
+            await buscarCepNovoFiliado(cep);
+        });
+    }
+
+    // Cancelar
+    const btnCancelar = containerNovo.querySelector("#btn-cancelar-novo");
+    if (btnCancelar) {
+        btnCancelar.addEventListener("click", () => {
+            containerNovo.style.display = "none";
+        });
+    }
+
+    // Submit (POST /api/filiados)
+    const form = containerNovo.querySelector("#form-novo-filiado");
+    if (form) {
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const fd = new FormData(form);
+            const payload = {};
+            for (const [k, v] of fd.entries()) {
+                payload[k] = (typeof v === "string") ? v.trim() : v;
+            }
+
+            // normalizações
+            if (payload.cpf) payload.cpf = payload.cpf.replace(/\D/g, "");
+            if (payload.telefone1) payload.telefone1 = payload.telefone1.replace(/\D/g, "");
+            if (payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
+            if (payload.cep) payload.cep = payload.cep.replace(/\D/g, "");
+
+            try {
+                const r = await apiFetch("/api/filiados", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (r && r.ok) {
+                    const d = await safeJson(r);
+                    alert(d?.message || "Filiado criado com sucesso.");
+                    form.reset();
+                    containerNovo.style.display = "none";
+                    await carregarLista();
+                } else {
+                    const err = await safeJson(r);
+                    alert(err?.message || "Erro ao criar filiado.");
+                }
+            } catch (ex) {
+                console.error(ex);
+                alert("Erro de conexão ao criar filiado.");
+            }
+        });
+    }
+
+    async function buscarCepNovoFiliado(cep) {
+        try {
+            const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const d = await r.json();
+            if (d?.erro) {
+                alert("CEP não encontrado.");
+                return;
+            }
+            const elLog = containerNovo.querySelector("#novo-logradouro");
+            const elCid = containerNovo.querySelector("#novo-cidade");
+            const elUf = containerNovo.querySelector("#novo-uf");
+
+            if (elLog) elLog.value = d.logradouro || "";
+            if (elCid) elCid.value = d.localidade || "";
+            if (elUf) elUf.value = d.uf || "";
+        } catch (e) {
+            console.error(e);
+            alert("Erro ao consultar CEP.");
+        }
+    }
 }
 
 function escapeHtml(str) {

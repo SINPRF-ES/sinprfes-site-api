@@ -134,6 +134,25 @@ function renderizarFormularioMeusDados(dados, container) {
             .field-row { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:12px; }
             .field-group { display:flex; flex-direction:column; gap:6px; }
 
+            /* ✅ CEP alinhado como na gestão */
+            .cep-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            #me-cep {
+                max-width: 180px;   /* controla o tamanho visual */
+            }
+            #btn-buscar-cep {
+                width: 44px;
+                min-width: 44px;
+                height: 42px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+            }
+
             /* Avatar Row Renovado */
             .avatar-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
             .avatar-preview {
@@ -147,7 +166,6 @@ function renderizarFormularioMeusDados(dados, container) {
             .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
             .avatar-fallback { font-size: 32px; color:#6c757d; }
 
-            /* Botão de Upload Invisível mas clicável */
             .avatar-actions { display: flex; flex-direction: column; gap: 8px; }
             .btn-upload-label {
                 background: #e9ecef; color: #333; padding: 8px 15px; border-radius: 5px;
@@ -155,7 +173,7 @@ function renderizarFormularioMeusDados(dados, container) {
                 transition: all 0.2s; display: inline-block;
             }
             .btn-upload-label:hover { background: #dde2e6; border-color: #bbb; }
-            #me-avatar-file { display: none; } /* Esconde o input file feio */
+            #me-avatar-file { display: none; }
 
             .form-actions { margin-top: 25px; text-align:right; }
         `;
@@ -208,14 +226,14 @@ function renderizarFormularioMeusDados(dados, container) {
 
                 <h3 style="margin-top:25px;">🏠 Endereço</h3>
 
-                <div class="field-row" style="grid-template-columns: 2fr 60px;">
+                <!-- ✅ ALTERADO: CEP com wrapper flex e tamanho controlado -->
+                <div class="field-row" style="grid-template-columns: 1fr;">
                     <div class="field-group">
                         <label>CEP</label>
-                        <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
-                    </div>
-                    <div class="field-group" style="justify-content:flex-end;">
-                        <label style="visibility:hidden;">Buscar</label>
-                        <button type="button" class="btn btn-secondary" id="btn-buscar-cep" style="padding: 10px 12px;">🔎</button>
+                        <div class="cep-wrapper">
+                            <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
+                            <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP">🔎</button>
+                        </div>
                     </div>
                 </div>
 
@@ -290,7 +308,6 @@ function renderizarFormularioMeusDados(dados, container) {
     aplicarMascaraTelefone(document.getElementById("me-telefone1"));
     aplicarMascaraTelefone(document.getElementById("me-telefone2"));
 
-    // ✅ NOVO: máscara do CEP em tempo real (só números, máx 8)
     const cepInput = document.getElementById("me-cep");
     aplicarMascaraCEP(cepInput);
 
@@ -318,7 +335,6 @@ function renderizarFormularioMeusDados(dados, container) {
             uf: document.getElementById("me-uf").value,
             cep: document.getElementById("me-cep").value.replace(/\D/g, ""),
             lotacao: document.getElementById("me-lotacao").value,
-            // (Avatar não vai aqui, pois foi enviado separado ou mantido)
         };
 
         try {
@@ -344,7 +360,6 @@ function renderizarFormularioMeusDados(dados, container) {
     const btnSalvarFoto = document.getElementById("btn-salvar-foto");
     const btnRemoverFoto = document.getElementById("btn-remover-foto");
 
-    // 1. Preview local ao selecionar
     inputFile.addEventListener("change", () => {
         const file = inputFile.files && inputFile.files[0];
         if (file) {
@@ -354,7 +369,6 @@ function renderizarFormularioMeusDados(dados, container) {
         }
     });
 
-    // 2. Enviar foto para o backend
     btnSalvarFoto.addEventListener("click", async () => {
         const file = inputFile.files && inputFile.files[0];
         if (!file) return;
@@ -383,7 +397,6 @@ function renderizarFormularioMeusDados(dados, container) {
         }
     });
 
-    // 3. Remover foto
     btnRemoverFoto.addEventListener("click", async () => {
       if (!confirm("Remover a foto de perfil?")) return;
 
