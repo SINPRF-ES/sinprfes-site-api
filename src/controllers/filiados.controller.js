@@ -198,6 +198,14 @@ exports.excluirDependentes = async (req, res) => {
       return res.status(400).json({ message: "O corpo da requisição deve conter um array de 'indices' numéricos." });
     }
 
+    // VERIFICAÇÃO DE PERMISSÃO: Permite se for gestor OU o próprio usuário
+    const ehGestor = perfilGestao(req.user.perfil_acesso);
+    const ehProprioUsuario = Number(req.user.id) === idAlvo;
+
+    if (!ehGestor && !ehProprioUsuario) {
+      return res.status(403).json({ message: "Você não tem permissão para executar esta ação." });
+    }
+
     const filiado = await buscarPorId(idAlvo);
     if (!filiado) {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });

@@ -147,7 +147,6 @@ router.post(
 router.delete(
   "/:id/dependentes",
   authMiddleware,
-  requirePermission("EDIT_FILIADO"),
   filiadosController.excluirDependentes
 );
 
