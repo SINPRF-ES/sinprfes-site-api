@@ -26,13 +26,15 @@ function perfilGestao(perfil) {
 }
 
 /**
- * Valida e sanitiza os dados dos dependentes a partir do corpo da requisição.
+ * Valida, sanitiza e normaliza os dados dos dependentes a partir do corpo da requisição.
+ * A função remove entradas vazias e retorna um array compacto e ordenado de dependentes.
+ *
  * @param {object} body O corpo da requisição (req.body).
- * @returns {object} Um objeto com os dados dos dependentes sanitizados.
+ * @returns {Array<object>} Um array de objetos, onde cada objeto representa um dependente válido.
  * @throws {Error} Lança um erro com mensagens de validação se houver inconsistências.
  */
 function validarESanitizarDependentes(body) {
-  const dependentesPayload = {};
+  const dependentesValidos = [];
   const erros = [];
 
   for (let i = 1; i <= 5; i++) {
@@ -44,26 +46,28 @@ function validarESanitizarDependentes(body) {
     const temAlgumDado = nome || cpf || dataNascimento || parentesco;
 
     if (temAlgumDado) {
+      // A validação agora usa o número do dependente VÁLIDO, não o do formulário.
+      const numeroDependenteAtual = dependentesValidos.length + 1;
+
       if (nome && !cpf) {
-        erros.push(`Dependente ${i}: CPF é obrigatório se o nome for preenchido.`);
+        erros.push(`Dependente ${numeroDependenteAtual}: CPF é obrigatório se o nome for preenchido.`);
       }
       if (cpf && !nome) {
-        erros.push(`Dependente ${i}: Nome é obrigatório se o CPF for preenchido.`);
+        erros.push(`Dependente ${numeroDependenteAtual}: Nome é obrigatório se o CPF for preenchido.`);
       }
       if (cpf && cpf.length !== 11) {
-        erros.push(`Dependente ${i}: CPF inválido (deve ter 11 dígitos).`);
+        erros.push(`Dependente ${numeroDependenteAtual}: CPF inválido (deve ter 11 dígitos).`);
       }
       if (dataNascimento && !/^\d{4}-\d{2}-\d{2}$/.test(dataNascimento)) {
-        erros.push(`Dependente ${i}: Data de nascimento inválida (use AAAA-MM-DD).`);
+        erros.push(`Dependente ${numeroDependenteAtual}: Data de nascimento inválida (use AAAA-MM-DD).`);
       }
 
-      // Adiciona ao payload apenas se houver dados.
-      // Se um dependente for enviado totalmente em branco, seus campos serão `undefined`
-      // no payload final, e o serviço irá ignorá-los no UPDATE.
-      dependentesPayload[`dep${i}_nome`] = nome || null;
-      dependentesPayload[`dep${i}_cpf`] = cpf || null;
-      dependentesPayload[`dep${i}_data_nascimento`] = dataNascimento || null;
-      dependentesPayload[`dep${i}_parentesco`] = parentesco || null;
+      dependentesValidos.push({
+        nome: nome || null,
+        cpf: cpf || null,
+        data_nascimento: dataNascimento || null,
+        parentesco: parentesco || null,
+      });
     }
   }
 
@@ -73,7 +77,7 @@ function validarESanitizarDependentes(body) {
     throw error;
   }
 
-  return dependentesPayload;
+  return dependentesValidos;
 }
 
 /**
@@ -140,14 +144,14 @@ exports.atualizarMeusDados = async (req, res) => {
     const id = req.user.id;
     const body = req.body || {};
 
-    let dadosDependentes;
-    try {
-      dadosDependentes = validarESanitizarDependentes(body);
-    } catch (err) {
-      if (err.isValidationError) {
-        return res.status(400).json({ message: err.message });
-      }
-      throw err; // Lança outros erros
+    const dependentesArray = validarESanitizarDependentes(body);
+    const dadosDependentes = {};
+    for (let i = 0; i < 5; i++) {
+      const dep = dependentesArray[i];
+      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
+      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
+      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
+      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
     }
 
     const payload = {
@@ -175,6 +179,72 @@ exports.atualizarMeusDados = async (req, res) => {
     });
   } catch (err) {
     log.error("FiliadosUpdateMeErro", err);
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+  }
+};
+
+/**
+ * DELETE /api/filiados/:id/dependentes
+ */
+exports.excluirDependentes = async (req, res) => {
+  try {
+    const idAlvo = parseInt(req.params.id, 10);
+    const { indices } = req.body; // Ex: [0, 2] para remover dependente 1 e 3
+
+    if (Number.isNaN(idAlvo)) {
+      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
+    }
+    if (!Array.isArray(indices) || indices.some(isNaN)) {
+      return res.status(400).json({ message: "O corpo da requisição deve conter um array de 'indices' numéricos." });
+    }
+
+    const filiado = await buscarPorId(idAlvo);
+    if (!filiado) {
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    }
+
+    // 1. Extrair dependentes existentes para um array
+    const dependentesAtuais = [];
+    for (let i = 1; i <= 5; i++) {
+      const nome = filiado[`dep${i}_nome`];
+      if (nome) { // Considera que se tem nome, é um dependente válido
+        dependentesAtuais.push({
+          nome: filiado[`dep${i}_nome`],
+          cpf: filiado[`dep${i}_cpf`],
+          data_nascimento: filiado[`dep${i}_data_nascimento`],
+          parentesco: filiado[`dep${i}_parentesco`],
+        });
+      }
+    }
+
+    // 2. Filtrar o array, removendo os dependentes nos índices especificados
+    const dependentesMantidos = dependentesAtuais.filter((_, index) => !indices.includes(index));
+
+    // 3. Mapear o array filtrado de volta para o formato de payload do serviço
+    const dadosDependentes = {};
+    for (let i = 0; i < 5; i++) {
+      const dep = dependentesMantidos[i];
+      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
+      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
+      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
+      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+    }
+
+    // 4. Chamar o serviço de atualização para salvar o estado reordenado
+    const atualizado = await atualizarFiliadoPorId(idAlvo, dadosDependentes);
+
+    log.info("DependentesExcluidos", {
+      atorId: req.user.id,
+      alvoId: idAlvo,
+      indicesExcluidos: indices,
+    });
+
+    return res.json({
+      message: "Dependentes excluídos e reordenados com sucesso.",
+      filiado: atualizado,
+    });
+  } catch (err) {
+    log.error("DependentesExcluirErro", err);
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
@@ -213,14 +283,14 @@ exports.atualizarFiliado = async (req, res) => {
       }
     }
 
-    let dadosDependentes;
-    try {
-      dadosDependentes = validarESanitizarDependentes(body);
-    } catch (err) {
-      if (err.isValidationError) {
-        return res.status(400).json({ message: err.message });
-      }
-      throw err;
+    const dependentesArray = validarESanitizarDependentes(body);
+    const dadosDependentes = {};
+    for (let i = 0; i < 5; i++) {
+      const dep = dependentesArray[i];
+      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
+      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
+      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
+      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
     }
 
     const payload = {
@@ -307,14 +377,14 @@ exports.criarFiliado = async (req, res) => {
       });
     }
 
-    let dadosDependentes;
-    try {
-      dadosDependentes = validarESanitizarDependentes(body);
-    } catch (err) {
-      if (err.isValidationError) {
-        return res.status(400).json({ message: err.message });
-      }
-      throw err;
+    const dependentesArray = validarESanitizarDependentes(body);
+    const dadosDependentes = {};
+    for (let i = 0; i < 5; i++) {
+      const dep = dependentesArray[i];
+      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
+      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
+      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
+      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
     }
 
     const dadosNovo = {

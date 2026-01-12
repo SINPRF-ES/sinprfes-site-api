@@ -280,7 +280,20 @@ function renderizarFormularioMeusDados(dados, container) {
                     </div>
                 </div>
 
-                <h3 style="margin-top:25px;">👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
+                <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top:25px;">
+                    <h3>👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
+                    <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm">Excluir</button>
+                </div>
+                <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                    <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
+                    <div id="checkboxes-excluir-dependentes" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Checkboxes serão inseridos aqui -->
+                    </div>
+                    <div style="margin-top: 15px; text-align: right;">
+                        <button type="button" id="btn-confirmar-exclusao-dependentes" class="btn btn-danger">Confirmar Exclusão</button>
+                    </div>
+                </div>
+
                 <div id="dependentes-container-meus-dados">
                     <!-- Campos dos dependentes serão inseridos aqui -->
                 </div>
@@ -359,6 +372,70 @@ function renderizarFormularioMeusDados(dados, container) {
             }
         }
     }
+
+    // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES ---
+    const dependentesAtuais = [];
+    for (let i = 1; i <= 5; i++) {
+        if (dados[`dep${i}_nome`]) {
+            dependentesAtuais.push({
+                nome: dados[`dep${i}_nome`],
+                index: i - 1
+            });
+        }
+    }
+
+    const btnToggleExcluir = document.getElementById("btn-toggle-excluir-dependentes");
+    const painelExcluir = document.getElementById("painel-excluir-dependentes");
+    const containerCheckboxes = document.getElementById("checkboxes-excluir-dependentes");
+    const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-dependentes");
+
+    if (dependentesAtuais.length === 0) {
+        btnToggleExcluir.style.display = 'none';
+    }
+
+    btnToggleExcluir.addEventListener("click", () => {
+        painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
+    });
+
+    containerCheckboxes.innerHTML = '';
+    dependentesAtuais.forEach(dep => {
+        containerCheckboxes.innerHTML += `
+            <label>
+                <input type="checkbox" name="excluir_dependente" value="${dep.index}">
+                Dependente ${dep.index + 1}: ${dep.nome}
+            </label>
+        `;
+    });
+
+    btnConfirmarExclusao.addEventListener("click", async () => {
+        const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
+        const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
+
+        if (indicesParaExcluir.length === 0) {
+            alert("Selecione pelo menos um dependente para excluir.");
+            return;
+        }
+
+        if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
+            try {
+                const r = await apiFetch(`/api/filiados/${dados.id}/dependentes`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ indices: indicesParaExcluir })
+                });
+
+                if (r.ok) {
+                    alert("Dependentes excluídos com sucesso.");
+                    await carregarMeusDados();
+                } else {
+                    const err = await r.json();
+                    alert(err.message || "Erro ao excluir dependentes.");
+                }
+            } catch (e) {
+                alert("Erro de conexão ao tentar excluir os dependentes.");
+            }
+        }
+    });
 
     // --- CEP ---
     document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);

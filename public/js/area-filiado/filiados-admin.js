@@ -380,7 +380,17 @@ function filtrarLista(termo) {
                         </div>
 
                         <div class="edit-group span-2">
-                            <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
+                            <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                                <h4 style="margin: 0; border: none; padding: 0;">Dependentes</h4>
+                                <button type="button" class="btn btn-danger-outline btn-sm btn-toggle-excluir-dependentes-admin" data-filiado-id="${f.id}">Excluir</button>
+                            </div>
+                            <div id="painel-excluir-dependentes-admin-${f.id}" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                                <p style="margin-top:0; font-weight:bold;">Selecione para remover:</p>
+                                <div id="checkboxes-excluir-dependentes-admin-${f.id}" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                                <div style="margin-top: 15px; text-align: right;">
+                                    <button type="button" class="btn btn-danger btn-confirmar-exclusao-dependentes-admin" data-filiado-id="${f.id}">Confirmar Exclusão</button>
+                                </div>
+                            </div>
                             <div id="dependentes-container-edicao-${f.id}">
                                 <!-- Campos dos dependentes serão inseridos aqui -->
                             </div>
@@ -465,6 +475,70 @@ function configurarListenersEdicao() {
                 }
             }
         }
+
+        // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES (ADMIN) ---
+        const dependentesAtuais = [];
+        for (let i = 1; i <= 5; i++) {
+            if (filiado[`dep${i}_nome`]) {
+                dependentesAtuais.push({ nome: filiado[`dep${i}_nome`], index: i - 1 });
+            }
+        }
+
+        const btnToggleExcluir = form.querySelector(`.btn-toggle-excluir-dependentes-admin[data-filiado-id="${filiadoId}"]`);
+        const painelExcluir = form.querySelector(`#painel-excluir-dependentes-admin-${filiadoId}`);
+        const containerCheckboxes = form.querySelector(`#checkboxes-excluir-dependentes-admin-${filiadoId}`);
+        const btnConfirmarExclusao = form.querySelector(`.btn-confirmar-exclusao-dependentes-admin[data-filiado-id="${filiadoId}"]`);
+
+        if (btnToggleExcluir && painelExcluir && containerCheckboxes && btnConfirmarExclusao) {
+            if (dependentesAtuais.length === 0) {
+                btnToggleExcluir.style.display = 'none';
+            }
+
+            btnToggleExcluir.addEventListener("click", () => {
+                painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
+            });
+
+            containerCheckboxes.innerHTML = '';
+            dependentesAtuais.forEach(dep => {
+                containerCheckboxes.innerHTML += `
+                    <label>
+                        <input type="checkbox" name="excluir_dependente_admin" value="${dep.index}">
+                        Dependente ${dep.index + 1}: ${dep.nome}
+                    </label>
+                `;
+            });
+
+            btnConfirmarExclusao.addEventListener("click", async () => {
+                const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
+                const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
+
+                if (indicesParaExcluir.length === 0) {
+                    alert("Selecione pelo menos um dependente para excluir.");
+                    return;
+                }
+
+                if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s) do filiado ${filiado.nome}?`)) {
+                    try {
+                        const r = await apiFetch(`/api/filiados/${filiadoId}/dependentes`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ indices: indicesParaExcluir })
+                        });
+
+                        if (r.ok) {
+                            alert("Dependentes excluídos com sucesso.");
+                            await carregarLista();
+                        } else {
+                            const err = await r.json();
+                            alert(err.message || "Erro ao excluir dependentes.");
+                        }
+                    } catch (e) {
+                        alert("Erro de conexão.");
+                    }
+                }
+            });
+        }
+
 
         // Máscaras
         form.querySelectorAll(".campo-telefone").forEach(inp => {
