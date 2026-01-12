@@ -380,6 +380,13 @@ function filtrarLista(termo) {
                         </div>
 
                         <div class="edit-group span-2">
+                            <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
+                            <div id="dependentes-container-edicao-${f.id}">
+                                <!-- Campos dos dependentes serão inseridos aqui -->
+                            </div>
+                        </div>
+
+                        <div class="edit-group span-2">
                             <label>Avatar (foto)</label>
                             <div class="avatar-actions">
                                 <img class="avatar-preview" src="${escapeHtml(f.avatar_url || '/img/avatar-placeholder.png')}" alt="Preview avatar" onerror="this.src='/img/avatar-placeholder.png'">
@@ -387,13 +394,6 @@ function filtrarLista(termo) {
                                 <button type="button" class="btn-upload-avatar">Enviar foto</button>
                                 <button type="button" class="btn btn-danger btn-remover-avatar" data-id="${f.id}">Remover foto</button>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="edit-group span-2">
-                        <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
-                        <div class="dependentes-grid" id="dependentes-container-edicao-${f.id}">
-                            <!-- Campos dos dependentes serão inseridos aqui -->
                         </div>
                     </div>
 
@@ -810,13 +810,13 @@ function renderizarFormularioNovoFiliado(containerNovo) {
               <label>Compl.</label>
               <input name="complemento" id="novo-complemento">
             </div>
+          </div>
 
-            <div class="edit-group span-2">
-                <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
-                <div class="dependentes-grid" id="dependentes-container-novo">
-                    <!-- Campos dos dependentes serão inseridos aqui -->
-                </div>
-            </div>
+          <div class="edit-group span-2">
+              <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
+              <div id="dependentes-container-novo">
+                  <!-- Campos dos dependentes serão inseridos aqui -->
+              </div>
           </div>
 
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">

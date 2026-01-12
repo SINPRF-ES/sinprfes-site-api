@@ -280,6 +280,11 @@ function renderizarFormularioMeusDados(dados, container) {
                     </div>
                 </div>
 
+                <h3 style="margin-top:25px;">👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
+                <div id="dependentes-container-meus-dados">
+                    <!-- Campos dos dependentes serão inseridos aqui -->
+                </div>
+
                 <div class="field-row" style="grid-template-columns: 1fr;">
                     <div class="field-group">
                         <label>Foto de perfil</label>
