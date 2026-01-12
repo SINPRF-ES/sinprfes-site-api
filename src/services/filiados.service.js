@@ -226,7 +226,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const isGestao = perfisGestao.includes(perfil);
 
   if (isGestao) {
-    // gestão: devolve campos necessários para edição
+    // gestão: devolve campos necessários para edição, incluindo dependentes
     const { rows } = await pool.query(
       `
       SELECT
@@ -234,7 +234,12 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
         lotacao, situacao, perfil_acesso,
         logradouro_bairro, numero, complemento, cidade, uf, cep,
         avatar_url,
-        arquivado_em, arquivado_motivo
+        arquivado_em, arquivado_motivo,
+        dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
+        dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
+        dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
+        dep4_nome, dep4_cpf, dep4_data_nascimento, dep4_parentesco,
+        dep5_nome, dep5_cpf, dep5_data_nascimento, dep5_parentesco
       FROM filiados
       ${whereSql}
       ORDER BY nome ASC

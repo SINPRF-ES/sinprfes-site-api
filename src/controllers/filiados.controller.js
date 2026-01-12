@@ -56,13 +56,15 @@ function validarESanitizarDependentes(body) {
       if (dataNascimento && !/^\d{4}-\d{2}-\d{2}$/.test(dataNascimento)) {
         erros.push(`Dependente ${i}: Data de nascimento inválida (use AAAA-MM-DD).`);
       }
-    }
 
-    // Sanitização para o payload final
-    dependentesPayload[`dep${i}_nome`] = nome || null;
-    dependentesPayload[`dep${i}_cpf`] = cpf || null;
-    dependentesPayload[`dep${i}_data_nascimento`] = dataNascimento || null;
-    dependentesPayload[`dep${i}_parentesco`] = parentesco || null;
+      // Adiciona ao payload apenas se houver dados.
+      // Se um dependente for enviado totalmente em branco, seus campos serão `undefined`
+      // no payload final, e o serviço irá ignorá-los no UPDATE.
+      dependentesPayload[`dep${i}_nome`] = nome || null;
+      dependentesPayload[`dep${i}_cpf`] = cpf || null;
+      dependentesPayload[`dep${i}_data_nascimento`] = dataNascimento || null;
+      dependentesPayload[`dep${i}_parentesco`] = parentesco || null;
+    }
   }
 
   if (erros.length > 0) {
