@@ -26,6 +26,55 @@ function perfilGestao(perfil) {
 }
 
 /**
+ * Valida e sanitiza os dados dos dependentes a partir do corpo da requisição.
+ * @param {object} body O corpo da requisição (req.body).
+ * @returns {object} Um objeto com os dados dos dependentes sanitizados.
+ * @throws {Error} Lança um erro com mensagens de validação se houver inconsistências.
+ */
+function validarESanitizarDependentes(body) {
+  const dependentesPayload = {};
+  const erros = [];
+
+  for (let i = 1; i <= 5; i++) {
+    const nome = (body[`dep${i}_nome`] || "").trim();
+    const cpf = (body[`dep${i}_cpf`] || "").replace(/\D/g, "");
+    const dataNascimento = (body[`dep${i}_data_nascimento`] || "").trim();
+    const parentesco = (body[`dep${i}_parentesco`] || "").trim();
+
+    const temAlgumDado = nome || cpf || dataNascimento || parentesco;
+
+    if (temAlgumDado) {
+      if (nome && !cpf) {
+        erros.push(`Dependente ${i}: CPF é obrigatório se o nome for preenchido.`);
+      }
+      if (cpf && !nome) {
+        erros.push(`Dependente ${i}: Nome é obrigatório se o CPF for preenchido.`);
+      }
+      if (cpf && cpf.length !== 11) {
+        erros.push(`Dependente ${i}: CPF inválido (deve ter 11 dígitos).`);
+      }
+      if (dataNascimento && !/^\d{4}-\d{2}-\d{2}$/.test(dataNascimento)) {
+        erros.push(`Dependente ${i}: Data de nascimento inválida (use AAAA-MM-DD).`);
+      }
+    }
+
+    // Sanitização para o payload final
+    dependentesPayload[`dep${i}_nome`] = nome || null;
+    dependentesPayload[`dep${i}_cpf`] = cpf || null;
+    dependentesPayload[`dep${i}_data_nascimento`] = dataNascimento || null;
+    dependentesPayload[`dep${i}_parentesco`] = parentesco || null;
+  }
+
+  if (erros.length > 0) {
+    const error = new Error(erros.join(" \n"));
+    error.isValidationError = true;
+    throw error;
+  }
+
+  return dependentesPayload;
+}
+
+/**
  * GET /api/filiados/me
  */
 exports.getMe = async (req, res) => {
@@ -89,7 +138,17 @@ exports.atualizarMeusDados = async (req, res) => {
     const id = req.user.id;
     const body = req.body || {};
 
-    const atualizado = await atualizarDadosProprios(id, {
+    let dadosDependentes;
+    try {
+      dadosDependentes = validarESanitizarDependentes(body);
+    } catch (err) {
+      if (err.isValidationError) {
+        return res.status(400).json({ message: err.message });
+      }
+      throw err; // Lança outros erros
+    }
+
+    const payload = {
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email1: body.email1,
@@ -101,7 +160,10 @@ exports.atualizarMeusDados = async (req, res) => {
       cidade: body.cidade,
       uf: body.uf,
       cep: body.cep,
-    });
+      ...dadosDependentes,
+    };
+
+    const atualizado = await atualizarDadosProprios(id, payload);
 
     log.info("FiliadoAtualizouProprios", { userId: id });
 
@@ -149,6 +211,16 @@ exports.atualizarFiliado = async (req, res) => {
       }
     }
 
+    let dadosDependentes;
+    try {
+      dadosDependentes = validarESanitizarDependentes(body);
+    } catch (err) {
+      if (err.isValidationError) {
+        return res.status(400).json({ message: err.message });
+      }
+      throw err;
+    }
+
     const payload = {
       nome: body.nome,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
@@ -165,6 +237,7 @@ exports.atualizarFiliado = async (req, res) => {
       cidade: body.cidade,
       uf: body.uf,
       cep: body.cep,
+      ...dadosDependentes,
     };
 
     // Somente ADMIN altera perfil_acesso
@@ -232,6 +305,16 @@ exports.criarFiliado = async (req, res) => {
       });
     }
 
+    let dadosDependentes;
+    try {
+      dadosDependentes = validarESanitizarDependentes(body);
+    } catch (err) {
+      if (err.isValidationError) {
+        return res.status(400).json({ message: err.message });
+      }
+      throw err;
+    }
+
     const dadosNovo = {
       nome: String(body.nome).trim(),
       cpf: cpfLimpo,
@@ -249,6 +332,7 @@ exports.criarFiliado = async (req, res) => {
       cidade: body.cidade || null,
       uf: body.uf || null,
       cep: body.cep || null,
+      ...dadosDependentes,
     };
 
     let novo;

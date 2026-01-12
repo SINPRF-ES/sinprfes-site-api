@@ -5,7 +5,8 @@ import {
   normalizarTextoBusca,
   formatarTelefoneTexto,
   aplicarMascaraCPF,
-  aplicarMascaraCEP
+  aplicarMascaraCEP,
+  gerarCamposDependentes
 } from './utils.js';
 import { renderizarSeguranca } from './seguranca.js';
 import { preencherFormularioRessarcimentoComDados } from './ressarcimento.js';
@@ -311,6 +312,25 @@ function renderizarFormularioMeusDados(dados, container) {
     const cepInput = document.getElementById("me-cep");
     aplicarMascaraCEP(cepInput);
 
+    // --- DEPENDENTES ---
+    const containerDependentes = document.getElementById("dependentes-container-meus-dados");
+    gerarCamposDependentes(containerDependentes, 'me');
+
+    for (let i = 1; i <= 5; i++) {
+        const nome = document.getElementById(`me-dep${i}_nome`);
+        const cpf = document.getElementById(`me-dep${i}_cpf`);
+        const dataNascimento = document.getElementById(`me-dep${i}_data_nascimento`);
+        const parentesco = document.getElementById(`me-dep${i}_parentesco`);
+
+        if (nome) nome.value = dados[`dep${i}_nome`] || '';
+        if (cpf) {
+            cpf.value = dados[`dep${i}_cpf`] || '';
+            aplicarMascaraCPF(cpf);
+        }
+        if (dataNascimento) dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
+        if (parentesco) parentesco.value = dados[`dep${i}_parentesco`] || '';
+    }
+
     // --- CEP ---
     document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);
     cepInput.addEventListener("blur", () => {
@@ -323,19 +343,34 @@ function renderizarFormularioMeusDados(dados, container) {
         const status = document.getElementById("meus-dados-status");
         status.textContent = "Salvando...";
 
-        const payload = {
-            telefone1: document.getElementById("me-telefone1").value.replace(/\D/g, ""),
-            telefone2: document.getElementById("me-telefone2").value.replace(/\D/g, ""),
-            email1: document.getElementById("me-email1").value,
-            email2: document.getElementById("me-email2").value,
-            logradouro_bairro: document.getElementById("me-endereco").value,
-            numero: document.getElementById("me-numero").value,
-            complemento: document.getElementById("me-complemento").value,
-            cidade: document.getElementById("me-cidade").value,
-            uf: document.getElementById("me-uf").value,
-            cep: document.getElementById("me-cep").value.replace(/\D/g, ""),
-            lotacao: document.getElementById("me-lotacao").value,
-        };
+        const form = e.target;
+        const formData = new FormData(form);
+        const payload = {};
+
+        for (const [key, value] of formData.entries()) {
+          payload[key] = value;
+        }
+
+        // Adiciona campos que não estão no form ou precisam de normalização
+        payload.telefone1 = document.getElementById("me-telefone1").value.replace(/\D/g, "");
+        payload.telefone2 = document.getElementById("me-telefone2").value.replace(/\D/g, "");
+        payload.email1 = document.getElementById("me-email1").value;
+        payload.email2 = document.getElementById("me-email2").value;
+        payload.logradouro_bairro = document.getElementById("me-endereco").value;
+        payload.numero = document.getElementById("me-numero").value;
+        payload.complemento = document.getElementById("me-complemento").value;
+        payload.cidade = document.getElementById("me-cidade").value;
+        payload.uf = document.getElementById("me-uf").value;
+        payload.cep = document.getElementById("me-cep").value.replace(/\D/g, "");
+        payload.lotacao = document.getElementById("me-lotacao").value;
+
+        // Sanitiza CPF dos dependentes
+        for (let i = 1; i <= 5; i++) {
+            const key = `dep${i}_cpf`;
+            if (payload[key]) {
+                payload[key] = payload[key].replace(/\D/g, "");
+            }
+        }
 
         try {
             const r = await apiFetch("/api/filiados/me", { method: "PUT", body: payload });

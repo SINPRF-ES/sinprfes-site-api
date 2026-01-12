@@ -9,7 +9,12 @@ const FILIADO_COLUMNS = `
   logradouro_bairro, numero, complemento, cidade, uf, cep,
   lotacao, situacao, senha_hash, twofa_secret, perfil_acesso,
   avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
-  arquivado_em, arquivado_motivo
+  arquivado_em, arquivado_motivo,
+  dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
+  dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
+  dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
+  dep4_nome, dep4_cpf, dep4_data_nascimento, dep4_parentesco,
+  dep5_nome, dep5_cpf, dep5_data_nascimento, dep5_parentesco
 `;
 
 /**
@@ -47,96 +52,62 @@ async function registrarUltimoAcesso(id) {
  * Observação: avatar é tratado em rota dedicada (upload), mas também aceitamos avatar_url se necessário.
  */
 async function atualizarDadosProprios(id, dados) {
-  const {
-    telefone1 = null,
-    telefone2 = null,
-    email1 = null,
-    email2 = null,
-    lotacao = null,
-    logradouro_bairro = null,
-    numero = null,
-    complemento = null,
-    cidade = null,
-    uf = null,
-    cep = null,
-    avatar_url = undefined,
-  } = dados || {};
-
   const campos = [];
   const valores = [];
   let idx = 1;
 
-  const add = (campoSql, valor) => {
+  const addCampo = (campoSql, valor, raw = false) => {
+    // Apenas adiciona à query se o valor não for undefined
     if (valor !== undefined) {
-      campos.push(`${campoSql} = $${idx}`);
-      valores.push(valor);
-      idx += 1;
-    }
-  };
-
-  add("telefone1", telefone1);
-  add("telefone2", telefone2);
-  add("email1", email1);
-  add("email2", email2);
-  add("lotacao", lotacao);
-  add("logradouro_bairro", logradouro_bairro);
-  add("numero", numero);
-  add("complemento", complemento);
-  add("cidade", cidade);
-  add("uf", uf);
-  add("cep", cep);
-  add("avatar_url", avatar_url);
-  add("atualizado_em", "NOW()");
-
-  // atualizado_em com NOW() não pode virar string param
-  const setParts = [];
-  const paramVals = [];
-  let p = 1;
-  for (const c of campos) {
-    if (c === "atualizado_em = $" + p) {
-      // não vai acontecer, pois usamos add("atualizado_em","NOW()") e isso geraria param.
-    }
-  }
-  // Recriar sem param para NOW()
-  const fields = [];
-  const vals = [];
-  let j = 1;
-
-  const add2 = (campoSql, valor, raw = false) => {
-    if (valor !== undefined) {
-      if (raw) fields.push(`${campoSql} = ${valor}`);
-      else {
-        fields.push(`${campoSql} = $${j}`);
-        vals.push(valor);
-        j += 1;
+      if (raw) {
+        campos.push(`${campoSql} = ${valor}`);
+      } else {
+        campos.push(`${campoSql} = $${idx}`);
+        valores.push(valor);
+        idx += 1;
       }
     }
   };
 
-  add2("telefone1", telefone1);
-  add2("telefone2", telefone2);
-  add2("email1", email1);
-  add2("email2", email2);
-  add2("lotacao", lotacao);
-  add2("logradouro_bairro", logradouro_bairro);
-  add2("numero", numero);
-  add2("complemento", complemento);
-  add2("cidade", cidade);
-  add2("uf", uf);
-  add2("cep", cep);
-  add2("avatar_url", avatar_url);
-  add2("atualizado_em", "NOW()", true);
+  // Campos existentes
+  addCampo("telefone1", dados.telefone1);
+  addCampo("telefone2", dados.telefone2);
+  addCampo("email1", dados.email1);
+  addCampo("email2", dados.email2);
+  addCampo("lotacao", dados.lotacao);
+  addCampo("logradouro_bairro", dados.logradouro_bairro);
+  addCampo("numero", dados.numero);
+  addCampo("complemento", dados.complemento);
+  addCampo("cidade", dados.cidade);
+  addCampo("uf", dados.uf);
+  addCampo("cep", dados.cep);
+  addCampo("avatar_url", dados.avatar_url);
 
-  vals.push(id);
+  // Campos dos dependentes
+  for (let i = 1; i <= 5; i++) {
+    addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
+    addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
+    addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
+    addCampo(`dep${i}_parentesco`, dados[`dep${i}_parentesco`]);
+  }
+
+  // Sempre atualiza o timestamp
+  addCampo("atualizado_em", "NOW()", true);
+
+  if (campos.length === 1) { // Só tem o atualizado_em
+    return buscarPorId(id);
+  }
+
+  valores.push(id);
 
   const { rows } = await pool.query(
     `
     UPDATE filiados
-    SET ${fields.join(", ")}
-    WHERE id = $${j}
+    SET ${campos.join(", ")}
+    WHERE id = $${idx}
     RETURNING ${FILIADO_COLUMNS}
   `,
-    vals
+    valores
   );
 
   return anexarEstadoCadastro(rows[0]) || null;
@@ -187,6 +158,14 @@ async function atualizarFiliadoPorId(id, dados) {
   addCampo("uf", dados.uf);
   addCampo("cep", dados.cep);
   addCampo("avatar_url", dados.avatar_url);
+
+  // Campos dos dependentes
+  for (let i = 1; i <= 5; i++) {
+    addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
+    addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
+    addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
+    addCampo(`dep${i}_parentesco`, dados[`dep${i}_parentesco`]);
+  }
 
   // sempre atualiza timestamp
   addCampo("atualizado_em", "NOW()", true);
@@ -308,50 +287,35 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       situacao = "ATIVO",
     } = dados;
 
+    const colunas = [
+      "nome", "cpf", "data_nascimento", "telefone1", "telefone2", "email1", "email2",
+      "logradouro_bairro", "numero", "complemento", "cidade", "uf", "cep",
+      "lotacao", "situacao", "perfil_acesso",
+      "criado_em", "atualizado_em", "bloqueado", "arquivado_em", "arquivado_motivo"
+    ];
+
+    const valores = [
+      nome, cpfNormalizado, data_nascimento, telefone1, telefone2, email1, email2,
+      logradouro_bairro, numero, complemento, cidade, uf, cep,
+      lotacao, situacao, perfilNovo,
+      "NOW()", "NOW()", false, null, null
+    ];
+
+    for (let i = 1; i <= 5; i++) {
+      colunas.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
+      valores.push(dados[`dep${i}_nome`], dados[`dep${i}_cpf`], dados[`dep${i}_data_nascimento`], dados[`dep${i}_parentesco`]);
+    }
+
+    const placeholders = valores.map((_, i) => (valores[i] === "NOW()" ? "NOW()" : `$${i + 1}`)).join(", ");
+    const valoresFiltrados = valores.filter(v => v !== "NOW()");
+
     const { rows } = await pool.query(
       `
-      INSERT INTO filiados
-        (nome, cpf, data_nascimento,
-         telefone1, telefone2,
-         email1, email2,
-         logradouro_bairro, numero, complemento, cidade, uf, cep,
-         lotacao,
-         situacao,
-         perfil_acesso,
-         criado_em, atualizado_em,
-         bloqueado,
-         arquivado_em, arquivado_motivo)
-      VALUES
-        ($1, $2, $3,
-         $4, $5,
-         $6, $7,
-         $8, $9, $10, $11, $12, $13,
-         $14,
-         $15,
-         $16,
-         NOW(), NOW(),
-         false,
-         NULL, NULL)
+      INSERT INTO filiados (${colunas.join(", ")})
+      VALUES (${placeholders})
       RETURNING ${FILIADO_COLUMNS}
     `,
-      [
-        nome,
-        cpfNormalizado,
-        data_nascimento,
-        telefone1,
-        telefone2,
-        email1,
-        email2,
-        logradouro_bairro,
-        numero,
-        complemento,
-        cidade,
-        uf,
-        cep,
-        lotacao,
-        situacao,
-        perfilNovo,
-      ]
+      valoresFiltrados
     );
 
     return anexarEstadoCadastro(rows[0]);
