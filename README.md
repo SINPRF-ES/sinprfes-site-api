@@ -1,121 +1,78 @@
-SINPRF-ES – Sistema de Filiação + Área Restrita + API
+# SINPRF-ES – Sistema de Filiação + Área Restrita + API
 
-Backend oficial do Sindicato dos Policiais Rodoviários Federais do Espírito Santo, incluindo:
+Backend oficial do Sindicato dos Policiais Rodoviários Federais do Espírito Santo.
 
-Site público (HTML + CSS + JS)
+## Visão Geral do Projeto
 
-API em Node.js (Express)
+Este repositório contém a aplicação full-stack do SINPRF-ES, que inclui:
 
-Banco PostgreSQL (Railway)
+- **Frontend**: Um site institucional estático construído com HTML, CSS e JavaScript, servido diretamente pelo diretório `/public`.
+- **Backend**: Uma API RESTful desenvolvida em Node.js com o framework Express, responsável por toda a lógica de negócio e comunicação com o banco de dados.
+- **Banco de Dados**: Utiliza PostgreSQL para persistência dos dados.
 
-Envio de e-mails + PDF automático
+O sistema gerencia o cadastro de filiados, autenticação, área restrita para acesso a dados e serviços, e funcionalidades administrativas para a gestão de usuários.
 
-Autenticação com JWT
+## Requisitos
 
-Fluxo de primeiro acesso
+- **Node.js**: Versão 18.0.0 ou superior.
+- **PostgreSQL**: Uma instância do PostgreSQL em execução.
+- **NPM**: Gerenciador de pacotes do Node.js.
 
-Preparado para integração futura com Login do gov.br
+## Setup Local
 
-🚀 Tecnologias utilizadas
+1.  **Instalar dependências**:
+    ```bash
+    npm install
+    ```
 
-Node.js + Express
+2.  **Criar arquivo `.env`**:
+    Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis de ambiente:
 
-PostgreSQL (Railway)
+    ```env
+    PORT=3000
+    DATABASE_URL=postgres://USUARIO:SENHA@HOST:PORTA/DATABASE
+    JWT_SECRET=sua-chave-secreta-jwt-aqui
+    ```
 
-PDFKit (geração de PDF)
+3.  **Rodar o servidor**:
+    ```bash
+    npm start
+    ```
+    O servidor estará disponível em `http://localhost:3000`.
 
-Nodemailer (SMTP)
+## Rotas Principais (API)
 
-Bcrypt + JWT
+A API segue um padrão RESTful e as principais rotas são:
 
-Arquitetura MVC + Services
+-   `POST /api/login`: Autentica um usuário e retorna um token JWT.
+-   `GET /api/filiados/me`: Retorna os dados do usuário autenticado.
+-   `PUT /api/filiados/me`: Permite que o usuário autenticado atualize seus próprios dados.
+-   `GET /api/filiados`: (Gestão) Lista todos os filiados.
+-   `POST /api/filiados`: (Gestão) Cria um novo filiado.
+-   `PUT /api/filiados/:id`: (Gestão) Atualiza os dados de um filiado específico.
 
-Hospedagem no Render
+## Dependentes (até 5)
 
-Site estático via /public
+O sistema permite que cada filiado cadastre até 5 dependentes.
 
-📁 Estrutura da aplicação
+### Campos por Dependente
 
-(Lembrete: esta estrutura é importante para organização e manutenção futura.)
+Para cada dependente (de 1 a 5), os seguintes campos estão disponíveis:
 
-server.js
-app.js
-public/
-src/
-  controllers/
-  services/
-  middleware/
-  utils/
-  routes/
-scripts/
+-   `depN_nome`: Nome completo do dependente.
+-   `depN_cpf`: CPF do dependente (armazenado sem formatação).
+-   `depN_data_nascimento`: Data de nascimento (formato `YYYY-MM-DD`).
+-   `depN_parentesco`: Grau de parentesco (ex: Filho, Cônjuge).
 
-⚙️ Como rodar localmente
-1. Instalar dependências
-npm install
+### Regras de Validação
 
-2. Criar arquivo .env
-PORT=3000
+-   **Consistência**: Se `depN_nome` for preenchido, `depN_cpf` é obrigatório, e vice-versa.
+-   **CPF**: Deve ser um CPF válido com 11 dígitos.
+-   **Data de Nascimento**: Deve ser uma data válida.
+-   **Opcional**: O preenchimento de dependentes é opcional. Um filiado pode não ter nenhum dependente cadastrado.
 
-DATABASE_URL=postgres://usuario:senha@host:porta/database
+### Permissões
 
-JWT_SECRET=algumasegurançaforte
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=sinprfes@sinprfes.org.br
-SMTP_PASS=senha
-MAIL_FROM=sinprfes@sinprfes.org.br
-MAIL_TO_FILIACAO=sinprfes@sinprfes.org.br
-
-3. Rodar servidor
-node server.js
-
-📡 Endpoints principais
-Endpoint	Método	Descrição
-/api/primeiro-acesso/iniciar	POST	Inicia fluxo do primeiro acesso
-/api/primeiro-acesso/confirmar	POST	Conclui criação de senha
-/api/login	POST	Login + JWT
-/api/me	GET	Dados do usuário autenticado
-/api/filiese	POST	Solicitação de filiação + PDF + e-mail
-📨 Envio de e-mail + PDF
-
-Cada ficha enviada gera:
-
-PDF automático (PDFKit)
-
-E-mail enviado ao sindicato com anexo
-
-Se SMTP não estiver configurado, o sistema registra aviso no console.
-
-🔒 Segurança
-
-Hash de senha com Bcrypt
-
-JWT com expiração
-
-2FA opcional (Google Authenticator)
-
-Preparado para Login gov.br
-
-📌 Scripts úteis
-Limpeza
-node scripts/cleanup.js
-
-📞 Suporte
-
-Em caso de dúvidas, fale com o desenvolvedor responsável (Marcelo Fávero Brandão).
-
-FIM DO README
-
-## Padrão de imports do backend
-Este backend está em **CommonJS** (uso de `require()` / `module.exports`).
-
-- Padrão adotado: **imports sem extensão** (ex.: `require("./routes/auth.routes")`).
-- Por que: é compatível com o resolver do Node em CommonJS e reduz ruído em diffs.
-
-### Alternativa (se migrar para ESM)
-Se no futuro o projeto migrar para `"type": "module"`, recomenda-se:
-- padronizar imports com **extensão explícita** (`.js`), pois o ESM é mais rígido.
-
-### Recomendação prática
-Não misturar estilos. Se decidir mudar para “sempre .js”, faça de forma global e com testes.
+-   **Perfil "FILIADO"**: Pode cadastrar, visualizar e editar seus próprios dependentes através da rota `PUT /api/filiados/me`.
+-   **Perfis de Gestão (ADMIN, DIRETORIA, etc.)**: Podem cadastrar, visualizar e editar os dependentes de qualquer filiado através das rotas `POST /api/filiados` (criação) e `PUT /api/filiados/:id` (edição).
+-   **Visualização Pública**: A lista de filiados retornada para o perfil "FILIADO" (`GET /api/filiados`) **não** inclui os dados dos dependentes, apenas nome e telefone, para proteger a privacidade.

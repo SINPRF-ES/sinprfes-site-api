@@ -5,7 +5,8 @@ import {
   normalizarTextoBusca,
   formatarTelefoneTexto,
   aplicarMascaraCPF,
-  aplicarMascaraCEP
+  aplicarMascaraCEP,
+  gerarCamposDependentes
 } from './utils.js';
 
 let cacheLista = [];
@@ -389,6 +390,13 @@ function filtrarLista(termo) {
                         </div>
                     </div>
 
+                    <div class="edit-group span-2">
+                        <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
+                        <div class="dependentes-grid" id="dependentes-container-edicao-${f.id}">
+                            <!-- Campos dos dependentes serão inseridos aqui -->
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn-save">💾 Salvar Alterações</button>
                 </form>
             </details>
@@ -409,6 +417,30 @@ function configurarListenersEdicao() {
     root.querySelectorAll("form.edit-form").forEach((form) => {
         if (form.dataset.bound === "1") return;
         form.dataset.bound = "1";
+
+        const filiadoId = form.dataset.id;
+        const filiado = cacheLista.find(f => f.id == filiadoId);
+
+        // --- Renderiza e preenche dependentes ---
+        const containerDependentes = form.querySelector(`#dependentes-container-edicao-${filiadoId}`);
+        if (containerDependentes && filiado) {
+            gerarCamposDependentes(containerDependentes, `edicao-${filiadoId}`);
+
+            for (let i = 1; i <= 5; i++) {
+                const nome = form.querySelector(`#edicao-${filiadoId}-dep${i}_nome`);
+                const cpf = form.querySelector(`#edicao-${filiadoId}-dep${i}_cpf`);
+                const dataNascimento = form.querySelector(`#edicao-${filiadoId}-dep${i}_data_nascimento`);
+                const parentesco = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco`);
+
+                if (nome) nome.value = filiado[`dep${i}_nome`] || '';
+                if (cpf) {
+                    cpf.value = filiado[`dep${i}_cpf`] || '';
+                    aplicarMascaraCPF(cpf);
+                }
+                if (dataNascimento) dataNascimento.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : '';
+                if (parentesco) parentesco.value = filiado[`dep${i}_parentesco`] || '';
+            }
+        }
 
         // Máscaras
         form.querySelectorAll(".campo-telefone").forEach(inp => {
@@ -504,6 +536,14 @@ async function salvarEdicao(form) {
     if (payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
     if (payload.cpf) payload.cpf = payload.cpf.replace(/\D/g, "");
     if (payload.cep) payload.cep = payload.cep.replace(/\D/g, "");
+
+    // Sanitiza CPF dos dependentes
+    for (let i = 1; i <= 5; i++) {
+        const key = `dep${i}_cpf`;
+        if (payload[key]) {
+            payload[key] = payload[key].replace(/\D/g, "");
+        }
+    }
 
     try {
         const r = await apiFetch(`/api/filiados/${id}`, {
@@ -770,6 +810,13 @@ function renderizarFormularioNovoFiliado(containerNovo) {
               <label>Compl.</label>
               <input name="complemento" id="novo-complemento">
             </div>
+
+            <div class="edit-group span-2">
+                <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
+                <div class="dependentes-grid" id="dependentes-container-novo">
+                    <!-- Campos dos dependentes serão inseridos aqui -->
+                </div>
+            </div>
           </div>
 
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
@@ -783,6 +830,11 @@ function renderizarFormularioNovoFiliado(containerNovo) {
     // Máscaras
     const cpfEl = containerNovo.querySelector("#novo-cpf");
     if (cpfEl) aplicarMascaraCPF(cpfEl);
+
+    // --- Renderiza campos de dependentes ---
+    const containerDependentes = containerNovo.querySelector("#dependentes-container-novo");
+    gerarCamposDependentes(containerDependentes, 'novo');
+    containerDependentes.querySelectorAll('input[name*="cpf"]').forEach(aplicarMascaraCPF);
 
     const cepEl = containerNovo.querySelector("#novo-cep");
     if (cepEl) aplicarMascaraCEP(cepEl);
@@ -836,6 +888,14 @@ function renderizarFormularioNovoFiliado(containerNovo) {
             if (payload.telefone1) payload.telefone1 = payload.telefone1.replace(/\D/g, "");
             if (payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
             if (payload.cep) payload.cep = payload.cep.replace(/\D/g, "");
+
+            // Sanitiza CPF dos dependentes
+            for (let i = 1; i <= 5; i++) {
+                const key = `dep${i}_cpf`;
+                if (payload[key]) {
+                    payload[key] = payload[key].replace(/\D/g, "");
+                }
+            }
 
             try {
                 const r = await apiFetch("/api/filiados", {

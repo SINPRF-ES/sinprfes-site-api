@@ -70,6 +70,19 @@
               Carregando seus dados...
             </div>
 
+            <div class="section-card">
+              <h3 class="section-title" style="margin-top: 2rem;">
+                <span class="emoji">👨‍👩‍👧‍👦</span>
+                <span>Dependentes (até 5)</span>
+              </h3>
+              <p class="section-subtitle">
+                Informe os dados dos seus dependentes. O preenchimento de nome e CPF são obrigatórios para cada dependente que você adicionar.
+              </p>
+              <div id="dependentes-container-meus-dados" class="dependentes-grid">
+                <!-- Campos dos dependentes serão inseridos aqui -->
+              </div>
+            </div>
+
             <div id="seguranca-container"></div>
           </div>
         </section>
@@ -162,5 +175,32 @@
   </main>
 
   <div id="site-footer"></div>
+
+  <template id="template-dependentes">
+    <div class="dependente-card">
+      <h4 class="dependente-titulo">Dependente <span class="dependente-numero"></span></h4>
+      <div class="field-row">
+        <div class="field-group">
+          <label for="depN_nome">Nome completo</label>
+          <input type="text" id="depN_nome" name="depN_nome" />
+        </div>
+        <div class="field-group">
+          <label for="depN_cpf">CPF</label>
+          <input type="text" id="depN_cpf" name="depN_cpf" placeholder="Apenas números" maxlength="11" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label for="depN_data_nascimento">Data de nascimento</label>
+          <input type="date" id="depN_data_nascimento" name="depN_data_nascimento" />
+        </div>
+        <div class="field-group">
+          <label for="depN_parentesco">Parentesco</label>
+          <input type="text" id="depN_parentesco" name="depN_parentesco" placeholder="Ex: Filho(a), Cônjuge" />
+        </div>
+      </div>
+    </div>
+  </template>
+
 </body>
 </html>
