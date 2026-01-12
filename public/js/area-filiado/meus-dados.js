@@ -5,7 +5,8 @@ import {
   normalizarTextoBusca,
   formatarTelefoneTexto,
   aplicarMascaraCPF,
-  aplicarMascaraCEP
+  aplicarMascaraCEP,
+  gerarCamposDependentes
 } from './utils.js';
 import { renderizarSeguranca } from './seguranca.js';
 import { preencherFormularioRessarcimentoComDados } from './ressarcimento.js';
@@ -279,6 +280,24 @@ function renderizarFormularioMeusDados(dados, container) {
                     </div>
                 </div>
 
+                <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top:25px;">
+                    <h3>👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
+                    <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm">Excluir</button>
+                </div>
+                <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                    <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
+                    <div id="checkboxes-excluir-dependentes" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Checkboxes serão inseridos aqui -->
+                    </div>
+                    <div style="margin-top: 15px; text-align: right;">
+                        <button type="button" id="btn-confirmar-exclusao-dependentes" class="btn btn-danger">Confirmar Exclusão</button>
+                    </div>
+                </div>
+
+                <div id="dependentes-container-meus-dados">
+                    <!-- Campos dos dependentes serão inseridos aqui -->
+                </div>
+
                 <div class="field-row" style="grid-template-columns: 1fr;">
                     <div class="field-group">
                         <label>Foto de perfil</label>
@@ -311,6 +330,113 @@ function renderizarFormularioMeusDados(dados, container) {
     const cepInput = document.getElementById("me-cep");
     aplicarMascaraCEP(cepInput);
 
+    // --- DEPENDENTES ---
+    const containerDependentes = document.getElementById("dependentes-container-meus-dados");
+    gerarCamposDependentes(containerDependentes, 'me');
+
+    for (let i = 1; i <= 5; i++) {
+        const nome = document.getElementById(`me-dep${i}_nome`);
+        const cpf = document.getElementById(`me-dep${i}_cpf`);
+        const dataNascimento = document.getElementById(`me-dep${i}_data_nascimento`);
+        const parentesco = document.getElementById(`me-dep${i}_parentesco`);
+
+        if (nome) nome.value = dados[`dep${i}_nome`] || '';
+        if (cpf) {
+            cpf.value = dados[`dep${i}_cpf`] || '';
+            aplicarMascaraCPF(cpf);
+        }
+        if (dataNascimento) dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
+        
+        // Lógica para preencher o campo de parentesco (select + outro)
+        const parentescoValor = dados[`dep${i}_parentesco`] || '';
+        const selectParentesco = document.getElementById(`me-dep${i}_parentesco_select`);
+        const inputOutro = document.getElementById(`me-dep${i}_parentesco_outro`);
+        const inputHidden = document.getElementById(`me-dep${i}_parentesco`);
+
+        if (selectParentesco && inputOutro && inputHidden) {
+            inputHidden.value = parentescoValor;
+            const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
+
+            if (opcoesPadrao.includes(parentescoValor)) {
+                selectParentesco.value = parentescoValor;
+                inputOutro.style.display = 'none';
+                inputOutro.value = '';
+            } else if (parentescoValor) {
+                selectParentesco.value = 'Outro';
+                inputOutro.style.display = 'block';
+                inputOutro.value = parentescoValor;
+            } else {
+                selectParentesco.value = '';
+                inputOutro.style.display = 'none';
+                inputOutro.value = '';
+            }
+        }
+    }
+
+    // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES ---
+    const dependentesAtuais = [];
+    for (let i = 1; i <= 5; i++) {
+        if (dados[`dep${i}_nome`]) {
+            dependentesAtuais.push({
+                nome: dados[`dep${i}_nome`],
+                index: i - 1
+            });
+        }
+    }
+
+    const btnToggleExcluir = document.getElementById("btn-toggle-excluir-dependentes");
+    const painelExcluir = document.getElementById("painel-excluir-dependentes");
+    const containerCheckboxes = document.getElementById("checkboxes-excluir-dependentes");
+    const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-dependentes");
+
+    if (dependentesAtuais.length === 0) {
+        btnToggleExcluir.style.display = 'none';
+    }
+
+    btnToggleExcluir.addEventListener("click", () => {
+        painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    containerCheckboxes.innerHTML = '';
+    dependentesAtuais.forEach(dep => {
+        containerCheckboxes.innerHTML += `
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" name="excluir_dependente" value="${dep.index}" style="width: auto;">
+                Dependente ${dep.index + 1}: ${dep.nome}
+            </label>
+        `;
+    });
+
+    btnConfirmarExclusao.addEventListener("click", async () => {
+        const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
+        const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
+
+        if (indicesParaExcluir.length === 0) {
+            alert("Selecione pelo menos um dependente para excluir.");
+            return;
+        }
+
+        if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
+            try {
+                const r = await apiFetch(`/api/filiados/${dados.id}/dependentes`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ indices: indicesParaExcluir })
+                });
+
+                if (r.ok) {
+                    alert("Dependentes excluídos com sucesso.");
+                    await carregarMeusDados();
+                } else {
+                    const err = await r.json();
+                    alert(err.message || "Erro ao excluir dependentes.");
+                }
+            } catch (e) {
+                alert("Erro de conexão ao tentar excluir os dependentes.");
+            }
+        }
+    });
+
     // --- CEP ---
     document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);
     cepInput.addEventListener("blur", () => {
@@ -323,19 +449,34 @@ function renderizarFormularioMeusDados(dados, container) {
         const status = document.getElementById("meus-dados-status");
         status.textContent = "Salvando...";
 
-        const payload = {
-            telefone1: document.getElementById("me-telefone1").value.replace(/\D/g, ""),
-            telefone2: document.getElementById("me-telefone2").value.replace(/\D/g, ""),
-            email1: document.getElementById("me-email1").value,
-            email2: document.getElementById("me-email2").value,
-            logradouro_bairro: document.getElementById("me-endereco").value,
-            numero: document.getElementById("me-numero").value,
-            complemento: document.getElementById("me-complemento").value,
-            cidade: document.getElementById("me-cidade").value,
-            uf: document.getElementById("me-uf").value,
-            cep: document.getElementById("me-cep").value.replace(/\D/g, ""),
-            lotacao: document.getElementById("me-lotacao").value,
-        };
+        const form = e.target;
+        const formData = new FormData(form);
+        const payload = {};
+        
+        for (const [key, value] of formData.entries()) {
+          payload[key] = value;
+        }
+
+        // Adiciona campos que não estão no form ou precisam de normalização
+        payload.telefone1 = document.getElementById("me-telefone1").value.replace(/\D/g, "");
+        payload.telefone2 = document.getElementById("me-telefone2").value.replace(/\D/g, "");
+        payload.email1 = document.getElementById("me-email1").value;
+        payload.email2 = document.getElementById("me-email2").value;
+        payload.logradouro_bairro = document.getElementById("me-endereco").value;
+        payload.numero = document.getElementById("me-numero").value;
+        payload.complemento = document.getElementById("me-complemento").value;
+        payload.cidade = document.getElementById("me-cidade").value;
+        payload.uf = document.getElementById("me-uf").value;
+        payload.cep = document.getElementById("me-cep").value.replace(/\D/g, "");
+        payload.lotacao = document.getElementById("me-lotacao").value;
+
+        // Sanitiza CPF dos dependentes
+        for (let i = 1; i <= 5; i++) {
+            const key = `dep${i}_cpf`;
+            if (payload[key]) {
+                payload[key] = payload[key].replace(/\D/g, "");
+            }
+        }
 
         try {
             const r = await apiFetch("/api/filiados/me", { method: "PUT", body: payload });

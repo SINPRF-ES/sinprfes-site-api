@@ -144,4 +144,10 @@ router.post(
   filiadosController.desarquivarFiliado
 );
 
+router.delete(
+  "/:id/dependentes",
+  authMiddleware,
+  filiadosController.excluirDependentes
+);
+
 module.exports = router;

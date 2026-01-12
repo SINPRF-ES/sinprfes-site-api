@@ -5,7 +5,8 @@ import {
   normalizarTextoBusca,
   formatarTelefoneTexto,
   aplicarMascaraCPF,
-  aplicarMascaraCEP
+  aplicarMascaraCEP,
+  gerarCamposDependentes
 } from './utils.js';
 
 let cacheLista = [];
@@ -199,13 +200,15 @@ function filtrarLista(termo) {
         const tel2Raw = (f.telefone2 || "").toString().replace(/\D/g, "");
         const tels = [tel1Raw, tel2Raw].filter(Boolean).map(formatarTelefoneTexto).join(" / ");
 
+        const metaCpf = f.cpf ? `CPF: ${formatarCPF(f.cpf)} &bull; ` : '';
+
         const header = `
             <div class="filiado-header">
                 <div class="filiado-left">
                     ${avatarHtml(f.avatar_url, f.nome)}
                     <div>
                         <div class="filiado-nome">${f.nome}</div>
-                        <div class="filiado-meta">CPF: ${formatarCPF(f.cpf)} &bull; ${f.lotacao || 'SEDE'}</div>
+                        <div class="filiado-meta">${metaCpf}${f.lotacao || 'SEDE'}</div>
                     </div>
                 </div>
                 <div style="text-align:right;">
@@ -379,6 +382,23 @@ function filtrarLista(termo) {
                         </div>
 
                         <div class="edit-group span-2">
+                            <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                                <h4 style="margin: 0; border: none; padding: 0;">Dependentes</h4>
+                                <button type="button" class="btn btn-danger-outline btn-sm btn-toggle-excluir-dependentes-admin" data-filiado-id="${f.id}">Excluir</button>
+                            </div>
+                            <div id="painel-excluir-dependentes-admin-${f.id}" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                                <p style="margin-top:0; font-weight:bold;">Selecione para remover:</p>
+                                <div id="checkboxes-excluir-dependentes-admin-${f.id}" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                                <div style="margin-top: 15px; text-align: right;">
+                                    <button type="button" class="btn btn-danger btn-confirmar-exclusao-dependentes-admin" data-filiado-id="${f.id}">Confirmar Exclusão</button>
+                                </div>
+                            </div>
+                            <div id="dependentes-container-edicao-${f.id}">
+                                <!-- Campos dos dependentes serão inseridos aqui -->
+                            </div>
+                        </div>
+
+                        <div class="edit-group span-2">
                             <label>Avatar (foto)</label>
                             <div class="avatar-actions">
                                 <img class="avatar-preview" src="${escapeHtml(f.avatar_url || '/img/avatar-placeholder.png')}" alt="Preview avatar" onerror="this.src='/img/avatar-placeholder.png'">
@@ -409,6 +429,118 @@ function configurarListenersEdicao() {
     root.querySelectorAll("form.edit-form").forEach((form) => {
         if (form.dataset.bound === "1") return;
         form.dataset.bound = "1";
+
+        const filiadoId = form.dataset.id;
+        const filiado = cacheLista.find(f => f.id == filiadoId);
+
+        // --- Renderiza e preenche dependentes ---
+        const containerDependentes = form.querySelector(`#dependentes-container-edicao-${filiadoId}`);
+        if (containerDependentes && filiado) {
+            gerarCamposDependentes(containerDependentes, `edicao-${filiadoId}`);
+            
+            for (let i = 1; i <= 5; i++) {
+                const nome = form.querySelector(`#edicao-${filiadoId}-dep${i}_nome`);
+                const cpf = form.querySelector(`#edicao-${filiadoId}-dep${i}_cpf`);
+                const dataNascimento = form.querySelector(`#edicao-${filiadoId}-dep${i}_data_nascimento`);
+                const parentesco = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco`);
+
+                if (nome) nome.value = filiado[`dep${i}_nome`] || '';
+                if (cpf) {
+                    cpf.value = filiado[`dep${i}_cpf`] || '';
+                    aplicarMascaraCPF(cpf);
+                }
+                if (dataNascimento) dataNascimento.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : '';
+
+                // Lógica para preencher o campo de parentesco (select + outro)
+                const parentescoValor = filiado[`dep${i}_parentesco`] || '';
+                const selectParentesco = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco_select`);
+                const inputOutro = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco_outro`);
+                const inputHidden = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco`);
+
+                if (selectParentesco && inputOutro && inputHidden) {
+                    inputHidden.value = parentescoValor;
+                    const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
+
+                    if (opcoesPadrao.includes(parentescoValor)) {
+                        selectParentesco.value = parentescoValor;
+                        inputOutro.style.display = 'none';
+                        inputOutro.value = '';
+                    } else if (parentescoValor) {
+                        selectParentesco.value = 'Outro';
+                        inputOutro.style.display = 'block';
+                        inputOutro.value = parentescoValor;
+                    } else {
+                        selectParentesco.value = '';
+                        inputOutro.style.display = 'none';
+                        inputOutro.value = '';
+                    }
+                }
+            }
+        }
+
+        // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES (ADMIN) ---
+        const dependentesAtuais = [];
+        for (let i = 1; i <= 5; i++) {
+            if (filiado[`dep${i}_nome`]) {
+                dependentesAtuais.push({ nome: filiado[`dep${i}_nome`], index: i - 1 });
+            }
+        }
+
+        const btnToggleExcluir = form.querySelector(`.btn-toggle-excluir-dependentes-admin[data-filiado-id="${filiadoId}"]`);
+        const painelExcluir = form.querySelector(`#painel-excluir-dependentes-admin-${filiadoId}`);
+        const containerCheckboxes = form.querySelector(`#checkboxes-excluir-dependentes-admin-${filiadoId}`);
+        const btnConfirmarExclusao = form.querySelector(`.btn-confirmar-exclusao-dependentes-admin[data-filiado-id="${filiadoId}"]`);
+        
+        if (btnToggleExcluir && painelExcluir && containerCheckboxes && btnConfirmarExclusao) {
+            if (dependentesAtuais.length === 0) {
+                btnToggleExcluir.style.display = 'none';
+            }
+
+            btnToggleExcluir.addEventListener("click", () => {
+                painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
+            });
+            
+            containerCheckboxes.innerHTML = '';
+            dependentesAtuais.forEach(dep => {
+                containerCheckboxes.innerHTML += `
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" name="excluir_dependente_admin" value="${dep.index}" style="width: auto;">
+                        Dependente ${dep.index + 1}: ${dep.nome}
+                    </label>
+                `;
+            });
+
+            btnConfirmarExclusao.addEventListener("click", async () => {
+                const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
+                const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
+
+                if (indicesParaExcluir.length === 0) {
+                    alert("Selecione pelo menos um dependente para excluir.");
+                    return;
+                }
+
+                if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s) do filiado ${filiado.nome}?`)) {
+                    try {
+                        const r = await apiFetch(`/api/filiados/${filiadoId}/dependentes`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ indices: indicesParaExcluir })
+                        });
+
+                        if (r.ok) {
+                            alert("Dependentes excluídos com sucesso.");
+                            await carregarLista();
+                        } else {
+                            const err = await r.json();
+                            alert(err.message || "Erro ao excluir dependentes.");
+                        }
+                    } catch (e) {
+                        alert("Erro de conexão.");
+                    }
+                }
+            });
+        }
+
 
         // Máscaras
         form.querySelectorAll(".campo-telefone").forEach(inp => {
@@ -504,6 +636,14 @@ async function salvarEdicao(form) {
     if (payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
     if (payload.cpf) payload.cpf = payload.cpf.replace(/\D/g, "");
     if (payload.cep) payload.cep = payload.cep.replace(/\D/g, "");
+
+    // Sanitiza CPF dos dependentes
+    for (let i = 1; i <= 5; i++) {
+        const key = `dep${i}_cpf`;
+        if (payload[key]) {
+            payload[key] = payload[key].replace(/\D/g, "");
+        }
+    }
 
     try {
         const r = await apiFetch(`/api/filiados/${id}`, {
@@ -772,6 +912,13 @@ function renderizarFormularioNovoFiliado(containerNovo) {
             </div>
           </div>
 
+          <div class="edit-group span-2">
+              <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
+              <div id="dependentes-container-novo">
+                  <!-- Campos dos dependentes serão inseridos aqui -->
+              </div>
+          </div>
+
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
             <button type="button" class="btn btn-outline" id="btn-cancelar-novo">Cancelar</button>
             <button type="submit" class="btn-save">✅ Criar Filiado</button>
@@ -783,6 +930,11 @@ function renderizarFormularioNovoFiliado(containerNovo) {
     // Máscaras
     const cpfEl = containerNovo.querySelector("#novo-cpf");
     if (cpfEl) aplicarMascaraCPF(cpfEl);
+
+    // --- Renderiza campos de dependentes ---
+    const containerDependentes = containerNovo.querySelector("#dependentes-container-novo");
+    gerarCamposDependentes(containerDependentes, 'novo');
+    containerDependentes.querySelectorAll('input[name*="cpf"]').forEach(aplicarMascaraCPF);
 
     const cepEl = containerNovo.querySelector("#novo-cep");
     if (cepEl) aplicarMascaraCEP(cepEl);
@@ -836,6 +988,14 @@ function renderizarFormularioNovoFiliado(containerNovo) {
             if (payload.telefone1) payload.telefone1 = payload.telefone1.replace(/\D/g, "");
             if (payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
             if (payload.cep) payload.cep = payload.cep.replace(/\D/g, "");
+
+            // Sanitiza CPF dos dependentes
+            for (let i = 1; i <= 5; i++) {
+                const key = `dep${i}_cpf`;
+                if (payload[key]) {
+                    payload[key] = payload[key].replace(/\D/g, "");
+                }
+            }
 
             try {
                 const r = await apiFetch("/api/filiados", {

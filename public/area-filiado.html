@@ -162,5 +162,39 @@
   </main>
 
   <div id="site-footer"></div>
+
+  <template id="template-dependentes">
+    <div class="dependente-card">
+      <h4 class="dependente-titulo">Dependente <span class="dependente-numero"></span></h4>
+      <div class="dependente-form-grid-final">
+        <div class="field-group">
+          <label for="depN_nome">Nome completo</label>
+          <input type="text" id="depN_nome" name="depN_nome" />
+        </div>
+        <div class="field-group">
+          <label for="depN_cpf">CPF</label>
+          <input type="text" id="depN_cpf" name="depN_cpf" placeholder="Apenas números" maxlength="11" />
+        </div>
+        <div class="field-group">
+          <label for="depN_data_nascimento">Data de nascimento</label>
+          <input type="date" id="depN_data_nascimento" name="depN_data_nascimento" />
+        </div>
+        <div class="field-group">
+          <label for="depN_parentesco_select">Parentesco</label>
+          <select id="depN_parentesco_select" name="depN_parentesco_select">
+            <option value="">Selecione...</option>
+            <option value="Filha(o) / enteada(o)">Filha(o) / enteada(o)</option>
+            <option value="Cônjuge / companheira(o)">Cônjuge / companheira(o)</option>
+            <option value="Pai / mãe">Pai / mãe</option>
+            <option value="Irmã(o)">Irmã(o)</option>
+            <option value="Outro">Outro</option>
+          </select>
+          <input type="text" id="depN_parentesco_outro" name="depN_parentesco_outro" placeholder="Especifique o parentesco" style="display: none; margin-top: 8px;" />
+          <input type="hidden" id="depN_parentesco" name="depN_parentesco" />
+        </div>
+      </div>
+    </div>
+  </template>
+
 </body>
 </html>
