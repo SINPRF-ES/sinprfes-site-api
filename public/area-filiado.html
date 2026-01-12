@@ -180,8 +180,17 @@
           <input type="date" id="depN_data_nascimento" name="depN_data_nascimento" />
         </div>
         <div class="field-group">
-          <label for="depN_parentesco">Parentesco</label>
-          <input type="text" id="depN_parentesco" name="depN_parentesco" placeholder="Ex: Filho(a), Cônjuge" />
+          <label for="depN_parentesco_select">Parentesco</label>
+          <select id="depN_parentesco_select" name="depN_parentesco_select">
+            <option value="">Selecione...</option>
+            <option value="Filha(o) / enteada(o)">Filha(o) / enteada(o)</option>
+            <option value="Cônjuge / companheira(o)">Cônjuge / companheira(o)</option>
+            <option value="Pai / mãe">Pai / mãe</option>
+            <option value="Irmã(o)">Irmã(o)</option>
+            <option value="Outro">Outro</option>
+          </select>
+          <input type="text" id="depN_parentesco_outro" name="depN_parentesco_outro" placeholder="Especifique o parentesco" style="display: none; margin-top: 8px;" />
+          <input type="hidden" id="depN_parentesco" name="depN_parentesco" />
         </div>
       </div>
     </div>

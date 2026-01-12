@@ -438,7 +438,31 @@ function configurarListenersEdicao() {
                     aplicarMascaraCPF(cpf);
                 }
                 if (dataNascimento) dataNascimento.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : '';
-                if (parentesco) parentesco.value = filiado[`dep${i}_parentesco`] || '';
+
+                // Lógica para preencher o campo de parentesco (select + outro)
+                const parentescoValor = filiado[`dep${i}_parentesco`] || '';
+                const selectParentesco = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco_select`);
+                const inputOutro = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco_outro`);
+                const inputHidden = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco`);
+
+                if (selectParentesco && inputOutro && inputHidden) {
+                    inputHidden.value = parentescoValor;
+                    const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
+
+                    if (opcoesPadrao.includes(parentescoValor)) {
+                        selectParentesco.value = parentescoValor;
+                        inputOutro.style.display = 'none';
+                        inputOutro.value = '';
+                    } else if (parentescoValor) {
+                        selectParentesco.value = 'Outro';
+                        inputOutro.style.display = 'block';
+                        inputOutro.value = parentescoValor;
+                    } else {
+                        selectParentesco.value = '';
+                        inputOutro.style.display = 'none';
+                        inputOutro.value = '';
+                    }
+                }
             }
         }
 

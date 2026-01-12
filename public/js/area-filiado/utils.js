@@ -205,7 +205,7 @@ export function gerarCamposDependentes(container, prefixoId = '') {
     // Usar um prefixo ajuda a evitar conflitos de ID quando o formulário é usado em múltiplos contextos (ex: Meus Dados vs. Modal Admin)
     const nomePrefixo = prefixoId ? `${prefixoId}-` : '';
 
-    const campos = clone.querySelectorAll('input, label');
+    const campos = clone.querySelectorAll('input, label, select');
     campos.forEach(campo => {
       const nomeOriginal = campo.name || '';
       const idOriginal = campo.id || '';
@@ -215,6 +215,25 @@ export function gerarCamposDependentes(container, prefixoId = '') {
       if (idOriginal) campo.id = `${nomePrefixo}${idOriginal.replace('depN_', `dep${i}_`)}`;
       if (forOriginal) campo.htmlFor = `${nomePrefixo}${forOriginal.replace('depN_', `dep${i}_`)}`;
     });
+
+    // Lógica para o campo de parentesco condicional
+    const selectParentesco = clone.querySelector(`select[name="dep${i}_parentesco_select"]`);
+    const inputOutro = clone.querySelector(`input[name="dep${i}_parentesco_outro"]`);
+    const inputHiddenFinal = clone.querySelector(`input[name="dep${i}_parentesco"]`);
+
+    const atualizarParentesco = () => {
+      if (selectParentesco.value === 'Outro') {
+        inputOutro.style.display = 'block';
+        inputHiddenFinal.value = inputOutro.value.trim();
+      } else {
+        inputOutro.style.display = 'none';
+        inputOutro.value = '';
+        inputHiddenFinal.value = selectParentesco.value;
+      }
+    };
+
+    selectParentesco.addEventListener('change', atualizarParentesco);
+    inputOutro.addEventListener('input', atualizarParentesco);
 
     container.appendChild(clone);
   }
