@@ -400,8 +400,8 @@ function renderizarFormularioMeusDados(dados, container) {
     containerCheckboxes.innerHTML = '';
     dependentesAtuais.forEach(dep => {
         containerCheckboxes.innerHTML += `
-            <label>
-                <input type="checkbox" name="excluir_dependente" value="${dep.index}">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" name="excluir_dependente" value="${dep.index}" style="width: auto;">
                 Dependente ${dep.index + 1}: ${dep.nome}
             </label>
         `;
