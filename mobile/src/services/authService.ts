@@ -51,3 +51,4 @@ export async function solicitarResetSenha(cpf: string): Promise<{ message: strin
   const { data } = await api.post('/api/senha/recuperar', { cpf });
   return data;
 }
+

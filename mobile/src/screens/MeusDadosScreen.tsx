@@ -63,7 +63,7 @@ export default function MeusDadosScreen() {
         const usuarioAtualizado = { ...usuario, avatar_url: filiadoAtualizado.avatar_url };
         await setSessao(token!, usuarioAtualizado);
       }
-
+      
       Alert.alert('Sucesso', 'Sua foto de perfil foi atualizada.');
     } catch (err: any) {
       console.error('[Upload Avatar Error]', err);
@@ -89,7 +89,7 @@ export default function MeusDadosScreen() {
     if (result.canceled || !result.assets || result.assets.length === 0) {
       return;
     }
-
+    
     await processAndUploadImage(result.assets[0].uri);
   };
 
@@ -110,7 +110,7 @@ export default function MeusDadosScreen() {
     if (result.canceled || !result.assets || result.assets.length === 0) {
       return;
     }
-
+    
     await processAndUploadImage(result.assets[0].uri);
   };
   
@@ -141,9 +141,9 @@ export default function MeusDadosScreen() {
       "Tem certeza de que deseja remover sua foto de perfil?",
       [
         { text: "Cancelar", style: "cancel" },
-        {
-          text: "Remover",
-          style: "destructive",
+        { 
+          text: "Remover", 
+          style: "destructive", 
           onPress: async () => {
             try {
               setIsUploading(true); // Reutiliza o estado de loading

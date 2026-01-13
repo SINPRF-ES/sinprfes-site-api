@@ -99,6 +99,11 @@ export default function RootNavigation() {
               component={ForgotPasswordScreen}
               options={{ title: 'Recuperar Senha' }}
             />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+              options={{ title: 'Redefinir Senha' }}
+            />
           </>
         ) : bloqueadoPorBiometria ? (
           <Stack.Screen
