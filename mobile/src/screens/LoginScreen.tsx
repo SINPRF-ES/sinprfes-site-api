@@ -37,6 +37,7 @@ export default function LoginScreen() {
         Alert.alert('Erro', 'Nenhuma sessão salva encontrada para login com biometria.');
         return;
       }
+
       
       const sucesso = await desbloquearComBiometria();
       if (sucesso) {
