@@ -200,13 +200,15 @@ function filtrarLista(termo) {
         const tel2Raw = (f.telefone2 || "").toString().replace(/\D/g, "");
         const tels = [tel1Raw, tel2Raw].filter(Boolean).map(formatarTelefoneTexto).join(" / ");
 
+        const metaCpf = f.cpf ? `CPF: ${formatarCPF(f.cpf)} &bull; ` : '';
+
         const header = `
             <div class="filiado-header">
                 <div class="filiado-left">
                     ${avatarHtml(f.avatar_url, f.nome)}
                     <div>
                         <div class="filiado-nome">${f.nome}</div>
-                        <div class="filiado-meta">CPF: ${formatarCPF(f.cpf)} &bull; ${f.lotacao || 'SEDE'}</div>
+                        <div class="filiado-meta">${metaCpf}${f.lotacao || 'SEDE'}</div>
                     </div>
                 </div>
                 <div style="text-align:right;">
