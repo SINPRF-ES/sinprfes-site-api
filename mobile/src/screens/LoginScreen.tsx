@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, Image, Pressable } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
@@ -16,6 +17,39 @@ export default function LoginScreen() {
   const [codigo2FA, setCodigo2FA] = useState<string>('');
   const [etapa, setEtapa] = useState<'credenciais' | '2fa'>('credenciais');
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Tenta autenticar com biometria ao carregar a tela
+  useEffect(() => {
+    (async () => {
+      if (biometriaHabilitada) {
+        // Um pequeno delay para dar tempo da UI renderizar e o usuário ver o prompt
+        setTimeout(handleBiometricLogin, 250);
+      }
+    })();
+  }, [biometriaHabilitada]);
+
+  async function handleBiometricLogin() {
+    try {
+      setLoading(true);
+      const sessaoSalva = await carregarSessao();
+      if (!sessaoSalva) {
+        // Isso não deveria acontecer se a biometria está habilitada, mas é uma guarda de segurança
+        Alert.alert('Erro', 'Nenhuma sessão salva encontrada para login com biometria.');
+        return;
+      }
+      
+      const sucesso = await desbloquearComBiometria();
+      if (sucesso) {
+        // Re-autentica usando a sessão salva
+        await setSessao(sessaoSalva.token, sessaoSalva.usuario);
+      }
+    } catch (e: any) {
+      // O erro já é tratado dentro de `desbloquearComBiometria`,
+      // então aqui apenas garantimos o estado de loading.
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function finalizarLoginComToken(token: string) {
     const usuario = await buscarUsuarioLogado(token);
@@ -98,6 +132,13 @@ export default function LoginScreen() {
         <Text style={styles.title}>SINPRF/ES</Text>
         <Text style={styles.subtitle}>Área do Filiado</Text>
 
+        {biometriaHabilitada && isEtapaCredenciais && (
+          <Pressable style={styles.biometricButton} onPress={handleBiometricLogin} disabled={loading}>
+            <MaterialCommunityIcons name="fingerprint" size={24} color="#FFF" />
+            <Text style={styles.biometricButtonText}>Entrar com Biometria</Text>
+          </Pressable>
+        )}
+
         <TextInput style={styles.input} placeholder="CPF" value={cpf} onChangeText={setCpf} keyboardType="numeric" editable={isEtapaCredenciais} />
         <TextInput style={styles.input} placeholder="Senha" value={senha} onChangeText={setSenha} secureTextEntry editable={isEtapaCredenciais} />
 
@@ -135,6 +176,21 @@ const styles = StyleSheet.create({
   logo: { width: 90, height: 90 },
   title: { fontSize: 26, fontWeight: 'bold', textAlign: 'center', marginBottom: 4, color: '#003366' },
   subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 24, color: '#555' },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#003366',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  biometricButtonText: {
+    color: '#FFF',
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 16, backgroundColor: '#fff' },
   forgotPasswordText: {
     textAlign: 'center',

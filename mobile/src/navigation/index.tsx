@@ -6,7 +6,6 @@ import {
 } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import * as Notifications from "expo-notifications";
-import { Button } from "react-native";
 
 import { useAuth } from "../hooks/useAuth";
 
@@ -113,6 +112,11 @@ export default function RootNavigation() {
               component={ForgotPasswordScreen}
               options={{ title: 'Recuperar Senha' }}
             />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+              options={{ title: 'Redefinir Senha' }}
+            />
           </>
         ) : bloqueadoPorBiometria ? (
           <Stack.Screen
@@ -125,13 +129,7 @@ export default function RootNavigation() {
             <Stack.Screen
               name="Home"
               component={HomeScreen}
-              options={{
-                title: "SINPRF/ES",
-                headerRight: () => {
-                  const { logout } = useAuth();
-                  return <Button onPress={logout} title="Sair" color="#c00" />;
-                },
-              }}
+              options={{ title: "SINPRF/ES" }}
             />
             <Stack.Screen
               name="MeusDados"
