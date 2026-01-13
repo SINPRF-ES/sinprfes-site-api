@@ -43,3 +43,11 @@ export async function buscarUsuarioLogado(token?: string): Promise<Usuario> {
   const { data } = await api.get<Usuario>('/api/auth/me', { headers });
   return data;
 }
+
+/**
+ * Solicita o envio do e-mail de redefinição de senha para o CPF informado.
+ */
+export async function solicitarResetSenha(cpf: string): Promise<{ message: string; email_destino: string | null }> {
+  const { data } = await api.post('/api/senha/recuperar', { cpf });
+  return data;
+}

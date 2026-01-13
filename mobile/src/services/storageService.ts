@@ -22,7 +22,7 @@ export async function carregarSessao(): Promise<Sessao | null> {
 }
 
 export async function limparSessao(): Promise<void> {
-  await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY, BIOMETRIA_KEY]);
+  await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
 }
 
 export async function definirBiometriaHabilitada(valor: boolean): Promise<void> {
