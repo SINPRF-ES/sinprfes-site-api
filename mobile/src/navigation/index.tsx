@@ -6,10 +6,12 @@ import {
 } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import * as Notifications from "expo-notifications";
+import { Button } from "react-native";
 
 import { useAuth } from "../hooks/useAuth";
 
 import LoginScreen from "../screens/LoginScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import BiometricLockScreen from "../screens/BiometricLockScreen";
 import HomeScreen from "../screens/HomeScreen";
 import FiliadosScreen from "../screens/FiliadosScreen";
@@ -22,6 +24,7 @@ import ConveniosScreen from "../screens/ConveniosScreen";
 
 export type RootStackParamList = {
   Login: undefined;
+  ForgotPassword: undefined;
   BiometricLock: undefined;
 
   Home: undefined;
@@ -99,11 +102,18 @@ export default function RootNavigation() {
     >
       <Stack.Navigator>
         {!autenticado ? (
-          <Stack.Screen
-            name="Login"
-            component={LoginScreen}
-            options={{ headerShown: false }}
-          />
+          <>
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+              options={{ title: 'Recuperar Senha' }}
+            />
+          </>
         ) : bloqueadoPorBiometria ? (
           <Stack.Screen
             name="BiometricLock"
@@ -115,7 +125,13 @@ export default function RootNavigation() {
             <Stack.Screen
               name="Home"
               component={HomeScreen}
-              options={{ title: "SINPRF/ES" }}
+              options={{
+                title: "SINPRF/ES",
+                headerRight: () => {
+                  const { logout } = useAuth();
+                  return <Button onPress={logout} title="Sair" color="#c00" />;
+                },
+              }}
             />
             <Stack.Screen
               name="MeusDados"

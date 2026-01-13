@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, Image, Pressable } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useNavigation } from '@react-navigation/native';
 
 import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 
 export default function LoginScreen() {
+  const navigation = useNavigation();
   const { setSessao, ativarBiometriaNesteAparelho, biometriaHabilitada } = useAuth();
 
   const [cpf, setCpf] = useState<string>('');
@@ -100,7 +102,12 @@ export default function LoginScreen() {
         <TextInput style={styles.input} placeholder="Senha" value={senha} onChangeText={setSenha} secureTextEntry editable={isEtapaCredenciais} />
 
         {isEtapaCredenciais ? (
-          <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
+          <>
+            <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
+            <Pressable onPress={() => navigation.navigate('ForgotPassword')} disabled={loading}>
+              <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
+            </Pressable>
+          </>
         ) : (
           <>
             <Text style={styles.info2fa}>Digite o código gerado pelo seu aplicativo autenticador (2FA).</Text>
@@ -129,6 +136,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: 'bold', textAlign: 'center', marginBottom: 4, color: '#003366' },
   subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 24, color: '#555' },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 16, backgroundColor: '#fff' },
+  forgotPasswordText: {
+    textAlign: 'center',
+    color: '#003366',
+    marginTop: 16,
+    padding: 8,
+    fontSize: 14,
+  },
   info2fa: { textAlign: 'center', marginBottom: 12, fontSize: 14 },
   buttonRow: { flexDirection: 'row', gap: 8 },
   buttonCol: { flex: 1 },

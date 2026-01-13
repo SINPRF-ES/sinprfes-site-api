@@ -1,4 +1,5 @@
 // src/services/filiadosService.ts
+import api from './apiService';
 import { API_BASE_URL } from '../config/api';
 import type { Filiado } from '../types/filiado';
 import { salvarFiliadosOffline, listarFiliadosOffline } from '../database/db';
@@ -55,4 +56,40 @@ export async function sincronizarFiliadosOffline(token: string): Promise<void> {
 // Expor a leitura local (apenas delegando pro db)
 export async function obterFiliadosOffline(): Promise<Filiado[]> {
   return listarFiliadosOffline();
+}
+
+/**
+ * Envia o avatar do usuário logado para a API.
+ * @param uri O URI local do arquivo de imagem.
+ * @returns Os dados do filiado atualizado com a nova URL do avatar.
+ */
+export async function uploadAvatar(uri: string) {
+  const filename = uri.split('/').pop() || 'avatar.jpg';
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+  const formData = new FormData();
+  formData.append('avatar', {
+    uri,
+    name: filename,
+    type,
+  } as any);
+
+  // A instância 'api' já tem o interceptor de token
+  const { data } = await api.post('/api/filiados/me/avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return data;
+}
+
+/**
+ * Envia uma requisição para remover o avatar do usuário logado.
+ * @returns Os dados do filiado atualizado (sem avatar_url).
+ */
+export async function removerAvatar() {
+  const { data } = await api.delete('/api/filiados/me/avatar');
+  return data;
 }

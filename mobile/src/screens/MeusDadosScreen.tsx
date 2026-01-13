@@ -1,14 +1,17 @@
 // src/screens/MeusDadosScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, Image, ScrollView } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
-import type { Filiado } from '../types/filiado'; // Supondo que o tipo exista
+import { uploadAvatar, removerAvatar } from '../services/filiadosService';
+import type { Filiado } from '../types/filiado';
 
 export default function MeusDadosScreen() {
   const { usuario, setSessao, token } = useAuth();
   const [filiado, setFiliado] = useState<Filiado | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
   // Efeito para buscar os dados completos do filiado
@@ -37,10 +40,9 @@ export default function MeusDadosScreen() {
       setFiliado(data);
 
       // Atualiza o usuário no contexto de autenticação, se necessário
-      // (aqui, assumimos que o `usuario` no AuthContext tem os mesmos campos básicos)
       if (usuario) {
-        const usuarioAtualizado = { ...usuario, nome: data.nome, email: data.email };
-        await setSessao(token!, usuarioAtualizado); // Precisamos do token aqui
+        const usuarioAtualizado = { ...usuario, nome: data.nome, email: data.email, avatar_url: data.avatar_url };
+        await setSessao(token!, usuarioAtualizado);
       }
 
       Alert.alert('Sucesso', 'Seus dados foram atualizados.');
@@ -50,13 +52,123 @@ export default function MeusDadosScreen() {
       setLoading(false);
     }
   };
-  
-  // TODO: Implementar upload de avatar com ImagePicker
-  const handleAvatarUpload = () => {
-    Alert.alert('Em construção', 'O upload de avatar será implementado em breve.');
+
+  const processAndUploadImage = async (uri: string) => {
+    try {
+      setIsUploading(true);
+      const filiadoAtualizado = await uploadAvatar(uri);
+      setFiliado(filiadoAtualizado);
+
+      if (usuario) {
+        const usuarioAtualizado = { ...usuario, avatar_url: filiadoAtualizado.avatar_url };
+        await setSessao(token!, usuarioAtualizado);
+      }
+      
+      Alert.alert('Sucesso', 'Sua foto de perfil foi atualizada.');
+    } catch (err: any) {
+      console.error('[Upload Avatar Error]', err);
+      Alert.alert('Erro no Upload', err.response?.data?.message || 'Não foi possível enviar sua foto.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  if (loading) {
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão necessária', 'Precisamos de acesso à sua câmera para tirar uma foto.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      return;
+    }
+    
+    await processAndUploadImage(result.assets[0].uri);
+  };
+
+  const chooseFromLibrary = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria para escolher uma foto.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      return;
+    }
+    
+    await processAndUploadImage(result.assets[0].uri);
+  };
+  
+  const handleAvatarUpload = () => {
+    Alert.alert(
+      "Alterar Foto de Perfil",
+      "Escolha uma opção",
+      [
+        {
+          text: "Tirar Foto",
+          onPress: takePhoto,
+        },
+        {
+          text: "Escolher da Galeria",
+          onPress: chooseFromLibrary,
+        },
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  const handleAvatarRemove = async () => {
+    Alert.alert(
+      "Confirmar Remoção",
+      "Tem certeza de que deseja remover sua foto de perfil?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Remover", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              setIsUploading(true); // Reutiliza o estado de loading
+              const filiadoAtualizado = await removerAvatar();
+              setFiliado(filiadoAtualizado);
+
+              if (usuario) {
+                const usuarioAtualizado = { ...usuario, avatar_url: null };
+                await setSessao(token!, usuarioAtualizado);
+              }
+
+              Alert.alert('Sucesso', 'Sua foto foi removida.');
+            } catch (err: any) {
+              console.error('[Remove Avatar Error]', err);
+              Alert.alert('Erro', err.response?.data?.message || 'Não foi possível remover sua foto.');
+            } finally {
+              setIsUploading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  if (loading && !filiado) { // Evita piscar a tela de loading em updates
     return <View style={styles.container}><Text>Carregando...</Text></View>;
   }
 
@@ -71,7 +183,15 @@ export default function MeusDadosScreen() {
           source={filiado?.avatar_url ? { uri: filiado.avatar_url } : require('../../assets/icon.png')} 
           style={styles.avatar} 
         />
-        <Button title="Alterar Foto" onPress={handleAvatarUpload} />
+        <View style={styles.buttonContainer}>
+          <Button title={isUploading ? "Enviando..." : "Alterar Foto"} onPress={handleAvatarUpload} disabled={isUploading || loading} />
+          {filiado?.avatar_url && (
+            <View style={styles.buttonSpacer} />
+          )}
+          {filiado?.avatar_url && (
+            <Button title="Remover Foto" onPress={handleAvatarRemove} color="#c00" disabled={isUploading || loading} />
+          )}
+        </View>
       </View>
 
       <Text style={styles.label}>Nome</Text>
@@ -115,6 +235,15 @@ const styles = StyleSheet.create({
   avatarContainer: {
     alignItems: 'center',
     marginBottom: 20,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonSpacer: {
+    width: 10,
   },
   avatar: {
     width: 100,
