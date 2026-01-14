@@ -56,9 +56,11 @@ api.interceptors.response.use(
       message,
     });
     
-    if (status === 401) {
-      logger.warn('Usuário deslogado devido a erro 401.');
+    // Evita logout imediato se a chamada inicial para /me falhar
+    if (status === 401 && !config.url.endsWith('/me')) {
+      logger.warn('Sessão expirada ou inválida. Limpando sessão...');
       await limparSessao();
+      // O ideal é que o useAuth ou um listener reaja a esta limpeza.
     }
     return Promise.reject(error);
   }
