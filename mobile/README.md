@@ -65,16 +65,41 @@ API_BASE_URL=http://192.168.1.5:3000
 - **Causa:** Ocorre quando a versão de uma biblioteca nativa (como `react-native-reanimated`) instalada no `node_modules` não corresponde exatamente à versão nativa pré-compilada no aplicativo Expo Go. Isso geralmente é causado por `npm install` que pode instalar uma versão de patch diferente devido a especificadores de versão flexíveis (ex: `~4.1.1`).
 - **Solução:** As versões das dependências nativas foram fixadas no `package.json` para garantir que apenas as versões compatíveis sejam instaladas. Se o erro persistir, execute os comandos de limpeza abaixo.
 
-### 3.2. Comandos de Limpeza de Cache
-Se o aplicativo apresentar comportamento inesperado, execute os seguintes comandos na ordem para garantir um ambiente limpo:
-```bash
-# 1. Limpa o cache do Expo
-npx expo start -c
+### 3.2. Procedimento de Reset Total (Limpeza de Cache e Dependências)
+Se o aplicativo apresentar comportamento inesperado, como erros de dependência nativa ou falhas de cache, siga este procedimento para garantir um ambiente completamente limpo.
 
-# 2. Reinstala as dependências (se o problema persistir)
-rm -rf node_modules
-npm install
+**1. Pare o servidor Metro Bundler.**
+
+**2. Limpe o cache do Expo:**
+```bash
+npx expo start -c
 ```
+
+**3. Remova `node_modules` e `package-lock.json`:**
+   - **Windows (PowerShell):**
+     ```powershell
+     Remove-Item -Recurse -Force node_modules, package-lock.json
+     ```
+   - **Windows (CMD):**
+     ```cmd
+     rmdir /s /q node_modules
+     del package-lock.json
+     ```
+   - **macOS / Linux:**
+     ```bash
+     rm -rf node_modules package-lock.json
+     ```
+
+**4. Reinstale as dependências:**
+   ```bash
+   npm install
+   ```
+
+**5. (Opcional) Reinstale dependências nativas críticas:**
+   Se suspeitar de problemas com bibliotecas como Reanimated ou Gesture Handler, force a reinstalação da versão correta:
+   ```bash
+   npx expo install react-native-reanimated react-native-gesture-handler
+   ```
 
 ### 3.3. Sistema de Logs e Diagnóstico
 O aplicativo agora possui um sistema de logging robusto para facilitar a depuração.
