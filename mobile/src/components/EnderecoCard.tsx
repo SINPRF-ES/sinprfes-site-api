@@ -1,7 +1,9 @@
 // src/components/EnderecoCard.tsx
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, Button } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, Button, Alert, ActivityIndicator } from 'react-native';
 import { Filiado } from '../types/filiado';
+import { formatCEP, sanitizeDigits } from '../utils/masks';
+import { buscarCep } from '../services/cepService';
 
 interface Props {
   filiado: Filiado | null;
@@ -9,6 +11,36 @@ interface Props {
 }
 
 const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
+  const [isBuscando, setIsBuscando] = useState(false);
+
+  const handleCepChange = (value: string) => {
+    const digits = sanitizeDigits(value);
+    setFiliado(f => (f ? { ...f, cep: digits } : null));
+  };
+
+  const handleBuscarCep = async () => {
+    const cep = filiado?.cep;
+    if (!cep || cep.length !== 8) {
+      Alert.alert('CEP Inválido', 'Por favor, insira um CEP com 8 dígitos.');
+      return;
+    }
+
+    setIsBuscando(true);
+    try {
+      const endereco = await buscarCep(cep);
+      if (endereco) {
+        setFiliado(f => f ? { ...f, ...endereco } : null);
+        Alert.alert('Sucesso', 'Endereço encontrado e preenchido.');
+      } else {
+        Alert.alert('CEP não encontrado', 'O CEP informado não foi localizado.');
+      }
+    } catch (error: any) {
+      Alert.alert('Erro na Busca', error.message);
+    } finally {
+      setIsBuscando(false);
+    }
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Endereço</Text>
@@ -17,13 +49,18 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
           <Text style={styles.label}>CEP</Text>
           <TextInput
             style={styles.input}
-            value={filiado?.cep || ''}
-            onChangeText={(text) => setFiliado(f => f ? { ...f, cep: text } : null)}
+            value={formatCEP(filiado?.cep || '')}
+            onChangeText={handleCepChange}
             placeholder="00000-000"
             keyboardType="numeric"
+            maxLength={9} // 00000-000
           />
         </View>
-        <Button title="Buscar" onPress={() => { /* TODO: Implementar busca de CEP via API (ex: ViaCEP) */ }} />
+        {isBuscando ? (
+          <ActivityIndicator />
+        ) : (
+          <Button title="Buscar" onPress={handleBuscarCep} />
+        )}
       </View>
       <Text style={styles.label}>Logradouro e Bairro</Text>
       <TextInput

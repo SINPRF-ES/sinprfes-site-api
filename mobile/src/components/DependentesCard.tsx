@@ -1,56 +1,85 @@
 // src/components/DependentesCard.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
+import { formatCPF, sanitizeDigits, formatISOToBR, parseBRToISO, formatDate } from '../utils/masks';
 
-interface Props {
-  filiado: Filiado | null;
-  setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
-}
+// Subcomponente para cada item de dependente
+const DependenteItem = ({ filiado, setFiliado, index }) => {
+  const [dataNascimento, setDataNascimento] = useState('');
 
-const DependentesCard: React.FC<Props> = ({ filiado, setFiliado }) => {
-  const handleDependentChange = (index: number, field: string, value: string) => {
+  // Sincroniza o estado local da data com o estado global do filiado
+  useEffect(() => {
+    const isoDate = filiado?.[`dep${index}_data_nascimento`];
+    setDataNascimento(formatISOToBR(isoDate));
+  }, [filiado?.[`dep${index}_data_nascimento`]]);
+
+  const handleDateChange = (text: string) => {
+    const formatted = formatDate(text);
+    setDataNascimento(formatted);
+
+    // Atualiza o estado global com o formato ISO
+    const isoDate = parseBRToISO(formatted);
     setFiliado(f => {
       if (!f) return null;
-      const newFiliado = { ...f };
-      newFiliado[`dep${index}_${field}`] = value;
-      return newFiliado;
+      // Só atualiza se a data for válida ou nula, para não enviar lixo
+      if (isoDate || formatted === '') {
+        return { ...f, [`dep${index}_data_nascimento`]: isoDate };
+      }
+      return f;
+    });
+  };
+
+  const handleDependentChange = (field: string, value: string, isDigitOnly = false) => {
+    const finalValue = isDigitOnly ? sanitizeDigits(value) : value;
+    setFiliado(f => {
+      if (!f) return null;
+      return { ...f, [`dep${index}_${field}`]: finalValue };
     });
   };
 
   return (
+    <View style={styles.dependenteBox}>
+      <Text style={styles.dependenteTitle}>Dependente {index}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Nome Completo do Dependente"
+        value={filiado?.[`dep${index}_nome`] || ''}
+        onChangeText={(text) => handleDependentChange('nome', text)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="CPF do Dependente"
+        value={formatCPF(filiado?.[`dep${index}_cpf`] || '')}
+        onChangeText={(text) => handleDependentChange('cpf', text, true)}
+        keyboardType="numeric"
+        maxLength={14}
+      />
+      {/* TODO: Substituir por um DatePicker para melhor UX */}
+      <TextInput
+        style={styles.input}
+        placeholder="Data de Nascimento (dd/MM/yyyy)"
+        value={dataNascimento}
+        onChangeText={handleDateChange}
+        keyboardType="numeric"
+        maxLength={10} // dd/MM/yyyy
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Parentesco"
+        value={filiado?.[`dep${index}_parentesco`] || ''}
+        onChangeText={(text) => handleDependentChange('parentesco', text)}
+      />
+    </View>
+  );
+};
+
+const DependentesCard: React.FC<{filiado: Filiado | null, setFiliado: any}> = ({ filiado, setFiliado }) => {
+  return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Dependentes</Text>
       {[1, 2, 3, 4, 5].map(i => (
-        <View key={i} style={styles.dependenteBox}>
-          <Text style={styles.dependenteTitle}>Dependente {i}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nome Completo do Dependente"
-            value={filiado?.[`dep${i}_nome`] || ''}
-            onChangeText={(text) => handleDependentChange(i, 'nome', text)}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="CPF do Dependente"
-            value={filiado?.[`dep${i}_cpf`] || ''}
-            onChangeText={(text) => handleDependentChange(i, 'cpf', text)}
-            keyboardType="numeric"
-          />
-          {/* TODO: Substituir por um DatePicker para melhor UX */}
-          <TextInput
-            style={styles.input}
-            placeholder="Data de Nascimento (AAAA-MM-DD)"
-            value={filiado?.[`dep${i}_data_nascimento`] || ''}
-            onChangeText={(text) => handleDependentChange(i, 'data_nascimento', text)}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Parentesco"
-            value={filiado?.[`dep${i}_parentesco`] || ''}
-            onChangeText={(text) => handleDependentChange(i, 'parentesco', text)}
-          />
-        </View>
+        <DependenteItem key={i} index={i} filiado={filiado} setFiliado={setFiliado} />
       ))}
     </View>
   );
