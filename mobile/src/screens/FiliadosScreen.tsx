@@ -1,6 +1,6 @@
 // mobile/src/screens/FiliadosScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useNetInfo } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,8 +10,8 @@ import { Filiado } from '../types/filiado';
 import FiliadoCard from '../components/FiliadoCard';
 
 const FiliadosScreen: React.FC = () => {
-  const { user } = useAuth();
-  const cacheKey = `filiados_cache_${user?.id}_${user?.perfil_acesso}`;
+  const { user: authUser } = useAuth();
+  const cacheKey = `filiados_cache_${authUser?.id}_${authUser?.perfil_acesso}`;
 
   const [filiados, setFiliados] = useState<Filiado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,6 @@ const FiliadosScreen: React.FC = () => {
   const [promptedForSync, setPromptedForSync] = useState(false);
 
   const navigation = useNavigation();
-  const { user } = useAuth();
   const netInfo = useNetInfo();
 
   useEffect(() => {
@@ -42,15 +41,13 @@ const FiliadosScreen: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    setError(null); // Limpa erros anteriores
+    setError(null);
     try {
-      // Tenta obter da API primeiro
       let data = await getFiliados();
 
-      // Camada de defesa: sanitiza os dados se o perfil for FILIADO
-      if (user?.perfil_acesso === 'FILIADO') {
+      if (authUser?.perfil_acesso === 'FILIADO') {
         data = data.map((f: Filiado) => {
-          if (f.id !== user.id) {
+          if (f.id !== authUser.id) {
             return {
               id: f.id,
               nome: f.nome,
@@ -59,7 +56,7 @@ const FiliadosScreen: React.FC = () => {
               situacao: f.situacao,
             };
           }
-          return f; // Mantém todos os dados para o próprio usuário
+          return f;
         });
       }
 
@@ -67,12 +64,11 @@ const FiliadosScreen: React.FC = () => {
       await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
       setIsOffline(false);
     } catch (apiError) {
-      // Se a API falhar, tenta carregar do cache
       try {
         const cachedData = await AsyncStorage.getItem(cacheKey);
         if (cachedData) {
           setFiliados(JSON.parse(cachedData));
-          setIsOffline(true); // Informa que os dados são do cache
+          setIsOffline(true);
         } else {
           setError('Não foi possível carregar os dados. Verifique sua conexão.');
         }
@@ -82,7 +78,7 @@ const FiliadosScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authUser, cacheKey]);
 
   useEffect(() => {
     fetchData();
@@ -94,23 +90,11 @@ const FiliadosScreen: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>Carregando filiados...</Text>
-      </View>
-    );
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#0000ff" /><Text>Carregando filiados...</Text></View>;
   }
 
   if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.button} onPress={handleRefresh}>
-          <Text style={styles.buttonText}>Tentar Novamente</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return <View style={styles.centered}><Text style={styles.errorText}>{error}</Text><TouchableOpacity style={styles.button} onPress={handleRefresh}><Text style={styles.buttonText}>Tentar Novamente</Text></TouchableOpacity></View>;
   }
 
   const filteredFiliados = filiados.filter(f =>
@@ -118,11 +102,10 @@ const FiliadosScreen: React.FC = () => {
     f.cpf?.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))
   );
 
-  const podeCriar = user?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(user.perfil_acesso);
-  const ehGestao = user?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(user.perfil_acesso);
+  const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
+  const ehGestao = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
 
   const handleCardPress = (item: Filiado) => {
-    // Gestão só pode editar online
     if (ehGestao) {
       if (netInfo.isConnected) {
         navigation.navigate('EditarFiliado', { filiadoId: item.id });
@@ -131,20 +114,14 @@ const FiliadosScreen: React.FC = () => {
       }
       return;
     }
-
-    // O próprio usuário pode acessar seus dados para editar (mesmo que a tela de edição bloqueie o salvamento)
-    if (item.id === user?.id) {
-      navigation.navigate('MeusDados'); // Reutiliza a tela "Meus Dados" que já tem a lógica de edição própria
+    if (item.id === authUser?.id) {
+      navigation.navigate('MeusDados');
     }
   };
 
   return (
     <View style={styles.container}>
-      {isOffline && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineText}>Você está offline. Exibindo dados do cache.</Text>
-        </View>
-      )}
+      {isOffline && <View style={styles.offlineBanner}><Text style={styles.offlineText}>Você está offline. Exibindo dados do cache.</Text></View>}
       <View style={styles.header}>
         <TextInput
           style={styles.searchInput}
@@ -152,11 +129,7 @@ const FiliadosScreen: React.FC = () => {
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
-        {podeCriar && (
-          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('CriarFiliado')}>
-            <Text style={styles.addButtonText}>Novo</Text>
-          </TouchableOpacity>
-        )}
+        {podeCriar && <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('CriarFiliado')}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
       </View>
       <FlatList
         data={filteredFiliados}
@@ -164,15 +137,11 @@ const FiliadosScreen: React.FC = () => {
         renderItem={({ item }) => (
           <FiliadoCard
             filiado={item}
-            currentUserProfile={user?.perfil_acesso || 'FILIADO'}
+            currentUserProfile={authUser?.perfil_acesso || 'FILIADO'}
             onPress={() => handleCardPress(item)}
           />
         )}
-        ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text>Nenhum filiado encontrado.</Text>
-          </View>
-        }
+        ListEmptyComponent={<View style={styles.centered}><Text>Nenhum filiado encontrado.</Text></View>}
         onRefresh={handleRefresh}
         refreshing={loading}
       />
@@ -181,60 +150,17 @@ const FiliadosScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    padding: 10,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  searchInput: {
-    flex: 1,
-    height: 40,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-  },
-  addButton: {
-    marginLeft: 10,
-    backgroundColor: '#007bff',
-    paddingHorizontal: 15,
-    justifyContent: 'center',
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 10,
-  },
-  button: {
-    backgroundColor: '#007bff',
-    padding: 10,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: '#fff',
-  },
-  offlineBanner: {
-    backgroundColor: '#ffc107',
-    padding: 10,
-    alignItems: 'center',
-  },
-  offlineText: {
-    color: '#000',
-  },
+  container: { flex: 1, backgroundColor: '#f0f0f0' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: { flexDirection: 'row', padding: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  searchInput: { flex: 1, height: 40, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 10 },
+  addButton: { marginLeft: 10, backgroundColor: '#007bff', paddingHorizontal: 15, justifyContent: 'center', borderRadius: 8 },
+  addButtonText: { color: '#fff', fontWeight: 'bold' },
+  errorText: { color: 'red', marginBottom: 10 },
+  button: { backgroundColor: '#007bff', padding: 10, borderRadius: 5 },
+  buttonText: { color: '#fff' },
+  offlineBanner: { backgroundColor: '#ffc107', padding: 10, alignItems: 'center' },
+  offlineText: { color: '#000' },
 });
 
 export default FiliadosScreen;
