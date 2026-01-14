@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import api from './apiService';
+import { logger } from '../infra/logger';
 
 /**
  * Obtém o token de push do Expo para este dispositivo.
@@ -47,6 +48,7 @@ export async function registrarDispositivoParaPush(): Promise<void> {
   try {
     const { token, platform } = await obterExpoPushToken();
     if (!token) {
+      logger.info('Push token não disponível. Registro de push ignorado.');
       return;
     }
 
@@ -54,10 +56,13 @@ export async function registrarDispositivoParaPush(): Promise<void> {
       expoPushToken: token,
       platform,
     });
-    console.log('Dispositivo registrado para notificações push com sucesso.');
+
+    logger.info('Dispositivo registrado para notificações push com sucesso.');
+
   } catch (e: any) {
-    console.warn('Falha ao registrar dispositivo para notificações push:', e.message);
-    // Lança o erro para que a LoginScreen possa capturá-lo, mesmo que opte por não agir.
-    throw e;
+    logger.warn('Falha ao registrar dispositivo para push (best-effort)', {
+      errorMessage: e.message,
+    });
+    // Não relançar o erro para não bloquear o fluxo de login.
   }
 }
