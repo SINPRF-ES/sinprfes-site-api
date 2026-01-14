@@ -34,29 +34,30 @@ export const setupGlobalErrorHandling = () => {
 
   // Intercepta console.error para garantir que erros sejam logados, evitando loops
   const originalConsoleError = console.error;
-  let lastErrorMessage = '';
-  let lastErrorTimestamp = 0;
+  let isHandlingConsoleError = false;
 
   console.error = (...args: unknown[]) => {
-    const now = Date.now();
-    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+    // Chama o original imediatamente para que o erro apareça no Metro
+    originalConsoleError.apply(console, args);
 
-    // Evita logar a mesma mensagem repetidamente em menos de 2 segundos
-    if (message === lastErrorMessage && now - lastErrorTimestamp < 2000) {
+    // Guard para prevenir recursão
+    if (isHandlingConsoleError) {
       return;
     }
 
-    lastErrorMessage = message;
-    lastErrorTimestamp = now;
+    isHandlingConsoleError = true;
 
     try {
+      const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
       const error = args.find(arg => arg instanceof Error) as Error | undefined;
+      // O logger agora não causa mais recursão, mas o guard é uma boa prática
       logger.error(`Console Error: ${message}`, error);
     } catch (e) {
-      // Evita loop infinito se o próprio logger falhar
+      // Se o logger falhar, pelo menos o erro original foi impresso
+      originalConsoleError('Falha ao registrar log de erro:', e);
+    } finally {
+      isHandlingConsoleError = false;
     }
-
-    originalConsoleError.apply(console, args);
   };
 
   logger.info('Global error handling has been set up.');

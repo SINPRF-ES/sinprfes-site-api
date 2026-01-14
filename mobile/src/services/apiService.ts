@@ -51,10 +51,29 @@ api.interceptors.response.use(
     const status = response?.status;
     const message = response?.data?.message || error.message;
 
-    logger.error(`API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`, error, {
-      status,
-      message,
-    });
+    // Sanitiza o objeto de erro para evitar logar dados sensíveis como o token
+    const sanitizedError = {
+      message: error.message,
+      stack: error.stack,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: {
+          // Lista segura de headers, excluindo 'Authorization'
+          'Content-Type': error.config?.headers?.['Content-Type'],
+        }
+      },
+      response: {
+        status: error.response?.status,
+        data: error.response?.data,
+      },
+    };
+
+    logger.error(
+      `API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
+      new Error(message), // Passa um novo objeto de erro sem o config original
+      { status, responseData: sanitizedError.response.data }
+    );
     
     // Evita logout imediato se a chamada inicial para /me falhar
     if (status === 401 && !config.url.endsWith('/me')) {

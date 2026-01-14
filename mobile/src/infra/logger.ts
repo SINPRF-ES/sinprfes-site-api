@@ -23,10 +23,8 @@ const log = async (level: LogLevel, message: string, meta?: Record<string, unkno
     stack: error?.stack,
   };
 
-  // Em ambiente de desenvolvimento, imprimir no console para depuração
-  if (__DEV__) {
-    console[level.toLowerCase()]?.(message, { ...meta, stack: error?.stack });
-  }
+  // Em ambiente de desenvolvimento, o erro já será impresso pelo errorHandling.ts.
+  // Evitamos chamar console.error() aqui para não criar um loop.
 
   try {
     const existingLogsJson = await AsyncStorage.getItem(LOGS_KEY);
