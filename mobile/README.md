@@ -47,7 +47,7 @@ Quando o app roda no seu celular, `localhost` se refere ao próprio celular, nã
 
 - **No macOS ou Linux:**
   - Abra o terminal e digite `ifconfig | grep inet`.
-  - Procure pelo endereço que se parece com `192.168.x.x`.
+  - Procure pelo endereço que se parece com `192.18.x.x`.
 
 ### 2.3. Configurando o Arquivo `.env`
 No seu arquivo `.env`, a variável `API_BASE_URL` deve ser configurada da seguinte forma (substitua `SEU_IP_AQUI` pelo IP encontrado):
