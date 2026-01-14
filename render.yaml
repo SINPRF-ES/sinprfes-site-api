@@ -3,7 +3,7 @@ services:
     name: sinprfes-site-api
     env: node
     region: oregon
-    buildCommand: "npm install"
+    buildCommand: "npm ci"
     startCommand: "npm start"
     autoDeploy: true
     healthCheckPath: "/health"
