@@ -32,16 +32,30 @@ export const setupGlobalErrorHandling = () => {
   // Para Hermes, a captura pode já ser coberta pelo ErrorUtils.
   // Por simplicidade, vamos interceptar o console.error como fallback.
 
-  // Intercepta console.error para garantir que erros sejam logados
+  // Intercepta console.error para garantir que erros sejam logados, evitando loops
   const originalConsoleError = console.error;
+  let lastErrorMessage = '';
+  let lastErrorTimestamp = 0;
+
   console.error = (...args: unknown[]) => {
-    try {
-        const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
-        const error = args.find(arg => arg instanceof Error) as Error | undefined;
-        logger.error(`Console Error: ${message}`, error);
-    } catch (e) {
-        // Evita loop infinito se o próprio logger falhar
+    const now = Date.now();
+    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+
+    // Evita logar a mesma mensagem repetidamente em menos de 2 segundos
+    if (message === lastErrorMessage && now - lastErrorTimestamp < 2000) {
+      return;
     }
+
+    lastErrorMessage = message;
+    lastErrorTimestamp = now;
+
+    try {
+      const error = args.find(arg => arg instanceof Error) as Error | undefined;
+      logger.error(`Console Error: ${message}`, error);
+    } catch (e) {
+      // Evita loop infinito se o próprio logger falhar
+    }
+
     originalConsoleError.apply(console, args);
   };
 
