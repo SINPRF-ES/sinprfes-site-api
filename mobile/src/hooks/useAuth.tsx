@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
+import api from '../services/apiService';
 
 import type { AuthContextData } from '../types/auth';
 import type { Usuario } from '../types/usuario';
@@ -23,24 +24,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [bloqueadoPorBiometria, setBloqueadoPorBiometria] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    async function loadSession() {
       try {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
 
         setBiometriaHabilitada(bio);
 
-        if (sessao?.token && sessao?.usuario) {
+        if (sessao?.token) {
+          // Define o token para que o interceptor do axios possa usá-lo
           setToken(sessao.token);
-          setUsuario(sessao.usuario);
 
-          // Se biometria habilitada, abre bloqueado
-          if (bio) setBloqueadoPorBiometria(true);
+          try {
+            // Valida o token e busca os dados do usuário atualizados
+            const { data: usuarioAtualizado } = await api.get('/api/filiados/me');
+            setUsuario(usuarioAtualizado);
+
+            // Atualiza o usuário no storage
+            await salvarSessao({ token: sessao.token, usuario: usuarioAtualizado });
+
+            if (bio) {
+              setBloqueadoPorBiometria(true);
+            }
+          } catch (error: any) {
+            // Se o token for inválido (401), o interceptor de resposta já lida com o logout.
+            // Aqui, apenas garantimos que o estado local seja limpo.
+            if (error.response?.status === 401) {
+              await limparSessao();
+              setToken(null);
+              setUsuario(null);
+            }
+            // Outros erros serão apenas logados pelo interceptor
+          }
         }
       } finally {
         setCarregando(false);
       }
-    })();
+    }
+
+    loadSession();
   }, []);
 
   async function setSessao(novoToken: string, novoUsuario: Usuario) {
