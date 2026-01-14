@@ -58,9 +58,57 @@ API_BASE_URL=http://192.168.1.5:3000
 ```
 **Importante:** Seu computador e seu celular devem estar conectados à mesma rede Wi-Fi.
 
-## 3. Features e Permissões
-... (seções 3, 4, 5 e 6 permanecem as mesmas)
-...
+## 3. Troubleshooting e Diagnóstico
+
+### 3.1. Erro de "Worklets Mismatch"
+- **Sintoma:** O aplicativo exibe uma tela vermelha com o erro `[Worklets] Mismatch between JavaScript part and native part...`.
+- **Causa:** Ocorre quando a versão de uma biblioteca nativa (como `react-native-reanimated`) instalada no `node_modules` não corresponde exatamente à versão nativa pré-compilada no aplicativo Expo Go. Isso geralmente é causado por `npm install` que pode instalar uma versão de patch diferente devido a especificadores de versão flexíveis (ex: `~4.1.1`).
+- **Solução:** As versões das dependências nativas foram fixadas no `package.json` para garantir que apenas as versões compatíveis sejam instaladas. Se o erro persistir, execute os comandos de limpeza abaixo.
+
+### 3.2. Procedimento de Reset Total (Limpeza de Cache e Dependências)
+Se o aplicativo apresentar comportamento inesperado, como erros de dependência nativa ou falhas de cache, siga este procedimento para garantir um ambiente completamente limpo.
+
+**1. Pare o servidor Metro Bundler.**
+
+**2. Limpe o cache do Expo:**
+```bash
+npx expo start -c
+```
+
+**3. Remova `node_modules` e `package-lock.json`:**
+   - **Windows (PowerShell):**
+     ```powershell
+     Remove-Item -Recurse -Force node_modules, package-lock.json
+     ```
+   - **Windows (CMD):**
+     ```cmd
+     rmdir /s /q node_modules
+     del package-lock.json
+     ```
+   - **macOS / Linux:**
+     ```bash
+     rm -rf node_modules package-lock.json
+     ```
+
+**4. Reinstale as dependências:**
+   ```bash
+   npm install
+   ```
+
+**5. (Opcional) Reinstale dependências nativas críticas:**
+   Se suspeitar de problemas com bibliotecas como Reanimated ou Gesture Handler, force a reinstalação da versão correta:
+   ```bash
+   npx expo install react-native-reanimated react-native-gesture-handler
+   ```
+
+### 3.3. Sistema de Logs e Diagnóstico
+O aplicativo agora possui um sistema de logging robusto para facilitar a depuração.
+
+- **Captura de Erros:** Todos os erros de JavaScript (incluindo renderização e promises não tratadas) e chamadas de API são automaticamente registrados.
+- **Acessando os Logs:**
+  1. No menu lateral (Drawer), navegue até a tela **"Diagnóstico"**.
+  2. Nesta tela, você pode visualizar, copiar para a área de transferência ou limpar os logs armazenados no dispositivo.
+- **Quando Usar:** Se você encontrar um bug, use o botão **"Copiar Logs"** e envie o texto para a equipe de desenvolvimento. Isso fornecerá o contexto necessário para identificar e resolver o problema.
 
 ## 4. Matriz de Paridade com o Site
 
