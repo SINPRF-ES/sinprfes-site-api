@@ -70,6 +70,17 @@ MAIL_TO_FILIACAO=sinprfes@sinprfes.org.br
 3. Rodar servidor
 node server.js
 
+## 🚀 Deploy no Render
+
+Para garantir um deploy consistente e seguro no Render, siga estas configurações:
+
+-   **Build Command**: `npm ci`
+    -   *Usa o `package-lock.json` para uma instalação determinística, evitando problemas de dependências transitivas que podem ocorrer com `npm install`.*
+-   **Start Command**: `npm start`
+    -   *Executa o servidor de produção.*
+-   **Node Version**: Definida no arquivo `.node-version` (atualmente `20.11.1`). O Render respeitará esta versão.
+-   **Root Directory**: O diretório raiz do projeto (`/`). Não configure para `/mobile`, pois este diretório contém um projeto separado que não deve interferir no build do backend.
+
 📡 Endpoints principais
 Endpoint	Método	Descrição
 /api/primeiro-acesso/iniciar	POST	Inicia fluxo do primeiro acesso
