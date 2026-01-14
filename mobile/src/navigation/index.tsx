@@ -21,21 +21,22 @@ import EditarFiliadoScreen from "../screens/EditarFiliadoScreen";
 import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
 import NoticiasScreen from "../screens/NoticiasScreen";
 import ConveniosScreen from "../screens/ConveniosScreen";
+import DrawerNavigator from "./DrawerNavigator"; // Importa o Drawer
 
 export type RootStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
   BiometricLock: undefined;
+  Drawer: undefined; // Adiciona a rota do Drawer
 
+  // As telas individuais ainda podem ser necessárias para navegação profunda
   Home: undefined;
   MeusDados: undefined;
   Noticias: undefined;
   Convenios: undefined;
-
   Filiados: undefined;
   CriarFiliado: undefined;
   EditarFiliado: { filiadoId: number };
-
   Votacao: undefined;
 };
 
@@ -107,26 +108,11 @@ export default function RootNavigation() {
             options={{ headerShown: false }}
           />
         ) : (
-          <>
-            <Stack.Screen
-              name="Home"
-              component={HomeScreen}
-              options={{
-                title: "SINPRF/ES",
-                headerRight: () => {
-                  const { logout } = useAuth();
-                  return <Button onPress={logout} title="Sair" color="#c00" />;
-                },
-              }}
-            />
-            <Stack.Screen name="MeusDados" component={MeusDadosScreen} options={{ title: "Meus Dados" }} />
-            <Stack.Screen name="Noticias" component={NoticiasScreen} options={{ title: "Notícias" }} />
-            <Stack.Screen name="Convenios" component={ConveniosScreen} options={{ title: "Convênios" }} />
-            <Stack.Screen name="Filiados" component={FiliadosScreen} options={{ title: "Filiados" }} />
-            <Stack.Screen name="CriarFiliado" component={CriarFiliadoScreen} options={{ title: "Novo Filiado" }} />
-            <Stack.Screen name="EditarFiliado" component={EditarFiliadoScreen} options={{ title: "Editar Filiado" }} />
-            <Stack.Screen name="Votacao" component={VotacaoScreen} options={{ title: "Assembleias e Votações" }} />
-          </>
+          <Stack.Screen
+            name="Drawer"
+            component={DrawerNavigator}
+            options={{ headerShown: false }}
+          />
         )}
       </Stack.Navigator>
     </NavigationContainer>

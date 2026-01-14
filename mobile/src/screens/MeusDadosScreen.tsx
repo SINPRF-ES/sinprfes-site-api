@@ -1,11 +1,19 @@
 // src/screens/MeusDadosScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, Image, ScrollView } from 'react-native';
+import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
 import { uploadAvatar, removerAvatar } from '../services/filiadosService';
 import type { Filiado } from '../types/filiado';
+
+// Importando os novos componentes
+import HeaderInfo from '../components/HeaderInfo';
+import ContatoCard from '../components/ContatoCard';
+import EnderecoCard from '../components/EnderecoCard';
+import LotacaoCard from '../components/LotacaoCard';
+import DependentesCard from '../components/DependentesCard';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function MeusDadosScreen() {
   const { usuario, setSessao, token } = useAuth();
@@ -34,6 +42,26 @@ export default function MeusDadosScreen() {
 
   const handleUpdate = async () => {
     if (!filiado) return;
+
+    // Validação de Dependentes
+    for (let i = 1; i <= 5; i++) {
+      const nome = filiado[`dep${i}_nome`];
+      const cpf = filiado[`dep${i}_cpf`];
+
+      if (nome && !cpf) {
+        Alert.alert('Erro de Validação', `O CPF do Dependente ${i} é obrigatório se o nome for preenchido.`);
+        return;
+      }
+      if (cpf && !nome) {
+        Alert.alert('Erro de Validação', `O Nome do Dependente ${i} é obrigatório se o CPF for preenchido.`);
+        return;
+      }
+      if (cpf && cpf.length !== 11) {
+        Alert.alert('Erro de Validação', `O CPF do Dependente ${i} deve conter 11 dígitos.`);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       const { data } = await api.put<Filiado>('/api/filiados/me', filiado);
@@ -41,7 +69,7 @@ export default function MeusDadosScreen() {
 
       // Atualiza o usuário no contexto de autenticação, se necessário
       if (usuario) {
-        const usuarioAtualizado = { ...usuario, nome: data.nome, email: data.email, avatar_url: data.avatar_url };
+        const usuarioAtualizado = { ...usuario, nome: data.nome, email: data.email1, avatar_url: data.avatar_url };
         await setSessao(token!, usuarioAtualizado);
       }
 
@@ -168,162 +196,67 @@ export default function MeusDadosScreen() {
     );
   };
 
-  if (loading && !filiado) { // Evita piscar a tela de loading em updates
-    return <View style={styles.container}><Text>Carregando...</Text></View>;
+  if (loading && !filiado) {
+    return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
   }
 
   if (error) {
-    return <View style={styles.container}><Text style={{color: 'red'}}>{error}</Text></View>;
+    return <View style={styles.centered}><Text style={{ color: 'red' }}>{error}</Text></View>;
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.avatarContainer}>
-        <Image 
-          source={filiado?.avatar_url ? { uri: filiado.avatar_url } : require('../../assets/icon.png')} 
-          style={styles.avatar} 
-        />
-        <View style={styles.buttonContainer}>
-          <Button title={isUploading ? "Enviando..." : "Alterar Foto"} onPress={handleAvatarUpload} disabled={isUploading || loading} />
-          {filiado?.avatar_url && (
-            <View style={styles.buttonSpacer} />
-          )}
-          {filiado?.avatar_url && (
-            <Button title="Remover Foto" onPress={handleAvatarRemove} color="#c00" disabled={isUploading || loading} />
-          )}
-        </View>
+    <KeyboardAwareScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <HeaderInfo filiado={filiado} />
+
+      <View style={styles.actionsContainer}>
+        <Button title={isUploading ? "Enviando..." : "Alterar Foto"} onPress={handleAvatarUpload} disabled={isUploading || loading} />
+        {filiado?.avatar_url && <View style={styles.buttonSpacer} />}
+        {filiado?.avatar_url && (
+          <Button title="Remover Foto" onPress={handleAvatarRemove} color="#c00" disabled={isUploading || loading} />
+        )}
       </View>
-
-      <Text style={styles.label}>Nome</Text>
-      <TextInput
-        style={styles.input}
-        value={filiado?.nome || ''}
-        onChangeText={(text) => setFiliado(f => f ? {...f, nome: text} : null)}
-        placeholder="Nome Completo"
-      />
       
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        value={filiado?.email || ''}
-        onChangeText={(text) => setFiliado(f => f ? {...f, email: text} : null)}
-        placeholder="seu@email.com"
-        keyboardType="email-address"
-      />
+      <ContatoCard filiado={filiado} setFiliado={setFiliado} />
+      <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
+      <LotacaoCard filiado={filiado} setFiliado={setFiliado} />
+      <DependentesCard filiado={filiado} setFiliado={setFiliado} />
 
-      <Text style={styles.label}>Telefone</Text>
-      <TextInput
-        style={styles.input}
-        value={filiado?.telefone || ''}
-        onChangeText={(text) => setFiliado(f => f ? {...f, telefone: text} : null)}
-        placeholder="(99) 99999-9999"
-        keyboardType="phone-pad"
-      />
-
-      {/* Adicionar outros campos aqui conforme a API permitir */}
-
-      <View style={styles.divider} />
-      <Text style={styles.sectionTitle}>Dependentes</Text>
-
-      {[1, 2, 3, 4, 5].map(i => (
-        <View key={i} style={styles.dependenteBox}>
-          <Text style={styles.dependenteTitle}>Dependente {i}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nome Completo do Dependente"
-            value={filiado?.[`dep${i}_nome`] || ''}
-            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_nome`]: text} : null)}
-            editable={!loading}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="CPF do Dependente"
-            value={filiado?.[`dep${i}_cpf`] || ''}
-            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_cpf`]: text} : null)}
-            keyboardType="numeric"
-            editable={!loading}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Data de Nascimento (AAAA-MM-DD)"
-            value={filiado?.[`dep${i}_data_nascimento`] || ''}
-            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_data_nascimento`]: text} : null)}
-            editable={!loading}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Parentesco"
-            value={filiado?.[`dep${i}_parentesco`] || ''}
-            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_parentesco`]: text} : null)}
-            editable={!loading}
-          />
-        </View>
-      ))}
-
-      <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
-    </ScrollView>
+      <View style={styles.saveButtonContainer}>
+        <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f0f0f0',
+  },
+  contentContainer: {
     padding: 20,
   },
-  avatarContainer: {
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
   },
-  buttonContainer: {
+  actionsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: -20, // Puxa para cima, perto do header
+    marginBottom: 20,
   },
   buttonSpacer: {
     width: 10,
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
-    backgroundColor: '#ccc',
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  divider: {
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-    marginVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#003366',
-    marginBottom: 15,
-  },
-  dependenteBox: {
-    borderColor: '#e0e0e0',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
-  },
-  dependenteTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#555',
-    marginBottom: 10,
+  saveButtonContainer: {
+    marginTop: 10,
+    marginBottom: 40, // Espaço extra na parte inferior
   },
 });
