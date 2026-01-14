@@ -38,7 +38,6 @@ export default function LoginScreen() {
         return;
       }
 
-      
       const sucesso = await desbloquearComBiometria();
       if (sucesso) {
         // Re-autentica usando a sessão salva

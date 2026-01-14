@@ -63,7 +63,7 @@ export default function MeusDadosScreen() {
         const usuarioAtualizado = { ...usuario, avatar_url: filiadoAtualizado.avatar_url };
         await setSessao(token!, usuarioAtualizado);
       }
-      
+
       Alert.alert('Sucesso', 'Sua foto de perfil foi atualizada.');
     } catch (err: any) {
       console.error('[Upload Avatar Error]', err);
@@ -89,7 +89,7 @@ export default function MeusDadosScreen() {
     if (result.canceled || !result.assets || result.assets.length === 0) {
       return;
     }
-    
+
     await processAndUploadImage(result.assets[0].uri);
   };
 
@@ -110,7 +110,7 @@ export default function MeusDadosScreen() {
     if (result.canceled || !result.assets || result.assets.length === 0) {
       return;
     }
-    
+
     await processAndUploadImage(result.assets[0].uri);
   };
   
@@ -141,9 +141,9 @@ export default function MeusDadosScreen() {
       "Tem certeza de que deseja remover sua foto de perfil?",
       [
         { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Remover", 
-          style: "destructive", 
+        {
+          text: "Remover",
+          style: "destructive",
           onPress: async () => {
             try {
               setIsUploading(true); // Reutiliza o estado de loading
@@ -222,6 +222,44 @@ export default function MeusDadosScreen() {
 
       {/* Adicionar outros campos aqui conforme a API permitir */}
 
+      <View style={styles.divider} />
+      <Text style={styles.sectionTitle}>Dependentes</Text>
+
+      {[1, 2, 3, 4, 5].map(i => (
+        <View key={i} style={styles.dependenteBox}>
+          <Text style={styles.dependenteTitle}>Dependente {i}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nome Completo do Dependente"
+            value={filiado?.[`dep${i}_nome`] || ''}
+            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_nome`]: text} : null)}
+            editable={!loading}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="CPF do Dependente"
+            value={filiado?.[`dep${i}_cpf`] || ''}
+            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_cpf`]: text} : null)}
+            keyboardType="numeric"
+            editable={!loading}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Data de Nascimento (AAAA-MM-DD)"
+            value={filiado?.[`dep${i}_data_nascimento`] || ''}
+            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_data_nascimento`]: text} : null)}
+            editable={!loading}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Parentesco"
+            value={filiado?.[`dep${i}_parentesco`] || ''}
+            onChangeText={(text) => setFiliado(f => f ? {...f, [`dep${i}_parentesco`]: text} : null)}
+            editable={!loading}
+          />
+        </View>
+      ))}
+
       <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
     </ScrollView>
   );
@@ -263,5 +301,29 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
     fontSize: 16,
+  },
+  divider: {
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    marginVertical: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#003366',
+    marginBottom: 15,
+  },
+  dependenteBox: {
+    borderColor: '#e0e0e0',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+  },
+  dependenteTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 10,
   },
 });
