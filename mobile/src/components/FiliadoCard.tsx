@@ -8,7 +8,7 @@ import { formatCPF, formatPhone } from '../utils/masks';
 interface FiliadoCardProps {
   filiado: Filiado;
   currentUserProfile: UserProfile;
-  onEdit: (filiadoId: number) => void;
+  onEdit: (filiado: Filiado) => void;
 }
 
 const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, onEdit }) => {

@@ -44,17 +44,24 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
 
   const parentescoOptions = [
     { label: 'Selecione...', value: '' },
-    { label: 'Cônjuge', value: 'Cônjuge' },
-    { label: 'Filho(a)', value: 'Filho(a)' },
-    { label: 'Pai', value: 'Pai' },
-    { label: 'Mãe', value: 'Mãe' },
-    { label: 'Enteado(a)', value: 'Enteado(a)' },
-    { label: 'Outro', value: 'Outro' },
+    { label: 'Cônjuge', value: 'CONJUGE' },
+    { label: 'Filho(a)', value: 'FILHO' },
+    { label: 'Pai', value: 'PAI' },
+    { label: 'Mãe', value: 'MAE' },
+    { label: 'Enteado(a)', value: 'ENTEADO' },
+    { label: 'Outro', value: 'OUTRO' },
   ];
 
-  const currentParentesco = filiado?.[`dep${index}_parentesco`] || '';
-  const isCustomParentesco = currentParentesco && !parentescoOptions.find(opt => opt.value === currentParentesco);
-  const selectedPickerValue = isCustomParentesco ? 'Outro' : currentParentesco;
+  const currentParentescoValue = filiado?.[`dep${index}_parentesco`] || '';
+  const isStandardOption = parentescoOptions.some(opt => opt.value === currentParentescoValue && opt.value !== '');
+
+  const [parentescoMode, setParentescoMode] = useState(isStandardOption || currentParentescoValue === '' ? currentParentescoValue : 'OUTRO');
+
+  const handleParentescoChange = (mode) => {
+    setParentescoMode(mode);
+    const newValue = mode === 'OUTRO' ? '' : mode;
+    handleDependentChange('parentesco', newValue);
+  };
 
   return (
     <View style={styles.dependenteBox}>
@@ -91,11 +98,8 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <Text style={styles.label}>Parentesco</Text>
       <View style={styles.pickerContainer}>
         <Picker
-          selectedValue={selectedPickerValue}
-          onValueChange={(itemValue) => {
-            const newValue = itemValue === 'Outro' ? '' : itemValue;
-            handleDependentChange('parentesco', newValue);
-          }}
+          selectedValue={parentescoMode}
+          onValueChange={handleParentescoChange}
         >
           {parentescoOptions.map(opt => (
             <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
@@ -103,13 +107,13 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         </Picker>
       </View>
 
-      {selectedPickerValue === 'Outro' && (
+      {parentescoMode === 'OUTRO' && (
         <>
           <Text style={styles.label}>Informe o parentesco</Text>
           <TextInput
             style={styles.input}
             placeholder="Informe o parentesco"
-            value={currentParentesco}
+            value={currentParentescoValue}
             onChangeText={(text) => handleDependentChange('parentesco', text)}
           />
         </>
