@@ -59,7 +59,7 @@ const PublicacoesScreen: React.FC = () => {
 
   return (
     <FlatList
-      data={publicacoes}
+      data={publicacoes || []}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.container}
