@@ -1,7 +1,7 @@
 // mobile/src/screens/PublicacoesScreen.tsx
 import React, 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, ActivityIndicator, Alert } from 'react-native';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { getPublicacoes, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 
