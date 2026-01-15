@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import ReanimatedPackage from 'react-native-reanimated/package.json';
 import { AuthProvider } from './src/hooks/useAuth';
 import RootNavigation from './src/navigation';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initDb } from './src/database/db';
 import { setupGlobalErrorHandling } from './src/infra/errorHandling';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -17,6 +18,7 @@ logger.info('App Initializing', {
   reanimatedVersion: ReanimatedPackage.version,
 });
 
+const queryClient = new QueryClient();
 
 export default function App() {
   useEffect(() => {
@@ -25,9 +27,11 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <RootNavigation />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RootNavigation />
+        </AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
