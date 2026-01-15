@@ -132,14 +132,42 @@ O aplicativo agora possui um sistema de logging robusto para facilitar a depura�
 |-------------------------|-----------|------------------------------------------------------------------------------------|
 | Autenticação (JWT)      | `OK`      | Fluxo de login, 2FA e armazenamento de sessão implementados.                       |
 | Meus Dados (GET/PUT)    | `OK`      | Tela implementada para visualização e edição dos próprios dados.                   |
-| Listagem de Filiados    | `OK`      | Busca em tempo real na API com diferenciação de dados por perfil.                  |
-| Gestão de Filiados      | `Parcial` | Telas de criação/edição criadas; lógica de arquivar/desarquivar pendente.        |
-| Dependentes (até 5)     | `OK`      | Campos adicionados nos formulários de criação e edição.                            |
+| Listagem de Filiados    | `OK`      | Busca local com cache offline e diferenciação de dados por perfil.                  |
+| Gestão de Filiados      | `OK`      | Telas de criação, edição, arquivamento e desarquivamento implementadas.        |
+| Dependentes (até 5)     | `OK`      | Campos adicionados nos formulários com labels corrigidos.                            |
 | Avatar Upload           | `Pendente`| Lógica de upload de imagem (`multipart/form-data`) precisa ser implementada.         |
 | Fluxo de Primeiro Acesso| `Pendente`| Requer análise do fluxo exato no backend/site.                                     |
 
-## 5. Roadmap Técnico: Módulo de Votação
-...
+## 5. Gestão (perfis admin/funcionário/diretoria)
+
+O aplicativo móvel implementa as funcionalidades de gestão de filiados, restritas aos perfis `ADMIN`, `DIRETORIA` e `FUNCIONARIO`. Essas funcionalidades incluem:
+
+-   **Criação de Novos Filiados**: Um formulário completo permite a criação de novos filiados.
+-   **Edição de Filiados Existentes**: A partir da lista de filiados, é possível acessar um formulário para editar todos os dados de um filiado.
+-   **Arquivamento e Desarquivamento**: A tela de edição de filiados inclui botões para arquivar e desarquivar filiados, com a devida confirmação.
+
+### Offline: gestão é online-only
+
+As ações de gestão que modificam dados (criar, editar, arquivar, desarquivar) estão disponíveis **apenas em modo online**. Se o dispositivo estiver offline, os botões correspondentes são desabilitados e uma mensagem informa o usuário sobre a restrição.
 
 ## 6. Checklist de Testes Manuais
-...
+
+### Login como FILIADO
+- [ ] Vê a lista de filiados com dados reduzidos (nome, telefone, lotação, situação).
+- [ ] Não vê o item de menu "Gestão" no Drawer.
+- [ ] Não consegue acessar as rotas de gestão (ex: `CriarFiliado`, `EditarFiliado`) por navegação direta.
+- [ ] Em "Meus Dados", os labels dos campos de dependentes ("Nome", "CPF", etc.) aparecem corretamente.
+
+### Login como ADMIN
+- [ ] Vê o item de menu "Gestão" no Drawer.
+- [ ] Consegue criar um novo filiado com sucesso.
+- [ ] Consegue editar um filiado existente com sucesso.
+- [ ] Consegue arquivar e desarquivar um filiado com sucesso.
+- [ ] Em modo offline, os botões de criar, editar e arquivar estão desabilitados e exibem uma mensagem informativa ao serem pressionados.
+
+### Verificação de Vazamento de Cache
+- [ ] Logar como ADMIN e sincronizar a lista de filiados.
+- [ ] Fazer logout.
+- [ ] Logar como FILIADO.
+- [ ] Colocar o dispositivo em modo avião (offline).
+- [ ] Acessar a lista de filiados e confirmar que os dados exibidos são os reduzidos (não os dados completos do cache do ADMIN).

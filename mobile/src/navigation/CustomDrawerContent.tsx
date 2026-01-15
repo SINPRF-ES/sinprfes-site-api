@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout } = useAuth();
-  const isAdmin = usuario?.perfil_acesso !== 'FILIADO';
+  const isGestao = usuario?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
 
   const filteredProps = {
     ...props,
@@ -32,6 +32,24 @@ const CustomDrawerContent = (props) => {
         <Text style={styles.status}>{usuario?.situacao || 'ATIVO'}</Text>
       </View>
       <DrawerItemList {...filteredProps} />
+
+      {isGestao && (
+        <>
+          <View style={styles.separator} />
+          <DrawerItem
+            label="Gestão"
+            labelStyle={styles.sectionHeader}
+            onPress={() => {}} // Não faz nada, é apenas um título
+          />
+          <DrawerItem
+            label="Novo Filiado"
+            icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
+            onPress={() => props.navigation.navigate('CriarFiliado')}
+          />
+        </>
+      )}
+
+      <View style={styles.separator} />
       <DrawerItem
         label="Sair"
         icon={({ color, size }) => <Ionicons name="exit-outline" color={color} size={size} />}
@@ -63,6 +81,16 @@ const styles = StyleSheet.create({
   status: {
     color: '#fff',
     fontSize: 14,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 10,
+  },
+  sectionHeader: {
+    fontWeight: 'bold',
+    color: '#003366',
+    marginLeft: -16, // Alinha com o texto dos outros itens
   },
 });
 
