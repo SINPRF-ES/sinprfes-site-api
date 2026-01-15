@@ -146,6 +146,8 @@ export default function EditarFiliadoScreen({ route, navigation }) {
     return <View style={styles.centered}><Text>Acesso negado.</Text></View>;
   }
 
+  const isManagementUser = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
+
   return (
     <KeyboardAwareScrollView
       style={styles.container}
@@ -153,9 +155,9 @@ export default function EditarFiliadoScreen({ route, navigation }) {
     >
       <Text style={styles.title}>Editar Filiado</Text>
       
-      <ContatoCard filiado={filiado} setFiliado={setFiliado} />
+      <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={isManagementUser} />
       <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
-      <LotacaoCard filiado={filiado} setFiliado={setFiliado} />
+      <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={isManagementUser} />
       <DependentesCard filiado={filiado} setFiliado={setFiliado} />
 
       <View style={styles.buttonContainer}>

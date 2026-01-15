@@ -20,7 +20,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <Text style={styles.label}>Unidade de Lotação</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <LotacaoPicker
-          selectedValue={filiado?.lotacao || 'SEDE'}
+          selectedValue={filiado?.lotacao || ''}
           onValueChange={(itemValue) => setFiliado(f => f ? { ...f, lotacao: itemValue } : null)}
           enabled={isEditing}
         />
@@ -29,10 +29,11 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <Text style={styles.label}>Situação Funcional</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <Picker
-          selectedValue={filiado?.situacao || 'ATIVO'}
+          selectedValue={filiado?.situacao || ''}
           onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao: itemValue } : null)}
           enabled={isEditing}
         >
+          <Picker.Item label="Não informado" value="" />
           <Picker.Item label="Ativo" value="ATIVO" />
           <Picker.Item label="Veterano" value="VETERANO" />
           <Picker.Item label="Pensionista" value="PENSIONISTA" />
@@ -75,6 +76,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 5,
     marginBottom: 15,
+    backgroundColor: '#fff',
   },
   pickerContainerDisabled: {
     borderWidth: 1,
