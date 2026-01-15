@@ -6,7 +6,7 @@ import { getPublicacoes, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 
 const PublicacoesScreen: React.FC = () => {
-  const { data: publicacoes, isLoading, error } = useQuery('publicacoes', getPublicacoes);
+  const { data: publicacoes, isLoading, error } = useQuery({ queryKey: ['publicacoes'], queryFn: getPublicacoes });
 
   const handlePress = (file: DriveFile) => {
     // Para PDFs e outros arquivos, usamos webViewLink que abre no navegador do app/dispositivo
