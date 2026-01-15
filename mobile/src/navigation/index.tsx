@@ -59,8 +59,12 @@ export default function RootNavigation() {
     const nav = navigationRef.current;
     const pending = pendingNavRef.current;
     if (!nav || !pending || !autenticado || bloqueadoPorBiometria) return;
-    if (pending.screen === "Noticias") nav.navigate("Noticias");
-    if (pending.screen === "Votacao") nav.navigate("Votacao");
+
+    if (pending.screen === "Noticias") nav.navigate("Drawer", { screen: "Noticias" });
+    // TODO: A rota 'Votacao' também precisa ser aninhada se estiver dentro do Drawer.
+    // Assumindo que sim por enquanto. Se 'Votacao' for uma tela no Stack principal, isso precisa ser ajustado.
+    if (pending.screen === "Votacao") nav.navigate("Drawer", { screen: "Votacao" });
+
     pendingNavRef.current = null;
   }
 

@@ -85,4 +85,29 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Busca a lista de filiados.
+ * A API retornará os campos de acordo com o perfil do usuário logado.
+ */
+export const getFiliados = async () => {
+  const response = await api.get('/api/filiados');
+  return response.data.filiados || response.data || [];
+};
+
+export const criarFiliado = async (filiadoData) => {
+  return await api.post('/api/filiados', filiadoData);
+};
+
+export const atualizarFiliado = async (id, filiadoData) => {
+  return await api.put(`/api/filiados/${id}`, filiadoData);
+};
+
+export const arquivarFiliado = async (id, motivo) => {
+  return await api.post(`/api/filiados/${id}/arquivar`, { motivo });
+};
+
+export const desarquivarFiliado = async (id) => {
+  return await api.post(`/api/filiados/${id}/desarquivar`);
+};
+
 export default api;

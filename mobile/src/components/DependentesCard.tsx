@@ -41,12 +41,16 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
   return (
     <View style={styles.dependenteBox}>
       <Text style={styles.dependenteTitle}>Dependente {index}</Text>
+
+      <Text style={styles.label}>Nome</Text>
       <TextInput
         style={styles.input}
         placeholder="Nome Completo do Dependente"
         value={filiado?.[`dep${index}_nome`] || ''}
         onChangeText={(text) => handleDependentChange('nome', text)}
       />
+
+      <Text style={styles.label}>CPF</Text>
       <TextInput
         style={styles.input}
         placeholder="CPF do Dependente"
@@ -55,15 +59,18 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         keyboardType="numeric"
         maxLength={14}
       />
-      {/* TODO: Substituir por um DatePicker para melhor UX */}
+
+      <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
         style={styles.input}
-        placeholder="Data de Nascimento (dd/MM/yyyy)"
+        placeholder="dd/MM/yyyy"
         value={dataNascimento}
         onChangeText={handleDateChange}
         keyboardType="numeric"
-        maxLength={10} // dd/MM/yyyy
+        maxLength={10}
       />
+
+      <Text style={styles.label}>Parentesco</Text>
       <TextInput
         style={styles.input}
         placeholder="Parentesco"
@@ -112,6 +119,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#555',
     marginBottom: 10,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
   },
   input: {
     borderWidth: 1,

@@ -12,7 +12,11 @@ export const sanitizeDigits = (value: string): string => {
  * Adapta-se a números de 8 ou 9 dígitos (celular vs. fixo).
  */
 export const formatPhone = (value: string): string => {
+  if (!value) return '';
   const digits = sanitizeDigits(value);
+
+  if (!digits) return '';
+
   if (digits.length <= 2) {
     return `(${digits}`;
   }
