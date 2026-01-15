@@ -112,11 +112,23 @@ export default function RootNavigation() {
             options={{ headerShown: false }}
           />
         ) : (
-          <Stack.Screen
-            name="Drawer"
-            component={DrawerNavigator}
-            options={{ headerShown: false }}
-          />
+          <>
+            <Stack.Screen
+              name="Drawer"
+              component={DrawerNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="CriarFiliado"
+              component={CriarFiliadoScreen}
+              options={{ title: "Novo Filiado" }}
+            />
+            <Stack.Screen
+              name="EditarFiliado"
+              component={EditarFiliadoScreen}
+              options={{ title: "Editar Filiado" }}
+            />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

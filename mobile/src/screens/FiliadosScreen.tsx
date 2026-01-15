@@ -117,9 +117,9 @@ const FiliadosScreen: React.FC = () => {
   const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
   const ehGestao = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
 
-  const handleEditPress = (filiadoId: number) => {
+  const handleEditPress = (filiado: Filiado) => {
     if (netInfo.isConnected) {
-      navigation.navigate('EditarFiliado', { filiadoId });
+      navigation.navigate('EditarFiliado', { filiado });
     } else {
       Alert.alert('Funcionalidade Offline', 'A edição de dados só pode ser feita quando você estiver online.');
     }

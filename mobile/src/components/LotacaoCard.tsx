@@ -4,20 +4,40 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
 import LotacaoPicker from './LotacaoPicker'; // Importando o novo componente
 
+import { Picker } from '@react-native-picker/picker';
+
 interface Props {
   filiado: Filiado | null;
   setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
+  isEditing?: boolean;
 }
 
-const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
+const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Lotação</Text>
+      <Text style={styles.cardTitle}>Lotação e Situação</Text>
+
       <Text style={styles.label}>Unidade de Lotação</Text>
-      <LotacaoPicker
-        selectedValue={filiado?.lotacao || 'SEDE'}
-        onValueChange={(itemValue) => setFiliado(f => f ? { ...f, lotacao: itemValue } : null)}
-      />
+      <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
+        <LotacaoPicker
+          selectedValue={filiado?.lotacao || 'SEDE'}
+          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, lotacao: itemValue } : null)}
+          enabled={isEditing}
+        />
+      </View>
+
+      <Text style={styles.label}>Situação Funcional</Text>
+      <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
+        <Picker
+          selectedValue={filiado?.situacao || 'ATIVO'}
+          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao: itemValue } : null)}
+          enabled={isEditing}
+        >
+          <Picker.Item label="Ativo" value="ATIVO" />
+          <Picker.Item label="Veterano" value="VETERANO" />
+          <Picker.Item label="Pensionista" value="PENSIONISTA" />
+        </Picker>
+      </View>
     </View>
   );
 };
@@ -49,6 +69,19 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
     fontSize: 16,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 15,
+  },
+  pickerContainerDisabled: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 15,
+    backgroundColor: '#f0f0f0',
   },
 });
 

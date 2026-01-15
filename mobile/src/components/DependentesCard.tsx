@@ -1,6 +1,7 @@
 // src/components/DependentesCard.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
 import { formatCPF, sanitizeDigits, formatISOToBR, parseBRToISO, formatDate } from '../utils/masks';
 
@@ -31,11 +32,34 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
   };
 
   const handleDependentChange = (field: string, value: string, isDigitOnly = false) => {
-    const finalValue = isDigitOnly ? sanitizeDigits(value) : value;
+    let finalValue = isDigitOnly ? sanitizeDigits(value) : value;
+    if (field === 'cpf') {
+      finalValue = finalValue.slice(0, 11);
+    }
     setFiliado(f => {
       if (!f) return null;
       return { ...f, [`dep${index}_${field}`]: finalValue };
     });
+  };
+
+  const parentescoOptions = [
+    { label: 'Selecione...', value: '' },
+    { label: 'Filha(o) / enteada(o)', value: 'FILHO_ENTEADO' },
+    { label: 'Cônjuge / companheira(o)', value: 'CONJUGE_COMPANHEIRO' },
+    { label: 'Pai / mãe', value: 'PAI_MAE' },
+    { label: 'Irmã(o)', value: 'IRMAO' },
+    { label: 'Outro', value: 'OUTRO' },
+  ];
+
+  const currentParentescoValue = filiado?.[`dep${index}_parentesco`] || '';
+  const isStandardOption = parentescoOptions.some(opt => opt.value === currentParentescoValue && opt.value !== '');
+
+  const [parentescoMode, setParentescoMode] = useState(isStandardOption || currentParentescoValue === '' ? currentParentescoValue : 'OUTRO');
+
+  const handleParentescoChange = (mode) => {
+    setParentescoMode(mode);
+    const newValue = mode === 'OUTRO' ? '' : mode;
+    handleDependentChange('parentesco', newValue);
   };
 
   return (
@@ -45,7 +69,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <Text style={styles.label}>Nome</Text>
       <TextInput
         style={styles.input}
-        placeholder="Nome Completo do Dependente"
+        placeholder="Nome completo"
         value={filiado?.[`dep${index}_nome`] || ''}
         onChangeText={(text) => handleDependentChange('nome', text)}
       />
@@ -53,7 +77,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <Text style={styles.label}>CPF</Text>
       <TextInput
         style={styles.input}
-        placeholder="CPF do Dependente"
+        placeholder="apenas números"
         value={formatCPF(filiado?.[`dep${index}_cpf`] || '')}
         onChangeText={(text) => handleDependentChange('cpf', text, true)}
         keyboardType="numeric"
@@ -63,7 +87,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
         style={styles.input}
-        placeholder="dd/MM/yyyy"
+        placeholder="DD/MM/AAAA"
         value={dataNascimento}
         onChangeText={handleDateChange}
         keyboardType="numeric"
@@ -71,12 +95,28 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       />
 
       <Text style={styles.label}>Parentesco</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Parentesco"
-        value={filiado?.[`dep${index}_parentesco`] || ''}
-        onChangeText={(text) => handleDependentChange('parentesco', text)}
-      />
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={parentescoMode}
+          onValueChange={handleParentescoChange}
+        >
+          {parentescoOptions.map(opt => (
+            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+          ))}
+        </Picker>
+      </View>
+
+      {parentescoMode === 'OUTRO' && (
+        <>
+          <Text style={styles.label}>Informe o parentesco</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Informe o parentesco"
+            value={currentParentescoValue}
+            onChangeText={(text) => handleDependentChange('parentesco', text)}
+          />
+        </>
+      )}
     </View>
   );
 };
@@ -133,6 +173,12 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
     fontSize: 16,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 15,
   },
 });
 
