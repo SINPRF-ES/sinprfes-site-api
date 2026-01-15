@@ -16,7 +16,9 @@ Fluxo de primeiro acesso
 
 Preparado para integração futura com Login do gov.br
 
-🚀 Tecnologias utilizadas
+---
+
+## 🚀 Tecnologias utilizadas
 
 Node.js + Express
 
@@ -36,24 +38,83 @@ Site estático via /public
 
 ---
 
+## 📦 Estrutura do Repositório (Monorepo Híbrido)
+
+Este repositório é **híbrido (monorepo simples)**, contendo **backend e mobile no mesmo repositório**, porém com **responsabilidades totalmente separadas**.
+
+### Estrutura geral
+
+```
+/
+├─ server.js
+├─ app.js
+├─ package.json        # Backend (API)
+├─ package-lock.json   # Backend (API)
+├─ scripts/
+├─ public/             # Site institucional
+├─ src/                # Backend (controllers, services, routes etc.)
+└─ mobile/             # Aplicativo Mobile (Expo / React Native)
+   ├─ package.json
+   ├─ app/
+   ├─ assets/
+   ├─ components/
+   └─ ...
+```
+
+### Regra fundamental do monorepo
+
+> **O backend (raiz do projeto) e o mobile (`/mobile`) são projetos independentes que apenas compartilham o mesmo repositório.**
+
+* O **backend**:
+
+  * é a **fonte única da verdade**;
+  * é o **único projeto buildado no Render**;
+  * **não pode conter dependências de UI/mobile** (React, Expo, React Native, navegação etc.).
+
+* O **mobile**:
+
+  * vive exclusivamente em `/mobile`;
+  * possui seu **próprio `package.json`**;
+  * é buildado localmente ou via **EAS Build**;
+  * consome a API do backend, sem lógica de negócio própria.
+
+### 🚫 Proibição explícita
+
+É **estritamente proibido** adicionar ao `package.json` da raiz (backend):
+
+* `react`, `react-dom`, `react-native`, `expo`
+* `@react-navigation/*`
+* `@react-native-*`
+* `react-query` / `@tanstack/react-query`
+* qualquer dependência de UI, navegação ou hooks visuais
+
+Essas dependências **devem existir somente em `/mobile/package.json`**.
+
+> Para evitar regressões, existe um **guardrail automático** (`scripts/check-root-deps.js`) que **bloqueia o build** caso dependências de mobile sejam adicionadas ao backend.
+
+---
+
 ## 🏛️ Arquitetura de 3 Camadas
 
 O sistema é estruturado em três camadas distintas, cada uma com sua responsabilidade:
 
-1.  **Backend (API)**:
-    -   **Fonte Única da Verdade**: Todas as regras de negócio, permissões de acesso e validações de dados estão centralizadas aqui.
-    -   **Tecnologia**: Node.js com Express.
-    -   **Responsabilidade**: Gerenciar o banco de dados, autenticar usuários e servir dados de forma segura para os frontends.
+1. **Backend (API)**
 
-2.  **Frontend Web**:
-    -   **Interface**: Aplicação web para desktops e navegadores.
-    -   **Tecnologia**: HTML, CSS e JavaScript (vanilla).
-    -   **Responsabilidade**: Consumir a API do backend e oferecer a experiência completa para o usuário via navegador.
+   * **Fonte Única da Verdade**: Todas as regras de negócio, permissões de acesso e validações de dados estão centralizadas aqui.
+   * **Tecnologia**: Node.js com Express.
+   * **Responsabilidade**: Gerenciar o banco de dados, autenticar usuários e servir dados de forma segura para os frontends.
 
-3.  **Mobile App**:
-    -   **Interface**: Aplicativo nativo para Android e iOS.
-    -   **Tecnologia**: React Native com Expo.
-    -   **Responsabilidade**: Espelhar as funcionalidades do frontend web, consumindo a mesma API e adaptando a experiência para dispositivos móveis.
+2. **Frontend Web**
+
+   * **Interface**: Aplicação web para desktops e navegadores.
+   * **Tecnologia**: HTML, CSS e JavaScript (vanilla).
+   * **Responsabilidade**: Consumir a API do backend e oferecer a experiência completa para o usuário via navegador.
+
+3. **Mobile App**
+
+   * **Interface**: Aplicativo nativo para Android e iOS.
+   * **Tecnologia**: React Native com Expo.
+   * **Responsabilidade**: Espelhar as funcionalidades do frontend web, consumindo a mesma API e adaptando a experiência para dispositivos móveis.
 
 > **Observação Importante**: O backend é a autoridade final sobre as regras de negócio. Os frontends (Web e Mobile) são apenas consumidores da API e não devem implementar lógicas de negócio próprias.
 
@@ -61,137 +122,33 @@ O sistema é estruturado em três camadas distintas, cada uma com sua responsabi
 
 ## 🎭 Regras de Perfil (FILIADO vs. GESTÃO)
 
-O acesso às funcionalidades do sistema é rigorosamente controlado por perfis de usuário, garantindo que cada um veja e edite apenas o que é permitido.
+### 👤 Perfil FILIADO
 
-### 👤 Perfil `FILIADO` (Padrão)
+* Visualização limitada (nome, lotação, situação funcional).
+* Pode editar apenas seus próprios dados permitidos (contato, endereço, dependentes, avatar).
 
--   **Visualização Limitada**: Pode ver uma lista simplificada de outros filiados (nome, lotação, situação).
--   **Autoedição**: Pode editar apenas seus próprios dados (contato, endereço, dependentes, avatar).
--   **Restrições**: Não pode ver dados sensíveis de terceiros (CPF, e-mail, etc.) nem realizar ações administrativas.
+### 🧑‍💼 Perfis de GESTÃO (ADMIN, DIRETORIA, FUNCIONARIO)
 
-### 🧑‍💼 Perfis de `GESTÃO` (ADMIN, DIRETORIA, FUNCIONARIO)
-
--   **Visão Completa**: Acesso total aos dados de todos os filiados.
--   **Edição Completa**: Permissão para criar, arquivar e gerenciar qualquer cadastro no sistema. A edição é iniciada exclusivamente a partir da lista de filiados, expandindo o item desejado.
--   **Ações Administrativas**: Capacidade de alterar perfis de acesso e outras configurações críticas.
--   **Acesso Restrito**: Funcionalidades sensíveis, como a tela de **Diagnóstico**, são visíveis apenas para o perfil `ADMIN`.
+* Acesso total aos dados de todos os filiados.
+* Permissão para criar, editar, arquivar e gerenciar cadastros.
+* A edição é iniciada exclusivamente a partir da lista de filiados, expandindo o item desejado.
+* A tela **Diagnóstico** é visível **apenas para ADMIN**.
 
 ---
 
-## 📱 Comportamento Offline do App Mobile
+## 🚀 Deploy no Render (Backend)
 
-O aplicativo mobile foi projetado para ser funcional mesmo sem conexão com a internet, utilizando um sistema de cache local.
+* **Build Command**: `npm ci`
+* **Start Command**: `npm start`
+* **Node Version**: definida em `.node-version` (20.11.1)
+* **Root Directory**: `/` (não usar `/mobile`)
 
--   **Cache de Dados**: Ao carregar a lista de filiados, os dados são salvos localmente no dispositivo.
--   **Acesso Offline**: Se o usuário estiver sem internet, o app exibe os dados salvos no cache, acompanhados de um aviso "Dados offline".
--   **Sincronização Inteligente**: Ao detectar que a conexão foi restabelecida, o app pergunta ao usuário se ele deseja sincronizar os dados para obter a versão mais recente do servidor.
-
----
-
-### 🛡️ Segurança de Cache por Perfil
-
-Para evitar o vazamento de dados entre diferentes usuários no mesmo dispositivo, o sistema de cache do aplicativo móvel segue regras de segurança estritas:
-
--   **Cache por Usuário/Perfil**: A chave de armazenamento para a lista de filiados é dinâmica, incorporando o ID e o perfil do usuário (ex: `filiados_cache_123_ADMIN`). Isso garante que os dados cacheados por um administrador, que são completos, não possam ser acessados por um usuário `FILIADO` que venha a usar o app no mesmo aparelho.
--   **Limpeza no Logout**: Ao realizar o logout, o aplicativo remove ativamente todas as chaves de cache relacionadas a filiados, garantindo que nenhum dado sensível permaneça armazenado no dispositivo.
--   **Ações de Gestão Online-Only**: Enquanto a visualização de dados offline é permitida para todos os perfis (com os dados já sanitizados), as ações de edição e criação de filiados por parte dos perfis de `GESTÃO` são bloqueadas se o dispositivo estiver offline. Uma mensagem informa ao usuário que ele precisa estar conectado para realizar essas operações.
+O Render **não deve** instalar nem considerar dependências do diretório `/mobile`.
 
 ---
 
+## 📌 Observação final
 
-📁 Estrutura da aplicação
+Este repositório foi estruturado como **monorepo híbrido por conveniência organizacional**, mas o backend e o mobile devem ser tratados como **projetos independentes em termos de dependências, build e deploy**.
 
-(Lembrete: esta estrutura é importante para organização e manutenção futura.)
-
-server.js
-app.js
-public/
-src/
-  controllers/
-  services/
-  middleware/
-  utils/
-  routes/
-scripts/
-
-⚙️ Como rodar localmente
-1. Instalar dependências
-npm install
-
-2. Criar arquivo .env
-PORT=3000
-
-DATABASE_URL=postgres://usuario:senha@host:porta/database
-
-JWT_SECRET=algumasegurançaforte
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=sinprfes@sinprfes.org.br
-SMTP_PASS=senha
-MAIL_FROM=sinprfes@sinprfes.org.br
-MAIL_TO_FILIACAO=sinprfes@sinprfes.org.br
-
-3. Rodar servidor
-node server.js
-
-## 🚀 Deploy no Render
-
-Para garantir um deploy consistente e seguro no Render, siga estas configurações:
-
--   **Build Command**: `npm ci`
-    -   *Usa o `package-lock.json` para uma instalação determinística, evitando problemas de dependências transitivas que podem ocorrer com `npm install`.*
--   **Start Command**: `npm start`
-    -   *Executa o servidor de produção.*
--   **Node Version**: Definida no arquivo `.node-version` (atualmente `20.11.1`). O Render respeitará esta versão.
--   **Root Directory**: O diretório raiz do projeto (`/`). Não configure para `/mobile`, pois este diretório contém um projeto separado que não deve interferir no build do backend.
-
-📡 Endpoints principais
-Endpoint	Método	Descrição
-/api/primeiro-acesso/iniciar	POST	Inicia fluxo do primeiro acesso
-/api/primeiro-acesso/confirmar	POST	Conclui criação de senha
-/api/login	POST	Login + JWT
-/api/me	GET	Dados do usuário autenticado
-/api/filiese	POST	Solicitação de filiação + PDF + e-mail
-📨 Envio de e-mail + PDF
-
-Cada ficha enviada gera:
-
-PDF automático (PDFKit)
-
-E-mail enviado ao sindicato com anexo
-
-Se SMTP não estiver configurado, o sistema registra aviso no console.
-
-🔒 Segurança
-
-Hash de senha com Bcrypt
-
-JWT com expiração
-
-2FA opcional (Google Authenticator)
-
-Preparado para Login gov.br
-
-📌 Scripts úteis
-Limpeza
-node scripts/cleanup.js
-
-📞 Suporte
-
-Em caso de dúvidas, fale com o desenvolvedor responsável (Marcelo Fávero Brandão).
-
-FIM DO README
-
-## Padrão de imports do backend
-Este backend está em **CommonJS** (uso de `require()` / `module.exports`).
-
-- Padrão adotado: **imports sem extensão** (ex.: `require("./routes/auth.routes")`).
-- Por que: é compatível com o resolver do Node em CommonJS e reduz ruído em diffs.
-
-### Alternativa (se migrar para ESM)
-Se no futuro o projeto migrar para `"type": "module"`, recomenda-se:
-- padronizar imports com **extensão explícita** (`.js`), pois o ESM é mais rígido.
-
-### Recomendação prática
-Não misturar estilos. Se decidir mudar para “sempre .js”, faça de forma global e com testes.
+Qualquer violação dessa separação é considerada erro crítico e deve ser bloqueada automaticamente pelo guardrail do projeto.
