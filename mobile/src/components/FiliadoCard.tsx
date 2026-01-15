@@ -41,12 +41,15 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           )}
 
           <View style={styles.footer}>
-            <Text style={[styles.situacao, styles[`situacao${filiado.situacao?.replace(/\s+/g, '')}`]]}>
-              {filiado.situacao || 'ATIVO'}
-            </Text>
+            {filiado.situacao && (
+              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
+                {filiado.situacao}
+              </Text>
+            )}
+            <View style={styles.buttonContainerSpacer} />
             {isGestao && (
               <View style={styles.editButtonContainer}>
-                <Button title="Editar" onPress={() => onEdit(filiado.id)} color="#003366" />
+                <Button title="Editar" onPress={() => onEdit(filiado)} color="#003366" />
               </View>
             )}
           </View>
@@ -111,6 +114,9 @@ const styles = StyleSheet.create({
   },
   editButtonContainer: {
     // Adicionado para alinhar o botão
+  },
+  buttonContainerSpacer: {
+    flex: 1,
   },
   situacao: {
     fontSize: 12,

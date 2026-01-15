@@ -44,11 +44,10 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
 
   const parentescoOptions = [
     { label: 'Selecione...', value: '' },
-    { label: 'Cônjuge', value: 'CONJUGE' },
-    { label: 'Filho(a)', value: 'FILHO' },
-    { label: 'Pai', value: 'PAI' },
-    { label: 'Mãe', value: 'MAE' },
-    { label: 'Enteado(a)', value: 'ENTEADO' },
+    { label: 'Filha(o) / enteada(o)', value: 'FILHO_ENTEADO' },
+    { label: 'Cônjuge / companheira(o)', value: 'CONJUGE_COMPANHEIRO' },
+    { label: 'Pai / mãe', value: 'PAI_MAE' },
+    { label: 'Irmã(o)', value: 'IRMAO' },
     { label: 'Outro', value: 'OUTRO' },
   ];
 
