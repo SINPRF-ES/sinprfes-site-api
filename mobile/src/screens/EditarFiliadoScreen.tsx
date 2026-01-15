@@ -56,6 +56,7 @@ export default function EditarFiliadoScreen({ route, navigation }) {
     for (let i = 1; i <= 5; i++) {
       const nome = filiado[`dep${i}_nome`];
       const cpf = filiado[`dep${i}_cpf`];
+      const parentesco = filiado[`dep${i}_parentesco`];
 
       if (nome && !cpf) {
         Alert.alert('Erro de Validação', `O CPF do Dependente ${i} é obrigatório se o nome for preenchido.`);
@@ -68,6 +69,10 @@ export default function EditarFiliadoScreen({ route, navigation }) {
       if (cpf && cpf.length !== 11) {
         Alert.alert('Erro de Validação', `O CPF do Dependente ${i} deve conter 11 dígitos.`);
         return;
+      }
+      if (nome && parentesco === '') {
+          Alert.alert('Erro de Validação', `O campo "Parentesco" do Dependente ${i} é obrigatório.`);
+          return;
       }
     }
 
