@@ -123,6 +123,7 @@ O aplicativo agora possui um sistema de logging robusto para facilitar a depura�
 - **Captura de Erros:** Todos os erros de JavaScript (incluindo renderização e promises não tratadas) e chamadas de API são automaticamente registrados.
 - **Acessando os Logs:**
   1. No menu lateral (Drawer), navegue até a tela **"Diagnóstico"**.
+     - **Observação:** Esta tela é visível **apenas para usuários com perfil `ADMIN`**.
   2. Nesta tela, você pode visualizar, copiar para a área de transferência ou limpar os logs armazenados no dispositivo.
 - **Quando Usar:** Se você encontrar um bug, use o botão **"Copiar Logs"** e envie o texto para a equipe de desenvolvimento. Isso fornecerá o contexto necessário para identificar e resolver o problema.
 
@@ -132,14 +133,68 @@ O aplicativo agora possui um sistema de logging robusto para facilitar a depura�
 |-------------------------|-----------|------------------------------------------------------------------------------------|
 | Autenticação (JWT)      | `OK`      | Fluxo de login, 2FA e armazenamento de sessão implementados.                       |
 | Meus Dados (GET/PUT)    | `OK`      | Tela implementada para visualização e edição dos próprios dados.                   |
-| Listagem de Filiados    | `OK`      | Busca em tempo real na API com diferenciação de dados por perfil.                  |
-| Gestão de Filiados      | `Parcial` | Telas de criação/edição criadas; lógica de arquivar/desarquivar pendente.        |
-| Dependentes (até 5)     | `OK`      | Campos adicionados nos formulários de criação e edição.                            |
+| Listagem de Filiados    | `OK`      | Busca local com cache offline e diferenciação de dados por perfil.                  |
+| Gestão de Filiados      | `OK`      | Telas de criação, edição, arquivamento e desarquivamento implementadas.        |
+| Dependentes (até 5)     | `OK`      | Campos adicionados nos formulários com labels corrigidos.                            |
 | Avatar Upload           | `Pendente`| Lógica de upload de imagem (`multipart/form-data`) precisa ser implementada.         |
 | Fluxo de Primeiro Acesso| `Pendente`| Requer análise do fluxo exato no backend/site.                                     |
 
-## 5. Roadmap Técnico: Módulo de Votação
-...
+## 5. Controles de Formulário e UX
 
-## 6. Checklist de Testes Manuais
-...
+### Máscara e Limite de CPF no Login
+- O campo de CPF na tela de login agora aplica automaticamente a máscara `000.000.000-00` à medida que o usuário digita.
+- A entrada é limitada a 11 dígitos (14 caracteres com a máscara).
+- Apenas os números são armazenados e enviados para a API, garantindo a integridade dos dados.
+
+### Exibição de Telefone Vazio
+- Foi corrigido um bug visual onde um parêntese `(` era exibido para campos de telefone vazios.
+- Agora, se um filiado não tiver um número de telefone cadastrado, o campo correspondente na UI será exibido completamente em branco.
+
+## 6. Gestão (perfis admin/funcionário/diretoria)
+
+O aplicativo móvel implementa as funcionalidades de gestão de filiados, restritas aos perfis `ADMIN`, `DIRETORIA` e `FUNCIONARIO`. Essas funcionalidades incluem:
+
+-   **Criação de Novos Filiados**: Acesso através de um botão "Novo" no cabeçalho da lista de filiados.
+-   **Edição de Filiados Existentes**: Para editar um filiado, o usuário de gestão deve:
+    1. Tocar no card do filiado na lista para expandi-lo.
+    2. Dentro do card expandido, tocar no botão "Editar".
+    - *Esta abordagem espelha o comportamento do site e evita a necessidade de um item de menu "Editar" separado.*
+-   **Arquivamento e Desarquivamento**: As opções para arquivar e desarquivar estão disponíveis dentro da tela de edição.
+
+### Offline: gestão é online-only
+
+As ações de gestão que modificam dados (criar, editar, arquivar, desarquivar) estão disponíveis **apenas em modo online**. Se o dispositivo estiver offline, os botões correspondentes são desabilitados e uma mensagem informa o usuário sobre a restrição.
+
+## 7. Checklist de Testes Manuais
+
+### Testes Gerais de UI/UX
+- [ ] **Login:** O campo CPF aceita no máximo 11 dígitos e exibe a máscara `000.000.000-00`.
+- [ ] **Telefone Vazio:** Em qualquer tela (lista, detalhes), um filiado sem telefone exibe um campo vazio (sem `(`).
+- [ ] **Menu Lateral (Drawer):**
+    - [ ] Não há itens duplicados como "Novo Filiado".
+    - [ ] O item "Editar Filiado" não existe.
+    - [ ] O item "Diagnóstico" só aparece para o perfil `ADMIN`.
+
+### Login como FILIADO
+- [ ] Vê a lista de filiados com dados reduzidos (nome, telefone, lotação, situação).
+- [ ] Não vê o item de menu "Gestão" no Drawer.
+- [ ] Tentar acessar a rota `/Logs` (Diagnóstico) diretamente resulta em um erro de "Acesso Negado".
+- [ ] Em "Meus Dados", os labels dos campos de dependentes ("Nome", "CPF", etc.) aparecem corretamente.
+
+### Login como ADMIN / GESTÃO
+- [ ] Vê o item de menu "Gestão" no Drawer.
+- [ ] **Fluxo de Edição:**
+    - [ ] Ao tocar em um filiado na lista, o card expande.
+    - [ ] O botão "Editar" aparece dentro do card expandido.
+    - [ ] Clicar em "Editar" navega corretamente para a tela de edição.
+- [ ] Consegue criar um novo filiado com sucesso.
+- [ ] Consegue editar um filiado existente com sucesso.
+- [ ] Consegue arquivar e desarquivar um filiado com sucesso.
+- [ ] Em modo offline, o botão "Editar" no card expandido está desabilitado.
+
+### Verificação de Vazamento de Cache
+- [ ] Logar como ADMIN e sincronizar a lista de filiados.
+- [ ] Fazer logout.
+- [ ] Logar como FILIADO.
+- [ ] Colocar o dispositivo em modo avião (offline).
+- [ ] Acessar a lista de filiados e confirmar que os dados exibidos são os reduzidos (não os dados completos do cache do ADMIN).

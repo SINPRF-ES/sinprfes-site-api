@@ -1,13 +1,23 @@
 // mobile/src/screens/LogsScreen.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, FlatList, Button, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { LogEntry, getLogs, clearLogs, getLogsAsText } from '../infra/logger';
+import { useAuth } from '../hooks/useAuth';
 
 const LogsScreen = () => {
+  const { usuario } = useAuth();
+  const navigation = useNavigation();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (usuario?.perfil_acesso !== 'ADMIN') {
+      Alert.alert('Acesso Negado', 'Esta área é restrita a administradores.');
+      navigation.goBack();
+    }
+  }, [usuario, navigation]);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);

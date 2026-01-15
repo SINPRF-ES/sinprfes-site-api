@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
+import { formatCPF, sanitizeDigits } from '../utils/masks';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -139,7 +140,20 @@ export default function LoginScreen() {
           </Pressable>
         )}
 
-        <TextInput style={styles.input} placeholder="CPF" value={cpf} onChangeText={setCpf} keyboardType="numeric" editable={isEtapaCredenciais} />
+        <TextInput
+          style={styles.input}
+          placeholder="CPF"
+          value={formatCPF(cpf)}
+          onChangeText={(text) => {
+            const digits = sanitizeDigits(text);
+            if (digits.length <= 11) {
+              setCpf(digits);
+            }
+          }}
+          keyboardType="numeric"
+          maxLength={14} // 000.000.000-00
+          editable={isEtapaCredenciais}
+        />
         <TextInput style={styles.input} placeholder="Senha" value={senha} onChangeText={setSenha} secureTextEntry editable={isEtapaCredenciais} />
 
         {isEtapaCredenciais ? (

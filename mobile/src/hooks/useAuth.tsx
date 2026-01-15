@@ -78,6 +78,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsuario(null);
     setBiometriaHabilitada(false);
     setBloqueadoPorBiometria(false);
+
+    // Limpeza adicional de caches específicos de telas
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      const keysToRemove = allKeys.filter(key => key.startsWith('filiados_cache_'));
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+    } catch (e) {
+      // erro, mas não deve bloquear o logout
+    }
   }
 
   async function ativarBiometriaNesteAparelho(ativar: boolean) {

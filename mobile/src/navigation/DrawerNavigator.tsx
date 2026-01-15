@@ -4,12 +4,17 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
-import LogsScreen from '../screens/LogsScreen'; // Importa a nova tela
+import LogsScreen from '../screens/LogsScreen';
+import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
 import CustomDrawerContent from './CustomDrawerContent';
+import { useAuth } from '../hooks/useAuth';
 
 const Drawer = createDrawerNavigator();
 
 const DrawerNavigator = () => {
+  const { usuario } = useAuth();
+  const isGestao = usuario?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
+
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -33,12 +38,23 @@ const DrawerNavigator = () => {
         component={FiliadosScreen}
         options={{ title: 'Listar Filiados' }}
       />
-      {/* Tela de Diagnóstico/Logs */}
-      <Drawer.Screen
-        name="Logs"
-        component={LogsScreen}
-        options={{ title: 'Diagnóstico' }}
-      />
+      {/* Tela de Diagnóstico/Logs - Apenas para ADMINS */}
+      {usuario?.perfil_acesso === 'ADMIN' && (
+        <Drawer.Screen
+          name="Logs"
+          component={LogsScreen}
+          options={{ title: 'Diagnóstico' }}
+        />
+      )}
+      {isGestao && (
+        <>
+          <Drawer.Screen
+            name="CriarFiliado"
+            component={CriarFiliadoScreen}
+            options={{ title: 'Novo Filiado' }}
+          />
+        </>
+      )}
     </Drawer.Navigator>
   );
 };
