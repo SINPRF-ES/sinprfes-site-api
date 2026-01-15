@@ -12,31 +12,18 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { Filiado } from '../types/filiado';
 
 export default function EditarFiliadoScreen({ route, navigation }) {
-  const { filiadoId } = route.params;
+  const { filiado: filiadoData } = route.params;
   const { usuario } = useAuth();
   const netInfo = useNetInfo();
-  const [filiado, setFiliado] = useState<Filiado | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [filiado, setFiliado] = useState<Filiado | null>(filiadoData);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!filiadoId) {
-      Alert.alert('Erro', 'ID do filiado não fornecido.');
+    if (!filiado) {
+      Alert.alert('Erro', 'Dados do filiado não fornecidos.');
       navigation.goBack();
-      return;
     }
-
-    const fetchFiliado = async () => {
-      try {
-        const { data } = await api.get(`/api/filiados/${filiadoId}`);
-        setFiliado(data);
-      } catch (error) {
-        Alert.alert('Erro', 'Não foi possível carregar os dados do filiado.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFiliado();
-  }, [filiadoId]);
+  }, [filiado]);
 
   const handleUpdate = async () => {
     if (!netInfo.isConnected) {
@@ -78,7 +65,7 @@ export default function EditarFiliadoScreen({ route, navigation }) {
 
     try {
       setLoading(true);
-      await api.put(`/api/filiados/${filiadoId}`, filiado);
+      await api.put(`/api/filiados/${filiado.id}`, filiado);
       Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
       navigation.navigate('Filiados', { refresh: true });
     } catch (err: any) {
