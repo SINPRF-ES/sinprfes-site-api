@@ -1,7 +1,7 @@
 // mobile/src/screens/FiliadosScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useNetInfo } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFiliados } from '../services/apiService';
@@ -22,6 +22,18 @@ const FiliadosScreen: React.FC = () => {
 
   const navigation = useNavigation();
   const netInfo = useNetInfo();
+
+  useFocusEffect(
+    useCallback(() => {
+      const state = navigation.getState();
+      const route = state.routes.find(r => r.name === 'Filiados');
+      if (route?.params?.refresh) {
+        fetchData();
+        // Limpa o parâmetro para evitar refresh em focos subsequentes
+        navigation.setParams({ refresh: false });
+      }
+    }, [navigation])
+  );
 
   useEffect(() => {
     if (netInfo.isConnected && isOffline && !promptedForSync) {

@@ -1,79 +1,30 @@
-// src/screens/EditarFiliadoScreen.tsx
+// mobile/src/screens/EditarFiliadoScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { useAuth } from '../hooks/useAuth';
+import { useNetInfo } from '@react-native-community/netinfo';
 import api from '../services/apiService';
-import type { Filiado, Dependente } from '../types/filiado';
-import type { RootStackParamList } from '../navigation';
+import ContatoCard from '../components/ContatoCard';
+import EnderecoCard from '../components/EnderecoCard';
+import LotacaoCard from '../components/LotacaoCard';
+import DependentesCard from '../components/DependentesCard';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Filiado } from '../types/filiado';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'EditarFiliado'>;
-
-const initialDependente: Dependente = { nome: '', cpf: '', data_nascimento: '', parentesco: '' };
-
-// --- Funções de Validação ---
-const isCpfValido = (cpf: string | null | undefined): boolean => {
-  if (!cpf) return false;
-  const cpfNumerico = cpf.replace(/\D/g, '');
-  return cpfNumerico.length === 11;
-};
-
-const isDataValida = (data: string | null | undefined): boolean => {
-    if (!data) return false;
-    const regexApi = /^\d{4}-\d{2}-\d{2}/;
-    const regexUser = /^\d{2}\/\d{2}\/\d{4}$/;
-
-    if (regexApi.test(data)) {
-        const dataObj = new Date(data);
-        return !isNaN(dataObj.getTime());
-    }
-
-    if (regexUser.test(data)) {
-        const [dia, mes, ano] = data.split('/').map(Number);
-        const dataObj = new Date(ano, mes - 1, dia);
-        return dataObj.getFullYear() === ano && dataObj.getMonth() === mes - 1 && dataObj.getDate() === dia;
-    }
-    
-    return false;
-};
-
-const formatarDataParaAPI = (data: string): string => {
-    if (data.includes('/')) {
-        const [dia, mes, ano] = data.split('/');
-        return `${ano}-${mes}-${dia}`;
-    }
-    return data.split('T')[0];
-};
-
-const formatarDataParaExibicao = (data: string | null | undefined): string => {
-    if (!data) return '';
-    if (data.includes('/')) return data;
-    try {
-        const [ano, mes, dia] = data.split('T')[0].split('-');
-        return `${dia}/${mes}/${ano}`;
-    } catch {
-        return data;
-    }
-};
-
-export default function EditarFiliadoScreen({ route, navigation }: Props) {
+export default function EditarFiliadoScreen({ route, navigation }) {
   const { filiadoId } = route.params;
+  const { usuario } = useAuth();
+  const netInfo = useNetInfo();
   const [filiado, setFiliado] = useState<Filiado | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchFiliado = async () => {
-      setLoading(true);
       try {
-        const { data } = await api.get<Filiado>(`/api/filiados/${filiadoId}`);
-        const dependentesFormatados = data.dependentes?.map(d => ({
-            ...d,
-            data_nascimento: formatarDataParaExibicao(d.data_nascimento),
-        })) || [];
-        const dependentesCompletos = Array(5).fill(null).map((_, i) => dependentesFormatados[i] || { ...initialDependente });
-        setFiliado({ ...data, dependentes: dependentesCompletos });
-      } catch (e: any) {
-        setError('Falha ao carregar dados do filiado.');
+        const { data } = await api.get(`/api/filiados/${filiadoId}`);
+        setFiliado(data);
+      } catch (error) {
+        Alert.alert('Erro', 'Não foi possível carregar os dados do filiado.');
       } finally {
         setLoading(false);
       }
@@ -81,89 +32,168 @@ export default function EditarFiliadoScreen({ route, navigation }: Props) {
     fetchFiliado();
   }, [filiadoId]);
 
-  const handleInputChange = (field: keyof Omit<Filiado, 'dependentes'>, value: any) => {
-    setFiliado(prev => (prev ? { ...prev, [field]: value } : null));
-  };
-
-  const handleDependenteChange = (index: number, field: keyof Dependente, value: string) => {
-    if (!filiado) return;
-    const novosDependentes = [...(filiado.dependentes || [])];
-    novosDependentes[index] = { ...novosDependentes[index], [field]: value };
-    setFiliado(prev => ({ ...prev, dependentes: novosDependentes }));
-  };
-
   const handleUpdate = async () => {
-    if (!filiado) return;
-    
-    // Validações...
-    // (A mesma lógica da tela de criação)
+    if (!netInfo.isConnected) {
+      Alert.alert('Offline', 'A edição de filiados só está disponível online.');
+      return;
+    }
 
-    setLoading(true);
+    if (!filiado.nome || !filiado.cpf || !filiado.email1) {
+      Alert.alert('Erro de Validação', 'Nome, CPF e Email 1 são obrigatórios.');
+      return;
+    }
+    if (filiado.cpf.length !== 11) {
+      Alert.alert('Erro de Validação', 'O CPF deve conter 11 dígitos.');
+      return;
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      const nome = filiado[`dep${i}_nome`];
+      const cpf = filiado[`dep${i}_cpf`];
+
+      if (nome && !cpf) {
+        Alert.alert('Erro de Validação', `O CPF do Dependente ${i} é obrigatório se o nome for preenchido.`);
+        return;
+      }
+      if (cpf && !nome) {
+        Alert.alert('Erro de Validação', `O Nome do Dependente ${i} é obrigatório se o CPF for preenchido.`);
+        return;
+      }
+      if (cpf && cpf.length !== 11) {
+        Alert.alert('Erro de Validação', `O CPF do Dependente ${i} deve conter 11 dígitos.`);
+        return;
+      }
+    }
+
     try {
-      const dependentesValidos = filiado.dependentes?.filter(d => d.nome && d.cpf).map(d => ({
-          ...d,
-          cpf: d.cpf?.replace(/\D/g, ''),
-          data_nascimento: d.data_nascimento ? formatarDataParaAPI(d.data_nascimento) : null,
-      }));
-      const payload = { ...filiado, dependentes: dependentesValidos };
-      
-      await api.put(`/api/filiados/${filiadoId}`, payload);
-      Alert.alert('Sucesso', 'Filiado atualizado com sucesso!');
-      navigation.goBack();
-    } catch (e: any) {
-      Alert.alert('Erro', e.response?.data?.message || 'Não foi possível atualizar o filiado.');
+      setLoading(true);
+      await api.put(`/api/filiados/${filiadoId}`, filiado);
+      Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
+      navigation.navigate('Filiados', { refresh: true });
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o filiado.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && !filiado) {
-    return <ActivityIndicator size="large" style={{ marginTop: 20 }} />;
+  const handleArchive = async () => {
+    if (!netInfo.isConnected) {
+      Alert.alert('Offline', 'A arquivação de filiados só está disponível online.');
+      return;
+    }
+    Alert.alert(
+      'Confirmar Arquivamento',
+      'Tem certeza de que deseja arquivar este filiado?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Arquivar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await api.post(`/api/filiados/${filiadoId}/arquivar`);
+              Alert.alert('Sucesso', 'Filiado arquivado com sucesso.');
+              navigation.navigate('Filiados', { refresh: true });
+            } catch (err: any) {
+              Alert.alert('Erro', err.response?.data?.message || 'Não foi possível arquivar o filiado.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleUnarchive = async () => {
+    if (!netInfo.isConnected) {
+      Alert.alert('Offline', 'A desarquivação de filiados só está disponível online.');
+      return;
+    }
+    Alert.alert(
+      'Confirmar Desarquivamento',
+      'Tem certeza de que deseja desarquivar este filiado?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desarquivar',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await api.post(`/api/filiados/${filiadoId}/desarquivar`);
+              Alert.alert('Sucesso', 'Filiado desarquivado com sucesso.');
+              navigation.navigate('Filiados', { refresh: true });
+            } catch (err: any) {
+              Alert.alert('Erro', err.response?.data?.message || 'Não foi possível desarquivar o filiado.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) {
+    return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
   }
 
-  if (error) {
-    return <Text style={{ color: 'red', textAlign: 'center', marginTop: 20 }}>{error}</Text>;
+  if (!filiado) {
+    return <View style={styles.centered}><Text>Filiado não encontrado.</Text></View>;
+  }
+
+  if (!usuario || !['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso)) {
+    return <View style={styles.centered}><Text>Acesso negado.</Text></View>;
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <KeyboardAwareScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
       <Text style={styles.title}>Editar Filiado</Text>
       
-      <Text style={styles.sectionTitle}>Dados do Filiado</Text>
-      <Text style={styles.label}>Nome Completo</Text>
-      <TextInput style={styles.input} value={filiado?.nome || ''} onChangeText={text => handleInputChange('nome', text)} />
-      
-      <Text style={styles.label}>Email</Text>
-      <TextInput style={styles.input} value={filiado?.email || ''} onChangeText={text => handleInputChange('email', text)} keyboardType="email-address" autoCapitalize="none" />
+      <ContatoCard filiado={filiado} setFiliado={setFiliado} />
+      <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
+      <LotacaoCard filiado={filiado} setFiliado={setFiliado} />
+      <DependentesCard filiado={filiado} setFiliado={setFiliado} />
 
-      <Text style={styles.label}>CPF</Text>
-      <TextInput style={styles.input} value={filiado?.cpf || ''} onChangeText={text => handleInputChange('cpf', text)} keyboardType="numeric" maxLength={11} />
-
-      <Text style={styles.label}>Telefone</Text>
-      <TextInput style={styles.input} value={filiado?.telefone || ''} onChangeText={text => handleInputChange('telefone', text)} keyboardType="phone-pad" />
-
-      <Text style={styles.sectionTitle}>Dependentes</Text>
-      {filiado?.dependentes?.map((dep, index) => (
-        <View key={index} style={styles.dependenteBox}>
-          <Text style={styles.dependenteTitle}>Dependente {index + 1}</Text>
-          <TextInput style={styles.input} placeholder="Nome do Dependente" value={dep.nome} onChangeText={text => handleDependenteChange(index, 'nome', text)} />
-          <TextInput style={styles.input} placeholder="CPF (11 dígitos)" value={dep.cpf} onChangeText={text => handleDependenteChange(index, 'cpf', text)} keyboardType="numeric" maxLength={11} />
-          <TextInput style={styles.input} placeholder="Data de Nascimento (DD/MM/AAAA)" value={dep.data_nascimento} onChangeText={text => handleDependenteChange(index, 'data_nascimento', text)} />
-          <TextInput style={styles.input} placeholder="Parentesco" value={dep.parentesco} onChangeText={text => handleDependenteChange(index, 'parentesco', text)} />
-        </View>
-      ))}
-
-      <Button title={loading ? 'Atualizando...' : 'Salvar Alterações'} onPress={handleUpdate} disabled={loading} />
-    </ScrollView>
+      <View style={styles.buttonContainer}>
+        <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
+      </View>
+      <View style={styles.buttonContainer}>
+        {filiado.arquivado_em ? (
+          <Button title="Desarquivar" onPress={handleUnarchive} color="green" disabled={loading} />
+        ) : (
+          <Button title="Arquivar" onPress={handleArchive} color="red" disabled={loading} />
+        )}
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f2f4f8' },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#003366' },
-  label: { fontSize: 16, marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginBottom: 15, backgroundColor: '#fff' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginTop: 20, marginBottom: 10, color: '#003366' },
-  dependenteBox: { borderWidth: 1, borderColor: '#ddd', borderRadius: 5, padding: 10, marginBottom: 15, backgroundColor: '#fff' },
-  dependenteTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
+  container: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+  },
+  contentContainer: {
+    padding: 20,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    marginTop: 10,
+  },
 });
