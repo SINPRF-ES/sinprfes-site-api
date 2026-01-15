@@ -117,17 +117,11 @@ const FiliadosScreen: React.FC = () => {
   const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
   const ehGestao = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
 
-  const handleCardPress = (item: Filiado) => {
-    if (ehGestao) {
-      if (netInfo.isConnected) {
-        navigation.navigate('EditarFiliado', { filiadoId: item.id });
-      } else {
-        Alert.alert('Funcionalidade Offline', 'A edição de dados de outros filiados só pode ser feita quando você estiver online.');
-      }
-      return;
-    }
-    if (item.id === authUser?.id) {
-      navigation.navigate('MeusDados');
+  const handleEditPress = (filiadoId: number) => {
+    if (netInfo.isConnected) {
+      navigation.navigate('EditarFiliado', { filiadoId });
+    } else {
+      Alert.alert('Funcionalidade Offline', 'A edição de dados só pode ser feita quando você estiver online.');
     }
   };
 
@@ -150,7 +144,7 @@ const FiliadosScreen: React.FC = () => {
           <FiliadoCard
             filiado={item}
             currentUserProfile={authUser?.perfil_acesso || 'FILIADO'}
-            onPress={() => handleCardPress(item)}
+            onEdit={handleEditPress}
           />
         )}
         ListEmptyComponent={<View style={styles.centered}><Text>Nenhum filiado encontrado.</Text></View>}

@@ -19,6 +19,12 @@ export default function EditarFiliadoScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!filiadoId) {
+      Alert.alert('Erro', 'ID do filiado não fornecido.');
+      navigation.goBack();
+      return;
+    }
+
     const fetchFiliado = async () => {
       try {
         const { data } = await api.get(`/api/filiados/${filiadoId}`);

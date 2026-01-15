@@ -1,6 +1,6 @@
 // mobile/src/components/FiliadoCard.tsx
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
 import { formatCPF, formatPhone } from '../utils/masks';
@@ -8,39 +8,50 @@ import { formatCPF, formatPhone } from '../utils/masks';
 interface FiliadoCardProps {
   filiado: Filiado;
   currentUserProfile: UserProfile;
-  onPress: () => void;
+  onEdit: (filiadoId: number) => void;
 }
 
-const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, onPress }) => {
-  const podeVerDetalhes = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(currentUserProfile);
+const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, onEdit }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(currentUserProfile);
+
+  const toggleExpand = () => setIsExpanded(!isExpanded);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image
-        source={{ uri: filiado.avatar_url || 'https://via.placeholder.com/50' }}
-        style={styles.avatar}
-      />
-      <View style={styles.infoContainer}>
-        <Text style={styles.nome}>{filiado.nome}</Text>
-        <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
-
-        {/* Campos visíveis apenas para perfis de GESTÃO */}
-        {podeVerDetalhes && (
-          <>
-            <Text style={styles.detalhe}>CPF: {formatCPF(filiado.cpf || '')}</Text>
-            <Text style={styles.detalhe}>Email: {filiado.email1}</Text>
-          </>
-        )}
-
-        {/* Campo visível para todos, conforme regra */}
-        <Text style={styles.detalhe}>Telefone: {formatPhone(filiado.telefone1 || 'Não informado')}</Text>
-
-        <View style={styles.footer}>
-            <Text style={[styles.situacao, styles[`situacao${filiado.situacao?.replace(/\s+/g, '')}`]]}>
-                {filiado.situacao || 'ATIVO'}
-            </Text>
+    <TouchableOpacity style={styles.card} onPress={toggleExpand} activeOpacity={0.7}>
+      <View style={styles.headerContainer}>
+        <Image
+          source={{ uri: filiado.avatar_url || 'https://via.placeholder.com/50' }}
+          style={styles.avatar}
+        />
+        <View style={styles.infoContainer}>
+          <Text style={styles.nome}>{filiado.nome}</Text>
+          <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
+          <Text style={styles.detalhe}>Telefone: {formatPhone(filiado.telefone1 || 'Não informado')}</Text>
         </View>
       </View>
+
+      {isExpanded && (
+        <View style={styles.expandedContent}>
+          {isGestao && (
+            <>
+              <Text style={styles.detalhe}>CPF: {formatCPF(filiado.cpf || '')}</Text>
+              <Text style={styles.detalhe}>Email: {filiado.email1}</Text>
+            </>
+          )}
+
+          <View style={styles.footer}>
+            <Text style={[styles.situacao, styles[`situacao${filiado.situacao?.replace(/\s+/g, '')}`]]}>
+              {filiado.situacao || 'ATIVO'}
+            </Text>
+            {isGestao && (
+              <View style={styles.editButtonContainer}>
+                <Button title="Editar" onPress={() => onEdit(filiado.id)} color="#003366" />
+              </View>
+            )}
+          </View>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -49,7 +60,6 @@ export default React.memo(FiliadoCard);
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 8,
     padding: 15,
@@ -60,6 +70,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
+  },
+  headerContainer: {
+    flexDirection: 'row',
   },
   avatar: {
     width: 50,
@@ -78,16 +91,26 @@ const styles = StyleSheet.create({
   lotacao: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 8,
   },
   detalhe: {
     fontSize: 14,
     color: '#333',
+    marginTop: 4,
+  },
+  expandedContent: {
+    marginTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 10,
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  editButtonContainer: {
+    // Adicionado para alinhar o botão
   },
   situacao: {
     fontSize: 12,

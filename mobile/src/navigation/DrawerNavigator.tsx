@@ -6,7 +6,6 @@ import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
 import LogsScreen from '../screens/LogsScreen';
 import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
-import EditarFiliadoScreen from '../screens/EditarFiliadoScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 
@@ -39,23 +38,20 @@ const DrawerNavigator = () => {
         component={FiliadosScreen}
         options={{ title: 'Listar Filiados' }}
       />
-      {/* Tela de Diagnóstico/Logs */}
-      <Drawer.Screen
-        name="Logs"
-        component={LogsScreen}
-        options={{ title: 'Diagnóstico' }}
-      />
+      {/* Tela de Diagnóstico/Logs - Apenas para ADMINS */}
+      {usuario?.perfil_acesso === 'ADMIN' && (
+        <Drawer.Screen
+          name="Logs"
+          component={LogsScreen}
+          options={{ title: 'Diagnóstico' }}
+        />
+      )}
       {isGestao && (
         <>
           <Drawer.Screen
             name="CriarFiliado"
             component={CriarFiliadoScreen}
             options={{ title: 'Novo Filiado' }}
-          />
-          <Drawer.Screen
-            name="EditarFiliado"
-            component={EditarFiliadoScreen}
-            options={{ title: 'Editar Filiado' }}
           />
         </>
       )}

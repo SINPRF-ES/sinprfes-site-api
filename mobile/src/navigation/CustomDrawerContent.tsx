@@ -13,11 +13,8 @@ const CustomDrawerContent = (props) => {
     ...props,
     state: {
       ...props.state,
-      routes: props.state.routes.filter(route => {
-        // Lógica para filtrar rotas de admin se necessário
-        // Ex: if (route.name === 'AdminScreen' && !isAdmin) return false;
-        return true;
-      }),
+      // Filtra a rota 'CriarFiliado' da lista automática, pois ela é adicionada manualmente abaixo
+      routes: props.state.routes.filter(route => route.name !== 'CriarFiliado'),
     },
   };
 

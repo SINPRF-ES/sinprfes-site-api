@@ -72,8 +72,9 @@ O acesso às funcionalidades do sistema é rigorosamente controlado por perfis d
 ### 🧑‍💼 Perfis de `GESTÃO` (ADMIN, DIRETORIA, FUNCIONARIO)
 
 -   **Visão Completa**: Acesso total aos dados de todos os filiados.
--   **Edição Completa**: Permissão para criar, editar, arquivar e gerenciar qualquer cadastro no sistema.
+-   **Edição Completa**: Permissão para criar, arquivar e gerenciar qualquer cadastro no sistema. A edição é iniciada exclusivamente a partir da lista de filiados, expandindo o item desejado.
 -   **Ações Administrativas**: Capacidade de alterar perfis de acesso e outras configurações críticas.
+-   **Acesso Restrito**: Funcionalidades sensíveis, como a tela de **Diagnóstico**, são visíveis apenas para o perfil `ADMIN`.
 
 ---
 
