@@ -4,7 +4,10 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
+import NoticiasScreen from '../screens/NoticiasScreen';
+import VotacaoScreen from '../modules/votacao/screens/VotacaoScreen';
 import LogsScreen from '../screens/LogsScreen';
+import SegurancaScreen from '../screens/SegurancaScreen';
 import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
@@ -34,9 +37,24 @@ const DrawerNavigator = () => {
         options={{ title: 'Meus Dados' }}
       />
       <Drawer.Screen
+        name="Noticias"
+        component={NoticiasScreen}
+        options={{ title: 'Notícias' }}
+      />
+      <Drawer.Screen
         name="Filiados"
         component={FiliadosScreen}
         options={{ title: 'Listar Filiados' }}
+      />
+      <Drawer.Screen
+        name="Votacao"
+        component={VotacaoScreen}
+        options={{ title: 'Votação' }}
+      />
+      <Drawer.Screen
+        name="Seguranca"
+        component={SegurancaScreen}
+        options={{ title: 'Segurança' }}
       />
       {/* Tela de Diagnóstico/Logs - Apenas para ADMINS */}
       {usuario?.perfil_acesso === 'ADMIN' && (

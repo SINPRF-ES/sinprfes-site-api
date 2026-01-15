@@ -11,10 +11,32 @@ import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Filiado } from '../types/filiado';
 
+const initialFiliadoState: Partial<Filiado> = {
+  nome: '',
+  cpf: '',
+  email1: '',
+  email2: '',
+  telefone1: '',
+  telefone2: '',
+  cep: '',
+  logradouro: '',
+  numero: '',
+  complemento: '',
+  cidade: '',
+  uf: '',
+  lotacao: 'SR-ES', // Valor padrão
+  situacao: 'ATIVO', // Valor padrão
+  dep1_nome: '', dep1_cpf: '', dep1_nascimento: null, dep1_parentesco: '',
+  dep2_nome: '', dep2_cpf: '', dep2_nascimento: null, dep2_parentesco: '',
+  dep3_nome: '', dep3_cpf: '', dep3_nascimento: null, dep3_parentesco: '',
+  dep4_nome: '', dep4_cpf: '', dep4_nascimento: null, dep4_parentesco: '',
+  dep5_nome: '', dep5_cpf: '', dep5_nascimento: null, dep5_parentesco: '',
+};
+
 export default function CriarFiliadoScreen({ navigation }) {
   const { usuario } = useAuth();
   const netInfo = useNetInfo();
-  const [filiado, setFiliado] = useState<Partial<Filiado>>({});
+  const [filiado, setFiliado] = useState<Partial<Filiado>>(initialFiliadoState);
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {

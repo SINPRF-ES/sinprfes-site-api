@@ -10,7 +10,7 @@ import { Filiado } from '../types/filiado';
 import FiliadoCard from '../components/FiliadoCard';
 
 const FiliadosScreen: React.FC = () => {
-  const { user: authUser } = useAuth();
+  const { usuario: authUser } = useAuth();
   const cacheKey = `filiados_cache_${authUser?.id}_${authUser?.perfil_acesso}`;
 
   const [filiados, setFiliados] = useState<Filiado[]>([]);

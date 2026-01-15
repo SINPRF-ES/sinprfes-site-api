@@ -74,6 +74,15 @@ O tratamento de erros 401 (Não Autorizado) é gerenciado para evitar loops e ga
 -   **Logout Centralizado:** Um **interceptor de resposta** no `axios` detecta respostas com status 401. Quando isso ocorre, ele automaticamente limpa os dados da sessão (token e usuário) do storage, efetivamente deslogando o usuário.
 -   **Prevenção de Loops:** O sistema de logging possui um mecanismo de "debouncing" que impede que o mesmo erro seja registrado várias vezes em um curto intervalo. Isso evita o spam de logs que ocorria anteriormente quando uma falha de autenticação acontecia.
 
+### 3.3. Gerenciamento de Biometria
+O aplicativo oferece a conveniência e segurança do login biométrico (digital ou facial).
+
+-   **Ativação Opcional:** No primeiro login bem-sucedido, o aplicativo pergunta se o usuário deseja ativar a biometria.
+-   **Tela de Segurança:** A qualquer momento, o usuário pode ativar ou desativar o login biométrico através da tela **"Segurança"**, acessível pelo menu lateral.
+-   **Fluxo de Login:**
+    -   Se a biometria estiver ativa, um botão "Entrar com Biometria" aparecerá na tela de login.
+    -   Ao desativar a biometria na tela de Segurança, este botão é removido.
+
 ## 4. Troubleshooting e Diagnóstico
 
 ### 4.1. Erro de "Worklets Mismatch"
@@ -174,6 +183,11 @@ As ações de gestão que modificam dados (criar, editar, arquivar, desarquivar)
     - [ ] Não há itens duplicados como "Novo Filiado".
     - [ ] O item "Editar Filiado" não existe.
     - [ ] O item "Diagnóstico" só aparece para o perfil `ADMIN`.
+- [ ] **Biometria:**
+    - [ ] É possível acessar a tela "Segurança" pelo menu.
+    - [ ] Ativar a biometria faz o botão aparecer na tela de Login.
+    - [ ] Desativar a biometria remove o botão da tela de Login.
+    - [ ] O login com biometria funciona corretamente.
 
 ### Login como FILIADO
 - [ ] Vê a lista de filiados com dados reduzidos (nome, telefone, lotação, situação).
