@@ -9,6 +9,7 @@ import VotacaoScreen from '../modules/votacao/screens/VotacaoScreen';
 import LogsScreen from '../screens/LogsScreen';
 import SegurancaScreen from '../screens/SegurancaScreen';
 import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
+import PublicacoesScreen from '../screens/PublicacoesScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 
@@ -50,6 +51,11 @@ const DrawerNavigator = () => {
         name="Votacao"
         component={VotacaoScreen}
         options={{ title: 'Votação' }}
+      />
+      <Drawer.Screen
+        name="Publicacoes"
+        component={PublicacoesScreen}
+        options={{ title: 'Publicações' }}
       />
       <Drawer.Screen
         name="Seguranca"
