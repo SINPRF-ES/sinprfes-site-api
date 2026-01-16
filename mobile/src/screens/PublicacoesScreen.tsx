@@ -1,5 +1,5 @@
 // mobile/src/screens/PublicacoesScreen.tsx
-import React, 'react';
+import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, ActivityIndicator, Alert } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { getPublicacoes, DriveFile } from '../services/driveService';

@@ -9,15 +9,6 @@ const CustomDrawerContent = (props) => {
   const { usuario, logout } = useAuth();
   const isGestao = usuario?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
 
-  const filteredProps = {
-    ...props,
-    state: {
-      ...props.state,
-      // Filtra a rota 'CriarFiliado' da lista automática, pois ela é adicionada manualmente abaixo
-      routes: props.state.routes.filter(route => route.name !== 'CriarFiliado'),
-    },
-  };
-
   return (
     <DrawerContentScrollView {...props}>
       <View style={styles.header}>
@@ -28,7 +19,7 @@ const CustomDrawerContent = (props) => {
         <Text style={styles.nome}>{usuario?.nome || 'Usuário'}</Text>
         <Text style={styles.status}>{usuario?.situacao || 'ATIVO'}</Text>
       </View>
-      <DrawerItemList {...filteredProps} />
+      <DrawerItemList {...props} />
 
       {isGestao && (
         <>

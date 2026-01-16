@@ -28,10 +28,7 @@ const LotacaoPicker: React.FC<Props> = ({ selectedValue, onValueChange }) => {
 
 const styles = StyleSheet.create({
   pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    marginBottom: 15,
+    // A borda e o estilo do container agora são controlados pelo componente pai (LotacaoCard)
   },
   picker: {
     // Estilos podem ser necessários para Android/iOS
