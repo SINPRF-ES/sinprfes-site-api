@@ -97,7 +97,8 @@ const styles = StyleSheet.create({
   nome: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
+    flexShrink: 1, // Impede que o nome empurre a badge para fora
+    marginRight: 8, // Adiciona um espaço entre o nome e a badge
   },
   lotacao: {
     fontSize: 14,
