@@ -30,6 +30,15 @@ export default function MeusDadosScreen() {
         setLoading(true);
         // O `apiService` já injeta o token
         const { data } = await api.get<Filiado>('/api/filiados/me');
+
+        // Formata as datas dos dependentes para o padrão brasileiro antes de popular o estado
+        for (let i = 1; i <= 5; i++) {
+          const fieldName = `dep${i}_data_nascimento`;
+          if (data[fieldName]) {
+            data[fieldName] = toBrazilianDate(data[fieldName]);
+          }
+        }
+
         setFiliado(data);
       } catch (err: any) {
         setError(err.message || 'Não foi possível carregar os dados.');

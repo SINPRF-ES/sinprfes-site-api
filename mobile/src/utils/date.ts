@@ -37,14 +37,18 @@ export const toBrazilianDate = (dateString: string | null | undefined): string =
     return '';
   }
 
-  const parts = dateString.split('-');
+  // Garante que estamos lidando apenas com a parte da data (YYYY-MM-DD)
+  const datePart = dateString.substring(0, 10);
+
+  const parts = datePart.split('-');
   if (parts.length !== 3) {
     return dateString; // Retorna o original se não estiver no formato esperado
   }
 
   const [year, month, day] = parts;
-  // Validação básica
-  if (day.length !== 2 || month.length !== 2 || year.length !== 4) {
+
+  // Validação mais robusta para garantir que os componentes são válidos
+  if (year.length !== 4 || month.length !== 2 || day.length !== 2 || isNaN(parseInt(day)) || isNaN(parseInt(month)) || isNaN(parseInt(year))) {
     return dateString;
   }
 

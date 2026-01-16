@@ -114,3 +114,18 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
 
   return `${day}/${month}/${year}`;
 };
+
+/**
+ * Normaliza um texto para busca, removendo acentos e convertendo para minúsculas.
+ * @param text O texto a ser normalizado.
+ * @returns O texto normalizado.
+ */
+export const normalizeText = (text: string | null | undefined): string => {
+  if (!text) {
+    return '';
+  }
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};

@@ -8,6 +8,7 @@ import { getFiliados } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { Filiado } from '../types/filiado';
 import FiliadoCard from '../components/FiliadoCard';
+import { normalizeText } from '../utils/masks';
 
 const FiliadosScreen: React.FC = () => {
   const { usuario: authUser } = useAuth();
@@ -55,24 +56,31 @@ const FiliadosScreen: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      let data = await getFiliados();
+      const data = await getFiliados();
+      let processedData = data;
 
+      // Sanitize data only for FILIADO profile, preserving all fields for management
       if (authUser?.perfil_acesso === 'FILIADO') {
-        data = data.map((f: Filiado) => {
+        processedData = data.map((f: Filiado) => {
           if (f.id !== authUser.id) {
+            // Return a limited subset of fields for other users
             return {
               id: f.id,
               nome: f.nome,
               telefone1: f.telefone1,
               lotacao: f.lotacao,
               situacao: f.situacao,
+              // Explicitly exclude CPF and other sensitive data
+              cpf: undefined,
+              email1: undefined,
             };
           }
+          // Return the full object for the logged-in user
           return f;
         });
       }
 
-      setFiliados(data);
+      setFiliados(processedData);
       await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
       setIsOffline(false);
     } catch (apiError) {
@@ -112,11 +120,25 @@ const FiliadosScreen: React.FC = () => {
   const filteredFiliados = filiados.filter(f => {
     const nome = f.nome || '';
     const cpf = f.cpf || '';
-    const term = searchTerm.toLowerCase();
-    return (
-      nome.toLowerCase().includes(term) ||
-      cpf.replace(/\D/g, '').includes(term.replace(/\D/g, ''))
-    );
+    const term = normalizeText(searchTerm);
+
+    if (!term) return true; // Se o termo de busca for vazio, mostra todos
+
+    const nomeNormalizado = normalizeText(nome);
+    const cpfSanitizado = cpf.replace(/\D/g, '');
+    const termSanitizado = term.replace(/\D/g, '');
+
+    // A busca por CPF deve ser exata ou parcial, mas sem normalização de texto
+    if (termSanitizado.length > 0 && cpfSanitizado.includes(termSanitizado)) {
+      return true;
+    }
+
+    // A busca por nome deve ser normalizada
+    if (nomeNormalizado.includes(term)) {
+      return true;
+    }
+
+    return false;
   });
 
   const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);

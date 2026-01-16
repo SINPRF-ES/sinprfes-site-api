@@ -43,7 +43,7 @@ const PublicacoesScreen: React.FC = () => {
         {renderIcon(item.mimeType)}
       </View>
       <View style={styles.textContainer}>
-        <Text style={styles.itemName}>{item.name}</Text>
+        {item.name && <Text style={styles.itemName}>{item.name}</Text>}
         {item.createdTime && (
             <Text style={styles.itemDate}>
             {new Date(item.createdTime).toLocaleDateString('pt-BR')}
@@ -66,7 +66,7 @@ const PublicacoesScreen: React.FC = () => {
     <FlatList
       data={publicacoes || []}
       renderItem={renderItem}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item, index) => item.id || `pub-${index}`}
       contentContainerStyle={styles.container}
       ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
     />
