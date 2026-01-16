@@ -14,6 +14,7 @@ import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { toISODate } from '../utils/date';
 
 export default function MeusDadosScreen() {
   const { usuario, setSessao, token } = useAuth();
@@ -64,7 +65,19 @@ export default function MeusDadosScreen() {
 
     try {
       setLoading(true);
-      const { data } = await api.put<Filiado>('/api/filiados/me', filiado);
+
+      // Clona o objeto para não alterar o estado da UI
+      const payload = { ...filiado };
+
+      // Converte as datas dos dependentes para o formato ISO (YYYY-MM-DD)
+      for (let i = 1; i <= 5; i++) {
+        const fieldName = `dep${i}_data_nascimento`;
+        if (payload[fieldName]) {
+          payload[fieldName] = toISODate(payload[fieldName]);
+        }
+      }
+
+      const { data } = await api.put<Filiado>('/api/filiados/me', payload);
       setFiliado(data);
 
       // Atualiza o usuário no contexto de autenticação, se necessário

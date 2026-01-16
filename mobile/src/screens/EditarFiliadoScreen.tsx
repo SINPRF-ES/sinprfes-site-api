@@ -67,7 +67,11 @@ export default function EditarFiliadoScreen({ route, navigation }) {
       setLoading(true);
       await api.put(`/api/filiados/${filiado.id}`, filiado);
       Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
-      navigation.navigate('Filiados', { refresh: true });
+      // Navega para a tela de listagem dentro do Drawer para forçar o refresh
+      navigation.navigate('Drawer', {
+        screen: 'Filiados',
+        params: { refresh: true },
+      });
     } catch (err: any) {
       Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o filiado.');
     } finally {
@@ -91,9 +95,12 @@ export default function EditarFiliadoScreen({ route, navigation }) {
           onPress: async () => {
             try {
               setLoading(true);
-              await api.post(`/api/filiados/${filiadoId}/arquivar`);
+              await api.post(`/api/filiados/${filiado.id}/arquivar`);
               Alert.alert('Sucesso', 'Filiado arquivado com sucesso.');
-              navigation.navigate('Filiados', { refresh: true });
+              navigation.navigate('Drawer', {
+                screen: 'Filiados',
+                params: { refresh: true },
+              });
             } catch (err: any) {
               Alert.alert('Erro', err.response?.data?.message || 'Não foi possível arquivar o filiado.');
             } finally {
@@ -120,9 +127,12 @@ export default function EditarFiliadoScreen({ route, navigation }) {
           onPress: async () => {
             try {
               setLoading(true);
-              await api.post(`/api/filiados/${filiadoId}/desarquivar`);
+              await api.post(`/api/filiados/${filiado.id}/desarquivar`);
               Alert.alert('Sucesso', 'Filiado desarquivado com sucesso.');
-              navigation.navigate('Filiados', { refresh: true });
+              navigation.navigate('Drawer', {
+                screen: 'Filiados',
+                params: { refresh: true },
+              });
             } catch (err: any) {
               Alert.alert('Erro', err.response?.data?.message || 'Não foi possível desarquivar o filiado.');
             } finally {
@@ -146,6 +156,8 @@ export default function EditarFiliadoScreen({ route, navigation }) {
     return <View style={styles.centered}><Text>Acesso negado.</Text></View>;
   }
 
+  const isManagementUser = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
+
   return (
     <KeyboardAwareScrollView
       style={styles.container}
@@ -153,9 +165,9 @@ export default function EditarFiliadoScreen({ route, navigation }) {
     >
       <Text style={styles.title}>Editar Filiado</Text>
       
-      <ContatoCard filiado={filiado} setFiliado={setFiliado} />
+      <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={isManagementUser} />
       <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
-      <LotacaoCard filiado={filiado} setFiliado={setFiliado} />
+      <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={isManagementUser} />
       <DependentesCard filiado={filiado} setFiliado={setFiliado} />
 
       <View style={styles.buttonContainer}>

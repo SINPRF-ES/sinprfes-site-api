@@ -1,33 +1,25 @@
 // src/components/DependentesCard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
-import { formatCPF, sanitizeDigits, formatISOToBR, parseBRToISO, formatDate } from '../utils/masks';
+import { formatCPF, sanitizeDigits, formatDate } from '../utils/masks';
+import { toBrazilianDate } from '../utils/date';
+
 
 // Subcomponente para cada item de dependente
 const DependenteItem = ({ filiado, setFiliado, index }) => {
-  const [dataNascimento, setDataNascimento] = useState('');
-
-  // Sincroniza o estado local da data com o estado global do filiado
-  useEffect(() => {
-    const isoDate = filiado?.[`dep${index}_data_nascimento`];
-    setDataNascimento(formatISOToBR(isoDate));
-  }, [filiado?.[`dep${index}_data_nascimento`]]);
 
   const handleDateChange = (text: string) => {
-    const formatted = formatDate(text);
-    setDataNascimento(formatted);
-
-    // Atualiza o estado global com o formato ISO
-    const isoDate = parseBRToISO(formatted);
-    setFiliado(f => {
-      if (!f) return null;
-      // Só atualiza se a data for válida ou nula, para não enviar lixo
-      if (isoDate || formatted === '') {
-        return { ...f, [`dep${index}_data_nascimento`]: isoDate };
-      }
-      return f;
+    const formatted = formatDate(text); // Aplica a máscara DD/MM/YYYY
+    // A data no estado é sempre mantida no formato da UI (DD/MM/YYYY)
+    // O `toISODate` será aplicado apenas no momento do submit em `MeusDadosScreen`
+    setFiliado(prevState => {
+        if (!prevState) return null;
+        return {
+            ...prevState,
+            [`dep${index}_data_nascimento`]: formatted,
+        };
     });
   };
 
@@ -36,9 +28,12 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
     if (field === 'cpf') {
       finalValue = finalValue.slice(0, 11);
     }
-    setFiliado(f => {
-      if (!f) return null;
-      return { ...f, [`dep${index}_${field}`]: finalValue };
+    setFiliado(prevState => {
+        if (!prevState) return null;
+        return {
+            ...prevState,
+            [`dep${index}_${field}`]: finalValue,
+        };
     });
   };
 
@@ -88,7 +83,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="DD/MM/AAAA"
-        value={dataNascimento}
+        value={toBrazilianDate(filiado?.[`dep${index}_data_nascimento`])}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}
