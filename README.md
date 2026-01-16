@@ -1,3 +1,16 @@
+# Sistema SINPRF/ES — Monorepo Híbrido (Backend + Web + Mobile)
+
+Este documento consolida **regras críticas de arquitetura** e **regras explícitas de negócio** (perfis, permissões, estados cadastrais e padronização de formatação) que **devem ser seguidas rigorosamente** por todos os clientes (Site e App Mobile).
+
+---
+
+## 🏛️ Princípio fundamental
+
+> **O backend é a fonte única da verdade.**
+
+- Todas as regras de negócio, permissões, validações e normalizações finais **residem no backend**.
+- O frontend web e o app mobile **consomem a mesma API** e devem exibir/operar com **os mesmos conceitos e resultados**.
+- Web e Mobile podem aplicar máscaras apenas por **experiência do usuário (UX)**, mas a validação final e a persistência sanitizada são do backend.
 
 ---
 
@@ -30,11 +43,11 @@
 - `react-query` / `@tanstack/react-query`
 - qualquer biblioteca de UI, navegação ou hooks visuais
 
-📌 **Todas essas dependências devem existir somente em `/mobile/package.json`.**
+Todas essas dependências devem existir somente em `/mobile/package.json`.
 
 ---
 
-## 🛡️ Guardrail automático (proteção contra regressão)
+## 🛡️ Guardrail automatico (protecao contra regressao)
 
 Para evitar regressões, o projeto possui um **guardrail automático**:
 
@@ -46,89 +59,195 @@ Se o build falhar por esse script, **o erro é intencional** e indica violação
 
 ---
 
-## 🏛️ Arquitetura de 3 Camadas
+## 🏛️ Arquitetura de 3 camadas
 
 O sistema é estruturado em três camadas bem definidas:
 
-### 1️⃣ Backend (API)
+### 1) Backend (API)
 
 - **Fonte Única da Verdade**
 - Centraliza:
   - regras de negócio
   - permissões
-  - validações
+  - validações e sanitização
+  - integrações
 - Tecnologia: Node.js + Express
 - Responsável por:
   - banco de dados
   - autenticação
-  - integração com serviços externos
+  - integrações com serviços externos
 
-### 2️⃣ Frontend Web
+### 2) Frontend Web
 
 - Interface para navegadores
 - Tecnologia: HTML, CSS e JavaScript (vanilla)
 - Consome exclusivamente a API do backend
 
-### 3️⃣ Mobile App
+### 3) Mobile App
 
 - Aplicativo nativo Android / iOS
 - Tecnologia: React Native + Expo
 - Espelha funcionalidades do site
 - Consome a mesma API do backend
 
-> ⚠️ **Importante:**  
-> Web e Mobile **não implementam regras de negócio próprias**.  
-> O backend é a autoridade final.
+---
+
+## 🎭 Regras de perfil e permissões
+
+O sistema possui quatro perfis funcionais, organizados em dois grupos.
+
+### Perfil FILIADO
+
+**Visualizacao:**
+- Pode visualizar **todos os seus próprios dados**.
+- Pode visualizar **outros usuários**, porém apenas os campos:
+  - Nome
+  - Telefone 1
+  - Lotacao
+  - Situacao funcional
+
+**Edicao (restrita):**
+- Nao pode alterar:
+  - Nome
+  - CPF
+- Pode alterar:
+  - Contatos (com regras abaixo)
+  - Endereco (somente o CEP)
+  - Dependentes
+  - Avatar
+
+**Regras obrigatorias (FILIADO):**
+- Telefone 1 **nao pode ficar em branco**.
+- E-mail 1 **nao pode ficar em branco**.
+- Endereco:
+  - O filiado informa **apenas o CEP**.
+  - Logradouro, Cidade e UF sao preenchidos automaticamente via `buscaCEP`.
+
+### Perfis de GESTAO (ADMIN, DIRETORIA, FUNCIONARIO)
+
+Esses três perfis possuem **as mesmas capacidades operacionais**, com uma excecao critica.
+
+**Permissoes comuns (ADMIN, DIRETORIA e FUNCIONARIO):**
+- Visualizar **todos os dados de todos os usuarios** (sem restricao de campos).
+- Criar novos usuarios.
+- Arquivar e desarquivar cadastros.
+- Editar dados de qualquer usuario.
+
+**Regra de edicao importante (GESTAO):**
+- Perfis de gestao podem alterar **tudo de todos**, **exceto** os campos de endereco preenchidos por `buscaCEP`:
+  - Logradouro
+  - Cidade
+  - UF
+
+Esses campos permanecem exclusivos do fluxo `buscaCEP`, inclusive para gestores.
+
+**Regra exclusiva do ADMIN:**
+- Apenas ADMIN pode conceder/remover o perfil ADMIN de outro usuario.
+- DIRETORIA e FUNCIONARIO podem conceder perfis **entre si** e para **FILIADO**, mas **nunca ADMIN**.
 
 ---
 
-## 🎭 Regras de Perfil
+## 📋 Estados e situacoes do usuario (sem ambiguidade)
 
-### 👤 Perfil FILIADO
+Cada usuario possui **dois eixos distintos**, que nao devem ser confundidos.
 
-- Visualização limitada:
-  - nome
-  - lotação
-  - situação funcional
-- Pode editar apenas:
-  - seus próprios contatos
-  - endereço
-  - dependentes
-  - avatar
+### 1) Estado do cadastro (administrativo)
 
-### 🧑‍💼 Perfis de GESTÃO (ADMIN, DIRETORIA, FUNCIONÁRIO)
+Define se o registro esta operacionalmente ativo no sistema.
 
-- Acesso total aos dados dos filiados
-- Pode:
-  - criar
-  - editar (inclusive nome, CPF e situação funcional)
-  - arquivar/desarquivar cadastros
-- A edição é iniciada **exclusivamente pela listagem**, expandindo o item desejado
-- A tela **Diagnóstico** é visível **apenas para ADMIN**
+- `CADASTRO_ATIVO`
+- `ARQUIVADO`
+
+Caracteristicas:
+- Controlado pela gestao.
+- Arquivamento:
+  - nao apaga dados
+  - preserva historico/auditoria
+  - e reversivel (desarquivar)
+
+### 2) Situacao funcional
+
+Define a condicao funcional do filiado perante a entidade.
+
+Valores permitidos:
+- `ATIVO`
+- `VETERANO`
+- `PENSIONISTA`
+
+**Importante:**
+- Estado do cadastro responde: "Este registro esta ativo no sistema?" (`CADASTRO_ATIVO` / `ARQUIVADO`).
+- Situacao funcional responde: "Qual a condicao funcional do filiado?" (`ATIVO` / `VETERANO` / `PENSIONISTA`).
+
+Mesmo que a palavra "ATIVO" exista na situacao funcional, ela **nao se confunde** com `CADASTRO_ATIVO`.
+
+---
+
+## 🎯 Mascaras, sanitizacao e normalizacao
+
+### Campos obrigatoriamente normalizados
+
+- CPF
+- Telefones
+- CEP
+- Datas
+
+### Regra
+
+- O backend deve **sanitizar/validar** e persistir **sempre no formato canonico** (ex.: apenas digitos para CPF/telefone/CEP).
+- Web e Mobile podem aplicar **mascaras visuais** (UX), mas nunca devem depender do frontend web para regras.
+
+---
+
+## 🤝 Modulo compartilhado agnostico (reuso entre Web e Mobile)
+
+Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adota um **modulo compartilhado agnostico** (sem DOM, sem React, sem React Native), com **funcoes puras**.
+
+### Objetivo
+
+- Garantir que o app mobile espelhe exatamente as mesmas mascaras e formatacoes do site.
+- Evitar duplicacao e drift de regra ao longo do tempo.
+
+### Regras do modulo compartilhado
+
+- Deve ficar em uma pasta comum no repositorio, por exemplo:
+  - `shared/format/` (ou equivalente)
+- Deve conter somente funcoes puras, por exemplo:
+  - `onlyDigits(value)`
+  - `formatCpf(value)`
+  - `formatTelefone(value)`
+  - `formatCep(value)` (se aplicavel)
+  - `parseDateToISO(value)` (se aplicavel)
+- **Nao pode**:
+  - acessar `window`, `document` ou DOM
+  - registrar `addEventListener`
+  - importar libs de UI
+  - criar dependencia no `package.json` da raiz
+
+### Como usar
+
+- Web:
+  - Mantem os `addEventListener` e manipulacao de input no `public/js/...`, mas delega a formatacao para funcoes puras do modulo compartilhado.
+- Mobile:
+  - Usa as mesmas funcoes puras para formatacao em componentes/inputs.
 
 ---
 
 ## 🚀 Deploy no Render (Backend)
 
-- **Build Command**: `npm ci`
-- **Start Command**: `npm start`
-- **Node Version**: definida em `.node-version` (20.11.1)
-- **Root Directory**: `/`  
-  (⚠️ **Nunca** usar `/mobile`)
+- Build Command: `npm ci`
+- Start Command: `npm start`
+- Node Version: definida em `.node-version`
+- Root Directory: `/` (nunca usar `/mobile`)
 
-O Render **não deve instalar nem considerar dependências do diretório `/mobile`**.
+O Render nao deve instalar nem considerar dependencias do diretorio `/mobile`.
 
 ---
 
-## 📌 Observação final
+## 📌 Observacao final
 
-Este repositório foi estruturado como **monorepo híbrido por conveniência organizacional**, porém:
+Qualquer implementacao que:
+- burle permissoes
+- duplique regras criticas de forma inconsistente
+- gere divergencia entre site e app
 
-- Backend e Mobile são **projetos independentes**
-- Possuem **dependências, build e deploy separados**
-- Qualquer mistura dessas responsabilidades é considerada **erro crítico**
-
-Essas regras existem para garantir:
-- estabilidade do deploy
-- previsibilidade no Render
-- coerência entre site, app e backend
+E considerada **erro de arquitetura** e deve ser corrigida.
