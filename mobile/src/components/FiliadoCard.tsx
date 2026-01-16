@@ -5,8 +5,9 @@ import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
 import { formatCPF, formatPhone } from '../utils/masks';
 
+// Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
-  filiado: Filiado;
+  filiado: Filiado & { situacaoFuncional?: string };
   currentUserProfile: UserProfile;
   onEdit: (filiado: Filiado) => void;
 }
@@ -25,11 +26,12 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           style={styles.avatar}
         />
         <View style={styles.infoContainer}>
-          <View style={styles.nomeContainer}>
-            <Text style={styles.nome} numberOfLines={1} ellipsizeMode="tail">{filiado.nome}</Text>
-            {filiado.situacao && (
-              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
-                {filiado.situacao}
+          <View style={styles.nameAndBadgeContainer}>
+            <Text style={styles.nome}>{filiado.nome}</Text>
+            {/* O Badge de situacaoFuncional só aparece se o dado existir. */}
+            {filiado.situacaoFuncional && (
+              <Text style={[styles.situacao, styles.situacaoFuncional]}>
+                {filiado.situacaoFuncional}
               </Text>
             )}
           </View>
@@ -48,6 +50,11 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           )}
 
           <View style={styles.footer}>
+            {filiado.situacao && (
+              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
+                {filiado.situacao}
+              </Text>
+            )}
             <View style={styles.buttonContainerSpacer} />
             {isGestao && (
               <View style={styles.editButtonContainer}>
@@ -84,6 +91,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: 'row',
+    alignItems: 'center', // Garante alinhamento vertical
   },
   avatar: {
     width: 50,
@@ -92,13 +100,19 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   infoContainer: {
-    flex: 1,
+    flex: 1, // Permite que o container de info ocupe o espaço restante
+  },
+  nameAndBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    flexWrap: 'wrap', // Permite que o badge quebre a linha se não houver espaço
   },
   nome: {
     fontSize: 16,
     fontWeight: 'bold',
-    flexShrink: 1, // Impede que o nome empurre a badge para fora
-    marginRight: 8, // Adiciona um espaço entre o nome e a badge
+    flex: 1, // Faz o nome ocupar o espaço e quebrar a linha
+    marginRight: 8, // Espaçamento entre o nome e o badge
   },
   lotacao: {
     fontSize: 14,
@@ -147,5 +161,15 @@ const styles = StyleSheet.create({
   situacaoPENSIONISTA: {
     backgroundColor: '#f8d7da',
     color: '#721c24',
+  },
+  situacaoFuncional: {
+    backgroundColor: '#cce5ff',
+    color: '#004085',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
 });

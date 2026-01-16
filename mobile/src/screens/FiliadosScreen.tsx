@@ -118,27 +118,15 @@ const FiliadosScreen: React.FC = () => {
   }
 
   const filteredFiliados = filiados.filter(f => {
-    const nome = f.nome || '';
-    const cpf = f.cpf || '';
-    const term = normalizeText(searchTerm);
+    const searchTermLower = searchTerm.toLowerCase();
+    const searchTermDigits = searchTerm.replace(/\D/g, '');
 
-    if (!term) return true; // Se o termo de busca for vazio, mostra todos
+    const nomeMatch = f.nome.toLowerCase().includes(searchTermLower);
 
-    const nomeNormalizado = normalizeText(nome);
-    const cpfSanitizado = cpf.replace(/\D/g, '');
-    const termSanitizado = term.replace(/\D/g, '');
+    // A busca por CPF só é realizada se o campo existir e o usuário for da gestão.
+    const cpfMatch = ehGestao && f.cpf && f.cpf.replace(/\D/g, '').includes(searchTermDigits);
 
-    // A busca por CPF deve ser exata ou parcial, mas sem normalização de texto
-    if (termSanitizado.length > 0 && cpfSanitizado.includes(termSanitizado)) {
-      return true;
-    }
-
-    // A busca por nome deve ser normalizada
-    if (nomeNormalizado.includes(term)) {
-      return true;
-    }
-
-    return false;
+    return nomeMatch || cpfMatch;
   });
 
   const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);

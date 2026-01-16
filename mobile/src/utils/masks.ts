@@ -116,16 +116,16 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
 };
 
 /**
- * Normaliza um texto para busca, removendo acentos e convertendo para minúsculas.
- * @param text O texto a ser normalizado.
- * @returns O texto normalizado.
+ * Formata uma string de data para o formato DD/MM/YYYY, ideal para inputs.
+ * Garante que as barras sejam inseridas nos locais corretos.
  */
-export const normalizeText = (text: string | null | undefined): string => {
-  if (!text) {
-    return '';
+export const formatDateToDdMmYyyy = (text: string): string => {
+  const digits = sanitizeDigits(text);
+  if (digits.length <= 2) {
+    return digits;
   }
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
 };

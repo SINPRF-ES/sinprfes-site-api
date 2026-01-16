@@ -3,23 +3,24 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
-import { formatCPF, sanitizeDigits, formatDate } from '../utils/masks';
-import { toBrazilianDate } from '../utils/date';
-
+import { formatCPF, sanitizeDigits, formatISOToBR, parseBRToISO, formatDateToDdMmYyyy } from '../utils/masks';
 
 // Subcomponente para cada item de dependente
 const DependenteItem = ({ filiado, setFiliado, index }) => {
 
   const handleDateChange = (text: string) => {
-    const formatted = formatDate(text); // Aplica a máscara DD/MM/YYYY
-    // A data no estado é sempre mantida no formato da UI (DD/MM/YYYY)
-    // O `toISODate` será aplicado apenas no momento do submit em `MeusDadosScreen`
-    setFiliado(prevState => {
-        if (!prevState) return null;
-        return {
-            ...prevState,
-            [`dep${index}_data_nascimento`]: formatted,
-        };
+    const formatted = formatDateToDdMmYyyy(text);
+    setDataNascimento(formatted);
+
+    // Atualiza o estado global com o formato ISO
+    const isoDate = parseBRToISO(formatted);
+    setFiliado(f => {
+      if (!f) return null;
+      // Só atualiza se a data for válida ou nula, para não enviar lixo
+      if (isoDate || formatted === '') {
+        return { ...f, [`dep${index}_data_nascimento`]: isoDate };
+      }
+      return f;
     });
   };
 
@@ -28,12 +29,9 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
     if (field === 'cpf') {
       finalValue = finalValue.slice(0, 11);
     }
-    setFiliado(prevState => {
-        if (!prevState) return null;
-        return {
-            ...prevState,
-            [`dep${index}_${field}`]: finalValue,
-        };
+    setFiliado(f => {
+      if (!f) return null;
+      return { ...f, [`dep${index}_${field}`]: finalValue };
     });
   };
 
@@ -83,7 +81,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="DD/MM/AAAA"
-        value={toBrazilianDate(filiado?.[`dep${index}_data_nascimento`])}
+        value={dataNascimento}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}

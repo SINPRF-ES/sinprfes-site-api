@@ -1,37 +1,37 @@
 // mobile/src/screens/PublicacoesScreen.tsx
-import React from 'react';
+import React, 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, ActivityIndicator, Alert } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { getPublicacoes, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 
 const PublicacoesScreen: React.FC = () => {
-  const { data: publicacoes, isLoading, error } = useQuery({ queryKey: ['publicacoes'], queryFn: getPublicacoes });
+  const { data: publicacoes, isLoading, error } = useQuery('publicacoes', getPublicacoes);
 
   const handlePress = (file: DriveFile) => {
     const url = file.webViewLink;
-    if (typeof url === 'string' && url.length > 0) {
-      Linking.canOpenURL(url).then(supported => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
-        }
-      });
-    } else {
-      Alert.alert('Erro', 'Este item não possui um link para visualização.');
+    if (!url) {
+      Alert.alert('Indisponível', 'Este item não possui um link para visualização.');
+      return;
     }
+
+    Linking.canOpenURL(url).then(supported => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
+      }
+    });
   };
 
   const renderIcon = (mimeType: string) => {
-    const type = mimeType || ''; // Safeguard against undefined mimeType
-    if (type.includes('folder')) {
+    if (mimeType.includes('folder')) {
       return <FontAwesome name="folder" size={24} color="#FFCA28" />; // Amarelo para pastas
     }
-    if (type.includes('pdf')) {
+    if (mimeType.includes('pdf')) {
       return <FontAwesome name="file-pdf-o" size={24} color="#D32F2F" />; // Vermelho para PDFs
     }
-    if (type.includes('image')) {
+    if (mimeType.includes('image')) {
       return <FontAwesome name="file-image-o" size={24} color="#4CAF50" />; // Verde para imagens
     }
     return <FontAwesome name="file" size={24} color="#757575" />; // Padrão
@@ -43,12 +43,10 @@ const PublicacoesScreen: React.FC = () => {
         {renderIcon(item.mimeType)}
       </View>
       <View style={styles.textContainer}>
-        {item.name && <Text style={styles.itemName}>{item.name}</Text>}
-        {item.createdTime && (
-            <Text style={styles.itemDate}>
-            {new Date(item.createdTime).toLocaleDateString('pt-BR')}
-            </Text>
-        )}
+        <Text style={styles.itemName}>{item.name}</Text>
+        <Text style={styles.itemDate}>
+          {new Date(item.createdTime).toLocaleDateString('pt-BR')}
+        </Text>
       </View>
       <FontAwesome name="external-link" size={20} color="#007BFF" />
     </TouchableOpacity>
@@ -64,9 +62,9 @@ const PublicacoesScreen: React.FC = () => {
 
   return (
     <FlatList
-      data={publicacoes || []}
+      data={publicacoes}
       renderItem={renderItem}
-      keyExtractor={(item, index) => item.id || `pub-${index}`}
+      keyExtractor={(item) => item.id}
       contentContainerStyle={styles.container}
       ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
     />
