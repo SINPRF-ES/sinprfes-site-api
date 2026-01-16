@@ -6,29 +6,32 @@ import { getPublicacoes, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 
 const PublicacoesScreen: React.FC = () => {
-  const { data: publicacoes, isLoading, error } = useQuery('publicacoes', getPublicacoes);
+  const { data: publicacoes, isLoading, error } = useQuery({ queryKey: ['publicacoes'], queryFn: getPublicacoes });
 
   const handlePress = (file: DriveFile) => {
-    // Para PDFs e outros arquivos, usamos webViewLink que abre no navegador do app/dispositivo
-    // Para pastas, também, para que o usuário possa navegar
     const url = file.webViewLink;
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
-      }
-    });
+    if (typeof url === 'string' && url.length > 0) {
+      Linking.canOpenURL(url).then(supported => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
+        }
+      });
+    } else {
+      Alert.alert('Erro', 'Este item não possui um link para visualização.');
+    }
   };
 
   const renderIcon = (mimeType: string) => {
-    if (mimeType.includes('folder')) {
+    const type = mimeType || ''; // Safeguard against undefined mimeType
+    if (type.includes('folder')) {
       return <FontAwesome name="folder" size={24} color="#FFCA28" />; // Amarelo para pastas
     }
-    if (mimeType.includes('pdf')) {
+    if (type.includes('pdf')) {
       return <FontAwesome name="file-pdf-o" size={24} color="#D32F2F" />; // Vermelho para PDFs
     }
-    if (mimeType.includes('image')) {
+    if (type.includes('image')) {
       return <FontAwesome name="file-image-o" size={24} color="#4CAF50" />; // Verde para imagens
     }
     return <FontAwesome name="file" size={24} color="#757575" />; // Padrão
@@ -41,9 +44,11 @@ const PublicacoesScreen: React.FC = () => {
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemDate}>
-          {new Date(item.createdTime).toLocaleDateString('pt-BR')}
-        </Text>
+        {item.createdTime && (
+            <Text style={styles.itemDate}>
+            {new Date(item.createdTime).toLocaleDateString('pt-BR')}
+            </Text>
+        )}
       </View>
       <FontAwesome name="external-link" size={20} color="#007BFF" />
     </TouchableOpacity>
@@ -59,7 +64,7 @@ const PublicacoesScreen: React.FC = () => {
 
   return (
     <FlatList
-      data={publicacoes}
+      data={publicacoes || []}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.container}

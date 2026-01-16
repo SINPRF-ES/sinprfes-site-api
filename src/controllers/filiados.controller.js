@@ -178,6 +178,10 @@ exports.atualizarMeusDados = async (req, res) => {
       filiado: atualizado,
     });
   } catch (err) {
+    if (err.isValidationError) {
+      log.warn("FiliadosUpdateMeValidation", { userId: req.user.id, error: err.message });
+      return res.status(400).json({ message: err.message });
+    }
     log.error("FiliadosUpdateMeErro", err);
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
