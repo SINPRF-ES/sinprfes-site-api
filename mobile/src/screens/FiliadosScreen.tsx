@@ -109,10 +109,15 @@ const FiliadosScreen: React.FC = () => {
     return <View style={styles.centered}><Text style={styles.errorText}>{error}</Text><TouchableOpacity style={styles.button} onPress={handleRefresh}><Text style={styles.buttonText}>Tentar Novamente</Text></TouchableOpacity></View>;
   }
 
-  const filteredFiliados = filiados.filter(f =>
-    f.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    f.cpf?.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))
-  );
+  const filteredFiliados = filiados.filter(f => {
+    const nome = f.nome || '';
+    const cpf = f.cpf || '';
+    const term = searchTerm.toLowerCase();
+    return (
+      nome.toLowerCase().includes(term) ||
+      cpf.replace(/\D/g, '').includes(term.replace(/\D/g, ''))
+    );
+  });
 
   const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
   const ehGestao = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
@@ -125,6 +130,10 @@ const FiliadosScreen: React.FC = () => {
     }
   };
 
+  const handleNovoPress = () => {
+    navigation.navigate('CriarFiliado');
+  };
+
   return (
     <View style={styles.container}>
       {isOffline && <View style={styles.offlineBanner}><Text style={styles.offlineText}>Você está offline. Exibindo dados do cache.</Text></View>}
@@ -135,7 +144,7 @@ const FiliadosScreen: React.FC = () => {
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
-        {podeCriar && <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('CriarFiliado')}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
+        {podeCriar && <TouchableOpacity style={styles.addButton} onPress={handleNovoPress}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
       </View>
       <FlatList
         data={filteredFiliados}

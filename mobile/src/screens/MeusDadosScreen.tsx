@@ -66,10 +66,7 @@ export default function MeusDadosScreen() {
     try {
       setLoading(true);
 
-      // Clona o objeto para não alterar o estado da UI
       const payload = { ...filiado };
-
-      // Converte as datas dos dependentes para o formato ISO (YYYY-MM-DD)
       for (let i = 1; i <= 5; i++) {
         const fieldName = `dep${i}_data_nascimento`;
         if (payload[fieldName]) {
@@ -77,12 +74,15 @@ export default function MeusDadosScreen() {
         }
       }
 
-      const { data } = await api.put<Filiado>('/api/filiados/me', payload);
-      setFiliado(data);
+      await api.put<Filiado>('/api/filiados/me', payload);
+
+      // Re-fetch dos dados completos para re-hidratar o estado
+      const { data: refreshedData } = await api.get<Filiado>('/api/filiados/me');
+      setFiliado(refreshedData);
 
       // Atualiza o usuário no contexto de autenticação, se necessário
       if (usuario) {
-        const usuarioAtualizado = { ...usuario, nome: data.nome, email: data.email1, avatar_url: data.avatar_url };
+        const usuarioAtualizado = { ...usuario, nome: refreshedData.nome, email: refreshedData.email1, avatar_url: refreshedData.avatar_url };
         await setSessao(token!, usuarioAtualizado);
       }
 

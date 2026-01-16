@@ -9,16 +9,18 @@ const PublicacoesScreen: React.FC = () => {
   const { data: publicacoes, isLoading, error } = useQuery({ queryKey: ['publicacoes'], queryFn: getPublicacoes });
 
   const handlePress = (file: DriveFile) => {
-    // Para PDFs e outros arquivos, usamos webViewLink que abre no navegador do app/dispositivo
-    // Para pastas, também, para que o usuário possa navegar
     const url = file.webViewLink;
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
-      }
-    });
+    if (typeof url === 'string' && url.length > 0) {
+      Linking.canOpenURL(url).then(supported => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
+        }
+      });
+    } else {
+      Alert.alert('Erro', 'Este item não possui um link para visualização.');
+    }
   };
 
   const renderIcon = (mimeType: string) => {
@@ -42,9 +44,11 @@ const PublicacoesScreen: React.FC = () => {
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemDate}>
-          {new Date(item.createdTime).toLocaleDateString('pt-BR')}
-        </Text>
+        {item.createdTime && (
+            <Text style={styles.itemDate}>
+            {new Date(item.createdTime).toLocaleDateString('pt-BR')}
+            </Text>
+        )}
       </View>
       <FontAwesome name="external-link" size={20} color="#007BFF" />
     </TouchableOpacity>

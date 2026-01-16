@@ -25,7 +25,14 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           style={styles.avatar}
         />
         <View style={styles.infoContainer}>
-          <Text style={styles.nome}>{filiado.nome}</Text>
+          <View style={styles.nomeContainer}>
+            <Text style={styles.nome} numberOfLines={1} ellipsizeMode="tail">{filiado.nome}</Text>
+            {filiado.situacao && (
+              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
+                {filiado.situacao}
+              </Text>
+            )}
+          </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
           <Text style={styles.detalhe}>Telefone: {formatPhone(filiado.telefone1 || 'Não informado')}</Text>
         </View>
@@ -41,11 +48,6 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           )}
 
           <View style={styles.footer}>
-            {filiado.situacao && (
-              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
-                {filiado.situacao}
-              </Text>
-            )}
             <View style={styles.buttonContainerSpacer} />
             {isGestao && (
               <View style={styles.editButtonContainer}>
@@ -62,6 +64,12 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
 export default React.memo(FiliadoCard);
 
 const styles = StyleSheet.create({
+  nomeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   card: {
     backgroundColor: '#fff',
     borderRadius: 8,
