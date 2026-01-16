@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
-import { formatCPF, formatPhone } from '../utils/masks';
+import { formatCpf, formatTelefone } from '../shared/formatters';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
@@ -36,7 +36,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
             )}
           </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
-          <Text style={styles.detalhe}>Telefone: {formatPhone(filiado.telefone1 || 'Não informado')}</Text>
+          <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1 || 'Não informado')}</Text>
         </View>
       </View>
 
@@ -44,7 +44,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
         <View style={styles.expandedContent}>
           {isGestao && (
             <>
-              <Text style={styles.detalhe}>CPF: {formatCPF(filiado.cpf || '')}</Text>
+              <Text style={styles.detalhe}>CPF: {formatCpf(filiado.cpf || '')}</Text>
               <Text style={styles.detalhe}>Email: {filiado.email1}</Text>
             </>
           )}

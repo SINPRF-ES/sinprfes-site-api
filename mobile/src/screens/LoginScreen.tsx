@@ -7,7 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
-import { formatCPF, sanitizeDigits } from '../utils/masks';
+import { formatCpf, onlyDigits } from '../shared/formatters';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -143,9 +143,9 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="CPF"
-          value={formatCPF(cpf)}
+          value={formatCpf(cpf)}
           onChangeText={(text) => {
-            const digits = sanitizeDigits(text);
+            const digits = onlyDigits(text);
             if (digits.length <= 11) {
               setCpf(digits);
             }
