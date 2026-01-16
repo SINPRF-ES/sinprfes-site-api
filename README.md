@@ -230,7 +230,17 @@ Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adot
 - **Web**:
   - (Futuro) Manter os `addEventListener` e a manipulação de input em `public/js/...`, mas delegar a formatação para as funções puras do módulo.
 - **Mobile**:
-  - O aplicativo móvel já utiliza este módulo para garantir a consistência da formatação. Um wrapper em `mobile/src/shared/formatters.ts` é usado para importar o módulo CommonJS.
+  - Para contornar limitações de resolução de caminho do Metro bundler, o módulo compartilhado é consumido como um **pacote local**.
+  - A dependência é definida em `mobile/package.json`:
+    ```json
+    "@sinprfes/shared-format": "file:../shared/format"
+    ```
+  - Após clonar o repositório, é necessário instalar as dependências do mobile:
+    ```sh
+    cd mobile
+    npm install
+    ```
+  - O wrapper em `mobile/src/shared/formatters.ts` importa o pacote pelo nome (`@sinprfes/shared-format`).
 
 ---
 
