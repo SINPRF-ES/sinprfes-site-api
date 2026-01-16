@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert, ActivityIndicator } from 'react-native';
 import { Filiado } from '../types/filiado';
-import { formatCEP, sanitizeDigits } from '../utils/masks';
+import { formatCep, onlyDigits } from '../shared/formatters';
 import { buscarCep } from '../services/cepService';
 
 interface Props {
@@ -14,7 +14,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
   const [isBuscando, setIsBuscando] = useState(false);
 
   const handleCepChange = (value: string) => {
-    const digits = sanitizeDigits(value);
+    const digits = onlyDigits(value);
     setFiliado(f => (f ? { ...f, cep: digits } : null));
   };
 
@@ -49,7 +49,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
           <Text style={styles.label}>CEP</Text>
           <TextInput
             style={styles.input}
-            value={formatCEP(filiado?.cep || '')}
+            value={formatCep(filiado?.cep || '')}
             onChangeText={handleCepChange}
             placeholder="00000-000"
             keyboardType="numeric"
