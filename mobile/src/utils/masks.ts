@@ -114,3 +114,18 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
 
   return `${day}/${month}/${year}`;
 };
+
+/**
+ * Formata uma string de data para o formato DD/MM/YYYY, ideal para inputs.
+ * Garante que as barras sejam inseridas nos locais corretos.
+ */
+export const formatDateToDdMmYyyy = (text: string): string => {
+  const digits = sanitizeDigits(text);
+  if (digits.length <= 2) {
+    return digits;
+  }
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+};

@@ -159,6 +159,11 @@ O aplicativo agora possui um sistema de logging robusto para facilitar a depura�
 - Foi corrigido um bug visual onde um parêntese `(` era exibido para campos de telefone vazios.
 - Agora, se um filiado não tiver um número de telefone cadastrado, o campo correspondente na UI será exibido completamente em branco.
 
+### Formulário de Dependentes
+- **Placeholders Específicos**: Os campos do formulário de dependentes agora exibem placeholders claros: "Nome completo", "apenas números" (CPF) e "DD/MM/AAAA" (Data de Nascimento).
+- **Validação de CPF**: O campo CPF para dependentes agora está limitado a 11 dígitos, e apenas valores numéricos são aceitos.
+- **Seleção de Parentesco**: O campo "Parentesco" foi transformado em um seletor com opções pré-definidas. Ao escolher "Outro", um campo de texto adicional é exibido para entrada manual, garantindo que o parentesco seja sempre registrado de forma estruturada ou personalizada quando necessário.
+
 ## 6. Gestão (perfis admin/funcionário/diretoria)
 
 O aplicativo móvel implementa as funcionalidades de gestão de filiados, restritas aos perfis `ADMIN`, `DIRETORIA` e `FUNCIONARIO`. Essas funcionalidades incluem:

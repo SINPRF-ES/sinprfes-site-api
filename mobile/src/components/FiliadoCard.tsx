@@ -5,10 +5,11 @@ import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
 import { formatCPF, formatPhone } from '../utils/masks';
 
+// Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
-  filiado: Filiado;
+  filiado: Filiado & { situacaoFuncional?: string };
   currentUserProfile: UserProfile;
-  onEdit: (filiadoId: number) => void;
+  onEdit: (filiado: Filiado) => void;
 }
 
 const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, onEdit }) => {
@@ -25,7 +26,15 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           style={styles.avatar}
         />
         <View style={styles.infoContainer}>
-          <Text style={styles.nome}>{filiado.nome}</Text>
+          <View style={styles.nameAndBadgeContainer}>
+            <Text style={styles.nome}>{filiado.nome}</Text>
+            {/* O Badge de situacaoFuncional só aparece se o dado existir. */}
+            {filiado.situacaoFuncional && (
+              <Text style={[styles.situacao, styles.situacaoFuncional]}>
+                {filiado.situacaoFuncional}
+              </Text>
+            )}
+          </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
           <Text style={styles.detalhe}>Telefone: {formatPhone(filiado.telefone1 || 'Não informado')}</Text>
         </View>
@@ -41,12 +50,15 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           )}
 
           <View style={styles.footer}>
-            <Text style={[styles.situacao, styles[`situacao${filiado.situacao?.replace(/\s+/g, '')}`]]}>
-              {filiado.situacao || 'ATIVO'}
-            </Text>
+            {filiado.situacao && (
+              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
+                {filiado.situacao}
+              </Text>
+            )}
+            <View style={styles.buttonContainerSpacer} />
             {isGestao && (
               <View style={styles.editButtonContainer}>
-                <Button title="Editar" onPress={() => onEdit(filiado.id)} color="#003366" />
+                <Button title="Editar" onPress={() => onEdit(filiado)} color="#003366" />
               </View>
             )}
           </View>
@@ -73,6 +85,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: 'row',
+    alignItems: 'center', // Garante alinhamento vertical
   },
   avatar: {
     width: 50,
@@ -81,12 +94,19 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   infoContainer: {
-    flex: 1,
+    flex: 1, // Permite que o container de info ocupe o espaço restante
+  },
+  nameAndBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    flexWrap: 'wrap', // Permite que o badge quebre a linha se não houver espaço
   },
   nome: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
+    flex: 1, // Faz o nome ocupar o espaço e quebrar a linha
+    marginRight: 8, // Espaçamento entre o nome e o badge
   },
   lotacao: {
     fontSize: 14,
@@ -112,6 +132,9 @@ const styles = StyleSheet.create({
   editButtonContainer: {
     // Adicionado para alinhar o botão
   },
+  buttonContainerSpacer: {
+    flex: 1,
+  },
   situacao: {
     fontSize: 12,
     fontWeight: 'bold',
@@ -132,5 +155,15 @@ const styles = StyleSheet.create({
   situacaoPENSIONISTA: {
     backgroundColor: '#f8d7da',
     color: '#721c24',
+  },
+  situacaoFuncional: {
+    backgroundColor: '#cce5ff',
+    color: '#004085',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
 });
