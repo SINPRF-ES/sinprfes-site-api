@@ -71,6 +71,12 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
 export default React.memo(FiliadoCard);
 
 const styles = StyleSheet.create({
+  nomeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   card: {
     backgroundColor: '#fff',
     borderRadius: 8,

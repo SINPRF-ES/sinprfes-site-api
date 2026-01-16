@@ -1,5 +1,5 @@
 // src/components/DependentesCard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
@@ -7,13 +7,6 @@ import { formatCPF, sanitizeDigits, formatISOToBR, parseBRToISO, formatDateToDdM
 
 // Subcomponente para cada item de dependente
 const DependenteItem = ({ filiado, setFiliado, index }) => {
-  const [dataNascimento, setDataNascimento] = useState('');
-
-  // Sincroniza o estado local da data com o estado global do filiado
-  useEffect(() => {
-    const isoDate = filiado?.[`dep${index}_data_nascimento`];
-    setDataNascimento(formatISOToBR(isoDate));
-  }, [filiado?.[`dep${index}_data_nascimento`]]);
 
   const handleDateChange = (text: string) => {
     const formatted = formatDateToDdMmYyyy(text);

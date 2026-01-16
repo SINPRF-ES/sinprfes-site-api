@@ -14,6 +14,7 @@ import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { toISODate } from '../utils/date';
 
 export default function MeusDadosScreen() {
   const { usuario, setSessao, token } = useAuth();
@@ -29,6 +30,15 @@ export default function MeusDadosScreen() {
         setLoading(true);
         // O `apiService` já injeta o token
         const { data } = await api.get<Filiado>('/api/filiados/me');
+
+        // Formata as datas dos dependentes para o padrão brasileiro antes de popular o estado
+        for (let i = 1; i <= 5; i++) {
+          const fieldName = `dep${i}_data_nascimento`;
+          if (data[fieldName]) {
+            data[fieldName] = toBrazilianDate(data[fieldName]);
+          }
+        }
+
         setFiliado(data);
       } catch (err: any) {
         setError(err.message || 'Não foi possível carregar os dados.');
@@ -64,12 +74,24 @@ export default function MeusDadosScreen() {
 
     try {
       setLoading(true);
-      const { data } = await api.put<Filiado>('/api/filiados/me', filiado);
-      setFiliado(data);
+
+      const payload = { ...filiado };
+      for (let i = 1; i <= 5; i++) {
+        const fieldName = `dep${i}_data_nascimento`;
+        if (payload[fieldName]) {
+          payload[fieldName] = toISODate(payload[fieldName]);
+        }
+      }
+
+      await api.put<Filiado>('/api/filiados/me', payload);
+
+      // Re-fetch dos dados completos para re-hidratar o estado
+      const { data: refreshedData } = await api.get<Filiado>('/api/filiados/me');
+      setFiliado(refreshedData);
 
       // Atualiza o usuário no contexto de autenticação, se necessário
       if (usuario) {
-        const usuarioAtualizado = { ...usuario, nome: data.nome, email: data.email1, avatar_url: data.avatar_url };
+        const usuarioAtualizado = { ...usuario, nome: refreshedData.nome, email: refreshedData.email1, avatar_url: refreshedData.avatar_url };
         await setSessao(token!, usuarioAtualizado);
       }
 

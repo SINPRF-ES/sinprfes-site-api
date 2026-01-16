@@ -75,7 +75,10 @@ const DrawerNavigator = () => {
           <Drawer.Screen
             name="CriarFiliado"
             component={CriarFiliadoScreen}
-            options={{ title: 'Novo Filiado' }}
+            options={{
+              title: 'Novo Filiado',
+              drawerItemStyle: { display: 'none' } // Oculta o item da lista padrão
+            }}
           />
         </>
       )}

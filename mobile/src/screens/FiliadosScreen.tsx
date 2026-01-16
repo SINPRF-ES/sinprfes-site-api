@@ -8,6 +8,7 @@ import { getFiliados } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { Filiado } from '../types/filiado';
 import FiliadoCard from '../components/FiliadoCard';
+import { normalizeText } from '../utils/masks';
 
 const FiliadosScreen: React.FC = () => {
   const { usuario: authUser } = useAuth();
@@ -55,24 +56,31 @@ const FiliadosScreen: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      let data = await getFiliados();
+      const data = await getFiliados();
+      let processedData = data;
 
+      // Sanitize data only for FILIADO profile, preserving all fields for management
       if (authUser?.perfil_acesso === 'FILIADO') {
-        data = data.map((f: Filiado) => {
+        processedData = data.map((f: Filiado) => {
           if (f.id !== authUser.id) {
+            // Return a limited subset of fields for other users
             return {
               id: f.id,
               nome: f.nome,
               telefone1: f.telefone1,
               lotacao: f.lotacao,
               situacao: f.situacao,
+              // Explicitly exclude CPF and other sensitive data
+              cpf: undefined,
+              email1: undefined,
             };
           }
+          // Return the full object for the logged-in user
           return f;
         });
       }
 
-      setFiliados(data);
+      setFiliados(processedData);
       await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
       setIsOffline(false);
     } catch (apiError) {
@@ -132,6 +140,10 @@ const FiliadosScreen: React.FC = () => {
     }
   };
 
+  const handleNovoPress = () => {
+    navigation.navigate('CriarFiliado');
+  };
+
   return (
     <View style={styles.container}>
       {isOffline && <View style={styles.offlineBanner}><Text style={styles.offlineText}>Você está offline. Exibindo dados do cache.</Text></View>}
@@ -142,7 +154,7 @@ const FiliadosScreen: React.FC = () => {
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
-        {podeCriar && <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('CriarFiliado')}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
+        {podeCriar && <TouchableOpacity style={styles.addButton} onPress={handleNovoPress}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
       </View>
       <FlatList
         data={filteredFiliados}
