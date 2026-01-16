@@ -3,10 +3,14 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
-import { formatCPF, sanitizeDigits, formatISOToBR, parseBRToISO, formatDateToDdMmYyyy } from '../utils/masks';
+import { formatCpf, onlyDigits } from '../shared/formatters';
+import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy } from '../utils/date';
 
 // Subcomponente para cada item de dependente
 const DependenteItem = ({ filiado, setFiliado, index }) => {
+  const [dataNascimento, setDataNascimento] = useState(() =>
+    formatISOToBR(filiado?.[`dep${index}_data_nascimento`])
+  );
 
   const handleDateChange = (text: string) => {
     const formatted = formatDateToDdMmYyyy(text);
@@ -25,7 +29,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
   };
 
   const handleDependentChange = (field: string, value: string, isDigitOnly = false) => {
-    let finalValue = isDigitOnly ? sanitizeDigits(value) : value;
+    let finalValue = isDigitOnly ? onlyDigits(value) : value;
     if (field === 'cpf') {
       finalValue = finalValue.slice(0, 11);
     }
@@ -71,7 +75,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="apenas números"
-        value={formatCPF(filiado?.[`dep${index}_cpf`] || '')}
+        value={formatCpf(filiado?.[`dep${index}_cpf`] || '')}
         onChangeText={(text) => handleDependentChange('cpf', text, true)}
         keyboardType="numeric"
         maxLength={14}
