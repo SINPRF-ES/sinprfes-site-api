@@ -7,9 +7,10 @@ import { formatPhone, sanitizeDigits } from '../utils/masks';
 interface Props {
   filiado: Filiado | null;
   setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
+  isEditing?: boolean;
 }
 
-const ContatoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
+const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }) => {
   const handlePhoneChange = (field: 'telefone1' | 'telefone2', value: string) => {
     const digits = sanitizeDigits(value);
     setFiliado(f => (f ? { ...f, [field]: digits } : null));
@@ -17,7 +18,27 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Contato</Text>
+      <Text style={styles.cardTitle}>Dados Pessoais</Text>
+
+      <Text style={styles.label}>Nome Completo</Text>
+      <TextInput
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={filiado?.nome || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, nome: text } : null)}
+        placeholder="Nome completo"
+        editable={isEditing}
+      />
+
+      <Text style={styles.label}>CPF</Text>
+      <TextInput
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={filiado?.cpf || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, cpf: sanitizeDigits(text) } : null)}
+        placeholder="Apenas números"
+        keyboardType="numeric"
+        maxLength={11}
+        editable={isEditing}
+      />
       <Text style={styles.label}>Telefone 1</Text>
       <TextInput
         style={styles.input}
@@ -85,6 +106,16 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
     fontSize: 16,
+  },
+  inputDisabled: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f0f0f0',
+    color: '#999',
   },
 });
 

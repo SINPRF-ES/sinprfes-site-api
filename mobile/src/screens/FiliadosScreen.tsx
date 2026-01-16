@@ -109,17 +109,24 @@ const FiliadosScreen: React.FC = () => {
     return <View style={styles.centered}><Text style={styles.errorText}>{error}</Text><TouchableOpacity style={styles.button} onPress={handleRefresh}><Text style={styles.buttonText}>Tentar Novamente</Text></TouchableOpacity></View>;
   }
 
-  const filteredFiliados = filiados.filter(f =>
-    f.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    f.cpf?.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))
-  );
+  const filteredFiliados = filiados.filter(f => {
+    const searchTermLower = searchTerm.toLowerCase();
+    const searchTermDigits = searchTerm.replace(/\D/g, '');
+
+    const nomeMatch = f.nome.toLowerCase().includes(searchTermLower);
+
+    // A busca por CPF só é realizada se o campo existir e o usuário for da gestão.
+    const cpfMatch = ehGestao && f.cpf && f.cpf.replace(/\D/g, '').includes(searchTermDigits);
+
+    return nomeMatch || cpfMatch;
+  });
 
   const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
   const ehGestao = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
 
-  const handleEditPress = (filiadoId: number) => {
+  const handleEditPress = (filiado: Filiado) => {
     if (netInfo.isConnected) {
-      navigation.navigate('EditarFiliado', { filiadoId });
+      navigation.navigate('EditarFiliado', { filiado });
     } else {
       Alert.alert('Funcionalidade Offline', 'A edição de dados só pode ser feita quando você estiver online.');
     }
