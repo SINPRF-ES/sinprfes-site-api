@@ -6,11 +6,14 @@ import { getPublicacoes, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 
 const PublicacoesScreen: React.FC = () => {
-  const { data: publicacoes, isLoading, error } = useQuery('publicacoes', getPublicacoes);
+  const { data: publicacoes, isLoading, error } = useQuery({
+    queryKey: ['publicacoes'],
+    queryFn: getPublicacoes,
+  });
 
   const handlePress = (file: DriveFile) => {
     const url = file.webViewLink;
-    if (!url) {
+    if (typeof url !== 'string' || url.length === 0) {
       Alert.alert('Indisponível', 'Este item não possui um link para visualização.');
       return;
     }
@@ -24,33 +27,38 @@ const PublicacoesScreen: React.FC = () => {
     });
   };
 
-  const renderIcon = (mimeType: string) => {
-    if (mimeType.includes('folder')) {
-      return <FontAwesome name="folder" size={24} color="#FFCA28" />; // Amarelo para pastas
+  const renderIcon = (mimeType: string | null | undefined) => {
+    const type = typeof mimeType === 'string' ? mimeType : '';
+    if (type.includes('folder')) {
+      return <FontAwesome name="folder" size={24} color="#FFCA28" />;
     }
-    if (mimeType.includes('pdf')) {
-      return <FontAwesome name="file-pdf-o" size={24} color="#D32F2F" />; // Vermelho para PDFs
+    if (type.includes('pdf')) {
+      return <FontAwesome name="file-pdf-o" size={24} color="#D32F2F" />;
     }
-    if (mimeType.includes('image')) {
-      return <FontAwesome name="file-image-o" size={24} color="#4CAF50" />; // Verde para imagens
+    if (type.includes('image')) {
+      return <FontAwesome name="file-image-o" size={24} color="#4CAF50" />;
     }
-    return <FontAwesome name="file" size={24} color="#757575" />; // Padrão
+    return <FontAwesome name="file" size={24} color="#757575" />;
   };
 
-  const renderItem = ({ item }: { item: DriveFile }) => (
-    <TouchableOpacity style={styles.itemContainer} onPress={() => handlePress(item)}>
-      <View style={styles.iconContainer}>
-        {renderIcon(item.mimeType)}
-      </View>
-      <View style={styles.textContainer}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemDate}>
-          {new Date(item.createdTime).toLocaleDateString('pt-BR')}
-        </Text>
-      </View>
-      <FontAwesome name="external-link" size={20} color="#007BFF" />
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: DriveFile }) => {
+    const safeDate = item.createdTime && !isNaN(new Date(item.createdTime).getTime())
+      ? new Date(item.createdTime).toLocaleDateString('pt-BR')
+      : 'Data indisponível';
+
+    return (
+      <TouchableOpacity style={styles.itemContainer} onPress={() => handlePress(item)}>
+        <View style={styles.iconContainer}>
+          {renderIcon(item.mimeType)}
+        </View>
+        <View style={styles.textContainer}>
+          <Text style={styles.itemName}>{item.name || 'Nome indisponível'}</Text>
+          <Text style={styles.itemDate}>{safeDate}</Text>
+        </View>
+        <FontAwesome name="external-link" size={20} color="#007BFF" />
+      </TouchableOpacity>
+    );
+  };
 
   if (isLoading) {
     return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
@@ -60,9 +68,14 @@ const PublicacoesScreen: React.FC = () => {
     return <View style={styles.centered}><Text style={styles.errorText}>Não foi possível carregar as publicações.</Text></View>;
   }
 
+  // Sanitização dos dados para evitar crashes na renderização
+  const sanitizedPublicacoes = Array.isArray(publicacoes)
+    ? publicacoes.filter(item => item && typeof item.id === 'string' && typeof item.name === 'string')
+    : [];
+
   return (
     <FlatList
-      data={publicacoes}
+      data={sanitizedPublicacoes}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.container}
