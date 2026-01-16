@@ -207,28 +207,30 @@ Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adot
 - Garantir que o app mobile espelhe exatamente as mesmas mascaras e formatacoes do site.
 - Evitar duplicacao e drift de regra ao longo do tempo.
 
-### Regras do modulo compartilhado
+### Regras do módulo compartilhado
 
-- Deve ficar em uma pasta comum no repositorio, por exemplo:
-  - `shared/format/` (ou equivalente)
-- Deve conter somente funcoes puras, por exemplo:
+- O módulo está localizado em:
+  - `shared/format/index.js`
+- Ele contém funções puras para formatação, como:
   - `onlyDigits(value)`
   - `formatCpf(value)`
   - `formatTelefone(value)`
-  - `formatCep(value)` (se aplicavel)
-  - `parseDateToISO(value)` (se aplicavel)
-- **Nao pode**:
-  - acessar `window`, `document` ou DOM
-  - registrar `addEventListener`
-  - importar libs de UI
-  - criar dependencia no `package.json` da raiz
+  - `formatCep(value)`
+  - `normalizeCpf(value)`
+  - `normalizeTelefone(value)`
+  - `normalizeCep(value)`
+- **Não pode**:
+  - Acessar `window`, `document` ou DOM.
+  - Registrar `addEventListener`.
+  - Importar bibliotecas de UI.
+  - Criar dependências no `package.json` da raiz.
 
 ### Como usar
 
-- Web:
-  - Mantem os `addEventListener` e manipulacao de input no `public/js/...`, mas delega a formatacao para funcoes puras do modulo compartilhado.
-- Mobile:
-  - Usa as mesmas funcoes puras para formatacao em componentes/inputs.
+- **Web**:
+  - (Futuro) Manter os `addEventListener` e a manipulação de input em `public/js/...`, mas delegar a formatação para as funções puras do módulo.
+- **Mobile**:
+  - O aplicativo móvel já utiliza este módulo para garantir a consistência da formatação. Um wrapper em `mobile/src/shared/formatters.ts` é usado para importar o módulo CommonJS.
 
 ---
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
-import { formatPhone, sanitizeDigits } from '../utils/masks';
+import { formatTelefone, onlyDigits } from '../shared/formatters';
 
 interface Props {
   filiado: Filiado | null;
@@ -12,7 +12,7 @@ interface Props {
 
 const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }) => {
   const handlePhoneChange = (field: 'telefone1' | 'telefone2', value: string) => {
-    const digits = sanitizeDigits(value);
+    const digits = onlyDigits(value);
     setFiliado(f => (f ? { ...f, [field]: digits } : null));
   };
 
@@ -33,7 +33,7 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
         value={filiado?.cpf || ''}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, cpf: sanitizeDigits(text) } : null)}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, cpf: onlyDigits(text) } : null)}
         placeholder="Apenas números"
         keyboardType="numeric"
         maxLength={11}
@@ -42,7 +42,7 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <Text style={styles.label}>Telefone 1</Text>
       <TextInput
         style={styles.input}
-        value={formatPhone(filiado?.telefone1 || '')}
+        value={formatTelefone(filiado?.telefone1 || '')}
         onChangeText={(text) => handlePhoneChange('telefone1', text)}
         placeholder="(99) 99999-9999"
         keyboardType="phone-pad"
@@ -51,7 +51,7 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <Text style={styles.label}>Telefone 2</Text>
       <TextInput
         style={styles.input}
-        value={formatPhone(filiado?.telefone2 || '')}
+        value={formatTelefone(filiado?.telefone2 || '')}
         onChangeText={(text) => handlePhoneChange('telefone2', text)}
         placeholder="Opcional"
         keyboardType="phone-pad"
