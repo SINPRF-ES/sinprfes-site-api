@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
-import api from '../services/apiService';
+import { buildUpdateFiliadoPayload } from '../services/filiadoPayloadMapper';
+import { atualizarFiliado } from '../services/apiService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
@@ -65,7 +66,8 @@ export default function EditarFiliadoScreen({ route, navigation }) {
 
     try {
       setLoading(true);
-      await api.put(`/api/filiados/${filiado.id}`, filiado);
+      const payload = buildUpdateFiliadoPayload(filiado);
+      await atualizarFiliado(filiado.id, payload);
       Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
       // Navega para a tela de listagem dentro do Drawer para forçar o refresh
       navigation.navigate('Drawer', {

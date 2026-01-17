@@ -275,3 +275,40 @@ npm install
 # 2. Inicie o app limpando o cache do Metro
 npx expo start -c
 ```
+
+---
+
+## Atualização de Filiados (PUT /api/filiados/:id)
+
+Para garantir a integridade dos dados e a compatibilidade com o backend, o payload enviado para a atualização de filiados passa por um processo de normalização e filtragem.
+
+### Regras de Normalização do Payload
+
+-   **Campos Numéricos:** Campos como `telefone1`, `telefone2`, e `cep` têm todos os caracteres não numéricos removidos. Apenas os dígitos são enviados.
+-   **CPF de Dependentes:** O CPF de cada dependente (`depX_cpf`) também é normalizado para conter apenas dígitos.
+-   **Datas:** As datas devem ser enviadas no formato `YYYY-MM-DD`. O app garante que datas inválidas não sejam enviadas.
+
+### Campos Não Editáveis
+
+O payload **não inclui** campos que são controlados pelo sistema ou que não devem ser alterados pelo usuário, tais como:
+- `id`, `cpf`, `nome`
+- `lotacao`, `situacao_funcional`
+- `perfil_acesso`
+- Campos de endereço preenchidos automaticamente (`logradouro`, `cidade`, etc.)
+
+## Publicações
+
+O acesso à seção de Publicações foi alinhado com o padrão do site, utilizando endpoints autenticados para garantir a segurança dos documentos.
+
+### Fluxo de Acesso
+
+1.  **Listagem:** A lista de arquivos e pastas é obtida através do endpoint `GET /api/publicacoes`. O app suporta a navegação entre pastas.
+2.  **Download Seguro:** Ao abrir um arquivo, o app utiliza o endpoint `GET /api/publicacoes/arquivo/:id`, enviando o token de autenticação do usuário. Isso elimina a dependência de links públicos (`webViewLink`).
+3.  **Armazenamento Temporário:** O arquivo é baixado para um diretório de cache temporário no dispositivo usando o `expo-file-system`.
+4.  **Abertura:** Após o download, o arquivo é aberto utilizando a funcionalidade nativa de compartilhamento do sistema operacional (`expo-sharing`).
+
+## Debug
+
+Para facilitar o diagnóstico de problemas durante o desenvolvimento:
+- **Payload de Atualização:** O payload final, normalizado e filtrado, que é enviado para a API de atualização de filiados, é impresso no console apenas em modo de desenvolvimento (`__DEV__`).
+- **Erros de API:** Em modo de desenvolvimento, a resposta completa de erros da API (incluindo o `status` e o `data`) é impressa no console para fornecer um contexto detalhado do problema.
