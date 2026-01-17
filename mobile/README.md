@@ -312,3 +312,22 @@ O acesso à seção de Publicações foi alinhado com o padrão do site, utiliza
 Para facilitar o diagnóstico de problemas durante o desenvolvimento:
 - **Payload de Atualização:** O payload final, normalizado e filtrado, que é enviado para a API de atualização de filiados, é impresso no console apenas em modo de desenvolvimento (`__DEV__`).
 - **Erros de API:** Em modo de desenvolvimento, a resposta completa de erros da API (incluindo o `status` e o `data`) é impressa no console para fornecer um contexto detalhado do problema.
+
+---
+
+## Correções de Regressão e Melhoras
+
+### Utilitários de Data
+
+O `mobile/src/utils/date.ts` provê helpers robustos para conversão de datas entre os formatos ISO (`YYYY-MM-DD`) e brasileiro (`DD/MM/YYYY`). A função `toBrazilianDate` trata strings de data completas (com timestamp) e retorna uma string vazia para entradas inválidas, evitando crashes.
+
+### Comportamento de Publicações
+
+O fluxo da tela de Publicações foi ajustado para melhorar a experiência do usuário e a compatibilidade:
+-   **Visualização Padrão:** Clicar em um arquivo agora tenta abri-lo para visualização direta usando o `webViewLink`.
+-   **Download Opcional:** O download é uma ação secundária, acionada por um ícone de "download" dedicado.
+
+### Compatibilidade com Expo SDK 54
+
+Para resolver um erro de método depreciado no Expo SDK 54, o serviço que realiza o download de arquivos foi atualizado para importar o `expo-file-system` a partir do endpoint legado:
+`import * as FileSystem from 'expo-file-system/legacy';`
