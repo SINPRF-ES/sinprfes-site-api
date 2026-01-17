@@ -14,7 +14,7 @@ import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { toISODate } from '../utils/date';
+import { toISODate, toBrazilianDate } from '../utils/date';
 
 export default function MeusDadosScreen() {
   const { usuario, setSessao, token } = useAuth();

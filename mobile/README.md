@@ -217,3 +217,134 @@ As ações de gestão que modificam dados (criar, editar, arquivar, desarquivar)
 - [ ] Logar como FILIADO.
 - [ ] Colocar o dispositivo em modo avião (offline).
 - [ ] Acessar a lista de filiados e confirmar que os dados exibidos são os reduzidos (não os dados completos do cache do ADMIN).
+
+---
+
+## Módulo compartilhado agnóstico (Web + Mobile): shared/format
+
+### Objetivo
+
+Para evitar divergências de máscaras e formatação entre o frontend Web e o App Mobile, o projeto utiliza um módulo compartilhado com funções puras e agnósticas (sem dependências de UI). A fonte da verdade para formatação é este módulo.
+
+### Localização
+
+O código-fonte do módulo compartilhado reside em: `sinprfes-site-api/shared/format/index.js`.
+
+### Funções Disponíveis
+
+O módulo exporta um conjunto de funções puras para normalização e formatação, incluindo:
+- `onlyDigits`
+- `formatCpf`
+- `formatTelefone`
+- `formatCep`
+- `normalizeCpf`
+- `normalizeTelefone`
+- `normalizeCep`
+
+### Restrições Críticas
+
+- **Sem DOM/UI:** O módulo não pode conter nenhuma referência a `window`, `document` ou qualquer API de UI.
+- **Sem Dependências na Raiz:** Nenhuma dependência para este módulo pode ser adicionada ao `package.json` da raiz do projeto.
+
+### Consumo no App Mobile
+
+O app mobile consome este módulo como um pacote local para garantir que o Metro bundler o resolva corretamente em ambientes de monorepo, especialmente no Windows.
+
+1.  **Dependência Local:** A dependência é declarada em `mobile/package.json`:
+    ```json
+    "dependencies": {
+      "@sinprfes/shared-format": "file:../shared/format"
+    }
+    ```
+
+2.  **Wrapper TypeScript:** Para manter a consistência e a clareza, o app utiliza um wrapper que reexporta as funções do módulo CommonJS em: `mobile/src/shared/formatters.ts`.
+
+### Nota sobre Windows e Monorepo (Metro Bundler)
+
+Para garantir que o Metro consiga resolver o pacote local (que é um symlink), uma configuração específica é necessária em `mobile/metro.config.js`. Este arquivo habilita o suporte a symlinks e adiciona a pasta do módulo compartilhado aos `watchFolders`.
+
+### Comandos de Instalação e Execução
+
+Para garantir que as dependências locais sejam corretamente instaladas e que o cache do Metro seja limpo, utilize os seguintes comandos a partir da raiz do repositório:
+
+```bash
+# 1. Navegue até a pasta do mobile e instale as dependências
+cd mobile
+npm install
+
+# 2. Inicie o app limpando o cache do Metro
+npx expo start -c
+```
+
+---
+
+## Atualização de Filiados (PUT /api/filiados/:id)
+
+Para garantir a integridade dos dados e a compatibilidade com o backend, o payload enviado para a atualização de filiados passa por um processo de normalização e filtragem.
+
+### Regras de Normalização do Payload
+
+-   **Campos Numéricos:** Campos como `telefone1`, `telefone2`, e `cep` têm todos os caracteres não numéricos removidos. Apenas os dígitos são enviados.
+-   **CPF de Dependentes:** O CPF de cada dependente (`depX_cpf`) também é normalizado para conter apenas dígitos.
+-   **Datas:** As datas devem ser enviadas no formato `YYYY-MM-DD`. O app garante que datas inválidas não sejam enviadas.
+
+### Campos Não Editáveis
+
+O payload **não inclui** campos que são controlados pelo sistema ou que não devem ser alterados pelo usuário, tais como:
+- `id`, `cpf`, `nome`
+- `lotacao`, `situacao_funcional`
+- `perfil_acesso`
+- Campos de endereço preenchidos automaticamente (`logradouro`, `cidade`, etc.)
+
+## Publicações
+
+O acesso à seção de Publicações foi alinhado com o padrão do site, utilizando endpoints autenticados para garantir a segurança dos documentos.
+
+### Fluxo de Acesso
+
+1.  **Listagem:** A lista de arquivos e pastas é obtida através do endpoint `GET /api/publicacoes`. O app suporta a navegação entre pastas.
+2.  **Download Seguro:** Ao abrir um arquivo, o app utiliza o endpoint `GET /api/publicacoes/arquivo/:id`, enviando o token de autenticação do usuário. Isso elimina a dependência de links públicos (`webViewLink`).
+3.  **Armazenamento Temporário:** O arquivo é baixado para um diretório de cache temporário no dispositivo usando o `expo-file-system`.
+4.  **Abertura:** Após o download, o arquivo é aberto utilizando a funcionalidade nativa de compartilhamento do sistema operacional (`expo-sharing`).
+
+## Debug
+
+Para facilitar o diagnóstico de problemas durante o desenvolvimento:
+- **Payload de Atualização:** O payload final, normalizado e filtrado, que é enviado para a API de atualização de filiados, é impresso no console apenas em modo de desenvolvimento (`__DEV__`).
+- **Erros de API:** Em modo de desenvolvimento, a resposta completa de erros da API (incluindo o `status` e o `data`) é impressa no console para fornecer um contexto detalhado do problema.
+
+---
+
+## Correções de Regressão e Melhoras
+
+### Utilitários de Data
+
+O `mobile/src/utils/date.ts` provê helpers robustos para conversão de datas entre os formatos ISO (`YYYY-MM-DD`) e brasileiro (`DD/MM/YYYY`). A função `toBrazilianDate` trata strings de data completas (com timestamp) e retorna uma string vazia para entradas inválidas, evitando crashes.
+
+### Comportamento de Publicações
+
+O fluxo da tela de Publicações foi ajustado para melhorar a experiência do usuário e a compatibilidade:
+-   **Visualização Padrão:** Clicar em um arquivo agora tenta abri-lo para visualização direta usando o `webViewLink`.
+-   **Download Opcional:** O download é uma ação secundária, acionada por um ícone de "download" dedicado.
+
+### Compatibilidade com Expo SDK 54
+
+Para resolver um erro de método depreciado no Expo SDK 54, o serviço que realiza o download de arquivos foi atualizado para importar o `expo-file-system` a partir do endpoint legado:
+`import * as FileSystem from 'expo-file-system/legacy';`
+
+---
+
+## Correções de Regressão e Melhoras (v2)
+
+### Tela "Meus Dados"
+-   **Data de Nascimento:** A data de nascimento do titular agora é exibida no card de informações do cabeçalho.
+-   **Campos de Endereço Read-Only:** Os campos `Logradouro`, `Cidade` e `UF` agora são apenas leitura (`editable=false`), pois são preenchidos exclusivamente pela funcionalidade de busca de CEP.
+-   **Estilo do Picker de Lotação:** O fundo do seletor de lotação foi corrigido para branco quando está em modo de edição, indicando claramente que é um campo interativo.
+
+### Tela "Editar Filiado" (Gestão)
+-   **Data de Nascimento:** O campo de data de nascimento do filiado agora é exibido (apenas leitura) no formulário de edição.
+-   **Situação Funcional:** Foi corrigido um bug onde o seletor de "Situação Funcional" sempre voltava para "Ativo". O componente agora é controlado e reflete corretamente o estado atual do filiado (ex: "Veterano").
+
+### Publicações
+-   **Visualização Segura:** O fluxo de publicações foi alinhado com o do site. Clicar em um arquivo agora inicia um download seguro e autenticado via `GET /api/publicacoes/arquivo/:id`, que é aberto em seguida, em vez de usar um link público (`webViewLink`).
+-   **Compatibilidade com Expo SDK 54:** O serviço de download foi atualizado para usar `expo-file-system/legacy`, resolvendo um erro de depreciação.
