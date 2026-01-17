@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
+import { toBrazilianDate } from '../utils/date';
 
 interface Props {
   filiado: Filiado | null;
@@ -25,7 +26,11 @@ const HeaderInfo: React.FC<Props> = ({ filiado }) => {
       <Text style={styles.nome}>{filiado.nome}</Text>
       <View style={styles.infoRow}>
         <Text style={styles.infoText}>CPF: {filiado.cpf}</Text>
-        <Text style={styles.infoText}>Perfil: {filiado.perfil_acesso}</Text>
+        {filiado.data_nascimento && (
+          <Text style={styles.infoText}>
+            Nascimento: {toBrazilianDate(filiado.data_nascimento)}
+          </Text>
+        )}
       </View>
       <View style={[styles.statusBadge, getStatusStyle(filiado.situacao)]}>
         <Text style={styles.statusText}>{filiado.situacao}</Text>
