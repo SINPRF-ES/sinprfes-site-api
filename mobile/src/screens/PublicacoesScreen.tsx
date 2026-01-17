@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublicacoes, downloadPublicacao, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
+import { Linking } from 'react-native';
 
 const PublicacoesScreen: React.FC = () => {
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
@@ -16,14 +17,30 @@ const PublicacoesScreen: React.FC = () => {
     queryFn: () => fetchPublicacoes(currentFolder.id),
   });
 
-  const handlePress = async (file: DriveFile) => {
+  const handlePress = (file: DriveFile) => {
     if (file.isFolder) {
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {
-      setIsDownloading(true);
-      await downloadPublicacao(file);
-      setIsDownloading(false);
+      // Prioriza o webViewLink para visualização direta
+      const url = file.webViewLink;
+      if (url) {
+        Linking.canOpenURL(url).then(supported => {
+          if (supported) {
+            Linking.openURL(url);
+          } else {
+            Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
+          }
+        });
+      } else {
+        Alert.alert('Indisponível', 'Este item não pode ser visualizado diretamente. Tente o download.');
+      }
     }
+  };
+
+  const handleDownload = async (file: DriveFile) => {
+    setIsDownloading(true);
+    await downloadPublicacao(file);
+    setIsDownloading(false);
   };
 
   const handleGoBack = () => {
@@ -58,7 +75,13 @@ const PublicacoesScreen: React.FC = () => {
           <Text style={styles.itemName}>{item.name}</Text>
           <Text style={styles.itemDate}>{safeDate}</Text>
         </View>
-        <FontAwesome name={item.isFolder ? "chevron-right" : "download"} size={20} color="#007BFF" />
+        {item.isFolder ? (
+          <FontAwesome name="chevron-right" size={20} color="#007BFF" />
+        ) : (
+          <TouchableOpacity onPress={() => handleDownload(item)} disabled={isDownloading} style={styles.downloadButton}>
+            <FontAwesome name="download" size={20} color="#007BFF" />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   };

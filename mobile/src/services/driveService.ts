@@ -1,6 +1,6 @@
 // mobile/src/services/driveService.ts
 import api from './apiService';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 
