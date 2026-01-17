@@ -331,3 +331,20 @@ O fluxo da tela de Publicações foi ajustado para melhorar a experiência do us
 
 Para resolver um erro de método depreciado no Expo SDK 54, o serviço que realiza o download de arquivos foi atualizado para importar o `expo-file-system` a partir do endpoint legado:
 `import * as FileSystem from 'expo-file-system/legacy';`
+
+---
+
+## Correções de Regressão e Melhoras (v2)
+
+### Tela "Meus Dados"
+-   **Data de Nascimento:** A data de nascimento do titular agora é exibida no card de informações do cabeçalho.
+-   **Campos de Endereço Read-Only:** Os campos `Logradouro`, `Cidade` e `UF` agora são apenas leitura (`editable=false`), pois são preenchidos exclusivamente pela funcionalidade de busca de CEP.
+-   **Estilo do Picker de Lotação:** O fundo do seletor de lotação foi corrigido para branco quando está em modo de edição, indicando claramente que é um campo interativo.
+
+### Tela "Editar Filiado" (Gestão)
+-   **Data de Nascimento:** O campo de data de nascimento do filiado agora é exibido (apenas leitura) no formulário de edição.
+-   **Situação Funcional:** Foi corrigido um bug onde o seletor de "Situação Funcional" sempre voltava para "Ativo". O componente agora é controlado e reflete corretamente o estado atual do filiado (ex: "Veterano").
+
+### Publicações
+-   **Visualização Segura:** O fluxo de publicações foi alinhado com o do site. Clicar em um arquivo agora inicia um download seguro e autenticado via `GET /api/publicacoes/arquivo/:id`, que é aberto em seguida, em vez de usar um link público (`webViewLink`).
+-   **Compatibilidade com Expo SDK 54:** O serviço de download foi atualizado para usar `expo-file-system/legacy`, resolvendo um erro de depreciação.

@@ -29,7 +29,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <Text style={styles.label}>Situação Funcional</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <Picker
-          selectedValue={filiado?.situacao_funcional || 'ATIVO'}
+          selectedValue={filiado?.situacao_funcional}
           onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao_funcional: itemValue } : null)}
           enabled={isEditing}
         >
@@ -75,6 +75,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 5,
     marginBottom: 15,
+    backgroundColor: '#fff',
   },
   pickerContainerDisabled: {
     borderWidth: 1,

@@ -17,30 +17,14 @@ const PublicacoesScreen: React.FC = () => {
     queryFn: () => fetchPublicacoes(currentFolder.id),
   });
 
-  const handlePress = (file: DriveFile) => {
+  const handlePress = async (file: DriveFile) => {
     if (file.isFolder) {
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {
-      // Prioriza o webViewLink para visualização direta
-      const url = file.webViewLink;
-      if (url) {
-        Linking.canOpenURL(url).then(supported => {
-          if (supported) {
-            Linking.openURL(url);
-          } else {
-            Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
-          }
-        });
-      } else {
-        Alert.alert('Indisponível', 'Este item não pode ser visualizado diretamente. Tente o download.');
-      }
+      setIsDownloading(true);
+      await downloadPublicacao(file);
+      setIsDownloading(false);
     }
-  };
-
-  const handleDownload = async (file: DriveFile) => {
-    setIsDownloading(true);
-    await downloadPublicacao(file);
-    setIsDownloading(false);
   };
 
   const handleGoBack = () => {
@@ -75,13 +59,7 @@ const PublicacoesScreen: React.FC = () => {
           <Text style={styles.itemName}>{item.name}</Text>
           <Text style={styles.itemDate}>{safeDate}</Text>
         </View>
-        {item.isFolder ? (
-          <FontAwesome name="chevron-right" size={20} color="#007BFF" />
-        ) : (
-          <TouchableOpacity onPress={() => handleDownload(item)} disabled={isDownloading} style={styles.downloadButton}>
-            <FontAwesome name="download" size={20} color="#007BFF" />
-          </TouchableOpacity>
-        )}
+        <FontAwesome name={item.isFolder ? "chevron-right" : "download"} size={20} color="#007BFF" />
       </TouchableOpacity>
     );
   };

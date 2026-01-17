@@ -64,10 +64,10 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
       </View>
       <Text style={styles.label}>Logradouro e Bairro</Text>
       <TextInput
-        style={styles.input}
+        style={styles.inputDisabled}
         value={filiado?.logradouro_bairro || ''}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, logradouro_bairro: text } : null)}
-        placeholder="Rua, Bairro"
+        placeholder="Preenchido pela busca de CEP"
+        editable={false}
       />
       <View style={styles.row}>
         <View style={styles.col}>
@@ -93,21 +93,20 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
         <View style={styles.col}>
           <Text style={styles.label}>Cidade</Text>
           <TextInput
-            style={styles.input}
+            style={styles.inputDisabled}
             value={filiado?.cidade || ''}
-            onChangeText={(text) => setFiliado(f => f ? { ...f, cidade: text } : null)}
             placeholder="Cidade"
+            editable={false}
           />
         </View>
         <View style={styles.col}>
           <Text style={styles.label}>UF</Text>
           <TextInput
-            style={styles.input}
+            style={styles.inputDisabled}
             value={filiado?.uf || ''}
-            onChangeText={(text) => setFiliado(f => f ? { ...f, uf: text } : null)}
             placeholder="UF"
             maxLength={2}
-            autoCapitalize="characters"
+            editable={false}
           />
         </View>
       </View>
@@ -142,6 +141,17 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
     fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  inputDisabled: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f0f0f0',
+    color: '#999',
   },
   cepContainer: {
     flexDirection: 'row',

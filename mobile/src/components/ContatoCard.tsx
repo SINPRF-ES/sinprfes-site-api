@@ -39,6 +39,13 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
         maxLength={11}
         editable={isEditing}
       />
+      <Text style={styles.label}>Data de Nascimento</Text>
+      <TextInput
+        style={styles.inputDisabled}
+        value={filiado?.data_nascimento ? toBrazilianDate(filiado.data_nascimento) : ''}
+        placeholder="DD/MM/AAAA"
+        editable={false}
+      />
       <Text style={styles.label}>Telefone 1</Text>
       <TextInput
         style={styles.input}
