@@ -1,5 +1,7 @@
 // mobile/src/utils/date.ts
 
+import { onlyDigits } from '../shared/formatters';
+
 /**
  * Converte uma data do formato DD/MM/YYYY para YYYY-MM-DD.
  * Retorna null se a data de entrada for inválida, vazia ou nula.
@@ -54,4 +56,63 @@ export const toBrazilianDate = (dateString: string | null | undefined): string =
 
   // Retorna no formato DD/MM/YYYY
   return `${day}/${month}/${year}`;
+};
+
+/**
+ * Converte uma data no formato dd/MM/yyyy para o formato ISO yyyy-MM-dd.
+ * Retorna null se a data for inválida ou vazia.
+ */
+export const parseBRToISO = (brDate: string | null | undefined): string | null => {
+  if (!brDate) return null;
+  const parts = brDate.split('/');
+  if (parts.length !== 3) return null;
+
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const year = parseInt(parts[2], 10);
+
+  if (isNaN(day) || isNaN(month) || isNaN(year) || year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  // Formata com padding (ex: 1 -> "01")
+  const monthStr = month.toString().padStart(2, '0');
+  const dayStr = day.toString().padStart(2, '0');
+
+  return `${year}-${monthStr}-${dayStr}`;
+};
+
+/**
+ * Converte uma data ISO (yyyy-MM-dd ou com T/Z) para o formato dd/MM/yyyy.
+ * Retorna uma string vazia se a data for inválida ou vazia.
+ */
+export const formatISOToBR = (isoDate: string | null | undefined): string => {
+  if (!isoDate) return '';
+
+  // Pega apenas a parte da data, ignorando o T/Z
+  const datePart = isoDate.split('T')[0];
+  const parts = datePart.split('-');
+
+  if (parts.length !== 3) return '';
+
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+
+  return `${day}/${month}/${year}`;
+};
+
+/**
+ * Formata uma string de data para o formato DD/MM/YYYY, ideal para inputs.
+ * Garante que as barras sejam inseridas nos locais corretos.
+ */
+export const formatDateToDdMmYyyy = (text: string): string => {
+  const digits = onlyDigits(text);
+  if (digits.length <= 2) {
+    return digits;
+  }
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
 };
