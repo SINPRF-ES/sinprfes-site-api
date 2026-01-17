@@ -1,0 +1,11 @@
+
+> sinprfes-site-api@1.0.0 start
+> node server.js
+
+{"level":"WARN","timestamp":"2026-01-16T12:04:34.231Z","message":"InstagramTokenNaoConfigurado"}
+[DATABASE] DATABASE_URL ausente
+SINPRF-ES rodando na porta 3000
+{"level":"ERROR","timestamp":"2026-01-16T12:08:54.042Z","message":"AuthLoginErroInterno","errorMessage":"","stack":"AggregateError [ECONNREFUSED]: \n    at /app/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async buscarPorCpf (/app/src/services/filiados.service.js:25:20)\n    at async exports.login (/app/src/controllers/auth.controller.js:43:21)"}
+{"level":"ERROR","timestamp":"2026-01-16T12:09:29.047Z","message":"AuthLoginErroInterno","errorMessage":"","stack":"AggregateError [ECONNREFUSED]: \n    at /app/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async buscarPorCpf (/app/src/services/filiados.service.js:25:20)\n    at async exports.login (/app/src/controllers/auth.controller.js:43:21)"}
+{"level":"ERROR","timestamp":"2026-01-16T12:11:55.425Z","message":"AuthLoginErroInterno","errorMessage":"","stack":"AggregateError [ECONNREFUSED]: \n    at /app/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async buscarPorCpf (/app/src/services/filiados.service.js:25:20)\n    at async exports.login (/app/src/controllers/auth.controller.js:43:21)"}
+Terminated

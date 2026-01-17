@@ -207,28 +207,40 @@ Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adot
 - Garantir que o app mobile espelhe exatamente as mesmas mascaras e formatacoes do site.
 - Evitar duplicacao e drift de regra ao longo do tempo.
 
-### Regras do modulo compartilhado
+### Regras do módulo compartilhado
 
-- Deve ficar em uma pasta comum no repositorio, por exemplo:
-  - `shared/format/` (ou equivalente)
-- Deve conter somente funcoes puras, por exemplo:
+- O módulo está localizado em:
+  - `shared/format/index.js`
+- Ele contém funções puras para formatação, como:
   - `onlyDigits(value)`
   - `formatCpf(value)`
   - `formatTelefone(value)`
-  - `formatCep(value)` (se aplicavel)
-  - `parseDateToISO(value)` (se aplicavel)
-- **Nao pode**:
-  - acessar `window`, `document` ou DOM
-  - registrar `addEventListener`
-  - importar libs de UI
-  - criar dependencia no `package.json` da raiz
+  - `formatCep(value)`
+  - `normalizeCpf(value)`
+  - `normalizeTelefone(value)`
+  - `normalizeCep(value)`
+- **Não pode**:
+  - Acessar `window`, `document` ou DOM.
+  - Registrar `addEventListener`.
+  - Importar bibliotecas de UI.
+  - Criar dependências no `package.json` da raiz.
 
 ### Como usar
 
-- Web:
-  - Mantem os `addEventListener` e manipulacao de input no `public/js/...`, mas delega a formatacao para funcoes puras do modulo compartilhado.
-- Mobile:
-  - Usa as mesmas funcoes puras para formatacao em componentes/inputs.
+- **Web**:
+  - (Futuro) Manter os `addEventListener` e a manipulação de input em `public/js/...`, mas delegar a formatação para as funções puras do módulo.
+- **Mobile**:
+  - Para contornar limitações de resolução de caminho do Metro bundler, o módulo compartilhado é consumido como um **pacote local**.
+  - A dependência é definida em `mobile/package.json`:
+    ```json
+    "@sinprfes/shared-format": "file:../shared/format"
+    ```
+  - Após clonar o repositório, é necessário instalar as dependências do mobile:
+    ```sh
+    cd mobile
+    npm install
+    ```
+  - O wrapper em `mobile/src/shared/formatters.ts` importa o pacote pelo nome (`@sinprfes/shared-format`).
 
 ---
 
