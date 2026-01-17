@@ -217,3 +217,61 @@ As ações de gestão que modificam dados (criar, editar, arquivar, desarquivar)
 - [ ] Logar como FILIADO.
 - [ ] Colocar o dispositivo em modo avião (offline).
 - [ ] Acessar a lista de filiados e confirmar que os dados exibidos são os reduzidos (não os dados completos do cache do ADMIN).
+
+---
+
+## Módulo compartilhado agnóstico (Web + Mobile): shared/format
+
+### Objetivo
+
+Para evitar divergências de máscaras e formatação entre o frontend Web e o App Mobile, o projeto utiliza um módulo compartilhado com funções puras e agnósticas (sem dependências de UI). A fonte da verdade para formatação é este módulo.
+
+### Localização
+
+O código-fonte do módulo compartilhado reside em: `sinprfes-site-api/shared/format/index.js`.
+
+### Funções Disponíveis
+
+O módulo exporta um conjunto de funções puras para normalização e formatação, incluindo:
+- `onlyDigits`
+- `formatCpf`
+- `formatTelefone`
+- `formatCep`
+- `normalizeCpf`
+- `normalizeTelefone`
+- `normalizeCep`
+
+### Restrições Críticas
+
+- **Sem DOM/UI:** O módulo não pode conter nenhuma referência a `window`, `document` ou qualquer API de UI.
+- **Sem Dependências na Raiz:** Nenhuma dependência para este módulo pode ser adicionada ao `package.json` da raiz do projeto.
+
+### Consumo no App Mobile
+
+O app mobile consome este módulo como um pacote local para garantir que o Metro bundler o resolva corretamente em ambientes de monorepo, especialmente no Windows.
+
+1.  **Dependência Local:** A dependência é declarada em `mobile/package.json`:
+    ```json
+    "dependencies": {
+      "@sinprfes/shared-format": "file:../shared/format"
+    }
+    ```
+
+2.  **Wrapper TypeScript:** Para manter a consistência e a clareza, o app utiliza um wrapper que reexporta as funções do módulo CommonJS em: `mobile/src/shared/formatters.ts`.
+
+### Nota sobre Windows e Monorepo (Metro Bundler)
+
+Para garantir que o Metro consiga resolver o pacote local (que é um symlink), uma configuração específica é necessária em `mobile/metro.config.js`. Este arquivo habilita o suporte a symlinks e adiciona a pasta do módulo compartilhado aos `watchFolders`.
+
+### Comandos de Instalação e Execução
+
+Para garantir que as dependências locais sejam corretamente instaladas e que o cache do Metro seja limpo, utilize os seguintes comandos a partir da raiz do repositório:
+
+```bash
+# 1. Navegue até a pasta do mobile e instale as dependências
+cd mobile
+npm install
+
+# 2. Inicie o app limpando o cache do Metro
+npx expo start -c
+```
