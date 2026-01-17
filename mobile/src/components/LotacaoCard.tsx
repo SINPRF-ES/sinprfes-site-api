@@ -29,8 +29,8 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <Text style={styles.label}>Situação Funcional</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <Picker
-          selectedValue={filiado?.situacao || 'ATIVO'}
-          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao: itemValue } : null)}
+          selectedValue={filiado?.situacao_funcional || 'ATIVO'}
+          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao_funcional: itemValue } : null)}
           enabled={isEditing}
         >
           <Picker.Item label="Ativo" value="ATIVO" />
