@@ -1,5 +1,7 @@
 // mobile/src/utils/date.ts
 
+import { onlyDigits } from '../shared/formatters';
+
 /**
  * Converte uma data do formato DD/MM/YYYY para YYYY-MM-DD.
  * Retorna null se a data de entrada for inválida, vazia ou nula.
@@ -57,14 +59,6 @@ export const toBrazilianDate = (dateString: string | null | undefined): string =
 };
 
 /**
- * Remove todos os caracteres não numéricos de uma string.
- */
- const sanitizeDigits = (value: string): string => {
-  return value.replace(/\D/g, '');
-};
-
-
-/**
  * Converte uma data no formato dd/MM/yyyy para o formato ISO yyyy-MM-dd.
  * Retorna null se a data for inválida ou vazia.
  */
@@ -113,7 +107,7 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
  * Garante que as barras sejam inseridas nos locais corretos.
  */
 export const formatDateToDdMmYyyy = (text: string): string => {
-  const digits = sanitizeDigits(text);
+  const digits = onlyDigits(text);
   if (digits.length <= 2) {
     return digits;
   }
