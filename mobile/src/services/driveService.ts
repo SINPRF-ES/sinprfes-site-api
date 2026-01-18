@@ -1,7 +1,7 @@
 // mobile/src/services/driveService.ts
 import api from './apiService';
 import { carregarSessao } from './storageService';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 import { logDebug } from '../utils/filiadoUtils';
@@ -58,13 +58,13 @@ export const downloadPublicacaoFile = async (
     .replace(/\s+/g, '_')
     .replace(/[^a-zA-Z0-9.\-_]/g, '');
 
-  const localUri = `${FileSystem.cacheDirectory}${safeName}`;
+  const localUri = `${FileSystemLegacy.cacheDirectory}${safeName}`;
   const url = `${api.defaults.baseURL}/api/publicacoes/arquivo/${fileId}`;
 
   logDebug('Publicacoes.download.start', { fileId, fileName, localUri });
 
   try {
-    const result = await FileSystem.downloadAsync(url, localUri, {
+    const result = await FileSystemLegacy.downloadAsync(url, localUri, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

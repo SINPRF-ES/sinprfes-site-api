@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { logger } from '../infra/logger';
 
 export default function PdfViewerScreen({ route }: any) {
@@ -14,8 +14,16 @@ export default function PdfViewerScreen({ route }: any) {
       try {
         logger.info('[Publicacoes.openLocal.pdf.start]', { fileId, localUri });
 
-        const content = await FileSystem.readAsStringAsync(localUri, {
-          encoding: FileSystem.EncodingType.Base64,
+        const info = await FileSystemLegacy.getInfoAsync(localUri);
+        logger.info('[Publicacoes.pdf.fsInfo]', { exists: info.exists, size: info.size, uri: localUri });
+        logger.info('[Publicacoes.pdf.encodingType]', { encodingType: typeof FileSystemLegacy?.EncodingType });
+
+        if (!FileSystemLegacy?.EncodingType?.Base64) {
+          throw new Error('EncodingType.Base64 indisponível (FileSystemLegacy)');
+        }
+
+        const content = await FileSystemLegacy.readAsStringAsync(localUri, {
+          encoding: FileSystemLegacy.EncodingType.Base64,
         });
 
         if (!content) {
@@ -25,7 +33,11 @@ export default function PdfViewerScreen({ route }: any) {
         logger.info('[Publicacoes.openLocal.pdf.base64.ok]', { size: content.length });
         setBase64(content);
       } catch (err: any) {
-        logger.error('[Publicacoes.openLocal.pdf.error]', err, { message: err.message });
+        logger.error('[Publicacoes.openLocal.pdf.error]', err, {
+          message: err.message,
+          localUri,
+          encodingType: typeof FileSystemLegacy?.EncodingType
+        });
         Alert.alert('Erro', 'Não foi possível carregar o PDF.');
       } finally {
         setLoading(false);
