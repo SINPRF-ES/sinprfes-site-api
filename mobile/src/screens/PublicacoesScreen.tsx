@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchPublicacoes, downloadPublicacao, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 import { Linking } from 'react-native';
+import { logDebug } from '../utils/filiadoUtils';
 
 const PublicacoesScreen: React.FC = () => {
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
@@ -14,23 +15,71 @@ const PublicacoesScreen: React.FC = () => {
 
   const { data: publicacoes, isLoading, error } = useQuery({
     queryKey: ['publicacoes', currentFolder.id],
-    queryFn: () => fetchPublicacoes(currentFolder.id),
+    queryFn: async () => {
+      logDebug('Publicacoes.fetch.start', { folderId: currentFolder.id });
+      const data = await fetchPublicacoes(currentFolder.id);
+      logDebug('Publicacoes.fetch.success', {
+        count: data.length,
+        items: data.slice(0, 5).map(i => ({
+          id: i.id,
+          name: i.name,
+          isFolder: i.isFolder,
+          mimeType: i.mimeType,
+          webViewLink: i.webViewLink
+        }))
+      });
+      return data;
+    },
   });
 
   const handlePress = async (file: DriveFile) => {
-    if (file.isFolder) {
+    // Garantir detecção de pasta baseada no mimeType caso isFolder falhe
+    const isActuallyFolder = file.isFolder || file.mimeType === 'application/vnd.google-apps.folder';
+
+    logDebug('Publicacoes.click', {
+      id: file.id,
+      title: file.name,
+      isFolder: file.isFolder,
+      isActuallyFolder,
+      mimeType: file.mimeType,
+      hasWebViewLink: !!file.webViewLink
+    });
+
+    if (isActuallyFolder) {
+      logDebug('Publicacoes.openFolder', { folderId: file.id });
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {
-      if (!file.webViewLink && !isDownloading) { // Apenas tenta baixar se não houver link e não estiver baixando
-        setIsDownloading(true);
-        try {
-          await downloadPublicacao(file);
-        } finally {
-          setIsDownloading(false);
+      setIsDownloading(true);
+      try {
+        logDebug('Publicacoes.openFile.start', {
+          fileId: file.id,
+          strategy: 'secure-download-then-share'
+        });
+
+        // Prioriza download seguro que abre o arquivo localmente
+        const success = await downloadPublicacao(file);
+
+        logDebug('Publicacoes.openFile.result', {
+          ok: success,
+          fallbackTriggered: !success && !!file.webViewLink
+        });
+
+        if (!success && file.webViewLink) {
+          logDebug('Publicacoes.openFile.strategy.fallback', { url: file.webViewLink });
+          await Linking.openURL(file.webViewLink);
+        } else if (!success) {
+          Alert.alert('Erro', 'Não foi possível abrir o arquivo.');
         }
-      } else if (file.webViewLink) {
-        // Fallback para webViewLink se o download seguro não for a opção primária
-        Linking.openURL(file.webViewLink).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
+      } catch (err: any) {
+        logDebug('Publicacoes.openFile.error', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+          stack: err.stack?.split('\n').slice(0, 3).join('\n')
+        });
+        Alert.alert('Erro', `Falha ao abrir arquivo: ${err.message}`);
+      } finally {
+        setIsDownloading(false);
       }
     }
   };
