@@ -226,7 +226,7 @@ export function gerarCamposDependentes(container, prefixoId = '') {
     selectParentesco.innerHTML = '<option value="">Selecione...</option>';
     options.forEach(opt => {
       const o = document.createElement('option');
-      o.value = opt.code;
+      o.value = opt.value;
       o.textContent = opt.label;
       selectParentesco.appendChild(o);
     });

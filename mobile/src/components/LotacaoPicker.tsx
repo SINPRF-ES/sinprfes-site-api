@@ -6,9 +6,10 @@ import { StyleSheet, View } from 'react-native';
 interface Props {
   selectedValue: string;
   onValueChange: (itemValue: string, itemIndex: number) => void;
+  enabled?: boolean;
 }
 
-const LotacaoPicker: React.FC<Props> = ({ selectedValue, onValueChange }) => {
+const LotacaoPicker: React.FC<Props> = ({ selectedValue, onValueChange, enabled = true }) => {
   const lotacaoOptions = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"];
 
   return (
@@ -17,6 +18,7 @@ const LotacaoPicker: React.FC<Props> = ({ selectedValue, onValueChange }) => {
         selectedValue={selectedValue}
         onValueChange={onValueChange}
         style={styles.picker}
+        enabled={enabled}
       >
         {lotacaoOptions.map((lotacao) => (
           <Picker.Item key={lotacao} label={lotacao} value={lotacao} />

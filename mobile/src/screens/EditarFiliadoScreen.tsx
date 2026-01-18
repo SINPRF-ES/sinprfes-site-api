@@ -78,8 +78,22 @@ export default function EditarFiliadoScreen({ route, navigation }) {
 
     try {
       setLoading(true);
+
+      if (filiado.perfil_acesso !== filiadoData.perfil_acesso) {
+        logDebug('PerfilAcesso.update.start', {
+          targetId: filiado.id,
+          from: filiadoData.perfil_acesso,
+          to: filiado.perfil_acesso
+        });
+      }
+
       const payload = buildUpdateFiliadoPayload(filiado);
       await atualizarFiliado(filiado.id, payload);
+
+      if (filiado.perfil_acesso !== filiadoData.perfil_acesso) {
+        logDebug('PerfilAcesso.update.success');
+      }
+
       Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
       // Navega para a tela de listagem dentro do Drawer para forçar o refresh
       navigation.navigate('Drawer', {
@@ -87,6 +101,13 @@ export default function EditarFiliadoScreen({ route, navigation }) {
         params: { refresh: true },
       });
     } catch (err: any) {
+      if (filiado.perfil_acesso !== filiadoData.perfil_acesso) {
+        logDebug('PerfilAcesso.update.error', {
+          message: err.message,
+          status: err.response?.status,
+          responseData: err.response?.data
+        });
+      }
       Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o filiado.');
     } finally {
       setLoading(false);

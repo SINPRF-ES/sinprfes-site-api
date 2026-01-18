@@ -10,6 +10,18 @@ import {
 } from './utils.js';
 import { renderizarSeguranca } from './seguranca.js';
 import { preencherFormularioRessarcimentoComDados } from './ressarcimento.js';
+import './age-utils.js';
+
+function formatarDataBR(isoStr) {
+    if (!isoStr) return "";
+    try {
+        const parts = isoStr.split('T')[0].split('-');
+        if (parts.length !== 3) return isoStr;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    } catch (e) {
+        return isoStr;
+    }
+}
 
 export async function carregarMeusDados() {
     const conteudo = document.getElementById("area-filiado-conteudo");
@@ -26,7 +38,7 @@ export async function carregarMeusDados() {
 
         // Alerta de endereço
         if ((!dados.cep || dados.cep === "") && alerta) {
-            alerta.textContent = "⚠️ Por favor, atualize seu endereço.";
+            alerta.textContent = " Por favor, atualize seu endereço.";
             alerta.style.display = 'block';
         }
 
@@ -50,13 +62,22 @@ function renderizarFormularioMeusDados(dados, container) {
         avatar_url
     } = dados;
 
-    const situacaoUpper = (situacao_funcional || "NÃO INFORMADO").toUpperCase();
-    let corStatus = '#888'; // Cinza para "NÃO INFORMADO"
-    if (situacaoUpper === 'ATIVO') corStatus = '#27ae60';
-    if (situacaoUpper === 'VETERANO') corStatus = '#f39c12';
-    if (situacaoUpper === 'PENSIONISTA') corStatus = '#e91e63';
+    const situacaoUpper = (situacao_funcional || situacao || "NÃO INFORMADO").toUpperCase();
+    let corStatus = '#95a5a6'; // Cinza
+    let iconeStatus = '!';
+    let classeBadge = 'badge-desconhecido';
 
-    const iconeStatus = situacaoUpper === 'ATIVO' ? '✅' : '⚠️';
+    if (situacaoUpper === 'ATIVO') {
+        corStatus = '#27ae60';
+        iconeStatus = '[OK]';
+        classeBadge = 'badge-ativo';
+    } else if (situacaoUpper === 'VETERANO') {
+        corStatus = '#f39c12';
+        classeBadge = 'badge-veterano';
+    } else if (situacaoUpper === 'PENSIONISTA') {
+        corStatus = '#e91e63';
+        classeBadge = 'badge-pensionista';
+    }
 
     const opcoes = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"]
         .map(op => `<option value="${op}" ${op === (lotacao || "SEDE").toUpperCase() ? "selected" : ""}>${op}</option>`)
@@ -75,22 +96,38 @@ function renderizarFormularioMeusDados(dados, container) {
                 margin-bottom: 25px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
                 display: flex;
-                flex-wrap: wrap;
-                justify-content: space-between;
                 align-items: center;
-                gap: 15px;
+                gap: 20px;
+            }
+            .header-avatar {
+                width: 90px;
+                height: 90px;
+                border-radius: 50%;
+                overflow: hidden;
+                border: 3px solid #ffc107;
+                background: #eee;
+                flex-shrink: 0;
+            }
+            .header-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
             }
             .profile-name h2 { margin: 0; font-size: 1.5rem; color: #fff; }
-            .profile-meta { font-size: 0.95rem; color: #ccdceb; margin-top: 5px; display:flex; flex-wrap:wrap; gap:8px; }
-            .status-badge {
+            .profile-badges { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+            .badge {
+                padding: 4px 12px;
+                border-radius: 6px;
+                font-size: 0.85rem;
                 font-weight: bold;
-                padding: 8px 14px;
-                border-radius: 8px;
-                font-size: 0.95rem;
-                background: rgba(255,255,255,0.12);
-                border: 1px solid rgba(255,255,255,0.2);
-                display:inline-block;
+                display: inline-block;
+                color: #333;
             }
+            .badge-perfil { background: #3498db; color: #fff; }
+            .badge-ativo { background: #27ae60; }
+            .badge-veterano { background: #f39c12; }
+            .badge-pensionista { background: #e91e63; }
+            .badge-desconhecido { background: #95a5a6; }
             .data-card {
                 background: #fff;
                 color: #333;
@@ -188,28 +225,49 @@ function renderizarFormularioMeusDados(dados, container) {
     const avatarUrlSafe = (avatar_url || "").toString().trim();
     const avatarImg = avatarUrlSafe
         ? `<img src="${avatarUrlSafe}" alt="Avatar" onerror="this.remove();">`
-        : `<div class="avatar-fallback">👤</div>`;
+        : `<div class="avatar-fallback"></div>`;
+
+    // AgeUtils é carregado como global em area-filiado.html
+    const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
     // AgeUtils é carregado como global em area-filiado.html
     const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
     container.innerHTML = `
         <div class="profile-header">
+            <div class="header-avatar">
+                ${avatarImg}
+            </div>
             <div class="profile-name">
                 <h2>${nome || ""}</h2>
-                <div class="profile-meta">
-                    <span>CPF: <strong>${formatarCPF(cpf || "")}</strong></span>
-                    <span>Perfil: <strong>${(perfil_acesso || "").toUpperCase()}</strong></span>
-                    <span>Idade: <strong>${idadeTxt}</strong></span>
+                <div class="profile-badges">
+                    <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
+                    <span class="badge ${classeBadge}">${iconeStatus} ${situacaoUpper}</span>
                 </div>
-            </div>
-            <div class="status-badge" style="border-left: 6px solid ${corStatus};">
-                ${iconeStatus} ${situacaoUpper}
             </div>
         </div>
 
         <div class="data-card">
-            <h3>📌 Contato</h3>
+            <h3>Informações Pessoais</h3>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>CPF</label>
+                    <input type="text" value="${formatarCPF(cpf || "")}" readonly />
+                </div>
+                <div class="field-group">
+                    <label>Data de Nascimento</label>
+                    <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Idade</label>
+                    <input type="text" value="${idadeTxt}" readonly />
+                </div>
+                <div class="field-group"></div>
+            </div>
+
+            <h3 style="margin-top:25px;">Contato</h3>
             <form id="form-meus-dados">
                 <div class="field-row">
                     <div class="field-group">
@@ -241,7 +299,7 @@ function renderizarFormularioMeusDados(dados, container) {
                         <label>CEP</label>
                         <div class="cep-wrapper">
                             <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
-                            <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP">🔎</button>
+                            <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP"></button>
                         </div>
                     </div>
                 </div>
@@ -289,7 +347,7 @@ function renderizarFormularioMeusDados(dados, container) {
                 </div>
 
                 <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top:25px;">
-                    <h3>👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
+                    <h3>Dependentes (até 5)</h3>
                     <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm">Excluir</button>
                 </div>
                 <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
@@ -325,7 +383,7 @@ function renderizarFormularioMeusDados(dados, container) {
 
                 <div class="form-actions">
                     <span id="meus-dados-status" class="field-hint" style="margin-right: 15px; font-weight:bold;"></span>
-                    <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">💾 Salvar Dados</button>
+                    <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">Salvar Dados</button>
                 </div>
               </form>
         </div>
@@ -557,7 +615,7 @@ function renderizarFormularioMeusDados(dados, container) {
         const r = await apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
         if (r.ok) {
           alert("Foto removida com sucesso!");
-          previewContainer.innerHTML = `<div class="avatar-fallback">👤</div>`;
+          previewContainer.innerHTML = `<div class="avatar-fallback"></div>`;
           inputFile.value = "";
           btnSalvarFoto.style.display = "none";
         } else {
