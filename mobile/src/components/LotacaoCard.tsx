@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
 import LotacaoPicker from './LotacaoPicker'; // Importando o novo componente
+import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 
 import { Picker } from '@react-native-picker/picker';
 
@@ -29,9 +30,10 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       <Text style={styles.label}>Situação Funcional</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <Picker
-          selectedValue={filiado?.situacao_funcional}
+          selectedValue={normalizeSituacaoFuncional(filiado?.situacao_funcional || filiado?.situacao)}
           onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao_funcional: itemValue } : null)}
           enabled={isEditing}
+          style={!isEditing ? { color: '#999' } : undefined}
         >
           <Picker.Item label="Ativo" value="ATIVO" />
           <Picker.Item label="Veterano" value="VETERANO" />

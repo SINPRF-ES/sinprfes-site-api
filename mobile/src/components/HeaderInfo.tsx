@@ -2,20 +2,36 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
-import { toBrazilianDate } from '../utils/date';
+import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
+import { useAuth } from '../hooks/useAuth';
 
 interface Props {
   filiado: Filiado | null;
 }
 
 const HeaderInfo: React.FC<Props> = ({ filiado }) => {
+  const { usuario } = useAuth();
+
   if (!filiado) {
     return null;
   }
 
-  const getStatusStyle = (status: string) => {
-    return status === 'ATIVO' ? styles.statusAtivo : styles.statusInativo;
+  const situacaoNormalizada = normalizeSituacaoFuncional(filiado.situacao_funcional || filiado.situacao);
+
+  const getBadgeStyle = () => {
+    switch (situacaoNormalizada) {
+      case 'ATIVO':
+        return styles.situacaoATIVO;
+      case 'VETERANO':
+        return styles.situacaoVETERANO;
+      case 'PENSIONISTA':
+        return styles.situacaoPENSIONISTA;
+      default:
+        return styles.situacaoDefault;
+    }
   };
+
+  const perfilLabel = usuario?.perfil_acesso || '';
 
   return (
     <View style={styles.container}>
@@ -24,16 +40,10 @@ const HeaderInfo: React.FC<Props> = ({ filiado }) => {
         style={styles.avatar}
       />
       <Text style={styles.nome}>{filiado.nome}</Text>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoText}>CPF: {filiado.cpf}</Text>
-        {filiado.data_nascimento && (
-          <Text style={styles.infoText}>
-            Nascimento: {toBrazilianDate(filiado.data_nascimento)}
-          </Text>
-        )}
-      </View>
-      <View style={[styles.statusBadge, getStatusStyle(filiado.situacao)]}>
-        <Text style={styles.statusText}>{filiado.situacao}</Text>
+      {perfilLabel ? <Text style={styles.perfil}>{perfilLabel}</Text> : null}
+
+      <View style={[styles.statusBadge, getBadgeStyle()]}>
+        <Text style={styles.statusText}>{situacaoNormalizada || 'NÃO INFORMADO'}</Text>
       </View>
     </View>
   );
@@ -44,7 +54,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     padding: 15,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#eee',
@@ -60,28 +70,31 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginVertical: 5,
-  },
-  infoText: {
+  perfil: {
     fontSize: 14,
     color: '#666',
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
   statusBadge: {
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 15,
-    marginTop: 5,
+    marginTop: 2,
   },
-  statusAtivo: {
-    backgroundColor: '#d4edda', // Verde claro
+  situacaoATIVO: {
+    backgroundColor: '#27ae60', // Verde
   },
-  statusInativo: {
-    backgroundColor: '#f8d7da', // Vermelho claro
+  situacaoVETERANO: {
+    backgroundColor: '#f39c12', // Amarelo
+  },
+  situacaoPENSIONISTA: {
+    backgroundColor: '#e91e63', // Rosa
+  },
+  situacaoDefault: {
+    backgroundColor: '#95a5a6', // Cinza
   },
   statusText: {
     fontSize: 12,

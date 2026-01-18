@@ -1,8 +1,10 @@
 // mobile/src/services/driveService.ts
 import api from './apiService';
+import { carregarSessao } from './storageService';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
+import { logDebug } from '../utils/filiadoUtils';
 
 export interface DriveFile {
   id: string;
@@ -11,6 +13,11 @@ export interface DriveFile {
   createdTime?: string | null;
   webViewLink?: string | null; // Manter para compatibilidade, mas não usar para downloads seguros
   isFolder: boolean;
+  // Campos para compatibilidade com formato do backend antigo/site
+  titulo?: string;
+  arquivo_url?: string;
+  data_publicacao?: string;
+  webContentLink?: string;
 }
 
 /**
@@ -21,44 +28,92 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
   const endpoint = folderId ? `/api/publicacoes?folderId=${folderId}` : '/api/publicacoes';
   const { data } = await api.get(endpoint);
 
-  // Mapeia a resposta para garantir o campo `isFolder`
-  return data.map((item: any) => ({
-    ...item,
-    isFolder: item.mimeType === 'application/vnd.google-apps.folder',
-  }));
+  // Mapeia a resposta para garantir robustez entre name/titulo, webViewLink/arquivo_url, etc.
+  return data.map((item: any) => {
+    const isFolder = item.isFolder ?? item.mimeType === 'application/vnd.google-apps.folder';
+    return {
+      ...item,
+      name: item.name || item.titulo || 'Sem nome',
+      webViewLink: item.webViewLink || item.arquivo_url,
+      createdTime: item.createdTime || item.data_publicacao,
+      isFolder: isFolder,
+    };
+  });
 };
 
 /**
- * Baixa um arquivo de publicação de forma segura e o abre.
- * @param file O objeto do arquivo a ser baixado.
+ * Baixa um arquivo de publicação de forma autenticada.
+ * @param fileId ID do arquivo no backend/Drive.
+ * @param fileName Nome original do arquivo.
+ * @param token Token JWT do usuário.
  */
-export const downloadPublicacao = async (file: DriveFile): Promise<void> => {
-  const { id, name } = file;
-  // Use um nome de arquivo sanitizado para o cache
-  const safeName = name.replace(/[^a-zA-Z0-9.-_]/g, '');
+export const downloadPublicacaoFile = async (
+  fileId: string,
+  fileName: string,
+  token: string
+): Promise<{ localUri: string; mimeType?: string }> => {
+  // Sanitiza o nome do arquivo: espaços para _, remove caracteres especiais
+  const safeName = (fileName || 'arquivo')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9.\-_]/g, '');
+
   const localUri = `${FileSystem.cacheDirectory}${safeName}`;
+  const url = `${api.defaults.baseURL}/api/publicacoes/arquivo/${fileId}`;
+
+  logDebug('Publicacoes.download.start', { fileId, fileName, localUri });
 
   try {
-    const downloadResumable = FileSystem.createDownloadResumable(
-      `${api.defaults.baseURL}/api/publicacoes/arquivo/${id}`,
-      localUri,
-      {
-        headers: {
-          Authorization: api.defaults.headers.common.Authorization,
-        },
-      }
-    );
+    const result = await FileSystem.downloadAsync(url, localUri, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-    const { uri } = await downloadResumable.downloadAsync();
-    console.log('Download concluído:', uri);
+    const { status, headers: resHeaders, uri } = result;
+    const contentType = resHeaders['content-type'] || resHeaders['Content-Type'] || '';
+
+    logDebug('Publicacoes.download.success', { status, uri, contentType });
+
+    if (status !== 200) {
+      logDebug('Publicacoes.download.error', {
+        status,
+        contentType,
+        reason: 'HTTP_STATUS_NOT_200'
+      });
+      throw new Error(`Erro no servidor (Status ${status})`);
+    }
+
+    if (contentType.includes('application/json')) {
+       // Se o status for 200 mas o tipo for JSON, pode ser um erro mascarado do backend
+       logDebug('Publicacoes.download.error', { reason: 'RECEIVED_JSON_INSTEAD_OF_FILE' });
+       throw new Error('O servidor retornou uma mensagem de erro em vez do arquivo.');
+    }
+
+    return { localUri: uri, mimeType: contentType };
+  } catch (error: any) {
+    logDebug('Publicacoes.download.error', { message: error.message });
+    throw error;
+  }
+};
+
+/**
+ * Baixa um arquivo de publicação de forma segura e o abre (Legado/Compatibilidade).
+ * @param file O objeto do arquivo a ser baixado.
+ */
+export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
+  try {
+    const sessao = await carregarSessao();
+    if (!sessao?.token) return false;
+
+    const { localUri } = await downloadPublicacaoFile(file.id, file.name, sessao.token);
 
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri);
-    } else {
-      Alert.alert('Indisponível', 'Não é possível abrir ou compartilhar este arquivo no seu dispositivo.');
+      await Sharing.shareAsync(localUri);
+      return true;
     }
-  } catch (error: any) {
-    console.error('Erro no download da publicação:', error);
-    Alert.alert('Erro de Download', 'Não foi possível baixar a publicação. Verifique sua conexão e tente novamente.');
+    return false;
+  } catch (error) {
+    return false;
   }
 };
