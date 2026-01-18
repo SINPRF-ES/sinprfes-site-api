@@ -1,16 +1,21 @@
 // mobile/src/screens/PublicacoesScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, Image, Button } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { fetchPublicacoes, downloadPublicacao, DriveFile } from '../services/driveService';
+import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 import { Linking } from 'react-native';
 import { logDebug } from '../utils/filiadoUtils';
 import api from '../services/apiService';
+import { useAuth } from '../hooks/useAuth';
+import * as Sharing from 'expo-sharing';
 
 const PublicacoesScreen: React.FC = () => {
+  const { token } = useAuth();
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{ uri: string; mimeType: string; name: string } | null>(null);
 
   const currentFolder = folderStack[folderStack.length - 1];
 
@@ -34,52 +39,56 @@ const PublicacoesScreen: React.FC = () => {
   });
 
   const handlePress = async (file: DriveFile) => {
-    // Garantir detecção de pasta baseada no mimeType caso isFolder falhe
     const isActuallyFolder = file.isFolder || file.mimeType === 'application/vnd.google-apps.folder';
-
-    const resolvedUrl = file.id ? `${api.defaults.baseURL}/api/publicacoes/arquivo/${file.id}` : (file.webViewLink || file.arquivo_url);
 
     logDebug('Publicacoes.click', {
       id: file.id,
       title: file.name,
-      isFolder: file.isFolder,
       isActuallyFolder,
-      mimeType: file.mimeType,
-      resolvedUrl
+      mimeType: file.mimeType
     });
 
     if (isActuallyFolder) {
-      logDebug('Publicacoes.openFolder', { folderId: file.id });
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
-    } else {
-      if (!resolvedUrl) {
-        logDebug('Publicacoes.openFile.error', { reason: 'missing_url', fileId: file.id });
-        Alert.alert('Erro', 'Não foi possível localizar o endereço deste arquivo.');
-        return;
+      return;
+    }
+
+    if (!token) {
+      Alert.alert('Acesso Negado', 'Sua sessão expirou. Por favor, faça login novamente.');
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      logDebug('Publicacoes.openLocal.start', { fileId: file.id, name: file.name, mimeType: file.mimeType });
+
+      const { localUri, mimeType } = await downloadPublicacaoFile(file.id, file.name, token);
+      const safeMimeType = mimeType || file.mimeType || '';
+
+      if (safeMimeType.startsWith('image/')) {
+        logDebug('Publicacoes.openLocal.success', { mode: 'image-modal', uri: localUri });
+        setSelectedFile({ uri: localUri, mimeType: safeMimeType, name: file.name });
+        setViewerVisible(true);
+      } else {
+        logDebug('Publicacoes.openLocal.success', { mode: 'share', uri: localUri });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(localUri);
+        } else {
+          Alert.alert('Indisponível', 'Não foi possível abrir o visualizador de arquivos neste dispositivo.');
+        }
       }
+    } catch (err: any) {
+      logDebug('Publicacoes.openLocal.error', { message: err.message });
 
-      try {
-        logDebug('Publicacoes.openFile.start', {
-          fileId: file.id,
-          strategy: 'Linking.openURL',
-          url: resolvedUrl
-        });
-
-        // Prioriza abrir via Linking (visualização inline/browser) para evitar downloads pesados desnecessários
-        await Linking.openURL(resolvedUrl);
-
-        logDebug('Publicacoes.openFile.result', { ok: true });
-      } catch (err: any) {
-        logDebug('Publicacoes.openFile.error', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-          stack: err.stack?.split('\n').slice(0, 3).join('\n')
-        });
-        Alert.alert('Erro', `Falha ao abrir arquivo: ${err.message}`);
-      } finally {
-        setIsDownloading(false);
+      // Fallback para webViewLink se o download falhar e houver link do Drive
+      if (file.webViewLink) {
+        logDebug('Publicacoes.openLocal.fallback', { url: file.webViewLink });
+        Linking.openURL(file.webViewLink).catch(() => {});
+      } else {
+        Alert.alert('Erro', err.message || 'Não foi possível abrir o arquivo.');
       }
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -120,8 +129,42 @@ const PublicacoesScreen: React.FC = () => {
     );
   };
 
+  const handleShare = async () => {
+    if (selectedFile?.uri) {
+      await Sharing.shareAsync(selectedFile.uri);
+    }
+  };
+
   return (
     <View style={styles.fullScreen}>
+      <Modal visible={viewerVisible} transparent={false} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle} numberOfLines={1}>{selectedFile?.name}</Text>
+            <TouchableOpacity onPress={() => setViewerVisible(false)} style={styles.closeButton}>
+              <FontAwesome name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.viewerContent}>
+            {selectedFile?.mimeType.startsWith('image/') && (
+              <Image
+                source={{ uri: selectedFile.uri }}
+                style={styles.fullImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+              <FontAwesome name="share" size={20} color="#fff" />
+              <Text style={styles.shareBtnText}>Compartilhar / Salvar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {isDownloading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
@@ -158,6 +201,56 @@ const styles = StyleSheet.create({
   fullScreen: {
     flex: 1,
     backgroundColor: '#f0f0f0',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    paddingTop: 50, // SafeArea manual simplificado
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 15,
+  },
+  closeButton: {
+    padding: 5,
+  },
+  viewerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  fullImage: {
+    width: '100%',
+    height: '100%',
+  },
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  shareBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#007BFF',
+    padding: 15,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   container: {
     padding: 10,

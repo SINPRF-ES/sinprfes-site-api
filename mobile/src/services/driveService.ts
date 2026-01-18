@@ -42,69 +42,78 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
 };
 
 /**
- * Baixa um arquivo de publicação de forma segura e o abre.
+ * Baixa um arquivo de publicação de forma autenticada.
+ * @param fileId ID do arquivo no backend/Drive.
+ * @param fileName Nome original do arquivo.
+ * @param token Token JWT do usuário.
+ */
+export const downloadPublicacaoFile = async (
+  fileId: string,
+  fileName: string,
+  token: string
+): Promise<{ localUri: string; mimeType?: string }> => {
+  // Sanitiza o nome do arquivo: espaços para _, remove caracteres especiais
+  const safeName = (fileName || 'arquivo')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9.\-_]/g, '');
+
+  const localUri = `${FileSystem.cacheDirectory}${safeName}`;
+  const url = `${api.defaults.baseURL}/api/publicacoes/arquivo/${fileId}`;
+
+  logDebug('Publicacoes.download.start', { fileId, fileName, localUri });
+
+  try {
+    const result = await FileSystem.downloadAsync(url, localUri, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const { status, headers: resHeaders, uri } = result;
+    const contentType = resHeaders['content-type'] || resHeaders['Content-Type'] || '';
+
+    logDebug('Publicacoes.download.success', { status, uri, contentType });
+
+    if (status !== 200) {
+      logDebug('Publicacoes.download.error', {
+        status,
+        contentType,
+        reason: 'HTTP_STATUS_NOT_200'
+      });
+      throw new Error(`Erro no servidor (Status ${status})`);
+    }
+
+    if (contentType.includes('application/json')) {
+       // Se o status for 200 mas o tipo for JSON, pode ser um erro mascarado do backend
+       logDebug('Publicacoes.download.error', { reason: 'RECEIVED_JSON_INSTEAD_OF_FILE' });
+       throw new Error('O servidor retornou uma mensagem de erro em vez do arquivo.');
+    }
+
+    return { localUri: uri, mimeType: contentType };
+  } catch (error: any) {
+    logDebug('Publicacoes.download.error', { message: error.message });
+    throw error;
+  }
+};
+
+/**
+ * Baixa um arquivo de publicação de forma segura e o abre (Legado/Compatibilidade).
  * @param file O objeto do arquivo a ser baixado.
  */
 export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
-  const { id } = file;
-  const name = file.name || 'arquivo_sem_nome';
-  // Use um nome de arquivo sanitizado para o cache
-  const safeName = name.replace(/[^a-zA-Z0-9.-_]/g, '');
-  const localUri = `${FileSystem.cacheDirectory}${safeName}`;
-
   try {
-    logDebug('Publicacoes.download.start', { id, localUri });
-
-    // Obter o token da sessão para o download direto via FileSystem
     const sessao = await carregarSessao();
-    const headers: Record<string, string> = {};
-    if (sessao?.token) {
-      headers.Authorization = `Bearer ${sessao.token}`;
-    }
+    if (!sessao?.token) return false;
 
-    const downloadResumable = FileSystem.createDownloadResumable(
-      `${api.defaults.baseURL}/api/publicacoes/arquivo/${id}`,
-      localUri,
-      { headers }
-    );
-
-    const result = await downloadResumable.downloadAsync();
-
-    if (!result) {
-      logDebug('Publicacoes.download.empty', { id });
-      return false;
-    }
-
-    const { uri, status, headers: resHeaders } = result;
-    const contentType = resHeaders['content-type'] || resHeaders['Content-Type'] || '';
-
-    logDebug('Publicacoes.download.response', {
-      uri,
-      status,
-      contentType,
-      contentDisposition: resHeaders['content-disposition'] || resHeaders['Content-Disposition'],
-      contentLength: resHeaders['content-length'] || resHeaders['Content-Length']
-    });
-
-    // Se o status não for sucesso ou se retornar um JSON (geralmente erro do backend)
-    if (status >= 400 || contentType.includes('application/json')) {
-      logDebug('Publicacoes.download.error', {
-        reason: 'backend_error',
-        status,
-        contentType
-      });
-      return false;
-    }
+    const { localUri } = await downloadPublicacaoFile(file.id, file.name, sessao.token);
 
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri);
+      await Sharing.shareAsync(localUri);
       return true;
-    } else {
-      logDebug('Publicacoes.share.unavailable', { uri });
-      return false;
     }
-  } catch (error: any) {
-    logDebug('Publicacoes.download.error', { message: error.message, status: error.response?.status });
+    return false;
+  } catch (error) {
     return false;
   }
 };
