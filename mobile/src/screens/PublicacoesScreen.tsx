@@ -9,8 +9,10 @@ import { logDebug } from '../utils/filiadoUtils';
 import api from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import * as Sharing from 'expo-sharing';
+import { useNavigation } from '@react-navigation/native';
 
 const PublicacoesScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { token } = useAuth();
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -69,6 +71,10 @@ const PublicacoesScreen: React.FC = () => {
         logDebug('Publicacoes.openLocal.success', { mode: 'image-modal', uri: localUri });
         setSelectedFile({ uri: localUri, mimeType: safeMimeType, name: file.name });
         setViewerVisible(true);
+      } else if (safeMimeType === 'application/pdf') {
+        logDebug('Publicacoes.openLocal.pdfViewer.start', { fileId: file.id, localUri });
+        navigation.navigate('PdfViewer', { localUri, title: file.name });
+        logDebug('Publicacoes.openLocal.pdfViewer.success');
       } else {
         logDebug('Publicacoes.openLocal.success', { mode: 'share', uri: localUri });
         if (await Sharing.isAvailableAsync()) {
