@@ -33,7 +33,13 @@ exports.listar = async (req, res) => {
         isFolder: isFolder, 
         descricao: isFolder ? "Pasta de documentos" : "Documento oficial.", 
         arquivo_url: file.webViewLink,
-        data_publicacao: file.createdTime
+        data_publicacao: file.createdTime,
+        // Novos campos para o mobile (contrato expandido)
+        name: file.name,
+        mimeType: file.mimeType,
+        webViewLink: file.webViewLink,
+        webContentLink: file.webContentLink,
+        createdTime: file.createdTime
       };
     });
 

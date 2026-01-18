@@ -6,6 +6,7 @@ import { fetchPublicacoes, downloadPublicacao, DriveFile } from '../services/dri
 import { FontAwesome } from '@expo/vector-icons';
 import { Linking } from 'react-native';
 import { logDebug } from '../utils/filiadoUtils';
+import api from '../services/apiService';
 
 const PublicacoesScreen: React.FC = () => {
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
@@ -36,40 +37,38 @@ const PublicacoesScreen: React.FC = () => {
     // Garantir detecção de pasta baseada no mimeType caso isFolder falhe
     const isActuallyFolder = file.isFolder || file.mimeType === 'application/vnd.google-apps.folder';
 
+    const resolvedUrl = file.id ? `${api.defaults.baseURL}/api/publicacoes/arquivo/${file.id}` : (file.webViewLink || file.arquivo_url);
+
     logDebug('Publicacoes.click', {
       id: file.id,
       title: file.name,
       isFolder: file.isFolder,
       isActuallyFolder,
       mimeType: file.mimeType,
-      hasWebViewLink: !!file.webViewLink
+      resolvedUrl
     });
 
     if (isActuallyFolder) {
       logDebug('Publicacoes.openFolder', { folderId: file.id });
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {
-      setIsDownloading(true);
+      if (!resolvedUrl) {
+        logDebug('Publicacoes.openFile.error', { reason: 'missing_url', fileId: file.id });
+        Alert.alert('Erro', 'Não foi possível localizar o endereço deste arquivo.');
+        return;
+      }
+
       try {
         logDebug('Publicacoes.openFile.start', {
           fileId: file.id,
-          strategy: 'secure-download-then-share'
+          strategy: 'Linking.openURL',
+          url: resolvedUrl
         });
 
-        // Prioriza download seguro que abre o arquivo localmente
-        const success = await downloadPublicacao(file);
+        // Prioriza abrir via Linking (visualização inline/browser) para evitar downloads pesados desnecessários
+        await Linking.openURL(resolvedUrl);
 
-        logDebug('Publicacoes.openFile.result', {
-          ok: success,
-          fallbackTriggered: !success && !!file.webViewLink
-        });
-
-        if (!success && file.webViewLink) {
-          logDebug('Publicacoes.openFile.strategy.fallback', { url: file.webViewLink });
-          await Linking.openURL(file.webViewLink);
-        } else if (!success) {
-          Alert.alert('Erro', 'Não foi possível abrir o arquivo.');
-        }
+        logDebug('Publicacoes.openFile.result', { ok: true });
       } catch (err: any) {
         logDebug('Publicacoes.openFile.error', {
           message: err.message,

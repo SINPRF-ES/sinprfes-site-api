@@ -1,5 +1,6 @@
 // mobile/src/services/driveService.ts
 import api from './apiService';
+import { carregarSessao } from './storageService';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
@@ -12,6 +13,11 @@ export interface DriveFile {
   createdTime?: string | null;
   webViewLink?: string | null; // Manter para compatibilidade, mas não usar para downloads seguros
   isFolder: boolean;
+  // Campos para compatibilidade com formato do backend antigo/site
+  titulo?: string;
+  arquivo_url?: string;
+  data_publicacao?: string;
+  webContentLink?: string;
 }
 
 /**
@@ -22,11 +28,17 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
   const endpoint = folderId ? `/api/publicacoes?folderId=${folderId}` : '/api/publicacoes';
   const { data } = await api.get(endpoint);
 
-  // Mapeia a resposta para garantir o campo `isFolder`
-  return data.map((item: any) => ({
-    ...item,
-    isFolder: item.mimeType === 'application/vnd.google-apps.folder',
-  }));
+  // Mapeia a resposta para garantir robustez entre name/titulo, webViewLink/arquivo_url, etc.
+  return data.map((item: any) => {
+    const isFolder = item.isFolder ?? item.mimeType === 'application/vnd.google-apps.folder';
+    return {
+      ...item,
+      name: item.name || item.titulo || 'Sem nome',
+      webViewLink: item.webViewLink || item.arquivo_url,
+      createdTime: item.createdTime || item.data_publicacao,
+      isFolder: isFolder,
+    };
+  });
 };
 
 /**
@@ -42,14 +54,18 @@ export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
 
   try {
     logDebug('Publicacoes.download.start', { id, localUri });
+
+    // Obter o token da sessão para o download direto via FileSystem
+    const sessao = await carregarSessao();
+    const headers: Record<string, string> = {};
+    if (sessao?.token) {
+      headers.Authorization = `Bearer ${sessao.token}`;
+    }
+
     const downloadResumable = FileSystem.createDownloadResumable(
       `${api.defaults.baseURL}/api/publicacoes/arquivo/${id}`,
       localUri,
-      {
-        headers: {
-          Authorization: api.defaults.headers.common.Authorization as string,
-        },
-      }
+      { headers }
     );
 
     const result = await downloadResumable.downloadAsync();
@@ -59,14 +75,26 @@ export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
       return false;
     }
 
-    const { uri, status, headers } = result;
-    logDebug('Publicacoes.download.success', {
+    const { uri, status, headers: resHeaders } = result;
+    const contentType = resHeaders['content-type'] || resHeaders['Content-Type'] || '';
+
+    logDebug('Publicacoes.download.response', {
       uri,
       status,
-      contentType: headers['content-type'],
-      contentDisposition: headers['content-disposition'],
-      contentLength: headers['content-length']
+      contentType,
+      contentDisposition: resHeaders['content-disposition'] || resHeaders['Content-Disposition'],
+      contentLength: resHeaders['content-length'] || resHeaders['Content-Length']
     });
+
+    // Se o status não for sucesso ou se retornar um JSON (geralmente erro do backend)
+    if (status >= 400 || contentType.includes('application/json')) {
+      logDebug('Publicacoes.download.error', {
+        reason: 'backend_error',
+        status,
+        contentType
+      });
+      return false;
+    }
 
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(uri);
