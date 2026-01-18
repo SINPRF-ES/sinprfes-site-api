@@ -106,9 +106,9 @@ export default function CriarFiliadoScreen({ navigation }) {
       <Text style={styles.title}>Novo Filiado</Text>
       
       {/* Reutilizar os cards para entrada de dados */}
-      <ContatoCard filiado={filiado as Filiado} setFiliado={setFiliado} />
+      <ContatoCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
       <EnderecoCard filiado={filiado as Filiado} setFiliado={setFiliado} />
-      <LotacaoCard filiado={filiado as Filiado} setFiliado={setFiliado} />
+      <LotacaoCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
       <DependentesCard filiado={filiado as Filiado} setFiliado={setFiliado} />
 
       <View style={styles.saveButtonContainer}>

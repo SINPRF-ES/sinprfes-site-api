@@ -102,6 +102,17 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
   return `${day}/${month}/${year}`;
 };
 
+const { formatAgeDetailed } = require('../../../shared/date/age');
+
+/**
+ * Calcula a idade detalhada a partir de uma data de nascimento.
+ * Aceita formatos ISO (YYYY-MM-DD) ou BR (DD/MM/YYYY).
+ * Retorna uma string como "37 anos, 5 meses e 11 dias" ou "—" se inválida.
+ */
+export const calculateAgeBreakdown = (dateStr: string | null | undefined): string => {
+  return formatAgeDetailed(dateStr);
+};
+
 /**
  * Formata uma string de data para o formato DD/MM/YYYY, ideal para inputs.
  * Garante que as barras sejam inseridas nos locais corretos.
