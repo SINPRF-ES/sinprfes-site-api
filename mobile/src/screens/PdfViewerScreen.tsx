@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Text, Share, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { logger } from '../infra/logger';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function PdfViewerScreen({ route }: any) {
   const { localUri, title, fileId } = route.params;
@@ -122,8 +123,69 @@ export default function PdfViewerScreen({ route }: any) {
     </html>
   `;
 
+  const handleShare = async () => {
+    try {
+      logger.info('[Publicacoes.pdf.share.start]', { fileId, localUri });
+      await Share.share({
+        url: Platform.OS === 'ios' ? localUri : undefined,
+        message: Platform.OS === 'android' ? localUri : title,
+        title: title,
+      });
+      logger.info('[Publicacoes.pdf.share.success]');
+    } catch (err: any) {
+      logger.error('[Publicacoes.pdf.share.error]', err);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      logger.info('[Publicacoes.pdf.save.start]', { fileId, localUri });
+
+      if (Platform.OS === 'android') {
+        const SAF = FileSystemLegacy.StorageAccessFramework;
+        const permissions = await SAF.requestDirectoryPermissionsAsync();
+
+        if (permissions.granted) {
+          const base64Content = await FileSystemLegacy.readAsStringAsync(localUri, {
+            encoding: FileSystemLegacy.EncodingType.Base64,
+          });
+
+          const mimeType = 'application/pdf';
+          const newFileUri = await SAF.createFileAsync(permissions.directoryUri, title, mimeType);
+          await FileSystemLegacy.writeAsStringAsync(newFileUri, base64Content, {
+            encoding: FileSystemLegacy.EncodingType.Base64,
+          });
+
+          logger.info('[Publicacoes.pdf.save.success]', { uri: newFileUri });
+          Alert.alert('Sucesso', 'Arquivo salvo com sucesso!');
+        } else {
+          logger.info('[Publicacoes.pdf.save.denied]');
+          // Fallback para share sheet
+          handleShare();
+        }
+      } else {
+        // No iOS o share sheet já tem a opção de salvar
+        handleShare();
+      }
+    } catch (err: any) {
+      logger.error('[Publicacoes.pdf.save.error]', err);
+      // Fallback
+      handleShare();
+    }
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.actionBar}>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+          <FontAwesome name="share-alt" size={20} color="#003366" />
+          <Text style={styles.actionText}>Compartilhar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleSave}>
+          <FontAwesome name="download" size={20} color="#003366" />
+          <Text style={styles.actionText}>Salvar</Text>
+        </TouchableOpacity>
+      </View>
       <WebView
         originWhitelist={['*']}
         source={{ html: htmlContent }}
@@ -146,6 +208,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#f9f9f9',
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 8,
+  },
+  actionText: {
+    color: '#003366',
+    fontWeight: 'bold',
   },
   webview: {
     flex: 1,

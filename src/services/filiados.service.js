@@ -2,6 +2,7 @@
 const pool = require("../config/db");
 const { normalizarCpf } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
+const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
 
 // Colunas completas (retornadas nos UPDATE/INSERT/GET internos)
 const FILIADO_COLUMNS = `
@@ -88,7 +89,9 @@ async function atualizarDadosProprios(id, dados) {
     addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
     addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
     addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
-    addCampo(`dep${i}_parentesco`, dados[`dep${i}_parentesco`]);
+    if (dados[`dep${i}_parentesco`] !== undefined) {
+      addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
+    }
   }
 
   // Sempre atualiza o timestamp
@@ -164,7 +167,9 @@ async function atualizarFiliadoPorId(id, dados) {
     addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
     addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
     addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
-    addCampo(`dep${i}_parentesco`, dados[`dep${i}_parentesco`]);
+    if (dados[`dep${i}_parentesco`] !== undefined) {
+      addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
+    }
   }
 
   // sempre atualiza timestamp
@@ -308,7 +313,12 @@ async function criarFiliadoInicial(dados, perfilCriador) {
 
     for (let i = 1; i <= 5; i++) {
       colunas.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
-      valores.push(dados[`dep${i}_nome`], dados[`dep${i}_cpf`], dados[`dep${i}_data_nascimento`], dados[`dep${i}_parentesco`]);
+      valores.push(
+        dados[`dep${i}_nome`],
+        dados[`dep${i}_cpf`],
+        dados[`dep${i}_data_nascimento`],
+        normalizeParentesco(dados[`dep${i}_parentesco`])
+      );
     }
 
     const placeholders = valores.map((_, i) => (valores[i] === "NOW()" ? "NOW()" : `$${i + 1}`)).join(", ");

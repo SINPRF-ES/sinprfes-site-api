@@ -190,6 +190,9 @@ function renderizarFormularioMeusDados(dados, container) {
         ? `<img src="${avatarUrlSafe}" alt="Avatar" onerror="this.remove();">`
         : `<div class="avatar-fallback">👤</div>`;
 
+    // AgeUtils é carregado como global em area-filiado.html
+    const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
+
     container.innerHTML = `
         <div class="profile-header">
             <div class="profile-name">
@@ -197,6 +200,7 @@ function renderizarFormularioMeusDados(dados, container) {
                 <div class="profile-meta">
                     <span>CPF: <strong>${formatarCPF(cpf || "")}</strong></span>
                     <span>Perfil: <strong>${(perfil_acesso || "").toUpperCase()}</strong></span>
+                    <span>Idade: <strong>${idadeTxt}</strong></span>
                 </div>
             </div>
             <div class="status-badge" style="border-left: 6px solid ${corStatus};">
