@@ -20,11 +20,6 @@ const NAV_ITEMS = [
     screen: 'Noticias', // Tela a ser criada
   },
   {
-    label: 'Convênios',
-    icon: 'storefront-outline',
-    screen: 'Convenios', // Tela a ser criada
-  },
-  {
     label: 'Buscar Filiados',
     icon: 'account-search-outline',
     screen: 'Filiados',

@@ -21,6 +21,7 @@ import EditarFiliadoScreen from "../screens/EditarFiliadoScreen";
 import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
 import NoticiasScreen from "../screens/NoticiasScreen";
 import ConveniosScreen from "../screens/ConveniosScreen";
+import PdfViewerScreen from "../screens/PdfViewerScreen";
 import DrawerNavigator from "./DrawerNavigator"; // Importa o Drawer
 
 export type RootStackParamList = {
@@ -38,6 +39,7 @@ export type RootStackParamList = {
   CriarFiliado: undefined;
   EditarFiliado: { filiadoId: number };
   Votacao: undefined;
+  PdfViewer: { localUri: string; title: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -127,6 +129,11 @@ export default function RootNavigation() {
               name="EditarFiliado"
               component={EditarFiliadoScreen}
               options={{ title: "Editar Filiado" }}
+            />
+            <Stack.Screen
+              name="PdfViewer"
+              component={PdfViewerScreen}
+              options={({ route }) => ({ title: route.params.title || "Visualizador PDF" })}
             />
           </>
         )}
