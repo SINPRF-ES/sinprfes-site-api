@@ -149,7 +149,12 @@ export const calculateAgeBreakdown = (dateStr: string | null | undefined): strin
   if (months > 0) parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
   if (days > 0 || (years === 0 && months === 0)) parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
 
-  return parts.length > 0 ? parts.join(', ') : '0 dias';
+  if (parts.length === 0) return '0 dias';
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} e ${parts[1]}`;
+
+  const lastPart = parts.pop();
+  return `${parts.join(', ')} e ${lastPart}`;
 };
 
 /**

@@ -73,7 +73,7 @@ const PublicacoesScreen: React.FC = () => {
         setViewerVisible(true);
       } else if (safeMimeType === 'application/pdf') {
         logDebug('Publicacoes.openLocal.pdfViewer.start', { fileId: file.id, localUri });
-        navigation.navigate('PdfViewer', { localUri, title: file.name });
+        navigation.navigate('PdfViewer', { localUri, title: file.name, fileId: file.id });
         logDebug('Publicacoes.openLocal.pdfViewer.success');
       } else {
         logDebug('Publicacoes.openLocal.success', { mode: 'share', uri: localUri });
