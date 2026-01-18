@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { formatTelefone, onlyDigits } from '../shared/formatters';
+import { toBrazilianDate } from '../utils/date';
 
 interface Props {
   filiado: Filiado | null;
