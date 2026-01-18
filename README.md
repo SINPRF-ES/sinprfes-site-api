@@ -282,3 +282,18 @@ As interfaces do site e do app foram corrigidas para não mais assumir "ATIVO" c
 
 - **Exibição:** Se o backend não fornecer um valor para a `situacao_funcional`, a UI exibirá "NÃO INFORMADO" (ou um estado visualmente neutro), em vez de incorretamente exibir "ATIVO".
 - **Edição:** Nos formulários de edição, o campo de seleção para a `situacao_funcional` agora reflete corretamente o valor atual do filiado, sem forçar um valor padrão que poderia levar a salvamentos incorretos de dados.
+
+### Padronização de Parentesco (Dependentes)
+
+Para garantir consistência entre Site, App e Banco de Dados, o campo `parentesco` dos dependentes segue uma regra canônica de códigos ENUM:
+- `FILHO_ENTEADO`: Filha(o) / enteada(o)
+- `CONJUGE_COMPANHEIRO`: Cônjuge / companheira(o)
+- `PAI_MAE`: Pai / mãe
+- `IRMAO`: Irmã(o)
+- `OUTRO`: Outro (permite texto livre na persistência, mas normalizado na exibição)
+
+O sistema utiliza um módulo compartilhado em `shared/dependentes/parentesco.js` para realizar a normalização automática de labels legados para esses códigos.
+
+### Cálculo de Idade Compartilhado
+
+O cálculo de idade detalhado (Anos, Meses e Dias) é unificado entre Site e App através do utilitário em `shared/date/age.js`. Isso garante que a mesma data de nascimento resulte sempre na mesma string de idade em qualquer plataforma.

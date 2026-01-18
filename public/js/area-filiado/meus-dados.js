@@ -230,6 +230,9 @@ function renderizarFormularioMeusDados(dados, container) {
     // AgeUtils é carregado como global em area-filiado.html
     const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
+    // AgeUtils é carregado como global em area-filiado.html
+    const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
+
     container.innerHTML = `
         <div class="profile-header">
             <div class="header-avatar">
