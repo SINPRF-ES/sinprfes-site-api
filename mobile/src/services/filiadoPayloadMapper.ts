@@ -18,6 +18,7 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
   if (formState.cep) payload.cep = onlyDigits(formState.cep);
   if (formState.email1) payload.email1 = formState.email1;
   if (formState.email2) payload.email2 = formState.email2;
+  if (formState.data_nascimento) payload.data_nascimento = formState.data_nascimento;
 
   // Endereço: Apenas o CEP é enviado. Outros campos são preenchidos via buscaCEP no backend.
   // Campos como logradouro, bairro, cidade, uf NÃO devem ser enviados.

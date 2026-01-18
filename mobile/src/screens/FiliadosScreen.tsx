@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Filiado } from '../types/filiado';
 import FiliadoCard from '../components/FiliadoCard';
 import { normalizeText } from '../utils/masks';
+import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 
 const FiliadosScreen: React.FC = () => {
   const { usuario: authUser } = useAuth();
@@ -134,7 +135,7 @@ const FiliadosScreen: React.FC = () => {
     const estadoCadastro = f.arquivado_em ? 'ARQUIVADO' : 'ATIVO';
     const estadoMatch = filtroEstado === 'TODOS' || estadoCadastro === filtroEstado;
 
-    const situacaoFuncional = f.situacao_funcional || 'ATIVO';
+    const situacaoFuncional = normalizeSituacaoFuncional(f.situacao_funcional || f.situacao);
     const situacaoMatch = filtroSituacao === 'TODOS' || situacaoFuncional === filtroSituacao;
 
     return textMatch && estadoMatch && situacaoMatch;
@@ -168,25 +169,29 @@ const FiliadosScreen: React.FC = () => {
         {podeCriar && <TouchableOpacity style={styles.addButton} onPress={handleNovoPress}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
       </View>
       <View style={styles.filtersContainer}>
-        <Picker
-          selectedValue={filtroEstado}
-          style={styles.picker}
-          onValueChange={(itemValue) => setFiltroEstado(itemValue)}
-        >
-          <Picker.Item label="Cadastro Ativo" value="ATIVO" />
-          <Picker.Item label="Arquivados" value="ARQUIVADO" />
-          <Picker.Item label="Todos Cadastros" value="TODOS" />
-        </Picker>
-        <Picker
-          selectedValue={filtroSituacao}
-          style={styles.picker}
-          onValueChange={(itemValue) => setFiltroSituacao(itemValue)}
-        >
-          <Picker.Item label="Todas Situações" value="TODOS" />
-          <Picker.Item label="Ativo" value="ATIVO" />
-          <Picker.Item label="Veterano" value="VETERANO" />
-          <Picker.Item label="Pensionista" value="PENSIONISTA" />
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={filtroEstado}
+            style={styles.picker}
+            onValueChange={(itemValue) => setFiltroEstado(itemValue)}
+          >
+            <Picker.Item label="Cadastro Ativo" value="ATIVO" />
+            <Picker.Item label="Arquivados" value="ARQUIVADO" />
+            <Picker.Item label="Todos Cadastros" value="TODOS" />
+          </Picker>
+        </View>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={filtroSituacao}
+            style={styles.picker}
+            onValueChange={(itemValue) => setFiltroSituacao(itemValue)}
+          >
+            <Picker.Item label="Todas Situações" value="TODOS" />
+            <Picker.Item label="Ativo" value="ATIVO" />
+            <Picker.Item label="Veterano" value="VETERANO" />
+            <Picker.Item label="Pensionista" value="PENSIONISTA" />
+          </Picker>
+        </View>
       </View>
       <FlatList
         data={filteredFiliados}
@@ -210,8 +215,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', padding: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  filtersContainer: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#fff', paddingBottom: 5 },
-  picker: { height: 50, flex: 1 },
+  filtersContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingTop: 16,
+    paddingBottom: 12,
+    paddingHorizontal: 8,
+    gap: 8
+  },
+  pickerWrapper: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    height: 50,
+    justifyContent: 'center',
+  },
+  picker: { height: 50 },
   searchInput: { flex: 1, height: 40, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 10 },
   addButton: { marginLeft: 10, backgroundColor: '#007bff', paddingHorizontal: 15, justifyContent: 'center', borderRadius: 8 },
   addButtonText: { color: '#fff', fontWeight: 'bold' },

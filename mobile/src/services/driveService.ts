@@ -3,6 +3,7 @@ import api from './apiService';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
+import { logDebug } from '../utils/filiadoUtils';
 
 export interface DriveFile {
   id: string;
@@ -32,33 +33,43 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
  * Baixa um arquivo de publicação de forma segura e o abre.
  * @param file O objeto do arquivo a ser baixado.
  */
-export const downloadPublicacao = async (file: DriveFile): Promise<void> => {
+export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
   const { id, name } = file;
   // Use um nome de arquivo sanitizado para o cache
   const safeName = name.replace(/[^a-zA-Z0-9.-_]/g, '');
   const localUri = `${FileSystem.cacheDirectory}${safeName}`;
 
   try {
+    logDebug('Publicacoes.download.start', { id, localUri });
     const downloadResumable = FileSystem.createDownloadResumable(
       `${api.defaults.baseURL}/api/publicacoes/arquivo/${id}`,
       localUri,
       {
         headers: {
-          Authorization: api.defaults.headers.common.Authorization,
+          Authorization: api.defaults.headers.common.Authorization as string,
         },
       }
     );
 
-    const { uri } = await downloadResumable.downloadAsync();
-    console.log('Download concluído:', uri);
+    const result = await downloadResumable.downloadAsync();
+
+    if (!result) {
+      logDebug('Publicacoes.download.empty', { id });
+      return false;
+    }
+
+    const { uri, status, headers } = result;
+    logDebug('Publicacoes.download.success', { uri, status, contentType: headers['content-type'] });
 
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(uri);
+      return true;
     } else {
-      Alert.alert('Indisponível', 'Não é possível abrir ou compartilhar este arquivo no seu dispositivo.');
+      logDebug('Publicacoes.share.unavailable', { uri });
+      return false;
     }
   } catch (error: any) {
-    console.error('Erro no download da publicação:', error);
-    Alert.alert('Erro de Download', 'Não foi possível baixar a publicação. Verifique sua conexão e tente novamente.');
+    logDebug('Publicacoes.download.error', { message: error.message, status: error.response?.status });
+    return false;
   }
 };

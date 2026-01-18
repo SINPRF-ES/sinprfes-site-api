@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { formatTelefone, onlyDigits } from '../shared/formatters';
-import { toBrazilianDate } from '../utils/date';
+import { toBrazilianDate, formatDateToDdMmYyyy, toISODate } from '../utils/date';
 
 interface Props {
   filiado: Filiado | null;
@@ -42,10 +42,17 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
       />
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
-        style={styles.inputDisabled}
+        style={isEditing ? styles.input : styles.inputDisabled}
         value={filiado?.data_nascimento ? toBrazilianDate(filiado.data_nascimento) : ''}
+        onChangeText={(text) => {
+          const formatted = formatDateToDdMmYyyy(text);
+          const isoDate = toISODate(formatted);
+          setFiliado(f => f ? { ...f, data_nascimento: isoDate || formatted } : null);
+        }}
         placeholder="DD/MM/AAAA"
-        editable={false}
+        keyboardType="numeric"
+        maxLength={10}
+        editable={isEditing}
       />
       <Text style={styles.label}>Telefone 1</Text>
       <TextInput
