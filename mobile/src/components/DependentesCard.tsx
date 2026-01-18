@@ -4,7 +4,8 @@ import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
 import { formatCpf, onlyDigits } from '../shared/formatters';
-import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy } from '../utils/date';
+import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate } from '../utils/date';
+import { PARENTESCO_OPTIONS, normalizeParentesco } from '../shared/parentesco';
 
 // Subcomponente para cada item de dependente
 const DependenteItem = ({ filiado, setFiliado, index }) => {
@@ -29,15 +30,11 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
 
   const parentescoOptions = [
     { label: 'Selecione...', value: '' },
-    { label: 'Filha(o) / enteada(o)', value: 'FILHO_ENTEADO' },
-    { label: 'Cônjuge / companheira(o)', value: 'CONJUGE_COMPANHEIRO' },
-    { label: 'Pai / mãe', value: 'PAI_MAE' },
-    { label: 'Irmã(o)', value: 'IRMAO' },
-    { label: 'Outro', value: 'OUTRO' },
+    ...PARENTESCO_OPTIONS.map(opt => ({ label: opt.label, value: opt.value }))
   ];
 
-  const currentParentescoValue = filiado?.[`dep${index}_parentesco`] || '';
-  const isStandardOption = parentescoOptions.some(opt => opt.value === currentParentescoValue && opt.value !== '');
+  const currentParentescoValue = normalizeParentesco(filiado?.[`dep${index}_parentesco`] || '');
+  const isStandardOption = PARENTESCO_OPTIONS.some(opt => opt.value === currentParentescoValue);
 
   const [parentescoMode, setParentescoMode] = useState(isStandardOption || currentParentescoValue === '' ? currentParentescoValue : 'OUTRO');
 
@@ -73,7 +70,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="DD/MM/AAAA"
-        value={filiado?.[`dep${index}_data_nascimento`] || ''}
+        value={toBrazilianDate(filiado?.[`dep${index}_data_nascimento` || ''])}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}

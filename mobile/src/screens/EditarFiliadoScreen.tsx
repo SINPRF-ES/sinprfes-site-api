@@ -11,6 +11,7 @@ import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Filiado } from '../types/filiado';
+import { logDebug } from '../utils/filiadoUtils';
 
 export default function EditarFiliadoScreen({ route, navigation }) {
   const { filiado: filiadoData } = route.params;
@@ -26,6 +27,14 @@ export default function EditarFiliadoScreen({ route, navigation }) {
     if (!filiado) {
       Alert.alert('Erro', 'Dados do filiado não fornecidos.');
       navigation.goBack();
+    } else {
+      logDebug('EditarFiliado.init', {
+        id: filiado.id,
+        nome: filiado.nome,
+        data_nascimento: filiado.data_nascimento,
+        situacao_funcional: filiado.situacao_funcional,
+        raw_keys: Object.keys(filiadoData)
+      });
     }
   }, [filiado]);
 
@@ -69,8 +78,22 @@ export default function EditarFiliadoScreen({ route, navigation }) {
 
     try {
       setLoading(true);
+
+      if (filiado.perfil_acesso !== filiadoData.perfil_acesso) {
+        logDebug('PerfilAcesso.update.start', {
+          targetId: filiado.id,
+          from: filiadoData.perfil_acesso,
+          to: filiado.perfil_acesso
+        });
+      }
+
       const payload = buildUpdateFiliadoPayload(filiado);
       await atualizarFiliado(filiado.id, payload);
+
+      if (filiado.perfil_acesso !== filiadoData.perfil_acesso) {
+        logDebug('PerfilAcesso.update.success');
+      }
+
       Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
       // Navega para a tela de listagem dentro do Drawer para forçar o refresh
       navigation.navigate('Drawer', {
@@ -78,6 +101,13 @@ export default function EditarFiliadoScreen({ route, navigation }) {
         params: { refresh: true },
       });
     } catch (err: any) {
+      if (filiado.perfil_acesso !== filiadoData.perfil_acesso) {
+        logDebug('PerfilAcesso.update.error', {
+          message: err.message,
+          status: err.response?.status,
+          responseData: err.response?.data
+        });
+      }
       Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o filiado.');
     } finally {
       setLoading(false);
@@ -173,7 +203,7 @@ export default function EditarFiliadoScreen({ route, navigation }) {
       <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
       <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
       <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao}/>
-      <DependentesCard filiado={filiado} setFiliado={setFiliado} />
+      <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
 
       <View style={styles.buttonContainer}>
         <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />

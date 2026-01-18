@@ -1,8 +1,9 @@
 // src/screens/MeusDadosScreen.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../hooks/useAuth';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/apiService';
 import { uploadAvatar, removerAvatar } from '../services/filiadosService';
 import type { Filiado } from '../types/filiado';
@@ -16,6 +17,7 @@ import DependentesCard from '../components/DependentesCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { toISODate, toBrazilianDate } from '../utils/date';
+import { logger } from '../infra/logger';
 
 export default function MeusDadosScreen() {
   const { usuario, setSessao, token } = useAuth();
@@ -24,32 +26,166 @@ export default function MeusDadosScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
+  const [isDeleteDependentesOpen, setIsDeleteDependentesOpen] = useState(false);
+  const [selectedDependenteIndices, setSelectedDependenteIndices] = useState<number[]>([]);
+  const [isDeletingDependentes, setIsDeletingDependentes] = useState(false);
+
   // Efeito para buscar os dados completos do filiado
-  useEffect(() => {
-    const fetchFiliadoData = async () => {
-      try {
-        setLoading(true);
-        // O `apiService` já injeta o token
-        const { data } = await api.get<Filiado>('/api/filiados/me');
+  const fetchFiliadoData = useCallback(async () => {
+    try {
+      setLoading(true);
+      // O `apiService` já injeta o token
+      const { data } = await api.get<Filiado>('/api/filiados/me');
 
-        // Formata as datas dos dependentes para o padrão brasileiro antes de popular o estado
-        for (let i = 1; i <= 5; i++) {
-          const fieldName = `dep${i}_data_nascimento`;
-          if (data[fieldName]) {
-            data[fieldName] = toBrazilianDate(data[fieldName]);
-          }
+      // Formata as datas dos dependentes para o padrão brasileiro antes de popular o estado
+      for (let i = 1; i <= 5; i++) {
+        const fieldName = `dep${i}_data_nascimento`;
+        if (data[fieldName]) {
+          data[fieldName] = toBrazilianDate(data[fieldName]);
         }
-
-        setFiliado(data);
-      } catch (err: any) {
-        setError(err.message || 'Não foi possível carregar os dados.');
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchFiliadoData();
+      setFiliado(data);
+    } catch (err: any) {
+      setError(err.message || 'Não foi possível carregar os dados.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchFiliadoData();
+  }, [fetchFiliadoData]);
+
+  const toggleDependenteSelection = (index: number) => {
+    setSelectedDependenteIndices(prev =>
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  const confirmDeleteDependentes = () => {
+    if (selectedDependenteIndices.length === 0) {
+      Alert.alert('Seleção Vazia', 'Por favor, selecione pelo menos um dependente para excluir.');
+      return;
+    }
+
+    Alert.alert(
+      'Confirmar Exclusão',
+      `Tem certeza que deseja excluir ${selectedDependenteIndices.length} dependente(s)? Esta ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sim, Excluir',
+          style: 'destructive',
+          onPress: handleDeleteDependentes
+        }
+      ]
+    );
+  };
+
+  const handleDeleteDependentes = async () => {
+    if (!filiado) return;
+
+    try {
+      setIsDeletingDependentes(true);
+      logger.info('[MeusDados.deleteDependentes.confirm]', { id: filiado.id, selected: selectedDependenteIndices });
+
+      logger.info('[MeusDados.deleteDependentes.request]', {
+        id: filiado.id,
+        indices: selectedDependenteIndices
+      });
+
+      const response = await api.delete(`/api/filiados/${filiado.id}/dependentes`, {
+        data: { indices: selectedDependenteIndices }
+      });
+
+      if (response.status === 200 || response.status === 204) {
+        logger.info('[MeusDados.deleteDependentes.success]', { count: selectedDependenteIndices.length });
+        Alert.alert('Sucesso', 'Dependentes excluídos com sucesso.');
+        setIsDeleteDependentesOpen(false);
+        setSelectedDependenteIndices([]);
+        await fetchFiliadoData();
+      } else {
+        throw new Error('Falha na exclusão.');
+      }
+    } catch (err: any) {
+      logger.error('[MeusDados.deleteDependentes.error]', err, {
+        message: err.message,
+        responseData: err.response?.data
+      });
+      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível excluir os dependentes.');
+    } finally {
+      setIsDeletingDependentes(false);
+    }
+  };
+
+  const renderExcluirDependentes = () => {
+    const dependentesAtuais = [];
+    if (filiado) {
+      for (let i = 1; i <= 5; i++) {
+        if (filiado[`dep${i}_nome`]) {
+          dependentesAtuais.push({
+            nome: filiado[`dep${i}_nome`],
+            index: i - 1
+          });
+        }
+      }
+    }
+
+    if (dependentesAtuais.length === 0) return null;
+
+    return (
+      <View>
+        <TouchableOpacity
+          style={styles.toggleDeleteBtn}
+          onPress={() => {
+            setIsDeleteDependentesOpen(!isDeleteDependentesOpen);
+            if (!isDeleteDependentesOpen) logger.info('[MeusDados.deleteDependentes.open]');
+          }}
+          disabled={loading || isDeletingDependentes}
+        >
+          <MaterialCommunityIcons name="delete-outline" size={20} color="#c62828" />
+          <Text style={styles.toggleDeleteBtnText}>
+            {isDeleteDependentesOpen ? 'Cancelar Exclusão' : 'Excluir dependentes'}
+          </Text>
+        </TouchableOpacity>
+
+        {isDeleteDependentesOpen && (
+          <View style={styles.deletePanel}>
+            <Text style={styles.deletePanelTitle}>Selecione para remover:</Text>
+            {dependentesAtuais.map((dep) => (
+              <TouchableOpacity
+                key={dep.index}
+                style={styles.dependenteRow}
+                onPress={() => toggleDependenteSelection(dep.index)}
+                disabled={isDeletingDependentes}
+              >
+                <MaterialCommunityIcons
+                  name={selectedDependenteIndices.includes(dep.index) ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                  size={24}
+                  color={selectedDependenteIndices.includes(dep.index) ? '#c62828' : '#757575'}
+                />
+                <Text style={styles.dependenteRowText}>{dep.nome}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={[
+                styles.confirmDeleteBtn,
+                (selectedDependenteIndices.length === 0 || isDeletingDependentes) && styles.confirmDeleteBtnDisabled
+              ]}
+              onPress={confirmDeleteDependentes}
+              disabled={selectedDependenteIndices.length === 0 || isDeletingDependentes}
+            >
+              <Text style={styles.confirmDeleteBtnText}>
+                {isDeletingDependentes ? 'Excluindo...' : 'Confirmar Exclusão'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const handleUpdate = async () => {
     if (!filiado) return;
@@ -256,6 +392,8 @@ export default function MeusDadosScreen() {
         <DependentesCard filiado={filiado} setFiliado={setFiliado} />
       </ErrorBoundary>
 
+      {renderExcluirDependentes()}
+
       <View style={styles.saveButtonContainer}>
         <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
       </View>
@@ -289,5 +427,62 @@ const styles = StyleSheet.create({
   saveButtonContainer: {
     marginTop: 10,
     marginBottom: 40, // Espaço extra na parte inferior
+  },
+  // Estilos para Excluir Dependentes
+  deletePanel: {
+    backgroundColor: '#fff8f8',
+    borderWidth: 1,
+    borderColor: '#e57373',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 20,
+  },
+  deletePanelTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#c62828',
+    marginBottom: 10,
+  },
+  dependenteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffcdd2',
+  },
+  dependenteRowText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 10,
+  },
+  confirmDeleteBtn: {
+    backgroundColor: '#c62828',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  confirmDeleteBtnDisabled: {
+    backgroundColor: '#ef9a9a',
+  },
+  confirmDeleteBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  toggleDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#c62828',
+    borderRadius: 8,
+  },
+  toggleDeleteBtnText: {
+    color: '#c62828',
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

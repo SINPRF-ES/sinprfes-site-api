@@ -218,6 +218,19 @@ export function gerarCamposDependentes(container, prefixoId = '') {
 
     // Lógica para o campo de parentesco condicional
     const selectParentesco = clone.querySelector(`select[name="dep${i}_parentesco_select"]`);
+
+    // ParentescoUtils é carregado como global em area-filiado.html
+    const options = window.ParentescoUtils ? window.ParentescoUtils.PARENTESCO_OPTIONS : [];
+
+    // Popula o select com as opções canônicas
+    selectParentesco.innerHTML = '<option value="">Selecione...</option>';
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      selectParentesco.appendChild(o);
+    });
+
     const inputOutro = clone.querySelector(`input[name="dep${i}_parentesco_outro"]`);
     const inputHiddenFinal = clone.querySelector(`input[name="dep${i}_parentesco"]`);
 
