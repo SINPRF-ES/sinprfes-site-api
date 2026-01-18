@@ -179,7 +179,24 @@ O aplicativo móvel implementa as funcionalidades de gestão de filiados, restri
 
 As ações de gestão que modificam dados (criar, editar, arquivar, desarquivar) estão disponíveis **apenas em modo online**. Se o dispositivo estiver offline, os botões correspondentes são desabilitados e uma mensagem informa o usuário sobre a restrição.
 
-## 7. Checklist de Testes Manuais
+## 7. Informações sobre Campos e Normalização
+
+### Situação Funcional vs Status do Cadastro
+
+No sistema, existem dois conceitos distintos que não devem ser confundidos:
+
+1.  **Situação Funcional:** Refere-se ao vínculo de trabalho do policial.
+    - Valores canônicos (salvos no banco): `ATIVO`, `VETERANO`, `PENSIONISTA`.
+    - O aplicativo realiza uma **normalização** (trim, uppercase, tratamento de plurais como "VETERANOS") para garantir a consistência na exibição de badges, filtros e formulários.
+2.  **Status do Cadastro:** Refere-se à situação do registro no sistema.
+    - `ATIVO`: Cadastro regular.
+    - `ARQUIVADO`: Cadastro inativo no sistema (baseado no campo `arquivado_em`).
+
+### Localização e Edição de Dados Sensíveis
+
+Por regra de negócio, a edição de campos como `nome`, `cpf`, `lotacao` e `situacao_funcional` em filiados existentes é restrita. No entanto, para **Novos Filiados**, todos estes campos são editáveis durante a criação. A `data_nascimento` do titular é editável por usuários com perfil `ADMIN`.
+
+## 8. Checklist de Testes Manuais
 
 ### Testes Gerais de UI/UX
 - [ ] **Login:** O campo CPF aceita no máximo 11 dígitos e exibe a máscara `000.000.000-00`.

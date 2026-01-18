@@ -11,6 +11,7 @@ import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Filiado } from '../types/filiado';
+import { logDebug } from '../utils/filiadoUtils';
 
 export default function EditarFiliadoScreen({ route, navigation }) {
   const { filiado: filiadoData } = route.params;
@@ -26,6 +27,14 @@ export default function EditarFiliadoScreen({ route, navigation }) {
     if (!filiado) {
       Alert.alert('Erro', 'Dados do filiado não fornecidos.');
       navigation.goBack();
+    } else {
+      logDebug('EditarFiliado.init', {
+        id: filiado.id,
+        nome: filiado.nome,
+        data_nascimento: filiado.data_nascimento,
+        situacao_funcional: filiado.situacao_funcional,
+        raw_keys: Object.keys(filiadoData)
+      });
     }
   }, [filiado]);
 

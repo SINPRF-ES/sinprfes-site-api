@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchPublicacoes, downloadPublicacao, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 import { Linking } from 'react-native';
+import { logDebug } from '../utils/filiadoUtils';
 
 const PublicacoesScreen: React.FC = () => {
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
@@ -14,23 +15,39 @@ const PublicacoesScreen: React.FC = () => {
 
   const { data: publicacoes, isLoading, error } = useQuery({
     queryKey: ['publicacoes', currentFolder.id],
-    queryFn: () => fetchPublicacoes(currentFolder.id),
+    queryFn: async () => {
+      logDebug('Publicacoes.fetch.start', { folderId: currentFolder.id });
+      const data = await fetchPublicacoes(currentFolder.id);
+      logDebug('Publicacoes.fetch.success', {
+        count: data.length,
+        firstTwo: data.slice(0, 2).map(i => ({ id: i.id, name: i.name, isFolder: i.isFolder }))
+      });
+      return data;
+    },
   });
 
   const handlePress = async (file: DriveFile) => {
+    logDebug('Publicacoes.click', { id: file.id, name: file.name, isFolder: file.isFolder, hasLink: !!file.webViewLink });
+
     if (file.isFolder) {
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {
-      if (!file.webViewLink && !isDownloading) { // Apenas tenta baixar se não houver link e não estiver baixando
-        setIsDownloading(true);
-        try {
-          await downloadPublicacao(file);
-        } finally {
-          setIsDownloading(false);
+      setIsDownloading(true);
+      try {
+        logDebug('Publicacoes.open.start', { id: file.id, name: file.name });
+        // Prioriza download seguro que abre o arquivo localmente
+        const success = await downloadPublicacao(file);
+        if (!success && file.webViewLink) {
+          logDebug('Publicacoes.open.fallback', { url: file.webViewLink });
+          await Linking.openURL(file.webViewLink);
+        } else if (!success) {
+          Alert.alert('Erro', 'Não foi possível abrir o arquivo.');
         }
-      } else if (file.webViewLink) {
-        // Fallback para webViewLink se o download seguro não for a opção primária
-        Linking.openURL(file.webViewLink).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
+      } catch (err: any) {
+        logDebug('Publicacoes.open.error', { message: err.message, stack: err.stack });
+        Alert.alert('Erro', `Falha ao abrir arquivo: ${err.message}`);
+      } finally {
+        setIsDownloading(false);
       }
     }
   };

@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-n
 import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
 import { formatCpf, formatTelefone } from '../shared/formatters';
+import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
@@ -18,9 +19,10 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 
-  const situacao = (filiado.situacao_funcional || '').toUpperCase();
+  const situacaoNormalizada = normalizeSituacaoFuncional(filiado.situacao_funcional || filiado.situacao);
+
   const getBadgeStyle = () => {
-    switch (situacao) {
+    switch (situacaoNormalizada) {
       case 'ATIVO':
         return styles.situacaoATIVO;
       case 'VETERANO':
@@ -32,6 +34,8 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
     }
   };
 
+  const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
+
   return (
     <TouchableOpacity style={styles.card} onPress={toggleExpand} activeOpacity={0.7}>
       <View style={styles.headerContainer}>
@@ -41,12 +45,10 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
         />
         <View style={styles.infoContainer}>
           <View style={styles.nameAndBadgeContainer}>
-            <Text style={styles.nome}>{filiado.nome}</Text>
-            {situacao && (
-              <View style={[styles.situacao, getBadgeStyle()]}>
-                <Text style={styles.situacaoText}>{situacao}</Text>
-              </View>
-            )}
+            <Text style={styles.nome} numberOfLines={2}>{filiado.nome}</Text>
+            <View style={[styles.situacao, getBadgeStyle()]}>
+              <Text style={styles.situacaoText}>{situacaoLabel}</Text>
+            </View>
           </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
           <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1 || 'Não informado')}</Text>
