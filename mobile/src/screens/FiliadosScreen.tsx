@@ -127,8 +127,10 @@ const FiliadosScreen: React.FC = () => {
 
     const nomeMatch = f.nome.toLowerCase().includes(searchTermLower);
 
-    // A busca por CPF só é realizada se o campo existir e o usuário for da gestão.
-    const cpfMatch = ehGestao && f.cpf && f.cpf.replace(/\D/g, '').includes(searchTermDigits);
+    // A busca por CPF só é realizada se o campo existir.
+    // Usamos onlyDigits para garantir comparação robusta (com ou sem pontuação)
+    const normalizedCpf = (f.cpf || '').replace(/\D/g, '');
+    const cpfMatch = searchTermDigits !== '' && normalizedCpf.includes(searchTermDigits);
 
     const textMatch = nomeMatch || cpfMatch;
 
@@ -219,8 +221,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: '#fff',
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 24,
+    paddingBottom: 20,
     paddingHorizontal: 8,
     gap: 8
   },

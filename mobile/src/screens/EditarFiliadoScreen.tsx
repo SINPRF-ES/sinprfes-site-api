@@ -182,7 +182,7 @@ export default function EditarFiliadoScreen({ route, navigation }) {
       <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
       <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
       <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao}/>
-      <DependentesCard filiado={filiado} setFiliado={setFiliado} />
+      <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
 
       <View style={styles.buttonContainer}>
         <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />

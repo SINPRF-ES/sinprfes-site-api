@@ -20,31 +20,59 @@ const PublicacoesScreen: React.FC = () => {
       const data = await fetchPublicacoes(currentFolder.id);
       logDebug('Publicacoes.fetch.success', {
         count: data.length,
-        firstTwo: data.slice(0, 2).map(i => ({ id: i.id, name: i.name, isFolder: i.isFolder }))
+        items: data.slice(0, 3).map(i => ({
+          id: i.id,
+          name: i.name,
+          isFolder: i.isFolder,
+          mimeType: i.mimeType,
+          webViewLink: i.webViewLink
+        }))
       });
       return data;
     },
   });
 
   const handlePress = async (file: DriveFile) => {
-    logDebug('Publicacoes.click', { id: file.id, name: file.name, isFolder: file.isFolder, hasLink: !!file.webViewLink });
+    logDebug('Publicacoes.click', {
+      id: file.id,
+      title: file.name,
+      isFolder: file.isFolder,
+      mimeType: file.mimeType,
+      hasWebViewLink: !!file.webViewLink
+    });
 
     if (file.isFolder) {
+      logDebug('Publicacoes.openFolder', { folderId: file.id });
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {
       setIsDownloading(true);
       try {
-        logDebug('Publicacoes.open.start', { id: file.id, name: file.name });
+        logDebug('Publicacoes.openFile.start', {
+          fileId: file.id,
+          strategy: 'secure-download-then-share'
+        });
+
         // Prioriza download seguro que abre o arquivo localmente
         const success = await downloadPublicacao(file);
+
+        logDebug('Publicacoes.openFile.result', {
+          ok: success,
+          fallbackTriggered: !success && !!file.webViewLink
+        });
+
         if (!success && file.webViewLink) {
-          logDebug('Publicacoes.open.fallback', { url: file.webViewLink });
+          logDebug('Publicacoes.openFile.strategy.fallback', { url: file.webViewLink });
           await Linking.openURL(file.webViewLink);
         } else if (!success) {
           Alert.alert('Erro', 'Não foi possível abrir o arquivo.');
         }
       } catch (err: any) {
-        logDebug('Publicacoes.open.error', { message: err.message, stack: err.stack });
+        logDebug('Publicacoes.openFile.error', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+          stack: err.stack?.split('\n').slice(0, 3).join('\n')
+        });
         Alert.alert('Erro', `Falha ao abrir arquivo: ${err.message}`);
       } finally {
         setIsDownloading(false);
