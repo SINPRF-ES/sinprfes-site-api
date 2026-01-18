@@ -174,7 +174,7 @@ function filtrarLista(termo) {
     const filtroEstado = (document.getElementById("filtro-estado-cadastro")?.value || "VIGENTES").toUpperCase();
 
     if (filtroSituacao !== "TODOS") {
-        res = res.filter((f) => String((f?.situacao || "ATIVO")).toUpperCase() === filtroSituacao);
+        res = res.filter((f) => String((f?.situacao_funcional || "ATIVO")).toUpperCase() === filtroSituacao);
     }
 
     if (filtroEstado === "ARQUIVADOS") {
@@ -307,8 +307,8 @@ function filtrarLista(termo) {
 
                         <div class="edit-group">
                             <label>Situação</label>
-                            <select name="situacao">
-                                ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || 'ATIVO').toUpperCase() === op ? 'selected' : ''}>${op}</option>`).join("")}
+                            <select name="situacao_funcional">
+                                ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao_funcional || '').toUpperCase() === op ? 'selected' : ''}>${op}</option>`).join("")}
                             </select>
                         </div>
 

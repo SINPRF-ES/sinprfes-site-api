@@ -1,6 +1,7 @@
 // mobile/src/screens/FiliadosScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useNetInfo } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +20,8 @@ const FiliadosScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('ATIVO');
+  const [filtroSituacao, setFiltroSituacao] = useState('TODOS');
   const [promptedForSync, setPromptedForSync] = useState(false);
 
   const navigation = useNavigation();
@@ -126,7 +129,15 @@ const FiliadosScreen: React.FC = () => {
     // A busca por CPF só é realizada se o campo existir e o usuário for da gestão.
     const cpfMatch = ehGestao && f.cpf && f.cpf.replace(/\D/g, '').includes(searchTermDigits);
 
-    return nomeMatch || cpfMatch;
+    const textMatch = nomeMatch || cpfMatch;
+
+    const estadoCadastro = f.arquivado_em ? 'ARQUIVADO' : 'ATIVO';
+    const estadoMatch = filtroEstado === 'TODOS' || estadoCadastro === filtroEstado;
+
+    const situacaoFuncional = f.situacao_funcional || 'ATIVO';
+    const situacaoMatch = filtroSituacao === 'TODOS' || situacaoFuncional === filtroSituacao;
+
+    return textMatch && estadoMatch && situacaoMatch;
   });
 
   const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
@@ -156,6 +167,27 @@ const FiliadosScreen: React.FC = () => {
         />
         {podeCriar && <TouchableOpacity style={styles.addButton} onPress={handleNovoPress}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
       </View>
+      <View style={styles.filtersContainer}>
+        <Picker
+          selectedValue={filtroEstado}
+          style={styles.picker}
+          onValueChange={(itemValue) => setFiltroEstado(itemValue)}
+        >
+          <Picker.Item label="Cadastro Ativo" value="ATIVO" />
+          <Picker.Item label="Arquivados" value="ARQUIVADO" />
+          <Picker.Item label="Todos Cadastros" value="TODOS" />
+        </Picker>
+        <Picker
+          selectedValue={filtroSituacao}
+          style={styles.picker}
+          onValueChange={(itemValue) => setFiltroSituacao(itemValue)}
+        >
+          <Picker.Item label="Todas Situações" value="TODOS" />
+          <Picker.Item label="Ativo" value="ATIVO" />
+          <Picker.Item label="Veterano" value="VETERANO" />
+          <Picker.Item label="Pensionista" value="PENSIONISTA" />
+        </Picker>
+      </View>
       <FlatList
         data={filteredFiliados}
         keyExtractor={(item) => item.id.toString()}
@@ -178,6 +210,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', padding: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  filtersContainer: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#fff', paddingBottom: 5 },
+  picker: { height: 50, flex: 1 },
   searchInput: { flex: 1, height: 40, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 10 },
   addButton: { marginLeft: 10, backgroundColor: '#007bff', paddingHorizontal: 15, justifyContent: 'center', borderRadius: 8 },
   addButtonText: { color: '#fff', fontWeight: 'bold' },

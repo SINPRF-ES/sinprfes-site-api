@@ -3,29 +3,21 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
-import { formatCPF, sanitizeDigits, formatISOToBR, parseBRToISO, formatDateToDdMmYyyy } from '../utils/masks';
+import { formatCpf, onlyDigits } from '../shared/formatters';
+import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy } from '../utils/date';
 
 // Subcomponente para cada item de dependente
 const DependenteItem = ({ filiado, setFiliado, index }) => {
-
   const handleDateChange = (text: string) => {
     const formatted = formatDateToDdMmYyyy(text);
-    setDataNascimento(formatted);
-
-    // Atualiza o estado global com o formato ISO
-    const isoDate = parseBRToISO(formatted);
     setFiliado(f => {
       if (!f) return null;
-      // Só atualiza se a data for válida ou nula, para não enviar lixo
-      if (isoDate || formatted === '') {
-        return { ...f, [`dep${index}_data_nascimento`]: isoDate };
-      }
-      return f;
+      return { ...f, [`dep${index}_data_nascimento`]: formatted };
     });
   };
 
   const handleDependentChange = (field: string, value: string, isDigitOnly = false) => {
-    let finalValue = isDigitOnly ? sanitizeDigits(value) : value;
+    let finalValue = isDigitOnly ? onlyDigits(value) : value;
     if (field === 'cpf') {
       finalValue = finalValue.slice(0, 11);
     }
@@ -71,7 +63,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="apenas números"
-        value={formatCPF(filiado?.[`dep${index}_cpf`] || '')}
+        value={formatCpf(filiado?.[`dep${index}_cpf`] || '')}
         onChangeText={(text) => handleDependentChange('cpf', text, true)}
         keyboardType="numeric"
         maxLength={14}
@@ -81,7 +73,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="DD/MM/AAAA"
-        value={dataNascimento}
+        value={filiado?.[`dep${index}_data_nascimento`] || ''}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}

@@ -74,6 +74,14 @@ api.interceptors.response.use(
       new Error(message), // Passa um novo objeto de erro sem o config original
       { status, responseData: sanitizedError.response.data }
     );
+
+    if (__DEV__) {
+      console.error('--- [DEV] Detalhes do Erro da API ---');
+      console.error('URL:', `${method?.toUpperCase()} ${url}`);
+      console.error('Status:', status);
+      console.error('Resposta:', JSON.stringify(response?.data, null, 2));
+      console.error('-------------------------------------');
+    }
     
     // Evita logout imediato se a chamada inicial para /me falhar
     if (status === 401 && !config.url.endsWith('/me')) {
@@ -99,6 +107,12 @@ export const criarFiliado = async (filiadoData) => {
 };
 
 export const atualizarFiliado = async (id, filiadoData) => {
+  if (__DEV__) {
+    console.log('--- [DEV] Payload para atualizarFiliado ---');
+    console.log('ID:', id);
+    console.log('Payload:', JSON.stringify(filiadoData, null, 2));
+    console.log('-------------------------------------------');
+  }
   return await api.put(`/api/filiados/${id}`, filiadoData);
 };
 

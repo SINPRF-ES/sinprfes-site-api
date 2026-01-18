@@ -1,34 +1,48 @@
 // mobile/src/screens/PublicacoesScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, ActivityIndicator, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { getPublicacoes, DriveFile } from '../services/driveService';
+import { fetchPublicacoes, downloadPublicacao, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
+import { Linking } from 'react-native';
 
 const PublicacoesScreen: React.FC = () => {
+  const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const currentFolder = folderStack[folderStack.length - 1];
+
   const { data: publicacoes, isLoading, error } = useQuery({
-    queryKey: ['publicacoes'],
-    queryFn: getPublicacoes,
+    queryKey: ['publicacoes', currentFolder.id],
+    queryFn: () => fetchPublicacoes(currentFolder.id),
   });
 
-  const handlePress = (file: DriveFile) => {
-    const url = file.webViewLink;
-    if (typeof url !== 'string' || url.length === 0) {
-      Alert.alert('Indisponível', 'Este item não possui um link para visualização.');
-      return;
-    }
-
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Alert.alert('Erro', `Não foi possível abrir o link: ${url}`);
+  const handlePress = async (file: DriveFile) => {
+    if (file.isFolder) {
+      setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
+    } else {
+      if (!file.webViewLink && !isDownloading) { // Apenas tenta baixar se não houver link e não estiver baixando
+        setIsDownloading(true);
+        try {
+          await downloadPublicacao(file);
+        } finally {
+          setIsDownloading(false);
+        }
+      } else if (file.webViewLink) {
+        // Fallback para webViewLink se o download seguro não for a opção primária
+        Linking.openURL(file.webViewLink).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
       }
-    });
+    }
+  };
+
+  const handleGoBack = () => {
+    if (folderStack.length > 1) {
+      setFolderStack(prev => prev.slice(0, -1));
+    }
   };
 
   const renderIcon = (mimeType: string | null | undefined) => {
-    const type = typeof mimeType === 'string' ? mimeType : '';
+    const type = mimeType || '';
     if (type.includes('folder')) {
       return <FontAwesome name="folder" size={24} color="#FFCA28" />;
     }
@@ -42,49 +56,61 @@ const PublicacoesScreen: React.FC = () => {
   };
 
   const renderItem = ({ item }: { item: DriveFile }) => {
-    const safeDate = item.createdTime && !isNaN(new Date(item.createdTime).getTime())
-      ? new Date(item.createdTime).toLocaleDateString('pt-BR')
-      : 'Data indisponível';
+    const safeDate = item.createdTime ? new Date(item.createdTime).toLocaleDateString('pt-BR') : 'Data indisponível';
 
     return (
-      <TouchableOpacity style={styles.itemContainer} onPress={() => handlePress(item)}>
+      <TouchableOpacity style={styles.itemContainer} onPress={() => handlePress(item)} disabled={isDownloading}>
         <View style={styles.iconContainer}>
           {renderIcon(item.mimeType)}
         </View>
         <View style={styles.textContainer}>
-          <Text style={styles.itemName}>{item.name || 'Nome indisponível'}</Text>
+          <Text style={styles.itemName}>{item.name}</Text>
           <Text style={styles.itemDate}>{safeDate}</Text>
         </View>
-        <FontAwesome name="external-link" size={20} color="#007BFF" />
+        <FontAwesome name={item.isFolder ? "chevron-right" : "download"} size={20} color="#007BFF" />
       </TouchableOpacity>
     );
   };
 
-  if (isLoading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
-  }
-
-  if (error) {
-    return <View style={styles.centered}><Text style={styles.errorText}>Não foi possível carregar as publicações.</Text></View>;
-  }
-
-  // Sanitização dos dados para evitar crashes na renderização
-  const sanitizedPublicacoes = Array.isArray(publicacoes)
-    ? publicacoes.filter(item => item && typeof item.id === 'string' && typeof item.name === 'string')
-    : [];
-
   return (
-    <FlatList
-      data={sanitizedPublicacoes}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.container}
-      ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
-    />
+    <View style={styles.fullScreen}>
+      {isDownloading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Baixando arquivo...</Text>
+        </View>
+      )}
+      <View style={styles.header}>
+        {folderStack.length > 1 && (
+          <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+            <FontAwesome name="arrow-left" size={20} color="#007BFF" />
+          </TouchableOpacity>
+        )}
+        <Text style={styles.headerTitle}>{currentFolder.name}</Text>
+      </View>
+
+      {isLoading ? (
+        <View style={styles.centered}><ActivityIndicator size="large" /></View>
+      ) : error ? (
+        <View style={styles.centered}><Text style={styles.errorText}>Não foi possível carregar as publicações.</Text></View>
+      ) : (
+        <FlatList
+          data={publicacoes || []}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.container}
+          ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
+        />
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  fullScreen: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+  },
   container: {
     padding: 10,
   },
@@ -92,6 +118,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  backButton: {
+    marginRight: 15,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   itemContainer: {
     flexDirection: 'row',
@@ -119,6 +160,17 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: 'red',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingText: {
+    color: '#fff',
+    marginTop: 10,
   },
 });
 

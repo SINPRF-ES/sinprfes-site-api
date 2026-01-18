@@ -251,3 +251,34 @@ Qualquer implementacao que:
 - gere divergencia entre site e app
 
 E considerada **erro de arquitetura** e deve ser corrigida.
+
+---
+
+## 📱 Funcionalidades Específicas do App Mobile
+
+### Publicações (App) — Navegação e Visualização Segura
+
+A seção "Publicações" no aplicativo móvel replica o comportamento do site, garantindo uma experiência consistente e segura.
+
+- **Navegação por Pastas:** O app permite a navegação hierárquica por pastas, assim como no site. Cada clique em uma pasta recarrega a lista de arquivos e subpastas contidas nela.
+- **Visualização Segura de Arquivos:** Para garantir a segurança dos documentos, o app utiliza um fluxo de download autenticado:
+  1. Ao clicar em um arquivo, o app faz uma requisição ao endpoint seguro da API (`/api/publicacoes/arquivo/:id`), enviando o token de autenticação do usuário.
+  2. O arquivo é baixado para o cache local do dispositivo de forma segura.
+  3. Após o download, o app utiliza o sistema de compartilhamento nativo do Android/iOS para abrir o arquivo no visualizador padrão do sistema (leitor de PDF, galeria de imagens, etc.).
+- **Fallback (WebView):** Em casos onde o download seguro não é possível ou para links públicos, o app pode utilizar o `WebViewLink` como um fallback para abrir o conteúdo em um navegador.
+
+### Distinção: Situação Funcional vs. Status do Cadastro
+
+Para evitar ambiguidades, o sistema diferencia claramente dois conceitos:
+
+- **Status do Cadastro:** Refere-se ao estado administrativo do registro do usuário no sistema (ex: `CADASTRO ATIVO`, `ARQUIVADO`). Este status é controlado pela gestão.
+- **Situação Funcional:** Descreve a condição profissional do filiado (ex: `ATIVO`, `VETERANO`, `PENSIONISTA`).
+
+A listagem de filiados no app mobile agora inclui filtros para ambos os eixos, permitindo uma busca mais granular e precisa.
+
+### Remoção de Defaults Indevidos (“ATIVO”) na UI
+
+As interfaces do site e do app foram corrigidas para não mais assumir "ATIVO" como um valor padrão para a **Situação Funcional**.
+
+- **Exibição:** Se o backend não fornecer um valor para a `situacao_funcional`, a UI exibirá "NÃO INFORMADO" (ou um estado visualmente neutro), em vez de incorretamente exibir "ATIVO".
+- **Edição:** Nos formulários de edição, o campo de seleção para a `situacao_funcional` agora reflete corretamente o valor atual do filiado, sem forçar um valor padrão que poderia levar a salvamentos incorretos de dados.

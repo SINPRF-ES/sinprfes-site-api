@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
-import { formatCPF, formatPhone } from '../utils/masks';
+import { formatCpf, formatTelefone } from '../shared/formatters';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
@@ -18,6 +18,20 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 
+  const situacao = (filiado.situacao_funcional || '').toUpperCase();
+  const getBadgeStyle = () => {
+    switch (situacao) {
+      case 'ATIVO':
+        return styles.situacaoATIVO;
+      case 'VETERANO':
+        return styles.situacaoVETERANO;
+      case 'PENSIONISTA':
+        return styles.situacaoPENSIONISTA;
+      default:
+        return styles.situacaoDefault;
+    }
+  };
+
   return (
     <TouchableOpacity style={styles.card} onPress={toggleExpand} activeOpacity={0.7}>
       <View style={styles.headerContainer}>
@@ -28,15 +42,14 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
         <View style={styles.infoContainer}>
           <View style={styles.nameAndBadgeContainer}>
             <Text style={styles.nome}>{filiado.nome}</Text>
-            {/* O Badge de situacaoFuncional só aparece se o dado existir. */}
-            {filiado.situacaoFuncional && (
-              <Text style={[styles.situacao, styles.situacaoFuncional]}>
-                {filiado.situacaoFuncional}
-              </Text>
+            {situacao && (
+              <View style={[styles.situacao, getBadgeStyle()]}>
+                <Text style={styles.situacaoText}>{situacao}</Text>
+              </View>
             )}
           </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
-          <Text style={styles.detalhe}>Telefone: {formatPhone(filiado.telefone1 || 'Não informado')}</Text>
+          <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1 || 'Não informado')}</Text>
         </View>
       </View>
 
@@ -44,7 +57,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
         <View style={styles.expandedContent}>
           {isGestao && (
             <>
-              <Text style={styles.detalhe}>CPF: {formatCPF(filiado.cpf || '')}</Text>
+              <Text style={styles.detalhe}>CPF: {formatCpf(filiado.cpf || '')}</Text>
               <Text style={styles.detalhe}>Email: {filiado.email1}</Text>
             </>
           )}
@@ -142,34 +155,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   situacao: {
-    fontSize: 12,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  situacaoText: {
+    fontSize: 10,
     fontWeight: 'bold',
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    overflow: 'hidden',
+    color: '#fff',
     textTransform: 'uppercase',
   },
   situacaoATIVO: {
-    backgroundColor: '#d4edda',
-    color: '#155724',
+    backgroundColor: '#27ae60', // Verde
   },
   situacaoVETERANO: {
-    backgroundColor: '#fff3cd',
-    color: '#856404',
+    backgroundColor: '#f39c12', // Amarelo
   },
   situacaoPENSIONISTA: {
-    backgroundColor: '#f8d7da',
-    color: '#721c24',
+    backgroundColor: '#e91e63', // Rosa
   },
-  situacaoFuncional: {
-    backgroundColor: '#cce5ff',
-    color: '#004085',
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    fontSize: 12,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+  situacaoDefault: {
+    backgroundColor: '#95a5a6', // Cinza
   },
 });
