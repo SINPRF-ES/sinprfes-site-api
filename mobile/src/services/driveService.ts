@@ -59,7 +59,13 @@ export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
     }
 
     const { uri, status, headers } = result;
-    logDebug('Publicacoes.download.success', { uri, status, contentType: headers['content-type'] });
+    logDebug('Publicacoes.download.success', {
+      uri,
+      status,
+      contentType: headers['content-type'],
+      contentDisposition: headers['content-disposition'],
+      contentLength: headers['content-length']
+    });
 
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(uri);

@@ -103,6 +103,45 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
 };
 
 /**
+ * Calcula a idade detalhada a partir de uma data de nascimento.
+ * Retorna uma string como "37 anos, 5 meses e 11 dias" ou "—" se inválida.
+ */
+export const calculateDetailedAge = (birthDateStr: string | null | undefined): string => {
+  if (!birthDateStr) return '—';
+
+  const birthDate = new Date(birthDateStr + 'T12:00:00'); // Normaliza para meio-dia local
+  if (isNaN(birthDate.getTime())) return '—';
+
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+
+  if (birthDate > today) return '—';
+
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let months = today.getMonth() - birthDate.getMonth();
+  let days = today.getDate() - birthDate.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    // Pega o último dia do mês anterior
+    const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  const parts = [];
+  if (years > 0) parts.push(`${years} ${years === 1 ? 'ano' : 'anos'}`);
+  if (months > 0) parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
+  if (days > 0 || parts.length === 0) parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
+
+  return parts.join(', ');
+};
+
+/**
  * Formata uma string de data para o formato DD/MM/YYYY, ideal para inputs.
  * Garante que as barras sejam inseridas nos locais corretos.
  */
