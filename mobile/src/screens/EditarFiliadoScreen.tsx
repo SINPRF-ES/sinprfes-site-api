@@ -16,7 +16,10 @@ export default function EditarFiliadoScreen({ route, navigation }) {
   const { filiado: filiadoData } = route.params;
   const { usuario } = useAuth();
   const netInfo = useNetInfo();
-  const [filiado, setFiliado] = useState<Filiado | null>(filiadoData);
+  const [filiado, setFiliado] = useState<Filiado | null>({
+    ...filiadoData,
+    situacao_funcional: filiadoData.situacao_funcional || '',
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

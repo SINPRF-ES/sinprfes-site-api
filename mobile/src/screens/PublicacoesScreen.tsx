@@ -21,9 +21,17 @@ const PublicacoesScreen: React.FC = () => {
     if (file.isFolder) {
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {
-      setIsDownloading(true);
-      await downloadPublicacao(file);
-      setIsDownloading(false);
+      if (!file.webViewLink && !isDownloading) { // Apenas tenta baixar se não houver link e não estiver baixando
+        setIsDownloading(true);
+        try {
+          await downloadPublicacao(file);
+        } finally {
+          setIsDownloading(false);
+        }
+      } else if (file.webViewLink) {
+        // Fallback para webViewLink se o download seguro não for a opção primária
+        Linking.openURL(file.webViewLink).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
+      }
     }
   };
 

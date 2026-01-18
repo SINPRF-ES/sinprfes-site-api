@@ -13,6 +13,7 @@ import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { toISODate, toBrazilianDate } from '../utils/date';
 
@@ -242,10 +243,18 @@ export default function MeusDadosScreen() {
         )}
       </View>
       
-      <ContatoCard filiado={filiado} setFiliado={setFiliado} />
-      <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
-      <LotacaoCard filiado={filiado} setFiliado={setFiliado} />
-      <DependentesCard filiado={filiado} setFiliado={setFiliado} />
+      <ErrorBoundary>
+        <ContatoCard filiado={filiado} setFiliado={setFiliado} />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <LotacaoCard filiado={filiado} setFiliado={setFiliado} />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <DependentesCard filiado={filiado} setFiliado={setFiliado} />
+      </ErrorBoundary>
 
       <View style={styles.saveButtonContainer}>
         <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />

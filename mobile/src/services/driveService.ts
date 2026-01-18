@@ -34,26 +34,31 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
  */
 export const downloadPublicacao = async (file: DriveFile): Promise<void> => {
   const { id, name } = file;
-  const localUri = `${FileSystem.cacheDirectory}${name}`;
+  // Use um nome de arquivo sanitizado para o cache
+  const safeName = name.replace(/[^a-zA-Z0-9.-_]/g, '');
+  const localUri = `${FileSystem.cacheDirectory}${safeName}`;
 
   try {
-    const { uri } = await FileSystem.downloadAsync(
+    const downloadResumable = FileSystem.createDownloadResumable(
       `${api.defaults.baseURL}/api/publicacoes/arquivo/${id}`,
       localUri,
       {
-        headers: { // Garante que o token de autorização seja enviado
+        headers: {
           Authorization: api.defaults.headers.common.Authorization,
         },
       }
     );
 
+    const { uri } = await downloadResumable.downloadAsync();
+    console.log('Download concluído:', uri);
+
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(uri);
     } else {
-      Alert.alert('Indisponível', 'A funcionalidade de compartilhamento não está disponível neste dispositivo.');
+      Alert.alert('Indisponível', 'Não é possível abrir ou compartilhar este arquivo no seu dispositivo.');
     }
   } catch (error: any) {
-    console.error('Erro no download:', error);
-    Alert.alert('Erro', 'Não foi possível baixar o arquivo. Verifique sua conexão e tente novamente.');
+    console.error('Erro no download da publicação:', error);
+    Alert.alert('Erro de Download', 'Não foi possível baixar a publicação. Verifique sua conexão e tente novamente.');
   }
 };

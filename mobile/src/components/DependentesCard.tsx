@@ -8,23 +8,11 @@ import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy } from '../utils/date
 
 // Subcomponente para cada item de dependente
 const DependenteItem = ({ filiado, setFiliado, index }) => {
-  const [dataNascimento, setDataNascimento] = useState(() =>
-    formatISOToBR(filiado?.[`dep${index}_data_nascimento`])
-  );
-
   const handleDateChange = (text: string) => {
     const formatted = formatDateToDdMmYyyy(text);
-    setDataNascimento(formatted);
-
-    // Atualiza o estado global com o formato ISO
-    const isoDate = parseBRToISO(formatted);
     setFiliado(f => {
       if (!f) return null;
-      // Só atualiza se a data for válida ou nula, para não enviar lixo
-      if (isoDate || formatted === '') {
-        return { ...f, [`dep${index}_data_nascimento`]: isoDate };
-      }
-      return f;
+      return { ...f, [`dep${index}_data_nascimento`]: formatted };
     });
   };
 
@@ -85,7 +73,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="DD/MM/AAAA"
-        value={dataNascimento}
+        value={filiado?.[`dep${index}_data_nascimento`] || ''}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}

@@ -44,14 +44,18 @@ export async function carregarMeusDados() {
 
 function renderizarFormularioMeusDados(dados, container) {
     const {
-        nome, cpf, situacao, perfil_acesso,
+        nome, cpf, situacao, situacao_funcional, perfil_acesso,
         telefone1, telefone2, email1, email2,
         logradouro_bairro, numero, complemento, cidade, uf, cep, lotacao,
         avatar_url
     } = dados;
 
-    const situacaoUpper = (situacao || "ATIVO").toUpperCase();
-    const corStatus = situacaoUpper === 'ATIVO' ? '#27ae60' : '#f39c12';
+    const situacaoUpper = (situacao_funcional || "NÃO INFORMADO").toUpperCase();
+    let corStatus = '#888'; // Cinza para "NÃO INFORMADO"
+    if (situacaoUpper === 'ATIVO') corStatus = '#27ae60';
+    if (situacaoUpper === 'VETERANO') corStatus = '#f39c12';
+    if (situacaoUpper === 'PENSIONISTA') corStatus = '#e91e63';
+
     const iconeStatus = situacaoUpper === 'ATIVO' ? '✅' : '⚠️';
 
     const opcoes = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"]
