@@ -104,12 +104,24 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
 
 /**
  * Calcula a idade detalhada a partir de uma data de nascimento.
+ * Aceita formatos ISO (YYYY-MM-DD) ou BR (DD/MM/YYYY).
  * Retorna uma string como "37 anos, 5 meses e 11 dias" ou "—" se inválida.
  */
-export const calculateDetailedAge = (birthDateStr: string | null | undefined): string => {
-  if (!birthDateStr) return '—';
+export const calculateAgeBreakdown = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '—';
 
-  const birthDate = new Date(birthDateStr + 'T12:00:00'); // Normaliza para meio-dia local
+  let isoDate = dateStr;
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+  }
+
+  // Validação básica para YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}/.test(isoDate)) return '—';
+
+  const birthDate = new Date(isoDate.substring(0, 10) + 'T12:00:00');
   if (isNaN(birthDate.getTime())) return '—';
 
   const today = new Date();
@@ -123,7 +135,6 @@ export const calculateDetailedAge = (birthDateStr: string | null | undefined): s
 
   if (days < 0) {
     months -= 1;
-    // Pega o último dia do mês anterior
     const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
     days += prevMonth.getDate();
   }
@@ -136,9 +147,9 @@ export const calculateDetailedAge = (birthDateStr: string | null | undefined): s
   const parts = [];
   if (years > 0) parts.push(`${years} ${years === 1 ? 'ano' : 'anos'}`);
   if (months > 0) parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
-  if (days > 0 || parts.length === 0) parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
+  if (days > 0 || (years === 0 && months === 0)) parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
 
-  return parts.join(', ');
+  return parts.length > 0 ? parts.join(', ') : '0 dias';
 };
 
 /**

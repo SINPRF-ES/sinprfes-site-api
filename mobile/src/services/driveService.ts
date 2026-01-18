@@ -34,7 +34,8 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
  * @param file O objeto do arquivo a ser baixado.
  */
 export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
-  const { id, name } = file;
+  const { id } = file;
+  const name = file.name || 'arquivo_sem_nome';
   // Use um nome de arquivo sanitizado para o cache
   const safeName = name.replace(/[^a-zA-Z0-9.-_]/g, '');
   const localUri = `${FileSystem.cacheDirectory}${safeName}`;

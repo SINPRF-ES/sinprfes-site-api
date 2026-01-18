@@ -20,7 +20,7 @@ const PublicacoesScreen: React.FC = () => {
       const data = await fetchPublicacoes(currentFolder.id);
       logDebug('Publicacoes.fetch.success', {
         count: data.length,
-        items: data.slice(0, 3).map(i => ({
+        items: data.slice(0, 5).map(i => ({
           id: i.id,
           name: i.name,
           isFolder: i.isFolder,
@@ -33,15 +33,19 @@ const PublicacoesScreen: React.FC = () => {
   });
 
   const handlePress = async (file: DriveFile) => {
+    // Garantir detecção de pasta baseada no mimeType caso isFolder falhe
+    const isActuallyFolder = file.isFolder || file.mimeType === 'application/vnd.google-apps.folder';
+
     logDebug('Publicacoes.click', {
       id: file.id,
       title: file.name,
       isFolder: file.isFolder,
+      isActuallyFolder,
       mimeType: file.mimeType,
       hasWebViewLink: !!file.webViewLink
     });
 
-    if (file.isFolder) {
+    if (isActuallyFolder) {
       logDebug('Publicacoes.openFolder', { folderId: file.id });
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
     } else {

@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { formatTelefone, onlyDigits } from '../shared/formatters';
-import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateDetailedAge } from '../utils/date';
+import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
 
 interface Props {
   filiado: Filiado | null;
@@ -55,10 +55,10 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
         editable={isEditing}
       />
 
-      <Text style={styles.label}>Idade (Calculada)</Text>
+      <Text style={styles.label}>Idade</Text>
       <TextInput
         style={styles.inputDisabled}
-        value={calculateDetailedAge(filiado?.data_nascimento)}
+        value={calculateAgeBreakdown(filiado?.data_nascimento)}
         editable={false}
       />
 

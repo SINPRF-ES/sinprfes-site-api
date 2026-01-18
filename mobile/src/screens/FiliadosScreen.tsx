@@ -1,6 +1,6 @@
 // mobile/src/screens/FiliadosScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -159,7 +159,7 @@ const FiliadosScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {isOffline && <View style={styles.offlineBanner}><Text style={styles.offlineText}>Você está offline. Exibindo dados do cache.</Text></View>}
       <View style={styles.header}>
         <TextInput
@@ -209,7 +209,7 @@ const FiliadosScreen: React.FC = () => {
         onRefresh={handleRefresh}
         refreshing={loading}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
