@@ -83,4 +83,4 @@
 
   // Exposição global garantida no Browser
   global.Formatters = Formatters;
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));
