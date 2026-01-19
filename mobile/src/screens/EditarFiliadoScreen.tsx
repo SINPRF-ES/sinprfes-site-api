@@ -4,7 +4,7 @@ import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } 
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { buildUpdateFiliadoPayload } from '../services/filiadoPayloadMapper';
-import { atualizarFiliado } from '../services/apiService';
+import { atualizarFiliado, arquivarFiliado, desarquivarFiliado } from '../services/apiService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
@@ -119,31 +119,40 @@ export default function EditarFiliadoScreen({ route, navigation }) {
       Alert.alert('Offline', 'A arquivação de filiados só está disponível online.');
       return;
     }
-    Alert.alert(
+
+    Alert.prompt(
       'Confirmar Arquivamento',
-      'Tem certeza de que deseja arquivar este filiado?',
+      'Informe a justificativa para arquivar este filiado:',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Arquivar',
           style: 'destructive',
-          onPress: async () => {
+          onPress: async (motivo) => {
+            if (!motivo || motivo.trim() === "") {
+              Alert.alert("Erro", "A justificativa é obrigatória.");
+              return;
+            }
+            logDebug('Filiados.archive.start', { id: filiado.id, currentStatus: 'ATIVO', endpoint: `/api/filiados/${filiado.id}/arquivar`, method: 'POST', bodyKeys: ['motivo'] });
             try {
               setLoading(true);
-              await api.post(`/api/filiados/${filiado.id}/arquivar`);
+              const resp = await arquivarFiliado(filiado.id, motivo);
+              logDebug('Filiados.archive.response', { status: resp.status, responseDataKeys: Object.keys(resp.data) });
               Alert.alert('Sucesso', 'Filiado arquivado com sucesso.');
               navigation.navigate('Drawer', {
                 screen: 'Filiados',
                 params: { refresh: true },
               });
             } catch (err: any) {
+              logDebug('Filiados.archive.error', { status: err.response?.status, responseData: err.response?.data, stack: err.stack });
               Alert.alert('Erro', err.response?.data?.message || 'Não foi possível arquivar o filiado.');
             } finally {
               setLoading(false);
             }
           },
         },
-      ]
+      ],
+      'plain-text'
     );
   };
 
@@ -152,30 +161,35 @@ export default function EditarFiliadoScreen({ route, navigation }) {
       Alert.alert('Offline', 'A desarquivação de filiados só está disponível online.');
       return;
     }
-    Alert.alert(
+
+    Alert.prompt(
       'Confirmar Desarquivamento',
-      'Tem certeza de que deseja desarquivar este filiado?',
+      'Informe a justificativa para desarquivar este filiado:',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Desarquivar',
-          onPress: async () => {
+          onPress: async (motivo) => {
+            logDebug('Filiados.unarchive.start', { id: filiado.id, currentStatus: 'ARQUIVADO', endpoint: `/api/filiados/${filiado.id}/desarquivar`, method: 'POST', bodyKeys: ['motivo'] });
             try {
               setLoading(true);
-              await api.post(`/api/filiados/${filiado.id}/desarquivar`);
+              const resp = await desarquivarFiliado(filiado.id, motivo || "Reativação via Mobile");
+              logDebug('Filiados.unarchive.response', { status: resp.status, responseDataKeys: Object.keys(resp.data) });
               Alert.alert('Sucesso', 'Filiado desarquivado com sucesso.');
               navigation.navigate('Drawer', {
                 screen: 'Filiados',
                 params: { refresh: true },
               });
             } catch (err: any) {
+              logDebug('Filiados.unarchive.error', { status: err.response?.status, responseData: err.response?.data, stack: err.stack });
               Alert.alert('Erro', err.response?.data?.message || 'Não foi possível desarquivar o filiado.');
             } finally {
               setLoading(false);
             }
           },
         },
-      ]
+      ],
+      'plain-text'
     );
   };
 

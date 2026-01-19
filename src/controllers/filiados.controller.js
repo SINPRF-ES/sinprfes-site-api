@@ -501,9 +501,11 @@ exports.desarquivarFiliado = async (req, res) => {
       return res.status(403).json({ message: "Sem permissão." });
     }
 
+    const motivo = String(req.body?.motivo || "").trim();
     const atualizado = await desarquivarFiliadoPorId(idAlvo, {
       atorId: req.user.id,
       atorPerfil: perfil,
+      motivo,
     });
 
     if (!atualizado) {

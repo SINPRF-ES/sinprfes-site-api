@@ -12,6 +12,11 @@ import { renderizarSeguranca } from './seguranca.js';
 import { preencherFormularioRessarcimentoComDados } from './ressarcimento.js';
 import './age-utils.js';
 
+if (window.__MEUS_DADOS_INIT__) {
+    console.log("Meus Dados já inicializado.");
+} else {
+    window.__MEUS_DADOS_INIT__ = true;
+
 function formatarDataBR(isoStr) {
     if (!isoStr) return "";
     try {
@@ -226,9 +231,6 @@ function renderizarFormularioMeusDados(dados, container) {
     const avatarImg = avatarUrlSafe
         ? `<img src="${avatarUrlSafe}" alt="Avatar" onerror="this.remove();">`
         : `<div class="avatar-fallback"></div>`;
-
-    // AgeUtils é carregado como global em area-filiado.html
-    const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
     // AgeUtils é carregado como global em area-filiado.html
     const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
@@ -663,3 +665,5 @@ function labelEstadoCadastro(filiado) {
   const txt = raw === 'CADASTRO_ATIVO' ? 'CADASTRO ATIVO' : 'ARQUIVADO';
   return `Estado do cadastro: ${txt}`;
 }
+
+} // Fim do check __MEUS_DADOS_INIT__
