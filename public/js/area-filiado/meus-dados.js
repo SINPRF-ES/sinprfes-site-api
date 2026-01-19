@@ -1,665 +1,671 @@
-import {
-  apiFetch,
-  aplicarMascaraTelefone,
-  formatarCPF,
-  normalizarTextoBusca,
-  formatarTelefoneTexto,
-  aplicarMascaraCPF,
-  aplicarMascaraCEP,
-  gerarCamposDependentes
-} from './utils.js';
-import { renderizarSeguranca } from './seguranca.js';
-import { preencherFormularioRessarcimentoComDados } from './ressarcimento.js';
-import './age-utils.js';
+/**
+ * Módulo Meus Dados (Área do Filiado)
+ * Carregado como script clássico (window.MeusDados)
+ */
 
-function formatarDataBR(isoStr) {
-    if (!isoStr) return "";
-    try {
-        const parts = isoStr.split('T')[0].split('-');
-        if (parts.length !== 3) return isoStr;
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    } catch (e) {
-        return isoStr;
+(function (global) {
+    if (global.MeusDados) return;
+
+    function formatarDataBR(isoStr) {
+        if (global.Formatters) return global.Formatters.formatISOToBR(isoStr);
+        if (!isoStr) return "";
+        try {
+            const parts = isoStr.split('T')[0].split('-');
+            if (parts.length !== 3) return isoStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } catch (e) {
+            return isoStr;
+        }
     }
-}
 
-export async function carregarMeusDados() {
-    const conteudo = document.getElementById("area-filiado-conteudo");
-    const alerta = document.getElementById("alerta-endereco-desatualizado");
+    async function carregarMeusDados() {
+        const { apiFetch } = global.Utils || {};
+        if (!apiFetch) return null;
 
-    if (!conteudo) return null;
-    conteudo.innerHTML = "Carregando seus dados...";
-    if (alerta) alerta.style.display = 'none';
+        const conteudo = document.getElementById("area-filiado-conteudo");
+        const alerta = document.getElementById("alerta-endereco-desatualizado");
 
-    try {
-        const resp = await apiFetch("/api/filiados/me");
-        if (!resp.ok) throw new Error();
-        const dados = await resp.json();
+        if (!conteudo) return null;
+        conteudo.innerHTML = "Carregando seus dados...";
+        if (alerta) alerta.style.display = 'none';
 
-        // Alerta de endereço
-        if ((!dados.cep || dados.cep === "") && alerta) {
-            alerta.textContent = " Por favor, atualize seu endereço.";
-            alerta.style.display = 'block';
+        try {
+            const resp = await apiFetch("/api/filiados/me");
+            if (!resp.ok) throw new Error();
+            const dados = await resp.json();
+
+            // Alerta de endereço
+            if ((!dados.cep || dados.cep === "") && alerta) {
+                alerta.textContent = " Por favor, atualize seu endereço.";
+                alerta.style.display = 'block';
+            }
+
+            renderizarFormularioMeusDados(dados, conteudo);
+            if (global.Seguranca && global.Seguranca.renderizarSeguranca) {
+                global.Seguranca.renderizarSeguranca(dados, carregarMeusDados);
+            }
+            if (global.Ressarcimento && global.Ressarcimento.preencherFormularioRessarcimentoComDados) {
+                global.Ressarcimento.preencherFormularioRessarcimentoComDados(dados);
+            }
+
+            return dados;
+        } catch (e) {
+            console.error(e);
+            conteudo.innerHTML = "<p>Erro ao carregar dados.</p>";
+            return null;
+        }
+    }
+
+    function renderizarFormularioMeusDados(dados, container) {
+        const {
+            nome, cpf, situacao, situacao_funcional, perfil_acesso,
+            telefone1, telefone2, email1, email2,
+            logradouro_bairro, numero, complemento, cidade, uf, cep, lotacao,
+            avatar_url
+        } = dados;
+
+        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF, apiFetch } = global.Utils || {};
+
+        const situacaoUpper = (situacao_funcional || situacao || "NÃO INFORMADO").toUpperCase();
+        let corStatus = '#95a5a6'; // Cinza
+        let iconeStatus = '!';
+        let classeBadge = 'badge-desconhecido';
+
+        if (situacaoUpper === 'ATIVO') {
+            corStatus = '#27ae60';
+            iconeStatus = '[OK]';
+            classeBadge = 'badge-ativo';
+        } else if (situacaoUpper === 'VETERANO') {
+            corStatus = '#f39c12';
+            classeBadge = 'badge-veterano';
+        } else if (situacaoUpper === 'PENSIONISTA') {
+            corStatus = '#e91e63';
+            classeBadge = 'badge-pensionista';
         }
 
-        renderizarFormularioMeusDados(dados, conteudo);
-        renderizarSeguranca(dados, carregarMeusDados);
-        preencherFormularioRessarcimentoComDados(dados);
+        const opcoes = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"]
+            .map(op => `<option value="${op}" ${op === (lotacao || "SEDE").toUpperCase() ? "selected" : ""}>${op}</option>`)
+            .join("");
 
-        return dados;
-    } catch (e) {
-        console.error(e);
-        conteudo.innerHTML = "<p>Erro ao carregar dados.</p>";
-        return null;
-    }
-}
+        if (!document.getElementById('style-meus-dados')) {
+            const s = document.createElement('style');
+            s.id = 'style-meus-dados';
+            s.textContent = `
+                .profile-header {
+                    background: linear-gradient(135deg, #003366 0%, #00152b 100%);
+                    color: #fff;
+                    padding: 25px;
+                    border-radius: 12px;
+                    border-left: 6px solid #ffc107;
+                    margin-bottom: 25px;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                    display: flex;
+                    align-items: center;
+                    gap: 20px;
+                }
+                .header-avatar {
+                    width: 90px;
+                    height: 90px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    border: 3px solid #ffc107;
+                    background: #eee;
+                    flex-shrink: 0;
+                }
+                .header-avatar img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+                .profile-name h2 { margin: 0; font-size: 1.5rem; color: #fff; }
+                .profile-badges { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+                .badge {
+                    padding: 4px 12px;
+                    border-radius: 6px;
+                    font-size: 0.85rem;
+                    font-weight: bold;
+                    display: inline-block;
+                    color: #333;
+                }
+                .badge-perfil { background: #3498db; color: #fff; }
+                .badge-ativo { background: #27ae60; }
+                .badge-veterano { background: #f39c12; }
+                .badge-pensionista { background: #e91e63; }
+                .badge-desconhecido { background: #95a5a6; }
+                .data-card {
+                    background: #fff;
+                    color: #333;
+                    padding: 25px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                    margin-bottom: 20px;
+                    border: 1px solid #e0e0e0;
+                }
+                .data-card h3 {
+                    color: #003366;
+                    font-size: 1.1rem;
+                    border-bottom: 2px solid #f0f0f0;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                    font-weight: bold;
+                }
+                .data-card input, .data-card select {
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ccc;
+                    border-radius: 6px;
+                    color: #333;
+                    background-color: #fff;
+                    font-size: 1rem;
+                    box-sizing: border-box;
+                }
+                .data-card input:focus, .data-card select:focus {
+                    border-color: #003366;
+                    outline: none;
+                    background-color: #f9fbff;
+                }
+                .data-card label {
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    color: #555;
+                    margin-bottom: 5px;
+                    display: block;
+                }
+                input[readonly] {
+                    background-color: #f8f9fa;
+                    color: #666;
+                    border-color: #eee;
+                    cursor: not-allowed;
+                }
+                .field-row { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:12px; }
+                .field-group { display:flex; flex-direction:column; gap:6px; }
 
-function renderizarFormularioMeusDados(dados, container) {
-    const {
-        nome, cpf, situacao, situacao_funcional, perfil_acesso,
-        telefone1, telefone2, email1, email2,
-        logradouro_bairro, numero, complemento, cidade, uf, cep, lotacao,
-        avatar_url
-    } = dados;
+                /* ✅ CEP alinhado como na gestão */
+                .cep-wrapper {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                #me-cep {
+                    max-width: 180px;   /* controla o tamanho visual */
+                }
+                #btn-buscar-cep {
+                    width: 44px;
+                    min-width: 44px;
+                    height: 42px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0;
+                }
 
-    const situacaoUpper = (situacao_funcional || situacao || "NÃO INFORMADO").toUpperCase();
-    let corStatus = '#95a5a6'; // Cinza
-    let iconeStatus = '!';
-    let classeBadge = 'badge-desconhecido';
+                /* Avatar Row Renovado */
+                .avatar-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+                .avatar-preview {
+                    width:80px; height:80px; border-radius:50%;
+                    background:#f1f3f5;
+                    border:3px solid #dee2e6;
+                    overflow:hidden;
+                    display:flex; align-items:center; justify-content:center;
+                    flex-shrink:0; position: relative;
+                }
+                .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+                .avatar-fallback { font-size: 32px; color:#6c757d; }
 
-    if (situacaoUpper === 'ATIVO') {
-        corStatus = '#27ae60';
-        iconeStatus = '[OK]';
-        classeBadge = 'badge-ativo';
-    } else if (situacaoUpper === 'VETERANO') {
-        corStatus = '#f39c12';
-        classeBadge = 'badge-veterano';
-    } else if (situacaoUpper === 'PENSIONISTA') {
-        corStatus = '#e91e63';
-        classeBadge = 'badge-pensionista';
-    }
+                .avatar-actions { display: flex; flex-direction: column; gap: 8px; }
+                .btn-upload-label {
+                    background: #e9ecef; color: #333; padding: 8px 15px; border-radius: 5px;
+                    font-size: 0.9rem; cursor: pointer; text-align: center; border: 1px solid #ccc;
+                    transition: all 0.2s; display: inline-block;
+                }
+                .btn-upload-label:hover { background: #dde2e6; border-color: #bbb; }
+                #me-avatar-file { display: none; }
 
-    const opcoes = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"]
-        .map(op => `<option value="${op}" ${op === (lotacao || "SEDE").toUpperCase() ? "selected" : ""}>${op}</option>`)
-        .join("");
+                .form-actions { margin-top: 25px; text-align:right; }
+            `;
+            document.head.appendChild(s);
+        }
 
-    if (!document.getElementById('style-meus-dados')) {
-        const s = document.createElement('style');
-        s.id = 'style-meus-dados';
-        s.textContent = `
-            .profile-header {
-                background: linear-gradient(135deg, #003366 0%, #00152b 100%);
-                color: #fff;
-                padding: 25px;
-                border-radius: 12px;
-                border-left: 6px solid #ffc107;
-                margin-bottom: 25px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                display: flex;
-                align-items: center;
-                gap: 20px;
-            }
-            .header-avatar {
-                width: 90px;
-                height: 90px;
-                border-radius: 50%;
-                overflow: hidden;
-                border: 3px solid #ffc107;
-                background: #eee;
-                flex-shrink: 0;
-            }
-            .header-avatar img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            .profile-name h2 { margin: 0; font-size: 1.5rem; color: #fff; }
-            .profile-badges { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-            .badge {
-                padding: 4px 12px;
-                border-radius: 6px;
-                font-size: 0.85rem;
-                font-weight: bold;
-                display: inline-block;
-                color: #333;
-            }
-            .badge-perfil { background: #3498db; color: #fff; }
-            .badge-ativo { background: #27ae60; }
-            .badge-veterano { background: #f39c12; }
-            .badge-pensionista { background: #e91e63; }
-            .badge-desconhecido { background: #95a5a6; }
-            .data-card {
-                background: #fff;
-                color: #333;
-                padding: 25px;
-                border-radius: 10px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                margin-bottom: 20px;
-                border: 1px solid #e0e0e0;
-            }
-            .data-card h3 {
-                color: #003366;
-                font-size: 1.1rem;
-                border-bottom: 2px solid #f0f0f0;
-                padding-bottom: 10px;
-                margin-bottom: 20px;
-                font-weight: bold;
-            }
-            .data-card input, .data-card select {
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ccc;
-                border-radius: 6px;
-                color: #333;
-                background-color: #fff;
-                font-size: 1rem;
-                box-sizing: border-box;
-            }
-            .data-card input:focus, .data-card select:focus {
-                border-color: #003366;
-                outline: none;
-                background-color: #f9fbff;
-            }
-            .data-card label {
-                font-weight: 600;
-                font-size: 0.9rem;
-                color: #555;
-                margin-bottom: 5px;
-                display: block;
-            }
-            input[readonly] {
-                background-color: #f8f9fa;
-                color: #666;
-                border-color: #eee;
-                cursor: not-allowed;
-            }
-            .field-row { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:12px; }
-            .field-group { display:flex; flex-direction:column; gap:6px; }
+        const avatarUrlSafe = (avatar_url || "").toString().trim();
+        const avatarImg = avatarUrlSafe
+            ? `<img src="${avatarUrlSafe}" alt="Avatar" onerror="this.remove();">`
+            : `<div class="avatar-fallback"></div>`;
 
-            /* ✅ CEP alinhado como na gestão */
-            .cep-wrapper {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            #me-cep {
-                max-width: 180px;   /* controla o tamanho visual */
-            }
-            #btn-buscar-cep {
-                width: 44px;
-                min-width: 44px;
-                height: 42px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-            }
+        // AgeUtils é carregado como global em area-filiado.html
+        const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
-            /* Avatar Row Renovado */
-            .avatar-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
-            .avatar-preview {
-                width:80px; height:80px; border-radius:50%;
-                background:#f1f3f5;
-                border:3px solid #dee2e6;
-                overflow:hidden;
-                display:flex; align-items:center; justify-content:center;
-                flex-shrink:0; position: relative;
-            }
-            .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
-            .avatar-fallback { font-size: 32px; color:#6c757d; }
-
-            .avatar-actions { display: flex; flex-direction: column; gap: 8px; }
-            .btn-upload-label {
-                background: #e9ecef; color: #333; padding: 8px 15px; border-radius: 5px;
-                font-size: 0.9rem; cursor: pointer; text-align: center; border: 1px solid #ccc;
-                transition: all 0.2s; display: inline-block;
-            }
-            .btn-upload-label:hover { background: #dde2e6; border-color: #bbb; }
-            #me-avatar-file { display: none; }
-
-            .form-actions { margin-top: 25px; text-align:right; }
-        `;
-        document.head.appendChild(s);
-    }
-
-    const avatarUrlSafe = (avatar_url || "").toString().trim();
-    const avatarImg = avatarUrlSafe
-        ? `<img src="${avatarUrlSafe}" alt="Avatar" onerror="this.remove();">`
-        : `<div class="avatar-fallback"></div>`;
-
-    // AgeUtils é carregado como global em area-filiado.html
-    const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
-
-    // AgeUtils é carregado como global em area-filiado.html
-    const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
-
-    container.innerHTML = `
-        <div class="profile-header">
-            <div class="header-avatar">
-                ${avatarImg}
-            </div>
-            <div class="profile-name">
-                <h2>${nome || ""}</h2>
-                <div class="profile-badges">
-                    <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
-                    <span class="badge ${classeBadge}">${iconeStatus} ${situacaoUpper}</span>
+        container.innerHTML = `
+            <div class="profile-header">
+                <div class="header-avatar">
+                    ${avatarImg}
+                </div>
+                <div class="profile-name">
+                    <h2>${nome || ""}</h2>
+                    <div class="profile-badges">
+                        <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
+                        <span class="badge ${classeBadge}">${iconeStatus} ${situacaoUpper}</span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="data-card">
-            <h3>Informações Pessoais</h3>
-            <div class="field-row">
-                <div class="field-group">
-                    <label>CPF</label>
-                    <input type="text" value="${formatarCPF(cpf || "")}" readonly />
-                </div>
-                <div class="field-group">
-                    <label>Data de Nascimento</label>
-                    <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
-                </div>
-            </div>
-            <div class="field-row">
-                <div class="field-group">
-                    <label>Idade</label>
-                    <input type="text" value="${idadeTxt}" readonly />
-                </div>
-                <div class="field-group"></div>
-            </div>
-
-            <h3 style="margin-top:25px;">Contato</h3>
-            <form id="form-meus-dados">
+            <div class="data-card">
+                <h3>Informações Pessoais</h3>
                 <div class="field-row">
                     <div class="field-group">
-                        <label>Telefone 1</label>
-                        <input type="text" id="me-telefone1" value="${telefone1 || ""}" />
+                        <label>CPF</label>
+                        <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
                     </div>
                     <div class="field-group">
-                        <label>Telefone 2</label>
-                        <input type="text" id="me-telefone2" value="${telefone2 || ""}" />
+                        <label>Data de Nascimento</label>
+                        <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
                     </div>
                 </div>
-
                 <div class="field-row">
                     <div class="field-group">
-                        <label>Email 1</label>
-                        <input type="email" id="me-email1" value="${email1 || ""}" />
+                        <label>Idade</label>
+                        <input type="text" value="${idadeTxt}" readonly />
                     </div>
-                    <div class="field-group">
-                        <label>Email 2</label>
-                        <input type="email" id="me-email2" value="${email2 || ""}" />
-                    </div>
+                    <div class="field-group"></div>
                 </div>
 
-                <h3 style="margin-top:25px;">🏠 Endereço</h3>
-
-                <!-- ✅ ALTERADO: CEP com wrapper flex e tamanho controlado -->
-                <div class="field-row" style="grid-template-columns: 1fr;">
-                    <div class="field-group">
-                        <label>CEP</label>
-                        <div class="cep-wrapper">
-                            <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
-                            <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP"></button>
+                <h3 style="margin-top:25px;">Contato</h3>
+                <form id="form-meus-dados">
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Telefone 1</label>
+                            <input type="text" id="me-telefone1" value="${telefone1 || ""}" />
+                        </div>
+                        <div class="field-group">
+                            <label>Telefone 2</label>
+                            <input type="text" id="me-telefone2" value="${telefone2 || ""}" />
                         </div>
                     </div>
-                </div>
 
-                <div class="field-row" style="grid-template-columns: 1fr;">
-                    <div class="field-group">
-                        <label>Logradouro</label>
-                        <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly />
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Email 1</label>
+                            <input type="email" id="me-email1" value="${email1 || ""}" />
+                        </div>
+                        <div class="field-group">
+                            <label>Email 2</label>
+                            <input type="email" id="me-email2" value="${email2 || ""}" />
+                        </div>
                     </div>
-                </div>
 
-                <div class="field-row" style="grid-template-columns: 1fr 2fr 1fr;">
-                    <div class="field-group">
-                        <label>Nº</label>
-                        <input type="text" id="me-numero" value="${numero || ""}" />
-                    </div>
-                    <div class="field-group">
-                        <label>Compl.</label>
-                        <input type="text" id="me-complemento" value="${complemento || ""}" />
-                    </div>
-                    <div class="field-group">
-                        <label>UF</label>
-                        <input type="text" id="me-uf" value="${uf || ""}" readonly />
-                    </div>
-                </div>
+                    <h3 style="margin-top:25px;">🏠 Endereço</h3>
 
-                <div class="field-row" style="grid-template-columns: 1fr;">
-                    <div class="field-group">
-                        <label>Cidade</label>
-                        <input type="text" id="me-cidade" value="${cidade || ""}" readonly />
+                    <!-- ✅ ALTERADO: CEP com wrapper flex e tamanho controlado -->
+                    <div class="field-row" style="grid-template-columns: 1fr;">
+                        <div class="field-group">
+                            <label>CEP</label>
+                            <div class="cep-wrapper">
+                                <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
+                                <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP"></button>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="field-row">
-                    <div class="field-group">
-                        <label>Lotação</label>
-                        <select id="me-lotacao">
-                            ${opcoes}
-                        </select>
+                    <div class="field-row" style="grid-template-columns: 1fr;">
+                        <div class="field-group">
+                            <label>Logradouro</label>
+                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly />
+                        </div>
                     </div>
-                    <div class="field-group">
-                        <label></label>
-                        <input type="text" value="" style="visibility:hidden;" />
-                    </div>
-                </div>
 
-                <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top:25px;">
-                    <h3>Dependentes (até 5)</h3>
-                    <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm">Excluir</button>
-                </div>
-                <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
-                    <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
-                    <div id="checkboxes-excluir-dependentes" style="display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Checkboxes serão inseridos aqui -->
+                    <div class="field-row" style="grid-template-columns: 1fr 2fr 1fr;">
+                        <div class="field-group">
+                            <label>Nº</label>
+                            <input type="text" id="me-numero" value="${numero || ""}" />
+                        </div>
+                        <div class="field-group">
+                            <label>Compl.</label>
+                            <input type="text" id="me-complemento" value="${complemento || ""}" />
+                        </div>
+                        <div class="field-group">
+                            <label>UF</label>
+                            <input type="text" id="me-uf" value="${uf || ""}" readonly />
+                        </div>
                     </div>
-                    <div style="margin-top: 15px; text-align: right;">
-                        <button type="button" id="btn-confirmar-exclusao-dependentes" class="btn btn-danger">Confirmar Exclusão</button>
+
+                    <div class="field-row" style="grid-template-columns: 1fr;">
+                        <div class="field-group">
+                            <label>Cidade</label>
+                            <input type="text" id="me-cidade" value="${cidade || ""}" readonly />
+                        </div>
                     </div>
-                </div>
 
-                <div id="dependentes-container-meus-dados">
-                    <!-- Campos dos dependentes serão inseridos aqui -->
-                </div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Lotação</label>
+                            <select id="me-lotacao">
+                                ${opcoes}
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label></label>
+                            <input type="text" value="" style="visibility:hidden;" />
+                        </div>
+                    </div>
 
-                <div class="field-row" style="grid-template-columns: 1fr;">
-                    <div class="field-group">
-                        <label>Foto de perfil</label>
-                        <div class="avatar-row">
-                            <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
-                            <div class="avatar-actions">
-                                <label class="btn-upload-label" for="me-avatar-file">Selecionar foto</label>
-                                <input type="file" id="me-avatar-file" accept="image/*" />
-                                <div style="display:flex; gap:10px;">
-                                    <button type="button" class="btn btn-primary" id="btn-salvar-foto" style="display:none;">Salvar Foto</button>
-                                    <button type="button" class="btn btn-danger" id="btn-remover-foto">Remover</button>
+                    <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top:25px;">
+                        <h3>Dependentes (até 5)</h3>
+                        <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm">Excluir</button>
+                    </div>
+                    <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                        <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
+                        <div id="checkboxes-excluir-dependentes" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Checkboxes serão inseridos aqui -->
+                        </div>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <button type="button" id="btn-confirmar-exclusao-dependentes" class="btn btn-danger">Confirmar Exclusão</button>
+                        </div>
+                    </div>
+
+                    <div id="dependentes-container-meus-dados">
+                        <!-- Campos dos dependentes serão inseridos aqui -->
+                    </div>
+
+                    <div class="field-row" style="grid-template-columns: 1fr;">
+                        <div class="field-group">
+                            <label>Foto de perfil</label>
+                            <div class="avatar-row">
+                                <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
+                                <div class="avatar-actions">
+                                    <label class="btn-upload-label" for="me-avatar-file">Selecionar foto</label>
+                                    <input type="file" id="me-avatar-file" accept="image/*" />
+                                    <div style="display:flex; gap:10px;">
+                                        <button type="button" class="btn btn-primary" id="btn-salvar-foto" style="display:none;">Salvar Foto</button>
+                                        <button type="button" class="btn btn-danger" id="btn-remover-foto">Remover</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-actions">
-                    <span id="meus-dados-status" class="field-hint" style="margin-right: 15px; font-weight:bold;"></span>
-                    <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">Salvar Dados</button>
-                </div>
-              </form>
-        </div>
-    `;
+                    <div class="form-actions">
+                        <span id="meus-dados-status" class="field-hint" style="margin-right: 15px; font-weight:bold;"></span>
+                        <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">Salvar Dados</button>
+                    </div>
+                  </form>
+            </div>
+        `;
 
-    // --- MÁSCARAS ---
-    aplicarMascaraTelefone(document.getElementById("me-telefone1"));
-    aplicarMascaraTelefone(document.getElementById("me-telefone2"));
-
-    const cepInput = document.getElementById("me-cep");
-    aplicarMascaraCEP(cepInput);
-
-    // --- DEPENDENTES ---
-    const containerDependentes = document.getElementById("dependentes-container-meus-dados");
-    gerarCamposDependentes(containerDependentes, 'me');
-
-    for (let i = 1; i <= 5; i++) {
-        const nome = document.getElementById(`me-dep${i}_nome`);
-        const cpf = document.getElementById(`me-dep${i}_cpf`);
-        const dataNascimento = document.getElementById(`me-dep${i}_data_nascimento`);
-        const parentesco = document.getElementById(`me-dep${i}_parentesco`);
-
-        if (nome) nome.value = dados[`dep${i}_nome`] || '';
-        if (cpf) {
-            cpf.value = dados[`dep${i}_cpf`] || '';
-            aplicarMascaraCPF(cpf);
+        // --- MÁSCARAS ---
+        if (aplicarMascaraTelefone) {
+            aplicarMascaraTelefone(document.getElementById("me-telefone1"));
+            aplicarMascaraTelefone(document.getElementById("me-telefone2"));
         }
-        if (dataNascimento) dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
-        
-        // Lógica para preencher o campo de parentesco (select + outro)
-        const parentescoValor = dados[`dep${i}_parentesco`] || '';
-        const selectParentesco = document.getElementById(`me-dep${i}_parentesco_select`);
-        const inputOutro = document.getElementById(`me-dep${i}_parentesco_outro`);
-        const inputHidden = document.getElementById(`me-dep${i}_parentesco`);
 
-        if (selectParentesco && inputOutro && inputHidden) {
-            inputHidden.value = parentescoValor;
-            const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
+        const cepInput = document.getElementById("me-cep");
+        if (aplicarMascaraCEP) aplicarMascaraCEP(cepInput);
 
-            if (opcoesPadrao.includes(parentescoValor)) {
-                selectParentesco.value = parentescoValor;
-                inputOutro.style.display = 'none';
-                inputOutro.value = '';
-            } else if (parentescoValor) {
-                selectParentesco.value = 'Outro';
-                inputOutro.style.display = 'block';
-                inputOutro.value = parentescoValor;
-            } else {
-                selectParentesco.value = '';
-                inputOutro.style.display = 'none';
-                inputOutro.value = '';
+        // --- DEPENDENTES ---
+        const containerDependentes = document.getElementById("dependentes-container-meus-dados");
+        if (gerarCamposDependentes) gerarCamposDependentes(containerDependentes, 'me');
+
+        for (let i = 1; i <= 5; i++) {
+            const nome = document.getElementById(`me-dep${i}_nome`);
+            const cpfEl = document.getElementById(`me-dep${i}_cpf`);
+            const dataNascimento = document.getElementById(`me-dep${i}_data_nascimento`);
+
+            if (nome) nome.value = dados[`dep${i}_nome`] || '';
+            if (cpfEl) {
+                cpfEl.value = dados[`dep${i}_cpf`] || '';
+                if (aplicarMascaraCPF) aplicarMascaraCPF(cpfEl);
+            }
+            if (dataNascimento) dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
+
+            // Lógica para preencher o campo de parentesco (select + outro)
+            const parentescoValor = dados[`dep${i}_parentesco`] || '';
+            const selectParentesco = document.getElementById(`me-dep${i}_parentesco_select`);
+            const inputOutro = document.getElementById(`me-dep${i}_parentesco_outro`);
+            const inputHidden = document.getElementById(`me-dep${i}_parentesco`);
+
+            if (selectParentesco && inputOutro && inputHidden) {
+                inputHidden.value = parentescoValor;
+                const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
+
+                if (opcoesPadrao.includes(parentescoValor)) {
+                    selectParentesco.value = parentescoValor;
+                    inputOutro.style.display = 'none';
+                    inputOutro.value = '';
+                } else if (parentescoValor) {
+                    selectParentesco.value = 'Outro';
+                    inputOutro.style.display = 'block';
+                    inputOutro.value = parentescoValor;
+                } else {
+                    selectParentesco.value = '';
+                    inputOutro.style.display = 'none';
+                    inputOutro.value = '';
+                }
             }
         }
-    }
 
-    // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES ---
-    const dependentesAtuais = [];
-    for (let i = 1; i <= 5; i++) {
-        if (dados[`dep${i}_nome`]) {
-            dependentesAtuais.push({
-                nome: dados[`dep${i}_nome`],
-                index: i - 1
-            });
-        }
-    }
-
-    const btnToggleExcluir = document.getElementById("btn-toggle-excluir-dependentes");
-    const painelExcluir = document.getElementById("painel-excluir-dependentes");
-    const containerCheckboxes = document.getElementById("checkboxes-excluir-dependentes");
-    const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-dependentes");
-
-    if (dependentesAtuais.length === 0) {
-        btnToggleExcluir.style.display = 'none';
-    }
-
-    btnToggleExcluir.addEventListener("click", () => {
-        painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
-    });
-    
-    containerCheckboxes.innerHTML = '';
-    dependentesAtuais.forEach(dep => {
-        containerCheckboxes.innerHTML += `
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" name="excluir_dependente" value="${dep.index}" style="width: auto;">
-                Dependente ${dep.index + 1}: ${dep.nome}
-            </label>
-        `;
-    });
-
-    btnConfirmarExclusao.addEventListener("click", async () => {
-        const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
-        const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
-
-        if (indicesParaExcluir.length === 0) {
-            alert("Selecione pelo menos um dependente para excluir.");
-            return;
-        }
-
-        if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
-            try {
-                const r = await apiFetch(`/api/filiados/${dados.id}/dependentes`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ indices: indicesParaExcluir })
+        // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES ---
+        const dependentesAtuais = [];
+        for (let i = 1; i <= 5; i++) {
+            if (dados[`dep${i}_nome`]) {
+                dependentesAtuais.push({
+                    nome: dados[`dep${i}_nome`],
+                    index: i - 1
                 });
+            }
+        }
 
+        const btnToggleExcluir = document.getElementById("btn-toggle-excluir-dependentes");
+        const painelExcluir = document.getElementById("painel-excluir-dependentes");
+        const containerCheckboxes = document.getElementById("checkboxes-excluir-dependentes");
+        const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-dependentes");
+
+        if (dependentesAtuais.length === 0) {
+            btnToggleExcluir.style.display = 'none';
+        }
+
+        btnToggleExcluir.onclick = () => {
+            painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
+        };
+
+        containerCheckboxes.innerHTML = '';
+        dependentesAtuais.forEach(dep => {
+            containerCheckboxes.innerHTML += `
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" name="excluir_dependente" value="${dep.index}" style="width: auto;">
+                    Dependente ${dep.index + 1}: ${dep.nome}
+                </label>
+            `;
+        });
+
+        btnConfirmarExclusao.onclick = async () => {
+            const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
+            const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
+
+            if (indicesParaExcluir.length === 0) {
+                alert("Selecione pelo menos um dependente para excluir.");
+                return;
+            }
+
+            if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
+                try {
+                    const r = await apiFetch(`/api/filiados/${dados.id}/dependentes`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ indices: indicesParaExcluir })
+                    });
+
+                    if (r.ok) {
+                        alert("Dependentes excluídos com sucesso.");
+                        await carregarMeusDados();
+                    } else {
+                        const err = await r.json();
+                        alert(err.message || "Erro ao excluir dependentes.");
+                    }
+                } catch (e) {
+                    alert("Erro de conexão ao tentar excluir os dependentes.");
+                }
+            }
+        };
+
+        // --- CEP ---
+        document.getElementById("btn-buscar-cep").onclick = buscarCep;
+        cepInput.onblur = () => {
+            const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
+            if (cepInput.value && onlyDigitsFn(cepInput.value).length === 8) buscarCep();
+        };
+
+        // --- SUBMIT DADOS (PUT /me) ---
+        document.getElementById("form-meus-dados").onsubmit = async (e) => {
+            e.preventDefault();
+            const status = document.getElementById("meus-dados-status");
+            status.textContent = "Salvando...";
+
+            const form = e.target;
+            const formData = new FormData(form);
+            const payload = {};
+
+            for (const [key, value] of formData.entries()) {
+              payload[key] = value;
+            }
+
+            const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
+
+            // Adiciona campos que não estão no form ou precisam de normalização
+            payload.telefone1 = onlyDigitsFn(document.getElementById("me-telefone1").value);
+            payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
+            payload.email1 = document.getElementById("me-email1").value;
+            payload.email2 = document.getElementById("me-email2").value;
+            payload.logradouro_bairro = document.getElementById("me-endereco").value;
+            payload.numero = document.getElementById("me-numero").value;
+            payload.complemento = document.getElementById("me-complemento").value;
+            payload.cidade = document.getElementById("me-cidade").value;
+            payload.uf = document.getElementById("me-uf").value;
+            payload.cep = onlyDigitsFn(document.getElementById("me-cep").value);
+            payload.lotacao = document.getElementById("me-lotacao").value;
+
+            // Sanitiza CPF dos dependentes
+            for (let i = 1; i <= 5; i++) {
+                const key = `dep${i}_cpf`;
+                if (payload[key]) {
+                    payload[key] = onlyDigitsFn(payload[key]);
+                }
+            }
+
+            try {
+                const r = await apiFetch("/api/filiados/me", { method: "PUT", body: payload });
                 if (r.ok) {
-                    alert("Dependentes excluídos com sucesso.");
                     await carregarMeusDados();
+                    alert("Dados salvos com sucesso!");
                 } else {
-                    const err = await r.json();
-                    alert(err.message || "Erro ao excluir dependentes.");
+                    status.textContent = "Erro ao salvar.";
+                    try {
+                        const d = await r.json();
+                        if (d?.message) alert(d.message);
+                    } catch {}
                 }
             } catch (e) {
-                alert("Erro de conexão ao tentar excluir os dependentes.");
+                status.textContent = "Erro de conexão.";
             }
-        }
-    });
+        };
 
-    // --- CEP ---
-    document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);
-    cepInput.addEventListener("blur", () => {
-        if (cepInput.value && cepInput.value.replace(/\D/g, "").length === 8) buscarCep();
-    });
+        // --- UPLOAD DE AVATAR ---
+        const inputFile = document.getElementById("me-avatar-file");
+        const previewContainer = document.getElementById("avatar-preview");
+        const btnSalvarFoto = document.getElementById("btn-salvar-foto");
+        const btnRemoverFoto = document.getElementById("btn-remover-foto");
 
-    // --- SUBMIT DADOS (PUT /me) ---
-    document.getElementById("form-meus-dados").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const status = document.getElementById("meus-dados-status");
-        status.textContent = "Salvando...";
-
-        const form = e.target;
-        const formData = new FormData(form);
-        const payload = {};
-        
-        for (const [key, value] of formData.entries()) {
-          payload[key] = value;
-        }
-
-        // Adiciona campos que não estão no form ou precisam de normalização
-        payload.telefone1 = document.getElementById("me-telefone1").value.replace(/\D/g, "");
-        payload.telefone2 = document.getElementById("me-telefone2").value.replace(/\D/g, "");
-        payload.email1 = document.getElementById("me-email1").value;
-        payload.email2 = document.getElementById("me-email2").value;
-        payload.logradouro_bairro = document.getElementById("me-endereco").value;
-        payload.numero = document.getElementById("me-numero").value;
-        payload.complemento = document.getElementById("me-complemento").value;
-        payload.cidade = document.getElementById("me-cidade").value;
-        payload.uf = document.getElementById("me-uf").value;
-        payload.cep = document.getElementById("me-cep").value.replace(/\D/g, "");
-        payload.lotacao = document.getElementById("me-lotacao").value;
-
-        // Sanitiza CPF dos dependentes
-        for (let i = 1; i <= 5; i++) {
-            const key = `dep${i}_cpf`;
-            if (payload[key]) {
-                payload[key] = payload[key].replace(/\D/g, "");
+        inputFile.onchange = () => {
+            const file = inputFile.files && inputFile.files[0];
+            if (file) {
+                const urlLocal = URL.createObjectURL(file);
+                previewContainer.innerHTML = `<img src="${urlLocal}" style="width:100%; height:100%; object-fit:cover;" />`;
+                btnSalvarFoto.style.display = "inline-block";
             }
-        }
+        };
 
-        try {
-            const r = await apiFetch("/api/filiados/me", { method: "PUT", body: payload });
+        btnSalvarFoto.onclick = async () => {
+            const file = inputFile.files && inputFile.files[0];
+            if (!file) return;
+
+            const originalText = btnSalvarFoto.innerText;
+            btnSalvarFoto.disabled = true;
+            btnSalvarFoto.innerText = "Enviando...";
+
+            const fd = new FormData();
+            fd.append("avatar", file);
+
+            try {
+                const r = await apiFetch("/api/filiados/me/avatar", { method: "POST", body: fd });
+                if (r.ok) {
+                    alert("Foto atualizada com sucesso!");
+                    btnSalvarFoto.style.display = "none";
+                    inputFile.value = "";
+                } else {
+                    alert("Erro ao enviar foto.");
+                }
+            } catch (e) {
+                alert("Erro de conexão.");
+            } finally {
+                btnSalvarFoto.disabled = false;
+                btnSalvarFoto.innerText = originalText;
+            }
+        };
+
+        btnRemoverFoto.onclick = async () => {
+          if (!confirm("Remover a foto de perfil?")) return;
+
+          btnRemoverFoto.disabled = true;
+          const txt = btnRemoverFoto.innerText;
+          btnRemoverFoto.innerText = "Removendo...";
+
+          try {
+            const r = await apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
             if (r.ok) {
-                await carregarMeusDados();
-                alert("Dados salvos com sucesso!");
+              alert("Foto removida com sucesso!");
+              previewContainer.innerHTML = `<div class="avatar-fallback"></div>`;
+              inputFile.value = "";
+              btnSalvarFoto.style.display = "none";
             } else {
-                status.textContent = "Erro ao salvar.";
-                try {
-                    const d = await r.json();
-                    if (d?.message) alert(d.message);
-                } catch {}
+              alert("Erro ao remover foto.");
             }
-        } catch (e) {
-            status.textContent = "Erro de conexão.";
-        }
-    });
-
-    // --- UPLOAD DE AVATAR ---
-    const inputFile = document.getElementById("me-avatar-file");
-    const previewContainer = document.getElementById("avatar-preview");
-    const btnSalvarFoto = document.getElementById("btn-salvar-foto");
-    const btnRemoverFoto = document.getElementById("btn-remover-foto");
-
-    inputFile.addEventListener("change", () => {
-        const file = inputFile.files && inputFile.files[0];
-        if (file) {
-            const urlLocal = URL.createObjectURL(file);
-            previewContainer.innerHTML = `<img src="${urlLocal}" style="width:100%; height:100%; object-fit:cover;" />`;
-            btnSalvarFoto.style.display = "inline-block";
-        }
-    });
-
-    btnSalvarFoto.addEventListener("click", async () => {
-        const file = inputFile.files && inputFile.files[0];
-        if (!file) return;
-
-        const originalText = btnSalvarFoto.innerText;
-        btnSalvarFoto.disabled = true;
-        btnSalvarFoto.innerText = "Enviando...";
-
-        const fd = new FormData();
-        fd.append("avatar", file);
-
-        try {
-            const r = await apiFetch("/api/filiados/me/avatar", { method: "POST", body: fd });
-            if (r.ok) {
-                alert("Foto atualizada com sucesso!");
-                btnSalvarFoto.style.display = "none";
-                inputFile.value = "";
-            } else {
-                alert("Erro ao enviar foto.");
-            }
-        } catch (e) {
+          } catch {
             alert("Erro de conexão.");
-        } finally {
-            btnSalvarFoto.disabled = false;
-            btnSalvarFoto.innerText = originalText;
-        }
-    });
-
-    btnRemoverFoto.addEventListener("click", async () => {
-      if (!confirm("Remover a foto de perfil?")) return;
-
-      btnRemoverFoto.disabled = true;
-      const txt = btnRemoverFoto.innerText;
-      btnRemoverFoto.innerText = "Removendo...";
-
-      try {
-        const r = await apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
-        if (r.ok) {
-          alert("Foto removida com sucesso!");
-          previewContainer.innerHTML = `<div class="avatar-fallback"></div>`;
-          inputFile.value = "";
-          btnSalvarFoto.style.display = "none";
-        } else {
-          alert("Erro ao remover foto.");
-        }
-      } catch {
-        alert("Erro de conexão.");
-      } finally {
-        btnRemoverFoto.disabled = false;
-        btnRemoverFoto.innerText = txt;
-      }
-    });
-}
-
-async function buscarCep() {
-    const cep = (document.getElementById("me-cep").value || "").replace(/\D/g, "");
-    if (cep.length !== 8) {
-        alert("Informe um CEP válido (8 dígitos).");
-        return;
+          } finally {
+            btnRemoverFoto.disabled = false;
+            btnRemoverFoto.innerText = txt;
+          }
+        };
     }
 
-    try {
-        const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-        const d = await r.json();
-        if (d?.erro) {
-            alert("CEP não encontrado.");
+    async function buscarCep() {
+        const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
+        const cep = onlyDigitsFn(document.getElementById("me-cep").value || "");
+        if (cep.length !== 8) {
+            alert("Informe um CEP válido (8 dígitos).");
             return;
         }
 
-        document.getElementById("me-endereco").value = d.logradouro || "";
-        document.getElementById("me-cidade").value = d.localidade || "";
-        document.getElementById("me-uf").value = d.uf || "";
-    } catch (e) {
-        alert("Erro ao buscar CEP.");
+        try {
+            const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const d = await r.json();
+            if (d?.erro) {
+                alert("CEP não encontrado.");
+                return;
+            }
+
+            document.getElementById("me-endereco").value = d.logradouro || "";
+            document.getElementById("me-cidade").value = d.localidade || "";
+            document.getElementById("me-uf").value = d.uf || "";
+        } catch (e) {
+            alert("Erro ao buscar CEP.");
+        }
     }
-}
 
-// Padronização de nomenclatura (frontend)
-function labelSituacaoFuncional(valor) {
-  return `Situação funcional do servidor: ${(valor || 'ATIVO').toString().toUpperCase()}`;
-}
-
-function labelEstadoCadastro(filiado) {
-  const raw = (filiado && (filiado.estado_cadastro || (filiado.arquivado_em ? 'ARQUIVADO' : 'CADASTRO_ATIVO'))) || 'CADASTRO_ATIVO';
-  const txt = raw === 'CADASTRO_ATIVO' ? 'CADASTRO ATIVO' : 'ARQUIVADO';
-  return `Estado do cadastro: ${txt}`;
-}
+    global.MeusDados = {
+        carregarMeusDados,
+        labelSituacaoFuncional: (valor) => `Situação funcional do servidor: ${(valor || 'ATIVO').toString().toUpperCase()}`,
+        labelEstadoCadastro: (filiado) => {
+            const raw = (filiado && (filiado.estado_cadastro || (filiado.arquivado_em ? 'ARQUIVADO' : 'CADASTRO_ATIVO'))) || 'CADASTRO_ATIVO';
+            const txt = raw === 'CADASTRO_ATIVO' ? 'CADASTRO ATIVO' : 'ARQUIVADO';
+            return `Estado do cadastro: ${txt}`;
+        }
+    };
+})(typeof window !== 'undefined' ? window : global);

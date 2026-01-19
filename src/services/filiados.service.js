@@ -417,7 +417,7 @@ async function arquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
 /**
  * Desarquivar
  */
-async function desarquivarFiliadoPorId(id, { atorId, atorPerfil }) {
+async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
   const antes = await buscarPorId(id);
   if (!antes) return null;
 
@@ -439,7 +439,7 @@ async function desarquivarFiliadoPorId(id, { atorId, atorPerfil }) {
   await registrarEventoAuditoria({
     filiadoId: id,
     acao: "DESARQUIVAR",
-    motivo: null,
+    motivo: motivo || null,
     atorId,
     atorPerfil,
     payloadAntes: antes,

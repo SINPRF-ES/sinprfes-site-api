@@ -1,313 +1,236 @@
-import { apiFetch, aplicarMascaraTelefone, formatarCPF, aplicarMascaraAgencia, aplicarMascaraConta } from './utils.js';
+/**
+ * Módulo Ressarcimento (Área do Filiado)
+ * Carregado como script clássico (window.Ressarcimento)
+ */
 
-// Lista dos principais bancos brasileiros (Código COMPE - Nome)
-const LISTA_BANCOS = [
-    "001 - Banco do Brasil S.A.",
-    "033 - Banco Santander (Brasil) S.A.",
-    "104 - Caixa Econômica Federal",
-    "237 - Banco Bradesco S.A.",
-    "341 - Itaú Unibanco S.A.",
-    "260 - Nu Pagamentos S.A. (Nubank)",
-    "077 - Banco Inter S.A.",
-    "290 - PagSeguro Internet S.A.",
-    "380 - PicPay Serviços S.A.",
-    "323 - Mercado Pago",
-    "336 - Banco C6 S.A.",
-    "041 - Banco do Estado do Rio Grande do Sul S.A. (Banrisul)",
-    "021 - BANESTES S.A. Banco do Estado do Espírito Santo",
-    "756 - Banco Cooperativo do Brasil S.A. (Sicoob)",
-    "748 - Banco Cooperativo Sicredi S.A.",
-    "655 - Banco Votorantim S.A. (Neon)",
-    "212 - Banco Original S.A.",
-    "070 - BRB - Banco de Brasília S.A.",
-    "136 - Confederação Nacional das Cooperativas Centrais Unicred",
-    "Outros"
-];
+(function (global) {
+    if (global.Ressarcimento) return;
 
-export async function inicializarRessarcimento() {
-    const secRes = document.getElementById("sec-ressarcimento");
-    if (!secRes) return;
+    const BANCOS_LISTA = [
+        { code: "001", name: "Banco do Brasil" },
+        { code: "104", name: "Caixa Econômica" },
+        { code: "033", name: "Santander" },
+        { code: "237", name: "Bradesco" },
+        { code: "341", name: "Itaú" },
+        { code: "260", name: "Nubank" },
+        { code: "077", name: "Inter" },
+        { code: "422", name: "Safra" },
+        { code: "041", name: "Banrisul" },
+        { code: "021", name: "Banestes" }
+    ];
 
-    const container = secRes.querySelector('.section-card');
-    if (!container) return;
-    
-    container.innerHTML = "";
+    function inicializarRessarcimento() {
+        const secRes = document.getElementById("sec-ressarcimento");
+        if (!secRes) return;
 
-    // 1. INJEÇÃO DE CSS
-    if (!document.getElementById('style-ressarcimento')) {
-        const s = document.createElement('style');
-        s.id = 'style-ressarcimento';
-        s.textContent = `
-            /* Header Gradiente - CENTRALIZADO */
-            .res-header {
-                background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
-                color: #fff; padding: 25px; border-radius: 12px;
-                border-left: 6px solid #27ae60; margin-bottom: 25px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center;
-            }
-            .res-title h2 { margin: 0; font-size: 1.5rem; color: #fff; }
-            .res-subtitle { font-size: 0.95rem; color: #bdc3c7; margin-top: 5px; }
+        const { formatarCPF, aplicarMascaraTelefone, apiFetch } = global.Utils || {};
 
-            /* Cards Brancos */
-            .res-card {
-                background: #fff; color: #333; padding: 25px;
-                border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                margin-bottom: 20px; border: 1px solid #e0e0e0;
-            }
-            .res-card h3 {
-                color: #2c3e50; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0;
-                padding-bottom: 10px; margin-bottom: 20px; font-weight: bold;
-                display: flex; align-items: center; justify-content: center; gap: 8px;
-            }
+        if (!document.getElementById('style-ressarcimento')) {
+            const s = document.createElement('style');
+            s.id = 'style-ressarcimento';
+            s.textContent = `
+                .res-header { margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+                .res-card { background: #fdfdfd; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .res-card h3 { margin-top: 0; color: #003366; font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+                .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                .res-group { margin-bottom: 15px; }
+                .res-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 0.9rem; }
+                .res-group input, .res-group select, .res-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+                .input-calc { background: #f0f0f0; font-weight: bold; color: #333; }
+                .total-box { background: #003366; color: #fff; padding: 20px; border-radius: 8px; text-align: center; margin-top: 10px; }
+                .total-label { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+                .total-value { font-size: 2rem; font-weight: bold; margin-top: 5px; }
+                .file-upload-wrapper { border: 2px dashed #ccc; padding: 30px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #fff; display: block; }
+                .file-upload-wrapper:hover { border-color: #003366; background: #f8fbff; }
+                .upload-icon { font-size: 2.5rem; color: #003366; margin-bottom: 10px; }
+                .upload-text { font-weight: bold; color: #333; }
+                .upload-hint { font-size: 0.8rem; color: #777; margin-top: 5px; }
+                @media (max-width: 768px) { .res-grid { grid-template-columns: 1fr; } }
+            `;
+            document.head.appendChild(s);
+        }
 
-            /* Grids e Inputs */
-            .res-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
-            .res-group { display: flex; flex-direction: column; }
-            .res-group label { font-weight: 600; font-size: 0.85rem; color: #555; margin-bottom: 5px; }
-            
-            .res-group input, .res-group select, .res-group textarea {
-                width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;
-                font-size: 1rem; color: #333; background: #fff; font-family: inherit;
-            }
-            .res-group input:focus, .res-group textarea:focus { border-color: #27ae60; outline: none; background: #f9fffb; }
+        const opcoesBancos = BANCOS_LISTA.map(b => `<option value="${b.code} - ${b.name}">`).join("");
 
-            /* Inputs Calculados (Readonly) */
-            .input-calc { background-color: #e9ecef !important; color: #555 !important; font-weight: bold; cursor: not-allowed; }
-            
-            /* Total Centralizado */
-            .total-box { 
-                background: #e8f8f5; border: 1px solid #27ae60; padding: 15px; 
-                border-radius: 8px; text-align: center; margin-top: 20px;
-            }
-            .total-label { font-size: 0.9rem; color: #27ae60; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
-            .total-value { font-size: 1.6rem; color: #27ae60; font-weight: 800; }
-
-            /* Upload */
-            .file-upload-wrapper { 
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                width: 100%; border: 2px dashed #ccc; padding: 30px; text-align: center; 
-                border-radius: 8px; background: #fafafa; cursor: pointer; transition: 0.2s; box-sizing: border-box;
-            }
-            .file-upload-wrapper:hover { border-color: #27ae60; background: #f0fdf4; }
-            .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
-            .upload-text { font-weight: bold; color: #333; margin-bottom: 5px; }
-            .upload-hint { color: #777; font-size: 0.85rem; }
-        `;
-        document.head.appendChild(s);
-    }
-
-    // 2. RENDERIZA O HTML
-    const opcoesBancos = LISTA_BANCOS.map(b => `<option value="${b}">`).join('');
-
-    container.innerHTML = `
-        <div class="res-header">
-            <div class="res-title">
+        secRes.innerHTML = `
+            <div class="res-header">
                 <h2>💸 Solicitação de Ressarcimento</h2>
-                <div class="res-subtitle">Preencha os dados da atividade sindical para reembolso.</div>
+                <p>Preencha os dados abaixo e anexe os comprovantes para processar seu reembolso.</p>
             </div>
-        </div>
 
-        <form id="form-ressarcimento">
-            
-            <div class="res-card">
-                <h3>👤 Dados do Filiado</h3>
-                <div class="res-grid">
-                    <div class="res-group"><label>Nome</label><input type="text" id="res-nome" readonly class="input-calc" placeholder="Carregando..."></div>
-                    <div class="res-group"><label>CPF</label><input type="text" id="res-cpf" readonly class="input-calc" placeholder="..."></div>
-                </div>
-                <div class="res-grid">
-                    <div class="res-group"><label>E-mail</label><input type="email" id="res-email" name="email_destino" readonly class="input-calc"></div>
+            <form id="form-ressarcimento">
+                <div class="res-card">
+                    <h3>👤 Dados do Solicitante</h3>
+                    <div class="res-group"><label>Nome Completo</label><input type="text" id="res-nome" name="nome_solicitante" readonly class="input-calc"></div>
+                    <div class="res-grid">
+                        <div class="res-group"><label>CPF</label><input type="text" id="res-cpf" readonly class="input-calc"></div>
+                        <div class="res-group"><label>E-mail</label><input type="email" id="res-email" name="email_destino" readonly class="input-calc"></div>
+                    </div>
                     <div class="res-group"><label>Telefone Contato</label><input type="text" id="res-telefone" name="telefone_contato"></div>
                 </div>
-            </div>
 
-            <div class="res-card">
-                <h3>📅 Detalhes da Atividade</h3>
-                <div class="res-grid">
-                    <div class="res-group"><label>Data Início</label><input type="date" id="res-data-inicio" name="data_inicio"></div>
-                    <div class="res-group"><label>Data Fim</label><input type="date" id="res-data-fim" name="data_fim"></div>
-                    <div class="res-group"><label>Local / Destino</label><input type="text" id="res-local" name="local" placeholder="Ex: Brasília - DF"></div>
-                </div>
-                <div class="res-group">
-                    <label>Descrição da Missão / Motivo</label>
-                    <textarea id="res-descricao" name="descricao" rows="5" placeholder="Descreva o motivo da viagem, atividades realizadas, etc..." required></textarea>
-                </div>
-            </div>
-
-            <div class="res-card">
-                <h3>🧮 Despesas</h3>
-                <div class="res-grid">
-                    <div class="res-group"><label>Qtd. Diárias</label><input type="text" id="res-diarias" name="diarias" readonly class="input-calc" value="0"></div>
-                    <div class="res-group"><label>Valor Diárias (R$)</label><input type="text" id="res-valor-diarias" name="valor_diarias" readonly class="input-calc" value="0.00"></div>
-                </div>
-                <div class="res-grid">
-                    <div class="res-group"><label>Km Rodados</label><input type="number" id="res-km" name="km_total" placeholder="0"></div>
-                    <div class="res-group"><label>Valor Km (R$)</label><input type="text" id="res-valor-km" name="valor_km" readonly class="input-calc" value="0.00"></div>
-                </div>
-                <div class="res-grid">
-                    <div class="res-group"><label>Outras Despesas (R$)</label><input type="number" id="res-valor-outros" name="valor_outros" step="0.01" placeholder="0.00"></div>
-                    <div class="res-group"><label>Descrição Outros</label><input type="text" id="res-descricao-outros" name="descricao_outros" placeholder="Pedágio, etc"></div>
-                </div>
-                <div class="total-box">
-                    <div class="total-label">Valor Total a Receber</div>
-                    <div class="total-value">R$ <span id="text-valor-total">0,00</span></div>
-                    <input type="hidden" id="res-valor-total" name="valor_total">
-                </div>
-            </div>
-
-            <div class="res-card">
-                <h3>🏦 Dados Bancários</h3>
-                
-                <div class="res-group" style="margin-bottom: 15px;">
-                    <label>Banco (Digite o nome ou código)</label>
-                    <input list="lista-bancos" id="res-banco" name="banco" placeholder="Ex: Digite 'nu' para Nubank ou '001' para BB">
-                    <datalist id="lista-bancos">
-                        ${opcoesBancos}
-                    </datalist>
-                </div>
-
-                <div class="res-grid">
-                    <div class="res-group">
-                        <label>Agência</label>
-                        <input type="text" id="res-agencia" name="agencia" placeholder="Ex: 1234-5">
+                <div class="res-card">
+                    <h3>📅 Detalhes da Atividade</h3>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Data Início</label><input type="date" id="res-data-inicio" name="data_inicio"></div>
+                        <div class="res-group"><label>Data Fim</label><input type="date" id="res-data-fim" name="data_fim"></div>
                     </div>
                     <div class="res-group">
-                        <label>Conta</label>
-                        <input type="text" id="res-conta" name="conta" placeholder="Ex: 12345-6">
+                        <label>Local / Destino</label>
+                        <input type="text" id="res-local" name="local" placeholder="Ex: Brasília - DF">
+                    </div>
+                    <div class="res-group">
+                        <label>Descrição da Missão / Motivo</label>
+                        <textarea id="res-descricao" name="descricao" rows="4" placeholder="Descreva o motivo da viagem/atividade..." required></textarea>
                     </div>
                 </div>
-                <div class="res-group"><label>PIX (Opcional)</label><input type="text" id="res-pix" name="pix" placeholder="CPF, E-mail ou Celular"></div>
-            </div>
 
-            <div class="res-card">
-                <h3>📎 Comprovantes</h3>
-                <label class="file-upload-wrapper">
-                    <div class="upload-icon">📂</div>
-                    <div class="upload-text">Clique para anexar arquivos</div>
-                    <div class="upload-hint">(PDF, JPG ou PNG - Comprovantes de pedágio, fotos, relatórios)</div>
-                    <input type="file" id="res-anexos" name="anexos" multiple style="display:none;">
-                </label>
-                <div id="file-list" style="margin-top:15px; color:#555; text-align: center;"></div>
-            </div>
+                <div class="res-card">
+                    <h3>🧮 Despesas e Cálculos</h3>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Diárias Estimadas</label><input type="text" id="res-diarias" name="diarias" readonly class="input-calc" value="0"></div>
+                        <div class="res-group"><label>Valor Diárias (R$)</label><input type="text" id="res-valor-diarias" name="valor_diarias" readonly class="input-calc" value="0.00"></div>
+                    </div>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Km Rodados</label><input type="number" id="res-km" name="km_total" placeholder="0"></div>
+                        <div class="res-group"><label>Valor Km (R$)</label><input type="text" id="res-valor-km" name="valor_km" readonly class="input-calc" value="0.00"></div>
+                    </div>
+                    <div class="res-group"><label>Outras Despesas (R$)</label><input type="number" step="0.01" id="res-valor-outros" name="valor_outros" placeholder="0.00"></div>
 
-            <div style="text-align:right; margin-top:20px;">
-                <span id="res-status" class="field-hint" style="margin-right:15px; font-weight:bold;"></span>
-                <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 40px;">🚀 Enviar</button>
-            </div>
-        </form>
-    `;
+                    <div class="total-box">
+                        <div class="total-label">Total a Receber</div>
+                        <div class="total-value">R$ <span id="text-valor-total">0,00</span></div>
+                        <input type="hidden" id="res-valor-total" name="valor_total">
+                    </div>
+                </div>
 
-    // 3. LÓGICA E MÁSCARAS
-    const form = document.getElementById("form-ressarcimento");
-    const tel = document.getElementById("res-telefone");
-    const inputFile = document.getElementById("res-anexos");
-    const fileList = document.getElementById("file-list");
-    
-    // Máscaras
-    const inpAgencia = document.getElementById("res-agencia");
-    const inpConta = document.getElementById("res-conta");
+                <div class="res-card">
+                    <h3>🏦 Dados Bancários</h3>
+                    <div class="res-group">
+                        <label>Banco</label>
+                        <input list="lista-bancos" id="res-banco" name="banco" placeholder="Busque pelo nome ou código">
+                        <datalist id="lista-bancos">${opcoesBancos}</datalist>
+                    </div>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Agência</label><input type="text" id="res-agencia" name="agencia"></div>
+                        <div class="res-group"><label>Conta</label><input type="text" id="res-conta" name="conta"></div>
+                    </div>
+                    <div class="res-group"><label>PIX (Opcional)</label><input type="text" id="res-pix" name="pix"></div>
+                </div>
 
-    aplicarMascaraTelefone(tel);
-    if(inpAgencia) aplicarMascaraAgencia(inpAgencia);
-    if(inpConta) aplicarMascaraConta(inpConta);
+                <div class="res-card">
+                    <h3>📎 Comprovantes</h3>
+                    <label class="file-upload-wrapper">
+                        <div class="upload-icon">📂</div>
+                        <div class="upload-text">Anexar Documentos</div>
+                        <div class="upload-hint">PDF, JPG ou PNG</div>
+                        <input type="file" id="res-anexos" name="anexos" multiple style="display:none;">
+                    </label>
+                    <div id="file-list" style="margin-top:10px; text-align:center;"></div>
+                </div>
 
-    // Upload visual
-    inputFile.addEventListener("change", () => {
-        if(inputFile.files.length > 0) {
-            fileList.innerHTML = `<div style="background:#e8f8f5; padding:10px; border-radius:6px; display:inline-block; border:1px solid #27ae60; color:#27ae60;"><strong>${inputFile.files.length} arquivo(s) selecionado(s):</strong><br>` + 
-                Array.from(inputFile.files).map(f => `<span style="font-size:0.9rem; display:block; margin-top:4px;">📄 ${f.name}</span>`).join("") + "</div>";
-        } else {
-            fileList.innerHTML = "";
-        }
-    });
+                <div style="text-align:right;">
+                    <span id="res-status" style="margin-right:15px; font-weight:bold;"></span>
+                    <button type="submit" class="btn btn-primary" style="padding:15px 40px;">Enviar Solicitação</button>
+                </div>
+            </form>
+        `;
 
-    // Cálculos
-    ["res-data-inicio", "res-data-fim", "res-km", "res-valor-outros"].forEach(id => {
-        document.getElementById(id)?.addEventListener("input", atualizarCalculos);
-    });
+        const form = document.getElementById("form-ressarcimento");
+        const tel = document.getElementById("res-telefone");
+        const inputFile = document.getElementById("res-anexos");
+        const fileList = document.getElementById("file-list");
 
-    // Carregamento de dados (Seguro)
-    let userData = JSON.parse(localStorage.getItem("userInfo") || "{}");
-    if (userData.nome) {
-        preencherFormularioRessarcimentoComDados(userData);
-    } else {
-        apiFetch("/api/filiados/me")
-            .then(r => r.json())
-            .then(dados => {
-                localStorage.setItem("userInfo", JSON.stringify(dados));
-                preencherFormularioRessarcimentoComDados(dados);
-            })
-            .catch(() => console.log("Erro ao buscar dados para ressarcimento."));
-    }
+        if (aplicarMascaraTelefone) aplicarMascaraTelefone(tel);
 
-    // Submit
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = form.querySelector("button[type='submit']");
-        const status = document.getElementById("res-status");
-        btn.disabled = true; 
-        status.textContent = "Enviando solicitação...";
-        status.style.color = "#333";
+        inputFile.onchange = () => {
+            fileList.innerHTML = inputFile.files.length > 0 ? `✅ ${inputFile.files.length} arquivo(s) prontos.` : "";
+        };
 
-        const fd = new FormData(form);
-        const t = document.getElementById("res-telefone").value.replace(/\D/g, "");
-        fd.set("telefone_contato", t);
+        const calcFields = ["res-data-inicio", "res-data-fim", "res-km", "res-valor-outros"];
+        calcFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.oninput = atualizarCalculos;
+        });
 
-        try {
-            const r = await apiFetch("/api/ressarcimentos", { method: "POST", body: fd });
-            if(r.ok) { 
-                status.textContent = "✅ Enviado com sucesso! Cópia enviada ao seu e-mail."; 
-                status.style.color = "#27ae60";
-                form.reset(); 
-                fileList.innerHTML = "";
-                atualizarCalculos(); 
-                userData = JSON.parse(localStorage.getItem("userInfo")||"{}");
-                preencherFormularioRessarcimentoComDados(userData);
-            } else { 
-                status.textContent = "Erro ao enviar."; 
-                status.style.color = "#c0392b";
+        async function carregarDados() {
+            let user = JSON.parse(localStorage.getItem("userInfo") || "{}");
+            if (!user.nome && apiFetch) {
+                try {
+                    const r = await apiFetch("/api/filiados/me");
+                    user = await r.json();
+                    localStorage.setItem("userInfo", JSON.stringify(user));
+                } catch(e) {}
             }
-        } catch(e) { 
-            status.textContent = "Erro de conexão."; 
-            status.style.color = "#c0392b";
+            preencherForm(user);
         }
-        finally { btn.disabled = false; }
-    });
-}
 
-function atualizarCalculos() {
-    const ini = document.getElementById("res-data-inicio").value;
-    const fim = document.getElementById("res-data-fim").value;
-    const km = parseFloat(document.getElementById("res-km").value) || 0;
-    const outros = parseFloat(document.getElementById("res-valor-outros").value) || 0;
+        function preencherForm(d) {
+            if (!d) return;
+            const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v || ""; };
+            set("res-nome", d.nome);
+            set("res-cpf", formatarCPF ? formatarCPF(d.cpf) : d.cpf);
+            set("res-email", d.email1 || d.email2);
+            set("res-telefone", d.telefone1 || d.telefone2);
+            if (aplicarMascaraTelefone) aplicarMascaraTelefone(document.getElementById("res-telefone"));
+        }
 
-    let dias = 0;
-    if (ini && fim) {
-        const d1 = new Date(ini); const d2 = new Date(fim);
-        if (d2 >= d1) dias = ((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+        function atualizarCalculos() {
+            const ini = document.getElementById("res-data-inicio").value;
+            const fim = document.getElementById("res-data-fim").value;
+            const km = parseFloat(document.getElementById("res-km").value) || 0;
+            const outros = parseFloat(document.getElementById("res-valor-outros").value) || 0;
+
+            let dias = 0;
+            if (ini && fim) {
+                const d1 = new Date(ini); const d2 = new Date(fim);
+                if (d2 >= d1) dias = ((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+            }
+            const calcDiarias = Math.max(0, dias - 1 + 0.7);
+
+            document.getElementById("res-diarias").value = calcDiarias.toFixed(1);
+            document.getElementById("res-valor-diarias").value = (calcDiarias * 500).toFixed(2);
+            document.getElementById("res-valor-km").value = (km * 1.5).toFixed(2);
+
+            const total = ((calcDiarias*500)+(km*1.5)+outros);
+            document.getElementById("res-valor-total").value = total.toFixed(2);
+            const display = document.getElementById("text-valor-total");
+            if(display) display.textContent = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        }
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = form.querySelector("button");
+            const status = document.getElementById("res-status");
+            btn.disabled = true;
+            status.textContent = "🚀 Enviando...";
+
+            const fd = new FormData(form);
+            if (tel) fd.set("telefone_contato", tel.value.replace(/\D/g, ""));
+
+            try {
+                const r = await apiFetch("/api/ressarcimentos", { method: "POST", body: fd });
+                if (r.ok) {
+                    status.textContent = "✅ Sucesso!";
+                    form.reset();
+                    fileList.innerHTML = "";
+                    atualizarCalculos();
+                    carregarDados();
+                } else {
+                    status.textContent = "❌ Erro ao enviar.";
+                }
+            } catch(err) {
+                status.textContent = "❌ Erro de conexão.";
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        carregarDados();
     }
-    const calcDiarias = Math.max(0, dias - 1 + 0.7);
-    
-    document.getElementById("res-diarias").value = calcDiarias.toFixed(1);
-    document.getElementById("res-valor-diarias").value = (calcDiarias * 500).toFixed(2);
-    document.getElementById("res-valor-km").value = (km * 1.5).toFixed(2);
-    
-    const total = ((calcDiarias*500)+(km*1.5)+outros);
-    document.getElementById("res-valor-total").value = total.toFixed(2);
-    const display = document.getElementById("text-valor-total");
-    if(display) display.textContent = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-}
 
-export function preencherFormularioRessarcimentoComDados(d) {
-    if(!d) return;
-    const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v || ""; };
-    setVal("res-nome", d.nome);
-    setVal("res-cpf", formatarCPF(d.cpf));
-    setVal("res-email", d.email1 || d.email2);
-    
-    const tel = document.getElementById("res-telefone");
-    if(tel) { 
-        tel.value = d.telefone1 || d.telefone2 || ""; 
-        aplicarMascaraTelefone(tel); 
-    }
-}
+    global.Ressarcimento = {
+        inicializarRessarcimento
+    };
+
+})(typeof window !== 'undefined' ? window : global);

@@ -1,22 +1,35 @@
-export function configurarNavegacao(callbackMudanca) {
-    const navButtons = document.querySelectorAll(".af-nav-item");
-    const sections = document.querySelectorAll(".af-section");
+/**
+ * Módulo Navegação (Área do Filiado)
+ * Carregado como script clássico (window.Navegacao)
+ */
 
-    navButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const alvo = btn.dataset.target;
-            
-            navButtons.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
+(function (global) {
+    if (global.Navegacao) return;
 
-            sections.forEach(s => {
-                const ativo = s.id === alvo;
-                s.classList.toggle("active", ativo);
-                // Ajuste para garantir que o display: none/block funcione
-                s.style.display = ativo ? 'block' : 'none'; 
+    function configurarNavegacao(callbackMudanca) {
+        const navButtons = document.querySelectorAll(".af-nav-item");
+        const sections = document.querySelectorAll(".af-section");
+
+        navButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const alvo = btn.dataset.target;
+
+                navButtons.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+
+                sections.forEach(s => {
+                    const ativo = s.id === alvo;
+                    s.classList.toggle("active", ativo);
+                    s.style.display = ativo ? 'block' : 'none';
+                });
+
+                if (callbackMudanca) callbackMudanca(alvo);
             });
-
-            if (callbackMudanca) callbackMudanca(alvo);
         });
-    });
-}
+    }
+
+    global.Navegacao = {
+        configurarNavegacao
+    };
+
+})(typeof window !== 'undefined' ? window : global);
