@@ -38,7 +38,7 @@
       <!-- Sidebar / Nav -->
       <nav class="af-sidebar">
         <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
-        <button class="af-nav-item" data-target="sec-filiados">👥 Filiados (Gestão)</button>
+        <button class="af-nav-item" data-target="sec-filiados">👥 Filiados</button>
         <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
         <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
         <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
@@ -71,6 +71,19 @@
           <!-- Conteúdo carregado via JS -->
         </section>
       </main>
+    </div>
+  </div>
+
+  <!-- Modal de Edição de Filiado -->
+  <div id="modal-editar-filiado" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-titulo">Editar Filiado</h2>
+        <button type="button" class="modal-close" onclick="document.getElementById('modal-editar-filiado').style.display='none'">×</button>
+      </div>
+      <div class="modal-body" id="modal-corpo">
+        <!-- Form carregado dinamicamente -->
+      </div>
     </div>
   </div>
 

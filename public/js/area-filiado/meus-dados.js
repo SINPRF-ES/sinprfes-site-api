@@ -18,6 +18,37 @@
         }
     }
 
+    function compactarDependentes(filiado) {
+        const dependentesValidos = [];
+        for (let i = 1; i <= 5; i++) {
+            if (filiado[`dep${i}_nome`]) {
+                dependentesValidos.push({
+                    nome: filiado[`dep${i}_nome`],
+                    cpf: filiado[`dep${i}_cpf`],
+                    data_nascimento: filiado[`dep${i}_data_nascimento`],
+                    parentesco: filiado[`dep${i}_parentesco`]
+                });
+            }
+        }
+
+        // Limpa todos os slots originais
+        for (let i = 1; i <= 5; i++) {
+            filiado[`dep${i}_nome`] = null;
+            filiado[`dep${i}_cpf`] = null;
+            filiado[`dep${i}_data_nascimento`] = null;
+            filiado[`dep${i}_parentesco`] = null;
+        }
+
+        // Preenche sequencialmente
+        dependentesValidos.forEach((dep, idx) => {
+            const i = idx + 1;
+            filiado[`dep${i}_nome`] = dep.nome;
+            filiado[`dep${i}_cpf`] = dep.cpf;
+            filiado[`dep${i}_data_nascimento`] = dep.data_nascimento;
+            filiado[`dep${i}_parentesco`] = dep.parentesco;
+        });
+    }
+
     async function carregarMeusDados() {
         const { apiFetch } = global.Utils || {};
         if (!apiFetch) return null;
@@ -33,6 +64,9 @@
             const resp = await apiFetch("/api/filiados/me");
             if (!resp.ok) throw new Error();
             const dados = await resp.json();
+
+            // Compactar dependentes antes de renderizar
+            compactarDependentes(dados);
 
             // Alerta de endereço
             if ((!dados.cep || dados.cep === "") && alerta) {
@@ -66,14 +100,12 @@
 
         const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF, apiFetch } = global.Utils || {};
 
-        const situacaoUpper = (situacao_funcional || situacao || "NÃO INFORMADO").toUpperCase();
+        const situacaoUpper = (situacao || situacao_funcional || "NÃO INFORMADO").toUpperCase();
         let corStatus = '#95a5a6'; // Cinza
-        let iconeStatus = '!';
         let classeBadge = 'badge-desconhecido';
 
         if (situacaoUpper === 'ATIVO') {
             corStatus = '#27ae60';
-            iconeStatus = '[OK]';
             classeBadge = 'badge-ativo';
         } else if (situacaoUpper === 'VETERANO') {
             corStatus = '#f39c12';
@@ -199,12 +231,13 @@
                     padding: 0;
                 }
 
-                /* Avatar Row Renovado */
-                .avatar-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+                /* Avatar Row Renovado - Agora no Topo */
+                .profile-header-avatar-section { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+                .avatar-row { display:flex; gap:15px; align-items:center; flex-wrap:wrap; }
                 .avatar-preview {
-                    width:80px; height:80px; border-radius:50%;
+                    width:90px; height:90px; border-radius:50%;
                     background:#f1f3f5;
-                    border:3px solid #dee2e6;
+                    border:3px solid #ffc107;
                     overflow:hidden;
                     display:flex; align-items:center; justify-content:center;
                     flex-shrink:0; position: relative;
@@ -212,13 +245,13 @@
                 .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
                 .avatar-fallback { font-size: 32px; color:#6c757d; }
 
-                .avatar-actions { display: flex; flex-direction: column; gap: 8px; }
+                .avatar-actions { display: flex; flex-direction: column; gap: 5px; }
                 .btn-upload-label {
-                    background: #e9ecef; color: #333; padding: 8px 15px; border-radius: 5px;
-                    font-size: 0.9rem; cursor: pointer; text-align: center; border: 1px solid #ccc;
+                    background: rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 5px;
+                    font-size: 0.75rem; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.3);
                     transition: all 0.2s; display: inline-block;
                 }
-                .btn-upload-label:hover { background: #dde2e6; border-color: #bbb; }
+                .btn-upload-label:hover { background: rgba(255,255,255,0.2); }
                 #me-avatar-file { display: none; }
 
                 .form-actions { margin-top: 25px; text-align:right; }
@@ -234,16 +267,25 @@
         // AgeUtils é carregado como global em area-filiado.html
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
+        const situacaoLower = situacaoUpper.toLowerCase();
         container.innerHTML = `
             <div class="profile-header">
-                <div class="header-avatar">
-                    ${avatarImg}
+                <div class="profile-header-avatar-section">
+                    <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
+                    <div class="avatar-actions">
+                        <label class="btn-upload-label" for="me-avatar-file">Alterar Foto</label>
+                        <input type="file" id="me-avatar-file" accept="image/*" />
+                        <div style="display:flex; gap:5px;">
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-foto" style="display:none; padding: 4px 8px; font-size: 0.7rem;">Salvar</button>
+                            <button type="button" class="btn btn-danger btn-sm" id="btn-remover-foto" style="padding: 4px 8px; font-size: 0.7rem;">Remover</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="profile-name">
                     <h2>${nome || ""}</h2>
                     <div class="profile-badges">
                         <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
-                        <span class="badge ${classeBadge}">${iconeStatus} ${situacaoUpper}</span>
+                        <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
                     </div>
                 </div>
             </div>
@@ -300,7 +342,9 @@
                             <label>CEP</label>
                             <div class="cep-wrapper">
                                 <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
-                                <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP"></button>
+                                <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -365,23 +409,6 @@
                         <!-- Campos dos dependentes serão inseridos aqui -->
                     </div>
 
-                    <div class="field-row" style="grid-template-columns: 1fr;">
-                        <div class="field-group">
-                            <label>Foto de perfil</label>
-                            <div class="avatar-row">
-                                <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
-                                <div class="avatar-actions">
-                                    <label class="btn-upload-label" for="me-avatar-file">Selecionar foto</label>
-                                    <input type="file" id="me-avatar-file" accept="image/*" />
-                                    <div style="display:flex; gap:10px;">
-                                        <button type="button" class="btn btn-primary" id="btn-salvar-foto" style="display:none;">Salvar Foto</button>
-                                        <button type="button" class="btn btn-danger" id="btn-remover-foto">Remover</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="form-actions">
                         <span id="meus-dados-status" class="field-hint" style="margin-right: 15px; font-weight:bold;"></span>
                         <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">Salvar Dados</button>
@@ -413,7 +440,19 @@
                 cpfEl.value = dados[`dep${i}_cpf`] || '';
                 if (aplicarMascaraCPF) aplicarMascaraCPF(cpfEl);
             }
-            if (dataNascimento) dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
+            if (dataNascimento) {
+                dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
+                const depIdade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—';
+                const idadeLabel = document.createElement('div');
+                idadeLabel.style.fontSize = '0.75rem';
+                idadeLabel.style.color = '#666';
+                idadeLabel.style.marginTop = '2px';
+                idadeLabel.textContent = `Idade: ${depIdade}`;
+                dataNascimento.insertAdjacentElement('afterend', idadeLabel);
+                dataNascimento.onchange = () => {
+                    idadeLabel.textContent = `Idade: ${global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—'}`;
+                };
+            }
 
             // Lógica para preencher o campo de parentesco (select + outro)
             const parentescoValor = dados[`dep${i}_parentesco`] || '';
@@ -520,11 +559,40 @@
 
             const form = e.target;
             const formData = new FormData(form);
-            const payload = {};
+            const rawPayload = {};
 
             for (const [key, value] of formData.entries()) {
-              payload[key] = value;
+                rawPayload[key] = value;
             }
+
+            // Compactar dependentes antes de enviar
+            const dependentesCompactados = [];
+            for (let i = 1; i <= 5; i++) {
+                const n = rawPayload[`dep${i}_nome`];
+                const c = rawPayload[`dep${i}_cpf`];
+                const d = rawPayload[`dep${i}_data_nascimento`];
+                const p = rawPayload[`dep${i}_parentesco`];
+                if (n || c || d || p) {
+                    dependentesCompactados.push({ n, c, d, p });
+                }
+            }
+
+            const payload = { ...rawPayload };
+            // Limpa slots no payload
+            for (let i = 1; i <= 5; i++) {
+                payload[`dep${i}_nome`] = "";
+                payload[`dep${i}_cpf`] = "";
+                payload[`dep${i}_data_nascimento`] = "";
+                payload[`dep${i}_parentesco`] = "";
+            }
+            // Preenche sequencialmente
+            dependentesCompactados.forEach((dep, idx) => {
+                const i = idx + 1;
+                payload[`dep${i}_nome`] = dep.n;
+                payload[`dep${i}_cpf`] = dep.c;
+                payload[`dep${i}_data_nascimento`] = dep.d;
+                payload[`dep${i}_parentesco`] = dep.p;
+            });
 
             const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
 

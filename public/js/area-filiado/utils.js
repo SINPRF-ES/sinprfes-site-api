@@ -90,9 +90,17 @@
     return only.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   }
 
+  function normalizeText(str) {
+    if (!str) return "";
+    return String(str)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
   function normalizarTextoBusca(valor) {
-    if (!valor) return "";
-    return String(valor).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").replace(/[^\w]/g, "").toLowerCase();
+    return normalizeText(valor);
   }
 
   function exibirAlertaFlutuante() {
@@ -173,7 +181,7 @@
       const inputOutro = clone.querySelector(`input[name="dep${i}_parentesco_outro"]`);
       const inputHiddenFinal = clone.querySelector(`input[name="dep${i}_parentesco"]`);
       const atualizarParentesco = () => {
-        if (selectParentesco.value === 'Outro') {
+        if (selectParentesco.value === 'OUTRO') {
           inputOutro.style.display = 'block';
           inputHiddenFinal.value = inputOutro.value.trim();
         } else {
@@ -184,6 +192,13 @@
       };
       selectParentesco.addEventListener('change', atualizarParentesco);
       inputOutro.addEventListener('input', atualizarParentesco);
+
+      // Listener para o campo manual atualizar o hidden
+      inputOutro.addEventListener('input', () => {
+        if (selectParentesco.value === 'OUTRO') {
+          inputHiddenFinal.value = inputOutro.value.trim();
+        }
+      });
       container.appendChild(clone);
     }
   }
@@ -201,6 +216,7 @@
     aplicarMascaraConta,
     aplicarMascaraCPF,
     aplicarMascaraCEP,
-    gerarCamposDependentes
+    gerarCamposDependentes,
+    normalizeText
   };
 })(typeof window !== 'undefined' ? window : global);

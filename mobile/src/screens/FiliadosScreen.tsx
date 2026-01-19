@@ -171,17 +171,19 @@ const FiliadosScreen: React.FC = () => {
         {podeCriar && <TouchableOpacity style={styles.addButton} onPress={handleNovoPress}><Text style={styles.addButtonText}>Novo</Text></TouchableOpacity>}
       </View>
       <View style={styles.filtersContainer}>
-        <View style={styles.pickerWrapper}>
-          <Picker
-            selectedValue={filtroEstado}
-            style={styles.picker}
-            onValueChange={(itemValue) => setFiltroEstado(itemValue)}
-          >
-            <Picker.Item label="Cadastro Ativo" value="ATIVO" />
-            <Picker.Item label="Arquivados" value="ARQUIVADO" />
-            <Picker.Item label="Todos Cadastros" value="TODOS" />
-          </Picker>
-        </View>
+        {ehGestao && (
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={filtroEstado}
+              style={styles.picker}
+              onValueChange={(itemValue) => setFiltroEstado(itemValue)}
+            >
+              <Picker.Item label="Cadastro Ativo" value="ATIVO" />
+              <Picker.Item label="Arquivados" value="ARQUIVADO" />
+              <Picker.Item label="Todos Cadastros" value="TODOS" />
+            </Picker>
+          </View>
+        )}
         <View style={styles.pickerWrapper}>
           <Picker
             selectedValue={filtroSituacao}

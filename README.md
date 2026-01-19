@@ -143,7 +143,41 @@ Esses campos permanecem exclusivos do fluxo `buscaCEP`, inclusive para gestores.
 
 **Regra exclusiva do ADMIN:**
 - Apenas ADMIN pode conceder/remover o perfil ADMIN de outro usuario.
-- DIRETORIA e FUNCIONARIO podem conceder perfis **entre si** e para **FILIADO**, mas **nunca ADMIN**.
+- DIRETORIA e FUNCIONARIO podem conceder/alterar perfis **entre si** (DIRETORIA, FUNCIONARIO) e para **FILIADO**, mas **NUNCA** promover a ADMIN nem remover um perfil ADMIN existente.
+
+---
+
+## 📋 Estados e situacoes do usuario (sem ambiguidade)
+
+Cada usuario possui **dois eixos distintos**, que nao devem ser confundidos.
+
+### 1) Estado do cadastro (administrativo)
+
+Define se o registro esta operacionalmente ativo no sistema.
+
+- `CADASTRO_ATIVO`
+- `ARQUIVADO`
+
+Caracteristicas:
+- Controlado pela gestao.
+- Arquivamento:
+  - nao apaga dados
+  - preserva historico/auditoria
+  - e reversivel (desarquivar)
+- **Login de Arquivado**: Bloqueado com a mensagem "Seu cadastro encontra-se inativo junto ao sindicato. Favor entrar em contato com a secretaria."
+
+### 2) Situacao funcional
+
+Define a condicao funcional do filiado perante a entidade.
+
+Valores permitidos (Canonicos):
+- `ATIVO`
+- `VETERANO`
+- `PENSIONISTA`
+
+**Importante:**
+- Estado do cadastro responde: "Este registro esta ativo no sistema?" (`CADASTRO_ATIVO` / `ARQUIVADO`).
+- Situacao funcional responde: "Qual a condicao funcional do filiado?" (`ATIVO` / `VETERANO` / `PENSIONISTA`).
 
 ---
 

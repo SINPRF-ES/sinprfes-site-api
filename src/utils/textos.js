@@ -14,7 +14,7 @@ module.exports = {
   AUTH: {
     INFORME_CREDENCIAIS: "Informe CPF e senha para entrar.",
     CREDENCIAIS_INVALIDAS: "CPF ou senha inválidos.",
-    CADASTRO_INATIVO: "Estado do cadastro: ARQUIVADO. Acesso indisponível. Contate o sindicato.",
+    CADASTRO_INATIVO: "Seu cadastro encontra-se inativo junto ao sindicato. Favor entrar em contato com a secretaria.",
     CODIGO_2FA_REQUERIDO: "É necessário informar o código de 2FA.",
     CODIGO_2FA_INVALIDO: "Código 2FA inválido.",
   },
