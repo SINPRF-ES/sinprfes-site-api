@@ -173,7 +173,7 @@
       const inputOutro = clone.querySelector(`input[name="dep${i}_parentesco_outro"]`);
       const inputHiddenFinal = clone.querySelector(`input[name="dep${i}_parentesco"]`);
       const atualizarParentesco = () => {
-        if (selectParentesco.value === 'Outro') {
+        if (selectParentesco.value === 'OUTRO') {
           inputOutro.style.display = 'block';
           inputHiddenFinal.value = inputOutro.value.trim();
         } else {
@@ -184,6 +184,13 @@
       };
       selectParentesco.addEventListener('change', atualizarParentesco);
       inputOutro.addEventListener('input', atualizarParentesco);
+
+      // Listener para o campo manual atualizar o hidden
+      inputOutro.addEventListener('input', () => {
+        if (selectParentesco.value === 'OUTRO') {
+          inputHiddenFinal.value = inputOutro.value.trim();
+        }
+      });
       container.appendChild(clone);
     }
   }

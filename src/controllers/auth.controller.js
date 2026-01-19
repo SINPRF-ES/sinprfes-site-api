@@ -49,14 +49,12 @@ exports.login = async (req, res) => {
         .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS }); // ✨
     }
 
-    // Verificação de Situação Funcional (Case Insensitive)
-    if (filiado.situacao) {
-      if (filiado.situacao.toUpperCase() !== "ATIVO") {
-        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, situacao: filiado.situacao });
+    // Verificação de Estado do Cadastro (Arquivado)
+    if (filiado.arquivado_em) {
+        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, status: "arquivado" });
         return res
-          .status(400)
-          .json({ error: Textos.AUTH.CADASTRO_INATIVO }); // ✨
-      }
+          .status(403)
+          .json({ error: Textos.AUTH.CADASTRO_INATIVO });
     }
 
     const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);

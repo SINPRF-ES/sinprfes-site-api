@@ -208,28 +208,51 @@ export default function EditarFiliadoScreen({ route, navigation }) {
   const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
 
   return (
-    <KeyboardAwareScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <Text style={styles.title}>Editar Filiado</Text>
-      
-      <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
-      <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
-      <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao}/>
-      <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.stickyHeader}>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.saveButton, loading && styles.disabledButton]}
+            onPress={handleUpdate}
+            disabled={loading}
+          >
+            <Text style={styles.actionButtonText}>{loading ? "..." : "Salvar"}</Text>
+          </TouchableOpacity>
 
-      <View style={styles.buttonContainer}>
-        <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
+          {filiado.arquivado_em ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.unarchiveButton, loading && styles.disabledButton]}
+              onPress={handleUnarchive}
+              disabled={loading}
+            >
+              <Text style={styles.actionButtonText}>Desarquivar</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.archiveButton, loading && styles.disabledButton]}
+              onPress={handleArchive}
+              disabled={loading}
+            >
+              <Text style={styles.actionButtonText}>Arquivar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-      <View style={styles.buttonContainer}>
-        {filiado.arquivado_em ? (
-          <Button title="Desarquivar" onPress={handleUnarchive} color="green" disabled={loading} />
-        ) : (
-          <Button title="Arquivar" onPress={handleArchive} color="red" disabled={loading} />
-        )}
-      </View>
-    </KeyboardAwareScrollView>
+
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+      >
+        <Text style={styles.title}>Editar Filiado</Text>
+
+        <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
+        <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
+        <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao}/>
+        <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} />
+
+        <View style={{ height: 40 }} />
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -237,6 +260,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f0f0',
+  },
+  stickyHeader: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    zIndex: 100,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  actionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#007bff',
+  },
+  archiveButton: {
+    backgroundColor: '#dc3545',
+  },
+  unarchiveButton: {
+    backgroundColor: '#28a745',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   contentContainer: {
     padding: 20,

@@ -324,9 +324,24 @@ exports.atualizarFiliado = async (req, res) => {
       ...dadosDependentes,
     };
 
-    // Somente ADMIN altera perfil_acesso
-    if (perfil === "ADMIN" && body.perfil_acesso) {
-      payload.perfil_acesso = String(body.perfil_acesso).toUpperCase();
+    // Regra canônica de alteração de perfil
+    if (body.perfil_acesso) {
+      const novoPerfil = String(body.perfil_acesso).toUpperCase();
+      const alvo = await buscarPorId(idAlvo);
+
+      if (perfil === "ADMIN") {
+        payload.perfil_acesso = novoPerfil;
+      } else if (["DIRETORIA", "FUNCIONARIO"].includes(perfil)) {
+        if (alvo.perfil_acesso === "ADMIN") {
+          // Não pode alterar perfil de um ADMIN
+          return res.status(403).json({ message: "Você não tem permissão para alterar o perfil de um administrador." });
+        }
+        if (novoPerfil === "ADMIN") {
+          // Não pode promover a ADMIN
+          return res.status(403).json({ message: "Você não tem permissão para promover um usuário a administrador." });
+        }
+        payload.perfil_acesso = novoPerfil;
+      }
     }
 
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
