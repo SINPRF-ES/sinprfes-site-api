@@ -977,15 +977,23 @@ footer {
    Layout Área do Filiado (af-layout)
 =========================== */
 
-.af-layout {
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+.af-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.af-main-layout {
+  display: flex;
   gap: 24px;
   align-items: flex-start;
 }
 
 /* Coluna esquerda (menu) */
 .af-sidebar {
+  width: 240px;
+  position: sticky;
+  top: 100px; /* Ajuste conforme a altura do header fixo */
   background: rgba(0, 0, 0, 0.7);
   border-radius: 20px;
   padding: 16px 14px 14px;
@@ -993,6 +1001,12 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  z-index: 10;
+}
+
+.af-content {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Título/subtítulo dentro do sidebar já usam .section-title/.section-subtitle */
@@ -1068,16 +1082,19 @@ footer {
 }
 
 /* Responsivo */
-@media (max-width: 768px) {
-  .af-layout {
-    grid-template-columns: 1fr;
+@media (max-width: 900px) {
+  .af-main-layout {
+    flex-direction: column;
   }
 
   .af-sidebar {
+    width: 100%;
+    position: relative;
+    top: 0;
     order: 0;
   }
 
-  .af-main {
+  .af-content {
     order: 1;
   }
 

@@ -163,7 +163,7 @@
       });
       const selectParentesco = clone.querySelector(`select[name="dep${i}_parentesco_select"]`);
       const options = global.ParentescoUtils ? global.ParentescoUtils.PARENTESCO_OPTIONS : [];
-      selectParentesco.innerHTML = '<option value="">Selecione...</option>';
+      selectParentesco.innerHTML = '<option value="" selected disabled>Selecione...</option>';
       options.forEach(opt => {
         const o = document.createElement('option');
         o.value = opt.value;
@@ -173,7 +173,7 @@
       const inputOutro = clone.querySelector(`input[name="dep${i}_parentesco_outro"]`);
       const inputHiddenFinal = clone.querySelector(`input[name="dep${i}_parentesco"]`);
       const atualizarParentesco = () => {
-        if (selectParentesco.value === 'Outro') {
+        if (selectParentesco.value === 'OUTRO') {
           inputOutro.style.display = 'block';
           inputHiddenFinal.value = inputOutro.value.trim();
         } else {
