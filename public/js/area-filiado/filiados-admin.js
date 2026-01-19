@@ -9,7 +9,6 @@
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
-    // opções fixas de lotação (select)
     const LOTACAO_OPCOES = [
       "SEDE",
       "DEL 01 - Viana",
@@ -18,19 +17,15 @@
       "DEL 04 - Linhares."
     ];
 
-    // Variáveis de estado
     let perfilAtual = null;
     let handlersConfigurados = false;
 
     function toDateInputValue(v) {
         if (global.Formatters) return global.Formatters.toDateInputValue(v);
-        // Aceita: yyyy-MM-dd, yyyy-MM-ddTHH:mm..., dd/MM/yyyy ou null
         if (!v) return "";
         const s = String(v).trim();
-        // dd/MM/yyyy
         const mBr = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
         if (mBr) return `${mBr[3]}-${mBr[2]}-${mBr[1]}`;
-        // yyyy-MM-dd
         const mIso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (mIso) return `${mIso[1]}-${mIso[2]}-${mIso[3]}`;
         return "";
@@ -44,11 +39,25 @@
 
     async function inicializarFiliados(perfil) {
         const listaEl = document.getElementById("lista-filiados");
-        if (!listaEl) return;
+        if (!listaEl) {
+            const secFiliados = document.getElementById("sec-filiados");
+            if (secFiliados) {
+                secFiliados.innerHTML = `
+                    <div class="search-box-container">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h2 style="margin:0;">👥 Gestão de Filiados</h2>
+                            <button id="btn-novo-filiado" class="btn btn-primary" style="display:none;">+ Novo Filiado</button>
+                        </div>
+                        <input type="text" id="busca-filiados" placeholder="Buscar por nome ou CPF..." style="width:100%; padding:10px; border-radius:8px; border:none; color:#333;">
+                    </div>
+                    <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
+                    <div id="lista-filiados"></div>
+                `;
+            }
+        }
 
         perfilAtual = (perfil || "").toUpperCase();
-
-        const { apiFetch, normalizarTextoBusca, aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes } = global.Utils || {};
+        const { apiFetch } = global.Utils || {};
 
         if (!handlersConfigurados) {
             const btnNovo = document.getElementById("btn-novo-filiado");
@@ -57,64 +66,47 @@
             if (btnNovo) {
                 if (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual)) {
                     btnNovo.style.display = "inline-block";
-                    const novoBtn = btnNovo.cloneNode(true);
-                    btnNovo.parentNode.replaceChild(novoBtn, btnNovo);
-
-                    if (containerNovo) {
-                        renderizarFormularioNovoFiliado(containerNovo);
-                        containerNovo.style.display = "none";
-                    }
-
-                    novoBtn.addEventListener("click", () => abrirNovoFiliado(containerNovo));
-                } else {
-                    btnNovo.style.display = 'none';
+                    btnNovo.onclick = () => abrirNovoFiliado(containerNovo);
+                    renderizarFormularioNovoFiliado(containerNovo);
                 }
             }
 
             const campoBusca = document.getElementById("busca-filiados");
             if (campoBusca) {
-                const novoInput = campoBusca.cloneNode(true);
-                campoBusca.parentNode.replaceChild(novoInput, campoBusca);
+                campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
 
-                novoInput.addEventListener("input", (e) => filtrarLista(e.target.value));
-                if (novoInput.value) setTimeout(() => filtrarLista(novoInput.value), 100);
+                const filtros = document.createElement("div");
+                filtros.className = "row-filtros";
 
-                if (!document.getElementById("filtro-estado-cadastro")) {
-                    const filtros = document.createElement("div");
-                    filtros.className = "row-filtros";
-                    filtros.innerHTML = `
-                        <label>
-                            Estado do cadastro:
-                            <select id="filtro-estado-cadastro" style="padding:6px; border-radius:6px; border:1px solid #ccc; margin-left:6px;">
-                                <option value="CADASTRO_ATIVO" selected>Cadastro ativo</option>
-                                <option value="ARQUIVADOS">Arquivados</option>
-                                <option value="TODOS">Todos</option>
-                            </select>
-                        </label>
+                const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
 
-                        <label>
-                            Situação funcional:
-                            <select id="filtro-situacao-funcional" style="padding:6px; border-radius:6px; border:1px solid #ccc; margin-left:6px;">
-                                <option value="TODOS" selected>Todos</option>
-                                <option value="ATIVO">Ativo</option>
-                                <option value="VETERANO">Veterano</option>
-                                <option value="PENSIONISTA">Pensionista</option>
-                            </select>
-                        </label>
-                    `;
+                filtros.innerHTML = `
+                    ${ehGestao ? `
+                    <label>
+                        Estado:
+                        <select id="filtro-estado-cadastro">
+                            <option value="CADASTRO_ATIVO" selected>Ativos</option>
+                            <option value="ARQUIVADOS">Arquivados</option>
+                            <option value="TODOS">Todos</option>
+                        </select>
+                    </label>` : '<input type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
+                    <label>
+                        Situação:
+                        <select id="filtro-situacao-funcional">
+                            <option value="TODOS" selected>Todos</option>
+                            <option value="ATIVO">Ativo</option>
+                            <option value="VETERANO">Veterano</option>
+                            <option value="PENSIONISTA">Pensionista</option>
+                        </select>
+                    </label>
+                `;
+                campoBusca.insertAdjacentElement("afterend", filtros);
 
-                    novoInput.insertAdjacentElement("afterend", filtros);
-
-                    filtros.querySelector("#filtro-estado-cadastro").addEventListener("change", () => {
-                        carregarLista();
-                    });
-
-                    filtros.querySelector("#filtro-situacao-funcional").addEventListener("change", () => {
-                        filtrarLista(document.getElementById("busca-filiados")?.value || "");
-                    });
+                if (ehGestao) {
+                    document.getElementById("filtro-estado-cadastro").addEventListener("change", carregarLista);
                 }
+                document.getElementById("filtro-situacao-funcional").addEventListener("change", () => filtrarLista(campoBusca.value));
             }
-
             handlersConfigurados = true;
         }
 
@@ -126,25 +118,20 @@
         if (!listaEl) return;
 
         const { apiFetch } = global.Utils || {};
-
         try {
-            listaEl.innerHTML = `<p style="color:#fff; text-align:center;">Carregando base de dados...</p>`;
+            listaEl.innerHTML = `<p style="text-align:center; color:#fff;">Carregando...</p>`;
             const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
-
             let url = "/api/filiados";
-            if (estado === "TODOS" || estado === "ARQUIVADOS") url = "/api/filiados?incluirArquivados=1";
+            if (estado !== "CADASTRO_ATIVO") url += "?incluirArquivados=1";
 
             const r = await apiFetch(url);
-            if (r && r.ok) {
+            if (r.ok) {
                 const d = await r.json();
                 cacheLista = d.filiados || d || [];
                 filtrarLista(document.getElementById("busca-filiados")?.value || "");
-            } else {
-                listaEl.innerHTML = `<p style="color:#e74c3c; text-align:center;">Erro ao carregar lista.</p>`;
             }
         } catch (e) {
-            console.error(e);
-            listaEl.innerHTML = `<p style="color:#e74c3c; text-align:center;">Erro de conexão.</p>`;
+            listaEl.innerHTML = `<p style="text-align:center; color:red;">Erro ao carregar.</p>`;
         }
     }
 
@@ -153,882 +140,356 @@
         if (!el) return;
 
         const { normalizarTextoBusca, formatarCPF, formatarTelefoneTexto } = global.Utils || {};
+        const t = (termo || "").toLowerCase();
 
-        const t = normalizarTextoBusca ? normalizarTextoBusca(termo || "") : (termo || "").toLowerCase();
-
-        let res = cacheLista.filter((f) => {
-            const nome = normalizarTextoBusca ? normalizarTextoBusca(f?.nome || "") : (f?.nome || "").toLowerCase();
-            const cpf = normalizarTextoBusca ? normalizarTextoBusca(f?.cpf || "") : (f?.cpf || "").toLowerCase();
+        let res = cacheLista.filter(f => {
+            const nome = (f.nome || "").toLowerCase();
+            const cpf = (f.cpf || "").toLowerCase();
             return nome.includes(t) || cpf.includes(t);
         });
 
-        const filtroSituacao = (document.getElementById("filtro-situacao-funcional")?.value || "TODOS").toUpperCase();
-        const filtroEstado = (document.getElementById("filtro-estado-cadastro")?.value || "VIGENTES").toUpperCase();
-
-        if (filtroSituacao !== "TODOS") {
-            res = res.filter((f) => String((f?.situacao_funcional || "ATIVO")).toUpperCase() === filtroSituacao);
+        const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
+        if (fSituacao !== "TODOS") {
+            res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
         }
 
-        if (filtroEstado === "ARQUIVADOS") {
-            res = res.filter((f) => String((f?.estado_cadastro || (f?.arquivado_em ? "ARQUIVADO" : "CADASTRO_ATIVO"))).toUpperCase() === "ARQUIVADO");
-        } else if (filtroEstado === "CADASTRO_ATIVO") {
-            res = res.filter((f) => String((f?.estado_cadastro || (f?.arquivado_em ? "ARQUIVADO" : "CADASTRO_ATIVO"))).toUpperCase() === "CADASTRO_ATIVO");
+        const fEstado = document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO";
+        if (fEstado === "ARQUIVADOS") {
+            res = res.filter(f => f.arquivado_em);
+        } else if (fEstado === "CADASTRO_ATIVO") {
+            res = res.filter(f => !f.arquivado_em);
         }
 
         if (!res.length) {
-            el.innerHTML = `<div style="background:#fff; color:#333; padding:20px; border-radius:8px; text-align:center;">Nenhum filiado encontrado.</div>`;
+            el.innerHTML = `<div class="filiado-card" style="text-align:center;">Nenhum registro.</div>`;
             return;
         }
 
-        const podeEditar = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
-        const ehAdmin = perfilAtual === "ADMIN";
-        const podeEditarCpf = ["ADMIN", "FUNCIONARIO", "DIRETORIA"].includes(perfilAtual);
-
         el.innerHTML = res.map(f => {
-            const situacao = (f.situacao || 'ATIVO').toUpperCase();
-            const classeStatus = situacao === 'ATIVO' ? 'status-ativo' : (situacao === 'VETERANO' ? 'status-veterano' : 'status-pensionista');
+            const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
+            const classeStatus = `status-${situacao.toLowerCase()}`;
+            const tels = [f.telefone1, f.telefone2].filter(Boolean).map(t => formatarTelefoneTexto ? formatarTelefoneTexto(t) : t).join(" / ");
+
+            return `
+                <div class="filiado-card ${classeStatus}">
+                    <div class="filiado-header">
+                        <div class="filiado-left">
+                            ${avatarHtml(f.avatar_url, f.nome)}
+                            <div>
+                                <div class="filiado-nome">${f.nome}</div>
+                                <div class="filiado-meta">${f.cpf ? formatarCPF(f.cpf) + ' • ' : ''}${f.lotacao || 'SEDE'}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="filiado-badge">${situacao}</span>
+                            <div style="margin-top:5px; font-size:0.85rem;">${tels || '-'}</div>
+                            ${["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) ?
+                                `<button class="btn btn-outline btn-sm" onclick="FiliadosAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function abrirModalEdicao(id) {
+        const filiado = cacheLista.find(f => f.id == id);
+        if (!filiado) return;
+
+        const modal = document.getElementById("modal-editar-filiado");
+        const corpo = document.getElementById("modal-corpo");
+        if (!modal || !corpo) return;
+
+        corpo.innerHTML = gerarHtmlForm(filiado);
+        modal.style.display = "flex";
+
+        configurarFormEdicao(id);
+    }
+
+    function gerarHtmlForm(f) {
+        const { toDateInputValue } = global.Formatters || {};
+        const ehAdmin = perfilAtual === "ADMIN";
+        const isArquivado = !!f.arquivado_em;
+
+        return `
+            <div id="alertas-modal"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#f8f9fa; padding:10px; border-radius:8px;">
+                <span>Status: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
+                <div>
+                    ${isArquivado ?
+                        `<button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.confirmarDesarquivar(${f.id})">📤 Desarquivar</button>` :
+                        `<button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.confirmarArquivar(${f.id})">📥 Arquivar</button>`}
+                </div>
+            </div>
+
+            <form id="form-edicao-modal">
+                <div class="edit-grid">
+                    <div class="edit-group">
+                        <label>Nome</label>
+                        <input name="nome" value="${f.nome || ""}" required>
+                    </div>
+                    <div class="edit-group">
+                        <label>CPF</label>
+                        <input name="cpf" value="${f.cpf || ""}" ${ehAdmin ? "" : "readonly"}>
+                    </div>
+                    <div class="edit-group">
+                        <label>Data Nascimento</label>
+                        <input type="date" name="data_nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
+                    </div>
+                    <div class="edit-group">
+                        <label>E-mail 1</label>
+                        <input name="email1" value="${f.email1 || ""}">
+                    </div>
+                    <div class="edit-group">
+                        <label>Telefone 1</label>
+                        <input name="telefone1" class="campo-telefone" value="${f.telefone1 || ""}">
+                    </div>
+                    <div class="edit-group">
+                        <label>Lotação</label>
+                        <select name="lotacao">
+                            ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
+                        </select>
+                    </div>
+                    <div class="edit-group">
+                        <label>Situação Funcional</label>
+                        <select name="situacao_funcional">
+                            ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao_funcional || f.situacao || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
+                        </select>
+                    </div>
+                    ${ehAdmin ? `
+                        <div class="edit-group">
+                            <label>Perfil de Acesso</label>
+                            <select name="perfil_acesso">
+                                <option value="FILIADO" ${f.perfil_acesso === "FILIADO" ? "selected" : ""}>FILIADO</option>
+                                <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
+                                <option value="ADMIN" ${f.perfil_acesso === "ADMIN" ? "selected" : ""}>ADMIN</option>
+                            </select>
+                        </div>
+                    ` : ""}
+                </div>
+
+                <div class="edit-group span-2" style="margin-top:20px;">
+                    <h4 style="border-bottom:1px solid #eee; padding-bottom:5px;">Dependentes</h4>
+                    <div id="modal-dependentes-container"></div>
+                </div>
+
+                <div class="edit-group span-2" style="margin-top:20px;">
+                    <h4 style="border-bottom:1px solid #eee; padding-bottom:5px;">Avatar (Foto)</h4>
+                    <div class="avatar-actions">
+                        <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" onerror="this.src='/img/avatar-placeholder.png'">
+                        <input type="file" id="modal-avatar-input" accept="image/*" style="flex:1;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.uploadAvatar(${f.id})">Upload</button>
+                        <button type="button" class="btn btn-danger-outline btn-sm" onclick="FiliadosAdmin.removerAvatar(${f.id})">Remover</button>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="margin-top:20px; padding:0;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-editar-filiado').style.display='none'">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        `;
+    }
+
+    function configurarFormEdicao(id) {
+        const form = document.getElementById("form-edicao-modal");
+        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, apiFetch } = global.Utils || {};
+
+        const filiado = cacheLista.find(f => f.id == id);
+
+        if (gerarCamposDependentes) {
+            const container = document.getElementById("modal-dependentes-container");
+            gerarCamposDependentes(container, "mod");
+
+            // Preencher dependentes
+            for (let i = 1; i <= 5; i++) {
+                const nome = document.getElementById(`mod-dep${i}_nome`);
+                const cpf = document.getElementById(`mod-dep${i}_cpf`);
+                const data = document.getElementById(`mod-dep${i}_data_nascimento`);
+                const select = document.getElementById(`mod-dep${i}_parentesco_select`);
+                const outro = document.getElementById(`mod-dep${i}_parentesco_outro`);
+                const hidden = document.getElementById(`mod-dep${i}_parentesco`);
+
+                if (nome) nome.value = filiado[`dep${i}_nome`] || "";
+                if (cpf) {
+                    cpf.value = filiado[`dep${i}_cpf`] || "";
+                    if (aplicarMascaraCPF) aplicarMascaraCPF(cpf);
+                }
+                if (data) data.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : "";
+
+                const pVal = filiado[`dep${i}_parentesco`] || "";
+                if (select && hidden) {
+                    hidden.value = pVal;
+                    const options = Array.from(select.options).map(o => o.value);
+                    if (options.includes(pVal)) {
+                        select.value = pVal;
+                    } else if (pVal) {
+                        select.value = "OUTRO";
+                        if (outro) {
+                            outro.value = pVal;
+                            outro.style.display = "block";
+                        }
+                    }
+                }
+            }
+        }
+
+        form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const fd = new FormData(form);
+            const payload = {};
+            fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-            const tel1Raw = onlyDigits(f.telefone1);
-            const tel2Raw = onlyDigits(f.telefone2);
-            const tels = [tel1Raw, tel2Raw].filter(Boolean).map(t => formatarTelefoneTexto ? formatarTelefoneTexto(t) : t).join(" / ");
+            if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
+            if (payload.cpf) payload.cpf = onlyDigits(payload.cpf);
 
-            const metaCpf = f.cpf ? `CPF: ${formatarCPF ? formatarCPF(f.cpf) : f.cpf} &bull; ` : '';
-
-            const header = `
-                <div class="filiado-header">
-                    <div class="filiado-left">
-                        ${avatarHtml(f.avatar_url, f.nome)}
-                        <div>
-                            <div class="filiado-nome">${f.nome}</div>
-                            <div class="filiado-meta">${metaCpf}${f.lotacao || 'SEDE'}</div>
-                        </div>
-                    </div>
-                    <div style="text-align:right;">
-                        <span class="filiado-badge" style="background:${classeStatus === 'status-ativo' ? '#e8f8f5' : '#fef9e7'}; color:#333;">${situacao}</span>
-                        <div style="margin-top:5px; font-size:0.9rem; color:#555;">📞 ${tels || '-'}</div>
-                    </div>
-                </div>`;
-
-            const isArquivado = String((f?.estado_cadastro || (f?.arquivado_em ? "ARQUIVADO" : "CADASTRO_ATIVO"))).toUpperCase() === "ARQUIVADO";
-            const arquivadoInfo = isArquivado ? `
-                <div class="af-archived-banner" style="margin-top:10px; padding:10px 12px; background:#fff3cd; border:1px solid #ffeeba; border-radius:8px; color:#5a4a00;">
-                    <strong>Cadastro arquivado</strong>${f?.arquivado_em ? ` • ${new Date(f.arquivado_em).toLocaleString('pt-BR')}` : ``}
-                    ${f?.arquivado_motivo ? `<div style="margin-top:6px; font-size:12px;"><strong>Motivo:</strong> ${String(f.arquivado_motivo)}</div>` : ``}
-                </div>` : ``;
-
-            const acoesArquivamento = podeEditar ? `
-                <div class="af-archive-actions" style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-                    ${isArquivado
-                        ? `<button type="button" class="btn btn-outline btn-desarquivar-filiado" data-id="${f.id}">📤 Desarquivar</button>`
-                        : `<button type="button" class="btn btn-outline btn-arquivar-filiado" data-id="${f.id}">📥 Arquivar</button>`
-                    }
-                </div>` : ``;
-
-            if (!podeEditar) return `<div class="filiado-card ${classeStatus}">${header}${arquivadoInfo}</div>`;
-
-            const attrCpf = podeEditarCpf ? '' : 'disabled style="background:#eee; cursor:not-allowed;"';
-
-            const adminSection = ehAdmin ? `
-                <div class="edit-group admin-field">
-                    <label>Perfil de Acesso (ADMIN)</label>
-                    <select name="perfil_acesso">
-                        <option value="FILIADO" ${f.perfil_acesso === 'FILIADO' ? 'selected' : ''}>FILIADO</option>
-                        <option value="ORGANIZADOR" ${f.perfil_acesso === 'ORGANIZADOR' ? 'selected' : ''}>ORGANIZADOR</option>
-                        <option value="FUNCIONARIO" ${f.perfil_acesso === 'FUNCIONARIO' ? 'selected' : ''}>FUNCIONARIO</option>
-                        <option value="DIRETORIA" ${f.perfil_acesso === 'DIRETORIA' ? 'selected' : ''}>DIRETORIA</option>
-                        <option value="ADMIN" ${f.perfil_acesso === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
-                    </select>
-                </div>` : '';
-
-            const lotacaoAtual = (f.lotacao || "SEDE").toString();
-
-            const editForm = `
-                <details class="edit-area">
-                    <summary class="btn-editar-toggle">✏️ Editar dados completos <span class="seta">▲</span></summary>
-
-                    ${arquivadoInfo}
-                    ${acoesArquivamento}
-
-                    <form class="edit-form" data-id="${f.id}">
-                        <div class="edit-grid">
-                            <div class="edit-group">
-                                <label>Nome</label>
-                                <input name="nome" value="${escapeHtml(f.nome || '')}">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>CPF</label>
-                                <input name="cpf" value="${escapeHtml(f.cpf || '')}" ${attrCpf}>
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Data de Nascimento</label>
-                                <input type="date" name="data_nascimento" value="${escapeHtml(toDateInputValue(f.data_nascimento))}">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>E-mail 1</label>
-                                <input name="email1" value="${escapeHtml(f.email1 || '')}">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>E-mail 2</label>
-                                <input name="email2" value="${escapeHtml(f.email2 || '')}">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Tel 1</label>
-                                <input name="telefone1" value="${escapeHtml(f.telefone1 || '')}" class="campo-telefone">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Tel 2</label>
-                                <input name="telefone2" value="${escapeHtml(f.telefone2 || '')}" class="campo-telefone">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Lotação</label>
-                                <select name="lotacao">
-                                    ${LOTACAO_OPCOES.map(op => {
-                                        const selected = (lotacaoAtual === op) ? 'selected' : '';
-                                        return `<option value="${escapeHtml(op)}" ${selected}>${escapeHtml(op)}</option>`;
-                                    }).join("")}
-                                </select>
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Situação</label>
-                                <select name="situacao_funcional">
-                                    ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao_funcional || '').toUpperCase() === op ? 'selected' : ''}>${op}</option>`).join("")}
-                                </select>
-                            </div>
-
-                            ${adminSection}
-
-                            <div class="edit-group span-2">
-                                <label>Logradouro</label>
-                                <input name="endereco" value="${escapeHtml(f.endereco || '')}">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Bairro</label>
-                                <input name="bairro" value="${escapeHtml(f.bairro || '')}">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Perfil</label>
-                                <select name="perfil">
-                                    <option value="FILIADO" ${f.perfil === 'FILIADO' ? 'selected' : ''}>FILIADO</option>
-                                    <option value="ORGANIZADOR" ${f.perfil === 'ORGANIZADOR' ? 'selected' : ''}>ORGANIZADOR</option>
-                                    <option value="FUNCIONARIO" ${f.perfil === 'FUNCIONARIO' ? 'selected' : ''}>FUNCIONARIO</option>
-                                    <option value="DIRETORIA" ${f.perfil === 'DIRETORIA' ? 'selected' : ''}>DIRETORIA</option>
-                                    <option value="ADMIN" ${f.perfil === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
-                                </select>
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Nº</label>
-                                <input name="numero" value="${escapeHtml(f.numero || '')}">
-                            </div>
-
-                            <div class="edit-group">
-                                <label>Compl.</label>
-                                <input name="complemento" value="${escapeHtml(f.complemento || '')}">
-                            </div>
-
-                            <div class="edit-group endereco-grid span-2">
-                                <div class="edit-group">
-                                    <label>CEP</label>
-                                    <div class="cep-wrapper">
-                                        <input class="campo-cep-admin" name="cep" value="${escapeHtml(f.cep || '')}" placeholder="00000000">
-                                        <button type="button" class="btn-buscar-cep-admin" title="Buscar CEP">🔎</button>
-                                    </div>
-                                </div>
-
-                                <div class="edit-group">
-                                    <label>Cidade</label>
-                                    <input name="cidade" value="${escapeHtml(f.cidade || '')}">
-                                </div>
-
-                                <div class="edit-group">
-                                    <label>UF</label>
-                                    <input name="uf" value="${escapeHtml(f.uf || '')}">
-                                </div>
-
-                                <div class="edit-group span-all">
-                                    <label>Logradouro</label>
-                                    <input name="logradouro" value="${escapeHtml(f.logradouro || '')}">
-                                </div>
-
-                                <div class="endereco-linha3">
-                                    <div class="edit-group">
-                                        <label>Nº</label>
-                                        <input name="numero_endereco" value="${escapeHtml(f.numero_endereco || f.numero || '')}">
-                                    </div>
-                                    <div class="edit-group">
-                                        <label>Compl.</label>
-                                        <input name="complemento_endereco" value="${escapeHtml(f.complemento_endereco || f.complemento || '')}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="edit-group span-2">
-                                <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">
-                                    <h4 style="margin: 0; border: none; padding: 0;">Dependentes</h4>
-                                    <button type="button" class="btn btn-danger-outline btn-sm btn-toggle-excluir-dependentes-admin" data-filiado-id="${f.id}">Excluir</button>
-                                </div>
-                                <div id="painel-excluir-dependentes-admin-${f.id}" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
-                                    <p style="margin-top:0; font-weight:bold;">Selecione para remover:</p>
-                                    <div id="checkboxes-excluir-dependentes-admin-${f.id}" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                                    <div style="margin-top: 15px; text-align: right;">
-                                        <button type="button" class="btn btn-danger btn-confirmar-exclusao-dependentes-admin" data-filiado-id="${f.id}">Confirmar Exclusão</button>
-                                    </div>
-                                </div>
-                                <div id="dependentes-container-edicao-${f.id}">
-                                </div>
-                            </div>
-
-                            <div class="edit-group span-2">
-                                <label>Avatar (foto)</label>
-                                <div class="avatar-actions">
-                                    <img class="avatar-preview" src="${escapeHtml(f.avatar_url || '/img/avatar-placeholder.png')}" alt="Preview avatar" onerror="this.src='/img/avatar-placeholder.png'">
-                                    <input type="file" name="avatar" accept="image/*">
-                                    <button type="button" class="btn-upload-avatar">Enviar foto</button>
-                                    <button type="button" class="btn btn-danger btn-remover-avatar" data-id="${f.id}">Remover foto</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-save">💾 Salvar Alterações</button>
-                    </form>
-                </details>
-            `;
-
-            return `<div class="filiado-card ${classeStatus}">${header}${editForm}</div>`;
-        }).join("");
-
-        configurarListenersEdicao();
-    }
-
-    function configurarListenersEdicao() {
-        const root = document.getElementById("lista-filiados");
-        if (!root) return;
-
-        const { apiFetch, aplicarMascaraTelefone, aplicarMascaraCPF, gerarCamposDependentes } = global.Utils || {};
-
-        root.querySelectorAll("form.edit-form").forEach((form) => {
-            if (form.dataset.bound === "1") return;
-            form.dataset.bound = "1";
-
-            const filiadoId = form.dataset.id;
-            const filiado = cacheLista.find(f => f.id == filiadoId);
-
-            const containerDependentes = form.querySelector(`#dependentes-container-edicao-${filiadoId}`);
-            if (containerDependentes && filiado) {
-                if (gerarCamposDependentes) {
-                    gerarCamposDependentes(containerDependentes, `edicao-${filiadoId}`);
-
-                    for (let i = 1; i <= 5; i++) {
-                        const nome = form.querySelector(`#edicao-${filiadoId}-dep${i}_nome`);
-                        const cpf = form.querySelector(`#edicao-${filiadoId}-dep${i}_cpf`);
-                        const dataNascimento = form.querySelector(`#edicao-${filiadoId}-dep${i}_data_nascimento`);
-
-                        if (nome) nome.value = filiado[`dep${i}_nome`] || '';
-                        if (cpf) {
-                            cpf.value = filiado[`dep${i}_cpf`] || '';
-                            if (aplicarMascaraCPF) aplicarMascaraCPF(cpf);
-                        }
-                        if (dataNascimento) dataNascimento.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : '';
-
-                        const parentescoValor = filiado[`dep${i}_parentesco`] || '';
-                        const selectParentesco = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco_select`);
-                        const inputOutro = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco_outro`);
-                        const inputHidden = form.querySelector(`#edicao-${filiadoId}-dep${i}_parentesco`);
-
-                        if (selectParentesco && inputOutro && inputHidden) {
-                            inputHidden.value = parentescoValor;
-                            const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
-
-                            if (opcoesPadrao.includes(parentescoValor)) {
-                                selectParentesco.value = parentescoValor;
-                                inputOutro.style.display = 'none';
-                                inputOutro.value = '';
-                            } else if (parentescoValor) {
-                                selectParentesco.value = 'Outro';
-                                inputOutro.style.display = 'block';
-                                inputOutro.value = parentescoValor;
-                            } else {
-                                selectParentesco.value = '';
-                                inputOutro.style.display = 'none';
-                                inputOutro.value = '';
-                            }
-                        }
-                    }
-                }
-            }
-
-            const dependentesAtuais = [];
             for (let i = 1; i <= 5; i++) {
-                if (filiado && filiado[`dep${i}_nome`]) {
-                    dependentesAtuais.push({ nome: filiado[`dep${i}_nome`], index: i - 1 });
+                if (payload[`dep${i}_cpf`]) payload[`dep${i}_cpf`] = onlyDigits(payload[`dep${i}_cpf`]);
+            }
+
+            try {
+                const r = await apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
+                if (r.ok) {
+                    alert("Sucesso!");
+                    document.getElementById("modal-editar-filiado").style.display = "none";
+                    await carregarLista();
+                } else {
+                    const err = await r.json();
+                    alert(err.message || "Erro ao salvar.");
                 }
-            }
-
-            const btnToggleExcluir = form.querySelector(`.btn-toggle-excluir-dependentes-admin[data-filiado-id="${filiadoId}"]`);
-            const painelExcluir = form.querySelector(`#painel-excluir-dependentes-admin-${filiadoId}`);
-            const containerCheckboxes = form.querySelector(`#checkboxes-excluir-dependentes-admin-${filiadoId}`);
-            const btnConfirmarExclusao = form.querySelector(`.btn-confirmar-exclusao-dependentes-admin[data-filiado-id="${filiadoId}"]`);
-            
-            if (btnToggleExcluir && painelExcluir && containerCheckboxes && btnConfirmarExclusao) {
-                if (dependentesAtuais.length === 0) {
-                    btnToggleExcluir.style.display = 'none';
-                }
-
-                btnToggleExcluir.onclick = () => {
-                    painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
-                };
-
-                containerCheckboxes.innerHTML = '';
-                dependentesAtuais.forEach(dep => {
-                    containerCheckboxes.innerHTML += `
-                        <label style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" name="excluir_dependente_admin" value="${dep.index}" style="width: auto;">
-                            Dependente ${dep.index + 1}: ${dep.nome}
-                        </label>
-                    `;
-                });
-
-                btnConfirmarExclusao.onclick = async () => {
-                    const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
-                    const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
-
-                    if (indicesParaExcluir.length === 0) {
-                        alert("Selecione pelo menos um dependente para excluir.");
-                        return;
-                    }
-
-                    if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s) do filiado ${filiado.nome}?`)) {
-                        try {
-                            const r = await apiFetch(`/api/filiados/${filiadoId}/dependentes`, {
-                                method: 'DELETE',
-                                body: { indices: indicesParaExcluir }
-                            });
-
-                            if (r.ok) {
-                                alert("Dependentes excluídos com sucesso.");
-                                await carregarLista();
-                            } else {
-                                const err = await r.json();
-                                alert(err.message || "Erro ao excluir dependentes.");
-                            }
-                        } catch (e) {
-                            alert("Erro de conexão.");
-                        }
-                    }
-                };
-            }
-
-            form.querySelectorAll(".campo-telefone").forEach(inp => {
-                if (aplicarMascaraTelefone) aplicarMascaraTelefone(inp);
-            });
-
-            const btnCep = form.querySelector(".btn-buscar-cep-admin");
-            if (btnCep) {
-                btnCep.onclick = async () => {
-                    const cepInput = form.querySelector("input[name='cep']");
-                    const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-                    const cep = onlyDigits(cepInput?.value || "");
-                    if (!cep || cep.length !== 8) {
-                        alert("CEP inválido. Informe 8 dígitos.");
-                        return;
-                    }
-                    await buscarCepEPreencher(form, cep);
-                };
-            }
-
-            const btnUpload = form.querySelector(".btn-upload-avatar");
-            if (btnUpload) {
-                btnUpload.onclick = async () => {
-                    const id = form.dataset.id;
-                    const fileInput = form.querySelector("input[type='file'][name='avatar']");
-                    const file = fileInput?.files?.[0];
-                    if (!file) {
-                        alert("Selecione um arquivo de imagem antes de enviar.");
-                        return;
-                    }
-                    await uploadAvatar(id, file, form);
-                };
-            }
-
-            const btnRemover = form.querySelector(".btn-remover-avatar");
-            if (btnRemover) {
-                btnRemover.onclick = async () => {
-                    const id = btnRemover.dataset.id;
-                    if (!id) return;
-                    if (!confirm("Deseja remover a foto do avatar deste usuário?")) return;
-                    await removerAvatar(id, form);
-                };
-            }
-
-            form.onsubmit = async (e) => {
-                e.preventDefault();
-                await salvarEdicao(form);
-            };
-        });
-
-        root.querySelectorAll(".btn-arquivar-filiado").forEach((btn) => {
-            if (btn.dataset.bound === "1") return;
-            btn.dataset.bound = "1";
-            btn.onclick = async () => {
-                const id = btn.dataset.id;
-                const motivo = prompt("Informe a justificativa para arquivar o cadastro:");
-                if (!motivo) return;
-                await arquivarFiliado(id, motivo);
-            };
-        });
-
-        root.querySelectorAll(".btn-desarquivar-filiado").forEach((btn) => {
-            if (btn.dataset.bound === "1") return;
-            btn.dataset.bound = "1";
-            btn.onclick = async () => {
-                const id = btn.dataset.id;
-                const motivo = prompt("Informe a justificativa para desarquivar o cadastro:");
-                if (!motivo) return;
-                await desarquivarFiliado(id, motivo);
-            };
-        });
+            } catch (err) { alert("Erro de conexão."); }
+        };
     }
 
-    async function salvarEdicao(form) {
-        const id = form.dataset.id;
-        if (!id) return;
+    async function confirmarArquivar(id) {
+        const motivo = prompt("Motivo do arquivamento:");
+        if (!motivo) return;
+        const { apiFetch } = global.Utils || {};
+        const r = await apiFetch(`/api/filiados/${id}/arquivar`, { method: "POST", body: { motivo } });
+        if (r.ok) {
+            alert("Arquivado.");
+            document.getElementById("modal-editar-filiado").style.display = "none";
+            await carregarLista();
+        }
+    }
+
+    async function confirmarDesarquivar(id) {
+        const motivo = prompt("Motivo do desarquivamento (opcional):") || "Reativado via Web";
+        const { apiFetch } = global.Utils || {};
+        const r = await apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST", body: { motivo } });
+        if (r.ok) {
+            alert("Desarquivado.");
+            document.getElementById("modal-editar-filiado").style.display = "none";
+            await carregarLista();
+        }
+    }
+
+    async function uploadAvatar(id) {
+        const input = document.getElementById("modal-avatar-input");
+        const file = input?.files?.[0];
+        if (!file) { alert("Selecione um arquivo."); return; }
 
         const { apiFetch } = global.Utils || {};
-
-        const data = new FormData(form);
-        const payload = {};
-
-        for (const [k, v] of data.entries()) {
-            if (k === "avatar") continue;
-            payload[k] = (typeof v === "string") ? v.trim() : v;
-        }
-
-        const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-
-        if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
-        if (payload.telefone2) payload.telefone2 = onlyDigits(payload.telefone2);
-        if (payload.cpf) payload.cpf = onlyDigits(payload.cpf);
-        if (payload.cep) payload.cep = onlyDigits(payload.cep);
-
-        for (let i = 1; i <= 5; i++) {
-            const key = `dep${i}_cpf`;
-            if (payload[key]) {
-                payload[key] = onlyDigits(payload[key]);
-            }
-        }
+        const fd = new FormData();
+        fd.append("avatar", file);
 
         try {
-            const r = await apiFetch(`/api/filiados/${id}`, {
-                method: "PUT",
-                body: payload
-            });
-
-            if (r && r.ok) {
-                alert("Alterações salvas com sucesso.");
-                await carregarLista();
-            } else {
-                const err = await safeJson(r);
-                alert(err?.message || "Erro ao salvar alterações.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Erro de conexão ao salvar alterações.");
-        }
-    }
-
-    async function buscarCepEPreencher(form, cep) {
-        try {
-            const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-            const d = await r.json();
-            if (d?.erro) {
-                alert("CEP não encontrado.");
-                return;
-            }
-
-            const cidade = form.querySelector("input[name='cidade']");
-            const uf = form.querySelector("input[name='uf']");
-            const logradouro = form.querySelector("input[name='logradouro']");
-
-            if (cidade) cidade.value = d.localidade || "";
-            if (uf) uf.value = d.uf || "";
-            if (logradouro) logradouro.value = d.logradouro || "";
-
-        } catch (e) {
-            console.error(e);
-            alert("Erro ao consultar CEP.");
-        }
-    }
-
-    async function uploadAvatar(id, file, form) {
-        const { apiFetch } = global.Utils || {};
-        try {
-            const fd = new FormData();
-            fd.append("avatar", file);
-
-            const r = await apiFetch(`/api/filiados/${id}/avatar`, {
-                method: "POST",
-                body: fd
-            });
-
-            if (r && r.ok) {
+            const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
+            if (r.ok) {
                 const d = await r.json();
-                alert(d?.message || "Foto enviada com sucesso.");
-
-                const img = form.querySelector(".avatar-preview");
-                if (img) img.src = d?.avatar_url || img.src;
-
+                document.getElementById("modal-avatar-preview").src = d.avatar_url;
+                alert("Avatar atualizado.");
                 await carregarLista();
-            } else {
-                const err = await safeJson(r);
-                alert(err?.message || "Erro ao enviar foto.");
             }
-        } catch (e) {
-            console.error(e);
-            alert("Erro de conexão ao enviar foto.");
-        }
+        } catch(e) { alert("Erro no upload."); }
     }
 
-    async function removerAvatar(id, form) {
+    async function removerAvatar(id) {
+        if (!confirm("Remover foto?")) return;
         const { apiFetch } = global.Utils || {};
         try {
             const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
-
-            if (r && r.ok) {
-                const d = await r.json();
-                alert(d?.message || "Foto removida.");
-
-                const img = form.querySelector(".avatar-preview");
-                if (img) img.src = "/img/avatar-placeholder.png";
-
+            if (r.ok) {
+                document.getElementById("modal-avatar-preview").src = "/img/avatar-placeholder.png";
+                alert("Foto removida.");
                 await carregarLista();
-            } else {
-                const err = await safeJson(r);
-                alert(err?.message || "Erro ao remover foto.");
             }
-        } catch (e) {
-            console.error(e);
-            alert("Erro de conexão ao remover foto.");
-        }
+        } catch(e) { alert("Erro ao remover."); }
     }
 
-    async function arquivarFiliado(id, motivo) {
-        const { apiFetch } = global.Utils || {};
-        try {
-            const r = await apiFetch(`/api/filiados/${id}/arquivar`, {
-                method: "POST",
-                body: { motivo }
-            });
-
-            if (r && r.ok) {
-                alert("Cadastro arquivado.");
-                await carregarLista();
-            } else {
-                const err = await safeJson(r);
-                alert(err?.message || "Erro ao arquivar cadastro.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Erro de conexão ao arquivar cadastro.");
-        }
+    function abrirNovoFiliado(container) {
+        container.style.display = container.style.display === "none" ? "block" : "none";
     }
 
-    async function desarquivarFiliado(id, motivo) {
-        const { apiFetch } = global.Utils || {};
-        try {
-            const r = await apiFetch(`/api/filiados/${id}/desarquivar`, {
-                method: "POST",
-                body: { motivo }
-            });
-
-            if (r && r.ok) {
-                alert("Cadastro desarquivado.");
-                await carregarLista();
-            } else {
-                const err = await safeJson(r);
-                alert(err?.message || "Erro ao desarquivar cadastro.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Erro de conexão ao desarquivar cadastro.");
-        }
-    }
-
-    function abrirNovoFiliado(containerNovo) {
-        if (!containerNovo) return;
-        containerNovo.style.display = containerNovo.style.display === "none" ? "block" : "none";
-    }
-
-    function renderizarFormularioNovoFiliado(containerNovo) {
-        if (!containerNovo) return;
-        if (containerNovo.dataset.rendered === "1") return;
-        containerNovo.dataset.rendered = "1";
-
-        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, apiFetch } = global.Utils || {};
-
-        const lotacoes = LOTACAO_OPCOES.map(op => `<option value="${escapeHtml(op)}">${escapeHtml(op)}</option>`).join("");
-        const situacoes = SITUACAO_OPCOES.map(op => `<option value="${op}" ${op === "ATIVO" ? "selected" : ""}>${op}</option>`).join("");
-
-        const perfilAcessoSelect = (perfilAtual === "ADMIN")
-            ? `
-              <div class="edit-group">
-                <label>Perfil de Acesso</label>
-                <select name="perfil_acesso">
-                  <option value="FILIADO" selected>FILIADO</option>
-                  <option value="ORGANIZADOR">ORGANIZADOR</option>
-                  <option value="FUNCIONARIO">FUNCIONARIO</option>
-                  <option value="DIRETORIA">DIRETORIA</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>
-              </div>`
-            : `<input type="hidden" name="perfil_acesso" value="FILIADO">`;
-
-        containerNovo.innerHTML = `
-          <div class="filiado-card" style="margin-top:14px;">
-            <div class="filiado-header" style="margin-bottom:10px;">
-              <div class="filiado-left">
-                <div>
-                  <div class="filiado-nome">➕ Novo Filiado</div>
-                  <div class="filiado-meta">Preencha os dados mínimos para criação (Nome, CPF, Email1).</div>
-                </div>
-              </div>
+    function renderizarFormularioNovoFiliado(container) {
+        if (!container) return;
+        const { gerarCamposDependentes } = global.Utils || {};
+        container.innerHTML = `
+            <div class="filiado-card" style="border-left-color: var(--amarelo);">
+                <h3>➕ Novo Filiado</h3>
+                <form id="form-novo-filiado-admin">
+                    <div class="edit-grid">
+                        <div class="edit-group">
+                            <label>Nome *</label>
+                            <input name="nome" required>
+                        </div>
+                        <div class="edit-group">
+                            <label>CPF *</label>
+                            <input name="cpf" required placeholder="Apenas números">
+                        </div>
+                        <div class="edit-group">
+                            <label>Email *</label>
+                            <input type="email" name="email1" required>
+                        </div>
+                    </div>
+                    <div id="novo-dependentes-container" style="margin-top:15px;"></div>
+                    <div style="text-align:right; margin-top:15px;">
+                        <button type="button" class="btn btn-outline" onclick="this.closest('.filiado-card').parentElement.style.display='none'">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Criar Cadastro</button>
+                    </div>
+                </form>
             </div>
-
-            <form id="form-novo-filiado" class="edit-form">
-              <div class="edit-grid">
-                <div class="edit-group">
-                  <label>Nome *</label>
-                  <input name="nome" required>
-                </div>
-
-                <div class="edit-group">
-                  <label>CPF *</label>
-                  <input name="cpf" id="novo-cpf" required>
-                </div>
-
-                <div class="edit-group">
-                  <label>Data de Nascimento</label>
-                  <input type="date" name="data_nascimento">
-                </div>
-
-                <div class="edit-group">
-                  <label>Email 1 *</label>
-                  <input type="email" name="email1" required>
-                </div>
-
-                <div class="edit-group">
-                  <label>Email 2</label>
-                  <input type="email" name="email2">
-                </div>
-
-                <div class="edit-group">
-                  <label>Tel 1</label>
-                  <input name="telefone1" id="novo-tel1" class="campo-telefone">
-                </div>
-
-                <div class="edit-group">
-                  <label>Tel 2</label>
-                  <input name="telefone2" id="novo-tel2" class="campo-telefone">
-                </div>
-
-                <div class="edit-group">
-                  <label>Lotação</label>
-                  <select name="lotacao">
-                    ${lotacoes}
-                  </select>
-                </div>
-
-                <div class="edit-group">
-                  <label>Situação</label>
-                  <select name="situacao">
-                    ${situacoes}
-                  </select>
-                </div>
-
-                ${perfilAcessoSelect}
-
-                <div class="edit-group">
-                  <label>CEP</label>
-                  <div class="cep-wrapper">
-                    <input name="cep" id="novo-cep" placeholder="00000000">
-                    <button type="button" class="btn-buscar-cep-admin" id="btn-buscar-cep-novo" title="Buscar CEP">🔎</button>
-                  </div>
-                </div>
-
-                <div class="edit-group">
-                  <label>UF</label>
-                  <input name="uf" id="novo-uf" readonly style="background:#f7f7f7;">
-                </div>
-
-                <div class="edit-group span-2">
-                  <label>Cidade</label>
-                  <input name="cidade" id="novo-cidade" readonly style="background:#f7f7f7;">
-                </div>
-
-                <div class="edit-group span-2">
-                  <label>Logradouro/Bairro</label>
-                  <input name="logradouro_bairro" id="novo-logradouro" readonly style="background:#f7f7f7;">
-                </div>
-
-                <div class="edit-group">
-                  <label>Nº</label>
-                  <input name="numero" id="novo-numero">
-                </div>
-
-                <div class="edit-group">
-                  <label>Compl.</label>
-                  <input name="complemento" id="novo-complemento">
-                </div>
-              </div>
-
-              <div class="edit-group span-2">
-                  <h4 style="margin-top: 1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">Dependentes</h4>
-                  <div id="dependentes-container-novo">
-                  </div>
-              </div>
-
-              <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
-                <button type="button" class="btn btn-outline" id="btn-cancelar-novo">Cancelar</button>
-                <button type="submit" class="btn-save">✅ Criar Filiado</button>
-              </div>
-            </form>
-          </div>
         `;
 
-        const cpfEl = containerNovo.querySelector("#novo-cpf");
-        if (cpfEl && aplicarMascaraCPF) aplicarMascaraCPF(cpfEl);
-
-        const containerDependentes = containerNovo.querySelector("#dependentes-container-novo");
-        if (containerDependentes && gerarCamposDependentes) {
-            gerarCamposDependentes(containerDependentes, 'novo');
-            containerDependentes.querySelectorAll('input[name*="cpf"]').forEach(inp => {
-                if (aplicarMascaraCPF) aplicarMascaraCPF(inp);
-            });
+        if (gerarCamposDependentes) {
+            gerarCamposDependentes(container.querySelector("#novo-dependentes-container"), "new");
         }
 
-        const cepEl = containerNovo.querySelector("#novo-cep");
-        if (cepEl && aplicarMascaraCEP) aplicarMascaraCEP(cepEl);
+        const form = container.querySelector("#form-novo-filiado-admin");
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const { apiFetch } = global.Utils || {};
+            const fd = new FormData(form);
+            const payload = {};
+            fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
 
-        const tel1 = containerNovo.querySelector("#novo-tel1");
-        if (tel1 && aplicarMascaraTelefone) aplicarMascaraTelefone(tel1);
-        const tel2 = containerNovo.querySelector("#novo-tel2");
-        if (tel2 && aplicarMascaraTelefone) aplicarMascaraTelefone(tel2);
+            const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
+            payload.cpf = onlyDigits(payload.cpf);
 
-        const btnBuscarCep = containerNovo.querySelector("#btn-buscar-cep-novo");
-        if (btnBuscarCep) {
-            btnBuscarCep.onclick = async () => {
-                const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-                const cep = onlyDigits(cepEl?.value || "");
-                if (cep.length !== 8) {
-                    alert("CEP inválido. Informe 8 dígitos.");
-                    return;
-                }
-                await buscarCepNovoFiliado(cep);
-            };
-        }
-
-        const btnCancelar = containerNovo.querySelector("#btn-cancelar-novo");
-        if (btnCancelar) {
-            btnCancelar.onclick = () => {
-                containerNovo.style.display = "none";
-            };
-        }
-
-        const form = containerNovo.querySelector("#form-novo-filiado");
-        if (form) {
-            form.onsubmit = async (e) => {
-                e.preventDefault();
-
-                const fd = new FormData(form);
-                const payload = {};
-                for (const [k, v] of fd.entries()) {
-                    payload[k] = (typeof v === "string") ? v.trim() : v;
-                }
-
-                const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-
-                if (payload.cpf) payload.cpf = onlyDigits(payload.cpf);
-                if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
-                if (payload.telefone2) payload.telefone2 = onlyDigits(payload.telefone2);
-                if (payload.cep) payload.cep = onlyDigits(payload.cep);
-
-                for (let i = 1; i <= 5; i++) {
-                    const key = `dep${i}_cpf`;
-                    if (payload[key]) {
-                        payload[key] = onlyDigits(payload[key]);
-                    }
-                }
-
-                try {
-                    const r = await apiFetch("/api/filiados", {
-                        method: "POST",
-                        body: payload
-                    });
-
-                    if (r && r.ok) {
-                        const d = await safeJson(r);
-                        alert(d?.message || "Filiado criado com sucesso.");
-                        form.reset();
-                        containerNovo.style.display = "none";
-                        await carregarLista();
-                    } else {
-                        const err = await safeJson(r);
-                        alert(err?.message || "Erro ao criar filiado.");
-                    }
-                } catch (ex) {
-                    console.error(ex);
-                    alert("Erro de conexão ao criar filiado.");
-                }
-            };
-        }
-
-        async function buscarCepNovoFiliado(cep) {
             try {
-                const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const d = await r.json();
-                if (d?.erro) {
-                    alert("CEP não encontrado.");
-                    return;
+                const r = await apiFetch("/api/filiados", { method: "POST", body: payload });
+                if (r.ok) {
+                    alert("Criado com sucesso!");
+                    container.style.display = "none";
+                    await carregarLista();
+                } else {
+                    const err = await r.json();
+                    alert(err.message || "Erro ao criar.");
                 }
-                const elLog = containerNovo.querySelector("#novo-logradouro");
-                const elCid = containerNovo.querySelector("#novo-cidade");
-                const elUf = containerNovo.querySelector("#novo-uf");
-
-                if (elLog) elLog.value = d.logradouro || "";
-                if (elCid) elCid.value = d.localidade || "";
-                if (elUf) elUf.value = d.uf || "";
-            } catch (e) {
-                console.error(e);
-                alert("Erro ao consultar CEP.");
-            }
-        }
-    }
-
-    function escapeHtml(str) {
-        return String(str ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    async function safeJson(r) {
-        try { return await r.json(); } catch { return null; }
+            } catch (err) { alert("Erro de conexão."); }
+        };
     }
 
     global.FiliadosAdmin = {
-        inicializarFiliados
+        inicializarFiliados,
+        abrirModalEdicao,
+        confirmarArquivar,
+        confirmarDesarquivar,
+        uploadAvatar,
+        removerAvatar
     };
 
 })(typeof window !== 'undefined' ? window : global);

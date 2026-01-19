@@ -33,10 +33,12 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
     ...PARENTESCO_OPTIONS.map(opt => ({ label: opt.label, value: opt.value }))
   ];
 
-  const currentParentescoValue = normalizeParentesco(filiado?.[`dep${index}_parentesco`] || '');
+  const rawValue = filiado?.[`dep${index}_parentesco`] || '';
+  const currentParentescoValue = normalizeParentesco(rawValue);
   const isStandardOption = PARENTESCO_OPTIONS.some(opt => opt.value === currentParentescoValue);
 
-  const [parentescoMode, setParentescoMode] = useState(isStandardOption || currentParentescoValue === '' ? currentParentescoValue : 'OUTRO');
+  // Se o valor raw for vazio, o modo deve ser '' (Selecione...)
+  const [parentescoMode, setParentescoMode] = useState(rawValue === '' ? '' : (isStandardOption ? currentParentescoValue : 'OUTRO'));
 
   const handleParentescoChange = (mode) => {
     setParentescoMode(mode);
