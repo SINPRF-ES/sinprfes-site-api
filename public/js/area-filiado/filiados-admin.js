@@ -59,6 +59,8 @@
         perfilAtual = (perfil || "").toUpperCase();
         const { apiFetch } = global.Utils || {};
 
+        const canManageProfiles = perfilAtual === "ADMIN" || perfilAtual === "DIRETORIA" || perfilAtual === "FUNCIONARIO";
+
         if (!handlersConfigurados) {
             const btnNovo = document.getElementById("btn-novo-filiado");
             const containerNovo = document.getElementById("novo-filiado-container");
@@ -166,8 +168,11 @@
         }
 
         el.innerHTML = res.map(f => {
-            const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
+            const situacao = (f.situacao || f.situacao_funcional || 'ATIVO').toUpperCase();
             const classeStatus = `status-${situacao.toLowerCase()}`;
+            const nascimento = f.data_nascimento;
+            const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
+
             const tels = [f.telefone1, f.telefone2].filter(Boolean).map(t => formatarTelefoneTexto ? formatarTelefoneTexto(t) : t).join(" / ");
 
             return `
@@ -178,6 +183,7 @@
                             <div>
                                 <div class="filiado-nome">${f.nome}</div>
                                 <div class="filiado-meta">${f.cpf ? formatarCPF(f.cpf) + ' • ' : ''}${f.lotacao || 'SEDE'}</div>
+                                <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                             </div>
                         </div>
                         <div style="text-align:right;">
@@ -210,6 +216,10 @@
         const { toDateInputValue } = global.Formatters || {};
         const ehAdmin = perfilAtual === "ADMIN";
         const isArquivado = !!f.arquivado_em;
+        const nascimento = f.data_nascimento;
+        const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
+
+        const canChangeProfile = ehAdmin || (["DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN");
 
         return `
             <div id="alertas-modal"></div>
@@ -234,7 +244,11 @@
                     </div>
                     <div class="edit-group">
                         <label>Data Nascimento</label>
-                        <input type="date" name="data_nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
+                        <input type="date" name="data_nascimento" id="edit-data-nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
+                    </div>
+                    <div class="edit-group">
+                        <label>Idade (Calculada)</label>
+                        <input type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f0f0f0;">
                     </div>
                     <div class="edit-group">
                         <label>E-mail 1</label>
@@ -252,20 +266,21 @@
                     </div>
                     <div class="edit-group">
                         <label>Situação Funcional</label>
-                        <select name="situacao_funcional">
-                            ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao_funcional || f.situacao || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
+                        <select name="situacao">
+                            ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
                         </select>
                     </div>
-                    ${ehAdmin ? `
+                    ${canChangeProfile ? `
                         <div class="edit-group">
                             <label>Perfil de Acesso</label>
                             <select name="perfil_acesso">
                                 <option value="FILIADO" ${f.perfil_acesso === "FILIADO" ? "selected" : ""}>FILIADO</option>
+                                <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>
                                 <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
-                                <option value="ADMIN" ${f.perfil_acesso === "ADMIN" ? "selected" : ""}>ADMIN</option>
+                                ${ehAdmin ? `<option value="ADMIN" ${f.perfil_acesso === "ADMIN" ? "selected" : ""}>ADMIN</option>` : ""}
                             </select>
                         </div>
-                    ` : ""}
+                    ` : `<input type="hidden" name="perfil_acesso" value="${f.perfil_acesso}">`}
                 </div>
 
                 <div class="edit-group span-2" style="margin-top:20px;">
@@ -315,7 +330,21 @@
                     cpf.value = filiado[`dep${i}_cpf`] || "";
                     if (aplicarMascaraCPF) aplicarMascaraCPF(cpf);
                 }
-                if (data) data.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : "";
+                if (data) {
+                    data.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : "";
+                    const depIdade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(data.value) : '—';
+                    const idadeLabel = document.createElement('div');
+                    idadeLabel.style.fontSize = '0.75rem';
+                    idadeLabel.style.color = '#666';
+                    idadeLabel.style.marginTop = '2px';
+                    idadeLabel.className = 'dep-idade-calc';
+                    idadeLabel.textContent = `Idade: ${depIdade}`;
+                    data.insertAdjacentElement('afterend', idadeLabel);
+
+                    data.onchange = () => {
+                        idadeLabel.textContent = `Idade: ${global.AgeUtils ? global.AgeUtils.formatAgeDetailed(data.value) : '—'}`;
+                    };
+                }
 
                 const pVal = filiado[`dep${i}_parentesco`] || "";
                 if (select && hidden) {
@@ -335,6 +364,14 @@
         }
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
+
+        const dataNascInput = document.getElementById("edit-data-nascimento");
+        if (dataNascInput) {
+            dataNascInput.onchange = () => {
+                const display = document.getElementById("edit-idade-display");
+                if (display) display.value = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascInput.value) : '—';
+            };
+        }
 
         form.onsubmit = async (e) => {
             e.preventDefault();
@@ -483,13 +520,31 @@
         };
     }
 
+    function handleParentescoChange(selectEl, prefixo) {
+        const value = selectEl.value;
+        const index = selectEl.name.match(/\d+/)[0];
+        const inputOutro = document.getElementById(`${prefixo}-dep${index}_parentesco_outro`);
+        const inputHidden = document.getElementById(`${prefixo}-dep${index}_parentesco`);
+
+        if (value === "OUTRO") {
+            if (inputOutro) inputOutro.style.display = "block";
+        } else {
+            if (inputOutro) {
+                inputOutro.style.display = "none";
+                inputOutro.value = "";
+            }
+            if (inputHidden) inputHidden.value = value;
+        }
+    }
+
     global.FiliadosAdmin = {
         inicializarFiliados,
         abrirModalEdicao,
         confirmarArquivar,
         confirmarDesarquivar,
         uploadAvatar,
-        removerAvatar
+        removerAvatar,
+        handleParentescoChange
     };
 
 })(typeof window !== 'undefined' ? window : global);

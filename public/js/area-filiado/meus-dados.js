@@ -100,14 +100,12 @@
 
         const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF, apiFetch } = global.Utils || {};
 
-        const situacaoUpper = (situacao_funcional || situacao || "NÃO INFORMADO").toUpperCase();
+        const situacaoUpper = (situacao || situacao_funcional || "NÃO INFORMADO").toUpperCase();
         let corStatus = '#95a5a6'; // Cinza
-        let iconeStatus = '!';
         let classeBadge = 'badge-desconhecido';
 
         if (situacaoUpper === 'ATIVO') {
             corStatus = '#27ae60';
-            iconeStatus = '[OK]';
             classeBadge = 'badge-ativo';
         } else if (situacaoUpper === 'VETERANO') {
             corStatus = '#f39c12';
@@ -286,7 +284,7 @@
                     <h2>${nome || ""}</h2>
                     <div class="profile-badges">
                         <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
-                        <span class="badge ${classeBadge}">${iconeStatus} ${situacaoUpper}</span>
+                        <span class="badge ${classeBadge}">${situacaoUpper}</span>
                     </div>
                 </div>
             </div>
@@ -439,7 +437,19 @@
                 cpfEl.value = dados[`dep${i}_cpf`] || '';
                 if (aplicarMascaraCPF) aplicarMascaraCPF(cpfEl);
             }
-            if (dataNascimento) dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
+            if (dataNascimento) {
+                dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
+                const depIdade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—';
+                const idadeLabel = document.createElement('div');
+                idadeLabel.style.fontSize = '0.75rem';
+                idadeLabel.style.color = '#666';
+                idadeLabel.style.marginTop = '2px';
+                idadeLabel.textContent = `Idade: ${depIdade}`;
+                dataNascimento.insertAdjacentElement('afterend', idadeLabel);
+                dataNascimento.onchange = () => {
+                    idadeLabel.textContent = `Idade: ${global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—'}`;
+                };
+            }
 
             // Lógica para preencher o campo de parentesco (select + outro)
             const parentescoValor = dados[`dep${i}_parentesco`] || '';

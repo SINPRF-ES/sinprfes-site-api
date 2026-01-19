@@ -129,7 +129,18 @@
 
             const r = await apiFetch(url);
             if(!r.ok) throw new Error("Erro API");
-            const lista = await r.json();
+            let lista = await r.json();
+
+            // Ordenação Alfabética (Case-Insensitive)
+            if (lista && Array.isArray(lista)) {
+                lista.sort((a, b) => {
+                    const nameA = (a.titulo || "").toLowerCase();
+                    const nameB = (b.titulo || "").toLowerCase();
+                    if (nameA < nameB) return -1;
+                    if (nameA > nameB) return 1;
+                    return 0;
+                });
+            }
 
             let navHtml = '';
             if (folderId) {
@@ -150,13 +161,13 @@
                 const icon = isFolder ? '📁' : (item.tipo === 'BALANCO' ? '📊' : '📄');
                 const btnText = isFolder ? "Abrir Pasta ➡️" : "👁️ Visualizar Agora";
                 const dataAttr = isFolder ? `data-folder-id="${item.id}"` : `data-file-id="${item.id}"`;
-                const dataFormatada = global.Formatters ? global.Formatters.formatISOToBR(item.data_publicacao) : new Date(item.data_publicacao).toLocaleDateString('pt-BR');
+
+                // Removida a exibição da data (pub-meta) conforme solicitado
 
                 return `
                     <div class="pub-card tipo-${item.tipo}" ${dataAttr}>
                         <div class="pub-icon">${icon}</div>
                         <h3 class="pub-title">${item.titulo}</h3>
-                        <span class="pub-meta">${dataFormatada}</span>
                         <div class="btn-action">${btnText}</div>
                     </div>
                 `;

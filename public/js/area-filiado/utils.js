@@ -184,6 +184,13 @@
       };
       selectParentesco.addEventListener('change', atualizarParentesco);
       inputOutro.addEventListener('input', atualizarParentesco);
+
+      // Listener para o campo manual atualizar o hidden
+      inputOutro.addEventListener('input', () => {
+        if (selectParentesco.value === 'OUTRO') {
+          inputHiddenFinal.value = inputOutro.value.trim();
+        }
+      });
       container.appendChild(clone);
     }
   }

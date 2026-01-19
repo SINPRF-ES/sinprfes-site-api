@@ -257,7 +257,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const params = [];
   const conds = [];
 
-  if (!incluirArquivados) {
+  const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
+  const isGestao = perfisGestao.includes(perfil);
+
+  // Apenas gestores podem incluir arquivados
+  if (!isGestao || !incluirArquivados) {
     conds.push("arquivado_em IS NULL");
   }
 
@@ -277,9 +281,6 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   }
 
   const whereSql = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
-
-  const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
-  const isGestao = perfisGestao.includes(perfil);
 
   if (isGestao) {
     // gestão: devolve campos necessários para edição, incluindo dependentes
@@ -309,11 +310,12 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const { rows } = await pool.query(
     `
     SELECT
-      id, nome, telefone1, avatar_url
+      id, nome, telefone1, avatar_url, situacao, arquivado_em
     FROM filiados
-    WHERE arquivado_em IS NULL
+    ${whereSql}
     ORDER BY nome ASC
-  `
+  `,
+    params
   );
 
   return anexarEstadoCadastroLista(rows);
@@ -408,23 +410,23 @@ async function registrarEventoAuditoria({
   payloadDepois = null,
 }) {
   try {
-    await pool.query(
-      `
+    const query = `
       INSERT INTO filiados_eventos
         (filiado_id, acao, motivo, ator_id, ator_perfil, payload_antes, payload_depois, criado_em)
       VALUES
         ($1, $2, $3, $4, $5, $6, $7, NOW())
-    `,
-      [
-        filiadoId,
-        acao,
-        motivo,
-        atorId,
-        atorPerfil,
-        payloadAntes ? JSON.stringify(payloadAntes) : null,
-        payloadDepois ? JSON.stringify(payloadDepois) : null,
-      ]
-    );
+    `;
+    const params = [
+      filiadoId,
+      acao,
+      motivo,
+      atorId,
+      atorPerfil,
+      payloadAntes ? JSON.stringify(payloadAntes) : null,
+      payloadDepois ? JSON.stringify(payloadDepois) : null,
+    ];
+
+    await pool.query(query, params);
   } catch (e) {
     // eslint-disable-next-line no-console
     console.warn("Auditoria não registrada (verifique migração filiados_eventos).", e?.message || e);
