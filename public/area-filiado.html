@@ -2,201 +2,104 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Área do Filiado – SINPRF-ES</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <title>Área do Filiado - SINPRF/ES</title>
   <link rel="stylesheet" href="/css/style.css" />
   <script src="/js/main.js" defer></script>
-  <!-- Scripts compartilhados (CJS/Global) -->
+
+  <!-- Scripts Utilitários (Ordem Crítica) -->
   <script src="/js/shared/format/formatters.js"></script>
+  <script src="/js/area-filiado/utils.js"></script>
   <script src="/js/area-filiado/age-utils.js"></script>
   <script src="/js/area-filiado/parentesco-utils.js"></script>
-  <script type="module" src="/js/area-filiado.js"></script>
+
+  <!-- Módulos de Seção -->
+  <script src="/js/area-filiado/navegacao.js"></script>
+  <script src="/js/area-filiado/seguranca.js"></script>
+  <script src="/js/area-filiado/meus-dados.js"></script>
+  <script src="/js/area-filiado/filiados-admin.js"></script>
+  <script src="/js/area-filiado/ressarcimento.js"></script>
+  <script src="/js/area-filiado/jogos.js"></script>
+  <script src="/js/area-filiado/publicacoes.js"></script>
+
+  <!-- Inicializador Principal -->
+  <script src="/js/area-filiado.js"></script>
 </head>
-<body>
-  <div id="site-header"></div>
-
-  <main class="page container area-filiado-main">
-    <section class="card af-layout section-card">
-      <div class="af-sidebar">
-        <h1 class="section-title">
-          <span class="emoji">👤</span>
-          <span>Área do filiado</span>
-        </h1>
-        <p class="section-subtitle">
-          Gerencie seus dados, consulte outros filiados e envie solicitações ao sindicato.
-        </p>
-
-        <nav class="af-nav">
-          <button class="af-nav-item active" data-target="sec-meus-dados">
-            Meus dados
-          </button>
-          <button class="af-nav-item" data-target="sec-filiados">
-            Filiados
-          </button>
-          <button class="af-nav-item" data-target="sec-publicacoes">
-            Publicações
-          </button>
-          <button class="af-nav-item" data-target="sec-ressarcimento">
-            Ressarcimento
-          </button>
-          <button class="af-nav-item" data-target="sec-jogos">
-            Jogos de integração
-          </button>
-        </nav>
-
-        <div class="af-sidebar-footer">
-          <button id="btn-logout" class="btn btn-outline" type="button">
-            Sair da área do filiado
-          </button>
-        </div>
+<body class="af-body">
+  <div class="af-container">
+    <header class="af-header">
+      <div class="af-header-content">
+        <h1>SINPRF/ES</h1>
+        <button id="btn-logout" class="btn btn-outline btn-sm">Sair</button>
       </div>
+    </header>
 
-      <div class="af-main">
+    <div class="af-main-layout">
+      <!-- Sidebar / Nav -->
+      <nav class="af-sidebar">
+        <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
+        <button class="af-nav-item" data-target="sec-filiados">👥 Filiados (Gestão)</button>
+        <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
+        <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
+        <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
+      </nav>
+
+      <!-- Conteúdo Principal -->
+      <main class="af-content">
         <section id="sec-meus-dados" class="af-section active">
-          <div class="section-card">
-            <h2 class="section-title">
-              <span class="emoji">📋</span>
-              <span>Meus dados cadastrais</span>
-            </h2>
-            <p class="section-subtitle">
-              Sempre confira se seus dados estão atualizados. Em caso de dúvida, fale com a secretaria do sindicato.
-            </p>
-
-            <div
-              id="alerta-endereco-desatualizado"
-              class="section-box"
-              style="color: #c0392b; font-weight: bold; margin-bottom: 15px; display: none;"
-            >
-            </div>
-
-            <div id="area-filiado-conteudo">
-              Carregando seus dados...
-            </div>
-
-            <div id="seguranca-container"></div>
+          <div id="area-filiado-conteudo">
+            <p>Carregando seus dados...</p>
           </div>
+          <div id="alerta-endereco-desatualizado" class="alerta alerta-warning" style="display:none; margin-top:20px;"></div>
         </section>
 
-        <section id="sec-filiados" class="af-section" aria-hidden="true">
-          <div class="section-card">
-            <h2 class="section-title">
-              <span class="emoji">👥</span>
-              <span>Filiados</span>
-            </h2>
-            <p class="section-subtitle">
-              Consulte outros filiados. Você verá somente os dados permitidos para o seu perfil.
-            </p>
-
-            <div id="tutorial-diretoria" class="af-tutorial" hidden>
-              <h3 class="section-subtitle">Dica rápida para Diretoria</h3>
-              <p class="field-hint">
-                Como diretoria/funcionário, você pode editar os dados de qualquer filiado.
-                Clique em “Ver / editar dados completos”. Campos com fundo destacado
-                indicam que somente o perfil <strong>ADMIN</strong> pode alterar.
-              </p>
-            </div>
-
-            <div class="section-box">
-              <div class="field-row">
-                <div class="field-group">
-                  <label for="busca-filiados">Buscar por nome ou CPF</label>
-                  <input
-                    type="text"
-                    id="busca-filiados"
-                    placeholder="Digite parte do nome ou CPF"
-                  />
-                  <p class="field-hint">
-                    A busca ignora maiúsculas/minúsculas e pontuação do CPF.
-                  </p>
-                </div>
-                <div class="field-group" style="align-self:flex-end; text-align:right;">
-                  <button type="button" id="btn-novo-filiado" class="btn btn-primary">
-                    Cadastrar novo filiado
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div id="novo-filiado-container"></div>
-
-            <div id="lista-filiados" class="af-lista-filiados" style="margin-top: 16px;">
-              Carregando lista de filiados...
-            </div>
-          </div>
+        <section id="sec-filiados" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
         </section>
 
-        <section id="sec-publicacoes" class="af-section" aria-hidden="true" style="display: none;">
-            <div class="section-card"></div>
+        <section id="sec-publicacoes" class="af-section" style="display:none;">
+           <div class="section-card">
+              <p>Carregando biblioteca...</p>
+           </div>
         </section>
 
-        <section id="sec-ressarcimento" class="af-section" aria-hidden="true">
-          <div class="section-card">
-            <h2 class="section-title">
-              <span class="emoji">💸</span>
-              <span>Pedido de ressarcimento</span>
-            </h2>
-            <p class="section-subtitle">
-              Preencha os dados abaixo para solicitar ressarcimento de despesas
-              decorrentes de atividade sindical, conforme Resolução nº 01/2025.
-            </p>
-            <div class="section-card">Carregando formulário...</div>
-          </div>
+        <section id="sec-ressarcimento" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
         </section>
 
-        <section id="sec-jogos" class="af-section" aria-hidden="true">
-          <div class="section-card">
-            <h2 class="section-title">
-              <span class="emoji">🏆</span>
-              <span>Jogos de integração</span>
-            </h2>
-            <p class="section-subtitle">
-              Em breve: espaço para iniciativas de integração, campeonatos e ações de bem-estar entre os filiados.
-            </p>
-            <div class="section-box">
-              <p>
-                Esta área ainda está em construção. Assim que a Diretoria definir os formatos de jogos
-                e eventos de integração, vamos disponibilizar a inscrição por aqui.
-              </p>
-            </div>
-          </div>
+        <section id="sec-jogos" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
         </section>
-      </div>
-    </section>
-  </main>
+      </main>
+    </div>
+  </div>
 
-  <div id="site-footer"></div>
-
+  <!-- Templates -->
   <template id="template-dependentes">
-    <div class="dependente-card">
-      <h4 class="dependente-titulo">Dependente <span class="dependente-numero"></span></h4>
-      <div class="dependente-form-grid-final">
-        <div class="field-group">
-          <label for="depN_nome">Nome completo</label>
-          <input type="text" id="depN_nome" name="depN_nome" />
+    <div class="dependente-item section-box" style="margin-top:15px; background: #fafafa;">
+        <h4 style="margin-bottom:12px; font-size:0.9rem; color:#666;">Dependente <span class="dependente-numero">N</span></h4>
+        <div class="field-row">
+            <div class="field-group">
+                <label>Nome</label>
+                <input type="text" name="depN_nome" id="depN_nome" />
+            </div>
+            <div class="field-group">
+                <label>CPF</label>
+                <input type="text" name="depN_cpf" id="depN_cpf" />
+            </div>
         </div>
-        <div class="field-group">
-          <label for="depN_cpf">CPF</label>
-          <input type="text" id="depN_cpf" name="depN_cpf" placeholder="Apenas números" maxlength="11" />
+        <div class="field-row">
+            <div class="field-group">
+                <label>Nascimento</label>
+                <input type="date" name="depN_data_nascimento" id="depN_data_nascimento" />
+            </div>
+            <div class="field-group">
+                <label>Parentesco</label>
+                <select name="depN_parentesco_select" id="depN_parentesco_select"></select>
+                <input type="text" name="depN_parentesco_outro" id="depN_parentesco_outro" style="display:none; margin-top:5px;" placeholder="Qual parentesco?" />
+                <input type="hidden" name="depN_parentesco" id="depN_parentesco" />
+            </div>
         </div>
-        <div class="field-group">
-          <label for="depN_data_nascimento">Data de nascimento</label>
-          <input type="date" id="depN_data_nascimento" name="depN_data_nascimento" />
-        </div>
-        <div class="field-group">
-          <label for="depN_parentesco_select">Parentesco</label>
-          <select id="depN_parentesco_select" name="depN_parentesco_select">
-            <option value="">Selecione...</option>
-            <option value="Filha(o) / enteada(o)">Filha(o) / enteada(o)</option>
-            <option value="Cônjuge / companheira(o)">Cônjuge / companheira(o)</option>
-            <option value="Pai / mãe">Pai / mãe</option>
-            <option value="Irmã(o)">Irmã(o)</option>
-            <option value="Outro">Outro</option>
-          </select>
-          <input type="text" id="depN_parentesco_outro" name="depN_parentesco_outro" placeholder="Especifique o parentesco" style="display: none; margin-top: 8px;" />
-          <input type="hidden" id="depN_parentesco" name="depN_parentesco" />
-        </div>
-      </div>
     </div>
   </template>
 
