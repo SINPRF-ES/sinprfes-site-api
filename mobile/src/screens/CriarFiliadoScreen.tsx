@@ -10,6 +10,8 @@ import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Filiado } from '../types/filiado';
+import { toISODate } from '../utils/date';
+import { onlyDigits } from '../shared/formatters';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',
@@ -26,6 +28,7 @@ const initialFiliadoState: Partial<Filiado> = {
   uf: '',
   lotacao: 'SR-ES', // Valor padrão
   situacao: 'ATIVO', // Valor padrão
+  perfil_acesso: 'FILIADO', // Valor padrão
   dep1_nome: '', dep1_cpf: '', dep1_nascimento: null, dep1_parentesco: '',
   dep2_nome: '', dep2_cpf: '', dep2_nascimento: null, dep2_parentesco: '',
   dep3_nome: '', dep3_cpf: '', dep3_nascimento: null, dep3_parentesco: '',
@@ -79,7 +82,30 @@ export default function CriarFiliadoScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await api.post('/api/filiados', filiado);
+
+      const payload = { ...filiado };
+
+      // Normalização
+      payload.cpf = onlyDigits(payload.cpf);
+      payload.telefone1 = onlyDigits(payload.telefone1);
+      payload.telefone2 = onlyDigits(payload.telefone2);
+      payload.cep = onlyDigits(payload.cep);
+
+      if (payload.data_nascimento) {
+        payload.data_nascimento = toISODate(payload.data_nascimento) || payload.data_nascimento;
+      }
+
+      for (let i = 1; i <= 5; i++) {
+        const depCpf = `dep${i}_cpf`;
+        if (payload[depCpf]) payload[depCpf] = onlyDigits(payload[depCpf]);
+
+        const depDate = `dep${i}_data_nascimento`;
+        if (payload[depDate]) {
+          payload[depDate] = toISODate(payload[depDate] as string) || payload[depDate];
+        }
+      }
+
+      await api.post('/api/filiados', payload);
       Alert.alert('Sucesso', 'Filiado criado com sucesso.');
       navigation.navigate('Filiados', { refresh: true });
     } catch (err: any) {

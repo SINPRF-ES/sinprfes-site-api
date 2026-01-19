@@ -17,6 +17,7 @@ import DependentesCard from '../components/DependentesCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { toISODate, toBrazilianDate } from '../utils/date';
+import { onlyDigits } from '../shared/formatters';
 import { logger } from '../infra/logger';
 
 export default function MeusDadosScreen() {
@@ -213,10 +214,24 @@ export default function MeusDadosScreen() {
       setLoading(true);
 
       const payload = { ...filiado };
+
+      // Normalização de campos antes de enviar ao backend
+      payload.cpf = onlyDigits(payload.cpf);
+      payload.telefone1 = onlyDigits(payload.telefone1);
+      payload.telefone2 = onlyDigits(payload.telefone2);
+      payload.cep = onlyDigits(payload.cep);
+
+      if (payload.data_nascimento) {
+          payload.data_nascimento = toISODate(payload.data_nascimento) || payload.data_nascimento;
+      }
+
       for (let i = 1; i <= 5; i++) {
+        const depCpf = `dep${i}_cpf`;
+        if (payload[depCpf]) payload[depCpf] = onlyDigits(payload[depCpf]);
+
         const fieldName = `dep${i}_data_nascimento`;
         if (payload[fieldName]) {
-          payload[fieldName] = toISODate(payload[fieldName]);
+          payload[fieldName] = toISODate(payload[fieldName]) || payload[fieldName];
         }
       }
 
