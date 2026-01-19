@@ -108,8 +108,13 @@
                     <h3>🏦 Dados Bancários</h3>
                     <div class="res-group">
                         <label>Banco</label>
-                        <input list="lista-bancos" id="res-banco" name="banco" placeholder="Busque pelo nome ou código">
-                        <datalist id="lista-bancos">${opcoesBancos}</datalist>
+                        <select id="res-banco-select" name="banco_select" required>
+                            <option value="">Selecione um banco...</option>
+                            ${BANCOS_LISTA.map(b => `<option value="${b.code} - ${b.name}">${b.code} - ${b.name}</option>`).join("")}
+                            <option value="OUTRO">Outro (Informar manual)</option>
+                        </select>
+                        <input type="text" id="res-banco-outro" name="banco_outro" placeholder="Informe o nome do banco" style="display:none; margin-top:10px;" required>
+                        <input type="hidden" id="res-banco" name="banco">
                     </div>
                     <div class="res-grid">
                         <div class="res-group"><label>Agência</label><input type="text" id="res-agencia" name="agencia"></div>
@@ -140,6 +145,29 @@
         const tel = document.getElementById("res-telefone");
         const inputFile = document.getElementById("res-anexos");
         const fileList = document.getElementById("file-list");
+
+        const bancoSelect = document.getElementById("res-banco-select");
+        const bancoOutro = document.getElementById("res-banco-outro");
+        const bancoHidden = document.getElementById("res-banco");
+
+        bancoSelect.onchange = () => {
+            if (bancoSelect.value === "OUTRO") {
+                bancoOutro.style.display = "block";
+                bancoOutro.required = true;
+                bancoHidden.value = bancoOutro.value;
+            } else {
+                bancoOutro.style.display = "none";
+                bancoOutro.required = false;
+                bancoOutro.value = "";
+                bancoHidden.value = bancoSelect.value;
+            }
+        };
+
+        bancoOutro.oninput = () => {
+            if (bancoSelect.value === "OUTRO") {
+                bancoHidden.value = bancoOutro.value;
+            }
+        };
 
         if (aplicarMascaraTelefone) aplicarMascaraTelefone(tel);
 
