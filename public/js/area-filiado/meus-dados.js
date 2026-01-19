@@ -267,6 +267,7 @@
         // AgeUtils é carregado como global em area-filiado.html
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
+        const situacaoLower = situacaoUpper.toLowerCase();
         container.innerHTML = `
             <div class="profile-header">
                 <div class="profile-header-avatar-section">
@@ -284,7 +285,7 @@
                     <h2>${nome || ""}</h2>
                     <div class="profile-badges">
                         <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
-                        <span class="badge ${classeBadge}">${situacaoUpper}</span>
+                        <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
                     </div>
                 </div>
             </div>

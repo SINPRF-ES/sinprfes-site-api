@@ -169,7 +169,8 @@
 
         el.innerHTML = res.map(f => {
             const situacao = (f.situacao || f.situacao_funcional || 'ATIVO').toUpperCase();
-            const classeStatus = `status-${situacao.toLowerCase()}`;
+            const situacaoLower = situacao.toLowerCase();
+            const classeStatus = `status-${situacaoLower}`;
             const nascimento = f.data_nascimento;
             const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
 
@@ -187,7 +188,7 @@
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <span class="filiado-badge">${situacao}</span>
+                            <span class="filiado-badge badge-${situacaoLower}">${situacao}</span>
                             <div style="margin-top:5px; font-size:0.85rem;">${tels || '-'}</div>
                             ${["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) ?
                                 `<button class="btn btn-outline btn-sm" onclick="FiliadosAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
@@ -270,6 +271,32 @@
                             ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
                         </select>
                     </div>
+
+                    <div class="edit-group">
+                        <label>CEP</label>
+                        <input name="cep" id="edit-cep" value="${f.cep || ""}" class="campo-cep">
+                    </div>
+                    <div class="edit-group span-2">
+                        <label>Logradouro / Bairro</label>
+                        <input name="logradouro_bairro" id="edit-logradouro" value="${f.logradouro_bairro || ""}" readonly style="background:#f0f0f0;">
+                    </div>
+                    <div class="edit-group">
+                        <label>Número</label>
+                        <input name="numero" value="${f.numero || ""}">
+                    </div>
+                    <div class="edit-group">
+                        <label>Complemento</label>
+                        <input name="complemento" value="${f.complemento || ""}">
+                    </div>
+                    <div class="edit-group">
+                        <label>Cidade</label>
+                        <input name="cidade" id="edit-cidade" value="${f.cidade || ""}" readonly style="background:#f0f0f0;">
+                    </div>
+                    <div class="edit-group">
+                        <label>UF</label>
+                        <input name="uf" id="edit-uf" value="${f.uf || ""}" readonly style="background:#f0f0f0;">
+                    </div>
+
                     ${canChangeProfile ? `
                         <div class="edit-group">
                             <label>Perfil de Acesso</label>
@@ -364,6 +391,24 @@
         }
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
+        const cepInput = form.querySelector(".campo-cep");
+        if (cepInput) {
+            global.Utils?.aplicarMascaraCEP?.(cepInput);
+            cepInput.addEventListener('blur', async () => {
+                const cep = (cepInput.value || "").replace(/\D/g, "");
+                if (cep.length === 8) {
+                    try {
+                        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                        const data = await res.json();
+                        if (!data.erro) {
+                            document.getElementById("edit-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
+                            document.getElementById("edit-cidade").value = data.localidade;
+                            document.getElementById("edit-uf").value = data.uf;
+                        }
+                    } catch (e) { console.error("Erro CEP", e); }
+                }
+            });
+        }
 
         const dataNascInput = document.getElementById("edit-data-nascimento");
         if (dataNascInput) {
@@ -481,6 +526,26 @@
                             <label>Email *</label>
                             <input type="email" name="email1" required>
                         </div>
+                        <div class="edit-group">
+                            <label>CEP</label>
+                            <input name="cep" class="campo-cep" id="new-cep">
+                        </div>
+                        <div class="edit-group">
+                            <label>Logradouro/Bairro</label>
+                            <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
+                        </div>
+                        <div class="edit-group">
+                            <label>Número</label>
+                            <input name="numero">
+                        </div>
+                        <div class="edit-group">
+                            <label>Cidade</label>
+                            <input name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
+                        </div>
+                        <div class="edit-group">
+                            <label>UF</label>
+                            <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+                        </div>
                     </div>
                     <div id="novo-dependentes-container" style="margin-top:15px;"></div>
                     <div style="text-align:right; margin-top:15px;">
@@ -496,6 +561,22 @@
         }
 
         const form = container.querySelector("#form-novo-filiado-admin");
+        const cepInp = form.querySelector("#new-cep");
+        if (cepInp) {
+            global.Utils?.aplicarMascaraCEP?.(cepInp);
+            cepInp.addEventListener('blur', async () => {
+                const cep = (cepInp.value || "").replace(/\D/g, "");
+                if (cep.length === 8) {
+                    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await res.json();
+                    if (!data.erro) {
+                        document.getElementById("new-logradouro").value = `${data.logradouro} - ${data.bairro}`;
+                        document.getElementById("new-cidade").value = data.localidade;
+                        document.getElementById("new-uf").value = data.uf;
+                    }
+                }
+            });
+        }
         form.onsubmit = async (e) => {
             e.preventDefault();
             const { apiFetch } = global.Utils || {};
