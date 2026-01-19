@@ -4,6 +4,55 @@ const { normalizarCpf } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
 
+/**
+ * Garante que os dependentes sejam salvos de forma compacta (da esquerda para a direita).
+ * Se dep1 e dep3 estiverem preenchidos, eles se tornam dep1 e dep2.
+ */
+function compactarDependentes(dados) {
+  const dependentesCompactados = [];
+  let houveAlgumCampoDependente = false;
+
+  for (let i = 1; i <= 5; i++) {
+    const nome = dados[`dep${i}_nome`];
+    const cpf = dados[`dep${i}_cpf`];
+    const data = dados[`dep${i}_data_nascimento`];
+    const parentesco = dados[`dep${i}_parentesco`];
+
+    if (nome !== undefined || cpf !== undefined || data !== undefined || parentesco !== undefined) {
+      houveAlgumCampoDependente = true;
+    }
+
+    if (nome || cpf || data || parentesco) {
+      dependentesCompactados.push({
+        nome: nome || null,
+        cpf: cpf || null,
+        data_nascimento: data || null,
+        parentesco: parentesco || null,
+      });
+    }
+
+    // Remove os campos originais para evitar duplicidade ou resíduos
+    delete dados[`dep${i}_nome`];
+    delete dados[`dep${i}_cpf`];
+    delete dados[`dep${i}_data_nascimento`];
+    delete dados[`dep${i}_parentesco`];
+  }
+
+  // Se não recebemos nenhum campo de dependente, não alteramos nada (mantém como estava no banco)
+  if (!houveAlgumCampoDependente) return dados;
+
+  // Preenche os slots compactados
+  for (let i = 0; i < 5; i++) {
+    const dep = dependentesCompactados[i];
+    dados[`dep${i + 1}_nome`] = dep ? dep.nome : null;
+    dados[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
+    dados[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
+    dados[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+  }
+
+  return dados;
+}
+
 // Colunas completas (retornadas nos UPDATE/INSERT/GET internos)
 const FILIADO_COLUMNS = `
   id, nome, cpf, data_nascimento, telefone1, telefone2, email1, email2,
@@ -53,6 +102,7 @@ async function registrarUltimoAcesso(id) {
  * Observação: avatar é tratado em rota dedicada (upload), mas também aceitamos avatar_url se necessário.
  */
 async function atualizarDadosProprios(id, dados) {
+  compactarDependentes(dados);
   const campos = [];
   const valores = [];
   let idx = 1;
@@ -121,6 +171,7 @@ async function atualizarDadosProprios(id, dados) {
  * Atualiza apenas campos presentes (valor !== undefined).
  */
 async function atualizarFiliadoPorId(id, dados) {
+  compactarDependentes(dados);
   const campos = [];
   const valores = [];
   let idx = 1;
@@ -273,6 +324,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
  * Observação: verificação proativa de CPF duplicado é feita no controller.
  */
 async function criarFiliadoInicial(dados, perfilCriador) {
+  compactarDependentes(dados);
   const cpfNormalizado = normalizarCpf(dados.cpf);
 
   // Fallback: se bater constraint única por race-condition
