@@ -4,14 +4,15 @@
  */
 
 (function (global) {
-    if (global.SegurancaLoaded) return;
-    global.SegurancaLoaded = true;
+    if (global.Seguranca) return;
 
     function renderizarSeguranca(filiado, callbackRecarregar) {
+        const { apiFetch } = global.Utils || {};
         let container = document.getElementById('seguranca-container');
+
         if (!container) {
             const pai = document.querySelector('#sec-meus-dados .section-card');
-            if (pai) {
+            if(pai) {
                 container = document.createElement('div');
                 container.id = 'seguranca-container';
                 pai.appendChild(container);

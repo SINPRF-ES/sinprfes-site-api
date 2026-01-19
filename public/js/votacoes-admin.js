@@ -1,120 +1,114 @@
 /**
- * Administração de Votações
- * Carregado como script clássico
+ * Módulo Gestão de Votações
+ * Carregado como script clássico (IIFE)
  */
 
 (function (global) {
-  const { apiFetch } = global.Utils || {};
-  if (!apiFetch) {
-      console.warn("Utils.apiFetch não disponível.");
-      return;
-  }
+    const { apiFetch } = global.Utils || {};
+    const listaEl = document.getElementById("lista-votacoes");
+    const formCriar = document.getElementById("form-criar-votacao");
 
-  const listaEl = document.getElementById("lista-votacoes");
-  const formCriar = document.getElementById("form-criar-votacao");
+    if (!listaEl || !formCriar) return;
 
-  if (!listaEl) return;
+    async function carregarVotacoes() {
+        try {
+            const r = await apiFetch("/api/votacoes");
+            if (!r.ok) return;
+            const votacoes = await r.json();
 
-  async function carregarVotacoes() {
-    try {
-      const r = await apiFetch("/api/votacoes");
-      const votacoes = await r.json();
+            if (!Array.isArray(votacoes) || !votacoes.length) {
+                listaEl.innerHTML = "<p>Nenhuma votação encontrada.</p>";
+                return;
+            }
 
-      if (!Array.isArray(votacoes) || !votacoes.length) {
-        listaEl.innerHTML = "<p>Nenhuma votação encontrada.</p>";
-        return;
-      }
+            listaEl.innerHTML = votacoes.map(v => {
+                return `
+                    <div class="section-box" style="margin-bottom:10px;">
+                        <strong>${v.titulo}</strong><br/>
+                        Status: <b>${v.status}</b><br/>
+                        ${v.ja_votou ? "⚠️ Você já votou" : ""}
+                        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-outline" data-action="abrir" data-id="${v.id}">Abrir</button>
+                            <button class="btn btn-outline" data-action="encerrar" data-id="${v.id}">Encerrar</button>
+                            <button class="btn btn-outline" data-action="resultado" data-id="${v.id}">Resultado</button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
 
-      listaEl.innerHTML = votacoes.map(v => {
-        return `
-          <div class="section-box" style="margin-bottom:10px;">
-            <strong>${v.titulo}</strong><br/>
-            Status: <b>${v.status}</b><br/>
-            ${v.ja_votou ? "⚠️ Você já votou" : ""}
-            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn btn-outline" data-action="abrir" data-id="${v.id}">Abrir</button>
-              <button class="btn btn-outline" data-action="encerrar" data-id="${v.id}">Encerrar</button>
-              <button class="btn btn-outline" data-action="resultado" data-id="${v.id}">Resultado</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      configurarBotoes();
-    } catch (e) {
-      console.error(e);
-      listaEl.innerHTML = "<p style='color:red;'>Erro ao carregar votações.</p>";
+            configurarBotoes();
+        } catch (e) {
+            console.error(e);
+            listaEl.innerHTML = "<p style='color:red;'>Erro ao carregar votações.</p>";
+        }
     }
-  }
 
-  function configurarBotoes() {
-    listaEl.querySelectorAll("button[data-action]").forEach(btn => {
-      btn.onclick = async () => {
-        const id = btn.dataset.id;
-        const action = btn.dataset.action;
+    function configurarBotoes() {
+        listaEl.querySelectorAll("button[data-action]").forEach(btn => {
+            btn.onclick = async () => {
+                const id = btn.dataset.id;
+                const action = btn.dataset.action;
 
-        if (action === "abrir") {
-          await apiFetch(`/api/votacoes/${id}/abrir`, { method: "POST" });
-          alert("Votação aberta.");
-        }
+                if (action === "abrir") {
+                    await apiFetch(`/api/votacoes/${id}/abrir`, { method: "POST" });
+                    alert("Votação aberta.");
+                }
 
-        if (action === "encerrar") {
-          await apiFetch(`/api/votacoes/${id}/encerrar`, { method: "POST" });
-          alert("Votação encerrada.");
-        }
+                if (action === "encerrar") {
+                    await apiFetch(`/api/votacoes/${id}/encerrar`, { method: "POST" });
+                    alert("Votação encerrada.");
+                }
 
-        if (action === "resultado") {
-          const r = await apiFetch(`/api/votacoes/${id}/resultado`);
-          const d = await r.json();
+                if (action === "resultado") {
+                    const r = await apiFetch(`/api/votacoes/${id}/resultado`);
+                    const d = await r.json();
 
-          alert(
-            `Resultado:\n\n` +
-            d.opcoes.map(o => `${o.texto}: ${o.votos}`).join("\n") +
-            `\n\nTotal: ${d.total}`
-          );
-        }
+                    alert(
+                        `Resultado:\n\n` +
+                        d.opcoes.map(o => `${o.texto}: ${o.votos}`).join("\n") +
+                        `\n\nTotal: ${d.total}`
+                    );
+                }
 
-        await carregarVotacoes();
-      };
-    });
-  }
+                await carregarVotacoes();
+            };
+        });
+    }
 
-  if (formCriar) {
-      formCriar.addEventListener("submit", async (e) => {
+    formCriar.onsubmit = async (e) => {
         e.preventDefault();
 
         const fd = new FormData(formCriar);
         const titulo = fd.get("titulo");
         const descricao = fd.get("descricao");
         const opcoes = fd.get("opcoes")
-          .split("\n")
-          .map(o => o.trim())
-          .filter(Boolean);
+            .split("\n")
+            .map(o => o.trim())
+            .filter(Boolean);
 
         if (opcoes.length < 2) {
-          alert("Informe pelo menos duas opções.");
-          return;
+            alert("Informe pelo menos duas opções.");
+            return;
         }
 
         try {
-          await apiFetch("/api/votacoes", {
-            method: "POST",
-            body: { titulo, descricao, opcoes }
-          });
+            await apiFetch("/api/votacoes", {
+                method: "POST",
+                body: { titulo, descricao, opcoes }
+            });
 
-          alert("Votação criada.");
-          formCriar.reset();
-          await carregarVotacoes();
+            alert("Votação criada.");
+            formCriar.reset();
+            await carregarVotacoes();
         } catch {
-          alert("Erro ao criar votação.");
+            alert("Erro ao criar votação.");
         }
-      });
-  }
+    };
 
-  // Auto-refresh (assembleia ao vivo)
-  setInterval(carregarVotacoes, 5000);
+    // Auto-refresh a cada 10s
+    setInterval(carregarVotacoes, 10000);
 
-  // Inicial
-  carregarVotacoes();
+    // Carga inicial
+    carregarVotacoes();
 
 })(typeof window !== 'undefined' ? window : global);

@@ -4,8 +4,7 @@
  */
 
 (function (global) {
-    if (global.MeusDadosLoaded) return;
-    global.MeusDadosLoaded = true;
+    if (global.MeusDados) return;
 
     function formatarDataBR(isoStr) {
         if (global.Formatters) return global.Formatters.formatISOToBR(isoStr);
@@ -42,11 +41,9 @@
             }
 
             renderizarFormularioMeusDados(dados, conteudo);
-
             if (global.Seguranca && global.Seguranca.renderizarSeguranca) {
                 global.Seguranca.renderizarSeguranca(dados, carregarMeusDados);
             }
-
             if (global.Ressarcimento && global.Ressarcimento.preencherFormularioRessarcimentoComDados) {
                 global.Ressarcimento.preencherFormularioRessarcimentoComDados(dados);
             }
@@ -67,7 +64,7 @@
             avatar_url
         } = dados;
 
-        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, apiFetch, formatarCPF } = global.Utils || {};
+        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF, apiFetch } = global.Utils || {};
 
         const situacaoUpper = (situacao_funcional || situacao || "NÃO INFORMADO").toUpperCase();
         let corStatus = '#95a5a6'; // Cinza
@@ -183,13 +180,14 @@
                 .field-row { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:12px; }
                 .field-group { display:flex; flex-direction:column; gap:6px; }
 
+                /* ✅ CEP alinhado como na gestão */
                 .cep-wrapper {
                     display: flex;
                     align-items: center;
                     gap: 8px;
                 }
                 #me-cep {
-                    max-width: 180px;
+                    max-width: 180px;   /* controla o tamanho visual */
                 }
                 #btn-buscar-cep {
                     width: 44px;
@@ -201,6 +199,7 @@
                     padding: 0;
                 }
 
+                /* Avatar Row Renovado */
                 .avatar-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
                 .avatar-preview {
                     width:80px; height:80px; border-radius:50%;
@@ -232,6 +231,7 @@
             ? `<img src="${avatarUrlSafe}" alt="Avatar" onerror="this.remove();">`
             : `<div class="avatar-fallback"></div>`;
 
+        // AgeUtils é carregado como global em area-filiado.html
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
         container.innerHTML = `
@@ -253,7 +253,7 @@
                 <div class="field-row">
                     <div class="field-group">
                         <label>CPF</label>
-                        <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : (cpf || "")}" readonly />
+                        <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
                     </div>
                     <div class="field-group">
                         <label>Data de Nascimento</label>
@@ -294,6 +294,7 @@
 
                     <h3 style="margin-top:25px;">🏠 Endereço</h3>
 
+                    <!-- ✅ ALTERADO: CEP com wrapper flex e tamanho controlado -->
                     <div class="field-row" style="grid-template-columns: 1fr;">
                         <div class="field-group">
                             <label>CEP</label>
@@ -353,6 +354,7 @@
                     <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
                         <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
                         <div id="checkboxes-excluir-dependentes" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Checkboxes serão inseridos aqui -->
                         </div>
                         <div style="margin-top: 15px; text-align: right;">
                             <button type="button" id="btn-confirmar-exclusao-dependentes" class="btn btn-danger">Confirmar Exclusão</button>
@@ -360,6 +362,7 @@
                     </div>
 
                     <div id="dependentes-container-meus-dados">
+                        <!-- Campos dos dependentes serão inseridos aqui -->
                     </div>
 
                     <div class="field-row" style="grid-template-columns: 1fr;">
@@ -387,6 +390,7 @@
             </div>
         `;
 
+        // --- MÁSCARAS ---
         if (aplicarMascaraTelefone) {
             aplicarMascaraTelefone(document.getElementById("me-telefone1"));
             aplicarMascaraTelefone(document.getElementById("me-telefone2"));
@@ -395,6 +399,7 @@
         const cepInput = document.getElementById("me-cep");
         if (aplicarMascaraCEP) aplicarMascaraCEP(cepInput);
 
+        // --- DEPENDENTES ---
         const containerDependentes = document.getElementById("dependentes-container-meus-dados");
         if (gerarCamposDependentes) gerarCamposDependentes(containerDependentes, 'me');
 
@@ -410,6 +415,7 @@
             }
             if (dataNascimento) dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
 
+            // Lógica para preencher o campo de parentesco (select + outro)
             const parentescoValor = dados[`dep${i}_parentesco`] || '';
             const selectParentesco = document.getElementById(`me-dep${i}_parentesco_select`);
             const inputOutro = document.getElementById(`me-dep${i}_parentesco_outro`);
@@ -435,6 +441,7 @@
             }
         }
 
+        // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES ---
         const dependentesAtuais = [];
         for (let i = 1; i <= 5; i++) {
             if (dados[`dep${i}_nome`]) {
@@ -454,9 +461,9 @@
             btnToggleExcluir.style.display = 'none';
         }
 
-        btnToggleExcluir.addEventListener("click", () => {
+        btnToggleExcluir.onclick = () => {
             painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
-        });
+        };
 
         containerCheckboxes.innerHTML = '';
         dependentesAtuais.forEach(dep => {
@@ -468,7 +475,7 @@
             `;
         });
 
-        btnConfirmarExclusao.addEventListener("click", async () => {
+        btnConfirmarExclusao.onclick = async () => {
             const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
             const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
 
@@ -496,15 +503,17 @@
                     alert("Erro de conexão ao tentar excluir os dependentes.");
                 }
             }
-        });
+        };
 
-        document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);
-        cepInput.addEventListener("blur", () => {
+        // --- CEP ---
+        document.getElementById("btn-buscar-cep").onclick = buscarCep;
+        cepInput.onblur = () => {
             const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
             if (cepInput.value && onlyDigitsFn(cepInput.value).length === 8) buscarCep();
-        });
+        };
 
-        document.getElementById("form-meus-dados").addEventListener("submit", async (e) => {
+        // --- SUBMIT DADOS (PUT /me) ---
+        document.getElementById("form-meus-dados").onsubmit = async (e) => {
             e.preventDefault();
             const status = document.getElementById("meus-dados-status");
             status.textContent = "Salvando...";
@@ -519,6 +528,7 @@
 
             const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
 
+            // Adiciona campos que não estão no form ou precisam de normalização
             payload.telefone1 = onlyDigitsFn(document.getElementById("me-telefone1").value);
             payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
             payload.email1 = document.getElementById("me-email1").value;
@@ -531,6 +541,7 @@
             payload.cep = onlyDigitsFn(document.getElementById("me-cep").value);
             payload.lotacao = document.getElementById("me-lotacao").value;
 
+            // Sanitiza CPF dos dependentes
             for (let i = 1; i <= 5; i++) {
                 const key = `dep${i}_cpf`;
                 if (payload[key]) {
@@ -553,23 +564,24 @@
             } catch (e) {
                 status.textContent = "Erro de conexão.";
             }
-        });
+        };
 
+        // --- UPLOAD DE AVATAR ---
         const inputFile = document.getElementById("me-avatar-file");
         const previewContainer = document.getElementById("avatar-preview");
         const btnSalvarFoto = document.getElementById("btn-salvar-foto");
         const btnRemoverFoto = document.getElementById("btn-remover-foto");
 
-        inputFile.addEventListener("change", () => {
+        inputFile.onchange = () => {
             const file = inputFile.files && inputFile.files[0];
             if (file) {
                 const urlLocal = URL.createObjectURL(file);
                 previewContainer.innerHTML = `<img src="${urlLocal}" style="width:100%; height:100%; object-fit:cover;" />`;
                 btnSalvarFoto.style.display = "inline-block";
             }
-        });
+        };
 
-        btnSalvarFoto.addEventListener("click", async () => {
+        btnSalvarFoto.onclick = async () => {
             const file = inputFile.files && inputFile.files[0];
             if (!file) return;
 
@@ -595,9 +607,9 @@
                 btnSalvarFoto.disabled = false;
                 btnSalvarFoto.innerText = originalText;
             }
-        });
+        };
 
-        btnRemoverFoto.addEventListener("click", async () => {
+        btnRemoverFoto.onclick = async () => {
           if (!confirm("Remover a foto de perfil?")) return;
 
           btnRemoverFoto.disabled = true;
@@ -620,7 +632,7 @@
             btnRemoverFoto.disabled = false;
             btnRemoverFoto.innerText = txt;
           }
-        });
+        };
     }
 
     async function buscarCep() {
@@ -656,5 +668,4 @@
             return `Estado do cadastro: ${txt}`;
         }
     };
-
 })(typeof window !== 'undefined' ? window : global);

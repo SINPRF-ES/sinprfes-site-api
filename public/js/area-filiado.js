@@ -1,89 +1,81 @@
 /**
- * Ponto de entrada Área do Filiado
- * Carregado como script clássico
+ * Orquestrador principal da Área do Filiado
+ * Carregado como script clássico.
+ * Garante a inicialização dos módulos na ordem correta.
  */
 
-(function (global) {
-    console.log("Sistema Área do Filiado: Iniciando...");
+(function () {
+    console.log("Sistema Área do Filiado: Orquestrando inicialização...");
 
     document.addEventListener("DOMContentLoaded", async () => {
-        const { obterUserInfo, exibirAlertaFlutuante } = global.Utils || {};
-        const { configurarNavegacao } = global.Navegacao || {};
-        const { carregarMeusDados } = global.MeusDados || {};
-        const { inicializarFiliados } = global.FiliadosAdmin || {};
-        const { inicializarRessarcimento } = global.Ressarcimento || {};
-        const { inicializarJogos } = global.Jogos || {};
-        const { inicializarPublicacoes } = global.Publicacoes || {};
-
-        // 1. Checa Login
+        // 1. Verificação de Token
         const token = localStorage.getItem("token");
         if (!token) {
             window.location.href = "/login.html";
             return;
         }
 
+        const { obterUserInfo, exibirAlertaFlutuante } = window.Utils || {};
+        const { configurarNavegacao } = window.Navegacao || {};
+        const { carregarMeusDados } = window.MeusDados || {};
+        const { inicializarFiliados } = window.FiliadosAdmin || {};
+        const { inicializarRessarcimento } = window.Ressarcimento || {};
+        const { inicializarJogos } = window.Jogos || {};
+        const { inicializarPublicacoes } = window.Publicacoes || {};
+
         let userInfo = obterUserInfo ? obterUserInfo() : {};
         let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
 
         console.log("Perfil inicial (Cache):", perfil);
 
-        // 2. Função para Recarregar Módulos
-        const atualizarModulos = (novoPerfil) => {
-            console.log("Atualizando módulos para perfil:", novoPerfil);
-            if (inicializarFiliados) inicializarFiliados(novoPerfil);
-            if (inicializarJogos) inicializarJogos(novoPerfil);
-            userInfo.perfil_acesso = novoPerfil;
-            localStorage.setItem("userInfo", JSON.stringify(userInfo));
-        };
-
-        // 3. Configura Navegação
+        // 2. Configura Navegação Global
         if (configurarNavegacao) {
             configurarNavegacao((abaAlvo) => {
-                if (abaAlvo === 'sec-meus-dados') { if(carregarMeusDados) carregarMeusDados(); }
-                else if (abaAlvo === 'sec-filiados') { if(inicializarFiliados) inicializarFiliados(perfil); }
-                else if (abaAlvo === 'sec-ressarcimento') { if(inicializarRessarcimento) inicializarRessarcimento(); }
-                else if (abaAlvo === 'sec-jogos') { if(inicializarJogos) inicializarJogos(perfil); }
-                else if (abaAlvo === 'sec-publicacoes') { if(inicializarPublicacoes) inicializarPublicacoes(); }
+                console.log("Navegando para:", abaAlvo);
+                if (abaAlvo === 'sec-meus-dados' && carregarMeusDados) carregarMeusDados();
+                else if (abaAlvo === 'sec-filiados' && inicializarFiliados) inicializarFiliados(perfil);
+                else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
+                else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
+                else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes();
             });
         }
 
-        // 4. Configura Logout
+        // 3. Logout
         const btnLogout = document.getElementById("btn-logout");
         if (btnLogout) {
             btnLogout.onclick = () => {
-                if (confirm("Deseja realmente sair?")) {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("userInfo");
+                if(confirm("Deseja realmente sair?")) {
+                    localStorage.clear();
                     window.location.href = "/login.html";
                 }
             };
         }
 
-        // 5. Inicialização Inteligente
+        // 4. Carga Inicial e Sincronização de Perfil
         try {
             if (carregarMeusDados) {
                 const dadosFrescos = await carregarMeusDados();
                 if (dadosFrescos && dadosFrescos.perfil_acesso) {
                     const perfilReal = dadosFrescos.perfil_acesso.toUpperCase();
                     if (perfilReal !== perfil) {
-                        console.log(`Perfil atualizado: ${perfil} -> ${perfilReal}`);
+                        console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
                         perfil = perfilReal;
-                        atualizarModulos(perfil);
+                        // Força re-render do menu/módulos se necessário
+                        if (inicializarFiliados) inicializarFiliados(perfil);
                     }
                 }
             }
         } catch (err) {
-            console.error("Erro ao atualizar perfil:", err);
+            console.error("Falha na sincronização inicial:", err);
         }
 
-        // Se o usuário já estiver em outra aba (por refresh), carrega ela agora
+        // 5. Aciona a aba inicial se não for Meus Dados
         const abaAtiva = document.querySelector(".af-section.active");
         if (abaAtiva && abaAtiva.id !== 'sec-meus-dados') {
             const btnAtivo = document.querySelector(`.af-nav-item[data-target="${abaAtiva.id}"]`);
-            if (btnAtivo) btnAtivo.click();
+            if(btnAtivo) btnAtivo.click();
         }
 
         if (exibirAlertaFlutuante) exibirAlertaFlutuante();
     });
-
-})(typeof window !== 'undefined' ? window : global);
+})();

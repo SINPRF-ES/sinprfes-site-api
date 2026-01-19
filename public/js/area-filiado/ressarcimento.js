@@ -4,111 +4,233 @@
  */
 
 (function (global) {
-    if (global.RessarcimentoLoaded) return;
-    global.RessarcimentoLoaded = true;
+    if (global.Ressarcimento) return;
 
-    async function inicializarRessarcimento() {
-        const sec = document.getElementById("sec-ressarcimento");
-        if (!sec) return;
+    const BANCOS_LISTA = [
+        { code: "001", name: "Banco do Brasil" },
+        { code: "104", name: "Caixa Econômica" },
+        { code: "033", name: "Santander" },
+        { code: "237", name: "Bradesco" },
+        { code: "341", name: "Itaú" },
+        { code: "260", name: "Nubank" },
+        { code: "077", name: "Inter" },
+        { code: "422", name: "Safra" },
+        { code: "041", name: "Banrisul" },
+        { code: "021", name: "Banestes" }
+    ];
 
-        const { apiFetch, aplicarMascaraTelefone, aplicarMascaraAgencia, aplicarMascaraConta, formatarCPF } = global.Utils || {};
+    function inicializarRessarcimento() {
+        const secRes = document.getElementById("sec-ressarcimento");
+        if (!secRes) return;
 
-        sec.innerHTML = `
-            <div class="section-card">
-                <div class="pub-header">
-                    <h2>💸 Solicitação de Ressarcimento</h2>
-                    <p>Utilize este formulário para solicitar o reembolso de despesas de viagens a serviço.</p>
+        const { formatarCPF, aplicarMascaraTelefone, apiFetch } = global.Utils || {};
+
+        if (!document.getElementById('style-ressarcimento')) {
+            const s = document.createElement('style');
+            s.id = 'style-ressarcimento';
+            s.textContent = `
+                .res-header { margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+                .res-card { background: #fdfdfd; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .res-card h3 { margin-top: 0; color: #003366; font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+                .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                .res-group { margin-bottom: 15px; }
+                .res-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 0.9rem; }
+                .res-group input, .res-group select, .res-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+                .input-calc { background: #f0f0f0; font-weight: bold; color: #333; }
+                .total-box { background: #003366; color: #fff; padding: 20px; border-radius: 8px; text-align: center; margin-top: 10px; }
+                .total-label { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+                .total-value { font-size: 2rem; font-weight: bold; margin-top: 5px; }
+                .file-upload-wrapper { border: 2px dashed #ccc; padding: 30px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #fff; display: block; }
+                .file-upload-wrapper:hover { border-color: #003366; background: #f8fbff; }
+                .upload-icon { font-size: 2.5rem; color: #003366; margin-bottom: 10px; }
+                .upload-text { font-weight: bold; color: #333; }
+                .upload-hint { font-size: 0.8rem; color: #777; margin-top: 5px; }
+                @media (max-width: 768px) { .res-grid { grid-template-columns: 1fr; } }
+            `;
+            document.head.appendChild(s);
+        }
+
+        const opcoesBancos = BANCOS_LISTA.map(b => `<option value="${b.code} - ${b.name}">`).join("");
+
+        secRes.innerHTML = `
+            <div class="res-header">
+                <h2>💸 Solicitação de Ressarcimento</h2>
+                <p>Preencha os dados abaixo e anexe os comprovantes para processar seu reembolso.</p>
+            </div>
+
+            <form id="form-ressarcimento">
+                <div class="res-card">
+                    <h3>👤 Dados do Solicitante</h3>
+                    <div class="res-group"><label>Nome Completo</label><input type="text" id="res-nome" name="nome_solicitante" readonly class="input-calc"></div>
+                    <div class="res-grid">
+                        <div class="res-group"><label>CPF</label><input type="text" id="res-cpf" readonly class="input-calc"></div>
+                        <div class="res-group"><label>E-mail</label><input type="email" id="res-email" name="email_destino" readonly class="input-calc"></div>
+                    </div>
+                    <div class="res-group"><label>Telefone Contato</label><input type="text" id="res-telefone" name="telefone_contato"></div>
                 </div>
 
-                <form id="form-ressarcimento">
-                    <div class="res-card">
-                        <h3>👤 Identificação</h3>
-                        <div class="res-grid">
-                            <div class="res-group"><label>Nome Completo</label><input type="text" id="res-nome" readonly class="input-calc"></div>
-                            <div class="res-group"><label>CPF</label><input type="text" id="res-cpf" readonly class="input-calc"></div>
-                        </div>
-                        <div class="res-grid">
-                            <div class="res-group"><label>E-mail</label><input type="email" id="res-email" readonly class="input-calc"></div>
-                            <div class="res-group"><label>Telefone Contato</label><input type="text" id="res-telefone" name="telefone_contato"></div>
-                        </div>
+                <div class="res-card">
+                    <h3>📅 Detalhes da Atividade</h3>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Data Início</label><input type="date" id="res-data-inicio" name="data_inicio"></div>
+                        <div class="res-group"><label>Data Fim</label><input type="date" id="res-data-fim" name="data_fim"></div>
                     </div>
+                    <div class="res-group">
+                        <label>Local / Destino</label>
+                        <input type="text" id="res-local" name="local" placeholder="Ex: Brasília - DF">
+                    </div>
+                    <div class="res-group">
+                        <label>Descrição da Missão / Motivo</label>
+                        <textarea id="res-descricao" name="descricao" rows="4" placeholder="Descreva o motivo da viagem/atividade..." required></textarea>
+                    </div>
+                </div>
 
-                    <div class="res-card">
-                        <h3>📅 Detalhes da Atividade</h3>
-                        <div class="res-grid">
-                            <div class="res-group"><label>Data Início</label><input type="date" id="res-data-inicio" name="data_inicio"></div>
-                            <div class="res-group"><label>Data Fim</label><input type="date" id="res-data-fim" name="data_fim"></div>
-                        </div>
-                        <div class="res-group">
-                            <label>Descrição do Motivo</label>
-                            <textarea id="res-descricao" name="descricao" rows="3" required></textarea>
-                        </div>
+                <div class="res-card">
+                    <h3>🧮 Despesas e Cálculos</h3>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Diárias Estimadas</label><input type="text" id="res-diarias" name="diarias" readonly class="input-calc" value="0"></div>
+                        <div class="res-group"><label>Valor Diárias (R$)</label><input type="text" id="res-valor-diarias" name="valor_diarias" readonly class="input-calc" value="0.00"></div>
                     </div>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Km Rodados</label><input type="number" id="res-km" name="km_total" placeholder="0"></div>
+                        <div class="res-group"><label>Valor Km (R$)</label><input type="text" id="res-valor-km" name="valor_km" readonly class="input-calc" value="0.00"></div>
+                    </div>
+                    <div class="res-group"><label>Outras Despesas (R$)</label><input type="number" step="0.01" id="res-valor-outros" name="valor_outros" placeholder="0.00"></div>
 
-                    <div class="res-card">
-                        <h3>🏦 Dados Bancários</h3>
-                        <div class="res-grid">
-                            <div class="res-group"><label>Agência</label><input type="text" id="res-agencia" name="agencia"></div>
-                            <div class="res-group"><label>Conta</label><input type="text" id="res-conta" name="conta"></div>
-                        </div>
+                    <div class="total-box">
+                        <div class="total-label">Total a Receber</div>
+                        <div class="total-value">R$ <span id="text-valor-total">0,00</span></div>
+                        <input type="hidden" id="res-valor-total" name="valor_total">
                     </div>
+                </div>
 
-                    <div style="text-align:right; margin-top:20px;">
-                        <span id="res-status" style="margin-right:15px; font-weight:bold;"></span>
-                        <button type="submit" class="btn btn-primary">🚀 Enviar Solicitação</button>
+                <div class="res-card">
+                    <h3>🏦 Dados Bancários</h3>
+                    <div class="res-group">
+                        <label>Banco</label>
+                        <input list="lista-bancos" id="res-banco" name="banco" placeholder="Busque pelo nome ou código">
+                        <datalist id="lista-bancos">${opcoesBancos}</datalist>
                     </div>
-                </form>
-            </div>
+                    <div class="res-grid">
+                        <div class="res-group"><label>Agência</label><input type="text" id="res-agencia" name="agencia"></div>
+                        <div class="res-group"><label>Conta</label><input type="text" id="res-conta" name="conta"></div>
+                    </div>
+                    <div class="res-group"><label>PIX (Opcional)</label><input type="text" id="res-pix" name="pix"></div>
+                </div>
+
+                <div class="res-card">
+                    <h3>📎 Comprovantes</h3>
+                    <label class="file-upload-wrapper">
+                        <div class="upload-icon">📂</div>
+                        <div class="upload-text">Anexar Documentos</div>
+                        <div class="upload-hint">PDF, JPG ou PNG</div>
+                        <input type="file" id="res-anexos" name="anexos" multiple style="display:none;">
+                    </label>
+                    <div id="file-list" style="margin-top:10px; text-align:center;"></div>
+                </div>
+
+                <div style="text-align:right;">
+                    <span id="res-status" style="margin-right:15px; font-weight:bold;"></span>
+                    <button type="submit" class="btn btn-primary" style="padding:15px 40px;">Enviar Solicitação</button>
+                </div>
+            </form>
         `;
 
         const form = document.getElementById("form-ressarcimento");
-        if (aplicarMascaraTelefone) aplicarMascaraTelefone(document.getElementById("res-telefone"));
-        if (aplicarMascaraAgencia) aplicarMascaraAgencia(document.getElementById("res-agencia"));
-        if (aplicarMascaraConta) aplicarMascaraConta(document.getElementById("res-conta"));
+        const tel = document.getElementById("res-telefone");
+        const inputFile = document.getElementById("res-anexos");
+        const fileList = document.getElementById("file-list");
 
-        let userData = global.Utils ? global.Utils.obterUserInfo() : {};
-        if (userData.nome) {
-            preencherFormularioRessarcimentoComDados(userData);
+        if (aplicarMascaraTelefone) aplicarMascaraTelefone(tel);
+
+        inputFile.onchange = () => {
+            fileList.innerHTML = inputFile.files.length > 0 ? `✅ ${inputFile.files.length} arquivo(s) prontos.` : "";
+        };
+
+        const calcFields = ["res-data-inicio", "res-data-fim", "res-km", "res-valor-outros"];
+        calcFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.oninput = atualizarCalculos;
+        });
+
+        async function carregarDados() {
+            let user = JSON.parse(localStorage.getItem("userInfo") || "{}");
+            if (!user.nome && apiFetch) {
+                try {
+                    const r = await apiFetch("/api/filiados/me");
+                    user = await r.json();
+                    localStorage.setItem("userInfo", JSON.stringify(user));
+                } catch(e) {}
+            }
+            preencherForm(user);
         }
 
-        form.addEventListener("submit", async (e) => {
+        function preencherForm(d) {
+            if (!d) return;
+            const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v || ""; };
+            set("res-nome", d.nome);
+            set("res-cpf", formatarCPF ? formatarCPF(d.cpf) : d.cpf);
+            set("res-email", d.email1 || d.email2);
+            set("res-telefone", d.telefone1 || d.telefone2);
+            if (aplicarMascaraTelefone) aplicarMascaraTelefone(document.getElementById("res-telefone"));
+        }
+
+        function atualizarCalculos() {
+            const ini = document.getElementById("res-data-inicio").value;
+            const fim = document.getElementById("res-data-fim").value;
+            const km = parseFloat(document.getElementById("res-km").value) || 0;
+            const outros = parseFloat(document.getElementById("res-valor-outros").value) || 0;
+
+            let dias = 0;
+            if (ini && fim) {
+                const d1 = new Date(ini); const d2 = new Date(fim);
+                if (d2 >= d1) dias = ((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+            }
+            const calcDiarias = Math.max(0, dias - 1 + 0.7);
+
+            document.getElementById("res-diarias").value = calcDiarias.toFixed(1);
+            document.getElementById("res-valor-diarias").value = (calcDiarias * 500).toFixed(2);
+            document.getElementById("res-valor-km").value = (km * 1.5).toFixed(2);
+
+            const total = ((calcDiarias*500)+(km*1.5)+outros);
+            document.getElementById("res-valor-total").value = total.toFixed(2);
+            const display = document.getElementById("text-valor-total");
+            if(display) display.textContent = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        }
+
+        form.onsubmit = async (e) => {
             e.preventDefault();
+            const btn = form.querySelector("button");
             const status = document.getElementById("res-status");
-            status.textContent = "Enviando...";
+            btn.disabled = true;
+            status.textContent = "🚀 Enviando...";
 
             const fd = new FormData(form);
-            const payload = Object.fromEntries(fd.entries());
-
-            const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
-            payload.telefone_contato = onlyDigits(payload.telefone_contato);
+            if (tel) fd.set("telefone_contato", tel.value.replace(/\D/g, ""));
 
             try {
-                const r = await apiFetch("/api/ressarcimentos", { method: "POST", body: payload });
+                const r = await apiFetch("/api/ressarcimentos", { method: "POST", body: fd });
                 if (r.ok) {
-                    status.textContent = "✅ Enviado com sucesso!";
+                    status.textContent = "✅ Sucesso!";
                     form.reset();
+                    fileList.innerHTML = "";
+                    atualizarCalculos();
+                    carregarDados();
                 } else {
-                    status.textContent = "Erro ao enviar.";
+                    status.textContent = "❌ Erro ao enviar.";
                 }
-            } catch (e) {
-                status.textContent = "Erro de conexão.";
+            } catch(err) {
+                status.textContent = "❌ Erro de conexão.";
+            } finally {
+                btn.disabled = false;
             }
-        });
-    }
+        };
 
-    function preencherFormularioRessarcimentoComDados(d) {
-        if (!d) return;
-        const { formatarCPF } = global.Utils || {};
-        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ""; };
-        setVal("res-nome", d.nome);
-        setVal("res-cpf", formatarCPF ? formatarCPF(d.cpf) : d.cpf);
-        setVal("res-email", d.email1 || d.email2);
-        setVal("res-telefone", d.telefone1 || d.telefone2);
+        carregarDados();
     }
 
     global.Ressarcimento = {
-        inicializarRessarcimento,
-        preencherFormularioRessarcimentoComDados
+        inicializarRessarcimento
     };
 
 })(typeof window !== 'undefined' ? window : global);

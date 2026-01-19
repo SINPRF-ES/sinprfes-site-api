@@ -4,15 +4,14 @@
  */
 
 (function (global) {
-    if (global.NavegacaoLoaded) return;
-    global.NavegacaoLoaded = true;
+    if (global.Navegacao) return;
 
     function configurarNavegacao(callbackMudanca) {
         const navButtons = document.querySelectorAll(".af-nav-item");
         const sections = document.querySelectorAll(".af-section");
 
         navButtons.forEach(btn => {
-            btn.onclick = () => {
+            btn.addEventListener("click", () => {
                 const alvo = btn.dataset.target;
 
                 navButtons.forEach(b => b.classList.remove("active"));
@@ -25,7 +24,7 @@
                 });
 
                 if (callbackMudanca) callbackMudanca(alvo);
-            };
+            });
         });
     }
 

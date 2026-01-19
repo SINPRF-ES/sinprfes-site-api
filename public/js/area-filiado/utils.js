@@ -1,10 +1,14 @@
-// Base da API (localhost vs produção)
-const API_BASE = (window.location.hostname === "localhost")
-  ? "http://localhost:3000"
-  : "https://api.sinprfes.org.br";
+/**
+ * Utilitários Compartilhados (Área do Filiado)
+ * Carregado como script clássico (window.Utils)
+ */
 
 (function (global) {
   if (global.Utils) return;
+
+  const API_BASE = (window.location.hostname === "localhost")
+    ? "http://localhost:3000"
+    : "https://api.sinprfes.org.br";
 
   function obterToken() {
     return localStorage.getItem("token");
