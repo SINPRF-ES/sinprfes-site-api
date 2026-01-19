@@ -120,8 +120,8 @@ export const arquivarFiliado = async (id, motivo) => {
   return await api.post(`/api/filiados/${id}/arquivar`, { motivo });
 };
 
-export const desarquivarFiliado = async (id) => {
-  return await api.post(`/api/filiados/${id}/desarquivar`);
+export const desarquivarFiliado = async (id, motivo) => {
+  return await api.post(`/api/filiados/${id}/desarquivar`, { motivo });
 };
 
 export default api;
