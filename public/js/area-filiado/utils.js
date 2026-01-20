@@ -143,18 +143,35 @@
   }
 
   function aplicarMascaraCPF(input) {
-    if (!input) return;
+    if (!input || input._hasCpfMask) return;
+
     const formatar = (val) => {
+      if (global.Formatters && global.Formatters.formatCpfLive) {
+        return global.Formatters.formatCpfLive(val);
+      }
       let v = val.replace(/\D/g, "").slice(0, 11);
       if (v.length <= 3) return v;
       if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
       if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
       return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
     };
+
+    const handler = (e) => {
+      const el = e.target;
+      const start = el.selectionStart;
+      const oldLen = el.value.length;
+      el.value = formatar(el.value);
+      const newLen = el.value.length;
+
+      // Ajuste básico de cursor para evitar pulos ao digitar no meio
+      if (start !== null && start < oldLen) {
+        el.setSelectionRange(start + (newLen - oldLen), start + (newLen - oldLen));
+      }
+    };
+
+    input.addEventListener("input", handler);
     if (input.value) input.value = formatar(input.value);
-    input.addEventListener("input", (e) => {
-      e.target.value = formatar(e.target.value);
-    });
+    input._hasCpfMask = true;
   }
 
   function aplicarMascaraCEP(input) {

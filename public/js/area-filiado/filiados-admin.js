@@ -58,11 +58,13 @@
     async function inicializarFiliados(perfil) {
         const listaEl = document.getElementById("lista-filiados");
         perfilAtual = (perfil || "").toUpperCase();
+        const isReadOnlyProfile = ["FILIADO", "ORGANIZADOR"].includes(perfilAtual);
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
 
         if (!listaEl) {
             const secFiliados = document.getElementById("sec-filiados");
             if (secFiliados) {
-                const placeholder = perfilAtual === "FILIADO" ? "Buscar por nome..." : "Buscar por nome ou CPF...";
+                const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
                 secFiliados.innerHTML = `
                     <div class="search-box-container">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -77,14 +79,14 @@
             }
         }
 
-        const canManageProfiles = perfilAtual === "ADMIN" || perfilAtual === "DIRETORIA" || perfilAtual === "FUNCIONARIO";
+        const canManageProfiles = ehGestao;
 
         if (!handlersConfigurados) {
             const btnNovo = document.getElementById("btn-novo-filiado");
             const containerNovo = document.getElementById("novo-filiado-container");
 
             if (btnNovo) {
-                if (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual)) {
+                if (ehGestao) {
                     btnNovo.style.display = "inline-block";
                     btnNovo.onclick = () => abrirNovoFiliado(containerNovo);
                     renderizarFormularioNovoFiliado(containerNovo);
@@ -169,7 +171,8 @@
             const matchesNome = nomeNorm.includes(tNorm);
 
             let matchesCpf = false;
-            if (perfilAtual !== "FILIADO") {
+            const isReadOnlyProfileLocal = ["FILIADO", "ORGANIZADOR"].includes(perfilAtual);
+            if (!isReadOnlyProfileLocal) {
                 const cpfDigits = onlyDigits(f.cpf);
                 matchesCpf = tDigits && cpfDigits.includes(tDigits);
             }
@@ -211,7 +214,7 @@
                             <div>
                                 <div class="filiado-nome">${f.nome}</div>
                                 <div class="filiado-meta">${f.cpf ? formatarCPF(f.cpf) + ' • ' : ''}${f.lotacao || 'SEDE'}</div>
-                                ${perfilAtual === "FILIADO" ? '' : `
+                                ${["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
                                 <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
                             </div>
@@ -219,7 +222,7 @@
                         <div style="text-align:right;">
                             <span class="filiado-badge badge-${situacaoLower}">${situacao}</span>
                             <div style="margin-top:5px; font-size:0.85rem;">${tels || '-'}</div>
-                            ${["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) ?
+            ${!["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ?
                                 `<button class="btn btn-outline btn-sm" onclick="FiliadosAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
                         </div>
                     </div>
