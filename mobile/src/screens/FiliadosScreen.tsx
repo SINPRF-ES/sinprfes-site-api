@@ -121,20 +121,28 @@ const FiliadosScreen: React.FC = () => {
     return <View style={styles.centered}><Text style={styles.errorText}>{error}</Text><TouchableOpacity style={styles.button} onPress={handleRefresh}><Text style={styles.buttonText}>Tentar Novamente</Text></TouchableOpacity></View>;
   }
 
+  const ehGestao = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
+
   const filteredFiliados = filiados.filter(f => {
-    const searchTermLower = searchTerm.toLowerCase();
+    const tNorm = normalizeText(searchTerm);
     const searchTermDigits = searchTerm.replace(/\D/g, '');
 
-    const nomeMatch = f.nome.toLowerCase().includes(searchTermLower);
+    const nomeNorm = normalizeText(f.nome);
+    const nomeMatch = nomeNorm.includes(tNorm);
 
-    // A busca por CPF só é realizada se o campo existir.
-    // Usamos onlyDigits para garantir comparação robusta (com ou sem pontuação)
-    const normalizedCpf = (f.cpf || '').replace(/\D/g, '');
-    const cpfMatch = searchTermDigits !== '' && normalizedCpf.includes(searchTermDigits);
+    // A busca por CPF só é realizada para gestão
+    let cpfMatch = false;
+    if (ehGestao) {
+      const normalizedCpf = (f.cpf || '').replace(/\D/g, '');
+      cpfMatch = searchTermDigits !== '' && normalizedCpf.includes(searchTermDigits);
+    }
 
     const textMatch = nomeMatch || cpfMatch;
 
     const estadoCadastro = f.arquivado_em ? 'ARQUIVADO' : 'ATIVO';
+    // Se não for gestão, SÓ vê ATIVOS
+    if (!ehGestao && estadoCadastro !== 'ATIVO') return false;
+
     const estadoMatch = filtroEstado === 'TODOS' || estadoCadastro === filtroEstado;
 
     const situacaoFuncional = normalizeSituacaoFuncional(f.situacao_funcional || f.situacao);
@@ -143,8 +151,7 @@ const FiliadosScreen: React.FC = () => {
     return textMatch && estadoMatch && situacaoMatch;
   });
 
-  const podeCriar = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
-  const ehGestao = authUser?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(authUser.perfil_acesso);
+  const podeCriar = ehGestao;
 
   const handleEditPress = (filiado: Filiado) => {
     if (netInfo.isConnected) {
@@ -164,7 +171,7 @@ const FiliadosScreen: React.FC = () => {
       <View style={styles.header}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por nome ou CPF..."
+          placeholder={ehGestao ? "Buscar por nome ou CPF..." : "Buscar por nome..."}
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
