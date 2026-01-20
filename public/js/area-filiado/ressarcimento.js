@@ -29,9 +29,9 @@
             const s = document.createElement('style');
             s.id = 'style-ressarcimento';
             s.textContent = `
-                .res-header { margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+                .res-header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
                 .res-card { background: #fdfdfd; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-                .res-card h3 { margin-top: 0; color: #003366; font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+                .res-card h3 { text-align: center; justify-content: center; margin-top: 0; color: #003366; font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
                 .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
                 .res-group { margin-bottom: 15px; }
                 .res-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 0.9rem; }
@@ -108,12 +108,12 @@
                     <h3>🏦 Dados Bancários</h3>
                     <div class="res-group">
                         <label>Banco</label>
-                        <select id="res-banco-select" name="banco_select" required>
+                        <select id="res-banco-select" name="banco_select">
                             <option value="">Selecione um banco...</option>
                             ${BANCOS_LISTA.map(b => `<option value="${b.code} - ${b.name}">${b.code} - ${b.name}</option>`).join("")}
                             <option value="OUTRO">Outro (Informar manual)</option>
                         </select>
-                        <input type="text" id="res-banco-outro" name="banco_outro" placeholder="Informe o nome do banco" style="display:none; margin-top:10px;" required>
+                        <input type="text" id="res-banco-outro" name="banco_outro" placeholder="Informe o nome do banco" style="display:none; margin-top:10px;">
                         <input type="hidden" id="res-banco" name="banco">
                     </div>
                     <div class="res-grid">
@@ -143,6 +143,8 @@
 
         const form = document.getElementById("form-ressarcimento");
         const tel = document.getElementById("res-telefone");
+        const ag = document.getElementById("res-agencia");
+        const ct = document.getElementById("res-conta");
         const inputFile = document.getElementById("res-anexos");
         const fileList = document.getElementById("file-list");
 
@@ -153,7 +155,7 @@
         bancoSelect.onchange = () => {
             if (bancoSelect.value === "OUTRO") {
                 bancoOutro.style.display = "block";
-                bancoOutro.required = true;
+                bancoOutro.required = false;
                 bancoHidden.value = bancoOutro.value;
             } else {
                 bancoOutro.style.display = "none";
@@ -170,6 +172,10 @@
         };
 
         if (aplicarMascaraTelefone) aplicarMascaraTelefone(tel);
+
+        const F = global.Formatters || {};
+        if (F.applyMaskAgencia) F.applyMaskAgencia(ag);
+        if (F.applyMaskConta) F.applyMaskConta(ct);
 
         inputFile.onchange = () => {
             fileList.innerHTML = inputFile.files.length > 0 ? `✅ ${inputFile.files.length} arquivo(s) prontos.` : "";

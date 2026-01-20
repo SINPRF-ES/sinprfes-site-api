@@ -78,6 +78,34 @@
       const mIso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (mIso) return `${mIso[1]}-${mIso[2]}-${mIso[3]}`;
       return "";
+    },
+
+    formatAgencia: function (agencia) {
+      if (!agencia) return '';
+      const digits = this.onlyDigits(agencia).slice(0, 5);
+      if (digits.length < 5) return digits;
+      return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    },
+
+    formatConta: function (conta) {
+      if (!conta) return '';
+      const digits = this.onlyDigits(conta).slice(0, 6);
+      if (digits.length < 6) return digits;
+      return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    },
+
+    applyMaskAgencia: function (el) {
+      if (!el) return;
+      const format = () => { el.value = this.formatAgencia(el.value); };
+      el.addEventListener('input', format);
+      format();
+    },
+
+    applyMaskConta: function (el) {
+      if (!el) return;
+      const format = () => { el.value = this.formatConta(el.value); };
+      el.addEventListener('input', format);
+      format();
     }
   };
 
