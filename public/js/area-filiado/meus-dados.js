@@ -127,33 +127,39 @@
                 .profile-header {
                     background: linear-gradient(135deg, #003366 0%, #00152b 100%);
                     color: #fff;
-                    padding: 30px 25px;
-                    border-radius: 12px;
+                    padding: 35px 30px;
+                    border-radius: 15px;
                     border-bottom: 6px solid #ffc107;
                     margin-bottom: 25px;
                     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
                     display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 40px;
+                    text-align: left;
+                }
+                .header-left-col {
+                    flex: 0 0 auto;
+                    display: flex;
                     flex-direction: column;
                     align-items: center;
-                    text-align: center;
-                    gap: 20px;
+                    gap: 15px;
                 }
-                .header-avatar {
-                    width: 90px;
-                    height: 90px;
-                    border-radius: 50%;
-                    overflow: hidden;
-                    border: 3px solid #ffc107;
-                    background: #eee;
-                    flex-shrink: 0;
+                .header-right-col {
+                    flex: 1;
+                    min-width: 280px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
                 }
-                .header-avatar img {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
+                .profile-name-title {
+                    margin: 0;
+                    font-size: 2rem;
+                    color: #fff;
+                    font-weight: 800;
                 }
-                .profile-name h2 { margin: 0; font-size: 1.5rem; color: #fff; }
-                .profile-badges { display: flex; justify-content: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+                .profile-badges { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
                 .badge {
                     padding: 6px 15px;
                     border-radius: 20px;
@@ -250,11 +256,14 @@
                 .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
                 .avatar-fallback { font-size: 32px; color:#6c757d; }
 
-                .avatar-actions { display: flex; flex-direction: column; gap: 5px; }
+                .avatar-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+                .avatar-buttons { display: flex; gap: 8px; justify-content: center; }
+                .avatar-buttons button { padding: 5px 12px; font-size: 0.75rem; }
                 .btn-upload-label {
-                    background: rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 5px;
-                    font-size: 0.75rem; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.3);
+                    background: rgba(255,255,255,0.1); color: #fff; padding: 8px 16px; border-radius: 8px;
+                    font-size: 0.8rem; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.3);
                     transition: all 0.2s; display: inline-block;
+                    font-weight: 600;
                 }
                 .btn-upload-label:hover { background: rgba(255,255,255,0.2); }
                 #me-avatar-file { display: none; }
@@ -264,6 +273,25 @@
                 /* Zebra striping for dependents */
                 .dependente-card:nth-child(even) { background-color: #ffffff; }
                 .dependente-card:nth-child(odd) { background-color: #f7f9fc; }
+
+                @media (max-width: 768px) {
+                    .profile-header {
+                        flex-direction: column;
+                        text-align: center;
+                        padding: 30px 20px;
+                        gap: 25px;
+                    }
+                    .header-right-col {
+                        align-items: center;
+                        min-width: unset;
+                    }
+                    .profile-name-title {
+                        font-size: 1.6rem;
+                    }
+                    .profile-badges {
+                        justify-content: center;
+                    }
+                }
             `;
             document.head.appendChild(s);
         }
@@ -279,19 +307,19 @@
         const situacaoLower = situacaoUpper.toLowerCase();
         container.innerHTML = `
             <div class="profile-header">
-                <div class="profile-header-avatar-section">
+                <div class="header-left-col">
                     <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
                     <div class="avatar-actions">
                         <label class="btn-upload-label" for="me-avatar-file">Alterar Foto</label>
                         <input type="file" id="me-avatar-file" accept="image/*" />
-                        <div style="display:flex; gap:5px; justify-content: center;">
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-foto" style="display:none; padding: 4px 8px; font-size: 0.7rem;">Salvar</button>
-                            <button type="button" class="btn btn-danger btn-sm" id="btn-remover-foto" style="padding: 4px 8px; font-size: 0.7rem;">Remover</button>
+                        <div class="avatar-buttons">
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-foto" style="display:none;">Salvar</button>
+                            <button type="button" class="btn btn-danger btn-sm" id="btn-remover-foto">Remover</button>
                         </div>
                     </div>
                 </div>
-                <div class="profile-name">
-                    <h2 style="font-size: 1.8rem;">${nome || ""}</h2>
+                <div class="header-right-col">
+                    <h2 class="profile-name-title">${nome || ""}</h2>
                     <div class="profile-badges">
                         <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
                         <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
