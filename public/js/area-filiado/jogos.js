@@ -10,8 +10,6 @@
         const secJogos = document.getElementById("sec-jogos");
         if (!secJogos) return;
 
-        const { apiFetch } = global.Utils || {};
-
         if (!document.getElementById('style-jogos')) {
             const s = document.createElement('style');
             s.id = 'style-jogos';
@@ -96,9 +94,8 @@
         const resumo = document.getElementById("jogos-resumo-inscricao");
 
         async function carregarInscricao() {
-            if (!apiFetch) return;
             try {
-                const r = await apiFetch("/api/jogos/inscricao");
+                const r = await window.Api.apiFetch("/api/jogos/inscricao");
                 if (r.ok) {
                     const data = await r.json();
                     if (data) {
@@ -136,7 +133,7 @@
             };
 
             try {
-                const r = await apiFetch("/api/jogos/inscricao", { method: "POST", body: payload });
+                const r = await window.Api.apiFetch("/api/jogos/inscricao", { method: "POST", body: payload });
                 if (r.ok) {
                     status.textContent = "✅ Inscrição salva com sucesso!";
                     status.style.color = "#27ae60";

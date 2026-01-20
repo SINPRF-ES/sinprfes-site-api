@@ -40,7 +40,6 @@
     async function inicializarFiliados(perfil) {
         const listaEl = document.getElementById("lista-filiados");
         perfilAtual = (perfil || "").toUpperCase();
-        const { apiFetch } = global.Utils || {};
 
         if (!listaEl) {
             const secFiliados = document.getElementById("sec-filiados");
@@ -59,7 +58,6 @@
                 `;
             }
         }
-        const { apiFetch } = global.Utils || {};
 
         const canManageProfiles = perfilAtual === "ADMIN" || perfilAtual === "DIRETORIA" || perfilAtual === "FUNCIONARIO";
 
@@ -121,14 +119,13 @@
         const listaEl = document.getElementById("lista-filiados");
         if (!listaEl) return;
 
-        const { apiFetch } = global.Utils || {};
         try {
             listaEl.innerHTML = `<p style="text-align:center; color:#fff;">Carregando...</p>`;
             const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
             let url = "/api/filiados";
             if (estado !== "CADASTRO_ATIVO") url += "?incluirArquivados=1";
 
-            const r = await apiFetch(url);
+            const r = await window.Api.apiFetch(url);
             if (r.ok) {
                 const d = await r.json();
                 cacheLista = d.filiados || d || [];
@@ -361,7 +358,7 @@
 
     function configurarFormEdicao(id) {
         const form = document.getElementById("form-edicao-modal");
-        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, apiFetch } = global.Utils || {};
+        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF } = global.Utils || {};
 
         const filiado = cacheLista.find(f => f.id == id);
 
@@ -523,7 +520,7 @@
             }
 
             try {
-                const r = await apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
+                const r = await window.Api.apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
                 if (r.ok) {
                     alert("Sucesso!");
                     document.getElementById("modal-editar-filiado").style.display = "none";
@@ -539,8 +536,7 @@
     async function confirmarArquivar(id) {
         const motivo = prompt("Motivo do arquivamento:");
         if (!motivo) return;
-        const { apiFetch } = global.Utils || {};
-        const r = await apiFetch(`/api/filiados/${id}/arquivar`, { method: "POST", body: { motivo } });
+        const r = await window.Api.apiFetch(`/api/filiados/${id}/arquivar`, { method: "POST", body: { motivo } });
         if (r.ok) {
             alert("Arquivado.");
             document.getElementById("modal-editar-filiado").style.display = "none";
@@ -550,8 +546,7 @@
 
     async function confirmarDesarquivar(id) {
         const motivo = prompt("Motivo do desarquivamento (opcional):") || "Reativado via Web";
-        const { apiFetch } = global.Utils || {};
-        const r = await apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST", body: { motivo } });
+        const r = await window.Api.apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST", body: { motivo } });
         if (r.ok) {
             alert("Desarquivado.");
             document.getElementById("modal-editar-filiado").style.display = "none";
@@ -564,12 +559,11 @@
         const file = input?.files?.[0];
         if (!file) { alert("Selecione um arquivo."); return; }
 
-        const { apiFetch } = global.Utils || {};
         const fd = new FormData();
         fd.append("avatar", file);
 
         try {
-            const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
+            const r = await window.Api.apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
             if (r.ok) {
                 const d = await r.json();
                 document.getElementById("modal-avatar-preview").src = d.avatar_url;
@@ -581,9 +575,8 @@
 
     async function removerAvatar(id) {
         if (!confirm("Remover foto?")) return;
-        const { apiFetch } = global.Utils || {};
         try {
-            const r = await apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
+            const r = await window.Api.apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
             if (r.ok) {
                 document.getElementById("modal-avatar-preview").src = "/img/avatar-placeholder.png";
                 alert("Foto removida.");
@@ -669,7 +662,6 @@
         }
         form.onsubmit = async (e) => {
             e.preventDefault();
-            const { apiFetch } = global.Utils || {};
             const fd = new FormData(form);
             const payload = {};
             fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
@@ -678,7 +670,7 @@
             payload.cpf = onlyDigits(payload.cpf);
 
             try {
-                const r = await apiFetch("/api/filiados", { method: "POST", body: payload });
+                const r = await window.Api.apiFetch("/api/filiados", { method: "POST", body: payload });
                 if (r.ok) {
                     alert("Criado com sucesso!");
                     container.style.display = "none";
@@ -707,6 +699,8 @@
             if (inputHidden) inputHidden.value = value;
         }
     }
+
+    // No local declarations of apiFetch here. Using window.Api.apiFetch everywhere.
 
     global.FiliadosAdmin = {
         inicializarFiliados,

@@ -7,7 +7,6 @@
     if (global.Seguranca) return;
 
     function renderizarSeguranca(filiado, callbackRecarregar) {
-        const { apiFetch } = global.Utils || {};
         let container = document.getElementById('seguranca-container');
 
         if (!container) {
@@ -38,10 +37,9 @@
     }
 
     async function desativar2FA(callbackRecarregar) {
-        const { apiFetch } = global.Utils || {};
         if (!confirm("Tem certeza que deseja desativar o 2FA?")) return;
         try {
-            const res = await apiFetch("/api/filiados/2fa/desativar", { method: "POST" });
+            const res = await window.Api.apiFetch("/api/filiados/2fa/desativar", { method: "POST" });
             if (res.ok) {
                 alert("2FA Desativado.");
                 if (callbackRecarregar) callbackRecarregar();

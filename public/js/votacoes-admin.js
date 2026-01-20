@@ -4,7 +4,6 @@
  */
 
 (function (global) {
-    const { apiFetch } = global.Utils || {};
     const listaEl = document.getElementById("lista-votacoes");
     const formCriar = document.getElementById("form-criar-votacao");
 
@@ -12,7 +11,7 @@
 
     async function carregarVotacoes() {
         try {
-            const r = await apiFetch("/api/votacoes");
+            const r = await window.Api.apiFetch("/api/votacoes");
             if (!r.ok) return;
             const votacoes = await r.json();
 
@@ -50,17 +49,17 @@
                 const action = btn.dataset.action;
 
                 if (action === "abrir") {
-                    await apiFetch(`/api/votacoes/${id}/abrir`, { method: "POST" });
+                    await window.Api.apiFetch(`/api/votacoes/${id}/abrir`, { method: "POST" });
                     alert("Votação aberta.");
                 }
 
                 if (action === "encerrar") {
-                    await apiFetch(`/api/votacoes/${id}/encerrar`, { method: "POST" });
+                    await window.Api.apiFetch(`/api/votacoes/${id}/encerrar`, { method: "POST" });
                     alert("Votação encerrada.");
                 }
 
                 if (action === "resultado") {
-                    const r = await apiFetch(`/api/votacoes/${id}/resultado`);
+                    const r = await window.Api.apiFetch(`/api/votacoes/${id}/resultado`);
                     const d = await r.json();
 
                     alert(
@@ -92,7 +91,7 @@
         }
 
         try {
-            await apiFetch("/api/votacoes", {
+            await window.Api.apiFetch("/api/votacoes", {
                 method: "POST",
                 body: { titulo, descricao, opcoes }
             });
