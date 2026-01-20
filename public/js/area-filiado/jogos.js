@@ -55,38 +55,46 @@
         { id: 'bocha', label: 'Bocha', grupo: 'Exibição', pontuavel: false },
     ];
 
+    const PERFIS_JOGOS_MANAGER = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
+
     function inicializarJogos(perfil) {
         const secJogos = document.getElementById("sec-jogos");
         if (!secJogos) return;
+
+        const isManager = PERFIS_JOGOS_MANAGER.includes((perfil || "").toUpperCase());
 
         if (!document.getElementById('style-jogos')) {
             const s = document.createElement('style');
             s.id = 'style-jogos';
             s.textContent = `
-                .jogos-card { background: #fff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-                .jogos-banner { background: #003366; color: #fff; padding: 30px; text-align: center; }
+                .jogos-card { background: #ffffff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; margin: 0 auto 25px auto; max-width: 1000px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+                .jogos-banner { background: #003366; color: #ffffff; padding: 30px; text-align: center; }
                 .jogos-banner h2 { font-size: 2rem; margin-bottom: 10px; color: #f1c40f; }
-                .jogos-body { padding: 30px; }
+                .jogos-body { padding: 30px; background: #ffffff; color: #333; }
                 .jogos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 10px; }
                 .jogos-grupo-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
                 .jogos-grupo-titulo { font-weight: bold; color: #003366; border-bottom: 2px solid #003366; margin-bottom: 10px; padding-bottom: 5px; font-size: 1.1rem; }
-                .mod-item { border: 1px solid #eee; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; background: #fff; margin-bottom: 5px; }
+                .mod-item { border: 1px solid #eee; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; background: #ffffff; margin-bottom: 5px; }
                 .mod-item:hover { background: #f0f4f8; border-color: #003366; }
                 .mod-item input { width: 18px; height: 18px; cursor: pointer; }
                 .mod-label { font-weight: 500; color: #333; font-size: 0.95rem; }
                 .jogos-form-group { margin-bottom: 20px; }
-                .jogos-form-group label { display: block; font-weight: bold; margin-bottom: 8px; }
-                .jogos-form-group textarea, .jogos-form-group input, .jogos-form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
-                .btn-jogos { background: #003366; color: #fff; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; transition: 0.2s; }
+                .jogos-form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
+                .jogos-form-group textarea, .jogos-form-group input, .jogos-form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; background: #fff; color: #333; }
+                .btn-jogos { background: #003366; color: #ffffff; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; transition: 0.2s; }
                 .btn-jogos:hover { background: #004488; }
-                .btn-export { background: #27ae60; color: #fff; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 0.9rem; }
+                .btn-jogos:disabled { background: #ccc; cursor: not-allowed; }
+                .btn-jogos-cancelar { background: #e74c3c; color: #ffffff; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; width: 100%; transition: 0.2s; margin-top: 10px; }
+                .btn-jogos-cancelar:hover { background: #c0392b; }
+                .btn-jogos-cancelar:disabled { background: #eee; color: #aaa; cursor: not-allowed; }
+                .btn-export { background: #27ae60; color: #ffffff; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 0.9rem; }
                 .btn-export:hover { background: #219150; }
-                .inscricao-resumo { margin-top: 20px; padding: 15px; background: #e8f4fd; border-left: 5px solid #003366; border-radius: 4px; display: none; }
+                .inscricao-resumo { margin-top: 20px; padding: 15px; background: #e8f4fd; border-left: 5px solid #003366; border-radius: 4px; display: none; color: #333; }
                 .planilha-container { margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px; overflow-x: auto; }
-                .jogos-tabela { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+                .jogos-tabela { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; background: #fff; }
                 .jogos-tabela th, .jogos-tabela td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-                .jogos-tabela th { background: #f4f4f4; position: sticky; top: 0; }
-                .jogos-tabela tr:nth-child(even) { background: #fafafa; }
+                .jogos-tabela th { background: #f1f3f5; color: #003366; position: sticky; top: 0; font-weight: bold; }
+                .jogos-tabela tr:nth-child(even) { background: #f8f9fa; }
             `;
             document.head.appendChild(s);
         }
@@ -148,7 +156,8 @@
                             <textarea name="observacoes" id="jogos-obs" rows="3" placeholder="Restrições alimentares, necessidades especiais, etc."></textarea>
                         </div>
 
-                        <button type="submit" class="btn-jogos">Confirmar minha Inscrição 🚀</button>
+                        <button type="submit" class="btn-jogos">Confirmar / Atualizar Inscrição 🚀</button>
+                        <button type="button" id="btn-cancelar-jogos" class="btn-jogos-cancelar" disabled title="Você ainda não possui inscrição ativa.">Cancelar minha Inscrição ❌</button>
                         <div id="jogos-status" style="margin-top:15px; text-align:center; font-weight:bold;"></div>
                     </form>
 
@@ -160,6 +169,7 @@
         const form = document.getElementById("form-jogos");
         const status = document.getElementById("jogos-status");
         const resumo = document.getElementById("jogos-resumo-inscricao");
+        const btnCancelar = document.getElementById("btn-cancelar-jogos");
 
         async function carregarInscricao() {
             try {
@@ -179,14 +189,50 @@
 
                         resumo.innerHTML = `<strong>Sua inscrição está confirmada!</strong><br>Você pode atualizar os dados acima a qualquer momento.`;
                         resumo.style.display = "block";
+
+                        if (btnCancelar) {
+                            btnCancelar.disabled = false;
+                            btnCancelar.title = "";
+                        }
+
+                        // Se for filiado comum, recarrega a planilha restrita
+                        if (!isManager) {
+                            renderizarPlanilhaFiliado(data);
+                        }
+                    } else {
+                        resetarEstadoInscricao();
                     }
+                } else {
+                    resetarEstadoInscricao();
                 }
-            } catch(e) {}
+            } catch(e) {
+                resetarEstadoInscricao();
+            }
+
+            // Se for manager, carrega a planilha completa INDEPENDENTE de ter inscrição própria
+            if (isManager) {
+                carregarPlanilhaManager();
+            }
+        }
+
+        function resetarEstadoInscricao() {
+            resumo.style.display = "none";
+            if (btnCancelar) {
+                btnCancelar.disabled = true;
+                btnCancelar.title = "Você ainda não possui inscrição ativa.";
+            }
+            form.reset();
+            form.querySelectorAll("input[name='modalidades']").forEach(chk => chk.checked = false);
+
+            if (!isManager) {
+                const wrapper = document.getElementById("tabela-jogos-wrapper");
+                if (wrapper) wrapper.innerHTML = "<em>Você ainda não está inscrito.</em>";
+            }
         }
 
         form.onsubmit = async (e) => {
             e.preventDefault();
-            const btn = form.querySelector("button");
+            const btn = form.querySelector("button[type='submit']");
             const selectedMods = Array.from(form.querySelectorAll("input[name='modalidades']:checked")).map(i => i.value);
 
             if (selectedMods.length === 0) {
@@ -211,9 +257,11 @@
                 if (r.ok) {
                     status.textContent = "✅ Inscrição salva com sucesso!";
                     status.style.color = "#27ae60";
+                    setTimeout(() => status.textContent = "", 3000);
                     carregarInscricao();
                 } else {
-                    status.textContent = "❌ Erro ao salvar.";
+                    const errData = await r.json();
+                    status.textContent = "❌ " + (errData.error || "Erro ao salvar.");
                     status.style.color = "#c0392b";
                 }
             } catch(err) {
@@ -223,40 +271,93 @@
             }
         };
 
-        async function carregarPlanilha() {
-            const P_MANAGER = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
-            if (!P_MANAGER.includes(perfil)) return;
+        if (btnCancelar) {
+            btnCancelar.onclick = async () => {
+                if (!confirm("Tem certeza que deseja cancelar sua inscrição nos Jogos 2026? Esta ação não pode ser desfeita.")) return;
 
-            const cardBody = secJogos.querySelector(".jogos-body");
-            const container = document.createElement("div");
-            container.className = "planilha-container";
-            container.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                    <h3 style="margin:0;">📊 Planilha de Inscrições (Gestão)</h3>
-                    <div id="jogos-export-actions">
-                        <button id="btn-export-csv" class="btn-export">Exportar CSV</button>
-                        <button id="btn-export-xls" class="btn-export" style="background:#2980b9;">Exportar XLS</button>
-                    </div>
-                </div>
-                <div id="tabela-jogos-wrapper" style="max-height: 600px; overflow: auto;">Carregando planilha...</div>
-            `;
-            cardBody.appendChild(container);
+                btnCancelar.disabled = true;
+                status.textContent = "Cancelando...";
 
+                try {
+                    const r = await window.Api.apiFetch("/api/jogos/inscricao", { method: "DELETE" });
+                    if (r.ok) {
+                        alert("Sua inscrição foi cancelada com sucesso.");
+                        status.textContent = "✅ Inscrição cancelada.";
+                        status.style.color = "#27ae60";
+                        setTimeout(() => status.textContent = "", 3000);
+                        carregarInscricao();
+                    } else {
+                        alert("Erro ao cancelar inscrição.");
+                        status.textContent = "❌ Erro ao cancelar.";
+                        status.style.color = "#c0392b";
+                        btnCancelar.disabled = false;
+                    }
+                } catch(err) {
+                    alert("Erro de conexão ao cancelar.");
+                    btnCancelar.disabled = false;
+                }
+            };
+        }
+
+        async function carregarPlanilhaManager() {
             try {
                 const r = await window.Api.apiFetch("/api/jogos/inscricoes");
                 if (!r.ok) throw new Error();
                 const { inscricoes } = await r.json();
 
+                const wrapper = document.getElementById("tabela-jogos-wrapper");
                 if (!inscricoes || inscricoes.length === 0) {
-                    document.getElementById("tabela-jogos-wrapper").textContent = "Nenhuma inscrição realizada até o momento.";
+                    if (wrapper) wrapper.textContent = "Nenhuma inscrição realizada até o momento.";
                     return;
                 }
 
                 renderizarTabela(inscricoes);
                 configurarExports(inscricoes);
             } catch (err) {
-                document.getElementById("tabela-jogos-wrapper").textContent = "Erro ao carregar dados da planilha.";
+                const wrapper = document.getElementById("tabela-jogos-wrapper");
+                if (wrapper) wrapper.textContent = "Erro ao carregar dados da planilha.";
             }
+        }
+
+        function renderizarPlanilhaFiliado(inscricao) {
+            const wrapper = document.getElementById("tabela-jogos-wrapper");
+            if (!wrapper) return;
+            if (!inscricao) {
+                wrapper.innerHTML = "<em>Você ainda não está inscrito.</em>";
+                return;
+            }
+            renderizarTabela([inscricao]);
+
+            // Oculta botões de export para filiados (se houver)
+            const exportActions = document.getElementById("jogos-export-actions");
+            if (exportActions) exportActions.style.display = "none";
+        }
+
+        async function inicializarContainerPlanilha() {
+            const cardBody = secJogos.querySelector(".jogos-body");
+            const container = document.createElement("div");
+            container.className = "planilha-container";
+
+            const titulo = isManager ? "📊 Planilha de Inscrições (Gestão)" : "📋 Minha Inscrição";
+
+            container.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                    <h3 style="margin:0; color:#003366;">${titulo}</h3>
+                    <div id="jogos-export-actions">
+                        <button id="btn-export-csv" class="btn-export">Exportar CSV</button>
+                        <button id="btn-export-xls" class="btn-export" style="background:#2980b9;">Exportar XLS</button>
+                    </div>
+                </div>
+                <div id="tabela-jogos-wrapper" style="max-height: 600px; overflow: auto;">Carregando...</div>
+            `;
+            cardBody.appendChild(container);
+
+            if (!isManager) {
+                // Para filiado, a tabela será preenchida pelo carregarInscricao()
+                const wrapper = document.getElementById("tabela-jogos-wrapper");
+                if (wrapper) wrapper.innerHTML = "<em>Carregando seus dados...</em>";
+            }
+            // Para manager, o carregarInscricao() já chamará carregarPlanilhaManager()
         }
 
         function calcularIdade2026(dataNasc) {
@@ -382,7 +483,7 @@
         }
 
         carregarInscricao();
-        carregarPlanilha();
+        inicializarContainerPlanilha();
     }
 
     global.Jogos = {
