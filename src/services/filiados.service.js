@@ -59,7 +59,7 @@ const FILIADO_COLUMNS = `
   logradouro_bairro, numero, complemento, cidade, uf, cep,
   lotacao, situacao, senha_hash, twofa_secret, perfil_acesso,
   avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
-  arquivado_em, arquivado_motivo,
+  arquivado_em, arquivado_motivo, arquivado_por,
   dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
   dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
   dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
@@ -291,7 +291,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
         lotacao, situacao, perfil_acesso,
         logradouro_bairro, numero, complemento, cidade, uf, cep,
         avatar_url,
-        arquivado_em, arquivado_motivo,
+        arquivado_em, arquivado_motivo, arquivado_por,
         dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
         dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
         dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
@@ -476,11 +476,12 @@ async function arquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
     SET
       arquivado_em = NOW(),
       arquivado_motivo = $1,
+      arquivado_por = $2,
       atualizado_em = NOW()
-    WHERE id = $2
+    WHERE id = $3
     RETURNING ${FILIADO_COLUMNS}
   `,
-    [motivo, id]
+    [motivo, atorId, id]
   );
 
   const depois = rows[0] || null;
@@ -511,6 +512,7 @@ async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
     SET
       arquivado_em = NULL,
       arquivado_motivo = NULL,
+      arquivado_por = NULL,
       atualizado_em = NOW()
     WHERE id = $1
     RETURNING ${FILIADO_COLUMNS}

@@ -37,6 +37,24 @@
         return `<img class="avatar-mini" src="${src}" alt="Avatar ${safeNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
     }
 
+    function formatISOToBRDateTime(isoStr) {
+        if (!isoStr) return "—";
+        try {
+            const date = new Date(isoStr);
+            if (isNaN(date.getTime())) return "—";
+
+            const dia = date.getDate().toString().padStart(2, '0');
+            const mes = (date.getMonth() + 1).toString().padStart(2, '0');
+            const ano = date.getFullYear();
+            const hora = date.getHours().toString().padStart(2, '0');
+            const min = date.getMinutes().toString().padStart(2, '0');
+
+            return `${dia}/${mes}/${ano} ${hora}:${min}`;
+        } catch (e) {
+            return "—";
+        }
+    }
+
     async function inicializarFiliados(perfil) {
         const listaEl = document.getElementById("lista-filiados");
         perfilAtual = (perfil || "").toUpperCase();
@@ -233,9 +251,11 @@
 
         const canChangeProfile = ehAdmin || (["DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN");
 
+        const responsavel = f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—");
+
         return `
             <div id="alertas-modal"></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#f8f9fa; padding:10px; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#f8f9fa; padding:10px; border-radius:8px;">
                 <span>Status: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
                 <div>
                     ${isArquivado ?
@@ -243,6 +263,17 @@
                         `<button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.confirmarArquivar(${f.id})">📥 Arquivar</button>`}
                 </div>
             </div>
+
+            ${isArquivado ? `
+                <div class="archive-details">
+                    <div class="archive-details-title">📋 Detalhes do arquivamento</div>
+                    <div class="archive-details-grid">
+                        <div class="archive-item"><strong>Arquivado por:</strong> <span>${responsavel}</span></div>
+                        <div class="archive-item"><strong>Arquivado em:</strong> <span>${formatISOToBRDateTime(f.arquivado_em)}</span></div>
+                        <div class="archive-item full-width"><strong>Motivo:</strong> <span>${f.arquivado_motivo || "—"}</span></div>
+                    </div>
+                </div>
+            ` : ''}
 
             <form id="form-edicao-modal">
                 <div class="edit-grid">
