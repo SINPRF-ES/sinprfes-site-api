@@ -144,15 +144,43 @@
 
   function aplicarMascaraCPF(input) {
     if (!input) return;
+    const formatar = (val) => {
+      let v = val.replace(/\D/g, "").slice(0, 11);
+      if (v.length <= 3) return v;
+      if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
+      if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
+      return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
+    };
+    if (input.value) input.value = formatar(input.value);
     input.addEventListener("input", (e) => {
-      e.target.value = e.target.value.replace(/\D/g, "").slice(0, 11);
+      e.target.value = formatar(e.target.value);
     });
   }
 
   function aplicarMascaraCEP(input) {
     if (!input) return;
+    const formatar = (val) => {
+      let v = val.replace(/\D/g, "").slice(0, 8);
+      if (v.length <= 5) return v;
+      return `${v.slice(0, 5)}-${v.slice(5)}`;
+    };
+    if (input.value) input.value = formatar(input.value);
     input.addEventListener("input", (e) => {
-      e.target.value = e.target.value.replace(/\D/g, "").slice(0, 8);
+      e.target.value = formatar(e.target.value);
+    });
+  }
+
+  function aplicarMascaraData(input) {
+    if (!input) return;
+    const formatar = (val) => {
+      let v = val.replace(/\D/g, "").slice(0, 8);
+      if (v.length <= 2) return v;
+      if (v.length <= 4) return `${v.slice(0, 2)}/${v.slice(2)}`;
+      return `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
+    };
+    if (input.value) input.value = formatar(input.value);
+    input.addEventListener("input", (e) => {
+      e.target.value = formatar(e.target.value);
     });
   }
 
@@ -220,6 +248,7 @@
     aplicarMascaraConta,
     aplicarMascaraCPF,
     aplicarMascaraCEP,
+    aplicarMascaraData,
     gerarCamposDependentes,
     normalizeText
   };
