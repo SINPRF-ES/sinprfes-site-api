@@ -8,9 +8,11 @@ import { buscarCep } from '../services/cepService';
 interface Props {
   filiado: Filiado | null;
   setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
+  hideTitle?: boolean;
+  cardStyle?: any;
 }
 
-const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
+const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {} }) => {
   const [isBuscando, setIsBuscando] = useState(false);
 
   const handleCepChange = (value: string) => {
@@ -42,8 +44,8 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado }) => {
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>Endereço</Text>
+    <View style={[styles.card, cardStyle]}>
+      {!hideTitle && <Text style={styles.cardTitle}>Endereço</Text>}
       <View style={styles.cepContainer}>
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>CEP</Text>

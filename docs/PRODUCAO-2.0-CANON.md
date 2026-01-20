@@ -113,7 +113,7 @@ graph TD
     *   **UI:** Formato BR `DD/MM/YYYY`.
 
 ### 5.2. Valores Canônicos (Enums/Strings)
-*   **Perfis de Acesso (`perfil_acesso`):** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR`, `FILIADO`.
+*   **Perfis de Acesso (`perfil_acesso`):** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR` (FILIADO + Jogos Manager), `FILIADO`.
 *   **Situação Funcional (`situacao`):** `ATIVO`, `APOSENTADO`, `PENSIONISTA`, `LICENCIADO`.
 *   **Parentesco Dependentes (`parentesco`):** `FILHO_ENTEADO`, `CONJUGE_COMPANHEIRO`, `PAI_MAE`, `IRMAO`, `OUTRO`.
 

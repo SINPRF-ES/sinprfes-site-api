@@ -13,9 +13,10 @@ interface Props {
   filiado: Filiado | null;
   setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
   isEditing?: boolean;
+  hideTitle?: boolean;
 }
 
-const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }) => {
+const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, hideTitle = false }) => {
   const { usuario } = useAuth();
   const perfilUsuario = usuario?.perfil_acesso || '';
   const isAdmin = perfilUsuario === 'ADMIN';
@@ -31,6 +32,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
 
   const profileOptions = [
     { label: 'Filiado', value: 'FILIADO' },
+    { label: 'Organizador', value: 'ORGANIZADOR' },
     { label: 'Funcionário', value: 'FUNCIONARIO' },
     { label: 'Diretoria', value: 'DIRETORIA' },
     ...(isAdmin ? [{ label: 'Admin', value: 'ADMIN' }] : [])
@@ -38,7 +40,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Lotação, Situação e Perfil</Text>
+      {!hideTitle && <Text style={styles.cardTitle}>Lotação, Situação e Perfil</Text>}
 
       <Text style={styles.label}>Unidade de Lotação</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>

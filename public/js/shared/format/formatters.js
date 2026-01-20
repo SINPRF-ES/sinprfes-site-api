@@ -94,6 +94,19 @@
       return `${digits.slice(0, 5)}-${digits.slice(5)}`;
     },
 
+    /**
+     * Formata CPF em tempo real (LIVE MASK) para inputs.
+     * XXX.XXX.XXX-XX
+     */
+    formatCpfLive: function (val) {
+      if (!val) return '';
+      let v = String(val).replace(/\D/g, "").slice(0, 11);
+      if (v.length <= 3) return v;
+      if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
+      if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
+      return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
+    },
+
     applyMaskAgencia: function (el) {
       if (!el) return;
       const format = () => { el.value = this.formatAgencia(el.value); };
