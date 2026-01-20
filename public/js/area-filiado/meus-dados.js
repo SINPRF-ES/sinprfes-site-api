@@ -99,7 +99,9 @@
 
         const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF } = global.Utils || {};
 
-        const situacaoUpper = (situacao || situacao_funcional || "NÃO INFORMADO").toUpperCase();
+        let situacaoRaw = (situacao || situacao_funcional || "NÃO INFORMADO").toUpperCase();
+        // Strip "[OK] " or "OK " prefixes
+        const situacaoUpper = situacaoRaw.replace(/^(\[OK\]\s*|OK\s*)/i, "");
         let corStatus = '#95a5a6'; // Cinza
         let classeBadge = 'badge-desconhecido';
 
@@ -125,34 +127,43 @@
                 .profile-header {
                     background: linear-gradient(135deg, #003366 0%, #00152b 100%);
                     color: #fff;
-                    padding: 25px;
-                    border-radius: 12px;
-                    border-left: 6px solid #ffc107;
+                    padding: 35px 30px;
+                    border-radius: 15px;
+                    border-bottom: 6px solid #ffc107;
                     margin-bottom: 25px;
                     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
                     display: flex;
+                    justify-content: center;
+                }
+                .profile-header-inner {
+                    display: flex;
+                    flex-wrap: wrap;
                     align-items: center;
-                    gap: 20px;
+                    gap: 40px;
+                    text-align: left;
                 }
-                .header-avatar {
-                    width: 90px;
-                    height: 90px;
-                    border-radius: 50%;
-                    overflow: hidden;
-                    border: 3px solid #ffc107;
-                    background: #eee;
-                    flex-shrink: 0;
+                .header-left-col {
+                    flex: 0 0 auto;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 15px;
                 }
-                .header-avatar img {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
+                .header-right-col {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
                 }
-                .profile-name h2 { margin: 0; font-size: 1.5rem; color: #fff; }
-                .profile-badges { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+                .profile-name-title {
+                    margin: 0;
+                    font-size: 2rem;
+                    color: #fff;
+                    font-weight: 800;
+                }
+                .profile-badges { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
                 .badge {
-                    padding: 4px 12px;
-                    border-radius: 6px;
+                    padding: 6px 15px;
+                    border-radius: 20px;
                     font-size: 0.85rem;
                     font-weight: bold;
                     display: inline-block;
@@ -167,18 +178,20 @@
                     background: #fff;
                     color: #333;
                     padding: 25px;
-                    border-radius: 10px;
+                    border-radius: 12px;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
                     margin-bottom: 20px;
                     border: 1px solid #e0e0e0;
+                    transition: background-color 0.3s ease;
                 }
+                .data-card.bg-alt { background-color: #f7f9fc; }
                 .data-card h3 {
                     color: #003366;
-                    font-size: 1.1rem;
-                    border-bottom: 2px solid #f0f0f0;
+                    font-size: 1.2rem;
                     padding-bottom: 10px;
                     margin-bottom: 20px;
                     font-weight: bold;
+                    text-align: center;
                 }
                 .data-card input, .data-card select {
                     width: 100%;
@@ -244,16 +257,44 @@
                 .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
                 .avatar-fallback { font-size: 32px; color:#6c757d; }
 
-                .avatar-actions { display: flex; flex-direction: column; gap: 5px; }
+                .avatar-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+                .avatar-buttons { display: flex; gap: 8px; justify-content: center; }
+                .avatar-buttons button { padding: 5px 12px; font-size: 0.75rem; }
                 .btn-upload-label {
-                    background: rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 5px;
-                    font-size: 0.75rem; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.3);
+                    background: rgba(255,255,255,0.1); color: #fff; padding: 8px 16px; border-radius: 8px;
+                    font-size: 0.8rem; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.3);
                     transition: all 0.2s; display: inline-block;
+                    font-weight: 600;
                 }
                 .btn-upload-label:hover { background: rgba(255,255,255,0.2); }
                 #me-avatar-file { display: none; }
 
-                .form-actions { margin-top: 25px; text-align:right; }
+                .form-actions { margin-top: 35px; text-align: center; }
+
+                /* Zebra striping for dependents */
+                .dependente-card:nth-child(even) { background-color: #ffffff; }
+                .dependente-card:nth-child(odd) { background-color: #f7f9fc; }
+
+                @media (max-width: 768px) {
+                    .profile-header {
+                        padding: 30px 20px;
+                    }
+                    .profile-header-inner {
+                        flex-direction: column;
+                        text-align: center;
+                        gap: 25px;
+                    }
+                    .header-right-col {
+                        align-items: center;
+                        min-width: unset;
+                    }
+                    .profile-name-title {
+                        font-size: 1.6rem;
+                    }
+                    .profile-badges {
+                        justify-content: center;
+                    }
+                }
             `;
             document.head.appendChild(s);
         }
@@ -269,48 +310,57 @@
         const situacaoLower = situacaoUpper.toLowerCase();
         container.innerHTML = `
             <div class="profile-header">
-                <div class="profile-header-avatar-section">
-                    <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
-                    <div class="avatar-actions">
-                        <label class="btn-upload-label" for="me-avatar-file">Alterar Foto</label>
-                        <input type="file" id="me-avatar-file" accept="image/*" />
-                        <div style="display:flex; gap:5px;">
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-foto" style="display:none; padding: 4px 8px; font-size: 0.7rem;">Salvar</button>
-                            <button type="button" class="btn btn-danger btn-sm" id="btn-remover-foto" style="padding: 4px 8px; font-size: 0.7rem;">Remover</button>
+                <div class="profile-header-inner">
+                    <div class="header-left-col">
+                        <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
+                        <div class="avatar-actions">
+                            <label class="btn-upload-label" for="me-avatar-file">Alterar Foto</label>
+                            <input type="file" id="me-avatar-file" accept="image/*" />
+                            <div class="avatar-buttons">
+                                <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-foto" style="display:none;">Salvar</button>
+                                <button type="button" class="btn btn-danger btn-sm" id="btn-remover-foto">Remover</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="profile-name">
-                    <h2>${nome || ""}</h2>
-                    <div class="profile-badges">
-                        <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
-                        <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
+                    <div class="header-right-col">
+                        <h2 class="profile-name-title">${nome || ""}</h2>
+                        <div class="profile-badges">
+                            <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
+                            <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="data-card">
-                <h3>Informações Pessoais</h3>
-                <div class="field-row">
-                    <div class="field-group">
-                        <label>CPF</label>
-                        <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
+            <form id="form-meus-dados">
+                <div class="data-card">
+                    <h3>👤 Informações Pessoais</h3>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>CPF</label>
+                            <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
+                        </div>
+                        <div class="field-group">
+                            <label>Data de Nascimento</label>
+                            <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
+                        </div>
                     </div>
-                    <div class="field-group">
-                        <label>Data de Nascimento</label>
-                        <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Idade</label>
+                            <input type="text" value="${idadeTxt}" readonly />
+                        </div>
+                        <div class="field-group">
+                            <label>Lotação</label>
+                            <select id="me-lotacao">
+                                ${opcoes}
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div class="field-row">
-                    <div class="field-group">
-                        <label>Idade</label>
-                        <input type="text" value="${idadeTxt}" readonly />
-                    </div>
-                    <div class="field-group"></div>
                 </div>
 
-                <h3 style="margin-top:25px;">Contato</h3>
-                <form id="form-meus-dados">
+                <div class="data-card bg-alt">
+                    <h3>📞 Contato</h3>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Telefone 1</label>
@@ -332,69 +382,53 @@
                             <input type="email" id="me-email2" value="${email2 || ""}" />
                         </div>
                     </div>
+                </div>
 
-                    <h3 style="margin-top:25px;">🏠 Endereço</h3>
-
-                    <!-- ✅ ALTERADO: CEP com wrapper flex e tamanho controlado -->
-                    <div class="field-row" style="grid-template-columns: 1fr;">
-                        <div class="field-group">
+                <div class="data-card">
+                    <h3>🏠 Endereço</h3>
+                    <div class="address-grid-v2">
+                        <!-- Linha 1: CEP + Logradouro -->
+                        <div class="edit-group cep-group">
                             <label>CEP</label>
-                            <div class="cep-wrapper">
-                                <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
-                                <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                </button>
+                            <div class="cep-input-wrapper">
+                                <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000-000" class="campo-cep" />
+                                <span class="cep-search-icon" id="btn-buscar-cep" style="cursor:pointer;">🔍</span>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="field-row" style="grid-template-columns: 1fr;">
-                        <div class="field-group">
-                            <label>Logradouro</label>
-                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly />
+                        <div class="edit-group logradouro-group">
+                            <label>Logradouro / Bairro</label>
+                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly style="background:#f0f0f0;" />
                         </div>
-                    </div>
 
-                    <div class="field-row" style="grid-template-columns: 1fr 2fr 1fr;">
-                        <div class="field-group">
-                            <label>Nº</label>
+                        <!-- Linha 2: Número + Complemento -->
+                        <div class="edit-group">
+                            <label>Número</label>
                             <input type="text" id="me-numero" value="${numero || ""}" />
                         </div>
-                        <div class="field-group">
-                            <label>Compl.</label>
+                        <div class="edit-group">
+                            <label>Complemento</label>
                             <input type="text" id="me-complemento" value="${complemento || ""}" />
                         </div>
-                        <div class="field-group">
-                            <label>UF</label>
-                            <input type="text" id="me-uf" value="${uf || ""}" readonly />
-                        </div>
-                    </div>
 
-                    <div class="field-row" style="grid-template-columns: 1fr;">
-                        <div class="field-group">
+                        <!-- Linha 3: Cidade + UF -->
+                        <div class="edit-group">
                             <label>Cidade</label>
-                            <input type="text" id="me-cidade" value="${cidade || ""}" readonly />
+                            <input type="text" id="me-cidade" value="${cidade || ""}" readonly style="background:#f0f0f0;" />
                         </div>
+                        <div class="edit-group">
+                            <label>UF</label>
+                            <input type="text" id="me-uf" value="${uf || ""}" readonly style="background:#f0f0f0;" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-card bg-alt">
+                    <div class="dependentes-header" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
+                        <h3 style="margin: 0;">👶 Dependentes (até 5)</h3>
+                        <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm" style="position: absolute; right: 0;">Excluir</button>
                     </div>
 
-                    <div class="field-row">
-                        <div class="field-group">
-                            <label>Lotação</label>
-                            <select id="me-lotacao">
-                                ${opcoes}
-                            </select>
-                        </div>
-                        <div class="field-group">
-                            <label></label>
-                            <input type="text" value="" style="visibility:hidden;" />
-                        </div>
-                    </div>
-
-                    <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; margin-top:25px;">
-                        <h3>Dependentes (até 5)</h3>
-                        <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm">Excluir</button>
-                    </div>
-                    <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                    <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                         <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
                         <div id="checkboxes-excluir-dependentes" style="display: flex; flex-direction: column; gap: 8px;">
                             <!-- Checkboxes serão inseridos aqui -->
@@ -407,13 +441,13 @@
                     <div id="dependentes-container-meus-dados">
                         <!-- Campos dos dependentes serão inseridos aqui -->
                     </div>
+                </div>
 
-                    <div class="form-actions">
-                        <span id="meus-dados-status" class="field-hint" style="margin-right: 15px; font-weight:bold;"></span>
-                        <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 30px;">Salvar Dados</button>
-                    </div>
-                  </form>
-            </div>
+                <div class="form-actions">
+                    <span id="meus-dados-status" class="field-hint" style="display: block; margin-bottom: 10px; font-weight:bold;"></span>
+                    <button type="submit" class="btn btn-primary btn-lg" style="padding: 15px 50px; font-size: 1.2rem; border-radius: 50px; box-shadow: 0 4px 15px rgba(241, 196, 15, 0.3);">Salvar Dados</button>
+                </div>
+            </form>
         `;
 
         // --- MÁSCARAS ---

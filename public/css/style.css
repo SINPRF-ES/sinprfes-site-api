@@ -591,6 +591,50 @@ footer {
   margin-top: 16px;
 }
 
+/* Utility classes for central alignment and section blocks */
+.text-center { text-align: center; }
+.flex-center { display: flex; justify-content: center; align-items: center; }
+.section-block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+.section-block-alt { background-color: #f7f9fc; }
+
+/* Archive details in modal */
+.archive-details {
+    background: #fdf2f2;
+    border: 1px solid #fbd5d5;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+.archive-details-title {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #9b1c1c;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #fbd5d5;
+    padding-bottom: 4px;
+}
+.archive-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+.archive-item {
+    font-size: 0.8rem;
+    color: #333;
+}
+.archive-item.full-width {
+    grid-column: 1 / -1;
+}
+.archive-item strong {
+    color: #771d1d;
+}
+
 /* Mobile: 1 coluna para tudo */
 @media (max-width: 768px) {
   .form-grid,
@@ -1505,4 +1549,52 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+/* =========================================================
+   NEW ADDRESS GRID (3-row structure)
+   ========================================================= */
+.address-grid, .address-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.address-grid .cep-group, .address-grid-v2 .cep-group {
+    grid-column: 1 / 2;
+}
+
+.address-grid .logradouro-group, .address-grid-v2 .logradouro-group {
+    grid-column: 2 / 3;
+}
+
+.cep-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cep-input-wrapper input {
+    width: 100% !important;
+    padding-right: 35px !important;
+}
+
+.cep-search-icon {
+    position: absolute;
+    right: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    user-select: none;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .address-grid, .address-grid-v2 {
+        grid-template-columns: 1fr;
+    }
+    .address-grid .cep-group, .address-grid-v2 .cep-group,
+    .address-grid .logradouro-group, .address-grid-v2 .logradouro-group {
+        grid-column: auto;
+    }
 }
