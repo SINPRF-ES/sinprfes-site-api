@@ -39,24 +39,26 @@
 
     async function inicializarFiliados(perfil) {
         const listaEl = document.getElementById("lista-filiados");
+        perfilAtual = (perfil || "").toUpperCase();
+        const { apiFetch } = global.Utils || {};
+
         if (!listaEl) {
             const secFiliados = document.getElementById("sec-filiados");
             if (secFiliados) {
+                const placeholder = perfilAtual === "FILIADO" ? "Buscar por nome..." : "Buscar por nome ou CPF...";
                 secFiliados.innerHTML = `
                     <div class="search-box-container">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                            <h2 style="margin:0;">👥 Gestão de Filiados</h2>
+                            <h2 style="margin:0;">👥 Filiados</h2>
                             <button id="btn-novo-filiado" class="btn btn-primary" style="display:none;">+ Novo Filiado</button>
                         </div>
-                        <input type="text" id="busca-filiados" placeholder="Buscar por nome ou CPF..." style="width:100%; padding:10px; border-radius:8px; border:none; color:#333;">
+                        <input type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; padding:10px; border-radius:8px; border:none; color:#333;">
                     </div>
                     <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
                     <div id="lista-filiados"></div>
                 `;
             }
         }
-
-        perfilAtual = (perfil || "").toUpperCase();
         const { apiFetch } = global.Utils || {};
 
         const canManageProfiles = perfilAtual === "ADMIN" || perfilAtual === "DIRETORIA" || perfilAtual === "FUNCIONARIO";
@@ -141,13 +143,23 @@
         const el = document.getElementById("lista-filiados");
         if (!el) return;
 
-        const { normalizarTextoBusca, formatarCPF, formatarTelefoneTexto } = global.Utils || {};
-        const t = (termo || "").toLowerCase();
+        const { normalizeText, formatarCPF, formatarTelefoneTexto } = global.Utils || {};
+        const tNorm = normalizeText ? normalizeText(termo) : (termo || "").toLowerCase();
+
+        const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
+        const tDigits = onlyDigits(termo);
 
         let res = cacheLista.filter(f => {
-            const nome = (f.nome || "").toLowerCase();
-            const cpf = (f.cpf || "").toLowerCase();
-            return nome.includes(t) || cpf.includes(t);
+            const nomeNorm = normalizeText ? normalizeText(f.nome) : (f.nome || "").toLowerCase();
+            const matchesNome = nomeNorm.includes(tNorm);
+
+            let matchesCpf = false;
+            if (perfilAtual !== "FILIADO") {
+                const cpfDigits = onlyDigits(f.cpf);
+                matchesCpf = tDigits && cpfDigits.includes(tDigits);
+            }
+
+            return matchesNome || matchesCpf;
         });
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
@@ -184,7 +196,9 @@
                             <div>
                                 <div class="filiado-nome">${f.nome}</div>
                                 <div class="filiado-meta">${f.cpf ? formatarCPF(f.cpf) + ' • ' : ''}${f.lotacao || 'SEDE'}</div>
+                                ${perfilAtual === "FILIADO" ? '' : `
                                 <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
+                                `}
                             </div>
                         </div>
                         <div style="text-align:right;">
@@ -311,8 +325,20 @@
                 </div>
 
                 <div class="edit-group span-2" style="margin-top:20px;">
-                    <h4 style="border-bottom:1px solid #eee; padding-bottom:5px;">Dependentes</h4>
-                    <div id="modal-dependentes-container"></div>
+                    <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom:1px solid #eee; padding-bottom:5px;">
+                        <h4 style="margin:0;">Dependentes</h4>
+                        <button type="button" id="btn-toggle-excluir-modal" class="btn btn-danger-outline btn-sm">Excluir</button>
+                    </div>
+
+                    <div id="painel-excluir-modal" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                        <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
+                        <div id="checkboxes-excluir-modal" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <button type="button" id="btn-confirmar-exclusao-modal" class="btn btn-danger">Confirmar Exclusão</button>
+                        </div>
+                    </div>
+
+                    <div id="modal-dependentes-container" style="margin-top:10px;"></div>
                 </div>
 
                 <div class="edit-group span-2" style="margin-top:20px;">
@@ -343,8 +369,14 @@
             const container = document.getElementById("modal-dependentes-container");
             gerarCamposDependentes(container, "mod");
 
+            const dependentesAtuais = [];
+
             // Preencher dependentes
             for (let i = 1; i <= 5; i++) {
+                if (filiado[`dep${i}_nome`]) {
+                    dependentesAtuais.push({ nome: filiado[`dep${i}_nome`], index: i });
+                }
+
                 const nome = document.getElementById(`mod-dep${i}_nome`);
                 const cpf = document.getElementById(`mod-dep${i}_cpf`);
                 const data = document.getElementById(`mod-dep${i}_data_nascimento`);
@@ -377,17 +409,75 @@
                 if (select && hidden) {
                     hidden.value = pVal;
                     const options = Array.from(select.options).map(o => o.value);
-                    if (options.includes(pVal)) {
+                    // Se o valor estiver nas opções e NÃO for OUTRO, seleciona e esconde campo manual
+                    if (pVal && pVal !== "OUTRO" && options.includes(pVal)) {
                         select.value = pVal;
+                        if (outro) { outro.style.display = "none"; outro.value = ""; }
                     } else if (pVal) {
+                        // Se for OUTRO ou valor customizado
                         select.value = "OUTRO";
                         if (outro) {
-                            outro.value = pVal;
+                            outro.value = (pVal === "OUTRO") ? "" : pVal;
                             outro.style.display = "block";
                         }
+                    } else {
+                        // Vazio
+                        select.value = "";
+                        if (outro) { outro.style.display = "none"; outro.value = ""; }
                     }
                 }
             }
+
+            // Lógica de Exclusão no Modal
+            const btnToggleExcluir = document.getElementById("btn-toggle-excluir-modal");
+            const painelExcluir = document.getElementById("painel-excluir-modal");
+            const containerCheckboxes = document.getElementById("checkboxes-excluir-modal");
+            const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-modal");
+
+            if (dependentesAtuais.length === 0) {
+                btnToggleExcluir.style.display = 'none';
+            }
+
+            btnToggleExcluir.onclick = () => {
+                painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
+            };
+
+            containerCheckboxes.innerHTML = '';
+            dependentesAtuais.forEach(dep => {
+                containerCheckboxes.innerHTML += `
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight:normal; cursor:pointer;">
+                        <input type="checkbox" name="excluir_dep_index" value="${dep.index}" style="width: auto;">
+                        Dependente ${dep.index}: ${dep.nome}
+                    </label>
+                `;
+            });
+
+            btnConfirmarExclusao.onclick = () => {
+                const marcados = Array.from(containerCheckboxes.querySelectorAll('input:checked')).map(cb => cb.value);
+                if (!marcados.length) return alert("Selecione um dependente.");
+
+                if (confirm(`Excluir ${marcados.length} dependente(s)?\n\nIsso limpará os campos e compactará a lista ao salvar.`)) {
+                    marcados.forEach(idx => {
+                        document.getElementById(`mod-dep${idx}_nome`).value = "";
+                        document.getElementById(`mod-dep${idx}_cpf`).value = "";
+                        document.getElementById(`mod-dep${idx}_data_nascimento`).value = "";
+                        const select = document.getElementById(`mod-dep${idx}_parentesco_select`);
+                        if (select) select.value = "";
+                        const hidden = document.getElementById(`mod-dep${idx}_parentesco`);
+                        if (hidden) hidden.value = "";
+                        const outro = document.getElementById(`mod-dep${idx}_parentesco_outro`);
+                        if (outro) { outro.value = ""; outro.style.display = "none"; }
+                    });
+                    painelExcluir.style.display = "none";
+                    // Trigger submit to save and let backend compact
+                    // Usamos requestSubmit se disponível para disparar a validação e o handler onsubmit
+                    if (typeof form.requestSubmit === "function") {
+                        form.requestSubmit();
+                    } else {
+                        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    }
+                }
+            };
         }
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));

@@ -342,7 +342,9 @@
                             <label>CEP</label>
                             <div class="cep-wrapper">
                                 <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000000" />
-                                <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP"></button>
+                                <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                </button>
                             </div>
                         </div>
                     </div>

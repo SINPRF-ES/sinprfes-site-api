@@ -90,9 +90,17 @@
     return only.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   }
 
+  function normalizeText(str) {
+    if (!str) return "";
+    return String(str)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
   function normalizarTextoBusca(valor) {
-    if (!valor) return "";
-    return String(valor).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").replace(/[^\w]/g, "").toLowerCase();
+    return normalizeText(valor);
   }
 
   function exibirAlertaFlutuante() {
@@ -208,6 +216,7 @@
     aplicarMascaraConta,
     aplicarMascaraCPF,
     aplicarMascaraCEP,
-    gerarCamposDependentes
+    gerarCamposDependentes,
+    normalizeText
   };
 })(typeof window !== 'undefined' ? window : global);

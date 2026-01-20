@@ -15,7 +15,7 @@ const PARENTESCO_OPTIONS = [
  * Normaliza um input (value ou label) para um value canônico.
  */
 function normalizeParentesco(input) {
-  if (!input) return 'OUTRO';
+  if (!input) return null;
 
   const normalizedInput = input.trim().toUpperCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove acentos
