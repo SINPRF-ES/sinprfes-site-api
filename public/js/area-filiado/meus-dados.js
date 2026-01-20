@@ -133,9 +133,12 @@
                     margin-bottom: 25px;
                     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
                     display: flex;
+                    justify-content: center;
+                }
+                .profile-header-inner {
+                    display: flex;
                     flex-wrap: wrap;
                     align-items: center;
-                    justify-content: center;
                     gap: 40px;
                     text-align: left;
                 }
@@ -147,8 +150,6 @@
                     gap: 15px;
                 }
                 .header-right-col {
-                    flex: 1;
-                    min-width: 280px;
                     display: flex;
                     flex-direction: column;
                     gap: 10px;
@@ -276,9 +277,11 @@
 
                 @media (max-width: 768px) {
                     .profile-header {
+                        padding: 30px 20px;
+                    }
+                    .profile-header-inner {
                         flex-direction: column;
                         text-align: center;
-                        padding: 30px 20px;
                         gap: 25px;
                     }
                     .header-right-col {
@@ -307,22 +310,24 @@
         const situacaoLower = situacaoUpper.toLowerCase();
         container.innerHTML = `
             <div class="profile-header">
-                <div class="header-left-col">
-                    <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
-                    <div class="avatar-actions">
-                        <label class="btn-upload-label" for="me-avatar-file">Alterar Foto</label>
-                        <input type="file" id="me-avatar-file" accept="image/*" />
-                        <div class="avatar-buttons">
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-foto" style="display:none;">Salvar</button>
-                            <button type="button" class="btn btn-danger btn-sm" id="btn-remover-foto">Remover</button>
+                <div class="profile-header-inner">
+                    <div class="header-left-col">
+                        <div class="avatar-preview" id="avatar-preview">${avatarImg}</div>
+                        <div class="avatar-actions">
+                            <label class="btn-upload-label" for="me-avatar-file">Alterar Foto</label>
+                            <input type="file" id="me-avatar-file" accept="image/*" />
+                            <div class="avatar-buttons">
+                                <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-foto" style="display:none;">Salvar</button>
+                                <button type="button" class="btn btn-danger btn-sm" id="btn-remover-foto">Remover</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="header-right-col">
-                    <h2 class="profile-name-title">${nome || ""}</h2>
-                    <div class="profile-badges">
-                        <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
-                        <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
+                    <div class="header-right-col">
+                        <h2 class="profile-name-title">${nome || ""}</h2>
+                        <div class="profile-badges">
+                            <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
+                            <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
+                        </div>
                     </div>
                 </div>
             </div>
