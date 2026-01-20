@@ -178,6 +178,62 @@ Diretoria SINPRF-ES
 // Jogos (confirmação / cancelamento)
 // --------------------------
 
+const MAPPING_MODALIDADES_JOGOS_2026 = {
+  atletismo_100m_masc: '100m Masculino',
+  atletismo_100m_fem: '100m Feminino',
+  atletismo_400m_masc: '400m Masculino',
+  atletismo_400m_fem: '400m Feminino',
+  atletismo_1500m_masc: '1500m Masculino',
+  atletismo_1500m_fem: '1500m Feminino',
+  atletismo_5000m_masc: '5000m Masculino',
+  atletismo_5000m_fem: '5000m Feminino',
+  beach_tenis_dupla_livre: 'Beach Tênis - Dupla Livre',
+  beach_tenis_dupla_mista: 'Beach Tênis - Dupla Mista',
+  canastra: 'Canastra',
+  domino: 'Dominó',
+  truco_duplas: 'Truco (Duplas)',
+  xadrez: 'Xadrez',
+  futebol_society_livre: 'Futebol Society (Livre)',
+  futebol_society_master: 'Futebol Society (Master - Acima de 55 anos)',
+  futsal_livre: 'Futsal (Livre)',
+  futevolei: 'Futevôlei',
+  voleibol_livre: 'Voleibol (Livre)',
+  voleibol_praia_dupla_masc: 'Vôlei de Praia - Dupla Masculina',
+  voleibol_praia_dupla_mista: 'Vôlei de Praia - Dupla Mista',
+  jiu_jitsu: 'Jiu-Jitsu',
+  natacao_50m_livre_masc: '50m Nado Livre (Masculino)',
+  natacao_50m_livre_fem: '50m Nado Livre (Feminino)',
+  natacao_50m_costas_masc: '50m Nado Costas (Masculino)',
+  natacao_50m_costas_fem: '50m Nado Costas (Feminino)',
+  natacao_50m_peito_masc: '50m Nado Peito (Masculino)',
+  natacao_50m_peito_fem: '50m Nado Peito (Feminino)',
+  natacao_50m_borboleta_masc: '50m Nado Borboleta (Masculino)',
+  natacao_50m_borboleta_fem: '50m Nado Borboleta (Feminino)',
+  natacao_revezamento_4x50m_livre: 'Revezamento 4x50m Livre',
+  natacao_revezamento_2x50m_misto: 'Revezamento 2x50 Misto',
+  sinuca_individual: 'Sinuca Individual',
+  sinuca_duplas: 'Sinuca Duplas',
+  tenis_quadra_individual_masc: 'Tênis de Quadra - Individual (Masculino)',
+  tenis_quadra_duplas_livre: 'Tênis de Quadra - Duplas (Livre)',
+  tenis_mesa_masc: 'Tênis de Mesa (Masculino)',
+  tenis_mesa_fem: 'Tênis de Mesa (Feminino)',
+  tenis_mesa_duplas: 'Tênis de Mesa (Duplas)',
+  tiro_nra_masc: 'Tiro NRA (Masculino)',
+  tiro_nra_fem: 'Tiro NRA (Feminino)',
+  tiro_ispc_masc: 'Tiro ISPC (Masculino)',
+  tiro_ispc_fem: 'Tiro ISPC (Feminino)',
+  peteca: 'Peteca',
+  damas: 'Damas',
+  bocha: 'Bocha',
+};
+
+function formatarModalidadesJogos(modalidades) {
+  if (!Array.isArray(modalidades)) return modalidades || "-";
+  return modalidades
+    .map((id) => MAPPING_MODALIDADES_JOGOS_2026[id] || id)
+    .join(", ");
+}
+
 function extrairEmailDestino(obj = {}) {
   return (
     (obj.email_destino && String(obj.email_destino).trim()) ||
@@ -202,9 +258,7 @@ async function enviarEmailConfirmacaoInscricaoJogos(payload) {
   const primeiroNome = (filiado.nome || "").split(" ")[0] || "Colega";
   const subject = `Confirmação de Pré-inscrição - Jogos`;
 
-  const modalidadesTexto = Array.isArray(inscricao.modalidades)
-    ? inscricao.modalidades.join(", ")
-    : (inscricao.modalidades || "-");
+  const modalidadesTexto = formatarModalidadesJogos(inscricao.modalidades);
 
   const corpo = `
 Olá, ${primeiroNome}!
@@ -242,9 +296,7 @@ async function enviarEmailCancelamentoInscricaoJogos(payload) {
   const primeiroNome = (filiado.nome || "").split(" ")[0] || "Colega";
   const subject = `Cancelamento de Pré-inscrição - Jogos`;
 
-  const modalidadesTexto = Array.isArray(inscricao.modalidades)
-    ? inscricao.modalidades.join(", ")
-    : (inscricao.modalidades || "-");
+  const modalidadesTexto = formatarModalidadesJogos(inscricao.modalidades);
 
   const corpo = `
 Olá, ${primeiroNome}!
