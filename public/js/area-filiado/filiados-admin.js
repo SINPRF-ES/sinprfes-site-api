@@ -40,6 +40,7 @@
     async function inicializarFiliados(perfil) {
         const listaEl = document.getElementById("lista-filiados");
         perfilAtual = (perfil || "").toUpperCase();
+        const { apiFetch } = global.Utils || {};
 
         if (!listaEl) {
             const secFiliados = document.getElementById("sec-filiados");
