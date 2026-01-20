@@ -50,8 +50,7 @@
     }
 
     async function carregarMeusDados() {
-        const { apiFetch } = global.Utils || {};
-        if (!apiFetch) return null;
+        if (!window.Api.apiFetch) return null;
 
         const conteudo = document.getElementById("area-filiado-conteudo");
         const alerta = document.getElementById("alerta-endereco-desatualizado");
@@ -61,7 +60,7 @@
         if (alerta) alerta.style.display = 'none';
 
         try {
-            const resp = await apiFetch("/api/filiados/me");
+            const resp = await window.Api.apiFetch("/api/filiados/me");
             if (!resp.ok) throw new Error();
             const dados = await resp.json();
 
@@ -98,7 +97,7 @@
             avatar_url
         } = dados;
 
-        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF, apiFetch } = global.Utils || {};
+        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF } = global.Utils || {};
 
         const situacaoUpper = (situacao || situacao_funcional || "NÃO INFORMADO").toUpperCase();
         let corStatus = '#95a5a6'; // Cinza
@@ -525,7 +524,7 @@
 
             if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
                 try {
-                    const r = await apiFetch(`/api/filiados/${dados.id}/dependentes`, {
+                    const r = await window.Api.apiFetch(`/api/filiados/${dados.id}/dependentes`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ indices: indicesParaExcluir })
@@ -618,7 +617,7 @@
             }
 
             try {
-                const r = await apiFetch("/api/filiados/me", { method: "PUT", body: payload });
+                const r = await window.Api.apiFetch("/api/filiados/me", { method: "PUT", body: payload });
                 if (r.ok) {
                     await carregarMeusDados();
                     alert("Dados salvos com sucesso!");
@@ -661,7 +660,7 @@
             fd.append("avatar", file);
 
             try {
-                const r = await apiFetch("/api/filiados/me/avatar", { method: "POST", body: fd });
+                const r = await window.Api.apiFetch("/api/filiados/me/avatar", { method: "POST", body: fd });
                 if (r.ok) {
                     alert("Foto atualizada com sucesso!");
                     btnSalvarFoto.style.display = "none";
@@ -685,7 +684,7 @@
           btnRemoverFoto.innerText = "Removendo...";
 
           try {
-            const r = await apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
+            const r = await window.Api.apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
             if (r.ok) {
               alert("Foto removida com sucesso!");
               previewContainer.innerHTML = `<div class="avatar-fallback"></div>`;

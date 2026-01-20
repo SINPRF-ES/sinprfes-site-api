@@ -23,7 +23,7 @@
         const secRes = document.getElementById("sec-ressarcimento");
         if (!secRes) return;
 
-        const { formatarCPF, aplicarMascaraTelefone, apiFetch } = global.Utils || {};
+        const { formatarCPF, aplicarMascaraTelefone } = global.Utils || {};
 
         if (!document.getElementById('style-ressarcimento')) {
             const s = document.createElement('style');
@@ -183,9 +183,9 @@
 
         async function carregarDados() {
             let user = JSON.parse(localStorage.getItem("userInfo") || "{}");
-            if (!user.nome && apiFetch) {
+            if (!user.nome && window.Api.apiFetch) {
                 try {
-                    const r = await apiFetch("/api/filiados/me");
+                    const r = await window.Api.apiFetch("/api/filiados/me");
                     user = await r.json();
                     localStorage.setItem("userInfo", JSON.stringify(user));
                 } catch(e) {}
@@ -237,7 +237,7 @@
             if (tel) fd.set("telefone_contato", tel.value.replace(/\D/g, ""));
 
             try {
-                const r = await apiFetch("/api/ressarcimentos", { method: "POST", body: fd });
+                const r = await window.Api.apiFetch("/api/ressarcimentos", { method: "POST", body: fd });
                 if (r.ok) {
                     status.textContent = "✅ Sucesso!";
                     form.reset();

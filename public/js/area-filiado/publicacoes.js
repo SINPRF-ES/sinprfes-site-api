@@ -22,8 +22,6 @@
 
         container.innerHTML = `<p style="text-align:center; color:#666; padding: 40px;">🔄 Carregando biblioteca...</p>`;
 
-        const { apiFetch } = global.Utils || {};
-
         if (!document.getElementById('style-publicacoes')) {
             const s = document.createElement('style');
             s.id = 'style-publicacoes';
@@ -109,7 +107,7 @@
             iframe.src = "";
 
             try {
-                const res = await apiFetch(`/api/publicacoes/arquivo/${idArquivo}`);
+                const res = await window.Api.apiFetch(`/api/publicacoes/arquivo/${idArquivo}`);
                 if (!res.ok) throw new Error("Erro API");
                 const blob = await res.blob();
                 currentBlobUrl = URL.createObjectURL(blob);
@@ -127,7 +125,7 @@
             let url = "/api/publicacoes";
             if (folderId) url += `?folderId=${folderId}`;
 
-            const r = await apiFetch(url);
+            const r = await window.Api.apiFetch(url);
             if(!r.ok) throw new Error("Erro API");
             let lista = await r.json();
 

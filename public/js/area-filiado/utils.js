@@ -10,6 +10,8 @@
     ? "http://localhost:3000"
     : "https://api.sinprfes.org.br";
 
+  window.Api = window.Api || {};
+
   function obterToken() {
     return localStorage.getItem("token");
   }
@@ -22,39 +24,41 @@
     }
   }
 
-  async function apiFetch(url, options = {}) {
-    const token = obterToken();
-    if (!token) {
-      window.location.href = "/login.html";
-      return;
-    }
-
-    const headers = new Headers(options.headers || {});
-    headers.set("Authorization", `Bearer ${token}`);
-
-    const isFormData = (typeof FormData !== "undefined") && (options.body instanceof FormData);
-    if (options.body && !isFormData && typeof options.body === "object") {
-      const isBlob = (typeof Blob !== "undefined") && (options.body instanceof Blob);
-      const isArrayBuffer = (typeof ArrayBuffer !== "undefined") && (options.body instanceof ArrayBuffer);
-      if (!isBlob && !isArrayBuffer) {
-        if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-        options.body = JSON.stringify(options.body);
+  if (!window.Api.apiFetch) {
+    window.Api.apiFetch = async function apiFetch(url, options = {}) {
+      const token = obterToken();
+      if (!token) {
+        window.location.href = "/login.html";
+        return;
       }
-    }
 
-    const finalUrl = (url && url.startsWith('/')) ? (API_BASE + url) : url;
-    const response = await fetch(finalUrl, { ...options, headers });
+      const headers = new Headers(options.headers || {});
+      headers.set("Authorization", `Bearer ${token}`);
 
-    if (response.status === 401) {
-      alert("Sessão expirada. Faça login novamente.");
-      localStorage.removeItem("token");
-      localStorage.removeItem("userInfo");
-      localStorage.removeItem("perfil_acesso");
-      window.location.href = "/login.html";
-      throw new Error("Sessão expirada");
-    }
+      const isFormData = (typeof FormData !== "undefined") && (options.body instanceof FormData);
+      if (options.body && !isFormData && typeof options.body === "object") {
+        const isBlob = (typeof Blob !== "undefined") && (options.body instanceof Blob);
+        const isArrayBuffer = (typeof ArrayBuffer !== "undefined") && (options.body instanceof ArrayBuffer);
+        if (!isBlob && !isArrayBuffer) {
+          if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+          options.body = JSON.stringify(options.body);
+        }
+      }
 
-    return response;
+      const finalUrl = (url && url.startsWith('/')) ? (API_BASE + url) : url;
+      const response = await fetch(finalUrl, { ...options, headers });
+
+      if (response.status === 401) {
+        alert("Sessão expirada. Faça login novamente.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("userInfo");
+        localStorage.removeItem("perfil_acesso");
+        window.location.href = "/login.html";
+        throw new Error("Sessão expirada");
+      }
+
+      return response;
+    };
   }
 
   function aplicarMascaraTelefone(input) {
@@ -206,7 +210,7 @@
   global.Utils = {
     obterToken,
     obterUserInfo,
-    apiFetch,
+    apiFetch: window.Api.apiFetch,
     aplicarMascaraTelefone,
     formatarTelefoneTexto,
     formatarCPF,
