@@ -37,6 +37,24 @@
         return `<img class="avatar-mini" src="${src}" alt="Avatar ${safeNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
     }
 
+    function formatISOToBRDateTime(isoStr) {
+        if (!isoStr) return "—";
+        try {
+            const date = new Date(isoStr);
+            if (isNaN(date.getTime())) return "—";
+
+            const dia = date.getDate().toString().padStart(2, '0');
+            const mes = (date.getMonth() + 1).toString().padStart(2, '0');
+            const ano = date.getFullYear();
+            const hora = date.getHours().toString().padStart(2, '0');
+            const min = date.getMinutes().toString().padStart(2, '0');
+
+            return `${dia}/${mes}/${ano} ${hora}:${min}`;
+        } catch (e) {
+            return "—";
+        }
+    }
+
     async function inicializarFiliados(perfil) {
         const listaEl = document.getElementById("lista-filiados");
         perfilAtual = (perfil || "").toUpperCase();
@@ -233,10 +251,14 @@
 
         const canChangeProfile = ehAdmin || (["DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN");
 
+        const responsavel = f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—");
+
         return `
             <div id="alertas-modal"></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#f8f9fa; padding:10px; border-radius:8px;">
-                <span>Status: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
+
+            <!-- Barra de Status do Filiado -->
+            <div class="status-bar-modal">
+                <span>Estado: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
                 <div>
                     ${isArquivado ?
                         `<button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.confirmarDesarquivar(${f.id})">📤 Desarquivar</button>` :
@@ -244,90 +266,139 @@
                 </div>
             </div>
 
+            ${isArquivado ? `
+                <div class="archive-details">
+                    <div class="archive-details-title">📋 Detalhes do arquivamento</div>
+                    <div class="archive-details-grid">
+                        <div class="archive-item"><strong>Arquivado por:</strong> <span>${responsavel}</span></div>
+                        <div class="archive-item"><strong>Arquivado em:</strong> <span>${formatISOToBRDateTime(f.arquivado_em)}</span></div>
+                        <div class="archive-item full-width"><strong>Motivo:</strong> <span>${f.arquivado_motivo || "—"}</span></div>
+                    </div>
+                </div>
+            ` : ''}
+
             <form id="form-edicao-modal">
-                <div class="edit-grid">
-                    <div class="edit-group">
-                        <label>Nome</label>
-                        <input name="nome" value="${f.nome || ""}" required>
+                <div class="data-card">
+                    <h3>👤 Informações Pessoais</h3>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Nome</label>
+                            <input name="nome" value="${f.nome || ""}" required>
+                        </div>
+                        <div class="field-group">
+                            <label>CPF</label>
+                            <input name="cpf" value="${f.cpf || ""}" ${ehAdmin ? "" : "readonly"}>
+                        </div>
                     </div>
-                    <div class="edit-group">
-                        <label>CPF</label>
-                        <input name="cpf" value="${f.cpf || ""}" ${ehAdmin ? "" : "readonly"}>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Data Nascimento</label>
+                            <input type="date" name="data_nascimento" id="edit-data-nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
+                        </div>
+                        <div class="field-group">
+                            <label>Idade (Calculada)</label>
+                            <input type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f8f9fa;">
+                        </div>
                     </div>
-                    <div class="edit-group">
-                        <label>Data Nascimento</label>
-                        <input type="date" name="data_nascimento" id="edit-data-nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
-                    </div>
-                    <div class="edit-group">
-                        <label>Idade (Calculada)</label>
-                        <input type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f0f0f0;">
-                    </div>
-                    <div class="edit-group">
-                        <label>E-mail 1</label>
-                        <input name="email1" value="${f.email1 || ""}">
-                    </div>
-                    <div class="edit-group">
-                        <label>Telefone 1</label>
-                        <input name="telefone1" class="campo-telefone" value="${f.telefone1 || ""}">
-                    </div>
-                    <div class="edit-group">
-                        <label>Lotação</label>
-                        <select name="lotacao">
-                            ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
-                        </select>
-                    </div>
-                    <div class="edit-group">
-                        <label>Situação Funcional</label>
-                        <select name="situacao">
-                            ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
-                        </select>
-                    </div>
-
-                    <div class="edit-group">
-                        <label>CEP</label>
-                        <input name="cep" id="edit-cep" value="${f.cep || ""}" class="campo-cep">
-                    </div>
-                    <div class="edit-group span-2">
-                        <label>Logradouro / Bairro</label>
-                        <input name="logradouro_bairro" id="edit-logradouro" value="${f.logradouro_bairro || ""}" readonly style="background:#f0f0f0;">
-                    </div>
-                    <div class="edit-group">
-                        <label>Número</label>
-                        <input name="numero" value="${f.numero || ""}">
-                    </div>
-                    <div class="edit-group">
-                        <label>Complemento</label>
-                        <input name="complemento" value="${f.complemento || ""}">
-                    </div>
-                    <div class="edit-group">
-                        <label>Cidade</label>
-                        <input name="cidade" id="edit-cidade" value="${f.cidade || ""}" readonly style="background:#f0f0f0;">
-                    </div>
-                    <div class="edit-group">
-                        <label>UF</label>
-                        <input name="uf" id="edit-uf" value="${f.uf || ""}" readonly style="background:#f0f0f0;">
-                    </div>
-
-                    ${canChangeProfile ? `
-                        <div class="edit-group">
-                            <label>Perfil de Acesso</label>
-                            <select name="perfil_acesso">
-                                <option value="FILIADO" ${f.perfil_acesso === "FILIADO" ? "selected" : ""}>FILIADO</option>
-                                <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>
-                                <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
-                                ${ehAdmin ? `<option value="ADMIN" ${f.perfil_acesso === "ADMIN" ? "selected" : ""}>ADMIN</option>` : ""}
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Situação Funcional</label>
+                            <select name="situacao">
+                                ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
                             </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Lotação</label>
+                            <select name="lotacao">
+                                ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
+                            </select>
+                        </div>
+                    </div>
+                    ${canChangeProfile ? `
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>Perfil de Acesso</label>
+                                <select name="perfil_acesso">
+                                    <option value="FILIADO" ${f.perfil_acesso === "FILIADO" ? "selected" : ""}>FILIADO</option>
+                                    <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>
+                                    <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
+                                    ${ehAdmin ? `<option value="ADMIN" ${f.perfil_acesso === "ADMIN" ? "selected" : ""}>ADMIN</option>` : ""}
+                                </select>
+                            </div>
+                            <div class="field-group"></div>
                         </div>
                     ` : `<input type="hidden" name="perfil_acesso" value="${f.perfil_acesso}">`}
                 </div>
 
-                <div class="edit-group span-2" style="margin-top:20px;">
-                    <div class="dependentes-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom:1px solid #eee; padding-bottom:5px;">
-                        <h4 style="margin:0;">Dependentes</h4>
-                        <button type="button" id="btn-toggle-excluir-modal" class="btn btn-danger-outline btn-sm">Excluir</button>
+                <div class="data-card bg-alt">
+                    <h3>📞 Contato</h3>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Email 1</label>
+                            <input name="email1" value="${f.email1 || ""}">
+                        </div>
+                        <div class="field-group">
+                            <label>Telefone 1</label>
+                            <input name="telefone1" class="campo-telefone" value="${f.telefone1 || ""}">
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Email 2</label>
+                            <input name="email2" value="${f.email2 || ""}">
+                        </div>
+                        <div class="field-group">
+                            <label>Telefone 2</label>
+                            <input name="telefone2" class="campo-telefone" value="${f.telefone2 || ""}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-card">
+                    <h3>🏠 Endereço</h3>
+                    <div class="address-grid-v2">
+                        <!-- Linha 1: CEP + Logradouro -->
+                        <div class="edit-group cep-group">
+                            <label>CEP</label>
+                            <div class="cep-input-wrapper">
+                                <input name="cep" id="edit-cep" value="${f.cep || ""}" class="campo-cep">
+                                <span class="cep-search-icon">🔍</span>
+                            </div>
+                        </div>
+                        <div class="edit-group logradouro-group">
+                            <label>Logradouro / Bairro</label>
+                            <input name="logradouro_bairro" id="edit-logradouro" value="${f.logradouro_bairro || ""}" readonly style="background:#f8f9fa;">
+                        </div>
+
+                        <!-- Linha 2: Número + Complemento -->
+                        <div class="edit-group">
+                            <label>Número</label>
+                            <input name="numero" value="${f.numero || ""}">
+                        </div>
+                        <div class="edit-group">
+                            <label>Complemento</label>
+                            <input name="complemento" value="${f.complemento || ""}">
+                        </div>
+
+                        <!-- Linha 3: Cidade + UF -->
+                        <div class="edit-group">
+                            <label>Cidade</label>
+                            <input name="cidade" id="edit-cidade" value="${f.cidade || ""}" readonly style="background:#f8f9fa;">
+                        </div>
+                        <div class="edit-group">
+                            <label>UF</label>
+                            <input name="uf" id="edit-uf" value="${f.uf || ""}" readonly style="background:#f8f9fa;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-card bg-alt">
+                    <div class="dependentes-header" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
+                        <h3 style="margin: 0;">👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
+                        <button type="button" id="btn-toggle-excluir-modal" class="btn btn-danger-outline btn-sm" style="position: absolute; right: 0;">Excluir</button>
                     </div>
 
-                    <div id="painel-excluir-modal" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                    <div id="painel-excluir-modal" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                         <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
                         <div id="checkboxes-excluir-modal" style="display: flex; flex-direction: column; gap: 8px;"></div>
                         <div style="margin-top: 15px; text-align: right;">
@@ -335,22 +406,26 @@
                         </div>
                     </div>
 
-                    <div id="modal-dependentes-container" style="margin-top:10px;"></div>
+                    <div id="modal-dependentes-container"></div>
                 </div>
 
-                <div class="edit-group span-2" style="margin-top:20px;">
-                    <h4 style="border-bottom:1px solid #eee; padding-bottom:5px;">Avatar (Foto)</h4>
-                    <div class="avatar-actions">
-                        <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" onerror="this.src='/img/avatar-placeholder.png'">
-                        <input type="file" id="modal-avatar-input" accept="image/*" style="flex:1;">
-                        <button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.uploadAvatar(${f.id})">Upload</button>
-                        <button type="button" class="btn btn-danger-outline btn-sm" onclick="FiliadosAdmin.removerAvatar(${f.id})">Remover</button>
+                <div class="data-card">
+                    <h3>🖼️ Avatar (Foto)</h3>
+                    <div class="subcard flex-center" style="gap: 20px; flex-wrap: wrap;">
+                        <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" onerror="this.src='/img/avatar-placeholder.png'" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #ffc107;">
+                        <div class="avatar-actions" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:10px;">
+                            <input type="file" id="modal-avatar-input" accept="image/*">
+                            <div style="display:flex; gap:10px;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="FiliadosAdmin.uploadAvatar(${f.id})" style="flex:1;">Upload</button>
+                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="FiliadosAdmin.removerAvatar(${f.id})" style="flex:1;">Remover</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-footer" style="margin-top:20px; padding:0;">
-                    <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-editar-filiado').style.display='none'">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                <div class="modal-footer-actions">
+                    <button type="button" class="btn btn-outline btn-lg" onclick="document.getElementById('modal-editar-filiado').style.display='none'">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-lg">Salvar Alterações</button>
                 </div>
             </form>
         `;
@@ -479,22 +554,29 @@
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
         const cepInput = form.querySelector(".campo-cep");
+        const btnBuscarCep = document.getElementById("btn-buscar-cep"); // Note: it's a span now with 🔍
+
+        const executarBuscaCep = async () => {
+            const cep = (cepInput.value || "").replace(/\D/g, "");
+            if (cep.length === 8) {
+                try {
+                    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await res.json();
+                    if (!data.erro) {
+                        document.getElementById("edit-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
+                        document.getElementById("edit-cidade").value = data.localidade;
+                        document.getElementById("edit-uf").value = data.uf;
+                    }
+                } catch (e) { console.error("Erro CEP", e); }
+            }
+        };
+
         if (cepInput) {
             global.Utils?.aplicarMascaraCEP?.(cepInput);
-            cepInput.addEventListener('blur', async () => {
-                const cep = (cepInput.value || "").replace(/\D/g, "");
-                if (cep.length === 8) {
-                    try {
-                        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                        const data = await res.json();
-                        if (!data.erro) {
-                            document.getElementById("edit-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
-                            document.getElementById("edit-cidade").value = data.localidade;
-                            document.getElementById("edit-uf").value = data.uf;
-                        }
-                    } catch (e) { console.error("Erro CEP", e); }
-                }
-            });
+            cepInput.addEventListener('blur', executarBuscaCep);
+            // also trigger on search icon click
+            const searchIcon = form.querySelector(".cep-search-icon");
+            if (searchIcon) searchIcon.onclick = executarBuscaCep;
         }
 
         const dataNascInput = document.getElementById("edit-data-nascimento");
@@ -619,28 +701,37 @@
                             <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
                         </div>
                         <div class="edit-group">
-                            <label>CEP</label>
-                            <input name="cep" class="campo-cep" id="new-cep" placeholder="00000-000">
+                            <!-- spacer -->
                         </div>
-                        <div class="edit-group span-2">
-                            <label>Logradouro / Bairro</label>
-                            <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
-                        </div>
-                        <div class="edit-group">
-                            <label>Número</label>
-                            <input name="numero">
-                        </div>
-                        <div class="edit-group">
-                            <label>Complemento</label>
-                            <input name="complemento">
-                        </div>
-                        <div class="edit-group">
-                            <label>Cidade</label>
-                            <input name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
-                        </div>
-                        <div class="edit-group">
-                            <label>UF</label>
-                            <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+
+                        <div class="address-grid span-2">
+                            <div class="edit-group cep-group">
+                                <label>CEP</label>
+                                <div class="cep-input-wrapper">
+                                    <input name="cep" id="new-cep" class="campo-cep" placeholder="00000-000">
+                                    <span class="cep-search-icon">🔍</span>
+                                </div>
+                            </div>
+                            <div class="edit-group logradouro-group">
+                                <label>Logradouro / Bairro</label>
+                                <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
+                            </div>
+                            <div class="edit-group">
+                                <label>Número</label>
+                                <input name="numero">
+                            </div>
+                            <div class="edit-group">
+                                <label>Complemento</label>
+                                <input name="complemento">
+                            </div>
+                            <div class="edit-group">
+                                <label>Cidade</label>
+                                <input name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
+                            </div>
+                            <div class="edit-group">
+                                <label>UF</label>
+                                <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+                            </div>
                         </div>
                     </div>
                     <div id="novo-dependentes-container" style="margin-top:15px;"></div>

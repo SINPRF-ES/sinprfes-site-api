@@ -46,33 +46,38 @@ api.interceptors.response.use(
   async (error) => {
     const { config, response } = error;
     const { method, url } = config;
-    const duration = new Date().getTime() - config.meta.requestStartedAt;
+    const duration = new Date().getTime() - config.meta?.requestStartedAt || 0;
 
     const status = response?.status;
-    const message = response?.data?.message || error.message;
+    const contentType = response?.headers?.['content-type'] || '';
+    let message = response?.data?.message || error.message;
+
+    // Se a API retornar HTML (ex: 502 Proxy, Erro do Render, etc), extraímos um preview para o log
+    if (contentType.includes('text/html')) {
+      const htmlPreview = typeof response.data === 'string'
+        ? response.data.replace(/<[^>]*>?/gm, '').substring(0, 200).trim()
+        : 'HTML body is not a string';
+
+      logger.error(`[DEBUG][API.HtmlError] ${method?.toUpperCase()} ${url} | Status: ${status} | Preview: ${htmlPreview}`);
+      message = 'Servidor indisponível (Erro de Proxy/HTML). Por favor, tente novamente em instantes.';
+    }
 
     // Sanitiza o objeto de erro para evitar logar dados sensíveis como o token
     const sanitizedError = {
-      message: error.message,
-      stack: error.stack,
+      message: message,
+      status: status,
+      contentType: contentType,
       config: {
         url: error.config?.url,
         method: error.config?.method,
-        headers: {
-          // Lista segura de headers, excluindo 'Authorization'
-          'Content-Type': error.config?.headers?.['Content-Type'],
-        }
       },
-      response: {
-        status: error.response?.status,
-        data: error.response?.data,
-      },
+      responseData: contentType.includes('application/json') ? response?.data : '[Non-JSON Content]',
     };
 
     logger.error(
       `API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
-      new Error(message), // Passa um novo objeto de erro sem o config original
-      { status, responseData: sanitizedError.response.data }
+      new Error(message),
+      { status, ...sanitizedError }
     );
 
     if (__DEV__) {

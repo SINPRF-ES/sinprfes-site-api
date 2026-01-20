@@ -59,7 +59,7 @@ const FILIADO_COLUMNS = `
   logradouro_bairro, numero, complemento, cidade, uf, cep,
   lotacao, situacao, senha_hash, twofa_secret, perfil_acesso,
   avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
-  arquivado_em, arquivado_motivo,
+  arquivado_em, arquivado_motivo, arquivado_por,
   dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
   dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
   dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
@@ -262,7 +262,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 
   // Apenas gestores podem incluir arquivados
   if (!isGestao || !incluirArquivados) {
-    conds.push("arquivado_em IS NULL");
+    conds.push("f.arquivado_em IS NULL");
   }
 
   if (filtro) {
@@ -274,8 +274,8 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 
     conds.push(`
       (
-        LOWER(nome) LIKE $${pNome}
-        OR regexp_replace(cpf, '[^0-9]', '', 'g') LIKE $${pCpf}
+        LOWER(f.nome) LIKE $${pNome}
+        OR regexp_replace(f.cpf, '[^0-9]', '', 'g') LIKE $${pCpf}
       )
     `);
   }
@@ -287,19 +287,21 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     const { rows } = await pool.query(
       `
       SELECT
-        id, nome, cpf, data_nascimento, telefone1, telefone2, email1, email2,
-        lotacao, situacao, perfil_acesso,
-        logradouro_bairro, numero, complemento, cidade, uf, cep,
-        avatar_url,
-        arquivado_em, arquivado_motivo,
-        dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
-        dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
-        dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
-        dep4_nome, dep4_cpf, dep4_data_nascimento, dep4_parentesco,
-        dep5_nome, dep5_cpf, dep5_data_nascimento, dep5_parentesco
-      FROM filiados
+        f.id, f.nome, f.cpf, f.data_nascimento, f.telefone1, f.telefone2, f.email1, f.email2,
+        f.lotacao, f.situacao, f.perfil_acesso,
+        f.logradouro_bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
+        f.avatar_url,
+        f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
+        responsavel.nome AS arquivado_por_nome,
+        f.dep1_nome, f.dep1_cpf, f.dep1_data_nascimento, f.dep1_parentesco,
+        f.dep2_nome, f.dep2_cpf, f.dep2_data_nascimento, f.dep2_parentesco,
+        f.dep3_nome, f.dep3_cpf, f.dep3_data_nascimento, f.dep3_parentesco,
+        f.dep4_nome, f.dep4_cpf, f.dep4_data_nascimento, f.dep4_parentesco,
+        f.dep5_nome, f.dep5_cpf, f.dep5_data_nascimento, f.dep5_parentesco
+      FROM filiados f
+      LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
       ${whereSql}
-      ORDER BY nome ASC
+      ORDER BY f.nome ASC
     `,
       params
     );
@@ -310,10 +312,10 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const { rows } = await pool.query(
     `
     SELECT
-      id, nome, telefone1, avatar_url, situacao, arquivado_em
-    FROM filiados
+      f.id, f.nome, f.telefone1, f.avatar_url, f.situacao, f.arquivado_em
+    FROM filiados f
     ${whereSql}
-    ORDER BY nome ASC
+    ORDER BY f.nome ASC
   `,
     params
   );
@@ -476,11 +478,12 @@ async function arquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
     SET
       arquivado_em = NOW(),
       arquivado_motivo = $1,
+      arquivado_por = $2,
       atualizado_em = NOW()
-    WHERE id = $2
+    WHERE id = $3
     RETURNING ${FILIADO_COLUMNS}
   `,
-    [motivo, id]
+    [motivo, atorId, id]
   );
 
   const depois = rows[0] || null;
@@ -511,6 +514,7 @@ async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
     SET
       arquivado_em = NULL,
       arquivado_motivo = NULL,
+      arquivado_por = NULL,
       atualizado_em = NOW()
     WHERE id = $1
     RETURNING ${FILIADO_COLUMNS}

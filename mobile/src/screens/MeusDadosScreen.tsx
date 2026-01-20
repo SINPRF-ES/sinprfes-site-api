@@ -395,16 +395,31 @@ export default function MeusDadosScreen() {
       </View>
       
       <ErrorBoundary>
-        <ContatoCard filiado={filiado} setFiliado={setFiliado} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>👤 Informações Pessoais</Text>
+        </View>
+        <ContatoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} />
       </ErrorBoundary>
+
       <ErrorBoundary>
-        <EnderecoCard filiado={filiado} setFiliado={setFiliado} />
+        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}>
+          <Text style={styles.sectionTitle}>🏠 Endereço</Text>
+        </View>
+        <EnderecoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
       </ErrorBoundary>
+
       <ErrorBoundary>
-        <LotacaoCard filiado={filiado} setFiliado={setFiliado} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text>
+        </View>
+        <LotacaoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} />
       </ErrorBoundary>
+
       <ErrorBoundary>
-        <DependentesCard filiado={filiado} setFiliado={setFiliado} />
+        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}>
+          <Text style={styles.sectionTitle}>👶 Dependentes</Text>
+        </View>
+        <DependentesCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
       </ErrorBoundary>
 
       {renderExcluirDependentes()}
@@ -422,7 +437,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   contentContainer: {
-    padding: 20,
+    paddingBottom: 40,
   },
   centered: {
     flex: 1,
@@ -440,8 +455,20 @@ const styles = StyleSheet.create({
     width: 10,
   },
   saveButtonContainer: {
-    marginTop: 10,
-    marginBottom: 40, // Espaço extra na parte inferior
+    padding: 20,
+    marginBottom: 40,
+  },
+  sectionHeader: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#003366',
   },
   // Estilos para Excluir Dependentes
   deletePanel: {

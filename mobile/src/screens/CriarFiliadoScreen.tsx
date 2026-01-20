@@ -48,8 +48,8 @@ export default function CriarFiliadoScreen({ navigation }) {
       return;
     }
 
-    if (!filiado.nome || !filiado.cpf || !filiado.email1) {
-      Alert.alert('Erro de Validação', 'Nome, CPF e Email 1 são obrigatórios.');
+    if (!filiado.nome || !filiado.cpf || !filiado.email1 || !filiado.telefone1) {
+      Alert.alert('Erro de Validação', 'Nome, CPF, Email 1 e Telefone 1 são obrigatórios.');
       return;
     }
     if (filiado.cpf.length !== 11) {

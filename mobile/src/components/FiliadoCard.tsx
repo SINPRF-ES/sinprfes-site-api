@@ -5,6 +5,7 @@ import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
 import { formatCpf, formatTelefone } from '../shared/formatters';
 import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
+import { calculateAgeBreakdown } from '../utils/date';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
@@ -61,6 +62,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
             <>
               <Text style={styles.detalhe}>CPF: {formatCpf(filiado.cpf || '')}</Text>
               <Text style={styles.detalhe}>Email: {filiado.email1}</Text>
+              <Text style={styles.detalhe}>Idade: {calculateAgeBreakdown(filiado.data_nascimento)}</Text>
             </>
           )}
 

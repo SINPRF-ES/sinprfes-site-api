@@ -214,6 +214,14 @@ Valores permitidos:
 
 Mesmo que a palavra "ATIVO" exista na situacao funcional, ela **nao se confunde** com `CADASTRO_ATIVO`.
 
+### 3) Auditoria de arquivamento
+
+Campos canônicos para rastrear o histórico de registros arquivados:
+
+- `arquivado_em`: Timestamp ISO indicando quando o registro foi movido para o arquivo.
+- `arquivado_motivo`: Justificativa textual para o arquivamento (obrigatório).
+- `arquivado_por`: ID (Integer) do usuário gestor que realizou a operação.
+
 ---
 
 ## 🎯 Mascaras, sanitizacao e normalizacao
