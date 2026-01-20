@@ -591,6 +591,18 @@ footer {
   margin-top: 16px;
 }
 
+/* Utility classes for central alignment and section blocks */
+.text-center { text-align: center; }
+.flex-center { display: flex; justify-content: center; align-items: center; }
+.section-block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+.section-block-alt { background-color: #f7f9fc; }
+
 /* Mobile: 1 coluna para tudo */
 @media (max-width: 768px) {
   .form-grid,
