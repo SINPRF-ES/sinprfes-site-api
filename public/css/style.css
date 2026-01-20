@@ -915,7 +915,7 @@ footer {
 }
 
 .modal-content {
-  max-width: 800px;
+  max-width: 1100px;
   width: 95%;
   position: relative;
   background: #fff;
@@ -1597,4 +1597,84 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
     .address-grid .logradouro-group, .address-grid-v2 .logradouro-group {
         grid-column: auto;
     }
+}
+
+/* =========================================================
+   SHARED PROFILE & MODAL UI CLASSES (Produção 2.0)
+   ========================================================= */
+.data-card {
+    background: #fff;
+    color: #333;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    transition: background-color 0.3s ease;
+}
+.data-card.bg-alt { background-color: #f7f9fc; }
+.data-card h3 {
+    color: #003366;
+    font-size: 1.2rem;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+.data-card input, .data-card select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    color: #333;
+    background-color: #fff;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+.data-card input:focus, .data-card select:focus {
+    border-color: #003366;
+    outline: none;
+    background-color: #f9fbff;
+}
+.data-card label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 5px;
+    display: block;
+}
+.field-row { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:12px; }
+.field-group { display:flex; flex-direction:column; gap:6px; }
+
+@media (max-width: 768px) {
+    .field-row { grid-template-columns: 1fr; }
+}
+
+.modal-footer-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding: 20px 0 0 0;
+    border-top: 1px solid #eee;
+}
+
+.subcard {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.subcard:nth-child(even) { background-color: #f7f9fc; }
+
+.status-bar-modal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    background: #f8f9fa;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border-left: 5px solid #003366;
 }
