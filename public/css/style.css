@@ -1550,3 +1550,51 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+
+/* =========================================================
+   NEW ADDRESS GRID (3-row structure)
+   ========================================================= */
+.address-grid, .address-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.address-grid .cep-group, .address-grid-v2 .cep-group {
+    grid-column: 1 / 2;
+}
+
+.address-grid .logradouro-group, .address-grid-v2 .logradouro-group {
+    grid-column: 2 / 3;
+}
+
+.cep-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cep-input-wrapper input {
+    width: 100% !important;
+    padding-right: 35px !important;
+}
+
+.cep-search-icon {
+    position: absolute;
+    right: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    user-select: none;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .address-grid, .address-grid-v2 {
+        grid-template-columns: 1fr;
+    }
+    .address-grid .cep-group, .address-grid-v2 .cep-group,
+    .address-grid .logradouro-group, .address-grid-v2 .logradouro-group {
+        grid-column: auto;
+    }
+}

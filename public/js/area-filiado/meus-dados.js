@@ -386,44 +386,38 @@
 
                 <div class="data-card">
                     <h3>🏠 Endereço</h3>
-                    <!-- Linha 1: CEP + Lupa + Logradouro -->
-                    <div class="field-row" style="grid-template-columns: 180px 1fr; gap: 20px;">
-                        <div class="field-group">
+                    <div class="address-grid-v2">
+                        <!-- Linha 1: CEP + Logradouro -->
+                        <div class="edit-group cep-group">
                             <label>CEP</label>
-                            <div class="cep-wrapper">
-                                <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000-000" />
-                                <button type="button" class="btn btn-secondary" id="btn-buscar-cep" title="Buscar CEP">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                </button>
+                            <div class="cep-input-wrapper">
+                                <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000-000" class="campo-cep" />
+                                <span class="cep-search-icon" id="btn-buscar-cep" style="cursor:pointer;">🔍</span>
                             </div>
                         </div>
-                        <div class="field-group">
+                        <div class="edit-group logradouro-group">
                             <label>Logradouro / Bairro</label>
-                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly />
+                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly style="background:#f0f0f0;" />
                         </div>
-                    </div>
 
-                    <!-- Linha 2: Número + Complemento -->
-                    <div class="field-row" style="grid-template-columns: 120px 1fr; gap: 20px;">
-                        <div class="field-group">
-                            <label>Nº</label>
+                        <!-- Linha 2: Número + Complemento -->
+                        <div class="edit-group">
+                            <label>Número</label>
                             <input type="text" id="me-numero" value="${numero || ""}" />
                         </div>
-                        <div class="field-group">
+                        <div class="edit-group">
                             <label>Complemento</label>
                             <input type="text" id="me-complemento" value="${complemento || ""}" />
                         </div>
-                    </div>
 
-                    <!-- Linha 3: Cidade + UF -->
-                    <div class="field-row" style="grid-template-columns: 1fr 100px; gap: 20px;">
-                        <div class="field-group">
+                        <!-- Linha 3: Cidade + UF -->
+                        <div class="edit-group">
                             <label>Cidade</label>
-                            <input type="text" id="me-cidade" value="${cidade || ""}" readonly />
+                            <input type="text" id="me-cidade" value="${cidade || ""}" readonly style="background:#f0f0f0;" />
                         </div>
-                        <div class="field-group">
+                        <div class="edit-group">
                             <label>UF</label>
-                            <input type="text" id="me-uf" value="${uf || ""}" readonly />
+                            <input type="text" id="me-uf" value="${uf || ""}" readonly style="background:#f0f0f0;" />
                         </div>
                     </div>
                 </div>

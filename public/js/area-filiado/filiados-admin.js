@@ -314,29 +314,34 @@
                         </select>
                     </div>
 
-                    <div class="edit-group">
-                        <label>CEP</label>
-                        <input name="cep" id="edit-cep" value="${f.cep || ""}" class="campo-cep">
-                    </div>
-                    <div class="edit-group span-2">
-                        <label>Logradouro / Bairro</label>
-                        <input name="logradouro_bairro" id="edit-logradouro" value="${f.logradouro_bairro || ""}" readonly style="background:#f0f0f0;">
-                    </div>
-                    <div class="edit-group">
-                        <label>Número</label>
-                        <input name="numero" value="${f.numero || ""}">
-                    </div>
-                    <div class="edit-group">
-                        <label>Complemento</label>
-                        <input name="complemento" value="${f.complemento || ""}">
-                    </div>
-                    <div class="edit-group">
-                        <label>Cidade</label>
-                        <input name="cidade" id="edit-cidade" value="${f.cidade || ""}" readonly style="background:#f0f0f0;">
-                    </div>
-                    <div class="edit-group">
-                        <label>UF</label>
-                        <input name="uf" id="edit-uf" value="${f.uf || ""}" readonly style="background:#f0f0f0;">
+                    <div class="address-grid span-2">
+                        <div class="edit-group cep-group">
+                            <label>CEP</label>
+                            <div class="cep-input-wrapper">
+                                <input name="cep" id="edit-cep" value="${f.cep || ""}" class="campo-cep">
+                                <span class="cep-search-icon">🔍</span>
+                            </div>
+                        </div>
+                        <div class="edit-group logradouro-group">
+                            <label>Logradouro / Bairro</label>
+                            <input name="logradouro_bairro" id="edit-logradouro" value="${f.logradouro_bairro || ""}" readonly style="background:#f0f0f0;">
+                        </div>
+                        <div class="edit-group">
+                            <label>Número</label>
+                            <input name="numero" value="${f.numero || ""}">
+                        </div>
+                        <div class="edit-group">
+                            <label>Complemento</label>
+                            <input name="complemento" value="${f.complemento || ""}">
+                        </div>
+                        <div class="edit-group">
+                            <label>Cidade</label>
+                            <input name="cidade" id="edit-cidade" value="${f.cidade || ""}" readonly style="background:#f0f0f0;">
+                        </div>
+                        <div class="edit-group">
+                            <label>UF</label>
+                            <input name="uf" id="edit-uf" value="${f.uf || ""}" readonly style="background:#f0f0f0;">
+                        </div>
                     </div>
 
                     ${canChangeProfile ? `
@@ -650,28 +655,37 @@
                             <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
                         </div>
                         <div class="edit-group">
-                            <label>CEP</label>
-                            <input name="cep" class="campo-cep" id="new-cep" placeholder="00000-000">
+                            <!-- spacer -->
                         </div>
-                        <div class="edit-group span-2">
-                            <label>Logradouro / Bairro</label>
-                            <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
-                        </div>
-                        <div class="edit-group">
-                            <label>Número</label>
-                            <input name="numero">
-                        </div>
-                        <div class="edit-group">
-                            <label>Complemento</label>
-                            <input name="complemento">
-                        </div>
-                        <div class="edit-group">
-                            <label>Cidade</label>
-                            <input name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
-                        </div>
-                        <div class="edit-group">
-                            <label>UF</label>
-                            <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+
+                        <div class="address-grid span-2">
+                            <div class="edit-group cep-group">
+                                <label>CEP</label>
+                                <div class="cep-input-wrapper">
+                                    <input name="cep" id="new-cep" class="campo-cep" placeholder="00000-000">
+                                    <span class="cep-search-icon">🔍</span>
+                                </div>
+                            </div>
+                            <div class="edit-group logradouro-group">
+                                <label>Logradouro / Bairro</label>
+                                <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
+                            </div>
+                            <div class="edit-group">
+                                <label>Número</label>
+                                <input name="numero">
+                            </div>
+                            <div class="edit-group">
+                                <label>Complemento</label>
+                                <input name="complemento">
+                            </div>
+                            <div class="edit-group">
+                                <label>Cidade</label>
+                                <input name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
+                            </div>
+                            <div class="edit-group">
+                                <label>UF</label>
+                                <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+                            </div>
                         </div>
                     </div>
                     <div id="novo-dependentes-container" style="margin-top:15px;"></div>
