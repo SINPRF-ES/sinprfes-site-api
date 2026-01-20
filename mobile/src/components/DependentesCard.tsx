@@ -4,7 +4,7 @@ import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
 import { formatCpf, onlyDigits } from '../shared/formatters';
-import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate } from '../utils/date';
+import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate, calculateAgeBreakdown } from '../utils/date';
 import { PARENTESCO_OPTIONS, normalizeParentesco } from '../shared/parentesco';
 
 // Subcomponente para cada item de dependente
@@ -35,13 +35,17 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
 
   const rawValue = filiado?.[`dep${index}_parentesco`] || '';
   const currentParentescoValue = normalizeParentesco(rawValue);
-  const isStandardOption = PARENTESCO_OPTIONS.some(opt => opt.value === currentParentescoValue);
 
-  // Se o valor raw for vazio, o modo deve ser '' (Selecione...)
-  const [parentescoMode, setParentescoMode] = useState(rawValue === '' ? '' : (isStandardOption ? currentParentescoValue : 'OUTRO'));
+  // No site, se for uma opção padrão, o select mostra ela. Se não for, e tiver valor, mostra "OUTRO".
+  const isStandardOption = PARENTESCO_OPTIONS.some(opt => opt.value === rawValue);
+
+  const [parentescoMode, setParentescoMode] = useState(
+    rawValue === '' ? '' : (isStandardOption ? rawValue : 'OUTRO')
+  );
 
   const handleParentescoChange = (mode) => {
     setParentescoMode(mode);
+    // Se mudar para OUTRO, inicialmente deixa o valor vazio no hidden para o usuário digitar
     const newValue = mode === 'OUTRO' ? '' : mode;
     handleDependentChange('parentesco', newValue);
   };
@@ -78,6 +82,13 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         maxLength={10}
       />
 
+      <Text style={styles.label}>Idade</Text>
+      <TextInput
+        style={styles.inputDisabled}
+        value={calculateAgeBreakdown(filiado?.[`dep${index}_data_nascimento`])}
+        editable={false}
+      />
+
       <Text style={styles.label}>Parentesco</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -105,10 +116,10 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
   );
 };
 
-const DependentesCard: React.FC<{filiado: Filiado | null, setFiliado: any}> = ({ filiado, setFiliado }) => {
+const DependentesCard: React.FC<{filiado: Filiado | null, setFiliado: any, hideTitle?: boolean, cardStyle?: any, isEditing?: boolean}> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {}, isEditing = true }) => {
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>Dependentes</Text>
+    <View style={[styles.card, cardStyle]}>
+      {!hideTitle && <Text style={styles.cardTitle}>Dependentes</Text>}
       {[1, 2, 3, 4, 5].map(i => (
         <DependenteItem key={i} index={i} filiado={filiado} setFiliado={setFiliado} />
       ))}
@@ -157,6 +168,17 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
     fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  inputDisabled: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f0f0f0',
+    color: '#999',
   },
   pickerContainer: {
     borderWidth: 1,

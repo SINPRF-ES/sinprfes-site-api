@@ -9,9 +9,10 @@ interface Props {
   filiado: Filiado | null;
   setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
   isEditing?: boolean;
+  hideTitle?: boolean;
 }
 
-const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }) => {
+const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, hideTitle = false }) => {
   const handlePhoneChange = (field: 'telefone1' | 'telefone2', value: string) => {
     const digits = onlyDigits(value);
     setFiliado(f => (f ? { ...f, [field]: digits } : null));
@@ -19,7 +20,7 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false }
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Dados Pessoais</Text>
+      {!hideTitle && <Text style={styles.cardTitle}>Dados Pessoais</Text>}
 
       <Text style={styles.label}>Nome Completo</Text>
       <TextInput
