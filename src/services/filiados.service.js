@@ -351,40 +351,70 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       situacao = "ATIVO",
     } = dados;
 
-    const colunas = [
-      "nome", "cpf", "data_nascimento", "telefone1", "telefone2", "email1", "email2",
-      "logradouro_bairro", "numero", "complemento", "cidade", "uf", "cep",
-      "lotacao", "situacao", "perfil_acesso",
-      "criado_em", "atualizado_em", "bloqueado", "arquivado_em", "arquivado_motivo"
-    ];
+    const colunas = [];
+    const placeholders = [];
+    const params = [];
+    let p = 1;
 
-    const valores = [
-      nome, cpfNormalizado, data_nascimento, telefone1, telefone2, email1, email2,
-      logradouro_bairro, numero, complemento, cidade, uf, cep,
-      lotacao, situacao, perfilNovo,
-      "NOW()", "NOW()", false, null, null
-    ];
-
-    for (let i = 1; i <= 5; i++) {
-      colunas.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
-      valores.push(
-        dados[`dep${i}_nome`],
-        dados[`dep${i}_cpf`],
-        dados[`dep${i}_data_nascimento`],
-        normalizeParentesco(dados[`dep${i}_parentesco`])
-      );
+    function push(col, val, castSql = "") {
+      colunas.push(col);
+      params.push(val === undefined ? null : val);
+      placeholders.push(`$${p}${castSql}`);
+      p++;
     }
 
-    const placeholders = valores.map((_, i) => (valores[i] === "NOW()" ? "NOW()" : `$${i + 1}`)).join(", ");
-    const valoresFiltrados = valores.filter(v => v !== "NOW()");
+    push("nome", nome);
+    push("cpf", cpfNormalizado);
+    // Explicit date cast with NULLIF for empty strings
+    colunas.push("data_nascimento");
+    params.push(data_nascimento === undefined ? null : data_nascimento);
+    placeholders.push(`NULLIF($${p}, '')::date`);
+    p++;
+
+    push("telefone1", telefone1);
+    push("telefone2", telefone2);
+    push("email1", email1);
+    push("email2", email2);
+    push("logradouro_bairro", logradouro_bairro);
+    push("numero", numero);
+    push("complemento", complemento);
+    push("cidade", cidade);
+    push("uf", uf);
+    push("cep", cep);
+    push("lotacao", lotacao);
+    push("situacao", situacao);
+    push("perfil_acesso", perfilNovo);
+
+    // NOW() directly in SQL, no parameter increment
+    colunas.push("criado_em");
+    placeholders.push("NOW()");
+    colunas.push("atualizado_em");
+    placeholders.push("NOW()");
+
+    push("bloqueado", false);
+    push("arquivado_em", null);
+    push("arquivado_motivo", null);
+
+    for (let i = 1; i <= 5; i++) {
+      push(`dep${i}_nome`, dados[`dep${i}_nome`]);
+      push(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
+
+      // Explicit date cast for dependents
+      colunas.push(`dep${i}_data_nascimento`);
+      params.push(dados[`dep${i}_data_nascimento`] === undefined ? null : dados[`dep${i}_data_nascimento`]);
+      placeholders.push(`NULLIF($${p}, '')::date`);
+      p++;
+
+      push(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
+    }
 
     const { rows } = await pool.query(
       `
       INSERT INTO filiados (${colunas.join(", ")})
-      VALUES (${placeholders})
+      VALUES (${placeholders.join(", ")})
       RETURNING ${FILIADO_COLUMNS}
     `,
-      valoresFiltrados
+      params
     );
 
     return anexarEstadoCadastro(rows[0]);

@@ -591,10 +591,11 @@
 
     function renderizarFormularioNovoFiliado(container) {
         if (!container) return;
-        const { gerarCamposDependentes } = global.Utils || {};
+        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, aplicarMascaraCEP, aplicarMascaraData } = global.Utils || {};
+
         container.innerHTML = `
             <div class="filiado-card" style="border-left-color: var(--amarelo);">
-                <h3>➕ Novo Filiado</h3>
+                <h3>👤 Novo Filiado</h3>
                 <form id="form-novo-filiado-admin">
                     <div class="edit-grid">
                         <div class="edit-group">
@@ -603,23 +604,35 @@
                         </div>
                         <div class="edit-group">
                             <label>CPF *</label>
-                            <input name="cpf" required placeholder="Apenas números">
+                            <input name="cpf" required placeholder="000.000.000-00">
                         </div>
                         <div class="edit-group">
                             <label>Email *</label>
                             <input type="email" name="email1" required>
                         </div>
                         <div class="edit-group">
-                            <label>CEP</label>
-                            <input name="cep" class="campo-cep" id="new-cep">
+                            <label>Telefone 1 *</label>
+                            <input name="telefone1" class="campo-telefone" required placeholder="(00) 00000-0000">
                         </div>
                         <div class="edit-group">
-                            <label>Logradouro/Bairro</label>
+                            <label>Data Nascimento</label>
+                            <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
+                        </div>
+                        <div class="edit-group">
+                            <label>CEP</label>
+                            <input name="cep" class="campo-cep" id="new-cep" placeholder="00000-000">
+                        </div>
+                        <div class="edit-group span-2">
+                            <label>Logradouro / Bairro</label>
                             <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
                         </div>
                         <div class="edit-group">
                             <label>Número</label>
                             <input name="numero">
+                        </div>
+                        <div class="edit-group">
+                            <label>Complemento</label>
+                            <input name="complemento">
                         </div>
                         <div class="edit-group">
                             <label>Cidade</label>
@@ -631,7 +644,7 @@
                         </div>
                     </div>
                     <div id="novo-dependentes-container" style="margin-top:15px;"></div>
-                    <div style="text-align:right; margin-top:15px;">
+                    <div style="text-align:right; margin-top:25px;">
                         <button type="button" class="btn btn-outline" onclick="this.closest('.filiado-card').parentElement.style.display='none'">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Criar Cadastro</button>
                     </div>
@@ -644,22 +657,31 @@
         }
 
         const form = container.querySelector("#form-novo-filiado-admin");
+
+        // Aplicar Máscaras
+        if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
+        if (aplicarMascaraTelefone) aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
+        if (aplicarMascaraData) aplicarMascaraData(form.querySelector('input[name="data_nascimento"]'));
+
         const cepInp = form.querySelector("#new-cep");
         if (cepInp) {
-            global.Utils?.aplicarMascaraCEP?.(cepInp);
+            if (aplicarMascaraCEP) aplicarMascaraCEP(cepInp);
             cepInp.addEventListener('blur', async () => {
                 const cep = (cepInp.value || "").replace(/\D/g, "");
                 if (cep.length === 8) {
-                    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                    const data = await res.json();
-                    if (!data.erro) {
-                        document.getElementById("new-logradouro").value = `${data.logradouro} - ${data.bairro}`;
-                        document.getElementById("new-cidade").value = data.localidade;
-                        document.getElementById("new-uf").value = data.uf;
-                    }
+                    try {
+                        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                        const data = await res.json();
+                        if (!data.erro) {
+                            document.getElementById("new-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
+                            document.getElementById("new-cidade").value = data.localidade;
+                            document.getElementById("new-uf").value = data.uf;
+                        }
+                    } catch (err) { console.error("Erro busca CEP", err); }
                 }
             });
         }
+
         form.onsubmit = async (e) => {
             e.preventDefault();
             const fd = new FormData(form);
@@ -667,7 +689,27 @@
             fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-            payload.cpf = onlyDigits(payload.cpf);
+
+            // Validação e Sanitização CPF
+            const cpfLimp = onlyDigits(payload.cpf);
+            if (cpfLimp.length !== 11) {
+                alert("O CPF deve ter exatamente 11 dígitos.");
+                return;
+            }
+            payload.cpf = cpfLimp;
+
+            // Sanitização Telefone
+            if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
+
+            // Conversão Data de Nascimento para ISO
+            if (payload.data_nascimento) {
+                const iso = global.Formatters ? global.Formatters.parseBRToISO(payload.data_nascimento) : null;
+                if (payload.data_nascimento.includes('/') && !iso) {
+                    alert("Data de nascimento inválida. Use o formato DD/MM/AAAA.");
+                    return;
+                }
+                if (iso) payload.data_nascimento = iso;
+            }
 
             try {
                 const r = await window.Api.apiFetch("/api/filiados", { method: "POST", body: payload });
