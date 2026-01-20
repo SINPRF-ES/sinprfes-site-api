@@ -13,10 +13,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function aplicarMascaraCpf(input) {
     if (!input) return;
-    input.addEventListener("input", () => {
-      // mantém só dígitos e limita a 11 caracteres
-      input.value = input.value.replace(/\D/g, "").slice(0, 11);
+
+    const formatar = (val) => {
+      // Se Formatters estiver carregado, usa a função canônica
+      if (window.Formatters && window.Formatters.formatCpfLive) {
+        return window.Formatters.formatCpfLive(val);
+      }
+      let v = String(val).replace(/\D/g, "").slice(0, 11);
+      if (v.length <= 3) return v;
+      if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
+      if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
+      return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
+    };
+
+    input.addEventListener("input", (e) => {
+      const el = e.target;
+      const start = el.selectionStart;
+      const oldLen = el.value.length;
+      el.value = formatar(el.value);
+      const newLen = el.value.length;
+
+      // Preserva cursor se estiver digitando no meio
+      if (start !== null && start < oldLen) {
+        el.setSelectionRange(start + (newLen - oldLen), start + (newLen - oldLen));
+      }
     });
+
+    if (input.value) input.value = formatar(input.value);
   }
 
   aplicarMascaraCpf(loginCpfInput);

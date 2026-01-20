@@ -28,3 +28,17 @@ export const formatCep = (cep: string | null | undefined): string => {
   if (digits.length !== 8) return digits;
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
+
+export const formatAgencia = (agencia: string | null | undefined): string => {
+  if (!agencia) return '';
+  const digits = onlyDigits(agencia).slice(0, 5);
+  if (digits.length < 5) return digits;
+  return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+};
+
+export const formatConta = (conta: string | null | undefined): string => {
+  if (!conta) return '';
+  const digits = onlyDigits(conta).slice(0, 6);
+  if (digits.length < 6) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+};

@@ -7,12 +7,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputTel2 = document.getElementById("telefone2");
 
     if(inputCpf) {
-        inputCpf.addEventListener("input", e => {
-            let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-            if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-            else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
-            else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
-            e.target.value = v;
+        const formatarCpf = (val) => {
+            if (window.Formatters && window.Formatters.formatCpfLive) {
+                return window.Formatters.formatCpfLive(val);
+            }
+            let v = val.replace(/\D/g, "").slice(0, 11);
+            if (v.length <= 3) return v;
+            if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
+            if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
+            return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
+        };
+
+        inputCpf.addEventListener("input", (e) => {
+            const el = e.target;
+            const start = el.selectionStart;
+            const oldLen = el.value.length;
+            el.value = formatarCpf(el.value);
+            const newLen = el.value.length;
+            if (start !== null && start < oldLen) {
+                el.setSelectionRange(start + (newLen - oldLen), start + (newLen - oldLen));
+            }
         });
     }
 
