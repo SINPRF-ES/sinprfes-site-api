@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,38 +11,147 @@ import {
   SafeAreaView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { formatAgencia, formatConta, onlyDigits } from '../shared/formatters';
+import { formatAgencia, formatConta, onlyDigits, formatCpf } from '../shared/formatters';
 import { criarRessarcimento } from '../services/ressarcimentoService';
 import { logger } from '../infra/logger';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import api from '../services/apiService';
+
+const BANCOS_LISTA = [
+  { code: "001", name: "Banco do Brasil" },
+  { code: "104", name: "Caixa Econômica" },
+  { code: "033", name: "Santander" },
+  { code: "237", name: "Bradesco" },
+  { code: "341", name: "Itaú" },
+  { code: "260", name: "Nubank" },
+  { code: "077", name: "Inter" },
+  { code: "422", name: "Safra" },
+  { code: "041", name: "Banrisul" },
+  { code: "021", name: "Banestes" }
+];
 
 const RessarcimentoScreen = () => {
   const { usuario } = useAuth();
   const netInfo = useNetInfo();
   const [loading, setLoading] = useState(false);
+  const [fetchingUser, setFetchingUser] = useState(false);
 
   const [form, setForm] = useState({
-    nome: usuario?.nome || '',
+    nome_solicitante: usuario?.nome || '',
     cpf: usuario?.cpf || '',
-    pix_tipo: '',
-    pix_chave: '',
+    email_destino: usuario?.email1 || usuario?.email2 || '',
+    telefone_contato: usuario?.telefone1 || usuario?.telefone2 || '',
+    data_inicio: '',
+    data_fim: '',
+    local: '',
+    descricao: '',
+    diarias: '0',
+    valor_diarias: '0.00',
+    km_total: '',
+    valor_km: '0.00',
+    valor_outros: '',
+    valor_total: '0.00',
+    banco_select: '',
+    banco_outro: '',
     banco: '',
     agencia: '',
     conta: '',
-    missao_motivo: '',
-    valor_total: '',
+    pix: '',
   });
 
   const [anexos, setAnexos] = useState<any[]>([]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setFetchingUser(true);
+        const { data } = await api.get('/api/filiados/me');
+        if (data) {
+          setForm(prev => ({
+            ...prev,
+            nome_solicitante: data.nome || prev.nome_solicitante,
+            cpf: data.cpf || prev.cpf,
+            email_destino: data.email1 || data.email2 || prev.email_destino,
+            telefone_contato: data.telefone1 || data.telefone2 || prev.telefone_contato,
+          }));
+        }
+      } catch (err) {
+        logger.error('[Ressarcimento.fetchUser.error]', err);
+      } finally {
+        setFetchingUser(false);
+      }
+    };
+    fetchUserData();
+  }, []);
+
   const handleInputChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const newForm = { ...prev, [field]: value };
+
+      if (field === 'banco_select') {
+        newForm.banco = value === 'OUTRO' ? prev.banco_outro : value;
+      } else if (field === 'banco_outro') {
+        if (prev.banco_select === 'OUTRO') {
+          newForm.banco = value;
+        }
+      }
+
+      return newForm;
+    });
   };
 
-  const handlePickImage = async () => {
+  const atualizarCalculos = useCallback(() => {
+    setForm(prev => {
+      const ini = prev.data_inicio;
+      const fim = prev.data_fim;
+      const km = parseFloat(prev.km_total) || 0;
+      const outros = parseFloat(prev.valor_outros) || 0;
+
+      let dias = 0;
+      if (ini && fim) {
+        const d1 = new Date(ini);
+        const d2 = new Date(fim);
+        if (d2 >= d1) {
+          dias = ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        }
+      }
+      const calcDiarias = Math.max(0, dias - 1 + 0.7);
+      const vDiarias = calcDiarias * 500;
+      const vKm = km * 1.5;
+      const total = vDiarias + vKm + outros;
+
+      return {
+        ...prev,
+        diarias: calcDiarias.toFixed(1),
+        valor_diarias: vDiarias.toFixed(2),
+        valor_km: vKm.toFixed(2),
+        valor_total: total.toFixed(2),
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    atualizarCalculos();
+  }, [form.data_inicio, form.data_fim, form.km_total, form.valor_outros, atualizarCalculos]);
+
+  const handlePickAnexos = async () => {
+    Alert.alert(
+      'Adicionar Anexo',
+      'Escolha o tipo de arquivo',
+      [
+        { text: 'Imagens (Galeria)', onPress: pickImages },
+        { text: 'Documentos (PDF)', onPress: pickDocument },
+        { text: 'Cancelar', style: 'cancel' },
+      ]
+    );
+  };
+
+  const pickImages = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria.');
@@ -60,6 +169,21 @@ const RessarcimentoScreen = () => {
     }
   };
 
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        multiple: true,
+      });
+
+      if (!result.canceled) {
+        setAnexos((prev) => [...prev, ...result.assets]);
+      }
+    } catch (err) {
+      logger.error('[Ressarcimento.pickDocument.error]', err);
+    }
+  };
+
   const handleRemoveAnexo = (index: number) => {
     setAnexos((prev) => prev.filter((_, i) => i !== index));
   };
@@ -70,7 +194,7 @@ const RessarcimentoScreen = () => {
       return;
     }
 
-    if (!form.missao_motivo.trim()) {
+    if (!form.descricao.trim()) {
       Alert.alert('Erro', 'O campo "Descrição da Missão / Motivo" é obrigatório.');
       return;
     }
@@ -80,18 +204,46 @@ const RessarcimentoScreen = () => {
       logger.info('[Ressarcimento.submit.start]', { filiadoId: usuario?.id });
 
       const formData = new FormData();
-      Object.keys(form).forEach((key) => {
-        let value = form[key];
-        if (key === 'agencia') value = onlyDigits(value);
-        if (key === 'conta') value = onlyDigits(value);
-        if (key === 'valor_total') value = value.replace(',', '.');
-        formData.append(key, value);
+
+      // Mapeamento de campos conforme ressarcimento.controller.js
+      const payload: any = {
+        nome: form.nome_solicitante,
+        cpf: onlyDigits(form.cpf),
+        email_destino: form.email_destino,
+        telefone_contato: onlyDigits(form.telefone_contato),
+        data_inicio: form.data_inicio,
+        data_fim: form.data_fim,
+        local: form.local,
+        descricao: form.descricao,
+        diarias: form.diarias,
+        valor_diarias: form.valor_diarias,
+        km_total: form.km_total || '0',
+        valor_km: form.valor_km,
+        valor_outros: form.valor_outros || '0',
+        valor_total: form.valor_total,
+        banco: form.banco,
+        agencia: onlyDigits(form.agencia),
+        conta: onlyDigits(form.conta),
+        pix: form.pix,
+      };
+
+      Object.keys(payload).forEach((key) => {
+        formData.append(key, payload[key]);
       });
 
-      anexos.forEach((anexo, index) => {
+      anexos.forEach((anexo) => {
         const fileUri = anexo.uri;
-        const fileName = fileUri.split('/').pop();
-        const fileType = 'image/jpeg'; // Fallback
+        const fileName = anexo.name || fileUri.split('/').pop();
+        let fileType = anexo.mimeType || anexo.type;
+
+        // Fallback for fileType
+        if (!fileType || fileType === 'success') {
+            const ext = fileName.split('.').pop().toLowerCase();
+            if (ext === 'pdf') fileType = 'application/pdf';
+            else if (ext === 'jpg' || ext === 'jpeg') fileType = 'image/jpeg';
+            else if (ext === 'png') fileType = 'image/png';
+            else fileType = 'application/octet-stream';
+        }
 
         formData.append('anexos', {
           uri: fileUri,
@@ -103,19 +255,28 @@ const RessarcimentoScreen = () => {
       await criarRessarcimento(formData);
 
       logger.info('[Ressarcimento.submit.success]');
-      Alert.alert('Sucesso', 'Sua solicitação foi enviada com sucesso!');
+      Alert.alert('Sucesso', 'Sua solicitação foi enviada com sucesso! O sindicato recebeu o pedido e uma cópia foi enviada para o seu e-mail.');
 
-      // Reset form
-      setForm({
-        ...form,
-        pix_tipo: '',
-        pix_chave: '',
+      // Reset form parcial (mantém dados do solicitante)
+      setForm(prev => ({
+        ...prev,
+        data_inicio: '',
+        data_fim: '',
+        local: '',
+        descricao: '',
+        diarias: '0',
+        valor_diarias: '0.00',
+        km_total: '',
+        valor_km: '0.00',
+        valor_outros: '',
+        valor_total: '0.00',
+        banco_select: '',
+        banco_outro: '',
         banco: '',
         agencia: '',
         conta: '',
-        missao_motivo: '',
-        valor_total: '',
-      });
+        pix: '',
+      }));
       setAnexos([]);
     } catch (err: any) {
       logger.error('[Ressarcimento.submit.error]', err);
@@ -125,50 +286,148 @@ const RessarcimentoScreen = () => {
     }
   };
 
+  if (fetchingUser) {
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /><Text>Carregando seus dados...</Text></View>;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>💰 Solicitar Ressarcimento</Text>
+          <Text style={styles.headerTitle}>💸 Solicitação de Ressarcimento</Text>
+          <Text style={styles.headerSubtitle}>Preencha os dados abaixo e anexe os comprovantes.</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>👤 Informações Pessoais</Text>
-          <Text style={styles.label}>Nome</Text>
-          <TextInput style={styles.inputDisabled} value={form.nome} editable={false} />
-          <Text style={styles.label}>CPF</Text>
-          <TextInput style={styles.inputDisabled} value={form.cpf} editable={false} />
+          <Text style={styles.cardTitle}>👤 Dados do Solicitante</Text>
+          <Text style={styles.label}>Nome Completo</Text>
+          <TextInput style={styles.inputDisabled} value={form.nome_solicitante} editable={false} />
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>CPF</Text>
+              <TextInput style={styles.inputDisabled} value={formatCpf(form.cpf)} editable={false} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.label}>E-mail</Text>
+              <TextInput style={styles.inputDisabled} value={form.email_destino} editable={false} />
+            </View>
+          </View>
+          <Text style={styles.label}>Telefone Contato</Text>
+          <TextInput
+            style={styles.input}
+            value={form.telefone_contato}
+            onChangeText={(v) => handleInputChange('telefone_contato', v)}
+            placeholder="(00) 00000-0000"
+          />
         </View>
 
         <View style={[styles.card, { backgroundColor: '#f7f9fc' }]}>
-          <Text style={styles.cardTitle}>📝 Missão e Valores</Text>
+          <Text style={styles.cardTitle}>📅 Detalhes da Atividade</Text>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Data Início</Text>
+              <TextInput
+                style={styles.input}
+                value={form.data_inicio}
+                onChangeText={(v) => handleInputChange('data_inicio', v)}
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.label}>Data Fim</Text>
+              <TextInput
+                style={styles.input}
+                value={form.data_fim}
+                onChangeText={(v) => handleInputChange('data_fim', v)}
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+          </View>
+          <Text style={styles.label}>Local / Destino</Text>
+          <TextInput
+            style={styles.input}
+            value={form.local}
+            onChangeText={(v) => handleInputChange('local', v)}
+            placeholder="Ex: Brasília - DF"
+          />
           <Text style={styles.label}>Descrição da Missão / Motivo *</Text>
           <TextInput
             style={[styles.input, { height: 100 }]}
-            value={form.missao_motivo}
-            onChangeText={(v) => handleInputChange('missao_motivo', v)}
+            value={form.descricao}
+            onChangeText={(v) => handleInputChange('descricao', v)}
             multiline
-            placeholder="Descreva o motivo do ressarcimento..."
-          />
-          <Text style={styles.label}>Valor Total (R$)</Text>
-          <TextInput
-            style={styles.input}
-            value={form.valor_total}
-            onChangeText={(v) => handleInputChange('valor_total', v)}
-            keyboardType="numeric"
-            placeholder="0,00"
+            placeholder="Descreva o motivo da viagem/atividade..."
           />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🏦 Dados Bancários (Opcional)</Text>
-          <Text style={styles.label}>Banco</Text>
+          <Text style={styles.cardTitle}>🧮 Despesas e Cálculos</Text>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Diárias Estimadas</Text>
+              <TextInput style={styles.inputDisabled} value={form.diarias} editable={false} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.label}>Valor Diárias (R$)</Text>
+              <TextInput style={styles.inputDisabled} value={form.valor_diarias} editable={false} />
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Km Rodados</Text>
+              <TextInput
+                style={styles.input}
+                value={form.km_total}
+                onChangeText={(v) => handleInputChange('km_total', v)}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.label}>Valor Km (R$)</Text>
+              <TextInput style={styles.inputDisabled} value={form.valor_km} editable={false} />
+            </View>
+          </View>
+          <Text style={styles.label}>Outras Despesas (R$)</Text>
           <TextInput
             style={styles.input}
-            value={form.banco}
-            onChangeText={(v) => handleInputChange('banco', v)}
-            placeholder="Ex: Banco do Brasil"
+            value={form.valor_outros}
+            onChangeText={(v) => handleInputChange('valor_outros', v)}
+            keyboardType="numeric"
+            placeholder="0.00"
           />
+
+          <View style={styles.totalBox}>
+            <Text style={styles.totalLabel}>Total a Receber</Text>
+            <Text style={styles.totalValue}>R$ {parseFloat(form.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: '#f7f9fc' }]}>
+          <Text style={styles.cardTitle}>🏦 Dados Bancários</Text>
+          <Text style={styles.label}>Banco</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={form.banco_select}
+              onValueChange={(v) => handleInputChange('banco_select', v)}
+            >
+              <Picker.Item label="Selecione um banco..." value="" />
+              {BANCOS_LISTA.map(b => (
+                <Picker.Item key={b.code} label={`${b.code} - ${b.name}`} value={`${b.code} - ${b.name}`} />
+              ))}
+              <Picker.Item label="Outro (Informar manual)" value="OUTRO" />
+            </Picker>
+          </View>
+
+          {form.banco_select === 'OUTRO' && (
+            <TextInput
+              style={styles.input}
+              value={form.banco_outro}
+              onChangeText={(v) => handleInputChange('banco_outro', v)}
+              placeholder="Informe o nome do banco"
+            />
+          )}
+
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Agência</Text>
@@ -193,38 +452,43 @@ const RessarcimentoScreen = () => {
               />
             </View>
           </View>
-          <Text style={styles.label}>Chave PIX</Text>
+          <Text style={styles.label}>PIX (Opcional)</Text>
           <TextInput
             style={styles.input}
-            value={form.pix_chave}
-            onChangeText={(v) => handleInputChange('pix_chave', v)}
+            value={form.pix}
+            onChangeText={(v) => handleInputChange('pix', v)}
             placeholder="Sua chave PIX"
           />
         </View>
 
-        <View style={[styles.card, { backgroundColor: '#f7f9fc' }]}>
-          <Text style={styles.cardTitle}>📎 Anexos (Comprovantes)</Text>
-          <TouchableOpacity style={styles.attachButton} onPress={handlePickImage}>
-            <MaterialCommunityIcons name="image-plus" size={24} color="#003366" />
-            <Text style={styles.attachButtonText}>Adicionar Imagens</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>📎 Comprovantes</Text>
+          <TouchableOpacity style={styles.attachButton} onPress={handlePickAnexos}>
+            <MaterialCommunityIcons name="paperclip" size={24} color="#003366" />
+            <Text style={styles.attachButtonText}>Anexar Documentos (PDF, JPG, PNG)</Text>
           </TouchableOpacity>
 
           {anexos.map((anexo, index) => (
             <View key={index} style={styles.anexoRow}>
+              <MaterialCommunityIcons
+                name={anexo.uri.endsWith('.pdf') ? "file-pdf-box" : "image"}
+                size={24}
+                color="#003366"
+              />
               <Text style={styles.anexoName} numberOfLines={1}>
-                {anexo.uri.split('/').pop()}
+                {anexo.name || anexo.uri.split('/').pop()}
               </Text>
               <TouchableOpacity onPress={() => handleRemoveAnexo(index)}>
-                <MaterialCommunityIcons name="close-circle" size={20} color="#dc3545" />
+                <MaterialCommunityIcons name="close-circle" size={24} color="#dc3545" />
               </TouchableOpacity>
             </View>
           ))}
         </View>
 
         <TouchableOpacity
-          style={[styles.submitButton, loading && styles.disabledButton]}
+          style={[styles.submitButton, (loading || !form.descricao) && styles.disabledButton]}
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={loading || !form.descricao}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -240,21 +504,27 @@ const RessarcimentoScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
   scrollContent: { paddingBottom: 40 },
-  header: { padding: 20, alignItems: 'center' },
+  header: { padding: 20, alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#003366' },
+  headerSubtitle: { fontSize: 12, color: '#666', marginTop: 5, textAlign: 'center' },
   card: { backgroundColor: '#fff', padding: 20, marginBottom: 15, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#eee' },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center' },
-  label: { fontSize: 14, color: '#666', marginBottom: 5, fontWeight: 'bold' },
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center', textTransform: 'uppercase' },
+  label: { fontSize: 13, color: '#555', marginBottom: 5, fontWeight: 'bold' },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, marginBottom: 15, backgroundColor: '#fff', fontSize: 16 },
-  inputDisabled: { borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 10, marginBottom: 15, backgroundColor: '#f8f9fa', color: '#999', fontSize: 16 },
+  inputDisabled: { borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 10, marginBottom: 15, backgroundColor: '#f8f9fa', color: '#333', fontSize: 16, fontWeight: 'bold' },
   row: { flexDirection: 'row' },
-  attachButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, borderWidth: 2, borderColor: '#003366', borderStyle: 'dashed', borderRadius: 8, marginBottom: 15 },
+  pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 10, backgroundColor: '#fff' },
+  totalBox: { backgroundColor: '#003366', padding: 20, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  totalLabel: { color: '#fff', fontSize: 12, textTransform: 'uppercase', opacity: 0.8 },
+  totalValue: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginTop: 5 },
+  attachButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20, borderWidth: 2, borderColor: '#003366', borderStyle: 'dashed', borderRadius: 8, marginBottom: 15 },
   attachButtonText: { color: '#003366', fontWeight: 'bold' },
-  anexoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, backgroundColor: '#fff', borderRadius: 8, marginBottom: 5, borderWidth: 1, borderColor: '#ddd' },
-  anexoName: { flex: 1, fontSize: 12, color: '#333' },
+  anexoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#ddd' },
+  anexoName: { flex: 1, fontSize: 14, color: '#333' },
   submitButton: { backgroundColor: '#003366', margin: 20, padding: 18, borderRadius: 30, alignItems: 'center', elevation: 3 },
   submitButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   disabledButton: { opacity: 0.6 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
 
 export default RessarcimentoScreen;
