@@ -20,4 +20,5 @@ export interface AuthContextData {
 
   ativarBiometriaNesteAparelho: (ativar: boolean) => Promise<void>;
   desbloquearComBiometria: () => Promise<boolean>;
+  setBloqueadoPorBiometria: (value: boolean) => void;
 }

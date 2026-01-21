@@ -12,6 +12,7 @@ import { useAuth } from "../hooks/useAuth";
 
 import LoginScreen from "../screens/LoginScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
+import ResetPasswordScreen from "../screens/ResetPasswordScreen";
 import BiometricLockScreen from "../screens/BiometricLockScreen";
 import HomeScreen from "../screens/HomeScreen";
 import FiliadosScreen from "../screens/FiliadosScreen";
@@ -105,6 +106,11 @@ export default function RootNavigation() {
               name="ForgotPassword"
               component={ForgotPasswordScreen}
               options={{ title: 'Recuperar Senha' }}
+            />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+              options={{ title: 'Redefinir Senha' }}
             />
           </>
         ) : bloqueadoPorBiometria ? (

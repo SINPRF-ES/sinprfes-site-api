@@ -26,9 +26,17 @@ const PublicacoesScreen: React.FC = () => {
     queryFn: async () => {
       logDebug('Publicacoes.fetch.start', { folderId: currentFolder.id });
       const data = await fetchPublicacoes(currentFolder.id);
+
+      // Sort alphabetically: Folders first, then files
+      const sortedData = [...data].sort((a, b) => {
+        if (a.isFolder && !b.isFolder) return -1;
+        if (!a.isFolder && b.isFolder) return 1;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      });
+
       logDebug('Publicacoes.fetch.success', {
-        count: data.length,
-        items: data.slice(0, 5).map(i => ({
+        count: sortedData.length,
+        items: sortedData.slice(0, 5).map(i => ({
           id: i.id,
           name: i.name,
           isFolder: i.isFolder,
@@ -36,7 +44,7 @@ const PublicacoesScreen: React.FC = () => {
           webViewLink: i.webViewLink
         }))
       });
-      return data;
+      return sortedData;
     },
   });
 
@@ -119,8 +127,6 @@ const PublicacoesScreen: React.FC = () => {
   };
 
   const renderItem = ({ item }: { item: DriveFile }) => {
-    const safeDate = item.createdTime ? new Date(item.createdTime).toLocaleDateString('pt-BR') : 'Data indisponível';
-
     return (
       <TouchableOpacity style={styles.itemContainer} onPress={() => handlePress(item)} disabled={isDownloading}>
         <View style={styles.iconContainer}>
@@ -128,7 +134,6 @@ const PublicacoesScreen: React.FC = () => {
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemDate}>{safeDate}</Text>
         </View>
         <FontAwesome name={item.isFolder ? "chevron-right" : "download"} size={20} color="#007BFF" />
       </TouchableOpacity>

@@ -117,26 +117,42 @@ Atenciosamente,
 SINPRF-ES
 `;
 
-  const payload = {
-    from: MAIL_FROM,
-    to: mailSindicato,
-    cc: emailFiliado || undefined,
-    subject,
-    text: corpoEmail,
-    attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
-  };
-
-  const { data, error } = await resend.emails.send(payload);
-
-  if (error) {
-    console.error("💥 Erro ao enviar e-mail de ressarcimento com Resend:", error);
-    throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
+  // 1. Envio para o Sindicato
+  try {
+    const payloadSindicato = {
+      from: MAIL_FROM,
+      to: mailSindicato,
+      subject,
+      text: corpoEmail,
+      attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
+    };
+    const resSindicato = await resend.emails.send(payloadSindicato);
+    if (resSindicato.error) throw resSindicato.error;
+    console.log("📧 [emailSindicatoOk]", resSindicato.data.id);
+  } catch (err) {
+    console.error("💥 [emailSindicatoErro]", err);
+    // Não paramos aqui, tentamos enviar a cópia mesmo se o do sindicato falhar
   }
 
-  console.log("📧 E-mail de ressarcimento enviado. Id:", data.id, {
-    to: mailSindicato,
-    cc: emailFiliado || "(sem cópia para filiado)",
-  });
+  // 2. Envio da Cópia para o Solicitante
+  if (emailFiliado) {
+    try {
+      const payloadSolicitante = {
+        from: MAIL_FROM,
+        to: emailFiliado,
+        subject: `CÓPIA: ${subject}`,
+        text: corpoEmail,
+        attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
+      };
+      const resSolicitante = await resend.emails.send(payloadSolicitante);
+      if (resSolicitante.error) throw resSolicitante.error;
+      console.log("📧 [emailSolicitanteOk]", resSolicitante.data.id);
+    } catch (err) {
+      console.error("💥 [emailSolicitanteErro]", err);
+    }
+  } else {
+    console.warn("⚠️ [emailSolicitanteSkip] E-mail não identificado.");
+  }
 }
 
 /**
@@ -319,6 +335,39 @@ SINPRF-ES
   await enviarEmailBase(emailDestino, subject, corpo);
 }
 
+/**
+ * Envia e-mail para o sindicato com a lista de aniversariantes do dia.
+ */
+async function enviarEmailAniversariantes(aniversariantes) {
+  const { MAIL_FROM, MAIL_TO_FILIACAO } = process.env;
+
+  if (!MAIL_FROM || !MAIL_TO_FILIACAO) {
+    throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
+  }
+
+  if (!aniversariantes || aniversariantes.length === 0) {
+    console.log("🎂 Sem aniversariantes hoje.");
+    return;
+  }
+
+  const subject = `🎂 Aniversariantes do Dia - ${new Date().toLocaleDateString("pt-BR")}`;
+
+  let corpo = `Olá,\n\nConfira os aniversariantes de hoje:\n\n`;
+
+  aniversariantes.forEach((p) => {
+    if (p.tipo === "FILIADO") {
+      corpo += `- ${p.nome} (Filiado ${p.situacao})\n`;
+    } else {
+      corpo += `- ${p.nome} (Dependente do filiado ${p.situacao_filiado_vinculo} ${p.nome_filiado_vinculo})\n`;
+    }
+  });
+
+  corpo += `\nAtenciosamente,\nSistema SINPRF-ES`;
+
+  await enviarEmailBase(MAIL_TO_FILIACAO, subject, corpo);
+  console.log("📧 E-mail de aniversariantes enviado.");
+}
+
 module.exports = {
   enviarEmailBase,
   enviarEmailFichaFiliacao,
@@ -326,4 +375,5 @@ module.exports = {
   enviarEmailBoasVindasFiliado,
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
+  enviarEmailAniversariantes,
 };
