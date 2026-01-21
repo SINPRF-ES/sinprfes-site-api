@@ -117,26 +117,42 @@ Atenciosamente,
 SINPRF-ES
 `;
 
-  const payload = {
-    from: MAIL_FROM,
-    to: mailSindicato,
-    cc: emailFiliado || undefined,
-    subject,
-    text: corpoEmail,
-    attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
-  };
-
-  const { data, error } = await resend.emails.send(payload);
-
-  if (error) {
-    console.error("💥 Erro ao enviar e-mail de ressarcimento com Resend:", error);
-    throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
+  // 1. Envio para o Sindicato
+  try {
+    const payloadSindicato = {
+      from: MAIL_FROM,
+      to: mailSindicato,
+      subject,
+      text: corpoEmail,
+      attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
+    };
+    const resSindicato = await resend.emails.send(payloadSindicato);
+    if (resSindicato.error) throw resSindicato.error;
+    console.log("📧 [emailSindicatoOk]", resSindicato.data.id);
+  } catch (err) {
+    console.error("💥 [emailSindicatoErro]", err);
+    // Não paramos aqui, tentamos enviar a cópia mesmo se o do sindicato falhar
   }
 
-  console.log("📧 E-mail de ressarcimento enviado. Id:", data.id, {
-    to: mailSindicato,
-    cc: emailFiliado || "(sem cópia para filiado)",
-  });
+  // 2. Envio da Cópia para o Solicitante
+  if (emailFiliado) {
+    try {
+      const payloadSolicitante = {
+        from: MAIL_FROM,
+        to: emailFiliado,
+        subject: `CÓPIA: ${subject}`,
+        text: corpoEmail,
+        attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
+      };
+      const resSolicitante = await resend.emails.send(payloadSolicitante);
+      if (resSolicitante.error) throw resSolicitante.error;
+      console.log("📧 [emailSolicitanteOk]", resSolicitante.data.id);
+    } catch (err) {
+      console.error("💥 [emailSolicitanteErro]", err);
+    }
+  } else {
+    console.warn("⚠️ [emailSolicitanteSkip] E-mail não identificado.");
+  }
 }
 
 /**

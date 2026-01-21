@@ -16,7 +16,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { formatAgencia, formatConta, onlyDigits, formatCpf } from '../shared/formatters';
+import { formatAgencia, formatConta, onlyDigits, formatCpf, formatTelefone } from '../shared/formatters';
+import { formatDateToDdMmYyyy } from '../utils/date';
 import { criarRessarcimento } from '../services/ressarcimentoService';
 import { logger } from '../infra/logger';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -91,7 +92,14 @@ const RessarcimentoScreen = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setForm((prev) => {
-      const newForm = { ...prev, [field]: value };
+      let finalValue = value;
+      if (field === 'telefone_contato') {
+        finalValue = formatTelefone(value);
+      } else if (field === 'data_inicio' || field === 'data_fim') {
+        finalValue = formatDateToDdMmYyyy(value);
+      }
+
+      const newForm = { ...prev, [field]: finalValue };
 
       if (field === 'banco_select') {
         newForm.banco = value === 'OUTRO' ? prev.banco_outro : value;
@@ -113,9 +121,13 @@ const RessarcimentoScreen = () => {
       const outros = parseFloat(prev.valor_outros) || 0;
 
       let dias = 0;
-      if (ini && fim) {
-        const d1 = new Date(ini);
-        const d2 = new Date(fim);
+      if (ini && fim && ini.length === 10 && fim.length === 10) {
+        // Converte DD/MM/YYYY para Date object (YYYY, MM-1, DD)
+        const parts1 = ini.split('/');
+        const parts2 = fim.split('/');
+        const d1 = new Date(parseInt(parts1[2]), parseInt(parts1[1]) - 1, parseInt(parts1[0]));
+        const d2 = new Date(parseInt(parts2[2]), parseInt(parts2[1]) - 1, parseInt(parts2[0]));
+
         if (d2 >= d1) {
           dias = ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         }
@@ -205,14 +217,19 @@ const RessarcimentoScreen = () => {
 
       const formData = new FormData();
 
-      // Mapeamento de campos conforme ressarcimento.controller.js
+      const toISO = (brDate: string) => {
+        if (!brDate || brDate.length !== 10) return '';
+        const [d, m, y] = brDate.split('/');
+        return `${y}-${m}-${d}`;
+      };
+
       const payload: any = {
         nome: form.nome_solicitante,
         cpf: onlyDigits(form.cpf),
         email_destino: form.email_destino,
         telefone_contato: onlyDigits(form.telefone_contato),
-        data_inicio: form.data_inicio,
-        data_fim: form.data_fim,
+        data_inicio: toISO(form.data_inicio),
+        data_fim: toISO(form.data_fim),
         local: form.local,
         descricao: form.descricao,
         diarias: form.diarias,
@@ -236,7 +253,6 @@ const RessarcimentoScreen = () => {
         const fileName = anexo.name || fileUri.split('/').pop();
         let fileType = anexo.mimeType || anexo.type;
 
-        // Fallback for fileType
         if (!fileType || fileType === 'success') {
             const ext = fileName.split('.').pop().toLowerCase();
             if (ext === 'pdf') fileType = 'application/pdf';
@@ -257,7 +273,6 @@ const RessarcimentoScreen = () => {
       logger.info('[Ressarcimento.submit.success]');
       Alert.alert('Sucesso', 'Sua solicitação foi enviada com sucesso! O sindicato recebeu o pedido e uma cópia foi enviada para o seu e-mail.');
 
-      // Reset form parcial (mantém dados do solicitante)
       setForm(prev => ({
         ...prev,
         data_inicio: '',
@@ -302,22 +317,21 @@ const RessarcimentoScreen = () => {
           <Text style={styles.cardTitle}>👤 Dados do Solicitante</Text>
           <Text style={styles.label}>Nome Completo</Text>
           <TextInput style={styles.inputDisabled} value={form.nome_solicitante} editable={false} />
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>CPF</Text>
-              <TextInput style={styles.inputDisabled} value={formatCpf(form.cpf)} editable={false} />
-            </View>
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={styles.label}>E-mail</Text>
-              <TextInput style={styles.inputDisabled} value={form.email_destino} editable={false} />
-            </View>
-          </View>
+
+          <Text style={styles.label}>CPF</Text>
+          <TextInput style={styles.inputDisabled} value={formatCpf(form.cpf)} editable={false} />
+
+          <Text style={styles.label}>E-mail</Text>
+          <TextInput style={styles.inputDisabled} value={form.email_destino} editable={false} />
+
           <Text style={styles.label}>Telefone Contato</Text>
           <TextInput
             style={styles.input}
             value={form.telefone_contato}
             onChangeText={(v) => handleInputChange('telefone_contato', v)}
             placeholder="(00) 00000-0000"
+            keyboardType="phone-pad"
+            maxLength={15}
           />
         </View>
 
@@ -330,7 +344,9 @@ const RessarcimentoScreen = () => {
                 style={styles.input}
                 value={form.data_inicio}
                 onChangeText={(v) => handleInputChange('data_inicio', v)}
-                placeholder="YYYY-MM-DD"
+                placeholder="DD/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
               />
             </View>
             <View style={{ flex: 1, marginLeft: 10 }}>
@@ -339,7 +355,9 @@ const RessarcimentoScreen = () => {
                 style={styles.input}
                 value={form.data_fim}
                 onChangeText={(v) => handleInputChange('data_fim', v)}
-                placeholder="YYYY-MM-DD"
+                placeholder="DD/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
               />
             </View>
           </View>
@@ -505,7 +523,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
   scrollContent: { paddingBottom: 40 },
   header: { padding: 20, alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#003366' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#003366', textAlign: 'center' },
   headerSubtitle: { fontSize: 12, color: '#666', marginTop: 5, textAlign: 'center' },
   card: { backgroundColor: '#fff', padding: 20, marginBottom: 15, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#eee' },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center', textTransform: 'uppercase' },
