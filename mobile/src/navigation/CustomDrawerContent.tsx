@@ -1,13 +1,24 @@
 // mobile/src/navigation/CustomDrawerContent.tsx
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 
 const CustomDrawerContent = (props) => {
-  const { usuario, logout } = useAuth();
+  const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
   const isGestao = usuario?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
+
+  const handleLogoutPress = () => {
+    Alert.alert(
+      'Sair da Conta',
+      'Tem certeza de que deseja encerrar sua sessão? Você precisará digitar sua senha novamente no próximo acesso.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sair', style: 'destructive', onPress: logout },
+      ]
+    );
+  };
 
   return (
     <DrawerContentScrollView {...props}>
@@ -38,11 +49,23 @@ const CustomDrawerContent = (props) => {
       )}
 
       <View style={styles.separator} />
+
+      <View style={styles.closeAppContainer}>
+        <TouchableOpacity
+          style={styles.closeAppButton}
+          onPress={() => setBloqueadoPorBiometria(true)}
+        >
+          <Ionicons name="lock-closed-outline" size={20} color="#fff" />
+          <Text style={styles.closeAppButtonText}>Fechar App</Text>
+        </TouchableOpacity>
+      </View>
+
       <DrawerItem
-        label="Sair"
-        icon={({ color, size }) => <Ionicons name="exit-outline" color={color} size={size} />}
-        onPress={logout}
-        inactiveTintColor="#c0392b"
+        label="Sair da conta"
+        icon={({ color, size }) => <Ionicons name="log-out-outline" color={color} size={size} />}
+        onPress={handleLogoutPress}
+        inactiveTintColor="#666"
+        labelStyle={{ fontSize: 12 }}
       />
     </DrawerContentScrollView>
   );
@@ -79,6 +102,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#003366',
     marginLeft: -16, // Alinha com o texto dos outros itens
+  },
+  closeAppContainer: {
+    paddingHorizontal: 15,
+    marginVertical: 10,
+  },
+  closeAppButton: {
+    backgroundColor: '#003366',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  closeAppButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

@@ -18,13 +18,6 @@ export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, t
   const [votoRealizado, setVotoRealizado] = useState<'SIM' | 'NAO' | null>(null);
 
   const handleVoto = async (voto: 'SIM' | 'NAO') => {
-    console.log(`[Assembleia.vote.attempt]`, {
-        votacaoId: votacao.id,
-        voto,
-        elegivel: userEligibility.elegivel,
-        motivoInelegivel: userEligibility.motivo
-    });
-
     if (!userEligibility.elegivel) {
        Alert.alert('Não Elegível', userEligibility.motivo || 'Você não pode votar neste item.');
        return;
@@ -33,8 +26,8 @@ export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, t
     setLoading(true);
     try {
       await assembleiaService.votar(assembleiaId, votacao.id, voto);
-      console.log(`[Assembleia.vote.result] success`);
       setVotoRealizado(voto);
+      // Feedback imediato
     } catch (error: any) {
       const message = error.response?.data?.error || 'Não foi possível registrar seu voto.';
       Alert.alert('Erro', message);

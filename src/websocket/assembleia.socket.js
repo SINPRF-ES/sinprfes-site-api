@@ -12,14 +12,7 @@ function init(server) {
   });
 
   io.on("connection", (socket) => {
-     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-     if (token) {
-        // Opcional: Validar JWT aqui se necessário
-        console.log(`[Socket.io] Usuário conectado com token.`);
-     }
-
     socket.on("join_assembleia", (assembleiaId) => {
-       console.log(`[Socket.io] Entrando na sala: assembleia_${assembleiaId}`);
       socket.join(`assembleia_${assembleiaId}`);
     });
   });
