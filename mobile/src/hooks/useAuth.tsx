@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useRef } from 'react';
+import { AppState } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
 
@@ -22,6 +23,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [biometriaHabilitada, setBiometriaHabilitada] = useState(false);
   const [bloqueadoPorBiometria, setBloqueadoPorBiometria] = useState(false);
+
+  const appState = useRef(AppState.currentState);
+  const backgroundTimestamp = useRef<number | null>(null);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        // App volve para o primeiro plano
+        if (backgroundTimestamp.current && Date.now() - backgroundTimestamp.current > 60000) {
+          if (token) {
+            setBloqueadoPorBiometria(true);
+          }
+        }
+        backgroundTimestamp.current = null;
+      } else if (nextAppState.match(/inactive|background/)) {
+        // App vai para segundo plano
+        backgroundTimestamp.current = Date.now();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [token]);
 
   useEffect(() => {
     async function loadSession() {
@@ -136,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     ativarBiometriaNesteAparelho,
     desbloquearComBiometria,
+    setBloqueadoPorBiometria,
   }), [usuario, token, carregando, biometriaHabilitada, bloqueadoPorBiometria]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

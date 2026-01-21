@@ -550,6 +550,49 @@ async function salvarTwoFaSecret(userId, secret) {
   return anexarEstadoCadastro(rows[0]) || null;
 }
 
+/**
+ * Busca aniversariantes do dia (filiados e dependentes)
+ */
+async function buscarAniversariantesDoDia() {
+  const query = `
+    SELECT * FROM (
+      -- Filiados
+      SELECT
+        id, nome, situacao, perfil_acesso, 'FILIADO' as tipo,
+        NULL as nome_filiado_vinculo, NULL as situacao_filiado_vinculo
+      FROM filiados
+      WHERE
+        data_nascimento IS NOT NULL AND
+        EXTRACT(DAY FROM data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
+        EXTRACT(MONTH FROM data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
+        arquivado_em IS NULL
+
+      UNION ALL
+
+      -- Dependentes (dep1 a dep5)
+      ${[1, 2, 3, 4, 5]
+        .map(
+          (i) => `
+      SELECT
+        f.id, f.dep${i}_nome as nome, 'DEPENDENTE' as situacao, f.perfil_acesso, 'DEPENDENTE' as tipo,
+        f.nome as nome_filiado_vinculo, f.situacao as situacao_filiado_vinculo
+      FROM filiados f
+      WHERE
+        f.dep${i}_data_nascimento IS NOT NULL AND
+        EXTRACT(DAY FROM f.dep${i}_data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
+        EXTRACT(MONTH FROM f.dep${i}_data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
+        f.arquivado_em IS NULL
+      `
+        )
+        .join(" UNION ALL ")}
+    ) as niver
+    ORDER BY tipo ASC, nome ASC
+  `;
+
+  const { rows } = await pool.query(query);
+  return rows;
+}
+
 module.exports = {
   buscarPorCpf,
   buscarPorId,
@@ -561,4 +604,5 @@ module.exports = {
   salvarTwoFaSecret,
   arquivarFiliadoPorId,
   desarquivarFiliadoPorId,
+  buscarAniversariantesDoDia,
 };

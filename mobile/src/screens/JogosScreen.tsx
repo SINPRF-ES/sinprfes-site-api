@@ -296,7 +296,7 @@ const JogosScreen = () => {
         {isManager && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📊 Planilha de Inscrições (Gestão)</Text>
-            <ScrollView horizontal>
+            <ScrollView horizontal persistentScrollbar>
               <View>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderText, { width: 150 }]}>Nome</Text>
