@@ -84,8 +84,8 @@ Refletindo a separação entre presença, elegibilidade e intenção.
 
 ## 5. Marco de Implementação
 
-Este documento foi validado e teve sua base técnica inicial implementada nas **Fases 1 e 2** (schema + foundation backend + realtime via Socket.IO), sem impacto em fluxos existentes.
-UI e UX funcionais (App Mobile) serão implementadas nas próximas fases, seguindo rigorosamente estas definições.
+- **v1.0 (20/01/2026):** Primeira versão operacional em produção. Inclui infraestrutura completa de backend, real-time via Socket.IO e interface mobile funcional para sessões, quóruns nominais, votações com snapshot de elegibilidade e auditoria plena.
+- **Fases 1 a 4:** Concluídas e estabilizadas.
 
 ---
 > “Qualquer implementação futura deve seguir este documento. Divergências são bugs.”

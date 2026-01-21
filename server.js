@@ -1,6 +1,13 @@
 require("dotenv").config();
 const { logDbSafeInfo } = require("./src/utils/dbLog");
 const app = require("./src/app");
+const http = require("http");
+const assembleiaSocket = require("./src/websocket/assembleia.socket");
+
+logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
+
+const server = http.createServer(app);
+assembleiaSocket.init(server);
 const { runBirthdayScan } = require("./src/jobs/birthdayCron");
 
 logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
