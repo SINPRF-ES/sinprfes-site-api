@@ -194,6 +194,7 @@ async function listarVotosNominais(votacaoId) {
  }
 
 async function finalizarVotacao(votacaoId) {
+   // Snapshot de elegíveis que não votaram -> Abstenção
   await pool.query(
     `INSERT INTO assembleia_votos (votacao_id, filiado_id, voto)
      SELECT v.id, c.filiado_id, 'ABSTENCAO'
@@ -208,7 +209,13 @@ async function finalizarVotacao(votacaoId) {
     `UPDATE assembleia_votacoes SET estado = 'CONCLUIDA', finalizada_em = NOW() WHERE id = $1 RETURNING *`,
     [votacaoId]
   );
-  return rows[0];
+
+   const finalizada = rows[0];
+   if (finalizada) {
+      await registrarAuditoria(finalizada.assembleia_id, null, "LAZY_CLOSE_VOTACAO", { votacao_id: votacaoId });
+   }
+
+   return finalizada;
 }
 
 async function pedirPalavra(assembleiaId, filiadoId) {
@@ -285,7 +292,7 @@ async function buscarMesa(assembleiaId) {
   return rows;
 }
 
-async function buscarEstadoCompleto(assembleiaId) {
+ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
   const assembleia = await buscarPorId(assembleiaId);
   if (!assembleia) return null;
 
@@ -304,20 +311,50 @@ async function buscarEstadoCompleto(assembleiaId) {
       contarVotos(votacaoAtiva.id),
       listarVotosNominais(votacaoAtiva.id)
     ]);
+
+     let elegivel = false;
+     let motivo_inelegibilidade = null;
+
+     if (filiadoId) {
+       elegivel = await verificarElegibilidade(votacaoAtiva.id, filiadoId);
+       if (!elegivel) {
+         // Tenta descobrir o motivo
+         const presencaNoQuorum = await verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, filiadoId);
+         if (!presencaNoQuorum) {
+           motivo_inelegibilidade = "Ausente na chamada de quórum deste item.";
+         } else {
+           motivo_inelegibilidade = "Restrição de elegibilidade técnica.";
+         }
+       }
+     }
+
     votacaoData = {
       ...votacaoAtiva,
       contagem,
-      votos
+       votos,
+       user_eligibility: {
+         elegivel,
+         motivo: motivo_inelegibilidade
+       }
     };
   }
 
   let totalPresentes = 0;
+  let userHasCheckedIn = false;
   if (ultimoQuorum) {
     const { rows: countRows } = await pool.query(
       'SELECT COUNT(*) as total FROM assembleia_checkins WHERE quorum_id = $1',
       [ultimoQuorum.id]
     );
     totalPresentes = parseInt(countRows[0].total);
+
+    if (filiadoId) {
+      const { rows: checkRows } = await pool.query(
+        'SELECT 1 FROM assembleia_checkins WHERE quorum_id = $1 AND filiado_id = $2',
+        [ultimoQuorum.id, filiadoId]
+      );
+      userHasCheckedIn = checkRows.length > 0;
+    }
   }
 
   return {
@@ -327,7 +364,8 @@ async function buscarEstadoCompleto(assembleiaId) {
     propostas,
     quorumVigente: ultimoQuorum ? {
       ...ultimoQuorum,
-      total: totalPresentes
+      total: totalPresentes,
+      userHasCheckedIn
     } : null,
     votacaoAtiva: votacaoData
   };

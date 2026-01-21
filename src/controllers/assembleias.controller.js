@@ -23,8 +23,12 @@ async function detalhe(req, res) {
 
 async function estadoCompleto(req, res) {
   try {
-    const estado = await service.buscarEstadoCompleto(req.params.id);
+     const estado = await service.buscarEstadoCompleto(req.params.id, req.user.id);
     if (!estado) return res.status(404).json({ error: "Assembleia não encontrada" });
+
+     // Auditoria de entrada (apenas uma vez por sessão/filiado via app)
+     await service.registrarAuditoria(req.params.id, req.user.id, "ENTRADA_SESSAO", { platform: 'mobile' });
+
     res.json(estado);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar estado da assembleia" });
@@ -171,6 +175,16 @@ async function votar(req, res) {
   try {
     const { id, vid } = req.params;
     const { voto } = req.body;
+
+     // Valida estado da votação e tempo
+     const votacao = await service.buscarVotacaoAtiva(id);
+     if (!votacao || votacao.id !== vid) {
+        return res.status(400).json({ error: "Votação não está ativa ou já foi encerrada" });
+     }
+
+     if (new Date(votacao.encerra_em) < new Date()) {
+        return res.status(400).json({ error: "O tempo para votação expirou" });
+     }
 
     const elegivel = await service.verificarElegibilidade(vid, req.user.id);
     if (!elegivel) return res.status(403).json({ error: "Você não possui check-in no quórum deste item e não pode votar" });

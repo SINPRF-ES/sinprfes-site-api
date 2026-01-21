@@ -18,7 +18,7 @@ export default function SessaoAssembleiaScreen() {
 
   const { assembleia, pedidosPalavra, propostas, mesa, quorumVigente: qVigente, votacaoAtiva: vAtiva, socket, carregando, refresh } = useAssembleiaSession(id);
   const { quorumVigente, chamadaAtiva, setChamadaAtiva } = useQuorum(id, socket, qVigente);
-  const { votacaoAtiva, contagem, votos, tempoRestante } = useVotacao(id, socket, vAtiva);
+  const { votacaoAtiva, contagem, votos, tempoRestante, userEligibility } = useVotacao(id, socket, vAtiva);
 
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [propostaModalVisible, setPropostaModalVisible] = useState(false);
@@ -82,7 +82,7 @@ export default function SessaoAssembleiaScreen() {
         )}
 
         {/* Check-in (se necessário) */}
-        {assembleia.estado === 'ABERTA' && chamadaAtiva && !hasCheckedIn && (
+        {assembleia.estado === 'ABERTA' && chamadaAtiva && !hasCheckedIn && !qVigente?.userHasCheckedIn && (
           <CheckinAssembleia
             assembleiaId={id}
             onSuccess={() => {
@@ -100,6 +100,7 @@ export default function SessaoAssembleiaScreen() {
             contagem={contagem}
             votos={votos}
             tempoRestante={tempoRestante}
+            userEligibility={userEligibility}
           />
         )}
 

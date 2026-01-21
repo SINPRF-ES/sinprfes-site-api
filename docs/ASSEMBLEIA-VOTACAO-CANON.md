@@ -13,8 +13,8 @@ Este documento define o padrão arquitetural, as regras de negócio e o schema d
 - **Voto Aberto:** Todo voto é público, nominal (associado ao filiado) e visível em tempo real.
 - **Transparência Total:** Contagem parcial e lista de votantes atualizadas via WebSocket para todos os presentes.
 - **Auditoria Imutável:** Todo evento relevante gera um log `append-only` (quem, quando, o quê).
-- **Elegibilidade por Snapshot:** O Backend congela a lista de votantes (snapshot) no momento exato da abertura de cada **item de pauta**, baseado estritamente no **quórum vigente**.
-- **Abstenção:** O filiado elegível que não manifestar voto até o encerramento do cronômetro é registrado automaticamente como ABSTENÇÃO, que soma ao total de SIM.
+- **Elegibilidade por Snapshot:** O Backend congela a lista de votantes (snapshot) no momento exato da abertura de cada **item de pauta**, baseado estritamente no **quórum vigente** (última chamada concluída).
+- **Abstenção:** O filiado elegível que não manifestar voto até o encerramento do cronômetro é registrado automaticamente como ABSTENÇÃO, que soma ao total de SIM para fins de aprovação.
 
 ---
 
@@ -27,7 +27,7 @@ Este documento define o padrão arquitetural, as regras de negócio e o schema d
     - A **diretoria** gera um **Token de 6 dígitos** com validade curta.
     - O sistema registra este evento como uma "Chamada de Quórum" independente.
     - Todos os presentes devem realizar o check-in no App Mobile.
-    - O **quórum vigente** é sempre o resultado da última chamada de quórum realizada com sucesso.
+    - O **quórum vigente** é sempre o resultado da última chamada de quórum realizada com sucesso. Recontagens anulam a validade de presenças de chamadas anteriores para itens futuros.
 4.  **Mesa Diretora:** A **diretoria** seleciona o Presidente e o Secretário da mesa entre os filiados presentes no quórum vigente.
 5.  **Encerramento:** A **diretoria** encerra a sessão, disparando a consolidação final da ata e logs. Estado: `ENCERRADA`.
 

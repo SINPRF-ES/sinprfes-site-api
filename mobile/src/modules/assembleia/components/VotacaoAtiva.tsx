@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Votacao, VotoContagem, VotoNominal } from '../types';
 import assembleiaService from '../services/assembleiaService';
@@ -10,18 +10,24 @@ interface Props {
   contagem: VotoContagem;
   votos: VotoNominal[];
   tempoRestante: number;
+  userEligibility: { elegivel: boolean, motivo?: string };
 }
 
-export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, tempoRestante }: Props) {
+export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, tempoRestante, userEligibility }: Props) {
   const [loading, setLoading] = useState(false);
   const [votoRealizado, setVotoRealizado] = useState<'SIM' | 'NAO' | null>(null);
 
   const handleVoto = async (voto: 'SIM' | 'NAO') => {
+    if (!userEligibility.elegivel) {
+       Alert.alert('Não Elegível', userEligibility.motivo || 'Você não pode votar neste item.');
+       return;
+    }
+
     setLoading(true);
     try {
       await assembleiaService.votar(assembleiaId, votacao.id, voto);
       setVotoRealizado(voto);
-      Alert.alert('Sucesso', 'Voto registrado com sucesso!');
+      // Feedback imediato
     } catch (error: any) {
       const message = error.response?.data?.error || 'Não foi possível registrar seu voto.';
       Alert.alert('Erro', message);
@@ -36,24 +42,33 @@ export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, t
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const renderVotoNominal = ({ item }: { item: VotoNominal }) => (
-    <View style={styles.votoNominalItem}>
-      <Text style={styles.voterName}>{item.nome}</Text>
-      <View style={[styles.miniBadge, { backgroundColor: item.voto === 'SIM' ? '#28a745' : item.voto === 'NAO' ? '#dc3545' : '#6c757d' }]}>
-        <Text style={styles.miniBadgeText}>{item.voto}</Text>
-      </View>
-    </View>
-  );
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.votoTitle}>VOTAÇÃO EM CURSO</Text>
+        <View>
+           <Text style={styles.votoTitle}>VOTAÇÃO EM CURSO</Text>
+           <View style={[styles.eligibilityBadge, { backgroundColor: userEligibility.elegivel ? '#e6f4ea' : '#fff5f5' }]}>
+              <MaterialCommunityIcons
+                 name={userEligibility.elegivel ? "check-decagram" : "alert-decagram"}
+                 size={14}
+                 color={userEligibility.elegivel ? "#28a745" : "#d9534f"}
+              />
+              <Text style={[styles.eligibilityText, { color: userEligibility.elegivel ? "#28a745" : "#d9534f" }]}>
+                 Elegível: {userEligibility.elegivel ? 'SIM' : 'NÃO'}
+              </Text>
+           </View>
+        </View>
         <View style={styles.timerBadge}>
           <MaterialCommunityIcons name="clock-outline" size={16} color="#d9534f" />
           <Text style={styles.timerText}>{formatTempo(tempoRestante)}</Text>
         </View>
       </View>
+
+      {!userEligibility.elegivel && (
+         <View style={styles.reasonBox}>
+            <Text style={styles.reasonText}>⚠️ {userEligibility.motivo}</Text>
+         </View>
+      )}
 
       <Text style={styles.tituloItem}>{votacao.titulo}</Text>
       {votacao.descricao && <Text style={styles.descricaoItem}>{votacao.descricao}</Text>}
@@ -73,7 +88,7 @@ export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, t
         </View>
       </View>
 
-      {!votoRealizado ? (
+      {userEligibility.elegivel && !votoRealizado && (
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.voteButton, styles.simButton, loading && styles.disabled]}
@@ -93,28 +108,31 @@ export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, t
             <Text style={styles.voteButtonText}>NÃO</Text>
           </TouchableOpacity>
         </View>
-      ) : (
+      )}
+
+      {votoRealizado && (
         <View style={styles.votedContainer}>
           <MaterialCommunityIcons name="check-circle" size={24} color="#28a745" />
-          <Text style={styles.votedText}>Você votou: {votoRealizado}</Text>
+          <Text style={styles.votedText}>Seu voto (Registrado): {votoRealizado}</Text>
         </View>
       )}
 
-      <Text style={styles.nominalTitle}>Votos Nominais (Público)</Text>
-      <View style={styles.nominalListContainer}>
-         {votos.length > 0 ? (
-            votos.slice(0, 10).map((v, i) => (
-               <View key={i} style={styles.votoNominalItem}>
-                  <Text style={styles.voterName} numberOfLines={1}>{v.nome}</Text>
-                  <View style={[styles.miniBadge, { backgroundColor: v.voto === 'SIM' ? '#28a745' : v.voto === 'NAO' ? '#dc3545' : '#6c757d' }]}>
-                    <Text style={styles.miniBadgeText}>{v.voto}</Text>
+      <View style={styles.nominalSection}>
+         <Text style={styles.nominalTitle}>Votos Nominais (Público)</Text>
+         <ScrollView style={styles.nominalList} nestedScrollEnabled>
+            {votos.length > 0 ? (
+               votos.map((v, i) => (
+                  <View key={v.filiado_id || i} style={styles.votoNominalItem}>
+                     <Text style={styles.voterName} numberOfLines={1}>{v.nome}</Text>
+                     <View style={[styles.miniBadge, { backgroundColor: v.voto === 'SIM' ? '#28a745' : v.voto === 'NAO' ? '#dc3545' : '#6c757d' }]}>
+                       <Text style={styles.miniBadgeText}>{v.voto}</Text>
+                     </View>
                   </View>
-               </View>
-            ))
-         ) : (
-            <Text style={styles.emptyNominal}>Nenhum voto registrado ainda.</Text>
-         )}
-         {votos.length > 10 && <Text style={styles.moreVotes}>+ {votos.length - 10} outros votos</Text>}
+               ))
+            ) : (
+               <Text style={styles.emptyNominal}>Nenhum voto registrado.</Text>
+            )}
+         </ScrollView>
       </View>
 
       {loading && <ActivityIndicator style={styles.loader} color="#003366" />}
@@ -130,18 +148,32 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#003366',
     marginBottom: 16,
+    maxHeight: 500,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
   votoTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '900',
     color: '#003366',
     letterSpacing: 1,
+  },
+  eligibilityBadge: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     paddingHorizontal: 8,
+     paddingVertical: 2,
+     borderRadius: 6,
+     marginTop: 4,
+     gap: 4,
+  },
+  eligibilityText: {
+     fontSize: 10,
+     fontWeight: 'bold',
   },
   timerBadge: {
     flexDirection: 'row',
@@ -159,6 +191,18 @@ const styles = StyleSheet.create({
     color: '#d9534f',
     marginLeft: 4,
   },
+  reasonBox: {
+     backgroundColor: '#fffaf0',
+     padding: 10,
+     borderRadius: 8,
+     borderWidth: 1,
+     borderColor: '#fee9c1',
+     marginBottom: 16,
+  },
+  reasonText: {
+     fontSize: 12,
+     color: '#856404',
+  },
   tituloItem: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -166,40 +210,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   descricaoItem: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#666',
-    marginBottom: 20,
-    lineHeight: 22,
+    marginBottom: 16,
+    lineHeight: 20,
   },
   countContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     backgroundColor: '#f8f9fa',
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   countBox: {
     alignItems: 'center',
   },
   countValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#003366',
   },
   countLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#666',
     fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   voteButton: {
     flex: 1,
-    height: 54,
+    height: 48,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,7 +258,7 @@ const styles = StyleSheet.create({
   },
   voteButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   disabled: {
@@ -224,37 +268,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 12,
     backgroundColor: '#e6f4ea',
     borderRadius: 12,
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   votedText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#1e7e34',
   },
-  nominalTitle: {
-     fontSize: 14,
-     fontWeight: 'bold',
-     color: '#666',
-     marginBottom: 10,
+  nominalSection: {
+     flex: 1,
      borderTopWidth: 1,
      borderTopColor: '#eee',
-     paddingTop: 16,
+     paddingTop: 12,
   },
-  nominalListContainer: {
-     gap: 8,
+  nominalTitle: {
+     fontSize: 12,
+     fontWeight: 'bold',
+     color: '#666',
+     marginBottom: 8,
+  },
+  nominalList: {
+     flex: 1,
   },
   votoNominalItem: {
      flexDirection: 'row',
      justifyContent: 'space-between',
      alignItems: 'center',
      paddingVertical: 4,
+     borderBottomWidth: 1,
+     borderBottomColor: '#f8f9fa',
   },
   voterName: {
-     fontSize: 13,
+     fontSize: 12,
      color: '#444',
      flex: 1,
   },
@@ -262,24 +311,19 @@ const styles = StyleSheet.create({
      paddingHorizontal: 6,
      paddingVertical: 2,
      borderRadius: 4,
-     minWidth: 40,
+     minWidth: 45,
      alignItems: 'center',
   },
   miniBadgeText: {
      color: '#fff',
-     fontSize: 10,
+     fontSize: 9,
      fontWeight: 'bold',
   },
   emptyNominal: {
-     fontSize: 12,
-     color: '#999',
-     fontStyle: 'italic',
-  },
-  moreVotes: {
      fontSize: 11,
      color: '#999',
+     fontStyle: 'italic',
      textAlign: 'center',
-     marginTop: 4,
   },
   loader: {
     marginTop: 12,

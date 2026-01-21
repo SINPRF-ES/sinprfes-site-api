@@ -7,16 +7,21 @@ export function useVotacao(assembleiaId: string, socket: Socket | null, initialS
   const [contagem, setContagem] = useState<VotoContagem>({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 });
   const [votos, setVotos] = useState<VotoNominal[]>([]);
   const [tempoRestante, setTempoRestante] = useState(0);
+  const [userEligibility, setUserEligibility] = useState<{ elegivel: boolean, motivo?: string }>({ elegivel: false });
 
   useEffect(() => {
      if (initialState) {
         setVotacaoAtiva(initialState);
         setContagem(initialState.contagem || { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 });
         setVotos(initialState.votos || []);
+        setUserEligibility(initialState.user_eligibility || { elegivel: false });
         if (initialState.encerra_em) {
            const resta = Math.max(0, Math.floor((new Date(initialState.encerra_em).getTime() - Date.now()) / 1000));
            setTempoRestante(resta);
         }
+     } else {
+        setVotacaoAtiva(null);
+        setTempoRestante(0);
      }
   }, [initialState]);
 
@@ -27,6 +32,7 @@ export function useVotacao(assembleiaId: string, socket: Socket | null, initialS
       setVotacaoAtiva(payload);
       setContagem(payload.contagem || { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 });
       setVotos(payload.votos || []);
+      setUserEligibility(payload.user_eligibility || { elegivel: false });
 
       if (payload.encerra_em) {
         const resta = Math.max(0, Math.floor((new Date(payload.encerra_em).getTime() - Date.now()) / 1000));
@@ -62,5 +68,5 @@ export function useVotacao(assembleiaId: string, socket: Socket | null, initialS
     }
   }, [tempoRestante]);
 
-  return { votacaoAtiva, contagem, votos, tempoRestante };
+  return { votacaoAtiva, contagem, votos, tempoRestante, userEligibility };
 }

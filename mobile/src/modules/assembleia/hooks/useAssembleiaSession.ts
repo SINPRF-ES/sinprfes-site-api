@@ -13,6 +13,7 @@ export function useAssembleiaSession(assembleiaId: string) {
   const [votacaoAtiva, setVotacaoAtiva] = useState<any>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
   const carregarEstado = useCallback(async () => {
     try {
@@ -37,10 +38,22 @@ export function useAssembleiaSession(assembleiaId: string) {
     const newSocket = io(API_BASE_URL);
     setSocket(newSocket);
 
-    newSocket.emit('join_assembleia', assembleiaId);
+    newSocket.on('connect', () => {
+       setIsConnected(true);
+       newSocket.emit('join_assembleia', assembleiaId);
+       // Re-hidratar ao reconectar para garantir que não perdeu nada
+       carregarEstado();
+    });
+
+    newSocket.on('disconnect', () => {
+       setIsConnected(false);
+    });
 
     newSocket.on('session_state_changed', (payload) => {
       setAssembleia(prev => prev ? { ...prev, estado: payload.estado } : null);
+      if (payload.estado === 'ENCERRADA') {
+         carregarEstado();
+      }
     });
 
     newSocket.on('word_queue_updated', (payload) => {
@@ -64,8 +77,16 @@ export function useAssembleiaSession(assembleiaId: string) {
     });
 
     newSocket.on('new_quorum_call', (payload) => {
-       // Reset local se necessário ou apenas atualiza info do token
        setQuorumVigente(payload);
+    });
+
+    newSocket.on('voting_started', (payload) => {
+       setVotacaoAtiva(payload);
+    });
+
+    newSocket.on('voting_ended', (payload) => {
+       setVotacaoAtiva(null);
+       carregarEstado(); // Atualiza propostas que podem ter sido votadas
     });
 
     return () => {
@@ -82,6 +103,7 @@ export function useAssembleiaSession(assembleiaId: string) {
     votacaoAtiva,
     socket,
     carregando,
+    isConnected,
     refresh: carregarEstado
   };
 }
