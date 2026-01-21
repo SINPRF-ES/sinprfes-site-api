@@ -1,5 +1,5 @@
 // mobile/src/services/filiadoPayloadMapper.ts
-import { onlyDigits } from '../shared/formatters';
+import { onlyDigits } from '../shared/format/formatters';
 import { toISODate } from '../utils/date';
 import type { Filiado } from '../types/filiado';
 
