@@ -1,69 +1,37 @@
 # Plano Técnico: Assembleias e Votações
 
-Este documento detalha a estrutura de arquivos, serviços e responsabilidades para a implementação do sistema de Assembleias.
+Este documento detalha o roteiro de implementação, focado na prioridade do App Mobile e na robustez do Backend.
 
-## 1. Backend (src/)
+## 1. Fase 1: Fundação e Schema (CONCLUÍDO)
+- **Database:** Criação das tabelas de assembleias, quoruns, check-ins, votações, votos, propostas e auditoria (PostgreSQL).
+- **Backend Service:** Implementação de `assembleias.service.js` para CRUD básico e gerenciamento de estado da sessão.
+- **Auditoria:** Mecanismo de log imutável para todos os eventos de gestão e presença.
 
-### 1.1. Rotas (`src/routes/assembleias.routes.js`)
-Endpoints protegidos por perfil (`ADMIN`, `DIRETORIA`, `FILIADO`):
-- `GET /api/assembleias`: Lista assembleias (Filiado vê ABERTAS/ENCERRADAS, Diretoria vê todas).
-- `GET /api/assembleias/:id`: Detalhes da sessão.
-- `POST /api/assembleias`: (Diretoria) Criar nova sessão.
-- `PATCH /api/assembleias/:id/abrir`: (Diretoria) Mudar estado para ABERTA.
-- `POST /api/assembleias/:id/quorum`: (Diretoria) Gerar novo token de quórum.
-- `POST /api/assembleias/:id/checkin`: (Todos) Realizar check-in com token.
-- `POST /api/assembleias/:id/votacao`: (Diretoria) Iniciar novo item de votação.
-- `POST /api/assembleias/:id/votacao/:vid/votar`: (Filiado) Registrar voto.
-- `GET /api/assembleias/:id/ata`: Gerar PDF da ata (backend-side).
+## 2. Fase 2: Real-time e Quórum (CONCLUÍDO)
+- **Socket.IO:** Configuração do servidor WebSocket para broadcasts de estado e eventos nominais.
+- **Check-in:** Lógica de geração de tokens de 6 dígitos e validação de presença por chamada de quórum.
+- **Real-time Events:** Emissão de eventos para abertura/fechamento de sessão e chamadas de quórum.
 
-### 1.2. Controller (`src/controllers/assembleias.controller.js`)
-- Orquestração das chamadas.
-- Acionamento dos broadcasts de Socket.IO após persistência.
+## 3. Fase 3: UI Mobile - Presença e Gestão (PRÓXIMA FASE)
+- **Lista de Assembleias:** Tela de listagem com status em tempo real.
+- **Fluxo de Check-in:** Interface para inserção de token e confirmação de presença.
+- **Painel de Gestão (Diretoria):** Controles mobile para abrir sessão e gerar tokens de quórum.
+- **Mesa Diretora:** Seleção de componentes da mesa via App.
 
-### 1.3. Service (`src/services/assembleias.service.js`)
-- **Lógica de Snapshot:** Ao abrir votação, seleciona IDs da tabela `assembleia_checkins` filtrando pelo `quorum_id` mais recente daquela assembleia.
-- **Lógica de Abstenção:** No fechamento da votação, identifica quem estava no snapshot mas não votou, inserindo registros como `ABSTENCAO`.
-- **Lógica de Propostas:** Verificação de presença do autor antes de permitir abertura de votação da proposta.
+## 4. Fase 4: Votação e Snapshot (Backend + Mobile)
+- **Snapshot Logic:** Implementação no backend da captura de elegibilidade no momento da abertura do item de pauta.
+- **Painel de Votos:** Interface mobile para votação nominal (SIM/NÃO) com cronômetro.
+- **Live Counting:** Atualização do gráfico/lista de votos em tempo real via socket.
+- **Abstenção Automática:** Lógica de encerramento de votação e preenchimento de abstenções.
 
-### 1.4. WebSocket (`src/websocket/assembleia.socket.js`)
-- Gerenciamento de salas por `assembleia_id`.
-- Handlers para `join_assembleia` e emissão de eventos de tempo real.
+## 5. Fase 5: Interação (Palavra e Propostas)
+- **Fila de Palavra:** UI para solicitação de fala e visualização de fila; controles de reordenação para diretoria.
+- **Propostas:** Submissão de propostas e lógica de retirada automática por ausência de autor no snapshot.
 
----
-
-## 2. Mobile (mobile/src/)
-
-### 2.1. Telas (Screens)
-- `Assembleias/ListaAssembleiasScreen.tsx`: Listagem simples com status.
-- `Assembleias/SessaoScreen.tsx`:
-    - Componente de Check-in (Token).
-    - Componente de Votação Ativa (Timer + Botões SIM/NAO).
-    - Componente de Resultado Parcial (Lista de nomes e votos).
-    - Fila de Palavra e Lista de Propostas.
-- `Assembleias/GestaoSessaoScreen.tsx`: (Apenas Diretoria) Botões de controle de fluxo, geração de tokens, abertura de pauta.
-
-### 2.2. Services & Hooks
-- `services/assembleiaService.ts`: Chamadas Axios para a API.
-- `hooks/useAssembleiaSocket.ts`: Hook customizado para encapsular a lógica de escuta de eventos e atualização de estado local do app.
+## 6. Fase 6: Finalização e Site (Consulta)
+- **Ata Automática:** Geração de PDF consolidado com todos os eventos e resultados.
+- **Área do Filiado (Web):** Espelhamento das assembleias encerradas, consulta de histórico e download de atas.
+- **Segurança:** Bloqueio de interações de escrita via interface web.
 
 ---
-
-## 3. Site (public/)
-
-### 3.1. Frontend
-- `area-filiado/assembleias.html`: Layout espelhado (Production 2.0 style) focado em consulta.
-- `js/area-filiado/assembleias.js`:
-    - Consumo da API via `window.Api.apiFetch`.
-    - Exibição de histórico de votações e atas.
-    - **Regra:** Não permite envio de comandos de gestão ou votos (redireciona para o App Mobile se o usuário tentar interagir).
-
----
-
-## 4. Ordem de Implementação Sugerida
-
-1.  **Fase 1 (Fundação):** Migrations do Banco de Dados e Cadastro de Assembleia.
-2.  **Fase 2 (Presença):** Lógica de Tokens de Quórum e Check-in no App.
-3.  **Fase 3 (Votação):** Backend de Snapshot e registro de votos via Socket.IO.
-4.  **Fase 4 (Interação):** Fila de palavra e Propostas.
-5.  **Fase 5 (Encerramento):** Geração automática de Ata e Logs de Auditoria.
-6.  **Fase 6 (Consulta):** Visualização histórica no Site.
+**Nota:** Nenhuma interface de usuário (UI) funcional foi implementada nas Fases 1 e 2. O estado atual é puramente de infraestrutura de backend e comunicação.

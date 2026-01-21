@@ -6,23 +6,23 @@ const app = express();
 const cors = require("cors");
 
 const allowedOrigins = [
-  "https://sinprfes.org.br",
-  "https://www.sinprfes.org.br",
-  "http://localhost:3000",
-  "http://localhost:5173",
+ "https://sinprfes.org.br",
+ "https://www.sinprfes.org.br",
+ "http://localhost:3000",
+ "http://localhost:5173",
 ];
 
 app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Permite chamadas server-to-server/curl sem Origin
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"));
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
+ cors({
+   origin: function (origin, callback) {
+     // Permite chamadas server-to-server/curl sem Origin
+     if (!origin) return callback(null, true);
+     if (allowedOrigins.includes(origin)) return callback(null, true);
+     return callback(new Error("Not allowed by CORS"));
+   },
+   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+   allowedHeaders: ["Content-Type", "Authorization"],
+ })
 );
 
 // Preflight
@@ -99,7 +99,7 @@ app.use("/api/eventos", eventoVotacoesRoutes); // vai usar subrotas /:id/votacoe
 
 // Health Check simples
 app.get("/health", (_, res) => {
-  res.json({ status: "ok" });
+ res.json({ status: "ok" });
 });
 
 module.exports = app;
