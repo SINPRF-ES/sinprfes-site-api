@@ -11,4 +11,4 @@ logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 runBirthdayScan(); // Dispara scan básico no boot
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));
+server.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));
