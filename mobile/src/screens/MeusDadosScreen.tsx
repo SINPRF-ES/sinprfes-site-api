@@ -17,7 +17,7 @@ import DependentesCard from '../components/DependentesCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { toISODate, toBrazilianDate } from '../utils/date';
-import { onlyDigits } from '../shared/formatters';
+import { onlyDigits } from '../shared/format/formatters';
 import { logger } from '../infra/logger';
 
 export default function MeusDadosScreen() {

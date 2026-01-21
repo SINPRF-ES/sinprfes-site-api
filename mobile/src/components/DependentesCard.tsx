@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
-import { formatCpf, onlyDigits } from '../shared/formatters';
+import { formatCpf, onlyDigits } from '../shared/format/formatters';
 import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate, calculateAgeBreakdown } from '../utils/date';
 import { PARENTESCO_OPTIONS, normalizeParentesco } from '../shared/parentesco';
 
@@ -76,7 +76,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <TextInput
         style={styles.input}
         placeholder="DD/MM/AAAA"
-        value={toBrazilianDate(filiado?.[`dep${index}_data_nascimento` || ''])}
+        value={toBrazilianDate(filiado?.[`dep${index}_data_nascimento`] || '')}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}
@@ -85,7 +85,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       <Text style={styles.label}>Idade</Text>
       <TextInput
         style={styles.inputDisabled}
-        value={calculateAgeBreakdown(filiado?.[`dep${index}_data_nascimento`])}
+        value={calculateAgeBreakdown(filiado?.[`dep${index}_data_nascimento`] || null)}
         editable={false}
       />
 

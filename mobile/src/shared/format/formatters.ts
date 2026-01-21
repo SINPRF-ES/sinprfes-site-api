@@ -4,10 +4,16 @@ export const onlyDigits = (text: string | null | undefined): string => {
 };
 
 export const formatCpf = (cpf: string | null | undefined): string => {
-  if (!cpf) return '';
-  const digits = onlyDigits(cpf);
-  if (digits.length !== 11) return digits;
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  try {
+    if (!cpf) return '—';
+    const digits = onlyDigits(cpf);
+    if (!digits) return '—';
+    if (digits.length !== 11) return digits;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  } catch (e) {
+    console.error('[Formatters.formatCpf.error]', e);
+    return '—';
+  }
 };
 
 export const formatTelefone = (tel: string | null | undefined): string => {
@@ -42,3 +48,14 @@ export const formatConta = (conta: string | null | undefined): string => {
   if (digits.length < 6) return digits;
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
+
+const Formatters = {
+  onlyDigits,
+  formatCpf,
+  formatTelefone,
+  formatCep,
+  formatAgencia,
+  formatConta
+};
+
+export default Formatters;

@@ -7,7 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
-import { formatCpf, onlyDigits } from '../shared/formatters';
+import { formatCpf, onlyDigits } from '../shared/format/formatters';
 
 export default function LoginScreen() {
   const navigation = useNavigation();

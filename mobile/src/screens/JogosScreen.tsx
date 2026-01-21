@@ -94,7 +94,13 @@ const JogosScreen = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const minInsc = await getMinhaInscricaoJogos().catch(() => null);
+      const minInsc = await getMinhaInscricaoJogos().catch((error) => {
+        if (error.response?.status === 404) {
+          logger.info('[Jogos.fetchData] Nenhuma inscrição encontrada (404 esperado)');
+          return null;
+        }
+        throw error;
+      });
       if (minInsc) {
         setInscricao(minInsc);
         setForm({

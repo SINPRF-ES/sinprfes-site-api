@@ -16,7 +16,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { formatAgencia, formatConta, onlyDigits, formatCpf, formatTelefone } from '../shared/formatters';
+import { formatAgencia, formatConta, onlyDigits, formatCpf, formatTelefone } from '../shared/format/formatters';
 import { formatDateToDdMmYyyy } from '../utils/date';
 import { criarRessarcimento } from '../services/ressarcimentoService';
 import { logger } from '../infra/logger';

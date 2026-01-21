@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert, ActivityIndicator } from 'react-native';
 import { Filiado } from '../types/filiado';
-import { formatCep, onlyDigits } from '../shared/formatters';
+import { formatCep, onlyDigits } from '../shared/format/formatters';
 import { buscarCep } from '../services/cepService';
 
 interface Props {
