@@ -50,6 +50,9 @@ const publicacoesRoutes = require("./routes/publicacoes.routes");
 // 🟣 NOVO: Rota de Votações
 const votacoesRoutes = require("./routes/votacoes.routes");
 
+// 🟦 NOVO: Rota de Assembleias
+const assembleiasRoutes = require("./routes/assembleias.routes");
+
 // ==============================
 // REGISTRO DE ROTAS (Prefixos)
 // ==============================
@@ -83,6 +86,9 @@ app.use("/api/publicacoes", publicacoesRoutes);
 
 // 🟣 NOVO: Votações
 app.use("/api/votacoes", votacoesRoutes);
+
+// 🟦 NOVO: Assembleias
+app.use("/api/assembleias", assembleiasRoutes);
 
 // Push de votações
 app.use("/api/push", pushRoutes);
