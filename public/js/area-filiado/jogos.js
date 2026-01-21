@@ -400,16 +400,19 @@
                                 return m ? m.label : id;
                             }).join(", ");
                             const emails = [i.email1, i.email2].filter(Boolean).join(" / ");
+                            const sexoFormatado = i.sexo ? (i.sexo.charAt(0).toUpperCase() + i.sexo.slice(1).toLowerCase()) : "-";
+                            const telefoneFormatado = window.Utils && window.Utils.formatarTelefoneTexto ? window.Utils.formatarTelefoneTexto(i.telefone1) : (i.telefone1 || "-");
+
                             return `
                                 <tr>
                                     <td style="font-weight:bold;">${i.nome_filiado || "-"}</td>
                                     <td style="text-align:center;">${idade || "-"}</td>
-                                    <td>${i.sexo || "-"}</td>
+                                    <td>${sexoFormatado}</td>
                                     <td style="font-size:0.85rem;">${modsLabels}</td>
                                     <td style="text-align:center;">${i.qtd_familiares || 0}</td>
                                     <td style="font-size:0.85rem;">${i.familiares || "-"}</td>
                                     <td style="font-size:0.85rem;">${i.observacoes || "-"}</td>
-                                    <td>${i.telefone1 || "-"}</td>
+                                    <td>${telefoneFormatado}</td>
                                     <td style="font-size:0.85rem;">${emails || "-"}</td>
                                 </tr>
                             `;
@@ -437,16 +440,18 @@
                     return m ? m.label : id;
                 }).join("; ");
                 const emails = [i.email1, i.email2].filter(Boolean).join(" / ");
+                const sexoFormatado = i.sexo ? (i.sexo.charAt(0).toUpperCase() + i.sexo.slice(1).toLowerCase()) : "";
+                const telefoneFormatado = window.Utils && window.Utils.formatarTelefoneTexto ? window.Utils.formatarTelefoneTexto(i.telefone1) : (i.telefone1 || "");
 
                 return [
                     i.nome_filiado || "",
                     idade,
-                    i.sexo || "",
+                    sexoFormatado,
                     mods,
                     i.qtd_familiares || 0,
                     (i.familiares || "").replace(/\n/g, " "),
                     (i.observacoes || "").replace(/\n/g, " "),
-                    i.telefone1 || "",
+                    telefoneFormatado,
                     emails
                 ].map(v => `"${String(v).replace(/"/g, '""')}"`);
             });
