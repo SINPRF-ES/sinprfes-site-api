@@ -26,11 +26,25 @@ function perfilGestao(perfil) {
 }
 
 /**
- * Verifica se uma string é um UUID válido.
+ * Valida se um ID é numérico e seguro (INTEGER PK).
+ * @returns {number|null} O ID convertido ou null se inválido.
  */
-function isUUID(str) {
-  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return regex.test(str);
+function parseFiliadoId(req, res) {
+  const raw = String(req.params.id ?? "").trim();
+
+  // IDs em produção são numéricos (SERIAL/INTEGER)
+  if (!/^\d+$/.test(raw)) {
+    res.status(400).json({ success: false, message: "ID inválido." });
+    return null;
+  }
+
+  const id = Number(raw);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    res.status(400).json({ success: false, message: "ID inválido." });
+    return null;
+  }
+
+  return id;
 }
 
 /**
@@ -184,10 +198,8 @@ exports.atualizarMeusDados = async (req, res) => {
  */
 exports.excluirDependentes = async (req, res) => {
   try {
-    const idAlvo = req.params.id;
-    if (!idAlvo || !isUUID(idAlvo)) {
-      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
-    }
+    const idAlvo = parseFiliadoId(req, res);
+    if (idAlvo === null) return;
 
     const { indices } = req.body;
     if (!Array.isArray(indices)) {
@@ -249,11 +261,8 @@ exports.excluirDependentes = async (req, res) => {
 exports.atualizarFiliado = async (req, res) => {
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    const idAlvo = req.params.id;
-
-    if (!idAlvo || !isUUID(idAlvo)) {
-      return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
-    }
+    const idAlvo = parseFiliadoId(req, res);
+    if (idAlvo === null) return;
 
     if (!perfilGestao(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
@@ -310,7 +319,7 @@ exports.atualizarFiliado = async (req, res) => {
         return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
       }
 
-      if (String(req.user.id) === String(idAlvo)) {
+      if (Number(req.user.id) === idAlvo) {
         return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
       }
 
@@ -411,8 +420,8 @@ exports.criarFiliado = async (req, res) => {
  */
 exports.arquivarFiliado = async (req, res) => {
   try {
-    const idAlvo = req.params.id;
-    if (!idAlvo || !isUUID(idAlvo)) return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
+    const idAlvo = parseFiliadoId(req, res);
+    if (idAlvo === null) return;
 
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
@@ -442,8 +451,8 @@ exports.arquivarFiliado = async (req, res) => {
  */
 exports.desarquivarFiliado = async (req, res) => {
   try {
-    const idAlvo = req.params.id;
-    if (!idAlvo || !isUUID(idAlvo)) return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
+    const idAlvo = parseFiliadoId(req, res);
+    if (idAlvo === null) return;
 
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
@@ -504,8 +513,8 @@ exports.uploadAvatarPorId = async (req, res) => {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
     }
 
-    const idAlvo = req.params.id;
-    if (!idAlvo || !isUUID(idAlvo)) return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
+    const idAlvo = parseFiliadoId(req, res);
+    if (idAlvo === null) return;
 
     if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado." });
 
@@ -567,8 +576,8 @@ exports.removerAvatarMe = async (req, res) => {
 
 exports.removerAvatarPorId = async (req, res) => {
   try {
-    const id = req.params.id;
-    if (!id || !isUUID(id)) return res.status(400).json({ message: Textos.FILIADOS.ID_INVALIDO });
+    const id = parseFiliadoId(req, res);
+    if (id === null) return;
 
     const antes = await buscarPorId(id);
     if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });

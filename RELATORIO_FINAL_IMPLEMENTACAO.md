@@ -2,41 +2,40 @@
 
 **Data:** 22/01/2026
 **Status:** **CONCLUÍDO (Hardening de Segurança, Paridade Mobile e Observabilidade)**
-**Versão:** 4.0 (Pós-Hardening de Sessão)
+**Versão:** 4.1 (Correção de IDs de Filiados)
 
 ---
 
 ## 1. Sumário de Execução
 
-Este ciclo consolidou a segurança do sistema com hardening de autenticação, padronização de mensagens de erro e implementação de observabilidade estruturada. O aplicativo móvel agora possui paridade total em UX, máscaras de dados e cache offline para o módulo de Jogos.
+Este ciclo consolidou a segurança do sistema com hardening de autenticação, padronização de mensagens de erro e implementação de observabilidade estruturada. Recentemente, restauramos a compatibilidade com IDs numéricos (INTEGER) para a tabela de filiados, corrigindo um erro que bloqueava o downgrade legítimo de perfis administrativos.
 
 ---
 
 ## 2. Implementações Realizadas
 
-### 2.1. Autenticação e Sessão (Backend + Mobile)
+### 2.1. Backend: Correção de IDs e Segurança
 - **Status:** **RESOLVIDO**
 - **Ação:**
-    - Padronização de mensagens de erro 401/403 no backend via `src/utils/textos.js`.
-    - Hardening do middleware de auth para re-validar o estado do usuário (bloqueio/arquivamento) em cada requisição.
-    - Atualização do `apiService.ts` no Mobile para gerenciar sessões expiradas de forma centralizada.
-- **Validação:** Usuários rebaixados ou bloqueados perdem acesso imediatamente, mesmo com token válido.
+    - Restaurada a validação numérica para `filiados.id` (SERIAL/INTEGER).
+    - Implementada função `parseFiliadoId` para garantir parsing seguro e retorno `400 Bad Request` para IDs inválidos.
+    - Mantida a trava de segurança que impede a auto-alteração de perfil (self-demotion).
+    - Garantido que um ADMIN possa rebaixar outro ADMIN distinto.
+- **Validação:** Downgrade ADMIN -> DIRETORIA funcional e seguro.
 
-### 2.2. Módulo de Jogos (Mobile + Cache Offline)
+### 2.2. Autenticação e Sessão (Hardening)
+- **Status:** **RESOLVIDO**
+- **Ação:**
+    - Padronização de mensagens de erro 401/403 via `textos.js`.
+    - Hardening do middleware de auth para re-validar o estado do usuário (bloqueio/arquivamento) em cada requisição.
+- **Validação:** Segurança soberana no backend independente do estado do cliente.
+
+### 2.3. Mobile: Alinhamento e UX
 - **Status:** **CONCLUÍDO**
 - **Ação:**
+    - Centralização da lógica de máscaras (CPF, CEP, Telefone, Data) e aplicação em todas as telas.
     - Implementação de cache SQLite para inscrições de jogos (`offline_jogos_inscricoes`).
-    - Paridade de visualização offline na `JogosScreen.tsx`.
-    - Garantia de consistência no envio de dependentes e cálculo de idade 2026.
-- **Validação:** App funcional para consulta de inscrições sem internet.
-
-### 2.3. Observabilidade e Logs Estruturados
-- **Status:** **IMPLEMENTADO**
-- **Ação:**
-    - Novo middleware `requestTracker.js` para gerar `RequestId` único por requisição.
-    - Enriquecimento dos logs em `log.js` com `requestId`, `userId` e metadados contextuais.
-    - Revisão dos controllers para evitar `HTTP 500` em erros de regra de negócio (UUID/RBAC).
-- **Validação:** Diagnóstico em produção facilitado via logs JSON rastreáveis.
+- **Validação:** Experiência consistente e resiliente a falhas de conexão.
 
 ---
 
@@ -44,17 +43,17 @@ Este ciclo consolidou a segurança do sistema com hardening de autenticação, p
 
 | Item | Status Anterior | Status Atual | Localização |
 | :--- | :--- | :--- | :--- |
-| Trava de Autorebaixamento | Inexistente (Risco Alto) | **Implementada** | `filiados.controller.js` |
-| Mensagens 401/403 | Inconsistentes | **Padronizadas** | `textos.js` |
-| Cache de Jogos (App) | Inexistente | **Implementado** | `db.ts` / `JogosScreen` |
+| Validação de ID | Incorreta (UUID) | **Correta (INTEGER)** | `filiados.controller.js` |
+| Trava de Autorebaixamento | Frágil | **Hardened** | `filiados.controller.js` |
 | Observabilidade | Básica | **Estruturada** | `requestTracker.js` |
+| Cache Mobile | Inexistente | **Funcional** | `db.ts` / `JogosScreen` |
 
 ---
 
 ## 4. Conclusão do Ciclo
 
-O sistema SINPRF/ES encontra-se agora em sua versão mais robusta, com governança de acesso soberana no backend e experiência mobile resiliente.
+O sistema SINPRF/ES encontra-se agora em sua versão mais robusta e estável, com governança de acesso clara e paridade técnica total entre Backend e Mobile.
 
 ---
 **Relatório entregue por Jules (AI Software Engineer)**
-*Hardening concluído com sucesso.*
+*Hardening e correções de ID concluídos.*
