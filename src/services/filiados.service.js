@@ -138,7 +138,13 @@ async function atualizarDadosProprios(id, dados) {
   for (let i = 1; i <= 5; i++) {
     addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
     addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
-    addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
+
+    if (dados[`dep${i}_data_nascimento`] !== undefined) {
+      campos.push(`dep${i}_data_nascimento = NULLIF($${idx}, '')::date`);
+      valores.push(dados[`dep${i}_data_nascimento`]);
+      idx += 1;
+    }
+
     if (dados[`dep${i}_parentesco`] !== undefined) {
       addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
     }
@@ -217,7 +223,13 @@ async function atualizarFiliadoPorId(id, dados) {
   for (let i = 1; i <= 5; i++) {
     addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
     addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
-    addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
+
+    if (dados[`dep${i}_data_nascimento`] !== undefined) {
+      campos.push(`dep${i}_data_nascimento = NULLIF($${idx}, '')::date`);
+      valores.push(dados[`dep${i}_data_nascimento`]);
+      idx += 1;
+    }
+
     if (dados[`dep${i}_parentesco`] !== undefined) {
       addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
     }

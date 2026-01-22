@@ -259,10 +259,12 @@ exports.excluirDependentes = async (req, res) => {
  * PUT /api/filiados/:id
  */
 exports.atualizarFiliado = async (req, res) => {
+  const loggedId = Number(req.user?.id);
+  const idAlvo = parseFiliadoId(req, res);
+  if (idAlvo === null) return;
+
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    const idAlvo = parseFiliadoId(req, res);
-    if (idAlvo === null) return;
 
     if (!perfilGestao(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
@@ -313,17 +315,19 @@ exports.atualizarFiliado = async (req, res) => {
 
     if (body.perfil_acesso) {
       const novoPerfil = String(body.perfil_acesso).toUpperCase();
-      const alvo = await buscarPorId(idAlvo);
 
+      // Trava de auto-alteração de perfil
+      if (loggedId === idAlvo) {
+        return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
+      }
+
+      const alvo = await buscarPorId(idAlvo);
       if (!alvo) {
         return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
       }
 
-      if (Number(req.user.id) === idAlvo) {
-        return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
-      }
-
       if (perfilAtor === "ADMIN") {
+        // ADMIN pode mudar qualquer perfil (exceto o próprio)
         payload.perfil_acesso = novoPerfil;
       } else {
         if (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN") {
@@ -336,11 +340,34 @@ exports.atualizarFiliado = async (req, res) => {
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
     if (!atualizado) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
 
-    log.info("FiliadoEditadoPorGestao", { atorId: req.user.id, alvoId: idAlvo, requestId: req.requestId });
+    log.info("FiliadoEditadoPorGestao", {
+        atorId: loggedId,
+        alvoId: idAlvo,
+        requestId: req.requestId,
+        perfilAtor,
+        bodyKeys: Object.keys(body)
+    });
 
     return res.json({ message: Textos.SUCESSO.DADOS_ATUALIZADOS, filiado: atualizado });
   } catch (err) {
-    log.error("FiliadosUpdateGestaoErro", { error: err, requestId: req.requestId, userId: req.user?.id });
+    // fallback (race-condition): constraint única no CPF
+    if (
+      err &&
+      (err.code === "23505" ||
+        err.code === "ER_DUP_ENTRY" ||
+        (err.message && err.message.includes("duplicate")))
+    ) {
+      return res.status(409).json({ message: "CPF duplicado no sistema." });
+    }
+
+    log.error("FiliadosUpdateGestaoErro", {
+        error: err.message,
+        stack: err.stack,
+        requestId: req.requestId,
+        loggedId,
+        targetId: idAlvo,
+        bodyKeys: Object.keys(req.body || {})
+    });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
@@ -419,10 +446,10 @@ exports.criarFiliado = async (req, res) => {
  * POST /api/filiados/:id/arquivar
  */
 exports.arquivarFiliado = async (req, res) => {
-  try {
-    const idAlvo = parseFiliadoId(req, res);
-    if (idAlvo === null) return;
+  const idAlvo = parseFiliadoId(req, res);
+  if (idAlvo === null) return;
 
+  try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
@@ -450,10 +477,10 @@ exports.arquivarFiliado = async (req, res) => {
  * POST /api/filiados/:id/desarquivar
  */
 exports.desarquivarFiliado = async (req, res) => {
-  try {
-    const idAlvo = parseFiliadoId(req, res);
-    if (idAlvo === null) return;
+  const idAlvo = parseFiliadoId(req, res);
+  if (idAlvo === null) return;
 
+  try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
@@ -507,14 +534,14 @@ exports.uploadAvatarMe = async (req, res) => {
  * POST /api/filiados/:id/avatar
  */
 exports.uploadAvatarPorId = async (req, res) => {
+  const idAlvo = parseFiliadoId(req, res);
+  if (idAlvo === null) return;
+
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
     }
-
-    const idAlvo = parseFiliadoId(req, res);
-    if (idAlvo === null) return;
 
     if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado." });
 
@@ -575,10 +602,10 @@ exports.removerAvatarMe = async (req, res) => {
 };
 
 exports.removerAvatarPorId = async (req, res) => {
-  try {
-    const id = parseFiliadoId(req, res);
-    if (id === null) return;
+  const id = parseFiliadoId(req, res);
+  if (id === null) return;
 
+  try {
     const antes = await buscarPorId(id);
     if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
 
