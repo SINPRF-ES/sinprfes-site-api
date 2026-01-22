@@ -329,6 +329,11 @@ exports.atualizarFiliado = async (req, res) => {
       const novoPerfil = String(body.perfil_acesso).toUpperCase();
       const alvo = await buscarPorId(idAlvo);
 
+      // 🛡️ Trava de segurança: proibida autoatribuição de perfil
+      if (req.user.id === idAlvo && alvo.perfil_acesso !== novoPerfil) {
+        return res.status(403).json({ message: "Você não pode alterar seu próprio perfil de acesso." });
+      }
+
       if (perfil === "ADMIN") {
         payload.perfil_acesso = novoPerfil;
       } else if (["DIRETORIA", "FUNCIONARIO"].includes(perfil)) {

@@ -96,6 +96,15 @@ O sistema é estruturado em três camadas bem definidas:
 
 O sistema possui quatro perfis funcionais, organizados em dois grupos.
 
+### Perfil FILIADO e COMUNICADOR
+
+**COMUNICADOR:**
+- Perfil de **menor privilégio**, destinado à futura assessoria de comunicação.
+- Propósito: CRUD/publicação de notícias via CMS interno (área autenticada).
+- **Importante:** O COMUNICADOR não edita HTML das páginas públicas (`index.html`, `noticias.html`). O conteúdo será consumido dinamicamente via backend.
+- Não possui acesso a dados de terceiros (sem `LIST_FILIADOS`).
+- Concessão permitida por ADMIN, DIRETORIA e FUNCIONARIO.
+
 ### Perfil FILIADO
 
 **Visualizacao:**
@@ -143,7 +152,7 @@ Esses campos permanecem exclusivos do fluxo `buscaCEP`, inclusive para gestores.
 
 **Regra exclusiva do ADMIN:**
 - Apenas ADMIN pode conceder/remover o perfil ADMIN de outro usuario.
-- DIRETORIA e FUNCIONARIO podem conceder/alterar perfis **entre si** (DIRETORIA, FUNCIONARIO) e para **FILIADO**, mas **NUNCA** promover a ADMIN nem remover um perfil ADMIN existente.
+- DIRETORIA e FUNCIONARIO podem conceder/alterar perfis **entre si** (DIRETORIA, FUNCIONARIO), para **FILIADO** e para **COMUNICADOR**, mas **NUNCA** promover a ADMIN nem remover um perfil ADMIN existente. O operador não pode alterar seu próprio perfil.
 
 ---
 

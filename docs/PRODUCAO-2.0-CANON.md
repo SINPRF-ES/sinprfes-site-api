@@ -113,7 +113,7 @@ graph TD
     *   **UI:** Formato BR `DD/MM/YYYY`.
 
 ### 5.2. Valores Canônicos (Enums/Strings)
-*   **Perfis de Acesso (`perfil_acesso`):** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR` (FILIADO + Jogos Manager), `FILIADO`.
+*   **Perfis de Acesso (`perfil_acesso`):** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `COMUNICADOR`, `ORGANIZADOR` (FILIADO + Jogos Manager), `FILIADO`.
 *   **Situação Funcional (`situacao`):** `ATIVO`, `APOSENTADO`, `PENSIONISTA`, `LICENCIADO`.
 *   **Parentesco Dependentes (`parentesco`):** `FILHO_ENTEADO`, `CONJUGE_COMPANHEIRO`, `PAI_MAE`, `IRMAO`, `OUTRO`.
 
@@ -177,6 +177,7 @@ Os seguintes componentes estão estáveis e não devem ser modificados sem aprov
 
 ## 9. Roadmap Controlado
 
+- **Módulo Notícias Internas (CMS):** Perfil `COMUNICADOR` com princípio de *least privilege*. Ausência de acesso a dados de terceiros. Conteúdo consumido via API pelo site público, sem edição de HTML por usuários não técnicos.
 - **Melhoria PDF Mobile:** Transição para visualizador de PDF 100% nativo (atualmente via WebView + Base64).
 - **Notificações:** Expansão do sistema de Push para eventos específicos.
 

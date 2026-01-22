@@ -44,5 +44,10 @@ module.exports = {
     "VIEW_SELF",       // vê todos os próprios dados
     "EDIT_SELF",       // edita apenas campos permitidos
     "VOTACAO_VOTAR"
+  ],
+
+  COMUNICADOR: [
+    "VIEW_SELF",
+    "EDIT_SELF"
   ]
 };
