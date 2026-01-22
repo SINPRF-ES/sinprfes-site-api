@@ -207,7 +207,7 @@ exports.excluirDependentes = async (req, res) => {
     }
 
     const ehGestor = perfilGestao(req.user.perfil_acesso);
-    const ehProprioUsuario = Number(req.user.id) === idAlvo;
+    const ehProprioUsuario = String(req.user.id) === String(idAlvo);
 
     if (!ehGestor && !ehProprioUsuario) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
@@ -273,7 +273,7 @@ exports.atualizarFiliado = async (req, res) => {
     if (body.cpf) {
       const cpfLimpo = normalizarCpf(body.cpf);
       const checkCpf = await pool.query(
-        "SELECT nome FROM filiados WHERE cpf = $1 AND id != $2 LIMIT 1",
+        "SELECT nome FROM filiados WHERE cpf = $1 AND CAST(id AS TEXT) != CAST($2 AS TEXT) LIMIT 1",
         [cpfLimpo, idAlvo]
       );
 
