@@ -1,87 +1,45 @@
+// mobile/src/screens/JogosScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
+  TextInput,
   TouchableOpacity,
   ScrollView,
+  StyleSheet,
   Alert,
   ActivityIndicator,
   SafeAreaView,
-  TextInput,
-  Switch,
-  FlatList,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
-import { useNetInfo } from '@react-native-community/netinfo';
-import {
-  getMinhaInscricaoJogos,
-  registrarInscricaoJogos,
-  cancelarInscricaoJogos,
-  getInscricoesJogos,
-} from '../services/jogosService';
 import { logger } from '../infra/logger';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } from '../services/jogosService';
+import NetInfo from '@react-native-community/netinfo';
+import { formatISOToBR } from '../utils/date';
+import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
 
 const MODALIDADES_JOGOS_2026 = [
-  { id: 'atletismo_100m_masc', label: '100m Masculino', grupo: 'Atletismo' },
-  { id: 'atletismo_100m_fem', label: '100m Feminino', grupo: 'Atletismo' },
-  { id: 'atletismo_400m_masc', label: '400m Masculino', grupo: 'Atletismo' },
-  { id: 'atletismo_400m_fem', label: '400m Feminino', grupo: 'Atletismo' },
-  { id: 'atletismo_1500m_masc', label: '1500m Masculino', grupo: 'Atletismo' },
-  { id: 'atletismo_1500m_fem', label: '1500m Feminino', grupo: 'Atletismo' },
-  { id: 'atletismo_5000m_masc', label: '5000m Masculino', grupo: 'Atletismo' },
-  { id: 'atletismo_5000m_fem', label: '5000m Feminino', grupo: 'Atletismo' },
-  { id: 'beach_tenis_dupla_livre', label: 'Beach Tênis - Dupla Livre', grupo: 'Beach Tênis' },
-  { id: 'beach_tenis_dupla_mista', label: 'Beach Tênis - Dupla Mista', grupo: 'Beach Tênis' },
-  { id: 'canastra', label: 'Canastra', grupo: 'Jogos de Mesa' },
-  { id: 'domino', label: 'Dominó', grupo: 'Jogos de Mesa' },
-  { id: 'truco_duplas', label: 'Truco (Duplas)', grupo: 'Jogos de Mesa' },
-  { id: 'xadrez', label: 'Xadrez', grupo: 'Jogos de Mesa' },
-  { id: 'futebol_society_livre', label: 'Futebol Society (Livre)', grupo: 'Futebol' },
-  { id: 'futebol_society_master', label: 'Futebol Society (Master - Acima de 55 anos)', grupo: 'Futebol' },
-  { id: 'futsal_livre', label: 'Futsal (Livre)', grupo: 'Futebol' },
-  { id: 'futevolei', label: 'Futevôlei', grupo: 'Vôlei' },
-  { id: 'voleibol_livre', label: 'Voleibol (Livre)', grupo: 'Vôlei' },
-  { id: 'voleibol_praia_dupla_masc', label: 'Vôlei de Praia - Dupla Masculina', grupo: 'Vôlei' },
-  { id: 'voleibol_praia_dupla_mista', label: 'Vôlei de Praia - Dupla Mista', grupo: 'Vôlei' },
-  { id: 'jiu_jitsu', label: 'Jiu-Jitsu', grupo: 'Artes Marciais' },
-  { id: 'natacao_50m_livre_masc', label: '50m Nado Livre (Masculino)', grupo: 'Natação' },
-  { id: 'natacao_50m_livre_fem', label: '50m Nado Livre (Feminino)', grupo: 'Natação' },
-  { id: 'natacao_50m_costas_masc', label: '50m Nado Costas (Masculino)', grupo: 'Natação' },
-  { id: 'natacao_50m_costas_fem', label: '50m Nado Costas (Feminino)', grupo: 'Natação' },
-  { id: 'natacao_50m_peito_masc', label: '50m Nado Peito (Masculino)', grupo: 'Natação' },
-  { id: 'natacao_50m_peito_fem', label: '50m Nado Peito (Feminino)', grupo: 'Natação' },
-  { id: 'natacao_50m_borboleta_masc', label: '50m Nado Borboleta (Masculino)', grupo: 'Natação' },
-  { id: 'natacao_50m_borboleta_fem', label: '50m Nado Borboleta (Feminino)', grupo: 'Natação' },
-  { id: 'natacao_revezamento_4x50m_livre', label: 'Revezamento 4x50m Livre', grupo: 'Natação' },
-  { id: 'natacao_revezamento_2x50m_misto', label: 'Revezamento 2x50 Misto', grupo: 'Natação' },
-  { id: 'sinuca_individual', label: 'Sinuca Individual', grupo: 'Sinuca' },
-  { id: 'sinuca_duplas', label: 'Sinuca Duplas', grupo: 'Sinuca' },
-  { id: 'tenis_quadra_individual_masc', label: 'Tênis de Quadra - Individual (Masculino)', grupo: 'Tênis' },
-  { id: 'tenis_quadra_duplas_livre', label: 'Tênis de Quadra - Duplas (Livre)', grupo: 'Tênis' },
-  { id: 'tenis_mesa_masc', label: 'Tênis de Mesa (Masculino)', grupo: 'Tênis de Mesa' },
-  { id: 'tenis_mesa_fem', label: 'Tênis de Mesa (Feminino)', grupo: 'Tênis de Mesa' },
-  { id: 'tenis_mesa_duplas', label: 'Tênis de Mesa (Duplas)', grupo: 'Tênis de Mesa' },
-  { id: 'tiro_nra_masc', label: 'Tiro NRA (Masculino)', grupo: 'Tiro' },
-  { id: 'tiro_nra_fem', label: 'Tiro NRA (Feminino)', grupo: 'Tiro' },
-  { id: 'tiro_ispc_masc', label: 'Tiro ISPC (Masculino)', grupo: 'Tiro' },
-  { id: 'tiro_ispc_fem', label: 'Tiro ISPC (Feminino)', grupo: 'Tiro' },
-  { id: 'peteca', label: 'Peteca', grupo: 'Exibição' },
-  { id: 'damas', label: 'Damas', grupo: 'Exibição' },
-  { id: 'bocha', label: 'Bocha', grupo: 'Exibição' },
+  { id: 'FUTSAL', label: 'Futsal', grupo: 'Coletivos' },
+  { id: 'VOLEI_QUADRA', label: 'Vôlei de Quadra', grupo: 'Coletivos' },
+  { id: 'VOLEI_AREIA', label: 'Vôlei de Areia', grupo: 'Coletivos' },
+  { id: 'TENIS_MESA', label: 'Tênis de Mesa', grupo: 'Individuais' },
+  { id: 'NATACAO', label: 'Natação', grupo: 'Individuais' },
+  { id: 'ATLETISMO', label: 'Atletismo', grupo: 'Individuais' },
+  { id: 'XADREZ', label: 'Xadrez', grupo: 'Outros' },
+  { id: 'DOMINO', label: 'Dominó', grupo: 'Outros' },
 ];
 
 const JogosScreen = () => {
   const { usuario } = useAuth();
-  const netInfo = useNetInfo();
-  const isManager = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'ORGANIZADOR'].includes(usuario?.perfil_acesso || '');
-
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [inscricao, setInscricao] = useState<any>(null);
   const [inscricoesGerais, setInscricoesGerais] = useState<any[]>([]);
+  const [netInfo, setNetInfo] = useState<any>({});
+
+  const isManager = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'ORGANIZADOR'].includes(usuario?.perfil_acesso || '');
 
   const [form, setForm] = useState({
     sexo: '',
@@ -91,37 +49,66 @@ const JogosScreen = () => {
     modalidades: [] as string[],
   });
 
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => setNetInfo(state));
+    return () => unsubscribe();
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const minInsc = await getMinhaInscricaoJogos().catch((error) => {
-        if (error.response?.status === 404) {
-          logger.info('[Jogos.fetchData] Nenhuma inscrição encontrada (404 esperado)');
-          return null;
-        }
-        throw error;
-      });
-      if (minInsc) {
-        setInscricao(minInsc);
+
+      let inscricoes;
+      if (netInfo.isConnected) {
+        inscricoes = await getInscricoesJogos();
+        await salvarJogosInscricoesOffline(inscricoes);
+      } else {
+        inscricoes = await listarJogosInscricoesOffline();
+      }
+
+      const minha = inscricoes.find((i: any) => String(i.filiado_id) === String(usuario?.id));
+
+      if (minha) {
+        setInscricao(minha);
         setForm({
-          sexo: minInsc.sexo || '',
-          qtd_familiares: String(minInsc.qtd_familiares || 0),
-          familiares: minInsc.familiares || '',
-          observacoes: minInsc.observacoes || '',
-          modalidades: minInsc.modalidades || [],
+          sexo: minha.sexo || '',
+          qtd_familiares: String(minha.qtd_familiares || '0'),
+          familiares: minha.familiares || '',
+          observacoes: minha.observacoes || '',
+          modalidades: minha.modalidades || [],
         });
+      } else {
+        setInscricao(null);
+        setForm({ sexo: '', qtd_familiares: '0', familiares: '', observacoes: '', modalidades: [] });
       }
 
       if (isManager) {
-        const gerais = await getInscricoesJogos();
-        setInscricoesGerais(gerais);
+        setInscricoesGerais(inscricoes);
       }
     } catch (err) {
       logger.error('[Jogos.fetchData.error]', err);
+      // Fallback offline caso a API falhe mas estejamos "conectados"
+      try {
+        const local = await listarJogosInscricoesOffline();
+        setInscricoesGerais(local);
+        const minhaLocal = local.find((i: any) => String(i.filiado_id) === String(usuario?.id));
+        if (minhaLocal) {
+          setInscricao(minhaLocal);
+          setForm({
+            sexo: minhaLocal.sexo || '',
+            qtd_familiares: String(minhaLocal.qtd_familiares || '0'),
+            familiares: minhaLocal.familiares || '',
+            observacoes: minhaLocal.observacoes || '',
+            modalidades: minhaLocal.modalidades || [],
+          });
+        }
+      } catch (dbErr) {
+        logger.error('[Jogos.fetchData.offlineFallback.error]', dbErr);
+      }
     } finally {
       setLoading(false);
     }
-  }, [isManager]);
+  }, [isManager, usuario?.id, netInfo.isConnected]);
 
   useEffect(() => {
     fetchData();
@@ -140,7 +127,7 @@ const JogosScreen = () => {
 
   const handleSave = async () => {
     if (!netInfo.isConnected) {
-      Alert.alert('Offline', 'Conecte-se para salvar.');
+      Alert.alert('Offline', 'Você precisa de internet para enviar ou atualizar sua inscrição.');
       return;
     }
 
@@ -158,13 +145,18 @@ const JogosScreen = () => {
       fetchData();
     } catch (err: any) {
       logger.error('[Jogos.submit.error]', err);
-      Alert.alert('Erro', 'Não foi possível salvar a inscrição.');
+      Alert.alert('Erro', err.response?.data?.error || 'Não foi possível salvar a inscrição.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleCancel = async () => {
+    if (!netInfo.isConnected) {
+      Alert.alert('Offline', 'Você precisa de internet para cancelar sua inscrição.');
+      return;
+    }
+
     Alert.alert(
       'Confirmar Cancelamento',
       'Tem certeza que deseja cancelar sua inscrição? Esta ação não pode ser desfeita.',
@@ -178,8 +170,6 @@ const JogosScreen = () => {
               setSubmitting(true);
               await cancelarInscricaoJogos();
               Alert.alert('Sucesso', 'Sua inscrição foi cancelada.');
-              setInscricao(null);
-              setForm({ sexo: '', qtd_familiares: '0', familiares: '', observacoes: '', modalidades: [] });
               fetchData();
             } catch (err) {
               Alert.alert('Erro', 'Não foi possível cancelar.');
@@ -194,8 +184,13 @@ const JogosScreen = () => {
 
   const calculateAge2026 = (birthDate: string) => {
     if (!birthDate) return '—';
-    const year = new Date(birthDate).getFullYear();
-    return 2026 - year;
+    try {
+      const date = new Date(birthDate);
+      if (isNaN(date.getTime())) return '—';
+      return 2026 - date.getFullYear();
+    } catch {
+      return '—';
+    }
   };
 
   const renderModalidades = () => {
@@ -240,6 +235,13 @@ const JogosScreen = () => {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Inscrição</Text>
+          {!netInfo.isConnected && (
+            <View style={styles.offlineBadge}>
+              <MaterialCommunityIcons name="cloud-off-outline" size={16} color="#721c24" />
+              <Text style={styles.offlineText}>Visualizando modo offline</Text>
+            </View>
+          )}
+
           <Text style={styles.label}>Sexo (Para fins de categoria)</Text>
           <View style={styles.pickerContainer}>
             <Picker
@@ -281,18 +283,18 @@ const JogosScreen = () => {
           />
 
           <TouchableOpacity
-            style={[styles.btnPrimary, submitting && styles.btnDisabled]}
+            style={[styles.btnPrimary, (submitting || !netInfo.isConnected) && styles.btnDisabled]}
             onPress={handleSave}
-            disabled={submitting}
+            disabled={submitting || !netInfo.isConnected}
           >
             <Text style={styles.btnText}>{inscricao ? 'Atualizar Inscrição 🚀' : 'Confirmar Inscrição 🚀'}</Text>
           </TouchableOpacity>
 
           {inscricao && (
             <TouchableOpacity
-              style={[styles.btnDanger, submitting && styles.btnDisabled, { marginTop: 10 }]}
+              style={[styles.btnDanger, (submitting || !netInfo.isConnected) && styles.btnDisabled, { marginTop: 10 }]}
               onPress={handleCancel}
-              disabled={submitting}
+              disabled={submitting || !netInfo.isConnected}
             >
               <Text style={styles.btnText}>Cancelar Inscrição ❌</Text>
             </TouchableOpacity>
@@ -306,13 +308,15 @@ const JogosScreen = () => {
               <View>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderText, { width: 150 }]}>Nome</Text>
-                  <Text style={[styles.tableHeaderText, { width: 60 }]}>Idade</Text>
+                  <Text style={[styles.tableHeaderText, { width: 100 }]}>Nascimento</Text>
+                  <Text style={[styles.tableHeaderText, { width: 60 }]}>Idade 2026</Text>
                   <Text style={[styles.tableHeaderText, { width: 100 }]}>Sexo</Text>
                   <Text style={[styles.tableHeaderText, { width: 200 }]}>Modalidades</Text>
                 </View>
                 {inscricoesGerais.map((item, idx) => (
                   <View key={idx} style={[styles.tableRow, idx % 2 === 0 ? {} : { backgroundColor: '#f9f9f9' }]}>
                     <Text style={[styles.tableCell, { width: 150, fontWeight: 'bold' }]}>{item.nome_filiado}</Text>
+                    <Text style={[styles.tableCell, { width: 100 }]}>{formatISOToBR(item.data_nascimento)}</Text>
                     <Text style={[styles.tableCell, { width: 60, textAlign: 'center' }]}>{calculateAge2026(item.data_nascimento)}</Text>
                     <Text style={[styles.tableCell, { width: 100 }]}>{item.sexo}</Text>
                     <Text style={[styles.tableCell, { width: 200 }]} numberOfLines={2}>
@@ -354,6 +358,8 @@ const styles = StyleSheet.create({
   tableHeaderText: { fontWeight: 'bold', color: '#003366', fontSize: 12 },
   tableRow: { flexDirection: 'row', padding: 10, borderBottomWidth: 1, borderBottomColor: '#eee', alignItems: 'center' },
   tableCell: { fontSize: 12, color: '#333' },
+  offlineBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, padding: 8, backgroundColor: '#f8d7da', borderRadius: 8, marginBottom: 15, alignSelf: 'center' },
+  offlineText: { fontSize: 12, color: '#721c24', fontWeight: 'bold' },
 });
 
 export default JogosScreen;

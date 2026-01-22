@@ -88,12 +88,25 @@ api.interceptors.response.use(
       console.error('-------------------------------------');
     }
     
-    // Evita logout imediato se a chamada inicial para /me falhar
-    if (status === 401 && !config.url.endsWith('/me')) {
-      logger.warn('Sessão expirada ou inválida. Limpando sessão...');
+    // Trata erro 401 (Não autorizado / Sessão expirada)
+    if (status === 401) {
+      // Se for a rota /me e estiver falhando, é provável que o token seja inválido/expirado
+      // Se for qualquer outra rota, limpamos a sessão para forçar novo login
+      logger.warn(`[API.401] Sessão expirada ou inválida na rota: ${url}`);
       await limparSessao();
-      // O ideal é que o useAuth ou um listener reaja a esta limpeza.
+
+      // Notifica o sistema de que a sessão caiu (opcional, useAuth já lida com falha no /me)
+      if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
+        (window as any).onSessionExpired();
+      }
     }
+
+    // Trata erro 403 (Proibido / Sem permissão)
+    if (status === 403) {
+      logger.warn(`[API.403] Acesso proibido à rota: ${url}`);
+      // Aqui poderíamos emitir um alerta global de "Permissão insuficiente"
+    }
+
     return Promise.reject(error);
   }
 );
