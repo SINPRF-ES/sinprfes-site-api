@@ -350,6 +350,10 @@ exports.atualizarFiliado = async (req, res) => {
 
     return res.json({ message: Textos.SUCESSO.DADOS_ATUALIZADOS, filiado: atualizado });
   } catch (err) {
+    if (err.isValidationError) {
+      return res.status(400).json({ message: err.message });
+    }
+
     // fallback (race-condition): constraint única no CPF
     if (
       err &&
@@ -437,6 +441,9 @@ exports.criarFiliado = async (req, res) => {
 
     return res.status(201).json({ message: Textos.SUCESSO.CRIADO_SUCESSO, filiado: novo });
   } catch (err) {
+    if (err.isValidationError) {
+      return res.status(400).json({ message: err.message });
+    }
     log.error("FiliadosCriarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_FILIADO });
   }

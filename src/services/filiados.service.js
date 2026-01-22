@@ -1,6 +1,6 @@
 // src/services/filiados.service.js
 const pool = require("../config/db");
-const { normalizarCpf } = require("../utils/format");
+const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
 
@@ -131,7 +131,17 @@ async function atualizarDadosProprios(id, dados) {
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
   addCampo("uf", dados.uf);
-  addCampo("cep", dados.cep);
+
+  if (dados.cep !== undefined) {
+    const cepNorm = normalizarCep(dados.cep);
+    if (cepNorm && cepNorm.length !== 8) {
+      const err = new Error("CEP deve conter 8 dígitos.");
+      err.isValidationError = true;
+      throw err;
+    }
+    addCampo("cep", cepNorm);
+  }
+
   addCampo("avatar_url", dados.avatar_url);
 
   // Campos dos dependentes
@@ -216,7 +226,17 @@ async function atualizarFiliadoPorId(id, dados) {
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
   addCampo("uf", dados.uf);
-  addCampo("cep", dados.cep);
+
+  if (dados.cep !== undefined) {
+    const cepNorm = normalizarCep(dados.cep);
+    if (cepNorm && cepNorm.length !== 8) {
+      const err = new Error("CEP deve conter 8 dígitos.");
+      err.isValidationError = true;
+      throw err;
+    }
+    addCampo("cep", cepNorm);
+  }
+
   addCampo("avatar_url", dados.avatar_url);
 
   // Campos dos dependentes
@@ -394,7 +414,15 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     push("complemento", complemento);
     push("cidade", cidade);
     push("uf", uf);
-    push("cep", cep);
+
+    const cepNorm = normalizarCep(cep);
+    if (cepNorm && cepNorm.length !== 8) {
+      const err = new Error("CEP deve conter 8 dígitos.");
+      err.isValidationError = true;
+      throw err;
+    }
+    push("cep", cepNorm);
+
     push("lotacao", lotacao);
     push("situacao", situacao);
     push("perfil_acesso", perfilNovo);
