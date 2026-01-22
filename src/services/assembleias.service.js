@@ -7,7 +7,7 @@ async function listar(perfilAcesso) {
   let query = `SELECT ${ASSEMBLEIA_COLUMNS} FROM assembleias`;
   const params = [];
 
-  if (perfilAcesso === "FILIADO") {
+  if (["FILIADO", "COMUNICADOR"].includes(perfilAcesso)) {
     query += " WHERE estado IN ('ABERTA', 'ENCERRADA')";
   }
 

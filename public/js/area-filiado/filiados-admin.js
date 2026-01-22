@@ -252,7 +252,9 @@
         const nascimento = f.data_nascimento;
         const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
 
-        const canChangeProfile = ehAdmin || (["DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN");
+        const userInfo = window.Utils && window.Utils.obterUserInfo ? window.Utils.obterUserInfo() : null;
+        const isSelf = userInfo && String(f.id) === String(userInfo.id);
+        const canChangeProfile = (ehAdmin || (["DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN")) && !isSelf;
 
         const responsavel = f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—");
 
@@ -323,6 +325,7 @@
                                 <label>Perfil de Acesso</label>
                                 <select name="perfil_acesso">
                                     <option value="FILIADO" ${f.perfil_acesso === "FILIADO" ? "selected" : ""}>FILIADO</option>
+                                    <option value="COMUNICADOR" ${f.perfil_acesso === "COMUNICADOR" ? "selected" : ""}>COMUNICADOR</option>
                                     <option value="ORGANIZADOR" ${f.perfil_acesso === "ORGANIZADOR" ? "selected" : ""}>ORGANIZADOR</option>
                                     <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>
                                     <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>

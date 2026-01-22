@@ -179,6 +179,7 @@ Os seguintes componentes estão estáveis e não devem ser modificados sem aprov
 
 ## 9. Roadmap Controlado
 
+- **Módulo Notícias Internas (CMS):** Perfil `COMUNICADOR` com princípio de *least privilege*. Ausência de acesso a dados de terceiros. Conteúdo consumido via API pelo site público, sem edição de HTML por usuários não técnicos.
 - **Melhoria PDF Mobile:** Transição para visualizador de PDF 100% nativo (atualmente via WebView + Base64).
 - **Notificações:** Expansão do sistema de Push para eventos específicos.
 
