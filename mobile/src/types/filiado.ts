@@ -1,17 +1,18 @@
 // src/types/filiado.ts
 
 export interface Filiado {
-  id: number;
+  id: string; // UUID
   nome: string;
   cpf: string;
   perfil_acesso: string;
   situacao: string;
+  situacao_funcional?: string; // Algumas rotas devolvem situacao_funcional
   avatar_url?: string | null;
 
   // Contato
-  telefone1?: string | null;
+  telefone1: string;
   telefone2?: string | null;
-  email1?: string | null;
+  email1: string;
   email2?: string | null;
 
   // Endereço
@@ -52,7 +53,12 @@ export interface Filiado {
   dep5_parentesco?: string | null;
 
   // Campos de controle
+  data_nascimento?: string | null;
   atualizado_em?: string | null;
+  arquivado_em?: string | null;
+  arquivado_motivo?: string | null;
+  arquivado_por?: string | null;
+  arquivado_por_nome?: string | null;
 
   // Para permitir acesso dinâmico a campos de dependentes
   [key: string]: any;

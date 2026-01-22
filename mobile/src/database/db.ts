@@ -4,7 +4,6 @@ import type { Filiado } from '../types/filiado';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-// Abre (ou reaproveita) o banco
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = SQLite.openDatabaseAsync('sinprf_offline.db');
@@ -12,7 +11,6 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
   return dbPromise;
 }
 
-// Inicializa a estrutura básica (tabela de filiados offline)
 export async function initDb(): Promise<void> {
   const db = await getDb();
 
@@ -20,7 +18,7 @@ export async function initDb(): Promise<void> {
     PRAGMA journal_mode = WAL;
 
     CREATE TABLE IF NOT EXISTS offline_filiados (
-      id INTEGER PRIMARY KEY NOT NULL,
+      id TEXT PRIMARY KEY NOT NULL,
       nome TEXT NOT NULL,
       cpf TEXT,
       telefone TEXT,
@@ -28,20 +26,27 @@ export async function initDb(): Promise<void> {
       situacao TEXT,
       atualizado_em TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS offline_jogos_inscricoes (
+      filiado_id TEXT PRIMARY KEY NOT NULL,
+      nome_filiado TEXT,
+      modalidades TEXT,
+      sexo TEXT,
+      qtd_familiares INTEGER,
+      familiares TEXT,
+      observacoes TEXT,
+      data_inscricao TEXT,
+      data_nascimento TEXT
+    );
   `);
 }
 
-// Salva lista de filiados no banco, substituindo o conteúdo anterior
 export async function salvarFiliadosOffline(lista: Filiado[]): Promise<void> {
   const db = await getDb();
-
-  // Limpa a tabela
   await db.execAsync('DELETE FROM offline_filiados;');
 
-  // Statement preparado para inserir vários registros
   const stmt = await db.prepareAsync(
-    `INSERT INTO offline_filiados
-       (id, nome, cpf, telefone, email, situacao, atualizado_em)
+    `INSERT INTO offline_filiados (id, nome, cpf, telefone, email, situacao, atualizado_em)
      VALUES ($id, $nome, $cpf, $telefone, $email, $situacao, $atualizado_em)`
   );
 
@@ -51,8 +56,8 @@ export async function salvarFiliadosOffline(lista: Filiado[]): Promise<void> {
         $id: f.id,
         $nome: f.nome,
         $cpf: f.cpf ?? null,
-        $telefone: f.telefone ?? null,
-        $email: f.email ?? null,
+        $telefone: f.telefone1 ?? null,
+        $email: f.email1 ?? null,
         $situacao: f.situacao ?? null,
         $atualizado_em: f.atualizado_em ?? null,
       });
@@ -62,38 +67,48 @@ export async function salvarFiliadosOffline(lista: Filiado[]): Promise<void> {
   }
 }
 
-// Lê lista de filiados do banco local
 export async function listarFiliadosOffline(): Promise<Filiado[]> {
   const db = await getDb();
-
-  const rows = await db.getAllAsync<Filiado>(
-    'SELECT id, nome, cpf, telefone, email, situacao, atualizado_em FROM offline_filiados ORDER BY nome COLLATE NOCASE;'
+  const rows = await db.getAllAsync<any>(
+    'SELECT id, nome, cpf, telefone as telefone1, email as email1, situacao, atualizado_em FROM offline_filiados ORDER BY nome COLLATE NOCASE;'
   );
-
-  return rows;
-}
-// Buscar local por nome/cpf/telefone
-export async function buscarFiliadosOffline(query: string, limit = 200): Promise<Filiado[]> {
-  const db = await getDb();
-  const q = `%${query.trim()}%`;
-
-  const rows = await db.getAllAsync<Filiado>(
-    `
-    SELECT id, nome, cpf, telefone, email, situacao, atualizado_em
-    FROM offline_filiados
-    WHERE nome LIKE ? OR cpf LIKE ? OR telefone LIKE ?
-    ORDER BY nome COLLATE NOCASE
-    LIMIT ?;
-    `,
-    [q, q, q, limit]
-  );
-
   return rows;
 }
 
-// Contar registros do cache local
-export async function contarFiliadosOffline(): Promise<number> {
+export async function salvarJogosInscricoesOffline(lista: any[]): Promise<void> {
   const db = await getDb();
-  const row = await db.getFirstAsync<{ total: number }>('SELECT COUNT(*) as total FROM offline_filiados;');
-  return row?.total ?? 0;
+  await db.execAsync('DELETE FROM offline_jogos_inscricoes;');
+
+  const stmt = await db.prepareAsync(
+    `INSERT INTO offline_jogos_inscricoes
+       (filiado_id, nome_filiado, modalidades, sexo, qtd_familiares, familiares, observacoes, data_inscricao, data_nascimento)
+     VALUES ($filiado_id, $nome_filiado, $modalidades, $sexo, $qtd_familiares, $familiares, $observacoes, $data_inscricao, $data_nascimento)`
+  );
+
+  try {
+    for (const i of lista) {
+      await stmt.executeAsync({
+        $filiado_id: i.filiado_id,
+        $nome_filiado: i.nome_filiado,
+        $modalidades: JSON.stringify(i.modalidades || []),
+        $sexo: i.sexo,
+        $qtd_familiares: i.qtd_familiares,
+        $familiares: i.familiares,
+        $observacoes: i.observacoes,
+        $data_inscricao: i.data_inscricao,
+        $data_nascimento: i.data_nascimento,
+      });
+    }
+  } finally {
+    await stmt.finalizeAsync();
+  }
+}
+
+export async function listarJogosInscricoesOffline(): Promise<any[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<any>('SELECT * FROM offline_jogos_inscricoes ORDER BY nome_filiado ASC;');
+  return rows.map(r => ({
+    ...r,
+    modalidades: JSON.parse(r.modalidades || '[]')
+  }));
 }
