@@ -333,6 +333,12 @@ exports.atualizarFiliado = async (req, res) => {
         return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
       }
 
+      // Bloqueio de auto-rebaixamento/auto-alteração de perfil no servidor
+      if (String(req.user.id) === String(idAlvo)) {
+        log.warn("TentativaAutoAlteracaoPerfil", { userId: req.user.id });
+        return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
+      }
+
       if (perfil === "ADMIN") {
         // ADMIN pode mudar qualquer perfil, inclusive rebaixar outro ADMIN
         payload.perfil_acesso = novoPerfil;
