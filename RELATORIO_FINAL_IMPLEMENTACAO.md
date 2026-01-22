@@ -1,40 +1,42 @@
 # Relatório Técnico Final — Auditoria e Implementação (Jan 2026)
 
 **Data:** 22/01/2026
-**Status:** **CONCLUÍDO (Fases 1, 2 e 3 implementadas)**
-**Versão:** 2.0 (Pós-Implementação)
+**Status:** **CONCLUÍDO (Hardening de Segurança, Paridade Mobile e Observabilidade)**
+**Versão:** 4.0 (Pós-Hardening de Sessão)
 
 ---
 
 ## 1. Sumário de Execução
 
-Após o diagnóstico inicial realizado em 20/01/2026, foram executadas três fases de correções e reorganização aprovadas pela diretoria técnica. O sistema agora apresenta maior robustez em segurança no backend, garantia de idempotência em automações e uma estrutura documental organizada.
+Este ciclo consolidou a segurança do sistema com hardening de autenticação, padronização de mensagens de erro e implementação de observabilidade estruturada. O aplicativo móvel agora possui paridade total em UX, máscaras de dados e cache offline para o módulo de Jogos.
 
 ---
 
-## 2. Implementações Realizadas (Fases 1 a 3)
+## 2. Implementações Realizadas
 
-### 2.1. Fase 1: Segurança (Autorebaixamento de Admin)
-- **Status:** **RESOLVIDO**
-- **Ação:** Implementada trava no backend (`src/controllers/filiados.controller.js`) que impede qualquer usuário logado de alterar seu próprio `perfil_acesso`.
-- **Validação:** Tentativas de auto-alteração via API agora retornam `403 Forbidden`, garantindo a soberania do backend sobre a UI.
-
-### 2.2. Fase 2: Idempotência (Job de Aniversariantes)
+### 2.1. Autenticação e Sessão (Backend + Mobile)
 - **Status:** **RESOLVIDO**
 - **Ação:**
-    - Criada a tabela `job_runs` via script de migração (`scripts/migration_jobs.sql`).
-    - O job `src/jobs/birthdayCron.js` foi refatorado para usar transações e lock `FOR UPDATE`, garantindo que apenas uma execução ocorra por dia.
-    - O disparo automático no boot foi condicionado à variável de ambiente `BIRTHDAY_SCAN_ON_BOOT=true`.
-- **Validação:** Proteção contra disparos duplicados em casos de restart de container (Render).
+    - Padronização de mensagens de erro 401/403 no backend via `src/utils/textos.js`.
+    - Hardening do middleware de auth para re-validar o estado do usuário (bloqueio/arquivamento) em cada requisição.
+    - Atualização do `apiService.ts` no Mobile para gerenciar sessões expiradas de forma centralizada.
+- **Validação:** Usuários rebaixados ou bloqueados perdem acesso imediatamente, mesmo com token válido.
 
-### 2.3. Fase 3: Organização Documental
+### 2.2. Módulo de Jogos (Mobile + Cache Offline)
 - **Status:** **CONCLUÍDO**
 - **Ação:**
-    - Centralização de todos os `.md` na pasta `/docs`.
-    - Criação da pasta `/docs/archive` para histórico técnico.
-    - `mobile/MOBILE_PARIDADE.md` movido para `docs/`.
-    - Planos técnicos antigos movidos para o arquivo.
-- **Validação:** Estrutura de documentação limpa e categorizada.
+    - Implementação de cache SQLite para inscrições de jogos (`offline_jogos_inscricoes`).
+    - Paridade de visualização offline na `JogosScreen.tsx`.
+    - Garantia de consistência no envio de dependentes e cálculo de idade 2026.
+- **Validação:** App funcional para consulta de inscrições sem internet.
+
+### 2.3. Observabilidade e Logs Estruturados
+- **Status:** **IMPLEMENTADO**
+- **Ação:**
+    - Novo middleware `requestTracker.js` para gerar `RequestId` único por requisição.
+    - Enriquecimento dos logs em `log.js` com `requestId`, `userId` e metadados contextuais.
+    - Revisão dos controllers para evitar `HTTP 500` em erros de regra de negócio (UUID/RBAC).
+- **Validação:** Diagnóstico em produção facilitado via logs JSON rastreáveis.
 
 ---
 
@@ -43,21 +45,16 @@ Após o diagnóstico inicial realizado em 20/01/2026, foram executadas três fas
 | Item | Status Anterior | Status Atual | Localização |
 | :--- | :--- | :--- | :--- |
 | Trava de Autorebaixamento | Inexistente (Risco Alto) | **Implementada** | `filiados.controller.js` |
-| Lock de Job (`job_runs`) | Inexistente (Risco Médio) | **Implementado** | `birthdayCron.js` |
-| Idempotência de Boot | Risco de Duplicidade | **Controlado por ENV** | `server.js` |
-| Organização de Docs | Dispersa | **Centralizada** | `/docs` |
-| Perfil COMUNICADOR | Consistente | **Mantido** | `roles.config.js` |
+| Mensagens 401/403 | Inconsistentes | **Padronizadas** | `textos.js` |
+| Cache de Jogos (App) | Inexistente | **Implementado** | `db.ts` / `JogosScreen` |
+| Observabilidade | Básica | **Estruturada** | `requestTracker.js` |
 
 ---
 
-## 4. Recomendações para Próximos Ciclos
+## 4. Conclusão do Ciclo
 
-Com as correções críticas finalizadas, os seguintes pontos permanecem como sugestões para evolução posterior:
-
-1.  **Módulos Legados:** Planejar a desativação controlada dos endpoints legados de votação (`/api/votacoes`), uma vez que o módulo de Assembleias agora é o padrão canônico.
-2.  **Mobile PDF:** Evoluir o visualizador de PDF no App de WebView para uma solução 100% nativa para melhorar a performance.
-3.  **Auditoria:** Expandir o uso da tabela `filiados_eventos` para cobrir 100% das alterações manuais em campos sensíveis de gestão.
+O sistema SINPRF/ES encontra-se agora em sua versão mais robusta, com governança de acesso soberana no backend e experiência mobile resiliente.
 
 ---
 **Relatório entregue por Jules (AI Software Engineer)**
-*Trabalho baseado integralmente no RELATORIO_TECNICO_AUDITORIA.md e nas diretrizes da Produção 2.0.*
+*Hardening concluído com sucesso.*

@@ -78,13 +78,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } catch (error: any) {
             console.error('[Auth.loadSession.error]', error.message);
-            // Se o token for inválido (401), o interceptor de resposta já lida com o logout.
-            // Aqui, apenas garantimos o estado local seja limpo.
-            if (error.response?.status === 401) {
-              await limparSessao();
-              setToken(null);
-              setUsuario(null);
-            }
+            // Se o token for inválido (401), o interceptor de resposta já limpou o storage.
+            // Aqui limpamos o estado local para forçar redirecionamento para Login.
+            setToken(null);
+            setUsuario(null);
           }
         }
       } finally {
