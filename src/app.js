@@ -28,6 +28,7 @@ app.use(
 // Preflight
 app.options("*", cors());
 
+app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições
 app.use(express.json());
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/shared", express.static(path.join(process.cwd(), "shared")));
