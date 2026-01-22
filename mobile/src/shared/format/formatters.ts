@@ -4,7 +4,6 @@ export const onlyDigits = (text: string | null | undefined): string => {
 };
 
 export const formatCpf = (cpf: string | null | undefined): string => {
-<<<<<<< HEAD:mobile/src/shared/format/formatters.ts
   try {
     if (!cpf) return '—';
     const digits = onlyDigits(cpf);
@@ -15,14 +14,12 @@ export const formatCpf = (cpf: string | null | undefined): string => {
     console.error('[Formatters.formatCpf.error]', e);
     return '—';
   }
-=======
   if (!cpf) return '';
   const digits = onlyDigits(cpf).slice(0, 11);
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
->>>>>>> main:mobile/src/shared/formatters.ts
 };
 
 export const formatTelefone = (tel: string | null | undefined): string => {
