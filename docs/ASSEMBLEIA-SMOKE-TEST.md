@@ -37,10 +37,9 @@ Este checklist deve ser executado para validar a integridade do sistema após a 
 
 ## 6. Robustez e Reentrada
 - [ ] Fechar e abrir o app durante uma votação ativa. O estado deve ser restaurado integralmente (cronômetro, elegibilidade, votos já feitos).
-- [ ] Simular queda de internet e retorno. O Socket.IO deve reconectar e o app deve re-hidratar o estado via API (verificar logs `[Assembleia.hydrate.start]`).
-- [ ] Verificar se ao reentrar, o motivo de inelegibilidade (se houver) é exibido corretamente.
+- [ ] Simular queda de internet e retorno. O Socket.IO deve reconectar e o app deve re-hidratar o estado via API.
 
-## 7. Auditoria e Logs (Verificação Técnica)
+## 7. Auditoria
 - [ ] Consultar tabela `assembleia_auditoria` e validar os eventos:
     - `ENTRADA_SESSAO` (Mobile login/entry)
     - `CHECKIN_ASSEMBLEIA`

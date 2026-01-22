@@ -8,7 +8,6 @@ import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
-import { carregarSessao } from '../services/storageService';
 
 export default function LoginScreen() {
   const navigation = useNavigation();

@@ -1,12 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../../../config/env';
-import { useAuth } from '../../../hooks/useAuth';
 import assembleiaService from '../services/assembleiaService';
 import { Assembleia, PedidoPalavra, Proposta } from '../types';
 
 export function useAssembleiaSession(assembleiaId: string) {
-  const { token } = useAuth();
   const [assembleia, setAssembleia] = useState<Assembleia | null>(null);
   const [pedidosPalavra, setPedidosPalavra] = useState<PedidoPalavra[]>([]);
   const [propostas, setPropostas] = useState<Proposta[]>([]);
@@ -19,7 +17,6 @@ export function useAssembleiaSession(assembleiaId: string) {
 
   const carregarEstado = useCallback(async () => {
     try {
-      console.log(`[Assembleia.hydrate.start] sessionId: ${assembleiaId}`);
       setCarregando(true);
       const data = await assembleiaService.buscarEstadoCompleto(assembleiaId);
       setAssembleia(data.assembleia);
@@ -28,15 +25,8 @@ export function useAssembleiaSession(assembleiaId: string) {
       setMesa(data.mesa);
       setQuorumVigente(data.quorumVigente);
       setVotacaoAtiva(data.votacaoAtiva);
-      console.log(`[Assembleia.hydrate.success]`, {
-        votacaoAtivaId: data.votacaoAtiva?.id || null,
-        quorumVigenteId: data.quorumVigente?.id || null,
-        mesa: data.mesa?.length || 0,
-        filaCount: data.pedidosPalavra?.length || 0,
-        propostasCount: data.propostas?.length || 0
-      });
     } catch (error) {
-      console.error('[Assembleia.hydrate.error]', error);
+      console.error('Erro ao carregar estado completo:', error);
     } finally {
       setCarregando(false);
     }
@@ -45,24 +35,14 @@ export function useAssembleiaSession(assembleiaId: string) {
   useEffect(() => {
     carregarEstado();
 
-    console.log(`[Assembleia.connect.start] URL: ${API_BASE_URL}`);
-    const newSocket = io(API_BASE_URL, {
-       transports: ['websocket'],
-       auth: { token },
-       query: { token }
-    });
+    const newSocket = io(API_BASE_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-       console.log(`[Assembleia.connect.ok] socketId: ${newSocket.id}`);
        setIsConnected(true);
        newSocket.emit('join_assembleia', assembleiaId);
        // Re-hidratar ao reconectar para garantir que não perdeu nada
        carregarEstado();
-    });
-
-    newSocket.on('connect_error', (error) => {
-       console.error(`[Assembleia.connect.error]`, error);
     });
 
     newSocket.on('disconnect', () => {

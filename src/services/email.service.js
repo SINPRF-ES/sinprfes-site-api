@@ -335,6 +335,39 @@ SINPRF-ES
   await enviarEmailBase(emailDestino, subject, corpo);
 }
 
+/**
+ * Envia e-mail para o sindicato com a lista de aniversariantes do dia.
+ */
+async function enviarEmailAniversariantes(aniversariantes) {
+  const { MAIL_FROM, MAIL_TO_FILIACAO } = process.env;
+
+  if (!MAIL_FROM || !MAIL_TO_FILIACAO) {
+    throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
+  }
+
+  if (!aniversariantes || aniversariantes.length === 0) {
+    console.log("🎂 Sem aniversariantes hoje.");
+    return;
+  }
+
+  const subject = `🎂 Aniversariantes do Dia - ${new Date().toLocaleDateString("pt-BR")}`;
+
+  let corpo = `Olá,\n\nConfira os aniversariantes de hoje:\n\n`;
+
+  aniversariantes.forEach((p) => {
+    if (p.tipo === "FILIADO") {
+      corpo += `- ${p.nome} (Filiado ${p.situacao})\n`;
+    } else {
+      corpo += `- ${p.nome} (Dependente do filiado ${p.situacao_filiado_vinculo} ${p.nome_filiado_vinculo})\n`;
+    }
+  });
+
+  corpo += `\nAtenciosamente,\nSistema SINPRF-ES`;
+
+  await enviarEmailBase(MAIL_TO_FILIACAO, subject, corpo);
+  console.log("📧 E-mail de aniversariantes enviado.");
+}
+
 module.exports = {
   enviarEmailBase,
   enviarEmailFichaFiliacao,
@@ -342,4 +375,5 @@ module.exports = {
   enviarEmailBoasVindasFiliado,
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
+  enviarEmailAniversariantes,
 };

@@ -35,8 +35,8 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
         value={formatCpf(filiado?.cpf || '')}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, cpf: onlyDigits(text) } : null)}
-        placeholder="Apenas números"
+        onChangeText={(text) => setFiliado(f => f ? { ...f, cpf: onlyDigits(text).slice(0, 11) } : null)}
+        placeholder="000.000.000-00"
         keyboardType="numeric"
         maxLength={14}
         editable={isEditing}

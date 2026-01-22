@@ -7,6 +7,7 @@ Este documento mapeia o estado atual do aplicativo mobile em relação às verda
 ### 1.1 Perfis de Acesso
 - **FILIADO:** Acesso restrito aos próprios dados. Na listagem geral, não deve ver arquivados nem CPF/Data de Nascimento de outros.
 - **GESTÃO (ADMIN, DIRETORIA, FUNCIONARIO):** Acesso total. Pode listar ativos/arquivados, editar terceiros e gerenciar dependentes.
+- **ORGANIZADOR:** Perfil específico para o módulo de Jogos. Na listagem de filiados, comporta-se como GESTÃO para visualização, mas com foco operacional.
 
 ### 1.2 Situação Funcional
 - Valores: `ATIVO`, `VETERANO`, `PENSIONISTA`.
@@ -19,19 +20,22 @@ Este documento mapeia o estado atual do aplicativo mobile em relação às verda
 ### 1.4 Compactação de Dependentes
 - O Backend sempre compacta os slots `dep1..dep5` da esquerda para a direita. O Mobile deve enviar os 5 slots preenchidos conforme a UI.
 
-## 2. Gaps Identificados e Prioridades
+## 2. Status de Implementação e Paridade
 
-| Módulo | Funcionalidade | Estado | Prioridade |
+| Módulo | Funcionalidade | Estado | Observação |
 | :--- | :--- | :--- | :--- |
-| **Auth/API** | Tratamento de 502/HTML (Proxy) | Pendente | Alta |
-| **Filiados** | Filtro Role-based (FILIADO vs Gestão) | Parcial | Alta |
-| **Filiados** | Busca Normalizada (Acentos) | Pendente | Média |
-| **Filiados** | Idade Detalhada em tempo real | Parcial | Média |
-| **Filiados** | Excluir Dependentes (Gestão) | Pendente | Alta |
-| **Filiados** | Detalhes de Arquivamento (Motivo/Quem) | Pendente | Média |
-| **Publicações** | Salvar/Compartilhar PDF | Pendente | Média |
-| **Ressarcimento** | Implementação Completa (Paridade Site) | Ausente | Alta |
-| **Jogos 2026** | Inscrição + Planilha Gestão | Ausente | Média |
+| **Auth/API** | Tratamento de 502/HTML (Proxy) | ✅ Concluído | Mensagem amigável + Log de preview. |
+| **Auth/API** | Biometria & Auto-lock (1 min) | ✅ Concluído | Segurança de dados sensíveis. |
+| **Filiados** | Filtro Role-based | ✅ Concluído | FILIADO não vê CPF/Arquivados. |
+| **Filiados** | Busca Normalizada (Acentos) | ✅ Concluído | `normalizeText` (João == Joao). |
+| **Filiados** | Máscara de CPF "Live" | ✅ Concluído | Formatação em tempo real preservando cursor. |
+| **Filiados** | Idade Detalhada | ✅ Concluído | Cálculo 'Y anos, M meses e D dias'. |
+| **Filiados** | Excluir Dependentes (Gestão) | ✅ Concluído | Checkbox de confirmação + fluxo do site. |
+| **Filiados** | Arquivamento | ✅ Concluído | Exibe Motivo, Data e Autor (Red block). |
+| **Publicações** | UX Sem Datas + Sort Alfa | ✅ Concluído | Espelha comportamento do site. |
+| **Publicações** | Share Native PDF | ✅ Concluído | Integrado com `react-native-pdf`. |
+| **Ressarcimento** | Paridade Completa | ✅ Concluído | Suporte multi-anexo (PDF/IMG). |
+| **Jogos 2026** | Inscrição + Gestão | ✅ Concluído | Table scrollable + Idade (2026-ano). |
 
 ## 3. Regras de Interface (Visual Parity)
 - **Meus Dados / Edição:**
@@ -39,3 +43,4 @@ Este documento mapeia o estado atual do aplicativo mobile em relação às verda
     - Alternância de fundos (#ffffff e #f7f9fc) entre seções.
     - Botões de ação ("Salvar", "Arquivar") fixos no topo (Sticky Header).
     - Grid de endereço em 3 linhas (CEP+Logr, Num+Comp, Cid+UF).
+    - Cartões com borda lateral colorida baseada no status funcional.

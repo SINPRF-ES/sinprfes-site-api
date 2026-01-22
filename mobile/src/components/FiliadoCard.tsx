@@ -35,10 +35,23 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
     }
   };
 
+  const getLeftBorderStyle = () => {
+    switch (situacaoNormalizada) {
+      case 'ATIVO':
+        return { borderLeftColor: '#27ae60' };
+      case 'VETERANO':
+        return { borderLeftColor: '#f39c12' };
+      case 'PENSIONISTA':
+        return { borderLeftColor: '#e91e63' };
+      default:
+        return { borderLeftColor: '#95a5a6' };
+    }
+  };
+
   const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
 
   return (
-    <TouchableOpacity style={styles.card} onPress={toggleExpand} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.card, getLeftBorderStyle()]} onPress={toggleExpand} activeOpacity={0.7}>
       <View style={styles.headerContainer}>
         <Image
           source={{ uri: filiado.avatar_url || 'https://via.placeholder.com/50' }}
@@ -75,7 +88,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
             <View style={styles.buttonContainerSpacer} />
             {isGestao && (
               <View style={styles.editButtonContainer}>
-                <Button title="Editar" onPress={() => onEdit(filiado)} color="#003366" />
+                <Button title="✏️ Editar" onPress={() => onEdit(filiado)} color="#003366" />
               </View>
             )}
           </View>
@@ -105,6 +118,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
+    borderLeftWidth: 5,
   },
   headerContainer: {
     flexDirection: 'row',

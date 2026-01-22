@@ -8,7 +8,6 @@ const cors = require("cors");
 const allowedOrigins = [
  "https://sinprfes.org.br",
  "https://www.sinprfes.org.br",
- "https://api.sinprfes.org.br",
  "http://localhost:3000",
  "http://localhost:5173",
 ];
