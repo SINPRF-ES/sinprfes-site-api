@@ -329,27 +329,36 @@ exports.atualizarFiliado = async (req, res) => {
       const novoPerfil = String(body.perfil_acesso).toUpperCase();
       const alvo = await buscarPorId(idAlvo);
 
-      // 🛡️ Trava de segurança: proibida autoatribuição de perfil
-      if (req.user.id === idAlvo && alvo.perfil_acesso !== novoPerfil) {
-        return res.status(403).json({ message: "Você não pode alterar seu próprio perfil de acesso." });
+      if (!alvo) {
+        return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
       }
 
       if (perfil === "ADMIN") {
+        // ADMIN pode mudar qualquer perfil, inclusive rebaixar outro ADMIN
         payload.perfil_acesso = novoPerfil;
-      } else if (["DIRETORIA", "FUNCIONARIO"].includes(perfil)) {
-        if (alvo.perfil_acesso === "ADMIN") {
-          // Não pode alterar perfil de um ADMIN
-          return res.status(403).json({ message: "Você não tem permissão para alterar o perfil de um administrador." });
-        }
-        if (novoPerfil === "ADMIN") {
-          // Não pode promover a ADMIN
-          return res.status(403).json({ message: "Você não tem permissão para promover um usuário a administrador." });
+      } else {
+        // DIRETORIA, FUNCIONARIO, etc. NÃO podem conceder nem retirar o perfil ADMIN
+        if (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN") {
+          log.warn("TentativaInvalidaAlterarPerfilAdmin", {
+            ator: req.user.id,
+            atorPerfil: perfil,
+            alvo: idAlvo,
+            alvoPerfilAtual: alvo.perfil_acesso,
+            novoPerfilDesejado: novoPerfil,
+          });
+          return res.status(403).json({ message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN." });
         }
         payload.perfil_acesso = novoPerfil;
       }
     }
 
-    const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
+    let atualizado;
+    try {
+      atualizado = await atualizarFiliadoPorId(idAlvo, payload);
+    } catch (dbErr) {
+      log.error("FiliadosUpdateDbErro", dbErr, { idAlvo, payloadKeys: Object.keys(payload) });
+      throw dbErr;
+    }
 
     if (!atualizado) {
       return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });

@@ -11,7 +11,7 @@ import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Filiado } from '../types/filiado';
 import { toISODate } from '../utils/date';
-import { onlyDigits } from '../shared/formatters';
+import { onlyDigits } from '../shared/format/formatters';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',

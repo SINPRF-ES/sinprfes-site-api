@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
-import { formatCpf, formatTelefone } from '../shared/formatters';
+import { formatCpf, formatTelefone } from '../shared/format/formatters';
 import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 import { calculateAgeBreakdown } from '../utils/date';
 

@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
 
+        console.log('[Biometria.init]', { enabled: bio, hasToken: !!sessao?.token });
         setBiometriaHabilitada(bio);
 
         if (sessao?.token) {
@@ -76,14 +77,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setBloqueadoPorBiometria(true);
             }
           } catch (error: any) {
+            console.error('[Auth.loadSession.error]', error.message);
             // Se o token for inválido (401), o interceptor de resposta já lida com o logout.
-            // Aqui, apenas garantimos que o estado local seja limpo.
+            // Aqui, apenas garantimos o estado local seja limpo.
             if (error.response?.status === 401) {
               await limparSessao();
               setToken(null);
               setUsuario(null);
             }
-            // Outros erros serão apenas logados pelo interceptor
           }
         }
       } finally {
@@ -105,7 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await limparSessao();
     setToken(null);
     setUsuario(null);
-    setBiometriaHabilitada(false);
+    // IMPORTANTE: Logout NÃO deve desativar a biometria se o usuário quiser manter a preferência
+    // No entanto, sem token o login por biometria não funcionará.
+    // Para simplificar e seguir a regra de segurança, mantemos a flag conforme o storage.
     setBloqueadoPorBiometria(false);
 
     // Limpeza adicional de caches específicos de telas
@@ -130,26 +133,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function desbloquearComBiometria(): Promise<boolean> {
     try {
+      console.log('[Biometria.auth.start]');
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
-      // Se não tem biometria configurada, não bloqueia o usuário
       if (!hasHardware || !enrolled) {
+        console.warn('[Biometria.auth.skip] Hardware ou Digital não disponíveis');
         setBloqueadoPorBiometria(false);
         return true;
       }
 
       const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Confirme sua identidade para acessar o SINPRF/ES',
-        cancelLabel: 'Cancelar',
+        promptMessage: 'Autenticação biométrica SINPRF/ES',
+        cancelLabel: 'Usar senha',
+        fallbackLabel: 'Usar senha',
+        disableDeviceFallback: false,
       });
 
       if (res.success) {
+        console.log('[Biometria.auth.ok]');
         setBloqueadoPorBiometria(false);
         return true;
       }
+      console.log('[Biometria.auth.fail]', res.error);
       return false;
-    } catch {
+    } catch (e) {
+      console.error('[Biometria.auth.error]', e);
       return false;
     }
   }

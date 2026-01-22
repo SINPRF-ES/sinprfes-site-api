@@ -7,11 +7,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
-import { formatCpf, onlyDigits } from '../shared/formatters';
+import { formatCpf, onlyDigits } from '../shared/format/formatters';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
-  const { setSessao, ativarBiometriaNesteAparelho, biometriaHabilitada } = useAuth();
+  const { setSessao, ativarBiometriaNesteAparelho, biometriaHabilitada, desbloquearComBiometria } = useAuth();
 
   const [cpf, setCpf] = useState<string>('');
   const [senha, setSenha] = useState<string>('');
@@ -31,22 +31,31 @@ export default function LoginScreen() {
 
   async function handleBiometricLogin() {
     try {
+      console.log('[Biometria.tap]');
       setLoading(true);
       const sessaoSalva = await carregarSessao();
+
       if (!sessaoSalva) {
-        // Isso não deveria acontecer se a biometria está habilitada, mas é uma guarda de segurança
-        Alert.alert('Erro', 'Nenhuma sessão salva encontrada para login com biometria.');
+        console.warn('[Biometria.session.fail] Sem sessão salva');
+        Alert.alert('Atenção', 'Por favor, realize o login com senha primeiro para ativar a biometria.');
         return;
       }
 
       const sucesso = await desbloquearComBiometria();
       if (sucesso) {
-        // Re-autentica usando a sessão salva
-        await setSessao(sessaoSalva.token, sessaoSalva.usuario);
+        console.log('[Biometria.session.restore.start]');
+        try {
+           // Tenta validar o token salvo
+           const usuario = await buscarUsuarioLogado(sessaoSalva.token);
+           await setSessao(sessaoSalva.token, usuario);
+           console.log('[Biometria.session.restore.ok]');
+        } catch (restoreError) {
+           console.error('[Biometria.session.restore.fail]', restoreError);
+           Alert.alert('Sessão Expirada', 'Sua sessão anterior expirou. Por favor, entre com sua senha.');
+        }
       }
     } catch (e: any) {
-      // O erro já é tratado dentro de `desbloquearComBiometria`,
-      // então aqui apenas garantimos o estado de loading.
+      console.error('[Biometria.error]', e);
     } finally {
       setLoading(false);
     }

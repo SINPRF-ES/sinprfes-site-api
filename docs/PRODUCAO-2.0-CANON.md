@@ -113,7 +113,8 @@ graph TD
     *   **UI:** Formato BR `DD/MM/YYYY`.
 
 ### 5.2. Valores Canônicos (Enums/Strings)
-*   **Perfis de Acesso (`perfil_acesso`):** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `COMUNICADOR`, `ORGANIZADOR` (FILIADO + Jogos Manager), `FILIADO`.
+*   **Perfis de Acesso (`perfil_acesso`):** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR` (FILIADO + Jogos Manager), `FILIADO`.
+    *   **Regra de Gestão:** Apenas o perfil `ADMIN` possui autoridade para conceder ou revogar o nível `ADMIN` de qualquer usuário (incluindo a demobilização de outros administradores). Perfis `DIRETORIA` e `FUNCIONARIO` podem alterar perfis entre si e níveis inferiores, mas são bloqueados (403) de qualquer interação que envolva o nível `ADMIN`.
 *   **Situação Funcional (`situacao`):** `ATIVO`, `APOSENTADO`, `PENSIONISTA`, `LICENCIADO`.
 *   **Parentesco Dependentes (`parentesco`):** `FILHO_ENTEADO`, `CONJUGE_COMPANHEIRO`, `PAI_MAE`, `IRMAO`, `OUTRO`.
 
@@ -171,6 +172,7 @@ Todo PR ou alteração deve validar:
 
 Os seguintes componentes estão estáveis e não devem ser modificados sem aprovação excepcional:
 - **Lógica de Auditoria:** Gravação em `filiados_eventos` dentro de blocos try/catch.
+- **Biometria (Mobile):** O token JWT deve ser armazenado exclusivamente via `expo-secure-store` para permitir a restauração segura da sessão via biometria sem nova coleta de senha.
 - **Compensação de Idade:** Regra dos Jogos 2026 (`2026 - ano_nascimento`).
 - **Layout de Cards:** Padrão de cores e centralização de títulos (`.res-header`, `.res-card h3`).
 - **CEP Lookup:** Preenchimento automático de campos de endereço (logradouro, bairro, cidade, UF).

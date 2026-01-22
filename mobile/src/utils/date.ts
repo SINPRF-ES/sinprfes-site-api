@@ -1,6 +1,6 @@
 // mobile/src/utils/date.ts
 
-import { onlyDigits } from '../shared/formatters';
+import { onlyDigits } from '../shared/format/formatters';
 
 /**
  * Converte uma data do formato DD/MM/YYYY para YYYY-MM-DD.
