@@ -1,10 +1,16 @@
 // src/routes/assembleias.routes.js
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 
 const auth = require("../middlewares/auth");
 const requirePermission = require("../middlewares/requirePermission");
 const controller = require("../controllers/assembleias.controller");
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
 // Todos autenticados podem listar e ver detalhes
 router.get("/", auth, controller.listar);
@@ -13,6 +19,7 @@ router.get("/:id/estado", auth, controller.estadoCompleto);
 
 // DIRETORIA/ADMIN podem criar, abrir e encerrar
 router.post("/", auth, requirePermission("VOTACAO_GERENCIAR"), controller.criar);
+router.post("/upload-edital", auth, requirePermission("VOTACAO_GERENCIAR"), upload.single("edital"), controller.uploadEdital);
 router.patch("/:id/abrir", auth, requirePermission("VOTACAO_GERENCIAR"), controller.abrir);
 router.patch("/:id/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), controller.encerrar);
 

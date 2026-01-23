@@ -129,6 +129,9 @@ export default function CriarFiliadoScreen({ navigation }) {
     <KeyboardAwareScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
+      enableOnAndroid
+      extraScrollHeight={50}
+      keyboardOpeningTime={0}
     >
       <Text style={styles.title}>Novo Filiado</Text>
       

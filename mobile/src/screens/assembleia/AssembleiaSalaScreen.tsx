@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaEstado, enviarVoto, pedirPalavra } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
@@ -7,6 +8,7 @@ import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assemble
 import { useAuth } from '../../hooks/useAuth';
 
 export default function AssembleiaSalaScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { id } = route.params;
   const { usuario, token } = useAuth();
   const [estado, setEstado] = useState<AssembleiaEstado | null>(null);
@@ -188,7 +190,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity style={styles.btnFooter} onPress={handlePedirPalavra}>
           <MaterialCommunityIcons name="microphone" size={24} color="#003366" />
           <Text style={styles.btnFooterText}>Pedir Palavra</Text>

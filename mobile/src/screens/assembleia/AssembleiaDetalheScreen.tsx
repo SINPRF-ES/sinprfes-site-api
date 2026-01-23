@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin } from '../../services/assembleiaService';
@@ -8,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
 
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { id } = route.params;
   const { usuario } = useAuth();
   const [assembleia, setAssembleia] = useState<Assembleia | null>(null);
@@ -90,7 +92,17 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     try {
       setActionLoading(true);
       const res = await gerarTokenQuorum(id);
-      Alert.alert('Sucesso', `Token gerado: ${res.token}. Ele expira em breve.`);
+      logger.info('TOKEN_GENERATED_AUTO_CHECKIN_START', { assembleiaId: id, token: res.token });
+
+      try {
+        await realizarCheckin(id, res.token);
+        logger.info('TOKEN_GENERATED_AUTO_CHECKIN_SUCCESS', { assembleiaId: id });
+        Alert.alert('Sucesso', `Token gerado: ${res.token}.\n\nSeu check-in foi realizado automaticamente.`);
+      } catch (checkinErr) {
+        logger.error('TOKEN_GENERATED_AUTO_CHECKIN_FAIL', checkinErr, { assembleiaId: id, token: res.token });
+        Alert.alert('Atenção', `Token gerado: ${res.token}, mas não conseguimos realizar seu auto-checkin. Por favor, insira o token manualmente.`);
+      }
+
       fetchData();
     } catch (err: any) {
       Alert.alert('Erro', err.response?.data?.message || 'Falha ao gerar token.');
@@ -122,6 +134,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }
 
   if (!assembleia) {
+    // Screen-level guard log
+    logger.warn('ASSEMBLEIA_DETALHE_GUARD_TRIGGERED', { id, loading });
+
     return (
       <View style={styles.centered}>
         <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#e74c3c" />
@@ -137,7 +152,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isAberta = assembleia.estado === 'ABERTA';
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
       <View style={styles.header}>
         <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
           <Text style={styles.badgeText}>{assembleia.estado}</Text>

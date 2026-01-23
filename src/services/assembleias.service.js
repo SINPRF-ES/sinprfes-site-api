@@ -1,7 +1,7 @@
 // src/services/assembleias.service.js
 const pool = require("../config/db");
 
-const ASSEMBLEIA_COLUMNS = "id, tipo, titulo, descricao, estado, criado_por, aberta_em, encerrada_em, criado_em";
+const ASSEMBLEIA_COLUMNS = "id, tipo, titulo, descricao, estado, criado_por, aberta_em, encerrada_em, criado_em, data_hora_inicio, edital_url";
 
 async function listar(perfilAcesso) {
   let query = `SELECT ${ASSEMBLEIA_COLUMNS} FROM assembleias`;
@@ -22,12 +22,12 @@ async function buscarPorId(id) {
 }
 
 async function criar(dados) {
-  const { tipo, titulo, descricao, criado_por } = dados;
+  const { tipo, titulo, descricao, criado_por, data_hora_inicio, edital_url } = dados;
   const { rows } = await pool.query(
-    `INSERT INTO assembleias (tipo, titulo, descricao, criado_por)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO assembleias (tipo, titulo, descricao, criado_por, data_hora_inicio, edital_url)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING ${ASSEMBLEIA_COLUMNS}`,
-    [tipo, titulo, descricao, criado_por]
+    [tipo, titulo, descricao, criado_por, data_hora_inicio, edital_url]
   );
   return rows[0];
 }

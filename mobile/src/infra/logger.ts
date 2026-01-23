@@ -90,6 +90,13 @@ export const logError = (context: string, err: any, meta?: Record<string, unknow
   logger.error(message, err instanceof Error ? err : new Error(String(err)), meta);
 };
 
+/**
+ * Log de navegação instrumentado
+ */
+export const logNavigation = (screenName: string, params?: any) => {
+  logger.info(`NAVIGATE_TO: ${screenName}`, { params });
+};
+
 export const getLogs = async (): Promise<LogEntry[]> => {
   try {
     const logsJson = await AsyncStorage.getItem(LOGS_KEY);

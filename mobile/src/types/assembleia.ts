@@ -10,6 +10,8 @@ export interface Assembleia {
   aberta_em?: string;
   encerrada_em?: string;
   criado_por: string;
+  data_hora_inicio?: string;
+  edital_url?: string;
 }
 
 export interface AssembleiaEstado {

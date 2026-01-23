@@ -9,6 +9,24 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
   return `${day}/${month}/${year}`;
 };
 
+export const formatISOToBRDateTime = (isoDate: string | null | undefined): string => {
+  if (!isoDate) return '—';
+  try {
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return '—';
+
+    const dia = date.getDate().toString().padStart(2, '0');
+    const mes = (date.getMonth() + 1).toString().padStart(2, '0');
+    const ano = date.getFullYear();
+    const hora = date.getHours().toString().padStart(2, '0');
+    const min = date.getMinutes().toString().padStart(2, '0');
+
+    return `${dia}/${mes}/${ano} ${hora}:${min}`;
+  } catch (e) {
+    return '—';
+  }
+};
+
 export const toBrazilianDate = (isoDate: string | null | undefined): string => {
   return formatISOToBR(isoDate);
 };

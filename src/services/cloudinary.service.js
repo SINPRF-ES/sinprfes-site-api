@@ -53,7 +53,24 @@ function deleteAvatarByPublicId(publicId) {
   return cloudinary.uploader.destroy(publicId, { resource_type: "image" });
 }
 
+function uploadFileBuffer(buffer, options = {}) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "auto",
+        ...options,
+      },
+      (err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+}
+
 module.exports = {
   uploadAvatarBuffer,
   deleteAvatarByPublicId,
+  uploadFileBuffer,
 };

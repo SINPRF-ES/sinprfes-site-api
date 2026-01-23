@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { iniciarVotacao } from '../../services/assembleiaService';
 
 export default function CriarItemVotacaoScreen({ route, navigation }: any) {
@@ -28,7 +30,7 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <KeyboardAwareScrollView style={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
       <Text style={styles.label}>Título do Item *</Text>
       <TextInput
         style={styles.input}
@@ -46,18 +48,23 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
       />
 
       <Text style={styles.label}>Duração (minutos) *</Text>
-      <TextInput
-        style={styles.input}
-        value={duracao}
-        onChangeText={setDuracao}
-        keyboardType="numeric"
-        maxLength={1}
-      />
+      <View style={styles.pickerBox}>
+        <Picker
+          selectedValue={duracao}
+          onValueChange={(v) => setDuracao(v)}
+        >
+          <Picker.Item label="1 minuto" value="1" />
+          <Picker.Item label="2 minutos" value="2" />
+          <Picker.Item label="3 minutos" value="3" />
+          <Picker.Item label="4 minutos" value="4" />
+          <Picker.Item label="5 minutos" value="5" />
+        </Picker>
+      </View>
 
       <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar} disabled={loading}>
         {loading ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>Iniciar Votação Agora</Text>}
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -65,6 +72,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8', padding: 20 },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 8 },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 16 },
+  pickerBox: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 20, justifyContent: 'center' },
   textArea: { height: 100, textAlignVertical: 'top' },
   btnSalvar: { backgroundColor: '#f1c40f', padding: 18, borderRadius: 30, alignItems: 'center' },
   btnText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
