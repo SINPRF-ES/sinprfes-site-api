@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
+import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -51,7 +52,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <TouchableOpacity
             key={item.label}
             style={styles.card}
-            onPress={() => navigation.navigate(item.screen as any)}
+            onPress={() => {
+              logNavigation(item.screen);
+              navigation.navigate(item.screen as any);
+            }}
           >
             <MaterialCommunityIcons name={item.icon as any} size={40} color="#003366" />
             <Text style={styles.cardLabel}>{item.label}</Text>

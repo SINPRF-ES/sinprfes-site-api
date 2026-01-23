@@ -1,6 +1,7 @@
 // src/controllers/assembleias.controller.js
 const service = require("../services/assembleias.service");
 const socket = require("../websocket/assembleia.socket");
+const { uploadFileBuffer } = require("../services/cloudinary.service");
 
 async function listar(req, res) {
   try {
@@ -37,13 +38,15 @@ async function estadoCompleto(req, res) {
 
 async function criar(req, res) {
   try {
-    const { tipo, titulo, descricao } = req.body;
+    const { tipo, titulo, descricao, data_hora_inicio, edital_url } = req.body;
     if (!tipo || !titulo) return res.status(400).json({ error: "Tipo e título são obrigatórios" });
 
     const nova = await service.criar({
       tipo,
       titulo,
       descricao,
+      data_hora_inicio,
+      edital_url,
       criado_por: req.user.id
     });
 
@@ -253,6 +256,25 @@ async function definirMesa(req, res) {
   }
 }
 
+async function uploadEdital(req, res) {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ error: "Arquivo não enviado" });
+    }
+
+    const result = await uploadFileBuffer(req.file.buffer, {
+      folder: "sinprfes/editais",
+      public_id: `edital_${Date.now()}`,
+      resource_type: "auto",
+    });
+
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error("Erro no upload do edital:", err);
+    res.status(500).json({ error: "Erro ao realizar upload do edital" });
+  }
+}
+
 module.exports = {
   listar,
   detalhe,
@@ -266,5 +288,6 @@ module.exports = {
   votar,
   pedirPalavra,
   criarProposta,
-  definirMesa
+  definirMesa,
+  uploadEdital
 };

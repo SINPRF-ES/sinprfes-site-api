@@ -5,7 +5,7 @@ import { Filiado } from '../types/filiado';
 import { UserProfile } from '../hooks/useAuth';
 import { formatCpf, formatTelefone } from '../shared/format/formatters';
 import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
-import { calculateAgeBreakdown } from '../utils/date';
+import { calculateAgeBreakdown, formatISOToBRDateTime } from '../utils/date';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
@@ -49,9 +49,10 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
   };
 
   const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
+  const isArquivado = !!filiado.arquivado_em;
 
   return (
-    <TouchableOpacity style={[styles.card, getLeftBorderStyle()]} onPress={toggleExpand} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.card, getLeftBorderStyle(), isArquivado && styles.cardArquivado]} onPress={toggleExpand} activeOpacity={0.7}>
       <View style={styles.headerContainer}>
         <Image
           source={{ uri: filiado.avatar_url || 'https://via.placeholder.com/50' }}
@@ -71,6 +72,21 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
 
       {isExpanded && (
         <View style={styles.expandedContent}>
+          {isArquivado && isGestao && (
+            <View style={styles.archiveDetails}>
+              <Text style={styles.archiveTitle}>📋 Detalhes do arquivamento</Text>
+              <Text style={styles.detalhe}>
+                <Text style={styles.bold}>Arquivado por:</Text> {filiado.arquivado_por_nome || filiado.arquivado_por || '—'}
+              </Text>
+              <Text style={styles.detalhe}>
+                <Text style={styles.bold}>Arquivado em:</Text> {formatISOToBRDateTime(filiado.arquivado_em)}
+              </Text>
+              <Text style={[styles.detalhe, { marginBottom: 10 }]}>
+                <Text style={styles.bold}>Motivo:</Text> {filiado.arquivado_motivo || '—'}
+              </Text>
+            </View>
+          )}
+
           {isGestao && (
             <>
               <Text style={styles.detalhe}>CPF: {formatCpf(filiado.cpf || '')}</Text>
@@ -153,6 +169,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginTop: 4,
+  },
+  bold: {
+    fontWeight: 'bold',
+  },
+  cardArquivado: {
+    backgroundColor: '#f8f9fa',
+    borderLeftColor: '#6c757d',
+  },
+  archiveDetails: {
+    backgroundColor: '#fff3cd',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ffeeba',
+  },
+  archiveTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#856404',
+    marginBottom: 5,
   },
   expandedContent: {
     marginTop: 15,

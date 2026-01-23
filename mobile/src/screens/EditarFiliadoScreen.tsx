@@ -172,7 +172,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
         </View>
       </View>
 
-      <KeyboardAwareScrollView contentContainerStyle={styles.contentContainer}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.contentContainer} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>👤 Informações Pessoais</Text></View>
         <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={true} hideTitle={true} />
 

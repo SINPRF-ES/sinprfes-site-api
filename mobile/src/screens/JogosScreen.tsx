@@ -5,12 +5,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
   Alert,
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
@@ -19,17 +19,7 @@ import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } f
 import NetInfo from '@react-native-community/netinfo';
 import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
 import { getCanonicalFiliadoId, ROLES } from '../utils/filiadoUtils';
-
-const MODALIDADES_JOGOS_2026 = [
-  { id: 'FUTSAL', label: 'Futsal', grupo: 'Coletivos' },
-  { id: 'VOLEI_QUADRA', label: 'Vôlei de Quadra', grupo: 'Coletivos' },
-  { id: 'VOLEI_AREIA', label: 'Vôlei de Areia', grupo: 'Coletivos' },
-  { id: 'TENIS_MESA', label: 'Tênis de Mesa', grupo: 'Individuais' },
-  { id: 'NATACAO', label: 'Natação', grupo: 'Individuais' },
-  { id: 'ATLETISMO', label: 'Atletismo', grupo: 'Individuais' },
-  { id: 'XADREZ', label: 'Xadrez', grupo: 'Outros' },
-  { id: 'DOMINO', label: 'Dominó', grupo: 'Outros' },
-];
+import { MODALIDADES_JOGOS_2026 } from '../constants/jogos';
 
 const JogosScreen = () => {
   const { usuario } = useAuth();
@@ -148,7 +138,7 @@ const JogosScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
         <View style={styles.banner}>
           <Text style={styles.bannerTitle}>🏅 Jogos PRF 2026</Text>
           <Text style={styles.bannerSubtitle}>Participe da maior integração esportiva!</Text>
@@ -166,15 +156,30 @@ const JogosScreen = () => {
           </View>
 
           <Text style={[styles.label, { marginTop: 10 }]}>Modalidades</Text>
-          {MODALIDADES_JOGOS_2026.map(m => (
-            <TouchableOpacity key={m.id} style={styles.modItem} onPress={() => handleToggleModalidade(m.id)}>
-              <MaterialCommunityIcons
-                name={form.modalidades.includes(m.id) ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                size={24} color="#003366"
-              />
-              <Text style={styles.modLabel}>{m.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {(() => {
+            const agruparModalidades = (lista: any[]) => {
+              return lista.reduce((acc, item) => {
+                if (!acc[item.grupo]) acc[item.grupo] = [];
+                acc[item.grupo].push(item);
+                return acc;
+              }, {});
+            };
+            const grupos: any = agruparModalidades(MODALIDADES_JOGOS_2026);
+            return Object.keys(grupos).map(grupo => (
+              <View key={grupo} style={styles.grupoContainer}>
+                <Text style={styles.grupoTitulo}>{grupo}</Text>
+                {grupos[grupo].map((m: any) => (
+                  <TouchableOpacity key={m.id} style={styles.modItem} onPress={() => handleToggleModalidade(m.id)}>
+                    <MaterialCommunityIcons
+                      name={form.modalidades.includes(m.id) ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                      size={24} color="#003366"
+                    />
+                    <Text style={styles.modLabel}>{m.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ));
+          })()}
 
           <TouchableOpacity
             style={[styles.btnPrimary, (submitting || !isConnected) && styles.btnDisabled]}
@@ -213,7 +218,13 @@ const JogosScreen = () => {
                             logger.error('JOGOS_RENDER_TYPE_ERROR', new Error(`modalidades is ${typeof mods}`), { item: { id: item.id, filiado_id: item.filiado_id } });
                             return 'Erro nos dados';
                           }
-                          return mods.map((mid: string) => MODALIDADES_JOGOS_2026.find(m => m.id === mid)?.label || mid).join(', ');
+                          return mods.map((mid: string) => {
+                            const found = MODALIDADES_JOGOS_2026.find(m => m.id === mid);
+                            if (!found && mid) {
+                              logger.warn('JOGOS_UNKNOWN_SLUG', { slug: mid });
+                            }
+                            return found ? found.label : mid;
+                          }).join(', ');
                         })()}
                     </Text>
                     <Text style={[styles.tableCell, { width: 80 }]}>{item.qtd_familiares || 0}</Text>
@@ -227,7 +238,7 @@ const JogosScreen = () => {
             </ScrollView>
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };
@@ -242,8 +253,10 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center' },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5 },
   pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 10 },
-  modItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  modLabel: { fontSize: 14, color: '#333' },
+  grupoContainer: { marginTop: 15 },
+  grupoTitulo: { fontSize: 14, fontWeight: 'bold', color: '#003366', borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 5, marginBottom: 5 },
+  modItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  modLabel: { fontSize: 14, color: '#333', flex: 1 },
   btnPrimary: { backgroundColor: '#003366', padding: 15, borderRadius: 30, alignItems: 'center', marginTop: 15 },
   btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   btnDisabled: { opacity: 0.6 },

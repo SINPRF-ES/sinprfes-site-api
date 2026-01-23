@@ -73,6 +73,13 @@ export const submeterProposta = async (id: string, dados: any): Promise<Proposta
   return response.data;
 };
 
+export const uploadEdital = async (formData: FormData): Promise<{ url: string }> => {
+  const response = await api.post('/api/assembleias/upload-edital', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
 export const definirMesa = async (id: string, dados: { presidente_id: string; secretario_id: string }): Promise<void> => {
   await api.post(`/api/assembleias/${id}/mesa`, dados);
 };
