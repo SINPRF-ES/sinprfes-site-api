@@ -5,7 +5,7 @@ import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
 import NoticiasScreen from '../screens/NoticiasScreen';
-import VotacaoScreen from '../modules/votacao/screens/VotacaoScreen';
+import AssembleiaStack from './AssembleiaStack';
 import LogsScreen from '../screens/LogsScreen';
 import SegurancaScreen from '../screens/SegurancaScreen';
 import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
@@ -51,7 +51,7 @@ const DrawerNavigator = () => {
       />
       <Drawer.Screen
         name="Votacao"
-        component={VotacaoScreen}
+        component={AssembleiaStack}
         options={{ title: 'Votação' }}
       />
       <Drawer.Screen
