@@ -14,8 +14,10 @@ logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 
 // Nota: O scan de aniversários pode ser agendado aqui se usássemos node-cron,
 // mas seguindo o padrão de "Job" do arquivo, ele é disparado manualmente ou via cron externo.
-// Para paridade de funcionalidade sem adicionar dependências de cron pesadas:
-runBirthdayScan(); // Dispara scan básico no boot
+// O job possui trava de idempotência interna via banco de dados.
+if (process.env.BIRTHDAY_SCAN_ON_BOOT === "true") {
+  runBirthdayScan();
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));
