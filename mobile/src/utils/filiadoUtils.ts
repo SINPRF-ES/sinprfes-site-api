@@ -17,6 +17,25 @@ export function normalizeSituacaoFuncional(value?: string | null): 'ATIVO' | 'VE
 }
 
 /**
+ * Retorna o ID do filiado de forma canônica (string).
+ * Aceita o objeto filiado ou o próprio id.
+ */
+export function getCanonicalFiliadoId(filiado: any): string {
+  if (!filiado) return '';
+  const id = typeof filiado === 'object' ? (filiado.id || filiado.filiado_id) : filiado;
+  return id ? String(id) : '';
+}
+
+/**
+ * Converte um ID canônico (string) para o formato esperado pelo backend (number).
+ */
+export function parseCanonicalFiliadoId(id: string | number): number {
+  if (!id) return 0;
+  const parsed = parseInt(String(id), 10);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
  * Log de depuração apenas em ambiente de desenvolvimento.
  */
 export const logDebug = (tag: string, data: any) => {
