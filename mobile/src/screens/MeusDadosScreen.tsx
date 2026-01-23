@@ -19,6 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { toISODate, toBrazilianDate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { logger } from '../infra/logger';
+import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 
 export default function MeusDadosScreen() {
   const { usuario, setSessao, token } = useAuth();
@@ -89,14 +90,15 @@ export default function MeusDadosScreen() {
 
     try {
       setIsDeletingDependentes(true);
-      logger.info('[MeusDados.deleteDependentes.confirm]', { id: filiado.id, selected: selectedDependenteIndices });
+      const canonicalId = getCanonicalFiliadoId(filiado);
+      logger.info('[MeusDados.deleteDependentes.confirm]', { id: canonicalId, selected: selectedDependenteIndices });
 
       logger.info('[MeusDados.deleteDependentes.request]', {
-        id: filiado.id,
+        id: canonicalId,
         indices: selectedDependenteIndices
       });
 
-      const response = await api.delete(`/api/filiados/${filiado.id}/dependentes`, {
+      const response = await api.delete(`/api/filiados/${canonicalId}/dependentes`, {
         data: { indices: selectedDependenteIndices }
       });
 

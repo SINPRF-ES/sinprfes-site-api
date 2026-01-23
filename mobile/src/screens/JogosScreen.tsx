@@ -18,6 +18,7 @@ import { logger } from '../infra/logger';
 import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } from '../services/jogosService';
 import NetInfo from '@react-native-community/netinfo';
 import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
+import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 
 const MODALIDADES_JOGOS_2026 = [
   { id: 'FUTSAL', label: 'Futsal', grupo: 'Coletivos' },
@@ -64,7 +65,8 @@ const JogosScreen = () => {
         inscricoes = await listarJogosInscricoesOffline();
       }
 
-      const minha = inscricoes.find((i: any) => String(i.filiado_id) === String(usuario?.id));
+      const currentUserId = getCanonicalFiliadoId(usuario);
+      const minha = inscricoes.find((i: any) => String(i.filiado_id) === currentUserId);
 
       if (minha) {
         setInscricao(minha);

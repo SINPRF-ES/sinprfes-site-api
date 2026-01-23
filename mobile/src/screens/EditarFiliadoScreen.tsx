@@ -4,21 +4,22 @@ import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } 
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { buildUpdateFiliadoPayload } from '../services/filiadoPayloadMapper';
-import { atualizarFiliado, arquivarFiliado, desarquivarFiliado, getFiliadoById, getMe } from '../services/apiService';
+import { atualizarFiliado, arquivarFiliado, desarquivarFiliado } from '../services/apiService';
+import { getMe, getFiliadoById } from '../services/filiadoService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Filiado } from '../types/filiado';
-import { logDebug } from '../utils/filiadoUtils';
+import { logDebug, getCanonicalFiliadoId, parseCanonicalFiliadoId } from '../utils/filiadoUtils';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
 import api from '../services/apiService';
 import { SafeAreaView, TouchableOpacity } from 'react-native';
 
 export default function EditarFiliadoScreen({ route, navigation }: any) {
-  const filiadoId = route.params?.filiadoId;
+  const filiadoId = parseCanonicalFiliadoId(route.params?.filiadoId);
   const { usuario } = useAuth();
   const netInfo = useNetInfo();
 
@@ -73,8 +74,10 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     try {
       setSaving(true);
       const payload = buildUpdateFiliadoPayload(filiado);
+      const canonicalId = getCanonicalFiliadoId(filiado);
+
       if (filiadoId) {
-        await atualizarFiliado(filiado.id, payload);
+        await atualizarFiliado(canonicalId, payload);
       } else {
         await api.put('/api/filiados/me', payload);
       }
@@ -102,7 +105,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
             if (!motivo) return;
             try {
               setSaving(true);
-              await arquivarFiliado(filiado.id, motivo);
+              await arquivarFiliado(getCanonicalFiliadoId(filiado), motivo);
               Alert.alert('Sucesso', 'Arquivado.');
               navigation.goBack();
             } catch (err: any) {
