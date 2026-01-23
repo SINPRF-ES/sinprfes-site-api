@@ -109,13 +109,13 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }
 
   const hasCheckedIn = estado?.quorumVigente.userHasCheckedIn || false;
-  const isAberta = assembleia.status === 'ABERTA';
+  const isAberta = assembleia.estado === 'ABERTA';
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <View style={[styles.badge, styles[`badge${assembleia.status}`]]}>
-          <Text style={styles.badgeText}>{assembleia.status}</Text>
+        <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
+          <Text style={styles.badgeText}>{assembleia.estado}</Text>
         </View>
         <Text style={styles.tipoText}>{assembleia.tipo}</Text>
       </View>
@@ -179,7 +179,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         <View style={styles.diretoriaSection}>
           <Text style={styles.sectionTitle}>Gestão (Diretoria)</Text>
           <View style={styles.diretoriaButtons}>
-            {assembleia.status === 'CRIADA' && (
+            {assembleia.estado === 'CRIADA' && (
               <TouchableOpacity style={styles.btnManagement} onPress={handleAbrir} disabled={actionLoading}>
                 <Text style={styles.btnText}>Abrir Assembleia</Text>
               </TouchableOpacity>

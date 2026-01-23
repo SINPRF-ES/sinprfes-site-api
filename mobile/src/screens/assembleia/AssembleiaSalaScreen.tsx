@@ -11,10 +11,9 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const { usuario, token } = useAuth();
   const [estado, setEstado] = useState<AssembleiaEstado | null>(null);
   const [loading, setLoading] = useState(true);
-  const [votosNominais, setVotosNominais] = useState<VotoNominal[]>([]);
   const [sendingVoto, setSendingVoto] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const data = await getAssembleiaEstado(id);
       setEstado(data);
@@ -23,7 +22,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchData();
@@ -32,38 +31,55 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       assembleiaSocket.connect(token);
       assembleiaSocket.joinRoom(id);
 
-      assembleiaSocket.onEvent('ESTADO_ATUALIZADO', (data) => {
-        setEstado(data);
-        if (data.votacaoAtiva === null) {
-          setVotosNominais([]);
-        }
+      assembleiaSocket.onEvent('session_state_changed', (data) => {
+        setEstado(prev => prev ? { ...prev, assembleia: { ...prev.assembleia, estado: data.estado } } : null);
       });
 
-      assembleiaSocket.onEvent('VOTO_CONFIRMADO', (data) => {
-        setVotosNominais(prev => [data, ...prev]);
+      assembleiaSocket.onEvent('voting_started', (data) => {
+        setEstado(prev => prev ? { ...prev, votacaoAtiva: data } : null);
       });
 
-      assembleiaSocket.onEvent('VOTACAO_ENCERRADA', (data) => {
-        Alert.alert('Votação Encerrada', `Resultado Final:\nSIM: ${data.total_sim}\nNÃO: ${data.total_nao}\nABSTENÇÕES: ${data.total_abstencao}`);
+      assembleiaSocket.onEvent('vote_cast', (data) => {
+        setEstado(prev => {
+          if (!prev || !prev.votacaoAtiva) return prev;
+          return {
+            ...prev,
+            votacaoAtiva: {
+              ...prev.votacaoAtiva,
+              contagem: data.contagem,
+              votos: data.votos
+            }
+          };
+        });
+      });
+
+      assembleiaSocket.onEvent('quorum_count_updated', (data) => {
+        setEstado(prev => prev && prev.quorumVigente ? { ...prev, quorumVigente: { ...prev.quorumVigente, total: data.total } } : prev);
+      });
+
+      assembleiaSocket.onEvent('new_quorum_call', (data) => {
+         fetchData(); // Mais seguro re-hidratar tudo
       });
     }
 
     return () => {
       assembleiaSocket.leaveRoom(id);
-      assembleiaSocket.offEvent('ESTADO_ATUALIZADO');
-      assembleiaSocket.offEvent('VOTO_CONFIRMADO');
-      assembleiaSocket.offEvent('VOTACAO_ENCERRADA');
+      assembleiaSocket.offEvent('session_state_changed');
+      assembleiaSocket.offEvent('voting_started');
+      assembleiaSocket.offEvent('vote_cast');
+      assembleiaSocket.offEvent('quorum_count_updated');
+      assembleiaSocket.offEvent('new_quorum_call');
     };
-  }, [id, token]);
+  }, [id, token, fetchData]);
 
-  const handleVotar = async (opcao: 'SIM' | 'NAO') => {
+  const handleVotar = async (voto: 'SIM' | 'NAO') => {
     if (!estado?.votacaoAtiva) return;
     try {
       setSendingVoto(true);
-      await enviarVoto(id, estado.votacaoAtiva.id, opcao);
+      await enviarVoto(id, estado.votacaoAtiva.id, voto);
       Alert.alert('Sucesso', 'Voto registrado com sucesso!');
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Falha ao votar.');
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao votar.');
     } finally {
       setSendingVoto(false);
     }
@@ -72,9 +88,9 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const handlePedirPalavra = async () => {
     try {
       await pedirPalavra(id);
-      Alert.alert('Sucesso', 'Você entrou na fila de oradores.');
+      Alert.alert('Sucesso', 'Seu pedido foi registrado.');
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Falha ao solicitar palavra.');
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao solicitar palavra.');
     }
   };
 
@@ -83,6 +99,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   }
 
   const { votacaoAtiva, quorumVigente } = estado;
+  const votosNominais = votacaoAtiva?.votos || [];
 
   return (
     <View style={styles.container}>
@@ -90,7 +107,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         <Text style={styles.assembleiaTitulo}>{estado.assembleia.titulo}</Text>
         <View style={styles.quorumBox}>
           <MaterialCommunityIcons name="account-group" size={16} color="#666" />
-          <Text style={styles.quorumText}>{quorumVigente.contagem} presentes</Text>
+          <Text style={styles.quorumText}>{quorumVigente?.total || 0} presentes</Text>
         </View>
       </View>
 
@@ -98,13 +115,13 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         {votacaoAtiva ? (
           <View style={styles.votacaoCard}>
             <View style={styles.votacaoHeader}>
-              <Text style={styles.votacaoBadge}>VOTAÇÃO ATIVA</Text>
+              <Text style={styles.votacaoBadge}>{votacaoAtiva.estado}</Text>
               <MaterialCommunityIcons name="clock-outline" size={20} color="#e74c3c" />
             </View>
             <Text style={styles.votacaoTitulo}>{votacaoAtiva.titulo}</Text>
             <Text style={styles.votacaoDesc}>{votacaoAtiva.descricao}</Text>
 
-            {votacaoAtiva.userEligible ? (
+            {votacaoAtiva.userEligible !== false ? (
               votacaoAtiva.userVoted ? (
                 <View style={styles.votedNotice}>
                   <MaterialCommunityIcons name="check-circle" size={30} color="#27ae60" />
@@ -130,24 +147,26 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
               )
             ) : (
               <View style={styles.notEligibleBox}>
-                <Text style={styles.notEligibleText}>Você não é elegível para este item (entrou após o início da votação).</Text>
+                <Text style={styles.notEligibleText}>Você não é elegível para este item (ausente no quórum).</Text>
               </View>
             )}
 
-            <View style={styles.placares}>
-              <View style={styles.placarItem}>
-                <Text style={styles.placarLabel}>SIM</Text>
-                <Text style={styles.placarValue}>{votacaoAtiva.total_sim}</Text>
+            {votacaoAtiva.contagem && (
+              <View style={styles.placares}>
+                <View style={styles.placarItem}>
+                  <Text style={styles.placarLabel}>SIM</Text>
+                  <Text style={styles.placarValue}>{votacaoAtiva.contagem.SIM}</Text>
+                </View>
+                <View style={styles.placarItem}>
+                  <Text style={styles.placarLabel}>NÃO</Text>
+                  <Text style={styles.placarValue}>{votacaoAtiva.contagem.NAO}</Text>
+                </View>
+                <View style={styles.placarItem}>
+                  <Text style={styles.placarLabel}>ABST.</Text>
+                  <Text style={styles.placarValue}>{votacaoAtiva.contagem.ABSTENCAO}</Text>
+                </View>
               </View>
-              <View style={styles.placarItem}>
-                <Text style={styles.placarLabel}>NÃO</Text>
-                <Text style={styles.placarValue}>{votacaoAtiva.total_nao}</Text>
-              </View>
-              <View style={styles.placarItem}>
-                <Text style={styles.placarLabel}>ABST.</Text>
-                <Text style={styles.placarValue}>{votacaoAtiva.total_abstencao}</Text>
-              </View>
-            </View>
+            )}
           </View>
         ) : (
           <View style={styles.waitingCard}>
@@ -161,8 +180,8 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             <Text style={styles.sectionTitle}>Votos Nominais (Ao vivo)</Text>
             {votosNominais.map((v, i) => (
               <View key={i} style={styles.votoNominalRow}>
-                <Text style={styles.nominalNome}>{v.filiado_nome}</Text>
-                <Text style={[styles.nominalOpcao, styles[`opcao${v.opcao}`]]}>{v.opcao}</Text>
+                <Text style={styles.nominalNome}>{v.nome}</Text>
+                <Text style={[styles.nominalOpcao, styles[`opcao${v.voto}`]]}>{v.voto}</Text>
               </View>
             ))}
           </View>

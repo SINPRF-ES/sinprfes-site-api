@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS assembleias (
     estado VARCHAR(20) DEFAULT 'CRIADA', -- CRIADA, ABERTA, ENCERRADA
     criado_por INTEGER REFERENCES filiados(id),
     aberta_em TIMESTAMP,
-    encerra_em TIMESTAMP,
+    encerrada_em TIMESTAMP,
     criado_em TIMESTAMP DEFAULT NOW(),
     CONSTRAINT chk_estado CHECK (estado IN ('CRIADA', 'ABERTA', 'ENCERRADA')),
     CONSTRAINT chk_tipo CHECK (tipo IN ('AGE', 'AGO'))
@@ -146,3 +146,12 @@ END $$;
 -- Phase B: Drop duplicates
 ALTER TABLE filiados DROP COLUMN IF EXISTS motivo_arquivamento;
 ALTER TABLE filiados DROP COLUMN IF EXISTS arquivado_pelo_id;
+
+-- 5. Alignment Fixes
+DO $$
+BEGIN
+    -- Rename encerra_em to encerrada_em in assembleias if it exists
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleias' AND column_name = 'encerra_em') THEN
+        ALTER TABLE assembleias RENAME COLUMN encerra_em TO encerrada_em;
+    END IF;
+END $$;
