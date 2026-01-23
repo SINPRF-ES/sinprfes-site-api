@@ -65,8 +65,8 @@ const JogosScreen = () => {
         inscricoes = await listarJogosInscricoesOffline();
       }
 
-      const currentUserId = getCanonicalFiliadoId(usuario);
-      const minha = inscricoes.find((i: any) => String(i.filiado_id) === currentUserId);
+      const currentUserId = usuario ? getCanonicalFiliadoId(usuario) : '';
+      const minha = Array.isArray(inscricoes) ? inscricoes.find((i: any) => String(i.filiado_id) === currentUserId) : null;
 
       if (minha) {
         setInscricao(minha);
