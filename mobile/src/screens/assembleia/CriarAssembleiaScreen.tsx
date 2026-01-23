@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { criarAssembleia } from '../../services/assembleiaService';
+import { logger } from '../../infra/logger';
 
 export default function CriarAssembleiaScreen({ navigation }: any) {
   const [titulo, setTitulo] = useState('');
