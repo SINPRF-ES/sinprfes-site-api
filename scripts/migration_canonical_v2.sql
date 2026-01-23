@@ -1,10 +1,41 @@
--- Migration: Assembleias e Votações
--- Data: 2026-01-20
+-- ============================================================================
+-- SINPRF-ES CANONICAL MIGRATION V2 (Consolidated)
+-- This script contains all necessary schema updates for the 2.0 system.
+-- It is designed to be idempotent (using IF NOT EXISTS).
+-- ============================================================================
 
--- Extensões necessárias
+-- 1. Job Management (Idempotency control for jobs like birthday scan)
+CREATE TABLE IF NOT EXISTS job_runs (
+    job_name VARCHAR(50) PRIMARY KEY,
+    last_run_date VARCHAR(10), -- Format: DD/MM/AAAA
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+INSERT INTO job_runs (job_name, last_run_date)
+VALUES ('BIRTHDAY_SCAN', '01/01/2000')
+ON CONFLICT (job_name) DO NOTHING;
+
+-- 2. CMS-Lite (Public site content blocks)
+CREATE TABLE IF NOT EXISTS content_blocks (
+    id SERIAL PRIMARY KEY,
+    page VARCHAR(50) NOT NULL, -- 'home', 'noticias'
+    slot VARCHAR(50) NOT NULL, -- 'hero', 'bloco_1', 'bloco_2', etc.
+    title VARCHAR(255),
+    body TEXT,
+    media_type VARCHAR(20) DEFAULT 'image', -- 'image', 'video'
+    media_url TEXT,
+    link_url TEXT,
+    link_text VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    ordenacao INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by INTEGER REFERENCES filiados(id)
+);
+
+-- 3. Assemblies & Voting System
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Assembleias
 CREATE TABLE IF NOT EXISTS assembleias (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tipo VARCHAR(10) NOT NULL, -- AGE, AGO
@@ -19,7 +50,6 @@ CREATE TABLE IF NOT EXISTS assembleias (
     CONSTRAINT chk_tipo CHECK (tipo IN ('AGE', 'AGO'))
 );
 
--- 2. Quóruns (Chamadas)
 CREATE TABLE IF NOT EXISTS assembleia_quoruns (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
@@ -28,7 +58,6 @@ CREATE TABLE IF NOT EXISTS assembleia_quoruns (
     criado_em TIMESTAMP DEFAULT NOW()
 );
 
--- 3. Check-ins
 CREATE TABLE IF NOT EXISTS assembleia_checkins (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     quorum_id UUID REFERENCES assembleia_quoruns(id) ON DELETE CASCADE,
@@ -37,7 +66,6 @@ CREATE TABLE IF NOT EXISTS assembleia_checkins (
     UNIQUE(quorum_id, filiado_id)
 );
 
--- 4. Mesa Diretora
 CREATE TABLE IF NOT EXISTS assembleia_mesa (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
@@ -47,11 +75,10 @@ CREATE TABLE IF NOT EXISTS assembleia_mesa (
     UNIQUE(assembleia_id, cargo)
 );
 
--- 5. Votações (Itens de Pauta)
 CREATE TABLE IF NOT EXISTS assembleia_votacoes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
-    quorum_snapshot_id UUID REFERENCES assembleia_quoruns(id), -- Snapshot de elegibilidade
+    quorum_snapshot_id UUID REFERENCES assembleia_quoruns(id), -- Snapshot for eligibility
     titulo VARCHAR(255) NOT NULL,
     descricao TEXT,
     estado VARCHAR(20) DEFAULT 'AGUARDANDO', -- AGUARDANDO, EM_CURSO, CONCLUIDA, RETIRADA
@@ -63,7 +90,6 @@ CREATE TABLE IF NOT EXISTS assembleia_votacoes (
     CONSTRAINT chk_estado_vot CHECK (estado IN ('AGUARDANDO', 'EM_CURSO', 'CONCLUIDA', 'RETIRADA'))
 );
 
--- 6. Votos
 CREATE TABLE IF NOT EXISTS assembleia_votos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     votacao_id UUID REFERENCES assembleia_votacoes(id) ON DELETE CASCADE,
@@ -74,7 +100,6 @@ CREATE TABLE IF NOT EXISTS assembleia_votos (
     UNIQUE(votacao_id, filiado_id)
 );
 
--- 7. Pedidos de Palavra
 CREATE TABLE IF NOT EXISTS assembleia_pedidos_palavra (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
@@ -85,7 +110,6 @@ CREATE TABLE IF NOT EXISTS assembleia_pedidos_palavra (
     CONSTRAINT chk_estado_palavra CHECK (estado IN ('PENDENTE', 'EM_FALA', 'CONCLUIDO', 'CANCELADO'))
 );
 
--- 8. Propostas
 CREATE TABLE IF NOT EXISTS assembleia_propostas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
@@ -98,7 +122,6 @@ CREATE TABLE IF NOT EXISTS assembleia_propostas (
     CONSTRAINT chk_estado_proposta CHECK (estado IN ('PENDENTE', 'VOTADA', 'RETIRADA'))
 );
 
--- 9. Auditoria
 CREATE TABLE IF NOT EXISTS assembleia_auditoria (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
@@ -107,3 +130,28 @@ CREATE TABLE IF NOT EXISTS assembleia_auditoria (
     payload JSONB,
     criado_em TIMESTAMP DEFAULT NOW()
 );
+
+-- 4. Archive Management Standardization
+-- Phase A: Backfill data from legacy columns to new standard ones
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'filiados' AND column_name = 'motivo_arquivamento') THEN
+        UPDATE filiados SET arquivado_motivo = motivo_arquivamento WHERE arquivado_motivo IS NULL AND motivo_arquivamento IS NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'filiados' AND column_name = 'arquivado_pelo_id') THEN
+        UPDATE filiados SET arquivado_por = arquivado_pelo_id WHERE arquivado_por IS NULL AND arquivado_pelo_id IS NOT NULL;
+    END IF;
+END $$;
+
+-- Phase B: Drop duplicates
+ALTER TABLE filiados DROP COLUMN IF EXISTS motivo_arquivamento;
+ALTER TABLE filiados DROP COLUMN IF EXISTS arquivado_pelo_id;
+
+-- 5. Alignment Fixes
+DO $$
+BEGIN
+    -- Rename encerra_em to encerrada_em in assembleias if it exists
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleias' AND column_name = 'encerra_em') THEN
+        ALTER TABLE assembleias RENAME COLUMN encerra_em TO encerrada_em;
+    END IF;
+END $$;

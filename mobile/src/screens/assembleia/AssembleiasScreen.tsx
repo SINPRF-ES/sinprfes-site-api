@@ -44,13 +44,13 @@ export default function AssembleiasScreen({ navigation }: any) {
       onPress={() => navigation.navigate('AssembleiaDetalhe', { id: item.id })}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.badge, styles[`badge${item.status}`]]}>
-          <Text style={styles.badgeText}>{item.status}</Text>
+        <View style={[styles.badge, styles[`badge${item.estado}`]]}>
+          <Text style={styles.badgeText}>{item.estado}</Text>
         </View>
         <Text style={styles.tipoText}>{item.tipo}</Text>
       </View>
       <Text style={styles.tituloText}>{item.titulo}</Text>
-      <Text style={styles.dataText}>Criada em: {new Date(item.data_criacao).toLocaleDateString()}</Text>
+      <Text style={styles.dataText}>Criada em: {new Date(item.criado_em).toLocaleDateString()}</Text>
 
       <View style={styles.cardFooter}>
         <Text style={styles.verMais}>Ver detalhes</Text>

@@ -1,46 +1,19 @@
 [
   {
-    "id": "home-1",
+    "id": "1",
     "page": "home",
+    "title": "T1",
+    "is_active": true,
     "ordenacao": 1,
-    "title": "União e Força",
-    "body": "Trabalhando incansavelmente pela valorização e direitos dos Policiais Rodoviários Federais no Espírito Santo.",
-    "media_type": "image",
-    "media_url": "img/hero_prf.jpg",
-    "is_active": true,
-    "updated_at": "2026-01-23T12:00:00.000Z"
+    "body": "<p>Hello</p>",
+    "updated_at": "2026-01-23T18:33:52.311Z",
+    "updated_by": 1
   },
   {
-    "id": "home-2",
+    "id": "2",
     "page": "home",
-    "ordenacao": 2,
-    "title": "Modernização da Frota",
-    "body": "Novas viaturas equipadas com tecnologia de ponta chegam para reforçar o trabalho dos nossos policiais.",
-    "media_type": "image",
-    "media_url": "img/noticia1.jpg",
-    "is_active": true,
-    "updated_at": "2026-01-23T12:00:00.000Z"
-  },
-  {
-    "id": "home-3",
-    "page": "home",
-    "ordenacao": 3,
-    "title": "Treinamento Tático",
-    "body": "Policiais participam de capacitação avançada em abordagem e operações especiais.",
-    "media_type": "image",
-    "media_url": "img/noticias_hero.jpg",
-    "is_active": true,
-    "updated_at": "2026-01-23T12:00:00.000Z"
-  },
-  {
-    "id": "noticias-1",
-    "page": "noticias",
-    "ordenacao": 1,
-    "title": "Informativo Sindical",
-    "body": "Confira as últimas notícias sobre as assembleias e decisões da diretoria.",
-    "media_type": "image",
-    "media_url": "img/noticia1.jpg",
-    "is_active": true,
-    "updated_at": "2026-01-23T12:00:00.000Z"
+    "title": "T2",
+    "is_active": false,
+    "ordenacao": 2
   }
 ]
