@@ -120,10 +120,12 @@ const JogosScreen = () => {
 
     try {
       setSubmitting(true);
+      logger.info('JOGOS_SAVE_START', { modalidadesCount: form.modalidades.length });
       await registrarInscricaoJogos(form);
       Alert.alert('Sucesso', 'Inscrição registrada!');
       fetchData();
     } catch (err: any) {
+      logger.error('JOGOS_SAVE_ERROR', err);
       Alert.alert('Erro', 'Não foi possível salvar.');
     } finally {
       setSubmitting(false);
@@ -190,9 +192,14 @@ const JogosScreen = () => {
               <View>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderText, { width: 150 }]}>Nome</Text>
-                  <Text style={[styles.tableHeaderText, { width: 80 }]}>Idade 2026</Text>
+                  <Text style={[styles.tableHeaderText, { width: 80 }]}>Idade (2026)</Text>
                   <Text style={[styles.tableHeaderText, { width: 100 }]}>Sexo</Text>
                   <Text style={[styles.tableHeaderText, { width: 200 }]}>Modalidades</Text>
+                  <Text style={[styles.tableHeaderText, { width: 80 }]}>Qtd Fam.</Text>
+                  <Text style={[styles.tableHeaderText, { width: 150 }]}>Familiares</Text>
+                  <Text style={[styles.tableHeaderText, { width: 150 }]}>Observações</Text>
+                  <Text style={[styles.tableHeaderText, { width: 120 }]}>Telefone</Text>
+                  <Text style={[styles.tableHeaderText, { width: 180 }]}>E-mail(s)</Text>
                 </View>
                 {inscricoesGerais.map((item, idx) => (
                   <View key={idx} style={styles.tableRow}>
@@ -209,6 +216,11 @@ const JogosScreen = () => {
                           return mods.map((mid: string) => MODALIDADES_JOGOS_2026.find(m => m.id === mid)?.label || mid).join(', ');
                         })()}
                     </Text>
+                    <Text style={[styles.tableCell, { width: 80 }]}>{item.qtd_familiares || 0}</Text>
+                    <Text style={[styles.tableCell, { width: 150 }]}>{item.familiares || '—'}</Text>
+                    <Text style={[styles.tableCell, { width: 150 }]}>{item.observacoes || '—'}</Text>
+                    <Text style={[styles.tableCell, { width: 120 }]}>{item.telefone1 || '—'}</Text>
+                    <Text style={[styles.tableCell, { width: 180 }]}>{[item.email1, item.email2].filter(Boolean).join(' / ') || '—'}</Text>
                   </View>
                 ))}
               </View>

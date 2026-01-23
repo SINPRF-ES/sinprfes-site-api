@@ -5,6 +5,7 @@ import { useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { obterVotacao, votar } from '../services/votacaoService';
 import { getDeviceId } from '../services/deviceService';
+import { logger } from '../infra/logger';
 
 import type { VotacaoDetalhe } from '../types/votacao';
 
@@ -24,9 +25,11 @@ export default function VotacaoDetalheScreen() {
     if (!token) return;
     try {
       setLoading(true);
+      logger.info('VOTACAO_DETALHE_LOAD_START', { id });
       const v = await obterVotacao(token, id);
       setVotacao(v);
     } catch (e: any) {
+      logger.error('VOTACAO_DETALHE_LOAD_ERROR', e, { id });
       Alert.alert('Erro', e?.message || 'Falha ao carregar votação.');
     } finally {
       setLoading(false);

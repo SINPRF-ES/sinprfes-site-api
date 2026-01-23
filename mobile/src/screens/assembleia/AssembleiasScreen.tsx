@@ -6,6 +6,7 @@ import { getAssembleias } from '../../services/assembleiaService';
 import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { isDiretoria } from '../../utils/filiadoUtils';
+import { logger } from '../../infra/logger';
 
 export default function AssembleiasScreen({ navigation }: any) {
   const { usuario } = useAuth();
@@ -42,7 +43,10 @@ export default function AssembleiasScreen({ navigation }: any) {
   const renderItem = ({ item }: { item: Assembleia }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('AssembleiaDetalhe', { id: item.id })}
+      onPress={() => {
+        logger.info('NAVIGATE_TO_ASSEMBLEIA_DETALHE', { id: item.id, titulo: item.titulo });
+        navigation.navigate('AssembleiaDetalhe', { id: item.id });
+      }}
     >
       <View style={styles.cardHeader}>
         <View style={[styles.badge, styles[`badge${item.estado}`]]}>

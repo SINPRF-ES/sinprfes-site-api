@@ -121,8 +121,8 @@ api.interceptors.response.use(
  * Busca a lista de filiados.
  * A API retornará os campos de acordo com o perfil do usuário logado.
  */
-export const getFiliados = async () => {
-  const response = await api.get('/api/filiados');
+export const getFiliados = async (params?: any) => {
+  const response = await api.get('/api/filiados', { params });
   return response.data.filiados || response.data || [];
 };
 

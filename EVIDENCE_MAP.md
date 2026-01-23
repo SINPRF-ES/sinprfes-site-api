@@ -30,3 +30,30 @@
 
 ## Technical Decision Summary
 **Shared Puro + Platform Adapters:** Optamos por manter os formatadores do Mobile em `mobile/src/shared/format/formatters.ts` seguindo a regra canônica (retornar `""` para vazios). Isso garante que o componente nativo (`TextInput`) possa exibir seus placeholders corretamente, sem interferência de máscaras parciais ou fallbacks de UI.
+
+## Patch de Correções Críticas e Regressões (Janeiro 2026)
+
+### A) Assembleias / Votação: Detalhes sem crash
+- **Crash Fix:** Corrigido acesso a `estado?.quorumVigente.contagem` (deve ser `total`) com optional chaining em `AssembleiaDetalheScreen.tsx`.
+- **UI Robustez:** Implementado fallback UI (alert icon + mensagem amigável) e botão de retry para falhas de fetch ou dados nulos.
+- **Instrumentação:** Adicionados logs `ASSEMBLEIA_DETALHE_FETCH_START` e `SUCCESS` com shape do payload.
+
+### B) Listagem de Filiados: Pickers Restaurados
+- **Funcionalidade:** Restaurados pickers "Cadastro" (Ativos/Arquivados/Todos) e "Situação Funcional" (Ativo/Veterano/Pensionista).
+- **RBAC:** Cadastro aparece apenas para Gestão; Funcional para todos.
+- **Filtro:** `useMemo` atualizado para filtrar localmente e `getFiliados` agora suporta `incluirArquivados=1`.
+
+### C) Visibilidade de Assembleias (Filiados)
+- **Backend:** Removido filtro de status no service `listar`, permitindo visibilidade de eventos `CRIADA` para todos os perfis.
+- **UI Gates:** Confirmada a manutenção de botões de ação (Criar, Abrir, Encerrar) restritos a perfis `ADMIN/DIRETORIA`.
+
+### D) Jogos 2026: Tabela Completa
+- **Renderização:** Tabela expandida para exibir todas as colunas: Qtd Fam., Familiares, Observações, Telefone e E-mail(s).
+- **Layout:** Scroll horizontal confirmado via `ScrollView horizontal` envolvendo o grid de dados.
+- **PII:** Logs de renderização não vazam dados sensíveis (apenas contagem e chaves).
+
+### E) Observabilidade e Logs
+- **Helper:** Implementado `logError(context, err, meta)` em `mobile/src/infra/logger.ts`.
+- **Instrumentação:** Adicionados pontos de boundary em `assembleiaService.ts`, `jogosService.ts`, `filiadosService.ts` e handlers de navegação.
+
+**Nenhuma regressão conhecida introduzida.**
