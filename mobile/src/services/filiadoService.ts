@@ -20,6 +20,11 @@ export const getMe = async (): Promise<Filiado> => {
   return response.data;
 };
 
+export const getFiliadoById = async (id: string): Promise<Filiado> => {
+  const response = await api.get(`/api/filiados/${id}`);
+  return response.data;
+};
+
 export const updateMe = async (data: Partial<Filiado>): Promise<Filiado> => {
   const response = await api.put('/api/filiados/me', unmaskFiliado(data));
   return response.data;

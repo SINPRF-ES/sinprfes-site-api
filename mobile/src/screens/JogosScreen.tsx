@@ -18,7 +18,7 @@ import { logger } from '../infra/logger';
 import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } from '../services/jogosService';
 import NetInfo from '@react-native-community/netinfo';
 import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
-import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
+import { getCanonicalFiliadoId, ROLES } from '../utils/filiadoUtils';
 
 const MODALIDADES_JOGOS_2026 = [
   { id: 'FUTSAL', label: 'Futsal', grupo: 'Coletivos' },
@@ -39,7 +39,7 @@ const JogosScreen = () => {
   const [inscricoesGerais, setInscricoesGerais] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(true);
 
-  const isManager = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'ORGANIZADOR'].includes(usuario?.perfil_acesso || '');
+  const isManager = [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO, ROLES.ORGANIZADOR].includes(usuario?.perfil_acesso || '');
 
   const [form, setForm] = useState({
     sexo: '',
@@ -122,8 +122,8 @@ const JogosScreen = () => {
     }
   };
 
-  const calculateAge2026 = (birthDate: string) => {
-    if (!birthDate) return '—';
+  const calculateAge2026 = (birthDate: any) => {
+    if (!birthDate || typeof birthDate !== 'string') return '—';
     const year = birthDate.includes('-') ? birthDate.split('-')[0] : birthDate.split('/')[2];
     return 2026 - parseInt(year);
   };

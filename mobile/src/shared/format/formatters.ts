@@ -4,21 +4,32 @@ export const onlyDigits = (text: string | null | undefined): string => {
 };
 
 export const formatCpf = (cpf: string | null | undefined): string => {
-  const digits = onlyDigits(cpf);
-  if (!digits) return '';
-  if (digits.length !== 11) return digits;
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  try {
+    if (!cpf) return '';
+    const digits = onlyDigits(cpf);
+    if (!digits) return '';
+    if (digits.length !== 11) return digits;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  } catch (e) {
+    console.error('[Formatters.formatCpf.error]', e);
+    return '—';
+  }
+  if (!cpf) return '';
+  const digits = onlyDigits(cpf).slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 };
 
 export const formatTelefone = (tel: string | null | undefined): string => {
-  const digits = onlyDigits(tel);
-  if (!digits) return '';
-
-  const limited = digits.slice(0, 11);
-  if (limited.length <= 2) return limited;
-  if (limited.length <= 6) return `(${limited.slice(0, 2)}) ${limited.slice(2)}`;
-  if (limited.length <= 10) return `(${limited.slice(0, 2)}) ${limited.slice(2, 6)}-${limited.slice(6)}`;
-  return `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7)}`;
+  if (!tel) return '';
+  const digits = onlyDigits(tel).slice(0, 11);
+  if (digits.length === 0) return '';
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
 
 export const formatCep = (cep: string | null | undefined): string => {

@@ -107,6 +107,8 @@ router.post("/",
 // =============================================================================
 // ROTAS ESPECÍFICAS POR ID
 // =============================================================================
+router.get("/:id", authMiddleware, filiadosController.getFiliadoById);
+
 router.put(
   "/:id",
   authMiddleware,

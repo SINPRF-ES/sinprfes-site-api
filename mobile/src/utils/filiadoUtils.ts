@@ -17,23 +17,53 @@ export function normalizeSituacaoFuncional(value?: string | null): 'ATIVO' | 'VE
 }
 
 /**
- * Retorna o ID do filiado de forma canônica (string).
- * Aceita o objeto filiado ou o próprio id.
+ * Canoniza o ID do filiado para string numérica, garantindo consistência
+ * entre o app (que prefere strings) e o backend (que usa INTEGER/SERIAL).
  */
-export function getCanonicalFiliadoId(filiado: any): string {
-  if (!filiado) return '';
-  const id = typeof filiado === 'object' ? (filiado.id || filiado.filiado_id) : filiado;
-  return id ? String(id) : '';
+export function getCanonicalFiliadoId(obj: any): string {
+  if (!obj) return '';
+  // Se for um objeto (filiado ou usuario), pega o .id
+  const id = typeof obj === 'object' ? obj.id : obj;
+  if (id === undefined || id === null) return '';
+  return String(id);
 }
 
 /**
- * Converte um ID canônico (string) para o formato esperado pelo backend (number).
+ * Alias para getCanonicalFiliadoId para expressar intenção de parsear um ID vindo de rota.
  */
-export function parseCanonicalFiliadoId(id: string | number): number {
-  if (!id) return 0;
-  const parsed = parseInt(String(id), 10);
-  return isNaN(parsed) ? 0 : parsed;
+export function parseCanonicalFiliadoId(id: any): string {
+  return getCanonicalFiliadoId(id);
 }
+
+/**
+ * Roles canônicas do sistema.
+ */
+export const ROLES = {
+  ADMIN: 'ADMIN',
+  DIRETORIA: 'DIRETORIA',
+  FUNCIONARIO: 'FUNCIONARIO',
+  ORGANIZADOR: 'ORGANIZADOR',
+  COMUNICADOR: 'COMUNICADOR',
+  FILIADO: 'FILIADO',
+};
+
+/**
+ * Verifica se o perfil tem acesso de gestão (administrativo geral).
+ */
+export const isGestao = (perfil?: string | null) => {
+  if (!perfil) return false;
+  const p = perfil.toUpperCase();
+  return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO].includes(p);
+};
+
+/**
+ * Verifica se o perfil tem acesso de diretoria (pode criar assembleias, ver logs, etc).
+ */
+export const isDiretoria = (perfil?: string | null) => {
+  if (!perfil) return false;
+  const p = perfil.toUpperCase();
+  return [ROLES.ADMIN, ROLES.DIRETORIA].includes(p);
+};
 
 /**
  * Log de depuração apenas em ambiente de desenvolvimento.
