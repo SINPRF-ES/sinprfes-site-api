@@ -48,6 +48,12 @@ export default function MeusDadosScreen() {
       }
 
       setFiliado(data);
+      logger.info('MEUS_DADOS_STATE_SNAPSHOT', {
+        hasUser: !!usuario,
+        hasFiliado: !!data,
+        filiadoKeys: data ? Object.keys(data) : [],
+        lotacao: data?.lotacao
+      });
     } catch (err: any) {
       setError(err.message || 'Não foi possível carregar os dados.');
     } finally {

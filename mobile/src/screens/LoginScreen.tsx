@@ -9,6 +9,7 @@ import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/au
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
 import { carregarSessao } from '../services/storageService';
+import { logger } from '../infra/logger';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -127,6 +128,21 @@ export default function LoginScreen() {
   }
 
   const isEtapaCredenciais = etapa === 'credenciais';
+
+  const cpfPlaceholder = "000.000.000-00";
+
+  useEffect(() => {
+    logger.info('LOGIN_SCREEN_MOUNT', {
+      etapa,
+      hasInitialCpf: !!cpf,
+      cpfPlaceholder,
+      isBiometriaEnabled: biometriaHabilitada
+    });
+
+    if (cpfPlaceholder.includes('_') || cpfPlaceholder.includes('-') && !cpfPlaceholder.includes('.')) {
+      logger.warn('CPF_PLACEHOLDER_RESIDUE_DETECTED', { placeholder: cpfPlaceholder });
+    }
+  }, []);
 
   return (
     <KeyboardAwareScrollView contentContainerStyle={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>

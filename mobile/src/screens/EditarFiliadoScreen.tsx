@@ -46,6 +46,13 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
         situacao_funcional: data.situacao_funcional || '',
       });
 
+      logger.info('EDIT_FILIADO_DATA_READY', {
+        id: data.id,
+        keys: Object.keys(data),
+        hasSituacao: !!data.situacao,
+        hasSituacaoFuncional: !!data.situacao_funcional
+      });
+
       logDebug('EditarFiliado.fetch', { id: data.id, nome: data.nome });
     } catch (err) {
       logger.error('[EditarFiliado.fetch.error]', err);
@@ -56,6 +63,11 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
   }, [filiadoId]);
 
   useEffect(() => {
+    logger.info('EDIT_FILIADO_MOUNT', {
+      filiadoIdParam: route.params?.filiadoId,
+      hasRouteParams: !!route.params,
+      profile: usuario?.perfil_acesso
+    });
     fetchData();
   }, [fetchData]);
 

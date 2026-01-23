@@ -5,6 +5,7 @@ import { Filiado } from '../types/filiado';
 import LotacaoPicker from './LotacaoPicker'; // Importando o novo componente
 import { normalizeSituacaoFuncional, getCanonicalFiliadoId, ROLES, isGestao as checkIsGestao } from '../utils/filiadoUtils';
 import { useAuth } from '../hooks/useAuth';
+import { logger } from '../infra/logger';
 
 import { Picker } from '@react-native-picker/picker';
 import { TextInput } from 'react-native';
@@ -17,6 +18,15 @@ interface Props {
 }
 
 const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, hideTitle = false }) => {
+  if (!filiado) {
+    logger.error('LOTACAO_CARD_MISSING_DATA', new Error('Filiado data is null in LotacaoCard'));
+    return (
+      <View style={styles.card}>
+        <Text style={styles.textError}>⚠️ Seção de Lotação indisponível (dados ausentes).</Text>
+      </View>
+    );
+  }
+
   const { usuario } = useAuth();
   const perfilUsuario = usuario?.perfil_acesso || '';
   const isAdmin = perfilUsuario === ROLES.ADMIN;
@@ -91,6 +101,11 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
 };
 
 const styles = StyleSheet.create({
+  textError: {
+    color: '#c0392b',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
   card: {
     backgroundColor: '#fff',
     borderRadius: 8,

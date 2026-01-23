@@ -57,6 +57,7 @@ const JogosScreen = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      logger.info('JOGOS_FETCH_START', { isConnected });
       let inscricoes;
       if (isConnected) {
         inscricoes = await getInscricoesJogos();
@@ -65,8 +66,15 @@ const JogosScreen = () => {
         inscricoes = await listarJogosInscricoesOffline();
       }
 
-      const currentUserId = usuario ? getCanonicalFiliadoId(usuario) : '';
-      const minha = Array.isArray(inscricoes) ? inscricoes.find((i: any) => String(i.filiado_id) === currentUserId) : null;
+      logger.info('JOGOS_FETCH_SHAPE', {
+        isArray: Array.isArray(inscricoes),
+        length: inscricoes?.length,
+        firstItemKeys: inscricoes?.[0] ? Object.keys(inscricoes[0]) : [],
+        hasModalidades: inscricoes?.[0] ? !!inscricoes[0].modalidades : false
+      });
+
+      const currentUserId = getCanonicalFiliadoId(usuario);
+      const minha = inscricoes.find((i: any) => String(i.filiado_id) === currentUserId);
 
       if (minha) {
         setInscricao(minha);
@@ -192,7 +200,14 @@ const JogosScreen = () => {
                     <Text style={[styles.tableCell, { width: 80 }]}>{calculateAge2026(item.data_nascimento)}</Text>
                     <Text style={[styles.tableCell, { width: 100 }]}>{formatGender(item.sexo)}</Text>
                     <Text style={[styles.tableCell, { width: 200 }]}>
-                        {(item.modalidades || []).map((mid: string) => MODALIDADES_JOGOS_2026.find(m => m.id === mid)?.label || mid).join(', ')}
+                        {(() => {
+                          const mods = item.modalidades || [];
+                          if (typeof mods.map !== 'function') {
+                            logger.error('JOGOS_RENDER_TYPE_ERROR', new Error(`modalidades is ${typeof mods}`), { item: { id: item.id, filiado_id: item.filiado_id } });
+                            return 'Erro nos dados';
+                          }
+                          return mods.map((mid: string) => MODALIDADES_JOGOS_2026.find(m => m.id === mid)?.label || mid).join(', ');
+                        })()}
                     </Text>
                   </View>
                 ))}

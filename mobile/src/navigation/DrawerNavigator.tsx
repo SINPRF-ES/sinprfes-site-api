@@ -15,6 +15,8 @@ import JogosScreen from '../screens/JogosScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/filiadoUtils';
+import { logger } from '../infra/logger';
+import { useEffect } from 'react';
 
 const Drawer = createDrawerNavigator();
 
@@ -22,6 +24,15 @@ const DrawerNavigator = () => {
   const { usuario } = useAuth();
   const ehGestao = isGestao(usuario?.perfil_acesso);
   const ehDiretoria = isDiretoria(usuario?.perfil_acesso);
+
+  useEffect(() => {
+    logger.info('NAV_GATE_EVAL', {
+      profile: usuario?.perfil_acesso,
+      ehGestao,
+      ehDiretoria,
+      visibleLogs: ehDiretoria
+    });
+  }, [usuario, ehGestao, ehDiretoria]);
 
   return (
     <Drawer.Navigator

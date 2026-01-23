@@ -19,9 +19,13 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${sessao.token}`;
     }
 
-    // Log da requisição
-    const { method, url } = config;
-    logger.info(`API Request: ${method?.toUpperCase()} ${url}`);
+    // Log da requisição instrumentada
+    const { method, url, params, data } = config;
+    logger.info(`API_REQ: ${method?.toUpperCase()} ${url}`, {
+      params,
+      dataKeys: data ? Object.keys(data) : undefined,
+      profile: sessao?.usuario?.perfil_acesso
+    });
     config.meta = { requestStartedAt: new Date().getTime() };
 
     return config;
@@ -35,11 +39,13 @@ api.interceptors.request.use(
 // Interceptor para tratar e loggar respostas
 api.interceptors.response.use(
   (response: any) => {
-    const { config, status } = response;
+    const { config, status, data } = response;
     const { method, url } = config;
     const duration = new Date().getTime() - config.meta.requestStartedAt;
 
-    logger.info(`API Response: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`);
+    logger.info(`API_RES: ${method?.toUpperCase()} ${url} | Status: ${status} | ${duration}ms`, {
+      dataShape: data ? Object.keys(data) : undefined
+    });
 
     return response;
   },
