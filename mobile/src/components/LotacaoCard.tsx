@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
 import LotacaoPicker from './LotacaoPicker'; // Importando o novo componente
-import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
+import { normalizeSituacaoFuncional, getCanonicalFiliadoId } from '../utils/filiadoUtils';
 import { useAuth } from '../hooks/useAuth';
 
 import { Picker } from '@react-native-picker/picker';
@@ -23,7 +23,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
   const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfilUsuario);
 
   const isTargetAdmin = filiado?.perfil_acesso === 'ADMIN';
-  const isSelf = filiado && filiado.id === usuario?.id;
+  const isSelf = filiado && getCanonicalFiliadoId(filiado) === getCanonicalFiliadoId(usuario);
 
   // Regra de UI:
   // ADMIN muda qualquer um (menos a si mesmo por segurança).

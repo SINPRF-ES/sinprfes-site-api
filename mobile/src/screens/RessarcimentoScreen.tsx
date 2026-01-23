@@ -20,6 +20,7 @@ import { formatAgencia, formatConta, onlyDigits, formatCpf, formatTelefone } fro
 import { formatDateToDdMmYyyy } from '../utils/date';
 import { criarRessarcimento } from '../services/ressarcimentoService';
 import { logger } from '../infra/logger';
+import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import api from '../services/apiService';
 
@@ -213,7 +214,8 @@ const RessarcimentoScreen = () => {
 
     try {
       setLoading(true);
-      logger.info('[Ressarcimento.submit.start]', { filiadoId: usuario?.id });
+      const filiadoId = getCanonicalFiliadoId(usuario);
+      logger.info('[Ressarcimento.submit.start]', { filiadoId });
 
       const formData = new FormData();
 

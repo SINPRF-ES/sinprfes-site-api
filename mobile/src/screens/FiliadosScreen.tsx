@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
+import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 
 export default function FiliadosScreen({ navigation, route }: any) {
   const { usuario } = useAuth();
@@ -78,7 +79,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
   }, [filiados, searchTerm, ehGestao]);
 
   const handleEdit = (filiado: Filiado) => {
-    navigation.navigate('EditarFiliado', { filiadoId: filiado.id });
+    navigation.navigate('EditarFiliado', { filiadoId: getCanonicalFiliadoId(filiado) });
   };
 
   if (loading && filiados.length === 0) {
