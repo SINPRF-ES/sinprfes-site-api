@@ -1,6 +1,6 @@
 // src/services/filiados.service.js
 const pool = require("../config/db");
-const { normalizarCpf } = require("../utils/format");
+const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
 
@@ -131,14 +131,30 @@ async function atualizarDadosProprios(id, dados) {
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
   addCampo("uf", dados.uf);
-  addCampo("cep", dados.cep);
+
+  if (dados.cep !== undefined) {
+    const cepNorm = normalizarCep(dados.cep);
+    if (cepNorm && cepNorm.length !== 8) {
+      const err = new Error("CEP deve conter 8 dígitos.");
+      err.isValidationError = true;
+      throw err;
+    }
+    addCampo("cep", cepNorm);
+  }
+
   addCampo("avatar_url", dados.avatar_url);
 
   // Campos dos dependentes
   for (let i = 1; i <= 5; i++) {
     addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
     addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
-    addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
+
+    if (dados[`dep${i}_data_nascimento`] !== undefined) {
+      campos.push(`dep${i}_data_nascimento = NULLIF($${idx}, '')::date`);
+      valores.push(dados[`dep${i}_data_nascimento`]);
+      idx += 1;
+    }
+
     if (dados[`dep${i}_parentesco`] !== undefined) {
       addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
     }
@@ -210,14 +226,30 @@ async function atualizarFiliadoPorId(id, dados) {
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
   addCampo("uf", dados.uf);
-  addCampo("cep", dados.cep);
+
+  if (dados.cep !== undefined) {
+    const cepNorm = normalizarCep(dados.cep);
+    if (cepNorm && cepNorm.length !== 8) {
+      const err = new Error("CEP deve conter 8 dígitos.");
+      err.isValidationError = true;
+      throw err;
+    }
+    addCampo("cep", cepNorm);
+  }
+
   addCampo("avatar_url", dados.avatar_url);
 
   // Campos dos dependentes
   for (let i = 1; i <= 5; i++) {
     addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
     addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
-    addCampo(`dep${i}_data_nascimento`, dados[`dep${i}_data_nascimento`]);
+
+    if (dados[`dep${i}_data_nascimento`] !== undefined) {
+      campos.push(`dep${i}_data_nascimento = NULLIF($${idx}, '')::date`);
+      valores.push(dados[`dep${i}_data_nascimento`]);
+      idx += 1;
+    }
+
     if (dados[`dep${i}_parentesco`] !== undefined) {
       addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
     }
@@ -382,7 +414,15 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     push("complemento", complemento);
     push("cidade", cidade);
     push("uf", uf);
-    push("cep", cep);
+
+    const cepNorm = normalizarCep(cep);
+    if (cepNorm && cepNorm.length !== 8) {
+      const err = new Error("CEP deve conter 8 dígitos.");
+      err.isValidationError = true;
+      throw err;
+    }
+    push("cep", cepNorm);
+
     push("lotacao", lotacao);
     push("situacao", situacao);
     push("perfil_acesso", perfilNovo);

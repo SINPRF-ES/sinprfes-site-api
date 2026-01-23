@@ -9,7 +9,7 @@ const log = {
   /**
    * Log de Informação (Sucesso, Fluxo normal)
    * @param {string} message - Mensagem curta do evento
-   * @param {object} meta - Dados adicionais (ex: { userId: 1, action: 'LOGIN' })
+   * @param {object} meta - Dados adicionais (ex: { userId: 1, action: 'LOGIN', requestId: '...' })
    */
   info: (message, meta = {}) => {
     console.log(

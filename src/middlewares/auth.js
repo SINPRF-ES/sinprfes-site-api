@@ -1,6 +1,7 @@
 // src/middlewares/auth.js
 const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
+const Textos = require("../utils/textos");
 
 module.exports = async (req, res, next) => {
   try {
@@ -8,45 +9,39 @@ module.exports = async (req, res, next) => {
     const [scheme, token] = authHeader.split(" ");
 
     if (scheme !== "Bearer" || !token) {
-      return res.status(401).json({ error: "Token não informado." });
+      return res.status(401).json({ error: Textos.AUTH.TOKEN_NAO_INFORMADO });
     }
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtErr) {
+      return res.status(401).json({ error: Textos.AUTH.TOKEN_INVALIDO });
+    }
 
-    // Validação mínima do payload
     if (!payload || !payload.id) {
-      return res.status(401).json({ error: "Token inválido." });
+      return res.status(401).json({ error: Textos.AUTH.TOKEN_INVALIDO });
     }
 
-    // ✅ Consulta o banco para garantir que o usuário ainda existe
-    // e para aplicar regras de bloqueio/arquivamento no nível do auth.
     const { rows } = await pool.query(
-      `
-      SELECT id, cpf, nome, perfil_acesso, bloqueado, arquivado_em
-      FROM filiados
-      WHERE id = $1
-      LIMIT 1
-      `,
+      "SELECT id, cpf, nome, perfil_acesso, bloqueado, arquivado_em FROM filiados WHERE id = $1 LIMIT 1",
       [payload.id]
     );
 
     const userDb = rows[0];
 
     if (!userDb) {
-      return res.status(401).json({ error: "Usuário não encontrado." });
+      return res.status(401).json({ error: Textos.AUTH.TOKEN_INVALIDO });
     }
 
-    // ✅ Bloqueio administrativo (ex.: desligado do portal)
     if (userDb.bloqueado) {
-      return res.status(403).json({ error: "Acesso bloqueado. Contate o sindicato." });
+      return res.status(403).json({ error: Textos.AUTH.ACESSO_BLOQUEADO });
     }
 
-    // ✅ Arquivamento administrativo (separado da situação funcional)
     if (userDb.arquivado_em) {
-      return res.status(403).json({ error: "Estado do cadastro: ARQUIVADO. Acesso indisponível. Contate o sindicato." });
+      return res.status(403).json({ error: Textos.AUTH.CADASTRO_INATIVO });
     }
 
-    // Preferir dados do banco (autoridade) em vez do payload antigo
     req.user = {
       id: userDb.id,
       cpf: userDb.cpf,
@@ -56,7 +51,6 @@ module.exports = async (req, res, next) => {
 
     return next();
   } catch (err) {
-    console.error("Erro no middleware de auth:", err);
-    return res.status(401).json({ error: "Token inválido ou expirado." });
+    return res.status(401).json({ error: Textos.AUTH.TOKEN_INVALIDO });
   }
 };

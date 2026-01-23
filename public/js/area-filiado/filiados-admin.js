@@ -33,7 +33,14 @@
 
     function avatarHtml(avatarUrl, nome) {
         const safeNome = (nome || "").toString();
-        const src = avatarUrl ? avatarUrl : "/img/avatar-placeholder.png";
+        const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+            ? "http://localhost:3000"
+            : "https://api.sinprfes.org.br";
+
+        const src = avatarUrl
+            ? (avatarUrl.startsWith('http') ? avatarUrl : apiBase + avatarUrl)
+            : "/img/avatar-placeholder.png";
+
         return `<img class="avatar-mini" src="${src}" alt="Avatar ${safeNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
     }
 
@@ -655,7 +662,12 @@
             const r = await window.Api.apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
             if (r.ok) {
                 const d = await r.json();
-                document.getElementById("modal-avatar-preview").src = d.avatar_url;
+                const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+                    ? "http://localhost:3000"
+                    : "https://api.sinprfes.org.br";
+
+                const finalUrl = d.avatar_url.startsWith('http') ? d.avatar_url : apiBase + d.avatar_url;
+                document.getElementById("modal-avatar-preview").src = finalUrl;
                 alert("Avatar atualizado.");
                 await carregarLista();
             }

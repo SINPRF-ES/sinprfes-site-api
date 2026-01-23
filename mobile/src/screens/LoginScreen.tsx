@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
+import { carregarSessao } from '../services/storageService';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -24,7 +25,7 @@ export default function LoginScreen() {
     (async () => {
       if (biometriaHabilitada) {
         // Um pequeno delay para dar tempo da UI renderizar e o usuário ver o prompt
-        setTimeout(handleBiometricLogin, 250);
+        setTimeout(handleBiometricLogin, 500);
       }
     })();
   }, [biometriaHabilitada]);
@@ -32,15 +33,14 @@ export default function LoginScreen() {
   async function handleBiometricLogin() {
     try {
       console.log('[Biometria.tap]');
-      setLoading(true);
       const sessaoSalva = await carregarSessao();
 
       if (!sessaoSalva) {
         console.warn('[Biometria.session.fail] Sem sessão salva');
-        Alert.alert('Atenção', 'Por favor, realize o login com senha primeiro para ativar a biometria.');
         return;
       }
 
+      setLoading(true);
       const sucesso = await desbloquearComBiometria();
       if (sucesso) {
         console.log('[Biometria.session.restore.start]');
@@ -65,14 +65,11 @@ export default function LoginScreen() {
     const usuario = await buscarUsuarioLogado(token);
     await setSessao(token, usuario);
 
-    // Registra o dispositivo para push notifications em segundo plano.
-    // O try/catch garante que o fluxo de login não seja interrompido se isso falhar.
     try {
       if (__DEV__) console.log('[Login] Tentando registrar dispositivo para push...');
       await registrarDispositivoParaPush();
     } catch (error) {
       if (__DEV__) console.warn('[Login] Falha ao registrar dispositivo para push:', error);
-      // Não bloqueia o usuário, apenas loga o erro em dev.
     }
 
     if (!biometriaHabilitada) {
@@ -113,7 +110,6 @@ export default function LoginScreen() {
   }
 
   async function handleLogin2FA() {
-    // ... (restante do código permanece o mesmo)
     if (!codigo2FA) {
       Alert.alert('Atenção', 'Informe o código 2FA.');
       return;
@@ -151,7 +147,7 @@ export default function LoginScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="CPF"
+          placeholder="000.000.000-00"
           value={formatCpf(cpf)}
           onChangeText={(text) => {
             const digits = onlyDigits(text);
@@ -160,7 +156,7 @@ export default function LoginScreen() {
             }
           }}
           keyboardType="numeric"
-          maxLength={14} // 000.000.000-00
+          maxLength={14}
           editable={isEtapaCredenciais}
         />
         <TextInput style={styles.input} placeholder="Senha" value={senha} onChangeText={setSenha} secureTextEntry editable={isEtapaCredenciais} />
