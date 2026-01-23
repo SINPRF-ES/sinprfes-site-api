@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleias } from '../../services/assembleiaService';
 import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
+import { isDiretoria } from '../../utils/filiadoUtils';
 
 export default function AssembleiasScreen({ navigation }: any) {
   const { usuario } = useAuth();
@@ -12,7 +13,7 @@ export default function AssembleiasScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(usuario?.perfil_acesso || '');
+  const ehDiretoria = isDiretoria(usuario?.perfil_acesso);
 
   const fetchData = async () => {
     try {
@@ -78,7 +79,7 @@ export default function AssembleiasScreen({ navigation }: any) {
         />
       )}
 
-      {isDiretoria && (
+      {ehDiretoria && (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => navigation.navigate('CriarAssembleia')}

@@ -12,7 +12,7 @@ import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Filiado } from '../types/filiado';
-import { logDebug, getCanonicalFiliadoId, parseCanonicalFiliadoId } from '../utils/filiadoUtils';
+import { logDebug, getCanonicalFiliadoId, parseCanonicalFiliadoId, isGestao as checkIsGestao, ROLES } from '../utils/filiadoUtils';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
 import api from '../services/apiService';
@@ -46,6 +46,13 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
         situacao_funcional: data.situacao_funcional || '',
       });
 
+      logger.info('EDIT_FILIADO_DATA_READY', {
+        id: data.id,
+        keys: Object.keys(data),
+        hasSituacao: !!data.situacao,
+        hasSituacaoFuncional: !!data.situacao_funcional
+      });
+
       logDebug('EditarFiliado.fetch', { id: data.id, nome: data.nome });
     } catch (err) {
       logger.error('[EditarFiliado.fetch.error]', err);
@@ -56,6 +63,11 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
   }, [filiadoId]);
 
   useEffect(() => {
+    logger.info('EDIT_FILIADO_MOUNT', {
+      filiadoIdParam: route.params?.filiadoId,
+      hasRouteParams: !!route.params,
+      profile: usuario?.perfil_acesso
+    });
     fetchData();
   }, [fetchData]);
 
@@ -132,7 +144,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     );
   }
 
-  const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario?.perfil_acesso || '');
+  const ehGestao = checkIsGestao(usuario?.perfil_acesso);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -146,7 +158,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
             <Text style={styles.actionButtonText}>{saving ? "..." : "Salvar"}</Text>
           </TouchableOpacity>
 
-          {isGestao && filiadoId && (
+          {ehGestao && filiadoId && (
              filiado.arquivado_em ? (
                 <TouchableOpacity style={[styles.actionButton, styles.unarchiveButton]} onPress={() => {}}>
                     <Text style={styles.actionButtonText}>Arquivado</Text>
@@ -168,7 +180,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
         <EnderecoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text></View>
-        <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={isGestao} hideTitle={true} />
+        <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={ehGestao} hideTitle={true} />
 
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>👶 Dependentes</Text></View>
         <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={true} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />

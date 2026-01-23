@@ -18,7 +18,7 @@ import { logger } from '../infra/logger';
 import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } from '../services/jogosService';
 import NetInfo from '@react-native-community/netinfo';
 import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
-import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
+import { getCanonicalFiliadoId, ROLES } from '../utils/filiadoUtils';
 
 const MODALIDADES_JOGOS_2026 = [
   { id: 'FUTSAL', label: 'Futsal', grupo: 'Coletivos' },
@@ -39,7 +39,7 @@ const JogosScreen = () => {
   const [inscricoesGerais, setInscricoesGerais] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(true);
 
-  const isManager = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'ORGANIZADOR'].includes(usuario?.perfil_acesso || '');
+  const isManager = [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO, ROLES.ORGANIZADOR].includes(usuario?.perfil_acesso || '');
 
   const [form, setForm] = useState({
     sexo: '',
@@ -57,6 +57,7 @@ const JogosScreen = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      logger.info('JOGOS_FETCH_START', { isConnected });
       let inscricoes;
       if (isConnected) {
         inscricoes = await getInscricoesJogos();
@@ -64,6 +65,13 @@ const JogosScreen = () => {
       } else {
         inscricoes = await listarJogosInscricoesOffline();
       }
+
+      logger.info('JOGOS_FETCH_SHAPE', {
+        isArray: Array.isArray(inscricoes),
+        length: inscricoes?.length,
+        firstItemKeys: inscricoes?.[0] ? Object.keys(inscricoes[0]) : [],
+        hasModalidades: inscricoes?.[0] ? !!inscricoes[0].modalidades : false
+      });
 
       const currentUserId = getCanonicalFiliadoId(usuario);
       const minha = inscricoes.find((i: any) => String(i.filiado_id) === currentUserId);
@@ -122,8 +130,8 @@ const JogosScreen = () => {
     }
   };
 
-  const calculateAge2026 = (birthDate: string) => {
-    if (!birthDate) return '—';
+  const calculateAge2026 = (birthDate: any) => {
+    if (!birthDate || typeof birthDate !== 'string') return '—';
     const year = birthDate.includes('-') ? birthDate.split('-')[0] : birthDate.split('/')[2];
     return 2026 - parseInt(year);
   };
@@ -192,7 +200,14 @@ const JogosScreen = () => {
                     <Text style={[styles.tableCell, { width: 80 }]}>{calculateAge2026(item.data_nascimento)}</Text>
                     <Text style={[styles.tableCell, { width: 100 }]}>{formatGender(item.sexo)}</Text>
                     <Text style={[styles.tableCell, { width: 200 }]}>
-                        {(item.modalidades || []).map((mid: string) => MODALIDADES_JOGOS_2026.find(m => m.id === mid)?.label || mid).join(', ')}
+                        {(() => {
+                          const mods = item.modalidades || [];
+                          if (typeof mods.map !== 'function') {
+                            logger.error('JOGOS_RENDER_TYPE_ERROR', new Error(`modalidades is ${typeof mods}`), { item: { id: item.id, filiado_id: item.filiado_id } });
+                            return 'Erro nos dados';
+                          }
+                          return mods.map((mid: string) => MODALIDADES_JOGOS_2026.find(m => m.id === mid)?.label || mid).join(', ');
+                        })()}
                     </Text>
                   </View>
                 ))}

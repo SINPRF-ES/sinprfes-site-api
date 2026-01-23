@@ -5,9 +5,9 @@ export const onlyDigits = (text: string | null | undefined): string => {
 
 export const formatCpf = (cpf: string | null | undefined): string => {
   try {
-    if (!cpf) return '—';
+    if (!cpf) return '';
     const digits = onlyDigits(cpf);
-    if (!digits) return '—';
+    if (!digits) return '';
     if (digits.length !== 11) return digits;
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
   } catch (e) {
@@ -25,6 +25,7 @@ export const formatCpf = (cpf: string | null | undefined): string => {
 export const formatTelefone = (tel: string | null | undefined): string => {
   if (!tel) return '';
   const digits = onlyDigits(tel).slice(0, 11);
+  if (digits.length === 0) return '';
   if (digits.length <= 2) return `(${digits}`;
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;

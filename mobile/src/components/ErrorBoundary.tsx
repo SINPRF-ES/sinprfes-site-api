@@ -1,6 +1,7 @@
 // src/components/ErrorBoundary.tsx
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { logger } from '../infra/logger';
 
 interface Props {
   children: ReactNode;
@@ -21,7 +22,9 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught an error", error, errorInfo);
+    logger.error('UI_RENDER_CRASH', error, {
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   public render() {

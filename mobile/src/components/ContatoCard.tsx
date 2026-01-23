@@ -68,7 +68,7 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
         style={styles.input}
         value={formatTelefone(filiado?.telefone1 || '')}
         onChangeText={(text) => handlePhoneChange('telefone1', text)}
-        placeholder="(99) 99999-9999"
+        placeholder="(00) 00000-0000"
         keyboardType="phone-pad"
         maxLength={15} // (xx) xxxxx-xxxx
       />

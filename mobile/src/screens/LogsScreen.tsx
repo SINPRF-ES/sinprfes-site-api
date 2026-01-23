@@ -5,6 +5,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { LogEntry, getLogs, clearLogs, getLogsAsText } from '../infra/logger';
 import { useAuth } from '../hooks/useAuth';
+import { ROLES, isDiretoria } from '../utils/filiadoUtils';
 
 const LogsScreen = () => {
   const { usuario } = useAuth();
@@ -12,12 +13,15 @@ const LogsScreen = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isAdmin = usuario?.perfil_acesso === ROLES.ADMIN;
+  const ehDiretoria = isDiretoria(usuario?.perfil_acesso);
+
   useEffect(() => {
-    if (usuario?.perfil_acesso !== 'ADMIN') {
-      Alert.alert('Acesso Negado', 'Esta área é restrita a administradores.');
+    if (!ehDiretoria) {
+      Alert.alert('Acesso Negado', 'Esta área é restrita a administradores ou diretoria.');
       navigation.goBack();
     }
-  }, [usuario, navigation]);
+  }, [usuario, navigation, ehDiretoria]);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
@@ -75,7 +79,7 @@ const LogsScreen = () => {
     <View style={styles.container}>
       <View style={styles.buttonContainer}>
         <Button title="Copiar Logs" onPress={handleCopyLogs} />
-        <Button title="Limpar Logs" onPress={handleClearLogs} color="red" />
+        {isAdmin && <Button title="Limpar Logs" onPress={handleClearLogs} color="red" />}
       </View>
       {logs.length === 0 ? (
         <View style={styles.centered}>

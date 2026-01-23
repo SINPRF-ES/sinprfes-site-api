@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
-import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
+import { getCanonicalFiliadoId, isGestao } from '../utils/filiadoUtils';
 
 export default function FiliadosScreen({ navigation, route }: any) {
   const { usuario } = useAuth();
@@ -18,7 +18,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario?.perfil_acesso || '');
+  const ehGestao = isGestao(usuario?.perfil_acesso);
   const cacheKey = `filiados_cache_${usuario?.id}`;
 
   const fetchData = useCallback(async (isRefresh = false) => {
