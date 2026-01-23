@@ -97,7 +97,8 @@ exports.login = async (req, res) => {
     log.info("AuthLoginSucesso", { 
       userId: filiado.id, 
       perfil: filiado.perfil_acesso,
-      ip: req.ip 
+      ip: req.ip,
+      requestId: req.requestId
     });
 
     return res.json({
@@ -106,7 +107,7 @@ exports.login = async (req, res) => {
       perfil_acesso: filiado.perfil_acesso || "FILIADO",
     });
   } catch (err) {
-    log.error("AuthLoginErroInterno", err);
+    log.error("AuthLoginErroInterno", { error: err, requestId: req.requestId });
     return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN }); // ✨
   }
 };
@@ -127,7 +128,7 @@ exports.ativar2fa = async (req, res) => {
         .json({ error: "Não foi possível ativar o 2FA." }); // Mantido, pois é uma mensagem específica de falha de DB
     }
 
-    log.info("Auth2FAAtivado", { userId });
+    log.info("Auth2FAAtivado", { userId, requestId: req.requestId });
 
     return res.json({
       message: "2FA ativado com sucesso. Configure no app autenticador.", // Mantido
@@ -135,7 +136,7 @@ exports.ativar2fa = async (req, res) => {
       otpauth_url: secret.otpauth_url,
     });
   } catch (err) {
-    log.error("Auth2FAAtivarErro", err);
+    log.error("Auth2FAAtivarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
   }
 };
@@ -152,7 +153,7 @@ exports.me = async (req, res) => {
     const { senha_hash, twofa_secret, ...limpo } = filiado;
     return res.json(limpo);
   } catch (err) {
-    log.error("AuthMeErro", err);
+    log.error("AuthMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ error: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨
   }
 };
@@ -168,7 +169,7 @@ exports.listarFiliados = async (req, res) => {
       filiados: lista,
     });
   } catch (err) {
-    log.error("AuthListarFiliadosErro", err);
+    log.error("AuthListarFiliadosErro", { error: err, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS }); // ✨
   }
 };
