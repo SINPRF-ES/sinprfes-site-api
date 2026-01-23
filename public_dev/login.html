@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Área do filiado – SINPRF-ES</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script src="js/path-resolver.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="js/main.js" defer></script>
+  <script src="js/login.js" defer></script>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <main class="page container">
+    <section class="card login-card">
+      <h1>Área do filiado</h1>
+      <p class="page-intro">
+        Acesse sua área do filiado para consultar e atualizar seus dados cadastrais,
+        além de acessar conteúdos exclusivos.
+      </p>
+
+      <!-- FORMULÁRIO DE LOGIN -->
+      <form id="login-form" class="form-grid">
+        <div class="form-group form-group-full">
+          <label for="login-cpf">CPF</label>
+          <input
+            type="text"
+            id="login-cpf"
+            name="cpf"
+            placeholder="000.000.000-00"
+            required
+          />
+        </div>
+
+        <div class="form-group form-group-full">
+          <label for="login-senha">Senha</label>
+          <input
+            type="password"
+            id="login-senha"
+            name="senha"
+            required
+          />
+        </div>
+
+        <!-- CAMPO 2FA (aparece só quando o backend exigir) -->
+        <div
+          class="form-group form-group-full"
+          id="campo-2fa"
+          style="display: none; margin-top: 8px;"
+        >
+          <label for="login-token-2fa">Código de 2FA</label>
+          <input
+            type="text"
+            id="login-token-2fa"
+            name="token_2fa"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            placeholder="123456"
+          />
+          <p class="field-hint">
+            Abra o aplicativo autenticador (Google Authenticator ou similar) e
+            informe o código temporário exibido para o SINPRF-ES.
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            Entrar
+          </button>
+        </div>
+
+        <p id="login-mensagem" class="field-hint"></p>
+      </form>
+
+      <hr class="form-separator" />
+
+      <!-- ESQUECI MINHA SENHA / PRIMEIRO ACESSO -->
+      <section class="form-card">
+        <h2>Esqueci minha senha / Primeiro acesso</h2>
+        <p class="field-hint">
+          Se for seu primeiro acesso, ou se você esqueceu sua senha,
+          utilize esta opção. Você receberá um link no e-mail cadastrado
+          para criar uma nova senha.
+        </p>
+
+        <form id="forgot-form" class="form-grid">
+          <div class="form-group form-group-full">
+            <label for="forgot-cpf">CPF</label>
+            <input
+              type="text"
+              id="forgot-cpf"
+              name="cpf"
+              placeholder="000.000.000-00"
+              required
+            />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-outline">
+              Enviar link para criar nova senha
+            </button>
+          </div>
+        </form>
+
+        <p id="forgot-mensagem" class="field-hint"></p>
+
+        <p class="field-hint">
+          O sistema informará para qual e-mail o link foi enviado. Caso
+          o e-mail esteja incorreto ou você não tenha mais acesso a ele,
+          favor entrar em contato com a secretaria, pela página
+          <a href="contato.html">Contato</a>.
+        </p>
+      </section>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>

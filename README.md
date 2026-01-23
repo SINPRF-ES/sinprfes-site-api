@@ -294,14 +294,38 @@ O Render nao deve instalar nem considerar dependencias do diretorio `/mobile`.
 
 ---
 
-## 📌 Observacao final
+## 📌 Observação final
 
-Qualquer implementacao que:
-- burle permissoes
-- duplique regras criticas de forma inconsistente
-- gere divergencia entre site e app
+Qualquer implementação que:
+- burle permissões
+- duplique regras críticas de forma inconsistente
+- gere divergência entre site e app
 
-E considerada **erro de arquitetura** e deve ser corrigida.
+É considerada **erro de arquitetura** e deve ser corrigida.
+
+---
+
+## 🌐 Ambiente de Desenvolvimento Paralelo (Dev V2)
+
+O projeto possui um ambiente de desenvolvimento paralelo para testes de novas interfaces e funcionalidades sem impactar a produção.
+
+### Acesso e Roteamento
+- **Produção (Estável):** `https://sinprfes.org.br/` (serve de `public/`)
+- **Dev V2 (Path Prefix):** `https://sinprfes.org.br/dev/index.html` (serve de `public_dev/`)
+- **Dev V2 (Subdomínio):** `https://dev.sinprfes.org.br/` (serve de `public_dev/`)
+
+O "Dev Router" no backend identifica o host (começando com `dev.`) ou o prefixo de caminho (`/dev/`) para alternar o diretório base de arquivos estáticos.
+
+### Segurança e Controle
+- **Visibilidade:** O ambiente dev é "oculto" (não linkado no menu principal), mas acessível por URL direta.
+- **Aviso:** Esta ocultação **não substitui** um controle de acesso forte. Para restrição total a IPs específicos ou autenticação de rede, recomenda-se o uso de **Cloudflare Access** no subdomínio `dev`.
+- **CMS Interno:** As atualizações de conteúdo via CMS na "Área do Filiado" refletem imediatamente no ambiente Dev V2.
+
+### CMS Interno (Comunicador)
+O novo layout utiliza um sistema de blocos editáveis:
+- **Onde editar:** Acesse a "Área do Filiado" com perfil `ADMIN`, `DIRETORIA` ou `COMUNICADOR` e utilize a aba **"Site (CMS)"**.
+- **Armazenamento:** Os blocos são persistidos em `data/content_blocks.json` com escrita atômica e proteção contra concorrência.
+- **Resiliência:** O sistema auto-gera os dados iniciais se o arquivo estiver ausente e possui tratamento de erros para JSON corrompido, garantindo que o site continue carregando mesmo em falhas do CMS.
 
 ---
 

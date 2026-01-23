@@ -12,7 +12,8 @@ module.exports = {
 
     "JOGOS_GERENCIAR",
     "VOTACAO_GERENCIAR",
-    "VOTACAO_VOTAR"
+    "VOTACAO_VOTAR",
+    "EDIT_CONTENT"
   ],
 
   FUNCIONARIO: [
@@ -48,6 +49,7 @@ module.exports = {
 
   COMUNICADOR: [
     "VIEW_SELF",
-    "EDIT_SELF"
+    "EDIT_SELF",
+    "EDIT_CONTENT"
   ]
 };

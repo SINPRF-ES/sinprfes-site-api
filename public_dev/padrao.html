@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <script src="js/path-resolver.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padrão V2 - SINPRF-ES</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo-area">
+                <a href="index.html" class="logo-link">
+                    <img src="img/brasao.png" alt="SINPRF-ES" class="logo-img">
+                    <div class="logo-text">
+                        SINPRF-ES<br>
+                        <small>Sindicato dos Policiais Rodoviários Federais no ES</small>
+                    </div>
+                </a>
+            </div>
+            <nav class="main-nav">
+                <a href="index.html">Início</a>
+                <a href="noticias.html">Notícias</a>
+                <a href="contato.html">Contato</a>
+            </nav>
+            <div class="header-actions">
+                <a href="area-filiado.html" class="btn btn-primary">Área do filiado</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero-v2">
+            <div class="hero-v2-content">
+                <h1 id="hero-title">Título da Página</h1>
+                <p id="hero-body">Subtítulo ou descrição curta para engajamento.</p>
+            </div>
+        </section>
+
+        <section class="cms-page-section">
+            <div class="cms-container">
+                <div id="content-blocks" class="cards-grid-v2">
+                    <!-- Blocos carregados via JS -->
+                    <div class="text-center">Carregando conteúdo...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            &copy; 2026 SINPRF-ES - Todos os direitos reservados.
+        </div>
+    </footer>
+
+    <script src="js/cms.js"></script>
+    <script>
+        // Inicializa CMS para esta página (exemplo: 'padrao')
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.CMS) window.CMS.loadPage('home');
+        });
+    </script>
+</body>
+</html>
