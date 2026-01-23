@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <script src="js/path-resolver.js"></script>
+  <meta charset="UTF-8">
+  <title>Estatuto – SINPRF-ES</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: #0b1724;
+    }
+
+    /* 1. SOBRESCRITA DA LARGURA DO CONTEÚDO PRINCIPAL (page-content) */
+    /* Remove a limitação de 960px do style.css para esta página */
+    .estatuto-page .page-content {
+        max-width: 100%;
+    }
+
+
+    .estatuto-page {
+      padding: 2rem 1rem 3rem;
+    }
+
+    .estatuto-card {
+      background-color: #ffffff;
+      color: #222222;
+      width: 70vw;    /* DEFININDO A LARGURA: 70% da Viewport */
+      max-width: 80%; /* Garante que não use mais que 80% em telas grandes (desktop) */
+      margin: 0 auto;
+      padding: 2.5rem 2rem 3rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20);
+    }
+
+    .estatuto-card h1,
+    .estatuto-card h2,
+    .estatuto-card h3 {
+      color: #003366;
+    }
+
+    .estatuto-header {
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #dde3ea;
+      padding-bottom: 1rem;
+    }
+
+    .estatuto-header h2 {
+      font-size: 1.4rem;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .estatuto-header .emoji {
+      font-size: 1.6rem;
+    }
+
+    .estatuto-header p {
+      font-size: 0.95rem;
+      color: #555;
+      margin-bottom: 0;
+    }
+
+    /* Regra para desktop */
+    @media (min-width: 992px) {
+      .estatuto-nav {
+        flex-wrap: nowrap;
+        justify-content: center;
+      }
+    }
+
+    /* Barra fixa dos títulos */
+.estatuto-nav {
+  position: fixed;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70vw;
+  max-width: 80%;
+  box-sizing: border-box;
+
+  margin: 0;
+  padding: 0.85rem 2rem;
+
+  background: #c8ddff !important;
+  border-bottom: 1px solid #dde3ea;
+
+  display: flex;
+  flex-wrap: nowrap; /* Mantido para Desktop */
+  justify-content: center;
+  gap: 0.5rem;
+  z-index: 1200;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+    /* Em telas grandes, todos em uma linha */
+@media (min-width: 992px) {
+  .estatuto-nav {
+    flex-wrap: nowrap;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+    .estatuto-nav-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #555;
+      margin-right: 0.5rem;
+      align-self: center;
+      white-space: nowrap;
+    }
+
+    .estatuto-nav a {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      text-decoration: none;
+      background-color: #003366;
+      color: #ffffff;
+      opacity: 0.9;
+      white-space: nowrap;
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .estatuto-nav a:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    /* Documento em si */
+    .estatuto-documento {
+      margin-top: 1.5rem;
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.75;
+      font-size: 0.96rem;
+      color: #222222;
+      /* AJUSTE: Adiciona um padding-top para compensar o espaço da barra fixa de navegação */
+      padding-top: 55px;
+      margin-top: 0;
+    }
+
+    .estatuto-documento h1 {
+      text-align: center;
+      font-size: 1.3rem;
+      text-transform: uppercase;
+      margin-bottom: 1.8rem;
+      border-bottom: 2px solid #003366;
+      padding-bottom: 0.75rem;
+    }
+
+    .estatuto-documento h2 {
+      text-align: center;
+      font-size: 1rem;
+      text-transform: uppercase;
+      background-color: #e9ecef;
+      color: #003366;
+      padding: 0.6rem;
+      margin-top: 2.4rem;
+      margin-bottom: 1.2rem;
+      border-radius: 4px;
+      line-height: 1.4;
+    }
+
+    .estatuto-documento h3 {
+      text-align: center;
+      font-size: 0.93rem;
+      text-transform: uppercase;
+      color: #555;
+      margin-top: 1.8rem;
+      margin-bottom: 0.9rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.35rem;
+    }
+
+    .estatuto-documento p {
+      margin-bottom: 0.95rem;
+      text-align: justify;
+    }
+
+    .preambulo {
+      font-style: italic;
+      margin-bottom: 1.8rem;
+      padding: 1.1rem 1.2rem;
+      background-color: #f8f9fa;
+      border-left: 4px solid #003366;
+      text-align: justify;
+    }
+
+    .artigo {
+      font-weight: bold;
+      color: #003366;
+      margin-right: 4px;
+    }
+
+    .paragrafo {
+      margin-left: 1.5rem;
+      font-size: 0.96rem;
+      display: block;
+      margin-bottom: 0.8rem;
+      text-align: justify;
+    }
+
+    .paragrafo strong {
+      color: #444;
+    }
+
+    .inciso {
+      margin-left: 2.2rem;
+      display: block;
+      margin-bottom: 0.45rem;
+      text-indent: -1.1rem;
+      padding-left: 1.1rem;
+      text-align: justify;
+    }
+
+    /* Assinaturas */
+    .assinaturas {
+      margin-top: 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      text-align: center;
+    }
+
+    .assinatura-linha {
+      border-top: 1px solid #333;
+      padding-top: 0.6rem;
+      width: 260px;
+      font-size: 0.95rem;
+    }
+
+    .assinatura-nome {
+      font-weight: bold;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    /* Espaço para o scroll ancorado não ficar escondido sob o nav fixo */
+    .estatuto-documento h2,
+    .estatuto-documento h3 {
+      scroll-margin-top: 130px;
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .estatuto-card {
+        padding: 1.7rem 1.1rem 2.2rem;
+        width: 95%; /* Prioriza largura total no mobile */
+        max-width: 95%;
+      }
+
+      .estatuto-nav {
+        padding-left: 10px;
+        padding-right: 10px;
+        top: 88px;
+        flex-wrap: nowrap; /* MANTIDO: Para não quebrar os botões */
+        width: 95%; /* Prioriza largura total no mobile */
+        max-width: 95%;
+
+        /* 🟢 CORREÇÃO CRÍTICA: Permite rolagem horizontal */
+        overflow-x: auto;
+        justify-content: flex-start; /* Alinha os itens à esquerda para iniciar a rolagem */
+
+      }
+
+      .estatuto-nav a {
+        font-size: 0.75rem;
+        flex-shrink: 0; /* Garante que os botões não encolham */
+      }
+
+      .estatuto-documento h1 {
+        font-size: 1.15rem;
+      }
+
+      .estatuto-documento h2 {
+        font-size: 0.93rem;
+      }
+
+      .estatuto-documento h3 {
+        font-size: 0.87rem;
+      }
+
+      /* Novo ajuste de scroll margin para mobile */
+      .estatuto-documento h2,
+      .estatuto-documento h3 {
+          scroll-margin-top: 130px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <div class="container estatuto-page">
+    <main class="page-content" id="estatuto">
+      <section class="card estatuto-card">
+        <header class="estatuto-header">
+          <h2>
+            <span class="emoji">📘</span>
+            Estatuto do SINPRF-ES
+          </h2>
+          <p>
+            Texto integral do Estatuto do Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo,
+            aprovado em Assembleia Geral Extraordinária em 11 de agosto de 2021.
+          </p>
+        </header>
+
+        <nav class="estatuto-nav">
+          <span class="estatuto-nav-title">Ir para:</span>
+          <a href="#titulo1">Título I</a>
+          <a href="#titulo2">Título II</a>
+          <a href="#titulo3">Título III</a>
+          <a href="#titulo4">Título IV</a>
+          <a href="#titulo5">Título V</a>
+          <a href="#titulo6">Título VI</a>
+          <a href="#titulo7">Título VII</a>
+          <a href="#titulo8">Título VIII</a>
+          <a href="#titulo9">Título IX</a>
+          <a href="#titulo10">Título X</a>
+          <a href="#topo-estatuto">Topo</a>
+        </nav>
+
+        <article class="estatuto-documento">
+          <h1 id="topo-estatuto">Estatuto do Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo</h1>
+
+          <div class="preambulo">
+            Nós, filiados ao Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo - SINPRF/ES,
+            reunidos em Assembleia Geral Extraordinária, na cidade de Vitória/ES, aos 11 dias de agosto de 2021,
+            aprovamos a reforma do ESTATUTO DO SINDICATO DOS POLICIAIS RODOVIÁRIOS FEDERAIS NO ESTADO DO ESPÍRITO SANTO,
+            que passa a vigorar com a redação a seguir:
+          </div>
+
+          <h2 id="titulo1">TÍTULO I<br>DOS PRINCÍPIOS FUNDAMENTAIS</h2>
+
+          <p><span class="artigo">Art. 1º</span> O Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo - SINPRF/ES, unidade sindical de âmbito estadual, integrante do sistema federativo da categoria dos policiais da Polícia Rodoviária Federal, constitui-se em entidade representativa para fins de coordenação, proteção e defesa dos diretos e interesses da classe.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> O Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo, filiado à Federação Nacional dos Policiais Rodoviários Federais - FENAPRF, constitui-se em pessoa jurídica de direito privado com autonomia própria, reconhecido pelo Estatuto da Federação e ainda por esse Estatuto.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> O Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo somente poderá desfiliar-se da FENAPRF mediante decisão da Assembleia Geral, convocada exclusivamente para esse fim, em primeira chamada com presença mínima de 2/3 (dois terços) dos filiados e em segunda e última chamada, após decorrido 30 minutos da primeira, com a maioria absoluta de seus sindicalizados, exigindo-se aprovação de 2/3 (dois terços) dos votos dos presentes, tomados em escrutínio secreto.</div>
+
+          <p><span class="artigo">Art. 2º</span> O SINPRF/ES reger-se-á pela Constituição da República Federativa do Brasil, pela legislação pertinente, por este Estatuto e pelas normas complementares.</p>
+
+          <h2 id="titulo2">TÍTULO II<br>DA DENOMINAÇÃO, CONSTITUIÇÃO, SEDE, FORO, BASE TERRITORIAL, DURAÇÃO, DISSOLUÇÃO E FINALIDADE</h2>
+
+          <h3>CAPÍTULO I<br>DA DENOMINAÇÃO, CONSTITUIÇÃO, SEDE E FORO</h3>
+
+          <p><span class="artigo">Art. 3º</span> O Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo, identificado pela sigla SINPRF/ES, tem personalidade jurídica distinta dos seus filiados, que não respondem ativa, passiva, subsidiária ou solidariamente pelas obrigações por ele assumidas e é representado, ativa e passivamente, em juízo ou fora dele, por seu Presidente, que poderá constituir mandatário.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> O SINPRF/ES terá sua sede na Avenida Nair de Azevedo Silva, nº 450, Salas 14/20, Ed. Shopping Center Vitória, Mário Cypreste, Vitória/ES, e foro na cidade de Vitória, capital do Estado do Espírito Santo.</div>
+
+          <p><span class="artigo">Art. 4º</span> O SINPRF/ES é a organização sindical de âmbito estadual dos policiais rodoviários federais ativos, inativos e pensionistas instituídas pelos policiais rodoviários federais falecidos, podendo atuar na qualidade de substituto processual, nos termos do art. 8º, inciso III, da Constituição da República.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> O SINPRF/ES é entidade privada sem fins lucrativos, não distribui entre seus sócios, associados, conselheiros, diretores, empregados, doadores ou terceiros, eventuais resultados, sobras, excedentes operacionais, brutos ou líquidos, dividendos, isenções de qualquer natureza, participações ou parcelas do seu patrimônio, auferidos mediante o exercício de suas atividades, e os aplica integralmente na consecução do respectivo seu objeto social, de forma imediata ou por meio da constituição de fundo patrimonial ou fundo de reserva.</div>
+
+          <p><span class="artigo">Art. 5º</span> Poderão filiar-se ao SINPRF/ES:</p>
+          <div class="inciso">I - na qualidade de sindicalizado efetivo, todos os policiais rodoviários federais, ativos e inativos;</div>
+          <div class="inciso">II - na qualidade de sindicalizado especial, os pensionistas vitalícios e temporários de policiais rodoviários federais falecidos.</div>
+
+          <div class="paragrafo"><strong>§ 1º</strong> A filiação do interessado que satisfaça os requisitos deste Estatuto ocorrerá por meio de requerimento dirigido ao Presidente do SINPRF/ES, no qual constarão, necessariamente, a sua intenção, a aceitação e o compromisso da fiel observância das normas estatutárias e complementares que regem o sistema sindical federativo da categoria, bem como a autorização respectiva para desconto da contribuição sindical em folha de pagamento ou pelo pagamento, por qualquer meio admitido.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> A filiação somente será efetivada após o efetivo recolhimento da contribuição sindical em favor da entidade sindical, por meio de desconto em folha ou pelo pagamento, por qualquer meio admitido, do valor correspondente à primeira mensalidade.</div>
+
+          <h3>CAPÍTULO II<br>DA BASE TERRITORIAL, DURAÇÃO E DISSOLUÇÃO</h3>
+
+          <p><span class="artigo">Art. 6º</span> O SINPRF/ES, com base territorial no Estado do Espírito Santo e duração indeterminada, observará os princípios constitucionais e as normas do Sistema Sindical Federativo.</p>
+
+          <p><span class="artigo">Art. 7º</span> O SINPRF/ES somente poderá ser dissolvido por deliberação de 2/3 (dois terços) do total de seus sindicalizados, tomados em escrutinio secreto, em Assembleia Geral Extraordinária convocada, exclusivamente, para esse fim.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> Na hipótese de dissolução do SINPRF/ES, o seu patrimônio reverterá em benefício da entidade que o suceder, ou de órgão de assistência filantrópica, conforme decisão da Assembleia Geral.</div>
+
+          <h3>CAPÍTULO III<br>DOS SEUS OBJETIVOS E FINS</h3>
+
+          <p><span class="artigo">Art. 8º</span> O SINPRF/ES, constituído para fins de coordenação, representação, proteção e defesa dos direitos e interesses da categoria que representa, com o intuito de manter colaboração com os poderes públicos, solidariedade com as demais entidades de classe profissional e subordinação aos interesses nacionais, tem por finalidade congregar todos os seus filiados, para, em conjunto, defenderem as legítimas reivindicações da categoria.</p>
+
+          <p><span class="artigo">Art. 9º</span> Para atingir suas finalidades ao SINPRF/ES incumbe:</p>
+          <div class="inciso">I - representar e defender seus sindicalizados e a categoria representada, nas relações funcionais e nas reivindicações de natureza salarial;</div>
+          <div class="inciso">II - dar assistência aos seus sindicalizados e aos integrantes da categoria representada, nas questões que envolvam seus interesses jurídico-funcionais;</div>
+          <div class="inciso">III - promover movimentos reivindicatórios tendentes a conquistar a plena valorização funcional da categoria representada, em todos seus aspectos, inclusive os de natureza salarial e os relativos às condições de trabalho;</div>
+          <div class="inciso">IV - representar seus sindicalizados perante qualquer pessoa, física ou jurídica, pública ou privada, nas questões concernentes à sua condição de servidor público civil, que prestam serviço de natureza Policial Rodoviário Federal;</div>
+          <div class="inciso">V - colaborar com as demais associações não sindicais, representativas de seus sindicalizados ou dos integrantes da categoria profissional representada;</div>
+          <div class="inciso">VI - promover e estabelecer intercâmbio com as demais organizações sindicais de trabalhadores, especialmente, com as representativas de outros segmentos do funcionalismo público;</div>
+          <div class="inciso">VII - organizar e promover os meios para a obtenção de benefícios aos filiados e aos seus dependentes, objetivando seu bem estar social;</div>
+          <div class="inciso">VIII - colaborar com os poderes públicos constituídos, como órgão técnico e consultivo no estudo e solução dos problemas que se relacionem com sua categoria profissional;</div>
+          <div class="inciso">IX - emitir parecer sobre estudos e projetos de qualquer natureza que digam respeito, direta ou indiretamente, aos interesses da categoria, bem como representar na forma deste Estatuto, a quem de direito, contra medidas que lhe sejam prejudiciais;</div>
+          <div class="inciso">X - participar, convocar, promover e organizar encontros e congressos regionais da categoria e das entidades da classe não sindicais;</div>
+          <div class="inciso">XI - eleger ou designar os representantes da categoria, na forma das normas estatutárias, regimentais e/ou regulamentares para auxiliar a sua administração;</div>
+          <div class="inciso">XII - celebrar convênios com as associações não sindicais, entidades públicas ou privadas, para realização de eventos, visando o constante aprimoramento e renovação de valores;</div>
+          <div class="inciso">XIII - promover manifestações cívicas relativas aos integrantes da categoria representada, e as pessoas físicas ou jurídicas que tenham prestado relevantes serviços ao Sindicato, a classe ou a instituição a qual os servidores representados encontram-se funcionalmente vinculados;</div>
+          <div class="inciso">XIV - conceder prêmios, certificados, títulos honoríficos, diplomas, placas e medalhas de honra ao mérito;</div>
+          <div class="inciso">XV - convocar ordinária e/ou extraordinariamente os seus filiados e a categoria que representa, com o fim de promover o congraçamento da classe e debater os problemas e assuntos de seus interesses;</div>
+          <div class="inciso">XVI - incentivar a sindicalização e promover a filiação e participação da categoria representada;</div>
+          <div class="inciso">XVII - divulgar suas atividades, mantendo os filiados perfeitamente informados das lutas de classe, em todos os níveis e áreas, tanto em relação as conquistas, quanto às reivindicações e dificuldades encontradas;</div>
+          <div class="inciso">XVIII - utilizar-se dos meios disponíveis para promover a divulgação dos interesses pertinentes à categoria representada, podendo, dentro de suas disponibilidades, ou mediante patrocínio, manter um órgão informativo de suas atividades e/ou matérias de seu interesse, objetivando manter a categoria representada devidamente informada;</div>
+          <div class="inciso">XIX - colaborar permanentemente com a FENAPRF, assim como manter constante união de trabalho com a mesma e com os demais sindicatos da categoria, visando assegurar os direitos e interesses da classe representada;</div>
+          <div class="inciso">XX - promover estudos e eventos relacionados aos interesses dos sindicalizados;</div>
+          <div class="inciso">XXI - promover o acompanhamento e apresentar propostas de matérias, de cunho legal ou regulamentar, relacionadas, direta ou indiretamente, com a atividade policial rodoviário federal;</div>
+          <div class="inciso">XXII - lutar pela adoção de critérios objetivos para a progressão funcional e para a ocupação de cargos de chefia;</div>
+          <div class="inciso">XXIII - pesquisar, estudar e implementar soluções para resoluções dos problemas que afetam o desempenho da atividade policial rodoviário federal;</div>
+          <div class="inciso">XXIV - promover campanhas visando a afirmação e a elevação da imagem da Polícia Rodoviária Federal e de seus servidores;</div>
+          <div class="inciso">XXV - adotar medidas visando a inclusão e a efetiva participação de policiais rodoviários federais em comissões, associações, conselhos, e todo e qualquer grupo da sociedade civil organizada em que se discutam assuntos afetos à área de atuação e aos interesses da categoria;</div>
+          <div class="inciso">XXVI - incentivar a permanente qualificação dos sindicalizados, podendo, para tanto, celebrar acordos e convênios com entidades educacionais, artísticas, culturais e desportivas, entre outras;</div>
+          <div class="inciso">XXVII - buscar a permanente assistência financeira, habitacional, médica, hospitalar, psicológica, farmacêutica, odontológica, educacional, de transporte, recreativa, cultural e de previdência privada aos seus associados e dependentes, através de acordos e/ou convênios, assim como implantar, diretamente ou indiretamente, serviços e programas de assistência social;</div>
+          <div class="inciso">XXVIII - designar representantes regionais para melhor atingir seus objetivos, promovendo maior integração entre os associados;</div>
+          <div class="inciso">XXIX - promover o congraçamento da categoria, bem como fomentar o debate dos problemas e assuntos de interesse, através de encontros, reuniões e seminários;</div>
+          <div class="inciso">XXX - celebrar termos de parceria, convênios, contratos, acordos ou outros instrumentos jurídicos com pessoas físicas ou jurídicas, de direito público ou privado, nacionais ou internacionais, cujos objetivos sejam compatíveis com as finalidades do SINPRF/ES;</div>
+          <div class="inciso">XXXI - promover atividades e finalidades de relevância pública e social.</div>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> A assistência jurídica será prestada exclusivamente aos sindicalizados em dia com suas obrigações sindicais.</div>
+
+          <h2 id="titulo3">TÍTULO III<br>DA ORGANIZAÇÃO E DA ADMINISTRAÇÃO</h2>
+
+          <h3>CAPÍTULO I<br>DA ORGANIZAÇÃO SINDICAL</h3>
+
+          <p><span class="artigo">Art. 10.</span> São órgãos integrantes do SINPRF/ES:</p>
+          <div class="inciso">I - Assembleia Geral;</div>
+          <div class="inciso">II - Diretoria Executiva;</div>
+          <div class="inciso">III - Delegado Representante Federativo;</div>
+          <div class="inciso">IV - Conselho Fiscal.</div>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> É vedada a acumulação de cargos diretivos na entidade, exceto em casos de nomeação.</div>
+
+          <p><span class="artigo">Art. 11.</span> Não comporta remuneração o exercício de qualquer cargo nos órgãos do Sindicato.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> Quando, por força de norma legal, não ficar assegurada a responsabilidade do órgão empregador pela remuneração do servidor que se licenciar para ficar à disposição do SINPRF/ES em decorrência de seu mandato sindical, ser-lhe-á deferida, a título de pró-labore, a importância equivalente à sua remuneração no órgão, desde que haja interesse e disponibilidade financeira da entidade, observada a competência da Assembleia Geral na fixação da verba de representação.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> Para atender suas finalidades, o SINPRF/ES, poderá, dentro de suas disponibilidades financeiras, cobrir as despesas de transporte, alimentação, estadia e outras decorrentes do exercício da atividade sindical dos membros da Diretoria Executiva e do Conselho Fiscal, do Delegado Representante Federativo e dos demais filiados.</div>
+
+          <p><span class="artigo">Art. 12.</span> Para atender suas finalidades, desde que haja disponibilidade financeira, a critério exclusivo da Diretoria Executiva, o SINPRF/ES poderá cobrir outras despesas, inclusive com filiados ou terceiros, desde que a serviço ou a interesse da entidade, mediante autorização da Presidência.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> O custeio das despesas previstas no caput poderá ocorrer:</div>
+          <div class="inciso">I - por meio do pagamento direto e integral das despesas pela entidade;</div>
+          <div class="inciso">II - por reembolso ao sindicalizado das despesas realizadas em favor da entidade, após a apresentação da devida comprovação;</div>
+          <div class="inciso">III - pela concessão de ajuda de custo, com a devida prestação de contas;</div>
+          <div class="inciso">IV - pela concessão de diárias, para as despesas com transporte e alimentação; e</div>
+          <div class="inciso">V - pela fixação de representação, equivalente à remuneração que o sindicalizado deixou de perceber, na hipótese do art. 11, § 1º deste Estatuto.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> A Diretoria Executiva regulamentará as modalidades de custeio das despesas, observados os princípios da economicidade para a entidade, da transparência, da segurança na movimentação de valores e da eficiência na atuação sindical.</div>
+
+          <h3>CAPÍTULO II<br>DA ADMINISTRAÇÃO E FISCALIZAÇÃO SINDICAL</h3>
+
+          <p><span class="artigo">Art. 13.</span> A administração do SINPRF/ES será exercida pela Diretoria Executiva, que é o órgão administrativo da entidade.</p>
+
+          <p><span class="artigo">Art. 14.</span> A fiscalização do SINPRF/ES será exercida pelo Conselho Fiscal, que é o órgão responsável pela fiscalização da gestão financeira da entidade.</p>
+
+          <h3>CAPÍTULO III<br>DA REPRESENTAÇÃO JUNTO À FEDERAÇÃO</h3>
+
+          <p><span class="artigo">Art. 15.</span> O SINPRF/ES será representado junto à FENAPRF por seu Presidente e por seu Delegado Representante Federativo, nos termos deste Estatuto e das demais normas legais do sistema sindical federativo.</p>
+
+          <h3>CAPÍTULO IV<br>DAS RESPONSABILIDADES DOS MEMBROS</h3>
+
+          <p><span class="artigo">Art. 16.</span> Os membros dos órgãos do SINPRF/ES responderão civil e criminalmente por quaisquer atos irregulares ou lesivos ao patrimônio da entidade sindical, estando ainda sujeitos à perda do mandato em razão de tais atos.</p>
+
+          <p><span class="artigo">Art. 17.</span> Os membros dos órgãos do SINPRF/ES não respondem pessoalmente pelas obrigações contraídas em nome do Sindicato, quando no exercício regular de suas funções.</p>
+
+          <h3>CAPÍTULO V<br>DOS LOCAIS DE REUNIÕES</h3>
+
+          <p><span class="artigo">Art. 18.</span> O SINPRF/ES poderá realizar reuniões, assembleias, seminários, convenções, conferências e palestras em qualquer parte da sua base territorial, de forma presencial, ou remota, por meio transmissão ao vivo pela internet.</p>
+
+          <h3>CAPÍTULO VI<br>DOS REQUISITOS PARA OS CARGOS ELETIVOS</h3>
+
+          <p><span class="artigo">Art. 19.</span> Para concorrer a qualquer um dos cargos do SINPRF/ES, à época do registro da candidatura, o candidato deverá contar, no mínimo, com seis meses de filiação ininterrupta e estar em dia com as obrigações sindicais.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> Os candidatos a Presidente, Vice-Presidente e demais componentes da Diretoria Executiva, do Conselho Fiscal, a Delegado Representante Federativo, e seus respectivos suplentes, serão inscritos e concorrerão na mesma chapa eleitoral, com a especificação dos cargos em disputa, nos termos do Regulamento Eleitoral da entidade.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> O exercício dos cargos eletivos de Presidente, Vice-Presidente e de Delegado Representante do SINPRF/ES é incompatível com o exercício de cargos em comissão ou de funções comissionadas de nível de gestor da Regional ou de área correcional, pertencentes à estrutura organizacional da Polícia Rodoviária Federal, ou cargos ou funções de nível funcional equivalente ou superior.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> A posse e o exercício de cargo titular na Diretoria Executiva, de Delegado Representante Federativo e de membro do Conselho Fiscal do SINPRF/ES implica ao candidato eleito, se for o caso, no afastamento do cargo em comissão ou da função comissionada exercida, observado o disposto no § 2º, até o término de seu mandato sindical, aplicando-se o mesmo critério aos suplentes quando assumirem a titularidade de cargos na entidade sindical.</div>
+
+          <div class="paragrafo"><strong>§ 4º</strong> A diplomação e a posse dos sindicalizados eleitos para os cargos dos órgãos do sindicato, dar-se-á em Assembleia Geral, que ocorrerá até o dia 1º de fevereiro de cada triênio.</div>
+
+          <h2 id="titulo4">TÍTULO IV<br>DA ASSEMBLEIA GERAL</h2>
+
+          <h3>CAPÍTULO I<br>DOS PODERES E DAS COMPETÊNCIAS</h3>
+
+          <p><span class="artigo">Art. 20.</span> A Assembleia Geral é o órgão deliberativo máximo da estrutura organizacional do SINPRF/ES, com poderes para deliberar sobre quaisquer assuntos que sejam de competência e interesse da entidade.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> A Assembleia Geral será constituída pelos filiados que estejam em dia com suas obrigações estatutárias.</div>
+
+          <p><span class="artigo">Art. 21.</span> Compete privativamente à Assembleia Geral:</p>
+          <div class="inciso">I - aprovar, alterar, modificar ou reformar o Estatuto, o Regimento e demais normas internas do respectivo sindicato, inclusive o Regulamento Eleitoral da entidade;</div>
+          <div class="inciso">II - eleger, por aclamação, trienalmente, os membros da Diretoria Executiva, do Conselho Fiscal e os Delegados Representantes Federativos, quando houver somente uma chapa inscrita;</div>
+          <div class="inciso">III - analisar, discutir e decidir sobre a destituição de ocupantes de qualquer dos cargos da estrutura organizacional da entidade;</div>
+          <div class="inciso">IV - decidir em grau de recurso, sobre a exclusão de sindicalizados ou indeferimento de pedido de filiação, ou ainda, sobre aplicação de penalidades;</div>
+          <div class="inciso">V - analisar, discutir, orientar e deliberar nos litígios e divergências entre os demais poderes do Sindicato;</div>
+          <div class="inciso">VI - apreciar a prestação de contas dos órgãos do Sindicato, elaborada pela Diretoria Executiva e aprovar o orçamento referente a cada exercício financeiro;</div>
+          <div class="inciso">VII - decidir sobre a filiação ou desfiliação do SINPRF/ES de organização sindical de grau superior, observando os dispositivos deste Estatuto;</div>
+          <div class="inciso">VIII - apreciar as decisões da Diretoria Executiva que dependam de seu referendo;</div>
+          <div class="inciso">IX - decidir sobre a dissolução do Sindicato;</div>
+          <div class="inciso">X - discutir e deliberar sobre a destinação do patrimônio em caso de dissolução da Entidade Sindical;</div>
+          <div class="inciso">XI - dirimir dúvidas que forem suscetíveis pela interpretação deste Estatuto, não solucionadas pelos demais poderes do Sindicato;</div>
+          <div class="inciso">XII - estabelecer a contribuição dos sindicalizados a ser paga pelos beneficiários dos acordos, convenções e sentenças judiciais;</div>
+          <div class="inciso">XIII - debater e decidir todos os assuntos de interesse geral;</div>
+          <div class="inciso">XIV - fixar, quando for o caso, a verba de representação de pró-labore do Presidente do SINPRF/ES;</div>
+          <div class="inciso">XV - permitir a alienação de bens imóveis;</div>
+          <div class="inciso">XVI - indicar sua Mesa Diretora.</div>
+
+          <h3>CAPÍTULO II<br>DAS REUNIÕES E DOS LOCAIS DE REALIZAÇÃO</h3>
+
+          <p><span class="artigo">Art. 22.</span> A Assembleia Geral do SINPRF/ES reúne-se ordinária e extraordinariamente.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> As reuniões serão realizadas onde funcionar a sede central da entidade ou em qualquer parte do Estado, conforme dispuser o edital de convocação, de forma presencial, ou remota, por meios eletrônicos, observados os critérios de conveniência e oportunidade da entidade.</div>
+
+          <h3>CAPÍTULO III<br>DA CONVOCAÇÃO E DA INSTALAÇÃO</h3>
+
+          <p><span class="artigo">Art. 23.</span> A Assembleia Geral será convocada, salvo nos casos de eleição, por edital publicado com antecedência mínima de 05 (cinco) dias, preferencialmente na imprensa oficial, e ainda, afixado em locais acessíveis aos sindicalizados.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> A Assembleia Geral será realizada por convocação:</div>
+          <div class="inciso">I - do Presidente da entidade;</div>
+          <div class="inciso">II - da Diretoria Executiva;</div>
+          <div class="inciso">III - do Conselho Fiscal;</div>
+          <div class="inciso">IV - dos sindicalizados em dia com suas obrigações sindicais.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> A Assembleia Geral realizar-se-á:</div>
+          <div class="inciso">I - quando o Presidente do Sindicato, a maioria dos membros da Diretoria Executiva ou do Conselho Fiscal julgarem conveniente, para tratar de assuntos de sua competência;</div>
+          <div class="inciso">II - a requerimento da maioria absoluta dos sindicalizados em dia com suas obrigações sindicais, os quais especificarão, pormenorizadamente, os motivos da convocação.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> À solicitação de convocação da Assembleia Geral, quando feita pela maioria dos membros da Diretoria Executiva, do Conselho Fiscal ou pela maioria absoluta dos sindicalizados quites com as obrigações sindicais, não poderá se opor o Presidente da entidade, que ultimará as providências à sua realização, dentro de 30 dias, contados da data de entrada do requerimento no sindicato.</div>
+
+          <div class="paragrafo"><strong>§ 4º</strong> Na falta de convocação pelo Presidente, expirado o prazo marcado pelo parágrafo anterior, a Assembleia Geral será convocada por aqueles que requereram a sua realização.</div>
+
+          <div class="paragrafo"><strong>§ 5º</strong> Na hipótese do art. 23, § 2º, II, deverão comparecer à Assembleia Geral, sob pena de nulidade, 2/3 (dois terços) dos promoventes.</div>
+
+          <p><span class="artigo">Art. 24.</span> A Assembleia Geral instalar-se-á em primeira convocação com a presença da maioria absoluta dos sindicalizados em dia com suas obrigações sindicais e, em segunda e última convocação, após o intervalo de 30 (trinta) minutos da primeira, com qualquer número de presentes.</p>
+
+          <p><span class="artigo">Art. 25.</span> A Assembleia Geral será instalada pelo Presidente da entidade e dirigida por uma Mesa Diretora.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> A Mesa Diretora será constituída por um Presidente, um Secretário e tantos membros quanto forem necessários, e ainda, em casos de votação secreta, por dois escrutinadores.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> Os componentes da Mesa Diretora serão escolhidos pela Assembleia Geral.</div>
+
+          <p><span class="artigo">Art. 26.</span> A Assembleia Geral reúne-se ordinariamente:</p>
+          <div class="inciso">I - anualmente, no primeiro trimestre, para apreciar e deliberar sobre a prestação de contas do exercício anterior e aprovar o orçamento para o exercício financeiro em curso;</div>
+          <div class="inciso">II - trienalmente, para dar posse aos sindicalizados eleitos aos cargos dos órgãos da Entidade Sindical, até o dia 1º de fevereiro após as eleições.</div>
+
+          <p><span class="artigo">Art. 27.</span> A Assembleia Geral reúne-se extraordinariamente, sempre que se fizer necessário, para deliberar sobre quaisquer assuntos da ordem do dia.</p>
+
+          <h3>CAPÍTULO IV<br>DAS DELIBERAÇÕES E EXIGÊNCIAS</h3>
+
+          <p><span class="artigo">Art. 28.</span> A Assembleia Geral só comporta deliberações sobre as matérias objetos da convocação e constantes da pauta.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> As deliberações da Assembleia Geral serão adotadas, em regra, por maioria dos votos dos presentes, ressalvadas as hipóteses em que este Estatuto exija maioria qualificada nas votações.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> As deliberações sobre as matérias previstas nos incisos I, III, IV, V, VII e XV do artigo 21 deste Estatuto exigem maioria de 2/3 (dois terços) dos presentes.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> As deliberações sobre as matérias prevista nos itens IX e X do artigo 21 exigem o cumprimento do disposto no § 2º do artigo 1º e no artigo 7º deste Estatuto.</div>
+
+          <div class="paragrafo"><strong>§ 4º</strong> Nos empates verificados, o Presidente do SINPRF/ES tem direito ao voto de qualidade, exceto em caso de empate verificado entre candidatos à eleição para quaisquer órgãos do SINPRF/ES, nos termos do Regulamento Eleitoral da entidade.</div>
+
+          <p><span class="artigo">Art. 29.</span> A Assembleia Geral poderá ocorrer de forma presencial, ou remota, por meios eletrônicos, observados os critérios de conveniência e oportunidade da entidade.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> Na hipótese de Assembleia Geral realizada de forma remota, deverão ser observados os requisitos de identificação do filiado, de segurança da informação e de ampla participação do sindicalizado, e produzirá todos os efeitos legais da assinatura presencial.</div>
+
+          <h2 id="titulo5">TÍTULO V<br>DA DIRETORIA EXECUTIVA</h2>
+
+          <h3>CAPÍTULO I<br>DOS PODERES DA DIRETORIA EXECUTIVA</h3>
+
+          <p><span class="artigo">Art. 30.</span> A Diretoria Executiva é o órgão administrativo do SINPRF/ES.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> A Diretoria Executiva administrará a entidade na forma estabelecida neste Estatuto, normas regimentais e/ou regulamentares e em conformidade com as leis vigentes.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> Os membros que compõem a Diretoria Executiva terão representatividade no Estado, sendo assegurado a todos os direitos e prerrogativas constitucionais inerentes aos mandatos que exercem.</div>
+
+          <h3>CAPÍTULO II<br>DA COMPOSIÇÃO DA DIRETORIA EXECUTIVA</h3>
+
+          <p><span class="artigo">Art. 31.</span> A Diretoria Executiva compõe-se dos seguintes cargos:</p>
+          <div class="inciso">I - Presidente;</div>
+          <div class="inciso">II - Vice-Presidente;</div>
+          <div class="inciso">III - Diretor de Secretaria;</div>
+          <div class="inciso">IV - Diretor Financeiro;</div>
+          <div class="inciso">V - Diretor Jurídico;</div>
+          <div class="inciso">VI - Diretor Social;</div>
+          <div class="inciso">VII - Diretor Parlamentar.</div>
+
+          <div class="paragrafo"><strong>§ 1º</strong> Os cargos dispostos dos incisos III a VII terão os respectivos suplentes.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> No âmbito de cada unidade administrativa da Polícia Rodoviária Federal na base territorial da entidade poderá haver um Representante Regional, que será nomeado por ato do Presidente, para ampliar a interlocução da categoria com a entidade.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> O mandato dos membros da Diretoria Executiva é de 3 (três) anos, admitidas reeleições.</div>
+
+          <h3>CAPÍTULO III<br>DA COMPETÊNCIA DA DIRETORIA EXECUTIVA</h3>
+
+          <p><span class="artigo">Art. 32.</span> À Diretoria Executiva compete:</p>
+          <div class="inciso">I - dirigir o Sindicato de acordo com presente Estatuto e normas regimentais;</div>
+          <div class="inciso">II - reunir-se anualmente em sessão ordinária e extraordinariamente, sempre que o Presidente ou a maioria dos Diretores decidirem;</div>
+          <div class="inciso">III - cumprir e fazer cumprir o Estatuto, demais normas do sistema sindical federativo da categoria e as decisões da Assembleia Geral;</div>
+          <div class="inciso">IV - elaborar o Regimento, o Regulamento e demais normas internas da entidade;</div>
+          <div class="inciso">V - propor à Assembleia Geral a reforma ou alteração do Estatuto, Regimento e Regulamentos da Entidade, desde que as mudanças não conflitem com as normas da FENAPRF;</div>
+          <div class="inciso">VI - propor à Assembleia Geral, quando for o caso, os valores dos descontos assistenciais;</div>
+          <div class="inciso">VII - propor à Assembleia Geral o orçamento de cada exercício, bem como eventuais alterações do mesmo durante sua execução;</div>
+          <div class="inciso">VIII - elaborar e executar seu plano de trabalho;</div>
+          <div class="inciso">IX - apresentar ao Conselho Fiscal para exame e parecer os balancetes mensais e os balanços anuais, acompanhados da prestação de contas e dos respectivos relatórios;</div>
+          <div class="inciso">X - autorizar a admissão, exclusão, readmissão e licença dos sindicalizados;</div>
+          <div class="inciso">XI - coordenar os trabalhos para realização de reuniões, congressos, seminários, conferências, convenções e outros;</div>
+          <div class="inciso">XII - promover o inter-relacionamento do SINPRF/ES com a as demais entidades sindicais e não sindicais da classe, objetivando a unidade, a uniformidade de posições e a defesa dos interesses coletivos da categoria;</div>
+          <div class="inciso">XIII - decidir sobre assuntos de interesse e relevância da categoria representada;</div>
+          <div class="inciso">XIV - decidir sobre questões que envolvam bens patrimoniais, inclusive quanto a sua aquisição ou alienação, exceto os bens imóveis;</div>
+          <div class="inciso">XV - interpretar o presente Estatuto e resolver os casos omissos;</div>
+          <div class="inciso">XVI - nomear as comissões que julgar necessárias, ou ainda, constituir grupos de trabalho objetivando o cumprimento das finalidades da Entidade;</div>
+          <div class="inciso">XVII - impor as penalidades de sua competência;</div>
+          <div class="inciso">XVIII - apreciar as informações fornecidas pelos seus Diretores, Conselheiros, Representantes, e demais componentes da categoria representada e, se julgar conveniente, tomar as medidas necessárias;</div>
+          <div class="inciso">XIX - deliberar sobre as matérias apresentadas pelos titulares dos cargos da Diretoria Executiva, do Conselho Fiscal e demais representantes;</div>
+          <div class="inciso">XX - deliberar sobre os atos de urgência praticados pelo presidente e demais componentes da Diretoria Executiva;</div>
+          <div class="inciso">XXI - admitir e demitir empregados, fixar seus salários e contratar a prestação de serviços;</div>
+          <div class="inciso">XXII - aprovar licenciamento de seus membros e deliberar sobre as faltas dos mesmos às reuniões para as quais estavam convocados.</div>
+
+          <div class="paragrafo"><strong>§ 1º</strong> Dos atos praticados pela Diretoria Executiva caberá recurso à Assembleia Geral.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> A parte interessada deverá interpor recurso no prazo máximo de 15 (quinze) dias da data do fato, devidamente fundamentado.</div>
+
+          <h3>CAPÍTULO IV<br>DAS DELIBERAÇÕES DA DIRETORIA EXECUTIVA</h3>
+
+          <p><span class="artigo">Art. 33.</span> As deliberações da Diretoria Executiva serão tomadas por maioria dos votos, com a presença mínima de 2/3 (dois terços) dos seus membros.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> Das decisões da Diretoria Executiva, qualquer diretor poderá recorrer na primeira reunião da Assembleia Geral que suceder ao ato impugnado.</div>
+
+          <h3>CAPÍTULO V<br>DAS REUNIÕES DA DIRETORIA EXECUTIVA</h3>
+
+          <p><span class="artigo">Art. 34.</span> A Diretoria Executiva reunir-se-á quando convocada pelo Presidente ou pela maioria de seus membros, na sede do Sindicato, ou em caráter especial, em qualquer parte do Estado ou, ainda, de forma eletrônica.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> As reuniões somente serão instaladas com a presença de pelo menos 2/3 (dois terços) de seus membros e as deliberações serão tomadas na forma do artigo anterior.</div>
+
+          <p><span class="artigo">Art. 35.</span> A Diretoria Executiva reúne-se, ordinariamente, no mínimo, uma vez por ano, segundo calendário estabelecido pela maioria de seus membros e, extraordinariamente, quando se fizer necessário.</p>
+
+          <h3>CAPÍTULO VI<br>DA COMPETÊNCIA DOS MEMBROS DA DIRETORIA EXECUTIVA</h3>
+
+          <p><span class="artigo">Art. 36.</span> Ao Presidente compete:</p>
+          <div class="inciso">I - dirigir, administrar e representar o Sindicato, ativa e passivamente, em juízo e fora dele;</div>
+          <div class="inciso">II - nomear e exonerar, quando necessário, Representantes Regionais e outros auxiliares;</div>
+          <div class="inciso">III - convocar, instalar e presidir as reuniões da Diretoria;</div>
+          <div class="inciso">IV - assinar com os Diretores das respectivas áreas os contratos e quaisquer documentos relativos à entidade;</div>
+          <div class="inciso">V - convocar e instalar as Assembleias Gerais em conformidade com o Estatuto;</div>
+          <div class="inciso">VI - conferir condecorações e distinções honoríficas;</div>
+          <div class="inciso">VII - assinar, juntamente com o Diretor Financeiro, os cheques emitidos pelo Sindicato, bem como movimentar contas bancárias;</div>
+          <div class="inciso">VIII - orientar a política do sindicato no Estado, submetendo à Diretoria Executiva os planos de ação para apreciação;</div>
+          <div class="inciso">IX - praticar os atos de urgência e de relevância para a classe, obedecidas as normas que lhe forem pertinentes;</div>
+          <div class="inciso">X - coordenar as atividades da Diretoria Executiva, cabendo-lhe, nas reuniões, o voto de qualidade em caso de empate;</div>
+          <div class="inciso">XI - aplicar as penalidades na forma estatutária, regimental e/ou regulamentar;</div>
+          <div class="inciso">XII - autorizar as despesas previstas no orçamento e ordenar o respectivo pagamento, fazendo o mesmo com as despesas suplementares, admitidas pela Diretoria Executiva;</div>
+          <div class="inciso">XIII - firmar contratos ou autorizar o credenciamento de advogado, em caráter permanente ou provisório, para defesa de seus filiados;</div>
+          <div class="inciso">XIV - velar pela regularidade e fiel execução deste Estatuto, das normas Regimentais e/ou Regulamentares;</div>
+          <div class="inciso">XV - supervisionar, coordenar e orientar as atividade dos Representantes Regionais;</div>
+          <div class="inciso">XVI - designar membros da Diretoria Executiva, Representantes Sindicais, ou ainda, filiados da Entidade para compor comissões e/ou grupos de trabalhos que julgar necessário, dentro das finalidades da entidade sindical;</div>
+          <div class="inciso">XVII - baixar Portarias, Instruções Normativas e outros documentos necessários ao desempenho da missão sindical;</div>
+          <div class="inciso">XVIII - designar membros da Diretoria Executiva para representá-lo ante os Poderes Executivo, Legislativo, Judiciário, bem como junto a Administração Pública em geral e/ou terceiros.</div>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> O Presidente do Sindicato poderá delegar as atribuições mencionadas nos incisos III, V, VI, IX, XII e XV deste artigo Vice-Presidente e aos Diretores, ressalvados os limites previstos neste estatuto.</div>
+
+          <p><span class="artigo">Art. 37.</span> Ao Vice-Presidente compete:</p>
+          <div class="inciso">I - substituir o Presidente em suas faltas e/ou impedimentos;</div>
+          <div class="inciso">II - assumir a Presidência em caso de vacância ou por licenciamento, durante o período de afastamento ou o tempo que faltar para o término do mandato;</div>
+          <div class="inciso">III - cumprir as normas estatutárias, regimentais e/ou regulamentares;</div>
+          <div class="inciso">IV - participar das reuniões da Diretoria Executiva.</div>
+
+          <p><span class="artigo">Art. 38.</span> Ao Diretor de Secretaria compete:</p>
+          <div class="inciso">I - dirigir e coordenar a Secretaria, bem como redigir a correspondência do Sindicato;</div>
+          <div class="inciso">II - secretariar as reuniões da Diretoria Executiva, lavrando as respectivas atas e demais registros;</div>
+          <div class="inciso">III - receber e registrar as chapas dos candidatos às eleições do Sindicato;</div>
+          <div class="inciso">IV - ter sob sua guarda os arquivos do Sindicato;</div>
+          <div class="inciso">V - preparar, em conjunto com o Presidente, os expedientes e a proposta da ordem do dia das reuniões da Diretoria Executiva;</div>
+          <div class="inciso">VI - preparar, em conjunto aos órgãos públicos, entidades privadas ou terceiros, quaisquer documentos ou informações que sejam de interesse da classe ou da própria Entidade;</div>
+          <div class="inciso">VII - cumprir as normas Estatutárias, Regimentais e/ou Regulamentares;</div>
+          <div class="inciso">VIII - desempenhar outras atividades que lhe forem atribuídas de acordo com as normas regimentais e/ou regulamentares.</div>
+
+          <p><span class="artigo">Art. 39.</span> Ao Diretor Financeiro compete:</p>
+          <div class="inciso">I - ter sob seu controle, a guarda e responsabilidade de todos os bens e valores pertencentes ao Sindicato;</div>
+          <div class="inciso">II - promover a arrecadação de todas as rendas e contribuições devidas ao Sindicato;</div>
+          <div class="inciso">III - quitar todas as despesas, contas e obrigações, assinando com o Presidente os cheques, ordens de pagamentos e demais documentos da gestão financeira do Sindicato;</div>
+          <div class="inciso">IV - elaborar, em conjunto com a Diretoria Executiva, a proposta de orçamento anual de receitas e despesas da entidade;</div>
+          <div class="inciso">V - levantar balancete, quando solicitado pelo Presidente ou por membro da Diretoria Executiva;</div>
+          <div class="inciso">VI - apresentar anualmente o balanço geral, que instruirá o relatório e prestação de contas da Diretoria Executiva;</div>
+          <div class="inciso">VII - coordenar e controlar, juntamente com o Presidente, a arrecadação do Sindicato, repasses e balancetes mensais;</div>
+          <div class="inciso">VIII - manter os recursos do Sindicato em instituição financeira autorizada pelo Banco Central do Brasil;</div>
+          <div class="inciso">IX - manter em ordem, asseio e clareza a escrituração contábil da Entidade;</div>
+          <div class="inciso">X - cumprir as normas Estatutárias, Regimentais e/ou regulamentares;</div>
+          <div class="inciso">XI - propor a contratação de assessoria contábil para a entidade;</div>
+          <div class="inciso">XII - desempenhar outras atividades que lhe forem atribuídas, de acordo com as normas regimentais e/ou regulamentares.</div>
+
+          <p><span class="artigo">Art. 40.</span> Ao Diretor Jurídico compete:</p>
+          <div class="inciso">I - estudar e promover medidas jurídicas em defesa da categoria representada e do próprio Sindicato;</div>
+          <div class="inciso">II - legalizar os bens imóveis adquiridos para a Entidade e suas aplicações;</div>
+          <div class="inciso">III - assessorar a Assembleia Geral e a Diretoria Executiva, emitindo pareceres;</div>
+          <div class="inciso">IV - assessorar a Presidência, quando da elaboração de contratos que onerem a Entidade;</div>
+          <div class="inciso">V - providenciar assistência jurídica aos filiados, promovendo a defesa e a orientação em todas as lides decorrentes do exercício do cargo;</div>
+          <div class="inciso">VI - assessorar e orientar o Presidente, Vice-Presidente e demais Diretores, nos assuntos do interesse da classe, quando necessário e/ou solicitado;</div>
+          <div class="inciso">VII - elaborar, orientar ou acompanhar a defesa do Sindicato e/ou dos membros da Diretoria Executiva, do Conselho fiscal, do Delegado Representante Federativo e outros membros, quando no desempenho das funções sindicais;</div>
+          <div class="inciso">VIII - cumprir as normas estatutárias, regimentais e/ou regulamentares;</div>
+          <div class="inciso">IX - propor a contratação de assessoria jurídica para a entidade;</div>
+          <div class="inciso">X - desempenhar outras atividades que lhe forem atribuídas, de acordo com as normas regimentais e ou regulamentares da Entidade.</div>
+
+          <p><span class="artigo">Art. 41.</span> Ao Diretor Social compete:</p>
+          <div class="inciso">I - promover o bem-estar social dos sindicalizados;</div>
+          <div class="inciso">II - desenvolver e incentivar campanhas de segurança e educativa no meio da comunidade representada;</div>
+          <div class="inciso">III - incentivar e promover a prática de desporto e os festejos comemorativos;</div>
+          <div class="inciso">IV - planejar encontros, reuniões, congressos e outras solenidades do interesse da classe;</div>
+          <div class="inciso">V - promover encontros e debates, visando maior integração da classe;</div>
+          <div class="inciso">VI - exercer outras atividades que lhe forem atribuídas, de acordo com as normas regimentais e/ou regulamentares;</div>
+          <div class="inciso">VII - desenvolver e executar o trabalho de relações públicas do sindicato;</div>
+          <div class="inciso">VIII - promover a divulgação de todas as atividades do Sindicato.</div>
+
+          <p><span class="artigo">Art. 42.</span> Ao Diretor Parlamentar compete:</p>
+          <div class="inciso">I - assessorar o presidente no relacionamento com as autoridades públicas;</div>
+          <div class="inciso">II - organizar e manter atualizado cadastro das autoridades dos Poderes Executivo e Legislativo, e, em particular, daquelas que representam o poder público nas negociações com os servidores públicos;</div>
+          <div class="inciso">III - desempenhar o trabalho de relações públicas do SINPRF/ES com a classe política objetivando a defesa dos direitos e interesses da categoria representada, dos dirigentes e representantes sindicais e dos sindicatos federados;</div>
+          <div class="inciso">IV - acompanhar o processo legislativo e projetos de interesse da categoria no Congresso Nacional;</div>
+          <div class="inciso">V - promover e coordenar a inserção do sindicato no processo legislativo;</div>
+          <div class="inciso">VI - promover intercâmbio entre sindicatos filiados, desenvolvendo a formação e a consciência política e sindical; e</div>
+          <div class="inciso">VII - assessorar o Presidente e demais diretores nos trabalhos da entidade.</div>
+
+          <p><span class="artigo">Art. 43.</span> Os Representantes Regionais, nomeados pelo Presidente, são os elementos de ligação entre a direção do SINPRF/ES e os filiados que se encontram, por circunstâncias de serviço, localizados nos diversos pontos do Estado, a fim de que possa ser prestada melhor assistência, sempre que os interesses da entidade ou do sindicalizado assim o exigirem.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> A área de atuação dos Representantes Regionais será coincidente com a circunscrição da sede do local de serviço, podendo, em casos especiais, abranger mais uma localidade.</div>
+
+          <h3>CAPÍTULO VII<br>DO DELEGADO REPRESENTANTE FEDERATIVO</h3>
+
+          <p><span class="artigo">Art. 44.</span> Ao Delegado Representante Federativo compete:</p>
+          <div class="inciso">I - representar a entidade, em conjunto com o seu Presidente, junto à Federação Nacional dos Policiais Rodoviários Federais;</div>
+          <div class="inciso">II - representar os anseios dos filiados no âmbito do sistema sindical federativo;</div>
+          <div class="inciso">III - participar das reuniões e debates de interesses da categoria no âmbito do sistema sindical e junto a órgãos e entidades públicas;</div>
+          <div class="inciso">IV - participar das reuniões da Diretoria Executiva;</div>
+          <div class="inciso">V - cumprir as normas estatutárias, regimentais e/ou regulamentares.</div>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> O Delegado Representante Federativo, e seu respectivo suplente, será inscrito e concorrerá na mesma chapa eleitoral, em conformidade com o Regulamento Eleitoral do Sistema Sindical Federativo.</div>
+
+          <h2 id="titulo6">TÍTULO VI<br>DO CONSELHO FISCAL</h2>
+
+          <h3>CAPÍTULO I<br>DA COMPOSIÇÃO DOS CARGOS DO CONSELHO FISCAL</h3>
+
+          <p><span class="artigo">Art. 45.</span> Ao Conselho Fiscal incumbe a fiscalização da gestão financeira e patrimonial da entidade.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> Aos membros titulares do Conselho Fiscal são assegurados todos os direitos e prerrogativas inerentes aos cargos que exercem no Sindicato.</div>
+
+          <p><span class="artigo">Art. 46.</span> O Conselho Fiscal compõe-se de 03 (três) membros titulares e igual número de suplentes.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> O Presidente, o Secretário e o vogal do Conselho Fiscal, bem como os suplentes, serão inscritos e concorrerão na mesma chapa eleitoral.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> A substituição ou preenchimento, em casos de impedimentos ou vacância dos titulares do Conselho Fiscal, obedecerá a ordem da colocação dos suplentes na chapa eleita.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> O mandato dos membros do Conselho Fiscal, titulares e suplentes, será de 03 (três) anos, coincidentes com o da Diretoria Executiva e do Delegado Representante Federativo.</div>
+
+          <h3>CAPÍTULO II<br>DA COMPETÊNCIA DO CONSELHO FISCAL</h3>
+
+          <p><span class="artigo">Art. 47.</span> Compete ao Conselho Fiscal emitir parecer na prestação de contas anual da Diretoria Executiva e exercer a auditoria fiscal da entidade, com plenos poderes para realizar, quando julgar necessário, ação fiscalizadora, vistorias e exames contábeis, visando manter a regularidade financeira e patrimonial da Entidade.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> Se, ao final de cada exercício, o Conselho Fiscal não receber da Diretoria Executiva os elementos contábeis da administração financeira, promoverá a tomada de contas.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> O Conselho Fiscal promoverá a convocação da Assembleia Geral, quando for o caso, obedecidas as normas do presente Estatuto.</div>
+
+          <h3>CAPÍTULO III<br>DAS REUNIÕES E DAS DELIBERAÇÕES</h3>
+
+          <p><span class="artigo">Art. 48.</span> O Conselho Fiscal reunir-se-á sempre que houver necessidade, convocado por seu Presidente ou pela maioria de seus membros, pela Diretoria Executiva ou ainda pela Assembleia Geral.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> As deliberações do Conselho Fiscal deverão ser tomadas por maioria de votos, com a presença obrigatória de todos os membros titulares.</div>
+
+          <h2 id="titulo7">TÍTULO VII<br>DA VACÂNCIA DOS CARGOS</h2>
+
+          <h3>CAPÍTULO I</h3>
+
+          <p><span class="artigo">Art. 49.</span> No caso de vacância de cargos eletivos de titulares dos órgãos do sindicato, proceder-se-á o seu preenchimento através dos suplentes.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> Os suplentes serão igualmente convocados no caso de afastamento, licença ou impedimento eventual do titular.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> No caso de nova vacância, e não havendo suplentes, deverão ser convocadas eleições, no prazo de 90 dias, para o preenchimento dos cargos vagos.</div>
+
+          <p><span class="artigo">Art. 50.</span> A vacância do cargo eletivo será declarada pelo respectivo órgão do Sindicato, nas seguintes hipóteses:</p>
+          <div class="inciso">I - impedimento;</div>
+          <div class="inciso">II - abandono;</div>
+          <div class="inciso">III - renúncia;</div>
+          <div class="inciso">IV - afastamento;</div>
+          <div class="inciso">V - licenciamento;</div>
+          <div class="inciso">VI - perda do mandato;</div>
+          <div class="inciso">VII - falecimento.</div>
+
+          <div class="paragrafo"><strong>§ 1º</strong> O impedimento legal dar-se-á quando houver infringência aos dispositivos estatutários e será declarado pela Assembleia Geral.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> O abandono dar-se-á quando o ocupante de determinado caso deixar de comparecer, sem motivo justificado, a três reuniões consecutivas ou cinco alternadas para as quais fora convocado.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> A renúncia dar-se-á por ato voluntário, expresso e irretratável do ocupante do cargo.</div>
+
+          <div class="paragrafo"><strong>§ 4º</strong> A perda do mandato dar-se-á quando houver, comprovadamente, por parte do exercente do cargo, malversação ou dilapidação do patrimônio sindical, ou ainda, grave violação às normas estatutárias.</div>
+
+          <div class="paragrafo"><strong>§ 5º</strong> O afastamento dar-se-á por motivo alheio à vontade do exercente do cargo e será determinado pelo órgão competente.</div>
+
+          <div class="paragrafo"><strong>§ 6º</strong> A licença dar-se-á por ato voluntário e expresso do exercente do cargo, em função de necessidade de afastamento temporário da função.</div>
+
+          <div class="paragrafo"><strong>§ 7º</strong> Aplicam-se aos cargos nomeados as mesmas hipóteses de vacância dos cargos eletivos, devendo o Presidente da entidade promover a exoneração e a nomeação do novo titular.</div>
+
+          <p><span class="artigo">Art. 51.</span> Ocorrendo a vacância simultânea ou sucessiva dos cargos de Presidente ou Vice-Presidente do Sindicato, os membros da Diretoria Executiva escolherão, em reunião extraordinária, dentre eles, aquele que ocupará, interinamente, o cargo de Presidente.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> Nessa hipótese, serão convocadas eleições dentro do prazo máximo de 90 dias para preenchimento dos cargos vagos.</div>
+
+          <h2 id="titulo8">TÍTULO VIII<br>DA GESTÃO FINANCEIRA E PATRIMONIAL</h2>
+
+          <h3>CAPÍTULO I<br>DO PATRIMÔNIO E DAS RECEITAS</h3>
+
+          <p><span class="artigo">Art. 52.</span> Constituem-se bens patrimoniais do Sindicato os móveis, imóveis, semoventes e todos e quaisquer outros bens, adquiridos ou obtidos pela própria entidade.</p>
+
+          <p><span class="artigo">Art. 53.</span> Constituem receitas do Sindicato:</p>
+          <div class="inciso">I - as contribuições previstas em lei;</div>
+          <div class="inciso">II - a renda proveniente de aplicações financeiras;</div>
+          <div class="inciso">III - a renda patrimonial;</div>
+          <div class="inciso">IV - as doações, subvenções, auxílios, contribuições de sindicalizados da categoria e/ ou de terceiros legados;</div>
+          <div class="inciso">V - a renda proveniente de empreendimentos, assistência judiciária nas causas trabalhistas, atividades e serviços e outras rendas eventuais.</div>
+          <div class="inciso">VI - recursos transferidos de parcerias com Estado;</div>
+          <div class="inciso">VII - outras rendas não especificadas.</div>
+
+          <p><span class="artigo">Art. 54.</span> A contribuição sindical será equivalente a:</p>
+          <div class="inciso">I - 1% (um por cento) do subsídio mensal do cargo, no nível que se encontrar na carreira, no caso do sindicalizado efetivo;</div>
+          <div class="inciso">II - 0,5% (cinco décimos por cento) do provento mensal de aposentadoria ou pensão, no caso de sindicalizado especial.</div>
+
+          <h3>CAPÍTULO II<br>DAS DESPESAS E ORÇAMENTO</h3>
+
+          <p><span class="artigo">Art. 55.</span> As despesas do SINPRF/ES correrão pelas rubricas previstas na legislação e instruções vigentes.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> O SINPRF/ES manterá registro específico adequado dos bens de sua propriedade de qualquer natureza o qual atenderá às normas exigidas para a escrituração contábil, de acordo com os princípios fundamentais de contabilidade e com as Normas Brasileiras de Contabilidade.</div>
+
+          <p><span class="artigo">Art. 56.</span> As despesas devem observar o orçamento aprovado na forma deste Estatuto, que comportará os dispêndios de manutenção, funcionamento e os gastos contratados, devidamente aprovados pela Assembleia Geral e autorizados pela Diretoria Executiva.</p>
+
+          <p><span class="artigo">Art. 57.</span> As despesas serão realizadas com observância à proposta orçamentária aprovada pela Assembleia Geral, submetendo-se à fiscalização do Conselho Fiscal.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> As receitas e as despesas serão escrituradas em livro próprio, obedecidas as formalidades legais.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> O exercício financeiro anual será iniciado em 1º de janeiro e encerrado em 31 de dezembro.</div>
+
+          <p><span class="artigo">Art. 58.</span> Em casos urgentes e excepcionais, o Presidente do Sindicato poderá autorizar despesas não previstas no orçamento anual, desde que haja disponibilidade financeira, obedecidas as normas que regem a entidade.</p>
+
+          <h2 id="titulo9">TÍTULO IX<br>DOS SINDICALIZADOS DA CATEGORIA</h2>
+
+          <h3>CAPÍTULO I<br>DOS DIREITOS DOS FILIADOS</h3>
+
+          <p><span class="artigo">Art. 59.</span> Aos filiados em dia com suas obrigações estatutárias, serão assegurados os seguintes direitos:</p>
+          <div class="inciso">I - participar, discutir, votar e ser votado nas Assembleias Gerais da entidade, nas eleições para a composição de cargos eletivos da entidade, nos congressos, reuniões, comissões e demais atividades, observados os impedimentos legais presentes;</div>
+          <div class="inciso">II - requerer, na forma estatutária, a convocação da Assembleia Geral;</div>
+          <div class="inciso">III - representar e requerer informações, por escrito, perante os órgãos do Sindicato sobre assuntos relativos à sua condição de sindicalizado;</div>
+          <div class="inciso">IV - utilizar os serviços e instalações do Sindicato, obedecidas as normas internas pertinentes;</div>
+          <div class="inciso">V - gozar das prerrogativas de sindicalizado, asseguradas neste estatuto e na legislação vigente;</div>
+          <div class="inciso">VI - encaminhar à Diretoria Executiva, por escrito, sugestões e propostas de interesse coletivo;</div>
+          <div class="inciso">VII - usufruir da assistência jurídica contratada e oferecida pelo SINPRF/ES, para defesa de situações provenientes do exercício da atividade funcional e sindical, mesmo após eventual demissão do servidor, enquanto couber recurso administrativo ou judicial;</div>
+          <div class="inciso">VIII - concessão de benefício assistencial de auxílio-invalidez, pago uma única vez, em pecúnia, em decorrência de fato de serviço que resulte em invalidez permanente do filiado, conforme regulamentação em ato normativo da Assembleia Geral.</div>
+
+          <div class="paragrafo"><strong>§ 1º</strong> Os sindicalizados especiais não poderão concorrer aos cargos da Diretoria Executiva.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> Os direitos previstos no inciso I deste artigo somente poderão ser exercidos pessoalmente pelo sindicalizado, sendo vedada a representação por procuração.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> A assistência jurídica não será prestada, nem custeada, ao filiado para causas em face do SINPRF/ES, nem quando se tratar de lide entre os próprios sindicalizados, exceto em caso de ação de cobrança em razão de pendência financeira do filiado com a entidade ou para a tutela de direitos e interesses de membros da Diretoria atingidos em decorrência ou em razão do exercício do mandato.</div>
+
+          <div class="paragrafo"><strong>§ 4º</strong> A Assembleia Geral poderá, por ato normativo, criar outros direitos aos sindicalizados.</div>
+
+          <h3>CAPÍTULO II<br>DOS DEVERES</h3>
+
+          <p><span class="artigo">Art. 60.</span> São deveres dos filiados:</p>
+          <div class="inciso">I - recolher, pontualmente, as contribuições sindicais;</div>
+          <div class="inciso">II - cumprir este Estatuto e as normas do sistema sindical federativo da categoria;</div>
+          <div class="inciso">III - zelar pelo patrimônio da entidade, conservando-o e indenizando-o, sempre que nele causar prejuízo, de acordo com o que for apurado pela Diretoria Executiva;</div>
+          <div class="inciso">IV - comparecer às reuniões e Assembleias da Entidade;</div>
+          <div class="inciso">V - exercer com dedicação, probidade e zelo o cargo ou função, quando escolhido ou eleito, e ainda, as tarefas que lhe forem atribuídas pela Diretoria, salvo justo impedimento;</div>
+          <div class="inciso">VI - respeitar e cumprir as decisões emanadas da Assembleia Geral;</div>
+          <div class="inciso">VII - manter-se a par da vida da entidade, não lhe sendo lícito alegar ignorância de qualquer dispositivo estatutário, regimental, regulamentar ou disposição administrativa como justificativa de ato praticado, prejudicial ao bom nome ou a atividade funcional da Instituição;</div>
+          <div class="inciso">VIII - manter atualizados os seus dados cadastrais junto à secretaria da entidade;</div>
+          <div class="inciso">IX - observar o decoro e a probidade no ambiente sindical.</div>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> A contribuição sindical mensal dos sindicalizados para custeio das atividades e serviços do SINPRF/ES incidirá sobre a remuneração bruta e será recolhida por meio de desconto em folha de pagamento ou pelo pagamento, por qualquer meio admitido.</div>
+
+          <h3>CAPÍTULO III<br>DAS PENALIDADES</h3>
+
+          <p><span class="artigo">Art. 61.</span> O filiado que infringir os dispositivos estatutários e as demais normas complementares do sistema sindical federativo, bem como as normas e regulamentos internos do SINPRF/ES, assegurado contraditório e a ampla defesa, estará passível das seguintes penalidades:</p>
+          <div class="inciso">I - advertência;</div>
+          <div class="inciso">II - multa;</div>
+          <div class="inciso">III - ressarcimento do dano;</div>
+          <div class="inciso">IV - suspensão;</div>
+          <div class="inciso">V - perda do mandato;</div>
+          <div class="inciso">VI - exclusão.</div>
+
+          <div class="paragrafo"><strong>§ 1º</strong> A aplicação das penalidades constantes dos incisos I a III são de competência da Diretoria Executiva e as do inciso IV a VI de competência da Assembleia Geral.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> A suposta falta cometida pelo filiado deverá ser examinada por uma comissão de sindicância composta, no mínimo, por 03 (três) membros dos órgãos da entidade, presidida pelo de cargo mais elevado, nomeados por ato do Presidente do Sindicato, que após a conclusão dos trabalhos, apresentará o relatório final à Diretoria Executiva ou à Assembleia Geral para julgamento, conforme o caso.</div>
+
+          <div class="paragrafo"><strong>§ 3º</strong> Para atingir suas finalidades, a comissão de sindicância poderá diligenciar, inquirir, tomar depoimentos e ouvir sindicalizados, outros integrantes da categoria e terceiros, podendo ainda solicitar, requerer e pedir vistas a documentos e informações junto às pessoas físicas ou jurídicas, além de outras medidas necessárias para a fiel e completa elucidação do caso.</div>
+
+          <div class="paragrafo"><strong>§ 4º</strong> Os filiados poderão recorrer das penas impostas pela Diretoria Executiva e interpor recurso, com efeito suspensivo, à Assembleia Geral do Sindicato, ou, no que couber, à Federação, no prazo máximo de 15 (quinze) dias, contados do ato da aplicação da penalidade, que será analisado e julgado na primeira Assembleia subsequente.</div>
+
+          <p><span class="artigo">Art. 62.</span> O processo de apuração de irregularidade contra filiado, instaurado pela entidade, não cessará caso o acusado se desfilie voluntariamente do sindicato.</p>
+
+          <p><span class="artigo">Art. 63.</span> Será assegurado o direito de ampla defesa ao filiado acusado, que poderá defender-se em qualquer fase do processo, pessoalmente ou por procuração, às suas expensas.</p>
+
+          <div class="paragrafo"><strong>Parágrafo único.</strong> O processo correrá à revelia caso o acusado, sem causa justificada, não compareça à convocação para prestar esclarecimentos.</div>
+
+          <p><span class="artigo">Art. 64.</span> Aplicam-se subsidiariamente a este Estatuto, em relação ao processamento de infrações na esfera sindical, as normas procedimentais relativas ao processo administrativo disciplinar dos servidores públicos federais.</p>
+
+          <h2 id="titulo10">TÍTULO X<br>DAS DISPOSIÇÕES GERAIS E TRANSITÓRIAS</h2>
+
+          <p><span class="artigo">Art. 65.</span> Serão nulos, de pleno direito, os atos praticados com objetivo de desvirtuar, impedir ou fraudar a aplicação dos preceitos contidos neste Estatuto e na legislação em vigor.</p>
+
+          <p><span class="artigo">Art. 66.</span> Não havendo disposição em contrário, prescreve em 02 (dois) anos o direito de pleitear a reparação de qualquer ato infringente de disposição contida neste Estatuto.</p>
+
+          <p><span class="artigo">Art. 67.</span> Ocorrendo a vacância coletiva dos cargos da Diretoria Executiva do SINPRF/ES, Conselho Fiscal e Delegado Representante, a Assembleia Geral, convocada por iniciativa de qualquer sindicalizado em dia com suas obrigações, elegerá os membros para a gestão interina da entidade, pelo prazo máximo de 90 dias, e deverá convocar eleições.</p>
+
+          <div class="paragrafo"><strong>§ 1º</strong> No caso de renúncia coletiva da Diretoria Executiva e do Conselho Fiscal do Sindicato, o Presidente da Federação baixará os atos necessários visando garantir a existência legal e a continuidade da administração sindical.</div>
+
+          <div class="paragrafo"><strong>§ 2º</strong> Entende-se como vacância coletiva, o afastamento definitivo, por qualquer motivo, de número igual ou superior a 2/3 (dois terços) dos membros, titulares e suplentes, de qualquer dos órgãos da Entidade.</div>
+
+          <p><span class="artigo">Art. 68.</span> O SINPRF/ES terá como símbolos o brasão, a bandeira e o hino.</p>
+
+          <p><span class="artigo">Art. 69.</span> Os casos omissos serão resolvidos pela Diretoria Executiva do Sindicato, observado o limite de sua competência.</p>
+
+          <p><span class="artigo">Art. 70.</span> Em até 12 meses, a Diretoria Executiva submeterá à Assembleia Geral proposta de atualização do Regulamento Eleitoral da entidade, observada as normas estatutárias vigentes e a legislação aplicável à matéria.</p>
+
+          <p><span class="artigo">Art. 71.</span> As alterações na composição da Diretoria Executiva somente produzirão efeitos a partir do mandato que iniciar-se-á em 1º de fevereiro de 2022.</p>
+
+          <p><span class="artigo">Art. 72.</span> Este Estatuto, devidamente modificado e aprovado pela Assembleia Geral Regional do dia 11 de agosto de 2ado de 2021, entra em vigor na data de seu registro no órgão competente.</p>
+
+          <div class="assinaturas">
+            <div style="font-style: italic;">Vitória/ES, 11 de agosto de 2021.</div>
+
+            <div class="assinatura-linha">
+              <span class="assinatura-nome">Itler José de Oliveira</span>
+              Presidente
+            </div>
+
+            <div class="assinatura-linha">
+              <span style="display:block; margin-bottom: 5px; font-size: 14px;">Visto:</span>
+              <span class="assinatura-nome">Igor Pinheiro de Santanna</span>
+              Advogado - OAB/ES nº 11.015
+            </div>
+          </div>
+
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notícias - SINPRF-ES (V2)</title>
+    <script src="js/path-resolver.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/main.js" defer></script>
+</head>
+<body>
+    <div id="site-header"></div>
+
+    <main>
+        <section class="hero-v2" id="cms-hero" style="min-height: 300px; background-image: url('img/noticias_hero.jpg');">
+            <div class="hero-v2-content">
+                <h1 id="hero-title">Notícias</h1>
+                <p id="hero-body">Fique por dentro das últimas atualizações e conquistas.</p>
+            </div>
+        </section>
+
+        <section class="cms-page-section">
+            <div class="cms-container">
+                <div id="content-blocks" class="cards-grid-v2">
+                    <!-- Conteúdo dinâmico via CMS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="site-footer"></div>
+
+    <script src="js/cms.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.CMS) window.CMS.loadPage('noticias');
+        });
+    </script>
+</body>
+</html>

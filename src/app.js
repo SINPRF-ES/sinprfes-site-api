@@ -30,6 +30,23 @@ app.options("*", cors());
 
 app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições
 app.use(express.json());
+
+// 🟢 NOVO: Suporte a site paralelo (v2/dev)
+// Prioridade A: Subdomínio dev.sinprfes.org.br
+// Prioridade B: Path prefix /dev/
+app.use((req, res, next) => {
+  const host = req.get('host') || '';
+  if (host.startsWith('dev.') || req.url.startsWith('/dev/')) {
+    // Se for path prefix, removemos o prefixo para servir os arquivos corretamente
+    if (req.url.startsWith('/dev/')) {
+      req.url = req.url.replace('/dev/', '/');
+      if (req.url === '' || req.url === '/') req.url = '/index.html';
+    }
+    return express.static(path.join(process.cwd(), "public_dev"))(req, res, next);
+  }
+  next();
+});
+
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/shared", express.static(path.join(process.cwd(), "shared")));
 
@@ -97,6 +114,9 @@ app.use("/api/push", pushRoutes);
 // Push de eventos
 app.use("/api/eventos", eventosRoutes);
 app.use("/api/eventos", eventoVotacoesRoutes); // vai usar subrotas /:id/votacoes
+
+// 🟧 NOVO: CMS-Lite para Blocos de Conteúdo
+app.use("/api/content-blocks", require("./routes/contentBlock.routes"));
 
 // Health Check simples
 app.get("/health", (_, res) => {

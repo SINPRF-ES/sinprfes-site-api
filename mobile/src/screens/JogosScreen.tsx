@@ -75,6 +75,9 @@ const JogosScreen = () => {
           observacoes: minha.observacoes || '',
           modalidades: minha.modalidades || [],
         });
+      } else {
+        setInscricao(null);
+        setForm({ sexo: '', qtd_familiares: '0', familiares: '', observacoes: '', modalidades: [] });
       }
 
       if (isManager) {
@@ -220,6 +223,8 @@ const styles = StyleSheet.create({
   tableHeaderText: { fontWeight: 'bold', color: '#003366' },
   tableRow: { flexDirection: 'row', padding: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
   tableCell: { fontSize: 12, color: '#333' },
+  offlineBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, padding: 8, backgroundColor: '#f8d7da', borderRadius: 8, marginBottom: 15, alignSelf: 'center' },
+  offlineText: { fontSize: 12, color: '#721c24', fontWeight: 'bold' },
 });
 
 export default JogosScreen;
