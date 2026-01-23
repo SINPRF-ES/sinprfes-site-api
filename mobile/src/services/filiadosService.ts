@@ -3,6 +3,7 @@ import api from './apiService';
 import { API_BASE_URL } from '../config/api';
 import type { Filiado } from '../types/filiado';
 import { salvarFiliadosOffline, listarFiliadosOffline } from '../database/db';
+import { logError } from '../infra/logger';
 
 const FILIADOS_ENDPOINT = `${API_BASE_URL}/api/filiados`;
 // Ajuste se sua rota real for diferente (ex.: /api/restrito/filiados)
@@ -19,19 +20,20 @@ interface FiliadoApi {
 
 // Busca lista de filiados na API
 export async function fetchFiliadosFromApi(token: string): Promise<Filiado[]> {
-  const resp = await fetch(FILIADOS_ENDPOINT, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  try {
+    const resp = await fetch(FILIADOS_ENDPOINT, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Erro ao buscar filiados: ${resp.status} - ${text}`);
-  }
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(`Erro ao buscar filiados: ${resp.status} - ${text}`);
+    }
 
-  const data: FiliadoApi[] = await resp.json();
+    const data: FiliadoApi[] = await resp.json();
 
   // Mapeia a resposta da API para o tipo Filiado usado no app/banco
   const lista: Filiado[] = data.map((item) => ({
@@ -44,7 +46,11 @@ export async function fetchFiliadosFromApi(token: string): Promise<Filiado[]> {
     atualizado_em: new Date().toISOString(),
   }));
 
-  return lista;
+    return lista;
+  } catch (err) {
+    logError('Service.fetchFiliadosFromApi', err);
+    throw err;
+  }
 }
 
 // Sincroniza: API → banco local

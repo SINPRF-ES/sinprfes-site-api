@@ -7,9 +7,8 @@ async function listar(perfilAcesso) {
   let query = `SELECT ${ASSEMBLEIA_COLUMNS} FROM assembleias`;
   const params = [];
 
-  if (["FILIADO", "COMUNICADOR"].includes(perfilAcesso)) {
-    query += " WHERE estado IN ('ABERTA', 'ENCERRADA')";
-  }
+  // Filiados agora podem ver todos os status (CRIADA, ABERTA, ENCERRADA)
+  // para consultar pauta e horários antecipadamente.
 
   query += " ORDER BY criado_em DESC";
 

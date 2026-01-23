@@ -79,6 +79,17 @@ export const logger = {
   error: (message: string, error?: Error, meta?: Record<string, unknown>) => log('ERROR', message, meta, error),
 };
 
+/**
+ * Helper unificado para log de erros com contexto.
+ * @param context Nome da tela ou ação onde o erro ocorreu
+ * @param err O objeto de erro capturado
+ * @param meta Dados adicionais para depuração (evitar PII)
+ */
+export const logError = (context: string, err: any, meta?: Record<string, unknown>) => {
+  const message = `[${context}] ${err?.message || 'Unknown Error'}`;
+  logger.error(message, err instanceof Error ? err : new Error(String(err)), meta);
+};
+
 export const getLogs = async (): Promise<LogEntry[]> => {
   try {
     const logsJson = await AsyncStorage.getItem(LOGS_KEY);

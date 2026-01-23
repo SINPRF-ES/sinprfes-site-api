@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin } from '../../services/assembleiaService';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
+import { logger } from '../../infra/logger';
 
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const { id } = route.params;
@@ -20,13 +21,25 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const fetchData = async () => {
     try {
       setLoading(true);
+      logger.info('ASSEMBLEIA_DETALHE_FETCH_START', { id, profile: usuario?.perfil_acesso });
+
       const [data, estadoData] = await Promise.all([
         getAssembleiaDetalhe(id),
         getAssembleiaEstado(id)
       ]);
+
+      logger.info('ASSEMBLEIA_DETALHE_FETCH_SUCCESS', {
+        id,
+        hasAssembleia: !!data,
+        hasEstado: !!estadoData,
+        estadoName: data?.estado,
+        hasQuorum: !!estadoData?.quorumVigente
+      });
+
       setAssembleia(data);
       setEstado(estadoData);
-    } catch (err) {
+    } catch (err: any) {
+      logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err, { id });
       console.error('[Assembleia.fetch]', err);
     } finally {
       setLoading(false);
@@ -104,11 +117,23 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }
   };
 
-  if (loading || !assembleia) {
+  if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
 
-  const hasCheckedIn = estado?.quorumVigente.userHasCheckedIn || false;
+  if (!assembleia) {
+    return (
+      <View style={styles.centered}>
+        <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#e74c3c" />
+        <Text style={styles.errorText}>Não foi possível carregar os dados desta assembleia.</Text>
+        <TouchableOpacity style={[styles.btnAction, { marginTop: 20 }]} onPress={fetchData}>
+          <Text style={styles.btnActionText}>Tentar Novamente</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
   const isAberta = assembleia.estado === 'ABERTA';
 
   return (
@@ -125,7 +150,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>Quórum Atual</Text>
-        <Text style={styles.infoValue}>{estado?.quorumVigente.contagem || 0} presentes</Text>
+        <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
 
         {isDiretoria && isAberta && (
           <TouchableOpacity style={styles.btnAction} onPress={handleGerarToken} disabled={actionLoading}>
@@ -198,7 +223,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8', padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10 },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   badgeCRIADA: { backgroundColor: '#cfe2ff' },

@@ -1,5 +1,6 @@
 import api from './apiService';
 import { Assembleia, AssembleiaEstado, VotacaoItem, Proposta } from '../types/assembleia';
+import { logError } from '../infra/logger';
 
 export const getAssembleias = async (): Promise<Assembleia[]> => {
   const response = await api.get('/api/assembleias');
@@ -12,8 +13,13 @@ export const getAssembleiaDetalhe = async (id: string): Promise<Assembleia> => {
 };
 
 export const getAssembleiaEstado = async (id: string): Promise<AssembleiaEstado> => {
-  const response = await api.get(`/api/assembleias/${id}/estado`);
-  return response.data;
+  try {
+    const response = await api.get(`/api/assembleias/${id}/estado`);
+    return response.data;
+  } catch (err) {
+    logError('Service.getAssembleiaEstado', err, { id });
+    throw err;
+  }
 };
 
 export const criarAssembleia = async (dados: Partial<Assembleia>): Promise<Assembleia> => {
@@ -35,7 +41,12 @@ export const gerarTokenQuorum = async (id: string): Promise<{ token: string }> =
 };
 
 export const realizarCheckin = async (id: string, token: string): Promise<void> => {
-  await api.post(`/api/assembleias/${id}/checkin`, { token });
+  try {
+    await api.post(`/api/assembleias/${id}/checkin`, { token });
+  } catch (err) {
+    logError('Service.realizarCheckin', err, { id });
+    throw err;
+  }
 };
 
 export const iniciarVotacao = async (id: string, dados: any): Promise<VotacaoItem> => {
@@ -44,7 +55,13 @@ export const iniciarVotacao = async (id: string, dados: any): Promise<VotacaoIte
 };
 
 export const enviarVoto = async (assembleiaId: string, votacaoId: string, opcao: 'SIM' | 'NAO'): Promise<void> => {
-  await api.post(`/api/assembleias/${assembleiaId}/votacao/${votacaoId}/votar`, { opcao });
+  try {
+    // FIX: Backend espera campo "voto"
+    await api.post(`/api/assembleias/${assembleiaId}/votacao/${votacaoId}/votar`, { voto: opcao });
+  } catch (err) {
+    logError('Service.enviarVoto', err, { assembleiaId, votacaoId, opcao });
+    throw err;
+  }
 };
 
 export const pedirPalavra = async (id: string): Promise<void> => {

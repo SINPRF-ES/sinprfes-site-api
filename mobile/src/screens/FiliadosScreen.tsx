@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
 import api, { getFiliados } from '../services/apiService';
 import FiliadoCard from '../components/FiliadoCard';
@@ -10,11 +11,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
 import { getCanonicalFiliadoId, isGestao } from '../utils/filiadoUtils';
+import { logger } from '../infra/logger';
 
 export default function FiliadosScreen({ navigation, route }: any) {
   const { usuario } = useAuth();
   const [filiados, setFiliados] = useState<Filiado[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
+  const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -26,7 +30,12 @@ export default function FiliadosScreen({ navigation, route }: any) {
       if (!isRefresh) setLoading(true);
       else setRefreshing(true);
 
-      const data = await getFiliados();
+      const params: any = {};
+      if (filtroCadastro !== 'CADASTRO_ATIVO' && ehGestao) {
+        params.incluirArquivados = '1';
+      }
+
+      const data = await getFiliados(params);
 
       let processedData = data;
       // Sanitização básica para perfil de filiado (diretório público interno)
@@ -52,11 +61,15 @@ export default function FiliadosScreen({ navigation, route }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [ehGestao, cacheKey]);
+  }, [ehGestao, cacheKey, filtroCadastro]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchData();
+      fetchData(true);
     }, [fetchData])
   );
 
@@ -72,14 +85,31 @@ export default function FiliadosScreen({ navigation, route }: any) {
     const digits = onlyDigits(searchTerm);
 
     return filiados.filter(f => {
+      // Filtro por Nome/CPF
       const nomeMatch = normalizeText(f.nome).includes(term);
       const cpfMatch = ehGestao && digits !== '' && onlyDigits(f.cpf || '').includes(digits);
-      return nomeMatch || cpfMatch;
+      if (!nomeMatch && !cpfMatch) return false;
+
+      // Filtro Situação Funcional
+      if (filtroFuncional !== 'TODOS') {
+        const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
+        if (situacao !== filtroFuncional) return false;
+      }
+
+      // Filtro Estado do Cadastro (local filter additionally)
+      if (ehGestao) {
+        if (filtroCadastro === 'ARQUIVADOS' && !f.arquivado_em) return false;
+        if (filtroCadastro === 'CADASTRO_ATIVO' && f.arquivado_em) return false;
+      }
+
+      return true;
     });
-  }, [filiados, searchTerm, ehGestao]);
+  }, [filiados, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
 
   const handleEdit = (filiado: Filiado) => {
-    navigation.navigate('EditarFiliado', { filiadoId: getCanonicalFiliadoId(filiado) });
+    const filiadoId = getCanonicalFiliadoId(filiado);
+    logger.info('NAVIGATE_TO_EDITAR_FILIADO', { filiadoId });
+    navigation.navigate('EditarFiliado', { filiadoId });
   };
 
   if (loading && filiados.length === 0) {
@@ -101,6 +131,42 @@ export default function FiliadosScreen({ navigation, route }: any) {
             <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
           </TouchableOpacity>
         )}
+      </View>
+
+      <View style={styles.filterRow}>
+        {ehGestao && (
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Cadastro:</Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={filtroCadastro}
+                onValueChange={(v) => setFiltroCadastro(v)}
+                style={styles.picker}
+                mode="dropdown"
+              >
+                <Picker.Item label="Ativos" value="CADASTRO_ATIVO" />
+                <Picker.Item label="Arquivados" value="ARQUIVADOS" />
+                <Picker.Item label="Todos" value="TODOS" />
+              </Picker>
+            </View>
+          </View>
+        )}
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Situação:</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={filtroFuncional}
+              onValueChange={(v) => setFiltroFuncional(v)}
+              style={styles.picker}
+              mode="dropdown"
+            >
+              <Picker.Item label="Todos" value="TODOS" />
+              <Picker.Item label="Ativo" value="ATIVO" />
+              <Picker.Item label="Veterano" value="VETERANO" />
+              <Picker.Item label="Pensionista" value="PENSIONISTA" />
+            </Picker>
+          </View>
+        </View>
       </View>
 
       <FlatList
@@ -137,8 +203,13 @@ export default function FiliadosScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, paddingHorizontal: 12, borderRadius: 10, elevation: 2 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginTop: 16, marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 12, borderRadius: 10, elevation: 2 },
   searchInput: { flex: 1, paddingVertical: 12, marginLeft: 8, fontSize: 16 },
+  filterRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 16 },
+  filterGroup: { flex: 1 },
+  filterLabel: { fontSize: 11, color: '#666', marginBottom: 2, fontWeight: 'bold' },
+  pickerWrapper: { backgroundColor: '#fff', borderRadius: 8, height: 40, justifyContent: 'center', elevation: 1 },
+  picker: { height: 40 },
   empty: { padding: 40, alignItems: 'center' },
   fab: { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#003366', justifyContent: 'center', alignItems: 'center', elevation: 4 },
 });
