@@ -23,7 +23,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
   const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfilUsuario);
 
   const isTargetAdmin = filiado?.perfil_acesso === 'ADMIN';
-  const isSelf = filiado && getCanonicalFiliadoId(filiado) === getCanonicalFiliadoId(usuario);
+  const isSelf = !!(filiado && usuario && getCanonicalFiliadoId(filiado) === getCanonicalFiliadoId(usuario));
 
   // Regra de UI:
   // ADMIN muda qualquer um (menos a si mesmo por segurança).

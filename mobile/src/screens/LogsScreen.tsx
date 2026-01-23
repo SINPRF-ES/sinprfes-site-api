@@ -13,8 +13,9 @@ const LogsScreen = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (usuario?.perfil_acesso !== 'ADMIN') {
-      Alert.alert('Acesso Negado', 'Esta área é restrita a administradores.');
+    const isAuthorized = usuario?.perfil_acesso && ['ADMIN', 'DIRETORIA'].includes(usuario.perfil_acesso);
+    if (!isAuthorized) {
+      Alert.alert('Acesso Negado', 'Esta área é restrita a administradores e diretoria.');
       navigation.goBack();
     }
   }, [usuario, navigation]);
@@ -75,7 +76,9 @@ const LogsScreen = () => {
     <View style={styles.container}>
       <View style={styles.buttonContainer}>
         <Button title="Copiar Logs" onPress={handleCopyLogs} />
-        <Button title="Limpar Logs" onPress={handleClearLogs} color="red" />
+        {usuario?.perfil_acesso === 'ADMIN' && (
+          <Button title="Limpar Logs" onPress={handleClearLogs} color="red" />
+        )}
       </View>
       {logs.length === 0 ? (
         <View style={styles.centered}>

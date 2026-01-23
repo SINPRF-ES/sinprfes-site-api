@@ -74,8 +74,8 @@ const DrawerNavigator = () => {
         component={SegurancaScreen}
         options={{ title: 'Segurança' }}
       />
-      {/* Tela de Diagnóstico/Logs - Apenas para ADMINS */}
-      {usuario?.perfil_acesso === 'ADMIN' && (
+      {/* Tela de Diagnóstico/Logs - ADMIN e DIRETORIA */}
+      {usuario?.perfil_acesso && ['ADMIN', 'DIRETORIA'].includes(usuario.perfil_acesso) && (
         <Drawer.Screen
           name="Logs"
           component={LogsScreen}
