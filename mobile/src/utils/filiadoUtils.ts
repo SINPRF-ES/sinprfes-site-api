@@ -17,6 +17,55 @@ export function normalizeSituacaoFuncional(value?: string | null): 'ATIVO' | 'VE
 }
 
 /**
+ * Canoniza o ID do filiado para string numérica, garantindo consistência
+ * entre o app (que prefere strings) e o backend (que usa INTEGER/SERIAL).
+ */
+export function getCanonicalFiliadoId(obj: any): string {
+  if (!obj) return '';
+  // Se for um objeto (filiado ou usuario), pega o .id
+  const id = typeof obj === 'object' ? obj.id : obj;
+  if (id === undefined || id === null) return '';
+  return String(id);
+}
+
+/**
+ * Alias para getCanonicalFiliadoId para expressar intenção de parsear um ID vindo de rota.
+ */
+export function parseCanonicalFiliadoId(id: any): string {
+  return getCanonicalFiliadoId(id);
+}
+
+/**
+ * Roles canônicas do sistema.
+ */
+export const ROLES = {
+  ADMIN: 'ADMIN',
+  DIRETORIA: 'DIRETORIA',
+  FUNCIONARIO: 'FUNCIONARIO',
+  ORGANIZADOR: 'ORGANIZADOR',
+  COMUNICADOR: 'COMUNICADOR',
+  FILIADO: 'FILIADO',
+};
+
+/**
+ * Verifica se o perfil tem acesso de gestão (administrativo geral).
+ */
+export const isGestao = (perfil?: string | null) => {
+  if (!perfil) return false;
+  const p = perfil.toUpperCase();
+  return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO].includes(p);
+};
+
+/**
+ * Verifica se o perfil tem acesso de diretoria (pode criar assembleias, ver logs, etc).
+ */
+export const isDiretoria = (perfil?: string | null) => {
+  if (!perfil) return false;
+  const p = perfil.toUpperCase();
+  return [ROLES.ADMIN, ROLES.DIRETORIA].includes(p);
+};
+
+/**
  * Log de depuração apenas em ambiente de desenvolvimento.
  */
 export const logDebug = (tag: string, data: any) => {

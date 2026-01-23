@@ -4,10 +4,11 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-na
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
+import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
-  const isGestao = usuario?.perfil_acesso && ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso);
+  const isGestao = checkIsGestao(usuario?.perfil_acesso);
 
   const handleLogoutPress = () => {
     Alert.alert(

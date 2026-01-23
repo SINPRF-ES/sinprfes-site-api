@@ -97,6 +97,39 @@ function validarESanitizarDependentes(body) {
 }
 
 /**
+ * GET /api/filiados/:id
+ */
+exports.getFiliadoById = async (req, res) => {
+  const idAlvo = parseFiliadoId(req, res);
+  if (idAlvo === null) return;
+
+  try {
+    const filiado = await buscarPorId(idAlvo);
+
+    if (!filiado) {
+      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    }
+
+    // Apenas gestores podem ver detalhes de outros filiados
+    const atorId = req.user.id;
+    const perfilAtor = (req.user.perfil_acesso || "FILIADO").toUpperCase();
+    const ehGestor = perfilGestao(perfilAtor);
+    const ehProprioUsuario = String(atorId) === String(idAlvo);
+
+    if (!ehGestor && !ehProprioUsuario) {
+      return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+    }
+
+    const { senha_hash, twofa_secret, ...dadosFiliado } = filiado;
+
+    return res.json(dadosFiliado);
+  } catch (err) {
+    log.error("FiliadosGetByIdErro", { error: err, requestId: req.requestId, userId: req.user?.id, targetId: idAlvo });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
+  }
+};
+
+/**
  * GET /api/filiados/me
  */
 exports.getMe = async (req, res) => {

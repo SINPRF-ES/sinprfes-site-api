@@ -12,6 +12,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { Filiado } from '../types/filiado';
 import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
+import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',
@@ -116,7 +117,7 @@ export default function CriarFiliadoScreen({ navigation }) {
   };
 
   // Renderiza apenas se for perfil de GESTAO
-  if (!usuario || !['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(usuario.perfil_acesso)) {
+  if (!usuario || !checkIsGestao(usuario.perfil_acesso)) {
     return (
       <View style={styles.centered}>
         <Text>Acesso negado.</Text>
