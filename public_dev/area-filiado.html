@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Área do Filiado - SINPRF/ES</title>
+  <script src="js/path-resolver.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="js/main.js" defer></script>
+
+  <!-- Scripts Utilitários (Ordem Crítica) -->
+  <script src="js/shared/format/formatters.js"></script>
+  <script src="js/area-filiado/utils.js"></script>
+  <script src="js/area-filiado/age-utils.js"></script>
+  <script src="js/area-filiado/parentesco-utils.js"></script>
+
+  <!-- Módulos de Seção -->
+  <script src="js/area-filiado/navegacao.js"></script>
+  <script src="js/area-filiado/cms-admin.js"></script>
+  <script src="js/area-filiado/seguranca.js"></script>
+  <script src="js/area-filiado/meus-dados.js"></script>
+  <script src="js/area-filiado/filiados-admin.js"></script>
+  <script src="js/area-filiado/ressarcimento.js"></script>
+  <script src="js/area-filiado/jogos.js"></script>
+  <script src="js/area-filiado/publicacoes.js"></script>
+
+  <!-- Inicializador Principal -->
+  <script src="js/area-filiado.js"></script>
+</head>
+<body class="af-body">
+  <div class="af-container">
+    <header class="af-header">
+      <div class="af-header-content">
+        <h1>SINPRF/ES</h1>
+        <button id="btn-logout" class="btn btn-outline btn-sm">Sair</button>
+      </div>
+    </header>
+
+    <div class="af-main-layout">
+      <!-- Sidebar / Nav -->
+      <nav class="af-sidebar">
+        <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
+        <button class="af-nav-item" data-target="sec-filiados">👥 Filiados</button>
+        <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
+        <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
+        <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
+        <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
+      </nav>
+
+      <!-- Conteúdo Principal -->
+      <main class="af-content">
+        <section id="sec-meus-dados" class="af-section active">
+          <div id="area-filiado-conteudo">
+            <p>Carregando seus dados...</p>
+          </div>
+          <div id="alerta-endereco-desatualizado" class="alerta alerta-warning" style="display:none; margin-top:20px;"></div>
+        </section>
+
+        <section id="sec-filiados" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
+        </section>
+
+        <section id="sec-publicacoes" class="af-section" style="display:none;">
+           <div class="section-card">
+              <p>Carregando biblioteca...</p>
+           </div>
+        </section>
+
+        <section id="sec-ressarcimento" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
+        </section>
+
+        <section id="sec-jogos" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
+        </section>
+
+        <section id="sec-cms" class="af-section" style="display:none;">
+          <div class="section-card">
+              <h2>Gerenciar Conteúdo do Site</h2>
+              <p class="section-subtitle">Edite os blocos de informação da Home e Notícias.</p>
+
+              <div class="field-row" style="max-width: 300px;">
+                  <div class="field-group">
+                      <label>Selecionar Página</label>
+                      <select id="cms-page-selector">
+                          <option value="home">Início (Home)</option>
+                          <option value="noticias">Notícias</option>
+                      </select>
+                  </div>
+              </div>
+
+              <div id="cms-blocks-admin" style="margin-top:20px; display: flex; flex-direction: column; gap: 20px;">
+                  <p>Carregando blocos...</p>
+              </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal de Edição de Filiado -->
+  <div id="modal-editar-filiado" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-titulo">Editar Filiado</h2>
+        <button type="button" class="modal-close" onclick="document.getElementById('modal-editar-filiado').style.display='none'">×</button>
+      </div>
+      <div class="modal-body" id="modal-corpo">
+        <!-- Form carregado dinamicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates -->
+  <template id="template-dependentes">
+    <div class="dependente-item section-box" style="margin-top:15px; background: #fafafa;">
+        <h4 style="margin-bottom:12px; font-size:0.9rem; color:#666;">Dependente <span class="dependente-numero">N</span></h4>
+        <div class="field-row">
+            <div class="field-group">
+                <label>Nome</label>
+                <input type="text" name="depN_nome" id="depN_nome" />
+            </div>
+            <div class="field-group">
+                <label>CPF</label>
+                <input type="text" name="depN_cpf" id="depN_cpf" />
+            </div>
+        </div>
+        <div class="field-row">
+            <div class="field-group">
+                <label>Nascimento</label>
+                <input type="date" name="depN_data_nascimento" id="depN_data_nascimento" />
+            </div>
+            <div class="field-group">
+                <label>Parentesco</label>
+                <select name="depN_parentesco_select" id="depN_parentesco_select"></select>
+                <input type="text" name="depN_parentesco_outro" id="depN_parentesco_outro" style="display:none; margin-top:5px;" placeholder="Qual parentesco?" />
+                <input type="hidden" name="depN_parentesco" id="depN_parentesco" />
+            </div>
+        </div>
+    </div>
+  </template>
+
+</body>
+</html>
