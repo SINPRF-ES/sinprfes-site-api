@@ -52,6 +52,18 @@ async function estadoCompleto(req, res) {
   }
 }
 
+async function diagnostico(req, res) {
+  const start = Date.now();
+  try {
+    const data = await service.buscarDiagnostico(req.params.id);
+    log.info("AssembleiaDiagnosticoAcessado", { requestId: req.requestId, assembleiaId: req.params.id, userId: req.user.id });
+    res.json(data);
+  } catch (err) {
+    log.error("AssembleiaDiagnosticoErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function criar(req, res) {
   const start = Date.now();
   try {
@@ -170,6 +182,9 @@ async function checkin(req, res) {
     // Verificar cooldown
     const failureData = failedCheckinAttempts.get(userId);
     if (failureData && failureData.count >= MAX_FAILED_ATTEMPTS && Date.now() - failureData.lastAttempt < COOLDOWN_TIME) {
+        if (process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true') {
+           log.warn("SUPORTE_CHECKIN_BLOQUEADO", { requestId: req.requestId, userId, assembleiaId: id });
+        }
         return res.status(429).json({ error: "Muitas tentativas inválidas. Tente novamente em alguns minutos." });
     }
 
@@ -188,8 +203,8 @@ async function checkin(req, res) {
         failedCheckinAttempts.set(userId, { count: currentFailures + 1, lastAttempt: Date.now() });
 
         await service.registrarAuditoria(id, userId, 'CHECKIN_FALHA_TOKEN', { token, requestId: req.requestId });
-        if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
-            log.warn("PilotoCheckinFriction", { requestId: req.requestId, userId, assembleiaId: id, reason: "Invalid Token" });
+        if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true' || process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true') {
+            log.warn("CHECKIN_FALHOU", { requestId: req.requestId, userId, assembleiaId: id, token_tentado: token, motivo: "Token Inválido" });
         }
         return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
     }
@@ -303,7 +318,12 @@ async function votar(req, res) {
      }
 
     const elegivel = await service.verificarElegibilidade(vid, req.user.id);
-    if (!elegivel) return res.status(403).json({ error: Textos.ASSEMBLEIA.NAO_ELEGIVEL });
+    if (!elegivel) {
+        if (process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true') {
+            log.warn("VOTO_REJEITADO", { requestId: req.requestId, userId: req.user.id, assembleiaId: id, votacaoId: vid, motivo: "Usuário Inelegível" });
+        }
+        return res.status(403).json({ error: Textos.ASSEMBLEIA.NAO_ELEGIVEL });
+    }
 
     await service.registrarVoto(vid, req.user.id, voto, id);
 
@@ -443,6 +463,7 @@ module.exports = {
   encerrarVotacao,
   pedirPalavra,
   criarProposta,
+  diagnostico,
   gerarRelatorio,
   uploadEdital
 };

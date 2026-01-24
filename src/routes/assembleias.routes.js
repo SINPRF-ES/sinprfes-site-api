@@ -44,4 +44,10 @@ router.post("/:id/propostas", auth, controller.criarProposta);
 // Relatório
 router.post("/:id/relatorio", auth, requirePermission("VOTACAO_GERENCIAR"), controller.gerarRelatorio);
 
+// Diagnóstico (Admin)
+router.get("/:id/diagnostico", auth, (req, res, next) => {
+    if (req.user.perfil_acesso === 'ADMIN') return next();
+    res.status(403).json({ error: "Acesso restrito a administradores" });
+}, controller.diagnostico);
+
 module.exports = router;

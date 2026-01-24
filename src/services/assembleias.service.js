@@ -643,6 +643,61 @@ async function listarPropostas(assembleiaId) {
   return rows;
 }
 
+async function buscarDiagnostico(assembleiaId) {
+  const socket = require("../websocket/assembleia.socket");
+
+  const assembleia = await buscarPorId(assembleiaId);
+  if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
+
+  const [mesa, ultimoQuorum, votacaoAtiva] = await Promise.all([
+    buscarMesa(assembleiaId),
+    buscarUltimoQuorum(assembleiaId),
+    buscarVotacaoAtiva(assembleiaId)
+  ]);
+
+  let totalCheckins = 0;
+  if (ultimoQuorum) {
+    const { rows } = await pool.query("SELECT COUNT(*) as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1", [ultimoQuorum.id]);
+    totalCheckins = parseInt(rows[0].total);
+  }
+
+  const inconsistencias = [];
+  if (assembleia.estado === ASSEMBLEIA_STATES.EM_CURSO) {
+    if (!mesa) inconsistencias.push("Mesa não definida em assembleia em curso.");
+    if (ultimoQuorum && totalCheckins < (ultimoQuorum.quorum_necessario || 0)) {
+       inconsistencias.push("Quórum abaixo do necessário para o tipo de chamada.");
+    }
+  }
+
+  return {
+    timestamp: new Date().toISOString(),
+    assembleia_id: assembleiaId,
+    estado: assembleia.estado,
+    sockets_conectados: socket.getRoomSocketCount(assembleiaId),
+    quorum: ultimoQuorum ? {
+      token: ultimoQuorum.token,
+      total_presentes: totalCheckins,
+      necessario: ultimoQuorum.quorum_necessario,
+      tipo: ultimoQuorum.tipo_chamada
+    } : null,
+    mesa: mesa ? {
+      presidente: mesa.presidente_nome,
+      secretario: mesa.secretario_nome
+    } : null,
+    votacao_ativa: votacaoAtiva ? {
+      id: votacaoAtiva.id,
+      titulo: votacaoAtiva.titulo,
+      status: votacaoAtiva.status
+    } : null,
+    inconsistencias,
+    piloto: {
+      ativo: process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true',
+      id_alvo: process.env.ASSEMBLEIA_PILOTO_ID,
+      suporte: process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true'
+    }
+  };
+}
+
 async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
   const assembleia = await buscarPorId(assembleiaId);
   if (!assembleia) return null;
@@ -759,5 +814,6 @@ module.exports = {
   verificarElegibilidadePorQuorum,
   definirMesa,
   buscarMesa,
-  buscarEstadoCompleto
+  buscarEstadoCompleto,
+  buscarDiagnostico
 };
