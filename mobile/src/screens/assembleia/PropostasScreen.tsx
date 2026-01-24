@@ -17,7 +17,7 @@ export default function PropostasScreen({ route }: any) {
     }
     try {
       setLoading(true);
-      await submeterProposta(id, { titulo, descricao });
+      await submeterProposta(id, { titulo, pauta: descricao });
       Alert.alert('Sucesso', 'Proposta enviada!');
       setTitulo('');
       setDescricao('');

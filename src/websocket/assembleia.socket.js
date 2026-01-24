@@ -20,6 +20,13 @@ function init(server) {
   return io;
 }
 
+function getRoomSocketCount(assembleiaId) {
+  if (!io) return 0;
+  const roomName = `assembleia_${assembleiaId}`;
+  const room = io.sockets.adapter.rooms.get(roomName);
+  return room ? room.size : 0;
+}
+
 function getIO() {
   if (!io) {
     throw new Error("Socket.io not initialized!");

@@ -38,15 +38,19 @@ export const criarAssembleia = async (dados: Partial<Assembleia>): Promise<Assem
 };
 
 export const abrirAssembleia = async (id: string): Promise<void> => {
-  await api.patch(`/api/assembleias/${id}/abrir`);
+  await api.post(`/api/assembleias/${id}/abrir`);
+};
+
+export const iniciarExecucao = async (id: string): Promise<void> => {
+  await api.post(`/api/assembleias/${id}/iniciar-execucao`);
 };
 
 export const encerrarAssembleia = async (id: string): Promise<void> => {
-  await api.patch(`/api/assembleias/${id}/encerrar`);
+  await api.post(`/api/assembleias/${id}/encerrar`);
 };
 
-export const gerarTokenQuorum = async (id: string): Promise<{ token: string }> => {
-  const response = await api.post(`/api/assembleias/${id}/quorum`);
+export const gerarTokenQuorum = async (id: string, dados: { tipo_chamada: string; observacao?: string }): Promise<{ token: string; quorum_id: string }> => {
+  const response = await api.post(`/api/assembleias/${id}/token`, dados);
   return response.data;
 };
 
@@ -60,14 +64,13 @@ export const realizarCheckin = async (id: string, token: string): Promise<void> 
 };
 
 export const iniciarVotacao = async (id: string, dados: any): Promise<VotacaoItem> => {
-  const response = await api.post(`/api/assembleias/${id}/votacao`, dados);
+  const response = await api.post(`/api/assembleias/${id}/votacoes`, dados);
   return response.data;
 };
 
 export const enviarVoto = async (assembleiaId: string, votacaoId: string, opcao: 'SIM' | 'NAO'): Promise<void> => {
   try {
-    // FIX: Backend espera campo "voto"
-    await api.post(`/api/assembleias/${assembleiaId}/votacao/${votacaoId}/votar`, { voto: opcao });
+    await api.post(`/api/assembleias/${assembleiaId}/votacoes/${votacaoId}/voto`, { voto: opcao });
   } catch (err) {
     logError('Service.enviarVoto', err, { assembleiaId, votacaoId, opcao });
     throw err;
@@ -83,6 +86,15 @@ export const submeterProposta = async (id: string, dados: any): Promise<Proposta
   return response.data;
 };
 
+export const encerrarVotacao = async (assembleiaId: string, votacaoId: string): Promise<void> => {
+  await api.post(`/api/assembleias/${assembleiaId}/votacoes/${votacaoId}/encerrar`);
+};
+
+export const solicitarRelatorio = async (id: string): Promise<{ request_id: string; auth_code: string }> => {
+  const response = await api.post(`/api/assembleias/${id}/relatorio`);
+  return response.data;
+};
+
 export const uploadEdital = async (formData: FormData): Promise<{ url: string }> => {
   const response = await api.post('/api/assembleias/upload-edital', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -90,6 +102,6 @@ export const uploadEdital = async (formData: FormData): Promise<{ url: string }>
   return response.data;
 };
 
-export const definirMesa = async (id: string, dados: { presidente_id: string; secretario_id: string }): Promise<void> => {
+export const definirMesa = async (id: string, dados: { presidente_user_id: string; secretario_user_id: string }): Promise<void> => {
   await api.post(`/api/assembleias/${id}/mesa`, dados);
 };

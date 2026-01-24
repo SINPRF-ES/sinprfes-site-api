@@ -51,5 +51,16 @@ module.exports = {
     ATUALIZAR_DADOS: "Erro interno ao atualizar dados.",
     CRIAR_FILIADO: "Erro interno ao criar filiado.",
     RESET_SENHA: "Erro interno ao redefinir a senha.",
+  },
+
+  ASSEMBLEIA: {
+    NAO_ENCONTRADA: "Assembleia não encontrada.",
+    TRANSICAO_INVALIDA: "Transição de estado inválida.",
+    MESA_NAO_DEFINIDA: "A mesa (Presidente e Secretário) deve estar definida e presente para iniciar a execução.",
+    TOKEN_INVALIDO: "Token inválido, expirado ou recontagem em curso.",
+    NAO_ELEGIVEL: "Você não possui check-in no quórum deste item e não pode votar.",
+    TEMPO_EXPIRADO: "O tempo para votação expirou.",
+    VOTACAO_ENCERRADA: "Votação não está ativa ou já foi encerrada.",
+    APENAS_PRESIDENTE: "Apenas o Presidente da Mesa pode realizar esta ação."
   }
 };
