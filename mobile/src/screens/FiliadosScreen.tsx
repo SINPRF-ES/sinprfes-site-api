@@ -14,6 +14,7 @@ import { onlyDigits } from '../shared/format/formatters';
 import { getCanonicalFiliadoId, isGestao } from '../utils/filiadoUtils';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 export default function FiliadosScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
@@ -72,8 +73,21 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
   useFocusEffect(
     useCallback(() => {
+      navigation.setOptions({
+        headerRight: () => {
+          const actions: MenuAction[] = [];
+          if (ehGestao) {
+            actions.push({
+              label: 'Novo Filiado',
+              icon: 'account-plus',
+              onPress: () => navigation.navigate('CriarFiliado')
+            });
+          }
+          return <HeaderMenu actions={actions} />;
+        }
+      });
       fetchData(true);
-    }, [fetchData])
+    }, [fetchData, ehGestao])
   );
 
   useEffect(() => {
@@ -195,14 +209,6 @@ export default function FiliadosScreen({ navigation, route }: any) {
         }
       />
 
-      {ehGestao && (
-        <TouchableOpacity
-          style={[styles.fab, { bottom: 20 + insets.bottom }]}
-          onPress={() => navigation.navigate('CriarFiliado')}
-        >
-          <MaterialCommunityIcons name="plus" size={30} color="#fff" />
-        </TouchableOpacity>
-      )}
     </SafeScreen>
   );
 }

@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin } from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
+import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
@@ -55,7 +56,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }, [id])
   );
 
-  const handleAbrir = async () => {
+
+  const handleAbrir = useCallback(async () => {
     Alert.alert('Confirmar', 'Deseja abrir esta assembleia para participação?', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Sim, Abrir', onPress: async () => {
@@ -70,9 +72,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         }
       }}
     ]);
-  };
+  }, [id, fetchData]);
 
-  const handleEncerrar = async () => {
+  const handleEncerrar = useCallback(async () => {
     Alert.alert('Confirmar', 'Deseja encerrar definitivamente esta assembleia?', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Sim, Encerrar', style: 'destructive', onPress: async () => {
@@ -87,9 +89,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         }
       }}
     ]);
-  };
+  }, [id, fetchData]);
 
-  const handleGerarToken = async () => {
+  const handleGerarToken = useCallback(async () => {
     try {
       setActionLoading(true);
       const res = await gerarTokenQuorum(id);
@@ -110,7 +112,26 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [id, fetchData]);
+
+  useEffect(() => {
+    const isAberta = assembleia?.estado === 'ABERTA';
+    const actions: MenuAction[] = [];
+    if (isDiretoria && assembleia) {
+      if (assembleia.estado === 'CRIADA') {
+        actions.push({ label: 'Abrir Assembleia', icon: 'play-circle-outline', onPress: handleAbrir });
+      }
+      if (isAberta) {
+        actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+        actions.push({ label: 'Gerar Token Quórum', icon: 'key-variant', onPress: handleGerarToken });
+        actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
+      }
+    }
+    navigation.setOptions({
+      headerRight: () => <HeaderMenu actions={actions} />,
+      title: 'Detalhes'
+    });
+  }, [navigation, assembleia, isDiretoria, handleAbrir, handleGerarToken, handleEncerrar]);
 
   const handleCheckin = async () => {
     if (tokenInput.length !== 6) {
@@ -172,12 +193,6 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>Quórum Atual</Text>
         <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
-
-        {isDiretoria && isAberta && (
-          <TouchableOpacity style={styles.btnAction} onPress={handleGerarToken} disabled={actionLoading}>
-            <Text style={styles.btnActionText}>Gerar Novo Token de Quórum</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {isAberta && (
@@ -191,15 +206,6 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                     <MaterialCommunityIcons name="door-open" size={24} color="#fff" />
                     <Text style={styles.btnSalaText}>Ir para a Sala de Votação</Text>
                 </TouchableOpacity>
-                {isDiretoria && (
-                    <TouchableOpacity
-                        style={[styles.btnSala, { backgroundColor: '#f1c40f', marginTop: 10 }]}
-                        onPress={() => navigation.navigate('CriarItemVotacao', { id })}
-                    >
-                        <MaterialCommunityIcons name="plus-circle-outline" size={24} color="#003366" />
-                        <Text style={[styles.btnSalaText, { color: '#003366' }]}>Iniciar Nova Votação</Text>
-                    </TouchableOpacity>
-                )}
             </View>
           ) : (
             <View style={styles.checkinCard}>
@@ -221,23 +227,6 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         </View>
       )}
 
-      {isDiretoria && (
-        <View style={[styles.diretoriaSection, { paddingBottom: insets.bottom + 12 }]}>
-          <Text style={styles.sectionTitle}>Gestão (Diretoria)</Text>
-          <View style={styles.diretoriaButtons}>
-            {assembleia.estado === 'CRIADA' && (
-              <TouchableOpacity style={styles.btnManagement} onPress={handleAbrir} disabled={actionLoading}>
-                <Text style={styles.btnText}>Abrir Assembleia</Text>
-              </TouchableOpacity>
-            )}
-            {isAberta && (
-              <TouchableOpacity style={[styles.btnManagement, styles.btnDanger]} onPress={handleEncerrar} disabled={actionLoading}>
-                <Text style={styles.btnText}>Encerrar Assembleia</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
     </ScrollView>
     </SafeScreen>
   );

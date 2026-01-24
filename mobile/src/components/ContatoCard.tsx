@@ -9,10 +9,17 @@ interface Props {
   filiado: Filiado | null;
   setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
   isEditing?: boolean;
+  isManagement?: boolean;
   hideTitle?: boolean;
 }
 
-const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, hideTitle = false }) => {
+const ContatoCard: React.FC<Props> = ({
+  filiado,
+  setFiliado,
+  isEditing = false,
+  isManagement = false,
+  hideTitle = false
+}) => {
   const handlePhoneChange = (field: 'telefone1' | 'telefone2', value: string) => {
     const digits = onlyDigits(value);
     setFiliado(f => (f ? { ...f, [field]: digits } : null));
@@ -24,26 +31,26 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
 
       <Text style={styles.label}>Nome Completo</Text>
       <TextInput
-        style={isEditing ? styles.input : styles.inputDisabled}
+        style={isManagement ? styles.input : styles.inputDisabled}
         value={filiado?.nome || ''}
         onChangeText={(text) => setFiliado(f => f ? { ...f, nome: text } : null)}
         placeholder="Nome completo"
-        editable={isEditing}
+        editable={isManagement}
       />
 
       <Text style={styles.label}>CPF</Text>
       <TextInput
-        style={isEditing ? styles.input : styles.inputDisabled}
+        style={isManagement ? styles.input : styles.inputDisabled}
         value={formatCpf(filiado?.cpf || '')}
         onChangeText={(text) => setFiliado(f => f ? { ...f, cpf: onlyDigits(text).slice(0, 11) } : null)}
         placeholder="000.000.000-00"
         keyboardType="numeric"
         maxLength={14}
-        editable={isEditing}
+        editable={isManagement}
       />
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
-        style={isEditing ? styles.input : styles.inputDisabled}
+        style={isManagement ? styles.input : styles.inputDisabled}
         value={filiado?.data_nascimento ? toBrazilianDate(filiado.data_nascimento) : ''}
         onChangeText={(text) => {
           const formatted = formatDateToDdMmYyyy(text);
@@ -53,7 +60,7 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
         placeholder="DD/MM/AAAA"
         keyboardType="numeric"
         maxLength={10}
-        editable={isEditing}
+        editable={isManagement}
       />
 
       <Text style={styles.label}>Idade</Text>
@@ -65,21 +72,23 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
 
       <Text style={styles.label}>Telefone 1</Text>
       <TextInput
-        style={styles.input}
-        value={formatTelefone(filiado?.telefone1 || '')}
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={isEditing ? formatTelefone(filiado?.telefone1 || '') : (formatTelefone(filiado?.telefone1) || '—')}
         onChangeText={(text) => handlePhoneChange('telefone1', text)}
         placeholder="(00) 00000-0000"
         keyboardType="phone-pad"
         maxLength={15} // (xx) xxxxx-xxxx
+        editable={isEditing}
       />
       <Text style={styles.label}>Telefone 2</Text>
       <TextInput
-        style={styles.input}
-        value={formatTelefone(filiado?.telefone2 || '')}
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={isEditing ? formatTelefone(filiado?.telefone2 || '') : (formatTelefone(filiado?.telefone2) || '—')}
         onChangeText={(text) => handlePhoneChange('telefone2', text)}
         placeholder="Opcional"
         keyboardType="phone-pad"
         maxLength={15}
+        editable={isEditing}
       />
       <Text style={styles.label}>Email 1</Text>
       <TextInput

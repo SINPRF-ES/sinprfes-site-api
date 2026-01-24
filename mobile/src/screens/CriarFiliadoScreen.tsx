@@ -1,5 +1,5 @@
 // mobile/src/screens/CriarFiliadoScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Button, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -13,6 +13,7 @@ import { Filiado } from '../types/filiado';
 import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',
@@ -37,13 +38,14 @@ const initialFiliadoState: Partial<Filiado> = {
   dep5_nome: '', dep5_cpf: '', dep5_nascimento: null, dep5_parentesco: '',
 };
 
-export default function CriarFiliadoScreen({ navigation }) {
+export default function CriarFiliadoScreen({ navigation }: any) {
   const { usuario } = useAuth();
   const netInfo = useNetInfo();
+
   const [filiado, setFiliado] = useState<Partial<Filiado>>(initialFiliadoState);
   const [loading, setLoading] = useState(false);
 
-  const handleCreate = async () => {
+  const handleCreate = useCallback(async () => {
     if (!netInfo.isConnected) {
       Alert.alert('Offline', 'A criação de filiados só está disponível online.');
       return;
@@ -114,7 +116,19 @@ export default function CriarFiliadoScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filiado, netInfo.isConnected, navigation]);
+
+  useEffect(() => {
+    const actions: MenuAction[] = [
+      { label: 'Criar Filiado', icon: 'account-plus', onPress: handleCreate }
+    ];
+    navigation.setOptions({
+      headerRight: () => <HeaderMenu actions={actions} />,
+      headerStyle: { backgroundColor: '#003366' },
+      headerTintColor: '#fff',
+      headerTitleAlign: 'center',
+    });
+  }, [navigation, filiado, loading, handleCreate]);
 
   // Renderiza apenas se for perfil de GESTAO
   if (!usuario || !checkIsGestao(usuario.perfil_acesso)) {
@@ -136,14 +150,16 @@ export default function CriarFiliadoScreen({ navigation }) {
       <Text style={styles.title}>Novo Filiado</Text>
       
       {/* Reutilizar os cards para entrada de dados */}
-      <ContatoCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
+      <ContatoCard
+        filiado={filiado as Filiado}
+        setFiliado={setFiliado}
+        isEditing={true}
+        isManagement={true}
+      />
       <EnderecoCard filiado={filiado as Filiado} setFiliado={setFiliado} />
       <LotacaoCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
       <DependentesCard filiado={filiado as Filiado} setFiliado={setFiliado} />
 
-      <View style={styles.saveButtonContainer}>
-        <Button title={loading ? "Criando..." : "Criar Filiado"} onPress={handleCreate} disabled={loading} />
-      </View>
     </KeyboardAwareScrollView>
   );
 }

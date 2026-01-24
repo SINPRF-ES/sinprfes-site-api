@@ -21,8 +21,11 @@ import { toISODate, toBrazilianDate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { logger } from '../infra/logger';
 import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
+import { useNavigation } from '@react-navigation/native';
 
 export default function MeusDadosScreen() {
+  const navigation = useNavigation<any>();
   const { usuario, setSessao, token } = useAuth();
   const [filiado, setFiliado] = useState<Filiado | null>(null);
   const [loading, setLoading] = useState(true);
@@ -197,7 +200,7 @@ export default function MeusDadosScreen() {
     );
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = useCallback(async () => {
     if (!filiado) return;
 
     // Validação de Dependentes
@@ -262,7 +265,7 @@ export default function MeusDadosScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filiado, usuario, token, setSessao]);
 
   const processAndUploadImage = async (uri: string) => {
     try {
@@ -325,7 +328,7 @@ export default function MeusDadosScreen() {
     await processAndUploadImage(result.assets[0].uri);
   };
   
-  const handleAvatarUpload = () => {
+  const handleAvatarUpload = useCallback(() => {
     Alert.alert(
       "Alterar Foto de Perfil",
       "Escolha uma opção",
@@ -344,9 +347,9 @@ export default function MeusDadosScreen() {
         },
       ]
     );
-  };
+  }, [takePhoto, chooseFromLibrary]);
 
-  const handleAvatarRemove = async () => {
+  const handleAvatarRemove = useCallback(async () => {
     Alert.alert(
       "Confirmar Remoção",
       "Tem certeza de que deseja remover sua foto de perfil?",
@@ -377,7 +380,25 @@ export default function MeusDadosScreen() {
         }
       ]
     );
-  };
+  }, [usuario, token, setSessao]);
+
+  useEffect(() => {
+    const actions: MenuAction[] = [
+      { label: 'Salvar Alterações', icon: 'content-save', onPress: handleUpdate },
+      { label: 'Alterar Foto', icon: 'camera', onPress: handleAvatarUpload }
+    ];
+
+    if (filiado?.avatar_url) {
+      actions.push({ label: 'Remover Foto', icon: 'camera-off', onPress: handleAvatarRemove, isDestructive: true });
+    }
+
+    navigation.setOptions({
+      headerRight: () => <HeaderMenu actions={actions} />,
+      headerStyle: { backgroundColor: '#003366' },
+      headerTintColor: '#fff',
+      headerTitleAlign: 'center',
+    });
+  }, [navigation, filiado, handleUpdate, handleAvatarUpload, handleAvatarRemove]);
 
   if (loading && !filiado) {
     return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
@@ -396,20 +417,18 @@ export default function MeusDadosScreen() {
       extraScrollHeight={50}
     >
       <HeaderInfo filiado={filiado} />
-
-      <View style={styles.actionsContainer}>
-        <Button title={isUploading ? "Enviando..." : "Alterar Foto"} onPress={handleAvatarUpload} disabled={isUploading || loading} />
-        {filiado?.avatar_url && <View style={styles.buttonSpacer} />}
-        {filiado?.avatar_url && (
-          <Button title="Remover Foto" onPress={handleAvatarRemove} color="#c00" disabled={isUploading || loading} />
-        )}
-      </View>
       
       <ErrorBoundary>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>👤 Informações Pessoais</Text>
         </View>
-        <ContatoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} />
+        <ContatoCard
+          filiado={filiado}
+          setFiliado={setFiliado}
+          isEditing={true}
+          isManagement={false}
+          hideTitle={true}
+        />
       </ErrorBoundary>
 
       <ErrorBoundary>
@@ -434,10 +453,6 @@ export default function MeusDadosScreen() {
       </ErrorBoundary>
 
       {renderExcluirDependentes()}
-
-      <View style={styles.saveButtonContainer}>
-        <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
-      </View>
     </KeyboardAwareScrollView>
     </SafeScreen>
   );

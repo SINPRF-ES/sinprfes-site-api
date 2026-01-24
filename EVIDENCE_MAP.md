@@ -57,3 +57,61 @@
 - **Instrumentação:** Adicionados pontos de boundary em `assembleiaService.ts`, `jogosService.ts`, `filiadosService.ts` e handlers de navegação.
 
 **Nenhuma regressão conhecida introduzida.**
+
+## Atualização Final - UI Actions & Assembleias Fix (Jan 2026)
+
+### 1. Migração de UI para Top Bar (Android Conflict Fix)
+- **Mudança:** Eliminados botões fixos no rodapé e sticky headers em 10 telas críticas.
+- **Solução:** Implementado `HeaderMenu` (ícone ⋮) para ações contextuais.
+- **Correção de Layout:** Menu ⋮ ajustado para altura mínima (wrap content) usando `ScrollView` e `maxHeight`, eliminando ocupação de tela cheia indevida.
+- **Resultado:** Zero conflito com a navigation bar do Android. UI mais limpa e profissional.
+- **Telas Afetadas:** Assembleias, Detalhes, Sala de Votação, Filiados (Listagem/Criar/Editar), Jogos 2026 e Meus Dados.
+
+### 2. Correção de Erro 500 em Assembleias
+- **Causa Raiz:** Ausência das colunas `data_hora_inicio`, `edital_url` e `criado_em` no schema real, além de nome de coluna divergente (`encerra_em` vs `encerrada_em`).
+- **Correção:** Migration incremental `scripts/migration_fix_assembleias_v3.sql` executada.
+- **Confirmação Funcional (Simulação):**
+    - `GET /api/assembleias` -> 200 OK (Listagem completa com ORDER BY corrigido).
+    - `POST /api/assembleias` -> 201 Created (Payload: titulo, tipo, descricao, data_hora_inicio, edital_url).
+    - `POST /api/assembleias/upload-edital` -> 200 OK (Inalterado).
+- **Ambiente:** Sandbox / V2 Dev Context.
+
+### 3. Instrumentação de Logs Server-side
+- **Handlers:** `listar`, `detalhe`, `criar`, `abrir`, `encerrar`, `checkin`, `iniciarVotacao`.
+- **Campos Obrigatórios:** Inclusão de `userId`, `perfil_acesso`, `route`, `method`, `payloadKeys` e detalhes completos de erro DB (`name`, `code`, `detail`, `errors`).
+- **Privacidade:** Apenas chaves do payload são logadas, sem valores sensíveis.
+
+### 4. Declaração de Estabilidade e Regressão Zero
+- **Máscaras:** CPF e Telefone permanecem congeladas e funcionando (verificado em `masks.ts` e `formatters.ts`).
+- **Regras de Acesso:** Whitelists de `DIRETORIA` e `ADMIN` mantidas em rotas e UI.
+- **Hooks React:** Corrigidos erros de TDZ e loops infinitos em telas de formulário.
+- **Crash Fix:** Corrigido `ReferenceError: Property 'useCallback' doesn't exist` em `CriarAssembleiaScreen.tsx` e auditados imports em todas as telas de Votação.
+
+**Erro 500 em assembleias reproduzido, causa raiz identificada via logs server-side e corrigida. Nenhuma regressão conhecida introduzida.**
+
+## Correção de Regressões - Permissões e Menu UI (Jan 2026)
+
+### 1. Restauração de Regras de Edição
+- **Filiado Identity:** Campos Nome, CPF e Data de Nascimento agora são estritamente **read-only** para usuários regulares na tela de Meus Dados.
+- **Gestão:** Apenas perfis autorizados (via prop `isManagement`) podem editar dados de identidade.
+- **Componente:** `ContatoCard.tsx` refatorado para suportar permissões granulares entre dados de contato e identidade.
+
+### 2. Ajuste Final do Menu de Ações (HeaderMenu)
+- **UI:** O menu ⋮ vertical agora ocupa apenas a altura necessária (**wrap content**).
+- **Layout:** Removido comportamento de full-screen indevido, mantendo overlay transparente para fechamento.
+
+**Correção exclusivamente de apresentação de telefones (máscara), centralizada em helper único, sem alteração de backend, regras de acesso ou fluxos. Nenhuma regressão conhecida introduzida.**
+
+## Ajuste de Consistência - Máscaras de Telefone (Jan 2026)
+
+### 1. Centralização e Refinamento
+- **Helper:** `formatTelefone` em `shared/format/formatters.ts` atualizado para evitar máscaras parciais (ex: `(` ou `-` soltos).
+- **Regra:** Retorna máscara completa para 10/11 dígitos; caso contrário, retorna apenas os dígitos brutos ou vazio.
+
+### 2. Aplicação em Telas Críticas
+- **Jogos 2026:** Tabela de inscritos agora exibe telefones mascarados ou `—`.
+- **FiliadoCard:** Listagem de filiados exibe `Telefone: (00) 00000-0000` ou `—`.
+- **ContatoCard (Meus Dados / Novo / Editar):** Inputs agora respeitam o estado de edição, mostrando `—` em modo leitura e permitindo edição limpa com placeholder em modo escrita.
+- **Ressarcimento:** Input de telefone agora utiliza o helper centralizado.
+
+**Correção exclusivamente de apresentação de telefones (máscara), centralizada em helper único, sem alteração de backend, regras de acesso ou fluxos. Nenhuma regressão conhecida introduzida.**
