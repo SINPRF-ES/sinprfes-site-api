@@ -3,24 +3,27 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin } from '../../services/assembleiaService';
+import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin, iniciarExecucao, solicitarRelatorio } from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
+import { assembleiaSocket } from '../../services/assembleiaSocket';
 
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { id } = route.params;
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const [assembleia, setAssembleia] = useState<Assembleia | null>(null);
   const [estado, setEstado] = useState<AssembleiaEstado | null>(null);
   const [loading, setLoading] = useState(true);
   const [tokenInput, setTokenInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(usuario?.perfil_acesso || '');
+  const perfil = (usuario?.perfil_acesso || '').toUpperCase();
+  const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
+  const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
 
   const fetchData = async () => {
     try {
@@ -43,18 +46,48 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       setAssembleia(data);
       setEstado(estadoData);
     } catch (err: any) {
-      logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err as Error, { id });
+      logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err instanceof Error ? err : new Error(String(err)), { id });
       console.error('[Assembleia.fetch]', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [id])
-  );
+  useEffect(() => {
+    fetchData();
+
+    if (token) {
+      assembleiaSocket.connect(token);
+      assembleiaSocket.joinRoom(id);
+
+      assembleiaSocket.onEvent('assembleia:status_changed', (data) => {
+        setAssembleia(prev => prev ? { ...prev, estado: data.estado } : null);
+      });
+
+      assembleiaSocket.onEvent('assembleia:checkin_updated', (data) => {
+        setEstado(prev => prev && prev.quorumVigente ? {
+          ...prev,
+          quorumVigente: { ...prev.quorumVigente, total: data.total, quorum_necessario: data.quorum_necessario }
+        } : prev);
+      });
+
+      assembleiaSocket.onEvent('assembleia:token_gerado', () => {
+        fetchData();
+      });
+
+      assembleiaSocket.onEvent('assembleia:recontagem', () => {
+        fetchData();
+      });
+    }
+
+    return () => {
+      assembleiaSocket.leaveRoom(id);
+      assembleiaSocket.offEvent('assembleia:status_changed');
+      assembleiaSocket.offEvent('assembleia:checkin_updated');
+      assembleiaSocket.offEvent('assembleia:token_gerado');
+      assembleiaSocket.offEvent('assembleia:recontagem');
+    };
+  }, [id, token]);
 
 
   const handleAbrir = useCallback(async () => {
@@ -91,18 +124,43 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     ]);
   }, [id, fetchData]);
 
+  const handleIniciarExecucao = useCallback(async () => {
+    try {
+      setActionLoading(true);
+      await iniciarExecucao(id);
+      Alert.alert('Sucesso', 'Assembleia iniciada! A pauta agora pode ser deliberada na sala.');
+      fetchData();
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao iniciar execução.');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [id, fetchData]);
+
+  const handleSolicitarRelatorio = useCallback(async () => {
+    try {
+      setActionLoading(true);
+      const res = await solicitarRelatorio(id);
+      Alert.alert('Sucesso', `Pedido de relatório registrado.\nID: ${res.request_id}\nAuth: ${res.auth_code}\n\nO documento será enviado para seu e-mail.`);
+    } catch (err: any) {
+      Alert.alert('Erro', 'Falha ao solicitar relatório.');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [id]);
+
   const handleGerarToken = useCallback(async () => {
     try {
       setActionLoading(true);
-      const res = await gerarTokenQuorum(id);
+      const res = await gerarTokenQuorum(id, { tipo_chamada: 'PRIMEIRA' });
       logger.info('TOKEN_GENERATED_AUTO_CHECKIN_START', { assembleiaId: id, token: res.token });
 
       try {
         await realizarCheckin(id, res.token);
         logger.info('TOKEN_GENERATED_AUTO_CHECKIN_SUCCESS', { assembleiaId: id });
         Alert.alert('Sucesso', `Token gerado: ${res.token}.\n\nSeu check-in foi realizado automaticamente.`);
-      } catch (checkinErr) {
-        logger.error('TOKEN_GENERATED_AUTO_CHECKIN_FAIL', checkinErr, { assembleiaId: id, token: res.token });
+      } catch (checkinErr: any) {
+        logger.error('TOKEN_GENERATED_AUTO_CHECKIN_FAIL', checkinErr instanceof Error ? checkinErr : new Error(String(checkinErr)), { assembleiaId: id, token: res.token });
         Alert.alert('Atenção', `Token gerado: ${res.token}, mas não conseguimos realizar seu auto-checkin. Por favor, insira o token manualmente.`);
       }
 
@@ -122,16 +180,28 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         actions.push({ label: 'Abrir Assembleia', icon: 'play-circle-outline', onPress: handleAbrir });
       }
       if (isAberta) {
-        actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+        actions.push({ label: 'Compor Mesa', icon: 'account-group-outline', onPress: () => navigation.navigate('ComporMesa', { id }) });
+        actions.push({ label: 'Iniciar Execução', icon: 'play-box-multiple-outline', onPress: handleIniciarExecucao });
         actions.push({ label: 'Gerar Token Quórum', icon: 'key-variant', onPress: handleGerarToken });
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
+      }
+      if (assembleia.estado === 'EM_CURSO') {
+        actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: () => {
+            // No mobile, redirecionamos para a sala onde o presidente tem esse controle ou fazemos aqui
+            navigation.navigate('AssembleiaSala', { id });
+        }});
+        actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+        actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
+      }
+      if (assembleia.estado === 'ENCERRADA') {
+        actions.push({ label: 'Gerar Relatório', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
       }
     }
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,
       title: 'Detalhes'
     });
-  }, [navigation, assembleia, isDiretoria, handleAbrir, handleGerarToken, handleEncerrar]);
+  }, [navigation, assembleia, isDiretoria, handleAbrir, handleGerarToken, handleEncerrar, handleIniciarExecucao, handleSolicitarRelatorio]);
 
   const handleCheckin = async () => {
     if (tokenInput.length !== 6) {
@@ -171,7 +241,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }
 
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
-  const isAberta = assembleia.estado === 'ABERTA';
+  const isParticipavel = assembleia.estado === 'ABERTA' || assembleia.estado === 'EM_CURSO';
 
   return (
     <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
@@ -188,16 +258,26 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       </View>
 
       <Text style={styles.tituloText}>{assembleia.titulo}</Text>
-      <Text style={styles.descricaoText}>{assembleia.descricao}</Text>
+      <Text style={styles.descricaoText}>{assembleia.pauta}</Text>
 
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>Quórum Atual</Text>
         <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
+        {estado?.quorumVigente && (
+          <Text style={styles.quorumStatus}>
+            Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
+          </Text>
+        )}
       </View>
 
-      {isAberta && (
+      {isParticipavel && (
         <View style={styles.interactionSection}>
-          {hasCheckedIn ? (
+          {!isElegivel ? (
+             <View style={styles.notEligibleBox}>
+                <MaterialCommunityIcons name="lock" size={24} color="#856404" />
+                <Text style={styles.notEligibleText}>Seu perfil ({perfil}) não possui permissão para realizar check-in.</Text>
+             </View>
+          ) : hasCheckedIn ? (
             <View style={styles.salaBox}>
                 <TouchableOpacity
                     style={styles.btnSala}
@@ -240,6 +320,7 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   badgeCRIADA: { backgroundColor: '#cfe2ff' },
   badgeABERTA: { backgroundColor: '#d1e7dd' },
+  badgeEM_CURSO: { backgroundColor: '#fff3cd' },
   badgeENCERRADA: { backgroundColor: '#f8d7da' },
   badgeText: { fontSize: 12, fontWeight: 'bold', color: '#333' },
   tipoText: { fontWeight: 'bold', color: '#666', fontSize: 16 },
@@ -260,6 +341,9 @@ const styles = StyleSheet.create({
   tokenInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 24, textAlign: 'center', marginBottom: 16, letterSpacing: 8 },
   btnCheckin: { backgroundColor: '#f1c40f', padding: 14, borderRadius: 8, alignItems: 'center' },
   btnText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
+  quorumStatus: { fontSize: 12, color: '#666', marginTop: 4 },
+  notEligibleBox: { backgroundColor: '#fff3cd', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  notEligibleText: { color: '#856404', fontSize: 14, flex: 1, fontWeight: '500' },
   diretoriaSection: { marginTop: 20, paddingBottom: 40 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12 },
   diretoriaButtons: { flexDirection: 'row', gap: 12 },

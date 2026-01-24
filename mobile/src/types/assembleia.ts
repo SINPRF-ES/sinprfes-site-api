@@ -4,12 +4,15 @@ export interface Assembleia {
   id: string;
   tipo: 'AGE' | 'AGO';
   titulo: string;
-  descricao: string;
-  estado: AssembleiaEstadoFiltro;
+  pauta: string;
+  estado: AssembleiaEstadoFiltro | 'EM_CURSO';
   criado_em: string;
   aberta_em?: string;
   encerrada_em?: string;
   criado_por: string;
+  data_evento?: string;
+  hora_primeira_chamada?: string;
+  hora_segunda_chamada?: string;
   data_hora_inicio?: string;
   edital_url?: string;
 }
@@ -19,9 +22,10 @@ export interface AssembleiaEstado {
   quorumVigente: {
     id: string;
     token: string;
-    valido_ate: string;
     total: number;
+    quorum_necessario: number;
     userHasCheckedIn: boolean;
+    presentes?: any[];
   } | null;
   votacaoAtiva: VotacaoItem | null;
   mesa: any[];
@@ -36,8 +40,8 @@ export interface VotacaoItem {
   descricao: string;
   aberta_em: string;
   encerra_em: string;
-  estado: 'AGUARDANDO' | 'EM_CURSO' | 'CONCLUIDA' | 'RETIRADA';
-  duracao_minutos: number;
+  status: 'ATIVA' | 'ENCERRADA' | 'AGUARDANDO' | 'RETIRADA';
+  duracao_segundos: number;
   contagem?: {
     SIM: number;
     NAO: number;
@@ -47,6 +51,11 @@ export interface VotacaoItem {
   votos?: VotoNominal[];
   userVoted?: boolean;
   userEligible?: boolean;
+  user_eligibility?: {
+    elegivel: boolean;
+    motivo: string | null;
+    jaVotou: boolean;
+  };
 }
 
 export interface VotoNominal {

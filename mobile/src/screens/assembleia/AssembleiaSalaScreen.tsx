@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAssembleiaEstado, enviarVoto, pedirPalavra } from '../../services/assembleiaService';
+import { getAssembleiaEstado, enviarVoto, pedirPalavra, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assembleia';
@@ -15,6 +15,20 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const [estado, setEstado] = useState<AssembleiaEstado | null>(null);
   const [loading, setLoading] = useState(true);
   const [sendingVoto, setSendingVoto] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  const perfil = (usuario?.perfil_acesso || '').toUpperCase();
+  const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
+  const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
+
+  const handlePedirPalavra = useCallback(async () => {
+    try {
+      await pedirPalavra(id);
+      Alert.alert('Sucesso', 'Seu pedido foi registrado.');
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao solicitar palavra.');
+    }
+  }, [id]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -27,15 +41,58 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     }
   }, [id]);
 
+  const handleRecontagem = useCallback(async () => {
+    Alert.alert('Confirmar Recontagem', 'Isso invalidará todos os check-ins atuais e gerará um novo token. Continuar?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Sim, Recontar', onPress: async () => {
+        try {
+          await gerarTokenQuorum(id, { tipo_chamada: 'RECONTAGEM' });
+        } catch (err: any) {
+          Alert.alert('Erro', err.response?.data?.error || 'Falha ao solicitar recontagem.');
+        }
+      }}
+    ]);
+  }, [id]);
+
+  const handleEncerrarVotacaoManual = useCallback(async () => {
+    if (!estado?.votacaoAtiva) return;
+    try {
+      await encerrarVotacao(id, estado.votacaoAtiva.id);
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao encerrar votação.');
+    }
+  }, [id, estado?.votacaoAtiva]);
+
+  const handleEncerrarAssembleiaManual = useCallback(async () => {
+    Alert.alert('Confirmar Encerramento', 'Deseja encerrar definitivamente esta assembleia?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Sim, Encerrar', style: 'destructive', onPress: async () => {
+        try {
+          await encerrarAssembleia(id);
+        } catch (err: any) {
+          Alert.alert('Erro', err.response?.data?.error || 'Falha ao encerrar assembleia.');
+        }
+      }}
+    ]);
+  }, [id]);
+
   useEffect(() => {
+    const actions: MenuAction[] = [
+      { label: 'Pedir Palavra', icon: 'microphone', onPress: handlePedirPalavra },
+      { label: 'Nova Proposta', icon: 'file-document-edit-outline', onPress: () => navigation.navigate('Propostas', { id }) }
+    ];
+
+    if (isPresidente) {
+      actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+      actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: handleRecontagem });
+      if (estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
+        actions.push({ label: 'Encerrar Votação Item', icon: 'stop-circle-outline', onPress: handleEncerrarVotacaoManual });
+      }
+      actions.push({ label: 'Encerrar Assembleia', icon: 'close-circle-outline', onPress: handleEncerrarAssembleiaManual, isDestructive: true });
+    }
+
     navigation.setOptions({
-      headerRight: () => {
-        const actions: MenuAction[] = [
-          { label: 'Pedir Palavra', icon: 'microphone', onPress: handlePedirPalavra },
-          { label: 'Nova Proposta', icon: 'file-document-edit-outline', onPress: () => navigation.navigate('Propostas', { id }) }
-        ];
-        return <HeaderMenu actions={actions} />;
-      },
+      headerRight: () => <HeaderMenu actions={actions} />,
       title: 'Sala de Votação'
     });
 
@@ -45,15 +102,18 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       assembleiaSocket.connect(token);
       assembleiaSocket.joinRoom(id);
 
-      assembleiaSocket.onEvent('session_state_changed', (data) => {
+      assembleiaSocket.onEvent('assembleia:status_changed', (data) => {
         setEstado(prev => prev ? { ...prev, assembleia: { ...prev.assembleia, estado: data.estado } } : null);
+        if (data.estado === 'ENCERRADA') {
+            navigation.goBack();
+        }
       });
 
-      assembleiaSocket.onEvent('voting_started', (data) => {
+      assembleiaSocket.onEvent('votacao:iniciada', (data) => {
         setEstado(prev => prev ? { ...prev, votacaoAtiva: data } : null);
       });
 
-      assembleiaSocket.onEvent('vote_cast', (data) => {
+      assembleiaSocket.onEvent('voto:updated', (data) => {
         setEstado(prev => {
           if (!prev || !prev.votacaoAtiva) return prev;
           return {
@@ -67,24 +127,44 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         });
       });
 
-      assembleiaSocket.onEvent('quorum_count_updated', (data) => {
-        setEstado(prev => prev && prev.quorumVigente ? { ...prev, quorumVigente: { ...prev.quorumVigente, total: data.total } } : prev);
+      assembleiaSocket.onEvent('assembleia:checkin_updated', (data) => {
+        setEstado(prev => prev && prev.quorumVigente ? {
+          ...prev,
+          quorumVigente: { ...prev.quorumVigente, total: data.total, quorum_necessario: data.quorum_necessario }
+        } : prev);
       });
 
-      assembleiaSocket.onEvent('new_quorum_call', (data) => {
-         fetchData(); // Mais seguro re-hidratar tudo
+      assembleiaSocket.onEvent('assembleia:token_gerado', () => {
+         fetchData();
+      });
+
+      assembleiaSocket.onEvent('assembleia:recontagem', () => {
+         fetchData();
+         Alert.alert('Recontagem', 'Uma nova recontagem foi iniciada. Por favor, realize o check-in novamente na tela de detalhes.');
+         navigation.navigate('AssembleiaDetalhe', { id });
+      });
+
+      assembleiaSocket.onEvent('votacao:encerrada', (data) => {
+          setEstado(prev => prev && prev.votacaoAtiva ? { ...prev, votacaoAtiva: { ...prev.votacaoAtiva, ...data, status: 'ENCERRADA' } } : prev);
+      });
+
+      assembleiaSocket.onEvent('assembleia:encerrada', () => {
+          navigation.navigate('AssembleiaDetalhe', { id });
       });
     }
 
     return () => {
       assembleiaSocket.leaveRoom(id);
-      assembleiaSocket.offEvent('session_state_changed');
-      assembleiaSocket.offEvent('voting_started');
-      assembleiaSocket.offEvent('vote_cast');
-      assembleiaSocket.offEvent('quorum_count_updated');
-      assembleiaSocket.offEvent('new_quorum_call');
+      assembleiaSocket.offEvent('assembleia:status_changed');
+      assembleiaSocket.offEvent('votacao:iniciada');
+      assembleiaSocket.offEvent('voto:updated');
+      assembleiaSocket.offEvent('assembleia:checkin_updated');
+      assembleiaSocket.offEvent('assembleia:token_gerado');
+      assembleiaSocket.offEvent('assembleia:recontagem');
+      assembleiaSocket.offEvent('votacao:encerrada');
+      assembleiaSocket.offEvent('assembleia:encerrada');
     };
-  }, [id, token, fetchData, handlePedirPalavra, navigation]);
+  }, [id, token, fetchData, handlePedirPalavra, handleRecontagem, handleEncerrarVotacaoManual, handleEncerrarAssembleiaManual, isPresidente, navigation, estado?.votacaoAtiva]);
 
   const handleVotar = async (voto: 'SIM' | 'NAO') => {
     if (!estado?.votacaoAtiva) return;
@@ -99,14 +179,24 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     }
   };
 
-  const handlePedirPalavra = useCallback(async () => {
-    try {
-      await pedirPalavra(id);
-      Alert.alert('Sucesso', 'Seu pedido foi registrado.');
-    } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.error || 'Falha ao solicitar palavra.');
+  useEffect(() => {
+    let interval: any;
+    if (estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
+       const end = new Date(estado.votacaoAtiva.encerra_em).getTime();
+       interval = setInterval(() => {
+          const now = new Date().getTime();
+          const diff = Math.max(0, Math.floor((end - now) / 1000));
+          setTimeLeft(diff);
+          if (diff === 0) {
+              fetchData();
+              clearInterval(interval);
+          }
+       }, 1000);
+    } else {
+        setTimeLeft(null);
     }
-  }, [id]);
+    return () => clearInterval(interval);
+  }, [estado?.votacaoAtiva, fetchData]);
 
   if (loading || !estado) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
@@ -129,17 +219,25 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         {votacaoAtiva ? (
           <View style={styles.votacaoCard}>
             <View style={styles.votacaoHeader}>
-              <Text style={styles.votacaoBadge}>{votacaoAtiva.estado}</Text>
-              <MaterialCommunityIcons name="clock-outline" size={20} color="#e74c3c" />
+              <Text style={styles.votacaoBadge}>{votacaoAtiva.status}</Text>
+              {timeLeft !== null && (
+                  <View style={styles.timerBox}>
+                    <MaterialCommunityIcons name="clock-outline" size={20} color="#e74c3c" />
+                    <Text style={styles.timerText}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</Text>
+                  </View>
+              )}
             </View>
             <Text style={styles.votacaoTitulo}>{votacaoAtiva.titulo}</Text>
             <Text style={styles.votacaoDesc}>{votacaoAtiva.descricao}</Text>
 
-            {votacaoAtiva.userEligible !== false ? (
-              votacaoAtiva.userVoted ? (
+            {votacaoAtiva.status === 'ATIVA' && isElegivel && votacaoAtiva.user_eligibility?.elegivel !== false ? (
+              votacaoAtiva.user_eligibility?.jaVotou ? (
                 <View style={styles.votedNotice}>
                   <MaterialCommunityIcons name="check-circle" size={30} color="#27ae60" />
                   <Text style={styles.votedText}>Seu voto foi computado.</Text>
+                  <TouchableOpacity style={{ marginTop: 10 }} onPress={() => setEstado(prev => prev ? { ...prev, votacaoAtiva: { ...prev.votacaoAtiva!, user_eligibility: { ...prev.votacaoAtiva!.user_eligibility!, jaVotou: false } } } : null)}>
+                      <Text style={{ color: '#003366', textDecorationLine: 'underline' }}>Alterar Voto</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.votoActions}>
@@ -159,11 +257,11 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                   </TouchableOpacity>
                 </View>
               )
-            ) : (
+            ) : votacaoAtiva.status === 'ATIVA' ? (
               <View style={styles.notEligibleBox}>
                 <Text style={styles.notEligibleText}>Você não é elegível para este item (ausente no quórum).</Text>
               </View>
-            )}
+            ) : null}
 
             {votacaoAtiva.contagem && (
               <View style={styles.placares}>
@@ -216,7 +314,9 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16 },
   votacaoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 3, marginBottom: 20 },
   votacaoHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  votacaoBadge: { backgroundColor: '#e74c3c', color: '#fff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, fontSize: 10, fontWeight: 'bold' },
+  votacaoBadge: { backgroundColor: '#e74c3c', color: '#fff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, fontSize: 10, fontWeight: 'bold', alignSelf: 'flex-start' },
+  timerBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  timerText: { color: '#e74c3c', fontWeight: 'bold', fontSize: 18 },
   votacaoTitulo: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 8 },
   votacaoDesc: { fontSize: 14, color: '#666', marginBottom: 20 },
   votoActions: { flexDirection: 'row', gap: 12, marginBottom: 20 },
@@ -226,8 +326,8 @@ const styles = StyleSheet.create({
   btnVotoText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   votedNotice: { alignItems: 'center', padding: 20 },
   votedText: { color: '#27ae60', fontWeight: 'bold', marginTop: 8 },
-  notEligibleBox: { backgroundColor: '#fff3cd', padding: 12, borderRadius: 8, marginBottom: 20 },
-  notEligibleText: { color: '#856404', fontSize: 13, textAlign: 'center' },
+  notEligibleBox: { backgroundColor: '#f8d7da', padding: 12, borderRadius: 8, marginBottom: 20 },
+  notEligibleText: { color: '#721c24', fontSize: 13, textAlign: 'center', fontWeight: '500' },
   placares: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 16 },
   placarItem: { flex: 1, alignItems: 'center' },
   placarLabel: { fontSize: 10, color: '#888', marginBottom: 4 },
@@ -236,8 +336,8 @@ const styles = StyleSheet.create({
   waitingText: { color: '#888', fontSize: 14 },
   nominaisSection: { marginTop: 10 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 12 },
-  votoNominalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  nominalNome: { fontSize: 14, color: '#444' },
+  votoNominalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee', alignItems: 'center' },
+  nominalNome: { fontSize: 14, color: '#444', flex: 1 },
   nominalOpcao: { fontWeight: 'bold', fontSize: 12 },
   opcaoSIM: { color: '#27ae60' },
   opcaoNAO: { color: '#c0392b' },
