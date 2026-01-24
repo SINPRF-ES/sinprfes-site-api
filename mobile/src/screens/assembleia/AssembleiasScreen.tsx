@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { isDiretoria } from '../../utils/filiadoUtils';
 import { logger } from '../../infra/logger';
+
+import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 
 export default function AssembleiasScreen({ navigation }: any) {
   const { usuario } = useAuth();
@@ -30,8 +32,26 @@ export default function AssembleiasScreen({ navigation }: any) {
 
   useFocusEffect(
     useCallback(() => {
+      navigation.setOptions({
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginLeft: 10 }}>
+            <MaterialCommunityIcons name="menu" size={24} color="#fff" />
+          </TouchableOpacity>
+        ),
+        headerRight: () => {
+          const actions: MenuAction[] = [];
+          if (ehDiretoria) {
+            actions.push({
+              label: 'Nova Assembleia',
+              icon: 'plus',
+              onPress: () => navigation.navigate('CriarAssembleia')
+            });
+          }
+          return <HeaderMenu actions={actions} />;
+        }
+      });
       fetchData();
-    }, [])
+    }, [ehDiretoria])
   );
 
   const onRefresh = async () => {
@@ -83,14 +103,6 @@ export default function AssembleiasScreen({ navigation }: any) {
         />
       )}
 
-      {ehDiretoria && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => navigation.navigate('CriarAssembleia')}
-        >
-          <MaterialCommunityIcons name="plus" size={30} color="#fff" />
-        </TouchableOpacity>
-      )}
     </View>
   );
 }

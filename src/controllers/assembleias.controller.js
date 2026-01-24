@@ -11,16 +11,18 @@ async function listar(req, res) {
   } catch (err) {
     log.error("AssembleiaListarErro", {
       userId: req.user?.id,
-      perfil: req.user?.perfil_acesso,
+      perfil_acesso: req.user?.perfil_acesso,
       route: req.originalUrl,
       method: req.method,
       errorMessage: err.message,
       stack: err.stack,
       dbError: {
-        code: err.code,
-        detail: err.detail,
+        name: err.name,
+        code: err.code || err.parent?.code,
+        detail: err.detail || err.parent?.detail,
         table: err.table,
-        column: err.column
+        column: err.column,
+        errors: err.errors
       }
     });
     res.status(500).json({ error: "Erro ao listar assembleias" });
@@ -33,7 +35,19 @@ async function detalhe(req, res) {
     if (!assembleia) return res.status(404).json({ error: "Assembleia não encontrada" });
     res.json(assembleia);
   } catch (err) {
-    log.error("AssembleiaDetalheErro", err);
+    log.error("AssembleiaDetalheErro", {
+      userId: req.user?.id,
+      perfil_acesso: req.user?.perfil_acesso,
+      route: req.originalUrl,
+      method: req.method,
+      errorMessage: err.message,
+      stack: err.stack,
+      dbError: {
+        name: err.name,
+        code: err.code || err.parent?.code,
+        detail: err.detail || err.parent?.detail,
+      }
+    });
     res.status(500).json({ error: "Erro ao buscar detalhe da assembleia" });
   }
 }
@@ -73,17 +87,19 @@ async function criar(req, res) {
   } catch (err) {
     log.error("AssembleiaCriarErro", {
       userId: req.user?.id,
-      perfil: req.user?.perfil_acesso,
+      perfil_acesso: req.user?.perfil_acesso,
       route: req.originalUrl,
       method: req.method,
       payloadKeys: Object.keys(req.body || {}),
       errorMessage: err.message,
       stack: err.stack,
       dbError: {
-        code: err.code,
-        detail: err.detail,
+        name: err.name,
+        code: err.code || err.parent?.code,
+        detail: err.detail || err.parent?.detail,
         table: err.table,
-        column: err.column
+        column: err.column,
+        errors: err.errors
       }
     });
     res.status(500).json({ error: "Erro ao criar assembleia" });
@@ -102,7 +118,19 @@ async function abrir(req, res) {
 
     res.json(atualizada);
   } catch (err) {
-    log.error("AssembleiaAbrirErro", err);
+    log.error("AssembleiaAbrirErro", {
+      userId: req.user?.id,
+      perfil_acesso: req.user?.perfil_acesso,
+      route: req.originalUrl,
+      method: req.method,
+      errorMessage: err.message,
+      stack: err.stack,
+      dbError: {
+        name: err.name,
+        code: err.code || err.parent?.code,
+        detail: err.detail || err.parent?.detail,
+      }
+    });
     res.status(500).json({ error: "Erro ao abrir assembleia" });
   }
 }
@@ -119,7 +147,19 @@ async function encerrar(req, res) {
 
     res.json(atualizada);
   } catch (err) {
-    log.error("AssembleiaEncerrarErro", err);
+    log.error("AssembleiaEncerrarErro", {
+      userId: req.user?.id,
+      perfil_acesso: req.user?.perfil_acesso,
+      route: req.originalUrl,
+      method: req.method,
+      errorMessage: err.message,
+      stack: err.stack,
+      dbError: {
+        name: err.name,
+        code: err.code || err.parent?.code,
+        detail: err.detail || err.parent?.detail,
+      }
+    });
     res.status(500).json({ error: "Erro ao encerrar assembleia" });
   }
 }
@@ -159,7 +199,20 @@ async function checkin(req, res) {
 
     res.json({ success: true, message: "Check-in realizado com sucesso" });
   } catch (err) {
-    log.error("AssembleiaCheckinErro", err);
+    log.error("AssembleiaCheckinErro", {
+      userId: req.user?.id,
+      perfil_acesso: req.user?.perfil_acesso,
+      route: req.originalUrl,
+      method: req.method,
+      payloadKeys: Object.keys(req.body || {}),
+      errorMessage: err.message,
+      stack: err.stack,
+      dbError: {
+        name: err.name,
+        code: err.code || err.parent?.code,
+        detail: err.detail || err.parent?.detail,
+      }
+    });
     res.status(500).json({ error: "Erro ao realizar check-in" });
   }
 }
@@ -206,7 +259,20 @@ async function iniciarVotacao(req, res) {
 
     res.status(201).json(votacao);
   } catch (err) {
-    log.error("AssembleiaIniciarVotacaoErro", err);
+    log.error("AssembleiaIniciarVotacaoErro", {
+      userId: req.user?.id,
+      perfil_acesso: req.user?.perfil_acesso,
+      route: req.originalUrl,
+      method: req.method,
+      payloadKeys: Object.keys(req.body || {}),
+      errorMessage: err.message,
+      stack: err.stack,
+      dbError: {
+        name: err.name,
+        code: err.code || err.parent?.code,
+        detail: err.detail || err.parent?.detail,
+      }
+    });
     res.status(500).json({ error: "Erro ao iniciar votação" });
   }
 }

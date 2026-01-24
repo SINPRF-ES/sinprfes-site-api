@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { iniciarVotacao } from '../../services/assembleiaService';
+import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 
 export default function CriarItemVotacaoScreen({ route, navigation }: any) {
   const { id } = route.params;
@@ -11,7 +12,7 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
   const [duracao, setDuracao] = useState('2');
   const [loading, setLoading] = useState(false);
 
-  const handleSalvar = async () => {
+  const handleSalvar = useCallback(async () => {
     if (!titulo || !descricao) {
       Alert.alert('Aviso', 'Preencha todos os campos.');
       return;
@@ -27,7 +28,17 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, titulo, descricao, duracao, navigation]);
+
+  useEffect(() => {
+    const actions: MenuAction[] = [
+      { label: 'Iniciar Votação', icon: 'play-box-outline', onPress: handleSalvar }
+    ];
+    navigation.setOptions({
+      headerRight: () => <HeaderMenu actions={actions} />,
+      title: 'Novo Item'
+    });
+  }, [navigation, handleSalvar]);
 
   return (
     <KeyboardAwareScrollView style={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
@@ -61,9 +72,6 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
         </Picker>
       </View>
 
-      <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar} disabled={loading}>
-        {loading ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>Iniciar Votação Agora</Text>}
-      </TouchableOpacity>
     </KeyboardAwareScrollView>
   );
 }

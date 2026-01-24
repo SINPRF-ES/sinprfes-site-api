@@ -19,10 +19,14 @@ import { logger } from '../infra/logger';
 import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } from '../services/jogosService';
 import NetInfo from '@react-native-community/netinfo';
 import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
+import { formatTelefone } from '../shared/format/formatters';
 import { getCanonicalFiliadoId, ROLES } from '../utils/filiadoUtils';
 import { MODALIDADES_JOGOS_2026 } from '../constants/jogos';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
+import { useNavigation } from '@react-navigation/native';
 
 const JogosScreen = () => {
+  const navigation = useNavigation<any>();
   const { usuario } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -105,7 +109,7 @@ const JogosScreen = () => {
     });
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!isConnected) { Alert.alert('Offline', 'Sem conexão.'); return; }
     if (form.modalidades.length === 0) { Alert.alert('Aviso', 'Selecione uma modalidade.'); return; }
 
@@ -121,7 +125,19 @@ const JogosScreen = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [isConnected, form, fetchData]);
+
+  useEffect(() => {
+    const actions: MenuAction[] = [
+      { label: 'Salvar Inscrição', icon: 'check-bold', onPress: handleSave }
+    ];
+    navigation.setOptions({
+      headerRight: () => <HeaderMenu actions={actions} />,
+      headerStyle: { backgroundColor: '#003366' },
+      headerTintColor: '#fff',
+      headerTitleAlign: 'center',
+    });
+  }, [navigation, handleSave]);
 
   const calculateAge2026 = (birthDate: any) => {
     if (!birthDate || typeof birthDate !== 'string') return '—';
@@ -187,13 +203,6 @@ const JogosScreen = () => {
             ));
           })()}
 
-          <TouchableOpacity
-            style={[styles.btnPrimary, (submitting || !isConnected) && styles.btnDisabled]}
-            onPress={handleSave}
-            disabled={submitting || !isConnected}
-          >
-            <Text style={styles.btnText}>Salvar Inscrição</Text>
-          </TouchableOpacity>
         </View>
 
         {isManager && (
@@ -236,7 +245,7 @@ const JogosScreen = () => {
                     <Text style={[styles.tableCell, { width: 80 }]}>{item.qtd_familiares || 0}</Text>
                     <Text style={[styles.tableCell, { width: 150 }]}>{item.familiares || '—'}</Text>
                     <Text style={[styles.tableCell, { width: 150 }]}>{item.observacoes || '—'}</Text>
-                    <Text style={[styles.tableCell, { width: 120 }]}>{item.telefone1 || '—'}</Text>
+                    <Text style={[styles.tableCell, { width: 120 }]}>{formatTelefone(item.telefone1) || '—'}</Text>
                     <Text style={[styles.tableCell, { width: 180 }]}>{[item.email1, item.email2].filter(Boolean).join(' / ') || '—'}</Text>
                   </View>
                 ))}

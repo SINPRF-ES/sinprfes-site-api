@@ -40,6 +40,7 @@ const DrawerNavigator = () => {
       screenOptions={{
         headerTintColor: '#fff',
         headerStyle: { backgroundColor: '#003366' },
+        headerTitleAlign: 'center',
       }}
     >
       <Drawer.Screen
@@ -65,7 +66,7 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Votacao"
         component={AssembleiaStack}
-        options={{ title: 'Votação' }}
+        options={{ title: 'Votação', headerShown: false }}
       />
       <Drawer.Screen
         name="Publicacoes"
