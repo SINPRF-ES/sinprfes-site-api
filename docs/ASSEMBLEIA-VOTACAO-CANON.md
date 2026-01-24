@@ -1,91 +1,120 @@
 # Assembleias e Votações - CANON
 
-Este documento define o padrão arquitetural, as regras de negócio e o schema de dados para o módulo de Assembleias e Votações. Ele é a fonte única de verdade para implementação no Backend, Mobile e Site.
+Este documento define o padrão arquitetural, as regras de negócio e o fluxo normativo para o módulo de Assembleias e Votações. Ele é a fonte única de verdade (SSoT) para implementação no Backend, Mobile e Web.
 
-## 1. Princípios Fundamentais
+## 1. Princípios e Regras Gerais
 
 ### 1.1. Hierarquia de Verdade
 1.  **Backend (Regra Absoluta):** Fonte única para regras de elegibilidade, auditoria, persistência e controle de tempo.
-2.  **App Mobile (Prioridade UX):** Interface primária e obrigatória para interação em tempo real (check-in, votação, pedidos de palavra).
-3.  **Site (Consulta/Espelho):** Visualização de estado, acesso a relatórios de ata e exportações históricas. Nunca dita regras ou permite comandos de gestão/votação.
+2.  **App Mobile (Interface Primária):** Canal obrigatório para interação em tempo real (check-in, votação, pedidos de palavra).
+3.  **Site (Consulta e Relatórios):** Espelhamento do estado e acesso a relatórios gerados.
 
 ### 1.2. Premissas Críticas
-- **Voto Aberto:** Todo voto é público, nominal (associado ao filiado) e visível em tempo real.
-- **Transparência Total:** Contagem parcial e lista de votantes atualizadas via WebSocket para todos os presentes.
-- **Auditoria Imutável:** Todo evento relevante gera um log `append-only` (quem, quando, o quê).
-- **Elegibilidade por Snapshot:** O Backend congela a lista de votantes (snapshot) no momento exato da abertura de cada **item de pauta**, baseado estritamente no **quórum vigente** (última chamada concluída).
-- **Abstenção:** O filiado elegível que não manifestar voto até o encerramento do cronômetro é registrado automaticamente como ABSTENÇÃO, que soma ao total de SIM para fins de aprovação.
+- **Voto Nominal e Aberto:** Todo voto é público, associado ao filiado e visível em tempo real.
+- **Auditoria Imutável:** Todo evento relevante gera um log `append-only`.
+- **Elegibilidade por Snapshot:** O Backend congela a lista de votantes no momento exato do início de cada votação.
+- **Abstenção:** O filiado elegível que não manifestar voto até o fim do tempo é registrado como ABSTENÇÃO. A ABSTENÇÃO é registrada nominalmente e considerada para fins estatísticos, não configurando voto favorável ou contrário.
 
 ---
 
-## 2. Fluxo Funcional Canônico
+## 2. Fluxo Funcional em 4 Fases
 
-### 2.1. Gestão da Sessão
-1.  **Criação:** Perfil **diretoria** cria a assembleia (AGE/AGO). Estado inicial: `CRIADA`.
-2.  **Abertura:** No momento do evento, a **diretoria** abre a sessão. Estado: `ABERTA`.
-3.  **Check-in e Quórum Vigente:**
-    - A **diretoria** gera um **Token de 6 dígitos** com validade curta.
-    - O sistema registra este evento como uma "Chamada de Quórum" independente.
-    - Todos os presentes devem realizar o check-in no App Mobile.
-    - O **quórum vigente** é sempre o resultado da última chamada de quórum realizada com sucesso. Recontagens anulam a validade de presenças de chamadas anteriores para itens futuros.
-4.  **Mesa Diretora:** A **diretoria** seleciona o Presidente e o Secretário da mesa entre os filiados presentes no quórum vigente.
-5.  **Encerramento:** A **diretoria** encerra a sessão, disparando a consolidação final da ata e logs. Estado: `ENCERRADA`.
+### Fase 1 — Criação do Evento
 
-### 2.2. Itens de Pauta e Votação
-1.  **Abertura de Item:** A **diretoria** inicia a votação de um item definindo título, descrição e duração (1 a 5 min).
-2.  **Snapshot de Elegibilidade:** Ao abrir o item, o backend captura instantaneamente todos os filiados com check-in ativo na última chamada de quórum. Quem entrar na assembleia após este marco não vota neste item específico.
-3.  **Registro de Voto:** Opções nominais SIM e NÃO.
-4.  **Tempo Real:** Broadcast instantâneo de cada voto para atualização do painel de contagem parcial.
-5.  **Conclusão:** Processamento automático de abstenções para elegíveis remanescentes ao fim do tempo.
+Esta fase compreende o agendamento e parametrização da assembleia.
 
-### 2.3. Pedidos de Palavra e Propostas
-- **Fila de Palavra:** Gerenciada pela **diretoria**, permite que qualquer presente solicite fala e visualize sua posição na fila.
-- **Propostas (Encaminhamentos):** Qualquer presente pode submeter uma proposta durante a sessão.
-- **Retirada por Ausência:** Se no momento da votação de uma **proposta**, o autor não constar no **quórum vigente** (snapshot), a proposta é retirada automaticamente pelo sistema com a justificativa: "Proposta retirada por ausência do autor".
+1.  **Perfis Autorizados:** Qualquer perfil de gestão possui permissão para criar eventos.
+2.  **Nomenclatura Obrigatória:** Os tipos de assembleia devem ser exibidos por extenso nos seletores:
+    - "Assembleia Geral Ordinária"
+    - "Assembleia Geral Extraordinária"
+    - *Vedado o uso de siglas (AGO/AGE) na interface.*
+3.  **Campos Obrigatórios:**
+    - Título da Assembleia.
+    - Pauta detalhada.
+    - Data do evento.
+    - Horário da 1ª chamada.
+    - Horário da 2ª chamada.
+    - Anexo do edital (PDF ou Imagem).
+4.  **Metadados:** O sistema deve registrar e permitir a visualização da data e hora de criação do registro.
+5.  **Visibilidade:** Após a criação, o evento torna-se visível para consulta por qualquer perfil de usuário.
+6.  **Alteração e Cancelamento:**
+    - Restrito a perfis de gestão.
+    - O cancelamento exige obrigatoriamente uma justificativa motivada, que será registrada em log.
+7.  **Regra Estatutária de Quórum:**
+    - **1ª chamada:** Metade dos filiados ativos + 1.
+    - **2ª chamada:** Qualquer número de presentes.
+
+### Fase 2 — Abertura e Credenciamento (Pré-Execução)
+
+Esta fase destina-se exclusivamente à constituição da assembleia e verificação de quórum, sem deliberação de pauta. No sistema, esta fase corresponde ao estado `ABERTA`.
+
+1.  **Início:** Um Diretor deve acionar o comando de abertura da assembleia.
+2.  **Token de Presença:**
+    - O sistema libera a geração de um token de check-in (6 dígitos).
+    - O diretor que gera o token tem seu check-in realizado automaticamente.
+    - O token não expira por tempo; expira apenas quando um novo token é gerado ou a assembleia é encerrada.
+3.  **Contagem de Quórum:**
+    - Consideram-se apenas filiados com cadastro **ATIVO**.
+    - **Perfis incluídos:** DIRETORIA, FILIADO, ORGANIZADOR.
+    - **Perfis excluídos:** ADMIN, COMUNICADOR (não contam para quórum nem votam).
+4.  **Exibição em Tempo Real:** O painel de gestão e a visualização dos usuários devem exibir:
+    - Total de filiados considerados para o cálculo.
+    - Quórum necessário (conforme regra da chamada vigente).
+    - Número de presentes confirmados (check-in).
+    - Status visual: "Quórum atingido" ou "Quórum não atingido".
+5.  **Regra de Chamada Automática:** Após o horário estipulado para a 1ª chamada, o sistema deve aplicar automaticamente a regra de 2ª chamada.
+6.  **Composição da Mesa:**
+    - Antes de iniciar as deliberações, um Diretor deve selecionar, entre os presentes, o **Presidente da Mesa** e o **Secretário da Mesa**.
+    - Autoindicação é permitida.
+    - **Bloqueio:** A Fase 3 (Execução) não pode ser iniciada sem que a mesa esteja definida.
+
+### Fase 3 — Execução da Assembleia (Debates e Votações)
+
+Fase dedicada à discussão da pauta e deliberações. No sistema, esta fase corresponde ao estado `EM_CURSO`.
+
+1.  **Interações de Debate:**
+    - Todos os presentes com check-in válido podem pedir a palavra e propor encaminhamentos/propostas.
+    - A Pauta, a fila de oradores e os encaminhamentos devem estar permanentemente visíveis.
+2.  **Recontagem de Presença (Atualizar Quórum):**
+    - Comando exclusivo do **Presidente da Mesa**.
+    - Ao acionar, todos os check-ins anteriores são invalidados.
+    - Um novo token é gerado e todos os presentes devem realizar novo check-in.
+    - O Presidente tem seu check-in renovado automaticamente.
+    - A última recontagem define o quórum vigente para as votações subsequentes.
+3.  **Processo de Votação:**
+    - Apenas o **Presidente da Mesa** inicia votações.
+    - **Duração:** Deve-se definir um tempo entre 1 e 5 minutos.
+    - **Snapshot de Elegibilidade:** No exato momento do início, o backend captura a lista de filiados com check-in válido. Apenas estes são elegíveis para votar neste item.
+    - **Votos:** Devem ser nominais e exibidos em tempo real (Nome + Voto).
+    - **Alterabilidade:** O votante pode alterar seu voto enquanto o cronômetro estiver ativo.
+    - **Novas Entradas:** Filiados que realizarem check-in após o snapshot de uma votação em curso não podem votar nela, mas estarão aptos para a próxima.
+
+### Fase 4 — Encerramento e Relatório
+
+Fase de finalização e consolidação documental.
+
+1.  **Bloqueio de Interação:** Ao encerrar a assembleia, toda e qualquer interação (voto, palavra, proposta) é permanentemente bloqueada.
+2.  **Modo de Consulta:** O evento passa ao estado `ENCERRADA` e permanece disponível apenas para consulta.
+3.  **Relatório de Assembleia:**
+    - Gerado sob demanda em formato PDF através do botão "Gerar Relatório".
+    - O relatório não é armazenado no servidor; é enviado por e-mail ao solicitante.
+    - **Conteúdo Obrigatório:**
+        - Horários de abertura e encerramento.
+        - Lista nominal de presentes (quórum final).
+        - Itens votados com respectivos resultados detalhados.
+4.  **Segurança e Rastreabilidade:**
+    - Watermark com logo do sindicato.
+    - Código de autenticação único ou QR Code para validação de integridade.
+    - Identificação: "Relatório gerado por [Nome do Usuário]".
 
 ---
 
-## 3. Diagrama de Estados (Sessão)
+## 3. Estados da Sessão (Máquina de Estados)
 
-```mermaid
-stateDiagram-v2
-    [*] --> CRIADA: Diretoria cria
-    CRIADA --> ABERTA: Diretoria inicia sessão
-    ABERTA --> QUORUM_ATIVO: Gerar Token / Chamada de Quórum
-    QUORUM_ATIVO --> QUORUM_ATIVO: Recontagem (Novo Token/Chamada)
-    QUORUM_ATIVO --> VOTACAO_EM_CURSO: Iniciar Item de Pauta
-    VOTACAO_EM_CURSO --> QUORUM_ATIVO: Fim da Votação / Retirada
-    ABERTA --> ENCERRADA: Diretoria encerra sessão
-    ENCERRADA --> [*]
-```
+- `CRIADA`: Agendada, aguardando início.
+- `ABERTA`: Em fase de credenciamento (Fase 2).
+- `EM_CURSO`: Fase de debates e votações (Fase 3).
+- `ENCERRADA`: Finalizada, somente consulta (Fase 4).
 
 ---
-
-## 4. Schema de Dados (PostgreSQL)
-
-Refletindo a separação entre presença, elegibilidade e intenção.
-
-### 4.1. Estrutura de Sessão
-- `assembleias`: Cabeçalho da sessão (tipo, título, estado).
-- `assembleia_quoruns`: Registros independentes de chamadas de quórum (tokens).
-- `assembleia_checkins`: Vínculo filiado <-> chamada de quórum.
-- `assembleia_mesa`: Composição da mesa diretora por sessão.
-
-### 4.2. Estrutura de Interação
-- `assembleia_votacoes`: Itens de pauta (vinculados a um `quorum_snapshot_id`).
-- `assembleia_votos`: Votos nominais (SIM, NAO, ABSTENCAO).
-- `assembleia_pedidos_palavra`: Controle da fila de fala.
-- `assembleia_propostas`: Encaminhamentos sugeridos por presentes.
-
-### 4.3. Auditoria
-- `assembleia_auditoria`: Log imutável de todos os eventos (CHECKIN, VOTO, RECONTAGEM, etc).
-
----
-
-## 5. Marco de Implementação
-
-- **v1.0 (20/01/2026):** Primeira versão operacional em produção. Inclui infraestrutura completa de backend, real-time via Socket.IO e interface mobile funcional para sessões, quóruns nominais, votações com snapshot de elegibilidade e auditoria plena.
-- **Fases 1 a 4:** Concluídas e estabilizadas.
-
----
-> “Qualquer implementação futura deve seguir este documento. Divergências são bugs.”
+> "Este documento é a especificação normativa. Qualquer divergência no código em relação a estas regras é considerada um erro de implementação."
