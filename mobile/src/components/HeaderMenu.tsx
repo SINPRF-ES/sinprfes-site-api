@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Modal, Text, StyleSheet, TouchableWithoutFeedback, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Modal, Text, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,40 +35,34 @@ export default function HeaderMenu({ actions }: Props) {
         <TouchableWithoutFeedback onPress={() => setVisible(false)}>
           <View style={styles.overlay}>
             <View style={[styles.menuContainer, { marginTop: insets.top + 10 }]}>
-              <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                bounces={false}
-              >
-                {actions.map((item, index) => (
-                  <TouchableOpacity
-                    key={item.label + index}
-                    style={[
-                      styles.menuItem,
-                      index === actions.length - 1 && styles.lastMenuItem
-                    ]}
-                    onPress={() => {
-                      setVisible(false);
-                      item.onPress();
-                    }}
-                  >
-                    {item.icon && (
-                      <MaterialCommunityIcons
-                        name={item.icon as any}
-                        size={20}
-                        color={item.isDestructive ? '#e74c3c' : '#333'}
-                        style={styles.menuIcon}
-                      />
-                    )}
-                    <Text style={[
-                      styles.menuText,
-                      item.isDestructive && styles.destructiveText
-                    ]}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {actions.map((item, index) => (
+                <TouchableOpacity
+                  key={item.label + index}
+                  style={[
+                    styles.menuItem,
+                    index === actions.length - 1 && styles.lastMenuItem
+                  ]}
+                  onPress={() => {
+                    setVisible(false);
+                    item.onPress();
+                  }}
+                >
+                  {item.icon && (
+                    <MaterialCommunityIcons
+                      name={item.icon as any}
+                      size={20}
+                      color={item.isDestructive ? '#e74c3c' : '#333'}
+                      style={styles.menuIcon}
+                    />
+                  )}
+                  <Text style={[
+                    styles.menuText,
+                    item.isDestructive && styles.destructiveText
+                  ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </TouchableWithoutFeedback>
@@ -98,12 +92,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     minWidth: 200,
-    maxHeight: '80%', // Evita ocupar toda a tela se houver muitos itens
-  },
-  scrollView: {
-    borderRadius: 8,
-  },
-  scrollContent: {
     paddingVertical: 8,
   },
   menuItem: {

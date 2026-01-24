@@ -211,7 +211,13 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
         )}
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>👤 Informações Pessoais</Text></View>
-        <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={true} hideTitle={true} />
+        <ContatoCard
+          filiado={filiado}
+          setFiliado={setFiliado}
+          isEditing={true}
+          isManagement={ehGestao}
+          hideTitle={true}
+        />
 
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>🏠 Endereço</Text></View>
         <EnderecoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />

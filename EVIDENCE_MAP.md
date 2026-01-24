@@ -89,6 +89,19 @@
 
 **Erro 500 em assembleias reproduzido, causa raiz identificada via logs server-side e corrigida. Nenhuma regressão conhecida introduzida.**
 
+## Correção de Regressões - Permissões e Menu UI (Jan 2026)
+
+### 1. Restauração de Regras de Edição
+- **Filiado Identity:** Campos Nome, CPF e Data de Nascimento agora são estritamente **read-only** para usuários regulares na tela de Meus Dados.
+- **Gestão:** Apenas perfis autorizados (via prop `isManagement`) podem editar dados de identidade.
+- **Componente:** `ContatoCard.tsx` refatorado para suportar permissões granulares entre dados de contato e identidade.
+
+### 2. Ajuste Final do Menu de Ações (HeaderMenu)
+- **UI:** O menu ⋮ vertical agora ocupa apenas a altura necessária (**wrap content**).
+- **Layout:** Removido comportamento de full-screen indevido, mantendo overlay transparente para fechamento.
+
+**Correção exclusivamente de apresentação de telefones (máscara), centralizada em helper único, sem alteração de backend, regras de acesso ou fluxos. Nenhuma regressão conhecida introduzida.**
+
 ## Ajuste de Consistência - Máscaras de Telefone (Jan 2026)
 
 ### 1. Centralização e Refinamento
