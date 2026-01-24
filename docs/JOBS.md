@@ -4,7 +4,7 @@ Este documento descreve os processos em segundo plano (jobs) e automações agen
 
 ## 1. Notificação de Aniversariantes (`BIRTHDAY_SCAN`)
 
-Responsável por identificar filiados que fazem aniversário no dia atual e enviar uma mensagem de congratulações.
+Responsável por identificar filiados e dependentes que fazem aniversário no dia atual e enviar um relatório consolidado ao e-mail institucional do sindicato (`sinprfes@sinprfes.org.br`).
 
 ### 1.1. Agendamento
 - **Frequência:** Diário.
@@ -23,7 +23,7 @@ Para garantir que o job rode exatamente uma vez por dia, mesmo em ambientes com 
 
 ### 1.3. Logs de Operação
 - `BirthdayJobStart`: Início do processamento.
-- `BirthdayJobEnd`: Conclusão com sucesso (inclui contagem de emails).
+- `BirthdayJobEnd`: Conclusão com sucesso (inclui contagem de aniversariantes no relatório).
 - `BirthdayJobSkipAlreadyRanToday`: Ignorado pois já foi executado hoje.
 - `BirthdayJobError`: Falha crítica no processamento.
 
