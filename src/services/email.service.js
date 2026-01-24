@@ -336,36 +336,41 @@ SINPRF-ES
 }
 
 /**
- * Envia e-mail para o sindicato com a lista de aniversariantes do dia.
+ * Envia e-mail para o sindicato com o relatório de aniversariantes do dia.
  */
-async function enviarEmailAniversariantes(aniversariantes) {
-  const { MAIL_FROM, MAIL_TO_FILIACAO } = process.env;
+async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
+  const { MAIL_FROM, BIRTHDAY_REPORT_TO } = process.env;
+  const to = BIRTHDAY_REPORT_TO || "sinprfes@sinprfes.org.br";
 
-  if (!MAIL_FROM || !MAIL_TO_FILIACAO) {
-    throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
+  if (!MAIL_FROM) {
+    throw new Error("❌ MAIL_FROM não configurado.");
   }
+
+  const subject = `Relatório diário de aniversariantes - ${dateStr}`;
+
+  let corpo = `Olá,\n\nRelatório de aniversariantes do dia ${dateStr}:\n\n`;
 
   if (!aniversariantes || aniversariantes.length === 0) {
-    console.log("🎂 Sem aniversariantes hoje.");
-    return;
+    corpo += `Nenhum aniversariante hoje.\n`;
+  } else {
+    aniversariantes.forEach((p, index) => {
+      // Formata a data (PG DATE vem como objeto Date em UTC midnight)
+      const dataNascStr = p.data_nascimento
+        ? new Date(p.data_nascimento).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+        : "-";
+
+      if (p.tipo === "FILIADO") {
+        corpo += `${index + 1}. ${p.nome} (Filiado - Nasc: ${dataNascStr})\n`;
+      } else {
+        corpo += `${index + 1}. ${p.nome} (Dependente de ${p.nome_filiado_vinculo} - Nasc: ${dataNascStr})\n`;
+      }
+    });
   }
-
-  const subject = `🎂 Aniversariantes do Dia - ${new Date().toLocaleDateString("pt-BR")}`;
-
-  let corpo = `Olá,\n\nConfira os aniversariantes de hoje:\n\n`;
-
-  aniversariantes.forEach((p) => {
-    if (p.tipo === "FILIADO") {
-      corpo += `- ${p.nome} (Filiado ${p.situacao})\n`;
-    } else {
-      corpo += `- ${p.nome} (Dependente do filiado ${p.situacao_filiado_vinculo} ${p.nome_filiado_vinculo})\n`;
-    }
-  });
 
   corpo += `\nAtenciosamente,\nSistema SINPRF-ES`;
 
-  await enviarEmailBase(MAIL_TO_FILIACAO, subject, corpo);
-  console.log("📧 E-mail de aniversariantes enviado.");
+  await enviarEmailBase(to, subject, corpo);
+  console.log(`📧 Relatório de aniversariantes enviado para ${to}.`);
 }
 
 module.exports = {
@@ -375,5 +380,5 @@ module.exports = {
   enviarEmailBoasVindasFiliado,
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
-  enviarEmailAniversariantes,
+  enviarRelatorioAniversariantes,
 };

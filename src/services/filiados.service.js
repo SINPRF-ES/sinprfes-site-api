@@ -610,7 +610,8 @@ async function buscarAniversariantesDoDia() {
       -- Filiados
       SELECT
         id, nome, situacao, perfil_acesso, 'FILIADO' as tipo,
-        NULL as nome_filiado_vinculo, NULL as situacao_filiado_vinculo
+        NULL as nome_filiado_vinculo, NULL as situacao_filiado_vinculo,
+        data_nascimento
       FROM filiados
       WHERE
         data_nascimento IS NOT NULL AND
@@ -626,7 +627,8 @@ async function buscarAniversariantesDoDia() {
           (i) => `
       SELECT
         f.id, f.dep${i}_nome as nome, 'DEPENDENTE' as situacao, f.perfil_acesso, 'DEPENDENTE' as tipo,
-        f.nome as nome_filiado_vinculo, f.situacao as situacao_filiado_vinculo
+        f.nome as nome_filiado_vinculo, f.situacao as situacao_filiado_vinculo,
+        f.dep${i}_data_nascimento as data_nascimento
       FROM filiados f
       WHERE
         f.dep${i}_data_nascimento IS NOT NULL AND
