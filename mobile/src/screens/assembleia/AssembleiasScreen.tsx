@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   badgeCRIADA: { backgroundColor: '#cfe2ff' },
   badgeABERTA: { backgroundColor: '#d1e7dd' },
+  badgeEM_CURSO: { backgroundColor: '#fff3cd' },
   badgeENCERRADA: { backgroundColor: '#f8d7da' },
   badgeText: { fontSize: 10, fontWeight: 'bold', color: '#333' },
   tipoText: { fontWeight: 'bold', color: '#666' },

@@ -372,3 +372,21 @@ O sistema utiliza um módulo compartilhado em `shared/dependentes/parentesco.js`
 ### Cálculo de Idade Compartilhado
 
 O cálculo de idade detalhado (Anos, Meses e Dias) é unificado entre Site e App através do utilitário em `shared/date/age.js`. Isso garante que a mesma data de nascimento resulte sempre na mesma string de idade em qualquer plataforma.
+
+---
+
+## 🏛️ Gestão de Ambientes e Homologação
+
+O projeto utiliza a variável de ambiente `ASSEMBLEIA_ENV` para distinguir o comportamento do sistema.
+
+### Ambientes Disponíveis
+- `dev`: Desenvolvimento local e sandbox (Padrão).
+- `hml`: Homologação institucional. Isolado para testes formais.
+- `prod`: Produção real. Regras de segurança máximas ativas.
+
+### Preparação de Homologação (Seed)
+Para popular o banco de dados de homologação com usuários de teste e uma assembleia fictícia:
+```bash
+ASSEMBLEIA_ENV=hml DATABASE_URL=sua_url_aqui node scripts/assembleia-hml-seed.js
+```
+**Atenção:** Este script é bloqueado em ambiente de produção para evitar poluição de dados reais.

@@ -28,6 +28,7 @@ app.use(
 // Preflight
 app.options("*", cors());
 
+app.use(require("./middlewares/requestId"));
 app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições
 app.use(express.json());
 

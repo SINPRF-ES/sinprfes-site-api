@@ -20,7 +20,7 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
 
     try {
       setLoading(true);
-      await iniciarVotacao(id, { titulo, descricao, duracao_minutos: parseInt(duracao) });
+      await iniciarVotacao(id, { titulo, descricao, duracao_segundos: parseInt(duracao) * 60 });
       Alert.alert('Sucesso', 'Votação iniciada!');
       navigation.goBack();
     } catch (err: any) {
@@ -63,7 +63,10 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
         <Picker
           selectedValue={duracao}
           onValueChange={(v) => setDuracao(v)}
+          style={styles.picker}
+          dropdownIconColor="#003366"
         >
+          <Picker.Item label="Selecione..." value="" />
           <Picker.Item label="1 minuto" value="1" />
           <Picker.Item label="2 minutos" value="2" />
           <Picker.Item label="3 minutos" value="3" />
@@ -79,8 +82,9 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8', padding: 20 },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 16 },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 16, color: '#333' },
   pickerBox: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 20, justifyContent: 'center' },
+  picker: { color: '#333' },
   textArea: { height: 100, textAlignVertical: 'top' },
   btnSalvar: { backgroundColor: '#f1c40f', padding: 18, borderRadius: 30, alignItems: 'center' },
   btnText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },

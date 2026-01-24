@@ -16,6 +16,7 @@ const log = {
       JSON.stringify({
         level: "INFO",
         timestamp: new Date().toISOString(),
+        env: process.env.ASSEMBLEIA_ENV || "dev",
         message,
         ...meta,
       })
@@ -44,6 +45,7 @@ const log = {
       JSON.stringify({
         level: "ERROR",
         timestamp: new Date().toISOString(),
+        env: process.env.ASSEMBLEIA_ENV || "dev",
         message,
         ...meta,
       })
@@ -58,6 +60,7 @@ const log = {
       JSON.stringify({
         level: "WARN",
         timestamp: new Date().toISOString(),
+        env: process.env.ASSEMBLEIA_ENV || "dev",
         message,
         ...meta,
       })
