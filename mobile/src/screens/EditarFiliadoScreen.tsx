@@ -18,6 +18,7 @@ import { logger } from '../infra/logger';
 import api from '../services/apiService';
 import { TouchableOpacity } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 export default function EditarFiliadoScreen({ route, navigation }: any) {
   const filiadoId = parseCanonicalFiliadoId(route.params?.filiadoId);
@@ -74,7 +75,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     fetchData();
   }, [fetchData]);
 
-  const handleUpdate = async () => {
+  const handleUpdate = useCallback(async () => {
     if (!filiado) return;
     if (!netInfo.isConnected) {
       Alert.alert('Offline', 'A edição de filiados só está disponível online.');
@@ -104,9 +105,9 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     } finally {
       setSaving(false);
     }
-  };
+  }, [filiado, netInfo.isConnected, filiadoId, navigation]);
 
-  const handleConfirmarAcao = async () => {
+  const handleConfirmarAcao = useCallback(async () => {
     if (!filiado || !motivoAcao) {
         Alert.alert('Aviso', 'Informe o motivo da ação.');
         return;
@@ -132,7 +133,29 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     } finally {
         setSaving(false);
     }
-  };
+  }, [filiado, motivoAcao, showMotivoInput, fetchData]);
+
+  useEffect(() => {
+    const ehGestao = checkIsGestao(usuario?.perfil_acesso);
+    const actions: MenuAction[] = [
+      { label: 'Salvar Alterações', icon: 'content-save', onPress: handleUpdate }
+    ];
+
+    if (ehGestao && filiadoId && filiado) {
+      if (filiado.arquivado_em) {
+        actions.push({ label: 'Desarquivar', icon: 'archive-arrow-up', onPress: () => setShowMotivoInput('DESARQUIVAR') });
+      } else {
+        actions.push({ label: 'Arquivar Cadastro', icon: 'archive-arrow-down', onPress: () => setShowMotivoInput('ARQUIVAR'), isDestructive: true });
+      }
+    }
+
+    navigation.setOptions({
+      headerRight: () => <HeaderMenu actions={actions} />,
+      headerStyle: { backgroundColor: '#003366' },
+      headerTintColor: '#fff',
+      headerTitleAlign: 'center',
+    });
+  }, [navigation, filiado, usuario, handleUpdate, filiadoId]);
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
@@ -151,29 +174,8 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
 
   return (
     <SafeScreen style={styles.container}>
-      <View style={styles.stickyHeader}>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.saveButton, saving && styles.disabledButton]}
-            onPress={handleUpdate}
-            disabled={saving}
-          >
-            <Text style={styles.actionButtonText}>{saving ? "..." : "Salvar"}</Text>
-          </TouchableOpacity>
-
-          {ehGestao && filiadoId && !showMotivoInput && (
-             filiado.arquivado_em ? (
-                <TouchableOpacity style={[styles.actionButton, styles.unarchiveButton]} onPress={() => setShowMotivoInput('DESARQUIVAR')}>
-                    <Text style={styles.actionButtonText}>Desarquivar</Text>
-                </TouchableOpacity>
-             ) : (
-                <TouchableOpacity style={[styles.actionButton, styles.archiveButton]} onPress={() => setShowMotivoInput('ARQUIVAR')}>
-                    <Text style={styles.actionButtonText}>Arquivar</Text>
-                </TouchableOpacity>
-             )
-          )}
-        </View>
-        {showMotivoInput && (
+      {showMotivoInput && (
+        <View style={styles.stickyHeader}>
             <View style={styles.motivoContainer}>
                 <TextInput
                     style={styles.motivoInput}
@@ -183,7 +185,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
                     autoFocus
                 />
                 <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <TouchableOpacity style={[styles.btnMotivo, styles.btnCancel]} onPress={() => setShowMotivoInput(null)}>
+                    <TouchableOpacity style={[styles.btnMotivo, styles.btnCancel]} onPress={() => { setShowMotivoInput(null); setMotivoAcao(''); }}>
                         <Text style={styles.btnMotivoText}>Cancelar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.btnMotivo, styles.btnConfirm]} onPress={handleConfirmarAcao}>
@@ -191,8 +193,8 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
                     </TouchableOpacity>
                 </View>
             </View>
-        )}
-      </View>
+        </View>
+      )}
 
       <KeyboardAwareScrollView contentContainerStyle={styles.contentContainer} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
         {filiado.arquivado_em && (

@@ -10,6 +10,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { criarAssembleia, uploadEdital } from '../../services/assembleiaService';
 import { logger } from '../../infra/logger';
 import { formatDateToDdMmYyyy } from '../../utils/date';
+import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
+import { useEffect } from 'react';
 
 export default function CriarAssembleiaScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -64,7 +66,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
     }
   };
 
-  const handleSalvar = async () => {
+  const handleSalvar = useCallback(async () => {
     if (!titulo || !descricao || !data || !hora) {
       Alert.alert('Aviso', 'Preencha todos os campos obrigatórios (Título, Pauta, Data e Hora).');
       return;
@@ -118,7 +120,17 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [titulo, tipo, descricao, data, hora, editalFile]);
+
+  useEffect(() => {
+    const actions: MenuAction[] = [
+      { label: 'Criar Assembleia', icon: 'check-circle-outline', onPress: handleSalvar }
+    ];
+    navigation.setOptions({
+      headerRight: () => <HeaderMenu actions={actions} />,
+      title: 'Nova Assembleia'
+    });
+  }, [navigation, titulo, tipo, descricao, data, hora, editalFile, loading, uploading, handleSalvar]);
 
   return (
     <SafeScreen style={styles.container}>
@@ -206,9 +218,6 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         </View>
       )}
 
-      <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar} disabled={loading || uploading}>
-        {loading || uploading ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>Criar Assembleia</Text>}
-      </TouchableOpacity>
     </KeyboardAwareScrollView>
     </SafeScreen>
   );
