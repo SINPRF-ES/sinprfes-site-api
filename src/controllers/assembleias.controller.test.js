@@ -13,7 +13,8 @@ describe('Assembleias Controller', () => {
     req = {
       params: { id: '1' },
       user: { id: 1, perfil_acesso: 'DIRETORIA' },
-      body: {}
+      body: {},
+      requestId: 'test-id'
     };
     res = {
       json: jest.fn(),

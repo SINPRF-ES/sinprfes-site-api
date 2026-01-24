@@ -394,6 +394,10 @@ async function verificarElegibilidadePorQuorum(quorumId, filiadoId) {
 }
 
 async function registrarVoto(votacaoId, filiadoId, voto, assembleiaId) {
+  if (voto !== 'SIM' && voto !== 'NAO') {
+    throw new Error("Apenas votos SIM ou NAO são permitidos manualmente.");
+  }
+
   // Blindagem de perfil: ADMIN e COMUNICADOR não votam
   const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [filiadoId]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
