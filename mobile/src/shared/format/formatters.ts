@@ -6,20 +6,17 @@ export const onlyDigits = (text: string | null | undefined): string => {
 export const formatCpf = (cpf: string | null | undefined): string => {
   try {
     if (!cpf) return '';
-    const digits = onlyDigits(cpf);
+    const digits = onlyDigits(cpf).slice(0, 11);
     if (!digits) return '';
-    if (digits.length !== 11) return digits;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
   } catch (e) {
     console.error('[Formatters.formatCpf.error]', e);
     return '—';
   }
-  if (!cpf) return '';
-  const digits = onlyDigits(cpf).slice(0, 11);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 };
 
 export const formatTelefone = (tel: string | null | undefined): string => {
