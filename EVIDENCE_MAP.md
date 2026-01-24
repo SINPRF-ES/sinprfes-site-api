@@ -63,6 +63,7 @@
 ### 1. Migração de UI para Top Bar (Android Conflict Fix)
 - **Mudança:** Eliminados botões fixos no rodapé e sticky headers em 10 telas críticas.
 - **Solução:** Implementado `HeaderMenu` (ícone ⋮) para ações contextuais.
+- **Correção de Layout:** Menu ⋮ ajustado para altura mínima (wrap content) usando `ScrollView` e `maxHeight`, eliminando ocupação de tela cheia indevida.
 - **Resultado:** Zero conflito com a navigation bar do Android. UI mais limpa e profissional.
 - **Telas Afetadas:** Assembleias, Detalhes, Sala de Votação, Filiados (Listagem/Criar/Editar), Jogos 2026 e Meus Dados.
 
@@ -84,5 +85,6 @@
 - **Máscaras:** CPF e Telefone permanecem congeladas e funcionando (verificado em `masks.ts` e `formatters.ts`).
 - **Regras de Acesso:** Whitelists de `DIRETORIA` e `ADMIN` mantidas em rotas e UI.
 - **Hooks React:** Corrigidos erros de TDZ e loops infinitos em telas de formulário.
+- **Crash Fix:** Corrigido `ReferenceError: Property 'useCallback' doesn't exist` em `CriarAssembleiaScreen.tsx` e auditados imports em todas as telas de Votação.
 
 **Erro 500 em assembleias reproduzido, causa raiz identificada via logs server-side e corrigida. Nenhuma regressão conhecida introduzida.**

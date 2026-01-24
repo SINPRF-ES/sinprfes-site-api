@@ -1,5 +1,5 @@
 // mobile/src/screens/CriarFiliadoScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Button, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -14,7 +14,6 @@ import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
-import { useEffect } from 'react';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',

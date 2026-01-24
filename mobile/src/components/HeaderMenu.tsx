@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Modal, Text, StyleSheet, TouchableWithoutFeedback, FlatList } from 'react-native';
+import { View, TouchableOpacity, Modal, Text, StyleSheet, TouchableWithoutFeedback, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,12 +35,18 @@ export default function HeaderMenu({ actions }: Props) {
         <TouchableWithoutFeedback onPress={() => setVisible(false)}>
           <View style={styles.overlay}>
             <View style={[styles.menuContainer, { marginTop: insets.top + 10 }]}>
-              <FlatList
-                data={actions}
-                keyExtractor={(item) => item.label}
-                renderItem={({ item }) => (
+              <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                bounces={false}
+              >
+                {actions.map((item, index) => (
                   <TouchableOpacity
-                    style={styles.menuItem}
+                    key={item.label + index}
+                    style={[
+                      styles.menuItem,
+                      index === actions.length - 1 && styles.lastMenuItem
+                    ]}
                     onPress={() => {
                       setVisible(false);
                       item.onPress();
@@ -61,8 +67,8 @@ export default function HeaderMenu({ actions }: Props) {
                       {item.label}
                     </Text>
                   </TouchableOpacity>
-                )}
-              />
+                ))}
+              </ScrollView>
             </View>
           </View>
         </TouchableWithoutFeedback>
@@ -92,6 +98,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     minWidth: 200,
+    maxHeight: '80%', // Evita ocupar toda a tela se houver muitos itens
+  },
+  scrollView: {
+    borderRadius: 8,
+  },
+  scrollContent: {
     paddingVertical: 8,
   },
   menuItem: {
@@ -100,6 +112,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#eee',
+  },
+  lastMenuItem: {
+    borderBottomWidth: 0,
   },
   menuIcon: {
     marginRight: 12,

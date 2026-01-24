@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { iniciarVotacao } from '../../services/assembleiaService';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
-import { useEffect } from 'react';
 
 export default function CriarItemVotacaoScreen({ route, navigation }: any) {
   const { id } = route.params;

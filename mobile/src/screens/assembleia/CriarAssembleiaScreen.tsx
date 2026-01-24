@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -11,7 +11,6 @@ import { criarAssembleia, uploadEdital } from '../../services/assembleiaService'
 import { logger } from '../../infra/logger';
 import { formatDateToDdMmYyyy } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
-import { useEffect } from 'react';
 
 export default function CriarAssembleiaScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
