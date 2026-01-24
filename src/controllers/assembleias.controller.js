@@ -188,6 +188,9 @@ async function checkin(req, res) {
         failedCheckinAttempts.set(userId, { count: currentFailures + 1, lastAttempt: Date.now() });
 
         await service.registrarAuditoria(id, userId, 'CHECKIN_FALHA_TOKEN', { token, requestId: req.requestId });
+        if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
+            log.warn("PilotoCheckinFriction", { requestId: req.requestId, userId, assembleiaId: id, reason: "Invalid Token" });
+        }
         return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
     }
 
@@ -284,6 +287,10 @@ async function votar(req, res) {
   const start = Date.now();
   try {
     const { id, vid } = req.params;
+
+    if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
+        log.info("PilotoActionAttempt", { requestId: req.requestId, userId: req.user.id, action: "votar", assembleiaId: id, votacaoId: vid });
+    }
     const { voto } = req.body;
 
      const votacao = await service.buscarVotacaoAtiva(id);

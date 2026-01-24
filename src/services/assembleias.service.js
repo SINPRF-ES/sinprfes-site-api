@@ -20,10 +20,16 @@ const ASSEMBLEIA_COLUMNS = `
  */
 async function registrarAuditoria(assembleiaId, userId, evento, payload, client = null) {
   const db = client || pool;
+  const env = process.env.ASSEMBLEIA_ENV || "dev";
   try {
+    const fullPayload = {
+      ...payload,
+      _env: env,
+      _timestamp: new Date().toISOString()
+    };
     await db.query(
       "INSERT INTO assembleia_auditoria (assembleia_id, user_id, evento, payload) VALUES ($1, $2, $3, $4)",
-      [assembleiaId, userId, evento, payload ? JSON.stringify(payload) : null]
+      [assembleiaId, userId, evento, JSON.stringify(fullPayload)]
     );
   } catch (err) {
     console.error("Erro ao registrar auditoria de assembleia:", err);
@@ -45,6 +51,14 @@ async function buscarPorId(id) {
 
 async function criar(dados) {
   const { tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada } = dados;
+
+  // Regra de Piloto Controlado
+  if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
+      if (tipo !== 'AGE') {
+          throw new Error("Durante o período de piloto, apenas assembleias do tipo AGE são permitidas.");
+      }
+  }
+
   const { rows } = await pool.query(
     `INSERT INTO assembleias (tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada, estado)
      VALUES ($1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''), $7, $8, $9, 'CRIADA')
@@ -272,6 +286,18 @@ async function buscarQuorumPorToken(assembleiaId, token) {
 
 async function realizarCheckin(dados) {
   const { assembleia_quorum_id, filiado_id, origem, assembleia_id } = dados;
+
+  // Regra de Piloto Controlado (Limite de usuários)
+  if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
+     const MAX_PILOTO = parseInt(process.env.ASSEMBLEIA_PILOTO_MAX_USERS || "50");
+     const { rows: countRows } = await pool.query(
+       "SELECT COUNT(*) as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1",
+       [assembleia_quorum_id]
+     );
+     if (parseInt(countRows[0].total) >= MAX_PILOTO) {
+        throw new Error(`Limite de usuários para o piloto atingido (${MAX_PILOTO}).`);
+     }
+  }
 
   // Blindagem de perfil: ADMIN e COMUNICADOR não fazem check-in
   const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [filiado_id]);

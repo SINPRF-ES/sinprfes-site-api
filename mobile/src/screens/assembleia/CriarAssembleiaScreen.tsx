@@ -157,6 +157,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
               style={styles.picker}
               dropdownIconColor="#003366"
             >
+              <Picker.Item label="Selecione..." value="" />
               <Picker.Item label="Assembleia Geral Extraordinária" value="AGE" />
               <Picker.Item label="Assembleia Geral Ordinária" value="AGO" />
             </Picker>

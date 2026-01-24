@@ -68,6 +68,7 @@ export default function ComporMesaScreen({ route, navigation }: any) {
           selectedValue={presidenteId}
           onValueChange={setPresidenteId}
           style={styles.picker}
+          dropdownIconColor="#003366"
         >
           <Picker.Item label="Selecione..." value="" />
           {presentes.map(p => (
@@ -82,6 +83,7 @@ export default function ComporMesaScreen({ route, navigation }: any) {
           selectedValue={secretarioId}
           onValueChange={setSecretarioId}
           style={styles.picker}
+          dropdownIconColor="#003366"
         >
           <Picker.Item label="Selecione..." value="" />
           {presentes.map(p => (
