@@ -58,8 +58,6 @@ async function criar(req, res) {
       criado_por: req.user.id
     });
 
-    await service.registrarAuditoria(nova.id, req.user.id, "CRIACAO_ASSEMBLEIA", { tipo, titulo });
-
     res.status(201).json(nova);
   } catch (err) {
     log.error("AssembleiaCriarErro", err);
@@ -69,9 +67,8 @@ async function criar(req, res) {
 
 async function abrir(req, res) {
   try {
-    const atualizada = await service.abrir(req.params.id);
-    await service.registrarAuditoria(req.params.id, req.user.id, "ABERTURA_ASSEMBLEIA", {});
-    socket.emitEvent(req.params.id, "session_state_changed", { estado: "ABERTA" });
+    const atualizada = await service.abrir(req.params.id, req.user.id);
+    socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "ABERTA" });
 
     res.json(atualizada);
   } catch (err) {
@@ -84,9 +81,8 @@ async function abrir(req, res) {
 
 async function iniciarExecucao(req, res) {
   try {
-    const atualizada = await service.iniciarExecucao(req.params.id);
-    await service.registrarAuditoria(req.params.id, req.user.id, "INICIO_EXECUCAO_ASSEMBLEIA", {});
-    socket.emitEvent(req.params.id, "session_state_changed", { estado: "EM_CURSO" });
+    const atualizada = await service.iniciarExecucao(req.params.id, req.user.id);
+    socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "EM_CURSO" });
 
     res.json(atualizada);
   } catch (err) {
@@ -97,11 +93,11 @@ async function iniciarExecucao(req, res) {
   }
 }
 
-async function encerrar(req, res) {
+async function iniciarExecucao(req, res) {
   try {
-    const atualizada = await service.encerrar(req.params.id);
-    await service.registrarAuditoria(req.params.id, req.user.id, "ENCERRAMENTO_ASSEMBLEIA", {});
-    socket.emitEvent(req.params.id, "session_state_changed", { estado: "ENCERRADA" });
+    const atualizada = await service.encerrar(req.params.id, req.user.id);
+    socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "ENCERRADA" });
+    socket.emitEvent(req.params.id, "assembleia:encerrada", {});
 
     res.json(atualizada);
   } catch (err) {
@@ -133,8 +129,8 @@ async function gerarTokenQuorum(req, res) {
       observacao
     });
 
-    await service.registrarAuditoria(id, req.user.id, "GERAR_TOKEN_QUORUM", { token, tipo_chamada });
-    socket.emitEvent(id, "new_quorum_call", { id: quorum.id, token, tipo_chamada });
+    const eventName = tipo_chamada === 'RECONTAGEM' ? "assembleia:recontagem" : "assembleia:token_gerado";
+    socket.emitEvent(id, eventName, { id: quorum.id, token, tipo_chamada });
 
     res.json({ token, quorum_id: quorum.id });
   } catch (err) {
@@ -162,14 +158,13 @@ async function checkin(req, res) {
     await service.realizarCheckin({
       assembleia_quorum_id: quorum.id,
       filiado_id: req.user.id,
-      origem: 'TOKEN'
+      origem: 'TOKEN',
+      assembleia_id: id
     });
-
-    await service.registrarAuditoria(id, req.user.id, "CHECKIN_ASSEMBLEIA", { assembleia_quorum_id: quorum.id });
 
     // Broadcast do total atualizado
     const estado = await service.buscarEstadoCompleto(id);
-    socket.emitEvent(id, "quorum_count_updated", { total: estado.quorumVigente?.total || 0 });
+    socket.emitEvent(id, "assembleia:checkin_updated", { total: estado.quorumVigente?.total || 0 });
 
     res.json({ success: true, message: "Check-in realizado com sucesso" });
   } catch (err) {
@@ -187,29 +182,14 @@ async function definirMesa(req, res) {
       return res.status(400).json({ error: "Presidente e Secretário são obrigatórios" });
     }
 
-    // Validar presença dos escolhidos no quórum vigente
-    const quorumVigente = await service.buscarUltimoQuorum(id);
-    if (!quorumVigente) return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
-
-    const [presencaP, presencaS] = await Promise.all([
-      service.verificarElegibilidadePorQuorum(quorumVigente.id, presidente_user_id),
-      service.verificarElegibilidadePorQuorum(quorumVigente.id, secretario_user_id)
-    ]);
-
-    if (!presencaP || !presencaS) {
-      return res.status(400).json({ error: Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA });
-    }
-
-    await service.definirMesa({
+    const mesa = await service.definirMesa({
       assembleia_id: id,
       presidente_user_id,
       secretario_user_id,
       definida_por_user_id: req.user.id
     });
 
-    const mesa = await service.buscarMesa(id);
-    await service.registrarAuditoria(id, req.user.id, "DEFINICAO_MESA", { presidente_user_id, secretario_user_id });
-    socket.emitEvent(id, "mesa_updated", mesa);
+    socket.emitEvent(id, "assembleia:mesa_definida", mesa);
 
     res.json(mesa);
   } catch (err) {
@@ -241,8 +221,7 @@ async function iniciarVotacao(req, res) {
       iniciada_por_user_id: req.user.id
     });
 
-    await service.registrarAuditoria(id, req.user.id, "INICIO_VOTACAO", { votacao_id: votacao.id, titulo });
-    socket.emitEvent(id, "voting_started", { ...votacao, contagem: { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 }, votos: [] });
+    socket.emitEvent(id, "votacao:iniciada", { ...votacao, contagem: { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 }, votos: [] });
 
     res.status(201).json(votacao);
   } catch (err) {
@@ -268,14 +247,14 @@ async function votar(req, res) {
     const elegivel = await service.verificarElegibilidade(vid, req.user.id);
     if (!elegivel) return res.status(403).json({ error: Textos.ASSEMBLEIA.NAO_ELEGIVEL });
 
-    await service.registrarVoto(vid, req.user.id, voto);
+    await service.registrarVoto(vid, req.user.id, voto, id);
 
     const [contagem, votos] = await Promise.all([
       service.contarVotos(vid),
       service.listarVotosNominais(vid)
     ]);
 
-    socket.emitEvent(id, "vote_cast", { contagem, votos });
+    socket.emitEvent(id, "voto:updated", { contagem, votos });
 
     res.json({ success: true });
   } catch (err) {
@@ -294,14 +273,13 @@ async function encerrarVotacao(req, res) {
        return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
     }
 
-    const finalizada = await service.finalizarVotacao(vid);
+    const finalizada = await service.finalizarVotacao(vid, req.user.id);
     const [contagem, votos] = await Promise.all([
       service.contarVotos(vid),
       service.listarVotosNominais(vid)
     ]);
 
-    await service.registrarAuditoria(id, req.user.id, "FIM_VOTACAO", { votacao_id: vid });
-    socket.emitEvent(id, "voting_ended", { ...finalizada, contagem, votos });
+    socket.emitEvent(id, "votacao:encerrada", { ...finalizada, contagem, votos });
 
     res.json(finalizada);
   } catch (err) {
@@ -350,11 +328,16 @@ async function gerarRelatorio(req, res) {
     const { id } = req.params;
 
     // Stub: Apenas registra o pedido e loga
-    await service.registrarAuditoria(id, req.user.id, "GERAR_RELATORIO", { solicitado_por: req.user.nome });
+    await service.registrarAuditoria(id, req.user.id, "RELATORIO_SOLICITADO", { solicitado_por: req.user.nome });
+
+    const request_id = Math.random().toString(36).substring(7).toUpperCase();
+    const auth_code = Math.random().toString(36).substring(7).toUpperCase();
 
     res.json({
       success: true,
-      message: "Pedido de relatório registrado. O documento será enviado por e-mail em breve (Stub)."
+      message: "Pedido de relatório registrado. O documento será enviado por e-mail em breve (Stub).",
+      request_id,
+      auth_code
     });
   } catch (err) {
     log.error("AssembleiaGerarRelatorioErro", err);
