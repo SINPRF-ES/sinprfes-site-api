@@ -17,23 +17,30 @@ router.get("/", auth, controller.listar);
 router.get("/:id", auth, controller.detalhe);
 router.get("/:id/estado", auth, controller.estadoCompleto);
 
-// DIRETORIA/ADMIN podem criar, abrir e encerrar
+// Gestão podem criar, abrir, iniciar execução e encerrar
 router.post("/", auth, requirePermission("VOTACAO_GERENCIAR"), controller.criar);
 router.post("/upload-edital", auth, requirePermission("VOTACAO_GERENCIAR"), upload.single("edital"), controller.uploadEdital);
-router.patch("/:id/abrir", auth, requirePermission("VOTACAO_GERENCIAR"), controller.abrir);
-router.patch("/:id/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), controller.encerrar);
+router.post("/:id/abrir", auth, requirePermission("VOTACAO_GERENCIAR"), controller.abrir);
+router.post("/:id/iniciar-execucao", auth, requirePermission("VOTACAO_GERENCIAR"), controller.iniciarExecucao);
+router.post("/:id/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), controller.encerrar);
 
 // Presença e Quórum
-router.post("/:id/quorum", auth, requirePermission("VOTACAO_GERENCIAR"), controller.gerarTokenQuorum);
+router.post("/:id/token", auth, requirePermission("VOTACAO_GERENCIAR"), controller.gerarTokenQuorum);
 router.post("/:id/checkin", auth, controller.checkin);
 
-// Votações
-router.post("/:id/votacao", auth, requirePermission("VOTACAO_GERENCIAR"), controller.iniciarVotacao);
-router.post("/:id/votacao/:vid/votar", auth, controller.votar);
+// Mesa
+router.post("/:id/mesa", auth, requirePermission("VOTACAO_GERENCIAR"), controller.definirMesa);
+
+// Votações (Itens)
+router.post("/:id/votacoes", auth, requirePermission("VOTACAO_GERENCIAR"), controller.iniciarVotacao);
+router.post("/:id/votacoes/:vid/voto", auth, controller.votar);
+router.post("/:id/votacoes/:vid/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), controller.encerrarVotacao);
 
 // Interação
 router.post("/:id/pedir-palavra", auth, controller.pedirPalavra);
 router.post("/:id/propostas", auth, controller.criarProposta);
-router.post("/:id/mesa", auth, requirePermission("VOTACAO_GERENCIAR"), controller.definirMesa);
+
+// Relatório
+router.post("/:id/relatorio", auth, requirePermission("VOTACAO_GERENCIAR"), controller.gerarRelatorio);
 
 module.exports = router;
