@@ -11,8 +11,17 @@ const Stack = createNativeStackNavigator();
 
 export default function AssembleiaStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="AssembleiaList" component={AssembleiasScreen} />
+    <Stack.Navigator screenOptions={{
+      headerShown: true,
+      headerTintColor: '#fff',
+      headerStyle: { backgroundColor: '#003366' },
+      headerTitleAlign: 'center',
+    }}>
+      <Stack.Screen
+        name="AssembleiaList"
+        component={AssembleiasScreen}
+        options={{ title: 'Assembleias' }}
+      />
       <Stack.Screen name="AssembleiaDetalhe" component={AssembleiaDetalheScreen} />
       <Stack.Screen name="AssembleiaSala" component={AssembleiaSalaScreen} />
       <Stack.Screen name="CriarAssembleia" component={CriarAssembleiaScreen} />

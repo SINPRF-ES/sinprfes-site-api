@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaEstado, enviarVoto, pedirPalavra } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
+import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -27,6 +28,17 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   }, [id]);
 
   useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => {
+        const actions: MenuAction[] = [
+          { label: 'Pedir Palavra', icon: 'microphone', onPress: handlePedirPalavra },
+          { label: 'Nova Proposta', icon: 'file-document-edit-outline', onPress: () => navigation.navigate('Propostas', { id }) }
+        ];
+        return <HeaderMenu actions={actions} />;
+      },
+      title: 'Sala de Votação'
+    });
+
     fetchData();
 
     if (token) {
@@ -72,7 +84,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       assembleiaSocket.offEvent('quorum_count_updated');
       assembleiaSocket.offEvent('new_quorum_call');
     };
-  }, [id, token, fetchData]);
+  }, [id, token, fetchData, handlePedirPalavra, navigation]);
 
   const handleVotar = async (voto: 'SIM' | 'NAO') => {
     if (!estado?.votacaoAtiva) return;
@@ -87,14 +99,14 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     }
   };
 
-  const handlePedirPalavra = async () => {
+  const handlePedirPalavra = useCallback(async () => {
     try {
       await pedirPalavra(id);
       Alert.alert('Sucesso', 'Seu pedido foi registrado.');
     } catch (err: any) {
       Alert.alert('Erro', err.response?.data?.error || 'Falha ao solicitar palavra.');
     }
-  };
+  }, [id]);
 
   if (loading || !estado) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
@@ -190,16 +202,6 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <TouchableOpacity style={styles.btnFooter} onPress={handlePedirPalavra}>
-          <MaterialCommunityIcons name="microphone" size={24} color="#003366" />
-          <Text style={styles.btnFooterText}>Pedir Palavra</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.btnFooter} onPress={() => navigation.navigate('Propostas', { id })}>
-          <MaterialCommunityIcons name="file-document-edit-outline" size={24} color="#003366" />
-          <Text style={styles.btnFooterText}>Proposta</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }

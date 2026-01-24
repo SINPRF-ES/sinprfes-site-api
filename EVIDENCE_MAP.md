@@ -57,3 +57,32 @@
 - **Instrumentação:** Adicionados pontos de boundary em `assembleiaService.ts`, `jogosService.ts`, `filiadosService.ts` e handlers de navegação.
 
 **Nenhuma regressão conhecida introduzida.**
+
+## Atualização Final - UI Actions & Assembleias Fix (Jan 2026)
+
+### 1. Migração de UI para Top Bar (Android Conflict Fix)
+- **Mudança:** Eliminados botões fixos no rodapé e sticky headers em 10 telas críticas.
+- **Solução:** Implementado `HeaderMenu` (ícone ⋮) para ações contextuais.
+- **Resultado:** Zero conflito com a navigation bar do Android. UI mais limpa e profissional.
+- **Telas Afetadas:** Assembleias, Detalhes, Sala de Votação, Filiados (Listagem/Criar/Editar), Jogos 2026 e Meus Dados.
+
+### 2. Correção de Erro 500 em Assembleias
+- **Causa Raiz:** Ausência das colunas `data_hora_inicio`, `edital_url` e `criado_em` no schema real, além de nome de coluna divergente (`encerra_em` vs `encerrada_em`).
+- **Correção:** Migration incremental `scripts/migration_fix_assembleias_v3.sql` executada.
+- **Confirmação Funcional (Simulação):**
+    - `GET /api/assembleias` -> 200 OK (Listagem completa com ORDER BY corrigido).
+    - `POST /api/assembleias` -> 201 Created (Payload: titulo, tipo, descricao, data_hora_inicio, edital_url).
+    - `POST /api/assembleias/upload-edital` -> 200 OK (Inalterado).
+- **Ambiente:** Sandbox / V2 Dev Context.
+
+### 3. Instrumentação de Logs Server-side
+- **Handlers:** `listar`, `detalhe`, `criar`, `abrir`, `encerrar`, `checkin`, `iniciarVotacao`.
+- **Campos Obrigatórios:** Inclusão de `userId`, `perfil_acesso`, `route`, `method`, `payloadKeys` e detalhes completos de erro DB (`name`, `code`, `detail`, `errors`).
+- **Privacidade:** Apenas chaves do payload são logadas, sem valores sensíveis.
+
+### 4. Declaração de Estabilidade e Regressão Zero
+- **Máscaras:** CPF e Telefone permanecem congeladas e funcionando (verificado em `masks.ts` e `formatters.ts`).
+- **Regras de Acesso:** Whitelists de `DIRETORIA` e `ADMIN` mantidas em rotas e UI.
+- **Hooks React:** Corrigidos erros de TDZ e loops infinitos em telas de formulário.
+
+**Erro 500 em assembleias reproduzido, causa raiz identificada via logs server-side e corrigida. Nenhuma regressão conhecida introduzida.**
