@@ -25,7 +25,7 @@ async function criar(dados) {
   const { tipo, titulo, descricao, criado_por, data_hora_inicio, edital_url } = dados;
   const { rows } = await pool.query(
     `INSERT INTO assembleias (tipo, titulo, descricao, criado_por, data_hora_inicio, edital_url)
-     VALUES ($1, $2, $3, $4, $5, $6)
+     VALUES ($1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''))
      RETURNING ${ASSEMBLEIA_COLUMNS}`,
     [tipo, titulo, descricao, criado_por, data_hora_inicio, edital_url]
   );
