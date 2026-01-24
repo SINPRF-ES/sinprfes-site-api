@@ -41,7 +41,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       setAssembleia(data);
       setEstado(estadoData);
     } catch (err: any) {
-      logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err, { id });
+      logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err as Error, { id });
       console.error('[Assembleia.fetch]', err);
     } finally {
       setLoading(false);
@@ -152,7 +152,12 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isAberta = assembleia.estado === 'ABERTA';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+    <View style={{ flex: 1, backgroundColor: '#f2f4f8' }}>
+    <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) + 20 }}
+        showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
         <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
           <Text style={styles.badgeText}>{assembleia.estado}</Text>
@@ -216,7 +221,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       )}
 
       {isDiretoria && (
-        <View style={styles.diretoriaSection}>
+        <View style={[styles.diretoriaSection, { marginBottom: insets.bottom }]}>
           <Text style={styles.sectionTitle}>Gestão (Diretoria)</Text>
           <View style={styles.diretoriaButtons}>
             {assembleia.estado === 'CRIADA' && (
@@ -233,11 +238,12 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f4f8', padding: 16 },
+  container: { flex: 1, backgroundColor: '#f2f4f8', paddingHorizontal: 16, paddingTop: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10 },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },

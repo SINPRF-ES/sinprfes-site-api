@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -83,7 +84,7 @@ const JogosScreen = () => {
       if (isManager) {
         setInscricoesGerais(inscricoes);
       }
-    } catch (err) {
+    } catch (err: any) {
       logger.error('[Jogos.fetch]', err);
     } finally {
       setLoading(false);
@@ -148,8 +149,13 @@ const JogosScreen = () => {
           <Text style={styles.cardTitle}>Minha Inscrição</Text>
           <Text style={styles.label}>Sexo</Text>
           <View style={styles.pickerContainer}>
-            <Picker selectedValue={form.sexo} onValueChange={(v) => setForm({ ...form, sexo: v })}>
-              <Picker.Item label="Selecione..." value="" />
+            <Picker
+              selectedValue={form.sexo}
+              onValueChange={(v) => setForm({ ...form, sexo: v })}
+              style={styles.picker}
+              dropdownIconColor="#003366"
+            >
+              <Picker.Item label="Selecione..." value="" color="#999" />
               <Picker.Item label="Masculino" value="MASCULINO" />
               <Picker.Item label="Feminino" value="FEMININO" />
             </Picker>
@@ -252,7 +258,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', padding: 20, margin: 15, borderRadius: 12, elevation: 3 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center' },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5 },
-  pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 10 },
+  pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 10, height: 50, justifyContent: 'center' },
+  picker: { color: '#333', height: 50 },
   grupoContainer: { marginTop: 15 },
   grupoTitulo: { fontSize: 14, fontWeight: 'bold', color: '#003366', borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 5, marginBottom: 5 },
   modItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },

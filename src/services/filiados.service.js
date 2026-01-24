@@ -73,7 +73,15 @@ const FILIADO_COLUMNS = `
 async function buscarPorCpf(cpfRaw) {
   const cpf = normalizarCpf(cpfRaw);
   const { rows } = await pool.query(
-    `SELECT ${FILIADO_COLUMNS} FROM filiados WHERE cpf = $1 LIMIT 1`,
+    `
+    SELECT
+      f.*,
+      responsavel.nome AS arquivado_por_nome
+    FROM filiados f
+    LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
+    WHERE f.cpf = $1
+    LIMIT 1
+    `,
     [cpf]
   );
   return anexarEstadoCadastro(rows[0]) || null;
@@ -84,7 +92,15 @@ async function buscarPorCpf(cpfRaw) {
  */
 async function buscarPorId(id) {
   const { rows } = await pool.query(
-    `SELECT ${FILIADO_COLUMNS} FROM filiados WHERE id = $1 LIMIT 1`,
+    `
+    SELECT
+      f.*,
+      responsavel.nome AS arquivado_por_nome
+    FROM filiados f
+    LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
+    WHERE f.id = $1
+    LIMIT 1
+    `,
     [id]
   );
   return anexarEstadoCadastro(rows[0]) || null;
@@ -169,17 +185,16 @@ async function atualizarDadosProprios(id, dados) {
 
   valores.push(id);
 
-  const { rows } = await pool.query(
+  await pool.query(
     `
     UPDATE filiados
     SET ${campos.join(", ")}
     WHERE id = $${idx}
-    RETURNING ${FILIADO_COLUMNS}
   `,
     valores
   );
 
-  return anexarEstadoCadastro(rows[0]) || null;
+  return await buscarPorId(id);
 }
 
 /**
@@ -262,17 +277,16 @@ async function atualizarFiliadoPorId(id, dados) {
 
   valores.push(id);
 
-  const { rows } = await pool.query(
+  await pool.query(
     `
     UPDATE filiados
     SET ${campos.join(", ")}
     WHERE id = $${idx}
-    RETURNING ${FILIADO_COLUMNS}
   `,
     valores
   );
 
-  return anexarEstadoCadastro(rows[0]) || null;
+  return await buscarPorId(id);
 }
 
 /**
@@ -454,12 +468,12 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       `
       INSERT INTO filiados (${colunas.join(", ")})
       VALUES (${placeholders.join(", ")})
-      RETURNING ${FILIADO_COLUMNS}
+      RETURNING id
     `,
       params
     );
 
-    return anexarEstadoCadastro(rows[0]);
+    return await buscarPorId(rows[0].id);
   } catch (err) {
     if (err && err.code === "23505") {
       err.code = "CPF_DUPLICADO";
@@ -512,7 +526,7 @@ async function arquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
   const antes = await buscarPorId(id);
   if (!antes) return null;
 
-  const { rows } = await pool.query(
+  await pool.query(
     `
     UPDATE filiados
     SET
@@ -521,12 +535,11 @@ async function arquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
       arquivado_por = $2,
       atualizado_em = NOW()
     WHERE id = $3
-    RETURNING ${FILIADO_COLUMNS}
   `,
     [motivo, atorId, id]
   );
 
-  const depois = rows[0] || null;
+  const depois = await buscarPorId(id);
 
   await registrarEventoAuditoria({
     filiadoId: id,
@@ -548,7 +561,7 @@ async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
   const antes = await buscarPorId(id);
   if (!antes) return null;
 
-  const { rows } = await pool.query(
+  await pool.query(
     `
     UPDATE filiados
     SET
@@ -557,12 +570,11 @@ async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
       arquivado_por = NULL,
       atualizado_em = NOW()
     WHERE id = $1
-    RETURNING ${FILIADO_COLUMNS}
   `,
     [id]
   );
 
-  const depois = rows[0] || null;
+  const depois = await buscarPorId(id);
 
   await registrarEventoAuditoria({
     filiadoId: id,
@@ -578,16 +590,15 @@ async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
 }
 
 async function salvarTwoFaSecret(userId, secret) {
-  const { rows } = await pool.query(
+  await pool.query(
     `
     UPDATE filiados
     SET twofa_secret = $1, atualizado_em = NOW()
     WHERE id = $2
-    RETURNING ${FILIADO_COLUMNS}
   `,
     [secret, userId]
   );
-  return anexarEstadoCadastro(rows[0]) || null;
+  return await buscarPorId(userId);
 }
 
 /**

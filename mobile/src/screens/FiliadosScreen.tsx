@@ -142,10 +142,12 @@ export default function FiliadosScreen({ navigation, route }: any) {
             <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={filtroCadastro}
-                onValueChange={(v) => setFiltroCadastro(v)}
+                onValueChange={(v) => v && setFiltroCadastro(v)}
                 style={styles.picker}
                 mode="dropdown"
+                dropdownIconColor="#003366"
               >
+                <Picker.Item label="Selecione..." value="" color="#999" />
                 <Picker.Item label="Ativos" value="CADASTRO_ATIVO" />
                 <Picker.Item label="Arquivados" value="ARQUIVADOS" />
                 <Picker.Item label="Todos" value="TODOS" />
@@ -158,10 +160,12 @@ export default function FiliadosScreen({ navigation, route }: any) {
           <View style={styles.pickerWrapper}>
             <Picker
               selectedValue={filtroFuncional}
-              onValueChange={(v) => setFiltroFuncional(v)}
+              onValueChange={(v) => v && setFiltroFuncional(v)}
               style={styles.picker}
               mode="dropdown"
+              dropdownIconColor="#003366"
             >
+              <Picker.Item label="Selecione..." value="" color="#999" />
               <Picker.Item label="Todos" value="TODOS" />
               <Picker.Item label="Ativo" value="ATIVO" />
               <Picker.Item label="Veterano" value="VETERANO" />
@@ -210,8 +214,8 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 16 },
   filterGroup: { flex: 1 },
   filterLabel: { fontSize: 11, color: '#666', marginBottom: 2, fontWeight: 'bold' },
-  pickerWrapper: { backgroundColor: '#fff', borderRadius: 8, height: 40, justifyContent: 'center', elevation: 1 },
-  picker: { height: 40, color: '#333' },
+  pickerWrapper: { backgroundColor: '#fff', borderRadius: 8, height: 50, justifyContent: 'center', elevation: 1 },
+  picker: { height: 50, color: '#333' },
   empty: { padding: 40, alignItems: 'center' },
   fab: { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#003366', justifyContent: 'center', alignItems: 'center', elevation: 4 },
 });

@@ -2,12 +2,14 @@
 const service = require("../services/assembleias.service");
 const socket = require("../websocket/assembleia.socket");
 const { uploadFileBuffer } = require("../services/cloudinary.service");
+const log = require("../utils/log");
 
 async function listar(req, res) {
   try {
     const assembleias = await service.listar(req.user.perfil_acesso);
     res.json(assembleias);
   } catch (err) {
+    log.error("AssembleiaListarErro", err);
     res.status(500).json({ error: "Erro ao listar assembleias" });
   }
 }
@@ -18,6 +20,7 @@ async function detalhe(req, res) {
     if (!assembleia) return res.status(404).json({ error: "Assembleia não encontrada" });
     res.json(assembleia);
   } catch (err) {
+    log.error("AssembleiaDetalheErro", err);
     res.status(500).json({ error: "Erro ao buscar detalhe da assembleia" });
   }
 }
@@ -32,6 +35,7 @@ async function estadoCompleto(req, res) {
 
     res.json(estado);
   } catch (err) {
+    log.error("AssembleiaEstadoCompletoErro", err);
     res.status(500).json({ error: "Erro ao buscar estado da assembleia" });
   }
 }
@@ -54,6 +58,7 @@ async function criar(req, res) {
 
     res.status(201).json(nova);
   } catch (err) {
+    log.error("AssembleiaCriarErro", err);
     res.status(500).json({ error: "Erro ao criar assembleia" });
   }
 }
@@ -70,6 +75,7 @@ async function abrir(req, res) {
 
     res.json(atualizada);
   } catch (err) {
+    log.error("AssembleiaAbrirErro", err);
     res.status(500).json({ error: "Erro ao abrir assembleia" });
   }
 }
@@ -86,6 +92,7 @@ async function encerrar(req, res) {
 
     res.json(atualizada);
   } catch (err) {
+    log.error("AssembleiaEncerrarErro", err);
     res.status(500).json({ error: "Erro ao encerrar assembleia" });
   }
 }
@@ -101,6 +108,7 @@ async function gerarTokenQuorum(req, res) {
 
     res.json({ token, valido_ate: quorum.valido_ate });
   } catch (err) {
+    log.error("AssembleiaGerarTokenQuorumErro", err);
     res.status(500).json({ error: "Erro ao gerar token de quórum" });
   }
 }
@@ -124,6 +132,7 @@ async function checkin(req, res) {
 
     res.json({ success: true, message: "Check-in realizado com sucesso" });
   } catch (err) {
+    log.error("AssembleiaCheckinErro", err);
     res.status(500).json({ error: "Erro ao realizar check-in" });
   }
 }
@@ -170,6 +179,7 @@ async function iniciarVotacao(req, res) {
 
     res.status(201).json(votacao);
   } catch (err) {
+    log.error("AssembleiaIniciarVotacaoErro", err);
     res.status(500).json({ error: "Erro ao iniciar votação" });
   }
 }
@@ -204,6 +214,7 @@ async function votar(req, res) {
 
     res.json({ success: true });
   } catch (err) {
+    log.error("AssembleiaVotarErro", err);
     res.status(500).json({ error: "Erro ao registrar voto" });
   }
 }
@@ -218,6 +229,7 @@ async function pedirPalavra(req, res) {
 
     res.json({ success: true });
   } catch (err) {
+    log.error("AssembleiaPedirPalavraErro", err);
     res.status(500).json({ error: "Erro ao pedir palavra" });
   }
 }
@@ -237,6 +249,7 @@ async function criarProposta(req, res) {
     socket.emitEvent(id, "new_proposal", { ...proposta, autor_nome: req.user.nome });
     res.status(201).json(proposta);
   } catch (err) {
+    log.error("AssembleiaCriarPropostaErro", err);
     res.status(500).json({ error: "Erro ao criar proposta" });
   }
 }
@@ -252,6 +265,7 @@ async function definirMesa(req, res) {
 
     res.json({ success: true });
   } catch (err) {
+    log.error("AssembleiaDefinirMesaErro", err);
     res.status(500).json({ error: "Erro ao definir mesa" });
   }
 }

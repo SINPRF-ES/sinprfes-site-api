@@ -131,13 +131,21 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>Tipo *</Text>
           <View style={styles.pickerBox}>
-            <Picker selectedValue={tipo} onValueChange={(itemValue) => setTipo(itemValue as any)}>
+            <Picker
+              selectedValue={tipo}
+              onValueChange={(itemValue) => setTipo(itemValue as any)}
+              style={styles.picker}
+              dropdownIconColor="#003366"
+            >
               <Picker.Item label="AGE" value="AGE" />
               <Picker.Item label="AGO" value="AGO" />
             </Picker>
           </View>
         </View>
-        <View style={{ flex: 1, marginLeft: 10 }}>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.label}>Data *</Text>
           <TextInput
             style={styles.input}
@@ -148,7 +156,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
             maxLength={10}
           />
         </View>
-        <View style={{ flex: 0.6, marginLeft: 10 }}>
+        <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.label}>Hora *</Text>
           <TextInput
             style={styles.input}
@@ -204,8 +212,9 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8', padding: 20 },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 16 },
-  pickerBox: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 20 },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 16, color: '#333' },
+  pickerBox: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 20, height: 50, justifyContent: 'center' },
+  picker: { color: '#333', height: 50 },
   textArea: { height: 120, textAlignVertical: 'top' },
   row: { flexDirection: 'row' },
   btnUpload: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 15, borderWidth: 1, borderColor: '#003366', borderStyle: 'dashed', borderRadius: 8, marginBottom: 20, backgroundColor: '#fff' },
