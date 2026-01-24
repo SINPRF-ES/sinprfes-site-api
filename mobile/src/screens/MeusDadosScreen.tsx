@@ -16,6 +16,7 @@ import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import SafeScreen from '../components/SafeScreen';
 import { toISODate, toBrazilianDate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { logger } from '../infra/logger';
@@ -387,10 +388,12 @@ export default function MeusDadosScreen() {
   }
 
   return (
+    <SafeScreen style={styles.container}>
     <KeyboardAwareScrollView
-      style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      enableOnAndroid
+      extraScrollHeight={50}
     >
       <HeaderInfo filiado={filiado} />
 
@@ -436,6 +439,7 @@ export default function MeusDadosScreen() {
         <Button title={loading ? "Salvando..." : "Salvar Alterações"} onPress={handleUpdate} disabled={loading} />
       </View>
     </KeyboardAwareScrollView>
+    </SafeScreen>
   );
 }
 

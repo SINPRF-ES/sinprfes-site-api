@@ -1,6 +1,7 @@
 // src/screens/HomeScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import SafeScreen from '../components/SafeScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
@@ -36,7 +37,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { usuario } = useAuth();
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeScreen style={styles.container}>
+    <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.welcomeTitle}>Bem-vindo,</Text>
         <Text style={styles.userName}>{usuario?.nome ?? 'Filiado'}</Text>
@@ -63,6 +65,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         ))}
       </View>
     </ScrollView>
+    </SafeScreen>
   );
 }
 

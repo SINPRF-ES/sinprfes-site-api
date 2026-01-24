@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import SafeScreen from '../../components/SafeScreen';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,6 +12,7 @@ import { logger } from '../../infra/logger';
 import { formatDateToDdMmYyyy } from '../../utils/date';
 
 export default function CriarAssembleiaScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<'AGE' | 'AGO'>('AGE');
   const [descricao, setDescricao] = useState('');
@@ -118,7 +121,8 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAwareScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
+    <SafeScreen style={styles.container}>
+    <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 40 }} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0} showsVerticalScrollIndicator={false}>
       <Text style={styles.label}>Título *</Text>
       <TextInput
         style={styles.input}
@@ -206,6 +210,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         {loading || uploading ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>Criar Assembleia</Text>}
       </TouchableOpacity>
     </KeyboardAwareScrollView>
+    </SafeScreen>
   );
 }
 

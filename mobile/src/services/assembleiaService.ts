@@ -3,8 +3,13 @@ import { Assembleia, AssembleiaEstado, VotacaoItem, Proposta } from '../types/as
 import { logError } from '../infra/logger';
 
 export const getAssembleias = async (): Promise<Assembleia[]> => {
-  const response = await api.get('/api/assembleias');
-  return response.data;
+  try {
+    const response = await api.get('/api/assembleias');
+    return response.data;
+  } catch (err) {
+    logError('ASSEMBLEIAS_GET_FAILED', err);
+    throw err;
+  }
 };
 
 export const getAssembleiaDetalhe = async (id: string): Promise<Assembleia> => {
@@ -23,8 +28,13 @@ export const getAssembleiaEstado = async (id: string): Promise<AssembleiaEstado>
 };
 
 export const criarAssembleia = async (dados: Partial<Assembleia>): Promise<Assembleia> => {
-  const response = await api.post('/api/assembleias', dados);
-  return response.data;
+  try {
+    const response = await api.post('/api/assembleias', dados);
+    return response.data;
+  } catch (err) {
+    logError('ASSEMBLEIAS_CREATE_FAILED', err, { keys: Object.keys(dados) });
+    throw err;
+  }
 };
 
 export const abrirAssembleia = async (id: string): Promise<void> => {

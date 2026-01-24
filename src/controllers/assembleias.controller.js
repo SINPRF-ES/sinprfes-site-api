@@ -9,7 +9,20 @@ async function listar(req, res) {
     const assembleias = await service.listar(req.user.perfil_acesso);
     res.json(assembleias);
   } catch (err) {
-    log.error("AssembleiaListarErro", err);
+    log.error("AssembleiaListarErro", {
+      userId: req.user?.id,
+      perfil: req.user?.perfil_acesso,
+      route: req.originalUrl,
+      method: req.method,
+      errorMessage: err.message,
+      stack: err.stack,
+      dbError: {
+        code: err.code,
+        detail: err.detail,
+        table: err.table,
+        column: err.column
+      }
+    });
     res.status(500).json({ error: "Erro ao listar assembleias" });
   }
 }
@@ -58,7 +71,21 @@ async function criar(req, res) {
 
     res.status(201).json(nova);
   } catch (err) {
-    log.error("AssembleiaCriarErro", err);
+    log.error("AssembleiaCriarErro", {
+      userId: req.user?.id,
+      perfil: req.user?.perfil_acesso,
+      route: req.originalUrl,
+      method: req.method,
+      payloadKeys: Object.keys(req.body || {}),
+      errorMessage: err.message,
+      stack: err.stack,
+      dbError: {
+        code: err.code,
+        detail: err.detail,
+        table: err.table,
+        column: err.column
+      }
+    });
     res.status(500).json({ error: "Erro ao criar assembleia" });
   }
 }
