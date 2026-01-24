@@ -93,7 +93,7 @@ async function iniciarExecucao(req, res) {
   }
 }
 
-async function encerrar(req, res) {
+async function iniciarExecucao(req, res) {
   try {
     const atualizada = await service.encerrar(req.params.id, req.user.id);
     socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "ENCERRADA" });
@@ -145,6 +145,12 @@ async function checkin(req, res) {
     const { token } = req.body;
 
     if (!token) return res.status(400).json({ error: "Token é obrigatório" });
+
+    // Bloqueia perfis que não votam nem contam quórum (ADMIN, COMUNICADOR)
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
+       return res.status(403).json({ error: "Seu perfil não possui permissão para realizar check-in em assembleias" });
+    }
 
     const quorum = await service.buscarQuorumPorToken(id, token);
     if (!quorum) return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
