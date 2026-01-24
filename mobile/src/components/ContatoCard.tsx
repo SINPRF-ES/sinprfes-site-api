@@ -65,21 +65,23 @@ const ContatoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
 
       <Text style={styles.label}>Telefone 1</Text>
       <TextInput
-        style={styles.input}
-        value={formatTelefone(filiado?.telefone1 || '')}
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={isEditing ? formatTelefone(filiado?.telefone1 || '') : (formatTelefone(filiado?.telefone1) || '—')}
         onChangeText={(text) => handlePhoneChange('telefone1', text)}
         placeholder="(00) 00000-0000"
         keyboardType="phone-pad"
         maxLength={15} // (xx) xxxxx-xxxx
+        editable={isEditing}
       />
       <Text style={styles.label}>Telefone 2</Text>
       <TextInput
-        style={styles.input}
-        value={formatTelefone(filiado?.telefone2 || '')}
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={isEditing ? formatTelefone(filiado?.telefone2 || '') : (formatTelefone(filiado?.telefone2) || '—')}
         onChangeText={(text) => handlePhoneChange('telefone2', text)}
         placeholder="Opcional"
         keyboardType="phone-pad"
         maxLength={15}
+        editable={isEditing}
       />
       <Text style={styles.label}>Email 1</Text>
       <TextInput

@@ -22,11 +22,19 @@ export const formatCpf = (cpf: string | null | undefined): string => {
 export const formatTelefone = (tel: string | null | undefined): string => {
   if (!tel) return '';
   const digits = onlyDigits(tel).slice(0, 11);
-  if (digits.length === 0) return '';
-  if (digits.length <= 2) return `(${digits}`;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  const len = digits.length;
+  if (len === 0) return '';
+
+  if (len === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (len === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  // Para comprimentos intermediários, evita máscaras parciais com caracteres "soltos" (ex: '(' ou '-')
+  // Retorna apenas os dígitos para garantir uma UI limpa em caso de dados incompletos
+  return digits;
 };
 
 export const formatCep = (cep: string | null | undefined): string => {

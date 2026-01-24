@@ -422,7 +422,7 @@ export default function MeusDadosScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>👤 Informações Pessoais</Text>
         </View>
-        <ContatoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} />
+        <ContatoCard filiado={filiado} setFiliado={setFiliado} isEditing={true} hideTitle={true} />
       </ErrorBoundary>
 
       <ErrorBoundary>

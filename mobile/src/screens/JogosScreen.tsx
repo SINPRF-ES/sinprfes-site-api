@@ -19,6 +19,7 @@ import { logger } from '../infra/logger';
 import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } from '../services/jogosService';
 import NetInfo from '@react-native-community/netinfo';
 import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
+import { formatTelefone } from '../shared/format/formatters';
 import { getCanonicalFiliadoId, ROLES } from '../utils/filiadoUtils';
 import { MODALIDADES_JOGOS_2026 } from '../constants/jogos';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
@@ -244,7 +245,7 @@ const JogosScreen = () => {
                     <Text style={[styles.tableCell, { width: 80 }]}>{item.qtd_familiares || 0}</Text>
                     <Text style={[styles.tableCell, { width: 150 }]}>{item.familiares || '—'}</Text>
                     <Text style={[styles.tableCell, { width: 150 }]}>{item.observacoes || '—'}</Text>
-                    <Text style={[styles.tableCell, { width: 120 }]}>{item.telefone1 || '—'}</Text>
+                    <Text style={[styles.tableCell, { width: 120 }]}>{formatTelefone(item.telefone1) || '—'}</Text>
                     <Text style={[styles.tableCell, { width: 180 }]}>{[item.email1, item.email2].filter(Boolean).join(' / ') || '—'}</Text>
                   </View>
                 ))}

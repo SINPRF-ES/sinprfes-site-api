@@ -99,12 +99,9 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     minWidth: 200,
     maxHeight: '80%', // Evita ocupar toda a tela se houver muitos itens
-    alignSelf: 'flex-end',
-    height: undefined,
   },
   scrollView: {
     borderRadius: 8,
-    flexGrow: 0,
   },
   scrollContent: {
     paddingVertical: 8,

@@ -88,3 +88,17 @@
 - **Crash Fix:** Corrigido `ReferenceError: Property 'useCallback' doesn't exist` em `CriarAssembleiaScreen.tsx` e auditados imports em todas as telas de Votação.
 
 **Erro 500 em assembleias reproduzido, causa raiz identificada via logs server-side e corrigida. Nenhuma regressão conhecida introduzida.**
+
+## Ajuste de Consistência - Máscaras de Telefone (Jan 2026)
+
+### 1. Centralização e Refinamento
+- **Helper:** `formatTelefone` em `shared/format/formatters.ts` atualizado para evitar máscaras parciais (ex: `(` ou `-` soltos).
+- **Regra:** Retorna máscara completa para 10/11 dígitos; caso contrário, retorna apenas os dígitos brutos ou vazio.
+
+### 2. Aplicação em Telas Críticas
+- **Jogos 2026:** Tabela de inscritos agora exibe telefones mascarados ou `—`.
+- **FiliadoCard:** Listagem de filiados exibe `Telefone: (00) 00000-0000` ou `—`.
+- **ContatoCard (Meus Dados / Novo / Editar):** Inputs agora respeitam o estado de edição, mostrando `—` em modo leitura e permitindo edição limpa com placeholder em modo escrita.
+- **Ressarcimento:** Input de telefone agora utiliza o helper centralizado.
+
+**Correção exclusivamente de apresentação de telefones (máscara), centralizada em helper único, sem alteração de backend, regras de acesso ou fluxos. Nenhuma regressão conhecida introduzida.**

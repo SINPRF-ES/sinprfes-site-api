@@ -66,7 +66,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
             </View>
           </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
-          <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1 || 'Não informado')}</Text>
+          <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1) || '—'}</Text>
         </View>
       </View>
 
