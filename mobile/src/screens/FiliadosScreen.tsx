@@ -13,6 +13,7 @@ import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
 import { getCanonicalFiliadoId, isGestao } from '../utils/filiadoUtils';
 import { logger } from '../infra/logger';
+import SafeScreen from '../components/SafeScreen';
 
 export default function FiliadosScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
@@ -119,7 +120,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <View style={styles.searchBar}>
         <MaterialCommunityIcons name="magnify" size={24} color="#666" />
         <TextInput
@@ -202,7 +203,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
           <MaterialCommunityIcons name="plus" size={30} color="#fff" />
         </TouchableOpacity>
       )}
-    </View>
+    </SafeScreen>
   );
 }
 

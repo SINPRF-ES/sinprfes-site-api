@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin } from '../../services/assembleiaService';
+import SafeScreen from '../../components/SafeScreen';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
@@ -152,10 +153,10 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isAberta = assembleia.estado === 'ABERTA';
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f2f4f8' }}>
+    <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
     <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) + 20 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
@@ -221,7 +222,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       )}
 
       {isDiretoria && (
-        <View style={[styles.diretoriaSection, { marginBottom: insets.bottom }]}>
+        <View style={[styles.diretoriaSection, { paddingBottom: insets.bottom + 12 }]}>
           <Text style={styles.sectionTitle}>Gestão (Diretoria)</Text>
           <View style={styles.diretoriaButtons}>
             {assembleia.estado === 'CRIADA' && (
@@ -238,7 +239,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         </View>
       )}
     </ScrollView>
-    </View>
+    </SafeScreen>
   );
 }
 

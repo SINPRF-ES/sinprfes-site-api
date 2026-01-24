@@ -43,6 +43,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
   const profileOptions = [
     { label: 'Filiado', value: ROLES.FILIADO },
     { label: 'Organizador', value: ROLES.ORGANIZADOR },
+    { label: 'Comunicador', value: ROLES.COMUNICADOR },
     { label: 'Funcionário', value: ROLES.FUNCIONARIO },
     { label: 'Diretoria', value: ROLES.DIRETORIA },
     ...(isAdmin ? [{ label: 'Admin', value: ROLES.ADMIN }] : [])

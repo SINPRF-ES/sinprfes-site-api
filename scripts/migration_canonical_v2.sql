@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS assembleias (
     aberta_em TIMESTAMP,
     encerrada_em TIMESTAMP,
     criado_em TIMESTAMP DEFAULT NOW(),
+    data_hora_inicio TIMESTAMP,
+    edital_url TEXT,
     CONSTRAINT chk_estado CHECK (estado IN ('CRIADA', 'ABERTA', 'ENCERRADA')),
     CONSTRAINT chk_tipo CHECK (tipo IN ('AGE', 'AGO'))
 );
@@ -153,5 +155,14 @@ BEGIN
     -- Rename encerra_em to encerrada_em in assembleias if it exists
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleias' AND column_name = 'encerra_em') THEN
         ALTER TABLE assembleias RENAME COLUMN encerra_em TO encerrada_em;
+    END IF;
+
+    -- Add missing columns if they don't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleias' AND column_name = 'data_hora_inicio') THEN
+        ALTER TABLE assembleias ADD COLUMN data_hora_inicio TIMESTAMP;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleias' AND column_name = 'edital_url') THEN
+        ALTER TABLE assembleias ADD COLUMN edital_url TEXT;
     END IF;
 END $$;

@@ -190,7 +190,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity style={styles.btnFooter} onPress={handlePedirPalavra}>
           <MaterialCommunityIcons name="microphone" size={24} color="#003366" />
           <Text style={styles.btnFooterText}>Pedir Palavra</Text>
