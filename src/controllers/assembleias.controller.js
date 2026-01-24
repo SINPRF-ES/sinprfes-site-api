@@ -175,6 +175,12 @@ async function checkin(req, res) {
 
     if (!token) return res.status(400).json({ error: "Token é obrigatório" });
 
+    // Bloqueia perfis que não votam nem contam quórum (ADMIN, COMUNICADOR)
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
+       return res.status(403).json({ error: "Seu perfil não possui permissão para realizar check-in em assembleias" });
+    }
+
     const quorum = await service.buscarQuorumPorToken(id, token);
     if (!quorum) {
         // Registrar falha
