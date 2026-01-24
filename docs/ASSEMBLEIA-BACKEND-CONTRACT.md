@@ -51,7 +51,7 @@ Os clientes devem entrar na sala `assembleia_{id}`.
 | `assembleia:status_changed` | `{ estado }` | Mudança de estado da assembleia |
 | `assembleia:token_gerado` | `{ id, token, tipo_chamada }` | Novo token de check-in |
 | `assembleia:recontagem` | `{ id, token, tipo_chamada: 'RECONTAGEM' }` | Recontagem iniciada |
-| `assembleia:checkin_updated` | `{ total }` | Atualização do total de presentes |
+| `assembleia:checkin_updated` | `{ total, quorum_necessario, atingido }` | Atualização do total de presentes |
 | `assembleia:mesa_definida` | `{ presidente_nome, secretario_nome, ... }` | Mesa composta |
 | `votacao:iniciada` | `{ id, titulo, duracao_segundos, aberta_em, ... }` | Novo item em votação |
 | `voto:updated` | `{ contagem: { SIM, NAO, ABSTENCAO, total }, votos: [...] }` | Voto registrado em tempo real |

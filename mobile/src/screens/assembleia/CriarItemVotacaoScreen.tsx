@@ -20,7 +20,7 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
 
     try {
       setLoading(true);
-      await iniciarVotacao(id, { titulo, descricao, duracao_minutos: parseInt(duracao) });
+      await iniciarVotacao(id, { titulo, descricao, duracao_segundos: parseInt(duracao) * 60 });
       Alert.alert('Sucesso', 'Votação iniciada!');
       navigation.goBack();
     } catch (err: any) {

@@ -6,6 +6,7 @@ import AssembleiaSalaScreen from '../screens/assembleia/AssembleiaSalaScreen';
 import CriarAssembleiaScreen from '../screens/assembleia/CriarAssembleiaScreen';
 import PropostasScreen from '../screens/assembleia/PropostasScreen';
 import CriarItemVotacaoScreen from '../screens/assembleia/CriarItemVotacaoScreen';
+import ComporMesaScreen from '../screens/assembleia/ComporMesaScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,7 @@ export default function AssembleiaStack() {
       <Stack.Screen name="CriarAssembleia" component={CriarAssembleiaScreen} />
       <Stack.Screen name="Propostas" component={PropostasScreen} />
       <Stack.Screen name="CriarItemVotacao" component={CriarItemVotacaoScreen} />
+      <Stack.Screen name="ComporMesa" component={ComporMesaScreen} options={{ title: 'Compor Mesa' }} />
     </Stack.Navigator>
   );
 }

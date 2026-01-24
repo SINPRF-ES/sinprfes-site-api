@@ -164,7 +164,11 @@ async function checkin(req, res) {
 
     // Broadcast do total atualizado
     const estado = await service.buscarEstadoCompleto(id);
-    socket.emitEvent(id, "assembleia:checkin_updated", { total: estado.quorumVigente?.total || 0 });
+    socket.emitEvent(id, "assembleia:checkin_updated", {
+      total: estado.quorumVigente?.total || 0,
+      quorum_necessario: estado.quorumVigente?.quorum_necessario || 0,
+      atingido: (estado.quorumVigente?.total || 0) >= (estado.quorumVigente?.quorum_necessario || 0)
+    });
 
     res.json({ success: true, message: "Check-in realizado com sucesso" });
   } catch (err) {

@@ -16,9 +16,10 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<'AGE' | 'AGO'>('AGE');
-  const [descricao, setDescricao] = useState('');
+  const [pauta, setPauta] = useState('');
   const [data, setData] = useState('');
-  const [hora, setHora] = useState('');
+  const [hora1, setHora1] = useState('');
+  const [hora2, setHora2] = useState('');
   const [editalFile, setEditalFile] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,8 +67,8 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
   };
 
   const handleSalvar = useCallback(async () => {
-    if (!titulo || !descricao || !data || !hora) {
-      Alert.alert('Aviso', 'Preencha todos os campos obrigatórios (Título, Pauta, Data e Hora).');
+    if (!titulo || !pauta || !data || !hora1 || !hora2) {
+      Alert.alert('Aviso', 'Preencha todos os campos obrigatórios (Título, Pauta, Data, 1ª e 2ª Chamada).');
       return;
     }
 
@@ -102,12 +103,16 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
       }
 
       const [d, m, y] = data.split('/');
-      const data_hora_inicio = `${y}-${m}-${d}T${hora}:00`;
+      const data_evento = `${y}-${m}-${d}`;
+      const data_hora_inicio = `${data_evento}T${hora1}:00`;
 
       await criarAssembleia({
         titulo,
         tipo,
-        descricao,
+        pauta,
+        data_evento,
+        hora_primeira_chamada: hora1,
+        hora_segunda_chamada: hora2,
         data_hora_inicio,
         edital_url: editalUrl
       });
@@ -119,7 +124,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
-  }, [titulo, tipo, descricao, data, hora, editalFile]);
+  }, [titulo, tipo, pauta, data, hora1, hora2, editalFile]);
 
   useEffect(() => {
     const actions: MenuAction[] = [
@@ -129,7 +134,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
       headerRight: () => <HeaderMenu actions={actions} />,
       title: 'Nova Assembleia'
     });
-  }, [navigation, titulo, tipo, descricao, data, hora, editalFile, loading, uploading, handleSalvar]);
+  }, [navigation, titulo, tipo, pauta, data, hora1, hora2, editalFile, loading, uploading, handleSalvar]);
 
   return (
     <SafeScreen style={styles.container}>
@@ -152,8 +157,8 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
               style={styles.picker}
               dropdownIconColor="#003366"
             >
-              <Picker.Item label="AGE" value="AGE" />
-              <Picker.Item label="AGO" value="AGO" />
+              <Picker.Item label="Assembleia Geral Extraordinária" value="AGE" />
+              <Picker.Item label="Assembleia Geral Ordinária" value="AGO" />
             </Picker>
           </View>
         </View>
@@ -171,12 +176,25 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
             maxLength={10}
           />
         </View>
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={styles.label}>Hora *</Text>
+      </View>
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>1ª Chamada *</Text>
           <TextInput
             style={styles.input}
-            value={hora}
-            onChangeText={(v) => setHora(formatHora(v))}
+            value={hora1}
+            onChangeText={(v) => setHora1(formatHora(v))}
+            placeholder="HH:MM"
+            keyboardType="numeric"
+            maxLength={5}
+          />
+        </View>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.label}>2ª Chamada *</Text>
+          <TextInput
+            style={styles.input}
+            value={hora2}
+            onChangeText={(v) => setHora2(formatHora(v))}
             placeholder="HH:MM"
             keyboardType="numeric"
             maxLength={5}
@@ -184,11 +202,11 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         </View>
       </View>
 
-      <Text style={styles.label}>Pauta / Descrição *</Text>
+      <Text style={styles.label}>Pauta Detalhada *</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
-        value={descricao}
-        onChangeText={setDescricao}
+        value={pauta}
+        onChangeText={setPauta}
         placeholder="Descreva os itens da pauta..."
         multiline
         numberOfLines={6}

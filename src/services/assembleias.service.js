@@ -636,6 +636,7 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
      let elegivel = false;
      let motivo_inelegibilidade = null;
 
+     let jaVotou = false;
      if (filiadoId) {
        elegivel = await verificarElegibilidade(votacaoAtiva.id, filiadoId);
        if (!elegivel) {
@@ -645,6 +646,8 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
          } else {
            motivo_inelegibilidade = "Restrição de elegibilidade técnica.";
          }
+       } else {
+          jaVotou = votos.some(v => v.filiado_id === filiadoId);
        }
      }
 
@@ -654,13 +657,15 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
        votos,
        user_eligibility: {
          elegivel,
-         motivo: motivo_inelegibilidade
+         motivo: motivo_inelegibilidade,
+         jaVotou
        }
     };
   }
 
   let totalPresentes = 0;
   let userHasCheckedIn = false;
+  let presentesNominais = [];
   if (ultimoQuorum) {
     const { rows: countRows } = await pool.query(
       'SELECT COUNT(*) as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1',
@@ -668,12 +673,18 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
     );
     totalPresentes = parseInt(countRows[0].total);
 
+    const { rows: presentesRows } = await pool.query(
+      `SELECT f.id, f.nome, f.avatar_url, c.registrado_em
+       FROM assembleia_checkins c
+       JOIN filiados f ON c.filiado_id = f.id
+       WHERE c.assembleia_quorum_id = $1
+       ORDER BY f.nome ASC`,
+      [ultimoQuorum.id]
+    );
+    presentesNominais = presentesRows;
+
     if (filiadoId) {
-      const { rows: checkRows } = await pool.query(
-        'SELECT 1 FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND filiado_id = $2',
-        [ultimoQuorum.id, filiadoId]
-      );
-      userHasCheckedIn = checkRows.length > 0;
+      userHasCheckedIn = presentesNominais.some(p => p.id === filiadoId);
     }
   }
 
@@ -685,7 +696,8 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
     quorumVigente: ultimoQuorum ? {
       ...ultimoQuorum,
       total: totalPresentes,
-      userHasCheckedIn
+      userHasCheckedIn,
+      presentes: presentesNominais
     } : null,
     votacaoAtiva: votacaoData
   };
