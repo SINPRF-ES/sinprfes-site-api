@@ -3,28 +3,14 @@ const service = require("../services/assembleias.service");
 const socket = require("../websocket/assembleia.socket");
 const { uploadFileBuffer } = require("../services/cloudinary.service");
 const log = require("../utils/log");
+const Textos = require("../utils/textos");
 
 async function listar(req, res) {
   try {
     const assembleias = await service.listar(req.user.perfil_acesso);
     res.json(assembleias);
   } catch (err) {
-    log.error("AssembleiaListarErro", {
-      userId: req.user?.id,
-      perfil_acesso: req.user?.perfil_acesso,
-      route: req.originalUrl,
-      method: req.method,
-      errorMessage: err.message,
-      stack: err.stack,
-      dbError: {
-        name: err.name,
-        code: err.code || err.parent?.code,
-        detail: err.detail || err.parent?.detail,
-        table: err.table,
-        column: err.column,
-        errors: err.errors
-      }
-    });
+    log.error("AssembleiaListarErro", err);
     res.status(500).json({ error: "Erro ao listar assembleias" });
   }
 }
@@ -32,22 +18,10 @@ async function listar(req, res) {
 async function detalhe(req, res) {
   try {
     const assembleia = await service.buscarPorId(req.params.id);
-    if (!assembleia) return res.status(404).json({ error: "Assembleia não encontrada" });
+    if (!assembleia) return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
     res.json(assembleia);
   } catch (err) {
-    log.error("AssembleiaDetalheErro", {
-      userId: req.user?.id,
-      perfil_acesso: req.user?.perfil_acesso,
-      route: req.originalUrl,
-      method: req.method,
-      errorMessage: err.message,
-      stack: err.stack,
-      dbError: {
-        name: err.name,
-        code: err.code || err.parent?.code,
-        detail: err.detail || err.parent?.detail,
-      }
-    });
+    log.error("AssembleiaDetalheErro", err);
     res.status(500).json({ error: "Erro ao buscar detalhe da assembleia" });
   }
 }
@@ -55,9 +29,9 @@ async function detalhe(req, res) {
 async function estadoCompleto(req, res) {
   try {
      const estado = await service.buscarEstadoCompleto(req.params.id, req.user.id);
-    if (!estado) return res.status(404).json({ error: "Assembleia não encontrada" });
+    if (!estado) return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
 
-     // Auditoria de entrada (apenas uma vez por sessão/filiado via app)
+     // Auditoria de entrada
      await service.registrarAuditoria(req.params.id, req.user.id, "ENTRADA_SESSAO", { platform: 'mobile' });
 
     res.json(estado);
@@ -69,15 +43,18 @@ async function estadoCompleto(req, res) {
 
 async function criar(req, res) {
   try {
-    const { tipo, titulo, descricao, data_hora_inicio, edital_url } = req.body;
+    const { tipo, titulo, pauta, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada } = req.body;
     if (!tipo || !titulo) return res.status(400).json({ error: "Tipo e título são obrigatórios" });
 
     const nova = await service.criar({
       tipo,
       titulo,
-      descricao,
+      pauta,
       data_hora_inicio,
       edital_url,
+      data_evento,
+      hora_primeira_chamada,
+      hora_segunda_chamada,
       criado_por: req.user.id
     });
 
@@ -85,95 +62,81 @@ async function criar(req, res) {
 
     res.status(201).json(nova);
   } catch (err) {
-    log.error("AssembleiaCriarErro", {
-      userId: req.user?.id,
-      perfil_acesso: req.user?.perfil_acesso,
-      route: req.originalUrl,
-      method: req.method,
-      payloadKeys: Object.keys(req.body || {}),
-      errorMessage: err.message,
-      stack: err.stack,
-      dbError: {
-        name: err.name,
-        code: err.code || err.parent?.code,
-        detail: err.detail || err.parent?.detail,
-        table: err.table,
-        column: err.column,
-        errors: err.errors
-      }
-    });
+    log.error("AssembleiaCriarErro", err);
     res.status(500).json({ error: "Erro ao criar assembleia" });
   }
 }
 
 async function abrir(req, res) {
   try {
-    const assembleia = await service.buscarPorId(req.params.id);
-    if (!assembleia) return res.status(404).json({ error: "Assembleia não encontrada" });
-    if (assembleia.estado !== "CRIADA") return res.status(400).json({ error: "Estado inválido para abertura" });
-
     const atualizada = await service.abrir(req.params.id);
     await service.registrarAuditoria(req.params.id, req.user.id, "ABERTURA_ASSEMBLEIA", {});
     socket.emitEvent(req.params.id, "session_state_changed", { estado: "ABERTA" });
 
     res.json(atualizada);
   } catch (err) {
-    log.error("AssembleiaAbrirErro", {
-      userId: req.user?.id,
-      perfil_acesso: req.user?.perfil_acesso,
-      route: req.originalUrl,
-      method: req.method,
-      errorMessage: err.message,
-      stack: err.stack,
-      dbError: {
-        name: err.name,
-        code: err.code || err.parent?.code,
-        detail: err.detail || err.parent?.detail,
-      }
-    });
-    res.status(500).json({ error: "Erro ao abrir assembleia" });
+    log.error("AssembleiaAbrirErro", err);
+    const isTransitionError = err.message.includes(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
+    const status = isTransitionError ? 409 : 500;
+    res.status(status).json({ error: err.message });
+  }
+}
+
+async function iniciarExecucao(req, res) {
+  try {
+    const atualizada = await service.iniciarExecucao(req.params.id);
+    await service.registrarAuditoria(req.params.id, req.user.id, "INICIO_EXECUCAO_ASSEMBLEIA", {});
+    socket.emitEvent(req.params.id, "session_state_changed", { estado: "EM_CURSO" });
+
+    res.json(atualizada);
+  } catch (err) {
+    log.error("AssembleiaIniciarExecucaoErro", err);
+    const isTransitionError = err.message.includes(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
+    const status = isTransitionError ? 409 : 422;
+    res.status(status).json({ error: err.message });
   }
 }
 
 async function encerrar(req, res) {
   try {
-    const assembleia = await service.buscarPorId(req.params.id);
-    if (!assembleia) return res.status(404).json({ error: "Assembleia não encontrada" });
-    if (assembleia.estado !== "ABERTA") return res.status(400).json({ error: "Apenas assembleias abertas podem ser encerradas" });
-
     const atualizada = await service.encerrar(req.params.id);
     await service.registrarAuditoria(req.params.id, req.user.id, "ENCERRAMENTO_ASSEMBLEIA", {});
     socket.emitEvent(req.params.id, "session_state_changed", { estado: "ENCERRADA" });
 
     res.json(atualizada);
   } catch (err) {
-    log.error("AssembleiaEncerrarErro", {
-      userId: req.user?.id,
-      perfil_acesso: req.user?.perfil_acesso,
-      route: req.originalUrl,
-      method: req.method,
-      errorMessage: err.message,
-      stack: err.stack,
-      dbError: {
-        name: err.name,
-        code: err.code || err.parent?.code,
-        detail: err.detail || err.parent?.detail,
-      }
-    });
-    res.status(500).json({ error: "Erro ao encerrar assembleia" });
+    log.error("AssembleiaEncerrarErro", err);
+    res.status(500).json({ error: err.message });
   }
 }
 
 async function gerarTokenQuorum(req, res) {
   try {
     const { id } = req.params;
+    const { tipo_chamada, observacao } = req.body;
+
+    // Validar se é recontagem e se quem pede é o Presidente
+    if (tipo_chamada === 'RECONTAGEM') {
+       const mesa = await service.buscarMesa(id);
+       if (!mesa || mesa.presidente_user_id !== req.user.id) {
+          return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+       }
+    }
+
     const token = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const quorum = await service.gerarQuorum(id, token);
-    await service.registrarAuditoria(id, req.user.id, "GERAR_TOKEN_QUORUM", { token });
-    socket.emitEvent(id, "new_quorum_call", { id: quorum.id, valido_ate: quorum.valido_ate });
+    const quorum = await service.gerarQuorum({
+      assembleia_id: id,
+      token,
+      gerado_por_user_id: req.user.id,
+      tipo_chamada: tipo_chamada || 'PRIMEIRA',
+      observacao
+    });
 
-    res.json({ token, valido_ate: quorum.valido_ate });
+    await service.registrarAuditoria(id, req.user.id, "GERAR_TOKEN_QUORUM", { token, tipo_chamada });
+    socket.emitEvent(id, "new_quorum_call", { id: quorum.id, token, tipo_chamada });
+
+    res.json({ token, quorum_id: quorum.id });
   } catch (err) {
     log.error("AssembleiaGerarTokenQuorumErro", err);
     res.status(500).json({ error: "Erro ao gerar token de quórum" });
@@ -187,92 +150,103 @@ async function checkin(req, res) {
 
     if (!token) return res.status(400).json({ error: "Token é obrigatório" });
 
+    // Bloqueia perfis que não votam nem contam quórum (ADMIN, COMUNICADOR)
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
+       return res.status(403).json({ error: "Seu perfil não possui permissão para realizar check-in em assembleias" });
+    }
+
     const quorum = await service.buscarQuorumPorToken(id, token);
-    if (!quorum) return res.status(400).json({ error: "Token inválido ou expirado" });
+    if (!quorum) return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
 
-    await service.realizarCheckin(quorum.id, req.user.id);
-    await service.registrarAuditoria(id, req.user.id, "CHECKIN_ASSEMBLEIA", { quorum_id: quorum.id });
+    await service.realizarCheckin({
+      assembleia_quorum_id: quorum.id,
+      filiado_id: req.user.id,
+      origem: 'TOKEN'
+    });
 
-    // Busca total atualizado de presentes
+    await service.registrarAuditoria(id, req.user.id, "CHECKIN_ASSEMBLEIA", { assembleia_quorum_id: quorum.id });
+
+    // Broadcast do total atualizado
     const estado = await service.buscarEstadoCompleto(id);
     socket.emitEvent(id, "quorum_count_updated", { total: estado.quorumVigente?.total || 0 });
 
     res.json({ success: true, message: "Check-in realizado com sucesso" });
   } catch (err) {
-    log.error("AssembleiaCheckinErro", {
-      userId: req.user?.id,
-      perfil_acesso: req.user?.perfil_acesso,
-      route: req.originalUrl,
-      method: req.method,
-      payloadKeys: Object.keys(req.body || {}),
-      errorMessage: err.message,
-      stack: err.stack,
-      dbError: {
-        name: err.name,
-        code: err.code || err.parent?.code,
-        detail: err.detail || err.parent?.detail,
-      }
-    });
+    log.error("AssembleiaCheckinErro", err);
     res.status(500).json({ error: "Erro ao realizar check-in" });
+  }
+}
+
+async function definirMesa(req, res) {
+  try {
+    const { id } = req.params;
+    const { presidente_user_id, secretario_user_id } = req.body;
+
+    if (!presidente_user_id || !secretario_user_id) {
+      return res.status(400).json({ error: "Presidente e Secretário são obrigatórios" });
+    }
+
+    // Validar presença dos escolhidos no quórum vigente
+    const quorumVigente = await service.buscarUltimoQuorum(id);
+    if (!quorumVigente) return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
+
+    const [presencaP, presencaS] = await Promise.all([
+      service.verificarElegibilidadePorQuorum(quorumVigente.id, presidente_user_id),
+      service.verificarElegibilidadePorQuorum(quorumVigente.id, secretario_user_id)
+    ]);
+
+    if (!presencaP || !presencaS) {
+      return res.status(400).json({ error: Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA });
+    }
+
+    await service.definirMesa({
+      assembleia_id: id,
+      presidente_user_id,
+      secretario_user_id,
+      definida_por_user_id: req.user.id
+    });
+
+    const mesa = await service.buscarMesa(id);
+    await service.registrarAuditoria(id, req.user.id, "DEFINICAO_MESA", { presidente_user_id, secretario_user_id });
+    socket.emitEvent(id, "mesa_updated", mesa);
+
+    res.json(mesa);
+  } catch (err) {
+    log.error("AssembleiaDefinirMesaErro", err);
+    res.status(500).json({ error: "Erro ao definir mesa" });
   }
 }
 
 async function iniciarVotacao(req, res) {
   try {
     const { id } = req.params;
-    const { titulo, descricao, duracao_minutos, proposta_id } = req.body;
+    const { titulo, descricao, duracao_segundos } = req.body;
+
+    // Apenas o Presidente da Mesa pode iniciar votação
+    const mesa = await service.buscarMesa(id);
+    if (!mesa || mesa.presidente_user_id !== req.user.id) {
+       return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+    }
 
     const quorum = await service.buscarUltimoQuorum(id);
-    if (!quorum) return res.status(400).json({ error: "Não há quórum ativo para iniciar votação" });
-
-    // P1: Regra de retirada de proposta por ausência do autor
-    if (proposta_id) {
-       const propostas = await service.listarPropostas(id);
-       const proposta = propostas.find(p => p.id === proposta_id);
-       if (proposta) {
-          const elegivel = await service.verificarElegibilidadePorQuorum(quorum.id, proposta.autor_id);
-          if (!elegivel) {
-             // Retira automaticamente
-             await service.atualizarEstadoProposta(proposta_id, 'RETIRADA', 'Proposta retirada por ausência do autor');
-             await service.registrarAuditoria(id, req.user.id, "PROPOSTA_RETIRADA_AUSENCIA_AUTOR", { proposta_id });
-
-             const propostas = await service.listarPropostas(id);
-             socket.emitEvent(id, "proposal_updated", propostas.find(p => p.id === proposta_id));
-
-             return res.status(400).json({ error: "Proposta retirada por ausência do autor no quórum vigente" });
-          }
-       }
-    }
+    if (!quorum) return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
 
     const votacao = await service.criarVotacao({
       assembleia_id: id,
       quorum_snapshot_id: quorum.id,
       titulo,
       descricao,
-      duracao_minutos: duracao_minutos || 1
+      duracao_segundos: duracao_segundos || 60,
+      iniciada_por_user_id: req.user.id
     });
 
     await service.registrarAuditoria(id, req.user.id, "INICIO_VOTACAO", { votacao_id: votacao.id, titulo });
-
-    // Broadcast nominal (inicialmente vazio)
     socket.emitEvent(id, "voting_started", { ...votacao, contagem: { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 }, votos: [] });
 
     res.status(201).json(votacao);
   } catch (err) {
-    log.error("AssembleiaIniciarVotacaoErro", {
-      userId: req.user?.id,
-      perfil_acesso: req.user?.perfil_acesso,
-      route: req.originalUrl,
-      method: req.method,
-      payloadKeys: Object.keys(req.body || {}),
-      errorMessage: err.message,
-      stack: err.stack,
-      dbError: {
-        name: err.name,
-        code: err.code || err.parent?.code,
-        detail: err.detail || err.parent?.detail,
-      }
-    });
+    log.error("AssembleiaIniciarVotacaoErro", err);
     res.status(500).json({ error: "Erro ao iniciar votação" });
   }
 }
@@ -282,18 +256,17 @@ async function votar(req, res) {
     const { id, vid } = req.params;
     const { voto } = req.body;
 
-     // Valida estado da votação e tempo
      const votacao = await service.buscarVotacaoAtiva(id);
      if (!votacao || votacao.id !== vid) {
-        return res.status(400).json({ error: "Votação não está ativa ou já foi encerrada" });
+        return res.status(400).json({ error: Textos.ASSEMBLEIA.VOTACAO_ENCERRADA });
      }
 
      if (new Date(votacao.encerra_em) < new Date()) {
-        return res.status(400).json({ error: "O tempo para votação expirou" });
+        return res.status(400).json({ error: Textos.ASSEMBLEIA.TEMPO_EXPIRADO });
      }
 
     const elegivel = await service.verificarElegibilidade(vid, req.user.id);
-    if (!elegivel) return res.status(403).json({ error: "Você não possui check-in no quórum deste item e não pode votar" });
+    if (!elegivel) return res.status(403).json({ error: Textos.ASSEMBLEIA.NAO_ELEGIVEL });
 
     await service.registrarVoto(vid, req.user.id, voto);
 
@@ -302,13 +275,38 @@ async function votar(req, res) {
       service.listarVotosNominais(vid)
     ]);
 
-    // P1: Broadcast nominal em tempo real
     socket.emitEvent(id, "vote_cast", { contagem, votos });
 
     res.json({ success: true });
   } catch (err) {
     log.error("AssembleiaVotarErro", err);
     res.status(500).json({ error: "Erro ao registrar voto" });
+  }
+}
+
+async function encerrarVotacao(req, res) {
+  try {
+    const { id, vid } = req.params;
+
+    // Apenas Presidente
+    const mesa = await service.buscarMesa(id);
+    if (!mesa || mesa.presidente_user_id !== req.user.id) {
+       return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+    }
+
+    const finalizada = await service.finalizarVotacao(vid);
+    const [contagem, votos] = await Promise.all([
+      service.contarVotos(vid),
+      service.listarVotosNominais(vid)
+    ]);
+
+    await service.registrarAuditoria(id, req.user.id, "FIM_VOTACAO", { votacao_id: vid });
+    socket.emitEvent(id, "voting_ended", { ...finalizada, contagem, votos });
+
+    res.json(finalizada);
+  } catch (err) {
+    log.error("AssembleiaEncerrarVotacaoErro", err);
+    res.status(500).json({ error: "Erro ao encerrar votação" });
   }
 }
 
@@ -330,13 +328,13 @@ async function pedirPalavra(req, res) {
 async function criarProposta(req, res) {
   try {
     const { id } = req.params;
-    const { titulo, descricao } = req.body;
+    const { titulo, pauta } = req.body;
 
     const proposta = await service.criarProposta({
       assembleia_id: id,
       autor_id: req.user.id,
       titulo,
-      descricao
+      pauta
     });
 
     socket.emitEvent(id, "new_proposal", { ...proposta, autor_nome: req.user.nome });
@@ -347,19 +345,20 @@ async function criarProposta(req, res) {
   }
 }
 
-async function definirMesa(req, res) {
+async function gerarRelatorio(req, res) {
   try {
     const { id } = req.params;
-    const { filiado_id, cargo } = req.body;
 
-    await service.definirMesa(id, filiado_id, cargo);
-    const mesa = await service.buscarMesa(id);
-    socket.emitEvent(id, "mesa_updated", mesa);
+    // Stub: Apenas registra o pedido e loga
+    await service.registrarAuditoria(id, req.user.id, "GERAR_RELATORIO", { solicitado_por: req.user.nome });
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      message: "Pedido de relatório registrado. O documento será enviado por e-mail em breve (Stub)."
+    });
   } catch (err) {
-    log.error("AssembleiaDefinirMesaErro", err);
-    res.status(500).json({ error: "Erro ao definir mesa" });
+    log.error("AssembleiaGerarRelatorioErro", err);
+    res.status(500).json({ error: "Erro ao solicitar relatório" });
   }
 }
 
@@ -377,7 +376,7 @@ async function uploadEdital(req, res) {
 
     res.json({ url: result.secure_url });
   } catch (err) {
-    console.error("Erro no upload do edital:", err);
+    log.error("AssembleiaUploadEditalErro", err);
     res.status(500).json({ error: "Erro ao realizar upload do edital" });
   }
 }
@@ -388,13 +387,16 @@ module.exports = {
   estadoCompleto,
   criar,
   abrir,
+  iniciarExecucao,
   encerrar,
   gerarTokenQuorum,
   checkin,
+  definirMesa,
   iniciarVotacao,
   votar,
+  encerrarVotacao,
   pedirPalavra,
   criarProposta,
-  definirMesa,
+  gerarRelatorio,
   uploadEdital
 };
