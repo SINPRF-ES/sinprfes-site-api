@@ -27,9 +27,11 @@ Momento de reunir os participantes e validar o quórum.
 1.  **Abrir Assembleia:** No horário previsto, selecione o evento e clique em "Abrir Assembleia". O status muda para `ABERTA`.
 2.  **Token de Check-in:** Clique em "Gerar Token". Um código de 6 dígitos será gerado.
     - *Dica:* Compartilhe este código com os presentes (via chat, áudio ou projeção).
+    - **Validade:** O token não possui expiração por tempo, apenas por recontagem ou encerramento da assembleia.
     - O Diretor que gera o token tem sua presença confirmada automaticamente.
 3.  **Monitorar Quórum:** Acompanhe no painel o número de presentes em relação ao total de filiados ativos. O sistema indicará se o quórum estatutário foi atingido.
 4.  **Definir Mesa:** Antes de prosseguir, selecione entre os presentes quem será o **Presidente** e o **Secretário** da mesa.
+    - *Bloqueio:* A assembleia somente entra em fase de execução (votações) após a definição da mesa diretora.
 
 ### Ações do Filiado:
 1.  **Check-in:** Localize a assembleia aberta no aplicativo.

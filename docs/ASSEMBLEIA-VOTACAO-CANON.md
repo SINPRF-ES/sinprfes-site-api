@@ -13,7 +13,7 @@ Este documento define o padrão arquitetural, as regras de negócio e o fluxo no
 - **Voto Nominal e Aberto:** Todo voto é público, associado ao filiado e visível em tempo real.
 - **Auditoria Imutável:** Todo evento relevante gera um log `append-only`.
 - **Elegibilidade por Snapshot:** O Backend congela a lista de votantes no momento exato do início de cada votação.
-- **Abstenção:** O filiado elegível que não manifestar voto até o fim do tempo é registrado como ABSTENÇÃO.
+- **Abstenção:** O filiado elegível que não manifestar voto até o fim do tempo é registrado como ABSTENÇÃO. A ABSTENÇÃO é registrada nominalmente e considerada para fins estatísticos, não configurando voto favorável ou contrário.
 
 ---
 
@@ -46,7 +46,7 @@ Esta fase compreende o agendamento e parametrização da assembleia.
 
 ### Fase 2 — Abertura e Credenciamento (Pré-Execução)
 
-Esta fase destina-se exclusivamente à constituição da assembleia e verificação de quórum, sem deliberação de pauta.
+Esta fase destina-se exclusivamente à constituição da assembleia e verificação de quórum, sem deliberação de pauta. No sistema, esta fase corresponde ao estado `ABERTA`.
 
 1.  **Início:** Um Diretor deve acionar o comando de abertura da assembleia.
 2.  **Token de Presença:**
@@ -70,7 +70,7 @@ Esta fase destina-se exclusivamente à constituição da assembleia e verificaç
 
 ### Fase 3 — Execução da Assembleia (Debates e Votações)
 
-Fase dedicada à discussão da pauta e deliberações.
+Fase dedicada à discussão da pauta e deliberações. No sistema, esta fase corresponde ao estado `EM_CURSO`.
 
 1.  **Interações de Debate:**
     - Todos os presentes com check-in válido podem pedir a palavra e propor encaminhamentos/propostas.

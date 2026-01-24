@@ -20,13 +20,14 @@ Este checklist deve ser seguido para validar o fluxo completo de uma assembleia 
 - [ ] Verificar check-in automático do Diretor que gerou o token.
 - [ ] Validar check-in de Filiado com token correto.
 - [ ] Validar rejeição de check-in com token inválido.
+- [ ] Tentar fazer check-in com token anterior após uma recontagem (deve falhar).
 - [ ] Verificar contagem de quórum:
     - [ ] Somar apenas filiados ATIVOS.
     - [ ] Excluir perfis ADMIN e COMUNICADOR da contagem.
 - [ ] Validar exibição em tempo real do status do quórum (Atingido / Não Atingido).
 - [ ] Validar aplicação automática da regra de 2ª chamada após o horário previsto.
 - [ ] Definir Mesa: selecionar Presidente e Secretário entre os presentes.
-- [ ] Tentar avançar para Fase 3 sem definir a Mesa (deve ser bloqueado).
+- [ ] Tentar avançar para Fase 3 / iniciar votação sem definir a Mesa (deve ser bloqueado).
 
 ---
 
