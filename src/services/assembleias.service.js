@@ -12,23 +12,18 @@ const ASSEMBLEIA_STATES = {
 
 const ASSEMBLEIA_COLUMNS = `
   id, tipo, titulo, pauta, estado, criado_por as criada_por_user_id, aberta_em, encerrada_em, criado_em,
-  data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada
+  data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada,
+  edital_public_id, edital_resource_type, edital_type, edital_format
 `;
 
 /**
- * Normaliza dados de uma assembleia, aplicando correções de URL e campos.
+ * Normaliza dados de uma assembleia.
  */
 function normalizarAssembleia(assembleia) {
   if (!assembleia) return null;
 
-  // Correção de URL do edital (Cloudinary 401 PDF Fix)
-  // PDFs servidos via /image/upload/ podem retornar 401 se houver restrição.
-  // Mudamos para /raw/upload/ conforme diretriz.
-  if (assembleia.edital_url && assembleia.edital_url.toLowerCase().endsWith('.pdf')) {
-    if (assembleia.edital_url.includes('/image/upload/')) {
-      assembleia.edital_url = assembleia.edital_url.replace('/image/upload/', '/raw/upload/');
-    }
-  }
+  // Removido o rewrite manual de URL para PDF conforme diretriz.
+  // A URL deve ser persistida corretamente no upload ou acessada via proxy se antiga/quebrada.
 
   return assembleia;
 }
@@ -69,7 +64,11 @@ async function buscarPorId(id) {
 }
 
 async function criar(dados) {
-  const { tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada } = dados;
+  const {
+    tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento,
+    hora_primeira_chamada, hora_segunda_chamada,
+    edital_public_id, edital_resource_type, edital_type, edital_format
+  } = dados;
 
   // Normalização do tipo para o padrão de banco (AGE/AGO) se necessário
   let tipoNorm = tipo;
@@ -77,10 +76,22 @@ async function criar(dados) {
   if (tipo === 'Assembleia Geral Extraordinária') tipoNorm = 'AGE';
 
   const { rows } = await pool.query(
-    `INSERT INTO assembleias (tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada, estado)
-     VALUES ($1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''), NULLIF($7, '')::DATE, NULLIF($8, '')::TIME, NULLIF($9, '')::TIME, 'CRIADA')
+    `INSERT INTO assembleias (
+        tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url,
+        data_evento, hora_primeira_chamada, hora_segunda_chamada, estado,
+        edital_public_id, edital_resource_type, edital_type, edital_format
+     )
+     VALUES (
+        $1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''),
+        NULLIF($7, '')::DATE, NULLIF($8, '')::TIME, NULLIF($9, '')::TIME, 'CRIADA',
+        $10, $11, $12, $13
+     )
      RETURNING ${ASSEMBLEIA_COLUMNS}`,
-    [tipoNorm, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada]
+    [
+        tipoNorm, titulo, pauta, criado_por, data_hora_inicio, edital_url,
+        data_evento, hora_primeira_chamada, hora_segunda_chamada,
+        edital_public_id, edital_resource_type, edital_type, edital_format
+    ]
   );
   const nova = rows[0];
   await registrarAuditoria(nova.id, criado_por, 'ASSEMBLEIA_CRIADA', { tipo, titulo });
