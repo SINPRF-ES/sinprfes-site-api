@@ -372,20 +372,31 @@ async function criarVotacao(dados) {
 }
 
 async function buscarVotacaoAtiva(assembleiaId) {
-  const { rows } = await pool.query(
-    `SELECT *, (aberta_em + interval '1 second' * duracao_segundos) as encerra_em
-     FROM assembleia_votacoes
-     WHERE assembleia_id = $1 AND status = 'ATIVA'
-     LIMIT 1`,
-    [assembleiaId]
-  );
-  const votacao = rows[0];
+  try {
+    const { rows } = await pool.query(
+      `SELECT *, (aberta_em + interval '1 second' * duracao_segundos) as encerra_em
+       FROM assembleia_votacoes
+       WHERE assembleia_id = $1 AND status = 'ATIVA'
+       LIMIT 1`,
+      [assembleiaId]
+    );
+    const votacao = rows[0];
 
-  if (votacao && new Date(votacao.encerra_em) < new Date()) {
-    return await finalizarVotacao(votacao.id);
+    // Se existe votação mas o tempo expirou, tenta finalizar
+    if (votacao && votacao.encerra_em && new Date(votacao.encerra_em) < new Date()) {
+      try {
+        return await finalizarVotacao(votacao.id);
+      } catch (err) {
+        log.error("Erro ao finalizar votação expirada em buscarVotacaoAtiva", { votacaoId: votacao.id, error: err.message });
+        return { ...votacao, tempo_expirado: true };
+      }
+    }
+
+    return votacao || null;
+  } catch (err) {
+    log.error("Erro em buscarVotacaoAtiva", { assembleiaId, error: err.message });
+    return null;
   }
-
-  return votacao;
 }
 
 async function verificarElegibilidade(votacaoId, filiadoId) {
@@ -687,93 +698,113 @@ async function buscarDiagnostico(assembleiaId) {
 }
 
 async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
-  const assembleia = await buscarPorId(assembleiaId);
-  if (!assembleia) return null;
+  try {
+    const assembleia = await buscarPorId(assembleiaId);
+    if (!assembleia) return null;
 
-  const [mesa, pedidosPalavra, propostas, ultimoQuorum] = await Promise.all([
-    buscarMesa(assembleiaId),
-    listarPedidosPalavra(assembleiaId),
-    listarPropostas(assembleiaId),
-    buscarUltimoQuorum(assembleiaId)
-  ]);
-
-  const votacaoAtiva = await buscarVotacaoAtiva(assembleiaId);
-  let votacaoData = null;
-
-  if (votacaoAtiva && votacaoAtiva.status === 'ATIVA') {
-    const [contagem, votos] = await Promise.all([
-      contarVotos(votacaoAtiva.id).catch(() => ({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 })),
-      listarVotosNominais(votacaoAtiva.id).catch(() => [])
+    const [mesa, pedidosPalavra, propostas, ultimoQuorum] = await Promise.all([
+      buscarMesa(assembleiaId).catch(() => null),
+      listarPedidosPalavra(assembleiaId).catch(() => []),
+      listarPropostas(assembleiaId).catch(() => []),
+      buscarUltimoQuorum(assembleiaId).catch(() => null)
     ]);
 
-     let elegivel = false;
-     let motivo_inelegibilidade = null;
-
-     let jaVotou = false;
-     if (filiadoId) {
-       elegivel = await verificarElegibilidade(votacaoAtiva.id, filiadoId);
-       if (!elegivel) {
-         const presencaNoQuorum = await verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, filiadoId);
-         if (!presencaNoQuorum) {
-           motivo_inelegibilidade = "Ausente na chamada de quórum deste item.";
-         } else {
-           motivo_inelegibilidade = "Restrição de elegibilidade técnica.";
-         }
-       } else {
-          jaVotou = votos.some(v => v.filiado_id === filiadoId);
-       }
-     }
-
-    votacaoData = {
-      ...votacaoAtiva,
-      contagem,
-       votos,
-       user_eligibility: {
-         elegivel,
-         motivo: motivo_inelegibilidade,
-         jaVotou
-       }
-    };
-  }
-
-  let totalPresentes = 0;
-  let userHasCheckedIn = false;
-  let presentesNominais = [];
-  if (ultimoQuorum) {
-    const { rows: countRows } = await pool.query(
-      'SELECT COUNT(*) as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1',
-      [ultimoQuorum.id]
-    );
-    totalPresentes = parseInt(countRows[0].total);
-
-    const { rows: presentesRows } = await pool.query(
-      `SELECT f.id, f.nome, f.avatar_url, c.registrado_em
-       FROM assembleia_checkins c
-       JOIN filiados f ON c.filiado_id = f.id
-       WHERE c.assembleia_quorum_id = $1
-       ORDER BY f.nome ASC`,
-      [ultimoQuorum.id]
-    );
-    presentesNominais = presentesRows;
-
-    if (filiadoId) {
-      userHasCheckedIn = presentesNominais.some(p => p.id === filiadoId);
+    let votacaoAtiva = null;
+    try {
+      votacaoAtiva = await buscarVotacaoAtiva(assembleiaId);
+    } catch (vErr) {
+      log.error("Erro ao buscar votação ativa em buscarEstadoCompleto", { assembleiaId, error: vErr.message });
     }
-  }
 
-  return {
-    assembleia,
-    mesa,
-    pedidosPalavra,
-    propostas,
-    quorumVigente: ultimoQuorum ? {
-      ...ultimoQuorum,
-      total: totalPresentes,
-      userHasCheckedIn,
-      presentes: presentesNominais
-    } : null,
-    votacaoAtiva: votacaoData
-  };
+    let votacaoData = null;
+    if (votacaoAtiva && (votacaoAtiva.status === 'ATIVA' || votacaoAtiva.tempo_expirado)) {
+      const [contagem, votos] = await Promise.all([
+        contarVotos(votacaoAtiva.id).catch(() => ({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 })),
+        listarVotosNominais(votacaoAtiva.id).catch(() => [])
+      ]);
+
+      let elegivel = false;
+      let motivo_inelegibilidade = null;
+      let jaVotou = false;
+
+      if (filiadoId && votacaoAtiva.id) {
+        try {
+          elegivel = await verificarElegibilidade(votacaoAtiva.id, filiadoId);
+          if (!elegivel) {
+            const presencaNoQuorum = await verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, filiadoId).catch(() => false);
+            motivo_inelegibilidade = !presencaNoQuorum ? "Ausente na chamada de quórum deste item." : "Restrição de elegibilidade técnica.";
+          } else {
+            jaVotou = (votos || []).some(v => v.filiado_id === filiadoId);
+          }
+        } catch (eligErr) {
+          log.error("Erro ao verificar elegibilidade em buscarEstadoCompleto", { votacaoId: votacaoAtiva.id, filiadoId, error: eligErr.message });
+        }
+      }
+
+      votacaoData = {
+        ...votacaoAtiva,
+        contagem,
+        votos,
+        user_eligibility: {
+          elegivel,
+          motivo: motivo_inelegibilidade,
+          jaVotou
+        }
+      };
+    }
+
+    let totalPresentes = 0;
+    let userHasCheckedIn = false;
+    let presentesNominais = [];
+
+    if (ultimoQuorum && ultimoQuorum.id) {
+      try {
+        const { rows: countRows } = await pool.query(
+          'SELECT COUNT(*) as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1',
+          [ultimoQuorum.id]
+        );
+        totalPresentes = parseInt(countRows[0]?.total || 0);
+
+        const { rows: presentesRows } = await pool.query(
+          `SELECT f.id, f.nome, f.avatar_url, c.registrado_em
+           FROM assembleia_checkins c
+           JOIN filiados f ON c.filiado_id = f.id
+           WHERE c.assembleia_quorum_id = $1
+           ORDER BY f.nome ASC`,
+          [ultimoQuorum.id]
+        );
+        presentesNominais = presentesRows || [];
+
+        if (filiadoId) {
+          userHasCheckedIn = presentesNominais.some(p => p.id === filiadoId);
+        }
+      } catch (qErr) {
+        log.error("Erro ao carregar detalhes do quórum em buscarEstadoCompleto", { quorumId: ultimoQuorum.id, error: qErr.message });
+      }
+    }
+
+    return {
+      assembleia,
+      mesa: mesa || null,
+      pedidosPalavra: pedidosPalavra || [],
+      propostas: propostas || [],
+      quorumVigente: ultimoQuorum ? {
+        ...ultimoQuorum,
+        total: totalPresentes,
+        userHasCheckedIn,
+        presentes: presentesNominais
+      } : null,
+      votacaoAtiva: votacaoData
+    };
+  } catch (err) {
+    log.error("Erro fatal em buscarEstadoCompleto", { assembleiaId, error: err.message });
+    // Retorna o mínimo possível para não quebrar o app completamente
+    try {
+      const basic = await buscarPorId(assembleiaId);
+      if (basic) return { assembleia: basic, mesa: null, pedidosPalavra: [], propostas: [], quorumVigente: null, votacaoAtiva: null };
+    } catch (inner) {}
+    throw err; // Re-throw if even basic fails
+  }
 }
 
 module.exports = {

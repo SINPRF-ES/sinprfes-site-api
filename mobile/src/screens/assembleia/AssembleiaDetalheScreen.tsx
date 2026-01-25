@@ -20,31 +20,43 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [tokenInput, setTokenInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [editalLoading, setEditalLoading] = useState(false);
 
   const perfil = (usuario?.perfil_acesso || '').toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
+
+  const [estadoLoading, setEstadoLoading] = useState(false);
+
+  const fetchEstado = async () => {
+    try {
+      setEstadoLoading(true);
+      const estadoData = await getAssembleiaEstado(id);
+      setEstado(estadoData);
+    } catch (err: any) {
+      logger.error('ASSEMBLEIA_ESTADO_FETCH_ERROR', err instanceof Error ? err : new Error(String(err)), { id });
+    } finally {
+      setEstadoLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
       logger.info('ASSEMBLEIA_DETALHE_FETCH_START', { id, profile: usuario?.perfil_acesso });
 
-      const [data, estadoData] = await Promise.all([
-        getAssembleiaDetalhe(id),
-        getAssembleiaEstado(id)
-      ]);
+      // Detalhe básico é obrigatório
+      const data = await getAssembleiaDetalhe(id);
+      setAssembleia(data);
+
+      // Estado pode falhar ou ser carregado em paralelo de forma resiliente
+      fetchEstado();
 
       logger.info('ASSEMBLEIA_DETALHE_FETCH_SUCCESS', {
         id,
         hasAssembleia: !!data,
-        hasEstado: !!estadoData,
-        estadoName: data?.estado,
-        hasQuorum: !!estadoData?.quorumVigente
+        estadoName: data?.estado
       });
-
-      setAssembleia(data);
-      setEstado(estadoData);
     } catch (err: any) {
       logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err instanceof Error ? err : new Error(String(err)), { id });
       console.error('[Assembleia.fetch]', err);
@@ -221,6 +233,22 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }
   };
 
+  const handleVerEdital = async () => {
+    if (!assembleia?.edital_url) return;
+
+    const url = assembleia.edital_url;
+    const cleanUrl = url.split('?')[0];
+    const extension = cleanUrl.split('.').pop()?.toLowerCase();
+
+    navigation.navigate('FileViewer', {
+        remoteUrl: url,
+        title: `Edital - ${assembleia.titulo}`,
+        fileId: id,
+        type: extension === 'pdf' ? 'pdf' : (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '') ? 'image' : 'other'),
+        context: 'assembleia-edital'
+    });
+  };
+
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
@@ -260,13 +288,56 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       <Text style={styles.tituloText}>{assembleia.titulo}</Text>
       <Text style={styles.descricaoText}>{assembleia.pauta}</Text>
 
+      <View style={styles.editalSection}>
+        <Text style={styles.sectionLabel}>Edital de Convocação</Text>
+        {assembleia.edital_url ? (
+          <TouchableOpacity
+            style={styles.btnEdital}
+            onPress={handleVerEdital}
+            disabled={editalLoading}
+          >
+            {editalLoading ? (
+              <ActivityIndicator size="small" color="#003366" />
+            ) : (
+              <MaterialCommunityIcons
+                name={assembleia.edital_url.toLowerCase().endsWith('.pdf') ? 'file-pdf-box' : 'image'}
+                size={24}
+                color="#003366"
+              />
+            )}
+            <Text style={styles.btnEditalText}>
+              {editalLoading ? 'Carregando...' : 'Ver Edital'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.noEditalBox}>
+            <MaterialCommunityIcons name="file-cancel-outline" size={20} color="#999" />
+            <Text style={styles.noEditalText}>Sem edital anexado</Text>
+          </View>
+        )}
+      </View>
+
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>Quórum Atual</Text>
-        <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
-        {estado?.quorumVigente && (
-          <Text style={styles.quorumStatus}>
-            Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
-          </Text>
+        {estadoLoading ? (
+            <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
+        ) : !estado ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={[styles.infoValue, { color: '#999' }]}>Indisponível</Text>
+                <TouchableOpacity onPress={fetchEstado} style={styles.btnRetrySmall}>
+                    <MaterialCommunityIcons name="refresh" size={16} color="#003366" />
+                    <Text style={styles.btnRetrySmallText}>Tentar</Text>
+                </TouchableOpacity>
+            </View>
+        ) : (
+            <>
+                <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
+                {estado?.quorumVigente && (
+                <Text style={styles.quorumStatus}>
+                    Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
+                </Text>
+                )}
+            </>
         )}
       </View>
 
@@ -308,11 +379,55 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       )}
 
     </ScrollView>
+
+
     </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  btnRetrySmall: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 6, backgroundColor: '#eee' },
+  btnRetrySmallText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },
+  editalSection: { marginBottom: 20 },
+  sectionLabel: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 8 },
+  btnEdital: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#003366',
+    padding: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
+  btnEditalText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
+  noEditalBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 4 },
+  noEditalText: { color: '#999', fontSize: 14, fontStyle: 'italic' },
+  modalContainer: { flex: 1, backgroundColor: '#fff' },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    paddingTop: 50,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: { fontSize: 16, fontWeight: 'bold', flex: 1, marginRight: 15 },
+  closeButton: { padding: 5 },
+  viewerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  fullImage: { width: '100%', height: '100%' },
+  modalFooter: { padding: 20, borderTopWidth: 1, borderTopColor: '#eee' },
+  shareBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#003366',
+    padding: 15,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareBtnText: { color: '#fff', fontWeight: 'bold', marginLeft: 10 },
   container: { flex: 1, backgroundColor: '#f2f4f8', paddingHorizontal: 16, paddingTop: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10 },

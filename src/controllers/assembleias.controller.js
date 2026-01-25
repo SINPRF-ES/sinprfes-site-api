@@ -77,18 +77,64 @@ async function diagnostico(req, res) {
 async function criar(req, res) {
   const start = Date.now();
   try {
-    const { tipo, titulo, pauta, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada } = req.body;
+    const {
+      tipo,
+      titulo,
+      pauta,
+      edital_url,
+      data_evento,
+      hora_primeira_chamada,
+      hora_segunda_chamada
+    } = req.body;
 
-    // Validação básica
-    if (!tipo || !titulo) {
-      return res.status(422).json({ error: "Tipo e título são campos obrigatórios." });
+    // 1. Validação de campos obrigatórios
+    if (!tipo || !titulo || !data_evento || !hora_primeira_chamada || !hora_segunda_chamada) {
+      return res.status(422).json({ error: "Título, tipo, data e horários de chamada são obrigatórios." });
     }
 
-    // Whitelist de tipos aceitos (incluindo nomes extensos do mobile)
+    // 2. Validação do Tipo
     const tiposValidos = ['AGE', 'AGO', 'Assembleia Geral Ordinária', 'Assembleia Geral Extraordinária'];
     if (!tiposValidos.includes(tipo)) {
-      return res.status(422).json({ error: "Tipo de assembleia inválido. Use AGO ou AGE." });
+      return res.status(422).json({ error: "Tipo de assembleia inválido." });
     }
+
+    // 3. Validação Estrita de Data
+    const regexData = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regexData.test(data_evento)) {
+      return res.status(422).json({ error: Textos.ASSEMBLEIA.DATA_EVENTO_INVALIDA, code: 'DATA_EVENTO_INVALIDA' });
+    }
+    const [y, m, d] = data_evento.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    if (dateObj.getFullYear() !== y || dateObj.getMonth() !== m - 1 || dateObj.getDate() !== d) {
+      return res.status(422).json({ error: Textos.ASSEMBLEIA.DATA_EVENTO_INVALIDA, code: 'DATA_EVENTO_INVALIDA' });
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    if (dateObj < hoje) {
+      return res.status(422).json({ error: Textos.ASSEMBLEIA.DATA_EVENTO_PASSADA, code: 'DATA_EVENTO_PASSADA' });
+    }
+
+    const umAnoDepois = new Date();
+    umAnoDepois.setFullYear(umAnoDepois.getFullYear() + 1);
+    umAnoDepois.setHours(23, 59, 59, 999);
+    if (dateObj > umAnoDepois) {
+      return res.status(422).json({ error: Textos.ASSEMBLEIA.DATA_EVENTO_MUITO_DISTANTE, code: 'DATA_EVENTO_MUITO_DISTANTE' });
+    }
+
+    // 4. Validação Estrita de Horas
+    const regexHora = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (!regexHora.test(hora_primeira_chamada) || !regexHora.test(hora_segunda_chamada)) {
+      return res.status(422).json({ error: Textos.ASSEMBLEIA.HORA_INVALIDA, code: 'HORA_INVALIDA' });
+    }
+
+    if (hora_segunda_chamada < hora_primeira_chamada) {
+      return res.status(422).json({ error: Textos.ASSEMBLEIA.HORA_ORDEM_INVALIDA, code: 'HORA_ORDEM_INVALIDA' });
+    }
+
+    // 5. Normalização de data_hora_inicio (Opcional, mas mantido para retrocompatibilidade se o banco exigir)
+    // Se o banco não usa mais, o service.criar vai ignorar o que não precisa.
+    const data_hora_inicio = `${data_evento}T${hora_primeira_chamada}:00`;
 
     const nova = await service.criar({
       tipo,
@@ -105,10 +151,9 @@ async function criar(req, res) {
     log.info("AssembleiaCriarSucesso", { requestId: req.requestId, assembleiaId: nova.id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.status(201).json(nova);
   } catch (err) {
-    log.error("AssembleiaCriarErro", { requestId: req.requestId, userId: req.user.id, error: err });
+    log.error("AssembleiaCriarErro", { requestId: req.requestId, userId: req.user.id, error: err.message, stack: err.stack });
 
-    // Tratamento de erros de banco previsíveis
-    if (err.message.includes("violates check constraint") || err.message.includes("invalid input syntax for type timestamp")) {
+    if (err.message.includes("violates check constraint") || err.message.includes("invalid input syntax") || err.message.includes("type date") || err.message.includes("type time")) {
       return res.status(422).json({ error: "Dados inválidos fornecidos para criação da assembleia.", details: err.message });
     }
 
@@ -247,13 +292,15 @@ async function checkin(req, res) {
 
     // Broadcast do quórum atualizado
     const estado = await service.buscarEstadoCompleto(id);
-    socket.emitEvent(id, "assembleia:checkin_updated", {
-      presentes_total: estado.quorumVigente?.total || 0,
-      quorum_total_ativos: estado.quorumVigente?.quorum_total_ativos || 0,
-      quorum_necessario: estado.quorumVigente?.quorum_necessario || 0,
-      quorum_atingido: (estado.quorumVigente?.total || 0) >= (estado.quorumVigente?.quorum_necessario || 0),
-      tipo_chamada: estado.quorumVigente?.tipo_chamada
-    });
+    if (estado) {
+      socket.emitEvent(id, "assembleia:checkin_updated", {
+        presentes_total: estado.quorumVigente?.total || 0,
+        quorum_total_ativos: estado.quorumVigente?.quorum_total_ativos || 0,
+        quorum_necessario: estado.quorumVigente?.quorum_necessario || 0,
+        quorum_atingido: (estado.quorumVigente?.total || 0) >= (estado.quorumVigente?.quorum_necessario || 0),
+        tipo_chamada: estado.quorumVigente?.tipo_chamada
+      });
+    }
 
     log.info("AssembleiaCheckinSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json({ success: true, message: "Check-in realizado com sucesso" });
@@ -454,10 +501,13 @@ async function uploadEdital(req, res) {
       return res.status(400).json({ error: "Arquivo não enviado" });
     }
 
+    // PDFs devem ser enviados como 'raw' para garantir delivery direto e evitar 401/path issues no Cloudinary
+    const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
+
     const result = await uploadFileBuffer(req.file.buffer, {
       folder: "sinprfes/editais",
       public_id: `edital_${Date.now()}`,
-      resource_type: "auto",
+      resource_type: isPdf ? "raw" : "auto",
     });
 
     res.json({ url: result.secure_url });
