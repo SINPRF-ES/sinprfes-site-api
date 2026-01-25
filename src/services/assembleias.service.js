@@ -209,6 +209,19 @@ async function gerarQuorum(dados) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
+    // Idempotência: Se já existe token ativo para este MESMO tipo_chamada, retorna ele
+    const { rows: existingRows } = await client.query(
+      `SELECT id, token, criado_em, quorum_total_ativos, quorum_necessario
+       FROM assembleia_quoruns
+       WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL`,
+      [assembleia_id, tipo_chamada]
+    );
+
+    if (existingRows.length > 0) {
+      await client.query('ROLLBACK');
+      return { ...existingRows[0], isNew: false };
+    }
+
     const totalAtivos = await contarFiliadosAtivosParaQuorum(client);
     let quorumNecessario = tipo_chamada === 'PRIMEIRA' ? Math.floor(totalAtivos / 2) + 1 : 0;
 
@@ -244,7 +257,7 @@ async function gerarQuorum(dados) {
        RETURNING id, token, criado_em, quorum_total_ativos, quorum_necessario`,
       [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao]
     );
-    const quorum = qRows[0];
+    const quorum = { ...qRows[0], isNew: true };
 
     const auditEvent = tipo_chamada === 'RECONTAGEM' ? 'RECONTAGEM_INICIADA' : 'TOKEN_GERADO';
     await registrarAuditoria(assembleia_id, gerado_por_user_id, auditEvent, { token, tipo_chamada, quorum_total_ativos: totalAtivos, quorum_necessario: quorumNecessario }, client);

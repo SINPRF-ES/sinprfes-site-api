@@ -6,6 +6,7 @@ import * as Clipboard from 'expo-clipboard';
 import { LogEntry, getLogs, clearLogs, getLogsAsText } from '../infra/logger';
 import { useAuth } from '../hooks/useAuth';
 import { ROLES, isDiretoria } from '../utils/filiadoUtils';
+import api from '../services/apiService';
 
 const LogsScreen = () => {
   const { usuario } = useAuth();
@@ -52,8 +53,16 @@ const LogsScreen = () => {
           text: 'Limpar',
           style: 'destructive',
           onPress: async () => {
+            const count = logs.length;
             await clearLogs();
             loadLogs();
+            try {
+              await api.post('/api/diagnostico/limpar-logs', { recordsDeleted: count });
+              Alert.alert('Sucesso', 'Logs limpos e ação registrada.');
+            } catch (err) {
+              // Falha na auditoria é registrada pelo interceptor, não bloqueamos o fluxo local
+              Alert.alert('Sucesso', 'Logs limpos localmente.');
+            }
           },
         },
       ]
@@ -79,7 +88,7 @@ const LogsScreen = () => {
     <View style={styles.container}>
       <View style={styles.buttonContainer}>
         <Button title="Copiar Logs" onPress={handleCopyLogs} />
-        {isAdmin && <Button title="Limpar Logs" onPress={handleClearLogs} color="red" />}
+        {(isAdmin || ehDiretoria) && <Button title="Limpar Logs" onPress={handleClearLogs} color="red" />}
       </View>
       {logs.length === 0 ? (
         <View style={styles.centered}>
