@@ -102,4 +102,84 @@ describe('Assembleias V5 Integration Tests', () => {
       expect(response.status).toBe(422);
     });
   });
+
+  describe('POST /api/assembleias/:id/token', () => {
+    let mClient;
+
+    beforeEach(async () => {
+      mClient = {
+        query: jest.fn(),
+        release: jest.fn(),
+      };
+      pool.connect.mockResolvedValue(mClient);
+    });
+
+    test('should succeed and be idempotent', async () => {
+      mClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ estado: 'ABERTA' }] }) // SELECT estado
+        .mockResolvedValueOnce({ rows: [] }) // SELECT existing (null)
+        .mockResolvedValueOnce({ rows: [{ total: 10 }] }) // COUNT filiados (contarFiliadosAtivosParaQuorum)
+        .mockResolvedValueOnce({ rows: [] }) // token collision check
+        .mockResolvedValueOnce({ rows: [] }) // update quoruns
+        .mockResolvedValueOnce({ rows: [{ id: 'q1', token: '111222' }] }) // INSERT
+        .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // Auto-checkin perfil
+        .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }); // Auto-checkin insert
+
+      const res1 = await request(app)
+        .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
+        .send({ tipo_chamada: 'PRIMEIRA' });
+
+      expect(res1.status).toBe(200);
+      expect(res1.body.token).toBe('111222');
+      expect(res1.body.isNew).toBe(true);
+
+      // Call again for idempotency
+      mClient.query
+        .mockReset()
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ estado: 'ABERTA' }] }) // SELECT estado
+        .mockResolvedValueOnce({ rows: [{ id: 'q1', token: '111222' }] }); // SELECT existing (found)
+
+      const res2 = await request(app)
+        .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
+        .send({ tipo_chamada: 'PRIMEIRA' });
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.token).toBe('111222');
+      expect(res2.body.isNew).toBe(false);
+    });
+
+    test('should return 404 for non-existent assembly', async () => {
+      mClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }); // SELECT estado (not found)
+
+      const response = await request(app)
+        .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
+        .send({ tipo_chamada: 'PRIMEIRA' });
+
+      expect(response.status).toBe(404);
+    });
+
+    test('should return 409 for invalid assembly state', async () => {
+      mClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ estado: 'CRIADA' }] }); // SELECT estado
+
+      const response = await request(app)
+        .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
+        .send({ tipo_chamada: 'PRIMEIRA' });
+
+      expect(response.status).toBe(409);
+    });
+
+    test('should return 422 for invalid tipo_chamada', async () => {
+      const response = await request(app)
+        .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
+        .send({ tipo_chamada: 'INVALID' });
+
+      expect(response.status).toBe(422);
+    });
+  });
 });

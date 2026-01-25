@@ -555,6 +555,14 @@ async function uploadEdital(req, res) {
       folder: "sinprfes/editais",
       public_id: `edital_${Date.now()}`,
       resource_type: isPdf ? "raw" : "auto",
+      type: "upload" // Garante que o arquivo é público e evita 401
+    });
+
+    log.info("AssembleiaUploadEditalSucesso", {
+        filename: req.file.originalname,
+        public_id: result.public_id,
+        resource_type: result.resource_type,
+        url: result.secure_url
     });
 
     res.json({ url: result.secure_url });
