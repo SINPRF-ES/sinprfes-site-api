@@ -23,6 +23,7 @@ import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
 import NoticiasScreen from "../screens/NoticiasScreen";
 import ConveniosScreen from "../screens/ConveniosScreen";
 import PdfViewerScreen from "../screens/PdfViewerScreen";
+import FileViewerScreen from "../screens/FileViewerScreen";
 import DrawerNavigator from "./DrawerNavigator"; // Importa o Drawer
 
 export type RootStackParamList = {
@@ -41,6 +42,7 @@ export type RootStackParamList = {
   EditarFiliado: { filiadoId: number };
   Votacao: undefined;
   PdfViewer: { localUri: string; title: string };
+  FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -140,6 +142,11 @@ export default function RootNavigation() {
               name="PdfViewer"
               component={PdfViewerScreen}
               options={({ route }) => ({ title: route.params.title || "Visualizador PDF" })}
+            />
+            <Stack.Screen
+              name="FileViewer"
+              component={FileViewerScreen}
+              options={({ route }) => ({ title: route.params.title || "Visualizador" })}
             />
           </>
         )}

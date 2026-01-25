@@ -1,6 +1,6 @@
 // mobile/src/screens/PublicacoesScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, Image, Button } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
@@ -16,8 +16,6 @@ const PublicacoesScreen: React.FC = () => {
   const { token } = useAuth();
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [viewerVisible, setViewerVisible] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<{ uri: string; mimeType: string; name: string } | null>(null);
 
   const currentFolder = folderStack[folderStack.length - 1];
 
@@ -75,22 +73,13 @@ const PublicacoesScreen: React.FC = () => {
       const { localUri, mimeType } = await downloadPublicacaoFile(file.id, file.name, token);
       const safeMimeType = mimeType || file.mimeType || '';
 
-      if (safeMimeType.startsWith('image/')) {
-        logDebug('Publicacoes.openLocal.success', { mode: 'image-modal', uri: localUri });
-        setSelectedFile({ uri: localUri, mimeType: safeMimeType, name: file.name });
-        setViewerVisible(true);
-      } else if (safeMimeType === 'application/pdf') {
-        logDebug('Publicacoes.openLocal.pdfViewer.start', { fileId: file.id, localUri });
-        navigation.navigate('PdfViewer', { localUri, title: file.name, fileId: file.id });
-        logDebug('Publicacoes.openLocal.pdfViewer.success');
-      } else {
-        logDebug('Publicacoes.openLocal.success', { mode: 'share', uri: localUri });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(localUri);
-        } else {
-          Alert.alert('Indisponível', 'Não foi possível abrir o visualizador de arquivos neste dispositivo.');
-        }
-      }
+      navigation.navigate('FileViewer', {
+          localUri,
+          title: file.name,
+          fileId: file.id,
+          type: safeMimeType.includes('pdf') ? 'pdf' : (safeMimeType.startsWith('image/') ? 'image' : 'other'),
+          context: 'publicacoes'
+      });
     } catch (err: any) {
       logDebug('Publicacoes.openLocal.error', { message: err.message });
 
@@ -140,42 +129,8 @@ const PublicacoesScreen: React.FC = () => {
     );
   };
 
-  const handleShare = async () => {
-    if (selectedFile?.uri) {
-      await Sharing.shareAsync(selectedFile.uri);
-    }
-  };
-
   return (
     <View style={styles.fullScreen}>
-      <Modal visible={viewerVisible} transparent={false} animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle} numberOfLines={1}>{selectedFile?.name}</Text>
-            <TouchableOpacity onPress={() => setViewerVisible(false)} style={styles.closeButton}>
-              <FontAwesome name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.viewerContent}>
-            {selectedFile?.mimeType.startsWith('image/') && (
-              <Image
-                source={{ uri: selectedFile.uri }}
-                style={styles.fullImage}
-                resizeMode="contain"
-              />
-            )}
-          </View>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-              <FontAwesome name="share" size={20} color="#fff" />
-              <Text style={styles.shareBtnText}>Compartilhar / Salvar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {isDownloading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
@@ -212,56 +167,6 @@ const styles = StyleSheet.create({
   fullScreen: {
     flex: 1,
     backgroundColor: '#f0f0f0',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 15,
-    paddingTop: 50, // SafeArea manual simplificado
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 15,
-  },
-  closeButton: {
-    padding: 5,
-  },
-  viewerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
-  fullImage: {
-    width: '100%',
-    height: '100%',
-  },
-  modalFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  shareBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#007BFF',
-    padding: 15,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shareBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginLeft: 10,
   },
   container: {
     padding: 10,

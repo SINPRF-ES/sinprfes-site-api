@@ -501,10 +501,13 @@ async function uploadEdital(req, res) {
       return res.status(400).json({ error: "Arquivo não enviado" });
     }
 
+    // PDFs devem ser enviados como 'raw' para garantir delivery direto e evitar 401/path issues no Cloudinary
+    const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
+
     const result = await uploadFileBuffer(req.file.buffer, {
       folder: "sinprfes/editais",
       public_id: `edital_${Date.now()}`,
-      resource_type: "auto",
+      resource_type: isPdf ? "raw" : "auto",
     });
 
     res.json({ url: result.secure_url });

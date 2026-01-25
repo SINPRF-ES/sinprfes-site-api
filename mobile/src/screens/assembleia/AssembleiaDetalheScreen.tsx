@@ -23,8 +23,6 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [tokenInput, setTokenInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [editalLoading, setEditalLoading] = useState(false);
-  const [editalModalVisible, setEditalModalVisible] = useState(false);
-  const [selectedEdital, setSelectedEdital] = useState<{ uri: string; mimeType: string; name: string } | null>(null);
 
   const perfil = (usuario?.perfil_acesso || '').toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
@@ -240,74 +238,17 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const handleVerEdital = async () => {
     if (!assembleia?.edital_url) return;
 
-    try {
-      setEditalLoading(true);
-      const url = assembleia.edital_url;
-      logger.info('assembleia.edital.open.start', { assembleiaId: id, url });
+    const url = assembleia.edital_url;
+    const cleanUrl = url.split('?')[0];
+    const extension = cleanUrl.split('.').pop()?.toLowerCase();
 
-      // Inferência de tipo por extensão
-      const cleanUrl = url.split('?')[0];
-      const extension = cleanUrl.split('.').pop()?.toLowerCase();
-      let mode: 'pdf' | 'image' | 'share' = 'share';
-      let mimeType = 'application/octet-stream';
-
-      if (extension === 'pdf') {
-        mode = 'pdf';
-        mimeType = 'application/pdf';
-      } else if (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')) {
-        mode = 'image';
-        mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
-      }
-
-      // Download para cache local (Option B) para garantir abertura correta
-      const fileName = `edital_${id}.${extension || 'bin'}`;
-      const localUri = `${FileSystemLegacy.cacheDirectory}${fileName}`;
-
-      const downloadResult = await FileSystemLegacy.downloadAsync(url, localUri);
-
-      if (downloadResult.status !== 200) {
-        throw new Error(`Falha no download (Status ${downloadResult.status})`);
-      }
-
-      // Se o servidor retornou um content-type, respeitar se for conclusivo
-      const remoteMime = downloadResult.headers['content-type'] || downloadResult.headers['Content-Type'];
-      if (remoteMime) {
-        if (remoteMime.includes('pdf')) {
-          mode = 'pdf';
-          mimeType = 'application/pdf';
-        } else if (remoteMime.includes('image/')) {
-          mode = 'image';
-          mimeType = remoteMime;
-        }
-      }
-
-      logger.info('assembleia.edital.detect.success', { mimeType, mode });
-
-      if (mode === 'pdf') {
-        navigation.navigate('PdfViewer', { localUri: downloadResult.uri, title: `Edital - ${assembleia.titulo}`, fileId: id });
-      } else if (mode === 'image') {
-        setSelectedEdital({ uri: downloadResult.uri, mimeType, name: `Edital - ${assembleia.titulo}` });
-        setEditalModalVisible(true);
-      } else {
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(downloadResult.uri);
-        } else {
-          Alert.alert('Aviso', 'Não foi possível abrir o arquivo neste dispositivo.');
-        }
-      }
-
-    } catch (err: any) {
-      logger.error('assembleia.edital.open.error', err instanceof Error ? err : new Error(String(err)), { assembleiaId: id });
-      Alert.alert('Erro', 'Não foi possível carregar o edital.');
-    } finally {
-      setEditalLoading(false);
-    }
-  };
-
-  const handleShareEdital = async () => {
-    if (selectedEdital?.uri) {
-      await Sharing.shareAsync(selectedEdital.uri);
-    }
+    navigation.navigate('FileViewer', {
+        remoteUrl: url,
+        title: `Edital - ${assembleia.titulo}`,
+        fileId: id,
+        type: extension === 'pdf' ? 'pdf' : (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '') ? 'image' : 'other'),
+        context: 'assembleia-edital'
+    });
   };
 
   if (loading) {
@@ -441,33 +382,6 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
     </ScrollView>
 
-    <Modal visible={editalModalVisible} transparent={false} animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle} numberOfLines={1}>{selectedEdital?.name}</Text>
-            <TouchableOpacity onPress={() => setEditalModalVisible(false)} style={styles.closeButton}>
-              <FontAwesome name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.viewerContent}>
-            {selectedEdital?.mimeType.startsWith('image/') && (
-              <Image
-                source={{ uri: selectedEdital.uri }}
-                style={styles.fullImage}
-                resizeMode="contain"
-              />
-            )}
-          </View>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.shareBtn} onPress={handleShareEdital}>
-              <FontAwesome name="share" size={20} color="#fff" />
-              <Text style={styles.shareBtnText}>Compartilhar / Salvar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
     </SafeScreen>
   );
