@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin, iniciarExecucao, solicitarRelatorio } from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
@@ -10,6 +10,8 @@ import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
