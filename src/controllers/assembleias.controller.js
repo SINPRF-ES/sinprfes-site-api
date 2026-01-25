@@ -17,8 +17,8 @@ async function listar(req, res) {
     log.info("AssembleiaListarSucesso", { requestId: req.requestId, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json(assembleias);
   } catch (err) {
-    log.error("AssembleiaListarErro", { requestId: req.requestId, userId: req.user.id, error: err.message });
-    res.status(500).json({ error: "Erro ao listar assembleias" });
+    log.error("AssembleiaListarErro", { requestId: req.requestId, userId: req.user.id, error: err });
+    res.status(500).json({ error: "Erro ao listar assembleias", requestId: req.requestId });
   }
 }
 
@@ -30,8 +30,8 @@ async function detalhe(req, res) {
     log.info("AssembleiaDetalheSucesso", { requestId: req.requestId, assembleiaId: req.params.id, elapsedMs: Date.now() - start });
     res.json(assembleia);
   } catch (err) {
-    log.error("AssembleiaDetalheErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
-    res.status(500).json({ error: "Erro ao buscar detalhe da assembleia" });
+    log.error("AssembleiaDetalheErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err });
+    res.status(500).json({ error: "Erro ao buscar detalhe da assembleia", requestId: req.requestId });
   }
 }
 
@@ -47,8 +47,8 @@ async function estadoCompleto(req, res) {
     log.info("AssembleiaEstadoCompletoSucesso", { requestId: req.requestId, assembleiaId: req.params.id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json(estado);
   } catch (err) {
-    log.error("AssembleiaEstadoCompletoErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
-    res.status(500).json({ error: "Erro ao buscar estado da assembleia" });
+    log.error("AssembleiaEstadoCompletoErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err });
+    res.status(500).json({ error: "Erro ao buscar estado da assembleia", requestId: req.requestId });
   }
 }
 

@@ -43,5 +43,6 @@ function emitEvent(assembleiaId, eventName, payload) {
 module.exports = {
   init,
   getIO,
-  emitEvent
+  emitEvent,
+  getRoomSocketCount
 };

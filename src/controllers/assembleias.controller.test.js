@@ -38,4 +38,13 @@ describe('Assembleias Controller', () => {
 
     expect(res.status).toHaveBeenCalledWith(422);
   });
+
+  test('listar should return 200 for ADMIN profile', async () => {
+    req.user.perfil_acesso = 'ADMIN';
+    service.listar.mockResolvedValue([{ id: 'ass-1' }]);
+
+    await controller.listar(req, res);
+
+    expect(res.json).toHaveBeenCalledWith([{ id: 'ass-1' }]);
+  });
 });

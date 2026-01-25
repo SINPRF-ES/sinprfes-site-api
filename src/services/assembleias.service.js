@@ -436,7 +436,7 @@ async function contarVotos(votacaoId) {
      FROM assembleia_votos WHERE votacao_id = $1`,
     [votacaoId]
   );
-  const contagem = rows[0];
+  const contagem = rows[0] || {};
   return {
     SIM: parseInt(contagem.SIM || 0),
     NAO: parseInt(contagem.NAO || 0),
@@ -696,8 +696,8 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
 
   if (votacaoAtiva && votacaoAtiva.status === 'ATIVA') {
     const [contagem, votos] = await Promise.all([
-      contarVotos(votacaoAtiva.id),
-      listarVotosNominais(votacaoAtiva.id)
+      contarVotos(votacaoAtiva.id).catch(() => ({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 })),
+      listarVotosNominais(votacaoAtiva.id).catch(() => [])
     ]);
 
      let elegivel = false;
