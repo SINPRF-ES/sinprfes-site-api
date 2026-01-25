@@ -76,7 +76,9 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-      if (editalFile && !editalData) {
+      let finalEditalData = editalData;
+
+      if (editalFile && !finalEditalData) {
         setUploading(true);
         const formData = new FormData();
         const fileUri = editalFile.uri;
@@ -98,6 +100,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         } as any);
 
         const res = await uploadEdital(formData);
+        finalEditalData = res;
         setEditalData(res);
         setUploading(false);
       }
@@ -116,6 +119,13 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         return;
       }
 
+      // Se o usuário selecionou um edital mas por algum motivo o upload falhou/limpou, avisar
+      if (editalFile && !finalEditalData?.url) {
+          Alert.alert('Erro', 'O edital selecionado não pôde ser processado. Tente removê-lo e anexar novamente.');
+          setLoading(false);
+          return;
+      }
+
       await criarAssembleia({
         titulo,
         tipo,
@@ -123,11 +133,11 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         data_evento,
         hora_primeira_chamada: hora1,
         hora_segunda_chamada: hora2,
-        edital_url: editalData?.url || '',
-        edital_public_id: editalData?.public_id,
-        edital_resource_type: editalData?.resource_type,
-        edital_type: editalData?.type,
-        edital_format: editalData?.format
+        edital_url: finalEditalData?.url || '',
+        edital_public_id: finalEditalData?.public_id,
+        edital_resource_type: finalEditalData?.resource_type,
+        edital_type: finalEditalData?.type,
+        edital_format: finalEditalData?.format
       });
 
       Alert.alert('Sucesso', 'Assembleia criada com sucesso!');

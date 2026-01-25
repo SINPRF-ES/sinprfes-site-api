@@ -107,19 +107,34 @@ async function limparLogsAuditoria(req, res) {
 async function criar(req, res) {
   const start = Date.now();
   try {
+    // Log diagnóstico para identificar chaves enviadas pelo mobile (Issue A/B)
+    log.info("AssembleiaCriarRequest", {
+        requestId: req.requestId,
+        bodyKeys: Object.keys(req.body || {}),
+        edital_url: req.body.edital_url,
+        editalUrl: req.body.editalUrl
+    });
+
     const {
       tipo,
       titulo,
       pauta,
-      edital_url,
-      edital_public_id,
-      edital_resource_type,
-      edital_type,
-      edital_format,
       data_evento,
       hora_primeira_chamada,
       hora_segunda_chamada
     } = req.body;
+
+    // Mapeamento tolerante (aceita snake_case ou camelCase) e sanitização de empty strings
+    const getVal = (k1, k2) => {
+        const v = req.body[k1] ?? req.body[k2];
+        return (typeof v === 'string' && v.trim() === '') ? null : (v || null);
+    };
+
+    const edital_url = getVal('edital_url', 'editalUrl');
+    const edital_public_id = getVal('edital_public_id', 'editalPublicId');
+    const edital_resource_type = getVal('edital_resource_type', 'editalResourceType');
+    const edital_type = getVal('edital_type', 'editalType');
+    const edital_format = getVal('edital_format', 'editalFormat');
 
     // 1. Validação de campos obrigatórios
     if (!tipo || !titulo || !data_evento || !hora_primeira_chamada || !hora_segunda_chamada) {
