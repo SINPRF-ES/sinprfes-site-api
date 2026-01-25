@@ -211,22 +211,23 @@ const JogosScreen = () => {
             <ScrollView horizontal>
               <View>
                 <View style={styles.tableHeader}>
-                  <Text style={[styles.tableHeaderText, { width: 150 }]}>Nome</Text>
-                  <Text style={[styles.tableHeaderText, { width: 80 }]}>Idade (2026)</Text>
-                  <Text style={[styles.tableHeaderText, { width: 100 }]}>Sexo</Text>
-                  <Text style={[styles.tableHeaderText, { width: 200 }]}>Modalidades</Text>
-                  <Text style={[styles.tableHeaderText, { width: 80 }]}>Qtd Fam.</Text>
-                  <Text style={[styles.tableHeaderText, { width: 150 }]}>Familiares</Text>
-                  <Text style={[styles.tableHeaderText, { width: 150 }]}>Observações</Text>
-                  <Text style={[styles.tableHeaderText, { width: 120 }]}>Telefone</Text>
-                  <Text style={[styles.tableHeaderText, { width: 180 }]}>E-mail(s)</Text>
+                  <View style={[styles.tableHeaderCellContainer, { width: 150 }]}><Text style={styles.tableHeaderText}>Nome</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 80 }]}><Text style={styles.tableHeaderText}>Idade (2026)</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 100 }]}><Text style={styles.tableHeaderText}>Sexo</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 200 }]}><Text style={styles.tableHeaderText}>Modalidades</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 80 }]}><Text style={styles.tableHeaderText}>Qtd Fam.</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 150 }]}><Text style={styles.tableHeaderText}>Familiares</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 150 }]}><Text style={styles.tableHeaderText}>Observações</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 120 }]}><Text style={styles.tableHeaderText}>Telefone</Text></View>
+                  <View style={[styles.tableHeaderCellContainer, { width: 180 }]}><Text style={styles.tableHeaderText}>E-mail(s)</Text></View>
                 </View>
                 {inscricoesGerais.map((item, idx) => (
-                  <View key={idx} style={styles.tableRow}>
-                    <Text style={[styles.tableCell, { width: 150 }]}>{item.nome_filiado}</Text>
-                    <Text style={[styles.tableCell, { width: 80 }]}>{calculateAge2026(item.data_nascimento)}</Text>
-                    <Text style={[styles.tableCell, { width: 100 }]}>{formatGender(item.sexo)}</Text>
-                    <Text style={[styles.tableCell, { width: 200 }]}>
+                  <View key={idx} style={[styles.tableRow, idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd]}>
+                    <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.nome_filiado}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 80 }]}><Text style={styles.tableCell}>{calculateAge2026(item.data_nascimento)}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 100 }]}><Text style={styles.tableCell}>{formatGender(item.sexo)}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 200 }]}>
+                      <Text style={styles.tableCell}>
                         {(() => {
                           const mods = item.modalidades || [];
                           if (typeof mods.map !== 'function') {
@@ -241,12 +242,13 @@ const JogosScreen = () => {
                             return found ? found.label : mid;
                           }).join(', ');
                         })()}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 80 }]}>{item.qtd_familiares || 0}</Text>
-                    <Text style={[styles.tableCell, { width: 150 }]}>{item.familiares || '—'}</Text>
-                    <Text style={[styles.tableCell, { width: 150 }]}>{item.observacoes || '—'}</Text>
-                    <Text style={[styles.tableCell, { width: 120 }]}>{formatTelefone(item.telefone1) || '—'}</Text>
-                    <Text style={[styles.tableCell, { width: 180 }]}>{[item.email1, item.email2].filter(Boolean).join(' / ') || '—'}</Text>
+                      </Text>
+                    </View>
+                    <View style={[styles.tableCellContainer, { width: 80 }]}><Text style={styles.tableCell}>{item.qtd_familiares || 0}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.familiares || '—'}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.observacoes || '—'}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 120 }]}><Text style={styles.tableCell}>{formatTelefone(item.telefone1) || '—'}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 180 }]}><Text style={styles.tableCell}>{[item.email1, item.email2].filter(Boolean).join(' / ') || '—'}</Text></View>
                   </View>
                 ))}
               </View>
@@ -277,10 +279,28 @@ const styles = StyleSheet.create({
   btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   btnDisabled: { opacity: 0.6 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f3f5', padding: 10 },
-  tableHeaderText: { fontWeight: 'bold', color: '#003366' },
-  tableRow: { flexDirection: 'row', padding: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  tableCell: { fontSize: 12, color: '#333' },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f3f5', borderTopWidth: 1, borderLeftWidth: 1, borderColor: '#ccc' },
+  tableHeaderText: { fontWeight: 'bold', color: '#003366', textAlign: 'center' },
+  tableRow: { flexDirection: 'row', borderLeftWidth: 1, borderColor: '#eee' },
+  tableCell: { fontSize: 12, color: '#333', textAlign: 'center' },
+  tableCellContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  tableHeaderCellContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+  },
+  tableRowEven: { backgroundColor: '#fff' },
+  tableRowOdd: { backgroundColor: '#f9f9f9' },
   offlineBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, padding: 8, backgroundColor: '#f8d7da', borderRadius: 8, marginBottom: 15, alignSelf: 'center' },
   offlineText: { fontSize: 12, color: '#721c24', fontWeight: 'bold' },
 });
