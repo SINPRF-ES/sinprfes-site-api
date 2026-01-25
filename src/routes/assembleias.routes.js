@@ -17,6 +17,7 @@ const upload = multer({
 router.get("/", auth, controller.listar);
 router.get("/:id", auth, controller.detalhe);
 router.get("/:id/estado", auth, stateLimiter, controller.estadoCompleto);
+router.get("/:id/edital", auth, controller.proxyEdital);
 
 // Gestão podem criar, abrir, iniciar execução e encerrar
 router.post("/", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.criar);
