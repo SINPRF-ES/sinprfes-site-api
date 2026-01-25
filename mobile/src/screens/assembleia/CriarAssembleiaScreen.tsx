@@ -103,8 +103,18 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
       }
 
       const [d, m, y] = data.split('/');
-      const data_evento = `${y}-${m}-${d}`;
-      const data_hora_inicio = `${data_evento}T${hora1}:00`;
+      const data_evento = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+
+      // Validação local adicional antes do envio
+      const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      if (dateObj < hoje) {
+        Alert.alert('Aviso', 'A data da assembleia não pode ser no passado.');
+        setLoading(false);
+        return;
+      }
 
       await criarAssembleia({
         titulo,
@@ -113,14 +123,14 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         data_evento,
         hora_primeira_chamada: hora1,
         hora_segunda_chamada: hora2,
-        data_hora_inicio,
         edital_url: editalUrl
       });
 
       Alert.alert('Sucesso', 'Assembleia criada com sucesso!');
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Falha ao criar assembleia.');
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Falha ao criar assembleia.';
+      Alert.alert('Erro', errorMsg);
     } finally {
       setLoading(false);
     }

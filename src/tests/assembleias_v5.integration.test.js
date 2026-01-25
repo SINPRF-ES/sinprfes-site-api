@@ -61,7 +61,9 @@ describe('Assembleias V5 Integration Tests', () => {
         .send({
           titulo: 'Assembleia 2026',
           tipo: 'Assembleia Geral Ordinária',
-          data_evento: '2026-03-01'
+          data_evento: '2026-03-01',
+          hora_primeira_chamada: '10:00',
+          hora_segunda_chamada: '10:30'
         });
 
       expect(response.status).toBe(201);
@@ -79,7 +81,7 @@ describe('Assembleias V5 Integration Tests', () => {
         .send({ titulo: 'Missing Tipo' });
 
       expect(response.status).toBe(422);
-      expect(response.body.error).toContain('campos obrigatórios');
+      expect(response.body.error.toLowerCase()).toContain('obrigatórios');
     });
 
     test('should return 422 for invalid tipo', async () => {

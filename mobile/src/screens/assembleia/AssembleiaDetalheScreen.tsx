@@ -25,26 +25,37 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
 
+  const [estadoLoading, setEstadoLoading] = useState(false);
+
+  const fetchEstado = async () => {
+    try {
+      setEstadoLoading(true);
+      const estadoData = await getAssembleiaEstado(id);
+      setEstado(estadoData);
+    } catch (err: any) {
+      logger.error('ASSEMBLEIA_ESTADO_FETCH_ERROR', err instanceof Error ? err : new Error(String(err)), { id });
+    } finally {
+      setEstadoLoading(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
       logger.info('ASSEMBLEIA_DETALHE_FETCH_START', { id, profile: usuario?.perfil_acesso });
 
-      const [data, estadoData] = await Promise.all([
-        getAssembleiaDetalhe(id),
-        getAssembleiaEstado(id)
-      ]);
+      // Detalhe básico é obrigatório
+      const data = await getAssembleiaDetalhe(id);
+      setAssembleia(data);
+
+      // Estado pode falhar ou ser carregado em paralelo de forma resiliente
+      fetchEstado();
 
       logger.info('ASSEMBLEIA_DETALHE_FETCH_SUCCESS', {
         id,
         hasAssembleia: !!data,
-        hasEstado: !!estadoData,
-        estadoName: data?.estado,
-        hasQuorum: !!estadoData?.quorumVigente
+        estadoName: data?.estado
       });
-
-      setAssembleia(data);
-      setEstado(estadoData);
     } catch (err: any) {
       logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err instanceof Error ? err : new Error(String(err)), { id });
       console.error('[Assembleia.fetch]', err);
@@ -262,11 +273,25 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>Quórum Atual</Text>
-        <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
-        {estado?.quorumVigente && (
-          <Text style={styles.quorumStatus}>
-            Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
-          </Text>
+        {estadoLoading ? (
+            <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
+        ) : !estado ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={[styles.infoValue, { color: '#999' }]}>Indisponível</Text>
+                <TouchableOpacity onPress={fetchEstado} style={styles.btnRetrySmall}>
+                    <MaterialCommunityIcons name="refresh" size={16} color="#003366" />
+                    <Text style={styles.btnRetrySmallText}>Tentar</Text>
+                </TouchableOpacity>
+            </View>
+        ) : (
+            <>
+                <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
+                {estado?.quorumVigente && (
+                <Text style={styles.quorumStatus}>
+                    Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
+                </Text>
+                )}
+            </>
         )}
       </View>
 
@@ -313,6 +338,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  btnRetrySmall: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 6, backgroundColor: '#eee' },
+  btnRetrySmallText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },
   container: { flex: 1, backgroundColor: '#f2f4f8', paddingHorizontal: 16, paddingTop: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10 },
