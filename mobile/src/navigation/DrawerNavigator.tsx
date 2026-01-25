@@ -66,7 +66,7 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Votacao"
         component={AssembleiaStack}
-        options={{ title: 'Votação', headerShown: false }}
+        options={{ title: 'Assembleias e Votações', headerShown: false }}
       />
       <Drawer.Screen
         name="Publicacoes"

@@ -4,6 +4,7 @@ const socket = require("../websocket/assembleia.socket");
 const { uploadFileBuffer } = require("../services/cloudinary.service");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
+const axios = require("axios");
 
 // Anti brute-force simples em memória para tokens
 const failedCheckinAttempts = new Map();
@@ -106,15 +107,34 @@ async function limparLogsAuditoria(req, res) {
 async function criar(req, res) {
   const start = Date.now();
   try {
+    // Log diagnóstico para identificar chaves enviadas pelo mobile (Issue A/B)
+    log.info("AssembleiaCriarRequest", {
+        requestId: req.requestId,
+        bodyKeys: Object.keys(req.body || {}),
+        edital_url: req.body.edital_url,
+        editalUrl: req.body.editalUrl
+    });
+
     const {
       tipo,
       titulo,
       pauta,
-      edital_url,
       data_evento,
       hora_primeira_chamada,
       hora_segunda_chamada
     } = req.body;
+
+    // Mapeamento tolerante (aceita snake_case ou camelCase) e sanitização de empty strings
+    const getVal = (k1, k2) => {
+        const v = req.body[k1] ?? req.body[k2];
+        return (typeof v === 'string' && v.trim() === '') ? null : (v || null);
+    };
+
+    const edital_url = getVal('edital_url', 'editalUrl');
+    const edital_public_id = getVal('edital_public_id', 'editalPublicId');
+    const edital_resource_type = getVal('edital_resource_type', 'editalResourceType');
+    const edital_type = getVal('edital_type', 'editalType');
+    const edital_format = getVal('edital_format', 'editalFormat');
 
     // 1. Validação de campos obrigatórios
     if (!tipo || !titulo || !data_evento || !hora_primeira_chamada || !hora_segunda_chamada) {
@@ -171,6 +191,10 @@ async function criar(req, res) {
       pauta,
       data_hora_inicio,
       edital_url,
+      edital_public_id,
+      edital_resource_type,
+      edital_type,
+      edital_format,
       data_evento,
       hora_primeira_chamada,
       hora_segunda_chamada,
@@ -242,9 +266,16 @@ async function encerrarAssembleia(req, res) {
 
 async function gerarTokenQuorum(req, res) {
   const start = Date.now();
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const { tipo_chamada, observacao } = req.body;
+
+    // Validação de UUID para evitar 500 do Postgres
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      log.warn("AssembleiaGerarTokenIdInvalido", { requestId: req.requestId, assembleiaId: id });
+      return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
+    }
 
     const tiposValidos = ['PRIMEIRA', 'SEGUNDA', 'RECONTAGEM'];
     const tipoFinal = (tipo_chamada || 'PRIMEIRA').toUpperCase();
@@ -277,19 +308,24 @@ async function gerarTokenQuorum(req, res) {
     log.info("AssembleiaGerarTokenSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, tipo_chamada: tipoFinal, isNew: quorum.isNew, elapsedMs: Date.now() - start });
     res.json({ token: quorum.token, quorum_id: quorum.id, isNew: quorum.isNew });
   } catch (err) {
-    log.error("AssembleiaGerarTokenQuorumErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message, stack: err.stack });
+    log.error("AssembleiaGerarTokenQuorumErro", { requestId: req.requestId, assembleiaId: id, error: err.message, stack: err.stack });
 
     if (err.message === Textos.ASSEMBLEIA.NAO_ENCONTRADA) {
       return res.status(404).json({ error: err.message });
     }
-    if (err.message === Textos.ASSEMBLEIA.TRANSICAO_INVALIDA) {
+    if (err.message.includes(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA)) {
       return res.status(409).json({ error: "Não é possível gerar token para esta assembleia no estado atual." });
     }
     if (err.message === Textos.ASSEMBLEIA.APENAS_PRESIDENTE) {
       return res.status(403).json({ error: err.message });
     }
 
-    res.status(500).json({ error: "Erro ao gerar token de quórum", requestId: req.requestId });
+    // Erros de banco específicos (ex: deadlock, unique violation inesperada)
+    if (err.code === '23505') {
+       return res.status(409).json({ error: "Conflito ao gerar token. Tente novamente.", requestId: req.requestId });
+    }
+
+    res.status(500).json({ error: "Erro interno ao gerar token de quórum", requestId: req.requestId });
   }
 }
 
@@ -542,33 +578,126 @@ async function gerarRelatorio(req, res) {
   }
 }
 
+async function proxyEdital(req, res) {
+  const { id } = req.params;
+  try {
+    const assembleia = await service.buscarPorId(id);
+    if (!assembleia || !assembleia.edital_url) {
+      return res.status(404).json({ error: "Edital não encontrado." });
+    }
+
+    let targetUrl = assembleia.edital_url;
+    log.info("AssembleiaProxyEditalAcessado", { requestId: req.requestId, assembleiaId: id, url: targetUrl });
+
+    // Função interna para realizar o stream
+    const performStream = async (url) => {
+      const response = await axios({
+        method: 'get',
+        url: url,
+        responseType: 'stream',
+        timeout: 15000,
+        validateStatus: (status) => status === 200
+      });
+
+      const contentType = response.headers['content-type'] || (url.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+      res.setHeader('Content-Type', contentType);
+      const filename = assembleia.edital_public_id ? `${assembleia.edital_public_id}.${assembleia.edital_format || 'pdf'}` : `edital_${id}.pdf`;
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+
+      response.data.pipe(res);
+    };
+
+    try {
+      await performStream(targetUrl);
+    } catch (streamErr) {
+      // Se falhou (401/404) e for PDF com /image/upload/, tenta o fallback para /raw/upload/ (retrocompatibilidade)
+      if ((streamErr.response?.status === 401 || streamErr.response?.status === 404) &&
+          targetUrl.toLowerCase().endsWith('.pdf') &&
+          targetUrl.includes('/image/upload/')) {
+
+        const fallbackUrl = targetUrl.replace('/image/upload/', '/raw/upload/');
+        log.info("AssembleiaProxyEditalFallback", { requestId: req.requestId, assembleiaId: id, from: targetUrl, to: fallbackUrl });
+        await performStream(fallbackUrl);
+      } else {
+        throw streamErr;
+      }
+    }
+
+  } catch (err) {
+    log.error("AssembleiaProxyEditalErro", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      error: err.message,
+      status: err.response?.status
+    });
+
+    if (res.headersSent) return; // Evita erro se o stream já começou
+
+    if (err.response?.status === 404) {
+      return res.status(404).json({ error: "Arquivo não encontrado no provedor." });
+    }
+    if (err.response?.status === 401) {
+      return res.status(403).json({ error: "Acesso negado pelo provedor de arquivos." });
+    }
+
+    res.status(500).json({ error: "Erro ao processar visualização do edital.", requestId: req.requestId });
+  }
+}
+
 async function uploadEdital(req, res) {
   try {
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({ error: "Arquivo não enviado" });
     }
 
-    // PDFs devem ser enviados como 'raw' para garantir delivery direto e evitar 401/path issues no Cloudinary
+    // PDFs devem ser enviados como 'raw' e imagens como 'image' para garantir delivery correto e evitar 401
     const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
+    const isImage = req.file.mimetype?.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(req.file.originalname || '');
 
     const result = await uploadFileBuffer(req.file.buffer, {
       folder: "sinprfes/editais",
-      public_id: `edital_${Date.now()}`,
-      resource_type: isPdf ? "raw" : "auto",
-      type: "upload" // Garante que o arquivo é público e evita 401
+      public_id: `edital_${Date.now()}${isPdf ? '.pdf' : ''}`,
+      resource_type: isPdf ? "raw" : (isImage ? "image" : "auto"),
+      type: "upload" // Garante que o arquivo é público
     });
+
+    // Validação automática pós-upload (best-effort HEAD check)
+    try {
+      const check = await axios.head(result.secure_url, { timeout: 5000 });
+      if (check.status !== 200 && check.status !== 302) {
+         throw new Error(`Cloudinary returned status ${check.status}`);
+      }
+    } catch (headErr) {
+       log.error("AssembleiaUploadEditalValidacaoFalhou", {
+           url: result.secure_url,
+           error: headErr.message,
+           requestId: req.requestId
+       });
+       return res.status(502).json({
+           error: "Arquivo enviado, mas não está acessível. Tente novamente.",
+           requestId: req.requestId
+       });
+    }
 
     log.info("AssembleiaUploadEditalSucesso", {
         filename: req.file.originalname,
         public_id: result.public_id,
         resource_type: result.resource_type,
-        url: result.secure_url
+        url: result.secure_url,
+        requestId: req.requestId
     });
 
-    res.json({ url: result.secure_url });
+    res.json({
+        url: result.secure_url,
+        secure_url: result.secure_url,
+        public_id: result.public_id,
+        resource_type: result.resource_type,
+        type: result.type,
+        format: result.format
+    });
   } catch (err) {
-    log.error("AssembleiaUploadEditalErro", err);
-    res.status(500).json({ error: "Erro ao realizar upload do edital" });
+    log.error("AssembleiaUploadEditalErro", { error: err.message, requestId: req.requestId });
+    res.status(500).json({ error: "Erro ao realizar upload do edital", requestId: req.requestId });
   }
 }
 
@@ -591,5 +720,6 @@ module.exports = {
   diagnostico,
   limparLogsAuditoria,
   gerarRelatorio,
-  uploadEdital
+  uploadEdital,
+  proxyEdital
 };

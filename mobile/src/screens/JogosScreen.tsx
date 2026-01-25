@@ -241,9 +241,11 @@ const JogosScreen = () => {
                             return 'Erro nos dados';
                           }
                           return mods.map((mid: string) => {
-                            const found = MODALIDADES_JOGOS_2026.find(m => m.id === mid);
+                            const normalizedMid = mid?.toLowerCase();
+                            const found = MODALIDADES_JOGOS_2026.find(m => m.id === normalizedMid || m.id === mid);
                             if (!found && mid) {
-                              logger.warn('JOGOS_UNKNOWN_SLUG', { slug: mid });
+                              // Rebaixado para INFO para evitar poluição de logs conforme diretriz C
+                              logger.info('JOGOS_UNKNOWN_SLUG', { slug: mid });
                             }
                             return found ? found.label : mid;
                           }).join(', ');

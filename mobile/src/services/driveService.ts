@@ -5,6 +5,7 @@ import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 import { logDebug } from '../utils/filiadoUtils';
+import { buildCacheDest, inferExtension } from '../utils/fileCacheUtils';
 
 export interface DriveFile {
   id: string;
@@ -52,13 +53,8 @@ export const downloadPublicacaoFile = async (
   fileName: string,
   token: string
 ): Promise<{ localUri: string; mimeType?: string }> => {
-  // Sanitiza o nome do arquivo: espaços para _, remove caracteres especiais
-  const safeName = (fileName || 'arquivo')
-    .trim()
-    .replace(/\s+/g, '_')
-    .replace(/[^a-zA-Z0-9.\-_]/g, '');
-
-  const localUri = `${FileSystemLegacy.cacheDirectory}${safeName}`;
+  const extension = inferExtension(fileName);
+  const localUri = buildCacheDest({ prefix: 'pub', id: fileId, ext: extension });
   const url = `${api.defaults.baseURL}/api/publicacoes/arquivo/${fileId}`;
 
   logDebug('Publicacoes.download.start', { fileId, fileName, localUri });

@@ -21,6 +21,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
   const [hora1, setHora1] = useState('');
   const [hora2, setHora2] = useState('');
   const [editalFile, setEditalFile] = useState<any>(null);
+  const [editalData, setEditalData] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -75,8 +76,9 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-      let editalUrl = '';
-      if (editalFile) {
+      let finalEditalData = editalData;
+
+      if (editalFile && !finalEditalData) {
         setUploading(true);
         const formData = new FormData();
         const fileUri = editalFile.uri;
@@ -98,7 +100,8 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         } as any);
 
         const res = await uploadEdital(formData);
-        editalUrl = res.url;
+        finalEditalData = res;
+        setEditalData(res);
         setUploading(false);
       }
 
@@ -116,6 +119,13 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         return;
       }
 
+      // Se o usuário selecionou um edital mas por algum motivo o upload falhou/limpou, avisar
+      if (editalFile && !finalEditalData?.url) {
+          Alert.alert('Erro', 'O edital selecionado não pôde ser processado. Tente removê-lo e anexar novamente.');
+          setLoading(false);
+          return;
+      }
+
       await criarAssembleia({
         titulo,
         tipo,
@@ -123,7 +133,11 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         data_evento,
         hora_primeira_chamada: hora1,
         hora_segunda_chamada: hora2,
-        edital_url: editalUrl
+        edital_url: finalEditalData?.url || '',
+        edital_public_id: finalEditalData?.public_id,
+        edital_resource_type: finalEditalData?.resource_type,
+        edital_type: finalEditalData?.type,
+        edital_format: finalEditalData?.format
       });
 
       Alert.alert('Sucesso', 'Assembleia criada com sucesso!');
@@ -240,7 +254,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
               <Text style={styles.pdfName}>{editalFile.name || 'documento.pdf'}</Text>
             </View>
           )}
-          <TouchableOpacity onPress={() => setEditalFile(null)} style={styles.btnRemove}>
+          <TouchableOpacity onPress={() => { setEditalFile(null); setEditalData(null); }} style={styles.btnRemove}>
             <Text style={styles.btnRemoveText}>Remover</Text>
           </TouchableOpacity>
         </View>
