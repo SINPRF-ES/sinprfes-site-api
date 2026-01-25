@@ -74,6 +74,35 @@ async function diagnostico(req, res) {
   }
 }
 
+async function limparLogsAuditoria(req, res) {
+  const start = Date.now();
+  try {
+    const { id } = req.params;
+    const { recordsDeleted } = req.body;
+
+    // Registrar auditoria da ação de limpeza no backend (específico de assembleia)
+    await service.registrarAuditoria(id, req.user.id, "DIAGNOSTICO_LOGS_LIMPOS", {
+      who: { id: req.user.id, perfil: req.user.perfil_acesso },
+      scope: "diagnostico.logs.clear",
+      recordsDeleted: recordsDeleted || 0,
+      platform: 'mobile',
+      requestId: req.requestId
+    });
+
+    log.info("AssembleiaLogsLimpos", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      userId: req.user.id,
+      recordsDeleted
+    });
+
+    res.json({ success: true, message: "Ação de limpeza registrada com sucesso." });
+  } catch (err) {
+    log.error("AssembleiaLimparLogsErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
+    res.status(500).json({ error: "Erro ao registrar limpeza de logs" });
+  }
+}
+
 async function criar(req, res) {
   const start = Date.now();
   try {
@@ -217,8 +246,15 @@ async function gerarTokenQuorum(req, res) {
     const { id } = req.params;
     const { tipo_chamada, observacao } = req.body;
 
+    const tiposValidos = ['PRIMEIRA', 'SEGUNDA', 'RECONTAGEM'];
+    const tipoFinal = (tipo_chamada || 'PRIMEIRA').toUpperCase();
+
+    if (!tiposValidos.includes(tipoFinal)) {
+      return res.status(422).json({ error: "Tipo de chamada inválido. Use PRIMEIRA, SEGUNDA ou RECONTAGEM." });
+    }
+
     // Validar se é recontagem e se quem pede é o Presidente
-    if (tipo_chamada === 'RECONTAGEM') {
+    if (tipoFinal === 'RECONTAGEM') {
        const mesa = await service.buscarMesa(id);
        if (!mesa || mesa.presidente_user_id !== req.user.id) {
           return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
@@ -231,18 +267,29 @@ async function gerarTokenQuorum(req, res) {
       assembleia_id: id,
       token,
       gerado_por_user_id: req.user.id,
-      tipo_chamada: tipo_chamada || 'PRIMEIRA',
+      tipo_chamada: tipoFinal,
       observacao
     });
 
-    const eventName = tipo_chamada === 'RECONTAGEM' ? "assembleia:recontagem" : "assembleia:token_gerado";
-    socket.emitEvent(id, eventName, { id: quorum.id, token, tipo_chamada });
+    const eventName = tipoFinal === 'RECONTAGEM' ? "assembleia:recontagem" : "assembleia:token_gerado";
+    socket.emitEvent(id, eventName, { id: quorum.id, token: quorum.token, tipo_chamada: tipoFinal });
 
-    log.info("AssembleiaGerarTokenSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, tipo_chamada, elapsedMs: Date.now() - start });
-    res.json({ token, quorum_id: quorum.id });
+    log.info("AssembleiaGerarTokenSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, tipo_chamada: tipoFinal, isNew: quorum.isNew, elapsedMs: Date.now() - start });
+    res.json({ token: quorum.token, quorum_id: quorum.id, isNew: quorum.isNew });
   } catch (err) {
-    log.error("AssembleiaGerarTokenQuorumErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
-    res.status(500).json({ error: "Erro ao gerar token de quórum" });
+    log.error("AssembleiaGerarTokenQuorumErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message, stack: err.stack });
+
+    if (err.message === Textos.ASSEMBLEIA.NAO_ENCONTRADA) {
+      return res.status(404).json({ error: err.message });
+    }
+    if (err.message === Textos.ASSEMBLEIA.TRANSICAO_INVALIDA) {
+      return res.status(409).json({ error: "Não é possível gerar token para esta assembleia no estado atual." });
+    }
+    if (err.message === Textos.ASSEMBLEIA.APENAS_PRESIDENTE) {
+      return res.status(403).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: "Erro ao gerar token de quórum", requestId: req.requestId });
   }
 }
 
@@ -534,6 +581,7 @@ module.exports = {
   pedirPalavra,
   criarProposta,
   diagnostico,
+  limparLogsAuditoria,
   gerarRelatorio,
   uploadEdital
 };

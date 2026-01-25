@@ -24,8 +24,17 @@ const stateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const diagnosticLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Muitas solicitações de diagnóstico. Por favor, aguarde um minuto.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   assemblyCommandLimiter,
   checkinLimiter,
-  stateLimiter
+  stateLimiter,
+  diagnosticLimiter
 };
