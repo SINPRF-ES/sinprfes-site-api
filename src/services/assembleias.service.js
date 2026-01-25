@@ -16,6 +16,24 @@ const ASSEMBLEIA_COLUMNS = `
 `;
 
 /**
+ * Normaliza dados de uma assembleia, aplicando correções de URL e campos.
+ */
+function normalizarAssembleia(assembleia) {
+  if (!assembleia) return null;
+
+  // Correção de URL do edital (Cloudinary 401 PDF Fix)
+  // PDFs servidos via /image/upload/ podem retornar 401 se houver restrição.
+  // Mudamos para /raw/upload/ conforme diretriz.
+  if (assembleia.edital_url && assembleia.edital_url.toLowerCase().endsWith('.pdf')) {
+    if (assembleia.edital_url.includes('/image/upload/')) {
+      assembleia.edital_url = assembleia.edital_url.replace('/image/upload/', '/raw/upload/');
+    }
+  }
+
+  return assembleia;
+}
+
+/**
  * Registra um evento de auditoria no sistema de assembleias.
  * Tabela assembleia_auditoria é APPEND-ONLY: updates e deletes são proibidos por política de dados.
  */
@@ -42,12 +60,12 @@ async function listar(perfilAcesso) {
   query += " ORDER BY criado_em DESC";
 
   const { rows } = await pool.query(query);
-  return rows;
+  return rows.map(normalizarAssembleia);
 }
 
 async function buscarPorId(id) {
   const { rows } = await pool.query(`SELECT ${ASSEMBLEIA_COLUMNS} FROM assembleias WHERE id = $1`, [id]);
-  return rows[0] || null;
+  return normalizarAssembleia(rows[0] || null);
 }
 
 async function criar(dados) {
@@ -89,12 +107,12 @@ async function abrir(id, userId) {
 async function contarFiliadosAtivosParaQuorum(client = null) {
   const db = client || pool;
   const { rows } = await db.query(
-    `SELECT COUNT(*) as total
+    `SELECT COUNT(*)::INTEGER as total
      FROM filiados
      WHERE arquivado_em IS NULL
        AND perfil_acesso IN ('DIRETORIA', 'FILIADO', 'ORGANIZADOR')`
   );
-  return parseInt(rows[0].total);
+  return parseInt(rows?.[0]?.total || 0);
 }
 
 async function iniciarExecucao(id, userId) {
@@ -209,6 +227,19 @@ async function gerarQuorum(dados) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
+    // Idempotência: Se já existe token ativo para este MESMO tipo_chamada, retorna ele
+    const { rows: existingRows } = await client.query(
+      `SELECT id, token, criado_em, quorum_total_ativos, quorum_necessario
+       FROM assembleia_quoruns
+       WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL`,
+      [assembleia_id, tipo_chamada]
+    );
+
+    if (existingRows.length > 0) {
+      await client.query('ROLLBACK');
+      return { ...existingRows[0], isNew: false };
+    }
+
     const totalAtivos = await contarFiliadosAtivosParaQuorum(client);
     let quorumNecessario = tipo_chamada === 'PRIMEIRA' ? Math.floor(totalAtivos / 2) + 1 : 0;
 
@@ -244,7 +275,7 @@ async function gerarQuorum(dados) {
        RETURNING id, token, criado_em, quorum_total_ativos, quorum_necessario`,
       [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao]
     );
-    const quorum = qRows[0];
+    const quorum = { ...qRows[0], isNew: true };
 
     const auditEvent = tipo_chamada === 'RECONTAGEM' ? 'RECONTAGEM_INICIADA' : 'TOKEN_GERADO';
     await registrarAuditoria(assembleia_id, gerado_por_user_id, auditEvent, { token, tipo_chamada, quorum_total_ativos: totalAtivos, quorum_necessario: quorumNecessario }, client);
@@ -701,6 +732,7 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
   try {
     const assembleia = await buscarPorId(assembleiaId);
     if (!assembleia) return null;
+    // buscarPorId já aplica normalizarAssembleia
 
     const [mesa, pedidosPalavra, propostas, ultimoQuorum] = await Promise.all([
       buscarMesa(assembleiaId).catch(() => null),
@@ -834,5 +866,6 @@ module.exports = {
   definirMesa,
   buscarMesa,
   buscarEstadoCompleto,
-  buscarDiagnostico
+  buscarDiagnostico,
+  normalizarAssembleia
 };
