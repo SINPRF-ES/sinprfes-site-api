@@ -4,10 +4,13 @@ import Pdf from 'react-native-pdf';
 import * as FileSystem from 'expo-file-system/legacy';
 import { logger } from '../infra/logger';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '../hooks/useAuth';
+import { API_BASE_URL } from '../config/env';
 import SafeScreen from '../components/SafeScreen';
 
 export default function FileViewerScreen({ route, navigation }: any) {
   const { localUri, remoteUrl, title, fileId, type, context } = route.params;
+  const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentLocalUri, setCurrentLocalUri] = useState(localUri);
   const [mimeType, setMimeType] = useState<string | null>(null);
@@ -42,9 +45,26 @@ export default function FileViewerScreen({ route, navigation }: any) {
 
       logger.info('[file.download.start]', { remoteUrl, dest });
 
-      const result = await FileSystem.downloadAsync(remoteUrl, dest);
+      let result = await FileSystem.downloadAsync(remoteUrl, dest);
 
       logger.info('[file.download.success]', { status: result.status });
+
+      // Fallback controlado para proxy do sistema se falhar download direto de edital (Issue A)
+      if (result.status !== 200 && context === 'assembleia-edital' && fileId) {
+          const proxyUrl = `${API_BASE_URL}/api/assembleias/${fileId}/edital`;
+          logger.info('[file.download.fallback.start]', { proxyUrl });
+
+          try {
+              result = await FileSystem.downloadAsync(proxyUrl, dest, {
+                  headers: {
+                      'Authorization': `Bearer ${token}`
+                  }
+              });
+              logger.info('[file.download.fallback.success]', { status: result.status });
+          } catch (fallbackErr) {
+              logger.error('[file.download.fallback.error]', fallbackErr);
+          }
+      }
 
       if (result.status === 401 || result.status === 403) {
         throw new Error(`Acesso negado (Status ${result.status}). Verifique as permissões do arquivo.`);
