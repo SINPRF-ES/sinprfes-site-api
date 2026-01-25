@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin, iniciarExecucao, solicitarRelatorio } from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
@@ -10,6 +10,8 @@ import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -20,6 +22,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [tokenInput, setTokenInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [editalLoading, setEditalLoading] = useState(false);
+  const [editalModalVisible, setEditalModalVisible] = useState(false);
+  const [selectedEdital, setSelectedEdital] = useState<{ uri: string; mimeType: string; name: string } | null>(null);
 
   const perfil = (usuario?.perfil_acesso || '').toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
@@ -232,6 +237,79 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }
   };
 
+  const handleVerEdital = async () => {
+    if (!assembleia?.edital_url) return;
+
+    try {
+      setEditalLoading(true);
+      const url = assembleia.edital_url;
+      logger.info('assembleia.edital.open.start', { assembleiaId: id, url });
+
+      // Inferência de tipo por extensão
+      const cleanUrl = url.split('?')[0];
+      const extension = cleanUrl.split('.').pop()?.toLowerCase();
+      let mode: 'pdf' | 'image' | 'share' = 'share';
+      let mimeType = 'application/octet-stream';
+
+      if (extension === 'pdf') {
+        mode = 'pdf';
+        mimeType = 'application/pdf';
+      } else if (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')) {
+        mode = 'image';
+        mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+      }
+
+      // Download para cache local (Option B) para garantir abertura correta
+      const fileName = `edital_${id}.${extension || 'bin'}`;
+      const localUri = `${FileSystemLegacy.cacheDirectory}${fileName}`;
+
+      const downloadResult = await FileSystemLegacy.downloadAsync(url, localUri);
+
+      if (downloadResult.status !== 200) {
+        throw new Error(`Falha no download (Status ${downloadResult.status})`);
+      }
+
+      // Se o servidor retornou um content-type, respeitar se for conclusivo
+      const remoteMime = downloadResult.headers['content-type'] || downloadResult.headers['Content-Type'];
+      if (remoteMime) {
+        if (remoteMime.includes('pdf')) {
+          mode = 'pdf';
+          mimeType = 'application/pdf';
+        } else if (remoteMime.includes('image/')) {
+          mode = 'image';
+          mimeType = remoteMime;
+        }
+      }
+
+      logger.info('assembleia.edital.detect.success', { mimeType, mode });
+
+      if (mode === 'pdf') {
+        navigation.navigate('PdfViewer', { localUri: downloadResult.uri, title: `Edital - ${assembleia.titulo}`, fileId: id });
+      } else if (mode === 'image') {
+        setSelectedEdital({ uri: downloadResult.uri, mimeType, name: `Edital - ${assembleia.titulo}` });
+        setEditalModalVisible(true);
+      } else {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(downloadResult.uri);
+        } else {
+          Alert.alert('Aviso', 'Não foi possível abrir o arquivo neste dispositivo.');
+        }
+      }
+
+    } catch (err: any) {
+      logger.error('assembleia.edital.open.error', err instanceof Error ? err : new Error(String(err)), { assembleiaId: id });
+      Alert.alert('Erro', 'Não foi possível carregar o edital.');
+    } finally {
+      setEditalLoading(false);
+    }
+  };
+
+  const handleShareEdital = async () => {
+    if (selectedEdital?.uri) {
+      await Sharing.shareAsync(selectedEdital.uri);
+    }
+  };
+
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
@@ -270,6 +348,35 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
       <Text style={styles.tituloText}>{assembleia.titulo}</Text>
       <Text style={styles.descricaoText}>{assembleia.pauta}</Text>
+
+      <View style={styles.editalSection}>
+        <Text style={styles.sectionLabel}>Edital de Convocação</Text>
+        {assembleia.edital_url ? (
+          <TouchableOpacity
+            style={styles.btnEdital}
+            onPress={handleVerEdital}
+            disabled={editalLoading}
+          >
+            {editalLoading ? (
+              <ActivityIndicator size="small" color="#003366" />
+            ) : (
+              <MaterialCommunityIcons
+                name={assembleia.edital_url.toLowerCase().endsWith('.pdf') ? 'file-pdf-box' : 'image'}
+                size={24}
+                color="#003366"
+              />
+            )}
+            <Text style={styles.btnEditalText}>
+              {editalLoading ? 'Carregando...' : 'Ver Edital'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.noEditalBox}>
+            <MaterialCommunityIcons name="file-cancel-outline" size={20} color="#999" />
+            <Text style={styles.noEditalText}>Sem edital anexado</Text>
+          </View>
+        )}
+      </View>
 
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>Quórum Atual</Text>
@@ -333,6 +440,35 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       )}
 
     </ScrollView>
+
+    <Modal visible={editalModalVisible} transparent={false} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle} numberOfLines={1}>{selectedEdital?.name}</Text>
+            <TouchableOpacity onPress={() => setEditalModalVisible(false)} style={styles.closeButton}>
+              <FontAwesome name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.viewerContent}>
+            {selectedEdital?.mimeType.startsWith('image/') && (
+              <Image
+                source={{ uri: selectedEdital.uri }}
+                style={styles.fullImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.shareBtn} onPress={handleShareEdital}>
+              <FontAwesome name="share" size={20} color="#fff" />
+              <Text style={styles.shareBtnText}>Compartilhar / Salvar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeScreen>
   );
 }
@@ -340,6 +476,46 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   btnRetrySmall: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 6, backgroundColor: '#eee' },
   btnRetrySmallText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },
+  editalSection: { marginBottom: 20 },
+  sectionLabel: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 8 },
+  btnEdital: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#003366',
+    padding: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
+  btnEditalText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
+  noEditalBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 4 },
+  noEditalText: { color: '#999', fontSize: 14, fontStyle: 'italic' },
+  modalContainer: { flex: 1, backgroundColor: '#fff' },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    paddingTop: 50,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: { fontSize: 16, fontWeight: 'bold', flex: 1, marginRight: 15 },
+  closeButton: { padding: 5 },
+  viewerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  fullImage: { width: '100%', height: '100%' },
+  modalFooter: { padding: 20, borderTopWidth: 1, borderTopColor: '#eee' },
+  shareBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#003366',
+    padding: 15,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareBtnText: { color: '#fff', fontWeight: 'bold', marginLeft: 10 },
   container: { flex: 1, backgroundColor: '#f2f4f8', paddingHorizontal: 16, paddingTop: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10 },
