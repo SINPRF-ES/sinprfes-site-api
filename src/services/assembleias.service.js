@@ -53,11 +53,16 @@ async function buscarPorId(id) {
 async function criar(dados) {
   const { tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada } = dados;
 
+  // Normalização do tipo para o padrão de banco (AGE/AGO) se necessário
+  let tipoNorm = tipo;
+  if (tipo === 'Assembleia Geral Ordinária') tipoNorm = 'AGO';
+  if (tipo === 'Assembleia Geral Extraordinária') tipoNorm = 'AGE';
+
   const { rows } = await pool.query(
     `INSERT INTO assembleias (tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada, estado)
-     VALUES ($1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''), $7, $8, $9, 'CRIADA')
+     VALUES ($1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''), NULLIF($7, '')::DATE, NULLIF($8, '')::TIME, NULLIF($9, '')::TIME, 'CRIADA')
      RETURNING ${ASSEMBLEIA_COLUMNS}`,
-    [tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada]
+    [tipoNorm, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada]
   );
   const nova = rows[0];
   await registrarAuditoria(nova.id, criado_por, 'ASSEMBLEIA_CRIADA', { tipo, titulo });
@@ -457,7 +462,7 @@ async function listarVotosNominais(votacaoId) {
   return rows;
 }
 
-async function finalizarVotacao(votacaoId, userId) {
+async function finalizarVotacao(votacaoId, userId = null) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -486,7 +491,8 @@ async function finalizarVotacao(votacaoId, userId) {
     );
     const votacao = rows[0];
 
-    await registrarAuditoria(votacao.assembleia_id, userId, 'VOTACAO_ENCERRADA', { votacao_id: votacaoId }, client);
+    // Se userId for null (ex: via timer automático), o auditoria registra sem user_id (sistema)
+    await registrarAuditoria(votacao.assembleia_id, userId, 'VOTACAO_ENCERRADA', { votacao_id: votacaoId, motivo: userId ? 'MANUAL' : 'AUTOMATICO' }, client);
 
     if (abstençõesAplicadas > 0) {
       await registrarAuditoria(votacao.assembleia_id, userId, 'ABSTENCAO_AUTOMATICA_APLICADA', { votacao_id: votacaoId, contagem: abstençõesAplicadas }, client);

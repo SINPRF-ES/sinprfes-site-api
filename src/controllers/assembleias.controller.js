@@ -18,6 +18,16 @@ async function listar(req, res) {
     res.json(assembleias);
   } catch (err) {
     log.error("AssembleiaListarErro", { requestId: req.requestId, userId: req.user.id, error: err });
+
+    // Se for erro de coluna inexistente, indica migração pendente
+    if (err.message.includes("column") && err.message.includes("does not exist")) {
+        return res.status(500).json({
+            error: "Erro de esquema no banco de dados. Verifique migrações.",
+            details: err.message,
+            requestId: req.requestId
+        });
+    }
+
     res.status(500).json({ error: "Erro ao listar assembleias", requestId: req.requestId });
   }
 }
@@ -68,7 +78,17 @@ async function criar(req, res) {
   const start = Date.now();
   try {
     const { tipo, titulo, pauta, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada } = req.body;
-    if (!tipo || !titulo) return res.status(400).json({ error: "Tipo e título são obrigatórios" });
+
+    // Validação básica
+    if (!tipo || !titulo) {
+      return res.status(422).json({ error: "Tipo e título são campos obrigatórios." });
+    }
+
+    // Whitelist de tipos aceitos (incluindo nomes extensos do mobile)
+    const tiposValidos = ['AGE', 'AGO', 'Assembleia Geral Ordinária', 'Assembleia Geral Extraordinária'];
+    if (!tiposValidos.includes(tipo)) {
+      return res.status(422).json({ error: "Tipo de assembleia inválido. Use AGO ou AGE." });
+    }
 
     const nova = await service.criar({
       tipo,
@@ -85,8 +105,18 @@ async function criar(req, res) {
     log.info("AssembleiaCriarSucesso", { requestId: req.requestId, assembleiaId: nova.id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.status(201).json(nova);
   } catch (err) {
-    log.error("AssembleiaCriarErro", { requestId: req.requestId, userId: req.user.id, error: err.message });
-    res.status(500).json({ error: "Erro ao criar assembleia" });
+    log.error("AssembleiaCriarErro", { requestId: req.requestId, userId: req.user.id, error: err });
+
+    // Tratamento de erros de banco previsíveis
+    if (err.message.includes("violates check constraint") || err.message.includes("invalid input syntax for type timestamp")) {
+      return res.status(422).json({ error: "Dados inválidos fornecidos para criação da assembleia.", details: err.message });
+    }
+
+    if (err.message.includes("column") && err.message.includes("does not exist")) {
+      return res.status(500).json({ error: "Erro de esquema no banco de dados. Migração incompleta.", requestId: req.requestId });
+    }
+
+    res.status(500).json({ error: "Erro inesperado ao criar assembleia", requestId: req.requestId });
   }
 }
 
