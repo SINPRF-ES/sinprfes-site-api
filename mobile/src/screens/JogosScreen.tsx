@@ -222,7 +222,13 @@ const JogosScreen = () => {
                   <View style={[styles.tableHeaderCellContainer, { width: 180 }]}><Text style={styles.tableHeaderText}>E-mail(s)</Text></View>
                 </View>
                 {inscricoesGerais.map((item, idx) => (
-                  <View key={idx} style={[styles.tableRow, idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd]}>
+                  <View
+                    key={idx}
+                    style={[
+                      styles.tableRow,
+                      idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd,
+                    ]}
+                  >
                     <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.nome_filiado}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 80 }]}><Text style={styles.tableCell}>{calculateAge2026(item.data_nascimento)}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 100 }]}><Text style={styles.tableCell}>{formatGender(item.sexo)}</Text></View>
@@ -281,15 +287,16 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   tableHeader: { flexDirection: 'row', backgroundColor: '#f1f3f5', borderTopWidth: 1, borderLeftWidth: 1, borderColor: '#ccc' },
   tableHeaderText: { fontWeight: 'bold', color: '#003366', textAlign: 'center' },
-  tableRow: { flexDirection: 'row', borderLeftWidth: 1, borderColor: '#eee' },
-  tableCell: { fontSize: 12, color: '#333', textAlign: 'center' },
+  tableRow: { flexDirection: 'row', borderLeftWidth: 1, borderColor: '#ccc' },
+  tableCell: { fontSize: 12, color: '#333', textAlign: 'center', flexShrink: 1 },
   tableCellContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: 8,
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#ccc',
+    minHeight: 44,
   },
   tableHeaderCellContainer: {
     justifyContent: 'center',
@@ -298,6 +305,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#ccc',
+    minHeight: 44,
   },
   tableRowEven: { backgroundColor: '#fff' },
   tableRowOdd: { backgroundColor: '#f9f9f9' },
