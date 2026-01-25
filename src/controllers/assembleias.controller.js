@@ -17,8 +17,8 @@ async function listar(req, res) {
     log.info("AssembleiaListarSucesso", { requestId: req.requestId, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json(assembleias);
   } catch (err) {
-    log.error("AssembleiaListarErro", { requestId: req.requestId, userId: req.user.id, error: err.message });
-    res.status(500).json({ error: "Erro ao listar assembleias" });
+    log.error("AssembleiaListarErro", { requestId: req.requestId, userId: req.user.id, error: err });
+    res.status(500).json({ error: "Erro ao listar assembleias", requestId: req.requestId });
   }
 }
 
@@ -30,8 +30,8 @@ async function detalhe(req, res) {
     log.info("AssembleiaDetalheSucesso", { requestId: req.requestId, assembleiaId: req.params.id, elapsedMs: Date.now() - start });
     res.json(assembleia);
   } catch (err) {
-    log.error("AssembleiaDetalheErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
-    res.status(500).json({ error: "Erro ao buscar detalhe da assembleia" });
+    log.error("AssembleiaDetalheErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err });
+    res.status(500).json({ error: "Erro ao buscar detalhe da assembleia", requestId: req.requestId });
   }
 }
 
@@ -47,8 +47,8 @@ async function estadoCompleto(req, res) {
     log.info("AssembleiaEstadoCompletoSucesso", { requestId: req.requestId, assembleiaId: req.params.id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json(estado);
   } catch (err) {
-    log.error("AssembleiaEstadoCompletoErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
-    res.status(500).json({ error: "Erro ao buscar estado da assembleia" });
+    log.error("AssembleiaEstadoCompletoErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err });
+    res.status(500).json({ error: "Erro ao buscar estado da assembleia", requestId: req.requestId });
   }
 }
 
@@ -182,9 +182,7 @@ async function checkin(req, res) {
     // Verificar cooldown
     const failureData = failedCheckinAttempts.get(userId);
     if (failureData && failureData.count >= MAX_FAILED_ATTEMPTS && Date.now() - failureData.lastAttempt < COOLDOWN_TIME) {
-        if (process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true') {
-           log.warn("SUPORTE_CHECKIN_BLOQUEADO", { requestId: req.requestId, userId, assembleiaId: id });
-        }
+        log.warn("AssembleiaCheckinBloqueado", { requestId: req.requestId, userId, assembleiaId: id });
         return res.status(429).json({ error: "Muitas tentativas inválidas. Tente novamente em alguns minutos." });
     }
 
@@ -203,9 +201,7 @@ async function checkin(req, res) {
         failedCheckinAttempts.set(userId, { count: currentFailures + 1, lastAttempt: Date.now() });
 
         await service.registrarAuditoria(id, userId, 'CHECKIN_FALHA_TOKEN', { token, requestId: req.requestId });
-        if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true' || process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true') {
-            log.warn("CHECKIN_FALHOU", { requestId: req.requestId, userId, assembleiaId: id, token_tentado: token, motivo: "Token Inválido" });
-        }
+        log.warn("AssembleiaCheckinFalhou", { requestId: req.requestId, userId, assembleiaId: id, token_tentado: token, motivo: "Token Inválido" });
         return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
     }
 
@@ -302,10 +298,6 @@ async function votar(req, res) {
   const start = Date.now();
   try {
     const { id, vid } = req.params;
-
-    if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
-        log.info("PilotoActionAttempt", { requestId: req.requestId, userId: req.user.id, action: "votar", assembleiaId: id, votacaoId: vid });
-    }
     const { voto } = req.body;
 
      const votacao = await service.buscarVotacaoAtiva(id);
@@ -319,9 +311,7 @@ async function votar(req, res) {
 
     const elegivel = await service.verificarElegibilidade(vid, req.user.id);
     if (!elegivel) {
-        if (process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true') {
-            log.warn("VOTO_REJEITADO", { requestId: req.requestId, userId: req.user.id, assembleiaId: id, votacaoId: vid, motivo: "Usuário Inelegível" });
-        }
+        log.warn("AssembleiaVotoRejeitado", { requestId: req.requestId, userId: req.user.id, assembleiaId: id, votacaoId: vid, motivo: "Usuário Inelegível" });
         return res.status(403).json({ error: Textos.ASSEMBLEIA.NAO_ELEGIVEL });
     }
 

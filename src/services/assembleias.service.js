@@ -1,6 +1,7 @@
 // src/services/assembleias.service.js
 const pool = require("../config/db");
 const Textos = require("../utils/textos");
+const log = require("../utils/log");
 
 const ASSEMBLEIA_STATES = {
   CRIADA: 'CRIADA',
@@ -32,7 +33,7 @@ async function registrarAuditoria(assembleiaId, userId, evento, payload, client 
       [assembleiaId, userId, evento, JSON.stringify(fullPayload)]
     );
   } catch (err) {
-    console.error("Erro ao registrar auditoria de assembleia:", err);
+    log.error("Erro ao registrar auditoria de assembleia", { assembleiaId, userId, evento, error: err.message });
   }
 }
 
@@ -51,13 +52,6 @@ async function buscarPorId(id) {
 
 async function criar(dados) {
   const { tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada } = dados;
-
-  // Regra de Piloto Controlado
-  if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
-      if (tipo !== 'AGE') {
-          throw new Error("Durante o período de piloto, apenas assembleias do tipo AGE são permitidas.");
-      }
-  }
 
   const { rows } = await pool.query(
     `INSERT INTO assembleias (tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada, estado)
@@ -287,18 +281,6 @@ async function buscarQuorumPorToken(assembleiaId, token) {
 async function realizarCheckin(dados) {
   const { assembleia_quorum_id, filiado_id, origem, assembleia_id } = dados;
 
-  // Regra de Piloto Controlado (Limite de usuários)
-  if (process.env.ASSEMBLEIA_PILOTO_ATIVO === 'true') {
-     const MAX_PILOTO = parseInt(process.env.ASSEMBLEIA_PILOTO_MAX_USERS || "50");
-     const { rows: countRows } = await pool.query(
-       "SELECT COUNT(*) as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1",
-       [assembleia_quorum_id]
-     );
-     if (parseInt(countRows[0].total) >= MAX_PILOTO) {
-        throw new Error(`Limite de usuários para o piloto atingido (${MAX_PILOTO}).`);
-     }
-  }
-
   // Blindagem de perfil: ADMIN e COMUNICADOR não fazem check-in
   const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [filiado_id]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
@@ -454,7 +436,7 @@ async function contarVotos(votacaoId) {
      FROM assembleia_votos WHERE votacao_id = $1`,
     [votacaoId]
   );
-  const contagem = rows[0];
+  const contagem = rows[0] || {};
   return {
     SIM: parseInt(contagem.SIM || 0),
     NAO: parseInt(contagem.NAO || 0),
@@ -714,8 +696,8 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
 
   if (votacaoAtiva && votacaoAtiva.status === 'ATIVA') {
     const [contagem, votos] = await Promise.all([
-      contarVotos(votacaoAtiva.id),
-      listarVotosNominais(votacaoAtiva.id)
+      contarVotos(votacaoAtiva.id).catch(() => ({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 })),
+      listarVotosNominais(votacaoAtiva.id).catch(() => [])
     ]);
 
      let elegivel = false;
