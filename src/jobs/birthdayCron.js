@@ -47,14 +47,18 @@ async function runBirthdayScan() {
 
     // 4. Executa a lógica de negócio
     const aniversariantes = await filiadosService.buscarAniversariantesDoDia();
-    let count = 0;
 
-    if (aniversariantes.length > 0) {
-      console.log(`🎂 [Job] Encontrados ${aniversariantes.length} aniversariantes.`);
-      await emailService.enviarEmailAniversariantes(aniversariantes);
-      count = aniversariantes.length;
+    // Sempre envia o relatório para o sindicato (mesmo se vazio, conforme requisito)
+    await emailService.enviarRelatorioAniversariantes({
+      dateStr: todayStr,
+      aniversariantes
+    });
+
+    const count = aniversariantes.length;
+    if (count > 0) {
+      console.log(`🎂 [Job] Relatório enviado com ${count} aniversariantes.`);
     } else {
-      console.log('🎂 [Job] Nenhum aniversariante hoje.');
+      console.log('🎂 [Job] Relatório enviado (nenhum aniversariante hoje).');
     }
 
     // 5. Atualiza a data da última execução
