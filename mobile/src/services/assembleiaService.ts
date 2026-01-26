@@ -49,9 +49,26 @@ export const encerrarAssembleia = async (id: string): Promise<void> => {
   await api.post(`/api/assembleias/${id}/encerrar`);
 };
 
-export const gerarTokenQuorum = async (id: string, dados: { tipo_chamada: string; observacao?: string }): Promise<{ token: string; quorum_id: string }> => {
+export const gerarTokenQuorum = async (id: string, dados: { tipo_chamada: string; observacao?: string }): Promise<{
+  token: string;
+  quorum_id: string;
+  quorumVigente?: any;
+  presente?: boolean;
+  tokenAtivo?: boolean;
+  issuedAt?: string;
+}> => {
   const response = await api.post(`/api/assembleias/${id}/token`, dados);
   return response.data;
+};
+
+export const atualizarQuorum = async (id: string): Promise<any> => {
+  try {
+    const response = await api.post(`/api/assembleias/${id}/quorum/atualizar`);
+    return response.data;
+  } catch (err) {
+    logError('ASSEMBLEIAS_QUORUM_UPDATE_FAILED', err, { id });
+    throw err;
+  }
 };
 
 export const realizarCheckin = async (id: string, token: string): Promise<void> => {
