@@ -851,14 +851,15 @@ async function listarPropostas(assembleiaId) {
 async function buscarDiagnostico(assembleiaId) {
   const socket = require("../websocket/assembleia.socket");
 
-  const assembleia = await buscarPorId(assembleiaId);
-  if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-
-  const [mesa, ultimoQuorum, votacaoAtiva] = await Promise.all([
-    buscarMesa(assembleiaId),
-    buscarUltimoQuorum(assembleiaId),
-    buscarVotacaoAtiva(assembleiaId)
+  // Otimização Bolt: Busca inicial paralela para reduzir latência de rede e DB
+  const [assembleia, mesa, ultimoQuorum, votacaoAtiva] = await Promise.all([
+    buscarPorId(assembleiaId),
+    buscarMesa(assembleiaId).catch(() => null),
+    buscarUltimoQuorum(assembleiaId).catch(() => null),
+    buscarVotacaoAtiva(assembleiaId).catch(() => null)
   ]);
+
+  if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
   let totalCheckins = 0;
   if (ultimoQuorum) {
@@ -905,46 +906,63 @@ async function buscarDiagnostico(assembleiaId) {
 
 async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
   try {
-    const assembleia = await buscarPorId(assembleiaId);
-    if (!assembleia) return null;
-    // buscarPorId já aplica normalizarAssembleia
-
-    const [mesa, pedidosPalavra, propostas, ultimoQuorum] = await Promise.all([
+    // Otimização Bolt: Busca inicial paralela agressiva para reduzir latência de rede e DB
+    const [assembleia, mesa, pedidosPalavra, propostas, ultimoQuorum, votacaoAtiva] = await Promise.all([
+      buscarPorId(assembleiaId).catch(() => null),
       buscarMesa(assembleiaId).catch(() => null),
       listarPedidosPalavra(assembleiaId).catch(() => []),
       listarPropostas(assembleiaId).catch(() => []),
-      buscarUltimoQuorum(assembleiaId).catch(() => null)
+      buscarUltimoQuorum(assembleiaId).catch(() => null),
+      buscarVotacaoAtiva(assembleiaId).catch(() => null)
     ]);
 
-    let votacaoAtiva = null;
-    try {
-      votacaoAtiva = await buscarVotacaoAtiva(assembleiaId);
-    } catch (vErr) {
-      log.error("Erro ao buscar votação ativa em buscarEstadoCompleto", { assembleiaId, error: vErr.message });
-    }
+    if (!assembleia) return null;
 
     let votacaoData = null;
+    let presentesNominais = [];
+    let totalPresentes = 0;
+    let userHasCheckedIn = false;
+
+    // Otimização Bolt: Parallelize sub-queries para votação e quórum em um único bloco de latência
+    const subTasks = [];
+    let votacaoTaskIdx = -1;
+    let quorumTaskIdx = -1;
+
     if (votacaoAtiva && (votacaoAtiva.status === 'ATIVA' || votacaoAtiva.tempo_expirado)) {
-      const [contagem, votos] = await Promise.all([
+      votacaoTaskIdx = subTasks.length;
+      subTasks.push(Promise.all([
         contarVotos(votacaoAtiva.id).catch(() => ({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 })),
-        listarVotosNominais(votacaoAtiva.id).catch(() => [])
-      ]);
+        listarVotosNominais(votacaoAtiva.id).catch(() => []),
+        filiadoId ? verificarElegibilidade(votacaoAtiva.id, filiadoId).catch(() => false) : Promise.resolve(false),
+        filiadoId ? verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, filiadoId).catch(() => false) : Promise.resolve(false)
+      ]));
+    }
 
-      let elegivel = false;
-      let motivo_inelegibilidade = null;
+    if (ultimoQuorum && ultimoQuorum.id) {
+      quorumTaskIdx = subTasks.length;
+      subTasks.push(pool.query(
+        `SELECT f.id, f.nome, f.avatar_url, c.registrado_em
+         FROM assembleia_checkins c
+         JOIN filiados f ON c.filiado_id = f.id
+         WHERE c.assembleia_quorum_id = $1
+         ORDER BY f.nome ASC`,
+        [ultimoQuorum.id]
+      ).catch(() => ({ rows: [] })));
+    }
+
+    const subResults = await Promise.all(subTasks);
+
+    if (votacaoTaskIdx !== -1) {
+      const [contagem, votos, elegivel, presencaNoQuorum] = subResults[votacaoTaskIdx];
+
       let jaVotou = false;
+      let motivo_inelegibilidade = null;
 
-      if (filiadoId && votacaoAtiva.id) {
-        try {
-          elegivel = await verificarElegibilidade(votacaoAtiva.id, filiadoId);
-          if (!elegivel) {
-            const presencaNoQuorum = await verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, filiadoId).catch(() => false);
-            motivo_inelegibilidade = !presencaNoQuorum ? "Ausente na chamada de quórum deste item." : "Restrição de elegibilidade técnica.";
-          } else {
-            jaVotou = (votos || []).some(v => v.filiado_id === filiadoId);
-          }
-        } catch (eligErr) {
-          log.error("Erro ao verificar elegibilidade em buscarEstadoCompleto", { votacaoId: votacaoAtiva.id, filiadoId, error: eligErr.message });
+      if (filiadoId) {
+        if (!elegivel) {
+          motivo_inelegibilidade = !presencaNoQuorum ? "Ausente na chamada de quórum deste item." : "Restrição de elegibilidade técnica.";
+        } else {
+          jaVotou = (votos || []).some(v => v.filiado_id === filiadoId);
         }
       }
 
@@ -960,33 +978,11 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
       };
     }
 
-    let totalPresentes = 0;
-    let userHasCheckedIn = false;
-    let presentesNominais = [];
-
-    if (ultimoQuorum && ultimoQuorum.id) {
-      try {
-        const { rows: countRows } = await pool.query(
-          'SELECT COUNT(*) as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1',
-          [ultimoQuorum.id]
-        );
-        totalPresentes = parseInt(countRows[0]?.total || 0);
-
-        const { rows: presentesRows } = await pool.query(
-          `SELECT f.id, f.nome, f.avatar_url, c.registrado_em
-           FROM assembleia_checkins c
-           JOIN filiados f ON c.filiado_id = f.id
-           WHERE c.assembleia_quorum_id = $1
-           ORDER BY f.nome ASC`,
-          [ultimoQuorum.id]
-        );
-        presentesNominais = presentesRows || [];
-
-        if (filiadoId) {
-          userHasCheckedIn = presentesNominais.some(p => p.id === filiadoId);
-        }
-      } catch (qErr) {
-        log.error("Erro ao carregar detalhes do quórum em buscarEstadoCompleto", { quorumId: ultimoQuorum.id, error: qErr.message });
+    if (quorumTaskIdx !== -1) {
+      presentesNominais = subResults[quorumTaskIdx].rows || [];
+      totalPresentes = presentesNominais.length; // Otimização Bolt: Evita query redundante de COUNT(*)
+      if (filiadoId) {
+        userHasCheckedIn = presentesNominais.some(p => p.id === filiadoId);
       }
     }
 
