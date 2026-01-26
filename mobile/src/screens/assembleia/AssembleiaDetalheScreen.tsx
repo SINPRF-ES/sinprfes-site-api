@@ -280,6 +280,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
   const isParticipavel = assembleia.estado === 'ABERTA' || assembleia.estado === 'EM_CURSO';
+  const isIniciado = assembleia.estado === 'EM_CURSO';
 
   return (
     <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
@@ -300,6 +301,22 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
       <Text style={styles.tituloText}>{assembleia.titulo}</Text>
       <Text style={styles.descricaoText}>{assembleia.pauta}</Text>
+
+      {isIniciado && estado?.mesa && (
+        <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366' }]}>
+            <Text style={styles.infoTitle}>Mesa Diretora</Text>
+            <View style={styles.mesaRow}>
+                <MaterialCommunityIcons name="account-tie" size={20} color="#003366" />
+                <Text style={styles.mesaLabel}>Presidente:</Text>
+                <Text style={styles.mesaValue}>{(estado.mesa as any).presidente_nome}</Text>
+            </View>
+            <View style={styles.mesaRow}>
+                <MaterialCommunityIcons name="account-edit" size={20} color="#003366" />
+                <Text style={styles.mesaLabel}>Secretário:</Text>
+                <Text style={styles.mesaValue}>{(estado.mesa as any).secretario_nome}</Text>
+            </View>
+        </View>
+      )}
 
       <View style={styles.editalSection}>
         <Text style={styles.sectionLabel}>Edital de Convocação</Text>
@@ -346,13 +363,83 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             <>
                 <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
                 {estado?.quorumVigente && (
-                <Text style={styles.quorumStatus}>
-                    Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
-                </Text>
+                <View style={styles.quorumDetails}>
+                    {!isIniciado && (
+                        <>
+                            <Text style={styles.quorumStatus}>
+                                {estado.quorumVigente.tipo_chamada === 'PRIMEIRA' ? '1ª Chamada (Qualificado)' : '2ª Chamada (Real)'}
+                            </Text>
+                            <Text style={styles.quorumStatus}>
+                                Total de Filiados Aptos: {estado.quorumVigente.quorum_total_ativos || 0}
+                            </Text>
+                            <Text style={styles.quorumStatus}>
+                                Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
+                            </Text>
+                        </>
+                    )}
+                    {isIniciado && (
+                         <Text style={styles.quorumStatus}>
+                            Quórum vigente (na abertura): {estado.quorumVigente.total} presentes
+                         </Text>
+                    )}
+                </View>
                 )}
             </>
         )}
       </View>
+
+      {estado?.quorumVigente?.presentes && estado.quorumVigente.presentes.length > 0 && (
+        <View style={styles.infoCard}>
+           <Text style={styles.infoTitle}>Lista Nominal de Presentes</Text>
+           {estado.quorumVigente.presentes.map((p: any) => (
+             <View key={p.id} style={styles.presenteRow}>
+                <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
+                <Text style={styles.presenteNome}>{p.nome}</Text>
+             </View>
+           ))}
+        </View>
+      )}
+
+      {isDiretoria && assembleia && (
+        <View style={styles.diretoriaSection}>
+            <Text style={styles.sectionTitle}>Ações da Mesa</Text>
+            <View style={styles.diretoriaButtons}>
+                {assembleia.estado === 'CRIADA' && (
+                    <TouchableOpacity style={styles.btnManagement} onPress={handleAbrir}>
+                        <Text style={styles.btnActionText}>Abrir Assembleia</Text>
+                    </TouchableOpacity>
+                )}
+                {assembleia.estado === 'ABERTA' && (
+                    <>
+                        <TouchableOpacity style={styles.btnManagement} onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}>
+                            <Text style={styles.btnActionText}>{(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.btnManagement} onPress={handleGerarToken}>
+                            <Text style={styles.btnActionText}>Gerar Token</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
+                {assembleia.estado === 'EM_CURSO' && (
+                    <>
+                        <TouchableOpacity style={styles.btnManagement} onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}>
+                            <Text style={styles.btnActionText}>Trocar Mesa</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.btnManagement} onPress={() => navigation.navigate('CriarItemVotacao', { id })}>
+                            <Text style={styles.btnActionText}>Novo Item</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.btnManagement, styles.btnDanger]} onPress={handleEncerrar}>
+                            <Text style={[styles.btnActionText, { color: '#fff' }]}>Encerrar</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
+                {assembleia.estado === 'ENCERRADA' && (
+                    <TouchableOpacity style={styles.btnManagement} onPress={handleSolicitarRelatorio}>
+                        <Text style={styles.btnActionText}>Relatório PDF</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+        </View>
+      )}
 
       {isParticipavel && (
         <View style={styles.interactionSection}>
@@ -469,7 +556,13 @@ const styles = StyleSheet.create({
   tokenInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 24, textAlign: 'center', marginBottom: 16, letterSpacing: 8 },
   btnCheckin: { backgroundColor: '#f1c40f', padding: 14, borderRadius: 8, alignItems: 'center' },
   btnText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
-  quorumStatus: { fontSize: 12, color: '#666', marginTop: 4 },
+  quorumDetails: { marginTop: 8, gap: 2 },
+  quorumStatus: { fontSize: 12, color: '#666' },
+  mesaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  mesaLabel: { fontSize: 14, fontWeight: 'bold', color: '#555' },
+  mesaValue: { fontSize: 14, color: '#333' },
+  presenteRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  presenteNome: { fontSize: 14, color: '#333' },
   notEligibleBox: { backgroundColor: '#fff3cd', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   notEligibleText: { color: '#856404', fontSize: 14, flex: 1, fontWeight: '500' },
   diretoriaSection: { marginTop: 20, paddingBottom: 40 },

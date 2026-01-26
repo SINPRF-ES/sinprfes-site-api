@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAssembleiaEstado, enviarVoto, pedirPalavra, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
+import { getAssembleiaEstado, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assembleia';
@@ -18,8 +18,10 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const perfil = (usuario?.perfil_acesso || '').toUpperCase();
+  const isDiretoria = perfil === 'DIRETORIA' || perfil === 'ADMIN';
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
+  const temAutoridade = isPresidente || isDiretoria;
 
   const handlePedirPalavra = useCallback(async () => {
     try {
@@ -63,6 +65,22 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     }
   }, [id, estado?.votacaoAtiva]);
 
+  const handleConcederPalavra = async (pid: string) => {
+    try {
+      await concederPalavra(id, pid);
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao conceder palavra.');
+    }
+  };
+
+  const handleIniciarVotacaoProposta = async (prid: string) => {
+    try {
+      await iniciarVotacaoProposta(id, prid);
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao iniciar votação da proposta.');
+    }
+  };
+
   const handleEncerrarAssembleiaManual = useCallback(async () => {
     Alert.alert('Confirmar Encerramento', 'Deseja encerrar definitivamente esta assembleia?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -76,6 +94,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     ]);
   }, [id]);
 
+  // Configura as ações do cabeçalho
   useEffect(() => {
     const actions: MenuAction[] = [
       { label: 'Pedir Palavra', icon: 'microphone', onPress: handlePedirPalavra },
@@ -95,9 +114,15 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       headerRight: () => <HeaderMenu actions={actions} />,
       title: 'Sala de Votação'
     });
+  }, [id, isPresidente, estado?.votacaoAtiva?.status, handlePedirPalavra, handleRecontagem, handleEncerrarVotacaoManual, handleEncerrarAssembleiaManual, navigation]);
 
+  // Carregamento inicial de dados
+  useEffect(() => {
     fetchData();
+  }, [fetchData]);
 
+  // Gerenciamento de Socket.IO
+  useEffect(() => {
     if (token) {
       assembleiaSocket.connect(token);
       assembleiaSocket.joinRoom(id);
@@ -134,6 +159,18 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         } : prev);
       });
 
+      assembleiaSocket.onEvent('word_queue_updated', (data) => {
+        setEstado(prev => prev ? { ...prev, pedidosPalavra: data } : null);
+      });
+
+      assembleiaSocket.onEvent('new_proposal', (data) => {
+        setEstado(prev => prev ? { ...prev, propostas: [...prev.propostas, data] } : null);
+      });
+
+      assembleiaSocket.onEvent('proposals_updated', (data) => {
+        setEstado(prev => prev ? { ...prev, propostas: data } : null);
+      });
+
       assembleiaSocket.onEvent('assembleia:token_gerado', () => {
          fetchData();
       });
@@ -159,12 +196,15 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       assembleiaSocket.offEvent('votacao:iniciada');
       assembleiaSocket.offEvent('voto:updated');
       assembleiaSocket.offEvent('assembleia:checkin_updated');
+      assembleiaSocket.offEvent('word_queue_updated');
+      assembleiaSocket.offEvent('new_proposal');
+      assembleiaSocket.offEvent('proposals_updated');
       assembleiaSocket.offEvent('assembleia:token_gerado');
       assembleiaSocket.offEvent('assembleia:recontagem');
       assembleiaSocket.offEvent('votacao:encerrada');
       assembleiaSocket.offEvent('assembleia:encerrada');
     };
-  }, [id, token, fetchData, handlePedirPalavra, handleRecontagem, handleEncerrarVotacaoManual, handleEncerrarAssembleiaManual, isPresidente, navigation, estado?.votacaoAtiva]);
+  }, [id, token, fetchData]);
 
   const handleVotar = async (voto: 'SIM' | 'NAO') => {
     if (!estado?.votacaoAtiva) return;
@@ -208,14 +248,50 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.assembleiaTitulo}>{estado.assembleia.titulo}</Text>
-        <View style={styles.quorumBox}>
-          <MaterialCommunityIcons name="account-group" size={16} color="#666" />
-          <Text style={styles.quorumText}>{quorumVigente?.total || 0} presentes</Text>
+        <View style={{ flex: 1 }}>
+            <Text style={styles.assembleiaTitulo}>{estado.assembleia.titulo}</Text>
+            <View style={styles.quorumBox}>
+                <MaterialCommunityIcons name="account-group" size={16} color="#666" />
+                <Text style={styles.quorumText}>{quorumVigente?.total || 0} presentes</Text>
+            </View>
         </View>
+        {estado.mesa && (
+            <View style={styles.mesaBrief}>
+                <MaterialCommunityIcons name="account-tie" size={24} color="#003366" />
+            </View>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {estado.mesa && (
+            <View style={styles.mesaCard}>
+                <Text style={styles.mesaTitle}>Mesa Diretora</Text>
+                <View style={styles.mesaRow}>
+                    <Text style={styles.mesaLabel}>Presidente:</Text>
+                    <Text style={styles.mesaValue}>{(estado.mesa as any).presidente_nome}</Text>
+                </View>
+                <View style={styles.mesaRow}>
+                    <Text style={styles.mesaLabel}>Secretário:</Text>
+                    <Text style={styles.mesaValue}>{(estado.mesa as any).secretario_nome}</Text>
+                </View>
+
+                {temAutoridade && (
+                    <View style={styles.mesaAcoes}>
+                        <Text style={styles.mesaAcoesTitle}>Ações de Comando</Text>
+                        <View style={styles.mesaAcoesGrid}>
+                            <TouchableOpacity style={styles.btnComando} onPress={() => navigation.navigate('CriarItemVotacao', { id })}>
+                                <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
+                                <Text style={styles.btnComandoText}>Novo Item</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.btnComando} onPress={handleRecontagem}>
+                                <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
+                                <Text style={styles.btnComandoText}>Recontar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+            </View>
+        )}
         {votacaoAtiva ? (
           <View style={styles.votacaoCard}>
             <View style={styles.votacaoHeader}>
@@ -298,6 +374,46 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             ))}
           </View>
         )}
+
+        {(estado.pedidosPalavra || []).length > 0 && (
+          <View style={styles.nominaisSection}>
+            <Text style={styles.sectionTitle}>Pedidos de Palavra</Text>
+            {estado.pedidosPalavra.map((p: any, i: number) => (
+              <View key={i} style={styles.itemInteracaoRow}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.nominalNome}>{p.filiado_nome}</Text>
+                  <Text style={styles.itemStatus}>{p.status}</Text>
+                </View>
+                {temAutoridade && p.status === 'PENDENTE' && (
+                  <TouchableOpacity style={styles.btnAcaoPequeno} onPress={() => handleConcederPalavra(p.id)}>
+                    <Text style={styles.btnAcaoPequenoText}>Conceder</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {(estado.propostas || []).length > 0 && (
+          <View style={styles.nominaisSection}>
+            <Text style={styles.sectionTitle}>Propostas e Encaminhamentos</Text>
+            {estado.propostas.map((pr: any, i: number) => (
+              <View key={i} style={styles.propostaCard}>
+                <Text style={styles.propostaTitulo}>{pr.titulo}</Text>
+                <Text style={styles.propostaAutor}>Por: {pr.autor_nome}</Text>
+                <Text style={styles.propostaDesc}>{pr.descricao}</Text>
+                <View style={styles.propostaFooter}>
+                   <Text style={[styles.itemStatus, { marginBottom: 0 }]}>{pr.status}</Text>
+                   {temAutoridade && pr.status === 'ATIVA' && (
+                      <TouchableOpacity style={styles.btnAcaoPequeno} onPress={() => handleIniciarVotacaoProposta(pr.id)}>
+                        <Text style={styles.btnAcaoPequenoText}>Votar Proposta</Text>
+                      </TouchableOpacity>
+                   )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
     </View>
@@ -308,9 +424,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#ddd', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  assembleiaTitulo: { fontSize: 16, fontWeight: 'bold', color: '#003366', flex: 1 },
-  quorumBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  assembleiaTitulo: { fontSize: 16, fontWeight: 'bold', color: '#003366' },
+  quorumBox: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   quorumText: { fontSize: 12, color: '#666' },
+  mesaBrief: { padding: 4 },
+  mesaCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 16, borderLeftWidth: 5, borderLeftColor: '#003366' },
+  mesaTitle: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginBottom: 8 },
+  mesaRow: { flexDirection: 'row', gap: 6, marginBottom: 2 },
+  mesaLabel: { fontSize: 12, color: '#666', fontWeight: 'bold' },
+  mesaValue: { fontSize: 12, color: '#333' },
+  mesaAcoes: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12 },
+  mesaAcoesTitle: { fontSize: 11, fontWeight: 'bold', color: '#999', marginBottom: 8, textTransform: 'uppercase' },
+  mesaAcoesGrid: { flexDirection: 'row', gap: 10 },
+  btnComando: { backgroundColor: '#003366', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center' },
+  btnComandoText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   scrollContent: { padding: 16 },
   votacaoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 3, marginBottom: 20 },
   votacaoHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
@@ -342,6 +469,16 @@ const styles = StyleSheet.create({
   opcaoSIM: { color: '#27ae60' },
   opcaoNAO: { color: '#c0392b' },
   opcaoABSTENCAO: { color: '#7f8c8d' },
+  itemInteracaoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee', alignItems: 'center' },
+  itemInfo: { flex: 1 },
+  itemStatus: { fontSize: 10, color: '#888', fontWeight: 'bold', marginTop: 2 },
+  btnAcaoPequeno: { backgroundColor: '#f1c40f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  btnAcaoPequenoText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },
+  propostaCard: { backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#eee' },
+  propostaTitulo: { fontSize: 15, fontWeight: 'bold', color: '#003366', marginBottom: 2 },
+  propostaAutor: { fontSize: 11, color: '#666', marginBottom: 6 },
+  propostaDesc: { fontSize: 13, color: '#444', marginBottom: 10 },
+  propostaFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   footer: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd', padding: 12, flexDirection: 'row', justifyContent: 'space-around' },
   btnFooter: { alignItems: 'center', gap: 4 },
   btnFooterText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },

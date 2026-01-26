@@ -264,11 +264,25 @@ async function encerrarAssembleia(req, res) {
   }
 }
 
+// Helper para validar se o usuário é o Presidente da Mesa ou Diretoria
+async function verificarAutoridadeMesa(assembleiaId, user) {
+  const mesa = await service.buscarMesa(assembleiaId);
+  const isDiretoria = user.perfil_acesso === 'DIRETORIA' || user.perfil_acesso === 'ADMIN';
+  const isPresidente = mesa && mesa.presidente_user_id === user.id;
+  return { mesa, autorizada: isDiretoria || isPresidente, isPresidente, isDiretoria };
+}
+
 async function gerarTokenQuorum(req, res) {
   const start = Date.now();
   const { id } = req.params;
   try {
     const { tipo_chamada, observacao } = req.body;
+
+    // Validação de autoridade: Presidente ou Diretoria
+    const { autorizada } = await verificarAutoridadeMesa(id, req.user);
+    if (!autorizada) {
+      return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+    }
 
     // Validação de UUID para evitar 500 do Postgres
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -282,14 +296,6 @@ async function gerarTokenQuorum(req, res) {
 
     if (!tiposValidos.includes(tipoFinal)) {
       return res.status(422).json({ error: "Tipo de chamada inválido. Use PRIMEIRA, SEGUNDA ou RECONTAGEM." });
-    }
-
-    const mesa = await service.buscarMesa(id);
-    // Se a mesa já estiver estabelecida OU for RECONTAGEM, apenas o Presidente pode gerar token
-    if (tipoFinal === 'RECONTAGEM' || mesa?.estabelecida_em) {
-       if (!mesa || mesa.presidente_user_id !== req.user.id) {
-          return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
-       }
     }
 
     const token = Math.floor(100000 + Math.random() * 900000).toString();
@@ -351,8 +357,8 @@ async function atualizarQuorum(req, res) {
   const start = Date.now();
   const { id } = req.params;
   try {
-    const mesa = await service.buscarMesa(id);
-    if (mesa?.estabelecida_em && mesa.presidente_user_id !== req.user.id) {
+    const { autorizada } = await verificarAutoridadeMesa(id, req.user);
+    if (!autorizada) {
        return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
     }
 
@@ -459,6 +465,10 @@ async function definirMesa(req, res) {
       return res.status(400).json({ error: "Presidente e Secretário são obrigatórios" });
     }
 
+    if (presidente_user_id === secretario_user_id) {
+      return res.status(400).json({ error: "Presidente e Secretário devem ser pessoas diferentes" });
+    }
+
     const mesa = await service.definirMesa({
       assembleia_id: id,
       presidente_user_id,
@@ -485,8 +495,17 @@ async function substituirMesa(req, res) {
     const { id } = req.params;
     const { presidente_user_id, secretario_user_id, justificativa } = req.body;
 
+    // Apenas DIRETORIA pode substituir a mesa. Presidente (se não for DIRETORIA) não pode.
+    if (req.user.perfil_acesso !== 'DIRETORIA' && req.user.perfil_acesso !== 'ADMIN') {
+        return res.status(403).json({ error: "Apenas a Diretoria pode destituir ou alterar a mesa." });
+    }
+
     if (!presidente_user_id || !secretario_user_id || !justificativa) {
       return res.status(400).json({ error: "Presidente, Secretário e Justificativa são obrigatórios" });
+    }
+
+    if (presidente_user_id === secretario_user_id) {
+      return res.status(400).json({ error: "Presidente e Secretário devem ser pessoas diferentes" });
     }
 
     const mesa = await service.substituirMesa({
@@ -517,9 +536,8 @@ async function iniciarVotacao(req, res) {
     const { id } = req.params;
     const { titulo, descricao, duracao_segundos } = req.body;
 
-    // Apenas o Presidente da Mesa pode iniciar votação
-    const mesa = await service.buscarMesa(id);
-    if (!mesa || mesa.presidente_user_id !== req.user.id) {
+    const { autorizada } = await verificarAutoridadeMesa(id, req.user);
+    if (!autorizada) {
        return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
     }
 
@@ -588,9 +606,8 @@ async function encerrarVotacao(req, res) {
   try {
     const { id, vid } = req.params;
 
-    // Apenas Presidente
-    const mesa = await service.buscarMesa(id);
-    if (!mesa || mesa.presidente_user_id !== req.user.id) {
+    const { autorizada } = await verificarAutoridadeMesa(id, req.user);
+    if (!autorizada) {
        return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
     }
 
@@ -622,6 +639,84 @@ async function pedirPalavra(req, res) {
   } catch (err) {
     log.error("AssembleiaPedirPalavraErro", err);
     res.status(500).json({ error: "Erro ao pedir palavra" });
+  }
+}
+
+async function concederPalavra(req, res) {
+  const { id, pid } = req.params;
+  try {
+    const { autorizada, mesa } = await verificarAutoridadeMesa(id, req.user);
+
+    log.info("AssembleiaConcederPalavraRequest", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      pedidoId: pid,
+      userId: req.user.id,
+      isPresidente: mesa?.presidente_user_id === req.user.id,
+      isDiretoria: req.user.perfil_acesso === 'DIRETORIA'
+    });
+
+    if (!autorizada) return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+
+    const pedido = await service.concederPalavra(id, pid, req.user.id);
+    if (!pedido) return res.status(404).json({ error: "Pedido de palavra não encontrado nesta assembleia." });
+
+    const fila = await service.listarPedidosPalavra(id);
+    socket.emitEvent(id, "word_queue_updated", fila);
+
+    res.json({ success: true, status: pedido.status });
+  } catch (err) {
+    log.error("AssembleiaConcederPalavraErro", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      pedidoId: pid,
+      error: err.message,
+      stack: err.stack
+    });
+
+    if (err.message.includes("check constraint")) {
+      return res.status(409).json({ error: "Status inválido para o pedido de palavra no banco de dados.", details: err.message });
+    }
+
+    res.status(500).json({ error: "Erro ao conceder palavra", requestId: req.requestId });
+  }
+}
+
+async function iniciarVotacaoProposta(req, res) {
+  const start = Date.now();
+  const { id, prid } = req.params;
+  try {
+    const { autorizada } = await verificarAutoridadeMesa(id, req.user);
+    if (!autorizada) return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+
+    const votacao = await service.iniciarVotacaoProposta(id, prid, req.user.id);
+
+    socket.emitEvent(id, "votacao:iniciada", { ...votacao, contagem: { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 }, votos: [] });
+
+    // Atualiza lista de propostas para refletir status EM_VOTACAO
+    const propostas = await service.listarPropostas(id);
+    socket.emitEvent(id, "proposals_updated", propostas);
+
+    log.info("AssembleiaIniciarVotacaoPropostaSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, votacaoId: votacao.id, elapsedMs: Date.now() - start });
+    res.status(201).json(votacao);
+  } catch (err) {
+    log.error("AssembleiaIniciarVotacaoPropostaErro", {
+       requestId: req.requestId,
+       assembleiaId: id,
+       propostaId: prid,
+       error: err.message,
+       stack: err.stack
+    });
+
+    if (err.message.includes("check constraint")) {
+      return res.status(409).json({ error: "Não foi possível transicionar a proposta para votação devido a restrição de status.", details: err.message });
+    }
+
+    if (err.message.includes("transição de estado inválida") || err.message.includes("já existe uma votação ativa")) {
+       return res.status(409).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: "Erro inesperado ao iniciar votação da proposta", details: err.message, requestId: req.requestId });
   }
 }
 
@@ -846,6 +941,8 @@ module.exports = {
   pedirPalavra,
   criarProposta,
   substituirMesa,
+  concederPalavra,
+  iniciarVotacaoProposta,
   diagnostico,
   limparLogsAuditoria,
   gerarRelatorio,

@@ -152,6 +152,11 @@ async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
 async function iniciarExecucao(id, userId) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
+
+  if (assembleia.estado === ASSEMBLEIA_STATES.EM_CURSO) {
+    return assembleia;
+  }
+
   if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA) {
     throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> EM_CURSO)`);
   }
@@ -410,10 +415,10 @@ async function buscarUltimoQuorum(assembleiaId) {
   return rows[0];
 }
 
-async function criarVotacao(dados) {
-  const client = await pool.connect();
+async function criarVotacao(dados, externalClient = null) {
+  const client = externalClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!externalClient) await client.query('BEGIN');
 
     const { assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, iniciada_por_user_id } = dados;
 
@@ -433,11 +438,9 @@ async function criarVotacao(dados) {
       throw new Error("Já existe uma votação ativa para esta assembleia.");
     }
 
-    // Apenas Presidente pode iniciar votação
-    const { rows: mesaRows } = await client.query(`SELECT presidente_user_id FROM assembleia_mesa WHERE assembleia_id = $1`, [assembleia_id]);
-    if (!mesaRows[0] || mesaRows[0].presidente_user_id !== iniciada_por_user_id) {
-      throw new Error(Textos.ASSEMBLEIA.APENAS_PRESIDENTE);
-    }
+    // Autoridade será validada no Controller para permitir DIRETORIA ou PRESIDENTE.
+    // Aqui mantemos apenas um check básico de existência de mesa se necessário,
+    // mas o controller já garante a lógica de negócio.
 
     const { rows: vRows } = await client.query(
       `INSERT INTO assembleia_votacoes (assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, status, iniciada_por_user_id, aberta_em)
@@ -449,13 +452,13 @@ async function criarVotacao(dados) {
 
     await registrarAuditoria(assembleia_id, iniciada_por_user_id, 'VOTACAO_INICIADA', { votacao_id: votacao.id, titulo, quorum_snapshot_id, duracao_segundos }, client);
 
-    await client.query('COMMIT');
+    if (!externalClient) await client.query('COMMIT');
     return votacao;
   } catch (e) {
-    await client.query('ROLLBACK');
+    if (!externalClient) await client.query('ROLLBACK');
     throw e;
   } finally {
-    client.release();
+    if (!externalClient) client.release();
   }
 }
 
@@ -618,6 +621,10 @@ async function buscarVotacaoPorId(votacaoId) {
 async function definirMesa(dados) {
   const { assembleia_id, presidente_user_id, secretario_user_id, definida_por_user_id } = dados;
 
+  if (presidente_user_id === secretario_user_id) {
+    throw new Error("Presidente e Secretário devem ser pessoas diferentes");
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -663,6 +670,13 @@ async function definirMesa(dados) {
     const mesa = rows[0];
     await registrarAuditoria(assembleia_id, definida_por_user_id, 'MESA_DEFINIDA', { presidente_user_id, secretario_user_id }, client);
 
+    // Transição automática para EM_CURSO (Phase 3) conforme nova diretriz
+    await client.query(
+      "UPDATE assembleias SET estado = 'EM_CURSO' WHERE id = $1",
+      [assembleia_id]
+    );
+    await registrarAuditoria(assembleia_id, definida_por_user_id, 'ASSEMBLEIA_INICIADA', { estado: 'EM_CURSO', motivo: 'MESA_DEFINIDA' }, client);
+
     await client.query('COMMIT');
     return mesa;
   } catch (e) {
@@ -675,6 +689,10 @@ async function definirMesa(dados) {
 
 async function substituirMesa(dados) {
   const { assembleia_id, presidente_user_id, secretario_user_id, substituida_por_user_id, justificativa } = dados;
+
+  if (presidente_user_id === secretario_user_id) {
+    throw new Error("Presidente e Secretário devem ser pessoas diferentes");
+  }
 
   if (!justificativa || justificativa.trim().length < 20) {
     throw new Error("Justificativa obrigatória (mínimo 20 caracteres).");
@@ -778,14 +796,28 @@ async function pedirPalavra(assembleiaId, filiadoId) {
 
 async function listarPedidosPalavra(assembleiaId) {
   const { rows } = await pool.query(
-    `SELECT p.*, f.nome as filiado_nome
+    `SELECT p.*, f.nome as filiado_nome, f.avatar_url
      FROM assembleia_pedidos_palavra p
      JOIN filiados f ON p.filiado_id = f.id
-     WHERE p.assembleia_id = $1 AND p.status IN ('PENDENTE', 'EM_FALA')
+     WHERE p.assembleia_id = $1 AND p.status IN ('PENDENTE', 'CONCEDIDO', 'EM_FALA')
      ORDER BY p.ordem ASC`,
     [assembleiaId]
   );
   return rows;
+}
+
+async function concederPalavra(assembleiaId, pedidoId, userId) {
+  const { rows } = await pool.query(
+    `UPDATE assembleia_pedidos_palavra
+     SET status = 'CONCEDIDO'
+     WHERE id = $1 AND assembleia_id = $2
+     RETURNING *`,
+    [pedidoId, assembleiaId]
+  );
+  if (rows[0]) {
+    await registrarAuditoria(assembleiaId, userId, 'PALAVRA_CONCEDIDA', { pedido_id: pedidoId, filiado_id: rows[0].filiado_id });
+  }
+  return rows[0];
 }
 
 async function criarProposta(dados) {
@@ -838,7 +870,7 @@ async function criarProposta(dados) {
 
 async function listarPropostas(assembleiaId) {
   const { rows } = await pool.query(
-    `SELECT p.*, f.nome as autor_nome
+    `SELECT p.*, f.nome as autor_nome, f.avatar_url
      FROM assembleia_propostas p
      JOIN filiados f ON p.autor_id = f.id
      WHERE p.assembleia_id = $1
@@ -846,6 +878,49 @@ async function listarPropostas(assembleiaId) {
     [assembleiaId]
   );
   return rows;
+}
+
+async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: propRows } = await client.query(
+      `SELECT * FROM assembleia_propostas WHERE id = $1 AND assembleia_id = $2 FOR UPDATE`,
+      [propostaId, assembleiaId]
+    );
+    const proposta = propRows[0];
+    if (!proposta) throw new Error("Proposta não encontrada.");
+
+    const quorum = await buscarUltimoQuorum(assembleiaId);
+    if (!quorum) throw new Error(Textos.ASSEMBLEIA.TOKEN_INVALIDO);
+
+    // Criar a votação baseada na proposta
+    const votacao = await criarVotacao({
+      assembleia_id: assembleiaId,
+      quorum_snapshot_id: quorum.id,
+      titulo: `Votação: ${proposta.titulo}`,
+      descricao: proposta.descricao,
+      duracao_segundos: 120, // Propostas costumam ter tempo maior
+      iniciada_por_user_id: userId
+    }, client);
+
+    // Atualizar status da proposta
+    await client.query(
+      `UPDATE assembleia_propostas SET status = 'EM_VOTACAO' WHERE id = $1`,
+      [propostaId]
+    );
+
+    await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_EM_VOTACAO', { proposta_id: propostaId, votacao_id: votacao.id }, client);
+
+    await client.query('COMMIT');
+    return votacao;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 async function buscarDiagnostico(assembleiaId) {
@@ -1032,8 +1107,10 @@ module.exports = {
   finalizarVotacao,
   pedirPalavra,
   listarPedidosPalavra,
+  concederPalavra,
   criarProposta,
   listarPropostas,
+  iniciarVotacaoProposta,
   verificarElegibilidadePorQuorum,
   definirMesa,
   substituirMesa,
