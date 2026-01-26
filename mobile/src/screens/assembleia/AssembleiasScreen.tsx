@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,6 +9,7 @@ import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { isDiretoria } from '../../utils/filiadoUtils';
 import { logger } from '../../infra/logger';
+import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/assembleiaLabels';
 
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 
@@ -17,6 +19,7 @@ export default function AssembleiasScreen({ navigation }: any) {
   const [assembleias, setAssembleias] = useState<Assembleia[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'ativas' | 'encerradas' | 'todas'>('ativas');
 
   const ehDiretoria = isDiretoria(usuario?.perfil_acesso);
 
@@ -62,16 +65,13 @@ export default function AssembleiasScreen({ navigation }: any) {
     setRefreshing(false);
   };
 
-  const renderItem = ({ item }: { item: Assembleia }) => {
-    const getStatusEmoji = (status: string) => {
-      switch (status) {
-        case 'ABERTA': return '🟢 ';
-        case 'EM_CURSO': return '🟡 ';
-        case 'ENCERRADA': return '🔴 ';
-        default: return '⚪ ';
-      }
-    };
+  const filteredAssembleias = assembleias.filter(a => {
+    if (filter === 'ativas') return a.estado !== 'ENCERRADA';
+    if (filter === 'encerradas') return a.estado === 'ENCERRADA';
+    return true;
+  });
 
+  const renderItem = ({ item }: { item: Assembleia }) => {
     return (
     <TouchableOpacity
       style={styles.card}
@@ -82,7 +82,10 @@ export default function AssembleiasScreen({ navigation }: any) {
     >
       <View style={styles.cardHeader}>
         <View style={[styles.badge, styles[`badge${item.estado}`]]}>
-          <Text style={styles.badgeText}>{getStatusEmoji(item.estado)}{item.estado}</Text>
+          <Text style={styles.badgeText}>
+            {getAssembleiaStatusEmoji(item.estado)}
+            {getAssembleiaStatusLabel(item.estado)}
+          </Text>
         </View>
         <Text style={styles.tipoText}>{item.tipo}</Text>
       </View>
@@ -99,11 +102,27 @@ export default function AssembleiasScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.filterContainer}>
+        <Text style={styles.filterLabel}>Filtrar:</Text>
+        <View style={styles.pickerWrapper}>
+            <Picker
+                selectedValue={filter}
+                onValueChange={(itemValue) => setFilter(itemValue as any)}
+                style={styles.picker}
+                dropdownIconColor="#003366"
+            >
+                <Picker.Item label="Ativas (Agendadas/Em andamento)" value="ativas" />
+                <Picker.Item label="Encerradas" value="encerradas" />
+                <Picker.Item label="Todas" value="todas" />
+            </Picker>
+        </View>
+      </View>
+
       {loading && !refreshing ? (
         <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>
       ) : (
         <FlatList
-          data={assembleias}
+          data={filteredAssembleias}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
@@ -122,6 +141,19 @@ export default function AssembleiasScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8' },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    zIndex: 10,
+  },
+  filterLabel: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginRight: 10 },
+  pickerWrapper: { flex: 1, height: 40, justifyContent: 'center', backgroundColor: '#f2f4f8', borderRadius: 8 },
+  picker: { height: 40, width: '100%' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 16 },
   card: {

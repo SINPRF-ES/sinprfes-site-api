@@ -603,7 +603,99 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
 // Export
 // ------------------------------------------------------------------
 
+async function gerarPdfRelatorioAssembleia(dados) {
+  const codigo = gerarCodigoVerificacao(dados, "RELATORIO_ASSEMBLEIA");
+
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 140, bottom: 70, left: 70, right: 70 },
+    });
+
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    // Título e Cabeçalho do Relatório
+    doc.moveDown(2);
+    doc.font("Helvetica-Bold").fontSize(16).text("Relatório de Assembleia", { align: "center" });
+    doc.moveDown(1);
+
+    // Dados da Assembleia
+    doc.font("Helvetica-Bold").fontSize(12).text("1. Informações Gerais");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(10);
+    doc.text(`Título: ${dados.assembleia.titulo}`);
+    doc.text(`Tipo: ${dados.assembleia.tipo}`);
+    doc.text(`Data: ${dados.assembleia.data_evento ? new Date(dados.assembleia.data_evento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}`);
+    doc.text(`1ª Chamada: ${dados.assembleia.hora_primeira_chamada || '-'}`);
+    doc.text(`2ª Chamada: ${dados.assembleia.hora_segunda_chamada || '-'}`);
+    doc.text(`Status Final: ${dados.assembleia.estado}`);
+    doc.moveDown(0.5);
+    doc.font("Helvetica-Bold").text("Pauta:");
+    doc.font("Helvetica").text(dados.assembleia.pauta || "Não informada", { align: "justify" });
+    doc.moveDown(1);
+
+    linha(doc);
+
+    // Mesa Diretora
+    doc.font("Helvetica-Bold").fontSize(12).text("2. Mesa Diretora");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(10);
+    if (dados.mesa) {
+        doc.text(`Presidente: ${dados.mesa.presidente_nome || '-'}`);
+        doc.text(`Secretário: ${dados.mesa.secretario_nome || '-'}`);
+    } else {
+        doc.text("Mesa não definida.");
+    }
+    doc.moveDown(1);
+
+    linha(doc);
+
+    // Quórum e Presença
+    doc.font("Helvetica-Bold").fontSize(12).text("3. Quórum e Presença");
+    doc.moveDown(0.5);
+    if (dados.quorums && dados.quorums.length > 0) {
+        dados.quorums.forEach((q) => {
+            doc.font("Helvetica-Bold").fontSize(10).text(`Chamada: ${q.tipo_chamada} (${new Date(q.criado_em).toLocaleString('pt-BR')})`);
+            doc.font("Helvetica").fontSize(10).text(`Token: ${q.token}`);
+            doc.text(`Total de presentes nesta chamada: ${q.presentes?.length || 0}`);
+            doc.moveDown(0.2);
+        });
+    } else {
+        doc.font("Helvetica").fontSize(10).text("Nenhum registro de quórum.");
+    }
+    doc.moveDown(1);
+
+    linha(doc);
+
+    // Itens de Votação
+    doc.font("Helvetica-Bold").fontSize(12).text("4. Deliberações e Votações");
+    doc.moveDown(0.5);
+    if (dados.votacoes && dados.votacoes.length > 0) {
+        dados.votacoes.forEach((v, idx) => {
+            doc.font("Helvetica-Bold").fontSize(10).text(`${idx + 1}. ${v.titulo}`);
+            doc.font("Helvetica").fontSize(10).text(`Descrição: ${v.descricao || '-'}`);
+            doc.text(`Resultado: SIM: ${v.contagem?.SIM || 0} | NÃO: ${v.contagem?.NAO || 0} | ABSTENÇÃO: ${v.contagem?.ABSTENCAO || 0}`);
+            doc.text(`Total de votos: ${v.contagem?.total || 0}`);
+            doc.moveDown(0.5);
+        });
+    } else {
+        doc.font("Helvetica").fontSize(10).text("Nenhum item votado.");
+    }
+
+    doc.end();
+  });
+
+  return await aplicarLayoutInstitucional(pdfBuffer, {
+    codigoVerificacao: codigo,
+    tipoDocumento: "Relatório de Assembleia",
+  });
+}
+
 module.exports = {
   gerarPdfFichaFiliacao,
   gerarPdfRessarcimento,
+  gerarPdfRelatorioAssembleia,
 };

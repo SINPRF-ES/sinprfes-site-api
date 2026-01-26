@@ -10,6 +10,7 @@ import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
+import { getAssembleiaStatusLabel } from '../../utils/assembleiaLabels';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -294,7 +295,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     >
       <View style={styles.header}>
         <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
-          <Text style={styles.badgeText}>{assembleia.estado}</Text>
+          <Text style={styles.badgeText}>{getAssembleiaStatusLabel(assembleia.estado)}</Text>
         </View>
         <Text style={styles.tipoText}>{assembleia.tipo}</Text>
       </View>
