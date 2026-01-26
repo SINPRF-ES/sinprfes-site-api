@@ -286,7 +286,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
     <KeyboardAwareScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
         enableOnAndroid
         extraScrollHeight={80}
@@ -304,7 +304,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
       {isIniciado && estado?.mesa && (
         <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366' }]}>
-            <Text style={styles.infoTitle}>Mesa Diretora</Text>
+            <Text style={styles.infoTitle}>🧑‍⚖️ Mesa Diretora</Text>
             <View style={styles.mesaRow}>
                 <MaterialCommunityIcons name="account-tie" size={20} color="#003366" />
                 <Text style={styles.mesaLabel}>Presidente:</Text>
@@ -318,13 +318,15 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         </View>
       )}
 
-      <View style={styles.editalSection}>
-        <Text style={styles.sectionLabel}>Edital de Convocação</Text>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>📌 Edital de Convocação</Text>
         {assembleia.edital_url ? (
           <TouchableOpacity
             style={styles.btnEdital}
             onPress={handleVerEdital}
             disabled={editalLoading}
+            accessibilityLabel="Ver Edital de Convocação"
+            accessibilityRole="button"
           >
             {editalLoading ? (
               <ActivityIndicator size="small" color="#003366" />
@@ -348,7 +350,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       </View>
 
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>Quórum Atual</Text>
+        <Text style={styles.infoTitle}>👥 Quórum Atual</Text>
         {estadoLoading ? (
             <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
         ) : !estado ? (
@@ -388,52 +390,91 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         )}
       </View>
 
-      {estado?.quorumVigente?.presentes && estado.quorumVigente.presentes.length > 0 && (
+      {estado?.quorumVigente && (
         <View style={styles.infoCard}>
-           <Text style={styles.infoTitle}>Lista Nominal de Presentes</Text>
-           {estado.quorumVigente.presentes.map((p: any) => (
-             <View key={p.id} style={styles.presenteRow}>
-                <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
-                <Text style={styles.presenteNome}>{p.nome}</Text>
-             </View>
-           ))}
+           <Text style={styles.infoTitle}>📋 Lista Nominal de Presentes</Text>
+           {estado.quorumVigente.presentes && estado.quorumVigente.presentes.length > 0 ? (
+             estado.quorumVigente.presentes.map((p: any) => (
+               <View key={p.id} style={styles.presenteRow}>
+                  <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
+                  <Text style={styles.presenteNome}>{p.nome}</Text>
+               </View>
+             ))
+           ) : (
+             <Text style={styles.emptyTextSmall}>Nenhum presente registrado até o momento.</Text>
+           )}
         </View>
       )}
 
       {isDiretoria && assembleia && (
-        <View style={styles.diretoriaSection}>
-            <Text style={styles.sectionTitle}>Ações da Mesa</Text>
+        <View style={[styles.infoCard, styles.diretoriaSection]}>
+            <Text style={styles.infoTitle}>⚡ Ações da Mesa</Text>
             <View style={styles.diretoriaButtons}>
                 {assembleia.estado === 'CRIADA' && (
-                    <TouchableOpacity style={styles.btnManagement} onPress={handleAbrir}>
+                    <TouchableOpacity
+                      style={styles.btnManagement}
+                      onPress={handleAbrir}
+                      accessibilityLabel="Abrir Assembleia"
+                      accessibilityRole="button"
+                    >
                         <Text style={styles.btnActionText}>Abrir Assembleia</Text>
                     </TouchableOpacity>
                 )}
                 {assembleia.estado === 'ABERTA' && (
                     <>
-                        <TouchableOpacity style={styles.btnManagement} onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}>
+                        <TouchableOpacity
+                          style={styles.btnManagement}
+                          onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}
+                          accessibilityLabel={(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa Diretora' : 'Compor Mesa Diretora'}
+                          accessibilityRole="button"
+                        >
                             <Text style={styles.btnActionText}>{(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.btnManagement} onPress={handleGerarToken}>
+                        <TouchableOpacity
+                          style={styles.btnManagement}
+                          onPress={handleGerarToken}
+                          accessibilityLabel="Gerar Token de Quórum"
+                          accessibilityRole="button"
+                        >
                             <Text style={styles.btnActionText}>Gerar Token</Text>
                         </TouchableOpacity>
                     </>
                 )}
                 {assembleia.estado === 'EM_CURSO' && (
                     <>
-                        <TouchableOpacity style={styles.btnManagement} onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}>
+                        <TouchableOpacity
+                          style={styles.btnManagement}
+                          onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}
+                          accessibilityLabel="Trocar Mesa Diretora"
+                          accessibilityRole="button"
+                        >
                             <Text style={styles.btnActionText}>Trocar Mesa</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.btnManagement} onPress={() => navigation.navigate('CriarItemVotacao', { id })}>
+                        <TouchableOpacity
+                          style={styles.btnManagement}
+                          onPress={() => navigation.navigate('CriarItemVotacao', { id })}
+                          accessibilityLabel="Novo Item de Votação"
+                          accessibilityRole="button"
+                        >
                             <Text style={styles.btnActionText}>Novo Item</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.btnManagement, styles.btnDanger]} onPress={handleEncerrar}>
+                        <TouchableOpacity
+                          style={[styles.btnManagement, styles.btnDanger]}
+                          onPress={handleEncerrar}
+                          accessibilityLabel="Encerrar Assembleia"
+                          accessibilityRole="button"
+                        >
                             <Text style={[styles.btnActionText, { color: '#fff' }]}>Encerrar</Text>
                         </TouchableOpacity>
                     </>
                 )}
                 {assembleia.estado === 'ENCERRADA' && (
-                    <TouchableOpacity style={styles.btnManagement} onPress={handleSolicitarRelatorio}>
+                    <TouchableOpacity
+                      style={styles.btnManagement}
+                      onPress={handleSolicitarRelatorio}
+                      accessibilityLabel="Gerar Relatório em PDF"
+                      accessibilityRole="button"
+                    >
                         <Text style={styles.btnActionText}>Relatório PDF</Text>
                     </TouchableOpacity>
                 )}
@@ -453,6 +494,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                 <TouchableOpacity
                     style={styles.btnSala}
                     onPress={() => navigation.navigate('AssembleiaSala', { id })}
+                    accessibilityLabel="Ir para a Sala de Votação"
+                    accessibilityRole="button"
                 >
                     <MaterialCommunityIcons name="door-open" size={24} color="#fff" />
                     <Text style={styles.btnSalaText}>Ir para a Sala de Votação</Text>
@@ -470,7 +513,13 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                 value={tokenInput}
                 onChangeText={setTokenInput}
               />
-              <TouchableOpacity style={styles.btnCheckin} onPress={handleCheckin} disabled={actionLoading}>
+              <TouchableOpacity
+                style={styles.btnCheckin}
+                onPress={handleCheckin}
+                disabled={actionLoading}
+                accessibilityLabel="Confirmar Presença com Token"
+                accessibilityRole="button"
+              >
                 <Text style={styles.btnText}>{actionLoading ? 'Confirmando...' : 'Confirmar Presença'}</Text>
               </TouchableOpacity>
             </View>
@@ -488,18 +537,16 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   btnRetrySmall: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 6, backgroundColor: '#eee' },
   btnRetrySmallText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },
-  editalSection: { marginBottom: 20 },
-  sectionLabel: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 8 },
   btnEdital: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#003366',
     padding: 12,
     borderRadius: 8,
-    alignSelf: 'flex-start'
   },
   btnEditalText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
   noEditalBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 4 },
@@ -542,7 +589,7 @@ const styles = StyleSheet.create({
   tituloText: { fontSize: 24, fontWeight: 'bold', color: '#003366', marginBottom: 8 },
   descricaoText: { fontSize: 16, color: '#555', marginBottom: 20 },
   infoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, elevation: 2 },
-  infoTitle: { fontSize: 14, color: '#666', marginBottom: 4 },
+  infoTitle: { fontSize: 14, color: '#666', marginBottom: 12, textAlign: 'center', fontWeight: 'bold', textTransform: 'uppercase' },
   infoValue: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 12 },
   btnAction: { backgroundColor: '#f1c40f', padding: 12, borderRadius: 8, alignItems: 'center' },
   btnActionText: { color: '#003366', fontWeight: 'bold' },
@@ -563,11 +610,11 @@ const styles = StyleSheet.create({
   mesaValue: { fontSize: 14, color: '#333' },
   presenteRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#eee' },
   presenteNome: { fontSize: 14, color: '#333' },
+  emptyTextSmall: { fontSize: 13, color: '#999', textAlign: 'center', fontStyle: 'italic', marginVertical: 8 },
   notEligibleBox: { backgroundColor: '#fff3cd', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   notEligibleText: { color: '#856404', fontSize: 14, flex: 1, fontWeight: '500' },
-  diretoriaSection: { marginTop: 20, paddingBottom: 40 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12 },
+  diretoriaSection: { marginTop: 0 },
   diretoriaButtons: { flexDirection: 'row', gap: 12 },
-  btnManagement: { flex: 1, backgroundColor: '#f1c40f', padding: 14, borderRadius: 8, alignItems: 'center' },
+  btnManagement: { flex: 1, backgroundColor: '#f1c40f', padding: 12, borderRadius: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
   btnDanger: { backgroundColor: '#e74c3c' },
 });

@@ -246,7 +246,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const votosNominais = votacaoAtiva?.votos || [];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
             <Text style={styles.assembleiaTitulo}>{estado.assembleia.titulo}</Text>
@@ -262,10 +262,13 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {estado.mesa && (
             <View style={styles.mesaCard}>
-                <Text style={styles.mesaTitle}>Mesa Diretora</Text>
+                <Text style={styles.mesaTitle}>🧑‍⚖️ Mesa Diretora</Text>
                 <View style={styles.mesaRow}>
                     <Text style={styles.mesaLabel}>Presidente:</Text>
                     <Text style={styles.mesaValue}>{(estado.mesa as any).presidente_nome}</Text>
@@ -279,11 +282,21 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                     <View style={styles.mesaAcoes}>
                         <Text style={styles.mesaAcoesTitle}>Ações de Comando</Text>
                         <View style={styles.mesaAcoesGrid}>
-                            <TouchableOpacity style={styles.btnComando} onPress={() => navigation.navigate('CriarItemVotacao', { id })}>
+                            <TouchableOpacity
+                                style={styles.btnComando}
+                                onPress={() => navigation.navigate('CriarItemVotacao', { id })}
+                                accessibilityLabel="Novo Item de Votação"
+                                accessibilityRole="button"
+                            >
                                 <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
                                 <Text style={styles.btnComandoText}>Novo Item</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.btnComando} onPress={handleRecontagem}>
+                            <TouchableOpacity
+                                style={styles.btnComando}
+                                onPress={handleRecontagem}
+                                accessibilityLabel="Solicitar Recontagem de Quórum"
+                                accessibilityRole="button"
+                            >
                                 <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
                                 <Text style={styles.btnComandoText}>Recontar</Text>
                             </TouchableOpacity>
@@ -294,6 +307,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         )}
         {votacaoAtiva ? (
           <View style={styles.votacaoCard}>
+            <Text style={styles.sectionTitle}>🗳️ Votação Ativa</Text>
             <View style={styles.votacaoHeader}>
               <Text style={styles.votacaoBadge}>{votacaoAtiva.status}</Text>
               {timeLeft !== null && (
@@ -321,6 +335,8 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                     style={[styles.btnVoto, styles.btnSim]}
                     onPress={() => handleVotar('SIM')}
                     disabled={sendingVoto}
+                    accessibilityLabel="Votar SIM"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.btnVotoText}>SIM</Text>
                   </TouchableOpacity>
@@ -328,6 +344,8 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                     style={[styles.btnVoto, styles.btnNao]}
                     onPress={() => handleVotar('NAO')}
                     disabled={sendingVoto}
+                    accessibilityLabel="Votar NÃO"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.btnVotoText}>NÃO</Text>
                   </TouchableOpacity>
@@ -365,7 +383,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
 
         {votosNominais.length > 0 && (
           <View style={styles.nominaisSection}>
-            <Text style={styles.sectionTitle}>Votos Nominais (Ao vivo)</Text>
+            <Text style={styles.sectionTitle}>👥 Votos Nominais (Ao vivo)</Text>
             {votosNominais.map((v, i) => (
               <View key={i} style={styles.votoNominalRow}>
                 <Text style={styles.nominalNome}>{v.nome}</Text>
@@ -377,7 +395,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
 
         {(estado.pedidosPalavra || []).length > 0 && (
           <View style={styles.nominaisSection}>
-            <Text style={styles.sectionTitle}>Pedidos de Palavra</Text>
+            <Text style={styles.sectionTitle}>🗣️ Pedidos de Palavra</Text>
             {estado.pedidosPalavra.map((p: any, i: number) => (
               <View key={i} style={styles.itemInteracaoRow}>
                 <View style={styles.itemInfo}>
@@ -385,7 +403,12 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                   <Text style={styles.itemStatus}>{p.status}</Text>
                 </View>
                 {temAutoridade && p.status === 'PENDENTE' && (
-                  <TouchableOpacity style={styles.btnAcaoPequeno} onPress={() => handleConcederPalavra(p.id)}>
+                  <TouchableOpacity
+                    style={styles.btnAcaoPequeno}
+                    onPress={() => handleConcederPalavra(p.id)}
+                    accessibilityLabel={`Conceder palavra para ${p.filiado_nome}`}
+                    accessibilityRole="button"
+                  >
                     <Text style={styles.btnAcaoPequenoText}>Conceder</Text>
                   </TouchableOpacity>
                 )}
@@ -396,7 +419,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
 
         {(estado.propostas || []).length > 0 && (
           <View style={styles.nominaisSection}>
-            <Text style={styles.sectionTitle}>Propostas e Encaminhamentos</Text>
+            <Text style={styles.sectionTitle}>📝 Propostas e Encaminhamentos</Text>
             {estado.propostas.map((pr: any, i: number) => (
               <View key={i} style={styles.propostaCard}>
                 <Text style={styles.propostaTitulo}>{pr.titulo}</Text>
@@ -405,7 +428,12 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                 <View style={styles.propostaFooter}>
                    <Text style={[styles.itemStatus, { marginBottom: 0 }]}>{pr.status}</Text>
                    {temAutoridade && pr.status === 'ATIVA' && (
-                      <TouchableOpacity style={styles.btnAcaoPequeno} onPress={() => handleIniciarVotacaoProposta(pr.id)}>
+                      <TouchableOpacity
+                        style={styles.btnAcaoPequeno}
+                        onPress={() => handleIniciarVotacaoProposta(pr.id)}
+                        accessibilityLabel={`Iniciar votação para a proposta: ${pr.titulo}`}
+                        accessibilityRole="button"
+                      >
                         <Text style={styles.btnAcaoPequenoText}>Votar Proposta</Text>
                       </TouchableOpacity>
                    )}
@@ -429,7 +457,7 @@ const styles = StyleSheet.create({
   quorumText: { fontSize: 12, color: '#666' },
   mesaBrief: { padding: 4 },
   mesaCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 16, borderLeftWidth: 5, borderLeftColor: '#003366' },
-  mesaTitle: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginBottom: 8 },
+  mesaTitle: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginBottom: 12, textAlign: 'center', textTransform: 'uppercase' },
   mesaRow: { flexDirection: 'row', gap: 6, marginBottom: 2 },
   mesaLabel: { fontSize: 12, color: '#666', fontWeight: 'bold' },
   mesaValue: { fontSize: 12, color: '#333' },
@@ -461,8 +489,8 @@ const styles = StyleSheet.create({
   placarValue: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   waitingCard: { padding: 40, alignItems: 'center', gap: 12 },
   waitingText: { color: '#888', fontSize: 14 },
-  nominaisSection: { marginTop: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 12 },
+  nominaisSection: { marginTop: 10, backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2 },
+  sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 12, textAlign: 'center', textTransform: 'uppercase' },
   votoNominalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee', alignItems: 'center' },
   nominalNome: { fontSize: 14, color: '#444', flex: 1 },
   nominalOpcao: { fontWeight: 'bold', fontSize: 12 },

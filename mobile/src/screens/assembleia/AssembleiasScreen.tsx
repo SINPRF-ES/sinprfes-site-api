@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleias } from '../../services/assembleiaService';
@@ -11,6 +12,7 @@ import { logger } from '../../infra/logger';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 
 export default function AssembleiasScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { usuario } = useAuth();
   const [assembleias, setAssembleias] = useState<Assembleia[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,17 @@ export default function AssembleiasScreen({ navigation }: any) {
     setRefreshing(false);
   };
 
-  const renderItem = ({ item }: { item: Assembleia }) => (
+  const renderItem = ({ item }: { item: Assembleia }) => {
+    const getStatusEmoji = (status: string) => {
+      switch (status) {
+        case 'ABERTA': return '🟢 ';
+        case 'EM_CURSO': return '🟡 ';
+        case 'ENCERRADA': return '🔴 ';
+        default: return '⚪ ';
+      }
+    };
+
+    return (
     <TouchableOpacity
       style={styles.card}
       onPress={() => {
@@ -70,7 +82,7 @@ export default function AssembleiasScreen({ navigation }: any) {
     >
       <View style={styles.cardHeader}>
         <View style={[styles.badge, styles[`badge${item.estado}`]]}>
-          <Text style={styles.badgeText}>{item.estado}</Text>
+          <Text style={styles.badgeText}>{getStatusEmoji(item.estado)}{item.estado}</Text>
         </View>
         <Text style={styles.tipoText}>{item.tipo}</Text>
       </View>
@@ -82,7 +94,8 @@ export default function AssembleiasScreen({ navigation }: any) {
         <MaterialCommunityIcons name="chevron-right" size={20} color="#003366" />
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -93,7 +106,7 @@ export default function AssembleiasScreen({ navigation }: any) {
           data={assembleias}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
