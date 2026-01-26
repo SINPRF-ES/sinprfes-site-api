@@ -33,6 +33,7 @@ router.post("/:id/checkin", auth, checkinLimiter, controller.checkin);
 
 // Mesa
 router.post("/:id/mesa", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.definirMesa);
+router.post("/:id/mesa/substituir", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.substituirMesa);
 
 // Votações (Itens)
 router.post("/:id/votacoes", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.iniciarVotacao);
