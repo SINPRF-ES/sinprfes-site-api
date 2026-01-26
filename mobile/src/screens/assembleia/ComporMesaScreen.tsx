@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, TextInput, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { getAssembleiaEstado, definirMesa } from '../../services/assembleiaService';
+import { getAssembleiaEstado, definirMesa, substituirMesa } from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function ComporMesaScreen({ route, navigation }: any) {
-  const { id } = route.params;
+  const { id, substituir } = route.params;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [presentes, setPresentes] = useState<any[]>([]);
   const [presidenteId, setPresidenteId] = useState('');
   const [secretarioId, setSecretarioId] = useState('');
+  const [justificativa, setJustificativa] = useState('');
 
   useEffect(() => {
     fetchPresentes();
@@ -44,13 +45,23 @@ export default function ComporMesaScreen({ route, navigation }: any) {
       return;
     }
 
+    if (substituir && justificativa.trim().length < 20) {
+        Alert.alert('Aviso', 'A justificativa é obrigatória (mínimo 20 caracteres) para substituição.');
+        return;
+    }
+
     try {
       setSubmitting(true);
-      await definirMesa(id, { presidente_user_id: presidenteId, secretario_user_id: secretarioId });
-      Alert.alert('Sucesso', 'Mesa definida com sucesso!');
+      if (substituir) {
+        await substituirMesa(id, { presidente_user_id: presidenteId, secretario_user_id: secretarioId, justificativa });
+        Alert.alert('Sucesso', 'Mesa substituída com sucesso!');
+      } else {
+        await definirMesa(id, { presidente_user_id: presidenteId, secretario_user_id: secretarioId });
+        Alert.alert('Sucesso', 'Mesa definida com sucesso!');
+      }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.error || 'Falha ao definir mesa.');
+      Alert.alert('Erro', err.response?.data?.error || 'Falha na operação.');
     } finally {
       setSubmitting(false);
     }
@@ -62,6 +73,10 @@ export default function ComporMesaScreen({ route, navigation }: any) {
 
   return (
     <SafeScreen style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+      <Text style={styles.title}>{substituir ? 'Substituir Mesa' : 'Compor Mesa'}</Text>
+      <Text style={styles.subtitle}>Selecione os membros entre os participantes presentes.</Text>
+
       <Text style={styles.label}>Presidente da Mesa</Text>
       <View style={styles.pickerBox}>
         <Picker
@@ -92,9 +107,24 @@ export default function ComporMesaScreen({ route, navigation }: any) {
         </Picker>
       </View>
 
+      {substituir && (
+        <>
+            <Text style={styles.label}>Justificativa da Substituição</Text>
+            <TextInput
+                style={styles.textArea}
+                placeholder="Descreva o motivo da substituição da mesa (mínimo 20 caracteres)..."
+                multiline
+                numberOfLines={4}
+                value={justificativa}
+                onChangeText={setJustificativa}
+            />
+        </>
+      )}
+
       <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>Confirmar Mesa</Text>}
+        {submitting ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>{substituir ? 'Confirmar Substituição' : 'Confirmar Mesa'}</Text>}
       </TouchableOpacity>
+      </ScrollView>
     </SafeScreen>
   );
 }
@@ -102,9 +132,12 @@ export default function ComporMesaScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8', padding: 20 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#003366', marginBottom: 4 },
+  subtitle: { fontSize: 14, color: '#666', marginBottom: 24 },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 8 },
   pickerBox: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 20, justifyContent: 'center' },
   picker: { color: '#333' },
-  btnSalvar: { backgroundColor: '#f1c40f', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 20 },
+  textArea: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, height: 100, textAlignVertical: 'top', marginBottom: 20 },
+  btnSalvar: { backgroundColor: '#f1c40f', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 20, marginBottom: 40 },
   btnText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
 });

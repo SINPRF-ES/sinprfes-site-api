@@ -122,3 +122,7 @@ export const uploadEdital = async (formData: FormData): Promise<{ url: string }>
 export const definirMesa = async (id: string, dados: { presidente_user_id: string; secretario_user_id: string }): Promise<void> => {
   await api.post(`/api/assembleias/${id}/mesa`, dados);
 };
+
+export const substituirMesa = async (id: string, dados: { presidente_user_id: string; secretario_user_id: string; justificativa: string }): Promise<void> => {
+  await api.post(`/api/assembleias/${id}/mesa/substituir`, dados);
+};

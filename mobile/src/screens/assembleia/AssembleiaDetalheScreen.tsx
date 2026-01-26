@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
@@ -194,7 +195,12 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         actions.push({ label: 'Abrir Assembleia', icon: 'play-circle-outline', onPress: handleAbrir });
       }
       if (isAberta) {
-        actions.push({ label: 'Compor Mesa', icon: 'account-group-outline', onPress: () => navigation.navigate('ComporMesa', { id }) });
+        const isMesaEstabelecida = !!(estado?.mesa as any)?.estabelecida_em;
+        actions.push({
+            label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
+            icon: isMesaEstabelecida ? 'account-convert-outline' : 'account-group-outline',
+            onPress: () => navigation.navigate('ComporMesa', { id, substituir: isMesaEstabelecida })
+        });
         actions.push({ label: 'Iniciar Execução', icon: 'play-box-multiple-outline', onPress: handleIniciarExecucao });
         actions.push({ label: 'Gerar Token Quórum', icon: 'key-variant', onPress: handleGerarToken });
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
@@ -277,10 +283,13 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
   return (
     <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
-    <ScrollView
+    <KeyboardAwareScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={80}
+        keyboardOpeningTime={0}
     >
       <View style={styles.header}>
         <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
@@ -375,14 +384,14 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                 onChangeText={setTokenInput}
               />
               <TouchableOpacity style={styles.btnCheckin} onPress={handleCheckin} disabled={actionLoading}>
-                <Text style={styles.btnText}>Confirmar Presença</Text>
+                <Text style={styles.btnText}>{actionLoading ? 'Confirmando...' : 'Confirmar Presença'}</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
       )}
 
-    </ScrollView>
+    </KeyboardAwareScrollView>
 
 
     </SafeScreen>

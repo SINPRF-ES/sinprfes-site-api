@@ -284,9 +284,9 @@ async function gerarTokenQuorum(req, res) {
       return res.status(422).json({ error: "Tipo de chamada inválido. Use PRIMEIRA, SEGUNDA ou RECONTAGEM." });
     }
 
-    // Validar se é recontagem e se quem pede é o Presidente
-    if (tipoFinal === 'RECONTAGEM') {
-       const mesa = await service.buscarMesa(id);
+    const mesa = await service.buscarMesa(id);
+    // Se a mesa já estiver estabelecida OU for RECONTAGEM, apenas o Presidente pode gerar token
+    if (tipoFinal === 'RECONTAGEM' || mesa?.estabelecida_em) {
        if (!mesa || mesa.presidente_user_id !== req.user.id) {
           return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
        }
@@ -351,6 +351,11 @@ async function atualizarQuorum(req, res) {
   const start = Date.now();
   const { id } = req.params;
   try {
+    const mesa = await service.buscarMesa(id);
+    if (mesa?.estabelecida_em && mesa.presidente_user_id !== req.user.id) {
+       return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+    }
+
     const quorum = await service.atualizarQuorum(id, req.user.id);
     const estado = await service.buscarEstadoCompleto(id, req.user.id);
 
@@ -467,7 +472,42 @@ async function definirMesa(req, res) {
     res.json(mesa);
   } catch (err) {
     log.error("AssembleiaDefinirMesaErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
-    res.status(500).json({ error: "Erro ao definir mesa" });
+    if (err.message.includes(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA)) {
+      return res.status(409).json({ error: err.message });
+    }
+    res.status(500).json({ error: "Erro ao definir mesa", requestId: req.requestId });
+  }
+}
+
+async function substituirMesa(req, res) {
+  const start = Date.now();
+  try {
+    const { id } = req.params;
+    const { presidente_user_id, secretario_user_id, justificativa } = req.body;
+
+    if (!presidente_user_id || !secretario_user_id || !justificativa) {
+      return res.status(400).json({ error: "Presidente, Secretário e Justificativa são obrigatórios" });
+    }
+
+    const mesa = await service.substituirMesa({
+      assembleia_id: id,
+      presidente_user_id,
+      secretario_user_id,
+      substituida_por_user_id: req.user.id,
+      justificativa
+    });
+
+    socket.emitEvent(id, "assembleia:mesa_definida", mesa);
+    await service.registrarAuditoria(id, req.user.id, "MESA_SUBSTITUICAO_REALIZADA", { requestId: req.requestId });
+
+    log.info("AssembleiaSubstituirMesaSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
+    res.json(mesa);
+  } catch (err) {
+    log.error("AssembleiaSubstituirMesaErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
+    if (err.message.includes("obrigatória") || err.message.includes("mínimo")) {
+      return res.status(400).json({ error: err.message });
+    }
+    res.status(500).json({ error: "Erro ao substituir mesa", requestId: req.requestId });
   }
 }
 
@@ -586,9 +626,19 @@ async function pedirPalavra(req, res) {
 }
 
 async function criarProposta(req, res) {
+  const start = Date.now();
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const { titulo, pauta } = req.body;
+
+    log.info("AssembleiaCriarPropostaRequest", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      userId: req.user.id,
+      profile: req.user.perfil_acesso,
+      hasTitulo: !!titulo,
+      hasPauta: !!pauta
+    });
 
     const proposta = await service.criarProposta({
       assembleia_id: id,
@@ -598,10 +648,36 @@ async function criarProposta(req, res) {
     });
 
     socket.emitEvent(id, "new_proposal", { ...proposta, autor_nome: req.user.nome });
+
+    log.info("AssembleiaCriarPropostaSucesso", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      userId: req.user.id,
+      propostaId: proposta.id,
+      elapsedMs: Date.now() - start
+    });
+
     res.status(201).json(proposta);
   } catch (err) {
-    log.error("AssembleiaCriarPropostaErro", err);
-    res.status(500).json({ error: "Erro ao criar proposta" });
+    log.error("AssembleiaCriarPropostaErro", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      userId: req.user.id,
+      error: err.message,
+      stack: err.stack
+    });
+
+    if (err.message === Textos.ASSEMBLEIA.NAO_ENCONTRADA) {
+      return res.status(404).json({ error: err.message });
+    }
+    if (err.message.includes(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA)) {
+      return res.status(409).json({ error: "Não é possível criar proposta nesta assembleia no estado atual." });
+    }
+    if (err.message.includes("obrigatório") || err.message.includes("inválido")) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: "Erro ao criar proposta", requestId: req.requestId });
   }
 }
 
@@ -769,6 +845,7 @@ module.exports = {
   encerrarVotacao,
   pedirPalavra,
   criarProposta,
+  substituirMesa,
   diagnostico,
   limparLogsAuditoria,
   gerarRelatorio,

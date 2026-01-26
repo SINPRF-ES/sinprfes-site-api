@@ -108,6 +108,7 @@ describe('Assembleias Service', () => {
        mockClient.query
          .mockResolvedValueOnce({ rows: [] }) // BEGIN
          .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] }) // SELECT FOR UPDATE
+         .mockResolvedValueOnce({ rows: [] }) // Idempotency check
          .mockResolvedValueOnce({ rows: [{ total: '100' }] }) // actives count
          .mockResolvedValueOnce({ rows: [] }) // collision check
          .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum anterior
