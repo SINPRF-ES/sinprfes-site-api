@@ -248,14 +248,50 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.assembleiaTitulo}>{estado.assembleia.titulo}</Text>
-        <View style={styles.quorumBox}>
-          <MaterialCommunityIcons name="account-group" size={16} color="#666" />
-          <Text style={styles.quorumText}>{quorumVigente?.total || 0} presentes</Text>
+        <View style={{ flex: 1 }}>
+            <Text style={styles.assembleiaTitulo}>{estado.assembleia.titulo}</Text>
+            <View style={styles.quorumBox}>
+                <MaterialCommunityIcons name="account-group" size={16} color="#666" />
+                <Text style={styles.quorumText}>{quorumVigente?.total || 0} presentes</Text>
+            </View>
         </View>
+        {estado.mesa && (
+            <View style={styles.mesaBrief}>
+                <MaterialCommunityIcons name="account-tie" size={24} color="#003366" />
+            </View>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {estado.mesa && (
+            <View style={styles.mesaCard}>
+                <Text style={styles.mesaTitle}>Mesa Diretora</Text>
+                <View style={styles.mesaRow}>
+                    <Text style={styles.mesaLabel}>Presidente:</Text>
+                    <Text style={styles.mesaValue}>{(estado.mesa as any).presidente_nome}</Text>
+                </View>
+                <View style={styles.mesaRow}>
+                    <Text style={styles.mesaLabel}>Secretário:</Text>
+                    <Text style={styles.mesaValue}>{(estado.mesa as any).secretario_nome}</Text>
+                </View>
+
+                {temAutoridade && (
+                    <View style={styles.mesaAcoes}>
+                        <Text style={styles.mesaAcoesTitle}>Ações de Comando</Text>
+                        <View style={styles.mesaAcoesGrid}>
+                            <TouchableOpacity style={styles.btnComando} onPress={() => navigation.navigate('CriarItemVotacao', { id })}>
+                                <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
+                                <Text style={styles.btnComandoText}>Novo Item</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.btnComando} onPress={handleRecontagem}>
+                                <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
+                                <Text style={styles.btnComandoText}>Recontar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+            </View>
+        )}
         {votacaoAtiva ? (
           <View style={styles.votacaoCard}>
             <View style={styles.votacaoHeader}>
@@ -388,9 +424,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f4f8' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#ddd', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  assembleiaTitulo: { fontSize: 16, fontWeight: 'bold', color: '#003366', flex: 1 },
-  quorumBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  assembleiaTitulo: { fontSize: 16, fontWeight: 'bold', color: '#003366' },
+  quorumBox: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   quorumText: { fontSize: 12, color: '#666' },
+  mesaBrief: { padding: 4 },
+  mesaCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 16, borderLeftWidth: 5, borderLeftColor: '#003366' },
+  mesaTitle: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginBottom: 8 },
+  mesaRow: { flexDirection: 'row', gap: 6, marginBottom: 2 },
+  mesaLabel: { fontSize: 12, color: '#666', fontWeight: 'bold' },
+  mesaValue: { fontSize: 12, color: '#333' },
+  mesaAcoes: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12 },
+  mesaAcoesTitle: { fontSize: 11, fontWeight: 'bold', color: '#999', marginBottom: 8, textTransform: 'uppercase' },
+  mesaAcoesGrid: { flexDirection: 'row', gap: 10 },
+  btnComando: { backgroundColor: '#003366', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center' },
+  btnComandoText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   scrollContent: { padding: 16 },
   votacaoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 3, marginBottom: 20 },
   votacaoHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },

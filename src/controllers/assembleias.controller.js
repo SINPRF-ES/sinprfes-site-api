@@ -643,21 +643,42 @@ async function pedirPalavra(req, res) {
 }
 
 async function concederPalavra(req, res) {
+  const { id, pid } = req.params;
   try {
-    const { id, pid } = req.params;
-    const { autorizada } = await verificarAutoridadeMesa(id, req.user);
+    const { autorizada, mesa } = await verificarAutoridadeMesa(id, req.user);
+
+    log.info("AssembleiaConcederPalavraRequest", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      pedidoId: pid,
+      userId: req.user.id,
+      isPresidente: mesa?.presidente_user_id === req.user.id,
+      isDiretoria: req.user.perfil_acesso === 'DIRETORIA'
+    });
+
     if (!autorizada) return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
 
     const pedido = await service.concederPalavra(id, pid, req.user.id);
-    if (!pedido) return res.status(404).json({ error: "Pedido não encontrado" });
+    if (!pedido) return res.status(404).json({ error: "Pedido de palavra não encontrado nesta assembleia." });
 
     const fila = await service.listarPedidosPalavra(id);
     socket.emitEvent(id, "word_queue_updated", fila);
 
-    res.json({ success: true });
+    res.json({ success: true, status: pedido.status });
   } catch (err) {
-    log.error("AssembleiaConcederPalavraErro", err);
-    res.status(500).json({ error: "Erro ao conceder palavra" });
+    log.error("AssembleiaConcederPalavraErro", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      pedidoId: pid,
+      error: err.message,
+      stack: err.stack
+    });
+
+    if (err.message.includes("check constraint")) {
+      return res.status(409).json({ error: "Status inválido para o pedido de palavra no banco de dados.", details: err.message });
+    }
+
+    res.status(500).json({ error: "Erro ao conceder palavra", requestId: req.requestId });
   }
 }
 
@@ -679,8 +700,23 @@ async function iniciarVotacaoProposta(req, res) {
     log.info("AssembleiaIniciarVotacaoPropostaSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, votacaoId: votacao.id, elapsedMs: Date.now() - start });
     res.status(201).json(votacao);
   } catch (err) {
-    log.error("AssembleiaIniciarVotacaoPropostaErro", { requestId: req.requestId, assembleiaId: id, error: err.message });
-    res.status(500).json({ error: err.message });
+    log.error("AssembleiaIniciarVotacaoPropostaErro", {
+       requestId: req.requestId,
+       assembleiaId: id,
+       propostaId: prid,
+       error: err.message,
+       stack: err.stack
+    });
+
+    if (err.message.includes("check constraint")) {
+      return res.status(409).json({ error: "Não foi possível transicionar a proposta para votação devido a restrição de status.", details: err.message });
+    }
+
+    if (err.message.includes("transição de estado inválida") || err.message.includes("já existe uma votação ativa")) {
+       return res.status(409).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: "Erro inesperado ao iniciar votação da proposta", details: err.message, requestId: req.requestId });
   }
 }
 

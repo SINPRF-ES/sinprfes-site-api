@@ -799,7 +799,7 @@ async function listarPedidosPalavra(assembleiaId) {
     `SELECT p.*, f.nome as filiado_nome, f.avatar_url
      FROM assembleia_pedidos_palavra p
      JOIN filiados f ON p.filiado_id = f.id
-     WHERE p.assembleia_id = $1 AND p.status IN ('PENDENTE', 'CONCEDIDA')
+     WHERE p.assembleia_id = $1 AND p.status IN ('PENDENTE', 'CONCEDIDO', 'EM_FALA')
      ORDER BY p.ordem ASC`,
     [assembleiaId]
   );
@@ -809,7 +809,7 @@ async function listarPedidosPalavra(assembleiaId) {
 async function concederPalavra(assembleiaId, pedidoId, userId) {
   const { rows } = await pool.query(
     `UPDATE assembleia_pedidos_palavra
-     SET status = 'CONCEDIDA'
+     SET status = 'CONCEDIDO'
      WHERE id = $1 AND assembleia_id = $2
      RETURNING *`,
     [pedidoId, assembleiaId]
