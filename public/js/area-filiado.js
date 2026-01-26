@@ -22,6 +22,7 @@
         const { inicializarRessarcimento } = window.Ressarcimento || {};
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
+        const { inicializarAssembleias } = window.Assembleias || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
         let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
@@ -37,6 +38,7 @@
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes();
+                else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
             });
         }
 
