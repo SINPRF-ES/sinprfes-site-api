@@ -246,8 +246,10 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         remoteUrl: url,
         title: `Edital - ${assembleia.titulo}`,
         fileId: id,
-        type: extension === 'pdf' ? 'pdf' : (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '') ? 'image' : 'other'),
-        context: 'assembleia-edital'
+        type: (extension === 'pdf' || assembleia.edital_format === 'pdf') ? 'pdf' : (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '') ? 'image' : 'other'),
+        context: 'assembleia-edital',
+        format: assembleia.edital_format,
+        resourceType: assembleia.edital_resource_type
     });
   };
 

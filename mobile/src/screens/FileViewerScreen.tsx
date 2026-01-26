@@ -7,9 +7,10 @@ import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL } from '../config/env';
 import SafeScreen from '../components/SafeScreen';
+import { inferExtension, buildCacheDest } from '../utils/fileCacheUtils';
 
 export default function FileViewerScreen({ route, navigation }: any) {
-  const { localUri, remoteUrl, title, fileId, type, context } = route.params;
+  const { localUri, remoteUrl, title, fileId, type, context, format, resourceType } = route.params;
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentLocalUri, setCurrentLocalUri] = useState(localUri);
@@ -28,22 +29,31 @@ export default function FileViewerScreen({ route, navigation }: any) {
 
   const inferMimeType = () => {
     const uri = currentLocalUri || remoteUrl || '';
-    const cleanUri = uri.split('?')[0];
-    const extension = cleanUri.split('.').pop()?.toLowerCase();
+    let extension = inferExtension(uri, mimeType || undefined);
+
+    // Prioriza o formato passado por parametro se disponivel
+    if (format === 'pdf' || (resourceType === 'raw' && context === 'assembleia-edital')) {
+        extension = 'pdf';
+    }
 
     if (extension === 'pdf') setMimeType('application/pdf');
-    else if (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')) setMimeType(`image/${extension === 'jpg' ? 'jpeg' : extension}`);
+    else if (['jpg', 'jpeg', 'png', 'webp'].includes(extension)) setMimeType(`image/${extension === 'jpg' ? 'jpeg' : extension}`);
   };
 
   const downloadToCache = async () => {
     try {
       setLoading(true);
-      const cleanUrl = remoteUrl.split('?')[0];
-      const extension = cleanUrl.split('.').pop()?.toLowerCase() || 'bin';
-      const fileName = `view_${fileId || Date.now()}.${extension}`;
-      const dest = `${FileSystem.cacheDirectory}${fileName}`;
 
-      logger.info('[file.download.start]', { remoteUrl, dest });
+      let extension = inferExtension(remoteUrl);
+
+      // Prioriza o formato passado por parametro se disponivel
+      if (format === 'pdf' || (resourceType === 'raw' && context === 'assembleia-edital')) {
+        extension = 'pdf';
+      }
+
+      const dest = buildCacheDest({ prefix: 'view', id: fileId || Date.now(), ext: extension });
+
+      logger.info('[file.download.start]', { remoteUrl, dest, extension, context, format });
 
       let result = await FileSystem.downloadAsync(remoteUrl, dest);
 

@@ -656,7 +656,7 @@ async function uploadEdital(req, res) {
 
     const result = await uploadFileBuffer(req.file.buffer, {
       folder: "sinprfes/editais",
-      public_id: `edital_${Date.now()}`,
+      public_id: `edital_${Date.now()}${isPdf ? '.pdf' : ''}`,
       resource_type: isPdf ? "raw" : (isImage ? "image" : "auto"),
       type: "upload" // Garante que o arquivo é público
     });

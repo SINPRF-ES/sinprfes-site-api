@@ -15,6 +15,10 @@ export interface Assembleia {
   hora_segunda_chamada?: string;
   data_hora_inicio?: string;
   edital_url?: string;
+  edital_public_id?: string;
+  edital_resource_type?: string;
+  edital_type?: string;
+  edital_format?: string;
 }
 
 export interface AssembleiaEstado {

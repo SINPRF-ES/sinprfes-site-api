@@ -4,6 +4,7 @@ import Pdf from 'react-native-pdf';
 import * as FileSystem from 'expo-file-system/legacy';
 import { logger } from '../infra/logger';
 import { FontAwesome } from '@expo/vector-icons';
+import SafeScreen from '../components/SafeScreen';
 
 export default function PdfViewerScreen({ route }: any) {
   const { localUri, title, fileId } = route.params;
@@ -62,7 +63,7 @@ export default function PdfViewerScreen({ route }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <View style={styles.actionBar}>
         <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
           <FontAwesome name="share-alt" size={20} color="#003366" />
@@ -78,6 +79,7 @@ export default function PdfViewerScreen({ route }: any) {
 
       <Pdf
         trustAllCerts={false}
+        enableAntialiasing={true}
         source={{ uri: localUri }}
         onLoadComplete={(numberOfPages, filePath) => {
           setLoading(false);
@@ -107,7 +109,7 @@ export default function PdfViewerScreen({ route }: any) {
         }}
         style={styles.pdf}
       />
-    </View>
+    </SafeScreen>
   );
 }
 
