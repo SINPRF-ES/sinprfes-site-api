@@ -1085,9 +1085,62 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
   }
 }
 
+async function gerarDadosRelatorio(id) {
+  const assembleia = await buscarPorId(id);
+  if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
+
+  const [mesa, quoruns, votacoes] = await Promise.all([
+    buscarMesa(id),
+    pool.query(`
+      SELECT q.*, f.nome as gerado_por_nome
+      FROM assembleia_quoruns q
+      LEFT JOIN filiados f ON q.gerado_por_user_id = f.id
+      WHERE q.assembleia_id = $1
+      ORDER BY q.criado_em ASC
+    `, [id]).then(r => r.rows),
+    pool.query(`
+      SELECT v.*, f.nome as iniciada_por_nome
+      FROM assembleia_votacoes v
+      LEFT JOIN filiados f ON v.iniciada_por_user_id = f.id
+      WHERE v.assembleia_id = $1
+      ORDER BY v.aberta_em ASC
+    `, [id]).then(r => r.rows)
+  ]);
+
+  // Para cada quórum, buscar presentes
+  for (let q of quoruns) {
+    const { rows: presentes } = await pool.query(`
+      SELECT f.nome, c.registrado_em
+      FROM assembleia_checkins c
+      JOIN filiados f ON c.filiado_id = f.id
+      WHERE c.assembleia_quorum_id = $1
+      ORDER BY f.nome ASC
+    `, [q.id]);
+    q.presentes = presentes;
+  }
+
+  // Para cada votação, buscar resultados
+  for (let v of votacoes) {
+    const [contagem, votos] = await Promise.all([
+      contarVotos(v.id),
+      listarVotosNominais(v.id)
+    ]);
+    v.contagem = contagem;
+    v.votosNominais = votos;
+  }
+
+  return {
+    assembleia,
+    mesa,
+    quoruns,
+    votacoes
+  };
+}
+
 module.exports = {
   listar,
   buscarPorId,
+  gerarDadosRelatorio,
   criar,
   abrir,
   iniciarExecucao,

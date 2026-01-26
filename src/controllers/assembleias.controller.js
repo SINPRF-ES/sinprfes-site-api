@@ -1,5 +1,8 @@
 // src/controllers/assembleias.controller.js
 const service = require("../services/assembleias.service");
+const filiadosService = require("../services/filiados.service");
+const pdfService = require("../services/pdf.service");
+const emailService = require("../services/email.service");
 const socket = require("../websocket/assembleia.socket");
 const { uploadFileBuffer } = require("../services/cloudinary.service");
 const log = require("../utils/log");
@@ -778,25 +781,44 @@ async function criarProposta(req, res) {
 
 async function gerarRelatorio(req, res) {
   const start = Date.now();
+  const { id } = req.params;
   try {
-    const { id } = req.params;
+    const [dados, filiado] = await Promise.all([
+      service.gerarDadosRelatorio(id),
+      filiadosService.buscarPorId(req.user.id)
+    ]);
 
-    // Stub: Apenas registra o pedido e loga
-    await service.registrarAuditoria(id, req.user.id, "RELATORIO_SOLICITADO", { solicitado_por: req.user.nome });
+    if (!filiado) {
+        return res.status(404).json({ error: "Dados do solicitante não encontrados." });
+    }
 
-    const request_id = Math.random().toString(36).substring(7).toUpperCase();
-    const auth_code = Math.random().toString(36).substring(7).toUpperCase();
+    const pdfBuffer = await pdfService.gerarPdfRelatorioAssembleia(dados);
 
-    log.info("AssembleiaGerarRelatorioSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, requestIdRelatorio: request_id, elapsedMs: Date.now() - start });
+    await emailService.enviarEmailRelatorioAssembleia(filiado, dados.assembleia, pdfBuffer);
+
+    const maskedEmail = filiado.email1 ? filiado.email1.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
+
+    await service.registrarAuditoria(id, req.user.id, "RELATORIO_GERADO", {
+      requestedBy: { id: req.user.id, nome: req.user.nome },
+      delivery: "email",
+      email: maskedEmail,
+      requestId: req.requestId
+    });
+
+    log.info("AssembleiaGerarRelatorioSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json({
       success: true,
-      message: "Pedido de relatório registrado. O documento será enviado por e-mail em breve (Stub).",
-      request_id,
-      auth_code
+      message: "O relatório foi gerado e enviado para seu e-mail com sucesso."
     });
   } catch (err) {
-    log.error("AssembleiaGerarRelatorioErro", { requestId: req.requestId, assembleiaId: id, error: err.message });
-    res.status(500).json({ error: "Erro ao solicitar relatório" });
+    log.error("AssembleiaGerarRelatorioErro", {
+      requestId: req.requestId,
+      assembleiaId: id,
+      userId: req.user.id,
+      error: err.message,
+      stack: err.stack
+    });
+    res.status(500).json({ error: "Erro ao gerar ou enviar relatório: " + err.message, requestId: req.requestId });
   }
 }
 

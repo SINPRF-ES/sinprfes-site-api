@@ -373,6 +373,65 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
   console.log(`📧 Relatório de aniversariantes enviado para ${to}.`);
 }
 
+async function enviarEmailRelatorioAssembleia(filiado, assembleia, pdfBuffer) {
+  const { MAIL_FROM, REPORT_NOTIFY_EMAIL } = process.env;
+  const unionEmail = REPORT_NOTIFY_EMAIL || "sinprfes@sinprfes.org.br";
+
+  if (!MAIL_FROM) {
+    throw new Error("❌ MAIL_FROM não configurado.");
+  }
+
+  const emailDestino = extrairEmailDestino(filiado);
+  if (!emailDestino) {
+    console.warn("⚠️ RelatorioAssembleiaSemEmail", JSON.stringify({ filiadoId: filiado.id }));
+  }
+
+  const subject = `Relatório de Assembleia - ${assembleia.titulo}`;
+  const corpo = `
+Prezado(a) ${filiado.nome || "filiado(a)"},
+
+Segue em anexo o relatório consolidado da assembleia "${assembleia.titulo}", conforme solicitado via plataforma SINPRF-ES.
+
+Este documento contém o registro da mesa diretora, quórum de presença e o resultado das votações realizadas.
+
+Atenciosamente,
+SINPRF-ES
+`;
+
+  // 1. Envio para o Filiado
+  if (emailDestino) {
+    try {
+      const payloadFiliado = {
+        from: MAIL_FROM,
+        to: emailDestino,
+        subject,
+        text: corpo,
+        attachments: [{ filename: `relatorio_assembleia_${assembleia.id.slice(0, 8)}.pdf`, content: pdfBuffer.toString("base64") }],
+      };
+      const resFiliado = await resend.emails.send(payloadFiliado);
+      if (resFiliado.error) throw resFiliado.error;
+      console.log("📧 [emailRelatorioFiliadoOk]", resFiliado.data.id);
+    } catch (err) {
+      console.error("💥 [emailRelatorioFiliadoErro]", err);
+      throw new Error(`Falha ao enviar e-mail para o filiado: ${err.message}`);
+    }
+  }
+
+  // 2. Notificação ao Sindicato
+  try {
+    const maskedCpf = filiado.cpf ? filiado.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4") : "CPF não informado";
+    const payloadSindicato = {
+      from: MAIL_FROM,
+      to: unionEmail,
+      subject: `NOTIFICAÇÃO: Relatório gerado - ${assembleia.titulo}`,
+      text: `O filiado ${filiado.nome} (CPF ${maskedCpf}) gerou o relatório da assembleia "${assembleia.titulo}" (ID: ${assembleia.id}) em ${new Date().toLocaleString('pt-BR')}.`,
+    };
+    await resend.emails.send(payloadSindicato);
+  } catch (err) {
+    console.error("💥 [emailRelatorioNotifSindicatoErro]", err);
+  }
+}
+
 module.exports = {
   enviarEmailBase,
   enviarEmailFichaFiliacao,
@@ -381,4 +440,5 @@ module.exports = {
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
   enviarRelatorioAniversariantes,
+  enviarEmailRelatorioAssembleia,
 };
