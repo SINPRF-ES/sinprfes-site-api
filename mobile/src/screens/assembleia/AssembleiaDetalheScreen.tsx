@@ -346,13 +346,33 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             <>
                 <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
                 {estado?.quorumVigente && (
-                <Text style={styles.quorumStatus}>
-                    Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
-                </Text>
+                <View style={styles.quorumDetails}>
+                    <Text style={styles.quorumStatus}>
+                        {estado.quorumVigente.tipo_chamada === 'PRIMEIRA' ? '1ª Chamada (Qualificado)' : '2ª Chamada (Real)'}
+                    </Text>
+                    <Text style={styles.quorumStatus}>
+                        Total de Filiados Aptos: {estado.quorumVigente.quorum_total_ativos || 0}
+                    </Text>
+                    <Text style={styles.quorumStatus}>
+                        Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
+                    </Text>
+                </View>
                 )}
             </>
         )}
       </View>
+
+      {estado?.quorumVigente?.presentes && estado.quorumVigente.presentes.length > 0 && (
+        <View style={styles.infoCard}>
+           <Text style={styles.infoTitle}>Lista Nominal de Presentes</Text>
+           {estado.quorumVigente.presentes.map((p: any) => (
+             <View key={p.id} style={styles.presenteRow}>
+                <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
+                <Text style={styles.presenteNome}>{p.nome}</Text>
+             </View>
+           ))}
+        </View>
+      )}
 
       {isParticipavel && (
         <View style={styles.interactionSection}>
@@ -469,7 +489,10 @@ const styles = StyleSheet.create({
   tokenInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 24, textAlign: 'center', marginBottom: 16, letterSpacing: 8 },
   btnCheckin: { backgroundColor: '#f1c40f', padding: 14, borderRadius: 8, alignItems: 'center' },
   btnText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
-  quorumStatus: { fontSize: 12, color: '#666', marginTop: 4 },
+  quorumDetails: { marginTop: 8, gap: 2 },
+  quorumStatus: { fontSize: 12, color: '#666' },
+  presenteRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  presenteNome: { fontSize: 14, color: '#333' },
   notEligibleBox: { backgroundColor: '#fff3cd', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   notEligibleText: { color: '#856404', fontSize: 14, flex: 1, fontWeight: '500' },
   diretoriaSection: { marginTop: 20, paddingBottom: 40 },
