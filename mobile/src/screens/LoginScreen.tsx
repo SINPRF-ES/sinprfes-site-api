@@ -17,6 +17,7 @@ export default function LoginScreen() {
 
   const [cpf, setCpf] = useState<string>('');
   const [senha, setSenha] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [codigo2FA, setCodigo2FA] = useState<string>('');
   const [etapa, setEtapa] = useState<'credenciais' | '2fa'>('credenciais');
   const [loading, setLoading] = useState<boolean>(false);
@@ -155,7 +156,13 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>Área do Filiado</Text>
 
         {biometriaHabilitada && isEtapaCredenciais && (
-          <Pressable style={styles.biometricButton} onPress={handleBiometricLogin} disabled={loading}>
+          <Pressable
+            style={styles.biometricButton}
+            onPress={handleBiometricLogin}
+            disabled={loading}
+            accessibilityLabel="Entrar com Biometria"
+            accessibilityRole="button"
+          >
             <MaterialCommunityIcons name="fingerprint" size={24} color="#FFF" />
             <Text style={styles.biometricButtonText}>Entrar com Biometria</Text>
           </Pressable>
@@ -164,6 +171,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="000.000.000-00"
+          accessibilityLabel="CPF"
           value={formatCpf(cpf)}
           onChangeText={(text) => {
             const digits = onlyDigits(text);
@@ -175,12 +183,40 @@ export default function LoginScreen() {
           maxLength={14}
           editable={isEtapaCredenciais}
         />
-        <TextInput style={styles.input} placeholder="Senha" value={senha} onChangeText={setSenha} secureTextEntry editable={isEtapaCredenciais} />
+
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Senha"
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry={!showPassword}
+            editable={isEtapaCredenciais}
+            accessibilityLabel="Senha"
+          />
+          <Pressable
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.showPasswordButton}
+            accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons
+              name={showPassword ? "eye-off" : "eye"}
+              size={24}
+              color="#666"
+            />
+          </Pressable>
+        </View>
 
         {isEtapaCredenciais ? (
           <>
             <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
-            <Pressable onPress={() => navigation.navigate('ForgotPassword')} disabled={loading}>
+            <Pressable
+              onPress={() => navigation.navigate('ForgotPassword')}
+              disabled={loading}
+              accessibilityRole="link"
+              accessibilityLabel="Esqueci minha senha ou Primeiro acesso"
+            >
               <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
             </Pressable>
           </>
@@ -227,6 +263,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 16, backgroundColor: '#fff' },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 12,
+    fontSize: 16,
+  },
+  showPasswordButton: {
+    padding: 10,
+  },
   forgotPasswordText: {
     textAlign: 'center',
     color: '#003366',
