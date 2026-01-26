@@ -30,6 +30,8 @@ export interface AssembleiaEstado {
     quorum_necessario: number;
     userHasCheckedIn: boolean;
     presentes?: any[];
+    tipo_chamada?: string;
+    quorum_total_ativos?: number;
   } | null;
   votacaoAtiva: VotacaoItem | null;
   mesa: any[];
