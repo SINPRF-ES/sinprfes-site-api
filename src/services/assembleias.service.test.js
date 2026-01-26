@@ -139,17 +139,20 @@ describe('Assembleias Service', () => {
       await expect(service.realizarCheckin({ filiado_id: 999 })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
     });
 
-    test('criarVotacao should block if not Presidente', async () => {
+    test('criarVotacao should transition if authority is valid', async () => {
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CURSO' }] }) // FOR UPDATE ass
         .mockResolvedValueOnce({ rows: [] }) // No active votations
-        .mockResolvedValueOnce({ rows: [{ presidente_user_id: 10 }] }); // mesa
+        .mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'Test' }] }) // INSERT votacao
+        .mockResolvedValueOnce({ rows: [] }) // Audit
+        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
-      await expect(service.criarVotacao({
+      const result = await service.criarVotacao({
         assembleia_id: '1',
-        iniciada_por_user_id: 20 // Not the president
-      })).rejects.toThrow(Textos.ASSEMBLEIA.APENAS_PRESIDENTE);
+        iniciada_por_user_id: 10
+      });
+      expect(result.id).toBe('v1');
     });
   });
 });

@@ -98,8 +98,17 @@ export const pedirPalavra = async (id: string): Promise<void> => {
   await api.post(`/api/assembleias/${id}/pedir-palavra`);
 };
 
+export const concederPalavra = async (id: string, pid: string): Promise<void> => {
+  await api.post(`/api/assembleias/${id}/pedidos/${pid}/conceder`);
+};
+
 export const submeterProposta = async (id: string, dados: any): Promise<Proposta> => {
   const response = await api.post(`/api/assembleias/${id}/propostas`, dados);
+  return response.data;
+};
+
+export const iniciarVotacaoProposta = async (id: string, prid: string): Promise<VotacaoItem> => {
+  const response = await api.post(`/api/assembleias/${id}/propostas/${prid}/votar`);
   return response.data;
 };
 

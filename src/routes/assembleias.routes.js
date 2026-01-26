@@ -27,8 +27,8 @@ router.post("/:id/iniciar-execucao", auth, requirePermission("VOTACAO_GERENCIAR"
 router.post("/:id/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.encerrarAssembleia);
 
 // Presença e Quórum
-router.post("/:id/token", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.gerarTokenQuorum);
-router.post("/:id/quorum/atualizar", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.atualizarQuorum);
+router.post("/:id/token", auth, assemblyCommandLimiter, controller.gerarTokenQuorum);
+router.post("/:id/quorum/atualizar", auth, assemblyCommandLimiter, controller.atualizarQuorum);
 router.post("/:id/checkin", auth, checkinLimiter, controller.checkin);
 
 // Mesa
@@ -36,13 +36,15 @@ router.post("/:id/mesa", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyC
 router.post("/:id/mesa/substituir", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.substituirMesa);
 
 // Votações (Itens)
-router.post("/:id/votacoes", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.iniciarVotacao);
+router.post("/:id/votacoes", auth, assemblyCommandLimiter, controller.iniciarVotacao);
 router.post("/:id/votacoes/:vid/voto", auth, assemblyCommandLimiter, controller.votar);
-router.post("/:id/votacoes/:vid/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.encerrarVotacao);
+router.post("/:id/votacoes/:vid/encerrar", auth, assemblyCommandLimiter, controller.encerrarVotacao);
 
 // Interação
 router.post("/:id/pedir-palavra", auth, controller.pedirPalavra);
+router.post("/:id/pedidos/:pid/conceder", auth, assemblyCommandLimiter, controller.concederPalavra);
 router.post("/:id/propostas", auth, controller.criarProposta);
+router.post("/:id/propostas/:prid/votar", auth, assemblyCommandLimiter, controller.iniciarVotacaoProposta);
 
 // Relatório
 router.post("/:id/relatorio", auth, requirePermission("VOTACAO_GERENCIAR"), controller.gerarRelatorio);

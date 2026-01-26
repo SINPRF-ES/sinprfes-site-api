@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Picker } from '@react-native-picker/picker';
 import { getAssembleiaEstado, definirMesa, substituirMesa } from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
@@ -45,6 +46,11 @@ export default function ComporMesaScreen({ route, navigation }: any) {
       return;
     }
 
+    if (presidenteId === secretarioId) {
+      Alert.alert('Aviso', 'Presidente e Secretário devem ser pessoas diferentes.');
+      return;
+    }
+
     if (substituir && justificativa.trim().length < 20) {
         Alert.alert('Aviso', 'A justificativa é obrigatória (mínimo 20 caracteres) para substituição.');
         return;
@@ -72,8 +78,15 @@ export default function ComporMesaScreen({ route, navigation }: any) {
   }
 
   return (
-    <SafeScreen style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={80}
+        keyboardOpeningTime={0}
+      >
       <Text style={styles.title}>{substituir ? 'Substituir Mesa' : 'Compor Mesa'}</Text>
       <Text style={styles.subtitle}>Selecione os membros entre os participantes presentes.</Text>
 
@@ -124,7 +137,7 @@ export default function ComporMesaScreen({ route, navigation }: any) {
       <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar} disabled={submitting}>
         {submitting ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>{substituir ? 'Confirmar Substituição' : 'Confirmar Mesa'}</Text>}
       </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeScreen>
   );
 }

@@ -47,6 +47,7 @@ describe('Assembleias Full Flow (Service Layer Integration)', () => {
     // 3. Gerar Quorum (PRIMEIRA)
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
     mockClient.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'ABERTA' }] }); // ass FOR UPDATE
+    mockClient.query.mockResolvedValueOnce({ rows: [] }); // Idempotency check
     mockClient.query.mockResolvedValueOnce({ rows: [{ total: 10 }] }); // counts
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // collision check
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // close previous
@@ -59,17 +60,22 @@ describe('Assembleias Full Flow (Service Layer Integration)', () => {
     expect(quorum.token).toBe('111222');
 
     // 4. Definir Mesa
-    pool.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'ABERTA' }] }); // buscarPorId
+    mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockClient.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'ABERTA' }] }); // ass FOR UPDATE
+    mockClient.query.mockResolvedValueOnce({ rows: [] }); // mesaExistente check
     pool.query.mockResolvedValueOnce({ rows: [{ id: quorumId }] }); // buscarUltimoQuorum
     pool.query.mockResolvedValueOnce({ rows: [{ 1: 1 }] }); // presence P
     pool.query.mockResolvedValueOnce({ rows: [{ 1: 1 }] }); // presence S
-    pool.query.mockResolvedValueOnce({ rows: [{ assembleia_id: assId, presidente_user_id: 10, secretario_user_id: 20 }] }); // INSERT mesa
-    pool.query.mockResolvedValueOnce({ rows: [] }); // Audit
+    mockClient.query.mockResolvedValueOnce({ rows: [{ assembleia_id: assId, presidente_user_id: 10, secretario_user_id: 20 }] }); // INSERT mesa
+    mockClient.query.mockResolvedValueOnce({ rows: [] }); // Audit mesa
+    mockClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE state
+    mockClient.query.mockResolvedValueOnce({ rows: [] }); // Audit state
+    mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
     await service.definirMesa({ assembleia_id: assId, presidente_user_id: 10, secretario_user_id: 20, definida_por_user_id: userId });
 
     // 5. Iniciar Execução
-    pool.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'ABERTA' }] }); // buscarPorId
-    pool.query.mockResolvedValueOnce({ rows: [{ presidente_user_id: 10, secretario_user_id: 20 }] }); // buscarMesa
+    pool.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'EM_CURSO' }] }); // buscarPorId
+    pool.query.mockResolvedValueOnce({ rows: [{ presidente_user_id: 10, secretario_user_id: 20, estabelecida_em: new Date() }] }); // buscarMesa
     pool.query.mockResolvedValueOnce({ rows: [{ id: quorumId }] }); // buscarUltimoQuorum
     pool.query.mockResolvedValueOnce({ rows: [{ 1: 1 }] }); // presence P
     pool.query.mockResolvedValueOnce({ rows: [{ 1: 1 }] }); // presence S
@@ -81,7 +87,6 @@ describe('Assembleias Full Flow (Service Layer Integration)', () => {
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
     mockClient.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'EM_CURSO' }] }); // ass FOR UPDATE
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // no active votations
-    mockClient.query.mockResolvedValueOnce({ rows: [{ presidente_user_id: 10 }] }); // mesa check
     mockClient.query.mockResolvedValueOnce({ rows: [{ id: votId, status: 'ATIVA' }] }); // insert vot
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // audit
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
