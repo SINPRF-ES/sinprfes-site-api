@@ -28,7 +28,14 @@ const app = require('../app');
 
 describe('Assembleias V5 Integration Tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    // Default mock for pool.connect
+    pool.connect.mockResolvedValue({
+        query: jest.fn().mockResolvedValue({ rows: [] }),
+        release: jest.fn()
+    });
+    // Default mock for pool.query
+    pool.query.mockResolvedValue({ rows: [] });
   });
 
   describe('GET /api/assembleias', () => {
@@ -115,16 +122,20 @@ describe('Assembleias V5 Integration Tests', () => {
     });
 
     test('should succeed and be idempotent', async () => {
-      mClient.query
-        .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ estado: 'ABERTA' }] }) // SELECT estado
-        .mockResolvedValueOnce({ rows: [] }) // SELECT existing (null)
-        .mockResolvedValueOnce({ rows: [{ total: 10 }] }) // COUNT filiados (contarFiliadosAtivosParaQuorum)
-        .mockResolvedValueOnce({ rows: [] }) // token collision check
-        .mockResolvedValueOnce({ rows: [] }) // update quoruns
-        .mockResolvedValueOnce({ rows: [{ id: 'q1', token: '111222' }] }) // INSERT
-        .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // Auto-checkin perfil
-        .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }); // Auto-checkin insert
+      mClient.query.mockImplementation((q) => {
+        if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
+        if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'ABERTA' }] });
+        if (q.includes('assembleia_quoruns') && q.includes('SELECT') && q.includes('encerrado_em IS NULL')) {
+            return Promise.resolve({ rows: [] });
+        }
+        if (q.includes('COUNT(*)') && q.includes('filiados')) return Promise.resolve({ rows: [{ total: 10 }] });
+        if (q.includes('SELECT perfil_acesso FROM filiados')) return Promise.resolve({ rows: [{ perfil_acesso: 'DIRETORIA' }] });
+        if (q.includes('INSERT INTO assembleia_quoruns')) return Promise.resolve({ rows: [{ id: 'q1', token: '111222' }] });
+        return Promise.resolve({ rows: [] });
+      });
+
+      // Mock for buscarEstadoCompleto queries on pool.query
+      pool.query.mockResolvedValue({ rows: [] });
 
       const res1 = await request(app)
         .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
@@ -133,13 +144,20 @@ describe('Assembleias V5 Integration Tests', () => {
       expect(res1.status).toBe(200);
       expect(res1.body.token).toBe('111222');
       expect(res1.body.isNew).toBe(true);
+      expect(res1.body.presente).toBe(true);
+      expect(res1.body.tokenAtivo).toBe(true);
 
       // Call again for idempotency
-      mClient.query
-        .mockReset()
-        .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ estado: 'ABERTA' }] }) // SELECT estado
-        .mockResolvedValueOnce({ rows: [{ id: 'q1', token: '111222' }] }); // SELECT existing (found)
+      mClient.query.mockReset();
+      mClient.query.mockImplementation((q) => {
+        if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
+        if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'ABERTA' }] });
+        if (q.includes('assembleia_quoruns') && q.includes('SELECT') && q.includes('encerrado_em IS NULL')) {
+            return Promise.resolve({ rows: [{ id: 'q1', token: '111222' }] });
+        }
+        if (q.includes('SELECT perfil_acesso FROM filiados')) return Promise.resolve({ rows: [{ perfil_acesso: 'DIRETORIA' }] });
+        return Promise.resolve({ rows: [] });
+      });
 
       const res2 = await request(app)
         .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')

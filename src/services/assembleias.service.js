@@ -126,6 +126,29 @@ async function contarFiliadosAtivosParaQuorum(client = null) {
   return parseInt(rows?.[0]?.total || 0);
 }
 
+/**
+ * Realiza check-in automático para o emissor do token se ele for elegível.
+ */
+async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
+  if (!userId) return;
+
+  const { rows: userRows } = await client.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [userId]);
+  const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
+
+  // ADMIN e COMUNICADOR não contam quórum nem votam, logo não fazem check-in
+  if (perfil !== 'ADMIN' && perfil !== 'COMUNICADOR') {
+    const origem = tipoChamada === 'RECONTAGEM' ? 'AUTO_PRESIDENTE' : 'AUTO_GERADOR';
+    await client.query(
+      `INSERT INTO assembleia_checkins (assembleia_quorum_id, filiado_id, origem)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (assembleia_quorum_id, filiado_id) DO UPDATE SET registrado_em = NOW()`,
+      [quorumId, userId, origem]
+    );
+    return true;
+  }
+  return false;
+}
+
 async function iniciarExecucao(id, userId) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
@@ -228,31 +251,39 @@ async function gerarQuorum(dados) {
   try {
     await client.query('BEGIN');
 
-    const { assembleia_id, gerado_por_user_id, tipo_chamada, observacao } = dados;
+    const { assembleia_id, gerado_por_user_id, tipo_chamada, observacao, forceNew } = dados;
     let { token } = dados;
 
+    // Lock na assembleia para garantir consistência de estado e evitar corridas
     const { rows: assRows } = await client.query(`SELECT estado FROM assembleias WHERE id = $1 FOR UPDATE`, [assembleia_id]);
     const assembleia = assRows[0];
+
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
     if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA && assembleia.estado !== ASSEMBLEIA_STATES.EM_CURSO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
-    // Idempotência: Se já existe token ativo para este MESMO tipo_chamada, retorna ele
-    const { rows: existingRows } = await client.query(
-      `SELECT id, token, criado_em, quorum_total_ativos, quorum_necessario
-       FROM assembleia_quoruns
-       WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL`,
-      [assembleia_id, tipo_chamada]
-    );
+    // Idempotência: Se NÃO for forceNew e já existe token ativo para este MESMO tipo_chamada, retorna ele
+    if (!forceNew) {
+      const { rows: existingRows } = await client.query(
+        `SELECT id, token, criado_em, quorum_total_ativos, quorum_necessario
+         FROM assembleia_quoruns
+         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL`,
+        [assembleia_id, tipo_chamada]
+      );
 
-    if (existingRows.length > 0) {
-      await client.query('ROLLBACK');
-      return { ...existingRows[0], isNew: false };
+      if (existingRows.length > 0) {
+        const existing = existingRows[0];
+        // Reforça check-in automático do emissor mesmo em retorno de token existente
+        await realizarAutoCheckin(client, existing.id, gerado_por_user_id, tipo_chamada);
+        await client.query('COMMIT');
+        return { ...existing, isNew: false };
+      }
     }
 
     const totalAtivos = await contarFiliadosAtivosParaQuorum(client);
-    let quorumNecessario = tipo_chamada === 'PRIMEIRA' ? Math.floor(totalAtivos / 2) + 1 : 0;
+    // 1ª Chamada: 50% + 1 dos ativos. Outras chamadas: qualquer número (0).
+    let quorumNecessario = (tipo_chamada === 'PRIMEIRA') ? Math.floor(totalAtivos / 2) + 1 : 0;
 
     // Apenas Presidente pode solicitar RECONTAGEM
     if (tipo_chamada === 'RECONTAGEM') {
@@ -262,7 +293,7 @@ async function gerarQuorum(dados) {
       }
     }
 
-    // Token collision check
+    // Token collision check (evita colisões raras de tokens de 6 dígitos ativos)
     let attempts = 0;
     while (attempts < 5) {
       const { rows: collisionRows } = await client.query(
@@ -274,7 +305,8 @@ async function gerarQuorum(dados) {
       attempts++;
     }
 
-    // Encerrar quórum anterior
+    // Encerrar quórum anterior antes de criar o novo (garante que só 1 esteja aberto por vez se for forceNew)
+    // Se for um novo snapshot, ele "limpa" o anterior (snapshotting).
     await client.query(
       `UPDATE assembleia_quoruns SET encerrado_em = NOW() WHERE assembleia_id = $1 AND encerrado_em IS NULL`,
       [assembleia_id]
@@ -283,26 +315,23 @@ async function gerarQuorum(dados) {
     const { rows: qRows } = await client.query(
       `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, token, criado_em, quorum_total_ativos, quorum_necessario`,
+       RETURNING id, token, criado_em, quorum_total_ativos, quorum_necessario, tipo_chamada`,
       [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao]
     );
     const quorum = { ...qRows[0], isNew: true };
 
+    // Auditoria obrigatória
     const auditEvent = tipo_chamada === 'RECONTAGEM' ? 'RECONTAGEM_INICIADA' : 'TOKEN_GERADO';
     await registrarAuditoria(assembleia_id, gerado_por_user_id, auditEvent, { token, tipo_chamada, quorum_total_ativos: totalAtivos, quorum_necessario: quorumNecessario }, client);
 
-    // Auto-checkin
-    if (gerado_por_user_id) {
-       const { rows: userRows } = await client.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [gerado_por_user_id]);
-       const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
-       if (perfil !== 'ADMIN' && perfil !== 'COMUNICADOR') {
-         const origem = tipo_chamada === 'RECONTAGEM' ? 'AUTO_PRESIDENTE' : 'AUTO_GERADOR';
-         await client.query(
-           `INSERT INTO assembleia_checkins (assembleia_quorum_id, filiado_id, origem)
-            VALUES ($1, $2, $3) ON CONFLICT (assembleia_quorum_id, filiado_id) DO UPDATE SET registrado_em = NOW()`,
-           [quorum.id, gerado_por_user_id, origem]
-         );
-       }
+    if (forceNew) {
+      await registrarAuditoria(assembleia_id, gerado_por_user_id, 'QUORUM_ATUALIZADO', { novo_quorum_id: quorum.id, tipo_chamada }, client);
+    }
+
+    // Auto-checkin do emissor
+    const checkedIn = await realizarAutoCheckin(client, quorum.id, gerado_por_user_id, tipo_chamada);
+    if (checkedIn) {
+      await registrarAuditoria(assembleia_id, gerado_por_user_id, 'CHECKIN_AUTO_EMISSOR', { quorum_id: quorum.id }, client);
     }
 
     await client.query('COMMIT');
@@ -313,6 +342,23 @@ async function gerarQuorum(dados) {
   } finally {
     client.release();
   }
+}
+
+async function atualizarQuorum(id, userId) {
+  // Gera um novo token com forceNew=true para encerrar o snapshot atual e iniciar um novo.
+  // Mantém o tipo_chamada do último snapshot se existir, ou assume PRIMEIRA.
+  const ultimo = await buscarUltimoQuorum(id);
+  const tipoChamada = ultimo?.tipo_chamada || 'PRIMEIRA';
+  const token = Math.floor(100000 + Math.random() * 900000).toString();
+
+  return await gerarQuorum({
+    assembleia_id: id,
+    token,
+    gerado_por_user_id: userId,
+    tipo_chamada: tipoChamada,
+    forceNew: true,
+    observacao: 'Atualização de Quórum (Novo Snapshot)'
+  });
 }
 
 async function buscarQuorumPorToken(assembleiaId, token) {
@@ -859,6 +905,7 @@ module.exports = {
   encerrar,
   registrarAuditoria,
   gerarQuorum,
+  atualizarQuorum,
   buscarQuorumPorToken,
   realizarCheckin,
   buscarUltimoQuorum,

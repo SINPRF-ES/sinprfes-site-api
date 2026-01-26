@@ -52,8 +52,17 @@ const assembleiaService = {
     return data;
   },
 
-  async gerarQuorum(id: string): Promise<{ token: string; valido_ate: string }> {
-    const { data } = await api.post(`/api/assembleias/:id/quorum`.replace(':id', id));
+  async gerarQuorum(id: string): Promise<any> {
+    const { data } = await api.post(`/api/assembleias/${id}/token`);
+    // Compatibilidade: se não vier valido_ate, calcula 10min a partir de issuedAt
+    if (!data.valido_ate && data.issuedAt) {
+      data.valido_ate = new Date(new Date(data.issuedAt).getTime() + 10 * 60 * 1000).toISOString();
+    }
+    return data;
+  },
+
+  async atualizarQuorum(id: string): Promise<any> {
+    const { data } = await api.post(`/api/assembleias/${id}/quorum/atualizar`);
     return data;
   },
 

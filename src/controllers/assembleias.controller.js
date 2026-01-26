@@ -302,11 +302,29 @@ async function gerarTokenQuorum(req, res) {
       observacao
     });
 
+    // Buscar estado consolidado para retorno rico (evita double fetch no app)
+    const estado = await service.buscarEstadoCompleto(id, req.user.id);
+
     const eventName = tipoFinal === 'RECONTAGEM' ? "assembleia:recontagem" : "assembleia:token_gerado";
-    socket.emitEvent(id, eventName, { id: quorum.id, token: quorum.token, tipo_chamada: tipoFinal });
+    socket.emitEvent(id, eventName, {
+      id: quorum.id,
+      token: quorum.token,
+      tipo_chamada: tipoFinal,
+      quorumVigente: estado?.quorumVigente
+    });
 
     log.info("AssembleiaGerarTokenSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, tipo_chamada: tipoFinal, isNew: quorum.isNew, elapsedMs: Date.now() - start });
-    res.json({ token: quorum.token, quorum_id: quorum.id, isNew: quorum.isNew });
+
+    res.json({
+      token: quorum.token,
+      quorum_id: quorum.id,
+      isNew: quorum.isNew,
+      tipo_chamada: tipoFinal,
+      quorumVigente: estado?.quorumVigente,
+      presente: true,
+      tokenAtivo: true,
+      issuedAt: quorum.criado_em || new Date().toISOString()
+    });
   } catch (err) {
     log.error("AssembleiaGerarTokenQuorumErro", { requestId: req.requestId, assembleiaId: id, error: err.message, stack: err.stack });
 
@@ -326,6 +344,39 @@ async function gerarTokenQuorum(req, res) {
     }
 
     res.status(500).json({ error: "Erro interno ao gerar token de quórum", requestId: req.requestId });
+  }
+}
+
+async function atualizarQuorum(req, res) {
+  const start = Date.now();
+  const { id } = req.params;
+  try {
+    const quorum = await service.atualizarQuorum(id, req.user.id);
+    const estado = await service.buscarEstadoCompleto(id, req.user.id);
+
+    socket.emitEvent(id, "assembleia:quorum_atualizado", {
+      id: quorum.id,
+      token: quorum.token,
+      tipo_chamada: quorum.tipo_chamada,
+      quorumVigente: estado?.quorumVigente
+    });
+
+    log.info("AssembleiaAtualizarQuorumSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
+
+    res.json({
+      token: quorum.token,
+      quorum_id: quorum.id,
+      tipo_chamada: quorum.tipo_chamada,
+      quorumVigente: estado?.quorumVigente,
+      presente: true,
+      tokenAtivo: true,
+      issuedAt: quorum.criado_em || new Date().toISOString()
+    });
+  } catch (err) {
+     log.error("AssembleiaAtualizarQuorumErro", { requestId: req.requestId, assembleiaId: id, error: err.message });
+     if (err.message === Textos.ASSEMBLEIA.NAO_ENCONTRADA) return res.status(404).json({ error: err.message });
+     if (err.message.includes(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA)) return res.status(409).json({ error: err.message });
+     res.status(500).json({ error: "Erro ao atualizar quórum", requestId: req.requestId });
   }
 }
 
@@ -710,6 +761,7 @@ module.exports = {
   iniciarExecucao,
   encerrarAssembleia,
   gerarTokenQuorum,
+  atualizarQuorum,
   checkin,
   definirMesa,
   iniciarVotacao,

@@ -28,6 +28,7 @@ router.post("/:id/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), assem
 
 // Presença e Quórum
 router.post("/:id/token", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.gerarTokenQuorum);
+router.post("/:id/quorum/atualizar", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.atualizarQuorum);
 router.post("/:id/checkin", auth, checkinLimiter, controller.checkin);
 
 // Mesa
