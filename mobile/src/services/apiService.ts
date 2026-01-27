@@ -80,11 +80,17 @@ api.interceptors.response.use(
       responseData: contentType.includes('application/json') ? response?.data : '[Non-JSON Content]',
     };
 
-    logger.error(
-      `API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
-      new Error(message),
-      { status, ...sanitizedError }
-    );
+    // Redução de ruído para erros best-effort (ex: Push Register 500)
+    const isPushRegister = url?.includes('/api/push/register');
+    if (isPushRegister && status === 500) {
+      logger.warn(`API Best-Effort Fail: ${method?.toUpperCase()} ${url} | Status: 500 | Message: ${message}`, { requestId: response?.headers?.['x-request-id'] });
+    } else {
+      logger.error(
+        `API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
+        new Error(message),
+        { status, ...sanitizedError }
+      );
+    }
 
     if (__DEV__) {
       console.error('--- [DEV] Detalhes do Erro da API ---');
