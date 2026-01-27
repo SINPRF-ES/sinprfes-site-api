@@ -27,17 +27,20 @@
         section.innerHTML = `
             <div id="sec-assembleias-lista">
                 <div class="section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                        <h2 style="color:#003366; margin:0;">🗳️ Assembleias e Votações</h2>
-                        <select id="filtro-assembleias" class="btn btn-outline" style="color:#333; background:#fff;" onchange="Assembleias.mudarFiltro(this.value)">
-                            <option value="ATIVAS">Ativas</option>
-                            <option value="ENCERRADAS">Encerradas</option>
-                            <option value="TODAS">Todas</option>
-                        </select>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:15px; text-align:center;">
+                        <h2 style="color:#003366; margin:0; font-size:1.6rem;">🗳️ Assembleias e Votações</h2>
+                        <div style="width:100%; max-width:200px;">
+                            <label style="font-size:0.8rem; color:#666; display:block; margin-bottom:4px;">Filtrar por status:</label>
+                            <select id="filtro-assembleias" class="btn btn-outline" style="width:100%; color:#333; background:#fff; border-radius:8px;" onchange="Assembleias.mudarFiltro(this.value)">
+                                <option value="ATIVAS">Ativas</option>
+                                <option value="ENCERRADAS">Encerradas</option>
+                                <option value="TODAS">Todas</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div id="area-assembleias-lista" style="margin-top:20px;">
-                    <p>Carregando assembleias...</p>
+                    <p class="text-center">Carregando assembleias...</p>
                 </div>
             </div>
 
@@ -89,7 +92,7 @@
 
     function renderizarLista(assembleias, container) {
         if (!assembleias.length) {
-            container.innerHTML = "<p>Nenhuma assembleia nesta categoria.</p>";
+            container.innerHTML = "<p class='text-center' style='padding:40px; color:#666;'>Nenhuma assembleia nesta categoria.</p>";
             return;
         }
 
@@ -99,18 +102,21 @@
             const dataBr = window.Formatters.formatISOToBR(a.data_evento);
 
             return `
-                <div class="section-box filiado-card" style="margin-bottom:15px; background:#fff; color:#333;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
-                        <div>
-                            <strong style="font-size:1.1rem; color:#003366;">${emoji} ${a.tipo} - ${a.titulo}</strong>
-                            <div style="margin-top:5px; font-size:0.9rem; color:#666;">
-                                📅 Data: ${dataBr} | 🕒 ${a.hora_primeira_chamada || '--:--'} (1ª) / ${a.hora_segunda_chamada || '--:--'} (2ª)
+                <div class="section-card filiado-card" style="margin-bottom:20px; background:#fff; border-left:6px solid #003366; transition:transform 0.2s;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+                        <div style="flex:1; min-width:280px;">
+                            <div style="margin-bottom:8px;">
+                                <span class="filiado-badge" style="background:#eef2f7; color:#003366;">${label}</span>
                             </div>
-                            <div style="margin-top:5px;">
-                                <span class="filiado-badge">${label}</span>
+                            <h3 style="margin:0; color:#003366; font-size:1.2rem;">${emoji} ${a.tipo} - ${a.titulo}</h3>
+                            <div style="margin-top:8px; font-size:0.95rem; color:#555; display:flex; gap:15px; flex-wrap:wrap;">
+                                <span>📅 <strong>Data:</strong> ${dataBr}</span>
+                                <span>🕒 <strong>Horário:</strong> ${a.hora_primeira_chamada || '--:--'} (1ª) / ${a.hora_segunda_chamada || '--:--'} (2ª)</span>
                             </div>
                         </div>
-                        <button class="btn btn-primary" onclick="Assembleias.abrirDetalhes('${a.id}')">Ver Detalhes</button>
+                        <div style="text-align:right;">
+                            <button class="btn btn-primary btn-lg" onclick="Assembleias.abrirDetalhes('${a.id}')">Ver Detalhes</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -128,7 +134,7 @@
 
     async function carregarDetalhesAssembleia(id) {
         const container = document.getElementById("area-assembleia-detalhe-conteudo");
-        container.innerHTML = "<p>Carregando detalhes...</p>";
+        container.innerHTML = "<p class='text-center'>Carregando detalhes...</p>";
 
         try {
             const [respA, respE] = await Promise.all([
@@ -147,94 +153,109 @@
             const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
 
             container.innerHTML = `
-                <div class="section-card" style="background:#fff; color:#333;">
-                    <button class="btn btn-outline btn-sm" style="margin-bottom:15px;" onclick="Assembleias.voltarParaLista()">← Voltar para Lista</button>
-
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <span class="filiado-badge">${label}</span>
-                        <strong style="color:#666;">${a.tipo}</strong>
+                <div class="section-card" style="background:#fff; color:#333; padding:30px;">
+                    <div style="display:flex; justify-content:flex-start; margin-bottom:20px;">
+                        <button class="btn btn-outline btn-sm" onclick="Assembleias.voltarParaLista()">← Voltar para Lista</button>
                     </div>
 
-                    <h2 style="color:#003366; margin-bottom:10px;">${a.titulo}</h2>
-                    <div class="section-box" style="background:#f8f9fa; color:#555; margin-bottom:20px; white-space: pre-wrap;">${a.pauta}</div>
+                    <div style="text-align:center; margin-bottom:25px;">
+                        <div style="margin-bottom:10px;">
+                            <span class="filiado-badge">${label}</span>
+                        </div>
+                        <h2 style="color:#003366; margin:0; font-size:1.8rem;">${a.titulo}</h2>
+                        <div style="margin-top:10px; color:#666; font-weight:600;">${a.tipo}</div>
+                    </div>
 
-                    <div class="field-row" style="margin-bottom:20px;">
+                    <div class="section-block section-block-alt">
+                        <h4 style="color:#003366; margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:8px;">📌 Pauta da Assembleia</h4>
+                        <div style="color:#444; white-space: pre-wrap; line-height:1.6; font-size:1rem;">${a.pauta}</div>
+                    </div>
+
+                    <div class="field-row" style="margin-bottom:30px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
                         <div class="field-group">
-                            <label>📅 Data do Evento</label>
-                            <input type="text" value="${dataBr}" readonly />
+                            <label style="font-weight:bold; color:#003366;">📅 Data do Evento</label>
+                            <input type="text" value="${dataBr}" readonly style="background:#f9f9f9; font-weight:bold;" />
                         </div>
                         <div class="field-group">
-                            <label>🕒 Chamadas (1ª / 2ª)</label>
-                            <input type="text" value="${a.hora_primeira_chamada} / ${a.hora_segunda_chamada}" readonly />
+                            <label style="font-weight:bold; color:#003366;">🕒 Chamadas (1ª / 2ª)</label>
+                            <input type="text" value="${a.hora_primeira_chamada} / ${a.hora_segunda_chamada}" readonly style="background:#f9f9f9; font-weight:bold;" />
                         </div>
                     </div>
 
-                    <!-- Edital -->
-                    <div class="section-box" style="margin-bottom:20px;">
-                        <h4 style="color:#003366; margin-bottom:10px;">📄 Edital de Convocação</h4>
-                        ${a.edital_url ? `
-                            <button class="btn btn-outline" style="width:100%;" onclick="window.open('${a.edital_url}', '_blank')">Visualizar Edital</button>
-                        ` : '<p style="font-style:italic; color:#999;">Sem edital anexado.</p>'}
-                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:30px;">
+                        <!-- Edital -->
+                        <div class="section-box" style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; padding:20px;">
+                            <h4 style="color:#003366; margin-bottom:15px; display:flex; align-items:center; gap:8px;">📄 Edital de Convocação</h4>
+                            ${a.edital_url ? `
+                                <button class="btn btn-outline" style="width:100%; padding:12px;" onclick="window.open('${a.edital_url}', '_blank')">Visualizar Edital</button>
+                            ` : '<p style="font-style:italic; color:#999; text-align:center;">Sem edital anexado.</p>'}
+                        </div>
 
-                    <!-- Quórum -->
-                    <div class="section-box" style="margin-bottom:20px;">
-                        <h4 style="color:#003366; margin-bottom:10px;">👥 Quórum Atual</h4>
-                        <p style="font-size:1.4rem; font-weight:bold; margin-bottom:5px;">${estado.quorumVigente?.total || 0} presentes</p>
-                        ${estado.quorumVigente ? `
-                            <div style="font-size:0.85rem; color:#666;">
-                                ${a.estado !== 'EM_CURSO' ? `
-                                    Chamada: ${estado.quorumVigente.tipo_chamada === 'PRIMEIRA' ? '1ª (Qualificado)' : '2ª (Real)'}<br>
-                                    Mínimo necessário: ${estado.quorumVigente.quorum_necessario || 'Qualquer número'}
-                                ` : 'Assembleia em andamento.'}
+                        <!-- Quórum -->
+                        <div class="section-box" style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; padding:20px;">
+                            <h4 style="color:#003366; margin-bottom:15px; display:flex; align-items:center; gap:8px;">👥 Quórum Atual</h4>
+                            <div style="text-align:center;">
+                                <p style="font-size:1.8rem; font-weight:bold; margin-bottom:5px; color:#003366;">${estado.quorumVigente?.total || 0}</p>
+                                <p style="font-size:0.85rem; color:#666; margin-bottom:15px;">Filiados Presentes</p>
                             </div>
-                        ` : ''}
+                            ${estado.quorumVigente ? `
+                                <div style="font-size:0.85rem; color:#666; background:#f8f9fa; padding:10px; border-radius:6px; margin-bottom:15px;">
+                                    ${a.estado !== 'EM_CURSO' ? `
+                                        <strong>Chamada:</strong> ${estado.quorumVigente.tipo_chamada === 'PRIMEIRA' ? '1ª (Qualificado)' : '2ª (Real)'}<br>
+                                        <strong>Mínimo:</strong> ${estado.quorumVigente.quorum_necessario || 'Qualquer número'}
+                                    ` : '<strong>Status:</strong> Assembleia em andamento.'}
+                                </div>
+                            ` : ''}
 
-                        <details style="margin-top:10px;">
-                            <summary style="cursor:pointer; color:#003366; font-size:0.9rem;">Ver Lista Nominal</summary>
-                            <div style="margin-top:10px; max-height:150px; overflow-y:auto; font-size:0.9rem;">
-                                ${estado.quorumVigente?.presentes?.length ?
-                                    estado.quorumVigente.presentes.map(p => `<div>✅ ${p.nome}</div>`).join("") :
-                                    '<p style="color:#999;">Nenhum registro.</p>'}
-                            </div>
-                        </details>
+                            <details style="margin-top:10px;">
+                                <summary style="cursor:pointer; color:#003366; font-size:0.9rem; font-weight:600;">Ver Lista Nominal</summary>
+                                <div style="margin-top:10px; max-height:150px; overflow-y:auto; font-size:0.85rem; padding:10px; background:#fff; border:1px solid #eee; border-radius:6px;">
+                                    ${estado.quorumVigente?.presentes?.length ?
+                                        estado.quorumVigente.presentes.map(p => `<div style="padding:4px 0; border-bottom:1px solid #f9f9f9;">✅ ${p.nome}</div>`).join("") :
+                                        '<p style="color:#999; text-align:center;">Nenhum registro.</p>'}
+                                </div>
+                            </details>
+                        </div>
                     </div>
 
                     <!-- Gestão (Diretoria) -->
                     ${isDiretoria ? `
-                        <div class="section-box" style="margin-bottom:20px; border:1px solid #003366;">
-                            <h4 style="color:#003366; margin-bottom:10px;">🛠️ Ações de Gestão</h4>
-                            <div style="display:flex; flex-wrap:wrap; gap:10px;">
-                                ${a.estado === 'CRIADA' ? `<button class="btn btn-primary btn-sm" onclick="Assembleias.abrirAssembleia('${id}')">Abrir Assembleia</button>` : ''}
+                        <div class="section-block" style="margin-bottom:30px; border:2px solid #003366; background:#f0f4f8;">
+                            <h4 style="color:#003366; margin-bottom:15px; text-transform:uppercase; font-size:0.9rem; letter-spacing:1px; display:flex; align-items:center; gap:8px;">🛠️ Ações de Gestão</h4>
+                            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+                                ${a.estado === 'CRIADA' ? `<button class="btn btn-primary" onclick="Assembleias.abrirAssembleia('${id}')">Abrir Assembleia</button>` : ''}
                                 ${a.estado === 'ABERTA' ? `
-                                    <button class="btn btn-primary btn-sm" onclick="Assembleias.prepararMesa('${id}')">Compor Mesa</button>
-                                    <button class="btn btn-primary btn-sm" onclick="Assembleias.gerarTokenToken('${id}')">Gerar Token</button>
-                                    <button class="btn btn-success btn-sm" onclick="Assembleias.iniciarExecucao('${id}')">Iniciar Execução</button>
+                                    <button class="btn btn-primary" onclick="Assembleias.prepararMesa('${id}')">Compor Mesa</button>
+                                    <button class="btn btn-primary" onclick="Assembleias.gerarTokenToken('${id}')">Gerar Token</button>
+                                    <button class="btn btn-success" onclick="Assembleias.iniciarExecucao('${id}')">Iniciar Execução</button>
                                 ` : ''}
-                                ${isParticipavel ? `<button class="btn btn-danger btn-sm" onclick="Assembleias.encerrarAssembleia('${id}')">Encerrar</button>` : ''}
-                                ${a.estado === 'ENCERRADA' ? `<button class="btn btn-primary btn-sm" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
+                                ${isParticipavel ? `<button class="btn btn-danger" onclick="Assembleias.encerrarAssembleia('${id}')">Encerrar</button>` : ''}
+                                ${a.estado === 'ENCERRADA' ? `<button class="btn btn-primary" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
                             </div>
                         </div>
                     ` : ''}
 
-                    <!-- Ações -->
+                    <!-- Ações Principal -->
                     <div id="area-acoes-detalhe">
                         ${isParticipavel ? `
                             ${hasCheckedIn ? `
-                                <button class="btn btn-success btn-lg" style="width:100%;" onclick="Assembleias.entrarNaSala('${id}')">🚪 Ir para Sala de Votação</button>
+                                <button class="btn btn-success btn-lg" style="width:100%; padding:20px; font-size:1.4rem; border-radius:15px; box-shadow:0 4px 15px rgba(39, 174, 96, 0.3);" onclick="Assembleias.entrarNaSala('${id}')">🚪 Entrar na Sala de Votação</button>
                             ` : `
-                                <div class="section-box" style="border:1px solid #f1c40f; background:#fffdf0;">
-                                    <h4 style="color:#856404;">Check-in Necessário</h4>
-                                    <p style="font-size:0.9rem; margin-bottom:10px;">Informe o token de 6 dígitos para registrar sua presença.</p>
-                                    <div style="display:flex; gap:10px;">
-                                        <input type="text" id="token-input" placeholder="000000" maxlength="6" style="flex:1; text-align:center; font-size:1.2rem; letter-spacing:4px;" />
-                                        <button class="btn btn-primary" onclick="Assembleias.realizarCheckin('${id}')">Confirmar</button>
+                                <div class="section-box" style="border:1px solid #f1c40f; background:#fffdf0; padding:25px; text-align:center; border-radius:15px;">
+                                    <h4 style="color:#856404; margin-bottom:10px;">Check-in Necessário</h4>
+                                    <p style="font-size:1rem; margin-bottom:20px; color:#555;">Para participar e votar, informe o token de 6 dígitos fornecido pela mesa.</p>
+                                    <div style="display:flex; gap:10px; max-width:400px; margin:0 auto; flex-wrap:wrap;">
+                                        <input type="text" id="token-input" placeholder="000000" maxlength="6" style="flex:1; text-align:center; font-size:1.8rem; letter-spacing:8px; padding:10px; border:2px solid #f1c40f; border-radius:10px;" />
+                                        <button class="btn btn-primary btn-lg" style="padding:0 30px;" onclick="Assembleias.realizarCheckin('${id}')">Confirmar Presença</button>
                                     </div>
                                 </div>
                             `}
                         ` : `
-                            <div class="section-box" style="text-align:center; color:#666;">
-                                ${a.estado === 'CRIADA' ? 'Assembleia agendada. Aguarde a abertura.' : 'Assembleia encerrada.'}
+                            <div class="section-block section-block-alt" style="text-align:center; padding:40px;">
+                                <div style="font-size:3rem; margin-bottom:15px;">${a.estado === 'CRIADA' ? '⏳' : '🏁'}</div>
+                                <h3 style="color:#666;">
+                                    ${a.estado === 'CRIADA' ? 'Assembleia agendada. Aguarde a abertura oficial.' : 'Esta assembleia já foi encerrada.'}
+                                </h3>
                             </div>
                         `}
                     </div>
@@ -394,121 +415,125 @@
         const temAutoridade = isPresidente || isDiretoria;
 
         container.innerHTML = `
-            <div class="section-card" style="background:#fff; color:#333;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div class="section-card" style="background:#fff; color:#333; padding:25px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:10px;">
                     <button class="btn btn-outline btn-sm" onclick="Assembleias.abrirDetalhes('${assembleia.id}')">← Sair da Sala</button>
-                    <h3 style="color:#003366; margin:0;">🏛️ Sala de Votação</h3>
-                    <div class="filiado-badge">${quorumVigente?.total || 0} presentes</div>
+                    <h3 style="color:#003366; margin:0; text-align:center; flex:1; min-width:200px;">🏛️ Sala de Votação Interativa</h3>
+                    <div class="filiado-badge" style="background:#003366; color:#fff;">${quorumVigente?.total || 0} Presentes</div>
                 </div>
 
-                <div style="text-align:center; margin-bottom:20px;">
-                    <strong style="font-size:1.2rem; color:#003366;">${assembleia.titulo}</strong>
+                <div style="text-align:center; margin-bottom:30px; border-bottom:1px solid #eee; padding-bottom:15px;">
+                    <h4 style="color:#003366; font-size:1.3rem; margin:0;">${assembleia.titulo}</h4>
+                    <p style="margin-top:5px; color:#666; font-size:0.9rem;">${assembleia.tipo}</p>
                 </div>
 
                 <!-- Mesa -->
-                <div class="section-box" style="margin-bottom:20px; border-left:5px solid #003366; background:#f0f7ff;">
-                    <h4 style="color:#003366; margin-bottom:10px; text-align:center;">🧑‍⚖️ Mesa Diretora</h4>
-                    <div style="display:flex; justify-content:space-around; flex-wrap:wrap; gap:15px;">
+                <div class="section-box" style="margin-bottom:30px; border:1px solid #003366; background:#f0f7ff; border-radius:12px; padding:20px;">
+                    <h4 style="color:#003366; margin-bottom:15px; text-align:center; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;">🧑‍⚖️ Mesa Diretora</h4>
+                    <div style="display:flex; justify-content:space-around; flex-wrap:wrap; gap:20px;">
                         <div style="text-align:center;">
-                            <small style="color:#666;">Presidente</small><br>
-                            <strong>${mesa?.presidente_nome || 'A definir'}</strong>
+                            <small style="color:#666; font-weight:bold; text-transform:uppercase;">Presidente</small><br>
+                            <strong style="font-size:1.1rem; color:#003366;">${mesa?.presidente_nome || 'A definir'}</strong>
                         </div>
                         <div style="text-align:center;">
-                            <small style="color:#666;">Secretário</small><br>
-                            <strong>${mesa?.secretario_nome || 'A definir'}</strong>
+                            <small style="color:#666; font-weight:bold; text-transform:uppercase;">Secretário</small><br>
+                            <strong style="font-size:1.1rem; color:#003366;">${mesa?.secretario_nome || 'A definir'}</strong>
                         </div>
                     </div>
                 </div>
 
                 <!-- Votação Ativa -->
-                <div id="area-votacao-ativa" style="margin-bottom:20px;">
+                <div id="area-votacao-ativa" style="margin-bottom:35px;">
                     ${votacaoAtiva ? `
-                        <div class="section-box" style="border:2px solid #27ae60; background:#fafffa;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span class="filiado-badge" style="background:#27ae60; color:#fff;">VOTAÇÃO ATIVA</span>
-                                <div id="timer-votacao" style="font-weight:bold; color:#e74c3c; font-size:1.2rem;">--:--</div>
+                        <div class="section-block" style="border:3px solid #27ae60; background:#f9fff9; border-radius:15px; padding:25px; box-shadow:0 8px 25px rgba(39, 174, 96, 0.1);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <span class="filiado-badge" style="background:#27ae60; color:#fff; padding:6px 12px;">🗳️ VOTAÇÃO EM CURSO</span>
+                                <div id="timer-votacao" style="font-weight:bold; color:#e74c3c; font-size:1.8rem; font-family:monospace;">--:--</div>
                             </div>
-                            <h4 style="margin:10px 0; color:#333;">${votacaoAtiva.titulo}</h4>
-                            <p style="font-size:0.9rem; color:#666;">${votacaoAtiva.descricao}</p>
+                            <h4 style="margin:0 0 10px 0; color:#003366; font-size:1.4rem;">${votacaoAtiva.titulo}</h4>
+                            <p style="font-size:1rem; color:#444; line-height:1.5;">${votacaoAtiva.descricao}</p>
 
                             ${votacaoAtiva.status === 'ATIVA' && !votacaoAtiva.userVoted ? `
-                                <div style="display:flex; gap:10px; margin-top:15px;">
-                                    <button class="btn btn-success" style="flex:1; font-size:1.2rem;" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'SIM')">SIM</button>
-                                    <button class="btn btn-danger" style="flex:1; font-size:1.2rem;" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'NAO')">NÃO</button>
+                                <div style="display:flex; gap:15px; margin-top:25px; flex-wrap:wrap;">
+                                    <button class="btn btn-success btn-lg" style="flex:1; font-size:1.5rem; padding:15px; border-radius:12px;" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'SIM')">SIM</button>
+                                    <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.5rem; padding:15px; border-radius:12px;" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'NAO')">NÃO</button>
                                 </div>
                             ` : `
-                                <div style="margin-top:15px; text-align:center; color:#27ae60; font-weight:bold;">
-                                    ${votacaoAtiva.userVoted ? '✅ Seu voto foi registrado.' : 'Votação em processamento...'}
+                                <div style="margin-top:25px; padding:20px; text-align:center; color:#27ae60; font-weight:bold; background:#e8f5e9; border-radius:10px; font-size:1.2rem;">
+                                    ${votacaoAtiva.userVoted ? '✅ Seu voto foi computado com sucesso.' : 'Aguardando encerramento...'}
                                 </div>
                             `}
 
-                            <div style="margin-top:15px; display:flex; justify-content:space-between; font-size:0.9rem; border-top:1px solid #eee; padding-top:10px;">
-                                <span>SIM: <strong>${votacaoAtiva.contagem?.SIM || 0}</strong></span>
-                                <span>NÃO: <strong>${votacaoAtiva.contagem?.NAO || 0}</strong></span>
-                                <span>TOTAL: <strong>${votacaoAtiva.contagem?.total || 0}</strong></span>
+                            <div style="margin-top:25px; display:flex; justify-content:space-around; font-size:1rem; border-top:2px dashed #ddd; padding-top:20px; color:#333;">
+                                <span>SIM: <strong style="color:#27ae60; font-size:1.2rem;">${votacaoAtiva.contagem?.SIM || 0}</strong></span>
+                                <span>NÃO: <strong style="color:#e74c3c; font-size:1.2rem;">${votacaoAtiva.contagem?.NAO || 0}</strong></span>
+                                <span>TOTAL: <strong style="font-size:1.2rem;">${votacaoAtiva.contagem?.total || 0}</strong></span>
                             </div>
                         </div>
                     ` : `
-                        <div class="section-box" style="text-align:center; background:#f8f9fa; color:#999; padding:30px;">
-                            <p>Aguardando próximo item de pauta para votação...</p>
+                        <div class="section-block section-block-alt" style="text-align:center; padding:50px; border-radius:15px;">
+                            <div style="font-size:3rem; margin-bottom:15px;">📋</div>
+                            <p style="color:#666; font-size:1.1rem;">Aguardando o próximo item de pauta ser liberado pela mesa para votação.</p>
                         </div>
                     `}
                 </div>
 
                 <!-- Ações de Interação -->
-                <div style="display:flex; gap:10px; margin-bottom:20px;">
-                    <button class="btn btn-outline" style="flex:1;" onclick="Assembleias.pedirPalavra('${assembleia.id}')">🎤 Pedir Palavra</button>
-                    <button class="btn btn-outline" style="flex:1;" onclick="Assembleias.novaProposta('${assembleia.id}')">📝 Nova Proposta</button>
+                <div style="display:flex; gap:15px; margin-bottom:35px; flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-lg" style="flex:1; padding:15px;" onclick="Assembleias.pedirPalavra('${assembleia.id}')">🎤 Pedir a Palavra</button>
+                    <button class="btn btn-outline btn-lg" style="flex:1; padding:15px;" onclick="Assembleias.novaProposta('${assembleia.id}')">📝 Apresentar Proposta</button>
                 </div>
 
                 <!-- Listas de Interação -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:25px;">
                     <!-- Pedidos de Palavra -->
-                    <div>
-                        <h4 style="color:#003366; margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;">🗣️ Fila de Fala</h4>
-                        <div class="section-box" style="max-height:300px; overflow-y:auto; padding:5px;">
+                    <div class="section-box" style="background:#fff; border:1px solid #ddd; border-radius:12px; padding:15px;">
+                        <h4 style="color:#003366; margin-bottom:15px; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #eee; padding-bottom:8px; display:flex; align-items:center; gap:8px;">🗣️ Fila de Oradores</h4>
+                        <div style="max-height:300px; overflow-y:auto; padding:5px;">
                             ${pedidosPalavra?.length ? pedidosPalavra.map(p => `
-                                <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                                    <div style="font-size:0.85rem;">
-                                        <strong>${p.filiado_nome}</strong><br>
-                                        <small style="color:#999;">${p.status}</small>
+                                <div style="padding:12px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="font-size:0.95rem;">
+                                        <strong style="color:#003366;">${p.filiado_nome}</strong><br>
+                                        <span class="filiado-badge" style="font-size:0.7rem; margin-top:4px;">${p.status}</span>
                                     </div>
                                     ${temAutoridade && p.status === 'PENDENTE' ? `
-                                        <button class="btn btn-primary btn-sm" style="padding:2px 6px; font-size:0.7rem;" onclick="Assembleias.concederPalavra('${assembleia.id}', '${p.id}')">Conceder</button>
+                                        <button class="btn btn-primary btn-sm" onclick="Assembleias.concederPalavra('${assembleia.id}', '${p.id}')">Conceder</button>
                                     ` : ''}
                                 </div>
-                            `).join("") : '<p style="padding:10px; color:#999; font-size:0.8rem;">Ninguém na fila.</p>'}
+                            `).join("") : '<p style="padding:20px; color:#999; font-size:0.9rem; text-align:center; font-style:italic;">Ninguém na fila no momento.</p>'}
                         </div>
                     </div>
 
                     <!-- Propostas -->
-                    <div>
-                        <h4 style="color:#003366; margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;">📝 Propostas</h4>
-                        <div class="section-box" style="max-height:300px; overflow-y:auto; padding:5px;">
+                    <div class="section-box" style="background:#fff; border:1px solid #ddd; border-radius:12px; padding:15px;">
+                        <h4 style="color:#003366; margin-bottom:15px; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #eee; padding-bottom:8px; display:flex; align-items:center; gap:8px;">📝 Propostas em Pauta</h4>
+                        <div style="max-height:300px; overflow-y:auto; padding:5px;">
                             ${propostas?.length ? propostas.map(pr => `
-                                <div style="padding:8px; border-bottom:1px solid #eee;">
-                                    <div style="font-size:0.85rem;">
-                                        <strong>${pr.titulo}</strong><br>
-                                        <small style="color:#666;">${pr.autor_nome}</small>
+                                <div style="padding:12px; border-bottom:1px solid #f5f5f5;">
+                                    <div style="font-size:0.95rem;">
+                                        <strong style="color:#003366;">${pr.titulo}</strong><br>
+                                        <small style="color:#666;">Autor: ${pr.autor_nome}</small>
                                     </div>
-                                    <div style="font-size:0.75rem; color:#888; margin-top:4px;">${pr.status}</div>
+                                    <div style="margin-top:6px;">
+                                        <span class="filiado-badge" style="font-size:0.7rem;">${pr.status}</span>
+                                    </div>
                                     ${temAutoridade && pr.status === 'ATIVA' ? `
-                                        <button class="btn btn-success btn-sm" style="padding:2px 6px; font-size:0.7rem; margin-top:5px; width:100%;" onclick="Assembleias.votarProposta('${assembleia.id}', '${pr.id}')">Votar Proposta</button>
+                                        <button class="btn btn-success btn-sm" style="margin-top:10px; width:100%;" onclick="Assembleias.votarProposta('${assembleia.id}', '${pr.id}')">Submeter à Votação</button>
                                     ` : ''}
                                 </div>
-                            `).join("") : '<p style="padding:10px; color:#999; font-size:0.8rem;">Sem propostas.</p>'}
+                            `).join("") : '<p style="padding:20px; color:#999; font-size:0.9rem; text-align:center; font-style:italic;">Nenhuma proposta apresentada.</p>'}
                         </div>
                     </div>
                 </div>
 
                 ${temAutoridade ? `
-                    <div class="section-box" style="margin-top:20px; border:1px solid #e74c3c;">
-                        <h4 style="color:#e74c3c; margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;">🛠️ Comandos de Mesa</h4>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <div class="section-block" style="margin-top:40px; border:2px solid #e74c3c; background:#fff8f8; border-radius:15px; padding:20px;">
+                        <h4 style="color:#e74c3c; margin-bottom:15px; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:8px;">🛠️ Painel de Controle da Mesa</h4>
+                        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
                             <button class="btn btn-outline btn-sm" onclick="Assembleias.prepararVotacaoItem('${assembleia.id}')">➕ Novo Item Votação</button>
                             <button class="btn btn-outline btn-sm" onclick="Assembleias.solicitarRecontagem('${assembleia.id}')">🔄 Recontar Quórum</button>
                             ${votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
-                                <button class="btn btn-danger btn-sm" onclick="Assembleias.encerrarVotacaoManual('${assembleia.id}', '${votacaoAtiva.id}')">⏹️ Encerrar Votação</button>
+                                <button class="btn btn-danger btn-sm" onclick="Assembleias.encerrarVotacaoManual('${assembleia.id}', '${votacaoAtiva.id}')">⏹️ Encerrar Votação Agora</button>
                             ` : ''}
                         </div>
                     </div>

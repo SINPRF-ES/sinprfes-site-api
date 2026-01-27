@@ -310,8 +310,7 @@ const RessarcimentoScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>💸 Solicitação de Ressarcimento</Text>
+        <View style={styles.card}>
           <Text style={styles.headerSubtitle}>Preencha os dados abaixo e anexe os comprovantes.</Text>
         </View>
 
@@ -524,9 +523,7 @@ const RessarcimentoScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
   scrollContent: { paddingBottom: 40 },
-  header: { padding: 20, alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#003366', textAlign: 'center' },
-  headerSubtitle: { fontSize: 12, color: '#666', marginTop: 5, textAlign: 'center' },
+  headerSubtitle: { fontSize: 13, color: '#666', textAlign: 'center', fontStyle: 'italic' },
   card: { backgroundColor: '#fff', padding: 20, marginBottom: 15, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#eee' },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center', textTransform: 'uppercase' },
   label: { fontSize: 13, color: '#555', marginBottom: 5, fontWeight: 'bold' },

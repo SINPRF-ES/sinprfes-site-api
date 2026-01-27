@@ -1,6 +1,8 @@
 // src/screens/ResetPasswordScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import SafeScreen from '../components/SafeScreen';
 import { useNavigation } from '@react-navigation/native';
 import { resetarSenha } from '../services/authService';
 
@@ -32,9 +34,9 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
+    <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid>
       <View style={styles.card}>
-        <Text style={styles.title}>Redefinir Senha</Text>
         <Text style={styles.instructions}>
           Copie o código (token) recebido em seu e-mail e crie uma nova senha com no mínimo 6 caracteres.
         </Text>
@@ -65,16 +67,20 @@ export default function ResetPasswordScreen() {
           color="#666"
         />
       </View>
-    </View>
+    </KeyboardAwareScrollView>
+    </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#001A33',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#001A33',
   },
   card: {
     backgroundColor: '#ffffff',
