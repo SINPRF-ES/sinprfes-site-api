@@ -425,7 +425,7 @@ const RessarcimentoScreen = () => {
 
           <View style={styles.totalBox}>
             <Text style={styles.totalLabel}>Total a Receber</Text>
-            <Text style={styles.totalValue}>R$ {parseFloat(form.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</Text>
+            <Text style={styles.totalValue}>R$ {parsePtNumber(form.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</Text>
           </View>
         </View>
 

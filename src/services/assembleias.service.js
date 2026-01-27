@@ -23,8 +23,11 @@ const ASSEMBLEIA_COLUMNS = `
 function normalizarAssembleia(assembleia) {
   if (!assembleia) return null;
 
-  // Removido o rewrite manual de URL para PDF conforme diretriz.
-  // A URL deve ser persistida corretamente no upload ou acessada via proxy se antiga/quebrada.
+  // Nunca retorna link direto do Cloudinary para o cliente (Diretriz TAREFA 1)
+  // Se existe um edital, apontamos para o nosso proxy autenticado.
+  if (assembleia.edital_url || assembleia.edital_public_id) {
+    assembleia.edital_url = `/api/assembleias/${assembleia.id}/edital`;
+  }
 
   return assembleia;
 }

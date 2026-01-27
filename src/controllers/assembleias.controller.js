@@ -4,7 +4,7 @@ const filiadosService = require("../services/filiados.service");
 const pdfService = require("../services/pdf.service");
 const emailService = require("../services/email.service");
 const socket = require("../websocket/assembleia.socket");
-const { uploadFileBuffer } = require("../services/cloudinary.service");
+const { uploadFileBuffer, getSignedUrl } = require("../services/cloudinary.service");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
 const axios = require("axios");
@@ -826,12 +826,21 @@ async function proxyEdital(req, res) {
   const { id } = req.params;
   try {
     const assembleia = await service.buscarPorId(id);
-    if (!assembleia || !assembleia.edital_url) {
+    if (!assembleia || (!assembleia.edital_url && !assembleia.edital_public_id)) {
       return res.status(404).json({ error: "Edital não encontrado." });
     }
 
+    // Se tivermos public_id, geramos uma URL assinada fresca.
+    // Caso contrário (retrocompatibilidade), usamos a URL salva.
     let targetUrl = assembleia.edital_url;
-    log.info("AssembleiaProxyEditalAcessado", { requestId: req.requestId, assembleiaId: id, url: targetUrl });
+    if (assembleia.edital_public_id) {
+        targetUrl = getSignedUrl(assembleia.edital_public_id, {
+            resource_type: assembleia.edital_resource_type || 'raw',
+            type: assembleia.edital_type || 'authenticated'
+        });
+    }
+
+    log.info("AssembleiaProxyEditalAcessado", { requestId: req.requestId, assembleiaId: id });
 
     // Função interna para realizar o stream
     const performStream = async (url) => {
@@ -839,13 +848,13 @@ async function proxyEdital(req, res) {
         method: 'get',
         url: url,
         responseType: 'stream',
-        timeout: 15000,
+        timeout: 20000,
         validateStatus: (status) => status === 200
       });
 
-      const contentType = response.headers['content-type'] || (url.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+      const contentType = response.headers['content-type'] || (url.toLowerCase().includes('.pdf') ? 'application/pdf' : 'image/jpeg');
       res.setHeader('Content-Type', contentType);
-      const filename = assembleia.edital_public_id ? `${assembleia.edital_public_id}.${assembleia.edital_format || 'pdf'}` : `edital_${id}.pdf`;
+      const filename = assembleia.edital_public_id ? `edital_${assembleia.id}.${assembleia.edital_format || 'pdf'}` : `edital_${id}.pdf`;
       res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
       response.data.pipe(res);
@@ -854,13 +863,13 @@ async function proxyEdital(req, res) {
     try {
       await performStream(targetUrl);
     } catch (streamErr) {
-      // Se falhou (401/404) e for PDF com /image/upload/, tenta o fallback para /raw/upload/ (retrocompatibilidade)
+      // Fallback para URLs antigas mal formatadas (PDF em /image/)
       if ((streamErr.response?.status === 401 || streamErr.response?.status === 404) &&
-          targetUrl.toLowerCase().endsWith('.pdf') &&
+          targetUrl.toLowerCase().includes('.pdf') &&
           targetUrl.includes('/image/upload/')) {
 
         const fallbackUrl = targetUrl.replace('/image/upload/', '/raw/upload/');
-        log.info("AssembleiaProxyEditalFallback", { requestId: req.requestId, assembleiaId: id, from: targetUrl, to: fallbackUrl });
+        log.info("AssembleiaProxyEditalFallback", { requestId: req.requestId, assembleiaId: id });
         await performStream(fallbackUrl);
       } else {
         throw streamErr;
@@ -875,12 +884,12 @@ async function proxyEdital(req, res) {
       status: err.response?.status
     });
 
-    if (res.headersSent) return; // Evita erro se o stream já começou
+    if (res.headersSent) return;
 
     if (err.response?.status === 404) {
       return res.status(404).json({ error: "Arquivo não encontrado no provedor." });
     }
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 || err.response?.status === 403) {
       return res.status(403).json({ error: "Acesso negado pelo provedor de arquivos." });
     }
 
@@ -894,7 +903,6 @@ async function uploadEdital(req, res) {
       return res.status(400).json({ error: "Arquivo não enviado" });
     }
 
-    // PDFs devem ser enviados como 'raw' e imagens como 'image' para garantir delivery correto e evitar 401
     const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
     const isImage = req.file.mimetype?.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(req.file.originalname || '');
 
@@ -905,7 +913,7 @@ async function uploadEdital(req, res) {
       // Para 'raw' no Cloudinary, a extensão DEVE estar no public_id para delivery correto
       public_id: `edital_${Date.now()}${isPdf ? '.pdf' : ''}`,
       resource_type: resourceType,
-      type: "upload" // Garante que o arquivo é público
+      type: "authenticated" // Mudado de 'upload' para 'authenticated' para segurança
     });
 
     // Validação automática pós-upload (best-effort HEAD check)
@@ -944,8 +952,8 @@ async function uploadEdital(req, res) {
     });
 
     res.json({
-        url: result.secure_url,
-        secure_url: result.secure_url,
+        url: "/api/assembleias/proxy-edital", // URL fictícia para evitar exposição do Cloudinary
+        secure_url: "/api/assembleias/proxy-edital",
         public_id: result.public_id,
         resource_type: result.resource_type,
         type: result.type,

@@ -53,27 +53,23 @@ export default function FileViewerScreen({ route, navigation }: any) {
 
       const dest = buildCacheDest({ prefix: 'view', id: fileId || Date.now(), ext: extension });
 
-      logger.info('[file.download.start]', { remoteUrl, dest, extension, context, format });
+      let result;
 
-      let result = await FileSystem.downloadAsync(remoteUrl, dest);
-
-      logger.info('[file.download.success]', { status: result.status });
-
-      // Fallback controlado para proxy do sistema se falhar download direto de edital (Issue A)
-      if (result.status !== 200 && context === 'assembleia-edital' && fileId) {
+      // Para editais de assembleia, SEMPRE usamos o proxy do sistema para garantir autenticação e evitar 403 do Cloudinary
+      if (context === 'assembleia-edital' && fileId) {
           const proxyUrl = `${API_BASE_URL}/api/assembleias/${fileId}/edital`;
-          logger.info('[file.download.fallback.start]', { proxyUrl });
+          logger.info('[file.download.proxy.start]', { proxyUrl, dest });
 
-          try {
-              result = await FileSystem.downloadAsync(proxyUrl, dest, {
-                  headers: {
-                      'Authorization': `Bearer ${token}`
-                  }
-              });
-              logger.info('[file.download.fallback.success]', { status: result.status });
-          } catch (fallbackErr) {
-              logger.error('[file.download.fallback.error]', fallbackErr);
-          }
+          result = await FileSystem.downloadAsync(proxyUrl, dest, {
+              headers: {
+                  'Authorization': `Bearer ${token}`
+              }
+          });
+          logger.info('[file.download.proxy.success]', { status: result.status });
+      } else {
+          logger.info('[file.download.direct.start]', { remoteUrl, dest });
+          result = await FileSystem.downloadAsync(remoteUrl, dest);
+          logger.info('[file.download.direct.success]', { status: result.status });
       }
 
       if (result.status === 401 || result.status === 403) {
