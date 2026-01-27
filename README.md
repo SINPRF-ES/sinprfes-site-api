@@ -390,3 +390,13 @@ Para popular o banco de dados de homologação com usuários de teste e uma asse
 ASSEMBLEIA_ENV=hml DATABASE_URL=sua_url_aqui node scripts/assembleia-hml-seed.js
 ```
 **Atenção:** Este script é bloqueado em ambiente de produção para evitar poluição de dados reais.
+
+---
+
+## 🏛️ Governança de Assembleias (Novas Regras)
+
+Para garantir integridade e padronização dos processos deliberativos:
+
+- **Edictal PDF Obrigatório:** Toda nova assembleia deve obrigatoriamente possuir um edital em formato PDF.
+- **Integração com Biblioteca Digital:** Os editais não são mais carregados diretamente via upload no formulário. Eles devem ser selecionados a partir de arquivos já existentes na **Biblioteca Digital (Google Drive)**, utilizando o seletor integrado disponível no Site e App.
+- **Visualização Segura:** O acesso aos editais é feito exclusivamente através de um proxy autenticado do backend, garantindo que apenas usuários logados e autorizados possam visualizar os documentos.

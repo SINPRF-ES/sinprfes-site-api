@@ -9,11 +9,12 @@
     let folderStack = [];
     let currentBlobUrl = null;
 
-    async function inicializarPublicacoes(folderId = null) {
-        const secPub = document.getElementById("sec-publicacoes");
+    async function inicializarPublicacoes(folderId = null, options = {}) {
+        const { onSelectFile, containerId = "sec-publicacoes", isPicker = false } = options;
+        const secPub = document.getElementById(containerId);
         if (!secPub) return;
 
-        let container = secPub.querySelector('.section-card');
+        let container = isPicker ? secPub : secPub.querySelector('.section-card');
         if (!container) {
             container = document.createElement('div');
             container.className = 'section-card';
@@ -54,7 +55,14 @@
                 .doc-iframe { flex: 1; width: 100%; border: none; display: none; }
                 .doc-close {
                     position: absolute; top: -40px; right: 0; color: #fff; font-size: 2rem; cursor: pointer;
+                    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
                 }
+                .doc-download {
+                    position: absolute; top: -40px; right: 50px; color: #fff; font-size: 1.5rem; cursor: pointer;
+                    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+                    text-decoration: none;
+                }
+                .doc-download:hover, .doc-close:hover { color: #ccc; }
                 .doc-loader {
                     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                     display: flex; align-items: center; justify-content: center;
@@ -66,7 +74,8 @@
             const modalHtml = `
                 <div id="modal-documento" class="doc-modal">
                     <div style="position:relative; width:90%; height:90%;">
-                        <div class="doc-close" id="btn-fechar-modal">&times;</div>
+                        <a id="btn-baixar-modal" class="doc-download" title="Baixar Documento" download="documento.pdf">📥</a>
+                        <div class="doc-close" id="btn-fechar-modal" title="Fechar">&times;</div>
                         <div class="doc-content">
                             <div id="doc-loader" class="doc-loader">
                                 <div style="font-size:2rem; margin-bottom:10px;">⏳</div>
@@ -96,22 +105,37 @@
             };
         }
 
-        async function abrirArquivoSeguro(idArquivo) {
+        async function abrirArquivoSeguro(idArquivo, titulo = "documento") {
             const modal = document.getElementById('modal-documento');
             const loader = document.getElementById('doc-loader');
             const iframe = document.getElementById('iframe-documento');
+            const btnBaixar = document.getElementById('btn-baixar-modal');
 
             modal.classList.add('open');
             loader.style.display = 'flex';
             iframe.style.display = 'none';
             iframe.src = "";
+            if (btnBaixar) btnBaixar.style.display = 'none';
 
             try {
                 const res = await window.Api.apiFetch(`/api/publicacoes/arquivo/${idArquivo}`);
                 if (!res.ok) throw new Error("Erro API");
                 const blob = await res.blob();
+
+                // Detecta tipo para nome do arquivo no download
+                const contentType = res.headers.get("content-type") || "";
+                const isImage = contentType.startsWith("image/");
+                const extension = isImage ? ".jpg" : ".pdf";
+
                 currentBlobUrl = URL.createObjectURL(blob);
                 iframe.src = currentBlobUrl;
+
+                if (btnBaixar) {
+                    btnBaixar.href = currentBlobUrl;
+                    btnBaixar.download = `${titulo}${extension}`;
+                    btnBaixar.style.display = 'flex';
+                }
+
                 loader.style.display = 'none';
                 iframe.style.display = 'block';
             } catch (error) {
@@ -157,10 +181,10 @@
             const cardsHtml = lista.map(item => {
                 const isFolder = item.isFolder;
                 const icon = isFolder ? '📁' : (item.tipo === 'BALANCO' ? '📊' : '📄');
-                const btnText = isFolder ? "Abrir Pasta ➡️" : "👁️ Visualizar Agora";
-                const dataAttr = isFolder ? `data-folder-id="${item.id}"` : `data-file-id="${item.id}"`;
+                let btnText = isFolder ? "Abrir Pasta ➡️" : "👁️ Visualizar Agora";
+                if (isPicker && !isFolder) btnText = "✅ Selecionar este PDF";
 
-                // Removida a exibição da data (pub-meta) conforme solicitado
+                const dataAttr = isFolder ? `data-folder-id="${item.id}"` : `data-file-id="${item.id}"`;
 
                 return `
                     <div class="pub-card tipo-${item.tipo}" ${dataAttr}>
@@ -177,14 +201,21 @@
                 card.onclick = () => {
                     const idDestino = card.dataset.folderId;
                     folderStack.push(folderId);
-                    inicializarPublicacoes(idDestino);
+                    inicializarPublicacoes(idDestino, options);
                 };
             });
 
             container.querySelectorAll('.pub-card[data-file-id]').forEach(card => {
                 card.onclick = () => {
                     const idArquivo = card.dataset.fileId;
-                    abrirArquivoSeguro(idArquivo);
+                    const titulo = card.querySelector('.pub-title')?.innerText || "documento";
+                    const item = lista.find(i => i.id === idArquivo);
+
+                    if (isPicker && onSelectFile) {
+                        onSelectFile(item);
+                    } else {
+                        abrirArquivoSeguro(idArquivo, Utils.normalizeText(titulo).replace(/\s+/g, '_'));
+                    }
                 };
             });
 
@@ -200,7 +231,7 @@
             if (btn) {
                 btn.onclick = () => {
                     const idAnterior = folderStack.pop();
-                    inicializarPublicacoes(idAnterior);
+                    inicializarPublicacoes(idAnterior, options);
                 };
             }
         }

@@ -4,6 +4,7 @@ const filiadosService = require("../services/filiados.service");
 const pdfService = require("../services/pdf.service");
 const emailService = require("../services/email.service");
 const socket = require("../websocket/assembleia.socket");
+const driveService = require("../services/drive.service");
 const { uploadFileBuffer, getSignedUrl } = require("../services/cloudinary.service");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
@@ -138,10 +139,15 @@ async function criar(req, res) {
     const edital_resource_type = getVal('edital_resource_type', 'editalResourceType');
     const edital_type = getVal('edital_type', 'editalType');
     const edital_format = getVal('edital_format', 'editalFormat');
+    const edital_drive_file_id = getVal('edital_drive_file_id', 'editalDriveFileId');
 
     // 1. Validação de campos obrigatórios
     if (!tipo || !titulo || !data_evento || !hora_primeira_chamada || !hora_segunda_chamada) {
       return res.status(422).json({ error: "Título, tipo, data e horários de chamada são obrigatórios." });
+    }
+
+    if (!edital_drive_file_id) {
+        return res.status(422).json({ error: "O edital (PDF da Biblioteca Digital) é obrigatório para novas assembleias." });
     }
 
     // 2. Validação do Tipo
@@ -198,6 +204,7 @@ async function criar(req, res) {
       edital_resource_type,
       edital_type,
       edital_format,
+      edital_drive_file_id,
       data_evento,
       hora_primeira_chamada,
       hora_segunda_chamada,
@@ -826,8 +833,29 @@ async function proxyEdital(req, res) {
   const { id } = req.params;
   try {
     const assembleia = await service.buscarPorId(id);
-    if (!assembleia || (!assembleia.edital_url && !assembleia.edital_public_id)) {
+    if (!assembleia || (!assembleia.edital_url && !assembleia.edital_public_id && !assembleia.edital_drive_file_id)) {
       return res.status(404).json({ error: "Edital não encontrado." });
+    }
+
+    // 🟢 NOVA REGRA: Preferência absoluta para Google Drive (Canonização)
+    if (assembleia.edital_drive_file_id) {
+        log.info("AssembleiaProxyEditalAcessadoDrive", { requestId: req.requestId, assembleiaId: id });
+        try {
+            const dados = await driveService.obterArquivoStream(assembleia.edital_drive_file_id);
+
+            // Força Content-Type PDF se for do Drive (já que agora é obrigatório ser PDF)
+            const contentType = dados.mimeType === 'application/octet-stream' ? 'application/pdf' : dados.mimeType;
+
+            res.setHeader("Content-Type", contentType);
+            res.setHeader("Content-Disposition", `inline; filename="edital_${id}.pdf"`);
+            return dados.stream.pipe(res);
+        } catch (driveErr) {
+            log.error("AssembleiaProxyEditalErroDrive", { requestId: req.requestId, error: driveErr.message });
+            // Se falhar no Drive e NÃO houver fallback legada, retorna erro
+            if (!assembleia.edital_url && !assembleia.edital_public_id) {
+                return res.status(502).json({ error: "Falha ao recuperar edital da Biblioteca Digital." });
+            }
+        }
     }
 
     // Se tivermos public_id, geramos uma URL assinada fresca.
@@ -904,16 +932,23 @@ async function uploadEdital(req, res) {
     }
 
     const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
+
+    if (isPdf) {
+        return res.status(400).json({
+            error: "Upload direto de PDF desativado para assembleias.",
+            message: "Por favor, utilize o seletor da Biblioteca Digital (Google Drive) para anexar o edital."
+        });
+    }
+
     const isImage = req.file.mimetype?.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(req.file.originalname || '');
 
-    const resourceType = isPdf ? "raw" : (isImage ? "image" : "auto");
+    const resourceType = isImage ? "image" : "auto";
 
     const result = await uploadFileBuffer(req.file.buffer, {
       folder: "sinprfes/editais",
-      // Para 'raw' no Cloudinary, a extensão DEVE estar no public_id para delivery correto
-      public_id: `edital_${Date.now()}${isPdf ? '.pdf' : ''}`,
+      public_id: `edital_${Date.now()}`,
       resource_type: resourceType,
-      type: "authenticated" // Mudado de 'upload' para 'authenticated' para segurança
+      type: "authenticated"
     });
 
     // Validação automática pós-upload (best-effort HEAD check)
@@ -957,7 +992,8 @@ async function uploadEdital(req, res) {
         public_id: result.public_id,
         resource_type: result.resource_type,
         type: result.type,
-        format: result.format || (isPdf ? "pdf" : null)
+        format: result.format || (isPdf ? "pdf" : null),
+        edital_drive_file_id: result.edital_drive_file_id || null
     });
   } catch (err) {
     log.error("AssembleiaUploadEditalErro", { error: err.message, requestId: req.requestId });

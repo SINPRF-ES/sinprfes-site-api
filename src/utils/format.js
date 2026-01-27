@@ -67,12 +67,40 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
+/**
+ * Aplica máscara de Agência: 0000-0 ou 0000
+ */
+function formatarAgencia(agencia) {
+  if (!agencia) return "-";
+  const limpa = agencia.toString().replace(/\D/g, "");
+  if (limpa.length < 1) return agencia;
+  // Preserva zeros à esquerda e tenta colocar hífen se tiver 5 ou mais dígitos (comum em DV)
+  // Mas o requisito diz: manter dígito verificador quando houver (ex.: 1234-5)
+  if (limpa.length === 5) {
+    return limpa.replace(/(\d{4})(\d{1})/, "$1-$2");
+  }
+  return agencia; // Se for 4 dígitos ou outro formato, retorna como está
+}
+
+/**
+ * Aplica máscara de Conta: 000000-0
+ */
+function formatarConta(conta) {
+  if (!conta) return "-";
+  const limpa = conta.toString().replace(/\D/g, "");
+  if (limpa.length < 2) return conta;
+  // Coloca hífen antes do último dígito (DV)
+  return limpa.replace(/(\d+)(\d{1})$/, "$1-$2");
+}
+
 module.exports = {
   normalizarCpf,
   normalizarCep,
   formatarCPF,
   formatarTelefone,
   formatarDataBR,
+  formatarAgencia,
+  formatarConta,
   escapeHtml,
   // normalizarDataEntrada e normalizarDataBanco removidas.
 };
