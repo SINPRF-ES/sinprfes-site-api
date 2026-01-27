@@ -24,6 +24,13 @@ import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import api from '../services/apiService';
 
+const parsePtNumber = (input: string): number => {
+  if (!input) return 0;
+  const normalized = input.trim().replace(/\s/g, '').replace(',', '.');
+  const num = Number(normalized);
+  return isNaN(num) ? 0 : num;
+};
+
 const BANCOS_LISTA = [
   { code: "001", name: "Banco do Brasil" },
   { code: "104", name: "Caixa Econômica" },
@@ -118,8 +125,8 @@ const RessarcimentoScreen = () => {
     setForm(prev => {
       const ini = prev.data_inicio;
       const fim = prev.data_fim;
-      const km = parseFloat(prev.km_total) || 0;
-      const outros = parseFloat(prev.valor_outros) || 0;
+      const km = parsePtNumber(prev.km_total);
+      const outros = parsePtNumber(prev.valor_outros);
 
       let dias = 0;
       if (ini && fim && ini.length === 10 && fim.length === 10) {
@@ -418,7 +425,7 @@ const RessarcimentoScreen = () => {
 
           <View style={styles.totalBox}>
             <Text style={styles.totalLabel}>Total a Receber</Text>
-            <Text style={styles.totalValue}>R$ {parseFloat(form.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</Text>
+            <Text style={styles.totalValue}>R$ {parsePtNumber(form.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</Text>
           </View>
         </View>
 

@@ -69,8 +69,20 @@ function uploadFileBuffer(buffer, options = {}) {
   });
 }
 
+/**
+ * Gera uma URL assinada para recursos que não são públicos.
+ */
+function getSignedUrl(publicId, options = {}) {
+  return cloudinary.url(publicId, {
+    sign_url: true,
+    secure: true,
+    ...options,
+  });
+}
+
 module.exports = {
   uploadAvatarBuffer,
   deleteAvatarByPublicId,
   uploadFileBuffer,
+  getSignedUrl,
 };
