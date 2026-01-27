@@ -60,6 +60,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         placeholder="Nome completo"
         value={filiado?.[`dep${index}_nome`] || ''}
         onChangeText={(text) => handleDependentChange('nome', text)}
+        accessibilityLabel={`Nome do Dependente ${index}`}
       />
 
       <Text style={styles.label}>CPF</Text>
@@ -70,6 +71,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         onChangeText={(text) => handleDependentChange('cpf', text, true)}
         keyboardType="numeric"
         maxLength={14}
+        accessibilityLabel={`CPF do Dependente ${index}`}
       />
 
       <Text style={styles.label}>Data de Nascimento</Text>
@@ -80,6 +82,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}
+        accessibilityLabel={`Data de Nascimento do Dependente ${index}`}
       />
 
       <Text style={styles.label}>Idade</Text>
@@ -87,6 +90,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         style={styles.inputDisabled}
         value={calculateAgeBreakdown(filiado?.[`dep${index}_data_nascimento`] || null)}
         editable={false}
+        accessibilityLabel={`Idade do Dependente ${index}`}
       />
 
       <Text style={styles.label}>Parentesco</Text>
@@ -109,6 +113,7 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
             placeholder="Informe o parentesco"
             value={currentParentescoValue}
             onChangeText={(text) => handleDependentChange('parentesco', text)}
+            accessibilityLabel={`Outro parentesco do Dependente ${index}`}
           />
         </>
       )}

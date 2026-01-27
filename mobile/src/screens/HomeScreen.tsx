@@ -61,6 +61,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               logNavigation(item.screen);
               navigation.navigate(item.screen as any);
             }}
+            accessibilityRole="link"
+            accessibilityLabel={item.label}
           >
             <MaterialCommunityIcons name={item.icon as any} size={40} color="#003366" />
             <Text style={styles.cardLabel}>{item.label}</Text>

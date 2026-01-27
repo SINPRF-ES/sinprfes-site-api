@@ -50,6 +50,11 @@ export default function ForgotPasswordScreen() {
           }}
           keyboardType="numeric"
           maxLength={14}
+          accessibilityLabel="CPF"
+          textContentType="username"
+          autoComplete="username"
+          returnKeyType="send"
+          onSubmitEditing={handleRequestReset}
         />
         <Button
           title={loading ? 'Enviando...' : 'Enviar Solicitação'}

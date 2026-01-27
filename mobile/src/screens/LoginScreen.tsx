@@ -184,6 +184,9 @@ export default function LoginScreen() {
           keyboardType="numeric"
           maxLength={14}
           editable={isEtapaCredenciais}
+          textContentType="username"
+          autoComplete="username"
+          returnKeyType="next"
         />
 
         <View style={styles.passwordContainer}>
@@ -195,6 +198,10 @@ export default function LoginScreen() {
             secureTextEntry={!showPassword}
             editable={isEtapaCredenciais}
             accessibilityLabel="Senha"
+            textContentType="password"
+            autoComplete="password"
+            returnKeyType="done"
+            onSubmitEditing={handleLoginCredenciais}
           />
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
@@ -225,7 +232,18 @@ export default function LoginScreen() {
         ) : (
           <>
             <Text style={styles.info2fa}>Digite o código gerado pelo seu aplicativo autenticador (2FA).</Text>
-            <TextInput style={styles.input} placeholder="Código 2FA" value={codigo2FA} onChangeText={setCodigo2FA} keyboardType="numeric" />
+            <TextInput
+              style={styles.input}
+              placeholder="Código 2FA"
+              value={codigo2FA}
+              onChangeText={setCodigo2FA}
+              keyboardType="numeric"
+              accessibilityLabel="Código 2FA"
+              textContentType="oneTimeCode"
+              autoComplete="one-time-code"
+              returnKeyType="done"
+              onSubmitEditing={handleLogin2FA}
+            />
 
             <View style={styles.buttonRow}>
               <View style={styles.buttonCol}>

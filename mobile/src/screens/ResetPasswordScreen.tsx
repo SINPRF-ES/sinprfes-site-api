@@ -46,6 +46,10 @@ export default function ResetPasswordScreen() {
           value={token}
           onChangeText={setToken}
           autoCapitalize="none"
+          accessibilityLabel="Código Token"
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
+          returnKeyType="next"
         />
         <TextInput
           style={styles.input}
@@ -53,6 +57,11 @@ export default function ResetPasswordScreen() {
           value={novaSenha}
           onChangeText={setNovaSenha}
           secureTextEntry
+          accessibilityLabel="Nova Senha"
+          textContentType="newPassword"
+          autoComplete="password-new"
+          returnKeyType="done"
+          onSubmitEditing={handleResetPassword}
         />
         <Button
           title={loading ? 'Redefinindo...' : 'Redefinir Senha'}
