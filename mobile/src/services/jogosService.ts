@@ -4,8 +4,12 @@ import { logError } from '../infra/logger';
 export const getMinhaInscricaoJogos = async () => {
   try {
     const response = await api.get('/api/jogos/inscricao');
+    if (response.status === 204) return null;
     return response.data;
-  } catch (err) {
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      return null;
+    }
     logError('Service.getMinhaInscricaoJogos', err);
     throw err;
   }

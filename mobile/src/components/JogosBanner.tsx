@@ -31,17 +31,17 @@ const JogosBanner = () => {
         // 2. Verificar se já está inscrito
         try {
           const inscricao = await getMinhaInscricaoJogos();
-          // Se 200 OK, o usuário já está inscrito
-          setVisible(false);
-        } catch (err: any) {
-          if (err.response?.status === 404) {
-            // 404 significa que não há inscrição encontrada -> Mostrar banner
+          // Se inscricao for null (204 ou 404), o usuário não está inscrito -> Mostrar banner
+          if (!inscricao) {
             setVisible(true);
           } else {
-            // Outros erros (500, timeout) -> Silenciar para não travar UX
-            logger.warn('[JogosBanner.checkStatus] Falha silenciosa ao verificar inscrição', { status: err.response?.status });
+            // Se houver dados, o usuário já está inscrito
             setVisible(false);
           }
+        } catch (err: any) {
+          // Outros erros (500, timeout) -> Silenciar para não travar UX
+          logger.warn('[JogosBanner.checkStatus] Falha silenciosa ao verificar inscrição', { status: err.response?.status });
+          setVisible(false);
         }
       } catch (err) {
         logger.error('[JogosBanner.checkStatus] Erro inesperado', err);
@@ -98,7 +98,7 @@ const JogosBanner = () => {
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-            <Text style={styles.registerButtonText}>Inscrever-se</Text>
+            <Text style={styles.registerButtonText} numberOfLines={1}>Inscrever-se</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.dontShowButton} onPress={handleDontShowAgain}>
@@ -165,16 +165,17 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
+    justifyContent: 'flex-start',
+    gap: 12,
   },
   registerButton: {
     backgroundColor: '#003366',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 110,
   },
   registerButtonText: {
     color: '#FFFFFF',

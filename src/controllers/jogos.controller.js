@@ -252,9 +252,7 @@ exports.obterMinhaInscricao = async (req, res) => {
     const { rows } = await pool.query(query, [userId]);
 
     if (!rows || rows.length === 0) {
-      return res.status(404).json({
-        error: "Nenhuma pré-inscrição encontrada para este usuário.",
-      });
+      return res.status(204).send();
     }
 
     log.info("JogosMinhaInscricaoVisualizada", { userId });
