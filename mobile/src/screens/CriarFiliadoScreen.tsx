@@ -29,7 +29,7 @@ const initialFiliadoState: Partial<Filiado> = {
   complemento: '',
   cidade: '',
   uf: '',
-  lotacao: 'SR-ES', // Valor padrão
+  lotacao: 'SEDE', // Valor padrão
   situacao: 'ATIVO', // Valor padrão
   perfil_acesso: 'FILIADO', // Valor padrão
   dep1_nome: '', dep1_cpf: '', dep1_nascimento: null, dep1_parentesco: '',
