@@ -12,8 +12,22 @@ function normalizarCep(cep) {
   return limpo.slice(0, 8);
 }
 
+/**
+ * Escapa caracteres HTML perigosos para prevenir XSS.
+ */
+function escapeHtml(text) {
+  if (typeof text !== "string") return text;
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 module.exports = {
   normalizarCpf,
   normalizarCep,
+  escapeHtml,
   // normalizarDataEntrada e normalizarDataBanco removidas.
 };
