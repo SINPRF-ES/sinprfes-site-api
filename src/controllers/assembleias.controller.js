@@ -4,6 +4,7 @@ const filiadosService = require("../services/filiados.service");
 const pdfService = require("../services/pdf.service");
 const emailService = require("../services/email.service");
 const socket = require("../websocket/assembleia.socket");
+const driveService = require("../services/drive.service");
 const { uploadFileBuffer, getSignedUrl } = require("../services/cloudinary.service");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
@@ -826,8 +827,25 @@ async function proxyEdital(req, res) {
   const { id } = req.params;
   try {
     const assembleia = await service.buscarPorId(id);
-    if (!assembleia || (!assembleia.edital_url && !assembleia.edital_public_id)) {
+    if (!assembleia || (!assembleia.edital_url && !assembleia.edital_public_id && !assembleia.edital_drive_file_id)) {
       return res.status(404).json({ error: "Edital não encontrado." });
+    }
+
+    // Preferência 1: Google Drive (mais robusto para PDFs)
+    if (assembleia.edital_drive_file_id) {
+        log.info("AssembleiaProxyEditalAcessadoDrive", { requestId: req.requestId, assembleiaId: id });
+        try {
+            const dados = await driveService.obterArquivoStream(assembleia.edital_drive_file_id);
+            res.setHeader("Content-Type", dados.mimeType);
+            res.setHeader("Content-Disposition", `inline; filename="${dados.name}"`);
+            return dados.stream.pipe(res);
+        } catch (driveErr) {
+            log.error("AssembleiaProxyEditalErroDrive", { requestId: req.requestId, error: driveErr.message });
+            // Se falhar no Drive, tenta o fallback para Cloudinary se existir
+            if (!assembleia.edital_url && !assembleia.edital_public_id) {
+                return res.status(404).json({ error: "Erro ao carregar edital do Drive." });
+            }
+        }
     }
 
     // Se tivermos public_id, geramos uma URL assinada fresca.
@@ -916,6 +934,22 @@ async function uploadEdital(req, res) {
       type: "authenticated" // Mudado de 'upload' para 'authenticated' para segurança
     });
 
+    // Se for PDF, salva também no Google Drive (Robustez contra 403 do Cloudinary raw)
+    if (isPdf) {
+      try {
+        const driveFileId = await driveService.uploadFile(
+          req.file.buffer,
+          `edital_${Date.now()}.pdf`,
+          'application/pdf'
+        );
+        result.edital_drive_file_id = driveFileId;
+        log.info("AssembleiaUploadEditalDriveSucesso", { driveFileId, requestId: req.requestId });
+      } catch (driveErr) {
+        log.error("AssembleiaUploadEditalDriveErro", { error: driveErr.message, requestId: req.requestId });
+        // Não falha o upload se o Cloudinary deu certo, mas logamos o erro.
+      }
+    }
+
     // Validação automática pós-upload (best-effort HEAD check)
     try {
       // Aumentado timeout para 10s e adicionado log detalhado para debug de 502/Bad Gateway
@@ -957,7 +991,8 @@ async function uploadEdital(req, res) {
         public_id: result.public_id,
         resource_type: result.resource_type,
         type: result.type,
-        format: result.format || (isPdf ? "pdf" : null)
+        format: result.format || (isPdf ? "pdf" : null),
+        edital_drive_file_id: result.edital_drive_file_id || null
     });
   } catch (err) {
     log.error("AssembleiaUploadEditalErro", { error: err.message, requestId: req.requestId });

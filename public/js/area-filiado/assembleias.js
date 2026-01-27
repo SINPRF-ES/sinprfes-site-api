@@ -63,7 +63,7 @@
         const modalHtml = `
             <div id="modal-documento" class="doc-modal">
                 <div style="position:relative; width:90%; height:90%;">
-                    <a id="btn-baixar-modal" class="doc-download" title="Baixar Documento" download="edital.pdf">📥</a>
+                    <a id="btn-baixar-modal" class="doc-download" title="Baixar Documento" download="documento.pdf">📥</a>
                     <div class="doc-close" id="btn-fechar-modal" title="Fechar">&times;</div>
                     <div class="doc-content">
                         <div id="doc-loader" class="doc-loader">
@@ -927,7 +927,8 @@
                 edital_public_id: editalData?.public_id || null,
                 edital_resource_type: editalData?.resource_type || null,
                 edital_type: editalData?.type || null,
-                edital_format: editalData?.format || null
+                edital_format: editalData?.format || null,
+                edital_drive_file_id: editalData?.edital_drive_file_id || null
             };
 
             const res = await window.Api.apiFetch("/api/assembleias", {

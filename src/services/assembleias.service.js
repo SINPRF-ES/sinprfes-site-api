@@ -14,7 +14,7 @@ const ASSEMBLEIA_STATES = {
 const ASSEMBLEIA_COLUMNS = `
   id, tipo, titulo, pauta, estado, criado_por as criada_por_user_id, aberta_em, encerrada_em, criado_em,
   data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada,
-  edital_public_id, edital_resource_type, edital_type, edital_format
+  edital_public_id, edital_resource_type, edital_type, edital_format, edital_drive_file_id
 `;
 
 /**
@@ -25,7 +25,7 @@ function normalizarAssembleia(assembleia) {
 
   // Nunca retorna link direto do Cloudinary para o cliente (Diretriz TAREFA 1)
   // Se existe um edital, apontamos para o nosso proxy autenticado.
-  if (assembleia.edital_url || assembleia.edital_public_id) {
+  if (assembleia.edital_url || assembleia.edital_public_id || assembleia.edital_drive_file_id) {
     assembleia.edital_url = `/api/assembleias/${assembleia.id}/edital`;
   }
 
@@ -71,7 +71,7 @@ async function criar(dados) {
   let {
     tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento,
     hora_primeira_chamada, hora_segunda_chamada,
-    edital_public_id, edital_resource_type, edital_type, edital_format
+    edital_public_id, edital_resource_type, edital_type, edital_format, edital_drive_file_id
   } = dados;
 
   // Sanitização contra XSS
@@ -87,18 +87,20 @@ async function criar(dados) {
     `INSERT INTO assembleias (
         tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url,
         data_evento, hora_primeira_chamada, hora_segunda_chamada, estado,
-        edital_public_id, edital_resource_type, edital_type, edital_format
+        edital_public_id, edital_resource_type, edital_type, edital_format,
+        edital_drive_file_id
      )
      VALUES (
         $1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''),
         NULLIF($7, '')::DATE, NULLIF($8, '')::TIME, NULLIF($9, '')::TIME, 'CRIADA',
-        $10, $11, $12, $13
+        $10, $11, $12, $13, $14
      )
      RETURNING ${ASSEMBLEIA_COLUMNS}`,
     [
         tipoNorm, titulo, pauta, criado_por, data_hora_inicio, edital_url,
         data_evento, hora_primeira_chamada, hora_segunda_chamada,
-        edital_public_id, edital_resource_type, edital_type, edital_format
+      edital_public_id, edital_resource_type, edital_type, edital_format,
+      edital_drive_file_id
     ]
   );
   const nova = rows[0];
