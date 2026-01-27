@@ -2,6 +2,7 @@
 const pool = require("../config/db");
 const Textos = require("../utils/textos");
 const log = require("../utils/log");
+const { escapeHtml } = require("../utils/format");
 
 const ASSEMBLEIA_STATES = {
   CRIADA: 'CRIADA',
@@ -64,11 +65,15 @@ async function buscarPorId(id) {
 }
 
 async function criar(dados) {
-  const {
+  let {
     tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url, data_evento,
     hora_primeira_chamada, hora_segunda_chamada,
     edital_public_id, edital_resource_type, edital_type, edital_format
   } = dados;
+
+  // Sanitização contra XSS
+  titulo = escapeHtml(titulo);
+  pauta = escapeHtml(pauta);
 
   // Normalização do tipo para o padrão de banco (AGE/AGO) se necessário
   let tipoNorm = tipo;
@@ -420,7 +425,11 @@ async function criarVotacao(dados, externalClient = null) {
   try {
     if (!externalClient) await client.query('BEGIN');
 
-    const { assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, iniciada_por_user_id } = dados;
+    let { assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, iniciada_por_user_id } = dados;
+
+    // Sanitização contra XSS
+    titulo = escapeHtml(titulo);
+    descricao = escapeHtml(descricao);
 
     const { rows: assRows } = await client.query(`SELECT estado FROM assembleias WHERE id = $1 FOR UPDATE`, [assembleia_id]);
     const assembleia = assRows[0];
@@ -688,7 +697,10 @@ async function definirMesa(dados) {
 }
 
 async function substituirMesa(dados) {
-  const { assembleia_id, presidente_user_id, secretario_user_id, substituida_por_user_id, justificativa } = dados;
+  let { assembleia_id, presidente_user_id, secretario_user_id, substituida_por_user_id, justificativa } = dados;
+
+  // Sanitização contra XSS
+  justificativa = escapeHtml(justificativa);
 
   if (presidente_user_id === secretario_user_id) {
     throw new Error("Presidente e Secretário devem ser pessoas diferentes");
@@ -821,7 +833,8 @@ async function concederPalavra(assembleiaId, pedidoId, userId) {
 }
 
 async function criarProposta(dados) {
-  const { assembleia_id, autor_id, titulo, pauta } = dados;
+  const { assembleia_id, autor_id, pauta } = dados;
+  let { titulo } = dados;
 
   if (!titulo || titulo.trim().length < 5) {
     throw new Error("O título da proposta deve ter pelo menos 5 caracteres.");
@@ -829,6 +842,10 @@ async function criarProposta(dados) {
   if (!pauta || pauta.trim().length < 10) {
     throw new Error("A descrição (pauta) da proposta deve ter pelo menos 10 caracteres.");
   }
+
+  // Sanitização contra XSS (após validação de tamanho)
+  titulo = escapeHtml(titulo);
+  const pautaSanitizada = escapeHtml(pauta);
 
   const client = await pool.connect();
   try {
@@ -852,7 +869,7 @@ async function criarProposta(dados) {
       `INSERT INTO assembleia_propostas (assembleia_id, autor_id, titulo, descricao, status)
        VALUES ($1, $2, $3, $4, 'ATIVA')
        RETURNING *`,
-      [assembleia_id, autor_id, titulo.trim(), pauta.trim()]
+      [assembleia_id, autor_id, titulo.trim(), pautaSanitizada.trim()]
     );
     const proposta = rows[0];
 
