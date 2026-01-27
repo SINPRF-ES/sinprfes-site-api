@@ -80,15 +80,17 @@ api.interceptors.response.use(
       responseData: contentType.includes('application/json') ? response?.data : '[Non-JSON Content]',
     };
 
-    // Redução de ruído para erros best-effort (ex: Push Register 500)
+    // Redução de ruído para erros best-effort (ex: Push Register 500, Jogos check 404)
     const isPushRegister = url?.includes('/api/push/register');
-    if (isPushRegister && status === 500) {
-      logger.warn(`API Best-Effort Fail: ${method?.toUpperCase()} ${url} | Status: 500 | Message: ${message}`, { requestId: response?.headers?.['x-request-id'] });
+    const isJogosCheck = url?.includes('/api/jogos/inscricao') && method?.toLowerCase() === 'get';
+
+    if ((isPushRegister && status === 500) || (isJogosCheck && status === 404)) {
+      logger.warn(`API Best-Effort/Expected Fail: ${method?.toUpperCase()} ${url} | Status: ${status} | Message: ${message}`, { requestId: response?.headers?.['x-request-id'] });
     } else {
       logger.error(
         `API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
         new Error(message),
-        { status, ...sanitizedError }
+        sanitizedError
       );
     }
 

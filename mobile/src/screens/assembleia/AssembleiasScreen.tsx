@@ -155,6 +155,7 @@ const styles = StyleSheet.create({
   filterLabel: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginRight: 10 },
   pickerWrapper: {
     flex: 1,
+    minWidth: 0,
     height: 40,
     justifyContent: 'center',
     backgroundColor: '#f2f4f8',
