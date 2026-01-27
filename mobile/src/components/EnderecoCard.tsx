@@ -56,6 +56,9 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
             placeholder="00000-000"
             keyboardType="numeric"
             maxLength={9} // 00000-000
+            accessibilityLabel="CEP"
+            textContentType="postalCode"
+            autoComplete="postal-code"
           />
         </View>
         {isBuscando ? (
@@ -70,6 +73,8 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
         value={filiado?.logradouro_bairro || ''}
         placeholder="Preenchido pela busca de CEP"
         editable={false}
+        accessibilityLabel="Logradouro e Bairro"
+        textContentType="streetAddressLine1"
       />
       <View style={styles.row}>
         <View style={styles.col}>
@@ -79,6 +84,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
             value={filiado?.numero || ''}
             onChangeText={(text) => setFiliado(f => f ? { ...f, numero: text } : null)}
             placeholder="Nº"
+            accessibilityLabel="Número"
           />
         </View>
         <View style={styles.col}>
@@ -88,6 +94,8 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
             value={filiado?.complemento || ''}
             onChangeText={(text) => setFiliado(f => f ? { ...f, complemento: text } : null)}
             placeholder="Opcional"
+            accessibilityLabel="Complemento"
+            textContentType="streetAddressLine2"
           />
         </View>
       </View>
@@ -99,6 +107,8 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
             value={filiado?.cidade || ''}
             placeholder="Cidade"
             editable={false}
+            accessibilityLabel="Cidade"
+            textContentType="addressCity"
           />
         </View>
         <View style={styles.col}>
@@ -109,6 +119,8 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
             placeholder="UF"
             maxLength={2}
             editable={false}
+            accessibilityLabel="UF"
+            textContentType="addressState"
           />
         </View>
       </View>

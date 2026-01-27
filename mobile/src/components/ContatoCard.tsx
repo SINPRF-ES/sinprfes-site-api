@@ -36,6 +36,9 @@ const ContatoCard: React.FC<Props> = ({
         onChangeText={(text) => setFiliado(f => f ? { ...f, nome: text } : null)}
         placeholder="Nome completo"
         editable={isManagement}
+        accessibilityLabel="Nome Completo"
+        textContentType="name"
+        autoComplete="name"
       />
 
       <Text style={styles.label}>CPF</Text>
@@ -47,6 +50,9 @@ const ContatoCard: React.FC<Props> = ({
         keyboardType="numeric"
         maxLength={14}
         editable={isManagement}
+        accessibilityLabel="CPF"
+        textContentType="username"
+        autoComplete="username"
       />
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
@@ -61,6 +67,8 @@ const ContatoCard: React.FC<Props> = ({
         keyboardType="numeric"
         maxLength={10}
         editable={isManagement}
+        accessibilityLabel="Data de Nascimento"
+        textContentType="birthdate"
       />
 
       <Text style={styles.label}>Idade</Text>
@@ -68,6 +76,7 @@ const ContatoCard: React.FC<Props> = ({
         style={styles.inputDisabled}
         value={calculateAgeBreakdown(filiado?.data_nascimento || null)}
         editable={false}
+        accessibilityLabel="Idade"
       />
 
       <Text style={styles.label}>Telefone 1</Text>
@@ -79,6 +88,9 @@ const ContatoCard: React.FC<Props> = ({
         keyboardType="phone-pad"
         maxLength={15} // (xx) xxxxx-xxxx
         editable={isEditing}
+        accessibilityLabel="Telefone 1"
+        textContentType="telephoneNumber"
+        autoComplete="tel"
       />
       <Text style={styles.label}>Telefone 2</Text>
       <TextInput
@@ -89,6 +101,9 @@ const ContatoCard: React.FC<Props> = ({
         keyboardType="phone-pad"
         maxLength={15}
         editable={isEditing}
+        accessibilityLabel="Telefone 2"
+        textContentType="telephoneNumber"
+        autoComplete="tel"
       />
       <Text style={styles.label}>Email 1</Text>
       <TextInput
@@ -98,6 +113,9 @@ const ContatoCard: React.FC<Props> = ({
         placeholder="seu@email.com"
         keyboardType="email-address"
         autoCapitalize="none"
+        accessibilityLabel="Email 1"
+        textContentType="emailAddress"
+        autoComplete="email"
       />
       <Text style={styles.label}>Email 2</Text>
       <TextInput
@@ -107,6 +125,9 @@ const ContatoCard: React.FC<Props> = ({
         placeholder="Opcional"
         keyboardType="email-address"
         autoCapitalize="none"
+        accessibilityLabel="Email 2"
+        textContentType="emailAddress"
+        autoComplete="email"
       />
     </View>
   );

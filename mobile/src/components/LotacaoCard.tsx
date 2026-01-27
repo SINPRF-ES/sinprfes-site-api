@@ -95,6 +95,7 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
           style={styles.inputDisabled}
           value={filiado?.perfil_acesso || ''}
           editable={false}
+          accessibilityLabel="Perfil de Acesso"
         />
       )}
     </View>
@@ -147,6 +148,16 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 15,
     backgroundColor: '#f0f0f0',
+  },
+  inputDisabled: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f0f0f0',
+    color: '#999',
   },
 });
 
