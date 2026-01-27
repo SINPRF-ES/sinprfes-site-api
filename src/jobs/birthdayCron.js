@@ -10,6 +10,7 @@ const emailService = require('../services/email.service');
  */
 async function runBirthdayScan() {
   const jobName = 'BIRTHDAY_SCAN';
+  console.log(`🚀 [Job] START: ${jobName}`);
   const client = await pool.connect();
 
   try {
@@ -24,7 +25,7 @@ async function runBirthdayScan() {
     );
 
     if (res.rows.length === 0) {
-      console.error('💥 [Job] Registro BIRTHDAY_SCAN não encontrado na tabela job_runs.');
+      console.error(`💥 [Job] Registro ${jobName} não encontrado na tabela job_runs.`);
       await client.query('ROLLBACK');
       return;
     }
@@ -35,6 +36,7 @@ async function runBirthdayScan() {
     });
 
     const lastRun = res.rows[0].last_run_date;
+    console.log(`✅ [Job] LOCK OK | lastRun: ${lastRun} | todayStr: ${todayStr}`);
 
     // 3. Verifica se já rodou hoje
     if (lastRun === todayStr) {
@@ -47,33 +49,32 @@ async function runBirthdayScan() {
 
     // 4. Executa a lógica de negócio
     const aniversariantes = await filiadosService.buscarAniversariantesDoDia();
+    const count = aniversariantes.length;
+    console.log(`✅ [Job] BUSCA aniversariantes OK (count: ${count})`);
 
     // Sempre envia o relatório para o sindicato (mesmo se vazio, conforme requisito)
     await emailService.enviarRelatorioAniversariantes({
       dateStr: todayStr,
       aniversariantes
     });
-
-    const count = aniversariantes.length;
-    if (count > 0) {
-      console.log(`🎂 [Job] Relatório enviado com ${count} aniversariantes.`);
-    } else {
-      console.log('🎂 [Job] Relatório enviado (nenhum aniversariante hoje).');
-    }
+    console.log('✅ [Job] EMAIL OK');
 
     // 5. Atualiza a data da última execução
     await client.query(
       'UPDATE job_runs SET last_run_date = $1, updated_at = NOW() WHERE job_name = $2',
       [todayStr, jobName]
     );
+    console.log('✅ [Job] UPDATE job_runs OK');
 
     // 6. Comita a transação
     await client.query('COMMIT');
+    console.log('✅ [Job] COMMIT OK');
     console.log(`🎂 [Job] Finalizado com sucesso. (${count} processados)`);
 
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('💥 [Job] Erro crítico ao processar aniversariantes:', error);
+    throw error;
   } finally {
     client.release();
   }
@@ -81,9 +82,14 @@ async function runBirthdayScan() {
 
 // Se executado diretamente via node (ex: cron do sistema ou Render Cron)
 if (require.main === module) {
-  runBirthdayScan().then(() => {
-    process.exit(0);
-  });
+  runBirthdayScan()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('💥 [Job] Process exiting with error:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = { runBirthdayScan };
