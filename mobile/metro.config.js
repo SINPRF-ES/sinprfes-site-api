@@ -5,6 +5,7 @@ const projectRoot = __dirname;
 const config = getDefaultConfig(projectRoot);
 
 config.resolver.unstable_enableSymlinks = true;
+config.resolver.assetExts.push('html');
 
 config.watchFolders = [
   path.resolve(projectRoot, "../shared/format"),

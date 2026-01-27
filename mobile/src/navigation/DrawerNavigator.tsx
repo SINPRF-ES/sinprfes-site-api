@@ -12,6 +12,7 @@ import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
 import RessarcimentoScreen from '../screens/RessarcimentoScreen';
 import JogosScreen from '../screens/JogosScreen';
+import EstatutoScreen from '../screens/EstatutoScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/filiadoUtils';
@@ -82,6 +83,11 @@ const DrawerNavigator = () => {
         name="Jogos2026"
         component={JogosScreen}
         options={{ title: 'Jogos 2026' }}
+      />
+      <Drawer.Screen
+        name="Estatuto"
+        component={EstatutoScreen}
+        options={{ title: 'Estatuto' }}
       />
       <Drawer.Screen
         name="Seguranca"

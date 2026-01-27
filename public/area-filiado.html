@@ -21,6 +21,8 @@
   <script src="/js/area-filiado/ressarcimento.js"></script>
   <script src="/js/area-filiado/jogos.js"></script>
   <script src="/js/area-filiado/publicacoes.js"></script>
+  <script src="/js/area-filiado/assembleia-utils.js"></script>
+  <script src="/js/area-filiado/assembleias.js"></script>
 
   <!-- Inicializador Principal -->
   <script src="/js/area-filiado.js"></script>
@@ -42,6 +44,7 @@
         <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
         <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
         <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
+        <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
       </nav>
 
       <!-- Conteúdo Principal -->
@@ -69,6 +72,22 @@
 
         <section id="sec-jogos" class="af-section" style="display:none;">
           <!-- Conteúdo carregado via JS -->
+        </section>
+
+        <section id="sec-assembleias" class="af-section" style="display:none;">
+          <div id="sec-assembleias-lista">
+             <div id="area-assembleias-lista">
+               <p>Carregando assembleias...</p>
+             </div>
+          </div>
+
+          <div id="sec-assembleias-detalhe" style="display:none;">
+             <div id="area-assembleia-detalhe-conteudo"></div>
+          </div>
+
+          <div id="sec-assembleias-sala" style="display:none;">
+             <div id="area-assembleia-sala-conteudo"></div>
+          </div>
         </section>
       </main>
     </div>
