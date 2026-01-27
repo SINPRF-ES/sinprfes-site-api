@@ -157,8 +157,7 @@ const JogosScreen = () => {
     <SafeAreaView style={styles.container}>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
         <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>🏅 Jogos PRF 2026</Text>
-          <Text style={styles.bannerSubtitle}>Participe da maior integração esportiva!</Text>
+          <Text style={styles.bannerSubtitle}>🏅 Participe da maior integração esportiva da categoria!</Text>
         </View>
 
         <View style={styles.card}>
@@ -271,9 +270,8 @@ const JogosScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
   scrollContent: { paddingBottom: 40 },
-  banner: { backgroundColor: '#003366', padding: 30, alignItems: 'center' },
-  bannerTitle: { fontSize: 24, fontWeight: 'bold', color: '#f1c40f' },
-  bannerSubtitle: { fontSize: 14, color: '#fff', marginTop: 5 },
+  banner: { backgroundColor: '#003366', padding: 20, alignItems: 'center' },
+  bannerSubtitle: { fontSize: 15, color: '#fff', textAlign: 'center', fontStyle: 'italic' },
   card: { backgroundColor: '#fff', padding: 20, margin: 15, borderRadius: 12, elevation: 3 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center' },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5 },

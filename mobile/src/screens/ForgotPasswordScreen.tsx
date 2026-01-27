@@ -1,6 +1,8 @@
 // src/screens/ForgotPasswordScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import SafeScreen from '../components/SafeScreen';
 import { useNavigation } from '@react-navigation/native';
 import { solicitarResetSenha } from '../services/authService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
@@ -30,9 +32,9 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
+    <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid>
       <View style={styles.card}>
-        <Text style={styles.title}>Recuperar Senha</Text>
         <Text style={styles.instructions}>
           Digite seu CPF abaixo. Enviaremos um link e um código de redefinição para o e-mail cadastrado.
         </Text>
@@ -69,16 +71,20 @@ export default function ForgotPasswordScreen() {
           color="#666"
         />
       </View>
-    </View>
+    </KeyboardAwareScrollView>
+    </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#001A33',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#001A33',
   },
   card: {
     backgroundColor: '#ffffff',
