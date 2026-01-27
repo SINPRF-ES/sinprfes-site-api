@@ -103,6 +103,32 @@
         }
     }
 
+    async function baixarEditalSeguro(idAssembleia) {
+        try {
+            const res = await window.Api.apiFetch(`/api/assembleias/${idAssembleia}/edital`);
+            if (!res.ok) throw new Error("Erro API ao baixar edital");
+            const blob = await res.blob();
+            const contentType = res.headers.get("content-type") || "";
+            const isImage = contentType.startsWith("image/");
+            const extension = isImage ? ".jpg" : ".pdf";
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.download = `edital_${idAssembleia}${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Pequeno delay para revogar o objeto
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        } catch (error) {
+            console.error(error);
+            alert("Não foi possível baixar o edital.");
+        }
+    }
+
     async function abrirEditalSeguro(idAssembleia) {
         const modal = document.getElementById('modal-documento');
         const loader = document.getElementById('doc-loader');
@@ -327,7 +353,7 @@
                             ${a.edital_url ? `
                                 <div style="font-size:3rem; margin-bottom:20px;">📄</div>
                                 <button class="btn btn-primary" style="width:100%; padding:15px; font-weight:800; border-radius:10px;" onclick="Assembleias.abrirEditalSeguro('${a.id}')">Visualizar Edital no Portal</button>
-                                <a href="/api/assembleias/${a.id}/edital" target="_blank" style="margin-top:12px; font-size:0.85rem; color:#666; font-weight:600; text-decoration:underline;">Abrir em nova aba / Download</a>
+                                <button class="btn btn-link" style="margin-top:12px; font-size:0.85rem; color:#666; font-weight:600; text-decoration:underline; border:none; background:none; cursor:pointer;" onclick="Assembleias.baixarEditalSeguro('${a.id}')">Abrir em nova aba / Download</button>
                             ` : '<div style="font-size:3rem; margin-bottom:15px; opacity:0.3;">🚫</div><p style="font-style:italic; color:#999; font-weight:600;">Sem edital anexado.</p>'}
                         </div>
 
@@ -935,6 +961,7 @@
         entrarNaSala,
         realizarCheckin,
         abrirEditalSeguro,
+        baixarEditalSeguro,
 
         // Ações de Gestão
         abrirAssembleia,
