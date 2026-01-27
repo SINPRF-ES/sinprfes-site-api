@@ -3,6 +3,9 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
+// Confia no proxy do Render para express-rate-limit
+app.set('trust proxy', 1);
+
 const cors = require("cors");
 
 const allowedOrigins = [
