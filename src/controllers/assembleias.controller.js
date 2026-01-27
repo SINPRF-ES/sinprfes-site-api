@@ -951,6 +951,22 @@ async function uploadEdital(req, res) {
       type: "authenticated"
     });
 
+    // Se for PDF, salva também no Google Drive (Robustez contra 403 do Cloudinary raw)
+    if (isPdf) {
+      try {
+        const driveFileId = await driveService.uploadFile(
+          req.file.buffer,
+          `edital_${Date.now()}.pdf`,
+          'application/pdf'
+        );
+        result.edital_drive_file_id = driveFileId;
+        log.info("AssembleiaUploadEditalDriveSucesso", { driveFileId, requestId: req.requestId });
+      } catch (driveErr) {
+        log.error("AssembleiaUploadEditalDriveErro", { error: driveErr.message, requestId: req.requestId });
+        // Não falha o upload se o Cloudinary deu certo, mas logamos o erro.
+      }
+    }
+
     // Validação automática pós-upload (best-effort HEAD check)
     try {
       // Aumentado timeout para 10s e adicionado log detalhado para debug de 502/Bad Gateway
