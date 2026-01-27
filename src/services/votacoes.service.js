@@ -84,35 +84,30 @@ exports.criarVotacao = async ({ criadoPor, titulo, descricao, abreEm, encerraEm,
 
     const votacao = vRes.rows[0];
 
-    const insertO = `
-      INSERT INTO votacao_opcoes (votacao_id, texto, ordem)
-      VALUES ($1, $2, $3)
-      RETURNING id, texto, ordem;
-    `;
-
-    const opRows = [];
+    const validOpcoes = [];
     for (let i = 0; i < opcoes.length; i++) {
-  const opcao = opcoes[i];
+      const opcao = opcoes[i];
+      if (!opcao || typeof opcao !== "object") continue;
+      const texto = (opcao.texto || "").toString().trim();
+      if (!texto) continue;
+      const ordem = Number.isFinite(opcao.ordem) ? opcao.ordem : i + 1;
+      validOpcoes.push({ texto, ordem });
+    }
 
-  if (!opcao || typeof opcao !== "object") continue;
-
-  const texto = (opcao.texto || "").toString().trim();
-  if (!texto) continue;
-
-  const ordem = Number.isFinite(opcao.ordem) ? opcao.ordem : i + 1;
-
-  const oRes = await client.query(insertO, [
-    votacao.id,
-    texto,
-    ordem,
-  ]);
-
-  opRows.push(oRes.rows[0]);
-}
-
-    if (opRows.length < 2) {
+    if (validOpcoes.length < 2) {
       throw new Error("Informe pelo menos 2 opções válidas.");
     }
+
+    // Otimização Bolt: Batch insert de opções para reduzir roundtrips ao DB (1+N -> 2 queries)
+    const placeholders = validOpcoes.map((_, i) => `($1, $${i * 2 + 2}, $${i * 2 + 3})`).join(', ');
+    const params = [votacao.id];
+    validOpcoes.forEach(o => params.push(o.texto, o.ordem));
+
+    const oRes = await client.query(
+      `INSERT INTO votacao_opcoes (votacao_id, texto, ordem) VALUES ${placeholders} RETURNING id, texto, ordem`,
+      params
+    );
+    const opRows = oRes.rows;
 
     await client.query("COMMIT");
     return { ...votacao, opcoes: opRows };

@@ -1124,26 +1124,54 @@ async function gerarDadosRelatorio(id) {
     `, [id]).then(r => r.rows)
   ]);
 
-  // Para cada quórum, buscar presentes
-  for (let q of quoruns) {
-    const { rows: presentes } = await pool.query(`
-      SELECT f.nome, c.registrado_em
+  // Otimização Bolt: Resolve N+1 queries para quóruns e votações no relatório
+  const quorumIds = quoruns.map(q => q.id);
+  const votacaoIds = votacoes.map(v => v.id);
+
+  const [allCheckins, allVotos] = await Promise.all([
+    quorumIds.length > 0 ? pool.query(`
+      SELECT c.assembleia_quorum_id, f.nome, c.registrado_em
       FROM assembleia_checkins c
       JOIN filiados f ON c.filiado_id = f.id
-      WHERE c.assembleia_quorum_id = $1
+      WHERE c.assembleia_quorum_id = ANY($1)
       ORDER BY f.nome ASC
-    `, [q.id]);
-    q.presentes = presentes;
+    `, [quorumIds]).then(r => r.rows) : Promise.resolve([]),
+    votacaoIds.length > 0 ? pool.query(`
+      SELECT v.votacao_id, v.filiado_id, f.nome, v.voto, v.registrado_em
+      FROM assembleia_votos v
+      JOIN filiados f ON v.filiado_id = f.id
+      WHERE v.votacao_id = ANY($1)
+      ORDER BY v.registrado_em DESC
+    `, [votacaoIds]).then(r => r.rows) : Promise.resolve([])
+  ]);
+
+  // Agrupa checkins por quórum (O(M))
+  const checkinsByQuorum = allCheckins.reduce((acc, c) => {
+    if (!acc[c.assembleia_quorum_id]) acc[c.assembleia_quorum_id] = [];
+    acc[c.assembleia_quorum_id].push(c);
+    return acc;
+  }, {});
+
+  for (let q of quoruns) {
+    q.presentes = checkinsByQuorum[q.id] || [];
   }
 
-  // Para cada votação, buscar resultados
+  // Agrupa votos por votação e calcula contagem (O(K))
+  const votosByVotacao = allVotos.reduce((acc, v) => {
+    if (!acc[v.votacao_id]) acc[v.votacao_id] = [];
+    acc[v.votacao_id].push(v);
+    return acc;
+  }, {});
+
   for (let v of votacoes) {
-    const [contagem, votos] = await Promise.all([
-      contarVotos(v.id),
-      listarVotosNominais(v.id)
-    ]);
-    v.contagem = contagem;
-    v.votosNominais = votos;
+    const nominals = votosByVotacao[v.id] || [];
+    v.votosNominais = nominals;
+    v.contagem = {
+      SIM: nominals.filter(vote => vote.voto === 'SIM').length,
+      NAO: nominals.filter(vote => vote.voto === 'NAO').length,
+      ABSTENCAO: nominals.filter(vote => vote.voto === 'ABSTENCAO').length,
+    };
+    v.contagem.total = v.contagem.SIM + v.contagem.NAO + v.contagem.ABSTENCAO;
   }
 
   return {

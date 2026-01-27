@@ -113,6 +113,8 @@ describe('Governance and Proposals Integration', () => {
 
     test('substituirMesa should fail if justification is too short', async () => {
         await expect(service.substituirMesa({
+            presidente_user_id: 2,
+            secretario_user_id: 3,
             justificativa: 'curta'
         })).rejects.toThrow(/Justificativa obrigatória/);
     });

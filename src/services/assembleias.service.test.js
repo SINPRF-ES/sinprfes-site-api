@@ -155,4 +155,49 @@ describe('Assembleias Service', () => {
       expect(result.id).toBe('v1');
     });
   });
+
+  describe('Reporting', () => {
+    test('gerarDadosRelatorio should fetch data without N+1', async () => {
+      // 1. buscarPorId
+      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', titulo: 'Ass 1' }] });
+      // 2. Promise.all
+      // 2a. buscarMesa
+      pool.query.mockResolvedValueOnce({ rows: [{ assembleia_id: '1', presidente_nome: 'P1' }] });
+      // 2b. quoruns
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1', token: '111' }, { id: 'q2', token: '222' }] });
+      // 2c. votacoes
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1' }] });
+
+      // 3. allCheckins (Batch)
+      pool.query.mockResolvedValueOnce({ rows: [
+        { assembleia_quorum_id: 'q1', nome: 'User 1' },
+        { assembleia_quorum_id: 'q1', nome: 'User 2' },
+        { assembleia_quorum_id: 'q2', nome: 'User 3' }
+      ]});
+
+      // 4. allVotos (Batch)
+      pool.query.mockResolvedValueOnce({ rows: [
+        { votacao_id: 'v1', nome: 'User 1', voto: 'SIM' },
+        { votacao_id: 'v1', nome: 'User 2', voto: 'NAO' }
+      ]});
+
+      const res = await service.gerarDadosRelatorio('1');
+
+      expect(res.assembleia.id).toBe('1');
+      expect(res.quoruns).toHaveLength(2);
+      expect(res.quoruns[0].presentes).toHaveLength(2);
+      expect(res.quoruns[1].presentes).toHaveLength(1);
+      expect(res.votacoes).toHaveLength(1);
+      expect(res.votacoes[0].contagem.SIM).toBe(1);
+      expect(res.votacoes[0].contagem.total).toBe(2);
+
+      // Verify that pool.query was NOT called for each quorum/votacao separately after batch fetch
+      // Total calls expected: 1 (buscarPorId) + 3 (mesa, quoruns, votacoes) + 1 (allCheckins) + 1 (allVotos) = 6
+      expect(pool.query).toHaveBeenCalledTimes(6);
+
+      // Verify batch queries use ANY
+      expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/assembleia_quorum_id = ANY/), expect.anything());
+      expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/votacao_id = ANY/), expect.anything());
+    });
+  });
 });

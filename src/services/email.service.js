@@ -2,7 +2,7 @@
 const { Resend } = require("resend");
 
 // 1. Inicializa o cliente Resend com a chave API
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_123");
 
 /**
  * Função de envio base
