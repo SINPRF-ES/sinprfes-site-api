@@ -19,6 +19,12 @@ const PublicacoesScreen: React.FC = () => {
 
   const currentFolder = folderStack[folderStack.length - 1];
 
+  React.useEffect(() => {
+    navigation.setOptions({
+      title: currentFolder.name,
+    });
+  }, [navigation, currentFolder.name]);
+
   const { data: publicacoes, isLoading, error } = useQuery({
     queryKey: ['publicacoes', currentFolder.id],
     queryFn: async () => {
@@ -137,14 +143,13 @@ const PublicacoesScreen: React.FC = () => {
           <Text style={styles.loadingText}>Baixando arquivo...</Text>
         </View>
       )}
-      <View style={styles.header}>
-        {folderStack.length > 1 && (
-          <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
-            <FontAwesome name="arrow-left" size={20} color="#007BFF" />
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle}>{currentFolder.name}</Text>
-      </View>
+
+      {folderStack.length > 1 && (
+        <TouchableOpacity onPress={handleGoBack} style={styles.backFolderButton}>
+          <FontAwesome name="arrow-left" size={16} color="#003366" />
+          <Text style={styles.backFolderText}>Voltar para anterior</Text>
+        </TouchableOpacity>
+      )}
 
       {isLoading ? (
         <View style={styles.centered}><ActivityIndicator size="large" /></View>
@@ -176,20 +181,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
+  backFolderButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    padding: 12,
+    backgroundColor: '#eef2f7',
+    gap: 8,
   },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  backFolderText: {
+    color: '#003366',
+    fontWeight: '600',
+    fontSize: 14,
   },
   itemContainer: {
     flexDirection: 'row',

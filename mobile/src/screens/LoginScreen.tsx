@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
+import SafeScreen from '../components/SafeScreen';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
@@ -146,6 +147,7 @@ export default function LoginScreen() {
   }, []);
 
   return (
+    <SafeScreen style={{ backgroundColor: '#001A33' }}>
     <KeyboardAwareScrollView contentContainerStyle={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
       <View style={styles.card}>
         <View style={styles.logoContainer}>
@@ -237,6 +239,7 @@ export default function LoginScreen() {
         )}
       </View>
     </KeyboardAwareScrollView>
+    </SafeScreen>
   );
 }
 

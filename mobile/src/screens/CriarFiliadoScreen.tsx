@@ -9,6 +9,7 @@ import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import SafeScreen from '../components/SafeScreen';
 import { Filiado } from '../types/filiado';
 import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
@@ -140,6 +141,7 @@ export default function CriarFiliadoScreen({ navigation }: any) {
   }
 
   return (
+    <SafeScreen style={styles.container}>
     <KeyboardAwareScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -147,8 +149,6 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       extraScrollHeight={50}
       keyboardOpeningTime={0}
     >
-      <Text style={styles.title}>Novo Filiado</Text>
-      
       {/* Reutilizar os cards para entrada de dados */}
       <ContatoCard
         filiado={filiado as Filiado}
@@ -161,6 +161,7 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       <DependentesCard filiado={filiado as Filiado} setFiliado={setFiliado} />
 
     </KeyboardAwareScrollView>
+    </SafeScreen>
   );
 }
 

@@ -20,11 +20,27 @@ const TOC_ITEMS = [
   { id: 'titulo10', label: 'TÍTULO X - Disposições Gerais' },
 ];
 
-export default function EstatutoScreen() {
+export default function EstatutoScreen({ navigation }: any) {
   const webViewRef = useRef<WebView>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [htmlUri, setHtmlUri] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.headerTocButton}
+          onPress={() => setModalVisible(true)}
+          accessibilityLabel="Abrir Sumário"
+          accessibilityRole="button"
+        >
+          <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#fff" />
+          <Text style={styles.headerTocButtonText}>Sumário</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   useEffect(() => {
     async function loadAsset() {
@@ -60,7 +76,7 @@ export default function EstatutoScreen() {
       font-size: 16px !important;
       font-family: sans-serif !important;
     }
-    .estatuto-nav { display: none !important; }
+    .estatuto-nav, #site-header, #site-footer { display: none !important; }
     .estatuto-card {
       width: 100% !important;
       max-width: 100% !important;
@@ -74,14 +90,6 @@ export default function EstatutoScreen() {
 
   return (
     <SafeScreen style={styles.container}>
-      <View style={styles.topBar}>
-        <Text style={styles.title}>Estatuto</Text>
-        <TouchableOpacity style={styles.tocButton} onPress={() => setModalVisible(true)}>
-          <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#fff" />
-          <Text style={styles.tocButtonText}>Sumário</Text>
-        </TouchableOpacity>
-      </View>
-
       {htmlUri ? (
         <WebView
           ref={webViewRef}
@@ -137,10 +145,8 @@ export default function EstatutoScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  topBar: { height: 60, backgroundColor: '#003366', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
-  title: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  tocButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 6 },
-  tocButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  headerTocButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, gap: 4, marginRight: 10 },
+  headerTocButtonText: { color: '#fff', fontWeight: '600', fontSize: 12 },
   webview: { flex: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' },

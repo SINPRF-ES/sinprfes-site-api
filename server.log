@@ -1,0 +1,8 @@
+
+> sinprfes-site-api@1.0.0 start
+> node server.js
+
+{"level":"WARN","timestamp":"2026-01-27T01:42:18.249Z","env":"dev","message":"InstagramTokenNaoConfigurado"}
+[DATABASE] DATABASE_URL ausente
+[DATABASE] DATABASE_URL ausente
+SINPRF-ES rodando na porta 3000
