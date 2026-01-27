@@ -125,12 +125,19 @@
 
     function renderizarEstruturaBase() {
         const section = document.getElementById("sec-assembleias");
+        const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
+
         section.innerHTML = `
             <div id="sec-assembleias-lista">
                 <div class="section-card">
                     <div style="display:flex; flex-direction:column; align-items:center; gap:15px; text-align:center;">
                         <h2 style="color:#fff; margin:0; font-size:1.8rem; font-weight: 800;">🗳️ Assembleias e Votações</h2>
                         <p style="color:#ccc; margin:0; font-size:1rem;">Participe das decisões do seu sindicato</p>
+
+                        ${isDiretoria ? `
+                            <button class="btn btn-success" style="margin-top:10px; font-weight:800; padding:12px 25px; border-radius:30px;" onclick="Assembleias.abrirCriacao()">➕ Criar Nova Assembleia</button>
+                        ` : ''}
+
                         <div style="width:100%; max-width:250px; margin-top:10px;">
                             <label style="font-size:0.85rem; color:#fff; display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase;">Filtrar por status:</label>
                             <select id="filtro-assembleias" class="btn btn-outline" style="width:100%; color:#fff; background:transparent; border: 2px solid #fff; border-radius:8px; font-weight:600;" onchange="Assembleias.mudarFiltro(this.value)">
@@ -144,6 +151,10 @@
                 <div id="area-assembleias-lista" style="margin-top:25px;">
                     <p class="text-center" style="color:#fff;">Carregando assembleias...</p>
                 </div>
+            </div>
+
+            <div id="sec-assembleias-criar" style="display:none;">
+                <div id="area-assembleia-criar-conteudo"></div>
             </div>
 
             <div id="sec-assembleias-detalhe" style="display:none;">
@@ -482,6 +493,7 @@
     function voltarParaLista() {
         pararPolling();
         document.getElementById("sec-assembleias-lista").style.display = "block";
+        document.getElementById("sec-assembleias-criar").style.display = "none";
         document.getElementById("sec-assembleias-detalhe").style.display = "none";
         document.getElementById("sec-assembleias-sala").style.display = "none";
     }
@@ -752,9 +764,147 @@
         } catch (err) { alert("Erro."); }
     }
 
+    async function abrirCriacao() {
+        document.getElementById("sec-assembleias-lista").style.display = "none";
+        document.getElementById("sec-assembleias-criar").style.display = "block";
+        document.getElementById("sec-assembleias-detalhe").style.display = "none";
+
+        const container = document.getElementById("area-assembleia-criar-conteudo");
+        container.innerHTML = `
+            <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; max-width: 800px; margin: 0 auto;">
+                <div style="display:flex; justify-content:flex-start; margin-bottom:25px;">
+                    <button class="btn btn-outline btn-sm" style="font-weight:700; color:#003366; border-color:#003366;" onclick="Assembleias.voltarParaLista()">← Cancelar e Voltar</button>
+                </div>
+
+                <div style="text-align:center; margin-bottom:30px;">
+                    <h2 style="color:#003366; margin:0; font-size:2rem; font-weight:800;">➕ Nova Assembleia</h2>
+                    <p style="color:#666; font-weight:600;">Preencha os dados básicos para agendamento</p>
+                </div>
+
+                <form id="form-criar-assembleia">
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; font-weight:800; color:#003366; margin-bottom:8px; font-size:0.9rem; text-transform:uppercase;">Título da Assembleia *</label>
+                        <input type="text" name="titulo" required placeholder="Ex: Assembleia Geral Extraordinária 01/2026" style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem;">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                        <div>
+                            <label style="display:block; font-weight:800; color:#003366; margin-bottom:8px; font-size:0.9rem; text-transform:uppercase;">Tipo *</label>
+                            <select name="tipo" required style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem; background:white;">
+                                <option value="AGE">Extraordinária (AGE)</option>
+                                <option value="AGO">Ordinária (AGO)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:800; color:#003366; margin-bottom:8px; font-size:0.9rem; text-transform:uppercase;">Data do Evento *</label>
+                            <input type="date" name="data_evento" required style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem;">
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                        <div>
+                            <label style="display:block; font-weight:800; color:#003366; margin-bottom:8px; font-size:0.9rem; text-transform:uppercase;">1ª Chamada *</label>
+                            <input type="time" name="hora_primeira_chamada" required style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:800; color:#003366; margin-bottom:8px; font-size:0.9rem; text-transform:uppercase;">2ª Chamada *</label>
+                            <input type="time" name="hora_segunda_chamada" required style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; font-weight:800; color:#003366; margin-bottom:8px; font-size:0.9rem; text-transform:uppercase;">Pauta / Ordem do Dia *</label>
+                        <textarea name="pauta" required rows="5" placeholder="Descreva os itens a serem debatidos e votados..." style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem; resize:vertical;"></textarea>
+                    </div>
+
+                    <div style="margin-bottom:30px; padding:20px; border:2px dashed #ddd; border-radius:10px; text-align:center; background:#f9f9f9;">
+                        <label style="display:block; font-weight:800; color:#003366; margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;">Edital de Convocação (Opcional)</label>
+                        <input type="file" id="input-edital" accept="application/pdf,image/*" style="margin-bottom:10px;">
+                        <p style="font-size:0.8rem; color:#666; margin:0;">PDF ou Imagem (Máx. 10MB)</p>
+                    </div>
+
+                    <div style="text-align:right;">
+                        <button type="submit" id="btn-salvar-assembleia" class="btn btn-primary btn-lg" style="padding:15px 40px; font-weight:800; border-radius:10px;">Agendar Assembleia 🚀</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.getElementById("form-criar-assembleia").onsubmit = (e) => {
+            e.preventDefault();
+            salvarNovaAssembleia();
+        };
+    }
+
+    async function salvarNovaAssembleia() {
+        const form = document.getElementById("form-criar-assembleia");
+        const btn = document.getElementById("btn-salvar-assembleia");
+        const fileInput = document.getElementById("input-edital");
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        btn.disabled = true;
+        btn.innerText = "Processando...";
+
+        try {
+            let editalData = null;
+
+            // 1. Upload do edital se houver
+            if (fileInput.files.length > 0) {
+                btn.innerText = "Enviando edital...";
+                const uploadFd = new FormData();
+                uploadFd.append('edital', fileInput.files[0]);
+
+                const resUpload = await window.Api.apiFetch("/api/assembleias/upload-edital", {
+                    method: "POST",
+                    body: uploadFd
+                });
+
+                if (!resUpload.ok) {
+                    const err = await resUpload.json();
+                    throw new Error(err.error || "Erro no upload do edital.");
+                }
+                editalData = await resUpload.json();
+            }
+
+            // 2. Criação da assembleia
+            btn.innerText = "Criando assembleia...";
+            const payload = {
+                ...data,
+                edital_url: editalData?.secure_url || editalData?.url || "",
+                edital_public_id: editalData?.public_id || null,
+                edital_resource_type: editalData?.resource_type || null,
+                edital_type: editalData?.type || null,
+                edital_format: editalData?.format || null
+            };
+
+            const res = await window.Api.apiFetch("/api/assembleias", {
+                method: "POST",
+                body: payload
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Erro ao criar assembleia.");
+            }
+
+            alert("Assembleia criada com sucesso!");
+            voltarParaLista();
+            await carregarListaAssembleias();
+        } catch (error) {
+            console.error(error);
+            alert("Erro: " + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Agendar Assembleia 🚀";
+        }
+    }
+
     global.Assembleias = {
         inicializarAssembleias,
         mudarFiltro,
+        abrirCriacao,
         abrirDetalhes,
         voltarParaLista,
         entrarNaSala,

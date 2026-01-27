@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -110,6 +110,7 @@ export default function AssembleiasScreen({ navigation }: any) {
                 onValueChange={(itemValue) => setFilter(itemValue as any)}
                 style={styles.picker}
                 dropdownIconColor="#003366"
+                mode="dropdown"
             >
                 <Picker.Item label="Ativas (Agendadas/Em andamento)" value="ativas" />
                 <Picker.Item label="Encerradas" value="encerradas" />
@@ -152,8 +153,23 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   filterLabel: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginRight: 10 },
-  pickerWrapper: { flex: 1, height: 40, justifyContent: 'center', backgroundColor: '#f2f4f8', borderRadius: 8 },
-  picker: { height: 40, width: '100%' },
+  pickerWrapper: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+    backgroundColor: '#f2f4f8',
+    borderRadius: 8,
+    overflow: 'hidden'
+  },
+  picker: {
+    height: 40,
+    width: '100%',
+    ...Platform.select({
+      android: {
+        marginLeft: -4,
+      }
+    })
+  },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 16 },
   card: {

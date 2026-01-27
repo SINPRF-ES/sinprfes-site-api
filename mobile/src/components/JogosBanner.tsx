@@ -29,12 +29,22 @@ const JogosBanner = () => {
         }
 
         // 2. Verificar se já está inscrito
-        const inscricao = await getMinhaInscricaoJogos();
-        if (!inscricao) {
-          setVisible(true);
+        try {
+          const inscricao = await getMinhaInscricaoJogos();
+          // Se 200 OK, o usuário já está inscrito
+          setVisible(false);
+        } catch (err: any) {
+          if (err.response?.status === 404) {
+            // 404 significa que não há inscrição encontrada -> Mostrar banner
+            setVisible(true);
+          } else {
+            // Outros erros (500, timeout) -> Silenciar para não travar UX
+            logger.warn('[JogosBanner.checkStatus] Falha silenciosa ao verificar inscrição', { status: err.response?.status });
+            setVisible(false);
+          }
         }
       } catch (err) {
-        logger.error('[JogosBanner.checkStatus]', err);
+        logger.error('[JogosBanner.checkStatus] Erro inesperado', err);
       } finally {
         setLoading(false);
       }
