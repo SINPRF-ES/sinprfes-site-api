@@ -284,9 +284,10 @@ async function gerarQuorum(dados) {
     }
 
     // Idempotência: Se NÃO for forceNew e já existe token ativo para este MESMO tipo_chamada, retorna ele
-    if (!forceNew) {
+    // RECONTAGEM sempre força um novo token para invalidar o snapshot anterior
+    if (!forceNew && tipo_chamada !== 'RECONTAGEM') {
       const { rows: existingRows } = await client.query(
-        `SELECT id, token, criado_em, quorum_total_ativos, quorum_necessario
+        `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario
          FROM assembleia_quoruns
          WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL`,
         [assembleia_id, tipo_chamada]
@@ -333,9 +334,9 @@ async function gerarQuorum(dados) {
     );
 
     const { rows: qRows } = await client.query(
-      `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, token, criado_em, quorum_total_ativos, quorum_necessario, tipo_chamada`,
+      `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao, valido_ate)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '10 minutes')
+       RETURNING id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, tipo_chamada`,
       [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao]
     );
     const quorum = { ...qRows[0], isNew: true };
@@ -519,8 +520,9 @@ async function verificarElegibilidade(votacaoId, filiadoId) {
   return rows.length > 0;
 }
 
-async function verificarElegibilidadePorQuorum(quorumId, filiadoId) {
-  const { rows } = await pool.query(
+async function verificarElegibilidadePorQuorum(quorumId, filiadoId, client = null) {
+  const db = client || pool;
+  const { rows } = await db.query(
     `SELECT 1 FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND filiado_id = $2`,
     [quorumId, filiadoId]
   );
@@ -922,6 +924,26 @@ async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
     const quorum = await buscarUltimoQuorum(assembleiaId);
     if (!quorum) throw new Error(Textos.ASSEMBLEIA.TOKEN_INVALIDO);
 
+    // Regra: se o autor da proposta não responder o check-in da votação, a proposta deve ser retirada automaticamente
+    const autorPresente = await verificarElegibilidadePorQuorum(quorum.id, proposta.autor_id, client);
+    if (!autorPresente) {
+        const motivo = 'autor ausente da votação';
+        await client.query(
+            `UPDATE assembleia_propostas
+             SET status = 'RETIRADA', motivo_retirada = $1, retirada_em = NOW()
+             WHERE id = $2`,
+            [motivo, propostaId]
+        );
+        await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_RETIRADA_AUTOMATICAMENTE', {
+            proposta_id: propostaId,
+            autor_id: proposta.autor_id,
+            motivo
+        }, client);
+
+        await client.query('COMMIT');
+        return { status: 'RETIRADA_AUTOR_AUSENTE', proposta_id: propostaId };
+    }
+
     // Criar a votação baseada na proposta
     const votacao = await criarVotacao({
       assembleia_id: assembleiaId,
@@ -1116,7 +1138,7 @@ async function gerarDadosRelatorio(id) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-  const [mesa, quoruns, votacoes] = await Promise.all([
+  const [mesa, quoruns, votacoes, propostas] = await Promise.all([
     buscarMesa(id),
     pool.query(`
       SELECT q.*, f.nome as gerado_por_nome
@@ -1131,6 +1153,13 @@ async function gerarDadosRelatorio(id) {
       LEFT JOIN filiados f ON v.iniciada_por_user_id = f.id
       WHERE v.assembleia_id = $1
       ORDER BY v.aberta_em ASC
+    `, [id]).then(r => r.rows),
+    pool.query(`
+      SELECT p.*, f.nome as autor_nome
+      FROM assembleia_propostas p
+      LEFT JOIN filiados f ON p.autor_id = f.id
+      WHERE p.assembleia_id = $1
+      ORDER BY p.criado_em ASC
     `, [id]).then(r => r.rows)
   ]);
 
@@ -1188,7 +1217,8 @@ async function gerarDadosRelatorio(id) {
     assembleia,
     mesa,
     quoruns,
-    votacoes
+    votacoes,
+    propostas
   };
 }
 

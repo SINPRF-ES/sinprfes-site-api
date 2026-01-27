@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaEstado, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
+import { formatTimeSP } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,6 +23,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
   const temAutoridade = isPresidente || isDiretoria;
+  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
 
   const handlePedirPalavra = useCallback(async () => {
     try {
@@ -75,7 +77,11 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
 
   const handleIniciarVotacaoProposta = async (prid: string) => {
     try {
-      await iniciarVotacaoProposta(id, prid);
+      const res = await iniciarVotacaoProposta(id, prid);
+      if ((res as any).status === 'RETIRADA_AUTOR_AUSENTE') {
+        Alert.alert('Proposta Retirada', 'A proposta foi retirada de pauta automaticamente pois o autor não está presente na votação.');
+        fetchData();
+      }
     } catch (err: any) {
       Alert.alert('Erro', err.response?.data?.error || 'Falha ao iniciar votação da proposta.');
     }
@@ -101,7 +107,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       { label: 'Nova Proposta', icon: 'file-document-edit-outline', onPress: () => navigation.navigate('Propostas', { id }) }
     ];
 
-    if (isPresidente) {
+    if (temAutoridade) {
       actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
       actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: handleRecontagem });
       if (estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
@@ -266,6 +272,14 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
+        {canSeeToken && (
+            <View style={styles.tokenCard}>
+                <Text style={styles.tokenLabel}>🔑 Token de Presença Vigente</Text>
+                <Text style={styles.tokenValue}>{estado.quorumVigente?.token}</Text>
+                <Text style={styles.tokenHint}>Compartilhe com os presentes</Text>
+            </View>
+        )}
+
         {estado.mesa && (
             <View style={styles.mesaCard}>
                 <Text style={styles.mesaTitle}>🧑‍⚖️ Mesa Diretora</Text>
@@ -298,7 +312,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                                 accessibilityRole="button"
                             >
                                 <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
-                                <Text style={styles.btnComandoText}>Recontar</Text>
+                                <Text style={styles.btnComandoText}>Recontar Quórum</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -399,7 +413,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             {estado.pedidosPalavra.map((p: any, i: number) => (
               <View key={i} style={styles.itemInteracaoRow}>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.nominalNome}>{p.filiado_nome}</Text>
+                  <Text style={styles.nominalNome}>{p.filiado_nome} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(p.criado_em)}</Text></Text>
                   <Text style={styles.itemStatus}>{p.status}</Text>
                 </View>
                 {temAutoridade && p.status === 'PENDENTE' && (
@@ -422,7 +436,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             <Text style={styles.sectionTitle}>📝 Propostas e Encaminhamentos</Text>
             {estado.propostas.map((pr: any, i: number) => (
               <View key={i} style={styles.propostaCard}>
-                <Text style={styles.propostaTitulo}>{pr.titulo}</Text>
+                <Text style={styles.propostaTitulo}>{pr.titulo} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(pr.criado_em)}</Text></Text>
                 <Text style={styles.propostaAutor}>Por: {pr.autor_nome}</Text>
                 <Text style={styles.propostaDesc}>{pr.descricao}</Text>
                 <View style={styles.propostaFooter}>
@@ -464,6 +478,10 @@ const styles = StyleSheet.create({
   mesaAcoes: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12 },
   mesaAcoesTitle: { fontSize: 11, fontWeight: 'bold', color: '#999', marginBottom: 8, textTransform: 'uppercase' },
   mesaAcoesGrid: { flexDirection: 'row', gap: 10 },
+  tokenCard: { backgroundColor: '#fffdf0', borderRadius: 12, padding: 16, marginBottom: 16, borderStyle: 'dashed', borderWidth: 2, borderColor: '#f1c40f', alignItems: 'center' },
+  tokenLabel: { fontSize: 12, fontWeight: 'bold', color: '#856404', marginBottom: 4, textTransform: 'uppercase' },
+  tokenValue: { fontSize: 32, fontWeight: '900', color: '#003366', letterSpacing: 8 },
+  tokenHint: { fontSize: 11, color: '#999', marginTop: 4 },
   btnComando: { backgroundColor: '#003366', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center' },
   btnComandoText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   scrollContent: { padding: 16 },

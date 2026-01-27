@@ -333,13 +333,16 @@ async function gerarTokenQuorum(req, res) {
 
     res.json({
       token: quorum.token,
+      tokenId: quorum.id,
       quorum_id: quorum.id,
       isNew: quorum.isNew,
       tipo_chamada: tipoFinal,
       quorumVigente: estado?.quorumVigente,
       presente: true,
       tokenAtivo: true,
-      issuedAt: quorum.criado_em || new Date().toISOString()
+      vigente: true,
+      issuedAt: quorum.criado_em || new Date().toISOString(),
+      expiresAt: quorum.valido_ate || new Date(Date.now() + 10 * 60 * 1000).toISOString()
     });
   } catch (err) {
     log.error("AssembleiaGerarTokenQuorumErro", { requestId: req.requestId, assembleiaId: id, error: err.message, stack: err.stack });
@@ -386,12 +389,15 @@ async function atualizarQuorum(req, res) {
 
     res.json({
       token: quorum.token,
+      tokenId: quorum.id,
       quorum_id: quorum.id,
       tipo_chamada: quorum.tipo_chamada,
       quorumVigente: estado?.quorumVigente,
       presente: true,
       tokenAtivo: true,
-      issuedAt: quorum.criado_em || new Date().toISOString()
+      vigente: true,
+      issuedAt: quorum.criado_em || new Date().toISOString(),
+      expiresAt: quorum.valido_ate || new Date(Date.now() + 10 * 60 * 1000).toISOString()
     });
   } catch (err) {
      log.error("AssembleiaAtualizarQuorumErro", { requestId: req.requestId, assembleiaId: id, error: err.message });
@@ -699,8 +705,20 @@ async function iniciarVotacaoProposta(req, res) {
     const { autorizada } = await verificarAutoridadeMesa(id, req.user);
     if (!autorizada) return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
 
-    const votacao = await service.iniciarVotacaoProposta(id, prid, req.user.id);
+    const result = await service.iniciarVotacaoProposta(id, prid, req.user.id);
 
+    if (result.status === 'RETIRADA_AUTOR_AUSENTE') {
+        const propostas = await service.listarPropostas(id);
+        socket.emitEvent(id, "proposals_updated", propostas);
+        log.info("AssembleiaPropostaRetiradaAutomatica", { requestId: req.requestId, assembleiaId: id, propostaId: prid });
+        return res.json({
+            success: false,
+            status: 'RETIRADA_AUTOR_AUSENTE',
+            message: 'Proposta retirada de pauta: autor ausente da votação.'
+        });
+    }
+
+    const votacao = result;
     socket.emitEvent(id, "votacao:iniciada", { ...votacao, contagem: { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 }, votos: [] });
 
     // Atualiza lista de propostas para refletir status EM_VOTACAO
