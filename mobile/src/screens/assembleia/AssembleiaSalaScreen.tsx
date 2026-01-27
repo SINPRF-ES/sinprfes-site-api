@@ -110,10 +110,12 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     if (temAutoridade) {
       actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
       actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: handleRecontagem });
-      if (estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
+      if (isDiretoria && estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
         actions.push({ label: 'Encerrar Votação Item', icon: 'stop-circle-outline', onPress: handleEncerrarVotacaoManual });
       }
-      actions.push({ label: 'Encerrar Assembleia', icon: 'close-circle-outline', onPress: handleEncerrarAssembleiaManual, isDestructive: true });
+      if (isDiretoria) {
+        actions.push({ label: 'Encerrar Assembleia', icon: 'close-circle-outline', onPress: handleEncerrarAssembleiaManual, isDestructive: true });
+      }
     }
 
     navigation.setOptions({
@@ -296,17 +298,19 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                     <View style={styles.mesaAcoes}>
                         <Text style={styles.mesaAcoesTitle}>Ações de Comando</Text>
                         <View style={styles.mesaAcoesGrid}>
+                            {isDiretoria && (
+                                <TouchableOpacity
+                                    style={styles.btnComando}
+                                    onPress={() => navigation.navigate('CriarItemVotacao', { id })}
+                                    accessibilityLabel="Novo Item de Votação"
+                                    accessibilityRole="button"
+                                >
+                                    <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
+                                    <Text style={styles.btnComandoText}>Novo Item</Text>
+                                </TouchableOpacity>
+                            )}
                             <TouchableOpacity
-                                style={styles.btnComando}
-                                onPress={() => navigation.navigate('CriarItemVotacao', { id })}
-                                accessibilityLabel="Novo Item de Votação"
-                                accessibilityRole="button"
-                            >
-                                <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
-                                <Text style={styles.btnComandoText}>Novo Item</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.btnComando}
+                                style={[styles.btnComando, !isDiretoria && { flex: 0, paddingHorizontal: 30 }]}
                                 onPress={handleRecontagem}
                                 accessibilityLabel="Solicitar Recontagem de Quórum"
                                 accessibilityRole="button"
