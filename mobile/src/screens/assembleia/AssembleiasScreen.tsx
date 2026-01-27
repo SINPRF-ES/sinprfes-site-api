@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -65,13 +65,17 @@ export default function AssembleiasScreen({ navigation }: any) {
     setRefreshing(false);
   };
 
-  const filteredAssembleias = assembleias.filter(a => {
-    if (filter === 'ativas') return a.estado !== 'ENCERRADA';
-    if (filter === 'encerradas') return a.estado === 'ENCERRADA';
-    return true;
-  });
+  // Otimização Bolt: Memoiza filtragem de assembleias
+  const filteredAssembleias = useMemo(() => {
+    return assembleias.filter(a => {
+      if (filter === 'ativas') return a.estado !== 'ENCERRADA';
+      if (filter === 'encerradas') return a.estado === 'ENCERRADA';
+      return true;
+    });
+  }, [assembleias, filter]);
 
-  const renderItem = ({ item }: { item: Assembleia }) => {
+  // Otimização Bolt: Memoiza renderItem para evitar re-instanciação e re-renders no FlatList
+  const renderItem = useCallback(({ item }: { item: Assembleia }) => {
     return (
     <TouchableOpacity
       style={styles.card}
@@ -81,7 +85,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       }}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.badge, styles[`badge${item.estado}`]]}>
+        <View style={[styles.badge, styles[`badge${item.estado}` as keyof typeof styles] || styles.badgeCRIADA]}>
           <Text style={styles.badgeText}>
             {getAssembleiaStatusEmoji(item.estado)}
             {getAssembleiaStatusLabel(item.estado)}
@@ -98,7 +102,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       </View>
     </TouchableOpacity>
     );
-  };
+  }, [navigation]);
 
   return (
     <View style={styles.container}>

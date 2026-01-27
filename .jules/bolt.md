@@ -7,3 +7,7 @@
 ## 2026-01-26 - [Fragile Mocks and Service Refactoring]
 **Learning:** High-level integration tests using `mockResolvedValueOnce` (like `assembleias.full_flow.test.js`) are extremely sensitive to internal implementation changes. Even performance optimizations that don't change logic but reorder or add/remove DB calls will break these tests.
 **Action:** When optimizing, verify if existing tests use strict mock sequencing and be prepared to update mock expectations if the optimization is necessary.
+
+## 2026-01-27 - [Batching and N+1 Resolution in Reports and Votations]
+**Learning:** For reports or list views requiring detailed data for each item (like quorums or voting results), replacing loops of queries with single batch queries using `ANY($1)` and grouping in memory significantly reduces overhead. In `criarVotacao`, batching multiple `INSERT` statements into one multi-row `VALUES` query reduces roundtrips from 1+N to 2.
+**Action:** Always prefer batch fetches/inserts over per-item loop queries. Use `.filter` or Map grouping in memory to re-associate data.
