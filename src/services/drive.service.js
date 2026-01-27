@@ -1,9 +1,14 @@
 // src/services/drive.service.js
 const { google } = require("googleapis");
 const path = require("path");
+const log = require("../utils/log");
 
+const streamifier = require("streamifier");
 const KEY_PATH = path.join(__dirname, "../../google.json");
-const SCOPES = ["https://www.googleapis.com/auth/drive.readonly"];
+const SCOPES = [
+  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/drive.file"
+];
 
 // 🟢 MUDANÇA: Aceita um ID opcional. Se não vier, usa o padrão do .env
 async function listarArquivosPublicos(targetFolderId = null) {
@@ -11,7 +16,7 @@ async function listarArquivosPublicos(targetFolderId = null) {
   const folderId = targetFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
   
   if (!folderId) {
-      console.warn("⚠️ GOOGLE_DRIVE_FOLDER_ID não configurado.");
+      log.warn("GoogleDriveFolderIdMissing", { targetFolderId });
       return []; 
   }
 
@@ -34,7 +39,7 @@ async function listarArquivosPublicos(targetFolderId = null) {
 
     return res.data.files || [];
   } catch (error) {
-    console.error("Erro na API do Google Drive:", error.message);
+    log.error("GoogleDriveListarErro", { error: error.message });
     throw error;
   }
 }
@@ -69,10 +74,50 @@ async function obterArquivoStream(fileId) {
     };
 
   } catch (error) {
-    console.error("Erro ao baixar arquivo do Drive:", error.message);
+    log.error("GoogleDriveDownloadErro", { error: error.message, fileId });
+    throw error;
+  }
+}
+
+/**
+ * Realiza o upload de um arquivo para o Google Drive.
+ */
+async function uploadFile(buffer, name, mimeType, folderId = null) {
+  const targetFolderId = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+  if (!targetFolderId) {
+    log.warn("GoogleDriveUploadFolderIdMissing");
+  }
+
+  const auth = new google.auth.GoogleAuth({
+    keyFile: KEY_PATH,
+    scopes: SCOPES,
+  });
+
+  const drive = google.drive({ version: "v3", auth });
+
+  const fileMetadata = {
+    name: name,
+    parents: targetFolderId ? [targetFolderId] : [],
+  };
+
+  const media = {
+    mimeType: mimeType,
+    body: streamifier.createReadStream(buffer),
+  };
+
+  try {
+    const file = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: "id",
+    });
+    return file.data.id;
+  } catch (error) {
+    log.error("GoogleDriveUploadErro", { error: error.message, filename: name });
     throw error;
   }
 }
 
 // Não esqueça de adicionar na exportação:
-module.exports = { listarArquivosPublicos, obterArquivoStream };
+module.exports = { listarArquivosPublicos, obterArquivoStream, uploadFile };
