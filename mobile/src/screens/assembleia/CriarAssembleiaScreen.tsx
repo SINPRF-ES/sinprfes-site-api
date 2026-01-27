@@ -21,8 +21,6 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
   const [hora1, setHora1] = useState('');
   const [hora2, setHora2] = useState('');
   const [editalFile, setEditalFile] = useState<any>(null);
-  const [editalData, setEditalData] = useState<any>(null);
-  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const formatHora = (text: string) => {
@@ -32,39 +30,12 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
   };
 
   const handlePickFile = async () => {
-    Alert.alert(
-      'Anexar Edital',
-      'Escolha o tipo de arquivo',
-      [
-        { text: 'Imagem (Galeria)', onPress: pickImage },
-        { text: 'Documento (PDF)', onPress: pickDocument },
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
-  };
-
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
+    navigation.navigate('Publicacoes', {
+        mode: 'picker',
+        onSelectFile: (file: any) => {
+            setEditalFile(file);
+        }
     });
-    if (!result.canceled) {
-      setEditalFile(result.assets[0]);
-    }
-  };
-
-  const pickDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/*'],
-    });
-    if (!result.canceled) {
-      setEditalFile(result.assets[0]);
-    }
   };
 
   const handleSalvar = useCallback(async () => {
@@ -73,37 +44,13 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
       return;
     }
 
+    if (!editalFile) {
+        Alert.alert('Aviso', 'O edital (PDF da Biblioteca Digital) é obrigatório.');
+        return;
+    }
+
     try {
       setLoading(true);
-
-      let finalEditalData = editalData;
-
-      if (editalFile && !finalEditalData) {
-        setUploading(true);
-        const formData = new FormData();
-        const fileUri = editalFile.uri;
-        const fileName = editalFile.name || fileUri.split('/').pop();
-        let fileType = editalFile.mimeType || editalFile.type;
-
-        if (!fileType || fileType === 'success') {
-          const ext = fileName.split('.').pop().toLowerCase();
-          if (ext === 'pdf') fileType = 'application/pdf';
-          else if (ext === 'jpg' || ext === 'jpeg') fileType = 'image/jpeg';
-          else if (ext === 'png') fileType = 'image/png';
-          else fileType = 'application/octet-stream';
-        }
-
-        formData.append('edital', {
-          uri: fileUri,
-          name: fileName,
-          type: fileType,
-        } as any);
-
-        const res = await uploadEdital(formData);
-        finalEditalData = res;
-        setEditalData(res);
-        setUploading(false);
-      }
 
       const [d, m, y] = data.split('/');
       const data_evento = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
@@ -119,13 +66,6 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         return;
       }
 
-      // Se o usuário selecionou um edital mas por algum motivo o upload falhou/limpou, avisar
-      if (editalFile && !finalEditalData?.url) {
-          Alert.alert('Erro', 'O edital selecionado não pôde ser processado. Tente removê-lo e anexar novamente.');
-          setLoading(false);
-          return;
-      }
-
       await criarAssembleia({
         titulo,
         tipo,
@@ -133,11 +73,8 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         data_evento,
         hora_primeira_chamada: hora1,
         hora_segunda_chamada: hora2,
-        edital_url: finalEditalData?.url || '',
-        edital_public_id: finalEditalData?.public_id,
-        edital_resource_type: finalEditalData?.resource_type,
-        edital_type: finalEditalData?.type,
-        edital_format: finalEditalData?.format
+        edital_drive_file_id: editalFile.id,
+        edital_format: 'pdf'
       });
 
       Alert.alert('Sucesso', 'Assembleia criada com sucesso!');
@@ -158,7 +95,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
       headerRight: () => <HeaderMenu actions={actions} />,
       title: 'Nova Assembleia'
     });
-  }, [navigation, titulo, tipo, pauta, data, hora1, hora2, editalFile, loading, uploading, handleSalvar]);
+  }, [navigation, titulo, tipo, pauta, data, hora1, hora2, editalFile, loading, handleSalvar]);
 
   return (
     <SafeScreen style={styles.container}>
@@ -237,24 +174,20 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         numberOfLines={6}
       />
 
-      <Text style={styles.label}>Edital de Convocação (Opcional)</Text>
+      <Text style={styles.label}>Edital de Convocação (Obrigatório PDF do Drive) *</Text>
       <TouchableOpacity style={styles.btnUpload} onPress={handlePickFile}>
-        <MaterialCommunityIcons name="paperclip" size={24} color="#003366" />
-        <Text style={styles.btnUploadText}>Selecionar PDF ou Imagem</Text>
+        <MaterialCommunityIcons name="google-drive" size={24} color="#003366" />
+        <Text style={styles.btnUploadText}>Selecionar da Biblioteca Digital</Text>
       </TouchableOpacity>
 
       {editalFile && (
         <View style={styles.previewContainer}>
-          <Text style={styles.previewLabel}>Preview do Edital:</Text>
-          {editalFile.mimeType?.startsWith('image/') || editalFile.type?.startsWith('image/') ? (
-            <Image source={{ uri: editalFile.uri }} style={styles.previewImage} resizeMode="contain" />
-          ) : (
-            <View style={styles.pdfPreview}>
-              <MaterialCommunityIcons name="file-pdf-box" size={40} color="#e74c3c" />
-              <Text style={styles.pdfName}>{editalFile.name || 'documento.pdf'}</Text>
-            </View>
-          )}
-          <TouchableOpacity onPress={() => { setEditalFile(null); setEditalData(null); }} style={styles.btnRemove}>
+          <Text style={styles.previewLabel}>Edital Selecionado:</Text>
+          <View style={styles.pdfPreview}>
+            <MaterialCommunityIcons name="file-pdf-box" size={40} color="#e74c3c" />
+            <Text style={styles.pdfName}>{editalFile.name || 'documento.pdf'}</Text>
+          </View>
+          <TouchableOpacity onPress={() => { setEditalFile(null); }} style={styles.btnRemove}>
             <Text style={styles.btnRemoveText}>Remover</Text>
           </TouchableOpacity>
         </View>

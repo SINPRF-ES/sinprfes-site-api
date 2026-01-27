@@ -19,6 +19,7 @@ export interface Assembleia {
   edital_resource_type?: string;
   edital_type?: string;
   edital_format?: string;
+  edital_drive_file_id?: string;
 }
 
 export interface AssembleiaEstado {

@@ -12,6 +12,7 @@
     let currentUserPerfil = 'FILIADO';
     let currentUserId = null;
     let currentBlobUrl = null;
+    let selectedDriveFile = null;
 
     async function inicializarAssembleias(perfil) {
         console.log("Inicializando módulo de Assembleias...");
@@ -868,10 +869,27 @@
                         <textarea name="pauta" required rows="5" placeholder="Descreva os itens a serem debatidos e votados..." style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem; resize:vertical;"></textarea>
                     </div>
 
-                    <div style="margin-bottom:30px; padding:20px; border:2px dashed #ddd; border-radius:10px; text-align:center; background:#f9f9f9;">
-                        <label style="display:block; font-weight:800; color:#003366; margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;">Edital de Convocação (Opcional)</label>
-                        <input type="file" id="input-edital" accept="application/pdf,image/*" style="margin-bottom:10px;">
-                        <p style="font-size:0.8rem; color:#666; margin:0;">PDF ou Imagem (Máx. 10MB)</p>
+                    <div style="margin-bottom:30px; padding:25px; border:2px dashed #003366; border-radius:12px; text-align:center; background:#f0f7ff;">
+                        <label style="display:block; font-weight:800; color:#003366; margin-bottom:15px; font-size:0.9rem; text-transform:uppercase;">Edital de Convocação (Obrigatório PDF) *</label>
+
+                        <div id="area-edital-selecionado" style="display:none; margin-bottom:15px; background:#fff; padding:15px; border-radius:10px; border:1px solid #27ae60; color:#27ae60; font-weight:700;">
+                            ✅ Edital selecionado: <span id="nome-edital-selecionado"></span>
+                        </div>
+
+                        <button type="button" class="btn btn-outline" id="btn-selecionar-drive" style="font-weight:700;">
+                            📂 Selecionar edital no Drive (Publicações)
+                        </button>
+
+                        <input type="hidden" name="edital_drive_file_id" id="input-edital-drive-id" required>
+                        <p style="font-size:0.8rem; color:#666; margin-top:10px;">O edital deve ser um arquivo PDF previamente salvo na biblioteca digital.</p>
+                    </div>
+
+                    <div id="container-picker-drive" style="display:none; margin-bottom:30px; padding:20px; border:1px solid #ddd; border-radius:10px; background:#fafafa; max-height:400px; overflow-y:auto;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h4 style="margin:0; color:#003366;">Escolha o arquivo PDF:</h4>
+                            <button type="button" class="btn btn-sm btn-outline" id="btn-fechar-picker">Fechar Seletor</button>
+                        </div>
+                        <div id="lista-picker-drive"></div>
                     </div>
 
                     <div style="text-align:right;">
@@ -880,6 +898,35 @@
                 </form>
             </div>
         `;
+
+        selectedDriveFile = null;
+
+        document.getElementById("btn-selecionar-drive").onclick = () => {
+            const container = document.getElementById("container-picker-drive");
+            container.style.display = "block";
+            window.Publicacoes.inicializarPublicacoes(null, {
+                isPicker: true,
+                containerId: "lista-picker-drive",
+                onSelectFile: (file) => {
+                    if (file.mimeType !== "application/vnd.google-apps.folder" && file.mimeType !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+                        alert("Por favor, selecione apenas arquivos PDF.");
+                        return;
+                    }
+                    if (file.mimeType === "application/vnd.google-apps.folder") return; // Folder click is handled by inicializarPublicacoes
+
+                    selectedDriveFile = file;
+                    document.getElementById("input-edital-drive-id").value = file.id;
+                    document.getElementById("nome-edital-selecionado").innerText = file.name;
+                    document.getElementById("area-edital-selecionado").style.display = "block";
+                    container.style.display = "none";
+                    document.getElementById("btn-selecionar-drive").innerText = "🔄 Trocar Edital";
+                }
+            });
+        };
+
+        document.getElementById("btn-fechar-picker").onclick = () => {
+            document.getElementById("container-picker-drive").style.display = "none";
+        };
 
         document.getElementById("form-criar-assembleia").onsubmit = (e) => {
             e.preventDefault();
@@ -890,45 +937,28 @@
     async function salvarNovaAssembleia() {
         const form = document.getElementById("form-criar-assembleia");
         const btn = document.getElementById("btn-salvar-assembleia");
-        const fileInput = document.getElementById("input-edital");
 
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
+
+        if (!data.edital_drive_file_id) {
+            alert("O edital (PDF) é obrigatório.");
+            return;
+        }
 
         btn.disabled = true;
         btn.innerText = "Processando...";
 
         try {
-            let editalData = null;
-
-            // 1. Upload do edital se houver
-            if (fileInput.files.length > 0) {
-                btn.innerText = "Enviando edital...";
-                const uploadFd = new FormData();
-                uploadFd.append('edital', fileInput.files[0]);
-
-                const resUpload = await window.Api.apiFetch("/api/assembleias/upload-edital", {
-                    method: "POST",
-                    body: uploadFd
-                });
-
-                if (!resUpload.ok) {
-                    const err = await resUpload.json();
-                    throw new Error(err.error || "Erro no upload do edital.");
-                }
-                editalData = await resUpload.json();
-            }
-
-            // 2. Criação da assembleia
+            // Criação da assembleia
             btn.innerText = "Criando assembleia...";
             const payload = {
                 ...data,
-                edital_url: editalData?.secure_url || editalData?.url || "",
-                edital_public_id: editalData?.public_id || null,
-                edital_resource_type: editalData?.resource_type || null,
-                edital_type: editalData?.type || null,
-                edital_format: editalData?.format || null,
-                edital_drive_file_id: editalData?.edital_drive_file_id || null
+                edital_url: "",
+                edital_public_id: null,
+                edital_resource_type: null,
+                edital_type: null,
+                edital_format: 'pdf'
             };
 
             const res = await window.Api.apiFetch("/api/assembleias", {

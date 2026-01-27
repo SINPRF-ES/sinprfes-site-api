@@ -74,6 +74,11 @@ async function criar(dados) {
     edital_public_id, edital_resource_type, edital_type, edital_format, edital_drive_file_id
   } = dados;
 
+  // Regra Canônica: Edital em PDF via Drive é obrigatório
+  if (!edital_drive_file_id) {
+      throw new Error("O edital em formato PDF (Biblioteca Digital) é obrigatório.");
+  }
+
   // Sanitização contra XSS
   titulo = escapeHtml(titulo);
   pauta = escapeHtml(pauta);

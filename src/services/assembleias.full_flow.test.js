@@ -35,7 +35,7 @@ describe('Assembleias Full Flow (Service Layer Integration)', () => {
     // 1. Criar
     pool.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'CRIADA' }] }); // INSERT ass
     pool.query.mockResolvedValueOnce({ rows: [] }); // Audit
-    const nova = await service.criar({ tipo: 'AGO', titulo: 'Ass Geral', criado_por: userId });
+    const nova = await service.criar({ tipo: 'AGO', titulo: 'Ass Geral', criado_por: userId, edital_drive_file_id: 'drive-123' });
     expect(nova.estado).toBe('CRIADA');
 
     // 2. Abrir

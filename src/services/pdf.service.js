@@ -8,7 +8,7 @@ const path = require("path");
 const { PDFDocument: PDFLibDocument } = require("pdf-lib");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
-const { formatarCPF, formatarTelefone, formatarDataBR } = require("../utils/format");
+const { formatarCPF, formatarTelefone, formatarDataBR, formatarAgencia, formatarConta } = require("../utils/format");
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
 const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");
@@ -491,8 +491,8 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
 
       doc.text(
         `Banco: ${dados.banco || "-"}   |   Agencia: ${
-          dados.agencia || "-"
-        }   |   Conta: ${dados.conta || "-"}`
+          formatarAgencia(dados.agencia)
+        }   |   Conta: ${formatarConta(dados.conta)}`
       );
       if (dados.pix) {
         doc.text(`Chave PIX: ${dados.pix}`);

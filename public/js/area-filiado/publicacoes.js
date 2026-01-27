@@ -9,11 +9,12 @@
     let folderStack = [];
     let currentBlobUrl = null;
 
-    async function inicializarPublicacoes(folderId = null) {
-        const secPub = document.getElementById("sec-publicacoes");
+    async function inicializarPublicacoes(folderId = null, options = {}) {
+        const { onSelectFile, containerId = "sec-publicacoes", isPicker = false } = options;
+        const secPub = document.getElementById(containerId);
         if (!secPub) return;
 
-        let container = secPub.querySelector('.section-card');
+        let container = isPicker ? secPub : secPub.querySelector('.section-card');
         if (!container) {
             container = document.createElement('div');
             container.className = 'section-card';
@@ -180,10 +181,10 @@
             const cardsHtml = lista.map(item => {
                 const isFolder = item.isFolder;
                 const icon = isFolder ? '📁' : (item.tipo === 'BALANCO' ? '📊' : '📄');
-                const btnText = isFolder ? "Abrir Pasta ➡️" : "👁️ Visualizar Agora";
-                const dataAttr = isFolder ? `data-folder-id="${item.id}"` : `data-file-id="${item.id}"`;
+                let btnText = isFolder ? "Abrir Pasta ➡️" : "👁️ Visualizar Agora";
+                if (isPicker && !isFolder) btnText = "✅ Selecionar este PDF";
 
-                // Removida a exibição da data (pub-meta) conforme solicitado
+                const dataAttr = isFolder ? `data-folder-id="${item.id}"` : `data-file-id="${item.id}"`;
 
                 return `
                     <div class="pub-card tipo-${item.tipo}" ${dataAttr}>
@@ -200,7 +201,7 @@
                 card.onclick = () => {
                     const idDestino = card.dataset.folderId;
                     folderStack.push(folderId);
-                    inicializarPublicacoes(idDestino);
+                    inicializarPublicacoes(idDestino, options);
                 };
             });
 
@@ -208,7 +209,13 @@
                 card.onclick = () => {
                     const idArquivo = card.dataset.fileId;
                     const titulo = card.querySelector('.pub-title')?.innerText || "documento";
-                    abrirArquivoSeguro(idArquivo, Utils.normalizeText(titulo).replace(/\s+/g, '_'));
+                    const item = lista.find(i => i.id === idArquivo);
+
+                    if (isPicker && onSelectFile) {
+                        onSelectFile(item);
+                    } else {
+                        abrirArquivoSeguro(idArquivo, Utils.normalizeText(titulo).replace(/\s+/g, '_'));
+                    }
                 };
             });
 
@@ -224,7 +231,7 @@
             if (btn) {
                 btn.onclick = () => {
                     const idAnterior = folderStack.pop();
-                    inicializarPublicacoes(idAnterior);
+                    inicializarPublicacoes(idAnterior, options);
                 };
             }
         }

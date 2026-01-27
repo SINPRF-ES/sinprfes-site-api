@@ -11,8 +11,11 @@ import { useAuth } from '../hooks/useAuth';
 import * as Sharing from 'expo-sharing';
 import { useNavigation } from '@react-navigation/native';
 
-const PublicacoesScreen: React.FC = () => {
+const PublicacoesScreen: React.FC = ({ route }: any) => {
   const navigation = useNavigation<any>();
+  const { mode, onSelectFile } = route.params || {};
+  const isPicker = mode === 'picker';
+
   const { token } = useAuth();
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -65,6 +68,16 @@ const PublicacoesScreen: React.FC = () => {
     if (isActuallyFolder) {
       setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
       return;
+    }
+
+    if (isPicker && onSelectFile) {
+        if (!file.mimeType?.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+            Alert.alert('Aviso', 'Por favor, selecione apenas arquivos PDF.');
+            return;
+        }
+        onSelectFile(file);
+        navigation.goBack();
+        return;
     }
 
     if (!token) {
@@ -130,7 +143,7 @@ const PublicacoesScreen: React.FC = () => {
         <View style={styles.textContainer}>
           <Text style={styles.itemName}>{item.name}</Text>
         </View>
-        <FontAwesome name={item.isFolder ? "chevron-right" : "download"} size={20} color="#007BFF" />
+        <FontAwesome name={item.isFolder ? "chevron-right" : (isPicker ? "check-circle" : "download")} size={20} color={isPicker && !item.isFolder ? "#27ae60" : "#007BFF"} />
       </TouchableOpacity>
     );
   };
