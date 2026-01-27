@@ -135,7 +135,7 @@
                 </div>
 
                 <div style="text-align:right;">
-                    <span id="res-status" style="margin-right:15px; font-weight:bold;"></span>
+                    <span id="res-status" style="margin-right:15px; font-weight:bold; color: #003366;"></span>
                     <button type="submit" class="btn btn-primary" style="padding:15px 40px;">Enviar Solicitação</button>
                 </div>
             </form>
@@ -177,8 +177,46 @@
         if (F.applyMaskAgencia) F.applyMaskAgencia(ag);
         if (F.applyMaskConta) F.applyMaskConta(ct);
 
+        let selectedFiles = [];
+
+        function renderFileList() {
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = "";
+                return;
+            }
+
+            fileList.innerHTML = `
+                <div style="margin-top: 15px; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                    <p style="font-weight: bold; margin-bottom: 10px; color: #003366;">✅ ${selectedFiles.length} arquivo(s) selecionado(s):</p>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        ${selectedFiles.map((f, i) => `
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                <span style="font-size: 0.9rem; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">${f.name}</span>
+                                <button type="button" class="btn-remove-file" data-index="${i}" style="background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.8rem;">Remover</button>
+                            </li>
+                        `).join("")}
+                    </ul>
+                </div>
+            `;
+
+            fileList.querySelectorAll(".btn-remove-file").forEach(btn => {
+                btn.onclick = (e) => {
+                    const idx = parseInt(e.target.getAttribute("data-index"));
+                    selectedFiles.splice(idx, 1);
+                    renderFileList();
+                };
+            });
+        }
+
         inputFile.onchange = () => {
-            fileList.innerHTML = inputFile.files.length > 0 ? `✅ ${inputFile.files.length} arquivo(s) prontos.` : "";
+            if (inputFile.files.length > 0) {
+                for (let i = 0; i < inputFile.files.length; i++) {
+                    selectedFiles.push(inputFile.files[i]);
+                }
+                // Limpa o input para permitir selecionar o mesmo arquivo novamente se desejar
+                inputFile.value = "";
+                renderFileList();
+            }
         };
 
         const calcFields = ["res-data-inicio", "res-data-fim", "res-km", "res-valor-outros"];
@@ -242,11 +280,18 @@
             const fd = new FormData(form);
             if (tel) fd.set("telefone_contato", tel.value.replace(/\D/g, ""));
 
+            // Adiciona múltiplos arquivos
+            fd.delete("anexos"); // Remove o que o FormData pegou do input (que deve estar vazio)
+            selectedFiles.forEach(file => {
+                fd.append("anexos", file);
+            });
+
             try {
                 const r = await window.Api.apiFetch("/api/ressarcimentos", { method: "POST", body: fd });
                 if (r.ok) {
                     status.textContent = "✅ Sucesso!";
                     form.reset();
+                    selectedFiles = [];
                     fileList.innerHTML = "";
                     atualizarCalculos();
                     carregarDados();

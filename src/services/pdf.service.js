@@ -8,6 +8,7 @@ const path = require("path");
 const { PDFDocument: PDFLibDocument } = require("pdf-lib");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
+const { formatarCPF, formatarTelefone, formatarDataBR } = require("../utils/format");
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
 const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");
@@ -416,8 +417,8 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
     doc.text(`Nome: ${dados.nome || ""}`);
-    doc.text(`CPF: ${dados.cpf || ""}`);
-    doc.text(`Telefone: ${dados.telefone_contato || ""}`);
+    doc.text(`CPF: ${formatarCPF(dados.cpf)}`);
+    doc.text(`Telefone: ${formatarTelefone(dados.telefone_contato)}`);
     doc.text(`E-mail: ${dados.email_destino || ""}`);
     doc.moveDown(1);
 
@@ -427,7 +428,7 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
     doc.font("Helvetica-Bold").fontSize(12).text("Dados da Atividade:");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Periodo: ${dados.data_inicio || ""} a ${dados.data_fim || ""}`);
+    doc.text(`Periodo: ${formatarDataBR(dados.data_inicio)} a ${formatarDataBR(dados.data_fim)}`);
     doc.text(`Local: ${dados.local || ""}`);
     doc.moveDown(0.3);
 
@@ -526,7 +527,7 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
       .text(
         `IP de origem: ${dados.ip || "-"}  |  User-Agent: ${
           dados.userAgent || "-"
-        }  |  CPF: ${dados.cpf || "-"}`
+        }  |  CPF: ${formatarCPF(dados.cpf) || "-"}`
       );
 
     doc.end();

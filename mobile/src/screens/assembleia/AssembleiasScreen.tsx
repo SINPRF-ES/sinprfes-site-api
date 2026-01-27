@@ -116,7 +116,7 @@ export default function AssembleiasScreen({ navigation }: any) {
                 dropdownIconColor="#003366"
                 mode="dropdown"
             >
-                <Picker.Item label="Ativas (Agendadas/Em andamento)" value="ativas" />
+                <Picker.Item label="Ativas" value="ativas" />
                 <Picker.Item label="Encerradas" value="encerradas" />
                 <Picker.Item label="Todas" value="todas" />
             </Picker>
@@ -160,14 +160,14 @@ const styles = StyleSheet.create({
   pickerWrapper: {
     flex: 1,
     minWidth: 0,
-    height: 40,
+    height: 52,
     justifyContent: 'center',
     backgroundColor: '#f2f4f8',
     borderRadius: 8,
     overflow: 'hidden'
   },
   picker: {
-    height: 40,
+    height: 52,
     width: '100%',
     ...Platform.select({
       android: {
