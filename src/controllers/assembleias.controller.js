@@ -910,6 +910,7 @@ async function uploadEdital(req, res) {
 
     const result = await uploadFileBuffer(req.file.buffer, {
       folder: "sinprfes/editais",
+      // Para 'raw' no Cloudinary, a extensão DEVE estar no public_id para delivery correto
       public_id: `edital_${Date.now()}${isPdf ? '.pdf' : ''}`,
       resource_type: resourceType,
       type: "authenticated" // Mudado de 'upload' para 'authenticated' para segurança
