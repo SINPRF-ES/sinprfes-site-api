@@ -333,13 +333,16 @@ async function gerarTokenQuorum(req, res) {
 
     res.json({
       token: quorum.token,
+      tokenId: quorum.id,
       quorum_id: quorum.id,
       isNew: quorum.isNew,
       tipo_chamada: tipoFinal,
       quorumVigente: estado?.quorumVigente,
       presente: true,
       tokenAtivo: true,
-      issuedAt: quorum.criado_em || new Date().toISOString()
+      vigente: true,
+      issuedAt: quorum.criado_em || new Date().toISOString(),
+      expiresAt: quorum.valido_ate || new Date(Date.now() + 10 * 60 * 1000).toISOString()
     });
   } catch (err) {
     log.error("AssembleiaGerarTokenQuorumErro", { requestId: req.requestId, assembleiaId: id, error: err.message, stack: err.stack });
@@ -386,12 +389,15 @@ async function atualizarQuorum(req, res) {
 
     res.json({
       token: quorum.token,
+      tokenId: quorum.id,
       quorum_id: quorum.id,
       tipo_chamada: quorum.tipo_chamada,
       quorumVigente: estado?.quorumVigente,
       presente: true,
       tokenAtivo: true,
-      issuedAt: quorum.criado_em || new Date().toISOString()
+      vigente: true,
+      issuedAt: quorum.criado_em || new Date().toISOString(),
+      expiresAt: quorum.valido_ate || new Date(Date.now() + 10 * 60 * 1000).toISOString()
     });
   } catch (err) {
      log.error("AssembleiaAtualizarQuorumErro", { requestId: req.requestId, assembleiaId: id, error: err.message });

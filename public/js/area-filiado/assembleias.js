@@ -13,6 +13,7 @@
     let currentUserId = null;
     let currentBlobUrl = null;
     let selectedDriveFile = null;
+    let currentPresentes = [];
 
     async function inicializarAssembleias(perfil) {
         console.log("Inicializando módulo de Assembleias...");
@@ -266,21 +267,28 @@
             const emoji = window.AssembleiaUtils.getStatusEmoji(a.estado);
             const dataBr = window.Formatters.formatISOToBR(a.data_evento);
 
+            // Cores baseadas no status para melhor contraste
+            let badgeStyle = "background:#eef2f7; color:#003366;";
+            if (a.estado === 'EM_CURSO') badgeStyle = "background:#fff3cd; color:#856404; border: 1px solid #ffeeba;";
+            if (a.estado === 'ABERTA') badgeStyle = "background:#d1e7dd; color:#0f5132; border: 1px solid #badbcc;";
+            if (a.estado === 'ENCERRADA') badgeStyle = "background:#f8d7da; color:#842029; border: 1px solid #f5c2c7;";
+
             return `
-                <div class="section-card filiado-card" style="margin-bottom:20px; background:#fff; border-left:8px solid #003366; transition:all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 25px; color:#333;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
-                        <div style="flex:1; min-width:280px;">
-                            <div style="margin-bottom:12px;">
-                                <span class="filiado-badge" style="background:#eef2f7; color:#003366; font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.75rem;">${label}</span>
-                            </div>
-                            <h3 style="margin:0; color:#003366; font-size:1.4rem; font-weight:800;">${emoji} ${a.tipo} - ${a.titulo}</h3>
-                            <div style="margin-top:12px; font-size:1rem; color:#444; display:flex; gap:20px; flex-wrap:wrap; font-weight:500;">
-                                <span style="display:flex; align-items:center; gap:6px;">📅 <strong style="color:#003366;">Data:</strong> ${dataBr}</span>
-                                <span style="display:flex; align-items:center; gap:6px;">🕒 <strong style="color:#003366;">Horário:</strong> ${a.hora_primeira_chamada || '--:--'} (1ª) / ${a.hora_segunda_chamada || '--:--'} (2ª)</span>
-                            </div>
+                <div class="section-card filiado-card" style="margin-bottom:25px; background:#fff; border-top:5px solid #003366; transition:all 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; color:#333; border-radius:15px; text-align:center;">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+                        <div>
+                            <span class="filiado-badge" style="${badgeStyle} font-weight:800; padding:8px 16px; border-radius:20px; font-size:0.8rem; text-transform:uppercase;">${label}</span>
                         </div>
-                        <div style="text-align:right;">
-                            <button class="btn btn-primary btn-lg" style="padding: 12px 25px; font-weight: 700; border-radius: 8px;" onclick="Assembleias.abrirDetalhes('${a.id}')">Ver Detalhes</button>
+
+                        <h3 style="margin:0; color:#003366; font-size:1.6rem; font-weight:900; line-height:1.3;">${emoji} ${a.tipo} - ${a.titulo}</h3>
+
+                        <div style="margin-top:5px; font-size:1.1rem; color:#555; display:flex; gap:25px; flex-wrap:wrap; font-weight:600; justify-content:center;">
+                            <span style="display:flex; align-items:center; gap:8px;">📅 Data: <span style="color:#003366;">${dataBr}</span></span>
+                            <span style="display:flex; align-items:center; gap:8px;">🕒 Horário: <span style="color:#003366;">${a.hora_primeira_chamada || '--:--'}</span></span>
+                        </div>
+
+                        <div style="margin-top:15px;">
+                            <button class="btn btn-primary btn-lg" style="padding: 15px 40px; font-weight: 800; border-radius: 30px; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);" onclick="Assembleias.abrirDetalhes('${a.id}')">Ver Detalhes e Participar</button>
                         </div>
                     </div>
                 </div>
@@ -309,6 +317,7 @@
 
             const a = await respA.json();
             const estado = await respE.json();
+            currentPresentes = estado.quorumVigente?.presentes || [];
 
             const label = window.AssembleiaUtils.getStatusLabel(a.estado);
             const dataBr = window.Formatters.formatISOToBR(a.data_evento);
@@ -316,6 +325,8 @@
             const isParticipavel = a.estado === 'ABERTA' || a.estado === 'EM_CURSO';
 
             const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
+            const isPresidente = estado.mesa && estado.mesa.presidente_user_id === currentUserId;
+            const canSeeToken = estado.quorumVigente?.token && (isPresidente || currentUserId === estado.quorumVigente.gerado_por_user_id);
 
             container.innerHTML = `
                 <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px;">
@@ -385,19 +396,31 @@
                         </div>
                     </div>
 
-                    <!-- Gestão (Diretoria) -->
-                    ${isDiretoria ? `
+                    <!-- Bloco de Token Vigente -->
+                    ${canSeeToken ? `
+                        <div class="section-block" style="margin-bottom:35px; border:3px solid #f1c40f; background:#fffdf0; border-radius:15px; padding:25px; text-align:center; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.2);">
+                            <h4 style="color:#856404; margin-bottom:15px; text-transform:uppercase; font-size:0.9rem; letter-spacing:1px; font-weight:900;">🔑 Token de Presença Vigente</h4>
+                            <div style="font-size:3.5rem; font-weight:900; color:#003366; letter-spacing:10px;">${estado.quorumVigente.token}</div>
+                            <p style="color:#666; margin-top:10px; font-size:0.9rem; font-weight:600;">Compartilhe este código com os filiados presentes.</p>
+                        </div>
+                    ` : ''}
+
+                    <!-- Gestão (Diretoria / Presidente) -->
+                    ${(isDiretoria || isPresidente) ? `
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px;">
                             <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px;">🛠️ Ações de Gestão e Controle</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center;">
-                                ${a.estado === 'CRIADA' ? `<button class="btn btn-primary btn-lg" onclick="Assembleias.abrirAssembleia('${id}')">Abrir Assembleia</button>` : ''}
-                                ${a.estado === 'ABERTA' ? `
+                                ${isDiretoria && a.estado === 'CRIADA' ? `<button class="btn btn-primary btn-lg" onclick="Assembleias.abrirAssembleia('${id}')">Abrir Assembleia</button>` : ''}
+                                ${isDiretoria && a.estado === 'ABERTA' ? `
                                     <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.prepararMesa('${id}')">Compor Mesa</button>
                                     <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.gerarTokenToken('${id}')">Gerar Token</button>
                                     <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" onclick="Assembleias.iniciarExecucao('${id}')">Iniciar Execução (Pauta)</button>
                                 ` : ''}
-                                ${isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" onclick="Assembleias.encerrarAssembleia('${id}')">Encerrar Assembleia</button>` : ''}
-                                ${a.estado === 'ENCERRADA' ? `<button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
+                                ${(isDiretoria || isPresidente) && a.estado === 'EM_CURSO' ? `
+                                    <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRecontagem('${id}')">🔄 Recontagem de Quórum</button>
+                                ` : ''}
+                                ${isDiretoria && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" onclick="Assembleias.encerrarAssembleia('${id}')">Encerrar Assembleia</button>` : ''}
+                                ${isDiretoria && a.estado === 'ENCERRADA' ? `<button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
                             </div>
                         </div>
                     ` : ''}
@@ -486,37 +509,99 @@
         } catch (err) { alert("Erro ao solicitar relatório."); }
     }
 
-    async function prepararMesa(id, substituir = false) {
-        const pId = prompt("ID do Usuário Presidente:");
-        const sId = prompt("ID do Usuário Secretário:");
-        if (!pId || !sId) return;
+    function ensureModalMesa() {
+        if (document.getElementById('modal-compor-mesa')) return;
+        const modalHtml = `
+            <div id="modal-compor-mesa" class="modal">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h2 id="mesa-modal-titulo">Compor Mesa Diretora</h2>
+                        <button type="button" class="modal-close" onclick="document.getElementById('modal-compor-mesa').style.display='none'">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="form-compor-mesa">
+                            <div class="field-group" style="margin-bottom: 15px;">
+                                <label style="font-weight:700; color:#003366;">Presidente</label>
+                                <select id="mesa-presidente-select" class="btn btn-outline" style="width:100%; color:#333; border: 1px solid #ccc;"></select>
+                            </div>
+                            <div class="field-group" style="margin-bottom: 15px;">
+                                <label style="font-weight:700; color:#003366;">Secretário</label>
+                                <select id="mesa-secretario-select" class="btn btn-outline" style="width:100%; color:#333; border: 1px solid #ccc;"></select>
+                            </div>
+                            <div id="mesa-justificativa-area" style="display:none; margin-bottom: 15px;">
+                                <label style="font-weight:700; color:#003366;">Justificativa (mín. 20 chars)</label>
+                                <textarea id="mesa-justificativa" class="btn btn-outline" style="width:100%; color:#333; height:80px; border: 1px solid #ccc; padding:10px;"></textarea>
+                            </div>
+                            <div style="text-align:right; margin-top:20px;">
+                                <button type="submit" class="btn btn-primary" style="font-weight:800; padding:10px 25px; border-radius:8px;">Confirmar Mesa</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
 
-        if (pId === sId) {
-            alert("Presidente e Secretário devem ser pessoas diferentes.");
+    async function prepararMesa(id, substituir = false) {
+        if (!currentPresentes || !currentPresentes.length) {
+            alert("Sem presentes para compor mesa. Gere/Informe token e registre check-ins.");
             return;
         }
 
-        let body = { presidente_user_id: pId, secretario_user_id: sId };
-        let url = `/api/assembleias/${id}/mesa`;
+        ensureModalMesa();
+        const modal = document.getElementById('modal-compor-mesa');
+        const pSelect = document.getElementById('mesa-presidente-select');
+        const sSelect = document.getElementById('mesa-secretario-select');
+        const jArea = document.getElementById('mesa-justificativa-area');
+        const form = document.getElementById('form-compor-mesa');
 
-        if (substituir) {
-            const justification = prompt("Justificativa para alteração da mesa (mín. 20 caracteres):");
-            if (!justification || justification.length < 20) {
-                alert("Justificativa obrigatória e deve ter pelo menos 20 caracteres.");
+        pSelect.innerHTML = currentPresentes.map(p => `<option value="${p.id}">${p.nome}</option>`).join("");
+        sSelect.innerHTML = currentPresentes.map(p => `<option value="${p.id}">${p.nome}</option>`).join("");
+
+        if (currentPresentes.length > 1) sSelect.selectedIndex = 1;
+
+        jArea.style.display = substituir ? 'block' : 'none';
+        document.getElementById('mesa-modal-titulo').innerText = substituir ? 'Substituir Mesa' : 'Compor Mesa';
+
+        modal.style.display = 'flex';
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const pId = pSelect.value;
+            const sId = sSelect.value;
+            const justificativa = document.getElementById('mesa-justificativa').value;
+
+            if (pId === sId) {
+                alert("Presidente e Secretário devem ser pessoas diferentes.");
                 return;
             }
-            body.justificativa = justification;
-            url = `/api/assembleias/${id}/mesa/substituir`;
-        }
 
-        try {
-            const r = await window.Api.apiFetch(url, {
-                method: "POST",
-                body: body
-            });
-            if (r.ok) { alert("Mesa atualizada!"); await carregarDetalhesAssembleia(id); }
-            else { const d = await r.json(); alert(d.message || d.error || "Erro."); }
-        } catch (err) { alert("Erro."); }
+            let body = { presidente_user_id: pId, secretario_user_id: sId };
+            let url = `/api/assembleias/${id}/mesa`;
+
+            if (substituir) {
+                if (!justificativa || justificativa.trim().length < 20) {
+                    alert("Justificativa obrigatória e deve ter pelo menos 20 caracteres.");
+                    return;
+                }
+                body.justificativa = justificativa;
+                url = `/api/assembleias/${id}/mesa/substituir`;
+            }
+
+            try {
+                const r = await window.Api.apiFetch(url, {
+                    method: "POST",
+                    body: body
+                });
+                if (r.ok) {
+                    alert("Mesa atualizada!");
+                    modal.style.display = 'none';
+                    await carregarDetalhesAssembleia(id);
+                }
+                else { const d = await r.json(); alert(d.message || d.error || "Erro."); }
+            } catch (err) { alert("Erro."); }
+        };
     }
 
     // --- Check-in ---
@@ -582,6 +667,7 @@
         const isPresidente = mesa && mesa.presidente_user_id === currentUserId;
         const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
         const temAutoridade = isPresidente || isDiretoria;
+        const canSeeToken = quorumVigente?.token && (isPresidente || currentUserId === quorumVigente.gerado_por_user_id);
 
         container.innerHTML = `
             <div class="section-card" style="background:#fff; color:#333; padding:30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-radius: 20px;">
@@ -595,6 +681,14 @@
                     <h4 style="color:#003366; font-size:1.8rem; margin:0; font-weight:800;">${assembleia.titulo}</h4>
                     <p style="margin-top:8px; color:#666; font-size:1.1rem; font-weight:600; text-transform:uppercase; letter-spacing:1px;">${assembleia.tipo}</p>
                 </div>
+
+                <!-- Bloco de Token Vigente na Sala -->
+                ${canSeeToken ? `
+                    <div class="section-block" style="margin-bottom:35px; border:3px solid #f1c40f; background:#fffdf0; border-radius:15px; padding:20px; text-align:center;">
+                        <h4 style="color:#856404; margin-bottom:10px; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; font-weight:900;">🔑 Token de Presença Vigente</h4>
+                        <div style="font-size:2.5rem; font-weight:900; color:#003366; letter-spacing:8px;">${quorumVigente.token}</div>
+                    </div>
+                ` : ''}
 
                 <!-- Mesa -->
                 <div class="section-box" style="margin-bottom:35px; border:2px solid #003366; background:#f4f9ff; border-radius:15px; padding:25px;">
@@ -709,9 +803,11 @@
                     <div class="section-block" style="margin-top:50px; border:3px solid #e74c3c; background:#fff8f8; border-radius:20px; padding:30px;">
                         <h4 style="color:#e74c3c; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:2px; font-weight:900; display:flex; align-items:center; gap:10px;">🛠️ Painel de Controle e Autoridade da Mesa</h4>
                         <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
-                            <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.prepararVotacaoItem('${assembleia.id}')">➕ Novo Item Votação Manual</button>
+                            ${isDiretoria ? `
+                                <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.prepararVotacaoItem('${assembleia.id}')">➕ Novo Item Votação Manual</button>
+                            ` : ''}
                             <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.solicitarRecontagem('${assembleia.id}')">🔄 Recontar Quórum (Novo Token)</button>
-                            ${votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
+                            ${isDiretoria && votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
                                 <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarVotacaoManual('${assembleia.id}', '${votacaoAtiva.id}')">⏹️ Encerrar Votação Imediatamente</button>
                             ` : ''}
                         </div>
@@ -792,7 +888,7 @@
                 body: { tipo_chamada: 'RECONTAGEM' }
             });
             alert("Recontagem iniciada! O quórum foi zerado.");
-            voltarParaLista();
+            await abrirDetalhes(aid);
         } catch (err) { alert("Erro."); }
     }
 

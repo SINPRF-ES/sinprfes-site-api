@@ -29,6 +29,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const perfil = (usuario?.perfil_acesso || '').toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
+  const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
+  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
 
   const [estadoLoading, setEstadoLoading] = useState(false);
 
@@ -191,11 +193,11 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   useEffect(() => {
     const isAberta = assembleia?.estado === 'ABERTA';
     const actions: MenuAction[] = [];
-    if (isDiretoria && assembleia) {
-      if (assembleia.estado === 'CRIADA') {
+    if ((isDiretoria || isPresidente) && assembleia) {
+      if (isDiretoria && assembleia.estado === 'CRIADA') {
         actions.push({ label: 'Abrir Assembleia', icon: 'play-circle-outline', onPress: handleAbrir });
       }
-      if (isAberta) {
+      if (isAberta && isDiretoria) {
         const isMesaEstabelecida = !!(estado?.mesa as any)?.estabelecida_em;
         actions.push({
             label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
@@ -211,10 +213,12 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             // No mobile, redirecionamos para a sala onde o presidente tem esse controle ou fazemos aqui
             navigation.navigate('AssembleiaSala', { id });
         }});
-        actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+        if (isDiretoria || isPresidente) {
+          actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+        }
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
-      if (assembleia.estado === 'ENCERRADA') {
+      if (assembleia.estado === 'ENCERRADA' && isDiretoria) {
         actions.push({ label: 'Gerar Relatório', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
       }
     }
@@ -302,6 +306,14 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
       <Text style={styles.tituloText}>{assembleia.titulo}</Text>
       <Text style={styles.descricaoText}>{assembleia.pauta}</Text>
+
+      {canSeeToken && (
+        <View style={styles.tokenCardVigente}>
+            <Text style={styles.tokenLabelVigente}>🔑 Token de Presença Vigente</Text>
+            <Text style={styles.tokenValueVigente}>{estado?.quorumVigente?.token}</Text>
+            <Text style={styles.tokenHintVigente}>Compartilhe este código com os filiados presentes</Text>
+        </View>
+      )}
 
       {isIniciado && estado?.mesa && (
         <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366' }]}>
@@ -618,4 +630,8 @@ const styles = StyleSheet.create({
   diretoriaButtons: { flexDirection: 'row', gap: 12 },
   btnManagement: { flex: 1, backgroundColor: '#f1c40f', padding: 12, borderRadius: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
   btnDanger: { backgroundColor: '#e74c3c' },
+  tokenCardVigente: { backgroundColor: '#fffdf0', borderRadius: 12, padding: 20, marginBottom: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: '#f1c40f', alignItems: 'center', elevation: 2 },
+  tokenLabelVigente: { fontSize: 13, fontWeight: 'bold', color: '#856404', marginBottom: 8, textTransform: 'uppercase' },
+  tokenValueVigente: { fontSize: 40, fontWeight: '900', color: '#003366', letterSpacing: 10 },
+  tokenHintVigente: { fontSize: 12, color: '#666', marginTop: 8, fontWeight: '500' },
 });

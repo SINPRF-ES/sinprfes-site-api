@@ -22,6 +22,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
   const temAutoridade = isPresidente || isDiretoria;
+  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
 
   const handlePedirPalavra = useCallback(async () => {
     try {
@@ -101,13 +102,17 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       { label: 'Nova Proposta', icon: 'file-document-edit-outline', onPress: () => navigation.navigate('Propostas', { id }) }
     ];
 
-    if (isPresidente) {
-      actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+    if (temAutoridade) {
+      if (isDiretoria) {
+        actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+      }
       actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: handleRecontagem });
-      if (estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
+      if (isDiretoria && estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
         actions.push({ label: 'Encerrar Votação Item', icon: 'stop-circle-outline', onPress: handleEncerrarVotacaoManual });
       }
-      actions.push({ label: 'Encerrar Assembleia', icon: 'close-circle-outline', onPress: handleEncerrarAssembleiaManual, isDestructive: true });
+      if (isDiretoria) {
+        actions.push({ label: 'Encerrar Assembleia', icon: 'close-circle-outline', onPress: handleEncerrarAssembleiaManual, isDestructive: true });
+      }
     }
 
     navigation.setOptions({
@@ -266,6 +271,14 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
+        {canSeeToken && (
+            <View style={styles.tokenCard}>
+                <Text style={styles.tokenLabel}>🔑 Token de Presença Vigente</Text>
+                <Text style={styles.tokenValue}>{estado.quorumVigente?.token}</Text>
+                <Text style={styles.tokenHint}>Compartilhe com os presentes</Text>
+            </View>
+        )}
+
         {estado.mesa && (
             <View style={styles.mesaCard}>
                 <Text style={styles.mesaTitle}>🧑‍⚖️ Mesa Diretora</Text>
@@ -282,23 +295,25 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                     <View style={styles.mesaAcoes}>
                         <Text style={styles.mesaAcoesTitle}>Ações de Comando</Text>
                         <View style={styles.mesaAcoesGrid}>
+                            {isDiretoria && (
+                                <TouchableOpacity
+                                    style={styles.btnComando}
+                                    onPress={() => navigation.navigate('CriarItemVotacao', { id })}
+                                    accessibilityLabel="Novo Item de Votação"
+                                    accessibilityRole="button"
+                                >
+                                    <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
+                                    <Text style={styles.btnComandoText}>Novo Item</Text>
+                                </TouchableOpacity>
+                            )}
                             <TouchableOpacity
-                                style={styles.btnComando}
-                                onPress={() => navigation.navigate('CriarItemVotacao', { id })}
-                                accessibilityLabel="Novo Item de Votação"
-                                accessibilityRole="button"
-                            >
-                                <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
-                                <Text style={styles.btnComandoText}>Novo Item</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.btnComando}
+                                style={[styles.btnComando, !isDiretoria && { flex: 0, paddingHorizontal: 30 }]}
                                 onPress={handleRecontagem}
                                 accessibilityLabel="Solicitar Recontagem de Quórum"
                                 accessibilityRole="button"
                             >
                                 <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
-                                <Text style={styles.btnComandoText}>Recontar</Text>
+                                <Text style={styles.btnComandoText}>Recontar Quórum</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -464,6 +479,10 @@ const styles = StyleSheet.create({
   mesaAcoes: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12 },
   mesaAcoesTitle: { fontSize: 11, fontWeight: 'bold', color: '#999', marginBottom: 8, textTransform: 'uppercase' },
   mesaAcoesGrid: { flexDirection: 'row', gap: 10 },
+  tokenCard: { backgroundColor: '#fffdf0', borderRadius: 12, padding: 16, marginBottom: 16, borderStyle: 'dashed', borderWidth: 2, borderColor: '#f1c40f', alignItems: 'center' },
+  tokenLabel: { fontSize: 12, fontWeight: 'bold', color: '#856404', marginBottom: 4, textTransform: 'uppercase' },
+  tokenValue: { fontSize: 32, fontWeight: '900', color: '#003366', letterSpacing: 8 },
+  tokenHint: { fontSize: 11, color: '#999', marginTop: 4 },
   btnComando: { backgroundColor: '#003366', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center' },
   btnComandoText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   scrollContent: { padding: 16 },

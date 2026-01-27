@@ -284,9 +284,10 @@ async function gerarQuorum(dados) {
     }
 
     // Idempotência: Se NÃO for forceNew e já existe token ativo para este MESMO tipo_chamada, retorna ele
-    if (!forceNew) {
+    // RECONTAGEM sempre força um novo token para invalidar o snapshot anterior
+    if (!forceNew && tipo_chamada !== 'RECONTAGEM') {
       const { rows: existingRows } = await client.query(
-        `SELECT id, token, criado_em, quorum_total_ativos, quorum_necessario
+        `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario
          FROM assembleia_quoruns
          WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL`,
         [assembleia_id, tipo_chamada]
@@ -333,9 +334,9 @@ async function gerarQuorum(dados) {
     );
 
     const { rows: qRows } = await client.query(
-      `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, token, criado_em, quorum_total_ativos, quorum_necessario, tipo_chamada`,
+      `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao, valido_ate)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '10 minutes')
+       RETURNING id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, tipo_chamada`,
       [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao]
     );
     const quorum = { ...qRows[0], isNew: true };
