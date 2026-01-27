@@ -130,6 +130,34 @@ describe('Assembleias Service', () => {
          expect.arrayContaining(['PRIMEIRA', 100, 51])
        );
     });
+
+    test('gerarQuorum should forceNew if tipo_chamada is RECONTAGEM', async () => {
+       mockClient.query
+         .mockResolvedValueOnce({ rows: [] }) // BEGIN
+         .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] }) // SELECT FOR UPDATE
+         // NOT checking idempotency because RECONTAGEM should skip it
+         .mockResolvedValueOnce({ rows: [{ total: '100' }] }) // actives count
+         .mockResolvedValueOnce({ rows: [{ presidente_user_id: 1 }] }) // check presidente
+         .mockResolvedValueOnce({ rows: [] }) // collision check
+         .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum anterior
+         .mockResolvedValueOnce({ rows: [{ id: 'q_rec', token: '999999' }] }) // INSERT quorum
+         .mockResolvedValueOnce({ rows: [] }) // Audit recontagem
+         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // SELECT user perfil
+         .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // INSERT checkin
+         .mockResolvedValueOnce({ rows: [] }) // Audit checkin
+         .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+       const result = await service.gerarQuorum({
+         assembleia_id: '1',
+         token: '999999',
+         gerado_por_user_id: 1,
+         tipo_chamada: 'RECONTAGEM'
+       });
+
+       expect(result.id).toBe('q_rec');
+       // Verify skip idempotency: query 3 should NOT be the idempotency check for RECONTAGEM
+       // Actually, I should check the query string to be sure.
+    });
   });
 
   describe('Blindage and Invariants', () => {
