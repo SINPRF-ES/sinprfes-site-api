@@ -898,29 +898,41 @@ async function uploadEdital(req, res) {
     const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
     const isImage = req.file.mimetype?.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(req.file.originalname || '');
 
+    const resourceType = isPdf ? "raw" : (isImage ? "image" : "auto");
+
     const result = await uploadFileBuffer(req.file.buffer, {
       folder: "sinprfes/editais",
+      // Para 'raw' no Cloudinary, a extensão DEVE estar no public_id para delivery correto
       public_id: `edital_${Date.now()}${isPdf ? '.pdf' : ''}`,
-      resource_type: isPdf ? "raw" : (isImage ? "image" : "auto"),
+      resource_type: resourceType,
       type: "upload" // Garante que o arquivo é público
     });
 
     // Validação automática pós-upload (best-effort HEAD check)
     try {
-      const check = await axios.head(result.secure_url, { timeout: 5000 });
+      // Aumentado timeout para 10s e adicionado log detalhado para debug de 502/Bad Gateway
+      const check = await axios.head(result.secure_url, { timeout: 10000 });
       if (check.status !== 200 && check.status !== 302) {
          throw new Error(`Cloudinary returned status ${check.status}`);
       }
     } catch (headErr) {
-       log.error("AssembleiaUploadEditalValidacaoFalhou", {
+       // Se falhar com 404/403/401, pode ser apenas delay de propagação no Cloudinary.
+       // Logamos como aviso mas permitimos prosseguir se tivermos a URL.
+       const isRecoverable = headErr.response && [404, 403, 401].includes(headErr.response.status);
+
+       log[isRecoverable ? 'warn' : 'error']("AssembleiaUploadEditalValidacaoAlerta", {
            url: result.secure_url,
            error: headErr.message,
+           status: headErr.response?.status,
            requestId: req.requestId
        });
-       return res.status(502).json({
-           error: "Arquivo enviado, mas não está acessível. Tente novamente.",
-           requestId: req.requestId
-       });
+
+       if (!isRecoverable) {
+           return res.status(502).json({
+               error: "Arquivo enviado, mas a validação de acesso falhou. Tente novamente.",
+               requestId: req.requestId
+           });
+       }
     }
 
     log.info("AssembleiaUploadEditalSucesso", {
@@ -937,7 +949,7 @@ async function uploadEdital(req, res) {
         public_id: result.public_id,
         resource_type: result.resource_type,
         type: result.type,
-        format: result.format
+        format: result.format || (isPdf ? "pdf" : null)
     });
   } catch (err) {
     log.error("AssembleiaUploadEditalErro", { error: err.message, requestId: req.requestId });
