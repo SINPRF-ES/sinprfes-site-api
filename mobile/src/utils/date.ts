@@ -27,6 +27,28 @@ export const formatISOToBRDateTime = (isoDate: string | null | undefined): strin
   }
 };
 
+/**
+ * Formata uma data ISO para HH:MM:SS no timezone America/Sao_Paulo.
+ */
+export const formatTimeSP = (isoDate: string | null | undefined): string => {
+  if (!isoDate) return '--:--:--';
+  try {
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return '--:--:--';
+
+    return date.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  } catch (e) {
+    console.error('formatTimeSP error', e);
+    return '--:--:--';
+  }
+};
+
 export const toBrazilianDate = (isoDate: string | null | undefined): string => {
   return formatISOToBR(isoDate);
 };

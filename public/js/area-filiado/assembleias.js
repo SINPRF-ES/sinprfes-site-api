@@ -766,7 +766,7 @@
                             ${pedidosPalavra?.length ? pedidosPalavra.map(p => `
                                 <div style="padding:15px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; align-items:center; background:${p.status === 'EM_FALA' ? '#fff9e6' : 'transparent'}; border-radius:8px;">
                                     <div style="font-size:1rem;">
-                                        <strong style="color:#003366; font-weight:800;">${p.filiado_nome}</strong><br>
+                                        <strong style="color:#003366; font-weight:800;">${p.filiado_nome}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(p.criado_em)}</small><br>
                                         <span class="filiado-badge" style="font-size:0.7rem; margin-top:6px; font-weight:700;">${p.status}</span>
                                     </div>
                                     ${temAutoridade && p.status === 'PENDENTE' ? `
@@ -784,7 +784,7 @@
                             ${propostas?.length ? propostas.map(pr => `
                                 <div style="padding:15px; border-bottom:1px solid #f5f5f5; background:${pr.status === 'EM_VOTACAO' ? '#e8f5e9' : 'transparent'}; border-radius:8px; margin-bottom:10px;">
                                     <div style="font-size:1rem;">
-                                        <strong style="color:#003366; font-weight:800;">${pr.titulo}</strong><br>
+                                        <strong style="color:#003366; font-weight:800;">${pr.titulo}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(pr.criado_em)}</small><br>
                                         <small style="color:#666; font-weight:600;">Autor: ${pr.autor_nome}</small>
                                     </div>
                                     <div style="margin-top:8px;">
@@ -876,7 +876,12 @@
     async function votarProposta(aid, prid) {
         if (!confirm("Deseja iniciar a votação desta proposta agora?")) return;
         try {
-            await window.Api.apiFetch(`/api/assembleias/${aid}/propostas/${prid}/votar`, { method: "POST" });
+            const r = await window.Api.apiFetch(`/api/assembleias/${aid}/propostas/${prid}/votar`, { method: "POST" });
+            const data = await r.json();
+            if (data.status === 'RETIRADA_AUTOR_AUSENTE') {
+                alert("Proposta retirada de pauta: autor ausente da votação.");
+                sincronizarEstado(aid);
+            }
         } catch (err) { alert("Erro."); }
     }
 

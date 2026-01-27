@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaEstado, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
+import { formatTimeSP } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
@@ -76,7 +77,11 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
 
   const handleIniciarVotacaoProposta = async (prid: string) => {
     try {
-      await iniciarVotacaoProposta(id, prid);
+      const res = await iniciarVotacaoProposta(id, prid);
+      if ((res as any).status === 'RETIRADA_AUTOR_AUSENTE') {
+        Alert.alert('Proposta Retirada', 'A proposta foi retirada de pauta automaticamente pois o autor não está presente na votação.');
+        fetchData();
+      }
     } catch (err: any) {
       Alert.alert('Erro', err.response?.data?.error || 'Falha ao iniciar votação da proposta.');
     }
@@ -103,9 +108,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     ];
 
     if (temAutoridade) {
-      if (isDiretoria) {
-        actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
-      }
+      actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
       actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: handleRecontagem });
       if (isDiretoria && estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
         actions.push({ label: 'Encerrar Votação Item', icon: 'stop-circle-outline', onPress: handleEncerrarVotacaoManual });
@@ -414,7 +417,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             {estado.pedidosPalavra.map((p: any, i: number) => (
               <View key={i} style={styles.itemInteracaoRow}>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.nominalNome}>{p.filiado_nome}</Text>
+                  <Text style={styles.nominalNome}>{p.filiado_nome} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(p.criado_em)}</Text></Text>
                   <Text style={styles.itemStatus}>{p.status}</Text>
                 </View>
                 {temAutoridade && p.status === 'PENDENTE' && (
@@ -437,7 +440,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             <Text style={styles.sectionTitle}>📝 Propostas e Encaminhamentos</Text>
             {estado.propostas.map((pr: any, i: number) => (
               <View key={i} style={styles.propostaCard}>
-                <Text style={styles.propostaTitulo}>{pr.titulo}</Text>
+                <Text style={styles.propostaTitulo}>{pr.titulo} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(pr.criado_em)}</Text></Text>
                 <Text style={styles.propostaAutor}>Por: {pr.autor_nome}</Text>
                 <Text style={styles.propostaDesc}>{pr.descricao}</Text>
                 <View style={styles.propostaFooter}>

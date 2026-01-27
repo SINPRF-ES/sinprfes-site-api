@@ -705,8 +705,20 @@ async function iniciarVotacaoProposta(req, res) {
     const { autorizada } = await verificarAutoridadeMesa(id, req.user);
     if (!autorizada) return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
 
-    const votacao = await service.iniciarVotacaoProposta(id, prid, req.user.id);
+    const result = await service.iniciarVotacaoProposta(id, prid, req.user.id);
 
+    if (result.status === 'RETIRADA_AUTOR_AUSENTE') {
+        const propostas = await service.listarPropostas(id);
+        socket.emitEvent(id, "proposals_updated", propostas);
+        log.info("AssembleiaPropostaRetiradaAutomatica", { requestId: req.requestId, assembleiaId: id, propostaId: prid });
+        return res.json({
+            success: false,
+            status: 'RETIRADA_AUTOR_AUSENTE',
+            message: 'Proposta retirada de pauta: autor ausente da votação.'
+        });
+    }
+
+    const votacao = result;
     socket.emitEvent(id, "votacao:iniciada", { ...votacao, contagem: { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 }, votos: [] });
 
     // Atualiza lista de propostas para refletir status EM_VOTACAO

@@ -182,6 +182,27 @@ describe('Assembleias Service', () => {
       });
       expect(result.id).toBe('v1');
     });
+
+    test('iniciarVotacaoProposta should withdraw proposal if author is absent', async () => {
+       mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+       mockClient.query.mockResolvedValueOnce({ rows: [{ id: 'pr1', assembleia_id: '1', autor_id: 100, titulo: 'Prop 1' }] }); // SELECT FOR UPDATE
+
+       pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1' }] }); // buscarUltimoQuorum (uses pool)
+
+       mockClient.query.mockResolvedValueOnce({ rows: [] }); // verificarElegibilidadePorQuorum (uses client)
+       mockClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE status RETIRADA
+       mockClient.query.mockResolvedValueOnce({ rows: [] }); // registrarAuditoria
+       mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+       const result = await service.iniciarVotacaoProposta('1', 'pr1', 1);
+
+       expect(result.status).toBe('RETIRADA_AUTOR_AUSENTE');
+
+       const updateCall = mockClient.query.mock.calls.find(c => c[0].includes("UPDATE assembleia_propostas"));
+       expect(updateCall).toBeDefined();
+       expect(updateCall[1]).toContain('autor ausente da votação');
+       expect(updateCall[1]).toContain('pr1');
+    });
   });
 
   describe('Reporting', () => {
@@ -195,6 +216,8 @@ describe('Assembleias Service', () => {
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1', token: '111' }, { id: 'q2', token: '222' }] });
       // 2c. votacoes
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1' }] });
+      // 2d. propostas
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 'pr1', titulo: 'Proposta 1', autor_nome: 'Autor 1' }] });
 
       // 3. allCheckins (Batch)
       pool.query.mockResolvedValueOnce({ rows: [
@@ -220,8 +243,8 @@ describe('Assembleias Service', () => {
       expect(res.votacoes[0].contagem.total).toBe(2);
 
       // Verify that pool.query was NOT called for each quorum/votacao separately after batch fetch
-      // Total calls expected: 1 (buscarPorId) + 3 (mesa, quoruns, votacoes) + 1 (allCheckins) + 1 (allVotos) = 6
-      expect(pool.query).toHaveBeenCalledTimes(6);
+      // Total calls expected: 1 (buscarPorId) + 4 (mesa, quoruns, votacoes, propostas) + 1 (allCheckins) + 1 (allVotos) = 7
+      expect(pool.query).toHaveBeenCalledTimes(7);
 
       // Verify batch queries use ANY
       expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/assembleia_quorum_id = ANY/), expect.anything());

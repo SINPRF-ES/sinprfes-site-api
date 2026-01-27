@@ -119,6 +119,26 @@
       const format = () => { el.value = this.formatConta(el.value); };
       el.addEventListener('input', format);
       format();
+    },
+
+    /**
+     * Formata uma data para HH:MM:SS no timezone America/Sao_Paulo.
+     */
+    formatTimeSP: function (date) {
+      if (!date) return "--:--:--";
+      try {
+        const d = (typeof date === 'string') ? new Date(date) : date;
+        return d.toLocaleTimeString('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+      } catch (e) {
+        console.error("Formatters.formatTimeSP error", e);
+        return "--:--:--";
+      }
     }
   };
 
