@@ -36,7 +36,7 @@ async function runBirthdayScan() {
     });
 
     const lastRun = res.rows[0].last_run_date;
-    console.log(`✅ [Job] LOCK OK | lastRun: ${lastRun} | todayStr: ${todayStr}`);
+    console.log(`[Job] lastRun=${lastRun} | todayStr=${todayStr}`);
 
     // 3. Verifica se já rodou hoje
     if (lastRun === todayStr) {
@@ -53,6 +53,7 @@ async function runBirthdayScan() {
     console.log(`✅ [Job] BUSCA aniversariantes OK (count: ${count})`);
 
     // Sempre envia o relatório para o sindicato (mesmo se vazio, conforme requisito)
+    console.log(`[Job] Iniciando envio de e-mail de aniversariantes...`);
     await emailService.enviarRelatorioAniversariantes({
       dateStr: todayStr,
       aniversariantes
@@ -73,7 +74,7 @@ async function runBirthdayScan() {
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('💥 [Job] Erro crítico ao processar aniversariantes:', error);
+    console.error('💥 [Job] Erro crítico ao processar aniversariantes:', error.stack || error);
     throw error;
   } finally {
     client.release();

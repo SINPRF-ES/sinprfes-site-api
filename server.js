@@ -8,16 +8,12 @@ logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 
 const server = http.createServer(app);
 assembleiaSocket.init(server);
-const { runBirthdayScan } = require("./src/jobs/birthdayCron");
+const { initBirthdayScheduler } = require("./src/jobs/birthdayScheduler");
 
 logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 
-// Nota: O scan de aniversários pode ser agendado aqui se usássemos node-cron,
-// mas seguindo o padrão de "Job" do arquivo, ele é disparado manualmente ou via cron externo.
-// O job possui trava de idempotência interna via banco de dados.
-if (process.env.BIRTHDAY_SCAN_ON_BOOT === "true") {
-  runBirthdayScan();
-}
+// Inicializa o scheduler de aniversariantes (cron + boot trigger)
+initBirthdayScheduler();
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));

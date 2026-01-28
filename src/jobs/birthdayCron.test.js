@@ -60,7 +60,7 @@ describe('birthdayCron - runBirthdayScan', () => {
     expect(mockClient.release).toHaveBeenCalled();
 
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining('START: BIRTHDAY_SCAN'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('LOCK OK'));
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('lastRun=01/01/2000'));
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining('BUSCA aniversariantes OK'));
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining('EMAIL OK'));
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining('UPDATE job_runs OK'));
@@ -103,7 +103,7 @@ describe('birthdayCron - runBirthdayScan', () => {
 
     expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
     expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Erro crítico ao processar aniversariantes'), error);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Erro crítico ao processar aniversariantes'), expect.anything());
     expect(mockClient.release).toHaveBeenCalled();
   });
 });
