@@ -1,6 +1,6 @@
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { fetchPublicacoes, downloadPublicacaoFile } from './driveService';
 import { logDebug } from '../utils/filiadoUtils';
 import { carregarSessao } from './storageService';
@@ -24,10 +24,11 @@ export interface UpdateManifest {
 
 export interface UpdateCheckResult {
   hasUpdate: boolean;
-  type: 'OTA' | 'APK';
-  isMandatory: boolean;
-  manifest: UpdateManifest;
+  type?: 'OTA' | 'APK';
+  isMandatory?: boolean;
+  manifest?: UpdateManifest;
   apkUrl?: string;
+  error?: 'APP_FOLDER_NOT_FOUND' | 'MANIFEST_NOT_FOUND' | 'MANIFEST_DOWNLOAD_ERROR' | string;
 }
 
 /**
@@ -43,33 +44,94 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
 
     // 1. Localizar pasta 'App' na raiz das Publicações
     const rootFiles = await fetchPublicacoes(null);
-    const appFolder = rootFiles.find(f => f.isFolder && f.name.toLowerCase() === 'app');
+    const appFolder = rootFiles.find(f => f.isFolder && (f.name || '').trim().toLowerCase() === 'app');
     if (!appFolder) {
-      logDebug('UpdateCheck.error', { reason: 'APP_FOLDER_NOT_FOUND' });
-      return null;
+      logDebug('UpdateCheck.step', { step: 'APP_FOLDER_NOT_FOUND' });
+      return { hasUpdate: false, error: 'Pasta App não encontrada no Drive.' };
     }
+    logDebug('UpdateCheck.step', { step: 'FOUND_APP_FOLDER', folderId: appFolder.id });
 
     // 2. Localizar 'update-manifest.json' e APK dentro da pasta 'App'
     const appFiles = await fetchPublicacoes(appFolder.id);
-    const manifestFile = appFiles.find(f => f.name === 'update-manifest.json');
+    logDebug('UpdateCheck.appFolderContents', {
+        count: appFiles.length,
+        items: appFiles.map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType }))
+    });
+
+    const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
     if (!manifestFile) {
-      logDebug('UpdateCheck.error', { reason: 'MANIFEST_NOT_FOUND' });
-      return null;
+      logDebug('UpdateCheck.step', {
+          step: 'MANIFEST_NOT_FOUND',
+          availableNames: appFiles.map(f => f.name)
+      });
+      return { hasUpdate: false, error: 'update-manifest.json não encontrado na pasta App.' };
+    }
+    logDebug('UpdateCheck.step', {
+        step: 'FOUND_MANIFEST',
+        fileId: manifestFile.id,
+        mimeType: manifestFile.mimeType,
+        name: manifestFile.name
+    });
+
+    // Validar MimeType para evitar Google Docs
+    if (manifestFile.mimeType === 'application/vnd.google-apps.document') {
+        logDebug('UpdateCheck.step', { step: 'MANIFEST_IS_GOOGLE_DOC', fileId: manifestFile.id });
+        return {
+            hasUpdate: false,
+            error: 'O update-manifest.json está como Google Docs. Faça upload como arquivo JSON (application/json) no Drive.'
+        };
     }
 
     // 3. Baixar e ler o manifesto
-    const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
-    const manifestContent = await FileSystem.readAsStringAsync(localUri);
-    const manifest: UpdateManifest = JSON.parse(manifestContent);
+    let manifest: UpdateManifest;
+    try {
+      logDebug('UpdateCheck.step', { step: 'DOWNLOADING_MANIFEST' });
+      const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
 
-    logDebug('UpdateCheck.manifestLoaded', manifest);
+      logDebug('UpdateCheck.step', {
+        step: 'READING_MANIFEST',
+        fileId: manifestFile.id,
+        name: manifestFile.name,
+        localUri
+      });
+      const manifestContent = await FileSystem.readAsStringAsync(localUri);
+
+      try {
+        manifest = JSON.parse(manifestContent);
+      } catch (parseError: any) {
+        logDebug('UpdateCheck.error', {
+            reason: 'MANIFEST_PARSE_FAILED',
+            message: parseError.message,
+            stack: parseError.stack
+        });
+        return { hasUpdate: false, error: 'Erro ao processar JSON do manifesto.' };
+      }
+
+      logDebug('UpdateCheck.MANIFEST_DOWNLOADED', {
+        size: manifestContent.length,
+        versionCode: manifest.versionCode,
+        runtimeVersion: manifest.runtimeVersion
+      });
+    } catch (e: any) {
+      logDebug('UpdateCheck.error', {
+          reason: 'MANIFEST_DOWNLOAD_FAILED',
+          message: e.message,
+          stack: e.stack
+      });
+      return { hasUpdate: false, error: `Falha no download: ${e.message}` };
+    }
 
     // 4. Comparar versões
     const currentVersionCode = Application.nativeBuildVersion ? parseInt(Application.nativeBuildVersion, 10) : 0;
     const currentRuntimeVersion = Updates.runtimeVersion || '';
+    const currentChannel = Updates.channel || '';
 
     logDebug('UpdateCheck.versions', {
-      current: { versionCode: currentVersionCode, runtimeVersion: currentRuntimeVersion },
+      current: {
+        versionCode: currentVersionCode,
+        runtimeVersion: currentRuntimeVersion,
+        channel: currentChannel
+      },
       remote: { versionCode: manifest.versionCode, runtimeVersion: manifest.runtimeVersion }
     });
 
@@ -97,8 +159,8 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
       try {
         const update = await Updates.checkForUpdateAsync();
+        logDebug('UpdateCheck.OTA_CHECK_RESULT', { isAvailable: update.isAvailable });
         if (update.isAvailable) {
-          logDebug('UpdateCheck.otaAvailable', {});
           return {
             hasUpdate: true,
             type: 'OTA',
@@ -107,15 +169,18 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
           };
         }
       } catch (e: any) {
-        logDebug('UpdateCheck.otaCheckSkipped', { message: e.message });
+        logDebug('UpdateCheck.OTA_CHECK_ERROR', { message: e.message });
       }
     }
 
     logDebug('UpdateCheck.noUpdateNeeded', {});
-    return null;
+    return { hasUpdate: false };
   } catch (error: any) {
-    logDebug('UpdateCheck.error', { message: error.message });
-    return null;
+    logDebug('UpdateCheck.error', {
+        message: error.message,
+        stack: error.stack
+    });
+    return { hasUpdate: false, error: error.message };
   }
 };
 
