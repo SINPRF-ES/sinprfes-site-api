@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler } from 'react-native';
-import { checkUpdates, applyOtaUpdate, UpdateCheckResult } from '../services/updateService';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated } from 'react-native';
+import { checkUpdates, applyOtaUpdate, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
 import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { logDebug } from '../utils/filiadoUtils';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
@@ -15,12 +15,20 @@ const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
 const UpdateAutoChecker: React.FC = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+  const bannerAnim = useRef(new Animated.Value(-100)).current;
+
   const { autenticado, token, bloqueadoPorBiometria } = useAuth();
   const navigation = useNavigation<any>();
 
   useEffect(() => {
     // Só roda se houver sessão válida e não estiver bloqueado por biometria
-    if (!autenticado || !token || bloqueadoPorBiometria) return;
+    if (!autenticado || !token || bloqueadoPorBiometria) {
+      if (!autenticado || !token) {
+        logDebug('UpdateAutoCheck.skip', { reason: 'noToken' });
+      }
+      return;
+    }
 
     const performAutoCheck = async () => {
       try {
@@ -28,40 +36,61 @@ const UpdateAutoChecker: React.FC = () => {
         const now = Date.now();
 
         if (now - lastCheck < CHECK_INTERVAL) {
-          logDebug('AutoCheck.skipThrottle', {
-            lastCheck: new Date(lastCheck).toISOString(),
-            nextCheck: new Date(lastCheck + CHECK_INTERVAL).toISOString()
-          });
+          logDebug('UpdateAutoCheck.skip', { reason: 'throttled' });
+          // Opcional: reportar skip por throttle ao backend?
+          // Melhor não saturar, mas vamos seguir o padrão se solicitado.
+          // Por ora, mantemos apenas local para evitar ruído excessivo no Render.
           return;
         }
 
-        logDebug('AutoCheck.start', {});
+        logDebug('UpdateAutoCheck.start', {});
+        await reportUpdateAutoCheck('start');
+
         const result = await checkUpdates();
 
         if (result) {
-            logDebug('AutoCheck.result', {
+            logDebug('UpdateAutoCheck.success', {
                 hasUpdate: result.hasUpdate,
                 type: result.type,
+                isMandatory: result.isMandatory
+            });
+
+            await reportUpdateAutoCheck('success', {
+                hasUpdate: result.hasUpdate,
+                type: result.type,
+                isMandatory: result.isMandatory,
                 error: result.error
             });
 
             if (result.hasUpdate) {
                 setUpdateResult(result);
-                logDebug('AutoCheck.modalShown', {
-                    type: result.type,
-                    mandatory: result.isMandatory
-                });
+
+                // Se não for obrigatório, mostra banner discreto em vez de modal
+                if (!result.isMandatory) {
+                  setShowBanner(true);
+                  Animated.spring(bannerAnim, {
+                    toValue: 50, // Ajustar conforme SafeArea
+                    useNativeDriver: true,
+                  }).start();
+
+                  // Auto-hide após 8 segundos (dar tempo do usuário ver)
+                  setTimeout(() => {
+                    handleCloseBanner();
+                  }, 8000);
+                }
             }
         }
 
         // Registra o check independente de ter update ou não (para respeitar o throttle)
         await salvarUltimoCheckUpdate();
       } catch (error: any) {
-        logDebug('AutoCheck.error', { message: error.message });
+        logDebug('UpdateAutoCheck.error', { message: error.message });
+        await reportUpdateAutoCheck('error', { message: error.message, stack: error.stack });
       }
     };
 
-    const timer = setTimeout(performAutoCheck, 3000);
+    // Pequeno delay para não sobrecarregar o boot do app
+    const timer = setTimeout(performAutoCheck, 5000);
     return () => clearTimeout(timer);
   }, [autenticado, token, bloqueadoPorBiometria]);
 
@@ -104,6 +133,23 @@ const UpdateAutoChecker: React.FC = () => {
     }
   };
 
+  const handleCloseBanner = () => {
+    Animated.timing(bannerAnim, {
+      toValue: -150,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setShowBanner(false));
+  };
+
+  const handleOpenUpdates = () => {
+    handleCloseBanner();
+    try {
+      navigation.navigate('Drawer', { screen: 'Atualizacoes' });
+    } catch (e) {
+      logDebug('AutoCheck.navError', { message: e.message });
+    }
+  };
+
   if (!updateResult) return null;
 
   const isMandatory = updateResult.isMandatory;
@@ -111,9 +157,30 @@ const UpdateAutoChecker: React.FC = () => {
   const notes = updateResult.type === 'OTA' ? manifest?.ota?.notes : manifest?.apk?.notes;
 
   return (
+    <>
+    {/* Banner Discreto para Updates Opcionais */}
+    {showBanner && (
+      <Animated.View style={[styles.bannerContainer, { transform: [{ translateY: bannerAnim }] }]}>
+        <View style={styles.bannerContent}>
+          <MaterialCommunityIcons name="update" size={24} color="#003366" />
+          <View style={styles.bannerTextContainer}>
+            <Text style={styles.bannerTitle}>Atualização disponível</Text>
+            <Text style={styles.bannerSub}>Uma nova versão está pronta.</Text>
+          </View>
+          <TouchableOpacity style={styles.bannerButton} onPress={handleOpenUpdates}>
+            <Text style={styles.bannerButtonText}>VER</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleCloseBanner} style={styles.bannerClose}>
+            <MaterialCommunityIcons name="close" size={20} color="#888" />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    )}
+
+    {/* Modal para Updates Obrigatórios */}
     <Modal
       transparent
-      visible={!!updateResult}
+      visible={!!updateResult && isMandatory}
       animationType="fade"
       onRequestClose={() => !isMandatory && setUpdateResult(null)}
     >
@@ -173,10 +240,58 @@ const UpdateAutoChecker: React.FC = () => {
         </View>
       </View>
     </Modal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  bannerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 10,
+    right: 10,
+    zIndex: 9999,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    padding: 12,
+  },
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bannerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  bannerTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  bannerSub: {
+    fontSize: 12,
+    color: '#666',
+  },
+  bannerButton: {
+    backgroundColor: '#003366',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  bannerButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  bannerClose: {
+    padding: 4,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',

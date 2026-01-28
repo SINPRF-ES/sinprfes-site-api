@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { fetchPublicacoes, downloadPublicacaoFile } from './driveService';
 import { logDebug } from '../utils/filiadoUtils';
 import { carregarSessao } from './storageService';
+import { enviarLogDiagnostico } from './diagnosticoService';
 
 export interface UpdateManifest {
   versionCode: number;
@@ -30,6 +31,26 @@ export interface UpdateCheckResult {
   apkUrl?: string;
   error?: 'APP_FOLDER_NOT_FOUND' | 'MANIFEST_NOT_FOUND' | 'MANIFEST_DOWNLOAD_ERROR' | string;
 }
+
+/**
+ * Helper para reportar eventos do auto-check para o backend
+ */
+export const reportUpdateAutoCheck = async (event: string, meta: any = {}) => {
+    const currentVersionCode = Application.nativeBuildVersion ? parseInt(Application.nativeBuildVersion, 10) : 0;
+    const currentRuntimeVersion = Updates.runtimeVersion || '';
+    const currentChannel = Updates.channel || '';
+
+    await enviarLogDiagnostico({
+        source: 'mobile',
+        event: `UpdateAutoCheck.${event}`,
+        meta: {
+            ...meta,
+            versionCode: currentVersionCode,
+            runtimeVersion: currentRuntimeVersion,
+            channel: currentChannel
+        }
+    });
+};
 
 /**
  * Verifica se há atualizações disponíveis consultando o manifesto no Google Drive
