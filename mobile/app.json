@@ -28,10 +28,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "updates": {
+      "url": "https://u.expo.dev/c589a042-895e-497e-a61f-a76216580a35",
+      "checkAutomatically": "NEVER"
+    },
+    "runtimeVersion": "54.0.0",
     "plugins": [
       "expo-secure-store",
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      "expo-updates"
     ],
     "extra": {
       "eas": {

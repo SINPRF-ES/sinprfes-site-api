@@ -13,6 +13,7 @@ import PublicacoesScreen from '../screens/PublicacoesScreen';
 import RessarcimentoScreen from '../screens/RessarcimentoScreen';
 import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
+import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/filiadoUtils';
@@ -93,6 +94,11 @@ const DrawerNavigator = () => {
         name="Seguranca"
         component={SegurancaScreen}
         options={{ title: 'Segurança' }}
+      />
+      <Drawer.Screen
+        name="Atualizacoes"
+        component={AtualizacoesScreen}
+        options={{ title: 'Atualizações' }}
       />
       {/* Tela de Diagnóstico/Logs - Para ADMIN e DIRETORIA */}
       {ehDiretoria && (
