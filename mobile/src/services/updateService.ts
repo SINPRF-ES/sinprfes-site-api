@@ -93,23 +93,39 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     }
 
     // Verificação de OTA (Mudanças apenas de JS/UI)
-    // Só tentamos OTA se o versionCode for o mesmo (base nativa compatível)
-    if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
-      try {
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          logDebug('UpdateCheck.otaAvailable', {});
-          return {
-            hasUpdate: true,
-            type: 'OTA',
-            isMandatory: false,
-            manifest
-          };
-        }
-      } catch (e: any) {
-        logDebug('UpdateCheck.otaCheckSkipped', { message: e.message });
-      }
+if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
+  try {
+    const update = await Updates.checkForUpdateAsync();
+
+    Alert.alert(
+      'DEBUG OTA',
+      JSON.stringify(
+        {
+          updateIsAvailable: update.isAvailable,
+          currentVersionCode,
+          currentRuntimeVersion,
+          manifestVersionCode: manifest.versionCode,
+          manifestRuntimeVersion: manifest.runtimeVersion,
+          updateId: update?.manifest?.id ?? null
+        },
+        null,
+        2
+      )
+    );
+
+    if (update.isAvailable) {
+      logDebug('UpdateCheck.otaAvailable', {});
+      return {
+        hasUpdate: true,
+        type: 'OTA',
+        isMandatory: false,
+        manifest
+      };
     }
+  } catch (e: any) {
+    logDebug('UpdateCheck.otaCheckSkipped', { message: e.message });
+  }
+}
 
     logDebug('UpdateCheck.noUpdateNeeded', {});
     return null;
