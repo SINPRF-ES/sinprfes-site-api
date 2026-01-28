@@ -80,8 +80,8 @@ export const downloadPublicacaoFile = async (
       throw new Error(`Erro no servidor (Status ${status})`);
     }
 
-    if (contentType.includes('application/json')) {
-       // Se o status for 200 mas o tipo for JSON, pode ser um erro mascarado do backend
+    if (contentType.includes('application/json') && !fileName.endsWith('.json')) {
+       // Se o status for 200 mas o tipo for JSON (e não esperávamos um JSON), pode ser um erro mascarado do backend
        logDebug('Publicacoes.download.error', { reason: 'RECEIVED_JSON_INSTEAD_OF_FILE' });
        throw new Error('O servidor retornou uma mensagem de erro em vez do arquivo.');
     }
