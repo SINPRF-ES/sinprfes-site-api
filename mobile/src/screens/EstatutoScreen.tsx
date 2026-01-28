@@ -68,7 +68,7 @@ export default function EstatutoScreen({ navigation }: any) {
   };
 
   const injectedCSS = `
-    #site-header, #site-footer { display: none !important; }
+    #site-header, #site-footer, .estatuto-nav { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
     body {
       padding: 10px !important;
       background-color: #fff !important;
@@ -76,7 +76,6 @@ export default function EstatutoScreen({ navigation }: any) {
       font-size: 16px !important;
       font-family: sans-serif !important;
     }
-    .estatuto-nav, #site-header, #site-footer { display: none !important; }
     .estatuto-card {
       width: 100% !important;
       max-width: 100% !important;
@@ -96,9 +95,23 @@ export default function EstatutoScreen({ navigation }: any) {
           source={{ uri: htmlUri }}
           style={styles.webview}
           injectedJavaScriptBeforeContentLoaded={`
-            var style = document.createElement('style');
-            style.innerHTML = \`${injectedCSS}\`;
-            document.head.appendChild(style);
+            (function() {
+              var style = document.createElement('style');
+              style.innerHTML = \`${injectedCSS}\`;
+              document.head.appendChild(style);
+
+              // Remoção determinística via JS
+              var removeNav = function() {
+                var nav = document.querySelector('.estatuto-nav');
+                if (nav) nav.remove();
+                var titles = document.querySelectorAll('.estatuto-nav-title');
+                titles.forEach(function(t) { t.remove(); });
+              };
+              removeNav();
+              document.addEventListener('DOMContentLoaded', removeNav);
+              setTimeout(removeNav, 500);
+              setTimeout(removeNav, 2000);
+            })();
           `}
           originWhitelist={['*']}
           allowFileAccess={true}

@@ -12,6 +12,16 @@ export const getAssembleias = async (): Promise<Assembleia[]> => {
   }
 };
 
+export const getAssembleiaEstadoMini = async (id: string): Promise<any> => {
+  try {
+    const response = await api.get(`/api/assembleias/${id}/estado/mini`);
+    return response.data;
+  } catch (err) {
+    logError('Service.getAssembleiaEstadoMini', err, { id });
+    throw err;
+  }
+};
+
 export const getAssembleiaDetalhe = async (id: string): Promise<Assembleia> => {
   const response = await api.get(`/api/assembleias/${id}`);
   return response.data;

@@ -326,7 +326,7 @@
 
             const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
             const isPresidente = estado.mesa && estado.mesa.presidente_user_id === currentUserId;
-            const canSeeToken = estado.quorumVigente?.token && (isPresidente || currentUserId === estado.quorumVigente.gerado_por_user_id);
+            const canSeeToken = estado.quorumVigente?.token && (isPresidente || isDiretoria || currentUserId === estado.quorumVigente.gerado_por_user_id);
 
             container.innerHTML = `
                 <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px;">
@@ -645,11 +645,12 @@
     function iniciarPolling(id) {
         pararPolling();
         sincronizarEstado(id);
-        pollingInterval = setInterval(() => sincronizarEstado(id), 5000);
+        // O polling real será controlado por setTimeout dentro de sincronizarEstadoMini para ser smart
+        // Mas por compatibilidade mantemos um fallback ou apenas iniciamos o ciclo
     }
 
     function pararPolling() {
-        if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+        if (pollingInterval) { clearTimeout(pollingInterval); pollingInterval = null; }
     }
 
     async function sincronizarEstado(id) {
@@ -657,7 +658,51 @@
             const r = await window.Api.apiFetch(`/api/assembleias/${id}/estado`);
             const estado = await r.json();
             renderizarSala(estado);
-        } catch (err) { console.error("Erro no polling:", err); }
+            // Inicia o ciclo de polling mini após o primeiro full load
+            iniciarPollingMini(id, estado);
+        } catch (err) { console.error("Erro no load inicial da sala:", err); }
+    }
+
+    function iniciarPollingMini(id, estadoInicial) {
+        pararPolling();
+
+        const rodar = async () => {
+            if (currentAssembleiaId !== id) return;
+            if (document.visibilityState !== 'visible') {
+                pollingInterval = setTimeout(rodar, 5000);
+                return;
+            }
+
+            let interval = 8000;
+            try {
+                const res = await window.Api.apiFetch(`/api/assembleias/${id}/estado/mini`);
+                if (!res.ok) throw new Error("Erro polling mini");
+                const mini = await res.json();
+
+                // Atualiza elementos específicos sem re-renderizar tudo se possível
+                // Mas aqui o renderizarSala é rápido o suficiente por enquanto.
+                // Idealmente atualizaríamos apenas o que mudou.
+                const estadoAtualizado = { ...estadoInicial, ...mini };
+                renderizarSala(estadoAtualizado);
+
+                if (mini.assembleia.estado === 'ENCERRADA') {
+                    alert("Esta assembleia foi encerrada.");
+                    voltarParaLista();
+                    return;
+                }
+
+                interval = 8000;
+                if (mini.assembleia.estado === 'EM_CURSO') interval = 5000;
+                if (mini.votacaoAtiva && mini.votacaoAtiva.status === 'ATIVA') interval = 2000;
+
+            } catch (err) {
+                console.warn("Erro no polling mini:", err);
+            }
+
+            pollingInterval = setTimeout(rodar, interval);
+        };
+
+        pollingInterval = setTimeout(rodar, 5000);
     }
 
     function renderizarSala(estado) {
@@ -667,7 +712,7 @@
         const isPresidente = mesa && mesa.presidente_user_id === currentUserId;
         const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
         const temAutoridade = isPresidente || isDiretoria;
-        const canSeeToken = quorumVigente?.token && (isPresidente || currentUserId === quorumVigente.gerado_por_user_id);
+        const canSeeToken = quorumVigente?.token && (isPresidente || isDiretoria || currentUserId === quorumVigente.gerado_por_user_id);
 
         container.innerHTML = `
             <div class="section-card" style="background:#fff; color:#333; padding:30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-radius: 20px;">
@@ -753,8 +798,8 @@
 
                 <!-- Ações de Interação -->
                 <div style="display:flex; gap:20px; margin-bottom:40px; flex-wrap:wrap;">
-                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" onclick="Assembleias.pedirPalavra('${assembleia.id}')">🎤 Pedir a Palavra (Fila)</button>
-                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" onclick="Assembleias.novaProposta('${assembleia.id}')">📝 Apresentar Proposta / Encaminhamento</button>
+                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" onclick="Assembleias.pedirPalavra('${assembleia.id}')">🎤 Pedir Palavra</button>
+                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" onclick="Assembleias.novaProposta('${assembleia.id}')">📝 Nova Proposta</button>
                 </div>
 
                 <!-- Listas de Interação -->
@@ -804,11 +849,14 @@
                         <h4 style="color:#e74c3c; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:2px; font-weight:900; display:flex; align-items:center; gap:10px;">🛠️ Painel de Controle e Autoridade da Mesa</h4>
                         <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
                             ${isDiretoria ? `
-                                <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.prepararVotacaoItem('${assembleia.id}')">➕ Novo Item Votação Manual</button>
+                                <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.prepararVotacaoItem('${assembleia.id}')">➕ Iniciar Votação</button>
                             ` : ''}
-                            <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.solicitarRecontagem('${assembleia.id}')">🔄 Recontar Quórum (Novo Token)</button>
+                            <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.solicitarRecontagem('${assembleia.id}')">🔄 Solicitar Recontagem</button>
                             ${isDiretoria && votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
-                                <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarVotacaoManual('${assembleia.id}', '${votacaoAtiva.id}')">⏹️ Encerrar Votação Imediatamente</button>
+                                <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarVotacaoManual('${assembleia.id}', '${votacaoAtiva.id}')">⏹️ Encerrar Votacao Item</button>
+                            ` : ''}
+                            ${isDiretoria ? `
+                                <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarAssembleia('${assembleia.id}')">🚫 Encerrar Assembleia</button>
                             ` : ''}
                         </div>
                     </div>
@@ -886,7 +934,7 @@
     }
 
     async function solicitarRecontagem(aid) {
-        if (!confirm("Deseja invalidar o quórum atual e solicitar uma nova recontagem? Todos os presentes deverão realizar o check-in novamente.")) return;
+        if (!confirm("Atenção: Novo token exige novo check-in!\n\nIsso invalidará todos os check-ins atuais e gerará um novo token. Todos os presentes deverão realizar o check-in novamente. Continuar?")) return;
         try {
             await window.Api.apiFetch(`/api/assembleias/${aid}/token`, {
                 method: "POST",
@@ -894,20 +942,77 @@
             });
             alert("Recontagem iniciada! O quórum foi zerado.");
             await abrirDetalhes(aid);
-        } catch (err) { alert("Erro."); }
+        } catch (err) { alert("Erro ao solicitar recontagem."); }
+    }
+
+    function ensureModalVotacao() {
+        if (document.getElementById('modal-criar-votacao')) return;
+        const modalHtml = `
+            <div id="modal-criar-votacao" class="modal">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h2>Iniciar Nova Votação</h2>
+                        <button type="button" class="modal-close" onclick="document.getElementById('modal-criar-votacao').style.display='none'">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="form-criar-votacao">
+                            <div class="field-group" style="margin-bottom: 15px;">
+                                <label style="font-weight:700; color:#003366;">Título do Item</label>
+                                <input type="text" id="votacao-titulo" class="btn btn-outline" style="width:100%; color:#333; border: 1px solid #ccc;" required placeholder="Ex: Aprovação de Contas">
+                            </div>
+                            <div class="field-group" style="margin-bottom: 15px;">
+                                <label style="font-weight:700; color:#003366;">Descrição/Pauta</label>
+                                <textarea id="votacao-descricao" class="btn btn-outline" style="width:100%; color:#333; height:80px; border: 1px solid #ccc; padding:10px;" required></textarea>
+                            </div>
+                            <div class="field-group" style="margin-bottom: 15px;">
+                                <label style="font-weight:700; color:#003366;">Duração</label>
+                                <select id="votacao-duracao" class="btn btn-outline" style="width:100%; color:#333; border: 1px solid #ccc;">
+                                    <option value="60">1 Minuto</option>
+                                    <option value="120">2 Minutos</option>
+                                    <option value="180">3 Minutos</option>
+                                    <option value="300" selected>5 Minutos (Padrão)</option>
+                                </select>
+                            </div>
+                            <div style="text-align:right; margin-top:20px;">
+                                <button type="submit" class="btn btn-primary" style="font-weight:800; padding:10px 25px; border-radius:8px;">🚀 Lançar Votação</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
     async function prepararVotacaoItem(aid) {
-        const titulo = prompt("Título do Item para Votação:");
-        const descricao = prompt("Descrição detalhada:");
-        const duracao = prompt("Duração em segundos (ex: 60):", "60");
-        if (!titulo || !descricao) return;
-        try {
-            await window.Api.apiFetch(`/api/assembleias/${aid}/votacoes`, {
-                method: "POST",
-                body: { titulo, descricao, duracao_segundos: parseInt(duracao) || 60 }
-            });
-        } catch (err) { alert("Erro."); }
+        ensureModalVotacao();
+        const modal = document.getElementById('modal-criar-votacao');
+        const form = document.getElementById('form-criar-votacao');
+
+        form.reset();
+        document.getElementById('votacao-duracao').value = "300";
+        modal.style.display = 'flex';
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const titulo = document.getElementById('votacao-titulo').value;
+            const descricao = document.getElementById('votacao-descricao').value;
+            const duracao = document.getElementById('votacao-duracao').value;
+
+            try {
+                const r = await window.Api.apiFetch(`/api/assembleias/${aid}/votacoes`, {
+                    method: "POST",
+                    body: { titulo, descricao, duracao_segundos: parseInt(duracao) }
+                });
+                if (r.ok) {
+                    modal.style.display = 'none';
+                    sincronizarEstado(aid);
+                } else {
+                    const d = await r.json();
+                    alert(d.error || "Erro ao iniciar votação.");
+                }
+            } catch (err) { alert("Erro de rede."); }
+        };
     }
 
     async function encerrarVotacaoManual(aid, vid) {

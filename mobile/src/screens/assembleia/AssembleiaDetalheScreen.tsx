@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image, AppState, AppStateStatus } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
-import { getAssembleiaDetalhe, getAssembleiaEstado, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin, iniciarExecucao, solicitarRelatorio } from '../../services/assembleiaService';
+import { getAssembleiaDetalhe, getAssembleiaEstado, getAssembleiaEstadoMini, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin, iniciarExecucao, solicitarRelatorio } from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
@@ -70,6 +70,72 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let interval: any;
+    let isActive = true;
+
+    const getPollingInterval = () => {
+        if (!assembleia) return 8000;
+        if (assembleia.estado === 'ENCERRADA') return 0;
+        if (estado?.votacaoAtiva && (estado.votacaoAtiva as any).status === 'ATIVA') return 2000;
+        if (assembleia.estado === 'EM_CURSO') return 5000;
+        return 8000;
+    };
+
+    const runPolling = async () => {
+        if (!isActive || AppState.currentState !== 'active') return;
+        const currentInterval = getPollingInterval();
+        if (currentInterval === 0) return;
+
+        try {
+            const mini = await getAssembleiaEstadoMini(id);
+            if (mini && isActive) {
+                setEstado(prev => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        assembleia: { ...prev.assembleia, estado: mini.assembleia.estado },
+                        quorumVigente: mini.quorumVigente ? {
+                            ...prev.quorumVigente,
+                            ...mini.quorumVigente
+                        } : prev.quorumVigente,
+                        votacaoAtiva: mini.votacaoAtiva
+                    } as any;
+                });
+
+                if (mini.assembleia.estado !== assembleia?.estado) {
+                    setAssembleia(prev => prev ? { ...prev, estado: mini.assembleia.estado } : null);
+                }
+            }
+        } catch (err) {
+            console.warn('[Polling.Detalhe.Error]', err);
+        }
+
+        if (isActive) {
+            const nextInterval = getPollingInterval();
+            if (nextInterval > 0) {
+                interval = setTimeout(runPolling, nextInterval);
+            }
+        }
+    };
+
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+        if (nextAppState === 'active') {
+            runPolling();
+        } else {
+            if (interval) clearTimeout(interval);
+        }
+    });
+
+    runPolling();
+
+    return () => {
+        isActive = false;
+        if (interval) clearTimeout(interval);
+        subscription.remove();
+    };
+  }, [id, assembleia?.estado, !!estado?.votacaoAtiva]);
 
   useEffect(() => {
     fetchData();

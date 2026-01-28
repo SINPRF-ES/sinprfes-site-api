@@ -251,4 +251,26 @@ describe('Assembleias Service', () => {
       expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/votacao_id = ANY/), expect.anything());
     });
   });
+
+  describe('Lightweight State Tracking', () => {
+    test('buscarEstadoResumido should return essentials only', async () => {
+      // 1. pool.query for assembleia state
+      pool.query.mockResolvedValueOnce({ rows: [{ estado: 'EM_CURSO' }] });
+      // 2. buscarUltimoQuorum
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1', token: '123456', gerado_por_user_id: 'u1' }] });
+      // 3. buscarVotacaoAtiva
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1', encerra_em: new Date(Date.now() + 60000) }] });
+      // 4. contarPresentesNoQuorum
+      pool.query.mockResolvedValueOnce({ rows: [{ total: 5 }] });
+      // 5. contarVotos
+      pool.query.mockResolvedValueOnce({ rows: [{ SIM: 2, NAO: 1, ABSTENCAO: 0 }] });
+
+      const res = await service.buscarEstadoResumido('1');
+      expect(res.assembleia.estado).toBe('EM_CURSO');
+      expect(res.quorumVigente.token).toBe('123456');
+      expect(res.quorumVigente.total).toBe(5);
+      expect(res.votacaoAtiva.tempoRestanteSegundos).toBeGreaterThan(0);
+      expect(res.votacaoAtiva.contagem.SIM).toBe(2);
+    });
+  });
 });

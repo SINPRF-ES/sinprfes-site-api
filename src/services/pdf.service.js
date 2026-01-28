@@ -659,10 +659,21 @@ async function gerarPdfRelatorioAssembleia(dados) {
     doc.moveDown(0.5);
     if (dados.quorums && dados.quorums.length > 0) {
         dados.quorums.forEach((q) => {
-            doc.font("Helvetica-Bold").fontSize(10).text(`Chamada: ${q.tipo_chamada} (${new Date(q.criado_em).toLocaleString('pt-BR')})`);
-            doc.font("Helvetica").fontSize(10).text(`Token: ${q.token}`);
-            doc.text(`Total de presentes nesta chamada: ${q.presentes?.length || 0}`);
-            doc.moveDown(0.2);
+            const dataHora = new Date(q.criado_em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const tipoDesc = q.tipo_chamada === 'PRIMEIRA' ? '1ª Chamada (Qualificado)' : (q.tipo_chamada === 'RECONTAGEM' ? 'Recontagem de Quórum' : '2ª Chamada (Real)');
+
+            doc.font("Helvetica-Bold").fontSize(10).text(`Fase: ${tipoDesc}`);
+            doc.font("Helvetica").fontSize(10).text(`Início: ${dataHora} | Token: ${q.token}`);
+            doc.text(`Filiados Aptos: ${q.quorum_total_ativos || '-'} | Mínimo Necessário: ${q.quorum_necessario || 'Qualquer número'}`);
+            doc.text(`Total de presentes registrados: ${q.presentes?.length || 0}`);
+
+            if (q.presentes && q.presentes.length > 0) {
+                doc.font("Helvetica-Oblique").fontSize(9).text("Lista de Presentes nesta fase:");
+                const nomes = q.presentes.map(p => p.nome).join(", ");
+                doc.font("Helvetica").fontSize(8).text(nomes, { align: "justify" });
+            }
+
+            doc.moveDown(0.8);
         });
     } else {
         doc.font("Helvetica").fontSize(10).text("Nenhum registro de quórum.");
@@ -676,11 +687,21 @@ async function gerarPdfRelatorioAssembleia(dados) {
     doc.moveDown(0.5);
     if (dados.votacoes && dados.votacoes.length > 0) {
         dados.votacoes.forEach((v, idx) => {
+            const abertaEm = new Date(v.aberta_em).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false });
+            const encerradaEm = v.finalizada_em ? new Date(v.finalizada_em).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false }) : '--:--:--';
+
             doc.font("Helvetica-Bold").fontSize(10).text(`${idx + 1}. ${v.titulo}`);
+            doc.font("Helvetica").fontSize(9).text(`Período: ${abertaEm} às ${encerradaEm} | Duração: ${v.duracao_segundos}s`);
             doc.font("Helvetica").fontSize(10).text(`Descrição: ${v.descricao || '-'}`);
-            doc.text(`Resultado: SIM: ${v.contagem?.SIM || 0} | NÃO: ${v.contagem?.NAO || 0} | ABSTENÇÃO: ${v.contagem?.ABSTENCAO || 0}`);
-            doc.text(`Total de votos: ${v.contagem?.total || 0}`);
-            doc.moveDown(0.5);
+            doc.font("Helvetica-Bold").text(`Resultado: SIM: ${v.contagem?.SIM || 0} | NÃO: ${v.contagem?.NAO || 0} | ABSTENÇÃO: ${v.contagem?.ABSTENCAO || 0}`);
+            doc.font("Helvetica").text(`Total de votos registrados: ${v.contagem?.total || 0}`);
+
+            if (v.votosNominais && v.votosNominais.length > 0) {
+                const nominalStr = v.votosNominais.map(vn => `${vn.nome} (${vn.voto})`).join("; ");
+                doc.font("Helvetica-Oblique").fontSize(8).text(`Votos Nominais: ${nominalStr}`, { align: "justify" });
+            }
+
+            doc.moveDown(0.8);
         });
     } else {
         doc.font("Helvetica").fontSize(10).text("Nenhum item votado.");
