@@ -1,6 +1,6 @@
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { fetchPublicacoes, downloadPublicacaoFile } from './driveService';
 import { logDebug } from '../utils/filiadoUtils';
 import { carregarSessao } from './storageService';
@@ -89,7 +89,12 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
       logDebug('UpdateCheck.step', { step: 'DOWNLOADING_MANIFEST' });
       const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
 
-      logDebug('UpdateCheck.step', { step: 'READING_MANIFEST', localUri });
+      logDebug('UpdateCheck.step', {
+        step: 'READING_MANIFEST',
+        fileId: manifestFile.id,
+        name: manifestFile.name,
+        localUri
+      });
       const manifestContent = await FileSystem.readAsStringAsync(localUri);
 
       try {
