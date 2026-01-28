@@ -32,7 +32,12 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
     queryKey: ['publicacoes', currentFolder.id],
     queryFn: async () => {
       logDebug('Publicacoes.fetch.start', { folderId: currentFolder.id });
-      const data = await fetchPublicacoes(currentFolder.id);
+      let data = await fetchPublicacoes(currentFolder.id);
+
+      // 🛑 Ocultar pasta 'App' na raiz para não confundir usuários
+      if (currentFolder.id === null) {
+        data = data.filter(item => item.name.toLowerCase() !== 'app');
+      }
 
       // Sort alphabetically: Folders first, then files
       const sortedData = [...data].sort((a, b) => {
