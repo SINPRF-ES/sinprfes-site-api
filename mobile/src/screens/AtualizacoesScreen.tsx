@@ -33,7 +33,7 @@ const AtualizacoesScreen = () => {
             if (result?.error) {
                 if (result.error === 'APP_FOLDER_NOT_FOUND' || result.error === 'MANIFEST_NOT_FOUND') {
                     setStatusMessage('Manifest não encontrado');
-                } else if (result.error === 'MANIFEST_DOWNLOAD_ERROR') {
+                } else if (result.error === 'MANIFEST_DOWNLOAD_ERROR' || result.error === 'MANIFEST_PARSE_ERROR') {
                     setStatusMessage('Erro ao baixar manifest');
                 } else {
                     setStatusMessage('Erro na verificação');
@@ -152,7 +152,7 @@ const AtualizacoesScreen = () => {
                     </View>
                 )}
 
-                {updateResult && updateResult.hasUpdate ? (
+                {updateResult && updateResult.hasUpdate && !updateResult.error ? (
                     <View style={[styles.resultCard, updateResult.isMandatory ? styles.mandatoryCard : styles.optionalCard]}>
                         <View style={styles.resultHeader}>
                             <FontAwesome
@@ -192,12 +192,17 @@ const AtualizacoesScreen = () => {
                             )}
                         </TouchableOpacity>
                     </View>
-                ) : lastCheck && (
+                ) : lastCheck && !updateResult?.error ? (
                     <View style={styles.noUpdateCard}>
                         <FontAwesome name="check-circle" size={40} color="#2e7d32" />
                         <Text style={styles.noUpdateText}>O aplicativo está atualizado!</Text>
                     </View>
-                )}
+                ) : lastCheck && updateResult?.error ? (
+                    <View style={[styles.noUpdateCard, { borderColor: '#d32f2f', borderWidth: 1 }]}>
+                        <FontAwesome name="times-circle" size={40} color="#d32f2f" />
+                        <Text style={[styles.noUpdateText, { color: '#d32f2f' }]}>{statusMessage || 'Erro ao verificar'}</Text>
+                    </View>
+                ) : null}
             </ScrollView>
         </SafeScreen>
     );

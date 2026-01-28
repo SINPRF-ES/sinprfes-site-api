@@ -53,9 +53,16 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
 
     // 2. Localizar 'update-manifest.json' e APK dentro da pasta 'App'
     const appFiles = await fetchPublicacoes(appFolder.id);
-    const manifestFile = appFiles.find(f => f.name === 'update-manifest.json');
+    logDebug('UpdateCheck.appFolderContents', {
+        count: appFiles.length,
+        items: appFiles.map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType }))
+    });
+
+    const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
     if (!manifestFile) {
-      logDebug('UpdateCheck.MANIFEST_NOT_FOUND', {});
+      logDebug('UpdateCheck.MANIFEST_NOT_FOUND', {
+          availableNames: appFiles.map(f => f.name)
+      });
       return { hasUpdate: false, error: 'MANIFEST_NOT_FOUND' };
     }
     logDebug('UpdateCheck.MANIFEST_FOUND', { id: manifestFile.id });
@@ -65,7 +72,13 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     try {
       const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
       const manifestContent = await FileSystem.readAsStringAsync(localUri);
-      manifest = JSON.parse(manifestContent);
+
+      try {
+        manifest = JSON.parse(manifestContent);
+      } catch (parseError: any) {
+        logDebug('UpdateCheck.error', { reason: 'MANIFEST_PARSE_FAILED', message: parseError.message });
+        return { hasUpdate: false, error: 'MANIFEST_PARSE_ERROR' };
+      }
 
       logDebug('UpdateCheck.MANIFEST_DOWNLOADED', {
         size: manifestContent.length,
@@ -73,7 +86,7 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
         runtimeVersion: manifest.runtimeVersion
       });
     } catch (e: any) {
-      logDebug('UpdateCheck.error', { reason: 'MANIFEST_DOWNLOAD_ERROR', message: e.message });
+      logDebug('UpdateCheck.error', { reason: 'MANIFEST_DOWNLOAD_FAILED', message: e.message });
       return { hasUpdate: false, error: 'MANIFEST_DOWNLOAD_ERROR' };
     }
 
