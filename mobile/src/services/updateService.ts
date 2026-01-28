@@ -24,10 +24,11 @@ export interface UpdateManifest {
 
 export interface UpdateCheckResult {
   hasUpdate: boolean;
-  type: 'OTA' | 'APK';
-  isMandatory: boolean;
-  manifest: UpdateManifest;
+  type?: 'OTA' | 'APK';
+  isMandatory?: boolean;
+  manifest?: UpdateManifest;
   apkUrl?: string;
+  error?: 'APP_FOLDER_NOT_FOUND' | 'MANIFEST_NOT_FOUND' | 'MANIFEST_DOWNLOAD_ERROR' | string;
 }
 
 /**
@@ -45,31 +46,61 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     const rootFiles = await fetchPublicacoes(null);
     const appFolder = rootFiles.find(f => f.isFolder && f.name.toLowerCase() === 'app');
     if (!appFolder) {
-      logDebug('UpdateCheck.error', { reason: 'APP_FOLDER_NOT_FOUND' });
-      return null;
+      logDebug('UpdateCheck.APP_FOLDER_NOT_FOUND', {});
+      return { hasUpdate: false, error: 'APP_FOLDER_NOT_FOUND' };
     }
+    logDebug('UpdateCheck.APP_FOLDER_FOUND', { id: appFolder.id });
 
     // 2. Localizar 'update-manifest.json' e APK dentro da pasta 'App'
     const appFiles = await fetchPublicacoes(appFolder.id);
-    const manifestFile = appFiles.find(f => f.name === 'update-manifest.json');
+    logDebug('UpdateCheck.appFolderContents', {
+        count: appFiles.length,
+        items: appFiles.map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType }))
+    });
+
+    const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
     if (!manifestFile) {
-      logDebug('UpdateCheck.error', { reason: 'MANIFEST_NOT_FOUND' });
-      return null;
+      logDebug('UpdateCheck.MANIFEST_NOT_FOUND', {
+          availableNames: appFiles.map(f => f.name)
+      });
+      return { hasUpdate: false, error: 'MANIFEST_NOT_FOUND' };
     }
+    logDebug('UpdateCheck.MANIFEST_FOUND', { id: manifestFile.id });
 
     // 3. Baixar e ler o manifesto
-    const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
-    const manifestContent = await FileSystem.readAsStringAsync(localUri);
-    const manifest: UpdateManifest = JSON.parse(manifestContent);
+    let manifest: UpdateManifest;
+    try {
+      const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
+      const manifestContent = await FileSystem.readAsStringAsync(localUri);
 
-    logDebug('UpdateCheck.manifestLoaded', manifest);
+      try {
+        manifest = JSON.parse(manifestContent);
+      } catch (parseError: any) {
+        logDebug('UpdateCheck.error', { reason: 'MANIFEST_PARSE_FAILED', message: parseError.message });
+        return { hasUpdate: false, error: 'MANIFEST_PARSE_ERROR' };
+      }
+
+      logDebug('UpdateCheck.MANIFEST_DOWNLOADED', {
+        size: manifestContent.length,
+        versionCode: manifest.versionCode,
+        runtimeVersion: manifest.runtimeVersion
+      });
+    } catch (e: any) {
+      logDebug('UpdateCheck.error', { reason: 'MANIFEST_DOWNLOAD_FAILED', message: e.message });
+      return { hasUpdate: false, error: 'MANIFEST_DOWNLOAD_ERROR' };
+    }
 
     // 4. Comparar versões
     const currentVersionCode = Application.nativeBuildVersion ? parseInt(Application.nativeBuildVersion, 10) : 0;
     const currentRuntimeVersion = Updates.runtimeVersion || '';
+    const currentChannel = Updates.channel || '';
 
     logDebug('UpdateCheck.versions', {
-      current: { versionCode: currentVersionCode, runtimeVersion: currentRuntimeVersion },
+      current: {
+        versionCode: currentVersionCode,
+        runtimeVersion: currentRuntimeVersion,
+        channel: currentChannel
+      },
       remote: { versionCode: manifest.versionCode, runtimeVersion: manifest.runtimeVersion }
     });
 
@@ -97,8 +128,8 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
       try {
         const update = await Updates.checkForUpdateAsync();
+        logDebug('UpdateCheck.OTA_CHECK_RESULT', { isAvailable: update.isAvailable });
         if (update.isAvailable) {
-          logDebug('UpdateCheck.otaAvailable', {});
           return {
             hasUpdate: true,
             type: 'OTA',
@@ -107,15 +138,15 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
           };
         }
       } catch (e: any) {
-        logDebug('UpdateCheck.otaCheckSkipped', { message: e.message });
+        logDebug('UpdateCheck.OTA_CHECK_ERROR', { message: e.message });
       }
     }
 
     logDebug('UpdateCheck.noUpdateNeeded', {});
-    return null;
+    return { hasUpdate: false };
   } catch (error: any) {
     logDebug('UpdateCheck.error', { message: error.message });
-    return null;
+    return { hasUpdate: false, error: error.message };
   }
 };
 
