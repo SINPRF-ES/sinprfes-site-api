@@ -47,6 +47,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         {usuario?.situacao && (
           <View style={styles.statusBadge}>
             <Text style={styles.statusText}>{usuario.situacao}</Text>
+            <Text>OTA OK</Text>
           </View>
         )}
       </View>
