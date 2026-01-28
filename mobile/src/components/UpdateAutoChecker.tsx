@@ -1,38 +1,77 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler } from 'react-native';
 import { checkUpdates, applyOtaUpdate, UpdateCheckResult } from '../services/updateService';
+import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
 import { FontAwesome } from '@expo/vector-icons';
 import { logDebug } from '../utils/filiadoUtils';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigation } from '@react-navigation/native';
+
+const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
 
 /**
- * Componente responsável por verificar atualizações ao iniciar o app.
- * Exibe um modal caso uma atualização OTA ou um novo APK estejam disponíveis.
+ * Componente global que verifica atualizações automaticamente respeitando throttling.
  */
-const UpdateChecker: React.FC = () => {
+const UpdateAutoChecker: React.FC = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
-  const [isChecking, setIsChecking] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const { autenticado, token, bloqueadoPorBiometria } = useAuth();
+  const navigation = useNavigation<any>();
 
   useEffect(() => {
-    const performCheck = async () => {
+    // Só roda se houver sessão válida e não estiver bloqueado por biometria
+    if (!autenticado || !token || bloqueadoPorBiometria) return;
+
+    const performAutoCheck = async () => {
       try {
-        setIsChecking(true);
-        const result = await checkUpdates();
-        if (result && result.hasUpdate) {
-          logDebug('UpdateChecker.updateFound', { type: result.type, mandatory: result.isMandatory });
-          setUpdateResult(result);
+        const lastCheck = await carregarUltimoCheckUpdate();
+        const now = Date.now();
+
+        if (now - lastCheck < CHECK_INTERVAL) {
+          logDebug('AutoCheck.skipThrottle', {
+            lastCheck: new Date(lastCheck).toISOString(),
+            nextCheck: new Date(lastCheck + CHECK_INTERVAL).toISOString()
+          });
+          return;
         }
+
+        logDebug('AutoCheck.start', {});
+        const result = await checkUpdates();
+
+        if (result) {
+            logDebug('AutoCheck.result', {
+                hasUpdate: result.hasUpdate,
+                type: result.type,
+                error: result.error
+            });
+
+            if (result.hasUpdate) {
+                setUpdateResult(result);
+                logDebug('AutoCheck.modalShown', {
+                    type: result.type,
+                    mandatory: result.isMandatory
+                });
+            }
+        }
+
+        // Registra o check independente de ter update ou não (para respeitar o throttle)
+        await salvarUltimoCheckUpdate();
       } catch (error: any) {
-        logDebug('UpdateChecker.error', { message: error.message });
-      } finally {
-        setIsChecking(false);
+        logDebug('AutoCheck.error', { message: error.message });
       }
     };
 
-    // Pequeno delay para não competir com o splash screen ou carregamento inicial pesado
-    const timer = setTimeout(performCheck, 2000);
+    const timer = setTimeout(performAutoCheck, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [autenticado, token, bloqueadoPorBiometria]);
+
+  // Bloquear botão voltar se for obrigatório
+  useEffect(() => {
+    if (updateResult?.isMandatory) {
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
+      return () => backHandler.remove();
+    }
+  }, [updateResult]);
 
   const handleUpdate = async () => {
     if (!updateResult) return;
@@ -40,24 +79,27 @@ const UpdateChecker: React.FC = () => {
     if (updateResult.type === 'OTA') {
       setIsUpdating(true);
       try {
-        logDebug('UpdateChecker.applyingOTA', {});
+        logDebug('AutoCheck.applyingOTA', {});
         await applyOtaUpdate();
-        // O app irá reiniciar automaticamente após o reloadAsync no applyOtaUpdate
-      } catch (error) {
-        logDebug('UpdateChecker.otaFailed', error);
-        Alert.alert('Erro', 'Não foi possível aplicar a atualização automática. Tente novamente mais tarde.');
+      } catch (error: any) {
+        logDebug('AutoCheck.otaFailed', { message: error.message });
+        Alert.alert('Erro', 'Não foi possível aplicar a atualização. Tente novamente pela tela de Configurações.');
         setIsUpdating(false);
       }
     } else {
       // APK Update
+      logDebug('AutoCheck.handlingAPK', { url: updateResult.apkUrl, mandatory: updateResult.isMandatory });
+
       if (updateResult.apkUrl) {
-        logDebug('UpdateChecker.openingApkUrl', { url: updateResult.apkUrl });
-        Linking.openURL(updateResult.apkUrl).catch((err) => {
-          logDebug('UpdateChecker.openUrlFailed', err);
-          Alert.alert('Erro', 'Não foi possível abrir o link de download.');
-        });
-      } else {
-        Alert.alert('Erro', 'Link de download do APK não encontrado no servidor.');
+          Linking.openURL(updateResult.apkUrl);
+      }
+
+      // Se não for obrigatório, podemos fechar o modal e opcionalmente levar o usuário para a tela de atualizações
+      if (!updateResult.isMandatory) {
+          setUpdateResult(null);
+          try {
+            navigation.navigate('Drawer', { screen: 'Atualizacoes' });
+          } catch (e) {}
       }
     }
   };
@@ -65,7 +107,8 @@ const UpdateChecker: React.FC = () => {
   if (!updateResult) return null;
 
   const isMandatory = updateResult.isMandatory;
-  const notes = updateResult.type === 'OTA' ? updateResult.manifest.ota.notes : updateResult.manifest.apk.notes;
+  const manifest = updateResult.manifest;
+  const notes = updateResult.type === 'OTA' ? manifest?.ota?.notes : manifest?.apk?.notes;
 
   return (
     <Modal
@@ -77,9 +120,15 @@ const UpdateChecker: React.FC = () => {
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <View style={styles.header}>
-            <FontAwesome name="arrow-circle-up" size={48} color="#003366" />
+            <FontAwesome
+                name={updateResult.type === 'OTA' ? "cloud-download" : "arrow-circle-up"}
+                size={48}
+                color="#003366"
+            />
             <Text style={styles.title}>Atualização Disponível</Text>
-            <Text style={styles.version}>Nova versão: {updateResult.manifest.versionName}</Text>
+            {manifest && (
+                <Text style={styles.version}>Versão: {manifest.versionName} (Build {manifest.versionCode})</Text>
+            )}
           </View>
 
           <View style={styles.body}>
@@ -89,7 +138,7 @@ const UpdateChecker: React.FC = () => {
             {isMandatory && (
               <View style={styles.mandatoryBadge}>
                 <FontAwesome name="exclamation-triangle" size={14} color="#d32f2f" style={{ marginRight: 6 }} />
-                <Text style={styles.mandatoryText}>Esta atualização é obrigatória</Text>
+                <Text style={styles.mandatoryText}>Esta atualização é obrigatória para continuar usando o app.</Text>
               </View>
             )}
           </View>
@@ -98,7 +147,7 @@ const UpdateChecker: React.FC = () => {
             {isUpdating ? (
               <View style={styles.updatingContainer}>
                 <ActivityIndicator size="large" color="#003366" />
-                <Text style={styles.updatingText}>Preparando atualização...</Text>
+                <Text style={styles.updatingText}>Baixando e aplicando atualização...</Text>
               </View>
             ) : (
               <View style={styles.buttonRow}>
@@ -115,7 +164,7 @@ const UpdateChecker: React.FC = () => {
                   onPress={handleUpdate}
                 >
                   <Text style={styles.updateButtonText}>
-                    {updateResult.type === 'OTA' ? 'Atualizar Agora' : 'Baixar e Instalar'}
+                    {updateResult.type === 'OTA' ? 'Baixar e Aplicar' : 'Baixar Agora'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -195,6 +244,8 @@ const styles = StyleSheet.create({
     color: '#d32f2f',
     fontWeight: '700',
     fontSize: 13,
+    textAlign: 'center',
+    flex: 1,
   },
   footer: {
     padding: 24,
@@ -248,4 +299,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default UpdateChecker;
+export default UpdateAutoChecker;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
 import { checkUpdates, applyOtaUpdate, UpdateCheckResult } from '../services/updateService';
+import { salvarUltimoCheckUpdate } from '../services/storageService';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
 import Constants from 'expo-constants';
@@ -29,6 +30,11 @@ const AtualizacoesScreen = () => {
             const result = await checkUpdates();
             setUpdateResult(result);
             setLastCheck(new Date());
+
+            // Atualiza o timestamp do último check para silenciar o auto-check global
+            if (result) {
+                await salvarUltimoCheckUpdate();
+            }
 
             if (result?.error) {
                 setStatusMessage(result.error);
