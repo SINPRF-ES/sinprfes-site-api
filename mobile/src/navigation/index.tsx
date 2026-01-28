@@ -25,6 +25,7 @@ import ConveniosScreen from "../screens/ConveniosScreen";
 import PdfViewerScreen from "../screens/PdfViewerScreen";
 import FileViewerScreen from "../screens/FileViewerScreen";
 import DrawerNavigator from "./DrawerNavigator"; // Importa o Drawer
+import UpdateAutoChecker from "../components/UpdateAutoChecker";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -54,7 +55,7 @@ type PendingNav =
   | null;
 
 export default function RootNavigation() {
-  const { autenticado, carregando, bloqueadoPorBiometria } = useAuth() as any;
+  const { autenticado, carregando, bloqueadoPorBiometria } = useAuth();
 
   const navigationRef =
     useRef<NavigationContainerRef<RootStackParamList> | null>(null);
@@ -97,6 +98,7 @@ export default function RootNavigation() {
         tryConsumePendingNav();
       }}
     >
+      <UpdateAutoChecker />
       <Stack.Navigator>
         {!autenticado ? (
           <>

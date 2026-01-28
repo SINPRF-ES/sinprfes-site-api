@@ -7,6 +7,7 @@ import { logger } from '../infra/logger';
 const TOKEN_KEY = 'sinprf_secure_token'; // No prefix with @ for SecureStore usually
 const USER_KEY = '@sinprf/usuario';
 const BIOMETRIA_KEY = '@sinprf/biometria_habilitada';
+const LAST_UPDATE_CHECK_KEY = '@sinprf/last_update_check';
 
 export async function salvarSessao(sessao: Sessao): Promise<void> {
   try {
@@ -48,4 +49,13 @@ export async function definirBiometriaHabilitada(valor: boolean): Promise<void> 
 export async function carregarBiometriaHabilitada(): Promise<boolean> {
   const v = await AsyncStorage.getItem(BIOMETRIA_KEY);
   return v === 'true';
+}
+
+export async function salvarUltimoCheckUpdate(): Promise<void> {
+  await AsyncStorage.setItem(LAST_UPDATE_CHECK_KEY, Date.now().toString());
+}
+
+export async function carregarUltimoCheckUpdate(): Promise<number> {
+  const v = await AsyncStorage.getItem(LAST_UPDATE_CHECK_KEY);
+  return v ? parseInt(v, 10) : 0;
 }

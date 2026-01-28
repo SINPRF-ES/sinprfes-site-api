@@ -3,7 +3,6 @@ import Constants from 'expo-constants';
 import ReanimatedPackage from 'react-native-reanimated/package.json';
 import { AuthProvider } from './src/hooks/useAuth';
 import RootNavigation from './src/navigation';
-import UpdateChecker from './src/components/UpdateChecker';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initDb } from './src/database/db';
 import { setupGlobalErrorHandling } from './src/infra/errorHandling';
@@ -31,7 +30,6 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <RootNavigation />
-          <UpdateChecker />
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
