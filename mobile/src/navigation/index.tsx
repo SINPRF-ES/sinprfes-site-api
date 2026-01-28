@@ -41,6 +41,7 @@ export type RootStackParamList = {
   CriarFiliado: undefined;
   EditarFiliado: { filiadoId: number };
   Votacao: undefined;
+  Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
 };

@@ -69,11 +69,7 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     const currentRuntimeVersion = Updates.runtimeVersion || '';
 
     logDebug('UpdateCheck.versions', {
-      current: {
-        versionCode: currentVersionCode,
-        runtimeVersion: currentRuntimeVersion,
-        channel: Updates.channel || 'N/A'
-      },
+      current: { versionCode: currentVersionCode, runtimeVersion: currentRuntimeVersion },
       remote: { versionCode: manifest.versionCode, runtimeVersion: manifest.runtimeVersion }
     });
 
@@ -97,33 +93,23 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     }
 
     // Verificação de OTA (Mudanças apenas de JS/UI)
-if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
-  try {
-    const update = await Updates.checkForUpdateAsync();
-
-    logDebug('UpdateCheck.otaDebug', {
-      updateIsAvailable: update.isAvailable,
-      currentVersionCode,
-      currentRuntimeVersion,
-      currentChannel: Updates.channel || 'N/A',
-      manifestVersionCode: manifest.versionCode,
-      manifestRuntimeVersion: manifest.runtimeVersion,
-      updateId: update?.manifest?.id ?? null
-    });
-
-    if (update.isAvailable) {
-      logDebug('UpdateCheck.otaAvailable', {});
-      return {
-        hasUpdate: true,
-        type: 'OTA',
-        isMandatory: false,
-        manifest
-      };
+    // Só tentamos OTA se o versionCode for o mesmo (base nativa compatível)
+    if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          logDebug('UpdateCheck.otaAvailable', {});
+          return {
+            hasUpdate: true,
+            type: 'OTA',
+            isMandatory: false,
+            manifest
+          };
+        }
+      } catch (e: any) {
+        logDebug('UpdateCheck.otaCheckSkipped', { message: e.message });
+      }
     }
-  } catch (e: any) {
-    logDebug('UpdateCheck.otaCheckSkipped', { message: e.message });
-  }
-}
 
     logDebug('UpdateCheck.noUpdateNeeded', {});
     return null;

@@ -19,10 +19,11 @@ const UpdateChecker: React.FC = () => {
         setIsChecking(true);
         const result = await checkUpdates();
         if (result && result.hasUpdate) {
+          logDebug('UpdateChecker.updateFound', { type: result.type, mandatory: result.isMandatory });
           setUpdateResult(result);
         }
-      } catch (error) {
-        logDebug('UpdateChecker.error', error);
+      } catch (error: any) {
+        logDebug('UpdateChecker.error', { message: error.message });
       } finally {
         setIsChecking(false);
       }

@@ -1,48 +1,47 @@
 {
-    "expo": {
-        "name": "SINPRF-ES",
-        "slug": "sinprfes-app",
-        "version": "1.0.0",
-        "orientation": "portrait",
-        "icon": "./assets/icon.png",
-        "userInterfaceStyle": "light",
-        "newArchEnabled": true,
-        "splash": {
-            "image": "./assets/splash-icon.png",
-            "resizeMode": "contain",
-            "backgroundColor": "#ffffff"
-        },
-        "ios": {
-            "supportsTablet": true
-        },
-        "android": {
-            "package": "com.mfavero138.sinprfesapp",
-            "adaptiveIcon": {
-                "foregroundImage": "./assets/adaptive-icon.png",
-                "backgroundColor": "#ffffff"
-            },
-            "edgeToEdgeEnabled": true,
-            "predictiveBackGestureEnabled": false,
-            "googleServicesFile": "./google-services.json"
-        },
-        "web": {
-            "favicon": "./assets/favicon.png"
-        },
-        "updates": {
-            "url": "https://u.expo.dev/c589a042-895e-497e-a61f-a76216580a35",
-            "checkAutomatically": "NEVER"
-        },
-        "runtimeVersion": "54.0.0",
-        "plugins": [
-            "expo-secure-store",
-            "expo-sqlite",
-            "expo-font",
-            "expo-updates"
-        ],
-        "extra": {
-            "eas": {
-                "projectId": "c589a042-895e-497e-a61f-a76216580a35"
-            }
-        }
+  "expo": {
+    "name": "SINPRF-ES",
+    "slug": "sinprfes-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.mfavero138.sinprfesapp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c589a042-895e-497e-a61f-a76216580a35",
+      "checkAutomatically": "NEVER"
+    },
+    "runtimeVersion": "54.0.0",
+    "plugins": [
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-font",
+      "expo-updates"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c589a042-895e-497e-a61f-a76216580a35"
+      }
     }
 }
