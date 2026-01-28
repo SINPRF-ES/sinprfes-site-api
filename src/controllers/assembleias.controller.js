@@ -1107,6 +1107,7 @@ module.exports = {
   listar,
   detalhe,
   estadoCompleto,
+  estadoMini,
   criar,
   abrir,
   iniciarExecucao,
