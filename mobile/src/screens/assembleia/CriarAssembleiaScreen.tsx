@@ -30,7 +30,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
   };
 
   const handlePickFile = async () => {
-    navigation.navigate('Publicacoes', {
+    navigation.navigate('PublicacoesPicker', {
         mode: 'picker',
         onSelectFile: (file: any) => {
             setEditalFile(file);

@@ -67,6 +67,28 @@ async function estadoCompleto(req, res) {
   }
 }
 
+async function estadoMini(req, res) {
+  try {
+    const estado = await service.buscarEstadoResumido(req.params.id);
+    if (!estado) return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
+
+    const mesa = await service.buscarMesa(req.params.id);
+    const isPresidente = mesa && mesa.presidente_user_id === req.user.id;
+    const isDiretoria = req.user.perfil_acesso === 'DIRETORIA' || req.user.perfil_acesso === 'ADMIN';
+
+    const canSeeToken = estado.quorumVigente?.token && (isPresidente || isDiretoria || req.user.id === estado.quorumVigente.gerado_por_user_id);
+
+    if (!canSeeToken && estado.quorumVigente) {
+        delete estado.quorumVigente.token;
+    }
+
+    res.json(estado);
+  } catch (err) {
+    log.error("AssembleiaEstadoMiniErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
+    res.status(500).json({ error: "Erro ao buscar estado resumido" });
+  }
+}
+
 async function diagnostico(req, res) {
   const start = Date.now();
   try {
@@ -565,7 +587,7 @@ async function iniciarVotacao(req, res) {
       quorum_snapshot_id: quorum.id,
       titulo,
       descricao,
-      duracao_segundos: duracao_segundos || 60,
+      duracao_segundos: duracao_segundos || 300,
       iniciada_por_user_id: req.user.id
     });
 
@@ -607,7 +629,20 @@ async function votar(req, res) {
       service.listarVotosNominais(vid)
     ]);
 
-    socket.emitEvent(id, "voto:updated", { contagem, votos });
+    // Auto-encerramento se todos os presentes votaram
+    const quorumVigente = await service.buscarUltimoQuorum(id);
+    if (quorumVigente) {
+        const totalPresentes = await service.contarPresentesNoQuorum(quorumVigente.id);
+        if (contagem.total >= totalPresentes && totalPresentes > 0) {
+            log.info("AssembleiaVotacaoAutoEncerramento", { requestId: req.requestId, assembleiaId: id, votacaoId: vid, votos: contagem.total, presentes: totalPresentes });
+            const finalizada = await service.finalizarVotacao(vid);
+            socket.emitEvent(id, "votacao:encerrada", { ...finalizada, contagem, votos });
+        } else {
+            socket.emitEvent(id, "voto:updated", { contagem, votos });
+        }
+    } else {
+        socket.emitEvent(id, "voto:updated", { contagem, votos });
+    }
 
     log.info("AssembleiaVotarSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, votacaoId: vid, elapsedMs: Date.now() - start });
     res.json({ success: true });
@@ -654,6 +689,9 @@ async function pedirPalavra(req, res) {
     res.json({ success: true });
   } catch (err) {
     log.error("AssembleiaPedirPalavraErro", err);
+    if (err.message === "Assembleia encerrada") {
+        return res.status(409).json({ error: err.message });
+    }
     res.status(500).json({ error: "Erro ao pedir palavra" });
   }
 }
@@ -790,6 +828,10 @@ async function criarProposta(req, res) {
       stack: err.stack
     });
 
+    if (err.message === "Assembleia encerrada") {
+        return res.status(409).json({ error: err.message });
+    }
+
     if (err.message === Textos.ASSEMBLEIA.NAO_ENCONTRADA) {
       return res.status(404).json({ error: err.message });
     }
@@ -808,6 +850,16 @@ async function gerarRelatorio(req, res) {
   const start = Date.now();
   const { id } = req.params;
   try {
+    const assembleia = await service.buscarPorId(id);
+    if (!assembleia) return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
+
+    // Governança: Durante assembleia em curso: somente diretoria gera relatório.
+    // Assembleia encerrada: qualquer usuário pode gerar relatório.
+    const isDiretoria = req.user.perfil_acesso === 'DIRETORIA' || req.user.perfil_acesso === 'ADMIN';
+    if (assembleia.estado === 'EM_CURSO' && !isDiretoria) {
+        return res.status(403).json({ error: "Durante a assembleia em curso, apenas a Diretoria pode gerar relatórios parciais." });
+    }
+
     const [dados, filiado] = await Promise.all([
       service.gerarDadosRelatorio(id),
       filiadosService.buscarPorId(req.user.id)
@@ -819,7 +871,23 @@ async function gerarRelatorio(req, res) {
 
     const pdfBuffer = await pdfService.gerarPdfRelatorioAssembleia(dados);
 
+    // Enviar PDF para o solicitante
     await emailService.enviarEmailRelatorioAssembleia(filiado, dados.assembleia, pdfBuffer);
+
+    // Notificação ao Sindicato (sem anexo, apenas aviso)
+    const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const notifyEmail = process.env.REPORT_NOTIFY_EMAIL || 'administrativo@sinprfes.org.br';
+    await emailService.enviarEmail({
+        to: notifyEmail,
+        subject: `[Notificação] Relatório de Assembleia Gerado - ${dados.assembleia.titulo}`,
+        html: `
+            <p>Um novo relatório de assembleia foi gerado.</p>
+            <p><strong>Assembleia:</strong> ${dados.assembleia.titulo}</p>
+            <p><strong>Solicitante:</strong> ${req.user.nome} (${req.user.perfil_acesso})</p>
+            <p><strong>Data/Hora:</strong> ${agora}</p>
+            <p>O documento foi enviado diretamente para o e-mail do solicitante.</p>
+        `
+    }).catch(err => log.error("Erro ao enviar notificação de relatório ao sindicato", { error: err.message }));
 
     const maskedEmail = filiado.email1 ? filiado.email1.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
 
