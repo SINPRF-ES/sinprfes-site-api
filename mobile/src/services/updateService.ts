@@ -81,6 +81,7 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
             error: 'O update-manifest.json está como Google Docs. Faça upload como arquivo JSON (application/json) no Drive.'
         };
     }
+    logDebug('UpdateCheck.MANIFEST_FOUND', { id: manifestFile.id });
 
     // 3. Baixar e ler o manifesto
     let manifest: UpdateManifest;
