@@ -392,6 +392,14 @@ async function buscarQuorumPorToken(assembleiaId, token) {
   return rows[0];
 }
 
+async function contarPresentesNoQuorum(quorumId) {
+  const { rows } = await pool.query(
+    "SELECT COUNT(*)::INTEGER as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1",
+    [quorumId]
+  );
+  return parseInt(rows[0].total || 0);
+}
+
 async function realizarCheckin(dados) {
   const { assembleia_quorum_id, filiado_id, origem, assembleia_id } = dados;
 
@@ -799,7 +807,7 @@ async function pedirPalavra(assembleiaId, filiadoId) {
   const assembleia = await buscarPorId(assembleiaId);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
   if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADA) {
-    throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
+    throw new Error("Assembleia encerrada");
   }
 
   const { rows: maxRows } = await pool.query(
@@ -873,6 +881,10 @@ async function criarProposta(dados) {
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
     // Permitir propostas em ABERTA ou EM_CURSO (conforme CANON)
+    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADA) {
+      throw new Error("Assembleia encerrada");
+    }
+
     if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA && assembleia.estado !== ASSEMBLEIA_STATES.EM_CURSO) {
       throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (Estado: ${assembleia.estado})`);
     }
@@ -950,7 +962,7 @@ async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
       quorum_snapshot_id: quorum.id,
       titulo: `Votação: ${proposta.titulo}`,
       descricao: proposta.descricao,
-      duracao_segundos: 120, // Propostas costumam ter tempo maior
+      duracao_segundos: 300, // Canonização: 5 minutos padrão
       iniciada_por_user_id: userId
     }, client);
 
@@ -1026,6 +1038,64 @@ async function buscarDiagnostico(assembleiaId) {
       suporte: process.env.ASSEMBLEIA_SUPORTE_ATIVO === 'true'
     }
   };
+}
+
+async function buscarEstadoResumido(assembleiaId) {
+  try {
+    const [assembleia, ultimoQuorum, votacaoAtiva] = await Promise.all([
+      pool.query(`SELECT estado FROM assembleias WHERE id = $1`, [assembleiaId]).then(r => r.rows[0]),
+      buscarUltimoQuorum(assembleiaId).catch(() => null),
+      buscarVotacaoAtiva(assembleiaId).catch(() => null)
+    ]);
+
+    if (!assembleia) return null;
+
+    let totalPresentes = 0;
+    if (ultimoQuorum) {
+      const { rows } = await pool.query(
+        "SELECT COUNT(*)::INTEGER as total FROM assembleia_checkins WHERE assembleia_quorum_id = $1",
+        [ultimoQuorum.id]
+      );
+      totalPresentes = parseInt(rows[0].total);
+    }
+
+    let votacaoResumo = null;
+    if (votacaoAtiva) {
+        const [contagem, votos] = await Promise.all([
+            contarVotos(votacaoAtiva.id),
+            listarVotosNominais(votacaoAtiva.id)
+        ]);
+        const fim = new Date(votacaoAtiva.encerra_em).getTime();
+        const agora = new Date().getTime();
+        const tempoRestante = Math.max(0, Math.floor((fim - agora) / 1000));
+
+        votacaoResumo = {
+            id: votacaoAtiva.id,
+            titulo: votacaoAtiva.titulo,
+            status: votacaoAtiva.status,
+            tempoRestanteSegundos: tempoRestante,
+            contagem,
+            votos
+        };
+    }
+
+    return {
+      assembleia: { id: assembleiaId, estado: assembleia.estado },
+      quorumVigente: ultimoQuorum ? {
+        id: ultimoQuorum.id,
+        token: ultimoQuorum.token, // O controller deve filtrar se o usuário pode ver
+        total: totalPresentes,
+        tipo_chamada: ultimoQuorum.tipo_chamada,
+        gerado_por_user_id: ultimoQuorum.gerado_por_user_id,
+        criado_em: ultimoQuorum.criado_em
+      } : null,
+      votacaoAtiva: votacaoResumo,
+      updatedAt: new Date().toISOString()
+    };
+  } catch (err) {
+    log.error("Erro em buscarEstadoResumido", { assembleiaId, error: err.message });
+    return null;
+  }
 }
 
 async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
@@ -1254,6 +1324,8 @@ module.exports = {
   substituirMesa,
   buscarMesa,
   buscarEstadoCompleto,
+  contarPresentesNoQuorum,
+  buscarEstadoResumido,
   buscarDiagnostico,
   normalizarAssembleia
 };

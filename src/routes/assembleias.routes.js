@@ -8,6 +8,20 @@ const requirePermission = require("../middlewares/requirePermission");
 const controller = require("../controllers/assembleias.controller");
 const { assemblyCommandLimiter, checkinLimiter, stateLimiter, diagnosticLimiter } = require("../middlewares/assembleiaRateLimit");
 
+// Verificação defensiva de boot: garante que todos os handlers existem no controller
+const required = [
+  "listar","detalhe","estadoCompleto","estadoMini","proxyEdital",
+  "criar","uploadEdital","abrir","iniciarExecucao","encerrarAssembleia",
+  "gerarTokenQuorum","atualizarQuorum","checkin","definirMesa","substituirMesa",
+  "iniciarVotacao","votar","encerrarVotacao",
+  "pedirPalavra","concederPalavra","criarProposta","iniciarVotacaoProposta",
+  "gerarRelatorio","diagnostico","limparLogsAuditoria"
+];
+const missing = required.filter(k => typeof controller?.[k] !== "function");
+if (missing.length) {
+  throw new Error(`assembleias.controller missing handlers: ${missing.join(", ")}`);
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
@@ -17,6 +31,7 @@ const upload = multer({
 router.get("/", auth, controller.listar);
 router.get("/:id", auth, controller.detalhe);
 router.get("/:id/estado", auth, stateLimiter, controller.estadoCompleto);
+router.get("/:id/estado/mini", auth, stateLimiter, controller.estadoMini);
 router.get("/:id/edital", auth, controller.proxyEdital);
 
 // Gestão podem criar, abrir, iniciar execução e encerrar

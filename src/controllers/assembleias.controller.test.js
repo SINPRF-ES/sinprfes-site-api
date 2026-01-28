@@ -47,4 +47,23 @@ describe('Assembleias Controller', () => {
 
     expect(res.json).toHaveBeenCalledWith([{ id: 'ass-1' }]);
   });
+
+  test('votar should auto-close votation if everyone has voted', async () => {
+    req.params = { id: 'ass1', vid: 'v1' };
+    req.body = { voto: 'SIM' };
+
+    service.buscarVotacaoAtiva.mockResolvedValue({ id: 'v1', encerra_em: new Date(Date.now() + 10000).toISOString() });
+    service.verificarElegibilidade.mockResolvedValue(true);
+    service.registrarVoto.mockResolvedValue({});
+    service.contarVotos.mockResolvedValue({ total: 10, SIM: 6, NAO: 4 });
+    service.listarVotosNominais.mockResolvedValue([]);
+    service.buscarUltimoQuorum.mockResolvedValue({ id: 'q1' });
+    service.contarPresentesNoQuorum.mockResolvedValue(10); // Matches contagem.total
+    service.finalizarVotacao.mockResolvedValue({ id: 'v1', status: 'ENCERRADA' });
+
+    await controller.votar(req, res);
+
+    expect(service.finalizarVotacao).toHaveBeenCalledWith('v1');
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
 });

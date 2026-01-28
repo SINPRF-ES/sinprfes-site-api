@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList, AppState, AppStateStatus } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAssembleiaEstado, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
+import { getAssembleiaEstado, getAssembleiaEstadoMini, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
 import { formatTimeSP } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
@@ -128,6 +128,70 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    let interval: any;
+    let isActive = true;
+
+    const getPollingInterval = () => {
+        if (!estado) return 5000;
+        if (estado.assembleia.estado === 'ENCERRADA') return 0;
+        if (estado.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') return 2000;
+        return 5000;
+    };
+
+    const runPolling = async () => {
+        if (!isActive || AppState.currentState !== 'active') return;
+        const currentInterval = getPollingInterval();
+        if (currentInterval === 0) return;
+
+        try {
+            const mini = await getAssembleiaEstadoMini(id);
+            if (mini && isActive) {
+                setEstado(prev => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        assembleia: { ...prev.assembleia, estado: mini.assembleia.estado },
+                        quorumVigente: mini.quorumVigente ? {
+                            ...prev.quorumVigente,
+                            ...mini.quorumVigente
+                        } : prev.quorumVigente,
+                        votacaoAtiva: mini.votacaoAtiva
+                    } as any;
+                });
+                if (mini.assembleia.estado === 'ENCERRADA') {
+                    navigation.navigate('AssembleiaDetalhe', { id });
+                }
+            }
+        } catch (err) {
+            console.warn('[Polling.Sala.Error]', err);
+        }
+
+        if (isActive) {
+            const nextInterval = getPollingInterval();
+            if (nextInterval > 0) {
+                interval = setTimeout(runPolling, nextInterval);
+            }
+        }
+    };
+
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+        if (nextAppState === 'active') {
+            runPolling();
+        } else {
+            if (interval) clearTimeout(interval);
+        }
+    });
+
+    runPolling();
+
+    return () => {
+        isActive = false;
+        if (interval) clearTimeout(interval);
+        subscription.remove();
+    };
+  }, [id, estado?.assembleia?.estado, !!estado?.votacaoAtiva, navigation]);
 
   // Gerenciamento de Socket.IO
   useEffect(() => {
