@@ -69,7 +69,11 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     const currentRuntimeVersion = Updates.runtimeVersion || '';
 
     logDebug('UpdateCheck.versions', {
-      current: { versionCode: currentVersionCode, runtimeVersion: currentRuntimeVersion },
+      current: {
+        versionCode: currentVersionCode,
+        runtimeVersion: currentRuntimeVersion,
+        channel: Updates.channel || 'N/A'
+      },
       remote: { versionCode: manifest.versionCode, runtimeVersion: manifest.runtimeVersion }
     });
 
@@ -97,21 +101,15 @@ if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
   try {
     const update = await Updates.checkForUpdateAsync();
 
-    Alert.alert(
-      'DEBUG OTA',
-      JSON.stringify(
-        {
-          updateIsAvailable: update.isAvailable,
-          currentVersionCode,
-          currentRuntimeVersion,
-          manifestVersionCode: manifest.versionCode,
-          manifestRuntimeVersion: manifest.runtimeVersion,
-          updateId: update?.manifest?.id ?? null
-        },
-        null,
-        2
-      )
-    );
+    logDebug('UpdateCheck.otaDebug', {
+      updateIsAvailable: update.isAvailable,
+      currentVersionCode,
+      currentRuntimeVersion,
+      currentChannel: Updates.channel || 'N/A',
+      manifestVersionCode: manifest.versionCode,
+      manifestRuntimeVersion: manifest.runtimeVersion,
+      updateId: update?.manifest?.id ?? null
+    });
 
     if (update.isAvailable) {
       logDebug('UpdateCheck.otaAvailable', {});
