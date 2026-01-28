@@ -13,6 +13,7 @@ const AtualizacoesScreen = () => {
     const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
     const [lastCheck, setLastCheck] = useState<Date | null>(null);
     const [isApplying, setIsApplying] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<string>('');
 
     const versionCode = Application.nativeBuildVersion;
     const versionName = Application.nativeApplicationVersion;
@@ -23,16 +24,30 @@ const AtualizacoesScreen = () => {
     const handleCheck = async () => {
         setIsChecking(true);
         setUpdateResult(null);
+        setStatusMessage('Verificando...');
         try {
             const result = await checkUpdates();
             setUpdateResult(result);
             setLastCheck(new Date());
 
-            if (!result || !result.hasUpdate) {
-                logDebug('Atualizacoes.check', { status: 'up_to_date' });
+            if (result?.error) {
+                if (result.error === 'APP_FOLDER_NOT_FOUND' || result.error === 'MANIFEST_NOT_FOUND') {
+                    setStatusMessage('Manifest não encontrado');
+                } else if (result.error === 'MANIFEST_DOWNLOAD_ERROR') {
+                    setStatusMessage('Erro ao baixar manifest');
+                } else {
+                    setStatusMessage('Erro na verificação');
+                }
+            } else if (result?.hasUpdate) {
+                setStatusMessage(result.type === 'OTA' ? 'OTA disponível' : 'APK disponível');
+            } else if (result) {
+                setStatusMessage('Manifest lido com sucesso (OTA não disponível)');
+            } else {
+                setStatusMessage('Não foi possível verificar');
             }
         } catch (error: any) {
             logDebug('Atualizacoes.check.error', error);
+            setStatusMessage('Erro ao verificar');
             Alert.alert('Erro', 'Falha ao verificar atualizações: ' + error.message);
         } finally {
             setIsChecking(false);
@@ -95,6 +110,20 @@ const AtualizacoesScreen = () => {
                         <Text style={styles.infoLabel}>Update URL:</Text>
                         <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="middle">{updateUrl || 'N/A'}</Text>
                     </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Update ID:</Text>
+                        <Text style={styles.infoValue}>{Updates.updateId || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Embedded Launch:</Text>
+                        <Text style={styles.infoValue}>{Updates.isEmbeddedLaunch ? 'Sim' : 'Não'}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Created At:</Text>
+                        <Text style={styles.infoValue}>
+                            {(Updates as any).createdAt ? new Date((Updates as any).createdAt).toLocaleString('pt-BR') : 'N/A'}
+                        </Text>
+                    </View>
                 </View>
 
                 <TouchableOpacity
@@ -113,9 +142,14 @@ const AtualizacoesScreen = () => {
                 </TouchableOpacity>
 
                 {lastCheck && (
-                    <Text style={styles.lastCheckText}>
-                        Última verificação: {lastCheck.toLocaleTimeString()}
-                    </Text>
+                    <View style={styles.statusContainer}>
+                        <Text style={styles.lastCheckText}>
+                            Última verificação: {lastCheck.toLocaleTimeString()}
+                        </Text>
+                        {statusMessage ? (
+                            <Text style={styles.statusMessage}>{statusMessage}</Text>
+                        ) : null}
+                    </View>
                 )}
 
                 {updateResult && updateResult.hasUpdate ? (
@@ -189,7 +223,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     checkButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    lastCheckText: { textAlign: 'center', color: '#888', fontSize: 12, marginBottom: 20 },
+    lastCheckText: { textAlign: 'center', color: '#888', fontSize: 12 },
+    statusContainer: { marginBottom: 20, alignItems: 'center' },
+    statusMessage: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#003366',
+        marginTop: 4,
+        textAlign: 'center'
+    },
     resultCard: { borderRadius: 12, padding: 20, borderLeftWidth: 6, elevation: 3, backgroundColor: '#fff' },
     mandatoryCard: { borderLeftColor: '#d32f2f' },
     optionalCard: { borderLeftColor: '#2e7d32' },
