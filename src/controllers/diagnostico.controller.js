@@ -32,6 +32,31 @@ async function limparLogs(req, res) {
   }
 }
 
+async function registrarLog(req, res) {
+  try {
+    const { source, event, meta } = req.body;
+
+    // Log estruturado no backend
+    log.info(`MOBILE_DIAGNOSTICO_${(event || 'UNKNOWN').toUpperCase()}`, {
+      requestId: req.requestId,
+      userId: req.user.id,
+      source: source || 'mobile',
+      event: event,
+      meta: meta
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    log.error("DiagnosticoRegistrarLogErro", {
+      requestId: req.requestId,
+      userId: req.user?.id,
+      error: err.message
+    });
+    res.status(500).json({ error: "Erro ao registrar log de diagnóstico" });
+  }
+}
+
 module.exports = {
-  limparLogs
+  limparLogs,
+  registrarLog
 };
