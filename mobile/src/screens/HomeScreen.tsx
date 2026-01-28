@@ -43,6 +43,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <View style={styles.header}>
         <Text style={styles.welcomeTitle}>Bem-vindo,</Text>
         <Text style={styles.userName}>{usuario?.nome ?? 'Filiado'}</Text>
+
+<Text style={styles.otaTest}>
+  123 teste de atualização OTA
+</Text>
+
         {usuario?.situacao && (
           <View style={styles.statusBadge}>
             <Text style={styles.statusText}>{usuario.situacao}</Text>
@@ -138,4 +143,11 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
   },
+  otaTest: {
+  marginTop: 8,
+  color: '#FFD54F',
+  fontWeight: 'bold',
+  fontSize: 14,
+},
+
 });
