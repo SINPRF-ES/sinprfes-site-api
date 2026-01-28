@@ -4,13 +4,12 @@ const { getDefaultConfig } = require("expo/metro-config");
 const projectRoot = __dirname;
 const config = getDefaultConfig(projectRoot);
 
-config.resolver.unstable_enableSymlinks = true;
-config.resolver.assetExts.push('html');
-
+// Monorepo: permite resolver e observar dependências via file:../shared/format
 config.watchFolders = [
   path.resolve(projectRoot, "../shared/format"),
 ];
 
+// Garante resolução consistente do node_modules do mobile
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
 ];
