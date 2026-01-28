@@ -44,12 +44,12 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
 
     // 1. Localizar pasta 'App' na raiz das Publicações
     const rootFiles = await fetchPublicacoes(null);
-    const appFolder = rootFiles.find(f => f.isFolder && f.name.toLowerCase() === 'app');
+    const appFolder = rootFiles.find(f => f.isFolder && (f.name || '').trim().toLowerCase() === 'app');
     if (!appFolder) {
-      logDebug('UpdateCheck.APP_FOLDER_NOT_FOUND', {});
-      return { hasUpdate: false, error: 'APP_FOLDER_NOT_FOUND' };
+      logDebug('UpdateCheck.step', { step: 'APP_FOLDER_NOT_FOUND' });
+      return { hasUpdate: false, error: 'Pasta App não encontrada no Drive.' };
     }
-    logDebug('UpdateCheck.APP_FOLDER_FOUND', { id: appFolder.id });
+    logDebug('UpdateCheck.step', { step: 'FOUND_APP_FOLDER', folderId: appFolder.id });
 
     // 2. Localizar 'update-manifest.json' e APK dentro da pasta 'App'
     const appFiles = await fetchPublicacoes(appFolder.id);
@@ -60,24 +60,47 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
 
     const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
     if (!manifestFile) {
-      logDebug('UpdateCheck.MANIFEST_NOT_FOUND', {
+      logDebug('UpdateCheck.step', {
+          step: 'MANIFEST_NOT_FOUND',
           availableNames: appFiles.map(f => f.name)
       });
-      return { hasUpdate: false, error: 'MANIFEST_NOT_FOUND' };
+      return { hasUpdate: false, error: 'update-manifest.json não encontrado na pasta App.' };
+    }
+    logDebug('UpdateCheck.step', {
+        step: 'FOUND_MANIFEST',
+        fileId: manifestFile.id,
+        mimeType: manifestFile.mimeType,
+        name: manifestFile.name
+    });
+
+    // Validar MimeType para evitar Google Docs
+    if (manifestFile.mimeType === 'application/vnd.google-apps.document') {
+        logDebug('UpdateCheck.step', { step: 'MANIFEST_IS_GOOGLE_DOC', fileId: manifestFile.id });
+        return {
+            hasUpdate: false,
+            error: 'O update-manifest.json está como Google Docs. Faça upload como arquivo JSON (application/json) no Drive.'
+        };
     }
     logDebug('UpdateCheck.MANIFEST_FOUND', { id: manifestFile.id });
 
     // 3. Baixar e ler o manifesto
     let manifest: UpdateManifest;
     try {
+      logDebug('UpdateCheck.step', { step: 'DOWNLOADING_MANIFEST' });
       const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
+
+      logDebug('UpdateCheck.step', { step: 'READING_MANIFEST', localUri });
       const manifestContent = await FileSystem.readAsStringAsync(localUri);
 
       try {
         manifest = JSON.parse(manifestContent);
       } catch (parseError: any) {
-        logDebug('UpdateCheck.error', { reason: 'MANIFEST_PARSE_FAILED', message: parseError.message });
-        return { hasUpdate: false, error: 'MANIFEST_PARSE_ERROR' };
+        logDebug('UpdateCheck.error', {
+            reason: 'MANIFEST_PARSE_FAILED',
+            message: parseError.message,
+            stack: parseError.stack
+        });
+        return { hasUpdate: false, error: 'Erro ao processar JSON do manifesto.' };
       }
 
       logDebug('UpdateCheck.MANIFEST_DOWNLOADED', {
@@ -86,8 +109,12 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
         runtimeVersion: manifest.runtimeVersion
       });
     } catch (e: any) {
-      logDebug('UpdateCheck.error', { reason: 'MANIFEST_DOWNLOAD_FAILED', message: e.message });
-      return { hasUpdate: false, error: 'MANIFEST_DOWNLOAD_ERROR' };
+      logDebug('UpdateCheck.error', {
+          reason: 'MANIFEST_DOWNLOAD_FAILED',
+          message: e.message,
+          stack: e.stack
+      });
+      return { hasUpdate: false, error: `Falha no download: ${e.message}` };
     }
 
     // 4. Comparar versões
@@ -145,7 +172,10 @@ export const checkUpdates = async (): Promise<UpdateCheckResult | null> => {
     logDebug('UpdateCheck.noUpdateNeeded', {});
     return { hasUpdate: false };
   } catch (error: any) {
-    logDebug('UpdateCheck.error', { message: error.message });
+    logDebug('UpdateCheck.error', {
+        message: error.message,
+        stack: error.stack
+    });
     return { hasUpdate: false, error: error.message };
   }
 };

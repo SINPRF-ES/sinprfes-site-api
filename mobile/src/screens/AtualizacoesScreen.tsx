@@ -31,13 +31,7 @@ const AtualizacoesScreen = () => {
             setLastCheck(new Date());
 
             if (result?.error) {
-                if (result.error === 'APP_FOLDER_NOT_FOUND' || result.error === 'MANIFEST_NOT_FOUND') {
-                    setStatusMessage('Manifest não encontrado');
-                } else if (result.error === 'MANIFEST_DOWNLOAD_ERROR' || result.error === 'MANIFEST_PARSE_ERROR') {
-                    setStatusMessage('Erro ao baixar manifest');
-                } else {
-                    setStatusMessage('Erro na verificação');
-                }
+                setStatusMessage(result.error);
             } else if (result?.hasUpdate) {
                 setStatusMessage(result.type === 'OTA' ? 'OTA disponível' : 'APK disponível');
             } else if (result) {
