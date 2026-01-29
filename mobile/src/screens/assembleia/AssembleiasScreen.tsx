@@ -76,6 +76,8 @@ export default function AssembleiasScreen({ navigation }: any) {
 
   // Otimização Bolt: Memoiza renderItem para evitar re-instanciação e re-renders no FlatList
   const renderItem = useCallback(({ item }: { item: Assembleia }) => {
+    const dataBr = item.data_evento ? new Date(item.data_evento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--/--/----';
+
     return (
     <TouchableOpacity
       style={styles.card}
@@ -87,17 +89,19 @@ export default function AssembleiasScreen({ navigation }: any) {
       <View style={styles.cardHeader}>
         <View style={[styles.badge, styles[`badge${item.estado}` as keyof typeof styles] || styles.badgeCRIADA]}>
           <Text style={styles.badgeText}>
-            {getAssembleiaStatusEmoji(item.estado)}
             {getAssembleiaStatusLabel(item.estado)}
           </Text>
         </View>
-        <Text style={styles.tipoText}>{item.tipo}</Text>
       </View>
-      <Text style={styles.tituloText}>{item.titulo}</Text>
-      <Text style={styles.dataText}>Criada em: {new Date(item.criado_em).toLocaleDateString()}</Text>
+      <Text style={styles.tituloText}>{getAssembleiaStatusEmoji(item.estado)} {item.tipo} - {item.titulo}</Text>
+
+      <View style={styles.infoRow}>
+          <Text style={styles.dataText}>📅 Data: <Text style={styles.dataValue}>{dataBr}</Text></Text>
+          <Text style={styles.dataText}>🕒 Horário: <Text style={styles.dataValue}>{item.hora_primeira_chamada || '--:--'}</Text></Text>
+      </View>
 
       <View style={styles.cardFooter}>
-        <Text style={styles.verMais}>Ver detalhes</Text>
+        <Text style={styles.verMais}>Ver Detalhes e Participar</Text>
         <MaterialCommunityIcons name="chevron-right" size={20} color="#003366" />
       </View>
     </TouchableOpacity>
@@ -197,8 +201,10 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: 'bold', color: '#333' },
   tipoText: { fontWeight: 'bold', color: '#666' },
   tituloText: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 4 },
-  dataText: { fontSize: 12, color: '#888', marginBottom: 12 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8 },
+  infoRow: { flexDirection: 'row', gap: 20, marginBottom: 12, flexWrap: 'wrap' },
+  dataText: { fontSize: 14, color: '#555', fontWeight: '500' },
+  dataValue: { color: '#003366', fontWeight: 'bold' },
+  cardFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12 },
   verMais: { fontSize: 14, color: '#003366', fontWeight: 'bold' },
   fab: { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#003366', justifyContent: 'center', alignItems: 'center', elevation: 4 },
   empty: { flex: 1, alignItems: 'center', marginTop: 50 },

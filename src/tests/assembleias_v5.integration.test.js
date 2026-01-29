@@ -70,7 +70,8 @@ describe('Assembleias V5 Integration Tests', () => {
           tipo: 'Assembleia Geral Ordinária',
           data_evento: '2026-03-01',
           hora_primeira_chamada: '10:00',
-          hora_segunda_chamada: '10:30'
+          hora_segunda_chamada: '10:30',
+          edital_drive_file_id: 'drive-123'
         });
 
       expect(response.status).toBe(201);
@@ -104,7 +105,14 @@ describe('Assembleias V5 Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/assembleias')
-        .send({ titulo: 'Test', tipo: 'AGO' });
+        .send({
+            titulo: 'Test',
+            tipo: 'AGO',
+            data_evento: '2026-03-01',
+            hora_primeira_chamada: '10:00',
+            hora_segunda_chamada: '10:30',
+            edital_drive_file_id: 'drive-123'
+        });
 
       expect(response.status).toBe(422);
     });

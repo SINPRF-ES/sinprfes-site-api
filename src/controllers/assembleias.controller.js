@@ -849,15 +849,23 @@ async function criarProposta(req, res) {
 async function gerarRelatorio(req, res) {
   const start = Date.now();
   const { id } = req.params;
+  log.info("REPORT_PDF_START", { requestId: req.requestId, assembleiaId: id, userId: req.user.id });
+
   try {
     const assembleia = await service.buscarPorId(id);
     if (!assembleia) return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
 
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    if (perfil === 'COMUNICADOR') {
+        log.warn("REPORT_PDF_FORBIDDEN", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, profile: perfil });
+        return res.status(403).json({ success: false, code: "FORBIDDEN", error: "Seu perfil não possui permissão para gerar relatórios." });
+    }
+
     // Governança: Durante assembleia em curso: somente diretoria gera relatório.
-    // Assembleia encerrada: qualquer usuário pode gerar relatório.
-    const isDiretoria = req.user.perfil_acesso === 'DIRETORIA' || req.user.perfil_acesso === 'ADMIN';
+    // Assembleia encerrada: qualquer usuário elegível (exceto comunicador) pode gerar relatório.
+    const isDiretoria = perfil === 'DIRETORIA' || perfil === 'ADMIN';
     if (assembleia.estado === 'EM_CURSO' && !isDiretoria) {
-        return res.status(403).json({ error: "Durante a assembleia em curso, apenas a Diretoria pode gerar relatórios parciais." });
+        return res.status(403).json({ success: false, code: "FORBIDDEN", error: "Durante a assembleia em curso, apenas a Diretoria pode gerar relatórios parciais." });
     }
 
     const [dados, filiado] = await Promise.all([
@@ -869,25 +877,19 @@ async function gerarRelatorio(req, res) {
         return res.status(404).json({ error: "Dados do solicitante não encontrados." });
     }
 
+    // Adiciona metadados do solicitante para o PDF e e-mail
+    dados.solicitante = {
+        nome: filiado.nome,
+        perfil: perfil,
+        data_geracao: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    };
+
     const pdfBuffer = await pdfService.gerarPdfRelatorioAssembleia(dados);
+    log.info("REPORT_PDF_GENERATED", { requestId: req.requestId, assembleiaId: id, size: pdfBuffer.length });
 
-    // Enviar PDF para o solicitante
-    await emailService.enviarEmailRelatorioAssembleia(filiado, dados.assembleia, pdfBuffer);
-
-    // Notificação ao Sindicato (sem anexo, apenas aviso)
-    const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    const notifyEmail = process.env.REPORT_NOTIFY_EMAIL || 'administrativo@sinprfes.org.br';
-    await emailService.enviarEmail({
-        to: notifyEmail,
-        subject: `[Notificação] Relatório de Assembleia Gerado - ${dados.assembleia.titulo}`,
-        html: `
-            <p>Um novo relatório de assembleia foi gerado.</p>
-            <p><strong>Assembleia:</strong> ${dados.assembleia.titulo}</p>
-            <p><strong>Solicitante:</strong> ${req.user.nome} (${req.user.perfil_acesso})</p>
-            <p><strong>Data/Hora:</strong> ${agora}</p>
-            <p>O documento foi enviado diretamente para o e-mail do solicitante.</p>
-        `
-    }).catch(err => log.error("Erro ao enviar notificação de relatório ao sindicato", { error: err.message }));
+    // Enviar PDF para o solicitante (O serviço também notifica o sindicato internamente)
+    await emailService.enviarEmailRelatorioAssembleia(filiado, dados.assembleia, pdfBuffer, dados);
+    log.info("REPORT_EMAIL_USER_SENT", { requestId: req.requestId, assembleiaId: id, userId: req.user.id });
 
     const maskedEmail = filiado.email1 ? filiado.email1.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
 
@@ -898,20 +900,21 @@ async function gerarRelatorio(req, res) {
       requestId: req.requestId
     });
 
-    log.info("AssembleiaGerarRelatorioSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
+    log.info("REPORT_DONE", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json({
       success: true,
-      message: "O relatório foi gerado e enviado para seu e-mail com sucesso."
+      message: "O relatório foi gerado e enviado para seu e-mail com sucesso.",
+      requestId: req.requestId
     });
   } catch (err) {
-    log.error("AssembleiaGerarRelatorioErro", {
+    log.error("REPORT_PDF_ERROR", {
       requestId: req.requestId,
       assembleiaId: id,
       userId: req.user.id,
       error: err.message,
       stack: err.stack
     });
-    res.status(500).json({ error: "Erro ao gerar ou enviar relatório: " + err.message, requestId: req.requestId });
+    res.status(500).json({ success: false, error: "Erro ao gerar ou enviar relatório.", requestId: req.requestId });
   }
 }
 
