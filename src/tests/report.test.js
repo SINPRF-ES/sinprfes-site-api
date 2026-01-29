@@ -48,14 +48,14 @@ describe('Assembleia Report API', () => {
     expect(emailService.enviarEmailRelatorioAssembleia).toHaveBeenCalled();
   });
 
-  test('should block FILIADO from generating report during EM_CURSO', async () => {
+  test('should allow FILIADO to generate report during EM_CURSO', async () => {
     mockUser = { id: 'user-2', perfil_acesso: 'FILIADO' };
     pool.query.mockResolvedValue({ rows: [{ id: 'ass-1', estado: 'EM_CURSO', titulo: 'Ass 1' }] });
 
     const response = await request(app).post('/api/assembleias/ass-1/relatorio');
 
-    expect(response.status).toBe(403);
-    expect(response.body.code).toBe('FORBIDDEN');
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
   });
 
   test('should allow FILIADO to generate report when ENCERRADA', async () => {

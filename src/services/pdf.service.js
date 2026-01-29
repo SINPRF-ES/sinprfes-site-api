@@ -665,6 +665,14 @@ async function gerarPdfRelatorioAssembleia(dados) {
     // Quórum e Presença
     doc.font("Helvetica-Bold").fontSize(12).text("3. Quórum e Presença");
     doc.moveDown(0.5);
+
+    doc.font("Helvetica-Bold").fontSize(10).text("Resumo de Presença Apurada:");
+    doc.font("Helvetica").fontSize(10).text(`Total de presentes (únicos): ${dados.presentes_total || 0}`);
+    if (!dados.presentes_total) {
+        doc.font("Helvetica-Oblique").fontSize(9).text("(sem registros de check-in)");
+    }
+    doc.moveDown(1);
+
     if (dados.quorums && dados.quorums.length > 0) {
         dados.quorums.forEach((q) => {
             const dataHora = new Date(q.criado_em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });

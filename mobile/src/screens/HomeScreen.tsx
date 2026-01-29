@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
 import JogosBanner from '../components/JogosBanner';
+import OtaUpdateBanner from '../components/OtaUpdateBanner';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
@@ -51,6 +52,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         )}
       </View>
 
+      <OtaUpdateBanner />
       <JogosBanner />
 
       <View style={styles.grid}>
