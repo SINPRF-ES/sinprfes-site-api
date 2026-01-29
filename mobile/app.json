@@ -34,10 +34,21 @@
     },
     "runtimeVersion": "54.0.0",
     "plugins": [
+      "./plugins/withAndroidSplit.js",
       "expo-secure-store",
       "expo-sqlite",
       "expo-font",
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": ["arm64-v8a", "armeabi-v7a"],
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
