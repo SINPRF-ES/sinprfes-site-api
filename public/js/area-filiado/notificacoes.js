@@ -32,10 +32,18 @@
         const form = document.getElementById("form-enviar-push");
         const bodyInput = document.getElementById("push-body");
         const charNow = document.getElementById("push-char-now");
+        const titleInput = document.getElementById("push-title");
+        const titleCharNow = document.getElementById("push-title-char-now");
 
         if (bodyInput && charNow) {
             bodyInput.addEventListener("input", () => {
                 charNow.textContent = bodyInput.value.length;
+            });
+        }
+
+        if (titleInput && titleCharNow) {
+            titleInput.addEventListener("input", () => {
+                titleCharNow.textContent = titleInput.value.length;
             });
         }
 
@@ -68,6 +76,7 @@
                         alert(`Notificação enviada com sucesso!\nEnviados: ${res.sent}\nFalhas: ${res.failed}`);
                         form.reset();
                         charNow.textContent = "0";
+                        if (titleCharNow) titleCharNow.textContent = "0";
                         await carregarHistorico();
                     } else {
                         const err = await r.json();

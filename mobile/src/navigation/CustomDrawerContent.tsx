@@ -46,6 +46,11 @@ const CustomDrawerContent = (props) => {
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('CriarFiliado')}
           />
+          <DrawerItem
+            label="Enviar Notificação"
+            icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
+            onPress={() => props.navigation.navigate('NotificacoesPush')}
+          />
         </>
       )}
 

@@ -3,7 +3,7 @@
 Este módulo permite que administradores enviem notificações push diretamente para todos os filiados que possuem o aplicativo instalado e estão logados.
 
 ## Requisitos de Acesso
-Apenas usuários com os seguintes perfis podem acessar o módulo no site:
+Apenas usuários com os seguintes perfis podem acessar o módulo (site e mobile):
 - ADMIN
 - DIRETORIA
 - FUNCIONÁRIO
@@ -15,6 +15,10 @@ Apenas usuários com os seguintes perfis podem acessar o módulo no site:
 - **Confirmação:** Todo envio exige confirmação positiva em janela de diálogo.
 - **Histórico:** Lista dos últimos 20 disparos com detalhes de quem enviou, conteúdo e contagem de sucesso/erro.
 - **Rate Limit:** Máximo de 2 disparos por minuto por usuário.
+
+## Endpoints (Backend)
+- `POST /api/push/campaigns/send`: Envia uma nova notificação.
+- `GET /api/push/campaigns`: Lista o histórico das últimas 20 campanhas.
 
 ## Como Testar
 
@@ -31,11 +35,16 @@ Apenas usuários com os seguintes perfis podem acessar o módulo no site:
 4. Confirme o envio.
 5. Verifique se o registro apareceu na tabela de **Histórico de Envios**.
 
-### Mobile (Verificação de logs)
-1. Abra o app em um dispositivo físico.
-2. Logue-se.
-3. Verifique nos logs (`adb logcat` ou visualizador de logs interno se disponível) as mensagens com prefixo `Push info:`.
-4. O registro de token deve ocorrer de forma silenciosa ("best-effort").
+### Mobile (Envio)
+1. Acesse o menu lateral do App com um perfil autorizado.
+2. Toque em **Enviar Notificação**.
+3. Realize o envio seguindo os mesmos passos do site.
+4. Verifique se o histórico no App também foi atualizado.
+
+### Mobile (Recebimento)
+1. Abra o app em um dispositivo físico e logue-se (para registrar o token).
+2. Envie uma notificação via site ou mobile.
+3. Verifique o recebimento da notificação no dispositivo.
 
 ## Segurança
 - Tokens de push são mascarados nos logs (ex: `ExponentPu...xxxx`).
