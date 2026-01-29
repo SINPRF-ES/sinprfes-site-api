@@ -1,5 +1,7 @@
 // src/controllers/push.controller.js
 const pushService = require("../services/push.service");
+const log = require("../utils/log");
+const { v4: uuidv4 } = require("uuid");
 
 function getUserId(req) {
   // Seu middleware auth normalmente seta req.user
@@ -7,16 +9,35 @@ function getUserId(req) {
   return req?.user?.id ?? req?.user?.userId ?? null;
 }
 
+function maskToken(token) {
+  if (!token || typeof token !== 'string') return "invalid-token";
+  if (token.length < 15) return "***";
+  return `${token.substring(0, 10)}...${token.slice(-4)}`;
+}
+
 exports.register = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const userId = getUserId(req);
+  const { expoPushToken, deviceId, platform } = req.body || {};
+  const bodyKeys = req.body ? Object.keys(req.body) : [];
+
   try {
-    const userId = getUserId(req);
+    log.info("PushRegisterIniciado", {
+      requestId,
+      method: req.method,
+      route: req.originalUrl,
+      userId,
+      platform,
+      expoPushTokenMasked: maskToken(expoPushToken),
+      bodyKeys
+    });
+
     if (!userId) {
-      return res.status(401).json({ error: "Usuário não autenticado (req.user ausente)." });
+      return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente)." });
     }
 
-    const { expoPushToken, deviceId, platform } = req.body || {};
     if (!expoPushToken) {
-      return res.status(400).json({ error: "expoPushToken é obrigatório." });
+      return res.status(400).json({ success: false, error: "expoPushToken é obrigatório." });
     }
 
     const result = await pushService.upsertToken({
@@ -26,25 +47,41 @@ exports.register = async (req, res) => {
       platform: platform ? String(platform) : null,
     });
 
-    return res.json({ ok: true, id: result?.id ?? null });
+    return res.json({ success: true, id: result?.id ?? null });
   } catch (e) {
-    console.error("PushRegisterErro:", e);
+    const errorId = uuidv4();
+    log.error("PushRegisterErro", {
+      errorId,
+      requestId,
+      userId,
+      error: e.message,
+      stack: e.stack
+    });
+
+    if (e.message === "ExpoPushToken inválido.") {
+      return res.status(400).json({ success: false, error: e.message });
+    }
+
     return res.status(500).json({
-      error: e?.message || "Erro ao registrar push token.",
+      success: false,
+      error: "Erro ao registrar push token.",
+      errorId
     });
   }
 };
 
 exports.unregister = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const userId = getUserId(req);
+  const { expoPushToken } = req.body || {};
+
   try {
-    const userId = getUserId(req);
     if (!userId) {
-      return res.status(401).json({ error: "Usuário não autenticado (req.user ausente)." });
+      return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente)." });
     }
 
-    const { expoPushToken } = req.body || {};
     if (!expoPushToken) {
-      return res.status(400).json({ error: "expoPushToken é obrigatório." });
+      return res.status(400).json({ success: false, error: "expoPushToken é obrigatório." });
     }
 
     const ok = await pushService.revokeToken({
@@ -52,19 +89,27 @@ exports.unregister = async (req, res) => {
       expoPushToken: String(expoPushToken),
     });
 
-    return res.json({ ok });
+    return res.json({ success: ok });
   } catch (e) {
-    console.error("PushUnregisterErro:", e);
-    return res.status(500).json({ error: e?.message || "Erro ao remover push token." });
+    const errorId = uuidv4();
+    log.error("PushUnregisterErro", {
+      errorId,
+      requestId,
+      userId,
+      error: e.message,
+      stack: e.stack
+    });
+    return res.status(500).json({ success: false, error: "Erro ao remover push token.", errorId });
   }
 };
 
 // (Opcional) broadcast manual para diretoria/admin
 exports.broadcast = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   try {
     const { title, body, data } = req.body || {};
     if (!title || !body) {
-      return res.status(400).json({ error: "title e body são obrigatórios." });
+      return res.status(400).json({ success: false, error: "title e body são obrigatórios." });
     }
 
     const r = await pushService.sendBroadcast({
@@ -73,9 +118,15 @@ exports.broadcast = async (req, res) => {
       data: data || {},
     });
 
-    return res.json(r);
+    return res.json({ success: true, ...r });
   } catch (e) {
-    console.error("PushBroadcastErro:", e);
-    return res.status(500).json({ error: e?.message || "Erro ao enviar broadcast." });
+    const errorId = uuidv4();
+    log.error("PushBroadcastErro", {
+      errorId,
+      requestId,
+      error: e.message,
+      stack: e.stack
+    });
+    return res.status(500).json({ success: false, error: "Erro ao enviar broadcast.", errorId });
   }
 };
