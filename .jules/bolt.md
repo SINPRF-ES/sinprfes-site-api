@@ -11,3 +11,7 @@
 ## 2026-01-27 - [Batching and N+1 Resolution in Reports and Votations]
 **Learning:** For reports or list views requiring detailed data for each item (like quorums or voting results), replacing loops of queries with single batch queries using `ANY($1)` and grouping in memory significantly reduces overhead. In `criarVotacao`, batching multiple `INSERT` statements into one multi-row `VALUES` query reduces roundtrips from 1+N to 2.
 **Action:** Always prefer batch fetches/inserts over per-item loop queries. Use `.filter` or Map grouping in memory to re-associate data.
+
+## 2026-01-29 - [Optimization of Assembly Check-in Broadcast]
+**Learning:** High-frequency endpoints like `checkin` (during the start of an event) should avoid fetching the full application state if only a small subset is needed for the real-time broadcast. In this codebase, `buscarEstadoCompleto` was a major bottleneck because it fetched proposals and speaker lists unnecessarily.
+**Action:** Always prefer targeted service calls over "get everything" state functions in real-time event handlers. Ensure WebSocket payloads match exactly what the client expects to avoid broken "live" features.

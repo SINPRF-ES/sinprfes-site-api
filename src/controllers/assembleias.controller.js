@@ -473,17 +473,19 @@ async function checkin(req, res) {
       assembleia_id: id
     });
 
-    // Broadcast do quórum atualizado
-    const estado = await service.buscarEstadoCompleto(id);
-    if (estado) {
-      socket.emitEvent(id, "assembleia:checkin_updated", {
-        presentes_total: estado.quorumVigente?.total || 0,
-        quorum_total_ativos: estado.quorumVigente?.quorum_total_ativos || 0,
-        quorum_necessario: estado.quorumVigente?.quorum_necessario || 0,
-        quorum_atingido: (estado.quorumVigente?.total || 0) >= (estado.quorumVigente?.quorum_necessario || 0),
-        tipo_chamada: estado.quorumVigente?.tipo_chamada
-      });
-    }
+    // Broadcast do quórum atualizado - OTIMIZAÇÃO BOLT ⚡
+    // Busca apenas o necessário para o contador de presença, evitando o peso do estado completo (propostas, oradores, etc)
+    const quorumVigente = await service.buscarUltimoQuorum(id);
+    const totalPresentes = quorumVigente ? await service.contarPresentesNoQuorum(quorumVigente.id) : 0;
+
+    socket.emitEvent(id, "assembleia:checkin_updated", {
+      total: totalPresentes, // Compatibilidade mobile
+      presentes_total: totalPresentes,
+      quorum_total_ativos: quorumVigente?.quorum_total_ativos || 0,
+      quorum_necessario: quorumVigente?.quorum_necessario || 0,
+      quorum_atingido: totalPresentes >= (quorumVigente?.quorum_necessario || 0),
+      tipo_chamada: quorumVigente?.tipo_chamada
+    });
 
     log.info("AssembleiaCheckinSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json({ success: true, message: "Check-in realizado com sucesso" });
