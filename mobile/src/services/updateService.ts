@@ -1,7 +1,9 @@
 import * as Application from 'expo-application';
+import * as Device from 'expo-device';
 import * as Updates from 'expo-updates';
 import * as FileSystem from 'expo-file-system/legacy';
-import { fetchPublicacoes, downloadPublicacaoFile } from './driveService';
+import * as IntentLauncher from 'expo-intent-launcher';
+import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from './driveService';
 import { logDebug } from '../utils/filiadoUtils';
 import { carregarSessao } from './storageService';
 import { enviarLogDiagnostico } from './diagnosticoService';
@@ -17,9 +19,10 @@ export interface UpdateManifest {
   };
   apk: {
     enabled: boolean;
-    fileName: string;
     minSupportedVersionCode: number;
     notes: string;
+    fileName?: string; // LEGADO
+    files?: Record<string, string>; // NOVO (por ABI, ex: {"arm64-v8a": "app-v2.apk"})
   };
 }
 
@@ -28,9 +31,73 @@ export interface UpdateCheckResult {
   type?: 'OTA' | 'APK';
   isMandatory?: boolean;
   manifest?: UpdateManifest;
-  apkUrl?: string;
+  apkFileId?: string;
+  apkFileName?: string;
+  apkAbi?: string;
   error?: 'APP_FOLDER_NOT_FOUND' | 'MANIFEST_NOT_FOUND' | 'MANIFEST_DOWNLOAD_ERROR' | string;
 }
+
+/**
+ * Resolve qual APK deve ser baixado com base na arquitetura do dispositivo.
+ */
+export const resolveApkForDevice = (
+  manifest: UpdateManifest,
+  availableFiles: DriveFile[]
+): {
+  apkFile?: DriveFile;
+  abi?: string;
+  reason?: string;
+} => {
+  const supportedAbis = (Device.supportedCpuArchitectures as string[]) || [];
+  let chosenAbi: string | undefined;
+  let expectedFileName: string | undefined;
+
+  logDebug('UpdateCheck.apk.resolve.start', {
+    supportedAbis,
+    hasFiles: !!manifest.apk.files,
+    fileName: manifest.apk.fileName
+  });
+
+  if (manifest.apk.files && Object.keys(manifest.apk.files).length > 0) {
+    // 1. Tentar ABIs suportadas pelo device na ordem de preferência do device
+    chosenAbi = supportedAbis.find((abi: string) => manifest.apk.files![abi]);
+
+    // 2. Fallback determinístico se não achou nada direto
+    if (!chosenAbi) {
+      if (manifest.apk.files['arm64-v8a']) chosenAbi = 'arm64-v8a';
+      else if (manifest.apk.files['armeabi-v7a']) chosenAbi = 'armeabi-v7a';
+    }
+
+    if (chosenAbi) {
+      expectedFileName = manifest.apk.files[chosenAbi];
+    }
+  } else {
+    // Legado: usar fileName direto
+    expectedFileName = manifest.apk.fileName;
+    chosenAbi = 'universal/legacy';
+  }
+
+  if (!expectedFileName) {
+    return { reason: 'APK_FILE_NOT_DEFINED_IN_MANIFEST' };
+  }
+
+  const apkFile = availableFiles.find(f => f.name === expectedFileName);
+
+  if (!apkFile) {
+    logDebug('UpdateCheck.apk.resolve.notFound', {
+      expectedFileName,
+      availableFiles: availableFiles.map(f => f.name)
+    });
+    return { abi: chosenAbi, reason: 'APK_FILE_NOT_FOUND' };
+  }
+
+  logDebug('UpdateCheck.apk.resolve.success', {
+    abi: chosenAbi,
+    fileName: apkFile.name
+  });
+
+  return { apkFile, abi: chosenAbi };
+};
 
 /**
  * Helper para reportar eventos do auto-check para o backend
@@ -128,16 +195,27 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
 
     if (manifest.apk.enabled && (hasNewVersionCode || hasNewRuntime)) {
       const isMandatory = currentVersionCode < manifest.apk.minSupportedVersionCode || hasNewRuntime;
-      const apkFile = appFiles.find(f => f.name === manifest.apk.fileName);
 
-      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory });
+      const { apkFile, abi, reason } = resolveApkForDevice(manifest, appFiles);
+
+      if (!apkFile) {
+        logDebug(`${logPrefix}.error`, { reason: reason || 'APK_FILE_NOT_FOUND' });
+        return {
+            hasUpdate: false,
+            error: `APK não encontrado no Drive (${abi || 'desconhecido'}). Verifique a pasta App.`
+        };
+      }
+
+      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory, abi, file: apkFile.name });
 
       return {
         hasUpdate: true,
         type: 'APK',
         isMandatory,
         manifest,
-        apkUrl: apkFile?.webViewLink || undefined
+        apkFileId: apkFile.id,
+        apkFileName: apkFile.name,
+        apkAbi: abi
       };
     }
 
@@ -178,6 +256,42 @@ export const applyOtaUpdate = async () => {
     await Updates.reloadAsync();
   } catch (error: any) {
     logDebug('UpdateCheck.applyOta.error', { message: error.message });
+    throw error;
+  }
+};
+
+/**
+ * Baixa e instala o APK usando o backend autenticado e o IntentLauncher do Android.
+ */
+export const downloadAndInstallApk = async (fileId: string, fileName: string): Promise<void> => {
+  const logPrefix = 'APK_UPDATE';
+  try {
+    logDebug(`${logPrefix}.click`, { fileId, fileName });
+
+    // 1. Carregar sessão
+    const sessao = await carregarSessao();
+    if (!sessao?.token) {
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+
+    // 2. Baixar APK
+    logDebug(`${logPrefix}.download.start`, { fileId, fileName });
+    const { localUri } = await downloadPublicacaoFile(fileId, fileName, sessao.token);
+    logDebug(`${logPrefix}.download.success`, { localUri });
+
+    // 3. Converter para content URI (necessário para o instalador Android)
+    const contentUri = await FileSystem.getContentUriAsync(localUri);
+    logDebug(`${logPrefix}.install.intent_sent`, { contentUri });
+
+    // 4. Abrir instalador Android
+    await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+      data: contentUri,
+      flags: 1, // Intent.FLAG_GRANT_READ_URI_PERMISSION
+      type: 'application/vnd.android.package-archive',
+    });
+
+  } catch (error: any) {
+    logDebug(`${logPrefix}.error`, { message: error.message });
     throw error;
   }
 };
