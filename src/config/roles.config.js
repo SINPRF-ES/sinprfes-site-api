@@ -13,7 +13,8 @@ module.exports = {
     "JOGOS_GERENCIAR",
     "VOTACAO_GERENCIAR",
     "VOTACAO_VOTAR",
-    "EDIT_CONTENT"
+    "EDIT_CONTENT",
+    "PUSH_GERENCIAR"
   ],
 
   FUNCIONARIO: [
@@ -25,7 +26,8 @@ module.exports = {
     "VIEW_SELF",
     "EDIT_SELF",
 
-    "VOTACAO_VOTAR"
+    "VOTACAO_VOTAR",
+    "PUSH_GERENCIAR"
   ],
 
   ORGANIZADOR: [
