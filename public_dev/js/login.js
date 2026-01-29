@@ -50,6 +50,17 @@ document.addEventListener("DOMContentLoaded", () => {
   aplicarMascaraCpf(loginCpfInput);
   aplicarMascaraCpf(forgotCpfInput);
 
+  const toggleBtn = document.getElementById("toggle-password");
+  const loginPass = document.getElementById("login-senha");
+  if (toggleBtn && loginPass) {
+    toggleBtn.onclick = () => {
+      const isPass = loginPass.type === "password";
+      loginPass.type = isPass ? "text" : "password";
+      toggleBtn.textContent = isPass ? "🙈" : "👁️";
+      toggleBtn.ariaLabel = isPass ? "Ocultar senha" : "Mostrar senha";
+    };
+  }
+
   // Campo extra para 2FA (se existir no HTML)
   const campo2fa = document.getElementById("campo-2fa");
   const inputToken2fa = document.getElementById("login-token-2fa");
@@ -124,7 +135,10 @@ document.addEventListener("DOMContentLoaded", () => {
         payload.token_2fa = inputToken2fa.value.trim();
       }
 
+      const btn = loginForm.querySelector('button[type="submit"]');
+      const oldText = btn.textContent;
       try {
+        btn.disabled = true; btn.textContent = "Entrando...";
         const resp = await fetch("/api/auth/login", {
           method: "POST",
           headers: {
@@ -178,9 +192,9 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = resolvePath("/area-filiado.html");
       } catch (err) {
         console.error("Erro no login:", err);
-        if (loginMsg) {
-          loginMsg.textContent = "Erro de comunicação com o servidor.";
-        }
+        if (loginMsg) loginMsg.textContent = "Erro de comunicação com o servidor.";
+      } finally {
+        btn.disabled = false; btn.textContent = oldText;
       }
     });
   }

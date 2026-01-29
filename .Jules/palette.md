@@ -5,3 +5,7 @@
 ## 2026-01-27 - [Semantic Form Metadata & Keyboard Flow]
 **Learning:** Mobile forms benefit greatly from `textContentType`, `autoComplete`, and `returnKeyType`. Adding `onSubmitEditing` to the final field in a form (e.g., password or 2FA token) allows users to submit without dismissing the keyboard and manually tapping a button, creating a much smoother "delightful" flow.
 **Action:** Always pair `returnKeyType="done"` or `"send"` with an `onSubmitEditing` handler for primary form actions. Use standard `textContentType` values like `birthdate` (not `birthdateDay`).
+
+## 2025-05-16 - [Numeric Input Mode for CPF]
+**Learning:** For fields like CPF that consist of digits but require specific formatting (e.g., dots and dashes), using `inputmode="numeric"` instead of `type="number"` allows the browser to show the numeric keypad on mobile without breaking formatting logic or introducing unwanted spin buttons.
+**Action:** Always use `inputmode="numeric"` for CPF, CEP, and telephone fields in web forms to improve mobile UX.
