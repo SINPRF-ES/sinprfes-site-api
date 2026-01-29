@@ -1,80 +1,83 @@
 # Release Process - SINPRF/ES Mobile
 
-Este documento descreve oficialmente a estratégia de versionamento e publicação do aplicativo SINPRF/ES.
+Este documento descreve oficialmente a estratégia de versionamento, política de `runtimeVersion` e o fluxo de publicação do aplicativo SINPRF/ES.
 
-## 1. Congelamento da Base v3
+## 1. Política de runtimeVersion e Base Nativa
 
-A partir da versão v3, a base nativa (APK) é considerada **congelada**.
+A `runtimeVersion` identifica a compatibilidade entre o código nativo (APK) e as atualizações JavaScript (OTA).
 
-- **versionCode**: 3
-- **versionName**: 1.0.0
-- **runtimeVersion**: 54.0.0
+- **Regra de Ouro**: O OTA só é baixado e aplicado se a `runtimeVersion` do app instalado for **exatamente igual** à `runtimeVersion` definida no update.
+- **Quando dar bump na `runtimeVersion`?**
+  - Adição ou remoção de bibliotecas nativas (que exigem `npx expo prebuild`).
+  - Alterações em `app.json` que afetam o build nativo (plugins, split ABI, R8/shrinkResources, assets de splash/ícone).
+  - Atualização do Expo SDK.
+- **Versão Atual da Base Otimizada**:
+  - `versionCode`: 3 (ou superior)
+  - `runtimeVersion`: `54.0.1`
 
-Qualquer alteração que envolva apenas código JavaScript ou ativos de UI deve ser distribuída via **OTA (Over-The-Air)**, mantendo a compatibilidade com esta base nativa.
-Mudanças que exijam novas bibliotecas nativas, permissões ou atualizações de SDK exigirão a geração de um novo APK (v4+) e alteração do `runtimeVersion`.
+## 2. OTA vs APK: Como decidir?
 
-## 2. OTA vs APK
+### OTA (Over-The-Air) - `eas update`
+- **Use para**: Correções de bugs no JS/React Native, mudanças de estilo (CSS/Styles), novas telas que não usam libs nativas inéditas, ajustes em textos e lógica de negócio.
+- **Vantagem**: Disponibilização imediata sem que o usuário precise baixar um novo arquivo.
 
-### OTA (Over-The-Air)
-- **Quando usar**: Correções de bugs, pequenas melhorias de UI, mudanças em regras de negócio no frontend.
-- **Vantagem**: Atualização silenciosa e imediata para todos os usuários sem necessidade de download manual de APK.
-- **Requisito**: `versionCode` e `runtimeVersion` devem ser idênticos aos da base instalada.
+### APK Base - `eas build`
+- **Use para**: Mudanças que impactam o código nativo (mencionadas na seção 1).
+- **Processo**: Requer gerar um novo binário, subir para o Google Drive e informar ao usuário que uma nova base é necessária.
 
-### APK
-- **Quando usar**: Mudanças estruturais, novas dependências nativas, atualização do Expo SDK.
-- **Processo**: Exige rebuild nativo e download/instalação manual pelo usuário via módulo de Publicações.
+## 3. Regras de Versionamento
 
-## 3. Estrutura de Versionamento
+- **`version` (app.json)**: Versão de "marketing" (ex: `1.0.0`). Meramente informativa para o usuário final.
+- **`versionCode` (Android)**: Inteiro incremental obrigatório para o Android. Deve ser aumentado a cada novo APK gerado.
+- **`runtimeVersion`**: Controla a compatibilidade do OTA. Deve permanecer o mesmo enquanto a base nativa for compatível.
 
-- **versionCode**: Inteiro incremental que identifica a build nativa.
-- **runtimeVersion**: String que vincula a build nativa às atualizações OTA compatíveis.
-- **Canal (Channel)**:
-  - `preview`: Para testes internos e homologação.
-  - `production`: Versão final para todos os usuários.
+## 4. Checklist: Antes de publicar uma nova Base (APK)
 
-## 4. Estrutura no Google Drive (Publicações/App)
+1. [ ] **Verificação de Saúde**: Execute `npx expo-doctor` e garanta que não há problemas de dependências.
+2. [ ] **Bump de Versão**: Incremente o `versionCode` e, se houver mudanças nativas, a `runtimeVersion`.
+3. [ ] **Build**: Gere o APK (ex: `eas build --platform android --profile preview`).
+4. [ ] **Upload**: Suba o APK para a pasta `Publicações/App` no Google Drive.
+5. [ ] **Manifesto**: Atualize o `update-manifest.json` no Drive com o novo `versionCode`, `runtimeVersion` e o nome do arquivo APK.
+6. [ ] **OTA**: Não é necessário disparar `eas update` imediatamente para uma nova base (ela já nasce com o código JS embutido), mas updates futuros devem respeitar a nova `runtimeVersion`.
 
-O aplicativo consome informações de atualização a partir da pasta `App` no módulo de Publicações do Google Drive.
-
-- `update-manifest.json`: Arquivo mestre que define a versão atual, notas de lançamento e se a atualização é obrigatória.
-- `sinprfes-app-latest.apk`: Link simbólico (ou cópia) do APK mais recente.
-- `sinprfes-app-vcX-Y.apk`: Histórico de APKs (ex: vc3-1.0.0.apk).
-
-### Formato do `update-manifest.json`
+### Exemplo de `update-manifest.json` (Google Drive)
 ```json
 {
   "versionCode": 3,
   "versionName": "1.0.0",
-  "runtimeVersion": "54.0.0",
+  "runtimeVersion": "54.0.1",
   "ota": {
     "enabled": true,
     "channel": "preview",
-    "notes": "Notas da atualização OTA"
+    "notes": "Notas da atualização JS"
   },
   "apk": {
     "enabled": true,
-    "fileName": "sinprfes-app-latest.apk",
+    "fileName": "sinprfes-app-vc3-1.0.0.apk",
     "minSupportedVersionCode": 3,
-    "notes": "Notas da atualização do APK"
+    "notes": "Nova base nativa obrigatória"
   }
 }
 ```
 
-## 5. Fluxo de Publicação
+## 5. Observabilidade e Logs Padronizados
 
-### Publicação OTA
-1. Certifique-se de estar no branch correto.
-2. Execute `eas update --branch [preview|production]`.
-3. Atualize o `update-manifest.json` no Google Drive se houver novas notas ou mudança de status.
+O sistema de atualização utiliza tags específicas para facilitar o diagnóstico via `diagnosticoService.ts`.
 
-### Publicação APK
-1. Incremente o `versionCode` no `app.json`.
-2. Execute `eas build --platform android --profile [preview|production]`.
-3. Faça upload do APK gerado para a pasta `App` no Google Drive.
-4. Atualize o `update-manifest.json` com o novo `versionCode` e nome do arquivo.
+### Tags de Decisão:
+- `APK_REQUIRED`: Quando o app detecta que o usuário precisa baixar um novo APK (mudança de `runtimeVersion` ou `versionCode` antigo).
+- `OTA_AVAILABLE`: Quando há uma atualização JS compatível disponível no canal.
+- `NO_UPDATE`: Quando o app já está na versão mais recente.
 
-## 6. Checklist de Publicação
-- [ ] Verificou se as mudanças exigem dependências nativas? (Se sim, use APK)
-- [ ] Testou a mudança localmente?
-- [ ] O `runtimeVersion` no `app.json` está correto?
-- [ ] O `update-manifest.json` reflete as mudanças e o nível de criticidade (obrigatório)?
+### Campos Obrigatórios nos Logs:
+Sempre logar o estado comparativo:
+- `currentVersionCode` vs `manifest.versionCode`
+- `currentRuntimeVersion` vs `manifest.runtimeVersion`
+- `Updates.channel`
+
+## 6. Fluxo de Verificação (Auto-check)
+
+O app realiza uma verificação automática no momento do **Login** (primeiro acesso à sessão válida).
+- O check ocorre em background.
+- Se detectado update, exibe um modal (obrigatório/login) ou banner (opcional/background).
+- **Nunca aplica sozinho**: O usuário deve sempre confirmar a aplicação da atualização ou o redirecionamento para o download do APK.

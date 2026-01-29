@@ -112,6 +112,15 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
     // 4. Comparar versões
     const currentVersionCode = Application.nativeBuildVersion ? parseInt(Application.nativeBuildVersion, 10) : 0;
     const currentRuntimeVersion = Updates.runtimeVersion || '';
+    const currentChannel = Updates.channel || '';
+
+    const logMeta = {
+      currentVersionCode,
+      currentRuntimeVersion,
+      currentChannel,
+      manifestVersionCode: manifest.versionCode,
+      manifestRuntimeVersion: manifest.runtimeVersion
+    };
 
     // Verificação de APK (Mudanças Nativas: runtimeVersion diferente OU versionCode superior)
     const hasNewRuntime = manifest.runtimeVersion !== currentRuntimeVersion;
@@ -121,7 +130,7 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       const isMandatory = currentVersionCode < manifest.apk.minSupportedVersionCode || hasNewRuntime;
       const apkFile = appFiles.find(f => f.name === manifest.apk.fileName);
 
-      logDebug(`${logPrefix}.apkAvailable`, { isMandatory, target: manifest.versionCode });
+      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory });
 
       return {
         hasUpdate: true,
@@ -136,8 +145,8 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
     if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
       try {
         const update = await Updates.checkForUpdateAsync();
-        logDebug(`${logPrefix}.otaAvailable`, { isAvailable: update.isAvailable });
         if (update.isAvailable) {
+          logDebug(`${logPrefix}.OTA_AVAILABLE`, logMeta);
           return {
             hasUpdate: true,
             type: 'OTA',
@@ -150,7 +159,7 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       }
     }
 
-    logDebug(`${logPrefix}.noUpdate`, {});
+    logDebug(`${logPrefix}.NO_UPDATE`, logMeta);
     return { hasUpdate: false };
   } catch (error: any) {
     logDebug(`${logPrefix}.error`, { message: error.message });
