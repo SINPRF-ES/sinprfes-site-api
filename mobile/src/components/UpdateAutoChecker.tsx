@@ -16,46 +16,44 @@ const UpdateAutoChecker: React.FC = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const bannerAnim = useRef(new Animated.Value(-100)).current;
 
   const { autenticado, token, bloqueadoPorBiometria } = useAuth();
+  const prevAutenticado = useRef(autenticado);
   const navigation = useNavigation<any>();
 
   useEffect(() => {
     // Só roda se houver sessão válida e não estiver bloqueado por biometria
     if (!autenticado || !token || bloqueadoPorBiometria) {
       if (!autenticado || !token) {
-        logDebug('UpdateAutoCheck.skip', { reason: 'noToken' });
+        logDebug('UpdateCheck.auto.skip', { reason: 'noToken' });
       }
+      prevAutenticado.current = autenticado;
       return;
     }
+
+    const isLoginTrigger = !prevAutenticado.current && autenticado;
+    prevAutenticado.current = autenticado;
 
     const performAutoCheck = async () => {
       try {
         const lastCheck = await carregarUltimoCheckUpdate();
         const now = Date.now();
 
-        if (now - lastCheck < CHECK_INTERVAL) {
-          logDebug('UpdateAutoCheck.skip', { reason: 'throttled' });
-          // Opcional: reportar skip por throttle ao backend?
-          // Melhor não saturar, mas vamos seguir o padrão se solicitado.
-          // Por ora, mantemos apenas local para evitar ruído excessivo no Render.
+        // Se for gatilho de login, ignoramos o throttle de 6h
+        if (!isLoginTrigger && (now - lastCheck < CHECK_INTERVAL)) {
+          logDebug('UpdateCheck.auto.skip', { reason: 'throttled' });
           return;
         }
 
-        logDebug('UpdateAutoCheck.start', {});
         await reportUpdateAutoCheck('start');
 
-        const result = await checkUpdates();
+        // checkUpdates('auto') já lida com logDebug('UpdateCheck.auto.*') internamente
+        const result = await checkUpdates('auto');
 
         if (result) {
-            logDebug('UpdateAutoCheck.success', {
-                hasUpdate: result.hasUpdate,
-                type: result.type,
-                isMandatory: result.isMandatory
-            });
-
-            await reportUpdateAutoCheck('success', {
+            await reportUpdateAutoCheck(result.hasUpdate ? 'success' : 'no_update', {
                 hasUpdate: result.hasUpdate,
                 type: result.type,
                 isMandatory: result.isMandatory,
@@ -65,38 +63,39 @@ const UpdateAutoChecker: React.FC = () => {
             if (result.hasUpdate) {
                 setUpdateResult(result);
 
-                // Se não for obrigatório, mostra banner discreto em vez de modal
-                if (!result.isMandatory) {
-                  setShowBanner(true);
-                  Animated.spring(bannerAnim, {
-                    toValue: 50, // Ajustar conforme SafeArea
-                    useNativeDriver: true,
-                  }).start();
+                // No LOGIN, sempre mostramos o modal amigável (mesmo se opcional).
+                // Em checks de background periódicos, usamos o banner para opcionais.
+                if (result.isMandatory || isLoginTrigger) {
+                    setShowModal(true);
+                } else {
+                    setShowBanner(true);
+                    Animated.spring(bannerAnim, {
+                        toValue: 50,
+                        useNativeDriver: true,
+                    }).start();
 
-                  // Auto-hide após 8 segundos (dar tempo do usuário ver)
-                  setTimeout(() => {
-                    handleCloseBanner();
-                  }, 8000);
+                    setTimeout(() => {
+                        handleCloseBanner();
+                    }, 8000);
                 }
             }
         }
 
-        // Registra o check independente de ter update ou não (para respeitar o throttle)
         await salvarUltimoCheckUpdate();
       } catch (error: any) {
-        logDebug('UpdateAutoCheck.error', { message: error.message });
-        await reportUpdateAutoCheck('error', { message: error.message, stack: error.stack });
+        logDebug('UpdateCheck.auto.error', { message: error.message });
+        await reportUpdateAutoCheck('error', { message: error.message });
       }
     };
 
-    // Pequeno delay para não sobrecarregar o boot do app
-    const timer = setTimeout(performAutoCheck, 5000);
+    const delay = isLoginTrigger ? 1000 : 5000;
+    const timer = setTimeout(performAutoCheck, delay);
     return () => clearTimeout(timer);
   }, [autenticado, token, bloqueadoPorBiometria]);
 
   // Bloquear botão voltar se for obrigatório
   useEffect(() => {
-    if (updateResult?.isMandatory) {
+    if (updateResult?.isMandatory && showModal) {
       const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
       return () => backHandler.remove();
     }
@@ -145,7 +144,7 @@ const UpdateAutoChecker: React.FC = () => {
     handleCloseBanner();
     try {
       navigation.navigate('Drawer', { screen: 'Atualizacoes' });
-    } catch (e) {
+    } catch (e: any) {
       logDebug('AutoCheck.navError', { message: e.message });
     }
   };
@@ -158,7 +157,7 @@ const UpdateAutoChecker: React.FC = () => {
 
   return (
     <>
-    {/* Banner Discreto para Updates Opcionais */}
+    {/* Banner Discreto para Updates Opcionais (Background Check) */}
     {showBanner && (
       <Animated.View style={[styles.bannerContainer, { transform: [{ translateY: bannerAnim }] }]}>
         <View style={styles.bannerContent}>
@@ -177,12 +176,17 @@ const UpdateAutoChecker: React.FC = () => {
       </Animated.View>
     )}
 
-    {/* Modal para Updates Obrigatórios */}
+    {/* Modal para Updates (Obrigatórios ou Login Check) */}
     <Modal
       transparent
-      visible={!!updateResult && isMandatory}
+      visible={showModal}
       animationType="fade"
-      onRequestClose={() => !isMandatory && setUpdateResult(null)}
+      onRequestClose={() => {
+        if (!isMandatory) {
+            setShowModal(false);
+            setUpdateResult(null);
+        }
+      }}
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
@@ -221,7 +225,10 @@ const UpdateAutoChecker: React.FC = () => {
                 {!isMandatory && (
                   <TouchableOpacity
                     style={styles.cancelButton}
-                    onPress={() => setUpdateResult(null)}
+                    onPress={() => {
+                        setShowModal(false);
+                        setUpdateResult(null);
+                    }}
                   >
                     <Text style={styles.cancelButtonText}>Depois</Text>
                   </TouchableOpacity>
