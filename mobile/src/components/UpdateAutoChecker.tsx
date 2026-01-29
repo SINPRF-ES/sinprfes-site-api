@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated } from 'react-native';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated, DeviceEventEmitter } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkUpdates, applyOtaUpdate, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
 import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -15,9 +16,7 @@ const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
 const UpdateAutoChecker: React.FC = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const bannerAnim = useRef(new Animated.Value(-100)).current;
 
   const { autenticado, token, bloqueadoPorBiometria } = useAuth();
   const prevAutenticado = useRef(autenticado);
@@ -64,20 +63,20 @@ const UpdateAutoChecker: React.FC = () => {
                 setUpdateResult(result);
 
                 // No LOGIN, sempre mostramos o modal amigável (mesmo se opcional).
-                // Em checks de background periódicos, usamos o banner para opcionais.
+                // Em checks de background periódicos, usamos o banner persistente na Home para opcionais.
                 if (result.isMandatory || isLoginTrigger) {
                     setShowModal(true);
+                    // Limpar banner se o modal for exibido
+                    await AsyncStorage.removeItem('@sinprf/ota_update_available');
                 } else {
-                    setShowBanner(true);
-                    Animated.spring(bannerAnim, {
-                        toValue: 50,
-                        useNativeDriver: true,
-                    }).start();
-
-                    setTimeout(() => {
-                        handleCloseBanner();
-                    }, 8000);
+                    // Salvar para o banner na Home
+                    await AsyncStorage.setItem('@sinprf/ota_update_available', JSON.stringify(result));
+                    DeviceEventEmitter.emit('ota_update_detected', result);
                 }
+            } else {
+                // Se não há update, garantir que o banner não apareça (ex: update aplicado ou expirado)
+                await AsyncStorage.removeItem('@sinprf/ota_update_available');
+                DeviceEventEmitter.emit('ota_update_detected', null);
             }
         }
 
@@ -132,23 +131,6 @@ const UpdateAutoChecker: React.FC = () => {
     }
   };
 
-  const handleCloseBanner = () => {
-    Animated.timing(bannerAnim, {
-      toValue: -150,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => setShowBanner(false));
-  };
-
-  const handleOpenUpdates = () => {
-    handleCloseBanner();
-    try {
-      navigation.navigate('Drawer', { screen: 'Atualizacoes' });
-    } catch (e: any) {
-      logDebug('AutoCheck.navError', { message: e.message });
-    }
-  };
-
   if (!updateResult) return null;
 
   const isMandatory = updateResult.isMandatory;
@@ -157,25 +139,6 @@ const UpdateAutoChecker: React.FC = () => {
 
   return (
     <>
-    {/* Banner Discreto para Updates Opcionais (Background Check) */}
-    {showBanner && (
-      <Animated.View style={[styles.bannerContainer, { transform: [{ translateY: bannerAnim }] }]}>
-        <View style={styles.bannerContent}>
-          <MaterialCommunityIcons name="update" size={24} color="#003366" />
-          <View style={styles.bannerTextContainer}>
-            <Text style={styles.bannerTitle}>Atualização disponível</Text>
-            <Text style={styles.bannerSub}>Uma nova versão está pronta.</Text>
-          </View>
-          <TouchableOpacity style={styles.bannerButton} onPress={handleOpenUpdates}>
-            <Text style={styles.bannerButtonText}>VER</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleCloseBanner} style={styles.bannerClose}>
-            <MaterialCommunityIcons name="close" size={20} color="#888" />
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-    )}
-
     {/* Modal para Updates (Obrigatórios ou Login Check) */}
     <Modal
       transparent
@@ -252,53 +215,6 @@ const UpdateAutoChecker: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  bannerContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 10,
-    right: 10,
-    zIndex: 9999,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    padding: 12,
-  },
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bannerTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  bannerTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#003366',
-  },
-  bannerSub: {
-    fontSize: 12,
-    color: '#666',
-  },
-  bannerButton: {
-    backgroundColor: '#003366',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  bannerButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  bannerClose: {
-    padding: 4,
-  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',

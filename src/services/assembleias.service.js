@@ -1208,7 +1208,7 @@ async function gerarDadosRelatorio(id) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-  const [mesa, quoruns, votacoes, propostas] = await Promise.all([
+  const [mesa, quoruns, votacoes, propostas, presentesGlobal] = await Promise.all([
     buscarMesa(id),
     pool.query(`
       SELECT q.*, f.nome as gerado_por_nome
@@ -1230,7 +1230,13 @@ async function gerarDadosRelatorio(id) {
       LEFT JOIN filiados f ON p.autor_id = f.id
       WHERE p.assembleia_id = $1
       ORDER BY p.criado_em ASC
-    `, [id]).then(r => r.rows)
+    `, [id]).then(r => r.rows),
+    pool.query(`
+      SELECT COUNT(DISTINCT c.filiado_id)::INTEGER as total
+      FROM assembleia_checkins c
+      JOIN assembleia_quoruns q ON c.assembleia_quorum_id = q.id
+      WHERE q.assembleia_id = $1
+    `, [id]).then(r => r.rows[0])
   ]);
 
   // Otimização Bolt: Resolve N+1 queries para quóruns e votações no relatório
@@ -1288,7 +1294,8 @@ async function gerarDadosRelatorio(id) {
     mesa,
     quoruns,
     votacoes,
-    propostas
+    propostas,
+    presentes_total: parseInt(presentesGlobal?.total || 0)
   };
 }
 

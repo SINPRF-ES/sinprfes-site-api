@@ -329,8 +329,8 @@
             const canSeeToken = estado.quorumVigente?.token && (isPresidente || isDiretoria || currentUserId === estado.quorumVigente.gerado_por_user_id);
 
             container.innerHTML = `
-                <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px;">
-                    <div style="display:flex; justify-content:flex-start; margin-bottom:25px;">
+                <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; text-align: center;">
+                    <div style="display:flex; justify-content:center; margin-bottom:25px;">
                         <button class="btn btn-outline btn-sm" style="font-weight:700; color:#003366; border-color:#003366;" onclick="Assembleias.voltarParaLista()">← Voltar para Lista</button>
                     </div>
 
@@ -342,17 +342,17 @@
                         <div style="margin-top:12px; color:#555; font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:1rem;">${a.tipo}</div>
                     </div>
 
-                    <div class="section-block section-block-alt" style="background: #f8fbff; border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 1px solid #e0e8f0;">
-                        <h4 style="color:#003366; margin-bottom:20px; font-weight: 800; font-size: 1.2rem; display:flex; align-items:center; gap:10px;">📌 Pauta da Assembleia</h4>
-                        <div style="color:#333; white-space: pre-wrap; line-height:1.7; font-size:1.05rem;">${a.pauta}</div>
+                    <div class="section-block section-block-alt" style="background: #f8fbff; border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 1px solid #e0e8f0; text-align: center;">
+                        <h4 style="color:#003366; margin-bottom:20px; font-weight: 800; font-size: 1.2rem; display:flex; align-items:center; gap:10px; justify-content:center;">📌 Pauta da Assembleia</h4>
+                        <div style="color:#333; white-space: pre-wrap; line-height:1.7; font-size:1.05rem; text-align: center;">${a.pauta}</div>
                     </div>
 
                     <div class="field-row" style="margin-bottom:35px; display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:25px;">
-                        <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd;">
+                        <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd; text-align: center;">
                             <label style="font-weight:800; color:#003366; font-size:0.9rem; text-transform:uppercase; margin-bottom:8px; display:block;">📅 Data do Evento</label>
                             <div style="font-size:1.3rem; font-weight:700; color:#333;">${dataBr}</div>
                         </div>
-                        <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd;">
+                        <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd; text-align: center;">
                             <label style="font-weight:800; color:#003366; font-size:0.9rem; text-transform:uppercase; margin-bottom:8px; display:block;">🕒 Chamadas (1ª / 2ª)</label>
                             <div style="font-size:1.3rem; font-weight:700; color:#333;">${a.hora_primeira_chamada} / ${a.hora_segunda_chamada}</div>
                         </div>
@@ -407,8 +407,8 @@
 
                     <!-- Gestão (Diretoria / Presidente) -->
                     ${(isDiretoria || isPresidente) ? `
-                        <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px;">
-                            <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px;">🛠️ Ações de Gestão e Controle</h4>
+                        <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px; text-align: center;">
+                            <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">🛠️ Ações de Gestão e Controle</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center;">
                                 ${isDiretoria && a.estado === 'CRIADA' ? `<button class="btn btn-primary btn-lg" onclick="Assembleias.abrirAssembleia('${id}')">Abrir Assembleia</button>` : ''}
                                 ${isDiretoria && a.estado === 'ABERTA' ? `
@@ -420,7 +420,7 @@
                                     <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRecontagem('${id}')">🔄 Recontagem de Quórum</button>
                                 ` : ''}
                                 ${isDiretoria && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" onclick="Assembleias.encerrarAssembleia('${id}')">Encerrar Assembleia</button>` : ''}
-                                ${((a.estado === 'ENCERRADA' && currentUserPerfil !== 'COMUNICADOR') || (a.estado === 'EM_CURSO' && isDiretoria)) ? `<button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
+                                ${(currentUserPerfil !== 'COMUNICADOR' && (a.estado === 'ENCERRADA' || a.estado === 'EM_CURSO' || a.estado === 'ABERTA')) ? `<button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
                             </div>
                         </div>
                     ` : ''}
@@ -715,7 +715,7 @@
         const canSeeToken = quorumVigente?.token && (isPresidente || isDiretoria || currentUserId === quorumVigente.gerado_por_user_id);
 
         container.innerHTML = `
-            <div class="section-card" style="background:#fff; color:#333; padding:30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-radius: 20px;">
+            <div class="section-card" style="background:#fff; color:#333; padding:30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-radius: 20px; text-align: center;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px;">
                     <button class="btn btn-outline btn-sm" style="font-weight:800; color:#003366; border-color:#003366;" onclick="Assembleias.abrirDetalhes('${assembleia.id}')">← Sair da Sala</button>
                     <h3 style="color:#003366; margin:0; text-align:center; flex:1; min-width:200px; font-weight:900; font-size:1.6rem;">🏛️ Sala de Votação Interativa</h3>
@@ -805,8 +805,8 @@
                 <!-- Listas de Interação -->
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:30px;">
                     <!-- Pedidos de Palavra -->
-                    <div class="section-box" style="background:#fff; border:1px solid #ddd; border-radius:15px; padding:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-                        <h4 style="color:#003366; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:1px; border-bottom:2px solid #f0f0f0; padding-bottom:12px; font-weight:900; display:flex; align-items:center; gap:10px;">🗣️ Fila de Oradores</h4>
+                    <div class="section-box" style="background:#fff; border:1px solid #ddd; border-radius:15px; padding:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: center;">
+                        <h4 style="color:#003366; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:1px; border-bottom:2px solid #f0f0f0; padding-bottom:12px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">🗣️ Fila de Oradores</h4>
                         <div style="max-height:350px; overflow-y:auto; padding:5px;">
                             ${pedidosPalavra?.length ? pedidosPalavra.map(p => `
                                 <div style="padding:15px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; align-items:center; background:${p.status === 'EM_FALA' ? '#fff9e6' : 'transparent'}; border-radius:8px;">
@@ -823,8 +823,8 @@
                     </div>
 
                     <!-- Propostas -->
-                    <div class="section-box" style="background:#fff; border:1px solid #ddd; border-radius:15px; padding:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-                        <h4 style="color:#003366; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:1px; border-bottom:2px solid #f0f0f0; padding-bottom:12px; font-weight:900; display:flex; align-items:center; gap:10px;">📝 Propostas em Pauta</h4>
+                    <div class="section-box" style="background:#fff; border:1px solid #ddd; border-radius:15px; padding:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: center;">
+                        <h4 style="color:#003366; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:1px; border-bottom:2px solid #f0f0f0; padding-bottom:12px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">📝 Propostas em Pauta</h4>
                         <div style="max-height:350px; overflow-y:auto; padding:5px;">
                             ${propostas?.length ? propostas.map(pr => `
                                 <div style="padding:15px; border-bottom:1px solid #f5f5f5; background:${pr.status === 'EM_VOTACAO' ? '#e8f5e9' : 'transparent'}; border-radius:8px; margin-bottom:10px;">

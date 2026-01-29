@@ -31,7 +31,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
   const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
-  const canGenerateReport = assembleia?.estado === 'ENCERRADA' ? perfil !== 'COMUNICADOR' : (assembleia?.estado === 'EM_CURSO' && isDiretoria);
+  const canGenerateReport = (assembleia?.estado === 'ENCERRADA' || assembleia?.estado === 'EM_CURSO' || assembleia?.estado === 'ABERTA') && perfil !== 'COMUNICADOR';
 
   const [estadoLoading, setEstadoLoading] = useState(false);
 
@@ -288,6 +288,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       if (canGenerateReport) {
         actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
       }
+    } else if (assembleia && canGenerateReport) {
+      // Caso não seja diretoria nem presidente (ex: FILIADO), mas pode gerar relatório
+      actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
     }
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,

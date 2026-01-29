@@ -861,12 +861,6 @@ async function gerarRelatorio(req, res) {
         return res.status(403).json({ success: false, code: "FORBIDDEN", error: "Seu perfil não possui permissão para gerar relatórios." });
     }
 
-    // Governança: Durante assembleia em curso: somente diretoria gera relatório.
-    // Assembleia encerrada: qualquer usuário elegível (exceto comunicador) pode gerar relatório.
-    const isDiretoria = perfil === 'DIRETORIA' || perfil === 'ADMIN';
-    if (assembleia.estado === 'EM_CURSO' && !isDiretoria) {
-        return res.status(403).json({ success: false, code: "FORBIDDEN", error: "Durante a assembleia em curso, apenas a Diretoria pode gerar relatórios parciais." });
-    }
 
     const [dados, filiado] = await Promise.all([
       service.gerarDadosRelatorio(id),
