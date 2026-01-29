@@ -30,7 +30,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
   const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
-  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
+  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
+  const canGenerateReport = assembleia?.estado === 'ENCERRADA' ? perfil !== 'COMUNICADOR' : (assembleia?.estado === 'EM_CURSO' && isDiretoria);
 
   const [estadoLoading, setEstadoLoading] = useState(false);
 
@@ -284,8 +285,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         }
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
-      if (assembleia.estado === 'ENCERRADA' && isDiretoria) {
-        actions.push({ label: 'Gerar Relatório', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
+      if (canGenerateReport) {
+        actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
       }
     }
     navigation.setOptions({
@@ -363,6 +364,11 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         extraScrollHeight={80}
         keyboardOpeningTime={0}
     >
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.btnVoltar}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#003366" />
+          <Text style={styles.btnVoltarText}>Voltar para Lista</Text>
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
           <Text style={styles.badgeText}>{getAssembleiaStatusLabel(assembleia.estado)}</Text>
@@ -371,7 +377,24 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       </View>
 
       <Text style={styles.tituloText}>{assembleia.titulo}</Text>
-      <Text style={styles.descricaoText}>{assembleia.pauta}</Text>
+
+      <View style={styles.pautaCard}>
+          <Text style={styles.pautaTitle}>📌 Pauta da Assembleia</Text>
+          <Text style={styles.pautaText}>{assembleia.pauta}</Text>
+      </View>
+
+      <View style={styles.fieldRow}>
+          <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>📅 Data do Evento</Text>
+              <Text style={styles.fieldValue}>
+                  {assembleia.data_evento ? new Date(assembleia.data_evento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--/--/----'}
+              </Text>
+          </View>
+          <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>🕒 Chamadas (1ª / 2ª)</Text>
+              <Text style={styles.fieldValue}>{assembleia.hora_primeira_chamada} / {assembleia.hora_segunda_chamada}</Text>
+          </View>
+      </View>
 
       {canSeeToken && (
         <View style={styles.tokenCardVigente}>
@@ -398,7 +421,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       )}
 
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>📌 Edital de Convocação</Text>
+        <Text style={styles.infoTitle}>📄 Edital de Convocação</Text>
         {assembleia.edital_url ? (
           <TouchableOpacity
             style={styles.btnEdital}
@@ -465,94 +488,72 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                     )}
                 </View>
                 )}
+
+                <View style={{ marginTop: 15, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10 }}>
+                    <Text style={[styles.infoTitle, { fontSize: 12, textAlign: 'left', marginBottom: 5 }]}>Lista Nominal</Text>
+                    {estado.quorumVigente?.presentes && estado.quorumVigente.presentes.length > 0 ? (
+                        estado.quorumVigente.presentes.map((p: any) => (
+                        <View key={p.id} style={styles.presenteRow}>
+                            <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
+                            <Text style={styles.presenteNome}>{p.nome}</Text>
+                        </View>
+                        ))
+                    ) : (
+                        <Text style={styles.emptyTextSmall}>Nenhum presente registrado.</Text>
+                    )}
+                </View>
             </>
         )}
       </View>
 
-      {estado?.quorumVigente && (
-        <View style={styles.infoCard}>
-           <Text style={styles.infoTitle}>📋 Lista Nominal de Presentes</Text>
-           {estado.quorumVigente.presentes && estado.quorumVigente.presentes.length > 0 ? (
-             estado.quorumVigente.presentes.map((p: any) => (
-               <View key={p.id} style={styles.presenteRow}>
-                  <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
-                  <Text style={styles.presenteNome}>{p.nome}</Text>
-               </View>
-             ))
-           ) : (
-             <Text style={styles.emptyTextSmall}>Nenhum presente registrado até o momento.</Text>
-           )}
-        </View>
-      )}
-
-      {isDiretoria && assembleia && (
+      {(isDiretoria || canGenerateReport) && assembleia && (
         <View style={[styles.infoCard, styles.diretoriaSection]}>
-            <Text style={styles.infoTitle}>⚡ Ações da Mesa</Text>
+            <Text style={styles.infoTitle}>⚡ Ações e Gestão</Text>
             <View style={styles.diretoriaButtons}>
-                {assembleia.estado === 'CRIADA' && (
+                {isDiretoria && assembleia.estado === 'CRIADA' && (
                     <TouchableOpacity
                       style={styles.btnManagement}
                       onPress={handleAbrir}
-                      accessibilityLabel="Abrir Assembleia"
-                      accessibilityRole="button"
                     >
-                        <Text style={styles.btnActionText}>Abrir Assembleia</Text>
+                        <Text style={styles.btnActionText}>Abrir</Text>
                     </TouchableOpacity>
                 )}
-                {assembleia.estado === 'ABERTA' && (
+                {isDiretoria && assembleia.estado === 'ABERTA' && (
                     <>
                         <TouchableOpacity
                           style={styles.btnManagement}
                           onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}
-                          accessibilityLabel={(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa Diretora' : 'Compor Mesa Diretora'}
-                          accessibilityRole="button"
                         >
                             <Text style={styles.btnActionText}>{(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.btnManagement}
                           onPress={handleGerarToken}
-                          accessibilityLabel="Gerar Token de Quórum"
-                          accessibilityRole="button"
                         >
-                            <Text style={styles.btnActionText}>Gerar Token</Text>
+                            <Text style={styles.btnActionText}>Token</Text>
                         </TouchableOpacity>
                     </>
                 )}
-                {assembleia.estado === 'EM_CURSO' && (
+                {isDiretoria && assembleia.estado === 'EM_CURSO' && (
                     <>
                         <TouchableOpacity
                           style={styles.btnManagement}
                           onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}
-                          accessibilityLabel="Trocar Mesa Diretora"
-                          accessibilityRole="button"
                         >
                             <Text style={styles.btnActionText}>Trocar Mesa</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={styles.btnManagement}
-                          onPress={() => navigation.navigate('CriarItemVotacao', { id })}
-                          accessibilityLabel="Novo Item de Votação"
-                          accessibilityRole="button"
-                        >
-                            <Text style={styles.btnActionText}>Novo Item</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
                           style={[styles.btnManagement, styles.btnDanger]}
                           onPress={handleEncerrar}
-                          accessibilityLabel="Encerrar Assembleia"
-                          accessibilityRole="button"
                         >
                             <Text style={[styles.btnActionText, { color: '#fff' }]}>Encerrar</Text>
                         </TouchableOpacity>
                     </>
                 )}
-                {assembleia.estado === 'ENCERRADA' && (
+                {canGenerateReport && (
                     <TouchableOpacity
                       style={styles.btnManagement}
                       onPress={handleSolicitarRelatorio}
-                      accessibilityLabel="Gerar Relatório em PDF"
-                      accessibilityRole="button"
                     >
                         <Text style={styles.btnActionText}>Relatório PDF</Text>
                     </TouchableOpacity>
@@ -692,9 +693,18 @@ const styles = StyleSheet.create({
   emptyTextSmall: { fontSize: 13, color: '#999', textAlign: 'center', fontStyle: 'italic', marginVertical: 8 },
   notEligibleBox: { backgroundColor: '#fff3cd', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   notEligibleText: { color: '#856404', fontSize: 14, flex: 1, fontWeight: '500' },
+  btnVoltar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  btnVoltarText: { color: '#003366', fontWeight: 'bold', fontSize: 14 },
+  pautaCard: { backgroundColor: '#f8fbff', borderRadius: 12, padding: 16, marginBottom: 20, borderLeftWidth: 5, borderLeftColor: '#003366', borderTopWidth: 1, borderTopColor: '#e0e8f0', borderRightWidth: 1, borderRightColor: '#e0e8f0', borderBottomWidth: 1, borderBottomColor: '#e0e8f0' },
+  pautaTitle: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginBottom: 8 },
+  pautaText: { fontSize: 15, color: '#333', lineHeight: 22 },
+  fieldRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  fieldGroup: { flex: 1, backgroundColor: '#fff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd' },
+  fieldLabel: { fontSize: 10, fontWeight: 'bold', color: '#666', textTransform: 'uppercase', marginBottom: 4 },
+  fieldValue: { fontSize: 14, fontWeight: 'bold', color: '#333' },
   diretoriaSection: { marginTop: 0 },
-  diretoriaButtons: { flexDirection: 'row', gap: 12 },
-  btnManagement: { flex: 1, backgroundColor: '#f1c40f', padding: 12, borderRadius: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  diretoriaButtons: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+  btnManagement: { minWidth: '30%', flex: 1, backgroundColor: '#f1c40f', padding: 12, borderRadius: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
   btnDanger: { backgroundColor: '#e74c3c' },
   tokenCardVigente: { backgroundColor: '#fffdf0', borderRadius: 12, padding: 20, marginBottom: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: '#f1c40f', alignItems: 'center', elevation: 2 },
   tokenLabelVigente: { fontSize: 13, fontWeight: 'bold', color: '#856404', marginBottom: 8, textTransform: 'uppercase' },

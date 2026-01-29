@@ -621,7 +621,14 @@ async function gerarPdfRelatorioAssembleia(dados) {
     // Título e Cabeçalho do Relatório
     doc.moveDown(2);
     doc.font("Helvetica-Bold").fontSize(16).text("Relatório de Assembleia", { align: "center" });
-    doc.moveDown(1);
+    doc.moveDown(0.5);
+
+    // Carimbo de Geração
+    if (dados.solicitante) {
+        doc.font("Helvetica-Oblique").fontSize(8).fillColor("#666")
+           .text(`Solicitado por: ${dados.solicitante.nome} (${dados.solicitante.perfil}) | Gerado em: ${dados.solicitante.data_geracao}`, { align: "center" });
+    }
+    doc.fillColor("#000").moveDown(1);
 
     // Dados da Assembleia
     doc.font("Helvetica-Bold").fontSize(12).text("1. Informações Gerais");
@@ -633,6 +640,7 @@ async function gerarPdfRelatorioAssembleia(dados) {
     doc.text(`1ª Chamada: ${dados.assembleia.hora_primeira_chamada || '-'}`);
     doc.text(`2ª Chamada: ${dados.assembleia.hora_segunda_chamada || '-'}`);
     doc.text(`Status Final: ${dados.assembleia.estado}`);
+    doc.text(`ID da Assembleia: ${dados.assembleia.id}`);
     doc.moveDown(0.5);
     doc.font("Helvetica-Bold").text("Pauta:");
     doc.font("Helvetica").text(dados.assembleia.pauta || "Não informada", { align: "justify" });

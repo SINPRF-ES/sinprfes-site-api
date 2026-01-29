@@ -420,7 +420,7 @@
                                     <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRecontagem('${id}')">🔄 Recontagem de Quórum</button>
                                 ` : ''}
                                 ${isDiretoria && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" onclick="Assembleias.encerrarAssembleia('${id}')">Encerrar Assembleia</button>` : ''}
-                                ${isDiretoria && a.estado === 'ENCERRADA' ? `<button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
+                                ${((a.estado === 'ENCERRADA' && currentUserPerfil !== 'COMUNICADOR') || (a.estado === 'EM_CURSO' && isDiretoria)) ? `<button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
                             </div>
                         </div>
                     ` : ''}

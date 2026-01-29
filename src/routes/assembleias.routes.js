@@ -61,8 +61,8 @@ router.post("/:id/pedidos/:pid/conceder", auth, assemblyCommandLimiter, controll
 router.post("/:id/propostas", auth, controller.criarProposta);
 router.post("/:id/propostas/:prid/votar", auth, assemblyCommandLimiter, controller.iniciarVotacaoProposta);
 
-// Relatório
-router.post("/:id/relatorio", auth, requirePermission("VOTACAO_GERENCIAR"), controller.gerarRelatorio);
+// Relatório (Governança interna no controller: todos exceto COMUNICADOR podem gerar se encerrada)
+router.post("/:id/relatorio", auth, controller.gerarRelatorio);
 
 // Diagnóstico (Admin e Diretoria)
 router.get("/:id/diagnostico", auth, (req, res, next) => {

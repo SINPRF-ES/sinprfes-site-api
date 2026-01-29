@@ -373,7 +373,7 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
   console.log(`📧 Relatório de aniversariantes enviado para ${to}.`);
 }
 
-async function enviarEmailRelatorioAssembleia(filiado, assembleia, pdfBuffer) {
+async function enviarEmailRelatorioAssembleia(filiado, assembleia, pdfBuffer, dados = {}) {
   const { MAIL_FROM, REPORT_NOTIFY_EMAIL } = process.env;
   const unionEmail = REPORT_NOTIFY_EMAIL || "sinprfes@sinprfes.org.br";
 
@@ -419,16 +419,38 @@ SINPRF-ES
 
   // 2. Notificação ao Sindicato
   try {
+    const agora = dados.solicitante?.data_geracao || new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     const maskedCpf = filiado.cpf ? filiado.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4") : "CPF não informado";
+
+    // Busca resumo do quórum mais recente se disponível
+    const ultimoQuorum = (dados.quorums || []).slice(-1)[0];
+    const resumoQuorum = ultimoQuorum ?
+        `Tipo: ${ultimoQuorum.tipo_chamada} | Presentes: ${ultimoQuorum.presentes?.length || 0} | Mínimo: ${ultimoQuorum.quorum_necessario || '0'}` :
+        'Nenhum quórum registrado';
+
     const payloadSindicato = {
       from: MAIL_FROM,
       to: unionEmail,
-      subject: `NOTIFICAÇÃO: Relatório gerado - ${assembleia.titulo}`,
-      text: `O filiado ${filiado.nome} (CPF ${maskedCpf}) gerou o relatório da assembleia "${assembleia.titulo}" (ID: ${assembleia.id}) em ${new Date().toLocaleString('pt-BR')}.`,
+      subject: `[Notificação] Relatório de Assembleia Gerado - ${assembleia.titulo}`,
+      html: `
+        <div style="font-family: sans-serif; color: #333;">
+            <p>Um novo relatório de assembleia foi gerado via plataforma.</p>
+            <hr />
+            <p><strong>Assembleia:</strong> ${assembleia.titulo} (ID: ${assembleia.id})</p>
+            <p><strong>Tipo:</strong> ${assembleia.tipo} | <strong>Status:</strong> ${assembleia.estado}</p>
+            <p><strong>Solicitante:</strong> ${filiado.nome} (CPF: ${maskedCpf} | Perfil: ${dados.solicitante?.perfil || 'N/A'})</p>
+            <p><strong>Data/Hora da Solicitação:</strong> ${agora}</p>
+            <p><strong>Resumo do Quórum:</strong> ${resumoQuorum}</p>
+            <hr />
+            <p style="font-size: 0.9rem; color: #666;">O documento PDF foi enviado diretamente para o e-mail do solicitante.</p>
+        </div>
+      `,
     };
     await resend.emails.send(payloadSindicato);
+    console.log("📧 [emailRelatorioNotifSindicatoOk]");
   } catch (err) {
-    console.error("💥 [emailRelatorioNotifSindicatoErro]", err);
+    console.error("💥 [emailRelatorioNotifSindicatoErro]", err.message);
+    // Falha na notificação não derruba o fluxo principal
   }
 }
 
