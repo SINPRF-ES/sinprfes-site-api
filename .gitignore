@@ -4,5 +4,6 @@ npm-debug.log*
 .DS_Store
 frontend
 tmp
+google.json
 mobile/*.apk
 mobile/build-*.apk

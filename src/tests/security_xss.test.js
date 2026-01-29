@@ -8,7 +8,7 @@ jest.mock('../utils/log');
 describe('Security - XSS Sanitization', () => {
   test('criar and criarProposta should escape HTML', async () => {
     pool.query.mockResolvedValue({ rows: [{ id: 'ass-1' }] });
-    await service.criar({ tipo: 'AGE', titulo: '<script>', pauta: '<img>', criado_por: 1 });
+    await service.criar({ tipo: 'AGE', titulo: '<script>', pauta: '<img>', criado_por: 1, edital_drive_file_id: 'drive-1' });
     const call = pool.query.mock.calls.find(c => c[0].includes('INSERT INTO assembleias'));
     expect(call[1][1]).toBe('&lt;script&gt;');
     expect(call[1][2]).toBe('&lt;img&gt;');
