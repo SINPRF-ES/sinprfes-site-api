@@ -12,8 +12,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return currentPath === page ? "active" : "";
   }
 
+  // Check for embed mode (app)
+  const isEmbed = new URLSearchParams(window.location.search).get("embed") === "1" ||
+                  new URLSearchParams(window.location.search).get("app") === "1";
+
+  if (isEmbed) {
+    document.body.style.paddingTop = "0";
+    if (headerEl) headerEl.style.display = "none";
+    if (footerEl) footerEl.style.display = "none";
+  }
+
   // ---------------- HEADER ----------------
-  if (headerEl) {
+  if (headerEl && !isEmbed) {
     headerEl.innerHTML = `
       <header class="site-header">
         <div class="container header-content">
@@ -46,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------------- FOOTER ----------------
-  if (footerEl) {
+  if (footerEl && !isEmbed) {
     const ano = new Date().getFullYear();
     footerEl.innerHTML = `
       <footer class="site-footer">
