@@ -25,7 +25,7 @@ const CustomDrawerContent = (props) => {
     <DrawerContentScrollView {...props}>
       <View style={styles.header}>
         <Image
-          source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/icon.png')}
+          source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/icon.webp')}
           style={styles.avatar}
         />
         <Text style={styles.nome}>{usuario?.nome || 'Usuário'}</Text>
