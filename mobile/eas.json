@@ -10,9 +10,9 @@
       "channel": "development"
     },
     "preview": {
-      "distribution": "internal",
+      "autoIncrement": true,
       "channel": "preview",
-      "autoIncrement": true
+      "distribution": "internal"
     },
     "production": {
       "autoIncrement": true,
