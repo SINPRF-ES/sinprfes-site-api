@@ -31,7 +31,17 @@ app.options("*", cors(corsOptions));
 
 app.use(require("./middlewares/requestId"));
 app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições
-app.use(express.json());
+
+// Configurações de Segurança de Cabeçalhos (Defense in Depth)
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  next();
+});
+
+// Limite de tamanho do corpo JSON (Proteção contra DoS)
+app.use(express.json({ limit: "100kb" }));
 
 // 🟢 NOVO: Suporte a site paralelo (v2/dev)
 // Prioridade A: Subdomínio dev.sinprfes.org.br
