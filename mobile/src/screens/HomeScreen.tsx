@@ -48,7 +48,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         {usuario?.situacao && (
           <View style={styles.statusBadge}>
             <Text style={styles.statusText}>{usuario.situacao}</Text>
-             <Text>TESTE DE OTA AUTOMÁTICO</Text>
           </View>
         )}
       </View>
