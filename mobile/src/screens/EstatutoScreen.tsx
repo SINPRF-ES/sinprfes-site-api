@@ -47,7 +47,10 @@ export default function EstatutoScreen({ navigation }: any) {
       try {
         const asset = Asset.fromModule(require('../../assets/html/estatuto.html'));
         await asset.downloadAsync();
-        setHtmlUri(asset.localUri || asset.uri);
+        const uri = asset.localUri || asset.uri || '';
+        const finalUri = uri.startsWith('http') ? (uri.includes('?') ? `${uri}&embed=1` : `${uri}?embed=1`) : uri;
+        setHtmlUri(finalUri);
+        console.log('[Estatuto] URL carregada:', finalUri);
       } catch (err) {
         console.error('Erro ao carregar asset do estatuto:', err);
       }
@@ -111,6 +114,7 @@ export default function EstatutoScreen({ navigation }: any) {
               document.addEventListener('DOMContentLoaded', removeNav);
               setTimeout(removeNav, 500);
               setTimeout(removeNav, 2000);
+              console.log('[Estatuto] Injected CSS/JS executed, embed mode should be active');
             })();
           `}
           originWhitelist={['*']}
