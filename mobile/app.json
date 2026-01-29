@@ -16,15 +16,15 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.mfavero138.sinprfesapp",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "googleServicesFile": "./google-services.json"
-    },
+  "package": "com.mfavero138.sinprfesapp",
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/adaptive-icon-foreground.png",
+    "backgroundColor": "#0B2A4A"
+  },
+  "edgeToEdgeEnabled": true,
+  "predictiveBackGestureEnabled": false,
+  "googleServicesFile": "./google-services.json"
+}
     "web": {
       "favicon": "./assets/favicon.png"
     },
