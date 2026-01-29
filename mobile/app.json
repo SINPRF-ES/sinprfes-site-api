@@ -17,6 +17,9 @@
     },
     "android": {
       "package": "com.mfavero138.sinprfesapp",
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundColor": "#0B2A4A"
