@@ -21,6 +21,7 @@ import CriarFiliadoScreen from "../screens/CriarFiliadoScreen";
 import EditarFiliadoScreen from "../screens/EditarFiliadoScreen";
 import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
 import NoticiasScreen from "../screens/NoticiasScreen";
+import NoticiaDetalheScreen from "../screens/NoticiaDetalheScreen";
 import ConveniosScreen from "../screens/ConveniosScreen";
 import PdfViewerScreen from "../screens/PdfViewerScreen";
 import FileViewerScreen from "../screens/FileViewerScreen";
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   Home: undefined;
   MeusDados: undefined;
   Noticias: undefined;
+  NoticiaDetalhe: { newsId: string };
   Convenios: undefined;
   Filiados: undefined;
   CriarFiliado: undefined;
@@ -150,6 +152,11 @@ export default function RootNavigation() {
               name="FileViewer"
               component={FileViewerScreen}
               options={({ route }) => ({ title: route.params.title || "Visualizador" })}
+            />
+            <Stack.Screen
+              name="NoticiaDetalhe"
+              component={NoticiaDetalheScreen}
+              options={{ title: "Notícia" }}
             />
           </>
         )}

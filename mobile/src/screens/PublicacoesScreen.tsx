@@ -34,10 +34,13 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       logDebug('Publicacoes.fetch.start', { folderId: currentFolder.id });
       let data = await fetchPublicacoes(currentFolder.id);
 
-      // 🛑 Ocultar pasta 'App' na raiz para não confundir usuários (DESATIVADO TEMPORARIAMENTE)
-      // if (currentFolder.id === null) {
-      //   data = data.filter(item => item.name.toLowerCase() !== 'app');
-      // }
+      // 🛑 Ocultar pastas técnicas na raiz para não confundir usuários
+      if (currentFolder.id === null) {
+        data = data.filter(item => {
+          const name = (item.name || '').toLowerCase();
+          return name !== 'app' && name !== 'noticias';
+        });
+      }
 
       // Sort alphabetically: Folders first, then files
       const sortedData = [...data].sort((a, b) => {

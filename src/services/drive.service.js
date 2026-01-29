@@ -82,6 +82,16 @@ async function obterArquivoStream(fileId) {
 /**
  * Realiza o upload de um arquivo para o Google Drive.
  */
+async function obterArquivoTexto(fileId) {
+  const { stream } = await obterArquivoStream(fileId);
+  return new Promise((resolve, reject) => {
+    let data = "";
+    stream.on("data", (chunk) => (data += chunk));
+    stream.on("end", () => resolve(data));
+    stream.on("error", (err) => reject(err));
+  });
+}
+
 async function uploadFile(buffer, name, mimeType, folderId = null) {
   const targetFolderId = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
 
@@ -120,4 +130,4 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
 }
 
 // Não esqueça de adicionar na exportação:
-module.exports = { listarArquivosPublicos, obterArquivoStream, uploadFile };
+module.exports = { listarArquivosPublicos, obterArquivoStream, obterArquivoTexto, uploadFile };

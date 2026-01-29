@@ -97,28 +97,40 @@ export default function EstatutoScreen({ navigation }: any) {
           ref={webViewRef}
           source={{ uri: htmlUri }}
           style={styles.webview}
-          injectedJavaScriptBeforeContentLoaded={`
-            (function() {
-              var style = document.createElement('style');
-              style.innerHTML = \`${injectedCSS}\`;
-              document.head.appendChild(style);
-
-              // Remoção determinística via JS
-              var removeNav = function() {
-                var nav = document.querySelector('.estatuto-nav');
-                if (nav) nav.remove();
-                var titles = document.querySelectorAll('.estatuto-nav-title');
-                titles.forEach(function(t) { t.remove(); });
-              };
-              removeNav();
-              document.addEventListener('DOMContentLoaded', removeNav);
-              setTimeout(removeNav, 500);
-              setTimeout(removeNav, 2000);
-              console.log('[Estatuto] Injected CSS/JS executed, embed mode should be active');
-            })();
-          `}
-          originWhitelist={['*']}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
           allowFileAccess={true}
+          injectedJavaScriptBeforeContentLoaded={"(function() {\n" +
+            "  console.log('[Estatuto][inject] start');\n" +
+            "  var cssText = " + JSON.stringify(injectedCSS) + ";\n" +
+            "  var styleEl = document.createElement('style');\n" +
+            "  styleEl.appendChild(document.createTextNode(cssText));\n" +
+            "  document.head.appendChild(styleEl);\n" +
+            "  console.log('[Estatuto][inject] css_applied');\n" +
+            "\n" +
+            "  var kill = function() {\n" +
+            "    var count = 0;\n" +
+            "    var selectors = ['#site-header', '#site-footer', '.estatuto-nav', '.estatuto-nav-title'];\n" +
+            "    selectors.forEach(function(sel) {\n" +
+            "      var elements = document.querySelectorAll(sel);\n" +
+            "      elements.forEach(function(el) {\n" +
+            "        el.remove();\n" +
+            "        count++;\n" +
+            "      });\n" +
+            "    });\n" +
+            "    if (count > 0) console.log('[Estatuto][inject] removed_nav count:', count);\n" +
+            "  };\n" +
+            "\n" +
+            "  kill();\n" +
+            "  var obs = new MutationObserver(kill);\n" +
+            "  obs.observe(document.documentElement, { childList: true, subtree: true });\n" +
+            "  console.log('[Estatuto][inject] observer_active');\n" +
+            "\n" +
+            "  document.addEventListener('DOMContentLoaded', kill);\n" +
+            "  setTimeout(kill, 500);\n" +
+            "  setTimeout(kill, 2000);\n" +
+            "})();"}
+          originWhitelist={['*']}
         />
       ) : (
         <View style={styles.centered}>

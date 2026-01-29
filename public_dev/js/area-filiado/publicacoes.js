@@ -129,6 +129,14 @@
             if(!r.ok) throw new Error("Erro API");
             let lista = await r.json();
 
+            // 🛑 Ocultar pastas técnicas na raiz
+            if (!folderId && lista && Array.isArray(lista)) {
+                lista = lista.filter(item => {
+                    const name = (item.titulo || item.name || '').toLowerCase();
+                    return name !== 'app' && name !== 'noticias';
+                });
+            }
+
             // Ordenação Alfabética (Case-Insensitive)
             if (lista && Array.isArray(lista)) {
                 lista.sort((a, b) => {
