@@ -36,8 +36,20 @@ const publicFormLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+/**
+ * Limiter para Campanhas de Push
+ */
+const pushCampaignLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 2, // limite de 2 envios por IP/usuário
+  message: { error: 'Limite de envio de notificações atingido (máx 2 por minuto).' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   loginLimiter,
   passwordResetLimiter,
-  publicFormLimiter
+  publicFormLimiter,
+  pushCampaignLimiter
 };

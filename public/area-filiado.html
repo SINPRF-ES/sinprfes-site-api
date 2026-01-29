@@ -21,6 +21,7 @@
   <script src="/js/area-filiado/ressarcimento.js"></script>
   <script src="/js/area-filiado/jogos.js"></script>
   <script src="/js/area-filiado/publicacoes.js"></script>
+  <script src="/js/area-filiado/notificacoes.js"></script>
   <script src="/js/area-filiado/assembleia-utils.js"></script>
   <script src="/js/area-filiado/assembleias.js"></script>
 
@@ -45,6 +46,7 @@
         <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
         <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
         <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
+        <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
       </nav>
 
       <!-- Conteúdo Principal -->
@@ -87,6 +89,45 @@
 
           <div id="sec-assembleias-sala" style="display:none;">
              <div id="area-assembleia-sala-conteudo"></div>
+          </div>
+        </section>
+
+        <section id="sec-notificacoes" class="af-section" style="display:none;">
+          <div class="section-card">
+            <h2>📢 Enviar Notificação Push</h2>
+            <p>Envie mensagens diretas para os dispositivos dos filiados.</p>
+
+            <form id="form-enviar-push" class="push-form">
+              <div class="field-group">
+                <label for="push-title">Título (opcional)</label>
+                <input type="text" id="push-title" placeholder="Ex: Informativo SINPRF-ES" maxlength="60">
+                <div class="char-count"><span id="push-title-char-now">0</span> / 60</div>
+              </div>
+
+              <div class="field-group">
+                <label for="push-body">Mensagem *</label>
+                <textarea id="push-body" required placeholder="Digite sua mensagem aqui..." maxlength="240" rows="4"></textarea>
+                <div class="char-count"><span id="push-char-now">0</span> / 240</div>
+              </div>
+
+              <div class="field-group">
+                <label for="push-target">Público-alvo</label>
+                <select id="push-target">
+                  <option value="ALL">Todos os filiados logados (Push)</option>
+                </select>
+              </div>
+
+              <div style="margin-top: 20px; text-align: right;">
+                <button type="submit" class="btn btn-primary" id="btn-enviar-push">🚀 Enviar Agora</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="section-card" style="margin-top: 20px;">
+            <h3>📜 Histórico de Envios</h3>
+            <div id="push-historico-lista">
+              <p>Carregando histórico...</p>
+            </div>
           </div>
         </section>
       </main>
