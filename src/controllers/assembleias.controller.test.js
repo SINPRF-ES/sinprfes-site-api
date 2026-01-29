@@ -1,9 +1,15 @@
 // src/controllers/assembleias.controller.test.js
 const controller = require('./assembleias.controller');
 const service = require('../services/assembleias.service');
+const filiadosService = require('../services/filiados.service');
+const pdfService = require('../services/pdf.service');
+const emailService = require('../services/email.service');
 const Textos = require('../utils/textos');
 
 jest.mock('../services/assembleias.service');
+jest.mock('../services/filiados.service');
+jest.mock('../services/pdf.service');
+jest.mock('../services/email.service');
 jest.mock('../websocket/assembleia.socket');
 
 describe('Assembleias Controller', () => {
@@ -65,5 +71,35 @@ describe('Assembleias Controller', () => {
 
     expect(service.finalizarVotacao).toHaveBeenCalledWith('v1');
     expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  describe('gerarRelatorio', () => {
+    test('should return 403 for COMUNICADOR profile', async () => {
+      req.user.perfil_acesso = 'COMUNICADOR';
+      service.buscarPorId.mockResolvedValue({ id: '1' });
+
+      await controller.gerarRelatorio(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: 'Seu perfil não possui permissão para gerar relatórios.'
+      }));
+    });
+
+    test('should allow FILIADO profile and return success', async () => {
+      req.user.perfil_acesso = 'FILIADO';
+      service.buscarPorId.mockResolvedValue({ id: '1' });
+      service.gerarDadosRelatorio.mockResolvedValue({ assembleia: { id: '1' } });
+      filiadosService.buscarPorId.mockResolvedValue({ id: 1, nome: 'Test', email1: 'test@example.com' });
+      pdfService.gerarPdfRelatorioAssembleia.mockResolvedValue(Buffer.from('pdf'));
+      emailService.enviarEmailRelatorioAssembleia.mockResolvedValue({});
+
+      await controller.gerarRelatorio(req, res);
+
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+        message: 'O relatório foi gerado e enviado para seu e-mail com sucesso.'
+      }));
+    });
   });
 });

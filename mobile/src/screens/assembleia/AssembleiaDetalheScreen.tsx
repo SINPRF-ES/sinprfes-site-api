@@ -225,8 +225,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const handleSolicitarRelatorio = useCallback(async () => {
     try {
       setActionLoading(true);
-      const res = await solicitarRelatorio(id);
-      Alert.alert('Sucesso', `Pedido de relatório registrado.\nID: ${res.request_id}\nAuth: ${res.auth_code}\n\nO documento será enviado para seu e-mail.`);
+      await solicitarRelatorio(id);
+      Alert.alert('Sucesso', 'Pedido de relatório registrado. O documento será enviado para seu e-mail.');
     } catch (err: any) {
       Alert.alert('Erro', 'Falha ao solicitar relatório.');
     } finally {
@@ -355,6 +355,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
   const isParticipavel = assembleia.estado === 'ABERTA' || assembleia.estado === 'EM_CURSO';
+  const isEncerrada = assembleia.estado === 'ENCERRADA';
   const isIniciado = assembleia.estado === 'EM_CURSO';
 
   return (
@@ -393,10 +394,12 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                   {assembleia.data_evento ? new Date(assembleia.data_evento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--/--/----'}
               </Text>
           </View>
+          {!isEncerrada && (
           <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>🕒 Chamadas (1ª / 2ª)</Text>
               <Text style={styles.fieldValue}>{assembleia.hora_primeira_chamada} / {assembleia.hora_segunda_chamada}</Text>
           </View>
+          )}
       </View>
 
       {canSeeToken && (
@@ -454,6 +457,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         )}
       </View>
 
+      {!isEncerrada && (
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>👥 Quórum Atual</Text>
         {estadoLoading ? (
@@ -508,8 +512,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             </>
         )}
       </View>
+      )}
 
-      {(isDiretoria || canGenerateReport) && assembleia && (
+      {(isDiretoria || canGenerateReport) && assembleia && !isEncerrada && (
         <View style={[styles.infoCard, styles.diretoriaSection]}>
             <Text style={styles.infoTitle}>⚡ Ações e Gestão</Text>
             <View style={styles.diretoriaButtons}>
@@ -562,6 +567,22 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                     </TouchableOpacity>
                 )}
             </View>
+        </View>
+      )}
+
+      {isEncerrada && perfil !== 'COMUNICADOR' && (
+        <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366', alignItems: 'center' }]}>
+            <MaterialCommunityIcons name="file-check" size={48} color="#003366" />
+            <Text style={[styles.tituloText, { fontSize: 18, marginTop: 10, textAlign: 'center' }]}>Assembleia Encerrada</Text>
+            <Text style={{ color: '#666', textAlign: 'center', marginBottom: 20 }}>Os itens desta assembleia foram deliberados. O relatório consolidado está disponível para solicitação.</Text>
+            <TouchableOpacity
+                style={[styles.btnSala, { width: '100%', backgroundColor: '#27ae60' }]}
+                onPress={handleSolicitarRelatorio}
+                disabled={actionLoading}
+            >
+                <MaterialCommunityIcons name="file-pdf-box" size={24} color="#fff" />
+                <Text style={styles.btnSalaText}>{actionLoading ? 'Solicitando...' : 'Solicitar Relatório PDF'}</Text>
+            </TouchableOpacity>
         </View>
       )}
 

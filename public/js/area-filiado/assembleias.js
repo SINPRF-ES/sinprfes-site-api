@@ -323,6 +323,7 @@
             const dataBr = window.Formatters.formatISOToBR(a.data_evento);
             const hasCheckedIn = estado.quorumVigente?.userHasCheckedIn || false;
             const isParticipavel = a.estado === 'ABERTA' || a.estado === 'EM_CURSO';
+            const isEncerrada = a.estado === 'ENCERRADA';
 
             const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
             const isPresidente = estado.mesa && estado.mesa.presidente_user_id === currentUserId;
@@ -352,10 +353,12 @@
                             <label style="font-weight:800; color:#003366; font-size:0.9rem; text-transform:uppercase; margin-bottom:8px; display:block;">📅 Data do Evento</label>
                             <div style="font-size:1.3rem; font-weight:700; color:#333;">${dataBr}</div>
                         </div>
+                        ${!isEncerrada ? `
                         <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd; text-align: center;">
                             <label style="font-weight:800; color:#003366; font-size:0.9rem; text-transform:uppercase; margin-bottom:8px; display:block;">🕒 Chamadas (1ª / 2ª)</label>
                             <div style="font-size:1.3rem; font-weight:700; color:#333;">${a.hora_primeira_chamada} / ${a.hora_segunda_chamada}</div>
                         </div>
+                        ` : ''}
                     </div>
 
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:25px; margin-bottom:35px;">
@@ -370,6 +373,7 @@
                         </div>
 
                         <!-- Quórum -->
+                        ${!isEncerrada ? `
                         <div class="section-box" style="background:#fff; border:2px solid #e0e0e0; border-radius:15px; padding:25px; display:flex; flex-direction:column; align-items:center; text-align:center;">
                             <h4 style="color:#003366; margin-bottom:20px; display:flex; align-items:center; gap:10px; font-weight:800;">👥 Quórum Atual</h4>
                             <div style="text-align:center; flex:1;">
@@ -394,6 +398,7 @@
                                 </div>
                             </details>
                         </div>
+                        ` : ''}
                     </div>
 
                     <!-- Bloco de Token Vigente -->
@@ -406,7 +411,7 @@
                     ` : ''}
 
                     <!-- Gestão (Diretoria / Presidente) -->
-                    ${(isDiretoria || isPresidente) ? `
+                    ${((isDiretoria || isPresidente) && !isEncerrada) ? `
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px; text-align: center;">
                             <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">🛠️ Ações de Gestão e Controle</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center;">
@@ -447,6 +452,9 @@
                                     ${a.estado === 'CRIADA' ? 'Assembleia agendada. Aguarde a abertura oficial.' : 'Esta assembleia já foi encerrada.'}
                                 </h3>
                                 <p style="color:#777; font-weight:500;">${a.estado === 'CRIADA' ? 'O acesso à sala será liberado no horário previsto.' : 'Os resultados e a ata estarão disponíveis em breve.'}</p>
+                                ${isEncerrada && currentUserPerfil !== 'COMUNICADOR' ? `
+                                    <button class="btn btn-primary btn-lg" style="margin-top:20px; font-weight:800;" onclick="Assembleias.solicitarRelatorio('${id}')">📄 Baixar Relatório PDF (E-mail)</button>
+                                ` : ''}
                             </div>
                         `}
                     </div>
