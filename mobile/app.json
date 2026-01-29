@@ -8,23 +8,23 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-  "image": "./assets/splash-icon.png",
-  "resizeMode": "contain",
-  "backgroundColor": "#0B2A4A"
-},
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B2A4A"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
-  "package": "com.mfavero138.sinprfesapp",
-  "adaptiveIcon": {
-    "foregroundImage": "./assets/adaptive-icon-foreground.png",
-    "backgroundColor": "#0B2A4A"
-  },
-  "edgeToEdgeEnabled": true,
-  "predictiveBackGestureEnabled": false,
-  "googleServicesFile": "./google-services.json"
-}
+      "package": "com.mfavero138.sinprfesapp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#0B2A4A"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -55,5 +55,5 @@
         "projectId": "c589a042-895e-497e-a61f-a76216580a35"
       }
     }
-}
+  }
 }
