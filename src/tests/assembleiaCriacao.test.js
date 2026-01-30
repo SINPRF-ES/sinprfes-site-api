@@ -18,7 +18,8 @@ describe('Assembleias Controller - Creation with Edital', () => {
         pauta: 'Pauta de teste',
         data_evento: '2026-12-31',
         hora_primeira_chamada: '10:00',
-        hora_segunda_chamada: '10:30'
+        hora_segunda_chamada: '10:30',
+        edital_drive_file_id: 'drive-id-test'
       },
       requestId: 'test-creation-id'
     };

@@ -30,6 +30,15 @@ describe('Push Campaign Controller', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, sent: 5 }));
     });
 
+    test('should return 200 and sent=0 if no tokens are found', async () => {
+        req.body = { title: 'Test', body: 'Message content', targetType: 'ALL' };
+        pushCampaignService.sendCampaign.mockResolvedValue({ success: true, sent: 0, campaignId: 'uuid' });
+
+        await controller.sendCampaign(req, res);
+
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, sent: 0 }));
+    });
+
     test('should return 400 if body is missing', async () => {
       req.body = { title: 'Test' };
 
@@ -39,6 +48,32 @@ describe('Push Campaign Controller', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
         message: 'O corpo da mensagem (body) é obrigatório.',
+        code: 'VALIDATION_ERROR'
+      }));
+    });
+
+    test('should return 400 if body is not a string', async () => {
+      req.body = { title: 'Test', body: true };
+
+      await controller.sendCampaign(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        message: 'O corpo da mensagem (body) deve ser uma string.',
+        code: 'VALIDATION_ERROR'
+      }));
+    });
+
+    test('should return 400 if title is not a string', async () => {
+      req.body = { title: 123, body: 'Valid message' };
+
+      await controller.sendCampaign(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        message: 'O título (title) deve ser uma string.',
         code: 'VALIDATION_ERROR'
       }));
     });
