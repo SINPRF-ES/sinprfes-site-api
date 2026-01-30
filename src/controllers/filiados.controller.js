@@ -26,6 +26,30 @@ function perfilGestao(perfil) {
 }
 
 /**
+ * Normaliza campos de data para o padrão YYYY-MM-DD.
+ * Aceita strings ISO completas (YYYY-MM-DDTHH:mm:ss...) e as trunca.
+ * Se o valor for vazio ou inválido, retorna null.
+ */
+function normalizeDateField(value) {
+  if (!value) return null;
+  const str = String(value).trim();
+  if (!str) return null;
+
+  // Se for YYYY-MM-DD ou ISO completo (YYYY-MM-DDTHH:mm...), trunca para os 10 primeiros caracteres
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    return str.substring(0, 10);
+  }
+
+  // Suporte legado ou fallback para formato brasileiro DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
+    const [d, m, y] = str.split("/");
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  return str;
+}
+
+/**
  * Valida se um ID é numérico e seguro (INTEGER PK).
  * @returns {number|null} O ID convertido ou null se inválido.
  */
@@ -57,7 +81,7 @@ function validarESanitizarDependentes(body) {
   for (let i = 1; i <= 5; i++) {
     const nome = (body[`dep${i}_nome`] || "").trim();
     const cpf = (body[`dep${i}_cpf`] || "").replace(/\D/g, "");
-    const dataNascimento = (body[`dep${i}_data_nascimento`] || "").trim();
+    const dataNascimento = normalizeDateField(body[`dep${i}_data_nascimento`]);
     const parentesco = (body[`dep${i}_parentesco`] || "").trim();
 
     const temAlgumDado = nome || cpf || dataNascimento || parentesco;
@@ -330,7 +354,7 @@ exports.atualizarFiliado = async (req, res) => {
     const payload = {
       nome: body.nome,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
-      data_nascimento: body.data_nascimento === "" ? undefined : body.data_nascimento,
+      data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email1: body.email1,
@@ -445,7 +469,7 @@ exports.criarFiliado = async (req, res) => {
     const dadosNovo = {
       nome: String(body.nome).trim(),
       cpf: cpfLimpo,
-      data_nascimento: body.data_nascimento || null,
+      data_nascimento: normalizeDateField(body.data_nascimento),
       telefone1: body.telefone1 || null,
       telefone2: body.telefone2 || null,
       email1: body.email1 || null,

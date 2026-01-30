@@ -1,6 +1,6 @@
 // mobile/src/services/filiadoPayloadMapper.ts
 import { onlyDigits } from '../shared/format/formatters';
-import { toISODate } from '../utils/date';
+import { toIsoDateYYYYMMDD } from '../utils/dateNormalize';
 import type { Filiado } from '../types/filiado';
 
 /**
@@ -19,7 +19,7 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
   if (formState.cep) payload.cep = onlyDigits(formState.cep);
   if (formState.email1) payload.email1 = formState.email1;
   if (formState.email2) payload.email2 = formState.email2;
-  if (formState.data_nascimento) payload.data_nascimento = toISODate(formState.data_nascimento) || formState.data_nascimento;
+  if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
   if (formState.nome) payload.nome = formState.nome;
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
   if (formState.lotacao) payload.lotacao = formState.lotacao;
@@ -39,7 +39,7 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
     if (formState[depKeyNome]) {
       payload[depKeyNome] = formState[depKeyNome];
       payload[depKeyParentesco] = formState[depKeyParentesco];
-      payload[depKeyNascimento] = toISODate(formState[depKeyNascimento] as string) || formState[depKeyNascimento];
+      payload[depKeyNascimento] = toIsoDateYYYYMMDD(formState[depKeyNascimento] as string) || formState[depKeyNascimento];
       if (formState[depKeyCpf]) {
         payload[depKeyCpf] = onlyDigits(formState[depKeyCpf] as string);
       }
