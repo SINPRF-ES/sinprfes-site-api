@@ -8,7 +8,7 @@ import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
-  const isGestao = checkIsGestao(usuario?.perfil_acesso);
+  const ehGestao = checkIsGestao(usuario?.perfil_acesso);
 
   const handleLogoutPress = () => {
     Alert.alert(
@@ -34,13 +34,18 @@ const CustomDrawerContent = (props) => {
       </View>
       <DrawerItemList {...props} />
 
-      {isGestao && (
+      {ehGestao && (
         <>
           <View style={styles.separator} />
           <DrawerItem
             label="Gestão"
             labelStyle={styles.sectionHeader}
             onPress={() => {}} // Não faz nada, é apenas um título
+          />
+          <DrawerItem
+            label="Enviar Notificação"
+            icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
+            onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
             label="Novo Filiado"

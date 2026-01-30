@@ -27,6 +27,7 @@
         const { inicializarRessarcimento } = window.Ressarcimento || {};
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
+        const { Notificacoes } = window || {};
         const { CMSAdmin } = window || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
@@ -43,6 +44,7 @@
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes();
+                else if (abaAlvo === 'sec-notificacoes' && Notificacoes) Notificacoes.init();
                 else if (abaAlvo === 'sec-cms' && CMSAdmin) CMSAdmin.init();
             });
         }
@@ -56,6 +58,13 @@
                     window.location.href = resolvePath("/login.html");
                 }
             };
+        }
+
+        // Exibe aba Notificações se tiver permissão
+        const perfisPush = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        if (perfisPush.includes(perfil)) {
+            const navPush = document.getElementById("nav-notificacoes");
+            if (navPush) navPush.style.display = "block";
         }
 
         // Exibe aba CMS se tiver permissão

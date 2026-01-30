@@ -8,11 +8,11 @@ const expo = new Expo();
 
 /**
  * Envia uma campanha de push para todos os tokens ativos.
- * @param {Object} params - { title, body, targetType, targetValue, data, createdBy }
+ * @param {Object} params - { title, body, targetType, targetValue, data, createdBy, requestId, perfil }
  */
-async function sendCampaign({ title, body, targetType, targetValue, data, createdBy }) {
+async function sendCampaign({ title, body, targetType, targetValue, data, createdBy, requestId, perfil }) {
   const startTime = new Date();
-  log.info("PushCampaign.Iniciado", { title, body, targetType, createdBy });
+  log.info("PushCampaign.Iniciado", { requestId, userId: createdBy, perfil, title, body, targetType });
 
   // 1. Buscar tokens (por enquanto apenas targetType='ALL' é suportado conforme v1)
   const tokens = await pushService.listActiveTokens();
@@ -75,7 +75,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     result: resultData
   });
 
-  log.info("PushCampaign.Finalizado", { campaignId, ...resultData });
+  log.info("PushCampaign.Finalizado", { requestId, userId: createdBy, campaignId, ...resultData });
 
   return { success: true, campaignId, ...resultData };
 }

@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
+import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TOC_ITEMS = [
@@ -48,7 +49,16 @@ export default function EstatutoScreen({ navigation }: any) {
         const asset = Asset.fromModule(require('../../assets/html/estatuto.html'));
         await asset.downloadAsync();
         const uri = asset.localUri || asset.uri || '';
-        const finalUri = uri.startsWith('http') ? (uri.includes('?') ? `${uri}&embed=1` : `${uri}?embed=1`) : uri;
+
+        const runtimeVersion = Updates.runtimeVersion || 'native';
+        const updateId = Updates.updateId || 'none';
+        const cb = `${runtimeVersion}-${updateId}`;
+
+        // Sempre adiciona cb e embed=1, mesmo se for file:// (ajudando no cacheBust se o asset mudar em OTA)
+        const finalUri = uri.includes('?')
+          ? `${uri}&embed=1&cb=${cb}`
+          : `${uri}?embed=1&cb=${cb}`;
+
         setHtmlUri(finalUri);
         console.log('[Estatuto] URL carregada:', finalUri);
       } catch (err) {
@@ -97,26 +107,40 @@ export default function EstatutoScreen({ navigation }: any) {
           ref={webViewRef}
           source={{ uri: htmlUri }}
           style={styles.webview}
-          injectedJavaScriptBeforeContentLoaded={`
-            (function() {
-              var style = document.createElement('style');
-              style.innerHTML = \`${injectedCSS}\`;
-              document.head.appendChild(style);
-
-              // Remoção determinística via JS
-              var removeNav = function() {
-                var nav = document.querySelector('.estatuto-nav');
-                if (nav) nav.remove();
-                var titles = document.querySelectorAll('.estatuto-nav-title');
-                titles.forEach(function(t) { t.remove(); });
-              };
-              removeNav();
-              document.addEventListener('DOMContentLoaded', removeNav);
-              setTimeout(removeNav, 500);
-              setTimeout(removeNav, 2000);
-              console.log('[Estatuto] Injected CSS/JS executed, embed mode should be active');
-            })();
-          `}
+          cacheEnabled={false}
+          incognito={true}
+          cacheMode="LOAD_NO_CACHE"
+          domStorageEnabled={true}
+          javaScriptEnabled={true}
+          injectedJavaScriptBeforeContentLoaded={
+            "(function() {" +
+              "console.log('[Estatuto][inject] start');" +
+              "var cssText = " + JSON.stringify(injectedCSS) + ";" +
+              "var style = document.createElement('style');" +
+              "style.appendChild(document.createTextNode(cssText));" +
+              "document.head.appendChild(style);" +
+              "console.log('[Estatuto][inject] css_applied');" +
+              "var kill = function() {" +
+                "var selectors = ['#site-header', '#site-footer', '.estatuto-nav', '.estatuto-nav-title', '.barra-azul', 'header', 'nav', '.navbar', '.site-header', '#header', '#nav'];" +
+                "var removedCount = 0;" +
+                "selectors.forEach(function(s) {" +
+                  "var elements = document.querySelectorAll(s);" +
+                  "for (var i = 0; i < elements.length; i++) {" +
+                    "elements[i].parentNode.removeChild(elements[i]);" +
+                    "removedCount++;" +
+                  "}" +
+                "});" +
+                "if (removedCount > 0) console.log('[Estatuto][inject] removed_nav count: ' + removedCount);" +
+              "};" +
+              "kill();" +
+              "var obs = new MutationObserver(kill);" +
+              "obs.observe(document.documentElement, { childList: true, subtree: true });" +
+              "console.log('[Estatuto][inject] observer_active');" +
+              "document.addEventListener('DOMContentLoaded', kill);" +
+              "setTimeout(kill, 500);" +
+              "setTimeout(kill, 2000);" +
+            "})();"
+          }
           originWhitelist={['*']}
           allowFileAccess={true}
         />

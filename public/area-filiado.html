@@ -94,40 +94,33 @@
 
         <section id="sec-notificacoes" class="af-section" style="display:none;">
           <div class="section-card">
-            <h2>📢 Enviar Notificação Push</h2>
-            <p>Envie mensagens diretas para os dispositivos dos filiados.</p>
+              <h2>📢 Notificações Push</h2>
+              <p class="section-subtitle">Envie mensagens para todos os filiados com o app instalado.</p>
 
-            <form id="form-enviar-push" class="push-form">
-              <div class="field-group">
-                <label for="push-title">Título (opcional)</label>
-                <input type="text" id="push-title" placeholder="Ex: Informativo SINPRF-ES" maxlength="60">
-                <div class="char-count"><span id="push-title-char-now">0</span> / 60</div>
+              <div class="form-container" style="max-width: 600px; margin-top: 20px;">
+                  <div class="field-group">
+                      <label>Título (opcional)</label>
+                      <input type="text" id="push-title" maxlength="60" placeholder="Ex: Informativo SINPRF-ES" />
+                      <small class="char-counter"><span id="push-title-count">0</span>/60</small>
+                  </div>
+
+                  <div class="field-group" style="margin-top: 15px;">
+                      <label>Mensagem *</label>
+                      <textarea id="push-message" maxlength="240" rows="4" placeholder="Digite sua mensagem aqui..."></textarea>
+                      <small class="char-counter"><span id="push-message-count">0</span>/240</small>
+                  </div>
+
+                  <button id="btn-send-push" class="btn btn-primary" style="margin-top: 20px;">
+                      🚀 Enviar Agora
+                  </button>
               </div>
 
-              <div class="field-group">
-                <label for="push-body">Mensagem *</label>
-                <textarea id="push-body" required placeholder="Digite sua mensagem aqui..." maxlength="240" rows="4"></textarea>
-                <div class="char-count"><span id="push-char-now">0</span> / 240</div>
+              <div class="history-container" style="margin-top: 40px;">
+                  <h3>📜 Histórico de Envios</h3>
+                  <div id="push-history-list" class="history-list">
+                      <p>Carregando histórico...</p>
+                  </div>
               </div>
-
-              <div class="field-group">
-                <label for="push-target">Público-alvo</label>
-                <select id="push-target">
-                  <option value="ALL">Todos os filiados logados (Push)</option>
-                </select>
-              </div>
-
-              <div style="margin-top: 20px; text-align: right;">
-                <button type="submit" class="btn btn-primary" id="btn-enviar-push">🚀 Enviar Agora</button>
-              </div>
-            </form>
-          </div>
-
-          <div class="section-card" style="margin-top: 20px;">
-            <h3>📜 Histórico de Envios</h3>
-            <div id="push-historico-lista">
-              <p>Carregando histórico...</p>
-            </div>
           </div>
         </section>
       </main>

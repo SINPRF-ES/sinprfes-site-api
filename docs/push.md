@@ -48,5 +48,10 @@ Apenas usuários com os seguintes perfis podem acessar o módulo (site e mobile)
 
 ## Segurança
 - Tokens de push são mascarados nos logs (ex: `ExponentPu...xxxx`).
-- O endpoint de envio é protegido por permissão `PUSH_GERENCIAR`.
-- O tamanho da mensagem é limitado tanto no frontend quanto no backend.
+- Logs padronizados incluem `requestId`, `userId` e `perfil` para rastreabilidade.
+- O endpoint de envio é protegido por permissão `PUSH_GERENCIAR` e possui rate limit de 2 disparos/min por usuário.
+- O tamanho da mensagem é limitado: Título (60) e Mensagem (240).
+
+## Detalhes de Implementação (Estatuto Mobile)
+Para garantir a remoção determinística de elementos indesejados no WebView do Estatuto (especialmente em Androids antigos), os seguintes seletores são removidos via `MutationObserver`:
+`#site-header`, `#site-footer`, `.estatuto-nav`, `.estatuto-nav-title`, `.barra-azul`, `header`, `nav`, `.navbar`, `.site-header`, `#header`, `#nav`.

@@ -1,13 +1,13 @@
 /**
- * Módulo de Notificações Push (Área do Filiado) - Padronizado
+ * Módulo de Notificações Push (Área do Filiado)
  */
 (function (global) {
     if (global.Notificacoes) return;
 
     let historyCache = [];
 
-    function init(perfil) {
-        console.log("Notificacoes: Inicializando para perfil:", perfil);
+    function init() {
+        console.log("Notificacoes: Inicializando...");
         setupHandlers();
         carregarHistorico();
     }
@@ -19,15 +19,13 @@
 
         if (titleInput) {
             titleInput.oninput = () => {
-                const countEl = document.getElementById('push-title-count');
-                if (countEl) countEl.textContent = titleInput.value.length;
+                document.getElementById('push-title-count').textContent = titleInput.value.length;
             };
         }
 
         if (messageInput) {
             messageInput.oninput = () => {
-                const countEl = document.getElementById('push-message-count');
-                if (countEl) countEl.textContent = messageInput.value.length;
+                document.getElementById('push-message-count').textContent = messageInput.value.length;
             };
         }
 
@@ -37,11 +35,8 @@
     }
 
     async function handleSend() {
-        const titleEl = document.getElementById('push-title');
-        const messageEl = document.getElementById('push-message');
-
-        const title = titleEl ? titleEl.value.trim() : '';
-        const body = messageEl ? messageEl.value.trim() : '';
+        const title = document.getElementById('push-title').value.trim();
+        const body = document.getElementById('push-message').value.trim();
 
         if (!body) {
             alert("A mensagem é obrigatória.");
@@ -67,14 +62,10 @@
 
             if (r.ok) {
                 alert(`Sucesso! Notificação enviada.\n🚀 Sucesso: ${data.sent}\n❌ Falhas: ${data.failed}`);
-                if (titleEl) titleEl.value = '';
-                if (messageEl) messageEl.value = '';
-
-                const tc = document.getElementById('push-title-count');
-                const mc = document.getElementById('push-message-count');
-                if (tc) tc.textContent = '0';
-                if (mc) mc.textContent = '0';
-
+                document.getElementById('push-title').value = '';
+                document.getElementById('push-message').value = '';
+                document.getElementById('push-title-count').textContent = '0';
+                document.getElementById('push-message-count').textContent = '0';
                 carregarHistorico();
             } else {
                 if (r.status === 429) {
@@ -146,10 +137,8 @@
         return d.toLocaleString('pt-BR');
     }
 
-    // Compatibilidade com código legado que pode chamar inicializarNotificacoes
     global.Notificacoes = {
         init,
-        inicializarNotificacoes: init,
         carregarHistorico
     };
 

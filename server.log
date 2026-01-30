@@ -3,9 +3,9 @@
 > sinprfes-site-api@1.0.0 start /app
 > node server.js
 
-{"level":"WARN","timestamp":"2026-01-30T01:18:11.088Z","env":"dev","message":"InstagramTokenNaoConfigurado"}
-[DATABASE] DATABASE_URL ausente
-[DATABASE] DATABASE_URL ausente
+{"level":"WARN","timestamp":"2026-01-30T03:31:38.928Z","env":"dev","message":"InstagramTokenNaoConfigurado"}
+[DATABASE] host=localhost port=5432 db=db sslmode=-
+[DATABASE] host=localhost port=5432 db=db sslmode=-
 [BirthdayScheduler] cron scheduled 0 8 * * * America/Sao_Paulo
 [BirthdayScheduler] boot trigger scheduled
 SINPRF-ES rodando na porta 3000
@@ -39,5 +39,3 @@ SINPRF-ES rodando na porta 3000
   ]
 }
 [BirthdayScheduler] trigger end: boot
-Terminated
- ELIFECYCLE  Command failed with exit code 143.
