@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { normalizeText } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
 import { logger } from '../infra/logger';
@@ -69,10 +70,28 @@ export default function NotificacoesPushScreen() {
   }, [fetchHistory]);
 
   const handleFiliadoSearch = async (q: string) => {
-    if (q.length < 3) return;
+    if (q.length < 2) {
+      setFiliadosBusca([]);
+      return;
+    }
+
     try {
-        const response = await api.get(`/api/filiados?q=${q}`);
-        setFiliadosBusca(response.data.filiados || []);
+        // Buscamos uma lista maior para filtrar localmente se necessário
+        // ou confiamos no backend se ele for robusto o suficiente.
+        // O usuário quer accent-insensitive.
+        const response = await api.get(`/api/filiados?q=${encodeURIComponent(q)}`);
+        const results = response.data.filiados || [];
+
+        // Refinamento local para garantir accent-insensitivity (joao = João)
+        const normalizedQuery = normalizeText(q);
+        const filtered = results.filter((f: any) => {
+          const nNome = normalizeText(f.nome || '');
+          const nCpf = (f.cpf || '').replace(/\D/g, '');
+          return nNome.includes(normalizedQuery) || nCpf.includes(normalizedQuery);
+        });
+
+        setFiliadosBusca(filtered.slice(0, 50));
+        logger.info('NOTIF_FILIADO_SEARCH_QUERY', { queryLength: q.length, resultsCount: filtered.length });
     } catch (e) {
         console.error(e);
     }
@@ -242,18 +261,33 @@ export default function NotificacoesPushScreen() {
                     placeholder="Buscar filiado (nome/cpf)..."
                     onChangeText={handleFiliadoSearch}
                 />
-                <View style={styles.pickerContainer}>
-                    <Picker
-                        selectedValue={targetValue}
-                        onValueChange={setTargetValue}
-                        style={styles.picker}
-                    >
-                        <Picker.Item label="Selecione um filiado..." value="" />
-                        {filiadosBusca.map(f => (
-                            <Picker.Item key={f.id} label={`${f.nome} (CPF: ${f.cpf})`} value={f.id} />
-                        ))}
-                    </Picker>
-                </View>
+                {filiadosBusca.length > 0 && (
+                  <View style={styles.searchResults}>
+                    {filiadosBusca.map(f => (
+                      <TouchableOpacity
+                        key={f.id}
+                        style={[styles.searchItem, targetValue === String(f.id) && styles.searchItemActive]}
+                        onPress={() => {
+                          setTargetValue(String(f.id));
+                          // Opcional: limpar busca após selecionar?
+                          // Melhor não para o usuário ver o que selecionou.
+                        }}
+                      >
+                        <Text style={[styles.searchItemText, targetValue === String(f.id) && styles.searchItemTextActive]}>
+                          {f.nome}
+                        </Text>
+                        <Text style={styles.searchItemSub}>{f.cpf}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {targetValue ? (
+                  <Text style={styles.selectedLabel}>
+                    Selecionado ID: {targetValue}
+                  </Text>
+                ) : (
+                  <Text style={styles.infoLabel}>Selecione um filiado na lista acima.</Text>
+                )}
              </View>
           )}
 
@@ -336,10 +370,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#fafafa',
     marginBottom: 10,
-    overflow: 'hidden'
+    // overflow: 'hidden' // Removido para evitar corte no Android em alguns casos
   },
   picker: {
-    height: 50,
+    height: 60, // Aumentado para evitar corte
     width: '100%',
   },
   scrollContent: { padding: 16 },
@@ -396,6 +430,46 @@ const styles = StyleSheet.create({
   historyResult: { flexDirection: 'row', gap: 12, marginTop: 4 },
   resultText: { fontSize: 12, fontWeight: 'bold', color: '#666' },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 20 },
+  searchResults: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    marginTop: 5,
+    backgroundColor: '#fff',
+  },
+  searchItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  searchItemActive: {
+    backgroundColor: '#e6f0fa',
+  },
+  searchItemText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  searchItemTextActive: {
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  searchItemSub: {
+    fontSize: 11,
+    color: '#999',
+  },
+  selectedLabel: {
+    fontSize: 12,
+    color: '#2ecc71',
+    marginTop: 5,
+    fontWeight: 'bold',
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 5,
+    fontStyle: 'italic',
+  },
   archivedButton: {
     marginTop: 8,
     padding: 12,

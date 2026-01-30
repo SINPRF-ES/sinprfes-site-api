@@ -1886,3 +1886,15 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
     font-weight: bold;
     color: #555;
 }
+
+.history-results span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Pagination for history */
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}

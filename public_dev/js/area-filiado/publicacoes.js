@@ -9,7 +9,7 @@
     let folderStack = [];
     let currentBlobUrl = null;
 
-    async function inicializarPublicacoes(folderId = null) {
+    async function inicializarPublicacoes(folderId = null, options = {}) {
         const secPub = document.getElementById("sec-publicacoes");
         if (!secPub) return;
 
@@ -129,11 +129,20 @@
             if(!r.ok) throw new Error("Erro API");
             let lista = await r.json();
 
-            // 🛑 Ocultar pastas técnicas na raiz
-            if (!folderId && lista && Array.isArray(lista)) {
+            // Filtragem de Pastas Técnicas (Apps, Noticias) para não-gestão
+            const perfil = (options.perfil || "").toUpperCase();
+            const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+            if (!perfisGestao.includes(perfil)) {
+                const pastasOcultas = ["APPS", "APP", "NOTICIAS", "NOTÍCIAS", "NOTICIA", "NOTÍCIA"];
                 lista = lista.filter(item => {
-                    const name = (item.titulo || item.name || '').toLowerCase();
-                    return name !== 'app' && name !== 'noticias';
+                    if (item.isFolder) {
+                        const tituloNorm = (item.titulo || "").toUpperCase().trim();
+                        if (pastasOcultas.includes(tituloNorm)) {
+                            console.log("PUBLICACOES_FOLDER_FILTER_APPLIED", { folder: item.titulo });
+                            return false;
+                        }
+                    }
+                    return true;
                 });
             }
 
@@ -185,7 +194,7 @@
                 card.onclick = () => {
                     const idDestino = card.dataset.folderId;
                     folderStack.push(folderId);
-                    inicializarPublicacoes(idDestino);
+                    inicializarPublicacoes(idDestino, options);
                 };
             });
 
@@ -208,7 +217,7 @@
             if (btn) {
                 btn.onclick = () => {
                     const idAnterior = folderStack.pop();
-                    inicializarPublicacoes(idAnterior);
+                    inicializarPublicacoes(idAnterior, options);
                 };
             }
         }

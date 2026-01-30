@@ -7,7 +7,7 @@
     let historyCache = [];
     let isShowingArchived = false;
 
-    function init(perfil) {
+    function inicializarNotificacoes(perfil) {
         console.log("Notificacoes: Inicializando para perfil:", perfil);
 
         // Controle de visibilidade do menu
@@ -260,7 +260,7 @@
     }
 
     global.Notificacoes = {
-        init,
+        inicializarNotificacoes,
         carregarHistorico
     };
 

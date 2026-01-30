@@ -23,7 +23,7 @@
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
-        const { inicializarNotificacoes } = window.Notificacoes || {};
+        const { Notificacoes } = window || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
         let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
@@ -38,9 +38,9 @@
                 else if (abaAlvo === 'sec-filiados' && inicializarFiliados) inicializarFiliados(perfil);
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
-                else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes();
+                else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
-                else if (abaAlvo === 'sec-notificacoes' && inicializarNotificacoes) inicializarNotificacoes(perfil);
+                else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
             });
         }
 
@@ -72,7 +72,7 @@
             }
 
             // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
-            if (inicializarNotificacoes) inicializarNotificacoes(perfil);
+            if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
 
         } catch (err) {
             console.error("Falha na sincronização inicial:", err);
