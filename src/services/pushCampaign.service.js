@@ -18,7 +18,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   let tokens;
   try {
     tokens = await pushService.listActiveTokens();
-    log.info("PushCampaign.TokensObtidos", { requestId, count: tokens.length });
+    log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { count: tokens.length });
   } catch (e) {
     log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
     throw e;
