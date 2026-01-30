@@ -8,6 +8,19 @@
 
     function init(perfil) {
         console.log("Notificacoes: Inicializando para perfil:", perfil);
+
+        // Controle de visibilidade do menu
+        const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        const navItem = document.getElementById('nav-notificacoes');
+
+        if (navItem) {
+            if (perfisAutorizados.includes(perfil)) {
+                navItem.style.display = "block";
+            } else {
+                navItem.style.display = "none";
+            }
+        }
+
         setupHandlers();
         carregarHistorico();
     }

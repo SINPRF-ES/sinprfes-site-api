@@ -94,3 +94,25 @@ adb logcat *:S ReactNative:V ReactNativeJS:V
 # Limpar cache do app
 adb shell pm clear br.org.sinprfes.app
 ```
+
+## 📢 PUSH – Depuração
+
+Para garantir a integridade do módulo de notificações:
+
+### Como testar envio
+1.  **Pelo App**: Acesse `Menu -> Notificações`. Digite título e mensagem. Confirme o envio.
+2.  **Pelo Site**: Acesse o Painel do Filiado (com perfil ADMIN/DIRETORIA). Vá em `📢 Notificações`. Digite e envie.
+
+### Exemplos de payload correto
+O backend espera:
+```json
+{
+  "title": "Informativo SINPRF-ES",
+  "body": "Conteúdo da mensagem aqui...",
+  "targetType": "ALL"
+}
+```
+
+### O que olhar nos logs
+-   **No App**: No menu `Logs`, procure por `Push.SendStart` (verifica tipos e tamanhos) e `Push.SendResponse`.
+-   **No Servidor**: Procure por `PushCampaign.ControllerIniciado` para ver os tipos recebidos e `PushCampaign.TicketErro` caso algum token falhe individualmente no Expo.
