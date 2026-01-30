@@ -23,6 +23,7 @@
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
+        const { inicializarNotificacoes } = window.Notificacoes || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
         let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
@@ -39,6 +40,7 @@
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes();
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
+                else if (abaAlvo === 'sec-notificacoes' && inicializarNotificacoes) inicializarNotificacoes(perfil);
             });
         }
 
@@ -64,9 +66,14 @@
                         perfil = perfilReal;
                         // Força re-render do menu/módulos se necessário
                         if (inicializarFiliados) inicializarFiliados(perfil);
+                        if (inicializarNotificacoes) inicializarNotificacoes(perfil);
                     }
                 }
             }
+
+            // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
+            if (inicializarNotificacoes) inicializarNotificacoes(perfil);
+
         } catch (err) {
             console.error("Falha na sincronização inicial:", err);
         }

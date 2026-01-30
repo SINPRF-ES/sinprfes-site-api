@@ -14,6 +14,7 @@ import RessarcimentoScreen from '../screens/RessarcimentoScreen';
 import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
+import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/filiadoUtils';
@@ -110,6 +111,14 @@ const DrawerNavigator = () => {
       )}
       {ehGestao && (
         <>
+          <Drawer.Screen
+            name="NotificacoesPush"
+            component={NotificacoesPushScreen}
+            options={{
+              title: 'Enviar Notificação',
+              drawerItemStyle: { display: 'none' }
+            }}
+          />
           <Drawer.Screen
             name="CriarFiliado"
             component={CriarFiliadoScreen}

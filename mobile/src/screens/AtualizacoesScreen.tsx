@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
-import { checkUpdates, applyOtaUpdate, UpdateCheckResult } from '../services/updateService';
+import { checkUpdates, applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult } from '../services/updateService';
 import { salvarUltimoCheckUpdate } from '../services/storageService';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
@@ -76,12 +76,18 @@ const AtualizacoesScreen = () => {
         );
     };
 
-    const handleDownloadAPK = () => {
-        if (updateResult?.apkUrl) {
-            logDebug('Atualizacoes.downloadAPK', { url: updateResult.apkUrl });
-            Linking.openURL(updateResult.apkUrl).catch(err => {
-                Alert.alert('Erro', 'Não foi possível abrir o link: ' + err.message);
-            });
+    const handleDownloadAPK = async () => {
+        if (updateResult?.apkFileId && updateResult?.apkFileName) {
+            setIsApplying(true);
+            try {
+                await downloadAndInstallApk(updateResult.apkFileId, updateResult.apkFileName);
+            } catch (error: any) {
+                Alert.alert('Erro no Download', error.message);
+            } finally {
+                setIsApplying(false);
+            }
+        } else {
+            Alert.alert('Erro', 'Não foi possível localizar o APK no Drive. Verifique a pasta App.');
         }
     };
 
@@ -166,6 +172,12 @@ const AtualizacoesScreen = () => {
                         </View>
 
                         <Text style={styles.resultVersion}>Nova versão: {updateResult.manifest.versionName}</Text>
+                        {updateResult.type === 'APK' && (
+                            <View style={styles.apkInfoBox}>
+                                <Text style={styles.apkInfoText}>ABI detectada: {updateResult.apkAbi}</Text>
+                                <Text style={styles.apkInfoText} numberOfLines={1}>Arquivo: {updateResult.apkFileName}</Text>
+                            </View>
+                        )}
                         <Text style={styles.resultNotesTitle}>O que mudou:</Text>
                         <Text style={styles.resultNotes}>
                             {updateResult.type === 'OTA' ? updateResult.manifest.ota.notes : updateResult.manifest.apk.notes}
@@ -179,15 +191,20 @@ const AtualizacoesScreen = () => {
                         )}
 
                         <TouchableOpacity
-                            style={[styles.actionButton, { backgroundColor: updateResult.isMandatory ? '#d32f2f' : '#003366' }]}
+                            style={[styles.actionButton, { backgroundColor: updateResult.isMandatory ? '#d32f2f' : '#003366' }, isApplying && { opacity: 0.7 }]}
                             onPress={updateResult.type === 'OTA' ? handleApplyOTA : handleDownloadAPK}
                             disabled={isApplying}
                         >
                             {isApplying ? (
-                                <ActivityIndicator color="#fff" />
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <ActivityIndicator color="#fff" style={{ marginRight: 10 }} />
+                                    <Text style={styles.actionButtonText}>
+                                        {updateResult.type === 'OTA' ? 'Aplicando...' : 'Baixando APK...'}
+                                    </Text>
+                                </View>
                             ) : (
                                 <Text style={styles.actionButtonText}>
-                                    {updateResult.type === 'OTA' ? 'Baixar e Aplicar (Reiniciar)' : 'Abrir Link do APK'}
+                                    {updateResult.type === 'OTA' ? 'Baixar e Aplicar (Reiniciar)' : 'Baixar e Instalar APK'}
                                 </Text>
                             )}
                         </TouchableOpacity>
@@ -250,7 +267,20 @@ const styles = StyleSheet.create({
     actionButton: { padding: 16, borderRadius: 8, alignItems: 'center' },
     actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
     noUpdateCard: { alignItems: 'center', padding: 30, backgroundColor: '#fff', borderRadius: 12, elevation: 2 },
-    noUpdateText: { marginTop: 10, fontSize: 16, color: '#2e7d32', fontWeight: 'bold' }
+    noUpdateText: { marginTop: 10, fontSize: 16, color: '#2e7d32', fontWeight: 'bold' },
+    apkInfoBox: {
+        backgroundColor: '#f8f9fa',
+        padding: 10,
+        borderRadius: 8,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#e9ecef'
+    },
+    apkInfoText: {
+        fontSize: 12,
+        color: '#6c757d',
+        fontFamily: 'monospace'
+    }
 });
 
 export default AtualizacoesScreen;

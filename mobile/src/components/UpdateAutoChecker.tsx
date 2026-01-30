@@ -12,6 +12,10 @@ const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
 
 /**
  * Componente global que verifica atualizações automaticamente respeitando throttling.
+ *
+ * POLÍTICA DE ATUALIZAÇÃO:
+ * - O app NUNCA deve aplicar atualizações (OTA ou APK) automaticamente.
+ * - Toda atualização deve ser precedida de confirmação do usuário via Modal ou Banner.
  */
 const UpdateAutoChecker: React.FC = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
@@ -35,18 +39,23 @@ const UpdateAutoChecker: React.FC = () => {
     const isLoginTrigger = !prevAutenticado.current && autenticado;
     prevAutenticado.current = autenticado;
 
+    if (isLoginTrigger) {
+      logDebug('UpdateCheck.auto.loginTriggerDetected', { timestamp: new Date().toISOString() });
+    }
+
     const performAutoCheck = async () => {
       try {
         const lastCheck = await carregarUltimoCheckUpdate();
         const now = Date.now();
 
-        // Se for gatilho de login, ignoramos o throttle de 6h
+        // Se for gatilho de login, ignoramos o throttle de 6h para garantir que o usuário
+        // veja atualizações críticas logo ao entrar no app.
         if (!isLoginTrigger && (now - lastCheck < CHECK_INTERVAL)) {
           logDebug('UpdateCheck.auto.skip', { reason: 'throttled' });
           return;
         }
 
-        await reportUpdateAutoCheck('start');
+        await reportUpdateAutoCheck(isLoginTrigger ? 'login_start' : 'periodic_start');
 
         // checkUpdates('auto') já lida com logDebug('UpdateCheck.auto.*') internamente
         const result = await checkUpdates('auto');
