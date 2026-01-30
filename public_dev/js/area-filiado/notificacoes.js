@@ -6,8 +6,21 @@
 
     let historyCache = [];
 
-    function init() {
-        console.log("Notificacoes: Inicializando...");
+    function init(perfil) {
+        console.log("Notificacoes: Inicializando para perfil:", perfil);
+
+        // Controle de visibilidade do menu
+        const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        const navItem = document.getElementById('nav-notificacoes');
+
+        if (navItem) {
+            if (perfisAutorizados.includes(perfil)) {
+                navItem.style.display = "block";
+            } else {
+                navItem.style.display = "none";
+            }
+        }
+
         setupHandlers();
         carregarHistorico();
     }
@@ -35,8 +48,15 @@
     }
 
     async function handleSend() {
-        const title = document.getElementById('push-title').value.trim();
-        const body = document.getElementById('push-message').value.trim();
+        const titleEl = document.getElementById('push-title');
+        const messageEl = document.getElementById('push-message');
+
+        // Garantir strings (evitar booleans acidentais do DOM ou extensões)
+        const titleRaw = titleEl ? titleEl.value : '';
+        const bodyRaw = messageEl ? messageEl.value : '';
+
+        const title = String(titleRaw).trim();
+        const body = String(bodyRaw).trim();
 
         if (!body) {
             alert("A mensagem é obrigatória.");
@@ -53,9 +73,21 @@
             btnSend.disabled = true;
             btnSend.innerHTML = "⌛ Enviando...";
 
+            const payload = {
+                title: title || null,
+                body: body,
+                targetType: 'ALL'
+            };
+            console.log("Notificacoes: Enviando push", {
+                titleType: typeof payload.title,
+                bodyType: typeof payload.body,
+                titleLength: payload.title ? payload.title.length : 0,
+                bodyLength: payload.body.length
+            });
+
             const r = await window.Api.apiFetch('/api/push/campaigns/send', {
                 method: 'POST',
-                body: { title: title || null, body, targetType: 'ALL' }
+                body: payload
             });
 
             const data = await r.json();

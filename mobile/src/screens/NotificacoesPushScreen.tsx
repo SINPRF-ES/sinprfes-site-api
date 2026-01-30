@@ -76,16 +76,24 @@ export default function NotificacoesPushScreen() {
   };
 
   const sendNotification = async () => {
+    // Garantir que title/body sejam strings (evitar booleans acidentais)
+    const sanitizedTitle = title ? String(title).trim() : '';
+    const sanitizedBody = body ? String(body).trim() : '';
+
     const payload = {
-      title: title.trim() || null,
-      body: body.trim(),
+      title: sanitizedTitle || null,
+      body: sanitizedBody,
       targetType: 'ALL' as const,
     };
 
     logger.info('Push.SendStart', {
       endpoint: '/api/push/campaigns/send',
-      titleLength: title.length,
-      bodyLength: body.length
+      titleLength: sanitizedTitle.length,
+      bodyLength: sanitizedBody.length,
+      types: {
+        title: typeof payload.title,
+        body: typeof payload.body
+      }
     });
 
     setLoading(true);
