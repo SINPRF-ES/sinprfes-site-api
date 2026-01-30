@@ -12,13 +12,13 @@ exports.sendCampaign = async (req, res) => {
     const { title, body, targetType, targetValue, data } = req.body || {};
 
     // Validação
-    if (!body) {
+    if (!body || String(body).trim().length === 0) {
       return res.status(400).json({ success: false, error: "O corpo da mensagem (body) é obrigatório." });
     }
 
     // Sanitização de tamanho
-    const sanitizedTitle = title ? String(title).substring(0, 60) : null;
-    const sanitizedBody = String(body).substring(0, 240);
+    const sanitizedTitle = title ? String(title).trim().substring(0, 60) : null;
+    const sanitizedBody = String(body).trim().substring(0, 240);
 
     const result = await pushCampaignService.sendCampaign({
       title: sanitizedTitle,
@@ -26,7 +26,9 @@ exports.sendCampaign = async (req, res) => {
       targetType: targetType || 'ALL',
       targetValue,
       data,
-      createdBy
+      createdBy,
+      requestId,
+      perfil
     });
 
     log.info("PushCampaign.ControllerSucesso", {
@@ -58,6 +60,7 @@ exports.sendCampaign = async (req, res) => {
 };
 
 exports.listCampaigns = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;
   const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
 
@@ -66,6 +69,7 @@ exports.listCampaigns = async (req, res) => {
     return res.json({ success: true, campaigns });
   } catch (e) {
     log.error("PushCampaign.ListErro", {
+        requestId,
         userId: createdBy,
         perfil,
         error: e.message

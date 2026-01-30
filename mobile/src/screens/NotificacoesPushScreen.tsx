@@ -40,6 +40,7 @@ export default function NotificacoesPushScreen() {
 
   const fetchHistory = useCallback(async (isRefresh = false) => {
     try {
+      logger.info('Push.FetchHistoryStart', { isRefresh });
       if (!isRefresh) setLoading(true);
       else setRefreshing(true);
       const response = await api.get('/api/push/campaigns');
@@ -75,6 +76,7 @@ export default function NotificacoesPushScreen() {
   };
 
   const sendNotification = async () => {
+    logger.info('Push.SendStart', { titleLength: title.length, bodyLength: body.length });
     setLoading(true);
     try {
       const response = await api.post('/api/push/campaigns/send', {
@@ -84,6 +86,7 @@ export default function NotificacoesPushScreen() {
       });
 
       if (response.data.success) {
+        logger.info('Push.SendSuccess', { sent: response.data.sent, failed: response.data.failed });
         Alert.alert('Sucesso', `Notificação enviada!\nSucesso: ${response.data.sent}\nFalhas: ${response.data.failed}`);
         setTitle('');
         setBody('');
