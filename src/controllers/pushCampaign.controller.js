@@ -1,5 +1,6 @@
 // src/controllers/pushCampaign.controller.js
 const pushCampaignService = require("../services/pushCampaign.service");
+const pushService = require("../services/push.service");
 const log = require("../utils/log");
 const { v4: uuidv4 } = require("uuid");
 
@@ -88,8 +89,18 @@ exports.sendCampaign = async (req, res) => {
       userId: createdBy,
       perfil,
       campaignId: result.campaignId,
-      sent: result.sent
+      sent: result.sent,
+      hasCredentialError: result.hasCredentialError
     });
+
+    if (result.hasCredentialError && result.sent === 0) {
+      return res.status(502).json({
+        ...result,
+        success: false,
+        message: "FCM credentials missing/invalid in Expo project. Configure FCM V1 service account in EAS/Expo credentials.",
+        code: "FCM_CREDENTIALS_ERROR"
+      });
+    }
 
     return res.json(result);
   } catch (e) {
@@ -115,6 +126,43 @@ exports.sendCampaign = async (req, res) => {
     }
 
     return res.status(500).json(response);
+  }
+};
+
+exports.pushHealth = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const userId = req.user?.id;
+  const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
+
+  try {
+    const tokens = await pushService.listActiveTokens(10);
+    const hasTokens = tokens.length > 0;
+
+    const checklist = {
+      hasTokens,
+      tokensCount: tokens.length,
+      expoConfigOk: "Unknown (Requires dry-run with real credentials)",
+      notes: [
+        "FCM V1 requires a Service Account Key (.json) configured in EAS/Expo Credentials.",
+        "Check Render logs for 'InvalidCredentials' if sent=0.",
+        "Use /api/push/campaigns/send for a real test."
+      ]
+    };
+
+    log.info("PushCampaign.HealthCheck", { requestId, userId, tokensCount: tokens.length });
+
+    return res.json({
+      success: true,
+      requestId,
+      checklist
+    });
+  } catch (e) {
+    log.error("PushCampaign.HealthError", { requestId, error: e.message });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao verificar saúde do push.",
+      error: e.message
+    });
   }
 };
 

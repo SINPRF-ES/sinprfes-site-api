@@ -92,7 +92,7 @@
 
             const data = await r.json();
 
-            if (r.ok) {
+            if (r.ok && data.sent > 0) {
                 alert(`Sucesso! Notificação enviada.\n🚀 Sucesso: ${data.sent}\n❌ Falhas: ${data.failed}`);
                 document.getElementById('push-title').value = '';
                 document.getElementById('push-message').value = '';
@@ -100,10 +100,13 @@
                 document.getElementById('push-message-count').textContent = '0';
                 carregarHistorico();
             } else {
+                const errorMsg = data.message || data.error || "Erro ao enviar notificação.";
                 if (r.status === 429) {
                     alert("Limite atingido. Você só pode enviar 2 notificações por minuto.");
+                } else if (data.sent === 0 && data.failed > 0) {
+                    alert(`Falha no envio:\n${errorMsg}\n\n(Tokens: ${data.failed})`);
                 } else {
-                    alert(data.error || "Erro ao enviar notificação.");
+                    alert(errorMsg);
                 }
             }
         } catch (e) {

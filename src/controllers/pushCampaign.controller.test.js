@@ -1,8 +1,10 @@
 // src/controllers/pushCampaign.controller.test.js
 const controller = require('./pushCampaign.controller');
 const pushCampaignService = require('../services/pushCampaign.service');
+const pushService = require('../services/push.service');
 
 jest.mock('../services/pushCampaign.service');
+jest.mock('../services/push.service');
 jest.mock('../utils/log');
 
 describe('Push Campaign Controller', () => {
@@ -118,6 +120,38 @@ describe('Push Campaign Controller', () => {
         message: 'Erro ao processar campanha de push.',
         details: 'DB Error',
         errorId: expect.any(String)
+      }));
+    });
+
+    test('should return 502 on FCM credential error', async () => {
+      req.body = { body: 'Message' };
+      pushCampaignService.sendCampaign.mockResolvedValue({
+        success: true,
+        sent: 0,
+        failed: 10,
+        hasCredentialError: true,
+        campaignId: 'uuid'
+      });
+
+      await controller.sendCampaign(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(502);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        code: 'FCM_CREDENTIALS_ERROR'
+      }));
+    });
+  });
+
+  describe('pushHealth', () => {
+    test('should return health status', async () => {
+      pushService.listActiveTokens.mockResolvedValue(['token1', 'token2']);
+
+      await controller.pushHealth(req, res);
+
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+        checklist: expect.objectContaining({ hasTokens: true })
       }));
     });
   });

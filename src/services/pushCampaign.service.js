@@ -52,6 +52,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   const tickets = [];
   let sentCount = 0;
   let errorCount = 0;
+  let hasCredentialError = false;
   const errors = [];
 
   let chunkIdx = 0;
@@ -73,6 +74,11 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
           errorCount++;
           const errorCode = ticket.details?.error;
           const errorMessage = ticket.message;
+
+          if (errorCode === 'InvalidCredentials') {
+            hasCredentialError = true;
+          }
+
           log.error("PushCampaign.TicketErro", {
             requestId,
             chunkIdx,
@@ -98,6 +104,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   const resultData = {
     sent: sentCount,
     failed: errorCount,
+    hasCredentialError,
     errors: errors.length > 0 ? errors : undefined,
     durationMs: new Date() - startTime
   };
