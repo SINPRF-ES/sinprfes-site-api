@@ -12,27 +12,29 @@ const expo = new Expo();
  */
 async function sendCampaign({ title, body, targetType, targetValue, data, createdBy, requestId, perfil }) {
   const startTime = new Date();
-  log.info("PushCampaign.Iniciado", { requestId, userId: createdBy, perfil, title, body, targetType });
+  log.info("PushCampaign.Iniciado", { requestId, userId: createdBy, perfil, title, body, targetType, targetValue });
 
-  // 1. Buscar tokens (por enquanto apenas targetType='ALL' é suportado conforme v1)
+  // 1. Buscar tokens
   let tokens;
+  let noTokenOrDenied = 0;
   try {
-    tokens = await pushService.listActiveTokens();
-    log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { count: tokens.length });
+    tokens = await pushService.resolvePushTargets(targetType, targetValue);
+    noTokenOrDenied = await pushService.countNoTokenTargets(targetType, targetValue);
+    log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { count: tokens.length, noTokenOrDenied });
   } catch (e) {
     log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
     throw e;
   }
 
   if (!tokens.length) {
-    log.warn("PushCampaign.SemTokens", { requestId, targetType });
+    log.warn("PushCampaign.SemTokens", { requestId, targetType, targetValue });
     const campaignId = await saveCampaignRecord({
       title, body, targetType, targetValue, data, createdBy,
       status: 'SENT',
       sentAt: new Date(),
-      result: { sent: 0, failed: 0, details: "Nenhum token encontrado." }
+      result: { sent: 0, failed: 0, noTokenOrDenied, details: "Nenhum token encontrado." }
     });
-    return { success: true, sent: 0, campaignId };
+    return { success: true, sent: 0, failed: 0, noTokenOrDenied, campaignId };
   }
 
   // 2. Preparar mensagens
@@ -69,7 +71,8 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
       tickets.push(...chunkTickets);
 
       // Log detalhado dos tickets deste chunk
-      chunkTickets.forEach((ticket, idx) => {
+      for (let i = 0; i < chunkTickets.length; i++) {
+        const ticket = chunkTickets[i];
         if (ticket.status === 'error') {
           errorCount++;
           const errorCode = ticket.details?.error;
@@ -79,18 +82,24 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
             hasCredentialError = true;
           }
 
+          // Auto-revogação se o dispositivo não estiver mais registrado
+          if (errorCode === 'DeviceNotRegistered') {
+            log.info("PushCampaign.RevogandoTokenInvalido", { token: chunk[i].to.substring(0, 15) + "..." });
+            await pushService.revokeSpecificToken(chunk[i].to);
+          }
+
           log.error("PushCampaign.TicketErro", {
             requestId,
             chunkIdx,
-            token: chunk[idx].to.substring(0, 15) + "...",
+            token: chunk[i].to.substring(0, 15) + "...",
             errorCode,
             errorMessage
           });
-          errors.push(`Token[${idx}]: ${errorCode || errorMessage}`);
+          errors.push(`Token[${i}]: ${errorCode || errorMessage}`);
         } else {
           sentCount++;
         }
-      });
+      }
 
     } catch (error) {
       log.error("PushCampaign.ChunkErro", { requestId, chunkIdx, error: error.message });
@@ -104,6 +113,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   const resultData = {
     sent: sentCount,
     failed: errorCount,
+    noTokenOrDenied,
     hasCredentialError,
     errors: errors.length > 0 ? errors : undefined,
     durationMs: new Date() - startTime
@@ -151,19 +161,29 @@ async function saveCampaignRecord({ title, body, targetType, targetValue, data, 
   return r.rows[0]?.id;
 }
 
-async function listCampaigns(limit = 20) {
+async function listCampaigns(limit = 20, offset = 0) {
   const sql = `
     SELECT c.*, f.nome as autor_nome
     FROM push_campaigns c
     LEFT JOIN filiados f ON c.created_by = f.id
     ORDER BY c.created_at DESC
-    LIMIT $1;
+    LIMIT $1 OFFSET $2;
   `;
-  const { rows } = await pool.query(sql, [limit]);
+  const { rows } = await pool.query(sql, [limit, offset]);
   return rows;
+}
+
+/**
+ * Remove campanhas com mais de 60 dias
+ */
+async function cleanupOldCampaigns() {
+    const sql = `DELETE FROM push_campaigns WHERE created_at < NOW() - INTERVAL '60 days'`;
+    const r = await pool.query(sql);
+    return r.rowCount;
 }
 
 module.exports = {
   sendCampaign,
-  listCampaigns
+  listCampaigns,
+  cleanupOldCampaigns
 };

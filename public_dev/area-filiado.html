@@ -83,6 +83,37 @@
 
               <div class="form-container" style="max-width: 600px; margin-top: 20px;">
                   <div class="field-group">
+                      <label>Público Alvo</label>
+                      <select id="push-target-type">
+                          <option value="ALL">Todos os filiados com app</option>
+                          <option value="ATIVOS">Apenas ATIVOS</option>
+                          <option value="VETERANOS">Veteranos / Pensionistas</option>
+                          <option value="LOTACAO">Por Lotação (somente ativos)</option>
+                          <option value="JOGOS">Inscritos nos Jogos</option>
+                          <option value="FILIADO">Especificar um Filiado</option>
+                      </select>
+                  </div>
+
+                  <div id="push-target-value-container" class="field-group" style="margin-top: 15px; display: none;">
+                      <label id="push-target-value-label">Valor do Filtro</label>
+
+                      <select id="push-target-lotacao" style="display: none;">
+                          <option value="SEDE">SEDE</option>
+                          <option value="DEL1">DEL1 (Serra)</option>
+                          <option value="DEL2">DEL2 (Viana)</option>
+                          <option value="DEL3">DEL3 (Linhares)</option>
+                          <option value="DEL4">DEL4 (Cachoeiro)</option>
+                      </select>
+
+                      <div id="push-target-filiado-wrapper" style="display: none;">
+                          <input type="text" id="push-target-filiado-search" placeholder="Buscar por nome ou CPF..." />
+                          <select id="push-target-filiado-select" style="margin-top: 5px;">
+                              <option value="">Aguardando busca...</option>
+                          </select>
+                      </div>
+                  </div>
+
+                  <div class="field-group" style="margin-top: 15px;">
                       <label>Título (opcional)</label>
                       <input type="text" id="push-title" maxlength="60" placeholder="Ex: Informativo SINPRF-ES" />
                       <small class="char-counter"><span id="push-title-count">0</span>/60</small>
