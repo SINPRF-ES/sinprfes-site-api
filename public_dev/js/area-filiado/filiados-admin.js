@@ -257,6 +257,7 @@
     function gerarHtmlForm(f) {
         const { toDateInputValue } = global.Formatters || {};
         const ehAdmin = perfilAtual === "ADMIN";
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
         const isArquivado = !!f.arquivado_em;
         const nascimento = f.data_nascimento;
         const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
@@ -301,7 +302,7 @@
                         </div>
                         <div class="field-group">
                             <label>CPF</label>
-                            <input name="cpf" value="${f.cpf || ""}" ${ehAdmin ? "" : "readonly"}>
+                            <input name="cpf" value="${f.cpf || ""}" ${ehGestao ? "" : "readonly"}>
                         </div>
                     </div>
                     <div class="field-row">

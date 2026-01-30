@@ -22,7 +22,7 @@ const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
 
 function perfilGestao(perfil) {
-  return ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"].includes((perfil || "").toUpperCase());
+  return ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((perfil || "").toUpperCase());
 }
 
 /**
@@ -440,7 +440,7 @@ exports.criarFiliado = async (req, res) => {
   try {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
 
-    if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilCriador)) {
+    if (!perfilGestao(perfilCriador)) {
       return res.status(403).json({ message: Textos.FILIADOS.PERMISSAO_CRIAR });
     }
 
@@ -515,7 +515,7 @@ exports.arquivarFiliado = async (req, res) => {
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
+    if (!perfilGestao(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
     }
 
@@ -546,7 +546,7 @@ exports.desarquivarFiliado = async (req, res) => {
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
+    if (!perfilGestao(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
     }
 
@@ -603,7 +603,7 @@ exports.uploadAvatarPorId = async (req, res) => {
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtor)) {
+    if (!perfilGestao(perfilAtor)) {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
     }
 

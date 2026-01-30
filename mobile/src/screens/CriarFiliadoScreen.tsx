@@ -158,7 +158,7 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       />
       <EnderecoCard filiado={filiado as Filiado} setFiliado={setFiliado} />
       <LotacaoCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
-      <DependentesCard filiado={filiado as Filiado} setFiliado={setFiliado} />
+      <DependentesCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
 
     </KeyboardAwareScrollView>
     </SafeScreen>

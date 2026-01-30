@@ -303,7 +303,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const params = [];
   const conds = [];
 
-  const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"];
+  const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
   const isGestao = perfisGestao.includes(perfil);
 
   // Apenas gestores podem incluir arquivados

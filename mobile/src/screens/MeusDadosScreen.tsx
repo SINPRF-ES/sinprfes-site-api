@@ -449,7 +449,7 @@ export default function MeusDadosScreen() {
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}>
           <Text style={styles.sectionTitle}>👶 Dependentes</Text>
         </View>
-        <DependentesCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
+        <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={true} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
       </ErrorBoundary>
 
       {renderExcluirDependentes()}
