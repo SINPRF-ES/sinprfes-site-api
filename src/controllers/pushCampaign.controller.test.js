@@ -47,7 +47,8 @@ describe('Push Campaign Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
-        message: 'O corpo da mensagem (body) é obrigatório.',
+        message: 'Payload inválido: title e body devem ser string não-vazia.',
+        errors: expect.objectContaining({ body: 'O corpo da mensagem (body) é obrigatório.' }),
         code: 'VALIDATION_ERROR'
       }));
     });
@@ -60,7 +61,8 @@ describe('Push Campaign Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
-        message: 'O corpo da mensagem (body) deve ser uma string.',
+        message: 'Payload inválido: title e body devem ser string não-vazia.',
+        errors: expect.objectContaining({ body: 'O corpo da mensagem (body) deve ser uma string.' }),
         code: 'VALIDATION_ERROR'
       }));
     });
@@ -73,7 +75,8 @@ describe('Push Campaign Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
-        message: 'O título (title) deve ser uma string.',
+        message: 'Payload inválido: title e body devem ser string não-vazia.',
+        errors: expect.objectContaining({ title: 'O título (title) deve ser uma string.' }),
         code: 'VALIDATION_ERROR'
       }));
     });
@@ -87,6 +90,19 @@ describe('Push Campaign Controller', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
         code: 'VALIDATION_ERROR'
+      }));
+    });
+
+    test('should return 400 if targetType is invalid', async () => {
+      req.body = { body: 'Message', targetType: 'INVALID' };
+
+      await controller.sendCampaign(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        errors: expect.objectContaining({ targetType: expect.stringContaining('Permitidos') })
       }));
     });
 
