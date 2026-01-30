@@ -76,31 +76,59 @@ export default function NotificacoesPushScreen() {
   };
 
   const sendNotification = async () => {
-    logger.info('Push.SendStart', { titleLength: title.length, bodyLength: body.length });
+    const payload = {
+      title: title.trim() || null,
+      body: body.trim(),
+      targetType: 'ALL' as const,
+    };
+
+    logger.info('Push.SendStart', {
+      endpoint: '/api/push/campaigns/send',
+      titleLength: title.length,
+      bodyLength: body.length
+    });
+
     setLoading(true);
     try {
-      const response = await api.post('/api/push/campaigns/send', {
-        title: title.trim() || null,
-        body: body.trim(),
-        targetType: 'ALL',
+      const response = await api.post('/api/push/campaigns/send', payload);
+
+      logger.info('Push.SendResponse', {
+        status: response.status,
+        success: response.data.success,
+        requestId: response.data.requestId,
+        sent: response.data.sent,
+        failed: response.data.failed
       });
 
       if (response.data.success) {
-        logger.info('Push.SendSuccess', { sent: response.data.sent, failed: response.data.failed });
         Alert.alert('Sucesso', `Notificação enviada!\nSucesso: ${response.data.sent}\nFalhas: ${response.data.failed}`);
         setTitle('');
         setBody('');
         fetchHistory(true);
       } else {
-        Alert.alert('Erro', response.data.error || 'Erro ao enviar notificação.');
+        const errorMsg = response.data.message || response.data.error || 'Erro ao enviar notificação.';
+        Alert.alert('Erro', errorMsg);
       }
     } catch (error: any) {
-      logger.error('Push.SendErro', error);
       const status = error.response?.status;
+      const responseData = error.response?.data;
+      const requestId = responseData?.requestId;
+      const serverMessage = responseData?.message || responseData?.error;
+
+      logger.error('Push.SendErro', error, {
+        endpoint: '/api/push/campaigns/send',
+        status,
+        requestId,
+        serverMessage,
+        payload: { ...payload, title: !!payload.title, body: !!payload.body } // Log existence only for privacy
+      });
+
       if (status === 429) {
         Alert.alert('Limite Atingido', 'Muitas tentativas. Tente novamente em 1 minuto.');
+      } else if (serverMessage) {
+        Alert.alert('Erro no Servidor', serverMessage);
       } else {
-        Alert.alert('Erro', 'Não foi possível enviar a notificação no momento.');
+        Alert.alert('Erro', `Não foi possível enviar a notificação no momento (Status: ${status || 'Unknown'}).`);
       }
     } finally {
       setLoading(false);

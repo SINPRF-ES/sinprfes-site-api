@@ -1,85 +1,96 @@
 # Roteiro de Publicação e Teste de Updates (OTA/APK)
 
-Este guia prático detalha o fluxo para o mantenedor do app SINPRF-ES.
+Este guia detalha o fluxo completo para o mantenedor do app SINPRF-ES, focado no canal **preview** e runtime **54.0.1**.
 
-## 🛠️ Cenário de Teste: Publicando uma OTA
+## A) Preparar repo limpo
+Sempre comece com um estado limpo para evitar artefatos de builds anteriores.
 
-Para validar o fluxo OTA sem gerar um novo APK:
-
-### 1. Preparação no Código
-- Realize a mudança desejada (ex: remover um texto de teste).
-- **NÃO** altere `versionCode` ou `runtimeVersion` no `app.json`.
-
-### 2. Publicação via EAS
-No terminal, na pasta `mobile/`:
 ```bash
-eas update --branch production --message "Removendo texto de teste da Home"
+git fetch origin
+git reset --hard origin/main
+git clean -fdx
 ```
-*Certifique-se de estar logado no EAS (`eas login`).*
+*Nota: Não mantenha artefatos gerados (build .apk, .tar.gz, /release/) dentro do repo. Verifique o .gitignore.*
 
-### 3. Atualização do Manifesto (Drive)
-No Google Drive, abra o arquivo `update-manifest.json` e atualize:
-```json
-"ota": {
-  "enabled": true,
-  "channel": "production",
-  "notes": "Correções na tela inicial e melhorias de estabilidade."
-}
-```
-*O `versionCode` no manifesto deve ser IGUAL ao build atual no celular (ex: 2).*
+## B) Instalar dependências e checagens
+Garanta que o ambiente está correto antes de buildar.
 
-### 4. Teste no Celular
-1. Abra o app.
-2. Vá no menu Lateral (Drawer) -> **Atualizações**.
-3. Toque em **Verificar Atualizações**.
-4. O app deve detectar a atualização OTA.
-5. Toque em **Baixar e Aplicar (Reiniciar)**.
-6. Após o reinício, valide se a mudança (ex: remoção do texto) foi aplicada.
-
----
-
-## 🏗️ Cenário de Teste: Publicando Novo APK
-
-Para mudanças nativas:
-
-### 1. Incrementar Versões (`app.json`)
-```json
-"version": "1.0.1",
-"android": {
-  "versionCode": 3
-}
-```
-
-### 2. Gerar o Binário
 ```bash
-eas build --platform android --profile production --local
+# Na raiz do monorepo
+pnpm install
+
+# Na pasta mobile/
+cd mobile
+npm install
+npx expo install expo-system-ui
+npx expo install --check
+npx expo-doctor
 ```
 
-### 3. Subir para o Drive
-1. Salve o APK como `sinprfes-app-vc3-1.0.1.apk` (histórico).
-2. Substitua o `sinprfes-app-latest.apk` pelo novo arquivo.
+## C) Build local (preview)
+Gere os APKs localmente usando o perfil de preview.
 
-### 4. Atualizar Manifesto
-```json
-{
-  "versionCode": 3,
-  "versionName": "1.0.1",
-  "runtimeVersion": "54.0.0",
-  "apk": {
-    "enabled": true,
-    "fileName": "sinprfes-app-latest.apk",
-    "minSupportedVersionCode": 3,
-    "notes": "Atualização obrigatória por mudanças nativas de segurança."
-  }
-}
+```bash
+npx eas build -p android --profile preview --local
 ```
-*Ao definir `minSupportedVersionCode` como 3, o app antigo (vc2) será bloqueado.*
 
----
+## D) Publicar OTA (Android)
+Envie atualizações de JS/UI sem necessidade de novo APK (desde que o runtimeVersion seja compatível).
 
-## 📌 Convenções de Versionamento
+```bash
+eas update --branch preview --platform android --message "Sua mensagem aqui"
+```
 
-- **versionCode**: Inteiro incremental (1, 2, 3...). Sincronizado com o build nativo.
-- **versionName**: String amigável (1.0.0, 1.0.1...).
-- **runtimeVersion**: Identifica a compatibilidade nativa. Geralmente fixo na versão major do Expo (ex: 54.0.0). Só mude se adicionar plugins nativos que quebrem o código JS antigo.
-- **minSupportedVersionCode**: A versão mínima que o app permite rodar sem forçar o download do APK.
+## E) Extrair e Organizar APKs por ABI
+Após o build local, extraia os binários e organize-os.
+
+```bash
+# 1. Preparar pasta de saída
+mkdir -p /tmp/sinprfes-build-out
+# Localize o arquivo .tar.gz gerado pelo EAS e extraia-o
+tar -xzvf build-*.tar.gz -C /tmp/sinprfes-build-out
+
+# 2. Localizar pasta release
+cd /tmp/sinprfes-build-out/release
+
+# 3. Definir ferramenta AAPT (ajuste o path conforme seu Android SDK)
+AAPT=$ANDROID_HOME/build-tools/34.0.0/aapt
+
+# 4. Extrair metadados (versionCode/versionName)
+$AAPT dump badging app-arm64-v8a-release.apk | grep versionCode
+$AAPT dump badging app-armeabi-v7a-release.apk | grep versionCode
+
+# 5. Renomear e organizar (Exemplo para VC 54)
+VC=54
+VN="1.1.0"
+cp app-arm64-v8a-release.apk sinprfes-app-vc$VC-arm64.apk
+cp app-armeabi-v7a-release.apk sinprfes-app-vc$VC-armeabi.apk
+
+# 6. Criar cópias "latest" para o manifesto
+cp sinprfes-app-vc$VC-arm64.apk sinprfes-app-latest-arm64.apk
+cp sinprfes-app-vc$VC-armeabi.apk sinprfes-app-latest-armeabi.apk
+```
+
+## F) Checklist final (manual)
+Antes de atualizar o `update-manifest.json` no Google Drive:
+
+1. [ ] Confirmar `versionCode` idêntico nos dois APKs.
+2. [ ] Confirmar `runtimeVersion: "54.0.1"` no `app.json`.
+3. [ ] Confirmar que o canal EAS é `preview`.
+4. [ ] Testar auto-check: ao logar, o modal deve aparecer se houver update.
+5. [ ] Testar botão "Baixar agora" no modal: deve iniciar download e instalação.
+6. [ ] Confirmar logs no `Atualizações` -> `Ver Logs`: procurar por `Update.Modal.CTA.Click` e `Update.Apk.Download.Success`.
+
+## 🔍 Debug (Opcional)
+Comandos úteis para depuração via ADB:
+
+```bash
+# Instalar manualmente via cabo/wifi
+adb install -r sinprfes-app-vc54-arm64.apk
+
+# Ver logs em tempo real filtrando pelo app
+adb logcat *:S ReactNative:V ReactNativeJS:V
+
+# Limpar cache do app
+adb shell pm clear br.org.sinprfes.app
+```

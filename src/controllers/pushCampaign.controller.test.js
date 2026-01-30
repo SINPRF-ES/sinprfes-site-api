@@ -36,7 +36,23 @@ describe('Push Campaign Controller', () => {
       await controller.sendCampaign(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'O corpo da mensagem (body) é obrigatório.' }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        message: 'O corpo da mensagem (body) é obrigatório.',
+        code: 'VALIDATION_ERROR'
+      }));
+    });
+
+    test('should return 400 if title is too long', async () => {
+      req.body = { title: 'a'.repeat(61), body: 'Valid message' };
+
+      await controller.sendCampaign(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        code: 'VALIDATION_ERROR'
+      }));
     });
 
     test('should return 500 on service failure', async () => {
@@ -46,7 +62,12 @@ describe('Push Campaign Controller', () => {
       await controller.sendCampaign(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, errorId: expect.any(String) }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        message: 'Erro ao processar campanha de push.',
+        details: 'DB Error',
+        errorId: expect.any(String)
+      }));
     });
   });
 
