@@ -81,3 +81,39 @@ O app realiza uma verificação automática no momento do **Login** (primeiro ac
 - O check ocorre em background.
 - Se detectado update, exibe um modal (obrigatório/login) ou banner (opcional/background).
 - **Nunca aplica sozinho**: O usuário deve sempre confirmar a aplicação da atualização ou o redirecionamento para o download do APK.
+
+## 7. APK Split por ABI e Otimização de Tamanho
+
+Para garantir que o aplicativo permaneça leve, utilizamos a técnica de **ABI Splitting**. Isso gera um APK específico para cada arquitetura de processador, em vez de um único APK universal gigante.
+
+### Arquiteturas Suportadas:
+- **arm64-v8a**: Dispositivos modernos de 64 bits.
+- **armeabi-v7a**: Dispositivos legados de 32 bits.
+
+### Otimizações Ativas:
+- `minifyEnabled`: true (Remove código não utilizado)
+- `shrinkResources`: true (Remove recursos não utilizados)
+
+### Como gerar os APKs:
+1. Execute o build local ou via EAS:
+   ```bash
+   # Exemplo via EAS
+   eas build --platform android --profile production
+   ```
+2. O EAS costuma retornar um link para download de um artefato. Se o split estiver ativo, o artefato pode ser um `.tar.gz`.
+3. Extraia o conteúdo e identifique os arquivos na pasta `release/`:
+   - `app-arm64-v8a-release.apk`
+   - `app-armeabi-v7a-release.apk`
+
+### Convenção de Nomes:
+Sempre renomear os arquivos antes de subir para o Drive para facilitar a identificação no `update-manifest.json`:
+- `sinprfes-app-vcX-1.0.0-arm64.apk`
+- `sinprfes-app-vcX-1.0.0-armeabi.apk`
+*(Onde `vcX` é o `versionCode` atual)*
+
+### Guardrail de Build:
+Antes de qualquer release de base nativa, é **obrigatório** rodar o script de verificação:
+```bash
+npm run verify:android-split
+```
+Este script garante que as configurações de split e `universalApk false` permanecem no `build.gradle` após o prebuild.
