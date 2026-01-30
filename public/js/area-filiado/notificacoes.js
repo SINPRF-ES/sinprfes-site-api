@@ -8,6 +8,19 @@
 
     function init(perfil) {
         console.log("Notificacoes: Inicializando para perfil:", perfil);
+
+        // Controle de visibilidade do menu
+        const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        const navItem = document.getElementById('nav-notificacoes');
+
+        if (navItem) {
+            if (perfisAutorizados.includes(perfil)) {
+                navItem.style.display = "block";
+            } else {
+                navItem.style.display = "none";
+            }
+        }
+
         setupHandlers();
         carregarHistorico();
     }
@@ -40,8 +53,12 @@
         const titleEl = document.getElementById('push-title');
         const messageEl = document.getElementById('push-message');
 
-        const title = titleEl ? titleEl.value.trim() : '';
-        const body = messageEl ? messageEl.value.trim() : '';
+        // Garantir strings (evitar booleans acidentais do DOM ou extensões)
+        const titleRaw = titleEl ? titleEl.value : '';
+        const bodyRaw = messageEl ? messageEl.value : '';
+
+        const title = String(titleRaw).trim();
+        const body = String(bodyRaw).trim();
 
         if (!body) {
             alert("A mensagem é obrigatória.");
@@ -58,14 +75,26 @@
             btnSend.disabled = true;
             btnSend.innerHTML = "⌛ Enviando...";
 
+            const payload = {
+                title: title || null,
+                body: body,
+                targetType: 'ALL'
+            };
+            console.log("Notificacoes: Enviando push", {
+                titleType: typeof payload.title,
+                bodyType: typeof payload.body,
+                titleLength: payload.title ? payload.title.length : 0,
+                bodyLength: payload.body.length
+            });
+
             const r = await window.Api.apiFetch('/api/push/campaigns/send', {
                 method: 'POST',
-                body: { title: title || null, body, targetType: 'ALL' }
+                body: payload
             });
 
             const data = await r.json();
 
-            if (r.ok) {
+            if (r.ok && data.sent > 0) {
                 alert(`Sucesso! Notificação enviada.\n🚀 Sucesso: ${data.sent}\n❌ Falhas: ${data.failed}`);
                 if (titleEl) titleEl.value = '';
                 if (messageEl) messageEl.value = '';
@@ -77,10 +106,13 @@
 
                 carregarHistorico();
             } else {
+                const errorMsg = data.message || data.error || "Erro ao enviar notificação.";
                 if (r.status === 429) {
                     alert("Limite atingido. Você só pode enviar 2 notificações por minuto.");
+                } else if (data.sent === 0 && data.failed > 0) {
+                    alert(`Falha no envio:\n${errorMsg}\n\n(Tokens: ${data.failed})`);
                 } else {
-                    alert(data.error || "Erro ao enviar notificação.");
+                    alert(errorMsg);
                 }
             }
         } catch (e) {

@@ -18,7 +18,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   let tokens;
   try {
     tokens = await pushService.listActiveTokens();
-    log.info("PushCampaign.TokensObtidos", { requestId, count: tokens.length });
+    log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { count: tokens.length });
   } catch (e) {
     log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
     throw e;
@@ -52,30 +52,59 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   const tickets = [];
   let sentCount = 0;
   let errorCount = 0;
+  let hasCredentialError = false;
   const errors = [];
 
   let chunkIdx = 0;
   for (const chunk of chunks) {
     chunkIdx++;
     try {
-      log.info("PushCampaign.EnviandoChunk", { requestId, chunkIdx, chunkSize: chunk.length });
+      log.info("PushCampaign.EnviandoChunk", {
+        requestId,
+        chunkIdx,
+        chunkSize: chunk.length,
+        totalChunks: chunks.length
+      });
       const chunkTickets = await expo.sendPushNotificationsAsync(chunk);
       tickets.push(...chunkTickets);
-      sentCount += chunkTickets.length;
+
+      // Log detalhado dos tickets deste chunk
+      chunkTickets.forEach((ticket, idx) => {
+        if (ticket.status === 'error') {
+          errorCount++;
+          const errorCode = ticket.details?.error;
+          const errorMessage = ticket.message;
+
+          if (errorCode === 'InvalidCredentials') {
+            hasCredentialError = true;
+          }
+
+          log.error("PushCampaign.TicketErro", {
+            requestId,
+            chunkIdx,
+            token: chunk[idx].to.substring(0, 15) + "...",
+            errorCode,
+            errorMessage
+          });
+          errors.push(`Token[${idx}]: ${errorCode || errorMessage}`);
+        } else {
+          sentCount++;
+        }
+      });
+
     } catch (error) {
       log.error("PushCampaign.ChunkErro", { requestId, chunkIdx, error: error.message });
       errorCount += chunk.length;
-      errors.push(`Chunk ${chunkIdx}: ${error.message}`);
+      errors.push(`Chunk ${chunkIdx} (Transport Error): ${error.message}`);
     }
   }
 
-  // 4. Analisar tickets (opcional para v1, mas bom para histórico)
-  // Por simplicidade na v1, vamos considerar enviados se o ticket foi gerado.
-  // Erros de tokens inválidos aparecem no recibo posterior, que não trataremos agora.
+  // 4. Analisar tickets (v1 simplificada: logs já feitos acima)
 
   const resultData = {
     sent: sentCount,
     failed: errorCount,
+    hasCredentialError,
     errors: errors.length > 0 ? errors : undefined,
     durationMs: new Date() - startTime
   };

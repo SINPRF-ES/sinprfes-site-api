@@ -85,5 +85,6 @@ async function sendBroadcast({ title, body, data }) {
 module.exports = {
   upsertToken,
   revokeToken,
+  listActiveTokens,
   sendBroadcast,
 };

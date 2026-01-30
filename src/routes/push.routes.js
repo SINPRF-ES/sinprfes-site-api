@@ -28,6 +28,13 @@ router.post(
   campaignController.sendCampaign
 );
 
+router.get(
+  "/health",
+  auth,
+  requirePermission("PUSH_GERENCIAR"),
+  campaignController.pushHealth
+);
+
 // Admin/Diretoria podem disparar broadcast manual (legacy/simples)
 router.post(
   "/broadcast",
