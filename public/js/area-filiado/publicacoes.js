@@ -159,7 +159,8 @@
             if (!perfisGestao.includes(perfil)) {
                 const pastasOcultas = ["APPS", "APP", "NOTICIAS", "NOTÍCIAS", "NOTICIA", "NOTÍCIA"];
                 lista = lista.filter(item => {
-                    if (item.isFolder) {
+                    // Ocultar pastas técnicas apenas na raiz, conforme comportamento do App
+                    if (item.isFolder && !folderId) {
                         const tituloNorm = (item.titulo || "").toUpperCase().trim();
                         if (pastasOcultas.includes(tituloNorm)) {
                             console.log("PUBLICACOES_FOLDER_FILTER_APPLIED", { folder: item.titulo });

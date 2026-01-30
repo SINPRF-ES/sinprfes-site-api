@@ -10,9 +10,11 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { normalizeText } from '../utils/masks';
+import { normalizeText, maskCPF } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
 import { logger } from '../infra/logger';
@@ -40,9 +42,12 @@ export default function NotificacoesPushScreen() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [targetType, setTargetType] = useState('ALL');
-  const [targetValue, setTargetValue] = useState('');
+  const [targetValue, setTargetValue] = useState<any>('');
   const [filiadosBusca, setFiliadosBusca] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isPickerVisible, setIsPickerVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isShowingArchived, setIsShowingArchived] = useState(false);
@@ -69,31 +74,43 @@ export default function NotificacoesPushScreen() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const handleFiliadoSearch = async (q: string) => {
-    if (q.length < 2) {
-      setFiliadosBusca([]);
-      return;
-    }
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery.length >= 2) {
+        performSearch(searchQuery);
+      } else {
+        setFiliadosBusca([]);
+      }
+    }, 400);
 
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const performSearch = async (q: string) => {
     try {
-        // Buscamos uma lista maior para filtrar localmente se necessário
-        // ou confiamos no backend se ele for robusto o suficiente.
-        // O usuário quer accent-insensitive.
+        setIsSearching(true);
         const response = await api.get(`/api/filiados?q=${encodeURIComponent(q)}`);
         const results = response.data.filiados || [];
 
-        // Refinamento local para garantir accent-insensitivity (joao = João)
         const normalizedQuery = normalizeText(q);
+        const queryOnlyDigits = q.replace(/\D/g, '');
+
         const filtered = results.filter((f: any) => {
           const nNome = normalizeText(f.nome || '');
           const nCpf = (f.cpf || '').replace(/\D/g, '');
-          return nNome.includes(normalizedQuery) || nCpf.includes(normalizedQuery);
+
+          const matchNome = nNome.includes(normalizedQuery);
+          const matchCpf = nCpf.includes(normalizedQuery) || (queryOnlyDigits && nCpf.includes(queryOnlyDigits));
+
+          return matchNome || matchCpf;
         });
 
         setFiliadosBusca(filtered.slice(0, 50));
         logger.info('NOTIF_FILIADO_SEARCH_QUERY', { queryLength: q.length, resultsCount: filtered.length });
     } catch (e) {
         console.error(e);
+    } finally {
+        setIsSearching(false);
     }
   };
 
@@ -104,13 +121,20 @@ export default function NotificacoesPushScreen() {
     }
 
     if (targetType === 'FILIADO' && !targetValue) {
-        Alert.alert('Erro', 'Selecione um filiado para o alvo específico.');
+        Alert.alert('Erro', 'Selecione um filiado para o destino específico.');
         return;
+    }
+
+    let targetLabel = targetType;
+    if (targetType === 'FILIADO' && targetValue?.nome) {
+      targetLabel = `Filiado — ${targetValue.nome} (${maskCPF(targetValue.cpf)})`;
+    } else if (targetValue) {
+      targetLabel = `${targetType} (${targetValue})`;
     }
 
     Alert.alert(
       'Confirmar Envio',
-      `Deseja realmente enviar esta notificação?\n\nPúblico: ${targetType}${targetValue ? ' ('+targetValue+')' : ''}\n\n"${body}"`,
+      `Deseja realmente enviar esta notificação?\n\nDestino: ${targetLabel}\n\n"${body}"`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Enviar Agora', onPress: sendNotification },
@@ -193,7 +217,20 @@ export default function NotificacoesPushScreen() {
   const renderCampaign = ({ item }: { item: Campaign }) => {
     const date = new Date(item.created_at).toLocaleString('pt-BR');
     const statusColor = item.status === 'SENT' ? '#2ecc71' : '#e74c3c';
-    const targetLabel = item.target_type + (item.target_value ? `: ${item.target_value}` : '');
+
+    let displayTargetValue = item.target_value;
+    if (item.target_type === 'FILIADO' && item.target_value) {
+      try {
+        const parsed = JSON.parse(item.target_value);
+        if (parsed && typeof parsed === 'object') {
+          displayTargetValue = `${parsed.nome} (${maskCPF(parsed.cpf)})`;
+        }
+      } catch (e) {
+        // Mantém ID original se não for JSON
+      }
+    }
+
+    const targetLabel = item.target_type + (displayTargetValue ? `: ${displayTargetValue}` : '');
 
     return (
       <View style={styles.historyCard}>
@@ -201,9 +238,9 @@ export default function NotificacoesPushScreen() {
           <Text style={styles.historyDate}>{date}</Text>
           <Text style={[styles.historyStatus, { color: statusColor }]}>{item.status}</Text>
         </View>
-        <Text style={styles.historyAuthor}>Por: {item.autor_nome || 'Sistema'} | Alvo: {targetLabel}</Text>
+        <Text style={styles.historyAuthor}>Por: {item.autor_nome || 'Sistema'} | Destino: {targetLabel}</Text>
         {item.title && <Text style={styles.historyTitle}>{item.title}</Text>}
-        <Text style={styles.historyBody}>{item.body}</Text>
+        <Text style={styles.historyBody} numberOfLines={3} ellipsizeMode="tail">{item.body}</Text>
         <View style={styles.historyResult}>
           <Text style={styles.resultText}>🚀 {item.result?.sent || 0}</Text>
           <Text style={styles.resultText}>❌ {item.result?.failed || 0}</Text>
@@ -215,6 +252,72 @@ export default function NotificacoesPushScreen() {
 
   return (
     <SafeScreen style={styles.container}>
+      <Modal
+        visible={isPickerVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Buscar Filiado</Text>
+              <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Nome ou CPF..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+
+            {isSearching ? (
+              <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} />
+            ) : (
+              <FlatList
+                data={filiadosBusca}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
+                      setIsPickerVisible(false);
+                      setSearchQuery('');
+                      setFiliadosBusca([]);
+                    }}
+                  >
+                    <View>
+                      <Text style={styles.modalItemName} numberOfLines={1} ellipsizeMode="tail">
+                        {item.nome}
+                      </Text>
+                      <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
+                    </View>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={() => (
+                  <Text style={styles.modalEmptyText}>
+                    {searchQuery.length < 2
+                      ? "Digite pelo menos 2 caracteres para buscar..."
+                      : "Nenhum filiado encontrado."}
+                  </Text>
+                )}
+                keyboardShouldPersistTaps="handled"
+              />
+            )}
+
+            {filiadosBusca.length >= 50 && (
+              <Text style={styles.infoLabel}>Muitos resultados. Refine sua busca se não encontrar quem deseja.</Text>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true, isShowingArchived)} />}
@@ -222,7 +325,7 @@ export default function NotificacoesPushScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📢 Nova Notificação</Text>
 
-          <Text style={styles.label}>Público Alvo</Text>
+          <Text style={styles.label}>Público de Destino</Text>
           <View style={styles.pickerContainer}>
             <Picker
                 selectedValue={targetType}
@@ -256,37 +359,22 @@ export default function NotificacoesPushScreen() {
 
           {targetType === 'FILIADO' && (
              <View>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Buscar filiado (nome/cpf)..."
-                    onChangeText={handleFiliadoSearch}
-                />
-                {filiadosBusca.length > 0 && (
-                  <View style={styles.searchResults}>
-                    {filiadosBusca.map(f => (
-                      <TouchableOpacity
-                        key={f.id}
-                        style={[styles.searchItem, targetValue === String(f.id) && styles.searchItemActive]}
-                        onPress={() => {
-                          setTargetValue(String(f.id));
-                          // Opcional: limpar busca após selecionar?
-                          // Melhor não para o usuário ver o que selecionou.
-                        }}
-                      >
-                        <Text style={[styles.searchItemText, targetValue === String(f.id) && styles.searchItemTextActive]}>
-                          {f.nome}
-                        </Text>
-                        <Text style={styles.searchItemSub}>{f.cpf}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-                {targetValue ? (
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => setIsPickerVisible(true)}
+                >
+                  <Text style={styles.pickerButtonText} numberOfLines={1}>
+                    {targetValue?.nome ? `${targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar filiado...'}
+                  </Text>
+                  <MaterialCommunityIcons name="magnify" size={20} color="#666" />
+                </TouchableOpacity>
+
+                {targetValue?.id ? (
                   <Text style={styles.selectedLabel}>
-                    Selecionado ID: {targetValue}
+                    Selecionado: {targetValue.nome} - {maskCPF(targetValue.cpf)}
                   </Text>
                 ) : (
-                  <Text style={styles.infoLabel}>Selecione um filiado na lista acima.</Text>
+                  <Text style={styles.infoLabel}>Selecione um filiado para o envio específico.</Text>
                 )}
              </View>
           )}
@@ -375,6 +463,78 @@ const styles = StyleSheet.create({
   picker: {
     height: 60, // Aumentado para evitar corte
     width: '100%',
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fafafa',
+  },
+  pickerButtonText: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: Dimensions.get('window').height * 0.8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  modalSearchInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 15,
+    backgroundColor: '#f9f9f9',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalItemName: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+    maxWidth: Dimensions.get('window').width * 0.7,
+  },
+  modalItemCpf: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  modalEmptyText: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 20,
+    paddingBottom: 20,
   },
   scrollContent: { padding: 16 },
   card: {

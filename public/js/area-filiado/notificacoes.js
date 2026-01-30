@@ -97,7 +97,7 @@
                 if (filiados.length === 0) {
                     select.innerHTML = '<option value="">Nenhum encontrado</option>';
                 } else {
-                    select.innerHTML = filiados.map(f => `<option value="${f.id}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
+                    select.innerHTML = filiados.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
                 }
             }
         } catch (e) {
@@ -124,14 +124,27 @@
         if (targetType === 'LOTACAO') {
             targetValue = document.getElementById('push-target-lotacao').value;
         } else if (targetType === 'FILIADO') {
-            targetValue = document.getElementById('push-target-filiado-select').value;
-            if (!targetValue) {
+            const select = document.getElementById('push-target-filiado-select');
+            const opt = select.options[select.selectedIndex];
+            if (!opt || !opt.value) {
                 alert("Selecione um filiado válido.");
                 return;
             }
+            targetValue = {
+                id: opt.value,
+                nome: opt.dataset.nome,
+                cpf: opt.dataset.cpf
+            };
         }
 
-        const confirmMsg = `Deseja realmente enviar esta notificação?\n\nPúblico: ${targetType}${targetValue ? ' ('+targetValue+')' : ''}\nMensagem: "${body}"`;
+        let targetLabel = targetType;
+        if (targetType === 'FILIADO' && targetValue && typeof targetValue === 'object') {
+            targetLabel = `Filiado — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
+        } else if (targetValue) {
+            targetLabel = `${targetType} (${targetValue})`;
+        }
+
+        const confirmMsg = `Deseja realmente enviar esta notificação?\n\nDestino: ${targetLabel}\nMensagem: "${body}"`;
         if (!confirm(confirmMsg)) return;
 
         const btnSend = document.getElementById('btn-send-push');
@@ -209,7 +222,20 @@
             const data = formatarData(c.created_at);
             const statusClass = c.status === 'SENT' ? 'status-sent' : 'status-failed';
             const statusLabel = c.status === 'SENT' ? 'Enviado' : 'Falhou';
-            const targetLabel = c.target_type + (c.target_value ? `: ${c.target_value}` : '');
+
+            let displayTargetValue = c.target_value;
+            if (c.target_type === 'FILIADO' && c.target_value) {
+                try {
+                    const parsed = JSON.parse(c.target_value);
+                    if (parsed && typeof parsed === 'object') {
+                        displayTargetValue = `${parsed.nome} (${window.Formatters?.formatCpf(parsed.cpf) || parsed.cpf})`;
+                    }
+                } catch (e) {
+                    // Mantém original se não for JSON
+                }
+            }
+
+            const targetLabel = c.target_type + (displayTargetValue ? `: ${displayTargetValue}` : '');
 
             return `
                 <div class="history-card">
@@ -217,9 +243,9 @@
                         <span class="history-date">${data}</span>
                         <span class="history-status ${statusClass}">${statusLabel}</span>
                     </div>
-                    <div class="history-author">Por: ${c.autor_nome || 'Sistema'} | Alvo: ${targetLabel}</div>
+                    <div class="history-author">Por: ${c.autor_nome || 'Sistema'} | Destino: ${targetLabel}</div>
                     ${c.title ? `<div class="history-title">${c.title}</div>` : ''}
-                    <div class="history-body">${c.body}</div>
+                    <div class="history-body" style="white-space: pre-wrap;">${c.body}</div>
                     <div class="history-results">
                         <span title="Sucesso">🚀 ${c.result?.sent || 0}</span>
                         <span title="Falhas">❌ ${c.result?.failed || 0}</span>
