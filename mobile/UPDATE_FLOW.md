@@ -57,4 +57,11 @@ Este documento descreve os critérios para decidir entre uma atualização via O
 | Nova permissão (GPS) | APK | **Sim** |
 | Atualizar Expo SDK | APK | **Sim** |
 
+---
+
+## 🛠️ Notas de Integração WebView
+
+- **Estatuto no app**: O WebView utiliza o modo embed (`?embed=1`) para evitar a renderização do header/nav azul do portal, garantindo que o usuário utilize apenas a navegação nativa do app (Sumário).
+- **Parâmetros Suportados**: `embed=1` ou `app=1` ocultam `#site-header` e `#site-footer`.
+
 **Nota**: Em caso de dúvida, opte pelo Build de APK para garantir que todos os usuários recebam as mudanças nativas necessárias.

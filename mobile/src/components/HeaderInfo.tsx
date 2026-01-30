@@ -36,8 +36,9 @@ const HeaderInfo: React.FC<Props> = ({ filiado }) => {
   return (
     <View style={styles.container}>
       <Image
-        source={filiado.avatar_url ? { uri: filiado.avatar_url } : require('../../assets/icon.png')}
+        source={filiado.avatar_url ? { uri: filiado.avatar_url } : require('../../assets/logo.png')}
         style={styles.avatar}
+        resizeMode="contain"
       />
       <Text style={styles.nome}>{filiado.nome}</Text>
       {perfilLabel ? <Text style={styles.perfil}>{perfilLabel}</Text> : null}
