@@ -40,8 +40,44 @@ Este documento descreve os critérios para decidir entre uma atualização via O
    - Sobrescreva o `sinprfes-app-latest.apk` na pasta `Publicações/App` do Drive.
 5. **Manifesto**:
    - Atualize `versionCode`, `versionName` e `runtimeVersion` no `update-manifest.json`.
+   - Preencha `apk.files` com os nomes dos arquivos por ABI (veja seção "ABI Split" abaixo).
    - Defina `minSupportedVersionCode` se a atualização for obrigatória.
 6. **Bloqueio**: Versões antigas abaixo do `minSupportedVersionCode` serão bloqueadas e forçadas a baixar o novo APK.
+
+---
+
+## 📱 3. Suporte a ABI Split (Otimização de Tamanho)
+
+O app utiliza ABI Split para reduzir o tamanho do download. Isso gera múltiplos APKs (um para cada arquitetura).
+
+### Como preencher o manifesto para ABI Split:
+
+No `update-manifest.json`, use o campo `files` dentro de `apk`:
+
+```json
+"apk": {
+  "enabled": true,
+  "minSupportedVersionCode": 7,
+  "notes": "Nova versão com melhorias nativas.",
+  "files": {
+    "arm64-v8a": "sinprfes-app-vc7-arm64.apk",
+    "armeabi-v7a": "sinprfes-app-vc7-v7a.apk"
+  }
+}
+```
+
+### Regras de Resolução:
+1. O App detecta as arquiteturas suportadas pelo celular.
+2. Ele tenta baixar o primeiro arquivo correspondente encontrado em `apk.files`.
+3. Fallback: Se não houver correspondência exata, ele tenta `arm64-v8a`, depois `armeabi-v7a`.
+4. Legado: Se `apk.files` não existir, o app usará o campo `apk.fileName`.
+
+---
+
+## 🔒 4. Downloads Autenticados
+
+Diferente das versões anteriores, o app **não usa mais** `webViewLink` (que exigia permissão pública).
+Agora o download é feito via backend autenticado, o que permite manter a pasta `App` no Google Drive como **privada**.
 
 ---
 

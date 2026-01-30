@@ -1,16 +1,42 @@
-const { withAppBuildGradle } = require('@expo/config-plugins');
+const { withAppBuildGradle, withAndroidManifest } = require('@expo/config-plugins');
 
+/**
+ * Adiciona configuração de Split APK por ABI e permissão de instalação.
+ */
 const withAndroidSplit = (config) => {
-  return withAppBuildGradle(config, (config) => {
+  // 1. Configuração de Split APK
+  config = withAppBuildGradle(config, (config) => {
     if (config.modResults.language === 'groovy') {
       config.modResults.contents = addSplitConfig(config.modResults.contents);
     }
     return config;
   });
+
+  // 2. Adição da permissão REQUEST_INSTALL_PACKAGES (Nível 2)
+  // Fazemos via plugin para evitar sobrescrever android.permissions no app.json,
+  // o que pode causar regressões em builds otimizados.
+  config = withAndroidManifest(config, (config) => {
+    const mainManifest = config.modResults.manifest;
+    if (!mainManifest['uses-permission']) {
+      mainManifest['uses-permission'] = [];
+    }
+    const hasPermission = mainManifest['uses-permission'].some(
+      (p) => p.$['android:name'] === 'android.permission.REQUEST_INSTALL_PACKAGES'
+    );
+    if (!hasPermission) {
+      mainManifest['uses-permission'].push({
+        $: { 'android:name': 'android.permission.REQUEST_INSTALL_PACKAGES' },
+      });
+    }
+    return config;
+  });
+
+  return config;
 };
 
 function addSplitConfig(contents) {
-  if (contents.includes('splits {')) {
+  // Se já existir um bloco splits, não duplica
+  if (contents.includes('splits {') || contents.includes('splits{')) {
     return contents;
   }
 
@@ -25,8 +51,8 @@ function addSplitConfig(contents) {
     }
 `;
 
-  // Insert before the end of the android block
-  return contents.replace(/android {/, 'android {' + splitBlock);
+  // Inserção robusta logo após a abertura do bloco android
+  return contents.replace(/android\s*{/, 'android {\n' + splitBlock);
 }
 
 module.exports = withAndroidSplit;
