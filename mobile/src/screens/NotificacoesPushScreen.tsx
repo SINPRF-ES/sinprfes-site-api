@@ -12,6 +12,8 @@ import {
   RefreshControl,
   Modal,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { normalizeText, maskCPF } from '../utils/masks';
@@ -218,15 +220,28 @@ export default function NotificacoesPushScreen() {
     const date = new Date(item.created_at).toLocaleString('pt-BR');
     const statusColor = item.status === 'SENT' ? '#2ecc71' : '#e74c3c';
 
-    let displayTargetValue = item.target_value;
+    const statusMap: { [key: string]: string } = {
+      SENT: 'ENVIADO',
+      FAILED: 'FALHOU',
+      QUEUED: 'EM FILA'
+    };
+
+    let displayTargetValue: any = item.target_value;
     if (item.target_type === 'FILIADO' && item.target_value) {
-      try {
-        const parsed = JSON.parse(item.target_value);
-        if (parsed && typeof parsed === 'object') {
-          displayTargetValue = `${parsed.nome} (${maskCPF(parsed.cpf)})`;
+      let obj: any = null;
+      if (typeof item.target_value === 'object') {
+        obj = item.target_value;
+      } else {
+        try {
+          obj = JSON.parse(item.target_value);
+        } catch (e) {
+          obj = null;
         }
-      } catch (e) {
-        // Mantém ID original se não for JSON
+      }
+
+      if (obj && typeof obj === 'object') {
+        displayTargetValue = `${obj.nome || ''} (${maskCPF(obj.cpf || '')})`.trim();
+        if (displayTargetValue === '()') displayTargetValue = obj.id || item.target_value;
       }
     }
 
@@ -236,7 +251,7 @@ export default function NotificacoesPushScreen() {
       <View style={styles.historyCard}>
         <View style={styles.historyHeader}>
           <Text style={styles.historyDate}>{date}</Text>
-          <Text style={[styles.historyStatus, { color: statusColor }]}>{item.status}</Text>
+          <Text style={[styles.historyStatus, { color: statusColor }]}>{statusMap[item.status] || item.status}</Text>
         </View>
         <Text style={styles.historyAuthor}>Por: {item.autor_nome || 'Sistema'} | Destino: {targetLabel}</Text>
         {item.title && <Text style={styles.historyTitle}>{item.title}</Text>}
@@ -252,6 +267,11 @@ export default function NotificacoesPushScreen() {
 
   return (
     <SafeScreen style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
       <Modal
         visible={isPickerVisible}
         animationType="slide"
@@ -369,11 +389,7 @@ export default function NotificacoesPushScreen() {
                   <MaterialCommunityIcons name="magnify" size={20} color="#666" />
                 </TouchableOpacity>
 
-                {targetValue?.id ? (
-                  <Text style={styles.selectedLabel}>
-                    Selecionado: {targetValue.nome} - {maskCPF(targetValue.cpf)}
-                  </Text>
-                ) : (
+                {!targetValue?.id && (
                   <Text style={styles.infoLabel}>Selecione um filiado para o envio específico.</Text>
                 )}
              </View>
@@ -446,6 +462,7 @@ export default function NotificacoesPushScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeScreen>
   );
 }
