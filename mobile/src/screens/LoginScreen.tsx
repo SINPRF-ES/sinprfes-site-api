@@ -151,7 +151,7 @@ export default function LoginScreen() {
     <KeyboardAwareScrollView contentContainerStyle={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
       <View style={styles.card}>
         <View style={styles.logoContainer}>
-          <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         </View>
 
         <Text style={styles.title}>SINPRF/ES</Text>
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', padding: 24, backgroundColor: '#001A33' },
   card: { backgroundColor: '#ffffff', padding: 24, borderRadius: 16, elevation: 4 },
   logoContainer: { alignItems: 'center', marginBottom: 12 },
-  logo: { width: 90, height: 90 },
+  logo: { width: 180, height: 150 },
   title: { fontSize: 26, fontWeight: 'bold', textAlign: 'center', marginBottom: 4, color: '#003366' },
   subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 24, color: '#555' },
   biometricButton: {

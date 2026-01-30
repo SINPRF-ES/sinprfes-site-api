@@ -25,8 +25,9 @@ const CustomDrawerContent = (props) => {
     <DrawerContentScrollView {...props}>
       <View style={styles.header}>
         <Image
-          source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/icon.webp')}
+          source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/logo.png')}
           style={styles.avatar}
+          resizeMode="contain"
         />
         <Text style={styles.nome}>{usuario?.nome || 'Usuário'}</Text>
         <Text style={styles.status}>{usuario?.situacao || 'ATIVO'}</Text>
@@ -45,11 +46,6 @@ const CustomDrawerContent = (props) => {
             label="Novo Filiado"
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('CriarFiliado')}
-          />
-          <DrawerItem
-            label="Enviar Notificação"
-            icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
-            onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
         </>
       )}
