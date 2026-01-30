@@ -8,12 +8,39 @@ exports.sendCampaign = async (req, res) => {
   const createdBy = req.user?.id;
   const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
 
+  log.info("PushCampaign.ControllerIniciado", {
+    requestId,
+    userId: createdBy,
+    perfil,
+    payload: req.body ? { ...req.body, body: req.body.body ? "..." : null } : null
+  });
+
   try {
     const { title, body, targetType, targetValue, data } = req.body || {};
 
     // Validação
     if (!body || String(body).trim().length === 0) {
-      return res.status(400).json({ success: false, error: "O corpo da mensagem (body) é obrigatório." });
+      return res.status(400).json({
+        success: false,
+        message: "O corpo da mensagem (body) é obrigatório.",
+        code: "VALIDATION_ERROR"
+      });
+    }
+
+    if (title && String(title).length > 60) {
+      return res.status(400).json({
+        success: false,
+        message: "O título não pode exceder 60 caracteres.",
+        code: "VALIDATION_ERROR"
+      });
+    }
+
+    if (String(body).length > 240) {
+      return res.status(400).json({
+        success: false,
+        message: "O corpo da mensagem não pode exceder 240 caracteres.",
+        code: "VALIDATION_ERROR"
+      });
     }
 
     // Sanitização de tamanho
@@ -53,8 +80,10 @@ exports.sendCampaign = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: "Erro ao processar campanha de push.",
-      errorId
+      message: "Erro ao processar campanha de push.",
+      details: e.message,
+      errorId,
+      code: "INTERNAL_SERVER_ERROR"
     });
   }
 };
@@ -74,6 +103,11 @@ exports.listCampaigns = async (req, res) => {
         perfil,
         error: e.message
     });
-    return res.status(500).json({ success: false, error: "Erro ao listar campanhas." });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao listar campanhas.",
+      details: e.message,
+      code: "INTERNAL_SERVER_ERROR"
+    });
   }
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated, DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { checkUpdates, applyOtaUpdate, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
+import { checkUpdates, applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
 import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { logDebug } from '../utils/filiadoUtils';
@@ -112,30 +112,46 @@ const UpdateAutoChecker: React.FC = () => {
   const handleUpdate = async () => {
     if (!updateResult) return;
 
+    logDebug('Update.Modal.CTA.Click', { type: updateResult.type, isMandatory: updateResult.isMandatory });
+
     if (updateResult.type === 'OTA') {
       setIsUpdating(true);
       try {
-        logDebug('AutoCheck.applyingOTA', {});
+        logDebug('Update.Ota.Download.Start', {});
         await applyOtaUpdate();
+        logDebug('Update.Ota.Download.Success', {});
       } catch (error: any) {
-        logDebug('AutoCheck.otaFailed', { message: error.message });
-        Alert.alert('Erro', 'Não foi possível aplicar a atualização. Tente novamente pela tela de Configurações.');
+        logDebug('Update.Ota.Download.Error', { message: error.message });
+        Alert.alert('Erro', 'Não foi possível aplicar a atualização OTA. Tente novamente pela tela de Atualizações.');
         setIsUpdating(false);
       }
     } else {
       // APK Update
-      logDebug('AutoCheck.handlingAPK', { url: updateResult.apkUrl, mandatory: updateResult.isMandatory });
+      if (updateResult.apkFileId && updateResult.apkFileName) {
+        setIsUpdating(true);
+        try {
+          logDebug('Update.Apk.Download.Start', { fileId: updateResult.apkFileId, fileName: updateResult.apkFileName });
+          await downloadAndInstallApk(updateResult.apkFileId, updateResult.apkFileName);
+          logDebug('Update.Apk.Download.Success', {});
 
-      if (updateResult.apkUrl) {
-          Linking.openURL(updateResult.apkUrl);
-      }
-
-      // Se não for obrigatório, podemos fechar o modal e opcionalmente levar o usuário para a tela de atualizações
-      if (!updateResult.isMandatory) {
+          // Se não for obrigatório, podemos fechar o modal após disparar o instalador
+          if (!updateResult.isMandatory) {
+            setShowModal(false);
+            setUpdateResult(null);
+          }
+        } catch (error: any) {
+          logDebug('Update.Apk.Download.Error', { message: error.message });
+          Alert.alert('Erro no Download', 'Falha ao baixar o APK: ' + error.message);
+        } finally {
+          setIsUpdating(false);
+        }
+      } else {
+        logDebug('Update.Apk.Error', { reason: 'Missing file info' });
+        Alert.alert('Erro', 'Dados do APK não encontrados. Tente pela tela de Atualizações.');
+        if (!updateResult.isMandatory) {
+          setShowModal(false);
           setUpdateResult(null);
-          try {
-            navigation.navigate('Drawer', { screen: 'Atualizacoes' });
-          } catch (e) {}
+        }
       }
     }
   };
