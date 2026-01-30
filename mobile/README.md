@@ -45,3 +45,12 @@ Utilize o prefixo `EXPO_PUBLIC_` para variáveis acessíveis no código (ex: `EX
 
 ### Logs
 Instrumentação via `logger` em fluxos críticos (Auth, API, Publicações). Logs disponíveis na tela de **Diagnóstico** para ADMINS.
+
+## ⚠️ CONFIGURAÇÕES CRÍTICAS (Build & Tamanho)
+
+Para manter o tamanho do APK reduzido (~30-40 MB) e suporte a arquiteturas específicas:
+
+1.  **Split por ABI**: O plugin `./plugins/withAndroidSplit.js` deve estar sempre ativo no `app.json`. Ele configura o Gradle para gerar APKs separados por arquitetura.
+2.  **Minificação (R8)**: No `app.json` (via `expo-build-properties`), `enableMinifyInReleaseBuilds` e `enableShrinkResourcesInReleaseBuilds` devem ser `true`.
+3.  **Permissões Android**: Evite usar o bloco `android.permissions` no `app.json`, pois ele sobrescreve permissões padrão e pode interferir em builds otimizados. Utilize o plugin `withAndroidSplit.js` (que agora gerencia o `AndroidManifest.xml`) para adicionar permissões nativas.
+4.  **Assets**: Utilize formatos otimizados (WebP) para assets internos.
