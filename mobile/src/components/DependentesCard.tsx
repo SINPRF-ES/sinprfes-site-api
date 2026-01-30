@@ -8,7 +8,7 @@ import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate, cal
 import { PARENTESCO_OPTIONS, normalizeParentesco } from '../shared/parentesco';
 
 // Subcomponente para cada item de dependente
-const DependenteItem = ({ filiado, setFiliado, index }) => {
+const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
   const handleDateChange = (text: string) => {
     const formatted = formatDateToDdMmYyyy(text);
     setFiliado(f => {
@@ -56,32 +56,35 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
 
       <Text style={styles.label}>Nome</Text>
       <TextInput
-        style={styles.input}
+        style={isEditing ? styles.input : styles.inputDisabled}
         placeholder="Nome completo"
         value={filiado?.[`dep${index}_nome`] || ''}
         onChangeText={(text) => handleDependentChange('nome', text)}
+        editable={isEditing}
         accessibilityLabel={`Nome do Dependente ${index}`}
       />
 
       <Text style={styles.label}>CPF</Text>
       <TextInput
-        style={styles.input}
+        style={isEditing ? styles.input : styles.inputDisabled}
         placeholder="apenas números"
         value={formatCpf(filiado?.[`dep${index}_cpf`] || '')}
         onChangeText={(text) => handleDependentChange('cpf', text, true)}
         keyboardType="numeric"
         maxLength={14}
+        editable={isEditing}
         accessibilityLabel={`CPF do Dependente ${index}`}
       />
 
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
-        style={styles.input}
+        style={isEditing ? styles.input : styles.inputDisabled}
         placeholder="DD/MM/AAAA"
         value={toBrazilianDate(filiado?.[`dep${index}_data_nascimento`] || '')}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}
+        editable={isEditing}
         accessibilityLabel={`Data de Nascimento do Dependente ${index}`}
       />
 
@@ -94,10 +97,11 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
       />
 
       <Text style={styles.label}>Parentesco</Text>
-      <View style={styles.pickerContainer}>
+      <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <Picker
           selectedValue={parentescoMode}
           onValueChange={handleParentescoChange}
+          enabled={isEditing}
         >
           {parentescoOptions.map(opt => (
             <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
@@ -109,10 +113,11 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
         <>
           <Text style={styles.label}>Informe o parentesco</Text>
           <TextInput
-            style={styles.input}
+            style={isEditing ? styles.input : styles.inputDisabled}
             placeholder="Informe o parentesco"
             value={currentParentescoValue}
             onChangeText={(text) => handleDependentChange('parentesco', text)}
+            editable={isEditing}
             accessibilityLabel={`Outro parentesco do Dependente ${index}`}
           />
         </>
@@ -121,12 +126,12 @@ const DependenteItem = ({ filiado, setFiliado, index }) => {
   );
 };
 
-const DependentesCard: React.FC<{filiado: Filiado | null, setFiliado: any, hideTitle?: boolean, cardStyle?: any, isEditing?: boolean}> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {}, isEditing = true }) => {
+const DependentesCard: React.FC<{filiado: Filiado | null, setFiliado: any, hideTitle?: boolean, cardStyle?: any, isEditing?: boolean}> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {}, isEditing = false }) => {
   return (
     <View style={[styles.card, cardStyle]}>
       {!hideTitle && <Text style={styles.cardTitle}>Dependentes</Text>}
       {[1, 2, 3, 4, 5].map(i => (
-        <DependenteItem key={i} index={i} filiado={filiado} setFiliado={setFiliado} />
+        <DependenteItem key={i} index={i} filiado={filiado} setFiliado={setFiliado} isEditing={isEditing} />
       ))}
     </View>
   );
@@ -190,6 +195,14 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 5,
     marginBottom: 15,
+    backgroundColor: '#fff',
+  },
+  pickerContainerDisabled: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 15,
+    backgroundColor: '#f0f0f0',
   },
 });
 
