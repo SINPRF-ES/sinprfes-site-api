@@ -18,7 +18,7 @@ function maskToken(token) {
 exports.register = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const userId = getUserId(req);
-  const { expoPushToken, deviceId, platform } = req.body || {};
+  const { expoPushToken, deviceId, platform, permissionStatus } = req.body || {};
   const bodyKeys = req.body ? Object.keys(req.body) : [];
 
   try {
@@ -28,12 +28,25 @@ exports.register = async (req, res) => {
       route: req.originalUrl,
       userId,
       platform,
+      permissionStatus,
       expoPushTokenMasked: maskToken(expoPushToken),
       bodyKeys
     });
 
     if (!userId) {
       return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente)." });
+    }
+
+    // Se negou, registramos mesmo sem token
+    if (permissionStatus === 'denied' && !expoPushToken) {
+        await pushService.upsertToken({
+            userId,
+            expoPushToken: null,
+            deviceId: deviceId ? String(deviceId) : null,
+            platform: platform ? String(platform) : null,
+            permissionStatus
+        });
+        return res.json({ success: true, message: "Status de permissão negado registrado." });
     }
 
     if (!expoPushToken) {
@@ -45,6 +58,7 @@ exports.register = async (req, res) => {
       expoPushToken: String(expoPushToken),
       deviceId: deviceId ? String(deviceId) : null,
       platform: platform ? String(platform) : null,
+      permissionStatus: permissionStatus || 'granted'
     });
 
     return res.json({ success: true, id: result?.id ?? null });
