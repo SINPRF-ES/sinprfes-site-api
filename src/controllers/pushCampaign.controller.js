@@ -8,52 +8,68 @@ exports.sendCampaign = async (req, res) => {
   const createdBy = req.user?.id;
   const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
 
+  const payloadForLog = req.body ? {
+    ...req.body,
+    title: req.body.title ? (typeof req.body.title === 'string' ? `${req.body.title.substring(0, 10)}...` : req.body.title) : null,
+    body: req.body.body ? (typeof req.body.body === 'string' ? `${req.body.body.substring(0, 10)}...` : req.body.body) : null
+  } : null;
+
+  const payloadTypes = req.body ? {
+    title: typeof req.body.title,
+    body: typeof req.body.body,
+    targetType: typeof req.body.targetType,
+    targetValue: typeof req.body.targetValue,
+    data: typeof req.body.data
+  } : null;
+
   log.info("PushCampaign.ControllerIniciado", {
     requestId,
     userId: createdBy,
     perfil,
-    payload: req.body ? { ...req.body, body: req.body.body ? "..." : null } : null
+    payload: payloadForLog,
+    types: payloadTypes
   });
 
   try {
     const { title, body, targetType, targetValue, data } = req.body || {};
+    const errors = {};
 
     // Validação
-    const reportValidationError = (message) => {
-      log.warn("PushCampaign.ValidacaoFalhou", { requestId, userId: createdBy, message });
+    if (body === undefined || body === null) {
+      errors.body = "O corpo da mensagem (body) é obrigatório.";
+    } else if (typeof body !== 'string') {
+      errors.body = "O corpo da mensagem (body) deve ser uma string.";
+    } else if (body.trim().length === 0) {
+      errors.body = "O corpo da mensagem (body) não pode ser vazio.";
+    } else if (body.length > 240) {
+      errors.body = "O corpo da mensagem não pode exceder 240 caracteres.";
+    }
+
+    if (title !== undefined && title !== null) {
+      if (typeof title !== 'string') {
+        errors.title = "O título (title) deve ser uma string.";
+      } else if (title.length > 60) {
+        errors.title = "O título não pode exceder 60 caracteres.";
+      }
+    }
+
+    const allowedTargetTypes = ['ALL', 'PROFILE', 'USER'];
+    if (targetType && !allowedTargetTypes.includes(targetType)) {
+      errors.targetType = `Tipo de alvo inválido. Permitidos: ${allowedTargetTypes.join(', ')}`;
+    }
+
+    if (Object.keys(errors).length > 0) {
+      log.warn("PushCampaign.ValidacaoFalhou", { requestId, userId: createdBy, errors });
       return res.status(400).json({
         success: false,
-        message,
+        message: "Payload inválido: title e body devem ser string não-vazia.",
+        errors,
         code: "VALIDATION_ERROR"
       });
-    };
-
-    if (body === undefined || body === null) {
-      return reportValidationError("O corpo da mensagem (body) é obrigatório.");
-    }
-
-    if (typeof body !== 'string') {
-      return reportValidationError("O corpo da mensagem (body) deve ser uma string.");
-    }
-
-    if (body.trim().length === 0) {
-      return reportValidationError("O corpo da mensagem (body) não pode ser vazio.");
-    }
-
-    if (title !== undefined && title !== null && typeof title !== 'string') {
-      return reportValidationError("O título (title) deve ser uma string.");
-    }
-
-    if (title && title.length > 60) {
-      return reportValidationError("O título não pode exceder 60 caracteres.");
-    }
-
-    if (body.length > 240) {
-      return reportValidationError("O corpo da mensagem não pode exceder 240 caracteres.");
     }
 
     // Sanitização de tamanho
-    const sanitizedTitle = title ? title.trim().substring(0, 60) : null;
+    const sanitizedTitle = (title && typeof title === 'string') ? title.trim().substring(0, 60) : null;
     const sanitizedBody = body.trim().substring(0, 240);
 
     const result = await pushCampaignService.sendCampaign({
