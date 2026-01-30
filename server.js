@@ -15,5 +15,9 @@ logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 // Inicializa o scheduler de aniversariantes (cron + boot trigger)
 initBirthdayScheduler();
 
+// Inicializa o scheduler de limpeza de push (60 dias)
+const { initPushCleanupScheduler } = require("./src/jobs/pushCleanupScheduler");
+initPushCleanupScheduler();
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));

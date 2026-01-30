@@ -11,6 +11,8 @@ import {
   FlatList,
   RefreshControl,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { normalizeText } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
 import { logger } from '../infra/logger';
@@ -23,10 +25,13 @@ interface Campaign {
   body: string;
   created_at: string;
   status: string;
+  target_type: string;
+  target_value: string | null;
   autor_nome: string | null;
   result: {
     sent: number;
     failed: number;
+    noTokenOrDenied?: number;
   };
 }
 
@@ -34,16 +39,21 @@ export default function NotificacoesPushScreen() {
   const { usuario } = useAuth();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [targetType, setTargetType] = useState('ALL');
+  const [targetValue, setTargetValue] = useState('');
+  const [filiadosBusca, setFiliadosBusca] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isShowingArchived, setIsShowingArchived] = useState(false);
 
-  const fetchHistory = useCallback(async (isRefresh = false) => {
+  const fetchHistory = useCallback(async (isRefresh = false, showArchived = false) => {
     try {
-      logger.info('Push.FetchHistoryStart', { isRefresh });
+      logger.info('Push.FetchHistoryStart', { isRefresh, showArchived });
       if (!isRefresh) setLoading(true);
       else setRefreshing(true);
-      const response = await api.get('/api/push/campaigns');
+      const url = showArchived ? '/api/push/campaigns?includeArchived=1' : '/api/push/campaigns';
+      const response = await api.get(url);
       if (response.data.success) {
         setCampaigns(response.data.campaigns);
       }
@@ -59,15 +69,48 @@ export default function NotificacoesPushScreen() {
     fetchHistory();
   }, [fetchHistory]);
 
+  const handleFiliadoSearch = async (q: string) => {
+    if (q.length < 2) {
+      setFiliadosBusca([]);
+      return;
+    }
+
+    try {
+        // Buscamos uma lista maior para filtrar localmente se necessário
+        // ou confiamos no backend se ele for robusto o suficiente.
+        // O usuário quer accent-insensitive.
+        const response = await api.get(`/api/filiados?q=${encodeURIComponent(q)}`);
+        const results = response.data.filiados || [];
+
+        // Refinamento local para garantir accent-insensitivity (joao = João)
+        const normalizedQuery = normalizeText(q);
+        const filtered = results.filter((f: any) => {
+          const nNome = normalizeText(f.nome || '');
+          const nCpf = (f.cpf || '').replace(/\D/g, '');
+          return nNome.includes(normalizedQuery) || nCpf.includes(normalizedQuery);
+        });
+
+        setFiliadosBusca(filtered.slice(0, 50));
+        logger.info('NOTIF_FILIADO_SEARCH_QUERY', { queryLength: q.length, resultsCount: filtered.length });
+    } catch (e) {
+        console.error(e);
+    }
+  };
+
   const handleSend = () => {
     if (!body.trim()) {
       Alert.alert('Erro', 'O corpo da mensagem é obrigatório.');
       return;
     }
 
+    if (targetType === 'FILIADO' && !targetValue) {
+        Alert.alert('Erro', 'Selecione um filiado para o alvo específico.');
+        return;
+    }
+
     Alert.alert(
       'Confirmar Envio',
-      `Deseja realmente enviar esta notificação para TODOS os filiados registrados?\n\n"${body}"`,
+      `Deseja realmente enviar esta notificação?\n\nPúblico: ${targetType}${targetValue ? ' ('+targetValue+')' : ''}\n\n"${body}"`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Enviar Agora', onPress: sendNotification },
@@ -83,7 +126,8 @@ export default function NotificacoesPushScreen() {
     const payload = {
       title: sanitizedTitle || null,
       body: sanitizedBody,
-      targetType: 'ALL' as const,
+      targetType: targetType,
+      targetValue: targetValue || null
     };
 
     logger.info('Push.SendStart', {
@@ -109,10 +153,13 @@ export default function NotificacoesPushScreen() {
       });
 
       if (response.data.success) {
-        Alert.alert('Sucesso', `Notificação enviada!\nSucesso: ${response.data.sent}\nFalhas: ${response.data.failed}`);
+        Alert.alert(
+            'Sucesso',
+            `Notificação enviada!\n🚀 Sucesso: ${response.data.sent}\n❌ Falhas: ${response.data.failed}\n🚫 Sem Token/Negado: ${response.data.noTokenOrDenied || 0}`
+        );
         setTitle('');
         setBody('');
-        fetchHistory(true);
+        fetchHistory(true, isShowingArchived);
       } else {
         const errorMsg = response.data.message || response.data.error || 'Erro ao enviar notificação.';
         Alert.alert('Erro', errorMsg);
@@ -146,6 +193,7 @@ export default function NotificacoesPushScreen() {
   const renderCampaign = ({ item }: { item: Campaign }) => {
     const date = new Date(item.created_at).toLocaleString('pt-BR');
     const statusColor = item.status === 'SENT' ? '#2ecc71' : '#e74c3c';
+    const targetLabel = item.target_type + (item.target_value ? `: ${item.target_value}` : '');
 
     return (
       <View style={styles.historyCard}>
@@ -153,12 +201,13 @@ export default function NotificacoesPushScreen() {
           <Text style={styles.historyDate}>{date}</Text>
           <Text style={[styles.historyStatus, { color: statusColor }]}>{item.status}</Text>
         </View>
-        <Text style={styles.historyAuthor}>Por: {item.autor_nome || 'Sistema'}</Text>
+        <Text style={styles.historyAuthor}>Por: {item.autor_nome || 'Sistema'} | Alvo: {targetLabel}</Text>
         {item.title && <Text style={styles.historyTitle}>{item.title}</Text>}
         <Text style={styles.historyBody}>{item.body}</Text>
         <View style={styles.historyResult}>
           <Text style={styles.resultText}>🚀 {item.result?.sent || 0}</Text>
           <Text style={styles.resultText}>❌ {item.result?.failed || 0}</Text>
+          <Text style={styles.resultText}>🚫 {item.result?.noTokenOrDenied || 0}</Text>
         </View>
       </View>
     );
@@ -168,11 +217,81 @@ export default function NotificacoesPushScreen() {
     <SafeScreen style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true, isShowingArchived)} />}
       >
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📢 Nova Notificação</Text>
-          <Text style={styles.label}>Título (opcional)</Text>
+
+          <Text style={styles.label}>Público Alvo</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+                selectedValue={targetType}
+                onValueChange={(v) => { setTargetType(v); setTargetValue(''); }}
+                style={styles.picker}
+            >
+                <Picker.Item label="Todos com app" value="ALL" />
+                <Picker.Item label="Apenas ATIVOS" value="ATIVOS" />
+                <Picker.Item label="Veteranos / Pensionistas" value="VETERANOS" />
+                <Picker.Item label="Por Lotação" value="LOTACAO" />
+                <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
+                <Picker.Item label="Especificar Filiado" value="FILIADO" />
+            </Picker>
+          </View>
+
+          {targetType === 'LOTACAO' && (
+             <View style={styles.pickerContainer}>
+                <Picker
+                    selectedValue={targetValue}
+                    onValueChange={setTargetValue}
+                    style={styles.picker}
+                >
+                    <Picker.Item label="SEDE" value="SEDE" />
+                    <Picker.Item label="DEL1 (Serra)" value="DEL1" />
+                    <Picker.Item label="DEL2 (Viana)" value="DEL2" />
+                    <Picker.Item label="DEL3 (Linhares)" value="DEL3" />
+                    <Picker.Item label="DEL4 (Cachoeiro)" value="DEL4" />
+                </Picker>
+             </View>
+          )}
+
+          {targetType === 'FILIADO' && (
+             <View>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Buscar filiado (nome/cpf)..."
+                    onChangeText={handleFiliadoSearch}
+                />
+                {filiadosBusca.length > 0 && (
+                  <View style={styles.searchResults}>
+                    {filiadosBusca.map(f => (
+                      <TouchableOpacity
+                        key={f.id}
+                        style={[styles.searchItem, targetValue === String(f.id) && styles.searchItemActive]}
+                        onPress={() => {
+                          setTargetValue(String(f.id));
+                          // Opcional: limpar busca após selecionar?
+                          // Melhor não para o usuário ver o que selecionou.
+                        }}
+                      >
+                        <Text style={[styles.searchItemText, targetValue === String(f.id) && styles.searchItemTextActive]}>
+                          {f.nome}
+                        </Text>
+                        <Text style={styles.searchItemSub}>{f.cpf}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {targetValue ? (
+                  <Text style={styles.selectedLabel}>
+                    Selecionado ID: {targetValue}
+                  </Text>
+                ) : (
+                  <Text style={styles.infoLabel}>Selecione um filiado na lista acima.</Text>
+                )}
+             </View>
+          )}
+
+          <Text style={[styles.label, { marginTop: 12 }]}>Título (opcional)</Text>
           <TextInput
             style={styles.input}
             value={title}
@@ -215,7 +334,27 @@ export default function NotificacoesPushScreen() {
           {campaigns.length === 0 && !loading ? (
             <Text style={styles.emptyText}>Nenhum envio realizado ainda.</Text>
           ) : (
-            campaigns.map((c) => <View key={c.id}>{renderCampaign({ item: c })}</View>)
+            <>
+              {campaigns.map((c) => <View key={c.id}>{renderCampaign({ item: c })}</View>)}
+
+              {!isShowingArchived && campaigns.length >= 5 && (
+                  <TouchableOpacity
+                    style={styles.archivedButton}
+                    onPress={() => { setIsShowingArchived(true); fetchHistory(true, true); }}
+                  >
+                    <Text style={styles.archivedButtonText}>Visualizar anteriores</Text>
+                  </TouchableOpacity>
+              )}
+
+              {isShowingArchived && (
+                  <TouchableOpacity
+                    style={styles.archivedButton}
+                    onPress={() => { setIsShowingArchived(false); fetchHistory(true, false); }}
+                  >
+                    <Text style={styles.archivedButtonText}>Ver apenas recentes</Text>
+                  </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -225,6 +364,18 @@ export default function NotificacoesPushScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fafafa',
+    marginBottom: 10,
+    // overflow: 'hidden' // Removido para evitar corte no Android em alguns casos
+  },
+  picker: {
+    height: 60, // Aumentado para evitar corte
+    width: '100%',
+  },
   scrollContent: { padding: 16 },
   card: {
     backgroundColor: '#fff',
@@ -279,4 +430,56 @@ const styles = StyleSheet.create({
   historyResult: { flexDirection: 'row', gap: 12, marginTop: 4 },
   resultText: { fontSize: 12, fontWeight: 'bold', color: '#666' },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 20 },
+  searchResults: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    marginTop: 5,
+    backgroundColor: '#fff',
+  },
+  searchItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  searchItemActive: {
+    backgroundColor: '#e6f0fa',
+  },
+  searchItemText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  searchItemTextActive: {
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  searchItemSub: {
+    fontSize: 11,
+    color: '#999',
+  },
+  selectedLabel: {
+    fontSize: 12,
+    color: '#2ecc71',
+    marginTop: 5,
+    fontWeight: 'bold',
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 5,
+    fontStyle: 'italic',
+  },
+  archivedButton: {
+    marginTop: 8,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#003366',
+    borderRadius: 8
+  },
+  archivedButtonText: {
+    color: '#003366',
+    fontWeight: 'bold'
+  }
 });

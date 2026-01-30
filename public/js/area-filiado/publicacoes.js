@@ -153,6 +153,23 @@
             if(!r.ok) throw new Error("Erro API");
             let lista = await r.json();
 
+            // Filtragem de Pastas Técnicas (Apps, Noticias) para não-gestão
+            const perfil = (options.perfil || "").toUpperCase();
+            const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+            if (!perfisGestao.includes(perfil)) {
+                const pastasOcultas = ["APPS", "APP", "NOTICIAS", "NOTÍCIAS", "NOTICIA", "NOTÍCIA"];
+                lista = lista.filter(item => {
+                    if (item.isFolder) {
+                        const tituloNorm = (item.titulo || "").toUpperCase().trim();
+                        if (pastasOcultas.includes(tituloNorm)) {
+                            console.log("PUBLICACOES_FOLDER_FILTER_APPLIED", { folder: item.titulo });
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+            }
+
             // Ordenação Alfabética (Case-Insensitive)
             if (lista && Array.isArray(lista)) {
                 lista.sort((a, b) => {
