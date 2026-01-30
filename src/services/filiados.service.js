@@ -354,11 +354,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     return anexarEstadoCadastroLista(rows);
   }
 
-  // filiado: devolve só diretório (inclui avatar para exibição)
+  // filiado: devolve só diretório (inclui avatar e lotação p/ visualização)
   const { rows } = await pool.query(
     `
     SELECT
-      f.id, f.nome, f.telefone1, f.avatar_url, f.situacao, f.arquivado_em
+      f.id, f.nome, f.telefone1, f.avatar_url, f.lotacao, f.situacao, f.arquivado_em
     FROM filiados f
     ${whereSql}
     ORDER BY f.nome ASC

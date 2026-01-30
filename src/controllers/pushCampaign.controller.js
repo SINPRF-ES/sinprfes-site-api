@@ -19,33 +19,42 @@ exports.sendCampaign = async (req, res) => {
     const { title, body, targetType, targetValue, data } = req.body || {};
 
     // Validação
-    if (!body || String(body).trim().length === 0) {
+    const reportValidationError = (message) => {
+      log.warn("PushCampaign.ValidacaoFalhou", { requestId, userId: createdBy, message });
       return res.status(400).json({
         success: false,
-        message: "O corpo da mensagem (body) é obrigatório.",
+        message,
         code: "VALIDATION_ERROR"
       });
+    };
+
+    if (body === undefined || body === null) {
+      return reportValidationError("O corpo da mensagem (body) é obrigatório.");
     }
 
-    if (title && String(title).length > 60) {
-      return res.status(400).json({
-        success: false,
-        message: "O título não pode exceder 60 caracteres.",
-        code: "VALIDATION_ERROR"
-      });
+    if (typeof body !== 'string') {
+      return reportValidationError("O corpo da mensagem (body) deve ser uma string.");
     }
 
-    if (String(body).length > 240) {
-      return res.status(400).json({
-        success: false,
-        message: "O corpo da mensagem não pode exceder 240 caracteres.",
-        code: "VALIDATION_ERROR"
-      });
+    if (body.trim().length === 0) {
+      return reportValidationError("O corpo da mensagem (body) não pode ser vazio.");
+    }
+
+    if (title !== undefined && title !== null && typeof title !== 'string') {
+      return reportValidationError("O título (title) deve ser uma string.");
+    }
+
+    if (title && title.length > 60) {
+      return reportValidationError("O título não pode exceder 60 caracteres.");
+    }
+
+    if (body.length > 240) {
+      return reportValidationError("O corpo da mensagem não pode exceder 240 caracteres.");
     }
 
     // Sanitização de tamanho
-    const sanitizedTitle = title ? String(title).trim().substring(0, 60) : null;
-    const sanitizedBody = String(body).trim().substring(0, 240);
+    const sanitizedTitle = title ? title.trim().substring(0, 60) : null;
+    const sanitizedBody = body.trim().substring(0, 240);
 
     const result = await pushCampaignService.sendCampaign({
       title: sanitizedTitle,
@@ -78,13 +87,18 @@ exports.sendCampaign = async (req, res) => {
       stack: e.stack
     });
 
-    return res.status(500).json({
+    const response = {
       success: false,
       message: "Erro ao processar campanha de push.",
-      details: e.message,
       errorId,
       code: "INTERNAL_SERVER_ERROR"
-    });
+    };
+
+    if ((process.env.ASSEMBLEIA_ENV || "dev") === "dev") {
+      response.details = e.message;
+    }
+
+    return res.status(500).json(response);
   }
 };
 

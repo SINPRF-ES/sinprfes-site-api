@@ -117,3 +117,9 @@ Antes de qualquer release de base nativa, é **obrigatório** rodar o script de 
 npm run verify:android-split
 ```
 Este script garante que as configurações de split e `universalApk false` permanecem no `build.gradle` após o prebuild.
+
+## 8. Notas de Versão (API/Backend)
+
+### Janeiro 2026
+- **Push Notifications**: Adicionada validação estrita no backend para `title` e `body` (devem ser strings). Erros de payload agora retornam HTTP 400 em vez de 500. Instrumentação reforçada com `errorId` e logs detalhados para diagnóstico.
+- **Diretório de Filiados**: O campo `lotacao` agora é retornado para o perfil `FILIADO`, permitindo que todos os usuários visualizem a lotação dos colegas na listagem.

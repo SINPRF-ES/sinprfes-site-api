@@ -15,9 +15,17 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   log.info("PushCampaign.Iniciado", { requestId, userId: createdBy, perfil, title, body, targetType });
 
   // 1. Buscar tokens (por enquanto apenas targetType='ALL' é suportado conforme v1)
-  const tokens = await pushService.listActiveTokens();
+  let tokens;
+  try {
+    tokens = await pushService.listActiveTokens();
+    log.info("PushCampaign.TokensObtidos", { requestId, count: tokens.length });
+  } catch (e) {
+    log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
+    throw e;
+  }
+
   if (!tokens.length) {
-    log.warn("PushCampaign.SemTokens", { targetType });
+    log.warn("PushCampaign.SemTokens", { requestId, targetType });
     const campaignId = await saveCampaignRecord({
       title, body, targetType, targetValue, data, createdBy,
       status: 'SENT',
@@ -39,20 +47,25 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
 
   // 3. Chunks e Envio
   const chunks = expo.chunkPushNotifications(messages);
+  log.info("PushCampaign.ChunksCriados", { requestId, chunksCount: chunks.length, messagesCount: messages.length });
+
   const tickets = [];
   let sentCount = 0;
   let errorCount = 0;
   const errors = [];
 
+  let chunkIdx = 0;
   for (const chunk of chunks) {
+    chunkIdx++;
     try {
+      log.info("PushCampaign.EnviandoChunk", { requestId, chunkIdx, chunkSize: chunk.length });
       const chunkTickets = await expo.sendPushNotificationsAsync(chunk);
       tickets.push(...chunkTickets);
       sentCount += chunkTickets.length;
     } catch (error) {
-      log.error("PushCampaign.ChunkErro", error);
+      log.error("PushCampaign.ChunkErro", { requestId, chunkIdx, error: error.message });
       errorCount += chunk.length;
-      errors.push(error.message);
+      errors.push(`Chunk ${chunkIdx}: ${error.message}`);
     }
   }
 
@@ -68,12 +81,21 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   };
 
   // 5. Salvar registro
-  const campaignId = await saveCampaignRecord({
-    title, body, targetType, targetValue, data, createdBy,
-    status: errorCount === messages.length ? 'FAILED' : 'SENT',
-    sentAt: new Date(),
-    result: resultData
-  });
+  let campaignId;
+  try {
+    campaignId = await saveCampaignRecord({
+        title, body, targetType, targetValue, data, createdBy,
+        status: (errorCount === messages.length && messages.length > 0) ? 'FAILED' : 'SENT',
+        sentAt: new Date(),
+        result: resultData
+    });
+    log.info("PushCampaign.RegistroSalvo", { requestId, campaignId });
+  } catch (e) {
+    log.error("PushCampaign.ErroSalvarRegistro", { requestId, error: e.message });
+    // Não vamos falhar o retorno se apenas o log no banco falhou,
+    // mas na v1 o registro é importante. Vamos deixar propagar para diagnosticar.
+    throw e;
+  }
 
   log.info("PushCampaign.Finalizado", { requestId, userId: createdBy, campaignId, ...resultData });
 
