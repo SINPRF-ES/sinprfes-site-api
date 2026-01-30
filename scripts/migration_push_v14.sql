@@ -4,7 +4,7 @@
 
 ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS permission_status VARCHAR(20);
 
--- Register cleanup job if it doesn't exist (to track last run)
-INSERT INTO job_runs (job_name, last_run)
-SELECT 'PUSH_CLEANUP', NOW() - INTERVAL '1 day'
+-- Register cleanup job if it doesn't exist
+INSERT INTO job_runs (job_name, last_run_date, updated_at)
+SELECT 'PUSH_CLEANUP', '01/01/1970', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM job_runs WHERE job_name = 'PUSH_CLEANUP');
