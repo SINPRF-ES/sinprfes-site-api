@@ -44,7 +44,7 @@
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes();
-                else if (abaAlvo === 'sec-notificacoes' && Notificacoes) Notificacoes.init();
+                else if (abaAlvo === 'sec-notificacoes' && Notificacoes) Notificacoes.init(perfil);
                 else if (abaAlvo === 'sec-cms' && CMSAdmin) CMSAdmin.init();
             });
         }
@@ -61,11 +61,7 @@
         }
 
         // Exibe aba Notificações se tiver permissão
-        const perfisPush = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-        if (perfisPush.includes(perfil)) {
-            const navPush = document.getElementById("nav-notificacoes");
-            if (navPush) navPush.style.display = "block";
-        }
+        if (Notificacoes) Notificacoes.init(perfil);
 
         // Exibe aba CMS se tiver permissão
         const perfisCms = ["ADMIN", "DIRETORIA", "COMUNICADOR"];
