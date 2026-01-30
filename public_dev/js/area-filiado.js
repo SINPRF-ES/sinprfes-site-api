@@ -81,6 +81,7 @@
                         perfil = perfilReal;
                         // Força re-render do menu/módulos se necessário
                         if (inicializarFiliados) inicializarFiliados(perfil);
+                        if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                     }
                 }
             }
