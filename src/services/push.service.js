@@ -107,14 +107,16 @@ async function resolvePushTargets(targetType, targetValue) {
         WHERE pt.revoked_at IS NULL
       `;
       break;
-    case 'FILIADO':
+    case 'FILIADO': {
+      const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
         WHERE pt.revoked_at IS NULL AND pt.user_id = $1
       `;
-      params = [targetValue];
+      params = [targetId];
       break;
+    }
     case 'ALL':
     default:
       sql = `
@@ -149,10 +151,12 @@ async function countNoTokenTargets(targetType, targetValue) {
       filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO' AND lotacao = $1";
       params = [targetValue];
       break;
-    case 'FILIADO':
+    case 'FILIADO': {
+      const targetIdCount = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       filiadosSql = "SELECT id FROM filiados WHERE id = $1";
-      params = [targetValue];
+      params = [targetIdCount];
       break;
+    }
     case 'ALL':
     default:
       filiadosSql = "SELECT id FROM filiados WHERE situacao IN ('ATIVO', 'APOSENTADO', 'PENSIONISTA')";

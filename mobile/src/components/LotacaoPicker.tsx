@@ -9,9 +9,9 @@ interface Props {
   enabled?: boolean;
 }
 
-const LotacaoPicker: React.FC<Props> = ({ selectedValue, onValueChange, enabled = true }) => {
-  const lotacaoOptions = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"];
+export const lotacaoOptions = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"];
 
+const LotacaoPicker: React.FC<Props> = ({ selectedValue, onValueChange, enabled = true }) => {
   return (
     <View style={styles.pickerContainer}>
       <Picker
