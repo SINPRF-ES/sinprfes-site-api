@@ -90,6 +90,18 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     try {
       setSaving(true);
       const payload = buildUpdateFiliadoPayload(filiado);
+
+      // Instrumentação de logs para depuração de datas (Step A)
+      logger.info('FILIADO_SAVE_PAYLOAD_DATES', {
+        filiado_id: filiado.id,
+        data_nascimento: { value: payload.data_nascimento, type: typeof payload.data_nascimento },
+        dep1_data_nascimento: { value: payload.dep1_data_nascimento, type: typeof payload.dep1_data_nascimento },
+        dep2_data_nascimento: { value: payload.dep2_data_nascimento, type: typeof payload.dep2_data_nascimento },
+        dep3_data_nascimento: { value: payload.dep3_data_nascimento, type: typeof payload.dep3_data_nascimento },
+        dep4_data_nascimento: { value: payload.dep4_data_nascimento, type: typeof payload.dep4_data_nascimento },
+        dep5_data_nascimento: { value: payload.dep5_data_nascimento, type: typeof payload.dep5_data_nascimento },
+      });
+
       const canonicalId = getCanonicalFiliadoId(filiado);
 
       if (filiadoId) {
