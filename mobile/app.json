@@ -32,17 +32,31 @@
       "url": "https://u.expo.dev/c589a042-895e-497e-a61f-a76216580a35",
       "checkAutomatically": "NEVER"
     },
-    "runtimeVersion": "54.0.0",
+    "runtimeVersion": "54.0.1",
     "plugins": [
       "expo-secure-store",
       "expo-sqlite",
       "expo-font",
-      "expo-updates"
+      "expo-updates",
+      "./plugins/withAndroidSplit.js",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "architectures": [
+              "armeabi-v7a",
+              "arm64-v8a"
+            ]
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
         "projectId": "c589a042-895e-497e-a61f-a76216580a35"
       }
     }
-}
+  }
 }
