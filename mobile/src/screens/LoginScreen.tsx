@@ -151,7 +151,7 @@ export default function LoginScreen() {
     <KeyboardAwareScrollView contentContainerStyle={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
       <View style={styles.card}>
         <View style={styles.logoContainer}>
-          <Image source={require('../../assets/icon.webp')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
         </View>
 
         <Text style={styles.title}>SINPRF/ES</Text>
