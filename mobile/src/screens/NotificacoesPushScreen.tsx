@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { lotacaoOptions } from '../components/LotacaoPicker';
 import { normalizeText, maskCPF } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
@@ -349,7 +350,10 @@ export default function NotificacoesPushScreen() {
           <View style={styles.pickerContainer}>
             <Picker
                 selectedValue={targetType}
-                onValueChange={(v) => { setTargetType(v); setTargetValue(''); }}
+                onValueChange={(v) => {
+                  setTargetType(v);
+                  setTargetValue(v === 'LOTACAO' ? lotacaoOptions[0] : '');
+                }}
                 style={styles.picker}
             >
                 <Picker.Item label="Todos com app" value="ALL" />
@@ -368,11 +372,9 @@ export default function NotificacoesPushScreen() {
                     onValueChange={setTargetValue}
                     style={styles.picker}
                 >
-                    <Picker.Item label="SEDE" value="SEDE" />
-                    <Picker.Item label="DEL1 (Serra)" value="DEL1" />
-                    <Picker.Item label="DEL2 (Viana)" value="DEL2" />
-                    <Picker.Item label="DEL3 (Linhares)" value="DEL3" />
-                    <Picker.Item label="DEL4 (Cachoeiro)" value="DEL4" />
+                    {lotacaoOptions.map((opt) => (
+                      <Picker.Item key={opt} label={opt} value={opt} />
+                    ))}
                 </Picker>
              </View>
           )}

@@ -225,13 +225,20 @@
 
             let displayTargetValue = c.target_value;
             if (c.target_type === 'FILIADO' && c.target_value) {
-                try {
-                    const parsed = JSON.parse(c.target_value);
-                    if (parsed && typeof parsed === 'object') {
-                        displayTargetValue = `${parsed.nome} (${window.Formatters?.formatCpf(parsed.cpf) || parsed.cpf})`;
+                let parsed = null;
+                if (typeof c.target_value === 'object') {
+                    parsed = c.target_value;
+                } else {
+                    try {
+                        parsed = JSON.parse(c.target_value);
+                    } catch (e) {
+                        parsed = null;
                     }
-                } catch (e) {
-                    // Mantém original se não for JSON
+                }
+
+                if (parsed && typeof parsed === 'object') {
+                    displayTargetValue = `${parsed.nome || ''} (${window.Formatters?.formatCpf(parsed.cpf || '') || parsed.cpf || ''})`;
+                    if (displayTargetValue.trim() === '()') displayTargetValue = parsed.id || c.target_value;
                 }
             }
 
