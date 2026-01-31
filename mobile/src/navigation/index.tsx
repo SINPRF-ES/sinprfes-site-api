@@ -22,6 +22,7 @@ import EditarFiliadoScreen from "../screens/EditarFiliadoScreen";
 import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
 import NoticiasScreen from "../screens/NoticiasScreen";
 import NoticiaDetalheScreen from "../screens/NoticiaDetalheScreen";
+import NoticiaEditorScreen from "../screens/NoticiaEditorScreen";
 import ConveniosScreen from "../screens/ConveniosScreen";
 import PdfViewerScreen from "../screens/PdfViewerScreen";
 import FileViewerScreen from "../screens/FileViewerScreen";
@@ -39,6 +40,7 @@ export type RootStackParamList = {
   MeusDados: undefined;
   Noticias: undefined;
   NoticiaDetalhe: { newsId: string };
+  NoticiaEditor: { newsId: string | null };
   Convenios: undefined;
   Filiados: undefined;
   CriarFiliado: undefined;
@@ -157,6 +159,11 @@ export default function RootNavigation() {
               name="NoticiaDetalhe"
               component={NoticiaDetalheScreen}
               options={{ title: "Notícia" }}
+            />
+            <Stack.Screen
+              name="NoticiaEditor"
+              component={NoticiaEditorScreen}
+              options={{ title: "Editor de Notícia" }}
             />
           </>
         )}

@@ -15,7 +15,8 @@ module.exports = {
     "VOTACAO_VOTAR",
     "EDIT_CONTENT",
     "PUSH_GERENCIAR",
-    "REPASSE_GERENCIAR"
+    "REPASSE_GERENCIAR",
+    "NOTICIAS_GERENCIAR"
   ],
 
   FUNCIONARIO: [
@@ -29,7 +30,8 @@ module.exports = {
 
     "VOTACAO_VOTAR",
     "PUSH_GERENCIAR",
-    "REPASSE_GERENCIAR"
+    "REPASSE_GERENCIAR",
+    "NOTICIAS_GERENCIAR"
   ],
 
   ORGANIZADOR: [
@@ -54,6 +56,7 @@ module.exports = {
   COMUNICADOR: [
     "VIEW_SELF",
     "EDIT_SELF",
-    "EDIT_CONTENT"
+    "EDIT_CONTENT",
+    "NOTICIAS_GERENCIAR"
   ]
 };

@@ -80,9 +80,28 @@ function getSignedUrl(publicId, options = {}) {
   });
 }
 
+/**
+ * Gera assinatura para upload direto do cliente.
+ */
+function gerarAssinaturaUpload(params) {
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const signature = cloudinary.utils.api_sign_request(
+    { ...params, timestamp },
+    cloudinary.config().api_secret
+  );
+
+  return {
+    timestamp,
+    signature,
+    cloud_name: cloudinary.config().cloud_name,
+    api_key: cloudinary.config().api_key,
+  };
+}
+
 module.exports = {
   uploadAvatarBuffer,
   deleteAvatarByPublicId,
   uploadFileBuffer,
   getSignedUrl,
+  gerarAssinaturaUpload,
 };

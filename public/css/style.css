@@ -850,7 +850,7 @@ footer {
 }
 
 /* ===========================
-   Layout Área do Filiado
+   Layout Página Inicial
 =========================== */
 .dashboard-layout {
   display: grid;
@@ -1018,7 +1018,7 @@ footer {
 }
 
 /* ===========================
-   Layout Área do Filiado (af-layout)
+   Layout Página Inicial (af-layout)
 =========================== */
 
 .af-container {
@@ -1164,7 +1164,7 @@ footer {
 }
 
 /* ===========================
-   Área do Filiado – navegação em abas
+   Página Inicial – navegação em abas
 =========================== */
 
 .af-section {
@@ -1175,7 +1175,7 @@ footer {
   display: block;
 }
 
-/* ===== Layout unificado da Área do Filiado ===== */
+/* ===== Layout unificado da Página Inicial ===== */
 
 /* container geral das páginas internas (meus dados, ressarcimento, etc.) */
 .area-filiado-main {

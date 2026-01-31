@@ -1,5 +1,5 @@
 /**
- * Módulo Ressarcimento (Área do Filiado)
+ * Módulo Ressarcimento (Página Inicial)
  * Carregado como script clássico (window.Ressarcimento)
  */
 

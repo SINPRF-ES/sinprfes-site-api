@@ -51,61 +51,68 @@ export default function NoticiaDetalheScreen({ route }: any) {
     );
   }
 
-  const coverUrl = noticia.coverFileId
-    ? `${API_BASE_URL}/api/publicacoes/arquivo/${noticia.coverFileId}`
-    : null;
+  const coverUrl = noticia.capa_url;
+  const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
 
   return (
     <SafeScreen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {coverUrl && (
           <Image
-            source={{ uri: coverUrl, headers: { Authorization: `Bearer ${token}` } }}
+            source={{ uri: coverUrl }}
             style={styles.cover}
             resizeMode="cover"
           />
         )}
 
         <View style={styles.content}>
-          <Text style={styles.date}>{formatDate(noticia.publishedAt)}</Text>
-          <Text style={styles.title}>{noticia.title}</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.date}>{formatDate(noticia.published_at || noticia.created_at)}</Text>
+            {ehGestaoNoticias && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('NoticiaEditor', { newsId: noticia.id })}
+                style={styles.editButton}
+              >
+                <FontAwesome name="edit" size={18} color="#003366" />
+                <Text style={styles.editText}>Editar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-          {noticia.tags && noticia.tags.length > 0 && (
-            <View style={styles.tagContainer}>
-              {noticia.tags.map((tag, idx) => (
-                <View key={idx} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+          <Text style={styles.title}>{noticia.titulo}</Text>
 
           <View style={styles.markdownContainer}>
             <Markdown style={markdownStyles}>
-              {noticia.bodyMarkdown}
+              {noticia.conteudo}
             </Markdown>
           </View>
 
-          {noticia.galleryFileIds && noticia.galleryFileIds.length > 0 && (
+          {noticia.midias && noticia.midias.length > 0 && (
             <View style={styles.gallerySection}>
-              <Text style={styles.galleryTitle}>Galeria de Fotos</Text>
-              <FlatList
-                data={noticia.galleryFileIds}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <Image
-                    source={{
-                      uri: `${API_BASE_URL}/api/publicacoes/arquivo/${item.id}`,
-                      headers: { Authorization: `Bearer ${token}` }
-                    }}
-                    style={styles.galleryImage}
-                    resizeMode="cover"
-                  />
-                )}
-                contentContainerStyle={styles.galleryList}
-              />
+              <Text style={styles.galleryTitle}>Mídias</Text>
+              {noticia.midias.map((item: any) => (
+                <View key={item.id} style={styles.mediaItem}>
+                  {item.tipo === 'IMAGEM' ? (
+                    <Image
+                      source={{ uri: item.url.replace('/upload/', '/upload/f_auto,q_auto/') }}
+                      style={styles.galleryImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.videoItem}>
+                      <Image
+                        source={{ uri: item.url.replace('/video/upload/', '/video/upload/f_auto,q_auto/').replace('.mp4', '.jpg').replace('.mov', '.jpg') }}
+                        style={styles.galleryImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.videoOverlay}>
+                        <FontAwesome name="play-circle" size={50} color="rgba(255,255,255,0.8)" />
+                        <Text style={styles.videoText}>Vídeo disponível</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
             </View>
           )}
         </View>
@@ -134,6 +141,25 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2f7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  editText: {
+    marginLeft: 5,
+    color: '#003366',
+    fontWeight: 'bold',
   },
   date: {
     fontSize: 14,
@@ -180,10 +206,45 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   galleryImage: {
-    width: width * 0.7,
-    height: 200,
+    width: '100%',
+    height: 250,
     borderRadius: 10,
-    marginRight: 15,
+    marginBottom: 15,
+  },
+  mediaItem: {
+    marginBottom: 20,
+  },
+  videoPlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  videoItem: {
+    position: 'relative',
+    width: '100%',
+    height: 250,
+    marginBottom: 15,
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  videoText: {
+    marginTop: 10,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  videoUrl: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
   },
   errorText: {
     fontSize: 16,

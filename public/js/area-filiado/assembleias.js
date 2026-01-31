@@ -1,5 +1,5 @@
 /**
- * Módulo Assembleias e Votações (Área do Filiado)
+ * Módulo Assembleias e Votações (Página Inicial)
  * Carregado como script clássico (window.Assembleias)
  */
 

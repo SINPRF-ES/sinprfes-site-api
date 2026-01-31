@@ -30,18 +30,17 @@ export default function NoticiasScreen() {
   };
 
   const renderItem = ({ item }: { item: NewsPost }) => {
-    const coverUrl = item.coverFileId
-      ? `${API_BASE_URL}/api/publicacoes/arquivo/${item.coverFileId}`
-      : null;
+    const coverUrl = item.capa_url;
+    const isRascunho = item.status === 'RASCUNHO';
 
     return (
       <TouchableOpacity
-        style={styles.card}
-        onPress={() => navigation.navigate('NoticiaDetalhe', { newsId: item.folderId })}
+        style={[styles.card, isRascunho && styles.draftCard]}
+        onPress={() => navigation.navigate('NoticiaDetalhe', { newsId: item.id })}
       >
         {coverUrl ? (
           <Image
-            source={{ uri: coverUrl, headers: { Authorization: `Bearer ${token}` } }}
+            source={{ uri: coverUrl.replace('/upload/', '/upload/f_auto,q_auto,w_500/') }}
             style={styles.cover}
             resizeMode="cover"
           />
@@ -51,18 +50,16 @@ export default function NoticiasScreen() {
           </View>
         )}
         <View style={styles.cardContent}>
-          <Text style={styles.date}>{formatDate(item.publishedAt)}</Text>
-          <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.summary} numberOfLines={3}>{item.summary}</Text>
-          {item.tags && item.tags.length > 0 && (
-            <View style={styles.tagContainer}>
-              {item.tags.map((tag, idx) => (
-                <View key={idx} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+          <View style={styles.cardHeader}>
+            <Text style={styles.date}>{formatDate(item.published_at || item.created_at)}</Text>
+            {isRascunho && (
+              <View style={styles.draftBadge}>
+                <Text style={styles.draftText}>RASCUNHO</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.title} numberOfLines={2}>{item.titulo}</Text>
+          <Text style={styles.summary} numberOfLines={3}>{item.conteudo}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -89,12 +86,22 @@ export default function NoticiasScreen() {
     );
   }
 
+  const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+
   return (
     <View style={styles.container}>
+      {ehGestaoNoticias && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('NoticiaEditor', { newsId: null })}
+        >
+          <FontAwesome name="plus" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
       <FlatList
         data={noticias}
         renderItem={renderItem}
-        keyExtractor={(item) => item.folderId}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} color="#003366" />
@@ -154,6 +161,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  draftCard: {
+    borderWidth: 1,
+    borderColor: '#ffc107',
+    opacity: 0.9,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  draftBadge: {
+    backgroundColor: '#ffc107',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  draftText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#003366',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    zIndex: 10,
   },
   cover: {
     width: '100%',

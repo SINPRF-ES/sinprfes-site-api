@@ -1,5 +1,5 @@
 /**
- * Módulo Navegação (Área do Filiado)
+ * Módulo Navegação (Página Inicial)
  * Carregado como script clássico (window.Navegacao)
  */
 

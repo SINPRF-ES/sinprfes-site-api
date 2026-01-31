@@ -1,5 +1,5 @@
 /**
- * Módulo Filiados Admin (Área do Filiado)
+ * Módulo Filiados Admin (Página Inicial)
  * Carregado como script clássico (window.FiliadosAdmin)
  */
 
