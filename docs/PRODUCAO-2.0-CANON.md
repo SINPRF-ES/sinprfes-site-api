@@ -115,7 +115,7 @@ graph TD
 ### 5.2. Valores Canônicos (Enums/Strings)
 *   **Perfis de Acesso (`perfil_acesso`):** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR` (FILIADO + Jogos Manager), `FILIADO`.
     *   **Regra de Gestão:** Apenas o perfil `ADMIN` possui autoridade para conceder ou revogar o nível `ADMIN` de qualquer usuário (incluindo a demobilização de outros administradores). Perfis `DIRETORIA` e `FUNCIONARIO` podem alterar perfis entre si e níveis inferiores, mas são bloqueados (403) de qualquer interação que envolva o nível `ADMIN`.
-*   **Situação Funcional (`situacao`):** `ATIVO`, `APOSENTADO`, `PENSIONISTA`, `LICENCIADO`.
+*   **Situação Funcional (`situacao`):** `ATIVO`, `VETERANO`, `PENSIONISTA`.
 *   **Parentesco Dependentes (`parentesco`):** `FILHO_ENTEADO`, `CONJUGE_COMPANHEIRO`, `PAI_MAE`, `IRMAO`, `OUTRO`.
 
 ### 5.3. Payload Crítico: Meus Dados (PUT /api/filiados/me)

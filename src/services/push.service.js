@@ -86,7 +86,7 @@ async function resolvePushTargets(targetType, targetValue) {
         SELECT pt.expo_push_token
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
-        WHERE pt.revoked_at IS NULL AND (f.situacao = 'APOSENTADO' OR f.situacao = 'PENSIONISTA')
+        WHERE pt.revoked_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
       `;
       break;
     case 'LOTACAO':
@@ -145,7 +145,7 @@ async function countNoTokenTargets(targetType, targetValue) {
       filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO'";
       break;
     case 'VETERANOS':
-      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'APOSENTADO' OR situacao = 'PENSIONISTA'";
+      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'VETERANO' OR situacao = 'PENSIONISTA'";
       break;
     case 'LOTACAO':
       filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO' AND lotacao = $1";
@@ -159,7 +159,7 @@ async function countNoTokenTargets(targetType, targetValue) {
     }
     case 'ALL':
     default:
-      filiadosSql = "SELECT id FROM filiados WHERE situacao IN ('ATIVO', 'APOSENTADO', 'PENSIONISTA')";
+      filiadosSql = "SELECT id FROM filiados WHERE situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA')";
       break;
   }
 

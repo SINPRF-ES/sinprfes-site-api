@@ -1,10 +1,7 @@
 const pool = require("../config/db");
-const { REPASSE_LOTACOES } = require("../../shared/repasse.constants");
+const { LOTACOES, normalizeLotacao } = require("../../shared/canon");
 
-/**
- * Mapeamento de lotação para keyword de busca no banco.
- * Segue a lógica de filiados-admin.js para consistência.
- */
+// Keywords para busca robusta se necessário, mas agora usamos a normalização canônica
 const LOTACAO_KEYWORDS = {
   "SEDE": "SEDE",
   "DEL 01 - Viana": "VIANA",
@@ -97,7 +94,7 @@ async function getRepasseAno(year) {
   // Geralmente repasse se baseia no histórico, mas o requisito é explícito: "não persistir".
 
   const ativosPorLotacao = {};
-  for (const lot of REPASSE_LOTACOES) {
+  for (const lot of LOTACOES) {
     ativosPorLotacao[lot] = await getFiliadosAtivosCount(lot);
   }
 
@@ -106,7 +103,7 @@ async function getRepasseAno(year) {
     const config = configRows.find(r => r.month === month) || { per_capita: 0 };
     const perCapita = parseFloat(config.per_capita);
 
-    const localidades = REPASSE_LOTACOES.map(lot => {
+    const localidades = LOTACOES.map(lot => {
       const data = lotacaoRows.find(r => r.month === month && r.lotacao_key === lot) || {
         responsavel_id: null,
         responsavel_nome: null,
@@ -153,7 +150,7 @@ async function getRepasseAno(year) {
 
   // Cálculo do acumulado por localidade no ano
   // acumuladoAno = soma(créditos mensais) – soma(reembolsos)
-  const lotacoesAcumulado = REPASSE_LOTACOES.map(lot => {
+  const lotacoesAcumulado = LOTACOES.map(lot => {
     let somaCreditos = 0;
     let somaReembolsos = 0;
 

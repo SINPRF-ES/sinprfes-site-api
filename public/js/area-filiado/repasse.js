@@ -11,7 +11,7 @@
     let repasseData = null;
     let perfilLogado = null;
 
-    const LOTACOES = (global.RepasseConstants && global.RepasseConstants.REPASSE_LOTACOES) || [];
+    const LOTACOES = global.Canon?.LOTACOES || [];
 
     async function inicializarRepasse(perfil) {
         perfilLogado = (perfil || "").toUpperCase();
@@ -234,7 +234,8 @@
     function atualizarLocalidade(month, lotacao, data) {
         const m = repasseData.meses.find(m => m.month === month);
         if (m) {
-            const loc = m.localidades.find(l => l.lotacao === lotacao);
+            const canonLot = global.Canon?.normalizeLotacao(lotacao);
+            const loc = m.localidades.find(l => l.lotacao === canonLot);
             if (loc) {
                 if (data.responsavelId !== undefined) loc.responsavelId = data.responsavelId;
                 if (data.prfTotal !== undefined) loc.prfTotal = parseInt(data.prfTotal) || 0;
@@ -274,16 +275,18 @@
             let somaCred = 0;
             let somaReem = 0;
             repasseData.meses.forEach(mes => {
-                const l = mes.localidades.find(ll => ll.lotacao === lot);
-                somaCred += l.creditoMes;
-                somaReem += l.reembolsoMes;
+                const l = mes.localidades.find(ll => global.Canon?.normalizeLotacao(ll.lotacao) === lot);
+                if (l) {
+                    somaCred += l.creditoMes;
+                    somaReem += l.reembolsoMes;
+                }
             });
             acumulados[lot] = somaCred - somaReem;
         });
 
         repasseData.meses.forEach(mes => {
             mes.localidades.forEach(l => {
-                l.acumuladoAno = acumulados[l.lotacao];
+                l.acumuladoAno = acumulados[global.Canon?.normalizeLotacao(l.lotacao)];
             });
         });
 

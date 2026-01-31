@@ -3,6 +3,11 @@ const pool = require("../config/db");
 const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
+const {
+  normalizeSituacaoFuncional,
+  normalizePerfil,
+  normalizeLotacao
+} = require("../../shared/canon");
 
 /**
  * Garante que os dependentes sejam salvos de forma compacta (da esquerda para a direita).
@@ -145,7 +150,9 @@ async function atualizarDadosProprios(id, dados) {
   addCampo("telefone2", dados.telefone2);
   addCampo("email1", dados.email1);
   addCampo("email2", dados.email2);
-  addCampo("lotacao", dados.lotacao);
+  if (dados.lotacao !== undefined) {
+    addCampo("lotacao", normalizeLotacao(dados.lotacao));
+  }
   addCampo("logradouro_bairro", dados.logradouro_bairro);
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
@@ -237,9 +244,15 @@ async function atualizarFiliadoPorId(id, dados) {
   addCampo("telefone2", dados.telefone2);
   addCampo("email1", dados.email1);
   addCampo("email2", dados.email2);
-  addCampo("lotacao", dados.lotacao);
-  addCampo("situacao", dados.situacao);
-  addCampo("perfil_acesso", dados.perfil_acesso);
+  if (dados.lotacao !== undefined) {
+    addCampo("lotacao", normalizeLotacao(dados.lotacao));
+  }
+  if (dados.situacao !== undefined) {
+    addCampo("situacao", normalizeSituacaoFuncional(dados.situacao));
+  }
+  if (dados.perfil_acesso !== undefined) {
+    addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
+  }
   addCampo("logradouro_bairro", dados.logradouro_bairro);
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
@@ -441,9 +454,9 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     }
     push("cep", cepNorm);
 
-    push("lotacao", lotacao);
-    push("situacao", situacao);
-    push("perfil_acesso", perfilNovo);
+    push("lotacao", normalizeLotacao(lotacao));
+    push("situacao", normalizeSituacaoFuncional(situacao));
+    push("perfil_acesso", normalizePerfil(perfilNovo));
 
     // NOW() directly in SQL, no parameter increment
     colunas.push("criado_em");

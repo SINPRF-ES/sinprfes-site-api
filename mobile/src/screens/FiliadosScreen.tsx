@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
 import { getCanonicalFiliadoId, isGestao } from '../utils/filiadoUtils';
+import * as Canon from '../utils/canon';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
@@ -109,22 +110,12 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
       // Filtro Situação Funcional / Lotação
       if (filtroFuncional !== 'TODOS') {
-        const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
-        const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
+        const situacao = Canon.normalizeSituacaoFuncional(f.situacao_funcional || f.situacao || 'ATIVO');
 
-        if (lotacoesLabels.includes(filtroFuncional)) {
-          if (situacao !== 'ATIVO') return false;
-
-          const keywords: any = {
-            "SEDE": "SEDE",
-            "DEL 01 - Viana": "VIANA",
-            "DEL 02 - Serra": "SERRA",
-            "DEL 03 - Guarapari": "GUARAPARI",
-            "DEL 04 - Linhares": "LINHARES"
-          };
-          const keyword = keywords[filtroFuncional];
-          const lotacaoNorm = normalizeText(f.lotacao || 'SEDE').toUpperCase();
-          if (!lotacaoNorm.includes(keyword)) return false;
+        if (Canon.LOTACOES.includes(filtroFuncional as any)) {
+          if (situacao !== Canon.SITUACAO_FUNCIONAL.ATIVO) return false;
+          const lotacaoNorm = Canon.normalizeLotacao(f.lotacao || 'SEDE');
+          if (lotacaoNorm !== filtroFuncional) return false;
         } else {
           if (situacao !== filtroFuncional) return false;
         }
@@ -183,8 +174,8 @@ export default function FiliadosScreen({ navigation, route }: any) {
                 dropdownIconColor="#003366"
               >
                 <Picker.Item label="Selecione..." value="" color="#999" />
-                <Picker.Item label="Ativos" value="CADASTRO_ATIVO" />
-                <Picker.Item label="Arquivados" value="ARQUIVADOS" />
+                <Picker.Item label="Ativos" value={Canon.ESTADO_CADASTRO.CADASTRO_ATIVO} />
+                <Picker.Item label="Arquivados" value={Canon.ESTADO_CADASTRO.ARQUIVADO} />
                 <Picker.Item label="Todos" value="TODOS" />
               </Picker>
             </View>
@@ -201,14 +192,12 @@ export default function FiliadosScreen({ navigation, route }: any) {
               dropdownIconColor="#003366"
             >
               <Picker.Item label="Todos" value="TODOS" />
-              <Picker.Item label="Ativo" value="ATIVO" />
-              <Picker.Item label="Veterano" value="VETERANO" />
-              <Picker.Item label="Pensionista" value="PENSIONISTA" />
-              <Picker.Item label="SEDE" value="SEDE" />
-              <Picker.Item label="DEL 01 - Viana" value="DEL 01 - Viana" />
-              <Picker.Item label="DEL 02 - Serra" value="DEL 02 - Serra" />
-              <Picker.Item label="DEL 03 - Guarapari" value="DEL 03 - Guarapari" />
-              <Picker.Item label="DEL 04 - Linhares" value="DEL 04 - Linhares" />
+              {Object.values(Canon.SITUACAO_FUNCIONAL).map(s => (
+                <Picker.Item key={s} label={Canon.LABELS[s]} value={s} />
+              ))}
+              {Canon.LOTACOES.map(l => (
+                <Picker.Item key={l} label={l} value={l} />
+              ))}
             </Picker>
           </View>
         </View>
