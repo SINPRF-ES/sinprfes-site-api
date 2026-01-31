@@ -1,101 +1,207 @@
-const { listarArquivosPublicos, obterArquivoTexto } = require("../services/drive.service");
+const pool = require("../config/db");
 const log = require("../utils/log");
+const cloudinary = require("../services/cloudinary.service");
 
-async function findFolderByName(parentFolderId, name) {
-  const files = await listarArquivosPublicos(parentFolderId);
-  return files.find(f => f.name.toLowerCase() === name.toLowerCase() && f.mimeType === "application/vnd.google-apps.folder");
+const PERFIS_GESTAO = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
+
+function verificarGestao(req) {
+  const perfil = (req.user?.perfil_acesso || "").toUpperCase();
+  return PERFIS_GESTAO.includes(perfil);
 }
 
 exports.listar = async (req, res) => {
   try {
-    const rootFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    const noticiasFolder = await findFolderByName(rootFolderId, "Noticias");
+    const { status } = req.query;
+    const isGestao = verificarGestao(req);
 
-    if (!noticiasFolder) {
-      log.warn("NoticiasFolderNotFound", { rootFolderId });
-      return res.json([]);
+    let query = `
+      SELECT n.*, f.nome as autor_nome
+      FROM noticias n
+      LEFT JOIN filiados f ON n.autor_id = f.id
+    `;
+    const params = [];
+
+    if (!isGestao) {
+      query += " WHERE n.status = 'PUBLICADA'";
+    } else if (status) {
+      query += " WHERE n.status = $1";
+      params.push(status.toUpperCase());
     }
 
-    const subfolders = await listarArquivosPublicos(noticiasFolder.id);
-    const postFolders = subfolders.filter(f => f.mimeType === "application/vnd.google-apps.folder");
+    query += " ORDER BY n.published_at DESC, n.created_at DESC";
 
-    const noticias = await Promise.all(postFolders.map(async (folder) => {
-      try {
-        const folderContent = await listarArquivosPublicos(folder.id);
-        const postJsonFile = folderContent.find(f => f.name === "post.json");
-
-        if (!postJsonFile) return null;
-
-        const postJsonContent = await obterArquivoTexto(postJsonFile.id);
-        const postData = JSON.parse(postJsonContent);
-
-        const coverFile = folderContent.find(f => f.name.startsWith("cover.") && (f.name.endsWith(".jpg") || f.name.endsWith(".png") || f.name.endsWith(".jpeg")));
-        const galleryFolder = folderContent.find(f => f.name.toLowerCase() === "gallery" && f.mimeType === "application/vnd.google-apps.folder");
-
-        let galleryFileIds = [];
-        if (galleryFolder) {
-          const galleryContent = await listarArquivosPublicos(galleryFolder.id);
-          galleryFileIds = galleryContent
-            .filter(f => f.mimeType.startsWith("image/"))
-            .map(f => ({ id: f.id, name: f.name }));
-        }
-
-        return {
-          ...postData,
-          folderId: folder.id,
-          coverFileId: coverFile ? coverFile.id : null,
-          galleryFileIds
-        };
-      } catch (err) {
-        log.error("ErroAoProcessarNoticia", { folderId: folder.id, error: err.message });
-        return null;
-      }
-    }));
-
-    const filteredNoticias = noticias
-      .filter(n => n !== null)
-      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-
-    return res.json(filteredNoticias);
+    const { rows } = await pool.query(query, params);
+    return res.json(rows);
   } catch (err) {
     log.error("ErroListarNoticias", err);
-    return res.status(500).json({ message: "Erro ao buscar notícias no Drive." });
+    return res.status(500).json({ message: "Erro ao buscar notícias." });
   }
 };
 
 exports.detalhar = async (req, res) => {
   try {
-    const { id } = req.params; // folderId da notícia
+    const { id } = req.params;
 
-    const folderContent = await listarArquivosPublicos(id);
-    const postJsonFile = folderContent.find(f => f.name === "post.json");
+    const { rows: newsRows } = await pool.query(
+      `SELECT n.*, f.nome as autor_nome
+       FROM noticias n
+       LEFT JOIN filiados f ON n.autor_id = f.id
+       WHERE n.id = $1`,
+      [id]
+    );
 
-    if (!postJsonFile) {
+    if (newsRows.length === 0) {
       return res.status(404).json({ message: "Notícia não encontrada." });
     }
 
-    const postJsonContent = await obterArquivoTexto(postJsonFile.id);
-    const postData = JSON.parse(postJsonContent);
+    const noticia = newsRows[0];
 
-    const coverFile = folderContent.find(f => f.name.startsWith("cover.") && (f.name.endsWith(".jpg") || f.name.endsWith(".png") || f.name.endsWith(".jpeg")));
-    const galleryFolder = folderContent.find(f => f.name.toLowerCase() === "gallery" && f.mimeType === "application/vnd.google-apps.folder");
+    const { rows: midiaRows } = await pool.query(
+      "SELECT * FROM noticia_midias WHERE noticia_id = $1 ORDER BY ordem ASC",
+      [id]
+    );
 
-    let galleryFileIds = [];
-    if (galleryFolder) {
-      const galleryContent = await listarArquivosPublicos(galleryFolder.id);
-      galleryFileIds = galleryContent
-        .filter(f => f.mimeType.startsWith("image/"))
-        .map(f => ({ id: f.id, name: f.name }));
-    }
+    noticia.midias = midiaRows;
 
-    return res.json({
-      ...postData,
-      folderId: id,
-      coverFileId: coverFile ? coverFile.id : null,
-      galleryFileIds
-    });
+    return res.json(noticia);
   } catch (err) {
     log.error("ErroDetalharNoticia", err);
     return res.status(500).json({ message: "Erro ao detalhar notícia." });
+  }
+};
+
+exports.criar = async (req, res) => {
+  try {
+    const { titulo, conteudo, capa_url } = req.body;
+
+    if (!titulo || !conteudo) {
+      return res.status(400).json({ message: "Título e conteúdo são obrigatórios." });
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO noticias (titulo, conteudo, status, autor_id, capa_url)
+       VALUES ($1, $2, 'RASCUNHO', $3, $4)
+       RETURNING *`,
+      [titulo, conteudo, req.user.id, capa_url]
+    );
+
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    log.error("ErroCriarNoticia", err);
+    return res.status(500).json({ message: "Erro ao criar notícia." });
+  }
+};
+
+exports.atualizar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titulo, conteudo, capa_url, status } = req.body;
+
+    const { rows } = await pool.query(
+      `UPDATE noticias
+       SET titulo = COALESCE($1, titulo),
+           conteudo = COALESCE($2, conteudo),
+           capa_url = COALESCE($3, capa_url),
+           status = COALESCE($4, status)
+       WHERE id = $5
+       RETURNING *`,
+      [titulo, conteudo, capa_url, status, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Notícia não encontrada." });
+    }
+
+    return res.json(rows[0]);
+  } catch (err) {
+    log.error("ErroAtualizarNoticia", err);
+    return res.status(500).json({ message: "Erro ao atualizar notícia." });
+  }
+};
+
+exports.publicar = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { rows } = await pool.query(
+      `UPDATE noticias
+       SET status = 'PUBLICADA',
+           published_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Notícia não encontrada." });
+    }
+
+    return res.json(rows[0]);
+  } catch (err) {
+    log.error("ErroPublicarNoticia", err);
+    return res.status(500).json({ message: "Erro ao publicar notícia." });
+  }
+};
+
+exports.excluir = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { rowCount } = await pool.query("DELETE FROM noticias WHERE id = $1", [id]);
+
+    if (rowCount === 0) {
+      return res.status(404).json({ message: "Notícia não encontrada." });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    log.error("ErroExcluirNoticia", err);
+    return res.status(500).json({ message: "Erro ao excluir notícia." });
+  }
+};
+
+exports.adicionarMidia = async (req, res) => {
+  try {
+    const { id } = req.params; // noticia_id
+    const { tipo, ordem } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Arquivo não enviado." });
+    }
+
+    const resourceType = tipo === "VIDEO" ? "video" : "image";
+    const result = await cloudinary.uploadFileBuffer(req.file.buffer, {
+      resource_type: resourceType,
+      folder: "noticias"
+    });
+
+    const { rows } = await pool.query(
+      `INSERT INTO noticia_midias (noticia_id, tipo, url, ordem)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [id, tipo || (resourceType === "video" ? "VIDEO" : "IMAGEM"), result.secure_url, ordem || 0]
+    );
+
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    log.error("ErroAdicionarMidia", err);
+    return res.status(500).json({ message: "Erro ao adicionar mídia." });
+  }
+};
+
+exports.removerMidia = async (req, res) => {
+  try {
+    const { midiaId } = req.params;
+
+    const { rowCount } = await pool.query("DELETE FROM noticia_midias WHERE id = $1", [midiaId]);
+
+    if (rowCount === 0) {
+      return res.status(404).json({ message: "Mídia não encontrada." });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    log.error("ErroRemoverMidia", err);
+    return res.status(500).json({ message: "Erro ao remover mídia." });
   }
 };

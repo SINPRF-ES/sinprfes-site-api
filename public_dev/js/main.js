@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <div class="header-actions">
             <a href="${navTo("filiese.html")}" class="btn btn-outline">Filie-se</a>
-            <a href="${navTo("area-filiado.html")}" class="btn btn-primary">Área do filiado</a>
+            <a href="${navTo("area-filiado.html")}" class="btn btn-primary">Página Inicial</a>
           </div>
         </div>
       </header>

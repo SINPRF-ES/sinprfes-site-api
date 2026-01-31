@@ -9,7 +9,7 @@ export function normalizeSituacaoFuncional(value?: string | null): 'ATIVO' | 'VE
 
   const v = value.trim().toUpperCase();
 
-  if (v === 'VETERANO' || v === 'VETERANOS') return 'VETERANO';
+  if (v === 'VETERANO' || v === 'VETERANOS' || v === 'APOSENTADO' || v === 'APOSENTADOS') return 'VETERANO';
   if (v === 'PENSIONISTA' || v === 'PENSIONISTAS') return 'PENSIONISTA';
   if (v === 'ATIVO' || v === 'ATIVOS') return 'ATIVO';
 
