@@ -20,9 +20,15 @@ const {
 
 const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
+const {
+  normalizeSituacaoFuncional,
+  normalizePerfil,
+  normalizeLotacao
+} = require("../../shared/canon");
 
 function perfilGestao(perfil) {
-  return ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((perfil || "").toUpperCase());
+  const p = normalizePerfil(perfil);
+  return ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
 }
 
 /**
@@ -223,7 +229,7 @@ exports.atualizarMeusDados = async (req, res) => {
       telefone2: body.telefone2,
       email1: body.email1,
       email2: body.email2,
-      lotacao: body.lotacao,
+      lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
       logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
@@ -359,8 +365,8 @@ exports.atualizarFiliado = async (req, res) => {
       telefone2: body.telefone2,
       email1: body.email1,
       email2: body.email2,
-      lotacao: body.lotacao,
-      situacao: body.situacao ? String(body.situacao).toUpperCase() : undefined,
+      lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
+      situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
       logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
@@ -371,7 +377,7 @@ exports.atualizarFiliado = async (req, res) => {
     };
 
     if (body.perfil_acesso) {
-      const novoPerfil = String(body.perfil_acesso).toUpperCase();
+      const novoPerfil = normalizePerfil(body.perfil_acesso);
 
       // Trava de auto-alteração de perfil
       if (loggedId === idAlvo) {
@@ -474,9 +480,9 @@ exports.criarFiliado = async (req, res) => {
       telefone2: body.telefone2 || null,
       email1: body.email1 || null,
       email2: body.email2 || null,
-      lotacao: body.lotacao || "SEDE",
-      situacao: (body.situacao || "ATIVO").toUpperCase(),
-      perfil_acesso: body.perfil_acesso || "FILIADO",
+      lotacao: normalizeLotacao(body.lotacao || "SEDE"),
+      situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
+      perfil_acesso: normalizePerfil(body.perfil_acesso || "FILIADO"),
       logradouro_bairro: body.logradouro_bairro || null,
       numero: body.numero || null,
       complemento: body.complemento || null,

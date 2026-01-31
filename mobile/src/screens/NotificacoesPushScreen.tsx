@@ -16,7 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { lotacaoOptions } from '../components/LotacaoPicker';
+import * as Canon from '../utils/canon';
 import { normalizeText, maskCPF } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
@@ -378,7 +378,7 @@ export default function NotificacoesPushScreen() {
                     onValueChange={setTargetValue}
                     style={styles.picker}
                 >
-                    {lotacaoOptions.map((opt) => (
+                    {Canon.LOTACOES.map((opt) => (
                       <Picker.Item key={opt} label={opt} value={opt} />
                     ))}
                 </Picker>

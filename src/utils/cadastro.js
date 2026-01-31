@@ -1,13 +1,8 @@
 // src/utils/cadastro.js
-// Vocabulário padronizado:
-// - Situação funcional do servidor: ATIVO | VETERANO | PENSIONISTA
-// - Estado do cadastro (administrativo): CADASTRO_ATIVO | ARQUIVADO
-
-const SITUACAO_FUNCIONAL = ["ATIVO", "VETERANO", "PENSIONISTA"];
-const ESTADO_CADASTRO = ["CADASTRO_ATIVO", "ARQUIVADO"];
+const { SITUACAO_FUNCIONAL, ESTADO_CADASTRO } = require("../../shared/canon");
 
 function estadoCadastro(filiado) {
-  return filiado && filiado.arquivado_em ? "ARQUIVADO" : "CADASTRO_ATIVO";
+  return filiado && filiado.arquivado_em ? ESTADO_CADASTRO.ARQUIVADO : ESTADO_CADASTRO.CADASTRO_ATIVO;
 }
 
 function anexarEstadoCadastro(obj) {
@@ -20,8 +15,8 @@ function anexarEstadoCadastroLista(lista) {
 }
 
 module.exports = {
-  SITUACAO_FUNCIONAL,
-  ESTADO_CADASTRO,
+  SITUACAO_FUNCIONAL: Object.values(SITUACAO_FUNCIONAL),
+  ESTADO_CADASTRO: Object.values(ESTADO_CADASTRO),
   estadoCadastro,
   anexarEstadoCadastro,
   anexarEstadoCadastroLista,
