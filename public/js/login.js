@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (resp.ok) {
-        // Token válido → pula o login e vai direto pra área do filiado
+        // Token válido → pula o login e vai direto pra Página Inicial
         window.location.href = "/area-filiado.html";
       } else if (resp.status === 401 || resp.status === 403) {
         // Token inválido/expirado → limpa e deixa o usuário logar de novo
@@ -169,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
             data.message || "Login realizado com sucesso. Redirecionando...";
         }
 
-        // Redireciona para área do filiado
+        // Redireciona para Página Inicial
         window.location.href = "/area-filiado.html";
       } catch (err) {
         console.error("Erro no login:", err);

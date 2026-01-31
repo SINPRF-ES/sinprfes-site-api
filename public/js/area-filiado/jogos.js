@@ -1,5 +1,5 @@
 /**
- * Módulo Jogos (Área do Filiado)
+ * Módulo Jogos (Página Inicial)
  * Carregado como script clássico (window.Jogos)
  */
 

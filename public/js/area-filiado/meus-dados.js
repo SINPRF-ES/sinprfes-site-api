@@ -1,5 +1,5 @@
 /**
- * Módulo Meus Dados (Área do Filiado)
+ * Módulo Meus Dados (Página Inicial)
  * Carregado como script clássico (window.MeusDados)
  */
 

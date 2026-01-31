@@ -1,5 +1,5 @@
 /**
- * Módulo Segurança (Área do Filiado)
+ * Módulo Segurança (Página Inicial)
  * Carregado como script clássico (window.Seguranca)
  */
 

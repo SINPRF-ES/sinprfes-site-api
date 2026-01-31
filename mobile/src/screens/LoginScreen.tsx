@@ -155,7 +155,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.title}>SINPRF/ES</Text>
-        <Text style={styles.subtitle}>Área do Filiado</Text>
+        <Text style={styles.subtitle}>Página Inicial</Text>
 
         {biometriaHabilitada && isEtapaCredenciais && (
           <Pressable

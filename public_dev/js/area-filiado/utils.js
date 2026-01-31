@@ -1,5 +1,5 @@
 /**
- * Utilitários Compartilhados (Área do Filiado)
+ * Utilitários Compartilhados (Página Inicial)
  * Carregado como script clássico (window.Utils)
  */
 
