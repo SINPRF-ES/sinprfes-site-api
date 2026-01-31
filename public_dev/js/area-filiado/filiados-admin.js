@@ -80,6 +80,7 @@
                             <h2 style="margin:0;">👥 Filiados</h2>
                             <button id="btn-novo-filiado" class="btn btn-primary" style="display:none;">+ Novo Filiado</button>
                         </div>
+                        <div id="filiados-count" style="font-weight: bold; margin-bottom: 10px; color: #fff;">Total: 0</div>
                         <input type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; padding:10px; border-radius:8px; border:none; color:#333;">
                     </div>
                     <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
@@ -128,6 +129,11 @@
                             <option value="ATIVO">Ativo</option>
                             <option value="VETERANO">Veterano</option>
                             <option value="PENSIONISTA">Pensionista</option>
+                            <option value="SEDE">SEDE</option>
+                            <option value="DEL 01 - Viana">DEL 01 - Viana</option>
+                            <option value="DEL 02 - Serra">DEL 02 - Serra</option>
+                            <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
+                            <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
                         </select>
                     </label>
                 `;
@@ -191,7 +197,25 @@
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {
-            res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
+            const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
+            if (lotacoesLabels.includes(fSituacao)) {
+                const keywords = {
+                    "SEDE": "SEDE",
+                    "DEL 01 - Viana": "VIANA",
+                    "DEL 02 - Serra": "SERRA",
+                    "DEL 03 - Guarapari": "GUARAPARI",
+                    "DEL 04 - Linhares": "LINHARES"
+                };
+                const keyword = keywords[fSituacao];
+                res = res.filter(f => {
+                    const s = (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase();
+                    let l = (f.lotacao || "SEDE").toUpperCase();
+                    if (normalizeText) l = normalizeText(l).toUpperCase();
+                    return s === "ATIVO" && l.includes(keyword);
+                });
+            } else {
+                res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
+            }
         }
 
         const fEstado = document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO";
@@ -200,6 +224,9 @@
         } else if (fEstado === "CADASTRO_ATIVO") {
             res = res.filter(f => !f.arquivado_em);
         }
+
+        const countEl = document.getElementById("filiados-count");
+        if (countEl) countEl.textContent = `Total: ${res.length}`;
 
         if (!res.length) {
             el.innerHTML = `<div class="filiado-card" style="text-align:center;">Nenhum registro.</div>`;
