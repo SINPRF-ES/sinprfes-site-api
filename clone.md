@@ -230,7 +230,7 @@ O sistema utiliza Controle de Acesso Baseado em Funções (RBAC). Os perfis e pe
 Para o projeto FENAPRF, os seguintes pontos devem ser configuráveis (via `.env` ou tabela de configurações):
 - **Nomenclatura de Perfis:** Embora o código use ADMIN/DIRETORIA, as etiquetas de exibição devem ser parametrizáveis.
 - **IDs de Pastas do Drive:** As constantes de "Noticias", "Publicações" e "Editais" devem vir de variáveis de ambiente.
-- **Opções de Lotação:** A lista de Delegacias/Lotações deve ser dinâmica ou facilmente editável em arquivo compartilhado.
+- **Opções de Lotação:** A lista de Lotações deve ser dinâmica ou facilmente editável em arquivo compartilhado.
 - **Limites de Push:** Máximo de caracteres em títulos/corpos.
 - **Prazos de Votação:** Tempo padrão para votações de assembleia (ex: 300 segundos).
 
@@ -238,7 +238,7 @@ Para o projeto FENAPRF, os seguintes pontos devem ser configuráveis (via `.env`
 
 - **Cores e Identidade Visual:** O SINPRF-ES usa uma paleta específica; a FENAPRF terá a sua própria.
 - **Links Institucionais:** Endereços de redes sociais e e-mails de contato específicos do ES.
-- **Estrutura de Lotações Regional:** As delegacias citadas no código (ex: Serra, Linhares) são geográficas do ES e não fazem sentido para uma Federação Nacional.
+- **Estrutura de Lotações Regional:** As lotações citadas no código (ex: Serra, Linhares) são geográficas do ES e não fazem sentido para uma Federação Nacional.
 - **IDs de Documentos Google:** Nunca reutilizar os IDs de arquivos ou pastas do sindicato local.
 
 ## 9. Estratégia de Implementação em Blocos
