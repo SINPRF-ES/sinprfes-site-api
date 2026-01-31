@@ -117,7 +117,7 @@
         }
 
         const opcoes = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"]
-            .map(op => `<option value="${op}" ${op === (lotacao || "SEDE").toUpperCase() ? "selected" : ""}>${op}</option>`)
+            .map(op => `<option value="${op}" ${String(lotacao || "SEDE").toUpperCase() === op.toUpperCase() ? "selected" : ""}>${op}</option>`)
             .join("");
 
         if (!document.getElementById('style-meus-dados')) {

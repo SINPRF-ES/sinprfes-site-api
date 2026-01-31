@@ -54,11 +54,11 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
       {!hideTitle && <Text style={styles.cardTitle}>Lotação, Situação e Perfil</Text>}
 
       <Text style={styles.label}>Unidade de Lotação</Text>
-      <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
+      <View style={(isEditing || isSelf) ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <LotacaoPicker
           selectedValue={filiado?.lotacao || 'SEDE'}
           onValueChange={(itemValue) => setFiliado(f => f ? { ...f, lotacao: itemValue } : null)}
-          enabled={isEditing}
+          enabled={isEditing || isSelf}
         />
       </View>
 

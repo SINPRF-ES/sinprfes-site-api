@@ -11,10 +11,10 @@
 
     const LOTACAO_OPCOES = [
       "SEDE",
-      "DEL 01 - Viana",
-      "DEL 02 - Serra",
-      "DEL 03 - Guarapari",
-      "DEL 04 - Linhares."
+      "1ª DEL (Viana)",
+      "2ª DEL (Serra)",
+      "3ª DEL (Guarapari)",
+      "4ª DEL (Linhares)"
     ];
 
     let perfilAtual = null;
