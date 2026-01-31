@@ -78,9 +78,9 @@
 
             // Exibe aba Repasse se tiver permissão
             const perfisRepasse = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-            if (perfisRepasse.includes(perfil)) {
-                const navRepasse = document.getElementById("nav-repasse");
-                if (navRepasse) navRepasse.style.display = "block";
+            const navRepasse = document.getElementById("nav-repasse");
+            if (navRepasse) {
+                navRepasse.style.display = perfisRepasse.includes(perfil) ? "block" : "none";
             }
 
         } catch (err) {
