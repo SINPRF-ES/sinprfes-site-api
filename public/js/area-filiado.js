@@ -23,6 +23,7 @@
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
+        const { inicializarRepasse } = window.Repasse || {};
         const { Notificacoes } = window || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
@@ -40,6 +41,7 @@
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
+                else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
             });
         }
@@ -73,6 +75,13 @@
 
             // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
             if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
+
+            // Exibe aba Repasse se tiver permissão
+            const perfisRepasse = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+            if (perfisRepasse.includes(perfil)) {
+                const navRepasse = document.getElementById("nav-repasse");
+                if (navRepasse) navRepasse.style.display = "block";
+            }
 
         } catch (err) {
             console.error("Falha na sincronização inicial:", err);
