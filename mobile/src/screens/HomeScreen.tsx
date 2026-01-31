@@ -35,8 +35,22 @@ const NAV_ITEMS = [
   },
 ];
 
+const GESTAO_ITEMS = [
+  {
+    label: 'Repasse por Localidade',
+    icon: 'cash-multiple',
+    screen: 'Repasse',
+  },
+];
+
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { usuario } = useAuth();
+  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
+
+  const displayedItems = [...NAV_ITEMS];
+  if (ehGestao) {
+    displayedItems.push(...GESTAO_ITEMS);
+  }
 
   return (
     <SafeScreen style={styles.container}>
@@ -56,7 +70,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <JogosBanner />
 
       <View style={styles.grid}>
-        {NAV_ITEMS.map((item) => (
+        {displayedItems.map((item) => (
           <TouchableOpacity
             key={item.label}
             style={styles.card}
