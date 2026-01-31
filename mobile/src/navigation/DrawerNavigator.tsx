@@ -15,6 +15,7 @@ import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
+import RepasseScreen from '../screens/RepasseScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/filiadoUtils';
@@ -111,6 +112,11 @@ const DrawerNavigator = () => {
       )}
       {ehGestao && (
         <>
+          <Drawer.Screen
+            name="Repasse"
+            component={RepasseScreen}
+            options={{ title: 'Repasse por Localidade' }}
+          />
           <Drawer.Screen
             name="NotificacoesPush"
             component={NotificacoesPushScreen}
