@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,17 +17,61 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SafeScreen from '../components/SafeScreen';
 import repasseService, { MesRepasse, Responsavel } from '../services/repasseService';
 import { useAuth } from '../hooks/useAuth';
-import { formatCurrency } from '../shared/format/formatters';
+import { logger } from '../infra/logger';
 
 const nomesMeses = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
-export default function RepasseScreen() {
-  console.info('[REPASSE][SCREEN] Render start');
+class RepasseErrorBoundary extends Component<{ children: ReactNode, breadcrumbs: string[] }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    logger.error('REPASSE_RENDER_ERROR', error, {
+      componentStack: errorInfo.componentStack,
+      breadcrumbs: this.props.breadcrumbs
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ padding: 20, alignItems: 'center' }}>
+          <Text style={{ color: 'red', fontWeight: 'bold' }}>⚠️ Erro ao carregar repasse.</Text>
+          <Text style={{ color: '#666', marginTop: 10 }}>Tente recarregar a tela.</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function RepasseScreen() {
   const { usuario } = useAuth();
+  const breadcrumbsRef = useRef<string[]>([]);
+
+  const bc = (msg: string, meta?: any) => {
+    breadcrumbsRef.current.push(msg);
+    if (breadcrumbsRef.current.length > 50) breadcrumbsRef.current.shift();
+    logger.info('REPASSE_BC', { msg, ...meta });
+  };
+
+  const safeNumber = (v: any, fallback = 0) => {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const formatCurrency = (v: any) =>
+    safeNumber(v, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [meses, setMeses] = useState<MesRepasse[]>([]);
@@ -49,61 +93,79 @@ export default function RepasseScreen() {
   const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
 
   const fetchData = useCallback(async () => {
+    bc('fetch:start', { year });
     try {
       setLoading(true);
 
-      // Chamada paralela segura - Promise.allSettled garante que falha em um não derruba o outro
+      bc('api:call:start', { year, ehGestao });
       const [respAno, respResps] = await Promise.allSettled([
         repasseService.getRepasseAno(year),
         ehGestao ? repasseService.listarResponsaveis() : Promise.resolve([])
       ]);
+      bc('api:call:end', {
+        anoStatus: respAno.status,
+        respsStatus: respResps.status
+      });
 
       if (respAno.status === 'fulfilled') {
         const data = respAno.value;
-        console.info('[REPASSE][FETCH][getRepasseAno] OK', { hasMeses: !!data?.meses });
 
         // Passo 1: Normalização robusta de dados (sanitização preventiva)
-        const mesesNorm = Array.isArray(data?.meses) ? data.meses.map(m => ({
+        const mesesApi = Array.isArray(data?.meses) ? data.meses : [];
+        const mesesNorm = mesesApi.map(m => ({
           ...m,
-          month: Number(m?.month || 0),
-          perCapita: Number(m?.perCapita || 0),
-          totalRepasseMes: Number(m?.totalRepasseMes || 0),
+          month: safeNumber(m?.month, 0),
+          perCapita: safeNumber(m?.perCapita, 0),
+          totalRepasseMes: safeNumber(m?.totalRepasseMes, 0),
           localidades: Array.isArray(m?.localidades) ? m.localidades.map(l => ({
             ...l,
             lotacao: String(l?.lotacao || ''),
-            filiadosAtivos: Number(l?.filiadosAtivos || 0),
-            prfTotal: Number(l?.prfTotal || 0),
-            percentual: (l?.percentual == null) ? null : Number(l.percentual),
-            creditoMes: Number(l?.creditoMes || 0),
-            reembolsoMes: Number(l?.reembolsoMes || 0),
-            acumuladoAno: Number(l?.acumuladoAno || 0),
+            filiadosAtivos: safeNumber(l?.filiadosAtivos, 0),
+            prfTotal: safeNumber(l?.prfTotal, 0),
+            percentual: (l?.percentual == null) ? null : safeNumber(l.percentual),
+            creditoMes: safeNumber(l?.creditoMes, 0),
+            reembolsoMes: safeNumber(l?.reembolsoMes, 0),
+            acumuladoAno: safeNumber(l?.acumuladoAno, 0),
             responsavelId: l?.responsavelId ?? null,
             responsavelNome: String(l?.responsavelNome || ''),
           })) : [],
-        })) : [];
+        }));
+
+        const totalAcumuladoNorm = safeNumber(data?.totalAcumuladoGeral, 0);
+
+        bc('normalize:done', {
+          mesesLen: mesesNorm.length,
+          total: totalAcumuladoNorm
+        });
 
         setMeses(mesesNorm);
-        setTotalAcumuladoGeral(Number(data?.totalAcumuladoGeral || 0));
+        setTotalAcumuladoGeral(totalAcumuladoNorm);
       } else {
-        console.error('[REPASSE][API][getRepasseAno]', respAno.reason);
+        logger.error('REPASSE_FETCH_ERROR', respAno.reason, {
+          fn: 'getRepasseAno',
+          breadcrumbs: breadcrumbsRef.current,
+          year
+        });
         setMeses([]);
       }
 
       if (respResps.status === 'fulfilled') {
         const respsData = respResps.value;
-        console.info('[REPASSE][FETCH][listarResponsaveis] OK', { count: respsData?.length });
         setResponsaveis(Array.isArray(respsData) ? respsData : []);
       } else {
-        // Falha no listarResponsaveis (ex: 403) não impede exibição do repasse
-        console.error('[REPASSE][API][responsaveis]', respResps.reason);
         setResponsaveis([]);
       }
 
       if (respAno.status === 'rejected') {
         Alert.alert('Erro', 'Não foi possível carregar os dados de repasse para este ano.');
       }
-    } catch (err) {
-      console.error('Repasse.fetchData critical crash prevent:', err);
+    } catch (err: any) {
+      logger.error('REPASSE_FETCH_ERROR', err, {
+        message: err.message,
+        stack: err.stack,
+        breadcrumbs: breadcrumbsRef.current,
+        year
+      });
       setMeses([]);
       setResponsaveis([]);
     } finally {
@@ -234,16 +296,6 @@ export default function RepasseScreen() {
     return '#2e7d32';
   };
 
-  // Versão tolerante do formatCurrency
-  const safeFormatCurrency = (v: any) => {
-    console.info('[REPASSE][FN CHECK]', { formatCurrency: typeof formatCurrency });
-    if (typeof formatCurrency !== 'function') {
-      console.error('[REPASSE][FATAL] formatCurrency não é função');
-      return String(v || 0);
-    }
-    const value = (v == null || !Number.isFinite(Number(v))) ? 0 : Number(v);
-    return formatCurrency(value);
-  };
 
   if (loading && meses.length === 0) {
     console.info('[REPASSE][RENDER] Loading state active');
@@ -255,13 +307,16 @@ export default function RepasseScreen() {
     return <View style={styles.centered}><Text>Carregando repasse...</Text></View>;
   }
 
+  bc('render:start', { selectedYear: year, mesesLen: meses?.length, totalType: typeof totalAcumuladoGeral });
+
   return (
     <SafeScreen style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+      <RepasseErrorBoundary breadcrumbs={breadcrumbsRef.current}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.title}>💱 Repasse Mensal</Text>
@@ -293,14 +348,9 @@ export default function RepasseScreen() {
           )}
 
           {(() => {
-            console.info('[REPASSE][MAP][meses]', {
-              exists: !!meses,
-              isArray: Array.isArray(meses),
-              count: meses?.length,
-            });
+            bc('render:list:meses', { mesesLen: meses.length });
 
             if (!Array.isArray(meses)) {
-              console.error('[REPASSE][FATAL] meses não é array');
               return null;
             }
 
@@ -312,10 +362,10 @@ export default function RepasseScreen() {
                 >
                   <View style={styles.monthHeaderLeft}>
                     <Text style={styles.monthName}>{nomesMeses[m.month - 1] || `Mês ${m.month}`}</Text>
-                    <Text style={styles.monthCapita}>Per Capita: {safeFormatCurrency(m.perCapita)}</Text>
+                    <Text style={styles.monthCapita}>Per Capita: {formatCurrency(m.perCapita)}</Text>
                   </View>
                   <View style={styles.monthHeaderRight}>
-                    <Text style={styles.monthTotal}>{safeFormatCurrency(m.totalRepasseMes)}</Text>
+                    <Text style={styles.monthTotal}>{formatCurrency(m.totalRepasseMes)}</Text>
                     <MaterialCommunityIcons
                       name={expandedMonth === m.month ? 'chevron-up' : 'chevron-down'}
                       size={24}
@@ -350,14 +400,9 @@ export default function RepasseScreen() {
                         </View>
 
                         {(() => {
-                          console.info('[REPASSE][MAP][localidades]', {
-                            month: m.month,
-                            exists: !!m.localidades,
-                            isArray: Array.isArray(m.localidades),
-                          });
+                          bc('render:list:localidades', { month: m.month, locLen: m.localidades?.length });
 
                           if (!Array.isArray(m.localidades)) {
-                            console.error(`[REPASSE][FATAL] localidades do mês ${m.month} não é array`);
                             return null;
                           }
 
@@ -409,7 +454,7 @@ export default function RepasseScreen() {
                                 </Text>
                               </View>
 
-                              <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{safeFormatCurrency(loc.creditoMes)}</Text></View>
+                              <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{formatCurrency(loc.creditoMes)}</Text></View>
 
                               <View style={[styles.tableCell, { width: 110 }]}>
                                 {ehGestao ? (
@@ -420,11 +465,11 @@ export default function RepasseScreen() {
                                     onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
                                   />
                                 ) : (
-                                  <Text style={styles.valueCell}>{safeFormatCurrency(loc.reembolsoMes)}</Text>
+                                  <Text style={styles.valueCell}>{formatCurrency(loc.reembolsoMes)}</Text>
                                 )}
                               </View>
 
-                              <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{safeFormatCurrency(loc.acumuladoAno)}</Text></View>
+                              <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(loc.acumuladoAno)}</Text></View>
                             </View>
                           ));
                         })()}
@@ -442,9 +487,10 @@ export default function RepasseScreen() {
               </View>
             ));
           })()}
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </RepasseErrorBoundary>
     </SafeScreen>
   );
 }
