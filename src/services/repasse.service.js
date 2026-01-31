@@ -37,7 +37,7 @@ async function getFiliadosAtivosCount(lotacaoKey) {
 
 async function listarResponsaveis() {
   const { rows } = await pool.query(`
-    SELECT id, nome, cpf
+    SELECT id, nome, cpf, lotacao
     FROM filiados
     WHERE situacao = 'ATIVO'
       AND arquivado_em IS NULL
