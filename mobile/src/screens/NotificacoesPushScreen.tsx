@@ -279,64 +279,70 @@ export default function NotificacoesPushScreen() {
         transparent={true}
         onRequestClose={() => setIsPickerVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Buscar Filiado</Text>
-              <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Buscar Filiado</Text>
+                <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
+                  <MaterialCommunityIcons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
 
-            <TextInput
-              style={styles.modalSearchInput}
-              placeholder="Nome ou CPF..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus
-            />
-
-            {isSearching ? (
-              <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} />
-            ) : (
-              <FlatList
-                data={filiadosBusca}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
-                      setIsPickerVisible(false);
-                      setSearchQuery('');
-                      setFiliadosBusca([]);
-                    }}
-                  >
-                    <View>
-                      <Text style={styles.modalItemName} numberOfLines={1} ellipsizeMode="tail">
-                        {item.nome}
-                      </Text>
-                      <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
-                    </View>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={() => (
-                  <Text style={styles.modalEmptyText}>
-                    {searchQuery.length < 2
-                      ? "Digite pelo menos 2 caracteres para buscar..."
-                      : "Nenhum filiado encontrado."}
-                  </Text>
-                )}
-                keyboardShouldPersistTaps="handled"
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Nome ou CPF..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
               />
-            )}
 
-            {filiadosBusca.length >= 50 && (
-              <Text style={styles.infoLabel}>Muitos resultados. Refine sua busca se não encontrar quem deseja.</Text>
-            )}
+              {isSearching ? (
+                <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} />
+              ) : (
+                <FlatList
+                  data={filiadosBusca}
+                  keyExtractor={(item) => String(item.id)}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.modalItem}
+                      onPress={() => {
+                        setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
+                        setIsPickerVisible(false);
+                        setSearchQuery('');
+                        setFiliadosBusca([]);
+                      }}
+                    >
+                      <View>
+                        <Text style={styles.modalItemName} numberOfLines={1} ellipsizeMode="tail">
+                          {item.nome}
+                        </Text>
+                        <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
+                      </View>
+                      <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={() => (
+                    <Text style={styles.modalEmptyText}>
+                      {searchQuery.length < 2
+                        ? "Digite pelo menos 2 caracteres para buscar..."
+                        : "Nenhum filiado encontrado."}
+                    </Text>
+                  )}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                />
+              )}
+
+              {filiadosBusca.length >= 50 && (
+                <Text style={styles.infoLabel}>Muitos resultados. Refine sua busca se não encontrar quem deseja.</Text>
+              )}
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <ScrollView
