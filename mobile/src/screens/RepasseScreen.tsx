@@ -25,6 +25,8 @@ const nomesMeses = [
 ];
 
 export default function RepasseScreen() {
+  console.info('[REPASSE][SCREEN] Render start');
+
   const { usuario } = useAuth();
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,16 @@ export default function RepasseScreen() {
   const [totalAcumuladoGeral, setTotalAcumuladoGeral] = useState(0);
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [expandedMonth, setExpandedMonth] = useState<number | null>(new Date().getMonth() + 1);
+
+  console.info('[REPASSE][STATE]', {
+    year,
+    loading,
+    mesesCount: meses?.length,
+    totalAcumuladoGeral,
+    responsaveisCount: responsaveis?.length,
+    expandedMonth,
+    usuarioPerfil: usuario?.perfil_acesso,
+  });
 
   // Implementação local para máxima robustez contra erros de importação (UI_RENDER_CRASH)
   const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
@@ -48,6 +60,8 @@ export default function RepasseScreen() {
 
       if (respAno.status === 'fulfilled') {
         const data = respAno.value;
+        console.info('[REPASSE][FETCH][getRepasseAno] OK', { hasMeses: !!data?.meses });
+
         // Passo 1: Normalização robusta de dados (sanitização preventiva)
         const mesesNorm = Array.isArray(data?.meses) ? data.meses.map(m => ({
           ...m,
@@ -71,15 +85,17 @@ export default function RepasseScreen() {
         setMeses(mesesNorm);
         setTotalAcumuladoGeral(Number(data?.totalAcumuladoGeral || 0));
       } else {
-        console.error('[Repasse] Erro ao carregar dados do ano:', respAno.reason);
+        console.error('[REPASSE][API][getRepasseAno]', respAno.reason);
         setMeses([]);
       }
 
       if (respResps.status === 'fulfilled') {
-        setResponsaveis(Array.isArray(respResps.value) ? respResps.value : []);
+        const respsData = respResps.value;
+        console.info('[REPASSE][FETCH][listarResponsaveis] OK', { count: respsData?.length });
+        setResponsaveis(Array.isArray(respsData) ? respsData : []);
       } else {
         // Falha no listarResponsaveis (ex: 403) não impede exibição do repasse
-        console.warn('[Repasse] Erro ao carregar responsáveis (pode ser falta de permissão):', respResps.reason);
+        console.error('[REPASSE][API][responsaveis]', respResps.reason);
         setResponsaveis([]);
       }
 
@@ -129,10 +145,12 @@ export default function RepasseScreen() {
   };
 
   const recalculate = (mesesList: MesRepasse[], month: number) => {
+    console.info('[REPASSE][LOGIC] Recalculate start', { month });
     const m = (mesesList || []).find(m => m.month === month);
     if (!m) return;
 
     const perCapita = Number(m.perCapita || 0);
+    console.info('[REPASSE][FOR_EACH][recalculate.localidades]', { count: m.localidades?.length });
     (m.localidades || []).forEach(loc => {
       const prfTotal = Number(loc.prfTotal || 0);
       const filiadosAtivos = Number(loc.filiadosAtivos || 0);
@@ -151,13 +169,16 @@ export default function RepasseScreen() {
       }
     });
 
+    console.info('[REPASSE][REDUCE][totalRepasseMes]');
     m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + Number(l.creditoMes || 0), 0);
 
     const lotacoes = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
     const acumulados: any = {};
+    console.info('[REPASSE][FOR_EACH][lotacoes]');
     lotacoes.forEach(lot => {
       let somaCred = 0;
       let somaReem = 0;
+      console.info(`[REPASSE][FOR_EACH][mesesList] for lotacao ${lot}`);
       (mesesList || []).forEach(mes => {
         const l = (mes.localidades || []).find(ll => ll.lotacao === lot);
         if (l) {
@@ -168,12 +189,14 @@ export default function RepasseScreen() {
       acumulados[lot] = somaCred - somaReem;
     });
 
+    console.info('[REPASSE][FOR_EACH][mesesList] update acumuladoAno');
     (mesesList || []).forEach(mes => {
       (mes.localidades || []).forEach(l => {
         l.acumuladoAno = Number(acumulados[l.lotacao] || 0);
       });
     });
 
+    console.info('[REPASSE][REDUCE][totalAcumuladoGeral]');
     setTotalAcumuladoGeral(Object.values(acumulados).reduce((acc: any, curr: any) => acc + Number(curr || 0), 0) as number);
   };
 
@@ -183,6 +206,7 @@ export default function RepasseScreen() {
 
     try {
       setLoading(true);
+      console.info('[REPASSE][MAP][handleSaveMonth.localidades]');
       await repasseService.updateRepasseMes(
         year,
         month,
@@ -212,12 +236,23 @@ export default function RepasseScreen() {
 
   // Versão tolerante do formatCurrency
   const safeFormatCurrency = (v: any) => {
+    console.info('[REPASSE][FN CHECK]', { formatCurrency: typeof formatCurrency });
+    if (typeof formatCurrency !== 'function') {
+      console.error('[REPASSE][FATAL] formatCurrency não é função');
+      return String(v || 0);
+    }
     const value = (v == null || !Number.isFinite(Number(v))) ? 0 : Number(v);
     return formatCurrency(value);
   };
 
   if (loading && meses.length === 0) {
+    console.info('[REPASSE][RENDER] Loading state active');
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+  }
+
+  if (!meses) {
+    console.warn('[REPASSE][RENDER] meses indefinido');
+    return <View style={styles.centered}><Text>Carregando repasse...</Text></View>;
   }
 
   return (
@@ -257,130 +292,156 @@ export default function RepasseScreen() {
             </View>
           )}
 
-          {meses.map((m) => (
-            <View key={m.month} style={styles.monthCard}>
-              <TouchableOpacity
-                style={styles.monthHeader}
-                onPress={() => setExpandedMonth(expandedMonth === m.month ? null : m.month)}
-              >
-                <View style={styles.monthHeaderLeft}>
-                  <Text style={styles.monthName}>{nomesMeses[m.month - 1] || `Mês ${m.month}`}</Text>
-                  <Text style={styles.monthCapita}>Per Capita: {safeFormatCurrency(m.perCapita)}</Text>
-                </View>
-                <View style={styles.monthHeaderRight}>
-                  <Text style={styles.monthTotal}>{safeFormatCurrency(m.totalRepasseMes)}</Text>
-                  <MaterialCommunityIcons
-                    name={expandedMonth === m.month ? 'chevron-up' : 'chevron-down'}
-                    size={24}
-                    color="#003366"
-                  />
-                </View>
-              </TouchableOpacity>
+          {(() => {
+            console.info('[REPASSE][MAP][meses]', {
+              exists: !!meses,
+              isArray: Array.isArray(meses),
+              count: meses?.length,
+            });
 
-              {expandedMonth === m.month && (
-                <View style={styles.monthDetails}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Per Capita do Mês</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={String(m.perCapita)}
-                      keyboardType="numeric"
-                      onChangeText={(v) => handleUpdatePerCapita(m.month, v)}
+            if (!Array.isArray(meses)) {
+              console.error('[REPASSE][FATAL] meses não é array');
+              return null;
+            }
+
+            return meses.map((m) => (
+              <View key={m.month} style={styles.monthCard}>
+                <TouchableOpacity
+                  style={styles.monthHeader}
+                  onPress={() => setExpandedMonth(expandedMonth === m.month ? null : m.month)}
+                >
+                  <View style={styles.monthHeaderLeft}>
+                    <Text style={styles.monthName}>{nomesMeses[m.month - 1] || `Mês ${m.month}`}</Text>
+                    <Text style={styles.monthCapita}>Per Capita: {safeFormatCurrency(m.perCapita)}</Text>
+                  </View>
+                  <View style={styles.monthHeaderRight}>
+                    <Text style={styles.monthTotal}>{safeFormatCurrency(m.totalRepasseMes)}</Text>
+                    <MaterialCommunityIcons
+                      name={expandedMonth === m.month ? 'chevron-up' : 'chevron-down'}
+                      size={24}
+                      color="#003366"
                     />
                   </View>
+                </TouchableOpacity>
 
-                  <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                    <View style={styles.tableContainer}>
-                      <View style={styles.tableHeader}>
-                        <View style={[styles.tableHeaderCell, { width: 130 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
-                        {ehGestao && <View style={[styles.tableHeaderCell, { width: 200 }]}><Text style={styles.tableHeaderText}>Responsável</Text></View>}
-                        <View style={[styles.tableHeaderCell, { width: 70 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 90 }]}><Text style={styles.tableHeaderText}>PRF Total</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 60 }]}><Text style={styles.tableHeaderText}>%</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Crédito Mês</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Reembolso</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 120 }]}><Text style={styles.tableHeaderText}>Acumulado Ano</Text></View>
-                      </View>
-
-                      {(m.localidades || []).map((loc, idx) => (
-                        <View
-                          key={loc.lotacao}
-                          style={[
-                            styles.tableRow,
-                            idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
-                          ]}
-                        >
-                          <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{String(loc.lotacao || '—')}</Text></View>
-
-                          {ehGestao && (
-                            <View style={[styles.tableCell, { width: 200 }]}>
-                              <View style={styles.pickerWrapperCell}>
-                                <Picker
-                                  selectedValue={loc.responsavelId}
-                                  onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
-                                  style={styles.pickerCell}
-                                >
-                                  <Picker.Item label="Selecione..." value={null} />
-                                  {(responsaveis || []).map(r => (
-                                    <Picker.Item key={r.id} label={r.nome} value={r.id} />
-                                  ))}
-                                </Picker>
-                              </View>
-                            </View>
-                          )}
-
-                          <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{Number(loc.filiadosAtivos || 0)}</Text></View>
-
-                          <View style={[styles.tableCell, { width: 90 }]}>
-                            {ehGestao ? (
-                              <TextInput
-                                style={styles.inputCell}
-                                value={String(loc.prfTotal || 0)}
-                                keyboardType="numeric"
-                                onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
-                              />
-                            ) : (
-                              <Text style={styles.valueCell}>{Number(loc.prfTotal || 0)}</Text>
-                            )}
-                          </View>
-
-                          <View style={[styles.tableCell, { width: 60 }]}>
-                            <Text style={[styles.valueCell, { color: getPercentColor(loc.percentual), fontWeight: 'bold' }]}>
-                              {(loc.percentual == null || !Number.isFinite(loc.percentual)) ? '—' : `${Number(loc.percentual).toFixed(1)}%`}
-                            </Text>
-                          </View>
-
-                          <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{safeFormatCurrency(loc.creditoMes)}</Text></View>
-
-                          <View style={[styles.tableCell, { width: 110 }]}>
-                            {ehGestao ? (
-                              <TextInput
-                                style={styles.inputCell}
-                                value={String(loc.reembolsoMes || 0)}
-                                keyboardType="numeric"
-                                onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
-                              />
-                            ) : (
-                              <Text style={styles.valueCell}>{safeFormatCurrency(loc.reembolsoMes)}</Text>
-                            )}
-                          </View>
-
-                          <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{safeFormatCurrency(loc.acumuladoAno)}</Text></View>
-                        </View>
-                      ))}
+                {expandedMonth === m.month && (
+                  <View style={styles.monthDetails}>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Per Capita do Mês</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={String(m.perCapita)}
+                        keyboardType="numeric"
+                        onChangeText={(v) => handleUpdatePerCapita(m.month, v)}
+                      />
                     </View>
-                  </ScrollView>
 
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={() => handleSaveMonth(m.month)}
-                  >
-                    <Text style={styles.saveButtonText}>Salvar {nomesMeses[m.month - 1]}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          ))}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                      <View style={styles.tableContainer}>
+                        <View style={styles.tableHeader}>
+                          <View style={[styles.tableHeaderCell, { width: 130 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
+                          {ehGestao && <View style={[styles.tableHeaderCell, { width: 200 }]}><Text style={styles.tableHeaderText}>Responsável</Text></View>}
+                          <View style={[styles.tableHeaderCell, { width: 70 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
+                          <View style={[styles.tableHeaderCell, { width: 90 }]}><Text style={styles.tableHeaderText}>PRF Total</Text></View>
+                          <View style={[styles.tableHeaderCell, { width: 60 }]}><Text style={styles.tableHeaderText}>%</Text></View>
+                          <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Crédito Mês</Text></View>
+                          <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Reembolso</Text></View>
+                          <View style={[styles.tableHeaderCell, { width: 120 }]}><Text style={styles.tableHeaderText}>Acumulado Ano</Text></View>
+                        </View>
+
+                        {(() => {
+                          console.info('[REPASSE][MAP][localidades]', {
+                            month: m.month,
+                            exists: !!m.localidades,
+                            isArray: Array.isArray(m.localidades),
+                          });
+
+                          if (!Array.isArray(m.localidades)) {
+                            console.error(`[REPASSE][FATAL] localidades do mês ${m.month} não é array`);
+                            return null;
+                          }
+
+                          return m.localidades.map((loc, idx) => (
+                            <View
+                              key={loc.lotacao}
+                              style={[
+                                styles.tableRow,
+                                idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
+                              ]}
+                            >
+                              <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{String(loc.lotacao || '—')}</Text></View>
+
+                              {ehGestao && (
+                                <View style={[styles.tableCell, { width: 200 }]}>
+                                  <View style={styles.pickerWrapperCell}>
+                                    <Picker
+                                      selectedValue={loc.responsavelId}
+                                      onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
+                                      style={styles.pickerCell}
+                                    >
+                                      <Picker.Item label="Selecione..." value={null} />
+                                      {(responsaveis || []).map(r => (
+                                        <Picker.Item key={r.id} label={r.nome} value={r.id} />
+                                      ))}
+                                    </Picker>
+                                  </View>
+                                </View>
+                              )}
+
+                              <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{Number(loc.filiadosAtivos || 0)}</Text></View>
+
+                              <View style={[styles.tableCell, { width: 90 }]}>
+                                {ehGestao ? (
+                                  <TextInput
+                                    style={styles.inputCell}
+                                    value={String(loc.prfTotal || 0)}
+                                    keyboardType="numeric"
+                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
+                                  />
+                                ) : (
+                                  <Text style={styles.valueCell}>{Number(loc.prfTotal || 0)}</Text>
+                                )}
+                              </View>
+
+                              <View style={[styles.tableCell, { width: 60 }]}>
+                                <Text style={[styles.valueCell, { color: getPercentColor(loc.percentual), fontWeight: 'bold' }]}>
+                                  {(loc.percentual == null || !Number.isFinite(loc.percentual)) ? '—' : `${Number(loc.percentual).toFixed(1)}%`}
+                                </Text>
+                              </View>
+
+                              <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{safeFormatCurrency(loc.creditoMes)}</Text></View>
+
+                              <View style={[styles.tableCell, { width: 110 }]}>
+                                {ehGestao ? (
+                                  <TextInput
+                                    style={styles.inputCell}
+                                    value={String(loc.reembolsoMes || 0)}
+                                    keyboardType="numeric"
+                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
+                                  />
+                                ) : (
+                                  <Text style={styles.valueCell}>{safeFormatCurrency(loc.reembolsoMes)}</Text>
+                                )}
+                              </View>
+
+                              <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{safeFormatCurrency(loc.acumuladoAno)}</Text></View>
+                            </View>
+                          ));
+                        })()}
+                      </View>
+                    </ScrollView>
+
+                    <TouchableOpacity
+                      style={styles.saveButton}
+                      onPress={() => handleSaveMonth(m.month)}
+                    >
+                      <Text style={styles.saveButtonText}>Salvar {nomesMeses[m.month - 1]}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            ));
+          })()}
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>

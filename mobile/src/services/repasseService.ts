@@ -36,6 +36,11 @@ export interface Responsavel {
 const repasseService = {
   getRepasseAno: async (year: number): Promise<RepasseAnoResponse> => {
     const response = await apiService.get(`/api/repasse?year=${year}`);
+    console.info('[REPASSE][SERVICE][RAW]', response.data);
+    console.info('[REPASSE][SERVICE][SHAPE]', {
+      meses: response.data?.meses,
+      totalAcumuladoGeral: response.data?.totalAcumuladoGeral,
+    });
     return response.data;
   },
 
@@ -50,9 +55,20 @@ const repasseService = {
   },
 
   listarResponsaveis: async (): Promise<Responsavel[]> => {
-    const response = await apiService.get('/api/repasse/responsaveis');
-    // Suporta retorno direto ou dentro de .responsaveis, garantindo sempre um array
-    return response.data?.responsaveis ?? response.data ?? [];
+    try {
+      const response = await apiService.get('/api/repasse/responsaveis');
+      console.info('[REPASSE][SERVICE][RESPONSAVEIS][RAW]', response.data);
+      // Suporta retorno direto ou dentro de .responsaveis, garantindo sempre um array
+      const data = response.data?.responsaveis ?? response.data ?? [];
+      if (!Array.isArray(data)) {
+        console.error('[REPASSE][SERVICE][RESPONSAVEIS][FATAL] data não é array', data);
+        return [];
+      }
+      return data;
+    } catch (error) {
+      console.error('[REPASSE][API][responsaveis]', error);
+      return [];
+    }
   }
 };
 

@@ -1,7 +1,5 @@
 # Clone Manual: SINPRF-ES to FENAPRF
 
-**Nota importante:** Este documento descreve o funcionamento do sistema do SINPRF-ES como referência funcional. Ele não define uma implementação obrigatória nem impõe estrutura técnica ao projeto FENAPRF, que deve adaptar os fluxos aqui descritos à sua própria realidade organizacional e jurídica.
-
 This document describes the functional architecture and business logic of the SINPRF-ES repository, intended to guide the reimplementation of its features in the FENAPRF project.
 
 ## 1. Visão Geral do Projeto
@@ -49,7 +47,7 @@ A comunicação é feita via requisições REST (JSON) e WebSockets para eventos
 
 ## 3. Modelo de Usuários e Perfis
 
-O sistema utiliza Controle de Acesso Baseado em Funções (RBAC). Os perfis descritos são abstrações técnicas; a nomenclatura e o mapeamento para cargos reais podem variar no projeto FENAPRF. Os perfis e permissões mapeados são:
+O sistema utiliza Controle de Acesso Baseado em Funções (RBAC). Os perfis e permissões são:
 
 - **ADMIN:** Acesso irrestrito a todas as funcionalidades e configurações do sistema.
 - **DIRETORIA:** Gestão de filiados, visualização de dados gerais, gerenciamento de votações, push e conteúdo.
@@ -142,7 +140,6 @@ O sistema utiliza Controle de Acesso Baseado em Funções (RBAC). Os perfis desc
 - **Descrição:** Sistema de deliberação em tempo real com quórum dinâmico.
 - **Acesso:** Gestores (Presidente/Secretário), Filiados (Participantes).
 - **Onde aparece:** App (Principal interface de participação) e Site (Painel da Mesa).
-- **Autoridade do Estado:** O backend é sempre a única fonte da verdade. O App e o Site são apenas interfaces de participação e controle. Em caso de divergência ou reconexão, o estado completo deve ser rehidratado a partir do servidor (autoridade central).
 - **Fluxo do Usuário:**
   1. **Edital:** A assembleia é criada com um PDF obrigatório.
   2. **Check-in (Quórum):** O gestor gera um token de 6 dígitos. O filiado deve digitar o token no App para marcar presença.
@@ -245,8 +242,6 @@ Para o projeto FENAPRF, os seguintes pontos devem ser configuráveis (via `.env`
 - **IDs de Documentos Google:** Nunca reutilizar os IDs de arquivos ou pastas do sindicato local.
 
 ## 9. Estratégia de Implementação em Blocos
-
-Os blocos abaixo representam uma sequência lógica sugerida, mas podem ser implementados fora de ordem conforme prioridade institucional, desde que os pré-requisitos técnicos de cada bloco sejam respeitados.
 
 ### Bloco 1: Fundação (Auth + Perfis)
 - **Pré-requisitos:** Banco de dados PG, Estrutura de JWT.
