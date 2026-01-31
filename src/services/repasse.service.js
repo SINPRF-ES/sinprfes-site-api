@@ -35,14 +35,40 @@ async function getFiliadosAtivosCount(lotacaoKey) {
   return parseInt(rows[0].count);
 }
 
-async function listarResponsaveis() {
-  const { rows } = await pool.query(`
-    SELECT id, nome, cpf
+async function listarResponsaveis(lotacaoKey = null) {
+  let query = `
+    SELECT id, nome, cpf, lotacao, perfil_acesso, situacao, arquivado_em
     FROM filiados
     WHERE situacao = 'ATIVO'
       AND arquivado_em IS NULL
-    ORDER BY nome ASC
-  `);
+  `;
+  const params = [];
+
+  if (lotacaoKey) {
+    const keyword = LOTACAO_KEYWORDS[lotacaoKey];
+    if (keyword) {
+      query += ` AND UPPER(lotacao) LIKE $1`;
+      params.push(`%${keyword.toUpperCase()}%`);
+    }
+  }
+
+  query += ` ORDER BY nome ASC`;
+
+  const { rows } = await pool.query(query, params);
+
+  // Logging backend (obrigatório)
+  const total = rows.length;
+  const byLotacao = {};
+  const organizadores = rows.filter(r => (r.perfil_acesso || '').toUpperCase() === 'ORGANIZADOR');
+
+  rows.forEach(r => {
+    const lot = r.lotacao || 'SEM LOTACAO';
+    byLotacao[lot] = (byLotacao[lot] || 0) + 1;
+  });
+
+  console.info(`[REPASSE_RESP] total=${total} byLotacao=${JSON.stringify(byLotacao)}`);
+  console.info(`[REPASSE_RESP] organizadores=${organizadores.length} lotacoes=${JSON.stringify(organizadores.map(o => o.lotacao))}`);
+
   return rows;
 }
 
