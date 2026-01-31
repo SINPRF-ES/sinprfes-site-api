@@ -17,7 +17,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SafeScreen from '../components/SafeScreen';
 import repasseService, { MesRepasse, Responsavel } from '../services/repasseService';
 import { useAuth } from '../hooks/useAuth';
-import { isGestao } from '../utils/filiadoUtils';
 import { formatCurrency } from '../shared/format/formatters';
 
 const nomesMeses = [
@@ -34,25 +33,67 @@ export default function RepasseScreen() {
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [expandedMonth, setExpandedMonth] = useState<number | null>(new Date().getMonth() + 1);
 
-  const ehGestao = isGestao(usuario?.perfil_acesso);
+  // Implementação local para máxima robustez contra erros de importação (UI_RENDER_CRASH)
+  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [data, resps] = await Promise.all([
+
+      // Chamada paralela segura - Promise.allSettled garante que falha em um não derruba o outro
+      const [respAno, respResps] = await Promise.allSettled([
         repasseService.getRepasseAno(year),
-        repasseService.listarResponsaveis()
+        ehGestao ? repasseService.listarResponsaveis() : Promise.resolve([])
       ]);
-      setMeses(data.meses);
-      setTotalAcumuladoGeral(data.totalAcumuladoGeral);
-      setResponsaveis(resps);
+
+      if (respAno.status === 'fulfilled') {
+        const data = respAno.value;
+        // Passo 1: Normalização robusta de dados (sanitização preventiva)
+        const mesesNorm = Array.isArray(data?.meses) ? data.meses.map(m => ({
+          ...m,
+          month: Number(m?.month || 0),
+          perCapita: Number(m?.perCapita || 0),
+          totalRepasseMes: Number(m?.totalRepasseMes || 0),
+          localidades: Array.isArray(m?.localidades) ? m.localidades.map(l => ({
+            ...l,
+            lotacao: String(l?.lotacao || ''),
+            filiadosAtivos: Number(l?.filiadosAtivos || 0),
+            prfTotal: Number(l?.prfTotal || 0),
+            percentual: (l?.percentual == null) ? null : Number(l.percentual),
+            creditoMes: Number(l?.creditoMes || 0),
+            reembolsoMes: Number(l?.reembolsoMes || 0),
+            acumuladoAno: Number(l?.acumuladoAno || 0),
+            responsavelId: l?.responsavelId ?? null,
+            responsavelNome: String(l?.responsavelNome || ''),
+          })) : [],
+        })) : [];
+
+        setMeses(mesesNorm);
+        setTotalAcumuladoGeral(Number(data?.totalAcumuladoGeral || 0));
+      } else {
+        console.error('[Repasse] Erro ao carregar dados do ano:', respAno.reason);
+        setMeses([]);
+      }
+
+      if (respResps.status === 'fulfilled') {
+        setResponsaveis(Array.isArray(respResps.value) ? respResps.value : []);
+      } else {
+        // Falha no listarResponsaveis (ex: 403) não impede exibição do repasse
+        console.warn('[Repasse] Erro ao carregar responsáveis (pode ser falta de permissão):', respResps.reason);
+        setResponsaveis([]);
+      }
+
+      if (respAno.status === 'rejected') {
+        Alert.alert('Erro', 'Não foi possível carregar os dados de repasse para este ano.');
+      }
     } catch (err) {
-      console.error(err);
-      Alert.alert('Erro', 'Não foi possível carregar os dados de repasse.');
+      console.error('Repasse.fetchData critical crash prevent:', err);
+      setMeses([]);
+      setResponsaveis([]);
     } finally {
       setLoading(false);
     }
-  }, [year]);
+  }, [year, ehGestao]);
 
   useEffect(() => {
     fetchData();
@@ -88,14 +129,17 @@ export default function RepasseScreen() {
   };
 
   const recalculate = (mesesList: MesRepasse[], month: number) => {
-    const m = mesesList.find(m => m.month === month);
+    const m = (mesesList || []).find(m => m.month === month);
     if (!m) return;
 
-    const perCapita = m.perCapita;
-    m.localidades.forEach(loc => {
-      if (loc.prfTotal > 0) {
-        loc.percentual = (loc.filiadosAtivos / loc.prfTotal) * 100;
-        const base = loc.filiadosAtivos * perCapita;
+    const perCapita = Number(m.perCapita || 0);
+    (m.localidades || []).forEach(loc => {
+      const prfTotal = Number(loc.prfTotal || 0);
+      const filiadosAtivos = Number(loc.filiadosAtivos || 0);
+
+      if (prfTotal > 0) {
+        loc.percentual = (filiadosAtivos / prfTotal) * 100;
+        const base = filiadosAtivos * perCapita;
         let factor = 0;
         if (loc.percentual >= 90) factor = 1.0;
         else if (loc.percentual >= 80) factor = 0.7;
@@ -107,30 +151,30 @@ export default function RepasseScreen() {
       }
     });
 
-    m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + l.creditoMes, 0);
+    m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + Number(l.creditoMes || 0), 0);
 
     const lotacoes = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
     const acumulados: any = {};
     lotacoes.forEach(lot => {
       let somaCred = 0;
       let somaReem = 0;
-      mesesList.forEach(mes => {
-        const l = mes.localidades.find(ll => ll.lotacao === lot);
+      (mesesList || []).forEach(mes => {
+        const l = (mes.localidades || []).find(ll => ll.lotacao === lot);
         if (l) {
-            somaCred += l.creditoMes;
-            somaReem += l.reembolsoMes;
+            somaCred += Number(l.creditoMes || 0);
+            somaReem += Number(l.reembolsoMes || 0);
         }
       });
       acumulados[lot] = somaCred - somaReem;
     });
 
-    mesesList.forEach(mes => {
-      mes.localidades.forEach(l => {
-        l.acumuladoAno = acumulados[l.lotacao];
+    (mesesList || []).forEach(mes => {
+      (mes.localidades || []).forEach(l => {
+        l.acumuladoAno = Number(acumulados[l.lotacao] || 0);
       });
     });
 
-    setTotalAcumuladoGeral(Object.values(acumulados).reduce((acc: any, curr: any) => acc + curr, 0) as number);
+    setTotalAcumuladoGeral(Object.values(acumulados).reduce((acc: any, curr: any) => acc + Number(curr || 0), 0) as number);
   };
 
   const handleSaveMonth = async (month: number) => {
@@ -143,7 +187,7 @@ export default function RepasseScreen() {
         year,
         month,
         m.perCapita,
-        m.localidades.map(l => ({
+        (m.localidades || []).map(l => ({
           lotacaoKey: l.lotacao,
           responsavelId: l.responsavelId,
           prfTotal: l.prfTotal,
@@ -159,11 +203,17 @@ export default function RepasseScreen() {
     }
   };
 
-  const getPercentColor = (percent: number | null) => {
-    if (percent === null) return '#888';
+  const getPercentColor = (percent: number | null | undefined) => {
+    if (percent == null || !Number.isFinite(percent)) return '#888';
     if (percent < 70) return '#c62828';
     if (percent < 80) return '#fcc419';
     return '#2e7d32';
+  };
+
+  // Versão tolerante do formatCurrency
+  const safeFormatCurrency = (v: any) => {
+    const value = (v == null || !Number.isFinite(Number(v))) ? 0 : Number(v);
+    return formatCurrency(value);
   };
 
   if (loading && meses.length === 0) {
@@ -171,7 +221,7 @@ export default function RepasseScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeScreen style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -200,6 +250,13 @@ export default function RepasseScreen() {
             <Text style={styles.statsValue}>{formatCurrency(totalAcumuladoGeral)}</Text>
           </View>
 
+          {meses.length === 0 && !loading && (
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="cash-off" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>Nenhum dado de repasse encontrado para o ano de {year}.</Text>
+            </View>
+          )}
+
           {meses.map((m) => (
             <View key={m.month} style={styles.monthCard}>
               <TouchableOpacity
@@ -207,11 +264,11 @@ export default function RepasseScreen() {
                 onPress={() => setExpandedMonth(expandedMonth === m.month ? null : m.month)}
               >
                 <View style={styles.monthHeaderLeft}>
-                  <Text style={styles.monthName}>{nomesMeses[m.month - 1]}</Text>
-                  <Text style={styles.monthCapita}>Per Capita: {formatCurrency(m.perCapita)}</Text>
+                  <Text style={styles.monthName}>{nomesMeses[m.month - 1] || `Mês ${m.month}`}</Text>
+                  <Text style={styles.monthCapita}>Per Capita: {safeFormatCurrency(m.perCapita)}</Text>
                 </View>
                 <View style={styles.monthHeaderRight}>
-                  <Text style={styles.monthTotal}>{formatCurrency(m.totalRepasseMes)}</Text>
+                  <Text style={styles.monthTotal}>{safeFormatCurrency(m.totalRepasseMes)}</Text>
                   <MaterialCommunityIcons
                     name={expandedMonth === m.month ? 'chevron-up' : 'chevron-down'}
                     size={24}
@@ -233,19 +290,19 @@ export default function RepasseScreen() {
                   </View>
 
                   <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                    <View>
+                    <View style={styles.tableContainer}>
                       <View style={styles.tableHeader}>
-                        <View style={[styles.tableHeaderCell, { width: 120 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 180 }]}><Text style={styles.tableHeaderText}>Responsável</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 60 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 80 }]}><Text style={styles.tableHeaderText}>PRF Total</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 70 }]}><Text style={styles.tableHeaderText}>%</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 100 }]}><Text style={styles.tableHeaderText}>Crédito</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 100 }]}><Text style={styles.tableHeaderText}>Reembolso</Text></View>
-                        <View style={[styles.tableHeaderCell, { width: 100 }]}><Text style={styles.tableHeaderText}>Acumulado</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 130 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
+                        {ehGestao && <View style={[styles.tableHeaderCell, { width: 200 }]}><Text style={styles.tableHeaderText}>Responsável</Text></View>}
+                        <View style={[styles.tableHeaderCell, { width: 70 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 90 }]}><Text style={styles.tableHeaderText}>PRF Total</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 60 }]}><Text style={styles.tableHeaderText}>%</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Crédito Mês</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Reembolso</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 120 }]}><Text style={styles.tableHeaderText}>Acumulado Ano</Text></View>
                       </View>
 
-                      {m.localidades.map((loc, idx) => (
+                      {(m.localidades || []).map((loc, idx) => (
                         <View
                           key={loc.lotacao}
                           style={[
@@ -253,45 +310,62 @@ export default function RepasseScreen() {
                             idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
                           ]}
                         >
-                          <View style={[styles.tableCell, { width: 120 }]}><Text style={styles.locNameCell}>{loc.lotacao}</Text></View>
-                          <View style={[styles.tableCell, { width: 180 }]}>
-                            <View style={styles.pickerWrapperCell}>
-                              <Picker
-                                selectedValue={loc.responsavelId}
-                                onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
-                                style={styles.pickerCell}
-                              >
-                                <Picker.Item label="Selecione..." value={null} />
-                                {responsaveis.map(r => (
-                                  <Picker.Item key={r.id} label={r.nome} value={r.id} />
-                                ))}
-                              </Picker>
+                          <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{String(loc.lotacao || '—')}</Text></View>
+
+                          {ehGestao && (
+                            <View style={[styles.tableCell, { width: 200 }]}>
+                              <View style={styles.pickerWrapperCell}>
+                                <Picker
+                                  selectedValue={loc.responsavelId}
+                                  onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
+                                  style={styles.pickerCell}
+                                >
+                                  <Picker.Item label="Selecione..." value={null} />
+                                  {(responsaveis || []).map(r => (
+                                    <Picker.Item key={r.id} label={r.nome} value={r.id} />
+                                  ))}
+                                </Picker>
+                              </View>
                             </View>
+                          )}
+
+                          <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{Number(loc.filiadosAtivos || 0)}</Text></View>
+
+                          <View style={[styles.tableCell, { width: 90 }]}>
+                            {ehGestao ? (
+                              <TextInput
+                                style={styles.inputCell}
+                                value={String(loc.prfTotal || 0)}
+                                keyboardType="numeric"
+                                onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
+                              />
+                            ) : (
+                              <Text style={styles.valueCell}>{Number(loc.prfTotal || 0)}</Text>
+                            )}
                           </View>
-                          <View style={[styles.tableCell, { width: 60 }]}><Text style={styles.valueCell}>{loc.filiadosAtivos}</Text></View>
-                          <View style={[styles.tableCell, { width: 80 }]}>
-                            <TextInput
-                              style={styles.inputCell}
-                              value={String(loc.prfTotal)}
-                              keyboardType="numeric"
-                              onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
-                            />
-                          </View>
-                          <View style={[styles.tableCell, { width: 70 }]}>
+
+                          <View style={[styles.tableCell, { width: 60 }]}>
                             <Text style={[styles.valueCell, { color: getPercentColor(loc.percentual), fontWeight: 'bold' }]}>
-                              {loc.percentual === null ? '—' : `${loc.percentual.toFixed(0)}%`}
+                              {(loc.percentual == null || !Number.isFinite(loc.percentual)) ? '—' : `${Number(loc.percentual).toFixed(1)}%`}
                             </Text>
                           </View>
-                          <View style={[styles.tableCell, { width: 100 }]}><Text style={styles.valueCell}>{formatCurrency(loc.creditoMes)}</Text></View>
-                          <View style={[styles.tableCell, { width: 100 }]}>
-                            <TextInput
-                              style={styles.inputCell}
-                              value={String(loc.reembolsoMes)}
-                              keyboardType="numeric"
-                              onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
-                            />
+
+                          <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{safeFormatCurrency(loc.creditoMes)}</Text></View>
+
+                          <View style={[styles.tableCell, { width: 110 }]}>
+                            {ehGestao ? (
+                              <TextInput
+                                style={styles.inputCell}
+                                value={String(loc.reembolsoMes || 0)}
+                                keyboardType="numeric"
+                                onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
+                              />
+                            ) : (
+                              <Text style={styles.valueCell}>{safeFormatCurrency(loc.reembolsoMes)}</Text>
+                            )}
                           </View>
-                          <View style={[styles.tableCell, { width: 100 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(loc.acumuladoAno)}</Text></View>
+
+                          <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{safeFormatCurrency(loc.acumuladoAno)}</Text></View>
                         </View>
                       ))}
                     </View>
@@ -310,7 +384,7 @@ export default function RepasseScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeScreen>
   );
 }
 
@@ -339,17 +413,81 @@ const styles = StyleSheet.create({
   input: { backgroundColor: '#f9f9f9', padding: 10, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
   saveButton: { backgroundColor: '#003366', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 15 },
   saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 20 },
+  emptyText: { color: '#999', fontSize: 16, textAlign: 'center', marginTop: 10 },
 
-  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f3f5', borderTopWidth: 1, borderLeftWidth: 1, borderColor: '#ccc' },
-  tableHeaderText: { fontWeight: 'bold', color: '#003366', fontSize: 11, textAlign: 'center' },
-  tableHeaderCell: { justifyContent: 'center', alignItems: 'center', padding: 8, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', minHeight: 40 },
-  tableRow: { flexDirection: 'row', borderLeftWidth: 1, borderColor: '#ccc' },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f3f5',
+    borderBottomWidth: 2,
+    borderBottomColor: '#ccc',
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
+  },
+  tableHeaderText: {
+    fontWeight: 'bold',
+    color: '#003366',
+    fontSize: 11,
+    textAlign: 'center',
+    textTransform: 'uppercase'
+  },
+  tableHeaderCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    borderRightWidth: 1,
+    borderRightColor: '#ccc',
+    minHeight: 44
+  },
+  tableRow: {
+    flexDirection: 'row',
+  },
   tableRowEven: { backgroundColor: '#fff' },
-  tableRowOdd: { backgroundColor: '#f9f9f9' },
-  tableCell: { justifyContent: 'center', alignItems: 'center', padding: 4, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', minHeight: 48 },
-  locNameCell: { fontSize: 11, fontWeight: 'bold', color: '#333', textAlign: 'center' },
-  valueCell: { fontSize: 11, color: '#333', textAlign: 'center' },
-  inputCell: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 4, fontSize: 11, width: '90%', textAlign: 'center', height: 30 },
-  pickerWrapperCell: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 4, width: '95%', height: 36, justifyContent: 'center' },
-  pickerCell: { color: '#333', height: 36 },
+  tableRowOdd: { backgroundColor: '#f8f9fa' },
+  tableCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 6,
+    borderRightWidth: 1,
+    borderRightColor: '#ccc',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    minHeight: 52
+  },
+  valueCell: {
+    fontSize: 12,
+    color: '#333',
+    textAlign: 'center'
+  },
+  inputCell: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#bbb',
+    borderRadius: 6,
+    padding: 4,
+    fontSize: 12,
+    width: '95%',
+    textAlign: 'center',
+    height: 36
+  },
+  pickerWrapperCell: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#bbb',
+    borderRadius: 6,
+    width: '95%',
+    height: 38,
+    justifyContent: 'center'
+  },
+  pickerCell: {
+    color: '#333',
+    height: 38
+  },
 });

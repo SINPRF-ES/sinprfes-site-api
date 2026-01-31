@@ -316,6 +316,8 @@
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
         const situacaoLower = situacaoUpper.toLowerCase();
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((perfil_acesso || "").toUpperCase());
+
         container.innerHTML = `
             <div class="profile-header">
                 <div class="profile-header-inner">
@@ -456,6 +458,18 @@
                     <button type="submit" class="btn btn-primary btn-lg" style="padding: 15px 50px; font-size: 1.2rem; border-radius: 50px; box-shadow: 0 4px 15px rgba(241, 196, 15, 0.3);">Salvar Dados</button>
                 </div>
             </form>
+
+            ${ehGestao ? `
+                <div class="data-card" style="margin-top: 40px; border-top: 4px solid #003366;">
+                    <h3>🛠️ Módulos de Gestão</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+                        <button type="button" class="btn btn-outline" style="height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;" onclick="document.querySelector('.af-nav-item[data-target=\'sec-repasse\']').click()">
+                            <span style="font-size: 2rem;">💱</span>
+                            <span>Repasse por Localidade</span>
+                        </button>
+                    </div>
+                </div>
+            ` : ''}
         `;
 
         // --- MÁSCARAS ---
