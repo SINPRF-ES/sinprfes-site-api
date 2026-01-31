@@ -107,10 +107,27 @@ export default function FiliadosScreen({ navigation, route }: any) {
       const cpfMatch = ehGestao && digits !== '' && onlyDigits(f.cpf || '').includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
 
-      // Filtro Situação Funcional
+      // Filtro Situação Funcional / Lotação
       if (filtroFuncional !== 'TODOS') {
         const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
-        if (situacao !== filtroFuncional) return false;
+        const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
+
+        if (lotacoesLabels.includes(filtroFuncional)) {
+          if (situacao !== 'ATIVO') return false;
+
+          const keywords: any = {
+            "SEDE": "SEDE",
+            "DEL 01 - Viana": "VIANA",
+            "DEL 02 - Serra": "SERRA",
+            "DEL 03 - Guarapari": "GUARAPARI",
+            "DEL 04 - Linhares": "LINHARES"
+          };
+          const keyword = keywords[filtroFuncional];
+          const lotacaoNorm = normalizeText(f.lotacao || 'SEDE').toUpperCase();
+          if (!lotacaoNorm.includes(keyword)) return false;
+        } else {
+          if (situacao !== filtroFuncional) return false;
+        }
       }
 
       // Filtro Estado do Cadastro (local filter additionally)
@@ -135,6 +152,9 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
   return (
     <SafeScreen style={styles.container}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#003366' }}>Total: {filteredFiliados.length}</Text>
+      </View>
       <View style={styles.searchBar}>
         <MaterialCommunityIcons name="magnify" size={24} color="#666" />
         <TextInput
@@ -180,11 +200,15 @@ export default function FiliadosScreen({ navigation, route }: any) {
               mode="dropdown"
               dropdownIconColor="#003366"
             >
-              <Picker.Item label="Selecione..." value="" color="#999" />
               <Picker.Item label="Todos" value="TODOS" />
               <Picker.Item label="Ativo" value="ATIVO" />
               <Picker.Item label="Veterano" value="VETERANO" />
               <Picker.Item label="Pensionista" value="PENSIONISTA" />
+              <Picker.Item label="SEDE" value="SEDE" />
+              <Picker.Item label="DEL 01 - Viana" value="DEL 01 - Viana" />
+              <Picker.Item label="DEL 02 - Serra" value="DEL 02 - Serra" />
+              <Picker.Item label="DEL 03 - Guarapari" value="DEL 03 - Guarapari" />
+              <Picker.Item label="DEL 04 - Linhares" value="DEL 04 - Linhares" />
             </Picker>
           </View>
         </View>

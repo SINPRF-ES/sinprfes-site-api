@@ -27,6 +27,7 @@
         const { inicializarRessarcimento } = window.Ressarcimento || {};
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
+        const { inicializarRepasse } = window.Repasse || {};
         const { Notificacoes } = window || {};
         const { CMSAdmin } = window || {};
 
@@ -44,6 +45,7 @@
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
+                else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-cms' && CMSAdmin) CMSAdmin.init();
             });
@@ -62,6 +64,13 @@
 
         // Exibe aba Notificações se tiver permissão
         if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
+
+        // Exibe aba Repasse se tiver permissão
+        const perfisRepasse = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        if (perfisRepasse.includes(perfil)) {
+            const navRepasse = document.getElementById("nav-repasse");
+            if (navRepasse) navRepasse.style.display = "block";
+        }
 
         // Exibe aba CMS se tiver permissão
         const perfisCms = ["ADMIN", "DIRETORIA", "COMUNICADOR"];

@@ -19,8 +19,10 @@
   <script src="/js/area-filiado/meus-dados.js"></script>
   <script src="/js/area-filiado/filiados-admin.js"></script>
   <script src="/js/area-filiado/ressarcimento.js"></script>
+  <script src="/shared/repasse.constants.js"></script>
   <script src="/js/area-filiado/jogos.js"></script>
   <script src="/js/area-filiado/publicacoes.js"></script>
+  <script src="/js/area-filiado/repasse.js"></script>
   <script src="/js/area-filiado/notificacoes.js"></script>
   <script src="/js/area-filiado/assembleia-utils.js"></script>
   <script src="/js/area-filiado/assembleias.js"></script>
@@ -46,6 +48,7 @@
         <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
         <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
         <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
+        <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;">💱 Repasse</button>
         <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
       </nav>
 
@@ -90,6 +93,10 @@
           <div id="sec-assembleias-sala" style="display:none;">
              <div id="area-assembleia-sala-conteudo"></div>
           </div>
+        </section>
+
+        <section id="sec-repasse" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
         </section>
 
         <section id="sec-notificacoes" class="af-section" style="display:none;">
