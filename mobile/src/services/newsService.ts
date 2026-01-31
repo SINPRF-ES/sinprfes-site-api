@@ -53,18 +53,47 @@ export const deleteNoticia = async (id: string): Promise<void> => {
 };
 
 export const addNoticiaMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'VIDEO'): Promise<NewsMedia> => {
+  // 1. Obter assinatura para upload direto (Signed Upload)
+  const { data: signatureData } = await api.post('/api/noticias/upload-signature', {
+    folder: 'noticias',
+    tags: 'noticia'
+  });
+
+  // 2. Upload direto para o Cloudinary
   const formData = new FormData();
   // @ts-ignore
   formData.append('file', {
     uri: file.uri,
-    type: file.type || 'image/jpeg',
-    name: file.name || 'upload.jpg',
+    type: file.type,
+    name: file.name,
   });
-  formData.append('tipo', tipo);
+  formData.append('api_key', signatureData.api_key);
+  formData.append('timestamp', signatureData.timestamp.toString());
+  formData.append('signature', signatureData.signature);
+  formData.append('folder', 'noticias');
+  formData.append('tags', 'noticia');
 
-  const { data } = await api.post(`/api/noticias/${id}/midias`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  const cloudName = signatureData.cloud_name;
+  const resourceType = tipo === 'VIDEO' ? 'video' : 'image';
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
+    method: 'POST',
+    body: formData,
   });
+
+  const uploadResult = await response.json();
+
+  if (!uploadResult.secure_url) {
+    throw new Error('Erro ao fazer upload para o Cloudinary');
+  }
+
+  // 3. Associar a mídia no nosso backend
+  const { data } = await api.post(`/api/noticias/${id}/midias_external`, {
+    tipo,
+    url: uploadResult.secure_url,
+    ordem: 0
+  });
+
   return data;
 };
 

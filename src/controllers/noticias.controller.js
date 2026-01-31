@@ -205,3 +205,55 @@ exports.removerMidia = async (req, res) => {
     return res.status(500).json({ message: "Erro ao remover mídia." });
   }
 };
+
+exports.adicionarMidiaExterna = async (req, res) => {
+  try {
+    if (!verificarGestao(req)) {
+      return res.status(403).json({ message: "Acesso negado." });
+    }
+
+    const { id } = req.params; // noticia_id
+    const { tipo, url, ordem } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ message: "URL da mídia não fornecida." });
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO noticia_midias (noticia_id, tipo, url, ordem)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [id, tipo, url, ordem || 0]
+    );
+
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    log.error("ErroAdicionarMidiaExterna", err);
+    return res.status(500).json({ message: "Erro ao associar mídia externa." });
+  }
+};
+
+exports.obterAssinaturaUpload = async (req, res) => {
+  try {
+    if (!verificarGestao(req)) {
+      return res.status(403).json({ message: "Acesso negado." });
+    }
+
+    const { folder, tags } = req.body;
+
+    // Configurações canônicas de upload para Notícias
+    const params = {
+      folder: folder || "noticias",
+      tags: tags || "noticia",
+      // Padronização Cloudinary (f_auto, q_auto via presets ou params se suportado na assinatura)
+      // Nota: f_auto/q_auto são geralmente aplicados na entrega (URL), não no upload.
+      // Mas podemos definir um eager transformation se quisermos.
+    };
+
+    const signatureData = cloudinary.gerarAssinaturaUpload(params);
+    return res.json(signatureData);
+  } catch (err) {
+    log.error("ErroGerarAssinatura", err);
+    return res.status(500).json({ message: "Erro ao gerar assinatura." });
+  }
+};

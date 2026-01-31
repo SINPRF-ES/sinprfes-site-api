@@ -142,10 +142,25 @@ export default function NoticiaEditorScreen() {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      videoMaxDuration: 30, // Limite de 30s no picker se suportado
     });
 
     if (!result.canceled) {
       const asset = result.assets[0];
+
+      // Validações Mobile-side
+      if (asset.type === 'video') {
+        if (asset.duration && asset.duration > 30) {
+          Alert.alert('Vídeo muito longo', 'A duração máxima permitida é de 30 segundos.');
+          return;
+        }
+        // fileSize em bytes. 50MB = 50 * 1024 * 1024
+        if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
+          Alert.alert('Vídeo muito grande', 'O tamanho máximo permitido é de 50MB.');
+          return;
+        }
+      }
+
       uploadMidia(asset, isCapa);
     }
   };

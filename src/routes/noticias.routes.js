@@ -47,10 +47,22 @@ router.post("/:id/midias",
   noticiasController.adicionarMidia
 );
 
+router.post("/:id/midias_external",
+  authMiddleware,
+  requirePermission("NOTICIAS_GERENCIAR"),
+  noticiasController.adicionarMidiaExterna
+);
+
 router.delete("/midias/:midiaId",
   authMiddleware,
   requirePermission("NOTICIAS_GERENCIAR"),
   noticiasController.removerMidia
+);
+
+router.post("/upload-signature",
+  authMiddleware,
+  requirePermission("NOTICIAS_GERENCIAR"),
+  noticiasController.obterAssinaturaUpload
 );
 
 module.exports = router;

@@ -94,15 +94,21 @@ export default function NoticiaDetalheScreen({ route }: any) {
                 <View key={item.id} style={styles.mediaItem}>
                   {item.tipo === 'IMAGEM' ? (
                     <Image
-                      source={{ uri: item.url }}
+                      source={{ uri: item.url.replace('/upload/', '/upload/f_auto,q_auto/') }}
                       style={styles.galleryImage}
                       resizeMode="cover"
                     />
                   ) : (
-                    <View style={styles.videoPlaceholder}>
-                      <FontAwesome name="play-circle" size={50} color="#003366" />
-                      <Text style={styles.videoText}>Vídeo disponível</Text>
-                      <Text style={styles.videoUrl} numberOfLines={1}>{item.url}</Text>
+                    <View style={styles.videoItem}>
+                      <Image
+                        source={{ uri: item.url.replace('/video/upload/', '/video/upload/f_auto,q_auto/').replace('.mp4', '.jpg').replace('.mov', '.jpg') }}
+                        style={styles.galleryImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.videoOverlay}>
+                        <FontAwesome name="play-circle" size={50} color="rgba(255,255,255,0.8)" />
+                        <Text style={styles.videoText}>Vídeo disponível</Text>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -217,10 +223,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  videoItem: {
+    position: 'relative',
+    width: '100%',
+    height: 250,
+    marginBottom: 15,
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+  },
   videoText: {
     marginTop: 10,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
   },
   videoUrl: {
     fontSize: 12,

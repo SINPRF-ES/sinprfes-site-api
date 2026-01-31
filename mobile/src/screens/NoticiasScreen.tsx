@@ -40,7 +40,7 @@ export default function NoticiasScreen() {
       >
         {coverUrl ? (
           <Image
-            source={{ uri: coverUrl }}
+            source={{ uri: coverUrl.replace('/upload/', '/upload/f_auto,q_auto,w_500/') }}
             style={styles.cover}
             resizeMode="cover"
           />
