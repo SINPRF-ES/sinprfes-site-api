@@ -1,11 +1,11 @@
 /**
- * Orquestrador principal da Área do Filiado
+ * Orquestrador principal da Página Inicial
  * Carregado como script clássico.
  * Garante a inicialização dos módulos na ordem correta.
  */
 
 (function () {
-    console.log("Sistema Área do Filiado: Orquestrando inicialização...");
+    console.log("Sistema Página Inicial: Orquestrando inicialização...");
 
     document.addEventListener("DOMContentLoaded", async () => {
         // 1. Verificação de Token

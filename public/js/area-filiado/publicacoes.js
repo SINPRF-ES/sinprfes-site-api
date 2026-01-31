@@ -1,5 +1,5 @@
 /**
- * Módulo Publicações (Área do Filiado)
+ * Módulo Publicações (Página Inicial)
  * Carregado como script clássico (window.Publicacoes)
  */
 

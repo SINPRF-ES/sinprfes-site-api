@@ -50,7 +50,7 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Início"
         component={HomeScreen}
-        options={{ title: 'Área do Filiado' }}
+        options={{ title: 'Página Inicial' }}
       />
       <Drawer.Screen
         name="MeusDados"

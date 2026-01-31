@@ -1,5 +1,5 @@
 /**
- * Módulo de Notificações Push (Área do Filiado)
+ * Módulo de Notificações Push (Página Inicial)
  */
 (function (global) {
     if (global.Notificacoes) return;

@@ -1,5 +1,5 @@
 /**
- * Módulo Repasse (Área do Filiado)
+ * Módulo Repasse (Página Inicial)
  * Carregado como script clássico (window.Repasse)
  */
 
