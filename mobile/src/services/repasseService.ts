@@ -35,12 +35,12 @@ export interface Responsavel {
 
 const repasseService = {
   getRepasseAno: async (year: number): Promise<RepasseAnoResponse> => {
-    const response = await apiService.get(`/repasse?year=${year}`);
+    const response = await apiService.get(`/api/repasse?year=${year}`);
     return response.data;
   },
 
   updateRepasseMes: async (year: number, month: number, perCapita: number, localidades: any[]): Promise<any> => {
-    const response = await apiService.post('/repasse', {
+    const response = await apiService.post('/api/repasse', {
       year,
       month,
       perCapita,
@@ -50,7 +50,7 @@ const repasseService = {
   },
 
   listarResponsaveis: async (): Promise<Responsavel[]> => {
-    const response = await apiService.get('/repasse/responsaveis');
+    const response = await apiService.get('/api/repasse/responsaveis');
     return response.data.responsaveis;
   }
 };

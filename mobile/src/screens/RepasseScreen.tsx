@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,6 +18,7 @@ import SafeScreen from '../components/SafeScreen';
 import repasseService, { MesRepasse, Responsavel } from '../services/repasseService';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao } from '../utils/filiadoUtils';
+import { formatCurrency } from '../shared/format/formatters';
 
 const nomesMeses = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -30,7 +32,7 @@ export default function RepasseScreen() {
   const [meses, setMeses] = useState<MesRepasse[]>([]);
   const [totalAcumuladoGeral, setTotalAcumuladoGeral] = useState(0);
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
-  const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
+  const [expandedMonth, setExpandedMonth] = useState<number | null>(new Date().getMonth() + 1);
 
   const ehGestao = isGestao(usuario?.perfil_acesso);
 
@@ -71,7 +73,6 @@ export default function RepasseScreen() {
 
     newMeses[mesIndex].localidades[locIndex] = loc;
 
-    // Recalcular localmente para feedback instantâneo
     recalculate(newMeses, month);
     setMeses(newMeses);
   };
@@ -108,7 +109,6 @@ export default function RepasseScreen() {
 
     m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + l.creditoMes, 0);
 
-    // Recalcular acumulados ano
     const lotacoes = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
     const acumulados: any = {};
     lotacoes.forEach(lot => {
@@ -159,8 +159,11 @@ export default function RepasseScreen() {
     }
   };
 
-  const formatCurrency = (v: number) => {
-    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const getPercentColor = (percent: number | null) => {
+    if (percent === null) return '#888';
+    if (percent < 70) return '#c62828';
+    if (percent < 80) return '#fcc419';
+    return '#2e7d32';
   };
 
   if (loading && meses.length === 0) {
@@ -168,7 +171,7 @@ export default function RepasseScreen() {
   }
 
   return (
-    <SafeScreen style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -229,74 +232,70 @@ export default function RepasseScreen() {
                     />
                   </View>
 
-                  {m.localidades.map((loc) => (
-                    <View key={loc.lotacao} style={styles.locCard}>
-                      <Text style={styles.locName}>{loc.lotacao}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                    <View>
+                      <View style={styles.tableHeader}>
+                        <View style={[styles.tableHeaderCell, { width: 120 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 180 }]}><Text style={styles.tableHeaderText}>Responsável</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 60 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 80 }]}><Text style={styles.tableHeaderText}>PRF Total</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 70 }]}><Text style={styles.tableHeaderText}>%</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 100 }]}><Text style={styles.tableHeaderText}>Crédito</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 100 }]}><Text style={styles.tableHeaderText}>Reembolso</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 100 }]}><Text style={styles.tableHeaderText}>Acumulado</Text></View>
+                      </View>
 
-                      <View style={styles.locGrid}>
-                        <View style={styles.locCol}>
-                          <Text style={styles.locLabel}>Responsável</Text>
-                          <View style={styles.locPickerWrapper}>
-                            <Picker
-                              selectedValue={loc.responsavelId}
-                              onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
-                              style={styles.locPicker}
-                            >
-                              <Picker.Item label="Selecione..." value={null} />
-                              {responsaveis.map(r => (
-                                <Picker.Item key={r.id} label={r.nome} value={r.id} />
-                              ))}
-                            </Picker>
+                      {m.localidades.map((loc, idx) => (
+                        <View
+                          key={loc.lotacao}
+                          style={[
+                            styles.tableRow,
+                            idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
+                          ]}
+                        >
+                          <View style={[styles.tableCell, { width: 120 }]}><Text style={styles.locNameCell}>{loc.lotacao}</Text></View>
+                          <View style={[styles.tableCell, { width: 180 }]}>
+                            <View style={styles.pickerWrapperCell}>
+                              <Picker
+                                selectedValue={loc.responsavelId}
+                                onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
+                                style={styles.pickerCell}
+                              >
+                                <Picker.Item label="Selecione..." value={null} />
+                                {responsaveis.map(r => (
+                                  <Picker.Item key={r.id} label={r.nome} value={r.id} />
+                                ))}
+                              </Picker>
+                            </View>
                           </View>
+                          <View style={[styles.tableCell, { width: 60 }]}><Text style={styles.valueCell}>{loc.filiadosAtivos}</Text></View>
+                          <View style={[styles.tableCell, { width: 80 }]}>
+                            <TextInput
+                              style={styles.inputCell}
+                              value={String(loc.prfTotal)}
+                              keyboardType="numeric"
+                              onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
+                            />
+                          </View>
+                          <View style={[styles.tableCell, { width: 70 }]}>
+                            <Text style={[styles.valueCell, { color: getPercentColor(loc.percentual), fontWeight: 'bold' }]}>
+                              {loc.percentual === null ? '—' : `${loc.percentual.toFixed(0)}%`}
+                            </Text>
+                          </View>
+                          <View style={[styles.tableCell, { width: 100 }]}><Text style={styles.valueCell}>{formatCurrency(loc.creditoMes)}</Text></View>
+                          <View style={[styles.tableCell, { width: 100 }]}>
+                            <TextInput
+                              style={styles.inputCell}
+                              value={String(loc.reembolsoMes)}
+                              keyboardType="numeric"
+                              onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
+                            />
+                          </View>
+                          <View style={[styles.tableCell, { width: 100 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(loc.acumuladoAno)}</Text></View>
                         </View>
-                      </View>
-
-                      <View style={styles.locGrid}>
-                        <View style={styles.locCol}>
-                          <Text style={styles.locLabel}>Filiados Ativos</Text>
-                          <Text style={styles.locValue}>{loc.filiadosAtivos}</Text>
-                        </View>
-                        <View style={styles.locCol}>
-                          <Text style={styles.locLabel}>PRF Total</Text>
-                          <TextInput
-                            style={styles.locInput}
-                            value={String(loc.prfTotal)}
-                            keyboardType="numeric"
-                            onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
-                          />
-                        </View>
-                      </View>
-
-                      <View style={styles.locGrid}>
-                        <View style={styles.locCol}>
-                          <Text style={styles.locLabel}>% Filiação</Text>
-                          <Text style={[styles.locValue, { color: (loc.percentual || 0) < 70 ? '#c62828' : '#2e7d32' }]}>
-                            {loc.percentual === null ? '—' : `${loc.percentual.toFixed(1)}%`}
-                          </Text>
-                        </View>
-                        <View style={styles.locCol}>
-                          <Text style={styles.locLabel}>Crédito Mês</Text>
-                          <Text style={[styles.locValue, { fontWeight: 'bold' }]}>{formatCurrency(loc.creditoMes)}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.locGrid}>
-                        <View style={styles.locCol}>
-                          <Text style={styles.locLabel}>Reembolso</Text>
-                          <TextInput
-                            style={styles.locInput}
-                            value={String(loc.reembolsoMes)}
-                            keyboardType="numeric"
-                            onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
-                          />
-                        </View>
-                        <View style={styles.locCol}>
-                          <Text style={styles.locLabel}>Acumulado Ano</Text>
-                          <Text style={[styles.locValue, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(loc.acumuladoAno)}</Text>
-                        </View>
-                      </View>
+                      ))}
                     </View>
-                  ))}
+                  </ScrollView>
 
                   <TouchableOpacity
                     style={styles.saveButton}
@@ -311,14 +310,14 @@ export default function RepasseScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeScreen>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16 },
+  content: { padding: 15 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#003366' },
   subtitle: { fontSize: 13, color: '#666' },
@@ -334,19 +333,23 @@ const styles = StyleSheet.create({
   monthCapita: { fontSize: 12, color: '#777', marginTop: 2 },
   monthHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   monthTotal: { fontSize: 15, fontWeight: 'bold', color: '#003366' },
-  monthDetails: { padding: 16, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  inputGroup: { marginBottom: 20 },
+  monthDetails: { padding: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  inputGroup: { marginBottom: 15 },
   label: { fontSize: 12, fontWeight: 'bold', color: '#666', marginBottom: 5 },
   input: { backgroundColor: '#f9f9f9', padding: 10, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
-  locCard: { backgroundColor: '#fcfcfc', borderBottomWidth: 1, borderBottomColor: '#eee', paddingVertical: 15, marginBottom: 10 },
-  locName: { fontSize: 15, fontWeight: 'bold', color: '#003366', marginBottom: 10 },
-  locGrid: { flexDirection: 'row', gap: 15, marginBottom: 10 },
-  locCol: { flex: 1 },
-  locLabel: { fontSize: 11, color: '#888', marginBottom: 3 },
-  locValue: { fontSize: 14, color: '#333' },
-  locInput: { backgroundColor: '#fff', padding: 6, borderRadius: 4, borderWidth: 1, borderColor: '#ccc', fontSize: 14, color: '#333' },
-  locPickerWrapper: { backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: '#ccc', height: 40, justifyContent: 'center' },
-  locPicker: { height: 40 },
-  saveButton: { backgroundColor: '#003366', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  saveButton: { backgroundColor: '#003366', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 15 },
+  saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f3f5', borderTopWidth: 1, borderLeftWidth: 1, borderColor: '#ccc' },
+  tableHeaderText: { fontWeight: 'bold', color: '#003366', fontSize: 11, textAlign: 'center' },
+  tableHeaderCell: { justifyContent: 'center', alignItems: 'center', padding: 8, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', minHeight: 40 },
+  tableRow: { flexDirection: 'row', borderLeftWidth: 1, borderColor: '#ccc' },
+  tableRowEven: { backgroundColor: '#fff' },
+  tableRowOdd: { backgroundColor: '#f9f9f9' },
+  tableCell: { justifyContent: 'center', alignItems: 'center', padding: 4, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', minHeight: 48 },
+  locNameCell: { fontSize: 11, fontWeight: 'bold', color: '#333', textAlign: 'center' },
+  valueCell: { fontSize: 11, color: '#333', textAlign: 'center' },
+  inputCell: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 4, fontSize: 11, width: '90%', textAlign: 'center', height: 30 },
+  pickerWrapperCell: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 4, width: '95%', height: 36, justifyContent: 'center' },
+  pickerCell: { color: '#333', height: 36 },
 });
