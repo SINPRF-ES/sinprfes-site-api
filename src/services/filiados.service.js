@@ -67,6 +67,10 @@ const FILIADO_COLUMNS = `
   dep5_nome, dep5_cpf, dep5_data_nascimento, dep5_parentesco
 `;
 
+const FILIADO_COLUMNS_WITH_ALIAS = FILIADO_COLUMNS.split(",")
+  .map((c) => `f.${c.trim()}`)
+  .join(", ");
+
 /**
  * Busca filiado pelo CPF (normalizado).
  */
@@ -75,7 +79,7 @@ async function buscarPorCpf(cpfRaw) {
   const { rows } = await pool.query(
     `
     SELECT
-      f.*,
+      ${FILIADO_COLUMNS_WITH_ALIAS},
       responsavel.nome AS arquivado_por_nome
     FROM filiados f
     LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
@@ -94,7 +98,7 @@ async function buscarPorId(id) {
   const { rows } = await pool.query(
     `
     SELECT
-      f.*,
+      ${FILIADO_COLUMNS_WITH_ALIAS},
       responsavel.nome AS arquivado_por_nome
     FROM filiados f
     LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
