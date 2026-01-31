@@ -51,7 +51,8 @@ const repasseService = {
 
   listarResponsaveis: async (): Promise<Responsavel[]> => {
     const response = await apiService.get('/api/repasse/responsaveis');
-    return response.data.responsaveis;
+    // Suporta retorno direto ou dentro de .responsaveis, garantindo sempre um array
+    return response.data?.responsaveis ?? response.data ?? [];
   }
 };
 

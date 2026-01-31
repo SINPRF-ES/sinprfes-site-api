@@ -40,7 +40,7 @@ export default function RepasseScreen() {
     try {
       setLoading(true);
 
-      // Chamada paralela segura
+      // Chamada paralela segura - Promise.allSettled garante que falha em um não derruba o outro
       const [respAno, respResps] = await Promise.allSettled([
         repasseService.getRepasseAno(year),
         ehGestao ? repasseService.listarResponsaveis() : Promise.resolve([])
@@ -48,7 +48,7 @@ export default function RepasseScreen() {
 
       if (respAno.status === 'fulfilled') {
         const data = respAno.value;
-        // Passo 1: Normalização robusta de dados
+        // Passo 1: Normalização robusta de dados (sanitização preventiva)
         const mesesNorm = Array.isArray(data?.meses) ? data.meses.map(m => ({
           ...m,
           month: Number(m?.month || 0),
@@ -59,33 +59,35 @@ export default function RepasseScreen() {
             lotacao: String(l?.lotacao || ''),
             filiadosAtivos: Number(l?.filiadosAtivos || 0),
             prfTotal: Number(l?.prfTotal || 0),
-            percentual: (l?.percentual === null || l?.percentual === undefined) ? null : Number(l.percentual),
+            percentual: (l?.percentual == null) ? null : Number(l.percentual),
             creditoMes: Number(l?.creditoMes || 0),
             reembolsoMes: Number(l?.reembolsoMes || 0),
             acumuladoAno: Number(l?.acumuladoAno || 0),
             responsavelId: l?.responsavelId ?? null,
+            responsavelNome: String(l?.responsavelNome || ''),
           })) : [],
         })) : [];
 
         setMeses(mesesNorm);
         setTotalAcumuladoGeral(Number(data?.totalAcumuladoGeral || 0));
       } else {
-        console.error('Erro ao carregar anos:', respAno.reason);
+        console.error('[Repasse] Erro ao carregar dados do ano:', respAno.reason);
         setMeses([]);
       }
 
       if (respResps.status === 'fulfilled') {
         setResponsaveis(Array.isArray(respResps.value) ? respResps.value : []);
       } else {
-        console.error('Erro ao carregar responsáveis:', respResps.reason);
+        // Falha no listarResponsaveis (ex: 403) não impede exibição do repasse
+        console.warn('[Repasse] Erro ao carregar responsáveis (pode ser falta de permissão):', respResps.reason);
         setResponsaveis([]);
       }
 
       if (respAno.status === 'rejected') {
-        Alert.alert('Aviso', 'Não foi possível carregar todos os dados de repasse.');
+        Alert.alert('Erro', 'Não foi possível carregar os dados de repasse para este ano.');
       }
     } catch (err) {
-      console.error('Repasse.fetchData crash prevent:', err);
+      console.error('Repasse.fetchData critical crash prevent:', err);
       setMeses([]);
       setResponsaveis([]);
     } finally {
@@ -127,14 +129,17 @@ export default function RepasseScreen() {
   };
 
   const recalculate = (mesesList: MesRepasse[], month: number) => {
-    const m = mesesList.find(m => m.month === month);
+    const m = (mesesList || []).find(m => m.month === month);
     if (!m) return;
 
-    const perCapita = m.perCapita;
+    const perCapita = Number(m.perCapita || 0);
     (m.localidades || []).forEach(loc => {
-      if (loc.prfTotal > 0) {
-        loc.percentual = (loc.filiadosAtivos / loc.prfTotal) * 100;
-        const base = loc.filiadosAtivos * perCapita;
+      const prfTotal = Number(loc.prfTotal || 0);
+      const filiadosAtivos = Number(loc.filiadosAtivos || 0);
+
+      if (prfTotal > 0) {
+        loc.percentual = (filiadosAtivos / prfTotal) * 100;
+        const base = filiadosAtivos * perCapita;
         let factor = 0;
         if (loc.percentual >= 90) factor = 1.0;
         else if (loc.percentual >= 80) factor = 0.7;
@@ -146,7 +151,7 @@ export default function RepasseScreen() {
       }
     });
 
-    m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + (l.creditoMes || 0), 0);
+    m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + Number(l.creditoMes || 0), 0);
 
     const lotacoes = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
     const acumulados: any = {};
@@ -156,8 +161,8 @@ export default function RepasseScreen() {
       (mesesList || []).forEach(mes => {
         const l = (mes.localidades || []).find(ll => ll.lotacao === lot);
         if (l) {
-            somaCred += (l.creditoMes || 0);
-            somaReem += (l.reembolsoMes || 0);
+            somaCred += Number(l.creditoMes || 0);
+            somaReem += Number(l.reembolsoMes || 0);
         }
       });
       acumulados[lot] = somaCred - somaReem;
@@ -165,11 +170,11 @@ export default function RepasseScreen() {
 
     (mesesList || []).forEach(mes => {
       (mes.localidades || []).forEach(l => {
-        l.acumuladoAno = acumulados[l.lotacao] || 0;
+        l.acumuladoAno = Number(acumulados[l.lotacao] || 0);
       });
     });
 
-    setTotalAcumuladoGeral(Object.values(acumulados).reduce((acc: any, curr: any) => acc + curr, 0) as number);
+    setTotalAcumuladoGeral(Object.values(acumulados).reduce((acc: any, curr: any) => acc + Number(curr || 0), 0) as number);
   };
 
   const handleSaveMonth = async (month: number) => {
@@ -198,11 +203,17 @@ export default function RepasseScreen() {
     }
   };
 
-  const getPercentColor = (percent: number | null) => {
-    if (percent === null) return '#888';
+  const getPercentColor = (percent: number | null | undefined) => {
+    if (percent == null || !Number.isFinite(percent)) return '#888';
     if (percent < 70) return '#c62828';
     if (percent < 80) return '#fcc419';
     return '#2e7d32';
+  };
+
+  // Versão tolerante do formatCurrency
+  const safeFormatCurrency = (v: any) => {
+    const value = (v == null || !Number.isFinite(Number(v))) ? 0 : Number(v);
+    return formatCurrency(value);
   };
 
   if (loading && meses.length === 0) {
@@ -239,6 +250,13 @@ export default function RepasseScreen() {
             <Text style={styles.statsValue}>{formatCurrency(totalAcumuladoGeral)}</Text>
           </View>
 
+          {meses.length === 0 && !loading && (
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="cash-off" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>Nenhum dado de repasse encontrado para o ano de {year}.</Text>
+            </View>
+          )}
+
           {meses.map((m) => (
             <View key={m.month} style={styles.monthCard}>
               <TouchableOpacity
@@ -246,11 +264,11 @@ export default function RepasseScreen() {
                 onPress={() => setExpandedMonth(expandedMonth === m.month ? null : m.month)}
               >
                 <View style={styles.monthHeaderLeft}>
-                  <Text style={styles.monthName}>{nomesMeses[m.month - 1]}</Text>
-                  <Text style={styles.monthCapita}>Per Capita: {formatCurrency(m.perCapita)}</Text>
+                  <Text style={styles.monthName}>{nomesMeses[m.month - 1] || `Mês ${m.month}`}</Text>
+                  <Text style={styles.monthCapita}>Per Capita: {safeFormatCurrency(m.perCapita)}</Text>
                 </View>
                 <View style={styles.monthHeaderRight}>
-                  <Text style={styles.monthTotal}>{formatCurrency(m.totalRepasseMes)}</Text>
+                  <Text style={styles.monthTotal}>{safeFormatCurrency(m.totalRepasseMes)}</Text>
                   <MaterialCommunityIcons
                     name={expandedMonth === m.month ? 'chevron-up' : 'chevron-down'}
                     size={24}
@@ -328,11 +346,11 @@ export default function RepasseScreen() {
 
                           <View style={[styles.tableCell, { width: 60 }]}>
                             <Text style={[styles.valueCell, { color: getPercentColor(loc.percentual), fontWeight: 'bold' }]}>
-                              {(loc.percentual === null || loc.percentual === undefined) ? '—' : `${Number(loc.percentual).toFixed(1)}%`}
+                              {(loc.percentual == null || !Number.isFinite(loc.percentual)) ? '—' : `${Number(loc.percentual).toFixed(1)}%`}
                             </Text>
                           </View>
 
-                          <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{formatCurrency(Number(loc.creditoMes || 0))}</Text></View>
+                          <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{safeFormatCurrency(loc.creditoMes)}</Text></View>
 
                           <View style={[styles.tableCell, { width: 110 }]}>
                             {ehGestao ? (
@@ -343,11 +361,11 @@ export default function RepasseScreen() {
                                 onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
                               />
                             ) : (
-                              <Text style={styles.valueCell}>{formatCurrency(Number(loc.reembolsoMes || 0))}</Text>
+                              <Text style={styles.valueCell}>{safeFormatCurrency(loc.reembolsoMes)}</Text>
                             )}
                           </View>
 
-                          <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(Number(loc.acumuladoAno || 0))}</Text></View>
+                          <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{safeFormatCurrency(loc.acumuladoAno)}</Text></View>
                         </View>
                       ))}
                     </View>
@@ -395,6 +413,8 @@ const styles = StyleSheet.create({
   input: { backgroundColor: '#f9f9f9', padding: 10, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
   saveButton: { backgroundColor: '#003366', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 15 },
   saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 20 },
+  emptyText: { color: '#999', fontSize: 16, textAlign: 'center', marginTop: 10 },
 
   tableContainer: {
     borderWidth: 1,
