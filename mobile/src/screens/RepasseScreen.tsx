@@ -239,7 +239,25 @@ export default function RepasseScreen() {
 
       if (respResps.status === 'fulfilled') {
         const respsData = respResps.value;
-        setResponsaveis(Array.isArray(respsData) ? respsData : []);
+        const respList = Array.isArray(respsData) ? respsData : [];
+
+        // Mobile logs (obrigatório)
+        const total = respList.length;
+        const byLotacaoCounts: any = {};
+        const orgs = respList.filter(r => (r.perfil_acesso || '').toUpperCase() === 'ORGANIZADOR');
+        respList.forEach(r => {
+          const l = r.lotacao || 'SEM LOTACAO';
+          byLotacaoCounts[l] = (byLotacaoCounts[l] || 0) + 1;
+        });
+
+        console.info("[REPASSE_UI] responsaveis loaded", {
+          total,
+          byLotacaoCounts,
+          organizadores: orgs.length,
+          organizadorLotacoes: orgs.map(o => o.lotacao)
+        });
+
+        setResponsaveis(respList);
       } else {
         setResponsaveis([]);
       }
@@ -521,14 +539,27 @@ export default function RepasseScreen() {
                                         const kw = LOTACAO_KEYWORDS[loc.lotacao];
                                         const respList = (responsaveis || []);
 
-                                        let filtered = respList.filter(r => {
-                                          if (!kw || !r.lotacao) return true;
+                                        // Filtro estrito por localidade (obrigatório)
+                                        // Remove o fallback de "vazar" usuários sem lotação ou ORGANIZADORES globais
+                                        const filtered = respList.filter(r => {
+                                          if (!kw) return true;
+                                          if (!r.lotacao) return false;
                                           return normalizeLocalidade(r.lotacao).includes(kw);
                                         });
 
-                                        if (filtered.length === 0 && respList.length > 0) {
-                                          bc('REPASSE_RESP_FILTER_FALLBACK', { lotacao: loc.lotacao });
-                                          filtered = respList;
+                                        // Mobile logs (obrigatório)
+                                        console.info("[REPASSE_UI] picker options", {
+                                          lotacao: loc.lotacao,
+                                          key: kw,
+                                          optionsCount: filtered.length,
+                                          optionIds: filtered.map(o => o.id).slice(0, 10)
+                                        });
+
+                                        if (filtered.length === 0 && loc.filiadosAtivos > 0) {
+                                          console.warn("[REPASSE_UI] lotacao sem responsaveis", {
+                                            lotacao: loc.lotacao,
+                                            filiadosAtivos: loc.filiadosAtivos
+                                          });
                                         }
 
                                         return filtered.map(r => (

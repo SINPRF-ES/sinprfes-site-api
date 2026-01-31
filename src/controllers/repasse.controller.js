@@ -27,7 +27,8 @@ async function updateRepasseMes(req, res) {
 
 async function listarResponsaveis(req, res) {
   try {
-    const responsaveis = await repasseService.listarResponsaveis();
+    const { lotacao } = req.query;
+    const responsaveis = await repasseService.listarResponsaveis(lotacao);
     res.json({ success: true, responsaveis });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
