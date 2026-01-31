@@ -48,7 +48,26 @@ export default function RepasseScreen() {
 
       if (respAno.status === 'fulfilled') {
         const data = respAno.value;
-        setMeses(Array.isArray(data?.meses) ? data.meses : []);
+        // Passo 1: Normalização robusta de dados
+        const mesesNorm = Array.isArray(data?.meses) ? data.meses.map(m => ({
+          ...m,
+          month: Number(m?.month || 0),
+          perCapita: Number(m?.perCapita || 0),
+          totalRepasseMes: Number(m?.totalRepasseMes || 0),
+          localidades: Array.isArray(m?.localidades) ? m.localidades.map(l => ({
+            ...l,
+            lotacao: String(l?.lotacao || ''),
+            filiadosAtivos: Number(l?.filiadosAtivos || 0),
+            prfTotal: Number(l?.prfTotal || 0),
+            percentual: (l?.percentual === null || l?.percentual === undefined) ? null : Number(l.percentual),
+            creditoMes: Number(l?.creditoMes || 0),
+            reembolsoMes: Number(l?.reembolsoMes || 0),
+            acumuladoAno: Number(l?.acumuladoAno || 0),
+            responsavelId: l?.responsavelId ?? null,
+          })) : [],
+        })) : [];
+
+        setMeses(mesesNorm);
         setTotalAcumuladoGeral(Number(data?.totalAcumuladoGeral || 0));
       } else {
         console.error('Erro ao carregar anos:', respAno.reason);
@@ -112,7 +131,7 @@ export default function RepasseScreen() {
     if (!m) return;
 
     const perCapita = m.perCapita;
-    m.localidades.forEach(loc => {
+    (m.localidades || []).forEach(loc => {
       if (loc.prfTotal > 0) {
         loc.percentual = (loc.filiadosAtivos / loc.prfTotal) * 100;
         const base = loc.filiadosAtivos * perCapita;
@@ -127,26 +146,26 @@ export default function RepasseScreen() {
       }
     });
 
-    m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + l.creditoMes, 0);
+    m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + (l.creditoMes || 0), 0);
 
     const lotacoes = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
     const acumulados: any = {};
     lotacoes.forEach(lot => {
       let somaCred = 0;
       let somaReem = 0;
-      mesesList.forEach(mes => {
-        const l = mes.localidades.find(ll => ll.lotacao === lot);
+      (mesesList || []).forEach(mes => {
+        const l = (mes.localidades || []).find(ll => ll.lotacao === lot);
         if (l) {
-            somaCred += l.creditoMes;
-            somaReem += l.reembolsoMes;
+            somaCred += (l.creditoMes || 0);
+            somaReem += (l.reembolsoMes || 0);
         }
       });
       acumulados[lot] = somaCred - somaReem;
     });
 
-    mesesList.forEach(mes => {
-      mes.localidades.forEach(l => {
-        l.acumuladoAno = acumulados[l.lotacao];
+    (mesesList || []).forEach(mes => {
+      (mes.localidades || []).forEach(l => {
+        l.acumuladoAno = acumulados[l.lotacao] || 0;
       });
     });
 
@@ -163,7 +182,7 @@ export default function RepasseScreen() {
         year,
         month,
         m.perCapita,
-        m.localidades.map(l => ({
+        (m.localidades || []).map(l => ({
           lotacaoKey: l.lotacao,
           responsavelId: l.responsavelId,
           prfTotal: l.prfTotal,
@@ -191,7 +210,7 @@ export default function RepasseScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeScreen style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -265,7 +284,7 @@ export default function RepasseScreen() {
                         <View style={[styles.tableHeaderCell, { width: 120 }]}><Text style={styles.tableHeaderText}>Acumulado Ano</Text></View>
                       </View>
 
-                      {m.localidades.map((loc, idx) => (
+                      {(m.localidades || []).map((loc, idx) => (
                         <View
                           key={loc.lotacao}
                           style={[
@@ -273,7 +292,7 @@ export default function RepasseScreen() {
                             idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
                           ]}
                         >
-                          <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{loc.lotacao || '—'}</Text></View>
+                          <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{String(loc.lotacao || '—')}</Text></View>
 
                           {ehGestao && (
                             <View style={[styles.tableCell, { width: 200 }]}>
@@ -284,7 +303,7 @@ export default function RepasseScreen() {
                                   style={styles.pickerCell}
                                 >
                                   <Picker.Item label="Selecione..." value={null} />
-                                  {responsaveis.map(r => (
+                                  {(responsaveis || []).map(r => (
                                     <Picker.Item key={r.id} label={r.nome} value={r.id} />
                                   ))}
                                 </Picker>
@@ -292,7 +311,7 @@ export default function RepasseScreen() {
                             </View>
                           )}
 
-                          <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{loc.filiadosAtivos || 0}</Text></View>
+                          <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{Number(loc.filiadosAtivos || 0)}</Text></View>
 
                           <View style={[styles.tableCell, { width: 90 }]}>
                             {ehGestao ? (
@@ -303,17 +322,17 @@ export default function RepasseScreen() {
                                 onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
                               />
                             ) : (
-                              <Text style={styles.valueCell}>{loc.prfTotal || 0}</Text>
+                              <Text style={styles.valueCell}>{Number(loc.prfTotal || 0)}</Text>
                             )}
                           </View>
 
                           <View style={[styles.tableCell, { width: 60 }]}>
                             <Text style={[styles.valueCell, { color: getPercentColor(loc.percentual), fontWeight: 'bold' }]}>
-                              {loc.percentual === null ? '—' : `${loc.percentual.toFixed(0)}%`}
+                              {(loc.percentual === null || loc.percentual === undefined) ? '—' : `${Number(loc.percentual).toFixed(1)}%`}
                             </Text>
                           </View>
 
-                          <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{formatCurrency(loc.creditoMes)}</Text></View>
+                          <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{formatCurrency(Number(loc.creditoMes || 0))}</Text></View>
 
                           <View style={[styles.tableCell, { width: 110 }]}>
                             {ehGestao ? (
@@ -324,11 +343,11 @@ export default function RepasseScreen() {
                                 onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
                               />
                             ) : (
-                              <Text style={styles.valueCell}>{formatCurrency(loc.reembolsoMes)}</Text>
+                              <Text style={styles.valueCell}>{formatCurrency(Number(loc.reembolsoMes || 0))}</Text>
                             )}
                           </View>
 
-                          <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(loc.acumuladoAno)}</Text></View>
+                          <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(Number(loc.acumuladoAno || 0))}</Text></View>
                         </View>
                       ))}
                     </View>
@@ -347,7 +366,7 @@ export default function RepasseScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeScreen>
   );
 }
 
@@ -388,7 +407,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#f1f3f5',
     borderBottomWidth: 2,
-    borderBottomColor: '#ccc'
+    borderBottomColor: '#ccc',
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
   },
   tableHeaderText: {
     fontWeight: 'bold',
@@ -415,9 +436,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 6,
     borderRightWidth: 1,
-    borderRightColor: '#eee',
+    borderRightColor: '#ccc',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#ccc',
     minHeight: 52
   },
   valueCell: {
