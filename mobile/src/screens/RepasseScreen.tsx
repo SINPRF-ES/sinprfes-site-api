@@ -16,6 +16,7 @@ import { Picker } from '@react-native-picker/picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SafeScreen from '../components/SafeScreen';
 import repasseService, { MesRepasse, Responsavel } from '../services/repasseService';
+import { getFiliados } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 
@@ -23,6 +24,14 @@ const nomesMeses = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
+
+const LOTACAO_KEYWORDS: any = {
+  "SEDE": "SEDE",
+  "DEL 01 - Viana": "VIANA",
+  "DEL 02 - Serra": "SERRA",
+  "DEL 03 - Guarapari": "GUARAPARI",
+  "DEL 04 - Linhares": "LINHARES"
+};
 
 class RepasseErrorBoundary extends Component<{ children: ReactNode, breadcrumbs: string[] }, { hasError: boolean }> {
   constructor(props: any) {
@@ -69,6 +78,15 @@ export default function RepasseScreen() {
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const normalizeLocalidade = (str: string) => {
+    return (str || '')
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
+  };
+
   const formatCurrency = (v: any) =>
     safeNumber(v, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -98,13 +116,15 @@ export default function RepasseScreen() {
       setLoading(true);
 
       bc('api:call:start', { year, ehGestao });
-      const [respAno, respResps] = await Promise.allSettled([
+      const [respAno, respResps, respFiliados] = await Promise.allSettled([
         repasseService.getRepasseAno(year),
-        ehGestao ? repasseService.listarResponsaveis() : Promise.resolve([])
+        ehGestao ? repasseService.listarResponsaveis() : Promise.resolve([]),
+        getFiliados()
       ]);
       bc('api:call:end', {
         anoStatus: respAno.status,
-        respsStatus: respResps.status
+        respsStatus: respResps.status,
+        filiadosStatus: respFiliados.status
       });
 
       if (respAno.status === 'fulfilled') {
@@ -112,7 +132,7 @@ export default function RepasseScreen() {
 
         // Passo 1: Normalização robusta de dados (sanitização preventiva)
         const mesesApi = Array.isArray(data?.meses) ? data.meses : [];
-        const mesesNorm = mesesApi.map(m => ({
+        const mesesNorm: MesRepasse[] = mesesApi.map(m => ({
           ...m,
           month: safeNumber(m?.month, 0),
           perCapita: safeNumber(m?.perCapita, 0),
@@ -131,7 +151,75 @@ export default function RepasseScreen() {
           })) : [],
         }));
 
-        const totalAcumuladoNorm = safeNumber(data?.totalAcumuladoGeral, 0);
+        // Task 2: Unificar contagem de filiados ativos (Fonte: Listar Filiados)
+        if (respFiliados.status === 'fulfilled') {
+          const allFiliados = Array.isArray(respFiliados.value) ? respFiliados.value : [];
+          bc('REPASSE_LOCALIDADE_NORMALIZATION', { allFiliadosCount: allFiliados.length });
+
+          const activeFiliados = allFiliados.filter(f => {
+            const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
+            return situacao === 'ATIVO' && !f.arquivado_em;
+          });
+
+          const counts: any = {};
+          Object.keys(LOTACAO_KEYWORDS).forEach(lot => {
+            const kw = LOTACAO_KEYWORDS[lot];
+            counts[lot] = activeFiliados.filter(f =>
+              normalizeLocalidade(f.lotacao || 'SEDE').includes(kw)
+            ).length;
+          });
+
+          bc('unify_counts:done', counts);
+
+          mesesNorm.forEach(m => {
+            m.localidades.forEach(l => {
+              if (counts[l.lotacao] !== undefined) {
+                l.filiadosAtivos = counts[l.lotacao];
+                // Recalcular percentual e crédito com base no novo número de ativos
+                const perCapita = Number(m.perCapita || 0);
+                if (l.prfTotal > 0) {
+                  l.percentual = (l.filiadosAtivos / l.prfTotal) * 100;
+                  const base = l.filiadosAtivos * perCapita;
+                  let factor = 0;
+                  if (l.percentual >= 90) factor = 1.0;
+                  else if (l.percentual >= 80) factor = 0.7;
+                  else if (l.percentual >= 70) factor = 0.4;
+                  l.creditoMes = base * factor;
+                } else {
+                  l.percentual = null;
+                  l.creditoMes = 0;
+                }
+              }
+            });
+            m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + (l.creditoMes || 0), 0);
+          });
+        } else {
+          logger.warn('REPASSE_FILIADOS_COUNT_FALLBACK', { reason: respFiliados.status });
+        }
+
+        // Recalcular acumulado anual após unificação de contagens
+        const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
+        const acumulados: any = {};
+        lotacoesLabels.forEach(lot => {
+          let somaCred = 0;
+          let somaReem = 0;
+          mesesNorm.forEach(mes => {
+            const l = mes.localidades.find(ll => ll.lotacao === lot);
+            if (l) {
+              somaCred += l.creditoMes;
+              somaReem += l.reembolsoMes;
+            }
+          });
+          acumulados[lot] = somaCred - somaReem;
+        });
+
+        mesesNorm.forEach(mes => {
+          mes.localidades.forEach(l => {
+            l.acumuladoAno = acumulados[l.lotacao] || 0;
+          });
+        });
+
+        const totalAcumuladoNorm = Object.values(acumulados).reduce((acc: any, curr: any) => acc + curr, 0) as number;
 
         bc('normalize:done', {
           mesesLen: mesesNorm.length,
@@ -327,6 +415,8 @@ export default function RepasseScreen() {
                 selectedValue={year}
                 onValueChange={(v) => setYear(v)}
                 style={styles.yearPicker}
+                mode="dropdown"
+                dropdownIconColor="#003366"
               >
                 {[year, year - 1, year - 2].map(y => (
                   <Picker.Item key={y} label={String(y)} value={y} />
@@ -423,11 +513,28 @@ export default function RepasseScreen() {
                                       selectedValue={loc.responsavelId}
                                       onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
                                       style={styles.pickerCell}
+                                      mode="dropdown"
+                                      dropdownIconColor="#003366"
                                     >
                                       <Picker.Item label="Selecione..." value={null} />
-                                      {(responsaveis || []).map(r => (
-                                        <Picker.Item key={r.id} label={r.nome} value={r.id} />
-                                      ))}
+                                      {(() => {
+                                        const kw = LOTACAO_KEYWORDS[loc.lotacao];
+                                        const respList = (responsaveis || []);
+
+                                        let filtered = respList.filter(r => {
+                                          if (!kw || !r.lotacao) return true;
+                                          return normalizeLocalidade(r.lotacao).includes(kw);
+                                        });
+
+                                        if (filtered.length === 0 && respList.length > 0) {
+                                          bc('REPASSE_RESP_FILTER_FALLBACK', { lotacao: loc.lotacao });
+                                          filtered = respList;
+                                        }
+
+                                        return filtered.map(r => (
+                                          <Picker.Item key={r.id} label={r.nome} value={r.id} />
+                                        ));
+                                      })()}
                                     </Picker>
                                   </View>
                                 </View>
@@ -502,8 +609,8 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#003366' },
   subtitle: { fontSize: 13, color: '#666' },
-  yearPickerWrapper: { backgroundColor: '#fff', borderRadius: 8, width: 120, elevation: 2 },
-  yearPicker: { height: 40 },
+  yearPickerWrapper: { backgroundColor: '#fff', borderRadius: 8, width: 150, flexShrink: 0, elevation: 2 },
+  yearPicker: { height: 52 },
   statsCard: { backgroundColor: '#003366', padding: 20, borderRadius: 12, marginBottom: 20, elevation: 4 },
   statsLabel: { color: '#fff', opacity: 0.8, fontSize: 13, marginBottom: 5 },
   statsValue: { color: '#ffc107', fontSize: 24, fontWeight: 'bold' },
@@ -590,11 +697,11 @@ const styles = StyleSheet.create({
     borderColor: '#bbb',
     borderRadius: 6,
     width: '95%',
-    height: 38,
+    height: 52,
     justifyContent: 'center'
   },
   pickerCell: {
     color: '#333',
-    height: 38
+    height: 52
   },
 });
