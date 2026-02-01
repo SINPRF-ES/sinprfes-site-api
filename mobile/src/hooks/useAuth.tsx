@@ -99,13 +99,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await salvarSessao({ token: novoToken, usuario: novoUsuario });
   }
 
-  async function logout() {
-    await limparSessao();
+  async function logout(removerBiometria = false) {
+    await limparSessao(!removerBiometria);
     setToken(null);
     setUsuario(null);
-    // IMPORTANTE: Logout NÃO deve desativar a biometria se o usuário quiser manter a preferência
-    // No entanto, sem token o login por biometria não funcionará.
-    // Para simplificar e seguir a regra de segurança, mantemos a flag conforme o storage.
+
+    if (removerBiometria) {
+      setBiometriaHabilitada(false);
+    }
+
     setBloqueadoPorBiometria(false);
 
     // Limpeza adicional de caches específicos de telas

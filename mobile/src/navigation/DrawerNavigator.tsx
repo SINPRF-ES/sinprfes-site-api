@@ -101,24 +101,24 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Estatuto"
         component={EstatutoScreen}
-        options={{ title: 'Estatuto' }}
+        options={{ title: '⚖️ Estatuto' }}
       />
       <Drawer.Screen
         name="Seguranca"
         component={SegurancaScreen}
-        options={{ title: 'Segurança' }}
+        options={{ title: '🛡️ Segurança' }}
       />
       <Drawer.Screen
         name="Atualizacoes"
         component={AtualizacoesScreen}
-        options={{ title: 'Atualizações' }}
+        options={{ title: '🔄 Atualizações' }}
       />
       {/* Tela de Diagnóstico/Logs - Para ADMIN e DIRETORIA */}
       {ehDiretoria && (
         <Drawer.Screen
           name="Logs"
           component={LogsScreen}
-          options={{ title: 'Diagnóstico' }}
+          options={{ title: '🧪 Diagnóstico' }}
         />
       )}
       {ehGestao && (
@@ -140,7 +140,7 @@ const DrawerNavigator = () => {
             name="CriarFiliado"
             component={CriarFiliadoScreen}
             options={{
-              title: 'Novo Filiado',
+              title: '👤 Novo Filiado',
               drawerItemStyle: { display: 'none' } // Oculta o item da lista padrão
             }}
           />
