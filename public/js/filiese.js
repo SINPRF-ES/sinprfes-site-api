@@ -140,6 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             
+            const originalText = btnSubmit.innerText;
             btnSubmit.disabled = true;
             btnSubmit.innerText = "ENVIANDO...";
             msgContainer.style.display = "none";
@@ -182,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } finally {
                 msgContainer.style.display = "block";
                 btnSubmit.disabled = false;
-                btnSubmit.innerText = "ENVIAR SOLICITAÇÃO";
+                btnSubmit.innerText = originalText;
             }
         });
     }

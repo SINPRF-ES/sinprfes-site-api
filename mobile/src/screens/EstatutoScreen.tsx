@@ -112,6 +112,11 @@ export default function EstatutoScreen({ navigation }: any) {
           cacheMode="LOAD_NO_CACHE"
           domStorageEnabled={true}
           javaScriptEnabled={true}
+          onLoadStart={() => console.log('[Estatuto] onLoadStart')}
+          onLoadEnd={() => console.log('[Estatuto] onLoadEnd')}
+          onMessage={(event) => {
+            console.log('[Estatuto] onMessage:', event.nativeEvent.data);
+          }}
           injectedJavaScriptBeforeContentLoaded={
             "(function() {" +
               "console.log('[Estatuto][inject] start');" +
@@ -132,12 +137,12 @@ export default function EstatutoScreen({ navigation }: any) {
                     "removedCount++;" +
                   "}" +
                 "});" +
-                "if (removedCount > 0) console.log('[Estatuto][inject] removed_nav count: ' + removedCount);" +
+                "if (removedCount > 0) log('[Estatuto][inject] removed_nav count: ' + removedCount);" +
               "};" +
               "kill();" +
               "var obs = new MutationObserver(kill);" +
               "obs.observe(document.documentElement, { childList: true, subtree: true });" +
-              "console.log('[Estatuto][inject] observer_active');" +
+              "log('[Estatuto][inject] observer_active');" +
               "document.addEventListener('DOMContentLoaded', kill);" +
               "setTimeout(kill, 300);" +
               "setTimeout(kill, 1000);" +
