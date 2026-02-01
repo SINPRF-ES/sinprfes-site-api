@@ -24,7 +24,9 @@ export interface NewsPost {
 }
 
 export const fetchNoticias = async (status?: string): Promise<NewsPost[]> => {
-  const { data } = await api.get('/api/noticias', { params: { status } });
+  // Garantir que status seja apenas string ou undefined (evita React Query context)
+  const sanitizedStatus = typeof status === 'string' ? status : undefined;
+  const { data } = await api.get('/api/noticias', { params: { status: sanitizedStatus } });
   return data;
 };
 
