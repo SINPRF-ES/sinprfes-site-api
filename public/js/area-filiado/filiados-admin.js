@@ -644,6 +644,16 @@
             const payload = {};
             fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
 
+            // Normalização de Nomes (Canônico)
+            if (payload.nome && global.Canon?.normalizeNome) {
+                payload.nome = global.Canon.normalizeNome(payload.nome);
+            }
+            for (let i = 1; i <= 5; i++) {
+                if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
+                    payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
+                }
+            }
+
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
             if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
 
@@ -841,6 +851,16 @@
             const fd = new FormData(form);
             const payload = {};
             fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
+
+            // Normalização de Nomes (Canônico)
+            if (payload.nome && global.Canon?.normalizeNome) {
+                payload.nome = global.Canon.normalizeNome(payload.nome);
+            }
+            for (let i = 1; i <= 5; i++) {
+                if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
+                    payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
+                }
+            }
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
 

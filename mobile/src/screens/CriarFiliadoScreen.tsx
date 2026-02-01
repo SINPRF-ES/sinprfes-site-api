@@ -15,6 +15,7 @@ import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
+import { normalizeNome } from '../utils/canon';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',
@@ -90,6 +91,7 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       const payload = { ...filiado };
 
       // Normalização
+      if (payload.nome) payload.nome = normalizeNome(payload.nome);
       payload.cpf = onlyDigits(payload.cpf);
       payload.telefone1 = onlyDigits(payload.telefone1);
       payload.telefone2 = onlyDigits(payload.telefone2);
@@ -100,6 +102,9 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       }
 
       for (let i = 1; i <= 5; i++) {
+        const depNome = `dep${i}_nome`;
+        if (payload[depNome]) payload[depNome] = normalizeNome(payload[depNome] as string);
+
         const depCpf = `dep${i}_cpf`;
         if (payload[depCpf]) payload[depCpf] = onlyDigits(payload[depCpf]);
 

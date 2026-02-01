@@ -633,6 +633,17 @@
             }
 
             const payload = { ...rawPayload };
+
+            // Normalização de Nomes (Canônico)
+            if (payload.nome && global.Canon?.normalizeNome) {
+                payload.nome = global.Canon.normalizeNome(payload.nome);
+            }
+            for (let i = 1; i <= 5; i++) {
+                if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
+                    payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
+                }
+            }
+
             // Limpa slots no payload
             for (let i = 1; i <= 5; i++) {
                 payload[`dep${i}_nome`] = "";

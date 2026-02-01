@@ -1,12 +1,14 @@
 // src/services/filiados.service.js
 const pool = require("../config/db");
+const log = require("../utils/log");
 const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
 const {
   normalizeSituacaoFuncional,
   normalizePerfil,
-  normalizeLotacao
+  normalizeLotacao,
+  normalizeNome
 } = require("../../shared/canon");
 
 /**
@@ -128,6 +130,21 @@ async function registrarUltimoAcesso(id) {
  */
 async function atualizarDadosProprios(id, dados) {
   compactarDependentes(dados);
+
+  if (dados.nome) {
+    const original = dados.nome;
+    dados.nome = normalizeNome(dados.nome);
+    if (original !== dados.nome) {
+      log.info("NomeNormalizado", {
+        context: "atualizarDadosProprios",
+        id,
+        nomeNormalized: true,
+        lenBefore: original.length,
+        lenAfter: dados.nome.length
+      });
+    }
+  }
+
   const campos = [];
   const valores = [];
   let idx = 1;
@@ -173,6 +190,9 @@ async function atualizarDadosProprios(id, dados) {
 
   // Campos dos dependentes
   for (let i = 1; i <= 5; i++) {
+    if (dados[`dep${i}_nome`]) {
+      dados[`dep${i}_nome`] = normalizeNome(dados[`dep${i}_nome`]);
+    }
     addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
     addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
 
@@ -214,6 +234,21 @@ async function atualizarDadosProprios(id, dados) {
  */
 async function atualizarFiliadoPorId(id, dados) {
   compactarDependentes(dados);
+
+  if (dados.nome) {
+    const original = dados.nome;
+    dados.nome = normalizeNome(dados.nome);
+    if (original !== dados.nome) {
+      log.info("NomeNormalizado", {
+        context: "atualizarFiliadoPorId",
+        id,
+        nomeNormalized: true,
+        lenBefore: original.length,
+        lenAfter: dados.nome.length
+      });
+    }
+  }
+
   const campos = [];
   const valores = [];
   let idx = 1;
@@ -428,7 +463,16 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       p++;
     }
 
-    push("nome", nome);
+    const nomeNorm = normalizeNome(nome);
+    if (nome !== nomeNorm) {
+      log.info("NomeNormalizado", {
+        context: "criarFiliadoInicial",
+        nomeNormalized: true,
+        lenBefore: nome.length,
+        lenAfter: (nomeNorm || "").length
+      });
+    }
+    push("nome", nomeNorm);
     push("cpf", cpfNormalizado);
     // Explicit date cast with NULLIF for empty strings
     colunas.push("data_nascimento");
@@ -469,6 +513,9 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     push("arquivado_motivo", null);
 
     for (let i = 1; i <= 5; i++) {
+      if (dados[`dep${i}_nome`]) {
+        dados[`dep${i}_nome`] = normalizeNome(dados[`dep${i}_nome`]);
+      }
       push(`dep${i}_nome`, dados[`dep${i}_nome`]);
       push(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
 

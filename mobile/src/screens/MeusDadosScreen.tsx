@@ -23,6 +23,7 @@ import { logger } from '../infra/logger';
 import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { useNavigation } from '@react-navigation/native';
+import { normalizeNome } from '../utils/canon';
 
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
@@ -228,6 +229,7 @@ export default function MeusDadosScreen() {
       const payload = { ...filiado };
 
       // Normalização de campos antes de enviar ao backend
+      if (payload.nome) payload.nome = normalizeNome(payload.nome);
       payload.cpf = onlyDigits(payload.cpf);
       payload.telefone1 = onlyDigits(payload.telefone1);
       payload.telefone2 = onlyDigits(payload.telefone2);
@@ -238,6 +240,9 @@ export default function MeusDadosScreen() {
       }
 
       for (let i = 1; i <= 5; i++) {
+        const depNome = `dep${i}_nome`;
+        if (payload[depNome]) payload[depNome] = normalizeNome(payload[depNome] as string);
+
         const depCpf = `dep${i}_cpf`;
         if (payload[depCpf]) payload[depCpf] = onlyDigits(payload[depCpf]);
 
