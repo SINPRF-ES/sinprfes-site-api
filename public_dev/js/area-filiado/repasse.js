@@ -197,13 +197,27 @@
             else colorPercent = "#27ae60";
         }
 
+        // Filtragem de responsáveis por localidade (Paridade com App)
+        const slug = (str) => (str || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const lotacaoAlvo = slug(loc.lotacao);
+
+        const responsaveisFiltrados = responsaveisCache.filter(r => {
+            const rLot = slug(r.lotacao);
+            if (lotacaoAlvo.includes("VIANA")) return rLot.includes("VIANA");
+            if (lotacaoAlvo.includes("SERRA")) return rLot.includes("SERRA");
+            if (lotacaoAlvo.includes("GUARAPARI")) return rLot.includes("GUARAPARI");
+            if (lotacaoAlvo.includes("LINHARES")) return rLot.includes("LINHARES");
+            // Default para SEDE ou outras localidades não mapeadas
+            return rLot.includes("SEDE") || rLot === "";
+        });
+
         return `
             <tr>
                 <td style="font-weight:bold; color:#003366;">${loc.lotacao}</td>
                 <td>
                     <select onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { responsavelId: this.value })">
                         <option value="">Selecione...</option>
-                        ${responsaveisCache.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
+                        ${responsaveisFiltrados.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
                     </select>
                 </td>
                 <td style="text-align:center;">${loc.filiadosAtivos}</td>

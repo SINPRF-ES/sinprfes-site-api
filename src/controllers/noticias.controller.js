@@ -27,10 +27,21 @@ exports.listar = async (req, res) => {
 
     // Validação estrita: se vier algo que não seja string, é erro 400.
     if (status && typeof status !== 'string') {
-      log.warn("NOTICIAS_GET_INVALID_PARAMS", { requestId, userId, queryParams });
+      // Sanitização básica do valor recebido para o log (se for objeto, vira string)
+      const receivedValue = typeof status === 'object' ? JSON.stringify(status) : String(status);
+
+      log.warn("NOTICIAS_GET_INVALID_PARAMS", {
+        requestId,
+        userId,
+        queryParams,
+        receivedStatusType: typeof status,
+        receivedStatusValue: receivedValue.substring(0, 500) // Limita tamanho no log
+      });
+
       return res.status(400).json({
         success: false,
         message: "Parâmetro 'status' inválido. Deve ser uma string.",
+        details: `Recebido tipo: ${typeof status}`,
         code: "INVALID_QUERY_PARAMS",
         requestId
       });
@@ -77,9 +88,11 @@ exports.listar = async (req, res) => {
       sql: query,
       sqlParams: params
     });
+
     return res.status(500).json({
       success: false,
-      message: "Erro ao buscar notícias.",
+      message: "Erro interno ao processar notícias.",
+      errorId: requestId, // Correlaciona com o log
       code: "INTERNAL_SERVER_ERROR",
       requestId
     });
@@ -117,7 +130,15 @@ exports.detalhar = async (req, res) => {
 
     noticia.midias = midiaRows;
 
-    log.info("NOTICIAS_DETAIL_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_DETAIL_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start
+    });
     return res.json(noticia);
   } catch (err) {
     log.error("NOTICIAS_DETAIL_FAILED", {
@@ -162,7 +183,14 @@ exports.criar = async (req, res) => {
       [titulo, conteudo, req.user.id, capa_url]
     );
 
-    log.info("NOTICIAS_CREATE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_CREATE_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      durationMs: Date.now() - start
+    });
     return res.status(201).json(rows[0]);
   } catch (err) {
     log.error("NOTICIAS_CREATE_FAILED", {
@@ -212,7 +240,15 @@ exports.atualizar = async (req, res) => {
       return res.status(404).json({ message: "Notícia não encontrada." });
     }
 
-    log.info("NOTICIAS_UPDATE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_UPDATE_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start
+    });
     return res.json(rows[0]);
   } catch (err) {
     log.error("NOTICIAS_UPDATE_FAILED", {
@@ -259,7 +295,15 @@ exports.publicar = async (req, res) => {
       return res.status(404).json({ message: "Notícia não encontrada." });
     }
 
-    log.info("NOTICIAS_PUBLISH_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_PUBLISH_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start
+    });
     return res.json(rows[0]);
   } catch (err) {
     log.error("NOTICIAS_PUBLISH_FAILED", {
@@ -298,7 +342,15 @@ exports.excluir = async (req, res) => {
       return res.status(404).json({ message: "Notícia não encontrada." });
     }
 
-    log.info("NOTICIAS_DELETE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_DELETE_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start
+    });
     return res.json({ success: true });
   } catch (err) {
     log.error("NOTICIAS_DELETE_FAILED", {
@@ -350,7 +402,15 @@ exports.adicionarMidia = async (req, res) => {
       [id, tipo || (resourceType === "video" ? "VIDEO" : "IMAGEM"), result.secure_url, ordem || 0]
     );
 
-    log.info("NOTICIAS_ADD_MEDIA_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_ADD_MEDIA_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start
+    });
     return res.status(201).json(rows[0]);
   } catch (err) {
     log.error("NOTICIAS_ADD_MEDIA_FAILED", {
@@ -389,7 +449,15 @@ exports.removerMidia = async (req, res) => {
       return res.status(404).json({ message: "Mídia não encontrada." });
     }
 
-    log.info("NOTICIAS_REMOVE_MEDIA_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_REMOVE_MEDIA_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      midiaId,
+      durationMs: Date.now() - start
+    });
     return res.json({ success: true });
   } catch (err) {
     log.error("NOTICIAS_REMOVE_MEDIA_FAILED", {
@@ -439,7 +507,15 @@ exports.adicionarMidiaExterna = async (req, res) => {
       [id, tipo, url, ordem || 0]
     );
 
-    log.info("NOTICIAS_ADD_EXTERNAL_MEDIA_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_ADD_EXTERNAL_MEDIA_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start
+    });
     return res.status(201).json(rows[0]);
   } catch (err) {
     log.error("NOTICIAS_ADD_EXTERNAL_MEDIA_FAILED", {
@@ -488,7 +564,14 @@ exports.obterAssinaturaUpload = async (req, res) => {
     };
 
     const signatureData = cloudinary.gerarAssinaturaUpload(params);
-    log.info("NOTICIAS_GET_SIGNATURE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
+    log.info("NOTICIAS_GET_SIGNATURE_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      durationMs: Date.now() - start
+    });
     return res.json(signatureData);
   } catch (err) {
     log.error("NOTICIAS_GET_SIGNATURE_FAILED", {

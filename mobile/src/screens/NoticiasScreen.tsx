@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { fetchNoticias, NewsPost } from '../services/newsService';
@@ -6,10 +6,12 @@ import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL } from '../config/env';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
+import { logger } from '../infra/logger';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 export default function NoticiasScreen() {
   const navigation = useNavigation<any>();
-  const { token } = useAuth();
+  const { token, usuario } = useAuth();
 
   const { data: noticias, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['noticias'],
@@ -30,40 +32,82 @@ export default function NoticiasScreen() {
   };
 
   const renderItem = ({ item }: { item: NewsPost }) => {
-    const coverUrl = item.capa_url;
-    const isRascunho = item.status === 'RASCUNHO';
+    try {
+      const coverUrl = item.capa_url;
+      const isRascunho = item.status === 'RASCUNHO';
 
-    return (
-      <TouchableOpacity
-        style={[styles.card, isRascunho && styles.draftCard]}
-        onPress={() => navigation.navigate('NoticiaDetalhe', { newsId: item.id })}
-      >
-        {coverUrl ? (
-          <Image
-            source={{ uri: coverUrl.replace('/upload/', '/upload/f_auto,q_auto,w_500/') }}
-            style={styles.cover}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={[styles.cover, styles.placeholderCover]}>
-            <FontAwesome name="newspaper-o" size={40} color="#ccc" />
+      return (
+        <TouchableOpacity
+          style={[styles.card, isRascunho && styles.draftCard]}
+          onPress={() => navigation.navigate('NoticiaDetalhe', { newsId: item.id })}
+        >
+          {coverUrl ? (
+            <Image
+              source={{ uri: coverUrl.replace('/upload/', '/upload/f_auto,q_auto,w_500/') }}
+              style={styles.cover}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.cover, styles.placeholderCover]}>
+              <FontAwesome name="newspaper-o" size={40} color="#ccc" />
+            </View>
+          )}
+          <View style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.date}>{formatDate(item.published_at || item.created_at)}</Text>
+              {isRascunho && (
+                <View style={styles.draftBadge}>
+                  <Text style={styles.draftText}>RASCUNHO</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.title} numberOfLines={2}>{item.titulo}</Text>
+            <Text style={styles.summary} numberOfLines={3}>{item.conteudo}</Text>
           </View>
-        )}
-        <View style={styles.cardContent}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.date}>{formatDate(item.published_at || item.created_at)}</Text>
-            {isRascunho && (
-              <View style={styles.draftBadge}>
-                <Text style={styles.draftText}>RASCUNHO</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.title} numberOfLines={2}>{item.titulo}</Text>
-          <Text style={styles.summary} numberOfLines={3}>{item.conteudo}</Text>
-        </View>
-      </TouchableOpacity>
-    );
+        </TouchableOpacity>
+      );
+    } catch (err) {
+      logger.error('Error rendering News item', err, { newsId: item?.id });
+      return null;
+    }
   };
+
+  let ehGestaoNoticias = false;
+  try {
+    ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  } catch (err) {
+    logger.error('Error checking management permission in NoticiasScreen', err);
+  }
+
+  useLayoutEffect(() => {
+    const actions: MenuAction[] = [];
+
+    if (ehGestaoNoticias) {
+      actions.push({
+        label: 'Criar notícia',
+        onPress: () => navigation.navigate('NoticiaEditor', { newsId: null }),
+        icon: 'plus'
+      });
+    }
+
+    actions.push({
+      label: 'Atualizar',
+      onPress: () => refetch(),
+      icon: 'refresh'
+    });
+
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.openDrawer()}
+          style={{ marginLeft: 15 }}
+        >
+          <FontAwesome name="bars" size={24} color="#fff" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => <HeaderMenu actions={actions} triggerLabel="Opções" />,
+    });
+  }, [navigation, ehGestaoNoticias, refetch]);
 
   if (isLoading) {
     return (
@@ -86,18 +130,8 @@ export default function NoticiasScreen() {
     );
   }
 
-  const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
-
   return (
     <View style={styles.container}>
-      {ehGestaoNoticias && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => navigation.navigate('NoticiaEditor', { newsId: null })}
-        >
-          <FontAwesome name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
-      )}
       <FlatList
         data={noticias}
         renderItem={renderItem}
@@ -183,19 +217,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#000',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#003366',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    zIndex: 10,
   },
   cover: {
     width: '100%',
