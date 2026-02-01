@@ -62,7 +62,21 @@ exports.listar = async (req, res) => {
 
     query += " ORDER BY n.published_at DESC, n.created_at DESC";
 
-    const { rows } = await pool.query(query, params);
+    const { rows: noticias } = await pool.query(query, params);
+
+    // Busca as mídias para todas as notícias listadas
+    if (noticias.length > 0) {
+      const ids = noticias.map(n => n.id);
+      const { rows: allMidias } = await pool.query(
+        "SELECT * FROM noticia_midias WHERE noticia_id = ANY($1) ORDER BY ordem ASC",
+        [ids]
+      );
+
+      // Agrupa as mídias por notícia
+      noticias.forEach(n => {
+        n.midias = allMidias.filter(m => m.noticia_id === n.id);
+      });
+    }
 
     log.info("NOTICIAS_GET_SUCCESS", {
       endpoint,
@@ -70,10 +84,10 @@ exports.listar = async (req, res) => {
       requestId,
       userId,
       durationMs: Date.now() - start,
-      count: rows.length
+      count: noticias.length
     });
 
-    return res.json(rows);
+    return res.json(noticias);
   } catch (err) {
     log.error("NOTICIAS_GET_FAILED", {
       endpoint,

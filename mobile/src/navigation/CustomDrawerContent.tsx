@@ -13,10 +13,18 @@ const CustomDrawerContent = (props) => {
   const handleLogoutPress = () => {
     Alert.alert(
       'Sair da Conta',
-      'Tem certeza de que deseja encerrar sua sessão? Você precisará digitar sua senha novamente no próximo acesso.',
+      'Como deseja sair?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sair', style: 'destructive', onPress: logout },
+        {
+          text: 'Sair (Manter Biometria)',
+          onPress: () => logout(false)
+        },
+        {
+          text: 'Remover acesso deste aparelho',
+          style: 'destructive',
+          onPress: () => logout(true)
+        },
       ]
     );
   };

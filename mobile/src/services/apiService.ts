@@ -104,7 +104,12 @@ api.interceptors.response.use(
 
     const status = response?.status;
     const contentType = response?.headers?.['content-type'] || '';
+    const errorId = response?.data?.errorId;
     let message = response?.data?.message || error.message;
+
+    if (errorId) {
+      message = `${message} (Cód: ${errorId})`;
+    }
 
     // Se a API retornar HTML (ex: 502 Proxy, Erro do Render, etc), extraímos um preview para o log
     if (contentType.includes('text/html')) {
