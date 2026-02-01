@@ -112,14 +112,20 @@ export default function EstatutoScreen({ navigation }: any) {
           cacheMode="LOAD_NO_CACHE"
           domStorageEnabled={true}
           javaScriptEnabled={true}
+          onLoadStart={() => console.log('[Estatuto] onLoadStart')}
+          onLoadEnd={() => console.log('[Estatuto] onLoadEnd')}
+          onMessage={(event) => {
+            console.log('[Estatuto] onMessage:', event.nativeEvent.data);
+          }}
           injectedJavaScriptBeforeContentLoaded={
             "(function() {" +
-              "console.log('[Estatuto][inject] start');" +
+              "var log = function(m) { window.ReactNativeWebView.postMessage('[JS]' + m); console.log(m); };" +
+              "log('[Estatuto][inject] start');" +
               "var cssText = " + JSON.stringify(injectedCSS) + ";" +
               "var style = document.createElement('style');" +
               "style.appendChild(document.createTextNode(cssText));" +
               "document.head.appendChild(style);" +
-              "console.log('[Estatuto][inject] css_applied');" +
+              "log('[Estatuto][inject] css_applied');" +
               "var kill = function() {" +
                 "var selectors = ['#site-header', '#site-footer', '.estatuto-nav', '.estatuto-nav-title', '.barra-azul', 'header', 'nav', '.navbar', '.site-header', '#header', '#nav'];" +
                 "var removedCount = 0;" +
@@ -130,13 +136,14 @@ export default function EstatutoScreen({ navigation }: any) {
                     "removedCount++;" +
                   "}" +
                 "});" +
-                "if (removedCount > 0) console.log('[Estatuto][inject] removed_nav count: ' + removedCount);" +
+                "if (removedCount > 0) log('[Estatuto][inject] removed_nav count: ' + removedCount);" +
               "};" +
               "kill();" +
               "var obs = new MutationObserver(kill);" +
               "obs.observe(document.documentElement, { childList: true, subtree: true });" +
-              "console.log('[Estatuto][inject] observer_active');" +
+              "log('[Estatuto][inject] observer_active');" +
               "document.addEventListener('DOMContentLoaded', kill);" +
+              "window.addEventListener('load', kill);" +
               "setTimeout(kill, 500);" +
               "setTimeout(kill, 2000);" +
             "})();"

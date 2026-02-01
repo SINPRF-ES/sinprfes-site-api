@@ -119,7 +119,13 @@ document.addEventListener("DOMContentLoaded", () => {
         payload.token_2fa = inputToken2fa.value.trim();
       }
 
+      const btnSubmit = loginForm.querySelector('button[type="submit"]');
+      const originalBtnText = btnSubmit.innerHTML;
+
       try {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = "Entrando...";
+
         const resp = await fetch("/api/auth/login", {
           method: "POST",
           headers: {
@@ -176,6 +182,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loginMsg) {
           loginMsg.textContent = "Erro de comunicação com o servidor.";
         }
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalBtnText;
       }
     });
   }
@@ -200,7 +209,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      const btnSubmit = forgotForm.querySelector('button[type="submit"]');
+      const originalBtnText = btnSubmit.innerHTML;
+
       try {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = "Enviando...";
+
         const resp = await fetch("/api/senha/recuperar", {
           method: "POST",
           headers: {
@@ -237,6 +252,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (forgotMsg) {
           forgotMsg.textContent = "Erro de comunicação com o servidor.";
         }
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalBtnText;
       }
     });
   }

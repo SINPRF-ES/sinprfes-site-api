@@ -7,6 +7,17 @@
 
   <link rel="stylesheet" href="/css/style.css">
 
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1' || params.get('app') === '1') {
+        var style = document.createElement('style');
+        style.innerHTML = '#site-header, #site-footer, .estatuto-nav { display: none !important; } body { padding-top: 0 !important; }';
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
+
   <style>
     html {
       scroll-behavior: smooth;
