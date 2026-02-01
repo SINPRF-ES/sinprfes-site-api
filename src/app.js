@@ -43,21 +43,6 @@ app.use((req, res, next) => {
 // Limite de tamanho do corpo JSON (Proteção contra DoS)
 app.use(express.json({ limit: "100kb" }));
 
-// 🟢 NOVO: Suporte a site paralelo (v2/dev)
-// Prioridade A: Subdomínio dev.sinprfes.org.br
-// Prioridade B: Path prefix /dev/
-app.use((req, res, next) => {
-  const host = req.get('host') || '';
-  if (host.startsWith('dev.') || req.url.startsWith('/dev/')) {
-    // Se for path prefix, removemos o prefixo para servir os arquivos corretamente
-    if (req.url.startsWith('/dev/')) {
-      req.url = req.url.replace('/dev/', '/');
-      if (req.url === '' || req.url === '/') req.url = '/index.html';
-    }
-    return express.static(path.join(process.cwd(), "public_dev"))(req, res, next);
-  }
-  next();
-});
 
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/shared", express.static(path.join(process.cwd(), "shared")));

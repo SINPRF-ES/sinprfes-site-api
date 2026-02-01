@@ -26,6 +26,8 @@
   <script src="/js/area-filiado/notificacoes.js"></script>
   <script src="/js/area-filiado/assembleia-utils.js"></script>
   <script src="/js/area-filiado/assembleias.js"></script>
+  <script src="/js/area-filiado/noticias-admin.js"></script>
+  <script src="/js/area-filiado/cms-admin.js"></script>
 
   <!-- Inicializador Principal -->
   <script src="/js/area-filiado.js"></script>
@@ -48,8 +50,10 @@
         <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
         <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
         <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
+        <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" style="display:none;">📰 Notícias</button>
         <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;">💱 Repasse</button>
         <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
+        <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
       </nav>
 
       <!-- Conteúdo Principal -->
@@ -97,6 +101,31 @@
 
         <section id="sec-repasse" class="af-section" style="display:none;">
           <!-- Conteúdo carregado via JS -->
+        </section>
+
+        <section id="sec-noticias" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via NoticiasAdmin -->
+        </section>
+
+        <section id="sec-cms" class="af-section" style="display:none;">
+          <div class="section-card">
+              <h2>Gerenciar Conteúdo do Site</h2>
+              <p class="section-subtitle">Edite os blocos de informação da Home e Notícias.</p>
+
+              <div class="field-row" style="max-width: 300px;">
+                  <div class="field-group">
+                      <label>Selecionar Página</label>
+                      <select id="cms-page-selector">
+                          <option value="home">Início (Home)</option>
+                          <option value="noticias">Notícias</option>
+                      </select>
+                  </div>
+              </div>
+
+              <div id="cms-blocks-admin" style="margin-top:20px; display: flex; flex-direction: column; gap: 20px;">
+                  <p>Carregando blocos...</p>
+              </div>
+          </div>
         </section>
 
         <section id="sec-notificacoes" class="af-section" style="display:none;">
@@ -174,6 +203,19 @@
       </div>
       <div class="modal-body" id="modal-corpo">
         <!-- Form carregado dinamicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Genérico -->
+  <div id="modal-generic" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-generic-titulo">Título</h2>
+        <button type="button" class="modal-close" onclick="document.getElementById('modal-generic').style.display='none'">×</button>
+      </div>
+      <div class="modal-body" id="modal-generic-corpo">
+        <!-- Conteúdo dinâmico -->
       </div>
     </div>
   </div>

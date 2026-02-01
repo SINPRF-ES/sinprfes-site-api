@@ -11,10 +11,11 @@
 
     const LOTACAO_OPCOES = [
       "SEDE",
-      "1ª DEL (Viana)",
-      "2ª DEL (Serra)",
-      "3ª DEL (Guarapari)",
-      "4ª DEL (Linhares)"
+      "DEL 01 - Viana",
+      "DEL 02 - Serra",
+      "DEL 03 - Guarapari",
+      "DEL 04 - Linhares",
+      "NENHUMA"
     ];
 
     let perfilAtual = null;
@@ -132,6 +133,7 @@
                             <option value="DEL 02 - Serra">DEL 02 - Serra</option>
                             <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
                             <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
+                            <option value="NENHUMA">NENHUMA</option>
                         </select>
                     </label>
                 `;
@@ -195,14 +197,15 @@
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {
-            const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
+            const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
             if (lotacoesLabels.includes(fSituacao)) {
                 const keywords = {
                     "SEDE": "SEDE",
                     "DEL 01 - Viana": "VIANA",
                     "DEL 02 - Serra": "SERRA",
                     "DEL 03 - Guarapari": "GUARAPARI",
-                    "DEL 04 - Linhares": "LINHARES"
+                    "DEL 04 - Linhares": "LINHARES",
+                    "NENHUMA": "NENHUMA"
                 };
                 const keyword = keywords[fSituacao];
                 res = res.filter(f => {
@@ -350,6 +353,7 @@
                         <div class="field-group">
                             <label>Lotação</label>
                             <select name="lotacao">
+                                <option value="">Selecione...</option>
                                 ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
                             </select>
                         </div>
@@ -476,6 +480,11 @@
     function configurarFormEdicao(id) {
         const form = document.getElementById("form-edicao-modal");
         const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF } = global.Utils || {};
+
+        if (aplicarMascaraCPF) {
+            const cpfInput = form.querySelector('input[name="cpf"]');
+            if (cpfInput) aplicarMascaraCPF(cpfInput);
+        }
 
         const filiado = cacheLista.find(f => f.id == id);
 
@@ -637,7 +646,14 @@
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
             if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
-            if (payload.cpf) payload.cpf = onlyDigits(payload.cpf);
+
+            // Validação e Sanitização CPF
+            const cpfLimp = onlyDigits(payload.cpf);
+            if (cpfLimp.length !== 11) {
+                alert("O CPF deve ter exatamente 11 dígitos.");
+                return;
+            }
+            payload.cpf = cpfLimp;
 
             for (let i = 1; i <= 5; i++) {
                 if (payload[`dep${i}_cpf`]) payload[`dep${i}_cpf`] = onlyDigits(payload[`dep${i}_cpf`]);

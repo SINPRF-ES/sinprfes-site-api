@@ -337,6 +337,10 @@ exports.atualizarFiliado = async (req, res) => {
 
     if (body.cpf) {
       const cpfLimpo = normalizarCpf(body.cpf);
+      if (cpfLimpo.length !== 11) {
+        return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
+      }
+
       const checkCpf = await pool.query(
         "SELECT nome FROM filiados WHERE cpf = $1 AND CAST(id AS TEXT) != CAST($2 AS TEXT) LIMIT 1",
         [cpfLimpo, idAlvo]
@@ -456,6 +460,10 @@ exports.criarFiliado = async (req, res) => {
     }
 
     const cpfLimpo = normalizarCpf(body.cpf);
+    if (cpfLimpo.length !== 11) {
+      return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
+    }
+
     const checkCpf = await pool.query("SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
 
     if (checkCpf.rows.length > 0) {

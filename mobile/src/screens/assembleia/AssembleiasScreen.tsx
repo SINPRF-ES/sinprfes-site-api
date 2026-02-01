@@ -38,11 +38,6 @@ export default function AssembleiasScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       navigation.setOptions({
-        headerLeft: () => (
-          <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginLeft: 10 }}>
-            <MaterialCommunityIcons name="menu" size={24} color="#fff" />
-          </TouchableOpacity>
-        ),
         headerRight: () => {
           const actions: MenuAction[] = [];
           if (ehDiretoria) {

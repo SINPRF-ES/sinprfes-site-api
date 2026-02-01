@@ -24,6 +24,8 @@
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
         const { inicializarRepasse } = window.Repasse || {};
+        const { inicializarNoticias } = window.NoticiasAdmin || {};
+        const { CMSAdmin } = window || {};
         const { Notificacoes } = window || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
@@ -41,6 +43,8 @@
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
+                else if (abaAlvo === 'sec-noticias' && inicializarNoticias) inicializarNoticias(perfil);
+                else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
                 else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
             });
@@ -76,12 +80,21 @@
             // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
             if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
 
-            // Exibe aba Repasse se tiver permissão
-            const perfisRepasse = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+            // Exibe abas restritas conforme perfil (Regra de Ouro)
+            const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+            const perfisComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
+
             const navRepasse = document.getElementById("nav-repasse");
-            if (navRepasse) {
-                navRepasse.style.display = perfisRepasse.includes(perfil) ? "block" : "none";
-            }
+            if (navRepasse) navRepasse.style.display = perfisGestao.includes(perfil) ? "block" : "none";
+
+            const navNoticias = document.getElementById("nav-noticias");
+            if (navNoticias) navNoticias.style.display = perfisComunicacao.includes(perfil) ? "block" : "none";
+
+            const navCms = document.getElementById("nav-cms");
+            if (navCms) navCms.style.display = perfisGestao.includes(perfil) ? "block" : "none";
+
+            const navNotificacoes = document.getElementById("nav-notificacoes");
+            if (navNotificacoes) navNotificacoes.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
         } catch (err) {
             console.error("Falha na sincronização inicial:", err);

@@ -311,14 +311,7 @@ O projeto possui um ambiente de desenvolvimento paralelo para testes de novas in
 
 ### Acesso e Roteamento
 - **Produção (Estável):** `https://sinprfes.org.br/` (serve de `public/`)
-- **Dev V2 (Path Prefix):** `https://sinprfes.org.br/dev/index.html` (serve de `public_dev/`)
-- **Dev V2 (Subdomínio):** `https://dev.sinprfes.org.br/` (serve de `public_dev/`)
 
-O "Dev Router" no backend identifica o host (começando com `dev.`) ou o prefixo de caminho (`/dev/`) para alternar o diretório base de arquivos estáticos.
-
-### Segurança e Controle
-- **Visibilidade:** O ambiente dev é "oculto" (não linkado no menu principal), mas acessível por URL direta.
-- **Aviso:** Esta ocultação **não substitui** um controle de acesso forte. Para restrição total a IPs específicos ou autenticação de rede, recomenda-se o uso de **Cloudflare Access** no subdomínio `dev`.
 - **CMS Interno:** As atualizações de conteúdo via CMS na "Área do Filiado" refletem imediatamente no ambiente Dev V2.
 
 ### CMS Interno (Comunicador)
