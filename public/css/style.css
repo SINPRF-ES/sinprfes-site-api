@@ -223,6 +223,12 @@ img {
   color: #777;
 }
 
+/* MODO EMBED (App) */
+.is-embed #site-header,
+.is-embed #site-footer {
+  display: none !important;
+}
+
 /* =========================================================
    SEÇÕES / CARTÕES
    ========================================================= */

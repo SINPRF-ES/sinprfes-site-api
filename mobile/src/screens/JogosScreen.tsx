@@ -161,10 +161,14 @@ const JogosScreen = () => {
         </View>
 
         <View style={styles.infoCard}>
-          <MaterialCommunityIcons name="information-outline" size={20} color="#003366" style={{ marginBottom: 4 }} />
-          <Text style={styles.infoTitle}>II JOIN PRF (2º Jogos de Integração Nacional da PRF)</Text>
-          <Text style={styles.infoText}>📅 12 a 17/04/2026</Text>
-          <Text style={styles.infoText}>📍 Poços de Caldas-MG</Text>
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="map-marker-radius" size={20} color="#003366" />
+            <Text style={styles.infoText}>Local: <Text style={styles.bold}>Poços de Caldas-MG</Text></Text>
+          </View>
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="calendar-clock" size={20} color="#003366" />
+            <Text style={styles.infoText}>Data: <Text style={styles.bold}>12 a 17/04/2026</Text></Text>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -280,30 +284,18 @@ const styles = StyleSheet.create({
   banner: { backgroundColor: '#003366', padding: 20, alignItems: 'center' },
   bannerSubtitle: { fontSize: 15, color: '#fff', textAlign: 'center', fontStyle: 'italic' },
   infoCard: {
-    backgroundColor: '#e7f3ff',
-    padding: 16,
-    marginHorizontal: 15,
-    marginTop: 15,
+    backgroundColor: '#e6f0fa',
+    margin: 15,
+    marginBottom: 0,
+    padding: 15,
     borderRadius: 12,
     borderLeftWidth: 5,
     borderLeftColor: '#003366',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    gap: 8,
   },
-  infoTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#003366',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#444',
-    lineHeight: 20,
-  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  infoText: { fontSize: 16, color: '#333' },
+  bold: { fontWeight: 'bold' },
   card: { backgroundColor: '#fff', padding: 20, margin: 15, borderRadius: 12, elevation: 3 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center' },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5 },

@@ -46,7 +46,7 @@ const CustomDrawerContent = (props) => {
         <>
           <View style={styles.separator} />
           <DrawerItem
-            label="Gestão"
+            label="🛠️ Gestão"
             labelStyle={styles.sectionHeader}
             onPress={() => {}} // Não faz nada, é apenas um título
           />
@@ -56,7 +56,7 @@ const CustomDrawerContent = (props) => {
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="Novo Filiado"
+            label="👤 Novo Filiado"
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('CriarFiliado')}
           />
@@ -71,12 +71,12 @@ const CustomDrawerContent = (props) => {
           onPress={() => setBloqueadoPorBiometria(true)}
         >
           <Ionicons name="lock-closed-outline" size={20} color="#fff" />
-          <Text style={styles.closeAppButtonText}>Fechar App</Text>
+          <Text style={styles.closeAppButtonText}>🔒 Fechar App</Text>
         </TouchableOpacity>
       </View>
 
       <DrawerItem
-        label="Sair da conta"
+        label="🚪 Sair da conta"
         icon={({ color, size }) => <Ionicons name="log-out-outline" color={color} size={size} />}
         onPress={handleLogoutPress}
         inactiveTintColor="#666"
