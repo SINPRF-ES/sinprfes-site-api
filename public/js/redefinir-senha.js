@@ -41,7 +41,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const originalBtnText = btnSubmit.innerHTML;
+
       try {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = "Salvando...";
+
         const resp = await fetch("/api/senha/resetar", {
           method: "POST",
           headers: {
@@ -72,6 +78,9 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         console.error("Erro ao redefinir senha:", err);
         msgEl.textContent = "Erro de comunicação com o servidor.";
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalBtnText;
       }
     });
   }
