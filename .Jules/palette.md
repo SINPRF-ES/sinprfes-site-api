@@ -9,3 +9,7 @@
 ## 2025-05-16 - [Numeric Input Mode for CPF]
 **Learning:** For fields like CPF that consist of digits but require specific formatting (e.g., dots and dashes), using `inputmode="numeric"` instead of `type="number"` allows the browser to show the numeric keypad on mobile without breaking formatting logic or introducing unwanted spin buttons.
 **Action:** Always use `inputmode="numeric"` for CPF, CEP, and telephone fields in web forms to improve mobile UX.
+
+## 2026-05-18 - [Interactive Loading States & Visual Limits]
+**Learning:** Providing immediate visual feedback during async operations (disabling buttons and changing text) significantly reduces user anxiety and prevents double-submissions. Similarly, visual cues on character limits (e.g., changing color at 90% threshold) help users self-correct before hitting a hard validation error.
+**Action:** Implement button loading states in all primary forms. Add visual thresholds to character counters for critical inputs like push notification titles and bodies.
