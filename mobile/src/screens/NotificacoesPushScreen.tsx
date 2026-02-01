@@ -358,7 +358,7 @@ export default function NotificacoesPushScreen() {
                 selectedValue={targetType}
                 onValueChange={(v) => {
                   setTargetType(v);
-                  setTargetValue(v === 'LOTACAO' ? lotacaoOptions[0] : '');
+                  setTargetValue(v === 'LOTACAO' ? Canon.LOTACOES[0] : '');
                 }}
                 style={styles.picker}
             >

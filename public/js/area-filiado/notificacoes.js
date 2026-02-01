@@ -24,6 +24,14 @@
 
         setupHandlers();
         carregarHistorico();
+        popularLotacoes();
+    }
+
+    function popularLotacoes() {
+        const select = document.getElementById('push-target-lotacao');
+        if (!select) return;
+        const lotacoes = global.Canon?.LOTACOES || ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
+        select.innerHTML = lotacoes.map(l => `<option value="${l}">${l}</option>`).join('');
     }
 
     function setupHandlers() {

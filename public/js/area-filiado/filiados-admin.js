@@ -9,7 +9,7 @@
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
-    const LOTACAO_OPCOES = [
+    const LOTACAO_OPCOES = global.Canon?.LOTACOES || [
       "SEDE",
       "DEL 01 - Viana",
       "DEL 02 - Serra",
@@ -197,7 +197,7 @@
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {
-            const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
+            const lotacoesLabels = global.Canon?.LOTACOES || ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
             if (lotacoesLabels.includes(fSituacao)) {
                 const keywords = {
                     "SEDE": "SEDE",

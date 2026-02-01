@@ -116,8 +116,13 @@
             classeBadge = 'badge-pensionista';
         }
 
-        const opcoes = ["SEDE", "1ª DEL (Viana)", "2ª DEL (Serra)", "3ª DEL (Guarapari)", "4ª DEL (Linhares)"]
-            .map(op => `<option value="${op}" ${String(lotacao || "SEDE").toUpperCase() === op.toUpperCase() ? "selected" : ""}>${op}</option>`)
+        const lotacoesParaSelect = (global.Canon && global.Canon.LOTACOES) ? global.Canon.LOTACOES : ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
+        const currentLotNorm = (global.Canon && global.Canon.normalizeLotacao) ? global.Canon.normalizeLotacao(lotacao || "SEDE") : (lotacao || "SEDE").toUpperCase();
+        const opcoes = lotacoesParaSelect
+            .map(op => {
+                const opNorm = (global.Canon && global.Canon.normalizeLotacao) ? global.Canon.normalizeLotacao(op) : op.toUpperCase();
+                return `<option value="${op}" ${currentLotNorm === opNorm ? "selected" : ""}>${op}</option>`;
+            })
             .join("");
 
         if (!document.getElementById('style-meus-dados')) {
