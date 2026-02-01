@@ -185,6 +185,18 @@
         }).join("");
     }
 
+    const LOTACAO_KEYWORDS = {
+        "SEDE": "SEDE",
+        "DEL 01 - Viana": "VIANA",
+        "DEL 02 - Serra": "SERRA",
+        "DEL 03 - Guarapari": "GUARAPARI",
+        "DEL 04 - Linhares": "LINHARES"
+    };
+
+    function normalizeText(str) {
+        return (str || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
     function renderRowLocalidade(month, loc) {
         const percent = loc.percentual;
         const percentDisplay = percent === null ? "—" : percent.toFixed(0) + "%";
@@ -197,13 +209,27 @@
             else colorPercent = "#27ae60";
         }
 
+        // Paridade com o app: filtrar responsáveis por lotação
+        const kw = LOTACAO_KEYWORDS[loc.lotacao];
+        const filteredResps = responsaveisCache.filter(r => {
+            if (!kw) return true;
+            if (!r.lotacao) return false;
+            return normalizeText(r.lotacao).includes(kw);
+        });
+
+        console.log(`[REPASSE_SITE] Filtrando responsáveis para ${loc.lotacao}`, {
+            key: kw,
+            totalOriginal: responsaveisCache.length,
+            totalFiltrado: filteredResps.length
+        });
+
         return `
             <tr>
                 <td style="font-weight:bold; color:#003366;">${loc.lotacao}</td>
                 <td>
                     <select onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { responsavelId: this.value })">
                         <option value="">Selecione...</option>
-                        ${responsaveisCache.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
+                        ${filteredResps.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
                     </select>
                 </td>
                 <td style="text-align:center;">${loc.filiadosAtivos}</td>

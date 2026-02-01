@@ -31,14 +31,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const response = await fetch("/api/noticias", { headers });
+    const requestId = response.headers.get("x-request-id");
 
     if (response.status === 401) {
+      console.warn("[NOTICIAS_SITE] Não autorizado", { requestId });
       loadingEl.innerHTML = `Para ver as notícias, acesse a <a href="/area-filiado.html">Página Inicial</a>.`;
       return;
     }
 
-    if (!response.ok) throw new Error("Erro ao carregar notícias");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("[NOTICIAS_SITE] Erro na API", {
+        status: response.status,
+        requestId,
+        errorData
+      });
+      throw new Error(errorData.message || "Erro ao carregar notícias");
+    }
+
     const noticias = await response.json();
+    console.log("[NOTICIAS_SITE] Notícias carregadas", {
+      count: noticias.length,
+      requestId
+    });
 
     loadingEl.remove();
 

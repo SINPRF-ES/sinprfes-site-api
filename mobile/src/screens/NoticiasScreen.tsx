@@ -13,7 +13,7 @@ export default function NoticiasScreen() {
 
   const { data: noticias, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['noticias'],
-    queryFn: fetchNoticias,
+    queryFn: () => fetchNoticias(),
   });
 
   const formatDate = (dateString: string) => {

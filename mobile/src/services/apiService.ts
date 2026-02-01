@@ -19,6 +19,23 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${sessao.token}`;
     }
 
+    // Guard-rail: Detectar e sanitizar parâmetros não-serializáveis (ex: React Query Context)
+    if (config.params) {
+      Object.keys(config.params).forEach(key => {
+        const val = config.params[key];
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          // Se parece um objeto complexo do React Query ou similar
+          if (val.queryKey || val.signal || val.client) {
+            logger.warn(`ReactQueryContextPassedToFetcher: Removendo objeto detectado no parâmetro '${key}'`, {
+              url: config.url,
+              paramKey: key
+            });
+            delete config.params[key];
+          }
+        }
+      });
+    }
+
     // Log da requisição instrumentada
     const { method, url, params, data } = config;
     logger.info(`API_REQ: ${method?.toUpperCase()} ${url}`, {
@@ -68,16 +85,35 @@ api.interceptors.response.use(
       message = 'Servidor indisponível (Erro de Proxy/HTML). Por favor, tente novamente em instantes.';
     }
 
+    // Diferenciação de tipos de erro conforme Objetivo 3
+    let errorContext = 'API_UNKNOWN_ERROR';
+    if (response) {
+      errorContext = 'API_BACKEND_ERROR';
+    } else if (error.request) {
+      errorContext = error.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'API_NETWORK_ERROR';
+    } else {
+      errorContext = 'API_SETUP_ERROR';
+    }
+
+    // Extrai o requestId do header para facilitar correlação Backend-Mobile
+    const requestId = response?.headers?.['x-request-id'] || response?.headers?.['X-Request-Id'];
+
     // Sanitiza o objeto de erro para evitar logar dados sensíveis como o token
     const sanitizedError = {
+      errorContext,
+      requestId,
       message: message,
       status: status,
       contentType: contentType,
       config: {
         url: error.config?.url,
         method: error.config?.method,
+        params: error.config?.params,
       },
       responseData: contentType.includes('application/json') ? response?.data : '[Non-JSON Content]',
+      responseHeaders: response?.headers,
+      durationMs: duration,
+      axiosCode: error.code
     };
 
     // Redução de ruído para erros best-effort (ex: Push Register 500, Jogos check 404)
@@ -85,11 +121,12 @@ api.interceptors.response.use(
     const isJogosCheck = url?.includes('/api/jogos/inscricao') && method?.toLowerCase() === 'get';
 
     if ((isPushRegister && status === 500) || (isJogosCheck && status === 404)) {
-      logger.warn(`API Best-Effort/Expected Fail: ${method?.toUpperCase()} ${url} | Status: ${status} | Message: ${message}`, { requestId: response?.headers?.['x-request-id'] });
+      logger.warn(`API Best-Effort/Expected Fail: ${method?.toUpperCase()} ${url} | Status: ${status} | Message: ${message}`, { requestId });
     } else {
+      // Preservamos o stack trace original passando o objeto error completo para o logger
       logger.error(
-        `API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
-        new Error(message),
+        `API Error [${errorContext}]: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
+        error,
         sanitizedError
       );
     }

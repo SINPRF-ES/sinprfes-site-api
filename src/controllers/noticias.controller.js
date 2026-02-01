@@ -10,16 +10,37 @@ function verificarGestao(req) {
 }
 
 exports.listar = async (req, res) => {
+  const start = Date.now();
+  const method = "GET";
+  const endpoint = "/api/noticias";
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
+  const queryParams = req.query;
+
+  let query = "";
+  let params = [];
+
   try {
     const { status } = req.query;
     const isGestao = verificarGestao(req);
 
-    let query = `
+    // Validação estrita: se vier algo que não seja string, é erro 400.
+    if (status && typeof status !== 'string') {
+      log.warn("NOTICIAS_GET_INVALID_PARAMS", { requestId, userId, queryParams });
+      return res.status(400).json({
+        success: false,
+        message: "Parâmetro 'status' inválido. Deve ser uma string.",
+        code: "INVALID_QUERY_PARAMS",
+        requestId
+      });
+    }
+
+    query = `
       SELECT n.*, f.nome as autor_nome
       FROM noticias n
       LEFT JOIN filiados f ON n.autor_id = f.id
     `;
-    const params = [];
 
     if (!isGestao) {
       query += " WHERE n.status = 'PUBLICADA'";
@@ -31,17 +52,50 @@ exports.listar = async (req, res) => {
     query += " ORDER BY n.published_at DESC, n.created_at DESC";
 
     const { rows } = await pool.query(query, params);
+
+    log.info("NOTICIAS_GET_SUCCESS", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      durationMs: Date.now() - start,
+      count: rows.length
+    });
+
     return res.json(rows);
   } catch (err) {
-    log.error("ErroListarNoticias", err);
-    return res.status(500).json({ message: "Erro ao buscar notícias." });
+    log.error("NOTICIAS_GET_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      queryParams,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack,
+      sql: query,
+      sqlParams: params
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao buscar notícias.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.detalhar = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const start = Date.now();
+  const { id } = req.params;
+  const method = "GET";
+  const endpoint = `/api/noticias/${id}`;
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
 
+  try {
     const { rows: newsRows } = await pool.query(
       `SELECT n.*, f.nome as autor_nome
        FROM noticias n
@@ -63,14 +117,37 @@ exports.detalhar = async (req, res) => {
 
     noticia.midias = midiaRows;
 
+    log.info("NOTICIAS_DETAIL_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.json(noticia);
   } catch (err) {
-    log.error("ErroDetalharNoticia", err);
-    return res.status(500).json({ message: "Erro ao detalhar notícia." });
+    log.error("NOTICIAS_DETAIL_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao detalhar notícia.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.criar = async (req, res) => {
+  const start = Date.now();
+  const method = "POST";
+  const endpoint = "/api/noticias";
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
+
   try {
     const { titulo, conteudo, capa_url } = req.body;
 
@@ -85,16 +162,39 @@ exports.criar = async (req, res) => {
       [titulo, conteudo, req.user.id, capa_url]
     );
 
+    log.info("NOTICIAS_CREATE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.status(201).json(rows[0]);
   } catch (err) {
-    log.error("ErroCriarNoticia", err);
-    return res.status(500).json({ message: "Erro ao criar notícia." });
+    log.error("NOTICIAS_CREATE_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack,
+      body: req.body
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao criar notícia.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.atualizar = async (req, res) => {
+  const start = Date.now();
+  const { id } = req.params;
+  const method = "PUT";
+  const endpoint = `/api/noticias/${id}`;
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
+
   try {
-    const { id } = req.params;
     const { titulo, conteudo, capa_url, status } = req.body;
 
     const { rows } = await pool.query(
@@ -112,17 +212,40 @@ exports.atualizar = async (req, res) => {
       return res.status(404).json({ message: "Notícia não encontrada." });
     }
 
+    log.info("NOTICIAS_UPDATE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.json(rows[0]);
   } catch (err) {
-    log.error("ErroAtualizarNoticia", err);
-    return res.status(500).json({ message: "Erro ao atualizar notícia." });
+    log.error("NOTICIAS_UPDATE_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack,
+      body: req.body
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao atualizar notícia.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.publicar = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const start = Date.now();
+  const { id } = req.params;
+  const method = "POST";
+  const endpoint = `/api/noticias/${id}/publicar`;
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
 
+  try {
     const { rows } = await pool.query(
       `UPDATE noticias
        SET status = 'PUBLICADA',
@@ -136,33 +259,78 @@ exports.publicar = async (req, res) => {
       return res.status(404).json({ message: "Notícia não encontrada." });
     }
 
+    log.info("NOTICIAS_PUBLISH_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.json(rows[0]);
   } catch (err) {
-    log.error("ErroPublicarNoticia", err);
-    return res.status(500).json({ message: "Erro ao publicar notícia." });
+    log.error("NOTICIAS_PUBLISH_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao publicar notícia.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.excluir = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const start = Date.now();
+  const { id } = req.params;
+  const method = "DELETE";
+  const endpoint = `/api/noticias/${id}`;
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
 
+  try {
     const { rowCount } = await pool.query("DELETE FROM noticias WHERE id = $1", [id]);
 
     if (rowCount === 0) {
       return res.status(404).json({ message: "Notícia não encontrada." });
     }
 
+    log.info("NOTICIAS_DELETE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.json({ success: true });
   } catch (err) {
-    log.error("ErroExcluirNoticia", err);
-    return res.status(500).json({ message: "Erro ao excluir notícia." });
+    log.error("NOTICIAS_DELETE_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao excluir notícia.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.adicionarMidia = async (req, res) => {
+  const start = Date.now();
+  const { id } = req.params; // noticia_id
+  const method = "POST";
+  const endpoint = `/api/noticias/${id}/midias`;
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
+
   try {
-    const { id } = req.params; // noticia_id
     const { tipo, ordem } = req.body;
 
     if (!req.file) {
@@ -182,37 +350,82 @@ exports.adicionarMidia = async (req, res) => {
       [id, tipo || (resourceType === "video" ? "VIDEO" : "IMAGEM"), result.secure_url, ordem || 0]
     );
 
+    log.info("NOTICIAS_ADD_MEDIA_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.status(201).json(rows[0]);
   } catch (err) {
-    log.error("ErroAdicionarMidia", err);
-    return res.status(500).json({ message: "Erro ao adicionar mídia." });
+    log.error("NOTICIAS_ADD_MEDIA_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao adicionar mídia.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.removerMidia = async (req, res) => {
-  try {
-    const { midiaId } = req.params;
+  const start = Date.now();
+  const { midiaId } = req.params;
+  const method = "DELETE";
+  const endpoint = `/api/noticias/midias/${midiaId}`;
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
 
+  try {
     const { rowCount } = await pool.query("DELETE FROM noticia_midias WHERE id = $1", [midiaId]);
 
     if (rowCount === 0) {
       return res.status(404).json({ message: "Mídia não encontrada." });
     }
 
+    log.info("NOTICIAS_REMOVE_MEDIA_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.json({ success: true });
   } catch (err) {
-    log.error("ErroRemoverMidia", err);
-    return res.status(500).json({ message: "Erro ao remover mídia." });
+    log.error("NOTICIAS_REMOVE_MEDIA_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      midiaId,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao remover mídia.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.adicionarMidiaExterna = async (req, res) => {
+  const start = Date.now();
+  const { id } = req.params; // noticia_id
+  const method = "POST";
+  const endpoint = `/api/noticias/${id}/midias_external`;
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
+
   try {
     if (!verificarGestao(req)) {
       return res.status(403).json({ message: "Acesso negado." });
     }
 
-    const { id } = req.params; // noticia_id
     const { tipo, url, ordem } = req.body;
 
     if (!url) {
@@ -226,14 +439,38 @@ exports.adicionarMidiaExterna = async (req, res) => {
       [id, tipo, url, ordem || 0]
     );
 
+    log.info("NOTICIAS_ADD_EXTERNAL_MEDIA_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.status(201).json(rows[0]);
   } catch (err) {
-    log.error("ErroAdicionarMidiaExterna", err);
-    return res.status(500).json({ message: "Erro ao associar mídia externa." });
+    log.error("NOTICIAS_ADD_EXTERNAL_MEDIA_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      id,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack,
+      body: req.body
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao associar mídia externa.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
 
 exports.obterAssinaturaUpload = async (req, res) => {
+  const start = Date.now();
+  const method = "POST";
+  const endpoint = "/api/noticias/upload-signature";
+  const requestId = req.requestId;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
+
   try {
     if (!verificarGestao(req)) {
       return res.status(403).json({ message: "Acesso negado." });
@@ -251,9 +488,24 @@ exports.obterAssinaturaUpload = async (req, res) => {
     };
 
     const signatureData = cloudinary.gerarAssinaturaUpload(params);
+    log.info("NOTICIAS_GET_SIGNATURE_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start });
     return res.json(signatureData);
   } catch (err) {
-    log.error("ErroGerarAssinatura", err);
-    return res.status(500).json({ message: "Erro ao gerar assinatura." });
+    log.error("NOTICIAS_GET_SIGNATURE_FAILED", {
+      endpoint,
+      method,
+      requestId,
+      userId,
+      profile,
+      durationMs: Date.now() - start,
+      errorMessage: err.message,
+      stack: err.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao gerar assinatura.",
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
+    });
   }
 };
