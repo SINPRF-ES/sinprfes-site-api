@@ -33,12 +33,16 @@ export const PERFIL_ACESSO = {
 export type PerfilAcesso = typeof PERFIL_ACESSO[keyof typeof PERFIL_ACESSO];
 
 // 4. Lotações Padronizadas
-export const LOTACOES = [
+export const LOTACOES_REPASSE = [
   "SEDE",
   "DEL 01 - Viana",
   "DEL 02 - Serra",
   "DEL 03 - Guarapari",
-  "DEL 04 - Linhares",
+  "DEL 04 - Linhares"
+] as const;
+
+export const LOTACOES = [
+  ...LOTACOES_REPASSE,
   "NENHUMA"
 ] as const;
 

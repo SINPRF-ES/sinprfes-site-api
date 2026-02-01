@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { LOTACOES, normalizeLotacao } = require("../../shared/canon");
+const { LOTACOES_REPASSE, normalizeLotacao } = require("../../shared/canon");
 
 // Keywords para busca robusta se necessário, mas agora usamos a normalização canônica
 const LOTACAO_KEYWORDS = {
@@ -94,7 +94,7 @@ async function getRepasseAno(year) {
   // Geralmente repasse se baseia no histórico, mas o requisito é explícito: "não persistir".
 
   const ativosPorLotacao = {};
-  for (const lot of LOTACOES) {
+  for (const lot of LOTACOES_REPASSE) {
     ativosPorLotacao[lot] = await getFiliadosAtivosCount(lot);
   }
 
@@ -103,7 +103,7 @@ async function getRepasseAno(year) {
     const config = configRows.find(r => r.month === month) || { per_capita: 0 };
     const perCapita = parseFloat(config.per_capita);
 
-    const localidades = LOTACOES.map(lot => {
+    const localidades = LOTACOES_REPASSE.map(lot => {
       const data = lotacaoRows.find(r => r.month === month && r.lotacao_key === lot) || {
         responsavel_id: null,
         responsavel_nome: null,
@@ -150,7 +150,7 @@ async function getRepasseAno(year) {
 
   // Cálculo do acumulado por localidade no ano
   // acumuladoAno = soma(créditos mensais) – soma(reembolsos)
-  const lotacoesAcumulado = LOTACOES.map(lot => {
+  const lotacoesAcumulado = LOTACOES_REPASSE.map(lot => {
     let somaCreditos = 0;
     let somaReembolsos = 0;
 
@@ -197,6 +197,9 @@ async function updateRepasseMes(year, month, perCapita, localidadesData) {
 
     // Update each location
     for (const loc of localidadesData) {
+      // Proteção: Apenas lotações do repasse
+      if (!LOTACOES_REPASSE.includes(loc.lotacaoKey)) continue;
+
       await client.query(`
         INSERT INTO repasse_lotacao (year, month, lotacao_key, responsavel_id, prf_total, reembolso_mes)
         VALUES ($1, $2, $3, $4, $5, $6)

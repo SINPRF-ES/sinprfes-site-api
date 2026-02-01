@@ -19,6 +19,7 @@ import repasseService, { MesRepasse, Responsavel } from '../services/repasseServ
 import { getFiliados } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
+import * as Canon from '../utils/canon';
 
 const nomesMeses = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -198,9 +199,8 @@ export default function RepasseScreen() {
         }
 
         // Recalcular acumulado anual após unificação de contagens
-        const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
         const acumulados: any = {};
-        lotacoesLabels.forEach(lot => {
+        Canon.LOTACOES_REPASSE.forEach(lot => {
           let somaCred = 0;
           let somaReem = 0;
           mesesNorm.forEach(mes => {
@@ -340,10 +340,9 @@ export default function RepasseScreen() {
     console.info('[REPASSE][REDUCE][totalRepasseMes]');
     m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + Number(l.creditoMes || 0), 0);
 
-    const lotacoes = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
     const acumulados: any = {};
     console.info('[REPASSE][FOR_EACH][lotacoes]');
-    lotacoes.forEach(lot => {
+    Canon.LOTACOES_REPASSE.forEach(lot => {
       let somaCred = 0;
       let somaReem = 0;
       console.info(`[REPASSE][FOR_EACH][mesesList] for lotacao ${lot}`);

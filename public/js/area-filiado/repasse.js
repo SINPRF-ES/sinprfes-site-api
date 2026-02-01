@@ -11,7 +11,7 @@
     let repasseData = null;
     let perfilLogado = null;
 
-    const LOTACOES = global.Canon?.LOTACOES || [];
+    const LOTACOES_REPASSE = global.Canon?.LOTACOES_REPASSE || [];
 
     async function inicializarRepasse(perfil) {
         perfilLogado = (perfil || "").toUpperCase();
@@ -297,7 +297,7 @@
         m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + l.creditoMes, 0);
 
         const acumulados = {};
-        LOTACOES.forEach(lot => {
+        LOTACOES_REPASSE.forEach(lot => {
             let somaCred = 0;
             let somaReem = 0;
             repasseData.meses.forEach(mes => {

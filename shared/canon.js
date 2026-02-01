@@ -39,13 +39,17 @@
     COMUNICADOR: 'COMUNICADOR'
   };
 
-  // 4. Lotações Padronizadas (Conforme Repasse)
-  const LOTACOES = [
+  // 4. Lotações Padronizadas
+  const LOTACOES_REPASSE = [
     "SEDE",
     "DEL 01 - Viana",
     "DEL 02 - Serra",
     "DEL 03 - Guarapari",
-    "DEL 04 - Linhares",
+    "DEL 04 - Linhares"
+  ];
+
+  const LOTACOES = [
+    ...LOTACOES_REPASSE,
     "NENHUMA"
   ];
 
@@ -127,6 +131,7 @@
     SITUACAO_FUNCIONAL,
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
+    LOTACOES_REPASSE,
     LOTACOES,
     LABELS,
     normalizeSituacaoFuncional,
