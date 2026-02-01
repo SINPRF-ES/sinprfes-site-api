@@ -28,6 +28,7 @@
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarRepasse } = window.Repasse || {};
+        const { inicializarNoticias } = window.NoticiasAdmin || {};
         const { Notificacoes } = window || {};
         const { CMSAdmin } = window || {};
 
@@ -45,6 +46,7 @@
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
+                else if (abaAlvo === 'sec-noticias' && inicializarNoticias) inicializarNoticias(perfil);
                 else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-cms' && CMSAdmin) CMSAdmin.init();
@@ -64,6 +66,13 @@
 
         // Exibe aba Notificações se tiver permissão
         if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
+
+        // Exibe aba Notícias se tiver permissão
+        const perfisNoticias = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
+        if (perfisNoticias.includes(perfil)) {
+            const navNoticias = document.getElementById("nav-noticias");
+            if (navNoticias) navNoticias.style.display = "block";
+        }
 
         // Exibe aba Repasse se tiver permissão
         const perfisRepasse = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];

@@ -6,10 +6,11 @@ import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL } from '../config/env';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
+import { logger } from '../infra/logger';
 
 export default function NoticiasScreen() {
   const navigation = useNavigation<any>();
-  const { token } = useAuth();
+  const { token, usuario } = useAuth();
 
   const { data: noticias, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['noticias'],
@@ -30,39 +31,44 @@ export default function NoticiasScreen() {
   };
 
   const renderItem = ({ item }: { item: NewsPost }) => {
-    const coverUrl = item.capa_url;
-    const isRascunho = item.status === 'RASCUNHO';
+    try {
+      const coverUrl = item.capa_url;
+      const isRascunho = item.status === 'RASCUNHO';
 
-    return (
-      <TouchableOpacity
-        style={[styles.card, isRascunho && styles.draftCard]}
-        onPress={() => navigation.navigate('NoticiaDetalhe', { newsId: item.id })}
-      >
-        {coverUrl ? (
-          <Image
-            source={{ uri: coverUrl.replace('/upload/', '/upload/f_auto,q_auto,w_500/') }}
-            style={styles.cover}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={[styles.cover, styles.placeholderCover]}>
-            <FontAwesome name="newspaper-o" size={40} color="#ccc" />
+      return (
+        <TouchableOpacity
+          style={[styles.card, isRascunho && styles.draftCard]}
+          onPress={() => navigation.navigate('NoticiaDetalhe', { newsId: item.id })}
+        >
+          {coverUrl ? (
+            <Image
+              source={{ uri: coverUrl.replace('/upload/', '/upload/f_auto,q_auto,w_500/') }}
+              style={styles.cover}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.cover, styles.placeholderCover]}>
+              <FontAwesome name="newspaper-o" size={40} color="#ccc" />
+            </View>
+          )}
+          <View style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.date}>{formatDate(item.published_at || item.created_at)}</Text>
+              {isRascunho && (
+                <View style={styles.draftBadge}>
+                  <Text style={styles.draftText}>RASCUNHO</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.title} numberOfLines={2}>{item.titulo}</Text>
+            <Text style={styles.summary} numberOfLines={3}>{item.conteudo}</Text>
           </View>
-        )}
-        <View style={styles.cardContent}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.date}>{formatDate(item.published_at || item.created_at)}</Text>
-            {isRascunho && (
-              <View style={styles.draftBadge}>
-                <Text style={styles.draftText}>RASCUNHO</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.title} numberOfLines={2}>{item.titulo}</Text>
-          <Text style={styles.summary} numberOfLines={3}>{item.conteudo}</Text>
-        </View>
-      </TouchableOpacity>
-    );
+        </TouchableOpacity>
+      );
+    } catch (err) {
+      logger.error('Error rendering News item', err, { newsId: item?.id });
+      return null;
+    }
   };
 
   if (isLoading) {
@@ -86,7 +92,12 @@ export default function NoticiasScreen() {
     );
   }
 
-  const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  let ehGestaoNoticias = false;
+  try {
+    ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  } catch (err) {
+    logger.error('Error checking management permission in NoticiasScreen', err);
+  }
 
   return (
     <View style={styles.container}>

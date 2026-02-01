@@ -23,10 +23,16 @@ export interface NewsPost {
   midias?: NewsMedia[];
 }
 
-export const fetchNoticias = async (status?: string): Promise<NewsPost[]> => {
+export const fetchNoticias = async (statusArg?: any): Promise<NewsPost[]> => {
   // Garantir que status seja apenas string ou undefined (evita React Query context)
-  const sanitizedStatus = typeof status === 'string' ? status : undefined;
-  const { data } = await api.get('/api/noticias', { params: { status: sanitizedStatus } });
+  // Se for chamado diretamente pelo useQuery, statusArg será o context object.
+  const status = typeof statusArg === 'string' ? statusArg : undefined;
+
+  // Usamos um objeto de params limpo para evitar poluição
+  const params: any = {};
+  if (status) params.status = status;
+
+  const { data } = await api.get('/api/noticias', { params });
   return data;
 };
 

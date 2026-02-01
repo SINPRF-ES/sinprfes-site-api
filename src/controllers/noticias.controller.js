@@ -27,10 +27,21 @@ exports.listar = async (req, res) => {
 
     // Validação estrita: se vier algo que não seja string, é erro 400.
     if (status && typeof status !== 'string') {
-      log.warn("NOTICIAS_GET_INVALID_PARAMS", { requestId, userId, queryParams });
+      // Sanitização básica do valor recebido para o log (se for objeto, vira string)
+      const receivedValue = typeof status === 'object' ? JSON.stringify(status) : String(status);
+
+      log.warn("NOTICIAS_GET_INVALID_PARAMS", {
+        requestId,
+        userId,
+        queryParams,
+        receivedStatusType: typeof status,
+        receivedStatusValue: receivedValue.substring(0, 500) // Limita tamanho no log
+      });
+
       return res.status(400).json({
         success: false,
         message: "Parâmetro 'status' inválido. Deve ser uma string.",
+        details: `Recebido tipo: ${typeof status}`,
         code: "INVALID_QUERY_PARAMS",
         requestId
       });
@@ -77,9 +88,11 @@ exports.listar = async (req, res) => {
       sql: query,
       sqlParams: params
     });
+
     return res.status(500).json({
       success: false,
-      message: "Erro ao buscar notícias.",
+      message: "Erro interno ao processar notícias.",
+      errorId: requestId, // Correlaciona com o log
       code: "INTERNAL_SERVER_ERROR",
       requestId
     });
