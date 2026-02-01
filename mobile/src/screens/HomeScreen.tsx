@@ -9,6 +9,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
+import Badge from '../components/Badge';
+import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
+import { Image } from 'react-native';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -52,18 +55,45 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     displayedItems.push(...GESTAO_ITEMS);
   }
 
+  const situacao = normalizeSituacaoFuncional(usuario?.situacao || '');
+  const perfil = (usuario?.perfil_acesso || 'FILIADO').toUpperCase();
+
+  const getSituacaoVariant = (s: string) => {
+    switch (s) {
+      case 'ATIVO': return 'success';
+      case 'VETERANO': return 'warning';
+      case 'PENSIONISTA': return 'pink';
+      default: return 'default';
+    }
+  };
+
   return (
     <SafeScreen style={styles.container}>
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.welcomeTitle}>Bem-vindo,</Text>
-        <Text style={styles.userName}>{usuario?.nome ?? 'Filiado'}</Text>
+        <View style={styles.headerContent}>
+          <Image
+            source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/logo.png')}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
+          <View style={styles.headerText}>
+            <Text style={styles.welcomeTitle}>Olá,</Text>
+            <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
+              {(usuario?.nome || 'Filiado').split(' ')[0]}
+            </Text>
+            <Text style={styles.userProfile}>{perfil}</Text>
 
-        {usuario?.situacao && (
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{usuario.situacao}</Text>
+            {situacao && (
+              <Badge
+                label={situacao}
+                variant={getSituacaoVariant(situacao)}
+                style={styles.headerBadge}
+                textStyle={styles.headerBadgeText}
+              />
+            )}
           </View>
-        )}
+        </View>
       </View>
 
       <OtaUpdateBanner />
@@ -98,33 +128,55 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#003366',
-    padding: 24,
-    paddingBottom: 48,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    padding: 20,
+    paddingBottom: 60,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#f0f0f0',
+  },
+  headerText: {
+    flex: 1,
+    justifyContent: 'center',
   },
   welcomeTitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#FFFFFF',
-    opacity: 0.9,
+    opacity: 0.8,
+    marginBottom: -2,
   },
   userName: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  statusBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  userProfile: {
     fontSize: 12,
+    color: '#FFC300',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  headerBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 0,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  headerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
   },
   grid: {
     flexDirection: 'row',
