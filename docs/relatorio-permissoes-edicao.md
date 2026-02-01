@@ -9,7 +9,7 @@ Este documento detalha os pontos identificados onde a permissão de edição de 
 | Arquivo | Linha (aprox) | O que está bloqueando | Comportamento Atual | Ajuste |
 |---------|---------------|-----------------------|----------------------|--------|
 | `public/js/area-filiado/filiados-admin.js` | 302 | `ehAdmin` no input CPF | DIRETORIA/FUNCIONARIO não conseguem editar CPF no modal. | Trocar `ehAdmin` por `ehGestao`. |
-| `public_dev/js/area-filiado/filiados-admin.js` | 304 | `ehAdmin` no input CPF | DIRETORIA/FUNCIONARIO não conseguem editar CPF no modal. | Trocar `ehAdmin` por `ehGestao`. |
+| `public/js/area-filiado/filiados-admin.js` | 304 | `ehAdmin` no input CPF | DIRETORIA/FUNCIONARIO não conseguem editar CPF no modal. | Trocar `ehAdmin` por `ehGestao`. |
 | `public/js/area-filiado/filiados-admin.js` | 69, 110 | `ehGestao` hardcoded | Já define `ehGestao` como o trio correto. | Verificar se é usado consistentemente em todos os campos. |
 
 ### 1.2 Mobile App

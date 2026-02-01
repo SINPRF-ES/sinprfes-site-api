@@ -97,15 +97,7 @@ export default function NoticiasScreen() {
     });
 
     navigation.setOptions({
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => navigation.openDrawer()}
-          style={{ marginLeft: 15 }}
-        >
-          <FontAwesome name="bars" size={24} color="#fff" />
-        </TouchableOpacity>
-      ),
-      headerRight: () => <HeaderMenu actions={actions} triggerLabel="Opções" />,
+      headerRight: () => <HeaderMenu actions={actions} />,
     });
   }, [navigation, ehGestaoNoticias, refetch]);
 

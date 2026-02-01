@@ -38,7 +38,8 @@ export const LOTACOES = [
   "DEL 01 - Viana",
   "DEL 02 - Serra",
   "DEL 03 - Guarapari",
-  "DEL 04 - Linhares"
+  "DEL 04 - Linhares",
+  "NENHUMA"
 ] as const;
 
 export type Lotacao = typeof LOTACOES[number];
@@ -99,7 +100,7 @@ export function normalizeEstadoCadastro(val: string | null | undefined): EstadoC
  */
 export function normalizeLotacao(val: string | null | undefined): string {
   const s = slugify(val);
-  if (!s) return 'SEDE';
+  if (!s || s === 'NENHUMA') return 'NENHUMA';
 
   for (const lot of LOTACOES) {
     if (slugify(lot) === s) return lot;

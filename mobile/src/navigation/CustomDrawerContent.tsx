@@ -43,7 +43,7 @@ const CustomDrawerContent = (props) => {
             onPress={() => {}} // Não faz nada, é apenas um título
           />
           <DrawerItem
-            label="Enviar Notificação"
+            label="📢 Notificações"
             icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />

@@ -1,6 +1,8 @@
 // mobile/src/navigation/DrawerNavigator.tsx
 import React from 'react';
+import { TouchableOpacity, Text } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
@@ -41,51 +43,60 @@ const DrawerNavigator = () => {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerTintColor: '#fff',
         headerStyle: { backgroundColor: '#003366' },
         headerTitleAlign: 'center',
-      }}
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => navigation.toggleDrawer()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}
+          >
+            <Ionicons name="menu" size={26} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', marginLeft: 4 }}>Menu</Text>
+          </TouchableOpacity>
+        ),
+      })}
     >
       <Drawer.Screen
         name="Início"
         component={HomeScreen}
-        options={{ title: 'Página Inicial' }}
-      />
-      <Drawer.Screen
-        name="MeusDados"
-        component={MeusDadosScreen}
-        options={{ title: 'Meus Dados' }}
+        options={{ title: '🏠 Página Inicial' }}
       />
       <Drawer.Screen
         name="Noticias"
         component={NoticiasScreen}
-        options={{ title: 'Notícias' }}
+        options={{ title: '📰 Notícias' }}
+      />
+      <Drawer.Screen
+        name="MeusDados"
+        component={MeusDadosScreen}
+        options={{ title: '👤 Meus Dados' }}
       />
       <Drawer.Screen
         name="Filiados"
         component={FiliadosScreen}
-        options={{ title: 'Listar Filiados' }}
-      />
-      <Drawer.Screen
-        name="Votacao"
-        component={AssembleiaStack}
-        options={{ title: 'Assembleias e Votações', headerShown: false }}
+        options={{ title: '👥 Filiados' }}
       />
       <Drawer.Screen
         name="Publicacoes"
         component={PublicacoesScreen}
-        options={{ title: 'Publicações' }}
+        options={{ title: '📚 Publicações' }}
       />
       <Drawer.Screen
         name="Ressarcimento"
         component={RessarcimentoScreen}
-        options={{ title: 'Ressarcimento' }}
+        options={{ title: '💸 Ressarcimento' }}
       />
       <Drawer.Screen
         name="Jogos2026"
         component={JogosScreen}
-        options={{ title: 'Jogos 2026' }}
+        options={{ title: '🏆 Jogos 2026' }}
+      />
+      <Drawer.Screen
+        name="Votacao"
+        component={AssembleiaStack}
+        options={{ title: '🗳️ Assembleias e Votações', headerShown: false }}
       />
       <Drawer.Screen
         name="Estatuto"
@@ -115,13 +126,13 @@ const DrawerNavigator = () => {
           <Drawer.Screen
             name="Repasse"
             component={RepasseScreen}
-            options={{ title: 'Repasse por Localidade' }}
+            options={{ title: '💰 Repasse' }}
           />
           <Drawer.Screen
             name="NotificacoesPush"
             component={NotificacoesPushScreen}
             options={{
-              title: 'Enviar Notificação',
+              title: '📢 Notificações',
               drawerItemStyle: { display: 'none' }
             }}
           />

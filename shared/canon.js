@@ -45,7 +45,8 @@
     "DEL 01 - Viana",
     "DEL 02 - Serra",
     "DEL 03 - Guarapari",
-    "DEL 04 - Linhares"
+    "DEL 04 - Linhares",
+    "NENHUMA"
   ];
 
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
@@ -106,7 +107,7 @@
    */
   function normalizeLotacao(val) {
     const s = slugify(val);
-    if (!s) return 'SEDE';
+    if (!s || s === 'NENHUMA') return 'NENHUMA';
 
     for (const lot of LOTACOES) {
       if (slugify(lot) === s) return lot;
