@@ -68,16 +68,31 @@ api.interceptors.response.use(
       message = 'Servidor indisponível (Erro de Proxy/HTML). Por favor, tente novamente em instantes.';
     }
 
+    // Diferenciação de tipos de erro conforme Objetivo 3
+    let errorContext = 'API_UNKNOWN_ERROR';
+    if (response) {
+      errorContext = 'API_BACKEND_ERROR';
+    } else if (error.request) {
+      errorContext = error.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'API_NETWORK_ERROR';
+    } else {
+      errorContext = 'API_SETUP_ERROR';
+    }
+
     // Sanitiza o objeto de erro para evitar logar dados sensíveis como o token
     const sanitizedError = {
+      errorContext,
       message: message,
       status: status,
       contentType: contentType,
       config: {
         url: error.config?.url,
         method: error.config?.method,
+        params: error.config?.params,
       },
       responseData: contentType.includes('application/json') ? response?.data : '[Non-JSON Content]',
+      responseHeaders: response?.headers,
+      durationMs: duration,
+      axiosCode: error.code
     };
 
     // Redução de ruído para erros best-effort (ex: Push Register 500, Jogos check 404)
@@ -87,9 +102,10 @@ api.interceptors.response.use(
     if ((isPushRegister && status === 500) || (isJogosCheck && status === 404)) {
       logger.warn(`API Best-Effort/Expected Fail: ${method?.toUpperCase()} ${url} | Status: ${status} | Message: ${message}`, { requestId: response?.headers?.['x-request-id'] });
     } else {
+      // Preservamos o stack trace original passando o objeto error completo para o logger
       logger.error(
-        `API Error: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
-        new Error(message),
+        `API Error [${errorContext}]: ${method?.toUpperCase()} ${url} | Status: ${status} | Duration: ${duration}ms`,
+        error,
         sanitizedError
       );
     }
