@@ -115,3 +115,20 @@ export function normalizeLotacao(val: string | null | undefined): string {
 
   return 'SEDE'; // Fallback seguro
 }
+
+/**
+ * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
+ * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
+ */
+export function normalizeNome(input?: string | null): string | null {
+  if (!input) return null;
+
+  // 1) trim + colapsa espaços múltiplos + tudo minúsculo (locale pt-BR)
+  const s = input
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("pt-BR");
+
+  // 2) Title Case por "palavra", preservando separadores: espaço, hífen e apóstrofo
+  return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
+}

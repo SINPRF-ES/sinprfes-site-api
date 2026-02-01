@@ -2,6 +2,7 @@
 import { onlyDigits } from '../shared/format/formatters';
 import { toIsoDateYYYYMMDD } from '../utils/dateNormalize';
 import type { Filiado } from '../types/filiado';
+import { normalizeNome } from '../utils/canon';
 
 /**
  * Constrói o payload para a atualização de um filiado, garantindo que os dados
@@ -20,7 +21,7 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
   if (formState.email1) payload.email1 = formState.email1;
   if (formState.email2) payload.email2 = formState.email2;
   if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
-  if (formState.nome) payload.nome = formState.nome;
+  if (formState.nome) payload.nome = normalizeNome(formState.nome);
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
   if (formState.lotacao) payload.lotacao = formState.lotacao;
   if (formState.situacao_funcional) payload.situacao = formState.situacao_funcional;
@@ -37,7 +38,7 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
     const depKeyParentesco = `dep${i}_parentesco` as keyof Filiado;
 
     if (formState[depKeyNome]) {
-      payload[depKeyNome] = formState[depKeyNome];
+      payload[depKeyNome] = normalizeNome(formState[depKeyNome] as string);
       payload[depKeyParentesco] = formState[depKeyParentesco];
       payload[depKeyNascimento] = toIsoDateYYYYMMDD(formState[depKeyNascimento] as string) || formState[depKeyNascimento];
       if (formState[depKeyCpf]) {

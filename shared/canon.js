@@ -133,6 +133,27 @@
     normalizePerfil,
     normalizeEstadoCadastro,
     normalizeLotacao,
+    normalizeNome,
     slugify
   };
+
+  /**
+   * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
+   * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
+   * @param {string} input - Nome a ser normalizado.
+   * @returns {string|null} - Nome normalizado ou null.
+   */
+  function normalizeNome(input) {
+    if (!input || typeof input !== 'string') return input || null;
+
+    // 1) trim + colapsa espaços múltiplos + tudo minúsculo (locale pt-BR)
+    const s = input
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLocaleLowerCase("pt-BR");
+
+    // 2) Title Case por "palavra", preservando separadores: espaço, hífen e apóstrofo
+    // Regex: início da string OU separador, seguido de um caractere alfabético
+    return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
+  }
 }));

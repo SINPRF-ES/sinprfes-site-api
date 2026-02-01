@@ -147,6 +147,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const fd = new FormData(form);
             const payload = Object.fromEntries(fd.entries());
+
+            // Normalização de Nome (Canônico)
+            if (payload.nome && window.Canon?.normalizeNome) {
+                payload.nome = window.Canon.normalizeNome(payload.nome);
+            }
             
             // Limpa formatação antes de enviar
             payload.cpf = payload.cpf.replace(/\D/g, "");
