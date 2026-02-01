@@ -12,9 +12,10 @@ export interface MenuAction {
 
 interface Props {
   actions: MenuAction[];
+  triggerLabel?: string;
 }
 
-export default function HeaderMenu({ actions }: Props) {
+export default function HeaderMenu({ actions, triggerLabel }: Props) {
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
 
@@ -23,7 +24,14 @@ export default function HeaderMenu({ actions }: Props) {
   return (
     <View>
       <TouchableOpacity onPress={() => setVisible(true)} style={styles.anchor}>
-        <MaterialCommunityIcons name="dots-vertical" size={24} color="#fff" />
+        {triggerLabel ? (
+          <View style={styles.triggerWithLabel}>
+            <MaterialCommunityIcons name="dots-vertical" size={24} color="#fff" />
+            <Text style={styles.label}>{triggerLabel}</Text>
+          </View>
+        ) : (
+          <MaterialCommunityIcons name="dots-vertical" size={24} color="#fff" />
+        )}
       </TouchableOpacity>
 
       <Modal
@@ -75,6 +83,20 @@ const styles = StyleSheet.create({
   anchor: {
     padding: 8,
     marginRight: -8,
+  },
+  triggerWithLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  label: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 2,
   },
   overlay: {
     flex: 1,

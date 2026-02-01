@@ -12,23 +12,27 @@ const api = axios.create({
 });
 
 function maskSensitiveData(obj: any): any {
-  if (!obj || typeof obj !== 'object') return obj;
-  const masked = { ...obj };
-  const keysToMask = ['password', 'senha', 'token', 'cpf'];
+  try {
+    if (!obj || typeof obj !== 'object') return obj;
+    const masked = Array.isArray(obj) ? [...obj] : { ...obj };
+    const keysToMask = ['password', 'senha', 'token', 'cpf'];
 
-  Object.keys(masked).forEach(key => {
-    const lowerKey = key.toLowerCase();
-    if (keysToMask.includes(lowerKey)) {
-      if (lowerKey === 'cpf' && typeof masked[key] === 'string' && masked[key].length === 11) {
-        masked[key] = masked[key].substring(0, 3) + '.***.***-' + masked[key].substring(9);
-      } else {
-        masked[key] = '********';
+    Object.keys(masked).forEach(key => {
+      const lowerKey = key.toLowerCase();
+      if (keysToMask.includes(lowerKey)) {
+        if (lowerKey === 'cpf' && typeof (masked as any)[key] === 'string' && (masked as any)[key].length === 11) {
+          (masked as any)[key] = (masked as any)[key].substring(0, 3) + '.***.***-' + (masked as any)[key].substring(9);
+        } else {
+          (masked as any)[key] = '********';
+        }
+      } else if (typeof (masked as any)[key] === 'object') {
+        (masked as any)[key] = maskSensitiveData((masked as any)[key]);
       }
-    } else if (typeof masked[key] === 'object') {
-      masked[key] = maskSensitiveData(masked[key]);
-    }
-  });
-  return masked;
+    });
+    return masked;
+  } catch (err) {
+    return '[Mask Error]';
+  }
 }
 
 // Interceptor para injetar o token JWT e loggar a requisição
@@ -58,9 +62,16 @@ api.interceptors.request.use(
 
     // Log da requisição instrumentada
     const { method, url, params, data } = config;
+    let maskedDataKeys: string[] | undefined;
+    try {
+      maskedDataKeys = data ? Object.keys(typeof data === 'string' ? JSON.parse(data) : data) : undefined;
+    } catch (e) {
+      maskedDataKeys = data ? ['[Complex/String Data]'] : undefined;
+    }
+
     logger.info(`API_REQ: ${method?.toUpperCase()} ${url}`, {
       params: maskSensitiveData(params),
-      dataKeys: data ? Object.keys(data) : undefined,
+      dataKeys: maskedDataKeys,
       profile: sessao?.usuario?.perfil_acesso
     });
     config.meta = { requestStartedAt: new Date().getTime() };
@@ -118,7 +129,16 @@ api.interceptors.response.use(
     // Extrai o requestId do header para facilitar correlação Backend-Mobile
     const requestId = response?.headers?.['x-request-id'] || response?.headers?.['X-Request-Id'];
 
-    // Sanitiza o objeto de erro para evitar logar dados sensíveis como o token
+    // Sanitiza o objeto de erro para evitar logar dados sensíveis
+    let errorData = error.config?.data;
+    if (typeof errorData === 'string') {
+      try {
+        errorData = JSON.parse(errorData);
+      } catch (e) {
+        // Manteve como string se não for JSON
+      }
+    }
+
     const sanitizedError = {
       errorContext,
       requestId,
@@ -129,7 +149,7 @@ api.interceptors.response.use(
         url: error.config?.url,
         method: error.config?.method,
         params: maskSensitiveData(error.config?.params),
-        data: maskSensitiveData(typeof error.config?.data === 'string' ? JSON.parse(error.config.data) : error.config?.data),
+        data: maskSensitiveData(errorData),
       },
       responseData: contentType.includes('application/json') ? maskSensitiveData(response?.data) : '[Non-JSON Content]',
       responseHeaders: response?.headers,

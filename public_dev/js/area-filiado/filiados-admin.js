@@ -352,6 +352,7 @@
                         <div class="field-group">
                             <label>Lotação</label>
                             <select name="lotacao">
+                                <option value="">Selecione...</option>
                                 ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
                             </select>
                         </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { fetchNoticias, NewsPost } from '../services/newsService';
@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../config/env';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 export default function NoticiasScreen() {
   const navigation = useNavigation<any>();
@@ -71,6 +72,43 @@ export default function NoticiasScreen() {
     }
   };
 
+  let ehGestaoNoticias = false;
+  try {
+    ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  } catch (err) {
+    logger.error('Error checking management permission in NoticiasScreen', err);
+  }
+
+  useLayoutEffect(() => {
+    const actions: MenuAction[] = [];
+
+    if (ehGestaoNoticias) {
+      actions.push({
+        label: 'Criar notícia',
+        onPress: () => navigation.navigate('NoticiaEditor', { newsId: null }),
+        icon: 'plus'
+      });
+    }
+
+    actions.push({
+      label: 'Atualizar',
+      onPress: () => refetch(),
+      icon: 'refresh'
+    });
+
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.openDrawer()}
+          style={{ marginLeft: 15 }}
+        >
+          <FontAwesome name="bars" size={24} color="#fff" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => <HeaderMenu actions={actions} triggerLabel="Opções" />,
+    });
+  }, [navigation, ehGestaoNoticias, refetch]);
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -92,23 +130,8 @@ export default function NoticiasScreen() {
     );
   }
 
-  let ehGestaoNoticias = false;
-  try {
-    ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
-  } catch (err) {
-    logger.error('Error checking management permission in NoticiasScreen', err);
-  }
-
   return (
     <View style={styles.container}>
-      {ehGestaoNoticias && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => navigation.navigate('NoticiaEditor', { newsId: null })}
-        >
-          <FontAwesome name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
-      )}
       <FlatList
         data={noticias}
         renderItem={renderItem}
@@ -194,19 +217,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#000',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#003366',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    zIndex: 10,
   },
   cover: {
     width: '100%',
