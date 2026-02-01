@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   new URLSearchParams(window.location.search).get("app") === "1";
 
   if (isEmbed) {
+    document.documentElement.classList.add("is-embed");
     document.body.style.paddingTop = "0";
     if (headerEl) headerEl.style.display = "none";
     if (footerEl) footerEl.style.display = "none";

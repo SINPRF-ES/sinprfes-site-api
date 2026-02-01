@@ -115,10 +115,12 @@ export default function EstatutoScreen({ navigation }: any) {
           injectedJavaScriptBeforeContentLoaded={
             "(function() {" +
               "console.log('[Estatuto][inject] start');" +
+              "document.documentElement.classList.add('is-embed');" +
               "var cssText = " + JSON.stringify(injectedCSS) + ";" +
               "var style = document.createElement('style');" +
+              "style.id = 'app-injected-style';" +
               "style.appendChild(document.createTextNode(cssText));" +
-              "document.head.appendChild(style);" +
+              "document.documentElement.appendChild(style);" +
               "console.log('[Estatuto][inject] css_applied');" +
               "var kill = function() {" +
                 "var selectors = ['#site-header', '#site-footer', '.estatuto-nav', '.estatuto-nav-title', '.barra-azul', 'header', 'nav', '.navbar', '.site-header', '#header', '#nav'];" +
@@ -137,8 +139,9 @@ export default function EstatutoScreen({ navigation }: any) {
               "obs.observe(document.documentElement, { childList: true, subtree: true });" +
               "console.log('[Estatuto][inject] observer_active');" +
               "document.addEventListener('DOMContentLoaded', kill);" +
-              "setTimeout(kill, 500);" +
-              "setTimeout(kill, 2000);" +
+              "setTimeout(kill, 300);" +
+              "setTimeout(kill, 1000);" +
+              "setTimeout(kill, 3000);" +
             "})();"
           }
           originWhitelist={['*']}

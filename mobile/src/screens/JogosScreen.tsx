@@ -160,6 +160,17 @@ const JogosScreen = () => {
           <Text style={styles.bannerSubtitle}>🏅 Participe da maior integração esportiva da categoria!</Text>
         </View>
 
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="map-marker-radius" size={20} color="#003366" />
+            <Text style={styles.infoText}>Local: <Text style={styles.bold}>Poços de Caldas-MG</Text></Text>
+          </View>
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="calendar-clock" size={20} color="#003366" />
+            <Text style={styles.infoText}>Data: <Text style={styles.bold}>12 a 17/04/2026</Text></Text>
+          </View>
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Minha Inscrição</Text>
           <Text style={styles.label}>Sexo</Text>
@@ -272,6 +283,19 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   banner: { backgroundColor: '#003366', padding: 20, alignItems: 'center' },
   bannerSubtitle: { fontSize: 15, color: '#fff', textAlign: 'center', fontStyle: 'italic' },
+  infoCard: {
+    backgroundColor: '#e6f0fa',
+    margin: 15,
+    marginBottom: 0,
+    padding: 15,
+    borderRadius: 12,
+    borderLeftWidth: 5,
+    borderLeftColor: '#003366',
+    gap: 8,
+  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  infoText: { fontSize: 16, color: '#333' },
+  bold: { fontWeight: 'bold' },
   card: { backgroundColor: '#fff', padding: 20, margin: 15, borderRadius: 12, elevation: 3 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 15, textAlign: 'center' },
   label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5 },

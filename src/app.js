@@ -132,4 +132,7 @@ app.get("/health", (_, res) => {
  res.json({ status: "ok" });
 });
 
+// Middleware Global de Erro
+app.use(require("./middlewares/errorHandler"));
+
 module.exports = app;
