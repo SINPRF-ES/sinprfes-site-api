@@ -114,6 +114,10 @@
                 <div class="jogos-banner">
                     <h2>🏅 Jogos de Integração da PRF - 2026</h2>
                     <p>Participe da maior integração esportiva da categoria!</p>
+                    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; font-weight: 500; opacity: 0.9;">
+                        <span>📍 Local: Poços de Caldas-MG</span>
+                        <span>📅 Data: 12 a 17/04/2026</span>
+                    </div>
                 </div>
                 <div class="jogos-body">
                     <form id="form-jogos">

@@ -6,7 +6,8 @@
 (function (global) {
     if (global.Repasse) return;
 
-    let yearCurrent = new Date().getFullYear();
+    const MIN_YEAR = 2026;
+    let yearCurrent = Math.max(new Date().getFullYear(), MIN_YEAR);
     let responsaveisCache = [];
     let repasseData = null;
     let perfilLogado = null;
@@ -62,7 +63,14 @@
                     <div style="display:flex; align-items:center; gap:10px;">
                         <label style="font-weight:bold;">Ano:</label>
                         <select id="repasse-year-select" style="padding:8px; border-radius:6px; background:#fff; color:#333; border:none;">
-                            ${[yearCurrent, yearCurrent - 1, yearCurrent - 2].map(y => `<option value="${y}" ${y === yearCurrent ? "selected" : ""}>${y}</option>`).join("")}
+                            ${(() => {
+                                const endYear = Math.max(yearCurrent, new Date().getFullYear()) + 5;
+                                let options = '';
+                                for (let y = MIN_YEAR; y <= endYear; y++) {
+                                    options += `<option value="${y}" ${y === yearCurrent ? "selected" : ""}>${y}</option>`;
+                                }
+                                return options;
+                            })()}
                         </select>
                     </div>
                 </div>

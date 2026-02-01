@@ -464,17 +464,6 @@
                 </div>
             </form>
 
-            ${ehGestao ? `
-                <div class="data-card" style="margin-top: 40px; border-top: 4px solid #003366;">
-                    <h3>🛠️ Módulos de Gestão</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
-                        <button type="button" class="btn btn-outline" style="height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;" onclick="document.querySelector('.af-nav-item[data-target=\'sec-repasse\']').click()">
-                            <span style="font-size: 2rem;">💱</span>
-                            <span>Repasse por Localidade</span>
-                        </button>
-                    </div>
-                </div>
-            ` : ''}
         `;
 
         // --- MÁSCARAS ---
