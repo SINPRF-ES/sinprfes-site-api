@@ -22,6 +22,14 @@ export default function LoginScreen() {
   const [codigo2FA, setCodigo2FA] = useState<string>('');
   const [etapa, setEtapa] = useState<'credenciais' | '2fa'>('credenciais');
   const [loading, setLoading] = useState<boolean>(false);
+  const [temCredencial, setTemCredencial] = useState<boolean>(false);
+
+  useEffect(() => {
+    (async () => {
+      const token = await require('../services/storageService').carregarTokenBiometrico();
+      setTemCredencial(!!token);
+    })();
+  }, []);
 
   // Tenta autenticar com biometria ao carregar a tela
   useEffect(() => {
@@ -36,10 +44,13 @@ export default function LoginScreen() {
   async function handleBiometricLogin() {
     try {
       console.log('[Biometria.tap]');
+      // Tenta carregar a sessão normal ou a credencial biométrica persistente
       const sessaoSalva = await carregarSessao();
+      const tokenBiometrico = await require('../services/storageService').carregarTokenBiometrico();
+      const tokenParaUsar = sessaoSalva?.token || tokenBiometrico;
 
-      if (!sessaoSalva) {
-        console.warn('[Biometria.session.fail] Sem sessão salva');
+      if (!tokenParaUsar) {
+        console.warn('[Biometria.session.fail] Sem credencial disponível');
         return;
       }
 
@@ -48,13 +59,17 @@ export default function LoginScreen() {
       if (sucesso) {
         console.log('[Biometria.session.restore.start]');
         try {
-           // Tenta validar o token salvo
-           const usuario = await buscarUsuarioLogado(sessaoSalva.token);
-           await setSessao(sessaoSalva.token, usuario);
+           // Tenta validar o token
+           const usuario = await buscarUsuarioLogado(tokenParaUsar);
+           await setSessao(tokenParaUsar, usuario);
            console.log('[Biometria.session.restore.ok]');
-        } catch (restoreError) {
+        } catch (restoreError: any) {
            console.error('[Biometria.session.restore.fail]', restoreError);
-           Alert.alert('Sessão Expirada', 'Sua sessão anterior expirou. Por favor, entre com sua senha.');
+           if (restoreError?.response?.status === 401) {
+              Alert.alert('Sessão Expirada', 'Sua credencial expirou. Por favor, entre com sua senha.');
+           } else {
+              Alert.alert('Erro', 'Não foi possível validar sua biometria agora. Tente com sua senha.');
+           }
         }
       }
     } catch (e: any) {
@@ -157,7 +172,7 @@ export default function LoginScreen() {
         <Text style={styles.title}>SINPRF/ES</Text>
         <Text style={styles.subtitle}>Página Inicial</Text>
 
-        {biometriaHabilitada && isEtapaCredenciais && (
+        {biometriaHabilitada && temCredencial && isEtapaCredenciais && (
           <Pressable
             style={styles.biometricButton}
             onPress={handleBiometricLogin}
