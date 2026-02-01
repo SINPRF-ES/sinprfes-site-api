@@ -43,13 +43,21 @@
 
         if (titleInput) {
             titleInput.oninput = () => {
-                document.getElementById('push-title-count').textContent = titleInput.value.length;
+                const len = titleInput.value.length;
+                const counter = document.getElementById('push-title-count');
+                counter.textContent = len;
+                counter.style.color = len > 54 ? '#e74c3c' : ''; // Red if > 90% of 60
+                counter.style.fontWeight = len > 54 ? 'bold' : 'normal';
             };
         }
 
         if (messageInput) {
             messageInput.oninput = () => {
-                document.getElementById('push-message-count').textContent = messageInput.value.length;
+                const len = messageInput.value.length;
+                const counter = document.getElementById('push-message-count');
+                counter.textContent = len;
+                counter.style.color = len > 216 ? '#e74c3c' : ''; // Red if > 90% of 240
+                counter.style.fontWeight = len > 216 ? 'bold' : 'normal';
             };
         }
 
@@ -180,8 +188,17 @@
                 alert(`Sucesso! Notificação enviada.\n🚀 Sucesso: ${data.sent}\n❌ Falhas: ${data.failed}\n🚫 Sem Token/Negado: ${data.noTokenOrDenied || 0}`);
                 document.getElementById('push-title').value = '';
                 document.getElementById('push-message').value = '';
-                document.getElementById('push-title-count').textContent = '0';
-                document.getElementById('push-message-count').textContent = '0';
+
+                const titleCount = document.getElementById('push-title-count');
+                titleCount.textContent = '0';
+                titleCount.style.color = '';
+                titleCount.style.fontWeight = 'normal';
+
+                const messageCount = document.getElementById('push-message-count');
+                messageCount.textContent = '0';
+                messageCount.style.color = '';
+                messageCount.style.fontWeight = 'normal';
+
                 carregarHistorico();
             } else {
                 const errorMsg = data.message || data.error || "Erro ao enviar notificação.";
