@@ -35,26 +35,30 @@
 </head>
 <body class="af-body">
   <div class="af-container">
-    <header class="af-header">
-      <div class="af-header-content">
-        <h1>SINPRF/ES</h1>
-        <button id="btn-logout" class="btn btn-outline btn-sm">Sair</button>
-      </div>
-    </header>
-
     <div class="af-main-layout">
       <!-- Sidebar / Nav -->
       <nav class="af-sidebar">
-        <button class="af-nav-item active" data-target="sec-meus-dados" aria-label="Ver Meus Dados">👤 Meus Dados</button>
-        <button class="af-nav-item" data-target="sec-filiados" aria-label="Ver Lista de Filiados">👥 Filiados</button>
-        <button class="af-nav-item" data-target="sec-publicacoes" aria-label="Ver Publicações e Biblioteca">📚 Publicações</button>
-        <button class="af-nav-item" data-target="sec-ressarcimento" aria-label="Gerenciar Ressarcimento">💸 Ressarcimento</button>
-        <button class="af-nav-item" data-target="sec-jogos" aria-label="Acessar Jogos 2026">🏆 Jogos 2026</button>
-        <button class="af-nav-item" data-target="sec-assembleias" aria-label="Assembleias e Votações">🗳️ Assembleias e Votações</button>
-        <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" style="display:none;" aria-label="Gerenciar Notícias">📰 Notícias</button>
-        <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;" aria-label="Gerenciar Repasses">💱 Repasse</button>
-        <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;" aria-label="Enviar Notificações Push">📢 Notificações</button>
-        <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;" aria-label="Gerenciar Conteúdo do Site">🌐 Site (CMS)</button>
+        <div class="af-sidebar-header">
+          <img src="/img/placeholder-sinprf.png" alt="Logo SINPRF/ES" class="af-sidebar-logo">
+          <span class="af-sidebar-title">SINPRF/ES</span>
+        </div>
+
+        <div class="af-sidebar-nav">
+          <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
+          <button class="af-nav-item" data-target="sec-filiados">👥 Filiados</button>
+          <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
+          <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
+          <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
+          <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
+          <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" style="display:none;">📰 Notícias</button>
+          <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;">💱 Repasse</button>
+          <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
+          <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
+        </div>
+
+        <div class="af-sidebar-footer">
+          <button id="btn-logout" class="af-logout-btn" aria-label="Sair da conta">🚪 Sair</button>
+        </div>
       </nav>
 
       <!-- Conteúdo Principal -->

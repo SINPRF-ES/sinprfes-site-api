@@ -4,6 +4,7 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { Filiado } from '../types/filiado';
 import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 import { useAuth } from '../hooks/useAuth';
+import Badge from './Badge';
 
 interface Props {
   filiado: Filiado | null;
@@ -16,36 +17,33 @@ const HeaderInfo: React.FC<Props> = ({ filiado }) => {
     return null;
   }
 
-  const situacaoNormalizada = normalizeSituacaoFuncional(filiado.situacao_funcional || filiado.situacao);
+  const situacao = normalizeSituacaoFuncional(filiado.situacao_funcional || filiado.situacao);
+  const perfil = (usuario?.perfil_acesso || 'FILIADO').toUpperCase();
 
-  const getBadgeStyle = () => {
-    switch (situacaoNormalizada) {
-      case 'ATIVO':
-        return styles.situacaoATIVO;
-      case 'VETERANO':
-        return styles.situacaoVETERANO;
-      case 'PENSIONISTA':
-        return styles.situacaoPENSIONISTA;
-      default:
-        return styles.situacaoDefault;
+  const getSituacaoVariant = (s: string) => {
+    switch (s) {
+      case 'ATIVO': return 'success';
+      case 'VETERANO': return 'warning';
+      case 'PENSIONISTA': return 'pink';
+      default: return 'default';
     }
   };
-
-  const perfilLabel = usuario?.perfil_acesso || '';
 
   return (
     <View style={styles.container}>
       <Image
         source={filiado.avatar_url ? { uri: filiado.avatar_url } : require('../../assets/logo.png')}
         style={styles.avatar}
-        resizeMode="contain"
+        resizeMode="cover"
       />
-      <Text style={styles.nome}>{filiado.nome}</Text>
-      {perfilLabel ? <Text style={styles.perfil}>{perfilLabel}</Text> : null}
+      <Text style={styles.nome}>{filiado.nome || '—'}</Text>
+      <Text style={styles.perfil}>{perfil}</Text>
 
-      <View style={[styles.statusBadge, getBadgeStyle()]}>
-        <Text style={styles.statusText}>{situacaoNormalizada || 'NÃO INFORMADO'}</Text>
-      </View>
+      <Badge
+        label={situacao || '—'}
+        variant={getSituacaoVariant(situacao)}
+        style={styles.badge}
+      />
     </View>
   );
 };
@@ -54,54 +52,44 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     marginBottom: 20,
-    padding: 15,
+    padding: 24,
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#eee',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginBottom: 10,
-    backgroundColor: '#ccc',
+    marginBottom: 16,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 3,
+    borderColor: '#f8f9fa',
   },
   nome: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#003366',
     textAlign: 'center',
+    marginBottom: 4,
   },
   perfil: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    textTransform: 'uppercase',
-    marginBottom: 8,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: 12,
   },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    marginTop: 2,
-  },
-  situacaoATIVO: {
-    backgroundColor: '#27ae60', // Verde
-  },
-  situacaoVETERANO: {
-    backgroundColor: '#f39c12', // Amarelo
-  },
-  situacaoPENSIONISTA: {
-    backgroundColor: '#e91e63', // Rosa
-  },
-  situacaoDefault: {
-    backgroundColor: '#95a5a6', // Cinza
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#333',
-  },
+  badge: {
+    paddingHorizontal: 16,
+    borderRadius: 99,
+  }
 });
 
 export default HeaderInfo;
