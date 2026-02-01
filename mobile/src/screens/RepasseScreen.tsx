@@ -91,7 +91,19 @@ export default function RepasseScreen() {
   const formatCurrency = (v: any) =>
     safeNumber(v, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  const [year, setYear] = useState(new Date().getFullYear());
+  const MIN_YEAR = 2026;
+  const currentYear = new Date().getFullYear();
+  const initialYear = Math.max(currentYear, MIN_YEAR);
+
+  const [year, setYear] = useState(initialYear);
+
+  const years = React.useMemo(() => {
+    const end = Math.max(initialYear, year) + 5;
+    const arr = [];
+    for (let y = MIN_YEAR; y <= end; y++) arr.push(y);
+    return arr;
+  }, [year, initialYear]);
+
   const [loading, setLoading] = useState(true);
   const [meses, setMeses] = useState<MesRepasse[]>([]);
   const [totalAcumuladoGeral, setTotalAcumuladoGeral] = useState(0);
@@ -427,6 +439,10 @@ export default function RepasseScreen() {
               <Text style={styles.title}>💱 Repasse Mensal</Text>
               <Text style={styles.subtitle}>Gestão de créditos por localidade</Text>
             </View>
+          </View>
+
+          <View style={styles.yearSelectionRow}>
+            <Text style={styles.yearLabel}>Ano:</Text>
             <View style={styles.yearPickerWrapper}>
               <Picker
                 selectedValue={year}
@@ -435,7 +451,7 @@ export default function RepasseScreen() {
                 mode="dropdown"
                 dropdownIconColor="#003366"
               >
-                {[year, year - 1, year - 2].map(y => (
+                {years.map(y => (
                   <Picker.Item key={y} label={String(y)} value={y} />
                 ))}
               </Picker>
@@ -636,10 +652,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 15 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#003366' },
   subtitle: { fontSize: 13, color: '#666' },
-  yearPickerWrapper: { backgroundColor: '#fff', borderRadius: 8, width: 150, flexShrink: 0, elevation: 2 },
+  yearSelectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  yearLabel: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  yearPickerWrapper: { backgroundColor: '#fff', borderRadius: 8, flex: 1, elevation: 2 },
   yearPicker: { height: 52 },
   statsCard: { backgroundColor: '#003366', padding: 20, borderRadius: 12, marginBottom: 20, elevation: 4 },
   statsLabel: { color: '#fff', opacity: 0.8, fontSize: 13, marginBottom: 5 },
