@@ -11,6 +11,26 @@ const api = axios.create({
   },
 });
 
+function maskSensitiveData(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  const masked = { ...obj };
+  const keysToMask = ['password', 'senha', 'token', 'cpf'];
+
+  Object.keys(masked).forEach(key => {
+    const lowerKey = key.toLowerCase();
+    if (keysToMask.includes(lowerKey)) {
+      if (lowerKey === 'cpf' && typeof masked[key] === 'string' && masked[key].length === 11) {
+        masked[key] = masked[key].substring(0, 3) + '.***.***-' + masked[key].substring(9);
+      } else {
+        masked[key] = '********';
+      }
+    } else if (typeof masked[key] === 'object') {
+      masked[key] = maskSensitiveData(masked[key]);
+    }
+  });
+  return masked;
+}
+
 // Interceptor para injetar o token JWT e loggar a requisição
 api.interceptors.request.use(
   async (config: any) => {
@@ -39,7 +59,7 @@ api.interceptors.request.use(
     // Log da requisição instrumentada
     const { method, url, params, data } = config;
     logger.info(`API_REQ: ${method?.toUpperCase()} ${url}`, {
-      params,
+      params: maskSensitiveData(params),
       dataKeys: data ? Object.keys(data) : undefined,
       profile: sessao?.usuario?.perfil_acesso
     });
@@ -108,9 +128,10 @@ api.interceptors.response.use(
       config: {
         url: error.config?.url,
         method: error.config?.method,
-        params: error.config?.params,
+        params: maskSensitiveData(error.config?.params),
+        data: maskSensitiveData(typeof error.config?.data === 'string' ? JSON.parse(error.config.data) : error.config?.data),
       },
-      responseData: contentType.includes('application/json') ? response?.data : '[Non-JSON Content]',
+      responseData: contentType.includes('application/json') ? maskSensitiveData(response?.data) : '[Non-JSON Content]',
       responseHeaders: response?.headers,
       durationMs: duration,
       axiosCode: error.code

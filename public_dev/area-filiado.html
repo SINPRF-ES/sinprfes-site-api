@@ -9,6 +9,7 @@
   <script src="js/main.js" defer></script>
 
   <!-- Scripts Utilitários (Ordem Crítica) -->
+  <script src="/shared/canon.js"></script>
   <script src="/shared/repasse.constants.js"></script>
   <script src="js/shared/format/formatters.js"></script>
   <script src="js/area-filiado/utils.js"></script>
@@ -26,6 +27,7 @@
   <script src="js/area-filiado/jogos.js"></script>
   <script src="js/area-filiado/publicacoes.js"></script>
   <script src="js/area-filiado/repasse.js"></script>
+  <script src="js/area-filiado/noticias-admin.js"></script>
 
   <!-- Inicializador Principal -->
   <script src="js/area-filiado.js"></script>
@@ -47,6 +49,7 @@
         <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
         <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
         <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
+        <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" style="display:none;">📰 Notícias</button>
         <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;">💱 Repasse</button>
         <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
         <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
@@ -146,6 +149,10 @@
           <!-- Conteúdo carregado via JS -->
         </section>
 
+        <section id="sec-noticias" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via NoticiasAdmin -->
+        </section>
+
         <section id="sec-cms" class="af-section" style="display:none;">
           <div class="section-card">
               <h2>Gerenciar Conteúdo do Site</h2>
@@ -179,6 +186,19 @@
       </div>
       <div class="modal-body" id="modal-corpo">
         <!-- Form carregado dinamicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Genérico -->
+  <div id="modal-generic" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-generic-titulo">Título</h2>
+        <button type="button" class="modal-close" onclick="document.getElementById('modal-generic').style.display='none'">×</button>
+      </div>
+      <div class="modal-body" id="modal-generic-corpo">
+        <!-- Conteúdo dinâmico -->
       </div>
     </div>
   </div>

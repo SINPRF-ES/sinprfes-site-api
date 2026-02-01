@@ -9,12 +9,12 @@
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
-    const LOTACAO_OPCOES = [
+    const LOTACAO_OPCOES = global.Canon?.LOTACOES || [
       "SEDE",
-      "1ª DEL (Viana)",
-      "2ª DEL (Serra)",
-      "3ª DEL (Guarapari)",
-      "4ª DEL (Linhares)"
+      "DEL 01 - Viana",
+      "DEL 02 - Serra",
+      "DEL 03 - Guarapari",
+      "DEL 04 - Linhares"
     ];
 
     let perfilAtual = null;
@@ -329,7 +329,7 @@
                         </div>
                         <div class="field-group">
                             <label>CPF</label>
-                            <input name="cpf" value="${f.cpf || ""}" ${ehGestao ? "" : "readonly"}>
+                            <input name="cpf" class="campo-cpf" value="${f.cpf || ""}" ${ehGestao ? "" : "readonly"}>
                         </div>
                     </div>
                     <div class="field-row">
@@ -597,6 +597,7 @@
         }
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
+        form.querySelectorAll(".campo-cpf").forEach(inp => aplicarMascaraCPF?.(inp));
         const cepInput = form.querySelector(".campo-cep");
         const btnBuscarCep = document.getElementById("btn-buscar-cep"); // Note: it's a span now with 🔍
 
@@ -639,7 +640,15 @@
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
             if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
-            if (payload.cpf) payload.cpf = onlyDigits(payload.cpf);
+
+            if (payload.cpf) {
+                const cpfLimp = onlyDigits(payload.cpf);
+                if (cpfLimp.length !== 11) {
+                    alert("O CPF deve ter exatamente 11 dígitos.");
+                    return;
+                }
+                payload.cpf = cpfLimp;
+            }
 
             for (let i = 1; i <= 5; i++) {
                 if (payload[`dep${i}_cpf`]) payload[`dep${i}_cpf`] = onlyDigits(payload[`dep${i}_cpf`]);
