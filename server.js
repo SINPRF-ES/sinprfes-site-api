@@ -19,5 +19,9 @@ initBirthdayScheduler();
 const { initPushCleanupScheduler } = require("./src/jobs/pushCleanupScheduler");
 initPushCleanupScheduler();
 
+// Inicializa o scheduler de limpeza de relatórios (30 dias)
+const { initReportCleanupScheduler } = require("./src/jobs/reportCleanupScheduler");
+initReportCleanupScheduler();
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));

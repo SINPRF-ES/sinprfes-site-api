@@ -17,10 +17,11 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import * as Canon from '../utils/canon';
-import { maskCPF } from '../utils/masks';
+import { normalizeText, maskCPF } from '../utils/masks';
+import { onlyDigits } from '../shared/format/formatters';
 import { useAuth } from '../hooks/useAuth';
 import reportsService from '../services/reportsService';
-import api from '../services/apiService';
+import api, { getFiliados } from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -38,13 +39,15 @@ export default function RelatoriosScreen() {
   const { usuario } = useAuth();
   const [reportType, setReportType] = useState('INDIVIDUAL');
   const [targetValue, setTargetValue] = useState<any>(null);
-  const [filiadosBusca, setFiliadosBusca] = useState<any[]>([]);
+  const [allFiliados, setAllFiliados] = useState<any[]>([]);
+  const [filteredFiliados, setFilteredFiliados] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isPickerVisible, setIsPickerVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [history, setHistory] = useState<ReportJob[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showFullHistory, setShowFullHistory] = useState(false);
 
   const fetchHistory = useCallback(async (isRefresh = false) => {
     try {
@@ -64,30 +67,39 @@ export default function RelatoriosScreen() {
     fetchHistory();
   }, [fetchHistory]);
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery.length >= 2) {
-        performSearch(searchQuery);
-      } else {
-        setFiliadosBusca([]);
-      }
-    }, 400);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
-
-  const performSearch = async (q: string) => {
+  const loadFiliados = useCallback(async () => {
     try {
-        setIsSearching(true);
-        const response = await api.get(`/api/filiados?q=${encodeURIComponent(q)}`);
-        const results = response.data.filiados || [];
-        setFiliadosBusca(results.slice(0, 20));
+      setIsSearching(true);
+      const data = await getFiliados(); // Busca filiados ativos
+      setAllFiliados(data);
     } catch (e) {
-        console.error(e);
+      console.error('[Reports.loadFiliados]', e);
     } finally {
-        setIsSearching(false);
+      setIsSearching(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isPickerVisible && allFiliados.length === 0) {
+      loadFiliados();
+    }
+  }, [isPickerVisible, allFiliados.length, loadFiliados]);
+
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      const term = normalizeText(searchQuery);
+      const digits = onlyDigits(searchQuery);
+
+      const filtered = allFiliados.filter(f => {
+        const nomeMatch = normalizeText(f.nome || '').includes(term);
+        const cpfMatch = digits !== '' && onlyDigits(f.cpf || '').includes(digits);
+        return nomeMatch || cpfMatch;
+      });
+      setFilteredFiliados(filtered.slice(0, 20));
+    } else {
+      setFilteredFiliados([]);
+    }
+  }, [searchQuery, allFiliados]);
 
   const handleGenerate = async () => {
     let params: any = {};
@@ -193,7 +205,7 @@ export default function RelatoriosScreen() {
             ) : (
               <View style={{ maxHeight: 300 }}>
                 <FlatList
-                  data={filiadosBusca}
+                  data={filteredFiliados}
                   keyExtractor={(item) => String(item.id)}
                   keyboardShouldPersistTaps="handled"
                   contentContainerStyle={{ paddingBottom: 16 }}
@@ -203,6 +215,7 @@ export default function RelatoriosScreen() {
                       onPress={() => {
                         setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
                         setIsPickerVisible(false);
+                        setSearchQuery('');
                       }}
                     >
                       <View>
@@ -212,7 +225,11 @@ export default function RelatoriosScreen() {
                     </TouchableOpacity>
                   )}
                   ListEmptyComponent={() => (
-                    <Text style={styles.modalEmptyText}>Nenhum filiado encontrado.</Text>
+                    <Text style={styles.modalEmptyText}>
+                      {searchQuery.length < 2
+                        ? "Digite pelo menos 2 caracteres para buscar..."
+                        : "Nenhum filiado encontrado."}
+                    </Text>
                   )}
                 />
               </View>
@@ -306,7 +323,29 @@ export default function RelatoriosScreen() {
           {history.length === 0 && !loading ? (
             <Text style={styles.emptyText}>Nenhuma solicitação realizada ainda.</Text>
           ) : (
-            history.map((h) => <View key={h.id}>{renderHistoryItem({ item: h })}</View>)
+            <>
+              {(showFullHistory ? history : history.slice(0, 5)).map((h) => (
+                <View key={h.id}>{renderHistoryItem({ item: h })}</View>
+              ))}
+
+              {!showFullHistory && history.length > 5 && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => setShowFullHistory(true)}
+                >
+                  <Text style={styles.showMoreButtonText}>Exibir anteriores</Text>
+                </TouchableOpacity>
+              )}
+
+              {showFullHistory && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => setShowFullHistory(false)}
+                >
+                  <Text style={styles.showMoreButtonText}>Ver apenas recentes</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -425,4 +464,17 @@ const styles = StyleSheet.create({
   modalItemName: { fontSize: 16, color: '#333' },
   modalItemCpf: { fontSize: 12, color: '#999' },
   modalEmptyText: { textAlign: 'center', color: '#999', marginTop: 20 },
+  showMoreButton: {
+    marginTop: 8,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#003366',
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  showMoreButtonText: {
+    color: '#003366',
+    fontWeight: 'bold',
+  },
 });

@@ -23,6 +23,20 @@ const QR_BASE_URL =
 // ------------------------------------------------------------------
 
 /**
+ * Garante que existe espaço na página para o conteúdo. Se não houver, adiciona nova página.
+ * @returns {boolean} True se uma nova página foi adicionada.
+ */
+function ensureSpace(doc, neededHeight) {
+    const bottomMargin = doc.page.margins.bottom || 70;
+    if (doc.y + neededHeight > doc.page.height - bottomMargin - 10) {
+        doc.addPage();
+        doc.moveDown(2);
+        return true;
+    }
+    return false;
+}
+
+/**
  * Renderiza blocos de Sexo e Faixa Etária.
  */
 function drawDistribuicoes(doc, dados, options = {}) {
@@ -103,31 +117,17 @@ function formatDateSafe(val) {
 }
 
 /**
- * Garante que existe espaço na página para o conteúdo. Se não houver, adiciona nova página.
- * @returns {boolean} True se uma nova página foi adicionada.
- */
-function ensureSpace(doc, neededHeight) {
-    const bottomMargin = doc.page.margins.bottom || 70;
-    if (doc.y + neededHeight > doc.page.height - bottomMargin - 10) {
-        doc.addPage();
-        doc.moveDown(2);
-        return true;
-    }
-    return false;
-}
-
-/**
  * Desenha uma tabela com suporte a paginação automática e repetição de cabeçalho.
  */
 function drawTableWithPagination(doc, options) {
     const {
         headers,
         rows,
-        colWidths,
+        colWidths = [159, 68, 68, 68, 92], // 35%, 15%, 15%, 15%, 20% de 455 (B2.1)
         rowHeight = 22,
         headerHeight = 22,
         startX = doc.page.margins.left,
-        fontSize = 8
+        fontSize = 7 // Levemente menor que o texto normal (B2.3)
     } = options;
 
     const drawHeader = (y) => {
@@ -135,10 +135,11 @@ function drawTableWithPagination(doc, options) {
         headers.forEach((h, i) => {
             const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
             doc.rect(x, y, colWidths[i], headerHeight).fillAndStroke("#eeeeee", "#333333");
-            // Centralizado horizontalmente via width + align
-            doc.fillColor("#000").text(h, x, y + (headerHeight / 2) - (fontSize / 2) + 1, {
+            // Centralizado horizontalmente via width + align (B2.2)
+            doc.fillColor("#000").text(h, x, y + (headerHeight / 2) - (fontSize / 2) + 0.5, {
                 width: colWidths[i],
-                align: 'center'
+                align: 'center',
+                lineBreak: false
             });
         });
         return y + headerHeight;
@@ -154,7 +155,7 @@ function drawTableWithPagination(doc, options) {
     currentY = drawHeader(currentY);
 
     rows.forEach((row) => {
-        // Se mudar de página, redesenha o header
+        // Se mudar de página, redesenha o header (B3)
         if (ensureSpace(doc, rowHeight)) {
             currentY = doc.y;
             currentY = drawHeader(currentY);
@@ -162,37 +163,39 @@ function drawTableWithPagination(doc, options) {
 
         row.forEach((text, i) => {
             const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+            const padding = 6; // (B2.3)
+
             doc.lineWidth(0.5).strokeColor("#333333");
             doc.rect(x, currentY, colWidths[i], rowHeight).stroke();
 
             doc.font("Helvetica").fontSize(fontSize);
 
-            // Truncamento para a primeira coluna (Lotação) se necessário
+            // Truncamento robusto para TODAS as colunas (B2.2)
             let val = String(text || "");
-            if (i === 0) {
-                const maxWidth = colWidths[i] - 10;
-                if (doc.widthOfString(val) > maxWidth) {
-                    while (doc.widthOfString(val + "...") > maxWidth && val.length > 0) {
-                        val = val.slice(0, -1);
-                    }
-                    val += "...";
+            const maxWidth = colWidths[i] - (padding * 2);
+            if (doc.widthOfString(val) > maxWidth) {
+                while (doc.widthOfString(val + "...") > maxWidth && val.length > 0) {
+                    val = val.slice(0, -1);
                 }
+                val += "...";
             }
 
-            // Centralizado horizontalmente em todas as células
-            doc.text(val, x, currentY + (rowHeight / 2) - (fontSize / 2) + 1, {
+            // Centralizado horizontal e verticalmente (B2.2)
+            doc.text(val, x, currentY + (rowHeight / 2) - (fontSize / 2) + 0.5, {
                 width: colWidths[i],
-                align: "center"
+                align: "center",
+                lineBreak: false
             });
         });
 
         currentY += rowHeight;
     });
 
-    // Reset de estado pós-tabela para evitar vazamento de alinhamento/posicionamento
+    // Reset de estado pós-tabela para evitar vazamento de alinhamento/posicionamento (B4)
     doc.x = doc.page.margins.left;
     doc.y = currentY;
     doc.fillColor("#000");
+    doc.font("Helvetica").fontSize(11);
 }
 
 /**
@@ -989,7 +992,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
     doc.font("Helvetica-Bold").fontSize(16).text(titulo, { align: "center" });
     doc.moveDown(1);
 
-    // Bloco "Resumo da Lotação" (Exclusivo para relatórios por Lotação que possuem dados de Repasse)
+    // Bloco "Resumo da Lotação" (LAYOUT TIPO DOSSIÊ - B1)
     if (dados.repasse) {
         doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Lotação");
         doc.moveDown(0.5);
@@ -1001,43 +1004,14 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         const hoje = new Date();
         const dataHoje = `${mesesPtBr[hoje.getMonth()]}/${hoje.getFullYear()}`;
 
-        const rows = [
-            ["Efetivo total", r.prfTotal !== null ? String(r.prfTotal) : "Não informado", "number"],
-            ["Filiados cadastrados", r.filiadosAtivos !== null ? String(r.filiadosAtivos) : "—", "number"],
-            ["Índice de sindicalização", r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—", "number"],
-            ["Base do efetivo", comp, "text"],
-            ["Relatório gerado em", dataHoje, "text"]
-        ];
+        doc.font("Helvetica").fontSize(11);
+        doc.text(`Efetivo total: ${r.prfTotal !== null ? String(r.prfTotal) : "Não informado"}`, { align: 'left' });
+        doc.text(`Filiados cadastrados: ${r.filiadosAtivos !== null ? String(r.filiadosAtivos) : "—"}`, { align: 'left' });
+        doc.text(`Índice de sindicalização: ${r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—"}`, { align: 'left' });
+        doc.text(`Base do efetivo: ${comp}`, { align: 'left' });
+        doc.text(`Relatório gerado em: ${dataHoje}`, { align: 'left' });
 
-        const startX = doc.x;
-        const startY = doc.y;
-        const col1Width = 273; // 60% of 455
-        const col2Width = 182; // 40% of 455
-        const rowHeight = 25;
-
-        rows.forEach((row, i) => {
-            const y = startY + (i * rowHeight);
-
-            doc.lineWidth(0.5).strokeColor("#333333");
-            doc.rect(startX, y, col1Width, rowHeight).stroke();
-            doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
-
-            // Alinhamento vertical centralizado
-            const textY = y + (rowHeight / 2) - (10 / 2) + 1;
-
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
-
-            if (row[2] === "number") {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
-                    width: col2Width - 10,
-                    align: "right"
-                });
-            } else {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
-            }
-        });
-
-        doc.y = startY + (rows.length * rowHeight) + 15;
+        doc.moveDown(1);
         linha(doc);
     }
 
@@ -1048,7 +1022,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.text(`Total de filiados: ${dados.total}`);
         doc.moveDown(1);
     } else if (dados.repasseBreakdown) {
-        // ESPECIAL: Relatório por Situação ATIVO com visão global do Repasse
+        // ESPECIAL: Relatório por Situação ATIVO (LAYOUT TIPO DOSSIÊ - B1)
         doc.font("Helvetica-Bold").fontSize(14).text("Resumo Global do Efetivo (Ativos)");
         doc.moveDown(0.5);
 
@@ -1056,46 +1030,18 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         const totalFiliadosAtivos = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.filiadosAtivos || 0), 0);
         const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
 
-        const rowsGlobal = [
-            ["Efetivo total", totalPrf.toString(), "number"],
-            ["Filiados cadastrados", totalFiliadosAtivos.toString(), "number"],
-            ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%", "number"],
-            ["Base do efetivo", "Dados mais recentes por lotação (ver tabela abaixo)", "text"]
-        ];
-
-        let startX = doc.x;
-        let startY = doc.y;
-        let col1Width = 273;
-        let col2Width = 182;
-        let rowHeight = 25;
-
-        rowsGlobal.forEach((row, i) => {
-            const y = startY + (i * rowHeight);
-            doc.lineWidth(0.5).strokeColor("#333333");
-            doc.rect(startX, y, col1Width, rowHeight).stroke();
-            doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
-
-            const textY = y + (rowHeight / 2) - (10 / 2) + 1;
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
-
-            if (row[2] === "number") {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
-                    width: col2Width - 10,
-                    align: "right"
-                });
-            } else {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
-            }
-        });
-
-        doc.y = startY + (rowsGlobal.length * rowHeight) + 20;
+        doc.font("Helvetica").fontSize(11);
+        doc.text(`Efetivo total: ${totalPrf}`, { align: 'left' });
+        doc.text(`Filiados cadastrados: ${totalFiliadosAtivos}`, { align: 'left' });
+        doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
+        doc.text(`Base do efetivo: Dados por lotação (ver tabela abaixo)`, { align: 'left' });
+        doc.moveDown(1);
 
         // Tabela por Lotação
         doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Efetivo PRF)");
         doc.moveDown(0.5);
 
         const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
-        const colWidths = [165, 60, 60, 60, 110];
         const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
         const tableRows = dados.repasseBreakdown.map(r => [
@@ -1109,7 +1055,6 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         drawTableWithPagination(doc, {
             headers,
             rows: tableRows,
-            colWidths,
             rowHeight: 22
         });
 
@@ -1165,44 +1110,16 @@ async function gerarPdfRelatorioGlobal(dados) {
     const totalFiliadosAtivos = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.filiadosAtivos || 0), 0);
     const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
 
-    const rowsAtivo = [
-        ["Efetivo total (PRF)", totalPrf.toString(), "number"],
-        ["Filiados ativos", totalFiliadosAtivos.toString(), "number"],
-        ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%", "number"]
-    ];
-
-    let startX = doc.x;
-    let startY = doc.y;
-    let col1Width = 273;
-    let col2Width = 182;
-    let rowHeight = 25;
-
-    rowsAtivo.forEach((row, i) => {
-        const y = startY + (i * rowHeight);
-        doc.lineWidth(0.5).strokeColor("#333333");
-        doc.rect(startX, y, col1Width, rowHeight).stroke();
-        doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
-
-        const textY = y + (rowHeight / 2) - (10 / 2) + 1;
-        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
-
-        if (row[2] === "number") {
-            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
-                width: col2Width - 10,
-                align: "right"
-            });
-        } else {
-            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
-        }
-    });
-
-    doc.y = startY + (rowsAtivo.length * rowHeight) + 15;
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Efetivo total (PRF): ${totalPrf}`, { align: 'left' });
+    doc.text(`Filiados ativos: ${totalFiliadosAtivos}`, { align: 'left' });
+    doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
+    doc.moveDown(1);
 
     doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Ativos)");
     doc.moveDown(0.5);
 
     const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
-    const colWidths = [165, 60, 60, 60, 110];
     const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
     const tableRows = a.repasseBreakdown.map(r => [
@@ -1216,7 +1133,6 @@ async function gerarPdfRelatorioGlobal(dados) {
     drawTableWithPagination(doc, {
         headers,
         rows: tableRows,
-        colWidths,
         rowHeight: 22
     });
 
