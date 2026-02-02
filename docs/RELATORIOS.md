@@ -14,13 +14,17 @@ Este módulo permite a geração de documentos estruturados em PDF com base nos 
 {
   "type": "INDIVIDUAL | LOTACAO | SITUACAO | GLOBAL",
   "params": {
-    "filiadoId": 123, // Obrigatório se type for INDIVIDUAL
-    "value": "SEDE | ATIVO | ..." // Obrigatório se type for LOTACAO ou SITUACAO. Ignorado para GLOBAL.
+    "filiadoId": 123, // Obrigatório se type for INDIVIDUAL. Contrato: { filiadoId }
+    "value": "SEDE | ATIVO | ..." // Obrigatório se type for LOTACAO ou SITUACAO. Contrato: { value }
+    // GLOBAL não exige parâmetros. Contrato: {}
   }
 }
 ```
 
 **Comportamento:**
+- **Paginação Automática:** Tabelas longas (como a distribuição por lotação no relatório de Ativos ou Global) possuem suporte a paginação automática. Se uma tabela não couber em uma página, ela continuará na próxima, repetindo o cabeçalho para garantir a legibilidade.
+- **Padrão Visual de Tabelas:** Tabelas de resumo utilizam largura de 60% para rótulos e 40% para valores, com alinhamento vertical centralizado e preenchimento (padding) padronizado. Valores numéricos são alinhados à direita.
+- **Truncamento Inteligente:** Nomes de lotação muito extensos em tabelas são automaticamente truncados com reticências (...) para evitar quebra de layout das linhas.
 - **Seleção de E-mail:** O sistema busca o melhor e-mail para o envio na seguinte ordem de precedência:
     1. E-mail no perfil/sessão do usuário logado.
     2. E-mail 1 cadastrado no cadastro do filiado vinculado ao ID do solicitante.
