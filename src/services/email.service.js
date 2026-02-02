@@ -255,6 +255,7 @@ function extrairEmailDestino(obj = {}) {
     (obj.email_destino && String(obj.email_destino).trim()) ||
     (obj.email1 && String(obj.email1).trim()) ||
     (obj.email2 && String(obj.email2).trim()) ||
+    (obj.email && String(obj.email).trim()) ||
     ""
   );
 }
@@ -454,6 +455,64 @@ SINPRF-ES
   }
 }
 
+/**
+ * Envia e-mail de relatório genérico (Individual, Lotação, Setor, Situação)
+ */
+async function enviarEmailRelatorio(filiado, reportTitle, pdfBuffer, filename) {
+  const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;
+  const unionEmail = REPORTS_COPY_EMAIL || "sinprfes@sinprfes.org.br";
+
+  if (!MAIL_FROM) {
+    throw new Error("❌ MAIL_FROM não configurado.");
+  }
+
+  const emailDestino = extrairEmailDestino(filiado);
+  const subject = `Relatório Gerado - ${reportTitle}`;
+  const corpo = `
+Prezado(a) ${filiado.nome || "solicitante"},
+
+Segue em anexo o relatório "${reportTitle}" solicitado via plataforma SINPRF-ES.
+
+Atenciosamente,
+SINPRF-ES
+`;
+
+  const attachments = [{ filename, content: pdfBuffer.toString("base64") }];
+
+  if (emailDestino) {
+    try {
+      const payload = {
+        from: MAIL_FROM,
+        to: emailDestino,
+        bcc: unionEmail,
+        subject,
+        text: corpo,
+        attachments
+      };
+      const res = await resend.emails.send(payload);
+      if (res.error) throw res.error;
+      console.log("📧 [emailRelatorioOk] enviado para", emailDestino, "com BCC para", unionEmail);
+    } catch (err) {
+      console.error("💥 [emailRelatorioErro]", err);
+      throw new Error(`Falha ao enviar e-mail do relatório: ${err.message}`);
+    }
+  } else {
+    // Se o solicitante não tem e-mail, envia apenas para o sindicato
+    try {
+      await resend.emails.send({
+        from: MAIL_FROM,
+        to: unionEmail,
+        subject: `[SOLICITANTE SEM EMAIL] ${subject}`,
+        text: `O usuário ${filiado.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
+        attachments
+      });
+      console.log("📧 [emailRelatorioUnionOnlyOk] enviado para", unionEmail);
+    } catch (err) {
+      console.error("💥 [emailRelatorioErroSindicatoOnly]", err);
+    }
+  }
+}
+
 module.exports = {
   enviarEmailBase,
   enviarEmailFichaFiliacao,
@@ -463,4 +522,5 @@ module.exports = {
   enviarEmailCancelamentoInscricaoJogos,
   enviarRelatorioAniversariantes,
   enviarEmailRelatorioAssembleia,
+  enviarEmailRelatorio,
 };

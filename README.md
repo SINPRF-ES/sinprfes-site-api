@@ -396,3 +396,22 @@ Para garantir integridade e padronização dos processos deliberativos:
 - **Edictal PDF Obrigatório:** Toda nova assembleia deve obrigatoriamente possuir um edital em formato PDF.
 - **Integração com Biblioteca Digital:** Os editais não são mais carregados diretamente via upload no formulário. Eles devem ser selecionados a partir de arquivos já existentes na **Biblioteca Digital (Google Drive)**, utilizando o seletor integrado disponível no Site e App.
 - **Visualização Segura:** O acesso aos editais é feito exclusivamente através de um proxy autenticado do backend, garantindo que apenas usuários logados e autorizados possam visualizar os documentos.
+
+---
+
+## 📊 Módulo de Relatórios e Dossiês
+
+O sistema permite a geração de relatórios estruturados e dossiês individuais em formato PDF, enviados automaticamente por e-mail para o solicitante e com cópia oculta (BCC) para a secretaria do sindicato.
+
+### Tipos de Relatórios (MVP)
+
+1.  **Dossiê do Filiado (Individual):** Reúne todos os dados cadastrais, funcionais, contatos, endereço e dependentes de um filiado específico. Respeita as regras de visibilidade (ex: CPF oculto para perfis que não possuem permissão de gestão).
+2.  **Relatório por Lotação:** Apresenta dados agregados de uma unidade operacional específica (SEDE, VIANA, SERRA, etc.), incluindo total de servidores ativos, distribuição por sexo e faixas etárias.
+3.  **Relatório por Situação Funcional:** Agrega dados por condição funcional (ATIVO, VETERANO, PENSIONISTA), com as mesmas métricas estatísticas.
+
+### Regras de Negócio e Auditoria
+
+- **Cálculo de Idade:** Baseado na `data_nascimento`. Caso ausente, o registro é contabilizado como "Idade desconhecida". Faixas etárias: 20-29, 30-39, 40-49, 50-59, 60+.
+- **Auditoria (Jobs):** Toda solicitação de relatório é registrada na tabela `report_jobs`, permitindo o acompanhamento do histórico de geração (quem solicitou, quando e com quais parâmetros).
+- **Configuração de E-mail:** A cópia para o sindicato é configurada via variável de ambiente `REPORTS_COPY_EMAIL`.
+- **Permissões:** O acesso ao módulo é restrito aos perfis de gestão (`ADMIN`, `DIRETORIA`, `FUNCIONARIO`) e ao perfil `ORGANIZADOR` (apenas visualização/geração conforme permissão `RELATORIOS_VER`).

@@ -25,6 +25,7 @@
         const { inicializarAssembleias } = window.Assembleias || {};
         const { inicializarRepasse } = window.Repasse || {};
         const { inicializarNoticias } = window.NoticiasAdmin || {};
+        const { inicializarRelatorios } = window.Relatorios || {};
         const { CMSAdmin } = window || {};
         const { Notificacoes } = window || {};
 
@@ -47,6 +48,7 @@
                 else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
                 else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
+                else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
             });
         }
 
@@ -95,6 +97,9 @@
 
             const navNotificacoes = document.getElementById("nav-notificacoes");
             if (navNotificacoes) navNotificacoes.style.display = perfisGestao.includes(perfil) ? "block" : "none";
+
+            const navRelatorios = document.getElementById("nav-relatorios");
+            if (navRelatorios) navRelatorios.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
         } catch (err) {
             console.error("Falha na sincronização inicial:", err);
