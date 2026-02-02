@@ -183,12 +183,19 @@
                       </select>
                   </div>
 
-                  <div style="text-align: center; margin-top: 30px;">
+                  <div style="text-align: center; margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
                       <button id="btn-gerar-relatorio" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.1rem; width: 100%; max-width: 400px;">
                           📄 Gerar e Enviar PDF
                       </button>
+                      <button id="btn-preview-relatorio" class="btn btn-outline" style="padding: 10px 40px; font-size: 1rem; width: 100%; max-width: 400px; color: var(--azul-fundo); border-color: var(--azul-fundo);">
+                          👁️ Visualizar na Tela
+                      </button>
                   </div>
               </div>
+          </div>
+
+          <div id="relatorio-preview-container" class="section-card" style="display: none; max-width: 900px; margin: 20px auto; padding: 0; overflow: hidden;">
+              <!-- Conteúdo carregado via JS -->
           </div>
 
           <div class="section-card" style="max-width: 700px; margin: 20px auto;">

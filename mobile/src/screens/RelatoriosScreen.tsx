@@ -48,6 +48,8 @@ export default function RelatoriosScreen() {
   const [history, setHistory] = useState<ReportJob[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const fetchHistory = useCallback(async (isRefresh = false) => {
     try {
@@ -144,6 +146,38 @@ export default function RelatoriosScreen() {
       Alert.alert('Erro', msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    let params: any = {};
+
+    if (reportType === 'INDIVIDUAL') {
+      if (!targetValue?.id) {
+        Alert.alert('Erro', 'Selecione um filiado.');
+        return;
+      }
+      params.filiadoId = targetValue.id;
+    } else if (reportType === 'GLOBAL') {
+      // Sem filtro
+    } else {
+      if (!targetValue) {
+        Alert.alert('Erro', 'Selecione um valor para o filtro.');
+        return;
+      }
+      params.value = targetValue;
+    }
+
+    setLoadingPreview(true);
+    setPreviewData(null);
+    try {
+      const res = await reportsService.previewReport(reportType, params);
+      setPreviewData(res);
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Erro ao carregar preview.';
+      Alert.alert('Erro', msg);
+    } finally {
+      setLoadingPreview(false);
     }
   };
 
@@ -309,9 +343,9 @@ export default function RelatoriosScreen() {
           )}
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, (loading || loadingPreview) && styles.buttonDisabled]}
             onPress={handleGenerate}
-            disabled={loading}
+            disabled={loading || loadingPreview}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -319,7 +353,84 @@ export default function RelatoriosScreen() {
               <Text style={styles.buttonText}>📄 Gerar e Enviar por E-mail</Text>
             )}
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.buttonSecondary, (loading || loadingPreview) && styles.buttonDisabled]}
+            onPress={handlePreview}
+            disabled={loading || loadingPreview}
+          >
+            {loadingPreview ? (
+              <ActivityIndicator color="#003366" />
+            ) : (
+              <Text style={styles.buttonSecondaryText}>👁️ Visualizar na Tela</Text>
+            )}
+          </TouchableOpacity>
         </View>
+
+        {previewData && (
+          <View style={styles.previewContainer}>
+            <View style={styles.previewHeader}>
+              <View>
+                <Text style={styles.previewTitle}>👁️ Visualização</Text>
+                <Text style={styles.previewSubtitle}>Gerada em: {new Date(previewData.generatedAt).toLocaleString('pt-BR')}</Text>
+                {previewData.baseCompetencia && <Text style={styles.previewSubtitle}>Base: {previewData.baseCompetencia}</Text>}
+              </View>
+              <TouchableOpacity onPress={() => setPreviewData(null)}>
+                <MaterialCommunityIcons name="close-circle" size={28} color="#c62828" />
+              </TouchableOpacity>
+            </View>
+
+            {previewData.sections.map((section: any, idx: number) => (
+              <View key={idx} style={styles.previewSection}>
+                <Text style={styles.previewSectionTitle}>{section.title}</Text>
+
+                {section.kind === 'kv' && (
+                  <View style={styles.kvContainer}>
+                    {section.items.map((item: any, i: number) => (
+                      <View key={i} style={styles.kvItem}>
+                        <Text style={styles.kvLabel}>{item.label}</Text>
+                        <Text style={styles.kvValue}>{item.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {section.kind === 'table' && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                    <View style={styles.tableContainer}>
+                      <View style={styles.tableHeader}>
+                        {section.columns.map((col: string, i: number) => (
+                          <View key={i} style={[styles.tableHeaderCell, { width: i === 0 ? 150 : 100 }]}>
+                            <Text style={styles.tableHeaderText}>{col}</Text>
+                          </View>
+                        ))}
+                      </View>
+                      {section.rows.map((row: any[], i: number) => (
+                        <View key={i} style={[styles.tableRow, i % 2 !== 0 && { backgroundColor: '#f8f9fa' }]}>
+                          {row.map((cell: any, j: number) => (
+                            <View key={j} style={[styles.tableCell, { width: j === 0 ? 150 : 100 }]}>
+                              <Text style={styles.tableCellText}>{cell}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                )}
+              </View>
+            ))}
+
+            <TouchableOpacity
+              style={styles.closePreviewButton}
+              onPress={() => {
+                setPreviewData(null);
+                // Scroll back up maybe?
+              }}
+            >
+              <Text style={styles.closePreviewButtonText}>Ocultar Visualização</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.historySection}>
           <Text style={styles.sectionTitle}>📜 Histórico de Solicitações</Text>
@@ -412,6 +523,69 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { backgroundColor: '#cccccc' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  buttonSecondary: {
+    backgroundColor: '#fff',
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#003366',
+  },
+  buttonSecondaryText: { color: '#003366', fontSize: 15, fontWeight: 'bold' },
+  previewContainer: {
+    marginTop: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 10,
+  },
+  previewTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366' },
+  previewSubtitle: { fontSize: 11, color: '#666' },
+  previewSection: { marginBottom: 25 },
+  previewSectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#003366',
+    borderLeftWidth: 4,
+    borderLeftColor: '#f1c40f',
+    paddingLeft: 8,
+    marginBottom: 12,
+  },
+  kvContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 15 },
+  kvItem: { width: '45%' },
+  kvLabel: { fontSize: 10, color: '#777', textTransform: 'uppercase' },
+  kvValue: { fontSize: 13, color: '#333', fontWeight: '500' },
+  tableContainer: { borderWidth: 1, borderColor: '#eee', borderRadius: 8, overflow: 'hidden' },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f3f5' },
+  tableHeaderCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#eee' },
+  tableHeaderText: { fontSize: 11, fontWeight: 'bold', color: '#003366', textAlign: 'center' },
+  tableRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#eee' },
+  tableCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#eee', justifyContent: 'center' },
+  tableCellText: { fontSize: 12, color: '#333', textAlign: 'center' },
+  closePreviewButton: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#003366',
+    alignItems: 'center',
+  },
+  closePreviewButtonText: { color: '#003366', fontWeight: 'bold' },
   historySection: { marginTop: 24 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12 },
   historyCard: {
