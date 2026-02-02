@@ -9,6 +9,7 @@ const { PDFDocument: PDFLibDocument } = require("pdf-lib");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
 const { formatarCPF, formatarTelefone, formatarDataBR, formatarAgencia, formatarConta } = require("../utils/format");
+const { labelFromParentesco } = require("../../shared/dependentes/parentesco");
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
 const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");
@@ -54,7 +55,33 @@ function sanitizeForPdf(text) {
   return s;
 }
 
-// Carrega o logo com buffer (para pdf-lib)
+/**
+ * Formata data de forma amigável para o PDF.
+ */
+function formatDateSafe(val) {
+    if (!val) return "Não informada";
+    const formatted = formatarDataBR(val);
+    // Se o formatarDataBR retornou algo inválido (não contém /), tenta fallback
+    if (!formatted || (typeof formatted === 'string' && !formatted.includes('/'))) {
+        return "Não informada";
+    }
+    return formatted;
+}
+
+/**
+ * Humaniza o parentesco para o PDF.
+ */
+function humanizeParentesco(val) {
+    if (!val) return "Dependente";
+    const label = labelFromParentesco(val);
+    if (label === 'Outro' && val !== 'OUTRO' && val !== 'Outro') {
+        // Fallback: SNAKE_CASE para Title Case
+        return val.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return label;
+}
+
+// Carrega o logo como buffer (para pdf-lib)
 async function carregarLogoBuffer() {
   try {
     const data = await fs.readFile(LOGO_PATH);
@@ -260,7 +287,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
 }
 
 // ------------------------------------------------------------------
-// PDF de Filiação (mantido – ajuste só se você quiser mudar layout)
+// PDF de Filiação
 // ------------------------------------------------------------------
 
 async function gerarPdfFichaFiliacao(dados) {
@@ -369,7 +396,7 @@ async function gerarPdfFichaFiliacao(dados) {
 }
 
 // ------------------------------------------------------------------
-// PDF de Ressarcimento (NOVO LAYOUT, sem sumário de anexos)
+// PDF de Ressarcimento
 // ------------------------------------------------------------------
 
 async function gerarPdfRessarcimento(dados, anexos = []) {
@@ -544,15 +571,11 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
   // 3) Se houver anexos, incorpora-os usando pdf-lib (SEM sumário de anexos)
   const pdfDoc = await PDFLibDocument.load(pdfPrincipalBuffer);
 
-  // 🟢 CORREÇÃO: Removido loop que cria páginas de título (intro)
-  // O código agora insere o conteúdo do anexo direto
   for (const anexo of anexos) {
     try {
       const buffer = await fs.readFile(anexo.path);
       const mime = anexo.mimetype || "";
       const nome = anexo.originalname || "";
-
-      // Aqui estava o código da página "intro". Foi removido.
 
       if (mime === "application/pdf" || nome.toLowerCase().endsWith(".pdf")) {
         const pdfAnexo = await PDFLibDocument.load(buffer);
@@ -762,7 +785,7 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
     doc.text(`CPF: ${podeVerCpf ? formatarCPF(filiado.cpf) : "***.***.***-**"}`);
     doc.text(`Matrícula (SIAPE): ${filiado.siape || "-"}`);
     doc.text(`Sexo: ${filiado.sexo === 'M' ? 'Masculino' : (filiado.sexo === 'F' ? 'Feminino' : '-')}`);
-    doc.text(`Data de Nascimento: ${filiado.data_nascimento ? formatarDataBR(filiado.data_nascimento) : "desconhecida"}`);
+    doc.text(`Data de Nascimento: ${formatDateSafe(filiado.data_nascimento)}`);
     doc.moveDown(1);
     linha(doc);
 
@@ -797,8 +820,9 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
     for (let i = 1; i <= 5; i++) {
         if (filiado[`dep${i}_nome`]) {
             temDependente = true;
-            doc.text(`${i}. ${filiado[`dep${i}_nome`]} (${filiado[`dep${i}_parentesco`] || 'Dependente'})`);
-            doc.text(`   CPF: ${podeVerCpf ? formatarCPF(filiado[`dep${i}_cpf`]) : "***.***.***-**"} | Nasc: ${filiado[`dep${i}_data_nascimento`] ? formatarDataBR(filiado[`dep${i}_data_nascimento`]) : '-'}`);
+            const parentescoLabel = humanizeParentesco(filiado[`dep${i}_parentesco`]);
+            doc.text(`${i}. ${filiado[`dep${i}_nome`]} (${parentescoLabel})`);
+            doc.text(`   CPF: ${podeVerCpf ? formatarCPF(filiado[`dep${i}_cpf`]) : "***.***.***-**"} | Nasc: ${formatDateSafe(filiado[`dep${i}_data_nascimento`])}`);
         }
     }
     if (!temDependente) doc.text("Nenhum dependente cadastrado.");
