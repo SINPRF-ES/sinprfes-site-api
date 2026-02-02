@@ -8,8 +8,6 @@
     let isShowingArchived = false;
 
     function inicializarNotificacoes(perfil) {
-        console.log("Notificacoes: Inicializando para perfil:", perfil);
-
         // Controle de visibilidade do menu
         const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
         const navItem = document.getElementById('nav-notificacoes');

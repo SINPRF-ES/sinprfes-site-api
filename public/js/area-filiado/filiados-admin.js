@@ -64,88 +64,78 @@
     }
 
     async function inicializarFiliados(perfil) {
-        const listaEl = document.getElementById("lista-filiados");
         perfilAtual = (perfil || "").toUpperCase();
-        const isReadOnlyProfile = ["FILIADO", "ORGANIZADOR"].includes(perfilAtual);
+        const secFiliados = document.getElementById("sec-filiados");
+        if (!secFiliados) return;
+
         const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+        const placeholder = !ehGestao ? "Buscar por nome..." : "Buscar por nome ou CPF...";
 
-        if (!listaEl) {
-            const secFiliados = document.getElementById("sec-filiados");
-            if (secFiliados) {
-                const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
-                secFiliados.innerHTML = `
-                    <div class="search-box-container">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                            <h2 style="margin:0;">👥 Filiados</h2>
-                            <button id="btn-novo-filiado" class="btn btn-primary" style="display:none;">+ Novo Filiado</button>
-                        </div>
-                        <div id="filiados-count" style="font-weight: bold; margin-bottom: 10px; color: #fff;">Total: 0</div>
-                        <input type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; padding:10px; border-radius:8px; border:none; color:#333;">
-                    </div>
-                    <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
-                    <div id="lista-filiados"></div>
-                `;
-            }
-        }
+        secFiliados.innerHTML = `
+            <div class="af-standard-header">
+                <h2>👥 Filiados</h2>
+                <p class="section-subtitle">Gerencie o cadastro de membros e dependentes do sindicato.</p>
+            </div>
 
-        const canManageProfiles = ehGestao;
+            <div class="af-standard-card af-standard-form">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                    <div id="filiados-count" style="font-weight: 800; font-size: 1.4rem; color: var(--azul-fundo);">Total: 0</div>
+                    ${ehGestao ? `<button id="btn-novo-filiado" class="btn btn-primary">+ Novo Filiado</button>` : ''}
+                </div>
 
-        if (!handlersConfigurados) {
-            const btnNovo = document.getElementById("btn-novo-filiado");
-            const containerNovo = document.getElementById("novo-filiado-container");
+                <div class="field-group">
+                    <label>🔍 Pesquisar</label>
+                    <input type="text" id="busca-filiados" placeholder="${placeholder}">
+                </div>
 
-            if (btnNovo) {
-                if (ehGestao) {
-                    btnNovo.style.display = "inline-block";
-                    btnNovo.onclick = () => abrirNovoFiliado(containerNovo);
-                    renderizarFormularioNovoFiliado(containerNovo);
-                }
-            }
-
-            const campoBusca = document.getElementById("busca-filiados");
-            if (campoBusca) {
-                campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
-
-                const filtros = document.createElement("div");
-                filtros.className = "row-filtros";
-
-                const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
-
-                filtros.innerHTML = `
+                <div class="field-row" style="margin-top: 20px;">
                     ${ehGestao ? `
-                    <label>
-                        Estado:
+                    <div class="field-group">
+                        <label>Estado do Cadastro</label>
                         <select id="filtro-estado-cadastro">
                             <option value="CADASTRO_ATIVO" selected>Ativos</option>
                             <option value="ARQUIVADOS">Arquivados</option>
                             <option value="TODOS">Todos</option>
                         </select>
-                    </label>` : '<input type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
-                    <label>
-                        Situação:
+                    </div>` : '<input type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
+
+                    <div class="field-group">
+                        <label>Situação / Lotação</label>
                         <select id="filtro-situacao-funcional">
                             <option value="TODOS" selected>Todos</option>
-                            <option value="ATIVO">Ativo</option>
+                            <option value="ATIVO">Ativo (Geral)</option>
                             <option value="VETERANO">Veterano</option>
                             <option value="PENSIONISTA">Pensionista</option>
-                            <option value="SEDE">SEDE</option>
-                            <option value="DEL 01 - Viana">DEL 01 - Viana</option>
-                            <option value="DEL 02 - Serra">DEL 02 - Serra</option>
-                            <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
-                            <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
-                            <option value="NENHUMA">NENHUMA</option>
+                            <optgroup label="Ativos por Lotação">
+                                <option value="SEDE">SEDE</option>
+                                <option value="DEL 01 - Viana">DEL 01 - Viana</option>
+                                <option value="DEL 02 - Serra">DEL 02 - Serra</option>
+                                <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
+                                <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
+                                <option value="NENHUMA">NENHUMA</option>
+                            </optgroup>
                         </select>
-                    </label>
-                `;
-                campoBusca.insertAdjacentElement("afterend", filtros);
+                    </div>
+                </div>
+            </div>
 
-                if (ehGestao) {
-                    document.getElementById("filtro-estado-cadastro").addEventListener("change", carregarLista);
-                }
-                document.getElementById("filtro-situacao-funcional").addEventListener("change", () => filtrarLista(campoBusca.value));
-            }
-            handlersConfigurados = true;
+            <div id="novo-filiado-container" style="display:none; margin-bottom:30px;"></div>
+            <div id="lista-filiados">
+                <p style="text-align:center; padding: 40px; color:#666;">Carregando...</p>
+            </div>
+        `;
+
+        if (ehGestao) {
+            const btnNovo = document.getElementById("btn-novo-filiado");
+            const containerNovo = document.getElementById("novo-filiado-container");
+            btnNovo.onclick = () => abrirNovoFiliado(containerNovo);
+
+            document.getElementById("filtro-estado-cadastro").addEventListener("change", carregarLista);
         }
+
+        const campoBusca = document.getElementById("busca-filiados");
+        campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
+        document.getElementById("filtro-situacao-funcional").addEventListener("change", () => filtrarLista(campoBusca.value));
 
         await carregarLista();
     }
@@ -155,7 +145,6 @@
         if (!listaEl) return;
 
         try {
-            listaEl.innerHTML = `<p style="text-align:center; color:#fff;">Carregando...</p>`;
             const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
             let url = "/api/filiados";
             if (estado !== "CADASTRO_ATIVO") url += "?incluirArquivados=1";
@@ -167,7 +156,7 @@
                 filtrarLista(document.getElementById("busca-filiados")?.value || "");
             }
         } catch (e) {
-            listaEl.innerHTML = `<p style="text-align:center; color:red;">Erro ao carregar.</p>`;
+            listaEl.innerHTML = `<div class="af-standard-card" style="text-align:center; color:#e74c3c;">Erro ao carregar filiados.</div>`;
         }
     }
 
@@ -176,13 +165,11 @@
         if (!el) return;
 
         const { filterFiliados, formatarCPF, formatarTelefoneTexto, normalizeText } = global.Utils || {};
-
-        // Reutiliza a lógica unificada de busca (nome/CPF)
         let res = filterFiliados ? filterFiliados(cacheLista, termo, { perfil: perfilAtual }) : cacheLista;
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {
-            const lotacoesLabels = global.Canon?.LOTACOES || ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
+            const lotacoesLabels = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
             if (lotacoesLabels.includes(fSituacao)) {
                 const keywords = {
                     "SEDE": "SEDE",
@@ -215,37 +202,36 @@
         if (countEl) countEl.textContent = `Total: ${res.length}`;
 
         if (!res.length) {
-            el.innerHTML = `<div class="filiado-card" style="text-align:center;">Nenhum registro.</div>`;
+            el.innerHTML = `<div class="af-standard-card" style="text-align:center; color:#666;">Nenhum registro encontrado.</div>`;
             return;
         }
+
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
 
         el.innerHTML = res.map(f => {
             const situacao = (f.situacao || f.situacao_funcional || 'ATIVO').toUpperCase();
             const situacaoLower = situacao.toLowerCase();
-            const classeStatus = `status-${situacaoLower}`;
             const nascimento = f.data_nascimento;
             const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
-
             const tels = [f.telefone1, f.telefone2].filter(Boolean).map(t => formatarTelefoneTexto ? formatarTelefoneTexto(t) : t).join(" / ");
 
             return `
-                <div class="filiado-card ${classeStatus}">
+                <div class="af-standard-card" style="padding: 20px !important; margin-bottom: 15px !important;">
                     <div class="filiado-header">
                         <div class="filiado-left">
                             ${avatarHtml(f.avatar_url, f.nome)}
                             <div>
                                 <div class="filiado-nome">${f.nome}</div>
                                 <div class="filiado-meta">${f.cpf ? formatarCPF(f.cpf) + ' • ' : ''}${f.lotacao || 'SEDE'}</div>
-                                ${["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
+                                ${!ehGestao ? '' : `
                                 <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
                             </div>
                         </div>
                         <div style="text-align:right;">
                             <span class="filiado-badge badge-${situacaoLower}">${situacao}</span>
-                            <div style="margin-top:5px; font-size:0.85rem;">${tels || '-'}</div>
-            ${!["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ?
-                                `<button class="btn btn-outline btn-sm" onclick="FiliadosAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
+                            <div style="margin-top:5px; font-size:0.85rem; color:#666;">${tels || '-'}</div>
+                            ${ehGestao ? `<button class="btn btn-outline btn-sm" onclick="FiliadosAdmin.abrirModalEdicao(${f.id})" style="margin-top:10px;">✏️ Editar</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -284,7 +270,6 @@
         return `
             <div id="alertas-modal"></div>
 
-            <!-- Barra de Status do Filiado -->
             <div class="status-bar-modal">
                 <span>Estado: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
                 <div>
@@ -305,8 +290,8 @@
                 </div>
             ` : ''}
 
-            <form id="form-edicao-modal">
-                <div class="data-card">
+            <form id="form-edicao-modal" class="af-standard-form">
+                <div class="af-standard-card">
                     <h3>👤 Informações Pessoais</h3>
                     <div class="field-row">
                         <div class="field-group">
@@ -375,7 +360,7 @@
                     ` : `<input type="hidden" name="perfil_acesso" value="${f.perfil_acesso}">`}
                 </div>
 
-                <div class="data-card bg-alt">
+                <div class="af-standard-card" style="background: #f8fafc !important;">
                     <h3>📞 Contato</h3>
                     <div class="field-row">
                         <div class="field-group">
@@ -399,78 +384,73 @@
                     </div>
                 </div>
 
-                <div class="data-card">
+                <div class="af-standard-card">
                     <h3>🏠 Endereço</h3>
                     <div class="address-grid-v2">
-                        <!-- Linha 1: CEP + Logradouro -->
-                        <div class="edit-group cep-group">
+                        <div class="field-group">
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
                                 <input name="cep" id="edit-cep" value="${f.cep || ""}" class="campo-cep">
                                 <span class="cep-search-icon">🔍</span>
                             </div>
                         </div>
-                        <div class="edit-group logradouro-group">
+                        <div class="field-group">
                             <label>Logradouro / Bairro</label>
                             <input name="logradouro_bairro" id="edit-logradouro" value="${f.logradouro_bairro || ""}" readonly style="background:#f8f9fa;">
                         </div>
-
-                        <!-- Linha 2: Número + Complemento -->
-                        <div class="edit-group">
+                        <div class="field-group">
                             <label>Número</label>
                             <input name="numero" value="${f.numero || ""}">
                         </div>
-                        <div class="edit-group">
+                        <div class="field-group">
                             <label>Complemento</label>
                             <input name="complemento" value="${f.complemento || ""}">
                         </div>
-
-                        <!-- Linha 3: Cidade + UF -->
-                        <div class="edit-group">
+                        <div class="field-group">
                             <label>Cidade</label>
                             <input name="cidade" id="edit-cidade" value="${f.cidade || ""}" readonly style="background:#f8f9fa;">
                         </div>
-                        <div class="edit-group">
+                        <div class="field-group">
                             <label>UF</label>
                             <input name="uf" id="edit-uf" value="${f.uf || ""}" readonly style="background:#f8f9fa;">
                         </div>
                     </div>
                 </div>
 
-                <div class="data-card bg-alt">
-                    <div class="dependentes-header" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
-                        <h3 style="margin: 0;">👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
-                        <button type="button" id="btn-toggle-excluir-modal" class="btn btn-danger-outline btn-sm" style="position: absolute; right: 0;">Excluir</button>
+                <div class="af-standard-card" style="background: #f8fafc !important;">
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
+                        <h3 style="margin: 0; border:none;">👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
+                        <button type="button" id="btn-toggle-excluir-modal" class="btn btn-outline btn-sm" style="position: absolute; right: 0;">🗑️ Gerenciar</button>
                     </div>
 
-                    <div id="painel-excluir-modal" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                        <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
-                        <div id="checkboxes-excluir-modal" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                        <div style="margin-top: 15px; text-align: right;">
-                            <button type="button" id="btn-confirmar-exclusao-modal" class="btn btn-danger">Confirmar Exclusão</button>
+                    <div id="painel-excluir-modal" style="display: none; background: #fff; border: 1px solid #e74c3c; border-radius: 10px; padding: 20px; margin-bottom: 25px;">
+                        <p style="margin-top:0; font-weight:bold; color:#e74c3c;">Selecione os dependentes para remover:</p>
+                        <div id="checkboxes-excluir-modal" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                        <div style="margin-top: 20px; text-align: right;">
+                            <button type="button" id="btn-confirmar-exclusao-modal" class="btn btn-danger" style="background:#e74c3c; color:#fff;">Confirmar Exclusão</button>
                         </div>
                     </div>
 
                     <div id="modal-dependentes-container"></div>
                 </div>
 
-                <div class="data-card">
+                <div class="af-standard-card">
                     <h3>🖼️ Avatar (Foto)</h3>
-                    <div class="subcard flex-center" style="gap: 20px; flex-wrap: wrap;">
-                        <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" onerror="this.src='/img/avatar-placeholder.png'" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #ffc107;">
-                        <div class="avatar-actions" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="display: flex; gap: 25px; align-items: center; flex-wrap: wrap;">
+                        <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" onerror="this.src='/img/avatar-placeholder.png'" style="width:120px; height:120px; border-radius:15px; object-fit:cover; border:3px solid var(--amarelo);">
+                        <div style="flex:1; min-width:250px; display:flex; flex-direction:column; gap:12px;">
                             <input type="file" id="modal-avatar-input" accept="image/*">
                             <div style="display:flex; gap:10px;">
-                                <button type="button" class="btn btn-primary btn-sm" onclick="FiliadosAdmin.uploadAvatar(${f.id})" style="flex:1;">Upload</button>
-                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="FiliadosAdmin.removerAvatar(${f.id})" style="flex:1;">Remover</button>
+                                <button type="button" class="btn btn-primary" onclick="FiliadosAdmin.uploadAvatar(${f.id})" style="flex:1;">📤 Upload</button>
+                                <button type="button" class="btn btn-outline" onclick="FiliadosAdmin.removerAvatar(${f.id})" style="flex:1; border-color:#e74c3c; color:#e74c3c;">🗑️ Remover</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-outline btn-lg" onclick="document.getElementById('modal-editar-filiado').style.display='none'">Cancelar</button>
-                    <button type="submit" class="btn btn-primary btn-lg">Salvar Alterações</button>
+                    <button type="button" class="btn btn-outline" style="padding: 12px 40px;" onclick="document.getElementById('modal-editar-filiado').style.display='none'">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 12px 50px;">💾 Salvar Alterações</button>
                 </div>
             </form>
         `;
@@ -492,8 +472,6 @@
             gerarCamposDependentes(container, "mod");
 
             const dependentesAtuais = [];
-
-            // Preencher dependentes
             for (let i = 1; i <= 5; i++) {
                 if (filiado[`dep${i}_nome`]) {
                     dependentesAtuais.push({ nome: filiado[`dep${i}_nome`], index: i });
@@ -531,34 +509,28 @@
                 if (select && hidden) {
                     hidden.value = pVal;
                     const options = Array.from(select.options).map(o => o.value);
-                    // Se o valor estiver nas opções e NÃO for OUTRO, seleciona e esconde campo manual
                     if (pVal && pVal !== "OUTRO" && options.includes(pVal)) {
                         select.value = pVal;
                         if (outro) { outro.style.display = "none"; outro.value = ""; }
                     } else if (pVal) {
-                        // Se for OUTRO ou valor customizado
                         select.value = "OUTRO";
                         if (outro) {
                             outro.value = (pVal === "OUTRO") ? "" : pVal;
                             outro.style.display = "block";
                         }
                     } else {
-                        // Vazio
                         select.value = "";
                         if (outro) { outro.style.display = "none"; outro.value = ""; }
                     }
                 }
             }
 
-            // Lógica de Exclusão no Modal
             const btnToggleExcluir = document.getElementById("btn-toggle-excluir-modal");
             const painelExcluir = document.getElementById("painel-excluir-modal");
             const containerCheckboxes = document.getElementById("checkboxes-excluir-modal");
             const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-modal");
 
-            if (dependentesAtuais.length === 0) {
-                btnToggleExcluir.style.display = 'none';
-            }
+            if (dependentesAtuais.length === 0) btnToggleExcluir.style.display = 'none';
 
             btnToggleExcluir.onclick = () => {
                 painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
@@ -567,9 +539,9 @@
             containerCheckboxes.innerHTML = '';
             dependentesAtuais.forEach(dep => {
                 containerCheckboxes.innerHTML += `
-                    <label style="display: flex; align-items: center; gap: 8px; font-weight:normal; cursor:pointer;">
-                        <input type="checkbox" name="excluir_dep_index" value="${dep.index}" style="width: auto;">
-                        Dependente ${dep.index}: ${dep.nome}
+                    <label style="display: flex; align-items: center; gap: 10px; font-weight:normal; cursor:pointer;">
+                        <input type="checkbox" name="excluir_dep_index" value="${dep.index}" style="width: auto !important;">
+                        <span>Dependente ${dep.index}: ${dep.nome}</span>
                     </label>
                 `;
             });
@@ -591,20 +563,14 @@
                         if (outro) { outro.value = ""; outro.style.display = "none"; }
                     });
                     painelExcluir.style.display = "none";
-                    // Trigger submit to save and let backend compact
-                    // Usamos requestSubmit se disponível para disparar a validação e o handler onsubmit
-                    if (typeof form.requestSubmit === "function") {
-                        form.requestSubmit();
-                    } else {
-                        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                    }
+                    if (typeof form.requestSubmit === "function") form.requestSubmit();
+                    else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
                 }
             };
         }
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
         const cepInput = form.querySelector(".campo-cep");
-        const btnBuscarCep = document.getElementById("btn-buscar-cep"); // Note: it's a span now with 🔍
 
         const executarBuscaCep = async () => {
             const cep = (cepInput.value || "").replace(/\D/g, "");
@@ -624,7 +590,6 @@
         if (cepInput) {
             global.Utils?.aplicarMascaraCEP?.(cepInput);
             cepInput.addEventListener('blur', executarBuscaCep);
-            // also trigger on search icon click
             const searchIcon = form.querySelector(".cep-search-icon");
             if (searchIcon) searchIcon.onclick = executarBuscaCep;
         }
@@ -641,47 +606,26 @@
             e.preventDefault();
             const fd = new FormData(form);
             const rawPayload = {};
-            fd.forEach((v, k) => {
-                if (!k.includes("_select") && !k.includes("_outro")) {
-                    rawPayload[k] = v;
-                }
-            });
+            fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) rawPayload[k] = v; });
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
             const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
 
-            // Sanitização e Limpeza Obrigatória (B2)
             const payload = {};
             Object.keys(rawPayload).forEach(key => {
                 let val = rawPayload[key];
-
-                // 1. Trim strings
                 if (typeof val === 'string') val = val.trim();
-
-                // 2. Remover vazios, null, undefined ou placeholders
-                if (val === "" || val === null || val === undefined || val === "Selecione...") {
-                    return;
-                }
-
-                // 3. Remover campos readonly se não for gestor pleno
-                if (!ehGestao && (key === 'sexo' || key === 'cpf' || key === 'siape')) {
-                    return;
-                }
-
-                // 4. Normalização de Nomes (Canônico)
+                if (val === "" || val === null || val === undefined || val === "Selecione...") return;
+                if (!ehGestao && (key === 'sexo' || key === 'cpf' || key === 'siape')) return;
                 if (key === 'nome' || key.includes('_nome')) {
                     if (global.Canon?.normalizeNome) val = global.Canon.normalizeNome(val);
                 }
-
-                // 5. Normalização de Documentos/Telefones
                 if (key === 'cpf' || key.includes('_cpf') || key === 'telefone1' || key === 'telefone2' || key === 'cep' || key === 'siape') {
                     val = onlyDigits(val);
                 }
-
                 payload[key] = val;
             });
 
-            // Validação final de campos críticos se presentes
             if (payload.cpf && payload.cpf.length !== 11) {
                 alert("O CPF deve ter exatamente 11 dígitos.");
                 return;
@@ -697,13 +641,6 @@
                     document.getElementById("modal-editar-filiado").style.display = "none";
                     await carregarLista();
                 } else {
-                    // Log detalhado para depuração (B2-4)
-                    console.log("FiliadosAdmin.UpdateErro:", {
-                        endpoint: url,
-                        status: r.status,
-                        errorId: data.errorId || 'N/A'
-                    });
-
                     const msg = data.message || "Erro ao salvar.";
                     const errorId = data.errorId ? `\n(ID do Erro: ${data.errorId})` : "";
                     alert(msg + errorId);
@@ -773,6 +710,7 @@
         if (container.style.display === "none") {
             renderizarFormularioNovoFiliado(container);
             container.style.display = "block";
+            container.scrollIntoView({ behavior: 'smooth' });
         } else {
             container.style.display = "none";
         }
@@ -783,15 +721,15 @@
         const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, aplicarMascaraCEP, aplicarMascaraData } = global.Utils || {};
 
         container.innerHTML = `
-            <div class="filiado-card" style="border-left-color: var(--amarelo);">
-                <h3>👤 Novo Filiado</h3>
+            <div class="af-standard-card af-standard-form">
+                <h3 style="border-bottom-color: var(--azul-fundo) !important;">👤 Novo Filiado</h3>
                 <form id="form-novo-filiado-admin">
-                    <div class="edit-grid">
-                        <div class="edit-group">
+                    <div class="field-row">
+                        <div class="field-group">
                             <label>Nome *</label>
                             <input name="nome" required>
                         </div>
-                        <div class="edit-group">
+                        <div class="field-group">
                             <label>Sexo</label>
                             <select name="sexo">
                                 <option value="" selected>-</option>
@@ -799,73 +737,85 @@
                                 <option value="F">♀️ Feminino</option>
                             </select>
                         </div>
-                        <div class="edit-group">
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
                             <label>CPF *</label>
                             <input name="cpf" required placeholder="000.000.000-00">
                         </div>
-                        <div class="edit-group">
+                        <div class="field-group">
                             <label>Matrícula (SIAPE)</label>
                             <input name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
                         </div>
-                        <div class="edit-group">
-                            <label>Email *</label>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Email Principal *</label>
                             <input type="email" name="email1" required>
                         </div>
-                        <div class="edit-group">
+                        <div class="field-group">
                             <label>Telefone 1 *</label>
                             <input name="telefone1" class="campo-telefone" required placeholder="(00) 00000-0000">
                         </div>
-                        <div class="edit-group">
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
                             <label>Data Nascimento</label>
                             <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
                         </div>
+                        <div class="field-group"></div>
+                    </div>
 
-                        <div class="address-grid span-2">
-                            <div class="edit-group cep-group">
+                    <div style="margin: 25px 0; border-top: 1px dashed #ccc; padding-top: 25px;">
+                        <h4 style="margin-bottom: 15px; color: var(--azul-fundo);">🏠 Endereço</h4>
+                        <div class="field-row">
+                            <div class="field-group">
                                 <label>CEP</label>
                                 <div class="cep-input-wrapper">
                                     <input name="cep" id="new-cep" class="campo-cep" placeholder="00000-000">
                                     <span class="cep-search-icon">🔍</span>
                                 </div>
                             </div>
-                            <div class="edit-group logradouro-group">
+                            <div class="field-group">
                                 <label>Logradouro / Bairro</label>
-                                <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
+                                <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f9f9f9;">
                             </div>
-                            <div class="edit-group">
+                        </div>
+                        <div class="field-row">
+                            <div class="field-group">
                                 <label>Número</label>
                                 <input name="numero">
                             </div>
-                            <div class="edit-group">
+                            <div class="field-group">
                                 <label>Complemento</label>
                                 <input name="complemento">
                             </div>
-                            <div class="edit-group">
+                        </div>
+                        <div class="field-row">
+                            <div class="field-group">
                                 <label>Cidade</label>
-                                <input name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
+                                <input name="cidade" id="new-cidade" readonly style="background:#f9f9f9;">
                             </div>
-                            <div class="edit-group">
+                            <div class="field-group">
                                 <label>UF</label>
-                                <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+                                <input name="uf" id="new-uf" readonly style="background:#f9f9f9;">
                             </div>
                         </div>
                     </div>
-                    <div id="novo-dependentes-container" style="margin-top:15px;"></div>
-                    <div style="text-align:right; margin-top:25px;">
-                        <button type="button" class="btn btn-outline" onclick="this.closest('.filiado-card').parentElement.style.display='none'">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Criar Cadastro</button>
+
+                    <div id="novo-dependentes-container" style="margin-top:25px;"></div>
+
+                    <div style="text-align:right; margin-top:35px; border-top: 1px solid #eee; padding-top: 25px;">
+                        <button type="button" class="btn btn-outline" style="margin-right:10px;" onclick="this.closest('.af-standard-card').parentElement.style.display='none'">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" style="padding: 12px 60px;">🚀 Criar Cadastro</button>
                     </div>
                 </form>
             </div>
         `;
 
-        if (gerarCamposDependentes) {
-            gerarCamposDependentes(container.querySelector("#novo-dependentes-container"), "new");
-        }
+        if (gerarCamposDependentes) gerarCamposDependentes(container.querySelector("#novo-dependentes-container"), "new");
 
         const form = container.querySelector("#form-novo-filiado-admin");
-
-        // Aplicar Máscaras
         if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
         if (aplicarMascaraTelefone) aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
         if (aplicarMascaraData) aplicarMascaraData(form.querySelector('input[name="data_nascimento"]'));
@@ -873,7 +823,7 @@
         const cepInp = form.querySelector("#new-cep");
         if (cepInp) {
             if (aplicarMascaraCEP) aplicarMascaraCEP(cepInp);
-            cepInp.addEventListener('blur', async () => {
+            const buscar = async () => {
                 const cep = (cepInp.value || "").replace(/\D/g, "");
                 if (cep.length === 8) {
                     try {
@@ -886,7 +836,9 @@
                         }
                     } catch (err) { console.error("Erro busca CEP", err); }
                 }
-            });
+            };
+            cepInp.addEventListener('blur', buscar);
+            form.querySelector(".cep-search-icon").onclick = buscar;
         }
 
         form.onsubmit = async (e) => {
@@ -895,10 +847,7 @@
             const payload = {};
             fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
 
-            // Normalização de Nomes (Canônico)
-            if (payload.nome && global.Canon?.normalizeNome) {
-                payload.nome = global.Canon.normalizeNome(payload.nome);
-            }
+            if (payload.nome && global.Canon?.normalizeNome) payload.nome = global.Canon.normalizeNome(payload.nome);
             for (let i = 1; i <= 5; i++) {
                 if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
                     payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
@@ -906,25 +855,14 @@
             }
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-
-            // Validação e Sanitização CPF
             const cpfLimp = onlyDigits(payload.cpf);
-            if (cpfLimp.length !== 11) {
-                alert("O CPF deve ter exatamente 11 dígitos.");
-                return;
-            }
+            if (cpfLimp.length !== 11) { alert("O CPF deve ter exatamente 11 dígitos."); return; }
             payload.cpf = cpfLimp;
-
-            // Sanitização Telefone
             if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
 
-            // Conversão Data de Nascimento para ISO
             if (payload.data_nascimento) {
                 const iso = global.Formatters ? global.Formatters.parseBRToISO(payload.data_nascimento) : null;
-                if (payload.data_nascimento.includes('/') && !iso) {
-                    alert("Data de nascimento inválida. Use o formato DD/MM/AAAA.");
-                    return;
-                }
+                if (payload.data_nascimento.includes('/') && !iso) { alert("Data de nascimento inválida."); return; }
                 if (iso) payload.data_nascimento = iso;
             }
 
@@ -951,15 +889,10 @@
         if (value === "OUTRO") {
             if (inputOutro) inputOutro.style.display = "block";
         } else {
-            if (inputOutro) {
-                inputOutro.style.display = "none";
-                inputOutro.value = "";
-            }
+            if (inputOutro) { inputOutro.style.display = "none"; inputOutro.value = ""; }
             if (inputHidden) inputHidden.value = value;
         }
     }
-
-    // No local declarations of apiFetch here. Using window.Api.apiFetch everywhere.
 
     global.FiliadosAdmin = {
         inicializarFiliados,
@@ -968,7 +901,8 @@
         confirmarDesarquivar,
         uploadAvatar,
         removerAvatar,
-        handleParentescoChange
+        handleParentescoChange,
+        abrirNovoFiliado
     };
 
 })(typeof window !== 'undefined' ? window : global);
