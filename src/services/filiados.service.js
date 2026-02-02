@@ -6,6 +6,7 @@ const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/ca
 const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
 const {
   normalizeSituacaoFuncional,
+  normalizeSexo,
   normalizePerfil,
   normalizeLotacao,
   normalizeNome
@@ -62,7 +63,7 @@ function compactarDependentes(dados) {
 
 // Colunas completas (retornadas nos UPDATE/INSERT/GET internos)
 const FILIADO_COLUMNS = `
-  id, nome, cpf, data_nascimento, telefone1, telefone2, email1, email2,
+  id, nome, cpf, siape, sexo, data_nascimento, telefone1, telefone2, email1, email2,
   logradouro_bairro, numero, complemento, cidade, uf, cep,
   lotacao, situacao, senha_hash, twofa_secret, perfil_acesso,
   avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
@@ -163,6 +164,11 @@ async function atualizarDadosProprios(id, dados) {
   };
   
   // Campos existentes
+  addCampo("sexo", normalizeSexo(dados.sexo));
+  if (dados.siape !== undefined) {
+    addCampo("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
+  }
+
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
   addCampo("email1", dados.email1);
@@ -265,7 +271,11 @@ async function atualizarFiliadoPorId(id, dados) {
   }
 
   addCampo("nome", dados.nome);
+  addCampo("sexo", normalizeSexo(dados.sexo));
   addCampo("cpf", dados.cpf);
+  if (dados.siape !== undefined) {
+    addCampo("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
+  }
 
   // ✅ PATCH: tipar explicitamente como date no SQL (evita "expression is of type text")
   if (dados.data_nascimento !== undefined) {
@@ -385,7 +395,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     const { rows } = await pool.query(
       `
       SELECT
-        f.id, f.nome, f.cpf, f.data_nascimento, f.telefone1, f.telefone2, f.email1, f.email2,
+        f.id, f.nome, f.cpf, f.siape, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email1, f.email2,
         f.lotacao, f.situacao, f.perfil_acesso,
         f.logradouro_bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
         f.avatar_url,
@@ -473,7 +483,9 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       });
     }
     push("nome", nomeNorm);
+    push("sexo", normalizeSexo(dados.sexo));
     push("cpf", cpfNormalizado);
+    push("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
     // Explicit date cast with NULLIF for empty strings
     colunas.push("data_nascimento");
     params.push(data_nascimento === undefined ? null : data_nascimento);

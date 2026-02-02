@@ -114,6 +114,7 @@ O sistema possui quatro perfis funcionais, organizados em dois grupos.
   - Telefone 1
   - Lotacao
   - Situacao funcional
+  - Sexo (♂️/♀️)
 
 **Edicao (restrita):**
 - Nao pode alterar:
@@ -238,6 +239,8 @@ Campos canônicos para rastrear o histórico de registros arquivados:
 ### Campos obrigatoriamente normalizados
 
 - CPF
+- SIAPE (Matrícula)
+- Sexo (M/F)
 - Telefones
 - CEP
 - Datas

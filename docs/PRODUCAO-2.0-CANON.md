@@ -101,6 +101,14 @@ graph TD
     *   **Banco:** String de 11 dígitos (apenas números).
     *   **Payload:** Deve ser enviado como string de 11 dígitos.
     *   **UI:** Máscara `000.000.000-00`.
+*   **SIAPE (Matrícula):**
+    *   **Banco:** String de 6 ou 7 dígitos (apenas números).
+    *   **Payload:** String de 6 ou 7 dígitos.
+    *   **UI:** Campo numérico (6-7 dígitos).
+*   **Sexo:**
+    *   **Banco:** CHAR(1) ('M' ou 'F').
+    *   **Payload:** 'M' ou 'F'.
+    *   **UI:** Label com emoji (♂️ Masculino / ♀️ Feminino).
 *   **CEP:**
     *   **Banco:** String de 8 dígitos (apenas números).
     *   **UI:** Máscara `00000-000`.
@@ -122,6 +130,9 @@ graph TD
 ```json
 {
   "nome": "String",
+  "sexo": "Enum (M/F)",
+  "cpf": "String (11 dígitos)",
+  "siape": "String (6-7 dígitos)",
   "email1": "String (RFC 5322)",
   "telefone1": "String (Dígitos)",
   "cep": "String (8 dígitos)",
