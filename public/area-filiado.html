@@ -136,19 +136,19 @@
         </section>
 
         <section id="sec-relatorios" class="af-section" style="display:none;">
-          <div class="section-card" style="text-align: center;">
-              <h2 style="font-size: 1.8rem; margin-bottom: 8px;">📊 Relatórios e Dossiês</h2>
-              <p class="section-subtitle" style="font-size: 1rem; color: var(--texto-fraco);">Gere PDFs consolidados e receba-os por e-mail.</p>
+          <div class="data-card" style="text-align: center;">
+              <h2 style="font-size: 1.8rem; margin-bottom: 8px; color: var(--azul-fundo);">📊 Relatórios e Dossiês</h2>
+              <p class="section-subtitle" style="font-size: 1rem; color: #666;">Gere PDFs consolidados e receba-os por e-mail.</p>
           </div>
 
-          <div class="section-card" style="max-width: 700px; margin: 20px auto;">
-              <h3 style="color: var(--amarelo); margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+          <div class="data-card" style="max-width: 700px; margin: 20px auto;">
+              <h3 style="color: var(--azul-fundo); margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                   ⚙️ Parâmetros do Relatório
               </h3>
 
               <div class="form-container">
                   <div class="field-group">
-                      <label style="font-weight: bold; color: var(--texto-claro);">Tipo de Relatório</label>
+                      <label style="font-weight: bold; color: #333;">Tipo de Relatório</label>
                       <select id="relatorio-tipo" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
                           <option value="INDIVIDUAL">Dossiê do Filiado (Individual)</option>
                           <option value="LOTACAO">Distribuição por Lotação</option>
@@ -187,19 +187,19 @@
                       <button id="btn-gerar-relatorio" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.1rem; width: 100%; max-width: 400px;">
                           📄 Gerar e Enviar PDF
                       </button>
-                      <button id="btn-preview-relatorio" class="btn btn-outline" style="padding: 10px 40px; font-size: 1rem; width: 100%; max-width: 400px; color: var(--azul-fundo); border-color: var(--azul-fundo);">
+                      <button id="btn-preview-relatorio" class="btn btn-outline" style="padding: 15px 40px; font-size: 1.1rem; width: 100%; max-width: 400px; color: var(--azul-fundo); border-color: var(--azul-fundo);">
                           👁️ Visualizar na Tela
                       </button>
                   </div>
               </div>
           </div>
 
-          <div id="relatorio-preview-container" class="section-card" style="display: none; max-width: 900px; margin: 20px auto; padding: 0; overflow: hidden;">
+          <div id="relatorio-preview-container" class="data-card" style="display: none; max-width: 900px; margin: 20px auto; padding: 0; overflow: hidden;">
               <!-- Conteúdo carregado via JS -->
           </div>
 
-          <div class="section-card" style="max-width: 700px; margin: 20px auto;">
-              <h3 style="color: var(--amarelo); margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+          <div class="data-card" style="max-width: 700px; margin: 20px auto;">
+              <h3 style="color: var(--azul-fundo); margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                   📜 Histórico de Solicitações
               </h3>
               <div id="relatorio-historico-list" class="history-list">
