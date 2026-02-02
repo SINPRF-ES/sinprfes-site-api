@@ -271,7 +271,9 @@ async function atualizarFiliadoPorId(id, dados) {
   }
 
   addCampo("nome", dados.nome);
-  addCampo("sexo", normalizeSexo(dados.sexo));
+  if (dados.sexo !== undefined) {
+    addCampo("sexo", normalizeSexo(dados.sexo));
+  }
   addCampo("cpf", dados.cpf);
   if (dados.siape !== undefined) {
     addCampo("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);

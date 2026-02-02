@@ -70,7 +70,7 @@ const ContatoCard: React.FC<Props> = ({
         autoComplete="username"
       />
 
-      <Text style={styles.label}>Matrícula (SIAPE)</label>
+      <Text style={styles.label}>Matrícula (SIAPE)</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
         value={isManagement ? (filiado?.siape || '') : (filiado?.siape || '—')}
