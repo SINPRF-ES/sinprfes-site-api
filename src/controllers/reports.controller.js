@@ -97,6 +97,12 @@ exports.generateReport = async (req, res) => {
       filename = `relatorio_${type.toLowerCase()}_${value.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
       pdfBuffer = await pdfService.gerarPdfRelatorioAgregado(dados, reportTitle);
 
+    } else if (type === "GLOBAL") {
+      const dados = await reportsService.buscarDadosGlobal();
+      reportTitle = "Relatório Global (Completo)";
+      filename = `relatorio_global_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdfBuffer = await pdfService.gerarPdfRelatorioGlobal(dados);
+
     } else {
       return res.status(400).json({ message: "Tipo de relatório inválido." });
     }

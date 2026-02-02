@@ -2,7 +2,7 @@
 const pool = require("../config/db");
 const filiadosService = require("./filiados.service");
 const repasseService = require("./repasse.service");
-const { SITUACAO_FUNCIONAL, LOTACOES } = require("../../shared/canon");
+const { SITUACAO_FUNCIONAL, LOTACOES, LOTACOES_REPASSE } = require("../../shared/canon");
 
 /**
  * Registra um novo job de relatório para auditoria.
@@ -89,12 +89,62 @@ async function buscarDadosAgregados(tipo, valor) {
     result.repasse = repasseData;
   }
 
+  // Especial: Situação ATIVO deve consumir Repasse globalmente e por lotação
+  if (tipo === "SITUACAO" && valor === "ATIVO") {
+    const breakdown = [];
+    for (const lot of LOTACOES_REPASSE) {
+      const repData = await repasseService.getUltimosDadosParaRelatorio(lot);
+      breakdown.push({ lotacao: lot, ...repData });
+    }
+    result.repasseBreakdown = breakdown;
+  }
+
   return result;
+}
+
+/**
+ * Dados para o Relatório Global (Completo).
+ * Agrega ATIVO (com Repasse), VETERANO (com faixas específicas) e PENSIONISTA.
+ */
+async function buscarDadosGlobal() {
+  const ativo = await buscarDadosAgregados("SITUACAO", "ATIVO");
+
+  // VETERANO com faixas etárias específicas (50-80+)
+  const { rows: vetRows } = await pool.query(`
+    SELECT
+      COUNT(*)::INTEGER as total,
+      COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
+      COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem,
+      COUNT(*) FILTER (WHERE data_nascimento IS NULL)::INTEGER as idade_desconhecida,
+      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 50 AND 59)::INTEGER as range_50_59,
+      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 60 AND 69)::INTEGER as range_60_69,
+      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 70 AND 79)::INTEGER as range_70_79,
+      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) >= 80)::INTEGER as range_80_plus
+    FROM filiados
+    WHERE situacao = 'VETERANO' AND arquivado_em IS NULL
+  `);
+
+  // PENSIONISTA (Apenas sexo)
+  const { rows: penRows } = await pool.query(`
+    SELECT
+      COUNT(*)::INTEGER as total,
+      COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
+      COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem
+    FROM filiados
+    WHERE situacao = 'PENSIONISTA' AND arquivado_em IS NULL
+  `);
+
+  return {
+    ativo,
+    veterano: vetRows[0],
+    pensionista: penRows[0]
+  };
 }
 
 module.exports = {
   registrarJob,
   listarHistorico,
   buscarDadosDossie,
-  buscarDadosAgregados
+  buscarDadosAgregados,
+  buscarDadosGlobal
 };

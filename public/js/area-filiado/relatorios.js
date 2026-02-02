@@ -47,6 +47,7 @@
         filiadoWrapper.style.display = 'none';
         lotacaoSelect.style.display = 'none';
         situacaoSelect.style.display = 'none';
+        document.getElementById('relatorio-param-container').style.display = 'block';
 
         if (tipo === 'INDIVIDUAL') {
             label.textContent = 'Filiado:';
@@ -57,6 +58,8 @@
         } else if (tipo === 'SITUACAO') {
             label.textContent = 'Selecionar Situação Funcional:';
             situacaoSelect.style.display = 'block';
+        } else if (tipo === 'GLOBAL') {
+            document.getElementById('relatorio-param-container').style.display = 'none';
         }
     }
 
@@ -156,7 +159,8 @@
         const tipoLabels = {
             INDIVIDUAL: "Dossiê Individual",
             LOTACAO: "Por Lotação",
-            SITUACAO: "Por Situação"
+            SITUACAO: "Por Situação",
+            GLOBAL: "Global (Completo)"
         };
 
         container.innerHTML = historyCache.map(h => {
