@@ -29,29 +29,29 @@ function drawDistribuicoes(doc, dados, options = {}) {
     const { isVeterano = false, isPensionista = false } = options;
 
     ensureSpace(doc, 60);
-    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:");
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:", { align: 'left' });
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Masculino: ${dados.masc}`);
-    doc.text(`Feminino: ${dados.fem}`);
+    doc.text(`Masculino: ${dados.masc}`, { align: 'left' });
+    doc.text(`Feminino: ${dados.fem}`, { align: 'left' });
     doc.moveDown(1);
 
     if (!isPensionista) {
         ensureSpace(doc, 100);
-        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:");
+        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:", { align: 'left' });
         doc.font("Helvetica").fontSize(11);
         if (isVeterano) {
-            doc.text(`50-59 anos: ${dados.range_50_59}`);
-            doc.text(`60-69 anos: ${dados.range_60_69}`);
-            doc.text(`70-79 anos: ${dados.range_70_79}`);
-            doc.text(`80+ anos: ${dados.range_80_plus}`);
+            doc.text(`50-59 anos: ${dados.range_50_59}`, { align: 'left' });
+            doc.text(`60-69 anos: ${dados.range_60_69}`, { align: 'left' });
+            doc.text(`70-79 anos: ${dados.range_70_79}`, { align: 'left' });
+            doc.text(`80+ anos: ${dados.range_80_plus}`, { align: 'left' });
         } else {
-            doc.text(`20-29 anos: ${dados.range_20_29}`);
-            doc.text(`30-39 anos: ${dados.range_30_39}`);
-            doc.text(`40-49 anos: ${dados.range_40_49}`);
-            doc.text(`50-59 anos: ${dados.range_50_59}`);
-            doc.text(`60+ anos: ${dados.range_60_plus}`);
+            doc.text(`20-29 anos: ${dados.range_20_29}`, { align: 'left' });
+            doc.text(`30-39 anos: ${dados.range_30_39}`, { align: 'left' });
+            doc.text(`40-49 anos: ${dados.range_40_49}`, { align: 'left' });
+            doc.text(`50-59 anos: ${dados.range_50_59}`, { align: 'left' });
+            doc.text(`60+ anos: ${dados.range_60_plus}`, { align: 'left' });
         }
-        doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`);
+        doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`, { align: 'left' });
         doc.moveDown(1);
     }
 }
@@ -135,7 +135,11 @@ function drawTableWithPagination(doc, options) {
         headers.forEach((h, i) => {
             const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
             doc.rect(x, y, colWidths[i], headerHeight).fillAndStroke("#eeeeee", "#333333");
-            doc.fillColor("#000").text(h, x + 5, y + (headerHeight / 2) - (fontSize / 2) + 2);
+            // Centralizado horizontalmente via width + align
+            doc.fillColor("#000").text(h, x, y + (headerHeight / 2) - (fontSize / 2) + 1, {
+                width: colWidths[i],
+                align: 'center'
+            });
         });
         return y + headerHeight;
     };
@@ -175,23 +179,20 @@ function drawTableWithPagination(doc, options) {
                 }
             }
 
-            let alignment = "left";
-            if (i >= 1 && i <= 3) alignment = "right";
-
-            if (alignment === "right") {
-                doc.text(val, x, currentY + (rowHeight / 2) - (fontSize / 2) + 2, {
-                    width: colWidths[i] - 5,
-                    align: "right"
-                });
-            } else {
-                doc.text(val, x + 5, currentY + (rowHeight / 2) - (fontSize / 2) + 2);
-            }
+            // Centralizado horizontalmente em todas as células
+            doc.text(val, x, currentY + (rowHeight / 2) - (fontSize / 2) + 1, {
+                width: colWidths[i],
+                align: "center"
+            });
         });
 
         currentY += rowHeight;
     });
 
+    // Reset de estado pós-tabela para evitar vazamento de alinhamento/posicionamento
+    doc.x = doc.page.margins.left;
     doc.y = currentY;
+    doc.fillColor("#000");
 }
 
 /**
@@ -1024,7 +1025,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
             // Alinhamento vertical centralizado
             const textY = y + (rowHeight / 2) - (10 / 2) + 1;
 
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY);
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
 
             if (row[2] === "number") {
                 doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
@@ -1032,7 +1033,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
                     align: "right"
                 });
             } else {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY);
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
             }
         });
 
@@ -1075,7 +1076,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
             doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
 
             const textY = y + (rowHeight / 2) - (10 / 2) + 1;
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY);
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
 
             if (row[2] === "number") {
                 doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
@@ -1083,7 +1084,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
                     align: "right"
                 });
             } else {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY);
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
             }
         });
 
@@ -1183,7 +1184,7 @@ async function gerarPdfRelatorioGlobal(dados) {
         doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
 
         const textY = y + (rowHeight / 2) - (10 / 2) + 1;
-        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY);
+        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
 
         if (row[2] === "number") {
             doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
@@ -1191,7 +1192,7 @@ async function gerarPdfRelatorioGlobal(dados) {
                 align: "right"
             });
         } else {
-            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY);
+            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
         }
     });
 

@@ -69,15 +69,11 @@
         select.innerHTML = '<option>Buscando...</option>';
 
         try {
-            const r = await window.Api.apiFetch(`/api/filiados?q=${encodeURIComponent(query)}`);
-            if (r.ok) {
-                const data = await r.json();
-                const filiados = data.filiados || [];
-                if (filiados.length === 0) {
-                    select.innerHTML = '<option value="">Nenhum encontrado</option>';
-                } else {
-                    select.innerHTML = filiados.map(f => `<option value="${f.id}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
-                }
+            const filiados = await window.Utils.searchFiliados(query);
+            if (filiados.length === 0) {
+                select.innerHTML = '<option value="">Nenhum encontrado</option>';
+            } else {
+                select.innerHTML = filiados.map(f => `<option value="${f.id}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
             }
         } catch (e) {
             console.error("Erro na busca de filiados", e);

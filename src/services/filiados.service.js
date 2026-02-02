@@ -376,18 +376,26 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   }
 
   if (filtro) {
-    // Busca por nome (case-insensitive) ou CPF (comparando apenas dígitos)
-    params.push(`%${filtro.toLowerCase()}%`);
-    params.push(`%${filtro.replace(/\D/g, "")}%`);
-    const pNome = params.length - 1;
-    const pCpf = params.length;
+    const termoLimpo = filtro.toLowerCase();
+    const apenasDigitos = filtro.replace(/\D/g, "");
 
-    conds.push(`
-      (
-        LOWER(f.nome) LIKE $${pNome}
-        OR regexp_replace(f.cpf, '[^0-9]', '', 'g') LIKE $${pCpf}
-      )
-    `);
+    const searchConds = [];
+
+    // Busca por nome (parcial)
+    if (termoLimpo) {
+      params.push(`%${termoLimpo}%`);
+      searchConds.push(`LOWER(f.nome) LIKE $${params.length}`);
+    }
+
+    // Busca por CPF (somente se houver dígitos na busca)
+    if (apenasDigitos) {
+      params.push(`%${apenasDigitos}%`);
+      searchConds.push(`regexp_replace(f.cpf, '[^0-9]', '', 'g') LIKE $${params.length}`);
+    }
+
+    if (searchConds.length > 0) {
+      conds.push(`(${searchConds.join(" OR ")})`);
+    }
   }
 
   const whereSql = conds.length ? `WHERE ${conds.join(" AND ")}` : "";

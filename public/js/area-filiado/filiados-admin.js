@@ -175,25 +175,10 @@
         const el = document.getElementById("lista-filiados");
         if (!el) return;
 
-        const { normalizeText, formatarCPF, formatarTelefoneTexto } = global.Utils || {};
-        const tNorm = normalizeText ? normalizeText(termo) : (termo || "").toLowerCase();
+        const { filterFiliados, formatarCPF, formatarTelefoneTexto, normalizeText } = global.Utils || {};
 
-        const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-        const tDigits = onlyDigits(termo);
-
-        let res = cacheLista.filter(f => {
-            const nomeNorm = normalizeText ? normalizeText(f.nome) : (f.nome || "").toLowerCase();
-            const matchesNome = nomeNorm.includes(tNorm);
-
-            let matchesCpf = false;
-            const isReadOnlyProfileLocal = ["FILIADO", "ORGANIZADOR"].includes(perfilAtual);
-            if (!isReadOnlyProfileLocal) {
-                const cpfDigits = onlyDigits(f.cpf);
-                matchesCpf = tDigits && cpfDigits.includes(tDigits);
-            }
-
-            return matchesNome || matchesCpf;
-        });
+        // Reutiliza a lógica unificada de busca (nome/CPF)
+        let res = filterFiliados ? filterFiliados(cacheLista, termo, { perfil: perfilAtual }) : cacheLista;
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {

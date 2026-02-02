@@ -267,6 +267,60 @@
     aplicarMascaraCEP,
     aplicarMascaraData,
     gerarCamposDependentes,
-    normalizeText
+    normalizeText,
+    searchFiliados,
+    filterFiliados
   };
+
+  let _filiadosCache = null;
+
+  /**
+   * Filtra uma lista de filiados com base em uma query de nome ou CPF.
+   * Centraliza a lógica de busca para garantir paridade entre módulos.
+   */
+  function filterFiliados(lista, query, options = {}) {
+    if (!query || query.length < 2) return lista;
+
+    const termo = normalizeText(query);
+    const apenasDigitos = query.replace(/\D/g, "");
+
+    // Regra de segurança: Perfis básicos não buscam por CPF
+    const perfil = (options.perfil || "").toUpperCase();
+    const canSearchCpf = !perfil || !["FILIADO", "ORGANIZADOR"].includes(perfil);
+
+    return (lista || []).filter(f => {
+      // Busca por nome (normalizado)
+      const nomeNorm = normalizeText(f.nome);
+      const matchesNome = nomeNorm.includes(termo);
+
+      // Busca por CPF (apenas dígitos)
+      let matchesCpf = false;
+      if (canSearchCpf) {
+          const cpfDigits = (f.cpf || "").replace(/\D/g, "");
+          matchesCpf = apenasDigitos && cpfDigits.includes(apenasDigitos);
+      }
+
+      return matchesNome || matchesCpf;
+    });
+  }
+
+  /**
+   * Busca unificada de filiados (Frontend).
+   * Carrega todos os filiados uma vez e filtra localmente para garantir
+   * paridade entre as telas de Filiados e Relatórios.
+   */
+  async function searchFiliados(query, options = {}) {
+    if (!_filiadosCache || options.forceRefresh) {
+      const r = await global.Utils.apiFetch('/api/filiados');
+      if (r.ok) {
+        const d = await r.json();
+        _filiadosCache = d.filiados || d || [];
+      } else {
+        console.error("Erro ao carregar cache de filiados");
+        return [];
+      }
+    }
+
+    return filterFiliados(_filiadosCache, query);
+  }
 })(typeof window !== 'undefined' ? window : global);
