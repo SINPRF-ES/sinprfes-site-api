@@ -12,9 +12,9 @@ import {
   RefreshControl,
   Modal,
   Dimensions,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Picker } from '@react-native-picker/picker';
 import * as Canon from '../utils/canon';
 import { maskCPF } from '../utils/masks';
@@ -98,6 +98,8 @@ export default function RelatoriosScreen() {
         return;
       }
       params.filiadoId = targetValue.id;
+    } else if (reportType === 'GLOBAL') {
+      // Sem filtro obrigatório
     } else {
       if (!targetValue) {
         Alert.alert('Erro', 'Selecione um valor para o filtro.');
@@ -163,10 +165,14 @@ export default function RelatoriosScreen() {
         onRequestClose={() => setIsPickerVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalContent}
+          <KeyboardAwareScrollView
+            enableOnAndroid
+            extraScrollHeight={50}
+            keyboardOpeningTime={0}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+            style={{ width: '100%' }}
           >
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Buscar Filiado</Text>
               <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
@@ -185,29 +191,33 @@ export default function RelatoriosScreen() {
             {isSearching ? (
               <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} />
             ) : (
-              <FlatList
-                data={filiadosBusca}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
-                      setIsPickerVisible(false);
-                    }}
-                  >
-                    <View>
-                      <Text style={styles.modalItemName}>{item.nome}</Text>
-                      <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={() => (
-                  <Text style={styles.modalEmptyText}>Nenhum filiado encontrado.</Text>
-                )}
-              />
+              <View style={{ maxHeight: 300 }}>
+                <FlatList
+                  data={filiadosBusca}
+                  keyExtractor={(item) => String(item.id)}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.modalItem}
+                      onPress={() => {
+                        setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
+                        setIsPickerVisible(false);
+                      }}
+                    >
+                      <View>
+                        <Text style={styles.modalItemName}>{item.nome}</Text>
+                        <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={() => (
+                    <Text style={styles.modalEmptyText}>Nenhum filiado encontrado.</Text>
+                  )}
+                />
+              </View>
             )}
-          </KeyboardAvoidingView>
+          </View>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 

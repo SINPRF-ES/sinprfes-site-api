@@ -100,6 +100,8 @@
             params.value = document.getElementById('relatorio-lotacao-select').value;
         } else if (tipo === 'SITUACAO') {
             params.value = document.getElementById('relatorio-situacao-select').value;
+        } else if (tipo === 'GLOBAL') {
+            // Sem filtro
         }
 
         const btnGerar = document.getElementById('btn-gerar-relatorio');

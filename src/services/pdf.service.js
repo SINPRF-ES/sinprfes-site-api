@@ -907,18 +907,18 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         const dataHoje = `${mesesPtBr[hoje.getMonth()]}/${hoje.getFullYear()}`;
 
         const rows = [
-            ["Efetivo total", r.prfTotal !== null ? String(r.prfTotal) : "Não informado"],
-            ["Filiados cadastrados", r.filiadosAtivos !== null ? String(r.filiadosAtivos) : "—"],
-            ["Índice de sindicalização", r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—"],
-            ["Base do efetivo", comp],
-            ["Relatório gerado em", dataHoje]
+            ["Efetivo total", r.prfTotal !== null ? String(r.prfTotal) : "Não informado", "number"],
+            ["Filiados cadastrados", r.filiadosAtivos !== null ? String(r.filiadosAtivos) : "—", "number"],
+            ["Índice de sindicalização", r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—", "number"],
+            ["Base do efetivo", comp, "text"],
+            ["Relatório gerado em", dataHoje, "text"]
         ];
 
         const startX = doc.x;
         const startY = doc.y;
-        const col1Width = 200;
-        const col2Width = 150;
-        const rowHeight = 20;
+        const col1Width = 273; // 60% of 455
+        const col2Width = 182; // 40% of 455
+        const rowHeight = 25;
 
         rows.forEach((row, i) => {
             const y = startY + (i * rowHeight);
@@ -927,13 +927,20 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
             doc.rect(startX, y, col1Width, rowHeight).stroke();
             doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
 
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 5, y + 6);
-            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 5, y + 6);
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+            if (row[2] === "number") {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                    width: col2Width - 10,
+                    align: "right"
+                });
+            } else {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+            }
         });
 
         doc.y = startY + (rows.length * rowHeight) + 15;
         linha(doc);
-
     }
 
     if (!dados.repasse && !dados.repasseBreakdown) {
@@ -952,25 +959,33 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
 
         const rowsGlobal = [
-            ["Efetivo total", totalPrf.toString()],
-            ["Filiados cadastrados", totalFiliadosAtivos.toString()],
-            ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%"],
-            ["Base do efetivo", "Dados mais recentes por lotação (ver tabela abaixo)"]
+            ["Efetivo total", totalPrf.toString(), "number"],
+            ["Filiados cadastrados", totalFiliadosAtivos.toString(), "number"],
+            ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%", "number"],
+            ["Base do efetivo", "Dados mais recentes por lotação (ver tabela abaixo)", "text"]
         ];
 
         let startX = doc.x;
         let startY = doc.y;
-        let col1Width = 200;
-        let col2Width = 150;
-        let rowHeight = 20;
+        let col1Width = 273;
+        let col2Width = 182;
+        let rowHeight = 25;
 
         rowsGlobal.forEach((row, i) => {
             const y = startY + (i * rowHeight);
             doc.lineWidth(0.5).strokeColor("#333333");
             doc.rect(startX, y, col1Width, rowHeight).stroke();
             doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 5, y + 6);
-            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 5, y + 6);
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+            if (row[2] === "number") {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                    width: col2Width - 10,
+                    align: "right"
+                });
+            } else {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+            }
         });
 
         doc.y = startY + (rowsGlobal.length * rowHeight) + 20;
@@ -980,15 +995,18 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.moveDown(0.5);
 
         const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
-        const colWidths = [130, 60, 60, 60, 90];
+        const colWidths = [165, 60, 60, 60, 110];
         startX = doc.x;
         startY = doc.y;
+        rowHeight = 22;
+
+        const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
         // Header
         headers.forEach((h, i) => {
             const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
             doc.rect(x, startY, colWidths[i], rowHeight).fillAndStroke("#eeeeee", "#333333");
-            doc.fillColor("#000").font("Helvetica-Bold").fontSize(9).text(h, x + 5, startY + 6);
+            doc.fillColor("#000").font("Helvetica-Bold").fontSize(8).text(h, x + 5, startY + 7);
         });
 
         startY += rowHeight;
@@ -996,12 +1014,12 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
 
         dados.repasseBreakdown.forEach((r, idx) => {
             const y = startY + (idx * rowHeight);
-            const comp = r.competencia ? `${mesesPtBr[r.competencia.month - 1]}/${r.competencia.year}` : "—";
+            const comp = r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—";
             const rowData = [
                 r.lotacao,
                 r.prfTotal !== null ? String(r.prfTotal) : "—",
                 String(r.filiadosAtivos),
-                r.percentual !== null ? r.percentual.toFixed(1) + "%" : "—",
+                r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
                 comp
             ];
 
@@ -1009,7 +1027,15 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
                 const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
                 doc.lineWidth(0.5).strokeColor("#333333");
                 doc.rect(x, y, colWidths[i], rowHeight).stroke();
-                doc.text(text, x + 5, y + 6);
+
+                let alignment = "left";
+                if (i >= 1 && i <= 3) alignment = "right";
+
+                if (alignment === "right") {
+                    doc.text(text, x, y + 7, { width: colWidths[i] - 5, align: "right" });
+                } else {
+                    doc.text(text, x + 5, y + 7);
+                }
             });
         });
 
@@ -1066,23 +1092,32 @@ async function gerarPdfRelatorioGlobal(dados) {
     const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
 
     const rowsAtivo = [
-        ["Efetivo total (PRF)", totalPrf.toString()],
-        ["Filiados ativos", totalFiliadosAtivos.toString()],
-        ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%"]
+        ["Efetivo total (PRF)", totalPrf.toString(), "number"],
+        ["Filiados ativos", totalFiliadosAtivos.toString(), "number"],
+        ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%", "number"]
     ];
 
     let startX = doc.x;
     let startY = doc.y;
-    let col1Width = 200;
-    let col2Width = 150;
-    let rowHeight = 20;
+    let col1Width = 273;
+    let col2Width = 182;
+    let rowHeight = 25;
 
     rowsAtivo.forEach((row, i) => {
         const y = startY + (i * rowHeight);
-        doc.lineWidth(0.5).strokeColor("#333333").rect(startX, y, col1Width, rowHeight).stroke();
+        doc.lineWidth(0.5).strokeColor("#333333");
+        doc.rect(startX, y, col1Width, rowHeight).stroke();
         doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
-        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 5, y + 6);
-        doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 5, y + 6);
+        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+        if (row[2] === "number") {
+            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                width: col2Width - 10,
+                align: "right"
+            });
+        } else {
+            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+        }
     });
 
     doc.y = startY + (rowsAtivo.length * rowHeight) + 15;
@@ -1091,26 +1126,43 @@ async function gerarPdfRelatorioGlobal(dados) {
     doc.moveDown(0.5);
 
     const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
-    const colWidths = [130, 60, 60, 60, 90];
+    const colWidths = [165, 60, 60, 60, 110];
     startX = doc.x;
     startY = doc.y;
+    rowHeight = 22;
+
+    const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
     headers.forEach((h, i) => {
         const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
         doc.rect(x, startY, colWidths[i], rowHeight).fillAndStroke("#eeeeee", "#333333");
-        doc.fillColor("#000").font("Helvetica-Bold").fontSize(9).text(h, x + 5, startY + 6);
+        doc.fillColor("#000").font("Helvetica-Bold").fontSize(8).text(h, x + 5, startY + 7);
     });
 
     startY += rowHeight;
     doc.font("Helvetica").fontSize(8);
     a.repasseBreakdown.forEach((r, idx) => {
         const y = startY + (idx * rowHeight);
-        const comp = r.competencia ? `${mesesPtBr[r.competencia.month - 1]}/${r.competencia.year}` : "—";
-        const rowData = [r.lotacao, r.prfTotal !== null ? String(r.prfTotal) : "—", String(r.filiadosAtivos), r.percentual !== null ? r.percentual.toFixed(1) + "%" : "—", comp];
+        const comp = r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—";
+        const rowData = [
+            r.lotacao,
+            r.prfTotal !== null ? String(r.prfTotal) : "—",
+            String(r.filiadosAtivos),
+            r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
+            comp
+        ];
         rowData.forEach((text, i) => {
             const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
             doc.lineWidth(0.5).strokeColor("#333333").rect(x, y, colWidths[i], rowHeight).stroke();
-            doc.text(text, x + 5, y + 6);
+
+            let alignment = "left";
+            if (i >= 1 && i <= 3) alignment = "right";
+
+            if (alignment === "right") {
+                doc.text(text, x, y + 7, { width: colWidths[i] - 5, align: "right" });
+            } else {
+                doc.text(text, x + 5, y + 7);
+            }
         });
     });
 
