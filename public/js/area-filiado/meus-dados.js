@@ -357,11 +357,10 @@
                         </div>
                         <div class="field-group">
                             <label>Sexo</label>
-                            <select id="me-sexo" disabled style="background:#f8f9fa;">
-                                <option value="" ${!dados.sexo ? "selected" : ""}>-</option>
-                                <option value="M" ${dados.sexo === "M" ? "selected" : ""}>♂️ Masculino</option>
-                                <option value="F" ${dados.sexo === "F" ? "selected" : ""}>♀️ Feminino</option>
-                            </select>
+                            <div style="padding: 10px; border: 1px solid #eee; border-radius: 6px; background-color: #f8f9fa; color: #666; font-size: 1rem; cursor: not-allowed;">
+                                ${dados.sexo === 'M' ? '♂️ Masculino' : (dados.sexo === 'F' ? '♀️ Feminino' : '—')}
+                                <input type="hidden" id="me-sexo" value="${dados.sexo || ''}" />
+                            </div>
                         </div>
                     </div>
                     <div class="field-row">

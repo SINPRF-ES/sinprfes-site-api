@@ -5,6 +5,7 @@
     if (global.Relatorios) return;
 
     let historyCache = [];
+    let showFullHistory = false;
 
     function inicializarRelatorios(perfil) {
         console.log("Relatorios: Inicializando para perfil:", perfil);
@@ -155,29 +156,63 @@
         }
 
         const tipoLabels = {
-            INDIVIDUAL: "Dossiê Individual",
-            LOTACAO: "Por Lotação",
-            SITUACAO: "Por Situação",
-            GLOBAL: "Global (Completo)"
+            INDIVIDUAL: "👤 Dossiê Individual",
+            LOTACAO: "📍 Por Lotação",
+            SITUACAO: "📑 Por Situação",
+            GLOBAL: "🌏 Global (Completo)"
         };
 
-        container.innerHTML = historyCache.map(h => {
-            const data = new Date(h.created_at).toLocaleString('pt-BR');
-            const params = typeof h.params === 'string' ? JSON.parse(h.params) : h.params;
-            const valor = params.value || params.filiadoId || "-";
+        const listToRender = showFullHistory ? historyCache : historyCache.slice(0, 5);
 
-            return `
-                <div class="history-item" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom: 4px;">
-                        <strong>${tipoLabels[h.report_type] || h.report_type}</strong>
-                        <span style="color:var(--texto-fraco); font-size:0.8rem;">${data}</span>
-                    </div>
-                    <div style="font-size:0.85rem; color:var(--cinza);">
-                        Parâmetro: <span style="color:var(--amarelo);">${valor}</span> | Solicitante: ${h.requester_name}
-                    </div>
+        let html = `
+            <div class="history-list">
+                ${listToRender.map(h => {
+                    const data = new Date(h.created_at).toLocaleString('pt-BR');
+                    const params = typeof h.params === 'string' ? JSON.parse(h.params) : h.params;
+
+                    // Prioriza o nome resolvido (A1)
+                    const labelParam = h.report_type === 'INDIVIDUAL' ? 'Filiado' : 'Parâmetro';
+                    const valor = params.filiadoNome || params.paramDisplay || params.value || params.filiadoId || "-";
+
+                    return `
+                        <div class="history-card">
+                            <div class="history-header">
+                                <strong style="color:var(--azul-card);">${tipoLabels[h.report_type] || h.report_type}</strong>
+                                <span class="history-date">${data}</span>
+                            </div>
+                            <div style="font-size:0.85rem; color:#555; margin-top:8px;">
+                                ${labelParam}: <span style="color:var(--azul-fundo); font-weight:600;">${valor}</span>
+                            </div>
+                            <div style="font-size:0.85rem; color:#777; margin-top:4px;">
+                                Solicitante: ${h.requester_name}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        if (!showFullHistory && historyCache.length > 5) {
+            html += `
+                <div style="text-align: center; margin-top: 15px;">
+                    <button id="btn-show-full-history" class="btn btn-outline btn-sm" style="color:var(--azul-fundo); border-color:var(--azul-fundo);">Exibir anteriores</button>
                 </div>
             `;
-        }).join('');
+        } else if (showFullHistory) {
+            html += `
+                <div style="text-align: center; margin-top: 15px;">
+                    <button id="btn-hide-full-history" class="btn btn-outline btn-sm" style="color:var(--azul-fundo); border-color:var(--azul-fundo);">Ver apenas recentes</button>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+
+        const btnShow = document.getElementById('btn-show-full-history');
+        if (btnShow) btnShow.onclick = () => { showFullHistory = true; renderizarHistorico(container); };
+
+        const btnHide = document.getElementById('btn-hide-full-history');
+        if (btnHide) btnHide.onclick = () => { showFullHistory = false; renderizarHistorico(container); };
     }
 
     global.Relatorios = {

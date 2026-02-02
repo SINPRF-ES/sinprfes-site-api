@@ -75,6 +75,10 @@ exports.generateReport = async (req, res) => {
       const dados = await reportsService.buscarDadosDossie(filiadoId);
       if (!dados) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
 
+      // Resolver nome para exibição no histórico (A1)
+      params.filiadoNome = dados.nome;
+      params.paramDisplay = dados.nome; // Campo redundante para robustez
+
       reportTitle = `Dossiê do Filiado - ${dados.nome}`;
 
       const slug = gerarSlugNome(dados.nome);
@@ -140,6 +144,24 @@ exports.getHistory = async (req, res) => {
 
     // ADMIN vê tudo, outros vêem apenas o próprio histórico por padrão (ajustável conforme UX)
     const history = await reportsService.listarHistorico(perfil === "ADMIN" ? null : requesterId);
+
+    // Resolver nomes para relatórios individuais (A1 - Retrocompatibilidade e Robustez)
+    for (const item of history) {
+      if (item.report_type === 'INDIVIDUAL') {
+        const p = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
+        if (!p.filiadoNome && p.filiadoId) {
+          try {
+            const filiado = await filiadosService.buscarPorId(p.filiadoId);
+            if (filiado) {
+              p.filiadoNome = filiado.nome;
+              item.params = p; // Atualiza o objeto para a resposta
+            }
+          } catch (e) {
+            log.error("ErroAoResolverNomeNoHistorico", { id: p.filiadoId });
+          }
+        }
+      }
+    }
 
     return res.json(history);
   } catch (err) {
