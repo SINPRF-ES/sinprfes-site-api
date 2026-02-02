@@ -22,6 +22,38 @@ const QR_BASE_URL =
 // Utilitários
 // ------------------------------------------------------------------
 
+/**
+ * Renderiza blocos de Sexo e Faixa Etária.
+ */
+function drawDistribuicoes(doc, dados, options = {}) {
+    const { isVeterano = false, isPensionista = false } = options;
+
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:");
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Masculino: ${dados.masc}`);
+    doc.text(`Feminino: ${dados.fem}`);
+    doc.moveDown(1);
+
+    if (!isPensionista) {
+        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:");
+        doc.font("Helvetica").fontSize(11);
+        if (isVeterano) {
+            doc.text(`50-59 anos: ${dados.range_50_59}`);
+            doc.text(`60-69 anos: ${dados.range_60_69}`);
+            doc.text(`70-79 anos: ${dados.range_70_79}`);
+            doc.text(`80+ anos: ${dados.range_80_plus}`);
+        } else {
+            doc.text(`20-29 anos: ${dados.range_20_29}`);
+            doc.text(`30-39 anos: ${dados.range_30_39}`);
+            doc.text(`40-49 anos: ${dados.range_40_49}`);
+            doc.text(`50-59 anos: ${dados.range_50_59}`);
+            doc.text(`60+ anos: ${dados.range_60_plus}`);
+        }
+        doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`);
+        doc.moveDown(1);
+    }
+}
+
 function linha(doc) {
   doc
     .moveTo(doc.page.margins.left, doc.y)
@@ -866,51 +898,152 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
     if (dados.repasse) {
         doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Lotação");
         doc.moveDown(0.5);
-        doc.font("Helvetica").fontSize(11);
 
         const r = dados.repasse;
         const comp = r.competencia
             ? `${mesesPtBr[r.competencia.month - 1]}/${r.competencia.year}`
             : "—";
-
-        if (r.prfTotal === null) {
-            doc.text(`Dados de Repasse: não informados`);
-            doc.text(`Base do efetivo: —`);
-        } else {
-            doc.text(`Efetivo total (Repasse): ${r.prfTotal}`);
-            doc.text(`Filiados cadastrados: ${r.filiadosAtivos}`);
-            doc.text(`Índice de sindicalização: ${r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—"}`);
-            doc.text(`Base do efetivo (Repasse): ${comp}`);
-        }
-
         const hoje = new Date();
         const dataHoje = `${mesesPtBr[hoje.getMonth()]}/${hoje.getFullYear()}`;
-        doc.text(`Relatório gerado em: ${dataHoje}`);
 
-        doc.moveDown(1);
+        const rows = [
+            ["Efetivo total", r.prfTotal !== null ? String(r.prfTotal) : "Não informado", "number"],
+            ["Filiados cadastrados", r.filiadosAtivos !== null ? String(r.filiadosAtivos) : "—", "number"],
+            ["Índice de sindicalização", r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—", "number"],
+            ["Base do efetivo", comp, "text"],
+            ["Relatório gerado em", dataHoje, "text"]
+        ];
+
+        const startX = doc.x;
+        const startY = doc.y;
+        const col1Width = 273; // 60% of 455
+        const col2Width = 182; // 40% of 455
+        const rowHeight = 25;
+
+        rows.forEach((row, i) => {
+            const y = startY + (i * rowHeight);
+
+            doc.lineWidth(0.5).strokeColor("#333333");
+            doc.rect(startX, y, col1Width, rowHeight).stroke();
+            doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
+
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+            if (row[2] === "number") {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                    width: col2Width - 10,
+                    align: "right"
+                });
+            } else {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+            }
+        });
+
+        doc.y = startY + (rows.length * rowHeight) + 15;
         linha(doc);
     }
 
-    doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
-    doc.moveDown(0.5);
-    doc.font("Helvetica").fontSize(12);
-    doc.text(`Total de servidores: ${dados.total}`);
-    doc.moveDown(1);
+    if (!dados.repasse && !dados.repasseBreakdown) {
+        doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
+        doc.moveDown(0.5);
+        doc.font("Helvetica").fontSize(12);
+        doc.text(`Total de filiados: ${dados.total}`);
+        doc.moveDown(1);
+    } else if (dados.repasseBreakdown) {
+        // ESPECIAL: Relatório por Situação ATIVO com visão global do Repasse
+        doc.font("Helvetica-Bold").fontSize(14).text("Resumo Global do Efetivo (Ativos)");
+        doc.moveDown(0.5);
 
-    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:");
-    doc.font("Helvetica").fontSize(11);
-    doc.text(`Masculino: ${dados.masc}`);
-    doc.text(`Feminino: ${dados.fem}`);
-    doc.moveDown(1);
+        const totalPrf = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.prfTotal || 0), 0);
+        const totalFiliadosAtivos = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.filiadosAtivos || 0), 0);
+        const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
 
-    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:");
-    doc.font("Helvetica").fontSize(11);
-    doc.text(`20-29 anos: ${dados.range_20_29}`);
-    doc.text(`30-39 anos: ${dados.range_30_39}`);
-    doc.text(`40-49 anos: ${dados.range_40_49}`);
-    doc.text(`50-59 anos: ${dados.range_50_59}`);
-    doc.text(`60+ anos: ${dados.range_60_plus}`);
-    doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`);
+        const rowsGlobal = [
+            ["Efetivo total", totalPrf.toString(), "number"],
+            ["Filiados cadastrados", totalFiliadosAtivos.toString(), "number"],
+            ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%", "number"],
+            ["Base do efetivo", "Dados mais recentes por lotação (ver tabela abaixo)", "text"]
+        ];
+
+        let startX = doc.x;
+        let startY = doc.y;
+        let col1Width = 273;
+        let col2Width = 182;
+        let rowHeight = 25;
+
+        rowsGlobal.forEach((row, i) => {
+            const y = startY + (i * rowHeight);
+            doc.lineWidth(0.5).strokeColor("#333333");
+            doc.rect(startX, y, col1Width, rowHeight).stroke();
+            doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+            if (row[2] === "number") {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                    width: col2Width - 10,
+                    align: "right"
+                });
+            } else {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+            }
+        });
+
+        doc.y = startY + (rowsGlobal.length * rowHeight) + 20;
+
+        // Tabela por Lotação
+        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Efetivo PRF)");
+        doc.moveDown(0.5);
+
+        const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
+        const colWidths = [165, 60, 60, 60, 110];
+        startX = doc.x;
+        startY = doc.y;
+        rowHeight = 22;
+
+        const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+        // Header
+        headers.forEach((h, i) => {
+            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+            doc.rect(x, startY, colWidths[i], rowHeight).fillAndStroke("#eeeeee", "#333333");
+            doc.fillColor("#000").font("Helvetica-Bold").fontSize(8).text(h, x + 5, startY + 7);
+        });
+
+        startY += rowHeight;
+        doc.font("Helvetica").fontSize(8);
+
+        dados.repasseBreakdown.forEach((r, idx) => {
+            const y = startY + (idx * rowHeight);
+            const comp = r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—";
+            const rowData = [
+                r.lotacao,
+                r.prfTotal !== null ? String(r.prfTotal) : "—",
+                String(r.filiadosAtivos),
+                r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
+                comp
+            ];
+
+            rowData.forEach((text, i) => {
+                const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+                doc.lineWidth(0.5).strokeColor("#333333");
+                doc.rect(x, y, colWidths[i], rowHeight).stroke();
+
+                let alignment = "left";
+                if (i >= 1 && i <= 3) alignment = "right";
+
+                if (alignment === "right") {
+                    doc.text(text, x, y + 7, { width: colWidths[i] - 5, align: "right" });
+                } else {
+                    doc.text(text, x + 5, y + 7);
+                }
+            });
+        });
+
+        doc.y = startY + (dados.repasseBreakdown.length * rowHeight) + 20;
+        linha(doc);
+    }
+
+    drawDistribuicoes(doc, dados);
 
     doc.end();
   });
@@ -921,10 +1054,161 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
   });
 }
 
+/**
+ * PDF: RELATÓRIO GLOBAL (Completo)
+ */
+async function gerarPdfRelatorioGlobal(dados) {
+  const codigo = gerarCodigoVerificacao(dados, "GLOBAL");
+
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    const mesesPtBr = [
+      "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+      "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+    ];
+
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 140, bottom: 70, left: 70, right: 70 },
+    });
+
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.moveDown(2);
+    doc.font("Helvetica-Bold").fontSize(18).text("Relatório Global SINPRF/ES", { align: "center" });
+    doc.moveDown(1);
+
+    // -------------------------------------------------------------------------
+    // SEÇÃO 1: ATIVO
+    // -------------------------------------------------------------------------
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. FILIADOS ATIVOS");
+    doc.fillColor("#000").moveDown(0.5);
+
+    const a = dados.ativo;
+    const totalPrf = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.prfTotal || 0), 0);
+    const totalFiliadosAtivos = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.filiadosAtivos || 0), 0);
+    const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
+
+    const rowsAtivo = [
+        ["Efetivo total (PRF)", totalPrf.toString(), "number"],
+        ["Filiados ativos", totalFiliadosAtivos.toString(), "number"],
+        ["Índice de sindicalização global", percentualGlobal.toFixed(2) + "%", "number"]
+    ];
+
+    let startX = doc.x;
+    let startY = doc.y;
+    let col1Width = 273;
+    let col2Width = 182;
+    let rowHeight = 25;
+
+    rowsAtivo.forEach((row, i) => {
+        const y = startY + (i * rowHeight);
+        doc.lineWidth(0.5).strokeColor("#333333");
+        doc.rect(startX, y, col1Width, rowHeight).stroke();
+        doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
+        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+        if (row[2] === "number") {
+            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                width: col2Width - 10,
+                align: "right"
+            });
+        } else {
+            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+        }
+    });
+
+    doc.y = startY + (rowsAtivo.length * rowHeight) + 15;
+
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Ativos)");
+    doc.moveDown(0.5);
+
+    const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
+    const colWidths = [165, 60, 60, 60, 110];
+    startX = doc.x;
+    startY = doc.y;
+    rowHeight = 22;
+
+    const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+    headers.forEach((h, i) => {
+        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+        doc.rect(x, startY, colWidths[i], rowHeight).fillAndStroke("#eeeeee", "#333333");
+        doc.fillColor("#000").font("Helvetica-Bold").fontSize(8).text(h, x + 5, startY + 7);
+    });
+
+    startY += rowHeight;
+    doc.font("Helvetica").fontSize(8);
+    a.repasseBreakdown.forEach((r, idx) => {
+        const y = startY + (idx * rowHeight);
+        const comp = r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—";
+        const rowData = [
+            r.lotacao,
+            r.prfTotal !== null ? String(r.prfTotal) : "—",
+            String(r.filiadosAtivos),
+            r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
+            comp
+        ];
+        rowData.forEach((text, i) => {
+            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+            doc.lineWidth(0.5).strokeColor("#333333").rect(x, y, colWidths[i], rowHeight).stroke();
+
+            let alignment = "left";
+            if (i >= 1 && i <= 3) alignment = "right";
+
+            if (alignment === "right") {
+                doc.text(text, x, y + 7, { width: colWidths[i] - 5, align: "right" });
+            } else {
+                doc.text(text, x + 5, y + 7);
+            }
+        });
+    });
+
+    doc.y = startY + (a.repasseBreakdown.length * rowHeight) + 15;
+    drawDistribuicoes(doc, a);
+
+    doc.addPage();
+    doc.moveDown(2);
+
+    // -------------------------------------------------------------------------
+    // SEÇÃO 2: VETERANO
+    // -------------------------------------------------------------------------
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("2. VETERANOS");
+    doc.fillColor("#000").moveDown(0.5);
+
+    const v = dados.veterano;
+    doc.font("Helvetica").fontSize(11).text(`Total de veteranos cadastrados: ${v.total}`);
+    doc.moveDown(1);
+    drawDistribuicoes(doc, v, { isVeterano: true });
+    doc.moveDown(1);
+
+    // -------------------------------------------------------------------------
+    // SEÇÃO 3: PENSIONISTA
+    // -------------------------------------------------------------------------
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("3. PENSIONISTAS");
+    doc.fillColor("#000").moveDown(0.5);
+
+    const p = dados.pensionista;
+    doc.font("Helvetica").fontSize(11).text(`Total de pensionistas cadastrados: ${p.total}`);
+    doc.moveDown(1);
+    drawDistribuicoes(doc, p, { isPensionista: true });
+
+    doc.end();
+  });
+
+  return await aplicarLayoutInstitucional(pdfBuffer, {
+    codigoVerificacao: codigo,
+    tipoDocumento: "Relatório Global",
+  });
+}
+
 module.exports = {
   gerarPdfFichaFiliacao,
   gerarPdfRessarcimento,
   gerarPdfRelatorioAssembleia,
   gerarPdfDossieFiliado,
-  gerarPdfRelatorioAgregado
+  gerarPdfRelatorioAgregado,
+  gerarPdfRelatorioGlobal
 };

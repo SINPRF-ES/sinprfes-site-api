@@ -12,10 +12,10 @@ Este módulo permite a geração de documentos estruturados em PDF com base nos 
 **Corpo da Requisição:**
 ```json
 {
-  "type": "INDIVIDUAL | LOTACAO | SITUACAO",
+  "type": "INDIVIDUAL | LOTACAO | SITUACAO | GLOBAL",
   "params": {
     "filiadoId": 123, // Obrigatório se type for INDIVIDUAL
-    "value": "SEDE | ATIVO | ..." // Obrigatório se type for LOTACAO ou SITUACAO
+    "value": "SEDE | ATIVO | ..." // Obrigatório se type for LOTACAO ou SITUACAO. Ignorado para GLOBAL.
   }
 }
 ```
@@ -28,13 +28,14 @@ Este módulo permite a geração de documentos estruturados em PDF com base nos 
     *   Se nenhum e-mail for encontrado, o PDF é enviado **apenas** para o sindicato com o prefixo `[SOLICITANTE SEM EMAIL]` no assunto.
 - **Formatação de Datas:** Todas as datas no PDF (nascimento do filiado e nascimento dos dependentes) são exibidas no formato brasileiro `dd/MM/yyyy` (ex: 04/07/1987). Caso a data não esteja informada no banco, o PDF exibirá explicitamente `Não informada`.
 - **Labels de Dependentes:** Os tipos de parentesco (vínculo) dos dependentes não são exibidos como códigos do banco (ex: `FILHO_ENTEADO`), mas com seus nomes humanizados (ex: "Filha(o) / Enteada(o)"). Valores desconhecidos são convertidos de snake_case para Title Case.
-- **Integração com Repasse (Lotação):** O relatório por lotação consome dados diretamente do módulo de Repasse.
-    - O Repasse é a **fonte da verdade** para os índices de sindicalização.
-    - O PDF exibe um bloco de "Resumo da Lotação" com: Efetivo total (Repasse), Filiados cadastrados, Índice de sindicalização e a Competência (mês/ano) base do dado de Repasse.
-    - O sistema utiliza o dado mais recente disponível no Repasse para a lotação selecionada.
+- **Integração com Repasse:** O Repasse é a **fonte da verdade** para os índices de sindicalização e efetivo total.
+    - **Relatório por Lotação:** Exibe um bloco de "Resumo da Lotação" em formato de tabela com: Efetivo total, Filiados cadastrados, Índice de sindicalização e a Competência (mês/ano) base.
+    - **Relatório por Situação (ATIVO):** Exibe um resumo global do efetivo (soma de todas as lotações do Repasse) e uma tabela detalhada por lotação com os índices individuais e meses de referência.
+    - **Relatório Global:** Incorpora a visão do Repasse na seção de Ativos.
 - **Nomenclatura de Arquivos (Filename):**
     *   Dossiês: `dossie_<nome-do-filiado-slug>.pdf` (ex: `dossie_joao_da_silva.pdf`). O slug remove acentos, caracteres especiais e substitui espaços por sublinhados.
     *   Relatórios Agregados: `relatorio_<tipo>_<valor>.pdf`.
+    *   Relatório Global: `relatorio_global_<data>.pdf`.
 - **Auditoria:** Toda solicitação bem-sucedida é registrada na tabela `report_jobs` com o ID e nome do solicitante, tipo de relatório e parâmetros utilizados.
 - **Cópia Sindicato:** Uma cópia oculta (BCC) é sempre enviada para o e-mail configurado em `REPORTS_COPY_EMAIL`.
 
@@ -54,4 +55,7 @@ Retorna uma lista dos últimos 50 relatórios gerados. Perfis `ADMIN` visualizam
 
 - A idade é calculada em tempo de execução com base no campo `data_nascimento`.
 - **Idade Desconhecida:** Registros sem data de nascimento cadastrada são contabilizados separadamente e exibidos como "desconhecida" nos relatórios agregados.
-- **Faixas Etárias:** 20-29, 30-39, 40-49, 50-59, 60+ anos.
+- **Faixas Etárias:**
+    - **Ativos:** 20-29, 30-39, 40-49, 50-59, 60+ anos.
+    - **Veteranos:** 50-59, 60-69, 70-79, 80+ anos.
+    - **Pensionistas:** Não exibido (apenas distribuição por sexo).

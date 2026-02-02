@@ -38,20 +38,41 @@ function formatarTelefone(tel) {
 }
 
 /**
- * Formata data ISO (AAAA-MM-DD) para PT-BR (DD/MM/AAAA)
+ * Formata data ISO (AAAA-MM-DD) ou objeto Date para PT-BR (DD/MM/AAAA).
+ * Garante tratamento robusto para evitar strings crude do sistema.
  */
-function formatarDataBR(dataStr) {
-  if (!dataStr) return "";
-  const s = dataStr.toString().trim();
-  // Se já estiver no formato DD/MM/AAAA, retorna como está
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+function formatarDataBR(data) {
+  if (!data) return "";
 
-  // Se for ISO ou similar (YYYY-MM-DD...)
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    const [y, m, d] = s.split("T")[0].split("-");
-    return `${d}/${m}/${y}`;
+  let d;
+  if (data instanceof Date) {
+    d = data;
+  } else {
+    const s = data.toString().trim();
+
+    // Se já estiver no formato DD/MM/AAAA, retorna como está
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+    // Se for ISO ou similar (YYYY-MM-DD...)
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      const [y, m, dayPart] = s.split("T")[0].split("-");
+      return `${dayPart}/${m}/${y}`;
+    }
+
+    d = new Date(data);
   }
-  return dataStr;
+
+  // Fallback se não for uma data válida
+  if (isNaN(d.getTime())) {
+    return data && typeof data === 'string' ? data : "";
+  }
+
+  // Usamos os métodos UTC para evitar problemas de fuso horário em datas de nascimento
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const year = d.getUTCFullYear();
+
+  return `${day}/${month}/${year}`;
 }
 
 /**

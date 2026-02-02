@@ -12,7 +12,9 @@ import {
   RefreshControl,
   Modal,
   Dimensions,
+  Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Picker } from '@react-native-picker/picker';
 import * as Canon from '../utils/canon';
 import { maskCPF } from '../utils/masks';
@@ -96,6 +98,8 @@ export default function RelatoriosScreen() {
         return;
       }
       params.filiadoId = targetValue.id;
+    } else if (reportType === 'GLOBAL') {
+      // Sem filtro obrigatório
     } else {
       if (!targetValue) {
         Alert.alert('Erro', 'Selecione um valor para o filtro.');
@@ -133,7 +137,8 @@ export default function RelatoriosScreen() {
     const typeLabels: any = {
       INDIVIDUAL: "👤 Dossiê Individual",
       LOTACAO: "📍 Por Lotação",
-      SITUACAO: "📑 Por Situação"
+      SITUACAO: "📑 Por Situação",
+      GLOBAL: "🌏 Global (Completo)"
     };
 
     const params = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
@@ -160,6 +165,13 @@ export default function RelatoriosScreen() {
         onRequestClose={() => setIsPickerVisible(false)}
       >
         <View style={styles.modalOverlay}>
+          <KeyboardAwareScrollView
+            enableOnAndroid
+            extraScrollHeight={50}
+            keyboardOpeningTime={0}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+            style={{ width: '100%' }}
+          >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Buscar Filiado</Text>
@@ -179,29 +191,33 @@ export default function RelatoriosScreen() {
             {isSearching ? (
               <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} />
             ) : (
-              <FlatList
-                data={filiadosBusca}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
-                      setIsPickerVisible(false);
-                    }}
-                  >
-                    <View>
-                      <Text style={styles.modalItemName}>{item.nome}</Text>
-                      <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={() => (
-                  <Text style={styles.modalEmptyText}>Nenhum filiado encontrado.</Text>
-                )}
-              />
+              <View style={{ maxHeight: 300 }}>
+                <FlatList
+                  data={filiadosBusca}
+                  keyExtractor={(item) => String(item.id)}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.modalItem}
+                      onPress={() => {
+                        setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
+                        setIsPickerVisible(false);
+                      }}
+                    >
+                      <View>
+                        <Text style={styles.modalItemName}>{item.nome}</Text>
+                        <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={() => (
+                    <Text style={styles.modalEmptyText}>Nenhum filiado encontrado.</Text>
+                  )}
+                />
+              </View>
             )}
           </View>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 
@@ -226,8 +242,9 @@ export default function RelatoriosScreen() {
                 mode="dropdown"
             >
                 <Picker.Item label="👤 Dossiê do Filiado (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="📍 Por Lotação (Consome Repasse)" value="LOTACAO" />
+                <Picker.Item label="📍 Por Lotação" value="LOTACAO" />
                 <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
+                <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
             </Picker>
           </View>
 
