@@ -54,7 +54,8 @@ exports.generateReport = async (req, res) => {
   const { type, params } = req.body;
   const requesterSession = req.user;
 
-  if (!type || !params) {
+  // Validação do contrato da API
+  if (!type || typeof params !== 'object' || params === null) {
     return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios." });
   }
 
@@ -67,11 +68,12 @@ exports.generateReport = async (req, res) => {
     const requester = await getRequesterData(requesterSession);
 
     if (type === "INDIVIDUAL") {
+      // Contrato: INDIVIDUAL => { filiadoId }
       const { filiadoId } = params;
-      if (!filiadoId) return res.status(400).json({ message: "ID do filiado é obrigatório." });
+      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório para relatório individual." });
 
       const dados = await reportsService.buscarDadosDossie(filiadoId);
-      if (!dados) return res.status(404).json({ message: "Filiado não encontrado." });
+      if (!dados) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
 
       reportTitle = `Dossiê do Filiado - ${dados.nome}`;
 
@@ -83,8 +85,9 @@ exports.generateReport = async (req, res) => {
       pdfBuffer = await pdfService.gerarPdfDossieFiliado(dados, { podeVerCpf });
 
     } else if (["LOTACAO", "SITUACAO"].includes(type)) {
+      // Contrato: LOTACAO/SITUACAO => { value }
       const { value } = params;
-      if (!value) return res.status(400).json({ message: "Valor do filtro é obrigatório." });
+      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório." });
 
       const dados = await reportsService.buscarDadosAgregados(type, value);
 
@@ -98,6 +101,7 @@ exports.generateReport = async (req, res) => {
       pdfBuffer = await pdfService.gerarPdfRelatorioAgregado(dados, reportTitle);
 
     } else if (type === "GLOBAL") {
+      // Contrato: GLOBAL => {}
       const dados = await reportsService.buscarDadosGlobal();
       reportTitle = "Relatório Global (Completo)";
       filename = `relatorio_global_${new Date().toISOString().split('T')[0]}.pdf`;
