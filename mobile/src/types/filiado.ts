@@ -3,7 +3,9 @@
 export interface Filiado {
   id: string; // UUID
   nome: string;
+  sexo?: 'M' | 'F' | null;
   cpf: string;
+  siape?: string | null;
   perfil_acesso: string;
   situacao: string;
   situacao_funcional?: string; // Algumas rotas devolvem situacao_funcional

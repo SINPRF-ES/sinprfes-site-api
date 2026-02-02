@@ -329,8 +329,22 @@
                             <input name="nome" value="${f.nome || ""}" required>
                         </div>
                         <div class="field-group">
+                            <label>Sexo</label>
+                            <select name="sexo" ${ehGestao ? "" : "disabled"}>
+                                <option value="" ${!f.sexo ? "selected" : ""}>-</option>
+                                <option value="M" ${f.sexo === "M" ? "selected" : ""}>♂️ Masculino</option>
+                                <option value="F" ${f.sexo === "F" ? "selected" : ""}>♀️ Feminino</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
                             <label>CPF</label>
                             <input name="cpf" value="${f.cpf || ""}" ${ehGestao ? "" : "readonly"}>
+                        </div>
+                        <div class="field-group">
+                            <label>Matrícula (SIAPE)</label>
+                            <input name="siape" value="${f.siape || ""}" placeholder="6 ou 7 dígitos" maxlength="7" ${ehGestao ? "" : "readonly"}>
                         </div>
                     </div>
                     <div class="field-row">
@@ -758,8 +772,20 @@
                             <input name="nome" required>
                         </div>
                         <div class="edit-group">
+                            <label>Sexo</label>
+                            <select name="sexo">
+                                <option value="" selected>-</option>
+                                <option value="M">♂️ Masculino</option>
+                                <option value="F">♀️ Feminino</option>
+                            </select>
+                        </div>
+                        <div class="edit-group">
                             <label>CPF *</label>
                             <input name="cpf" required placeholder="000.000.000-00">
+                        </div>
+                        <div class="edit-group">
+                            <label>Matrícula (SIAPE)</label>
+                            <input name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
                         </div>
                         <div class="edit-group">
                             <label>Email *</label>
@@ -772,9 +798,6 @@
                         <div class="edit-group">
                             <label>Data Nascimento</label>
                             <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
-                        </div>
-                        <div class="edit-group">
-                            <!-- spacer -->
                         </div>
 
                         <div class="address-grid span-2">

@@ -22,6 +22,7 @@ const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
 const {
   normalizeSituacaoFuncional,
+  normalizeSexo,
   normalizePerfil,
   normalizeLotacao
 } = require("../../shared/canon");
@@ -335,6 +336,20 @@ exports.atualizarFiliado = async (req, res) => {
 
     const body = req.body || {};
 
+    if (body.siape) {
+      const siapeLimpo = String(body.siape).replace(/\D/g, "");
+      if (siapeLimpo && (siapeLimpo.length < 6 || siapeLimpo.length > 7)) {
+        return res.status(400).json({ message: "Matrícula (SIAPE) deve ter 6 ou 7 dígitos." });
+      }
+    }
+
+    if (body.sexo) {
+      const sexoNorm = normalizeSexo(body.sexo);
+      if (body.sexo && !sexoNorm) {
+        return res.status(400).json({ message: "Sexo inválido. Use M ou F." });
+      }
+    }
+
     if (body.cpf) {
       const cpfLimpo = normalizarCpf(body.cpf);
       if (cpfLimpo.length !== 11) {
@@ -363,7 +378,9 @@ exports.atualizarFiliado = async (req, res) => {
 
     const payload = {
       nome: body.nome,
+      sexo: body.sexo ? normalizeSexo(body.sexo) : undefined,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
+      siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : undefined,
       data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
@@ -459,6 +476,20 @@ exports.criarFiliado = async (req, res) => {
       return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS });
     }
 
+    if (body.siape) {
+      const siapeLimpo = String(body.siape).replace(/\D/g, "");
+      if (siapeLimpo && (siapeLimpo.length < 6 || siapeLimpo.length > 7)) {
+        return res.status(400).json({ message: "Matrícula (SIAPE) deve ter 6 ou 7 dígitos." });
+      }
+    }
+
+    if (body.sexo) {
+      const sexoNorm = normalizeSexo(body.sexo);
+      if (body.sexo && !sexoNorm) {
+        return res.status(400).json({ message: "Sexo inválido. Use M ou F." });
+      }
+    }
+
     const cpfLimpo = normalizarCpf(body.cpf);
     if (cpfLimpo.length !== 11) {
       return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
@@ -482,7 +513,9 @@ exports.criarFiliado = async (req, res) => {
 
     const dadosNovo = {
       nome: String(body.nome).trim(),
+      sexo: body.sexo ? normalizeSexo(body.sexo) : null,
       cpf: cpfLimpo,
+      siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
       data_nascimento: normalizeDateField(body.data_nascimento),
       telefone1: body.telefone1 || null,
       telefone2: body.telefone2 || null,

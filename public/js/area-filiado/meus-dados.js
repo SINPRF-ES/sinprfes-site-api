@@ -352,25 +352,46 @@
                     <h3>👤 Informações Pessoais</h3>
                     <div class="field-row">
                         <div class="field-group">
-                            <label>CPF</label>
-                            <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
+                            <label>Nome</label>
+                            <input type="text" value="${nome || ""}" readonly />
                         </div>
                         <div class="field-group">
-                            <label>Data de Nascimento</label>
-                            <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
+                            <label>Sexo</label>
+                            <select id="me-sexo" disabled style="background:#f8f9fa;">
+                                <option value="" ${!dados.sexo ? "selected" : ""}>-</option>
+                                <option value="M" ${dados.sexo === "M" ? "selected" : ""}>♂️ Masculino</option>
+                                <option value="F" ${dados.sexo === "F" ? "selected" : ""}>♀️ Feminino</option>
+                            </select>
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
+                            <label>CPF</label>
+                            <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
+                        </div>
+                        <div class="field-group">
+                            <label>Matrícula (SIAPE)</label>
+                            <input type="text" id="me-siape" value="${dados.siape || "-"}" readonly />
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Data de Nascimento</label>
+                            <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
+                        </div>
+                        <div class="field-group">
                             <label>Idade</label>
                             <input type="text" value="${idadeTxt}" readonly />
                         </div>
+                    </div>
+                    <div class="field-row">
                         <div class="field-group">
                             <label>Lotação</label>
                             <select id="me-lotacao">
                                 ${opcoes}
                             </select>
                         </div>
+                        <div class="field-group"></div>
                     </div>
                 </div>
 
@@ -657,6 +678,8 @@
             const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
 
             // Adiciona campos que não estão no form ou precisam de normalização
+            payload.sexo = document.getElementById("me-sexo").value;
+            payload.siape = document.getElementById("me-siape").value;
             payload.telefone1 = onlyDigitsFn(document.getElementById("me-telefone1").value);
             payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
             payload.email1 = document.getElementById("me-email1").value;

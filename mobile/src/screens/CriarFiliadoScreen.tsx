@@ -19,7 +19,9 @@ import { normalizeNome } from '../utils/canon';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',
+  sexo: null,
   cpf: '',
+  siape: '',
   email1: '',
   email2: '',
   telefone1: '',
@@ -92,7 +94,9 @@ export default function CriarFiliadoScreen({ navigation }: any) {
 
       // Normalização
       if (payload.nome) payload.nome = normalizeNome(payload.nome);
+      if (payload.sexo === '') payload.sexo = null;
       payload.cpf = onlyDigits(payload.cpf);
+      if (payload.siape) payload.siape = onlyDigits(payload.siape).slice(0, 7);
       payload.telefone1 = onlyDigits(payload.telefone1);
       payload.telefone2 = onlyDigits(payload.telefone2);
       payload.cep = onlyDigits(payload.cep);
