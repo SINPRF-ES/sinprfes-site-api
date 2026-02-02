@@ -223,10 +223,11 @@ export default function RelatoriosScreen() {
                   else setTargetValue(null);
                 }}
                 style={styles.picker}
+                mode="dropdown"
             >
-                <Picker.Item label="Dossiê do Filiado (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="Por Lotação" value="LOTACAO" />
-                <Picker.Item label="Por Situação Funcional" value="SITUACAO" />
+                <Picker.Item label="👤 Dossiê do Filiado (Individual)" value="INDIVIDUAL" />
+                <Picker.Item label="📍 Por Lotação (Consome Repasse)" value="LOTACAO" />
+                <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
             </Picker>
           </View>
 
@@ -313,12 +314,18 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, color: '#666', marginBottom: 8, fontWeight: 'bold' },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    marginBottom: 16,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginBottom: 20,
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  picker: { height: 50 },
+  picker: {
+    height: 55,
+    width: '100%',
+    color: '#333',
+  },
   pickerButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -333,11 +340,16 @@ const styles = StyleSheet.create({
   pickerButtonText: { fontSize: 14, color: '#333' },
   button: {
     backgroundColor: '#003366',
-    height: 50,
-    borderRadius: 8,
+    height: 56, // Larger touch area
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
+    shadowColor: '#003366',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
   buttonDisabled: { backgroundColor: '#cccccc' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
@@ -345,11 +357,16 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12 },
   historyCard: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-    borderLeftWidth: 4,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 6,
     borderLeftColor: '#003366',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   historyType: { fontSize: 14, fontWeight: 'bold', color: '#003366' },
