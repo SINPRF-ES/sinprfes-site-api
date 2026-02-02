@@ -164,6 +164,11 @@ async function atualizarDadosProprios(id, dados) {
   };
   
   // Campos existentes
+  addCampo("sexo", normalizeSexo(dados.sexo));
+  if (dados.siape !== undefined) {
+    addCampo("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
+  }
+
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
   addCampo("email1", dados.email1);
