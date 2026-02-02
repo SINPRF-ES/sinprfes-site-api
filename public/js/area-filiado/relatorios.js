@@ -172,7 +172,7 @@
 
                     // Prioriza o nome resolvido (A1)
                     const labelParam = h.report_type === 'INDIVIDUAL' ? 'Filiado' : 'Parâmetro';
-                    const valor = params.filiadoNome || params.value || params.filiadoId || "-";
+                    const valor = params.filiadoNome || params.paramDisplay || params.value || params.filiadoId || "-";
 
                     return `
                         <div class="history-card">

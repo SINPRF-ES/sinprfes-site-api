@@ -160,7 +160,7 @@ export default function RelatoriosScreen() {
 
     // Prioriza o nome resolvido (A1)
     const labelParam = item.report_type === 'INDIVIDUAL' ? 'Filiado' : 'Parâmetro';
-    const value = params.filiadoNome || params.value || params.filiadoId || "-";
+    const value = params.filiadoNome || params.paramDisplay || params.value || params.filiadoId || "-";
 
     return (
       <View style={styles.historyCard}>
