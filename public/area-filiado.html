@@ -115,11 +115,15 @@
         </section>
 
         <section id="sec-cms" class="af-section" style="display:none;">
-          <div class="section-card">
-              <h2>Gerenciar Conteúdo do Site</h2>
-              <p class="section-subtitle">Edite os blocos de informação da Home e Notícias.</p>
+          <div class="af-standard-header">
+              <h2>🌐 Site (CMS)</h2>
+              <p class="section-subtitle">Gerencie o conteúdo das páginas do SINPRF/ES.</p>
+          </div>
 
-              <div class="field-row" style="max-width: 300px;">
+          <div class="af-standard-card af-standard-form">
+              <h3>Gerenciar Blocos de Conteúdo</h3>
+
+              <div class="field-row" style="max-width: 400px; margin-bottom: 20px;">
                   <div class="field-group">
                       <label>Selecionar Página</label>
                       <select id="cms-page-selector">
@@ -129,144 +133,142 @@
                   </div>
               </div>
 
-              <div id="cms-blocks-admin" style="margin-top:20px; display: flex; flex-direction: column; gap: 20px;">
+              <div id="cms-blocks-admin" style="display: flex; flex-direction: column; gap: 20px;">
                   <p>Carregando blocos...</p>
               </div>
           </div>
         </section>
 
         <section id="sec-relatorios" class="af-section" style="display:none;">
-          <div class="data-card" style="text-align: center;">
-              <h2 style="font-size: 1.8rem; margin-bottom: 8px; color: var(--azul-fundo);">📊 Relatórios e Dossiês</h2>
-              <p class="section-subtitle" style="font-size: 1rem; color: #666;">Gere PDFs consolidados e receba-os por e-mail.</p>
+          <div class="af-standard-header">
+              <h2>📊 Relatórios e Dossiês</h2>
+              <p class="section-subtitle">Gere PDFs consolidados e visualize estatísticas do sindicato.</p>
           </div>
 
-          <div class="data-card" style="max-width: 700px; margin: 20px auto;">
-              <h3 style="color: var(--azul-fundo); margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                  ⚙️ Parâmetros do Relatório
-              </h3>
+          <div class="af-standard-card af-standard-form" style="max-width: 800px; margin-left: auto; margin-right: auto;">
+              <h3>⚙️ Parâmetros do Relatório</h3>
 
-              <div class="form-container">
-                  <div class="field-group">
-                      <label style="font-weight: bold; color: #333;">Tipo de Relatório</label>
-                      <select id="relatorio-tipo" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
-                          <option value="INDIVIDUAL">Dossiê do Filiado (Individual)</option>
-                          <option value="LOTACAO">Distribuição por Lotação</option>
-                          <option value="SITUACAO">Distribuição por Situação Funcional</option>
-                          <option value="GLOBAL">Global (Completo)</option>
+              <div class="field-group">
+                  <label>Tipo de Relatório</label>
+                  <select id="relatorio-tipo">
+                      <option value="INDIVIDUAL">Dossiê do Filiado (Individual)</option>
+                      <option value="LOTACAO">Distribuição por Lotação</option>
+                      <option value="SITUACAO">Distribuição por Situação Funcional</option>
+                      <option value="GLOBAL">Global (Completo)</option>
+                  </select>
+              </div>
+
+              <div id="relatorio-param-container" class="field-group" style="margin-top: 20px;">
+                  <label id="relatorio-param-label">Filiado</label>
+
+                  <div id="relatorio-filiado-wrapper">
+                      <input type="text" id="relatorio-filiado-search" placeholder="Buscar por nome ou CPF..." />
+                      <select id="relatorio-filiado-select" style="margin-top: 8px;">
+                          <option value="">Aguardando busca...</option>
                       </select>
                   </div>
 
-                  <div id="relatorio-param-container" class="field-group" style="margin-top: 20px;">
-                      <label id="relatorio-param-label" style="font-weight: bold; color: var(--texto-claro);">Filiado</label>
+                  <select id="relatorio-lotacao-select" style="display: none;">
+                      <option value="SEDE">SEDE</option>
+                      <option value="DEL 01 - Viana">DEL 01 - Viana</option>
+                      <option value="DEL 02 - Serra">DEL 02 - Serra</option>
+                      <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
+                      <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
+                      <option value="NENHUMA">NENHUMA</option>
+                  </select>
 
-                      <div id="relatorio-filiado-wrapper">
-                          <input type="text" id="relatorio-filiado-search" placeholder="Buscar por nome ou CPF..." style="padding: 12px; border-radius: 8px;" />
-                          <select id="relatorio-filiado-select" style="margin-top: 8px; padding: 10px; border-radius: 8px;">
-                              <option value="">Aguardando busca...</option>
-                          </select>
-                      </div>
+                  <select id="relatorio-situacao-select" style="display: none;">
+                      <option value="ATIVO">ATIVO</option>
+                      <option value="VETERANO">VETERANO</option>
+                      <option value="PENSIONISTA">PENSIONISTA</option>
+                  </select>
+              </div>
 
-                      <select id="relatorio-lotacao-select" style="display: none; padding: 12px; border-radius: 8px;">
-                          <option value="SEDE">SEDE</option>
-                          <option value="DEL 01 - Viana">DEL 01 - Viana</option>
-                          <option value="DEL 02 - Serra">DEL 02 - Serra</option>
-                          <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
-                          <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
-                          <option value="NENHUMA">NENHUMA</option>
-                      </select>
-
-                      <select id="relatorio-situacao-select" style="display: none; padding: 12px; border-radius: 8px;">
-                          <option value="ATIVO">ATIVO</option>
-                          <option value="VETERANO">VETERANO</option>
-                          <option value="PENSIONISTA">PENSIONISTA</option>
-                      </select>
-                  </div>
-
-                  <div style="text-align: center; margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                      <button id="btn-gerar-relatorio" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.1rem; width: 100%; max-width: 400px;">
-                          📄 Gerar e Enviar PDF
-                      </button>
-                      <button id="btn-preview-relatorio" class="btn btn-outline" style="padding: 15px 40px; font-size: 1.1rem; width: 100%; max-width: 400px; color: var(--azul-fundo); border-color: var(--azul-fundo);">
-                          👁️ Visualizar na Tela
-                      </button>
-                  </div>
+              <div style="text-align: center; margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                  <button id="btn-gerar-relatorio" class="btn btn-primary" style="padding: 12px 40px; font-size: 1.1rem; width: 100%; max-width: 400px;">
+                      📄 Gerar e Enviar PDF
+                  </button>
+                  <button id="btn-preview-relatorio" class="btn btn-outline" style="padding: 12px 40px; font-size: 1.1rem; width: 100%; max-width: 400px;">
+                      👁️ Visualizar na Tela
+                  </button>
               </div>
           </div>
 
-          <div id="relatorio-preview-container" class="data-card" style="display: none; max-width: 900px; margin: 20px auto; padding: 0; overflow: hidden;">
+          <div id="relatorio-preview-container" class="af-standard-card" style="display: none; max-width: 1000px; margin: 30px auto; padding: 0; overflow: hidden;">
               <!-- Conteúdo carregado via JS -->
           </div>
 
-          <div class="data-card" style="max-width: 700px; margin: 20px auto;">
-              <h3 style="color: var(--azul-fundo); margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                  📜 Histórico de Solicitações
-              </h3>
-              <div id="relatorio-historico-list" class="history-list">
+          <div class="af-standard-card" style="max-width: 800px; margin: 30px auto;">
+              <h3>📜 Histórico de Solicitações</h3>
+              <div id="relatorio-historico-list">
                   <p>Carregando histórico...</p>
               </div>
           </div>
         </section>
 
         <section id="sec-notificacoes" class="af-section" style="display:none;">
-          <div class="section-card">
+          <div class="af-standard-header">
               <h2>📢 Notificações Push</h2>
-              <p class="section-subtitle">Envie mensagens para todos os filiados com o app instalado.</p>
+              <p class="section-subtitle">Envie mensagens para os filiados com o app instalado.</p>
+          </div>
 
-              <div class="form-container" style="max-width: 600px; margin-top: 20px;">
-                  <div class="field-group">
-                      <label>Público de Destino</label>
-                      <select id="push-target-type">
-                          <option value="ALL">Todos os filiados com app</option>
-                          <option value="ATIVOS">Apenas ATIVOS</option>
-                          <option value="VETERANOS">Veteranos / Pensionistas</option>
-                          <option value="LOTACAO">Por Lotação (somente ativos)</option>
-                          <option value="JOGOS">Inscritos nos Jogos</option>
-                          <option value="FILIADO">Especificar um Filiado</option>
+          <div class="af-standard-card af-standard-form" style="max-width: 700px; margin-left: auto; margin-right: auto;">
+              <h3>Nova Notificação</h3>
+
+              <div class="field-group">
+                  <label>Público de Destino</label>
+                  <select id="push-target-type">
+                      <option value="ALL">Todos os filiados com app</option>
+                      <option value="ATIVOS">Apenas ATIVOS</option>
+                      <option value="VETERANOS">Veteranos / Pensionistas</option>
+                      <option value="LOTACAO">Por Lotação (somente ativos)</option>
+                      <option value="JOGOS">Inscritos nos Jogos</option>
+                      <option value="FILIADO">Especificar um Filiado</option>
+                  </select>
+              </div>
+
+              <div id="push-target-value-container" class="field-group" style="margin-top: 15px; display: none;">
+                  <label id="push-target-value-label">Valor do Filtro</label>
+
+                  <select id="push-target-lotacao" style="display: none;">
+                      <option value="SEDE">SEDE</option>
+                      <option value="1ª DEL (Viana)">1ª DEL (Viana)</option>
+                      <option value="2ª DEL (Serra)">2ª DEL (Serra)</option>
+                      <option value="3ª DEL (Guarapari)">3ª DEL (Guarapari)</option>
+                      <option value="4ª DEL (Linhares)">4ª DEL (Linhares)</option>
+                  </select>
+
+                  <div id="push-target-filiado-wrapper" style="display: none;">
+                      <input type="text" id="push-target-filiado-search" placeholder="Buscar por nome ou CPF..." />
+                      <select id="push-target-filiado-select" style="margin-top: 5px;">
+                          <option value="">Aguardando busca...</option>
                       </select>
                   </div>
+              </div>
 
-                  <div id="push-target-value-container" class="field-group" style="margin-top: 15px; display: none;">
-                      <label id="push-target-value-label">Valor do Filtro</label>
+              <div class="field-group" style="margin-top: 15px;">
+                  <label>Título (opcional)</label>
+                  <input type="text" id="push-title" maxlength="60" placeholder="Ex: Informativo SINPRF-ES" />
+                  <small class="char-counter"><span id="push-title-count">0</span>/60</small>
+              </div>
 
-                      <select id="push-target-lotacao" style="display: none;">
-                          <option value="SEDE">SEDE</option>
-                          <option value="1ª DEL (Viana)">1ª DEL (Viana)</option>
-                          <option value="2ª DEL (Serra)">2ª DEL (Serra)</option>
-                          <option value="3ª DEL (Guarapari)">3ª DEL (Guarapari)</option>
-                          <option value="4ª DEL (Linhares)">4ª DEL (Linhares)</option>
-                      </select>
+              <div class="field-group" style="margin-top: 15px;">
+                  <label>Mensagem *</label>
+                  <textarea id="push-message" maxlength="240" rows="4" placeholder="Digite sua mensagem aqui..."></textarea>
+                  <small class="char-counter"><span id="push-message-count">0</span>/240</small>
+              </div>
 
-                      <div id="push-target-filiado-wrapper" style="display: none;">
-                          <input type="text" id="push-target-filiado-search" placeholder="Buscar por nome ou CPF..." inputmode="search" autocomplete="off" />
-                          <select id="push-target-filiado-select" style="margin-top: 5px;">
-                              <option value="">Aguardando busca...</option>
-                          </select>
-                      </div>
-                  </div>
-
-                  <div class="field-group" style="margin-top: 15px;">
-                      <label>Título (opcional)</label>
-                      <input type="text" id="push-title" maxlength="60" placeholder="Ex: Informativo SINPRF-ES" />
-                      <small class="char-counter"><span id="push-title-count">0</span>/60</small>
-                  </div>
-
-                  <div class="field-group" style="margin-top: 15px;">
-                      <label>Mensagem *</label>
-                      <textarea id="push-message" maxlength="240" rows="4" placeholder="Digite sua mensagem aqui..."></textarea>
-                      <small class="char-counter"><span id="push-message-count">0</span>/240</small>
-                  </div>
-
-                  <button id="btn-send-push" class="btn btn-primary" style="margin-top: 20px;">
+              <div style="text-align: center; margin-top: 25px;">
+                  <button id="btn-send-push" class="btn btn-primary" style="padding: 12px 60px; font-size: 1.1rem;">
                       🚀 Enviar Agora
                   </button>
               </div>
+          </div>
 
-              <div class="history-container" style="margin-top: 40px;">
-                  <h3>📜 Histórico de Envios</h3>
-                  <div id="push-history-list" class="history-list">
-                      <p>Carregando histórico...</p>
-                  </div>
+          <div class="af-standard-card" style="max-width: 700px; margin: 30px auto;">
+              <h3>📜 Histórico de Envios</h3>
+              <div id="push-history-list">
+                  <p>Carregando histórico...</p>
               </div>
           </div>
         </section>

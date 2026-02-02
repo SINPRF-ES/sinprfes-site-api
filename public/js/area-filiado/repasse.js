@@ -19,50 +19,22 @@
         const container = document.getElementById("sec-repasse");
         if (!container) return;
 
-        if (!document.getElementById('style-repasse')) {
-            const s = document.createElement('style');
-            s.id = 'style-repasse';
-            s.textContent = `
-                .repasse-card { background: #ffffff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; margin: 0 auto 25px auto; max-width: 1100px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-                .repasse-header-main { background: #003366; color: #ffffff; padding: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-                .repasse-header-main h2 { margin: 0; color: #f1c40f; font-size: 1.8rem; }
-                .repasse-body { padding: 25px; background: #ffffff; color: #333; }
-                .repasse-stats-box { background: #f8f9fa; border-left: 5px solid #f1c40f; padding: 15px; border-radius: 4px; margin-bottom: 25px; }
-                .repasse-stats-label { font-size: 0.9rem; color: #666; display: block; margin-bottom: 5px; }
-                .repasse-stats-value { font-size: 1.5rem; font-weight: bold; color: #003366; }
-
-                .month-container { margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
-                .month-tab { background: #f1f3f5; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
-                .month-tab:hover { background: #e9ecef; }
-                .month-tab h3 { margin: 0; font-size: 1.1rem; color: #003366; }
-                .month-tab-info { display: flex; align-items: center; gap: 20px; }
-                .month-tab-total { font-weight: bold; color: #27ae60; }
-
-                .month-content { padding: 20px; display: none; border-top: 1px solid #eee; background: #fff; }
-                .month-config-row { display: flex; gap: 20px; margin-bottom: 20px; align-items: flex-end; }
-
-                .repasse-tabela { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; background: #fff; }
-                .repasse-tabela th, .repasse-tabela td { border: 1px solid #ddd; padding: 12px 10px; text-align: left; }
-                .repasse-tabela th { background: #f1f3f5; color: #003366; position: sticky; top: 0; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
-                .repasse-tabela tr:nth-child(even) { background: #f8f9fa; }
-                .repasse-tabela input, .repasse-tabela select { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
-
-                .btn-repasse-save { background: #003366; color: #ffffff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-                .btn-repasse-save:hover { background: #004488; }
-            `;
-            document.head.appendChild(s);
-        }
-
         container.innerHTML = `
-            <div class="repasse-card">
-                <div class="repasse-header-main">
-                    <div>
-                        <h2>💱 Repasse por Localidade</h2>
-                        <p style="margin: 5px 0 0 0; opacity: 0.9;">Gestão de créditos e reembolsos mensais</p>
+            <div class="af-standard-header">
+                <h2>💱 Repasse por Localidade</h2>
+                <p class="section-subtitle">Gestão de créditos e reembolsos mensais para as delegacias.</p>
+            </div>
+
+            <div class="af-standard-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                    <div style="background: #f8f9fa; border-left: 5px solid var(--amarelo); padding: 15px; border-radius: 8px; flex: 1; min-width: 250px;">
+                        <span style="font-size: 0.9rem; color: #666; display: block; margin-bottom: 5px;">Total Acumulado Geral (${yearCurrent})</span>
+                        <span id="total-acumulado-geral" style="font-size: 1.5rem; font-weight: bold; color: var(--azul-fundo);">R$ 0,00</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <label style="font-weight:bold;">Ano:</label>
-                        <select id="repasse-year-select" style="padding:8px; border-radius:6px; background:#fff; color:#333; border:none;">
+
+                    <div class="af-standard-form" style="display:flex; align-items:center; gap:12px;">
+                        <label style="margin-bottom: 0 !important; white-space: nowrap;">Selecionar Ano:</label>
+                        <select id="repasse-year-select" style="width: 120px !important;">
                             ${(() => {
                                 const endYear = Math.max(yearCurrent, new Date().getFullYear()) + 5;
                                 let options = '';
@@ -74,15 +46,9 @@
                         </select>
                     </div>
                 </div>
-                <div class="repasse-body">
-                    <div class="repasse-stats-box">
-                        <span class="repasse-stats-label">Total Acumulado Geral (${yearCurrent})</span>
-                        <span id="total-acumulado-geral" class="repasse-stats-value">R$ 0,00</span>
-                    </div>
 
-                    <div id="repasse-meses-container">
-                        <p style="text-align:center; padding:40px; color:#666;">Carregando dados...</p>
-                    </div>
+                <div id="repasse-meses-container">
+                    <p style="text-align:center; padding:40px; color:#666;">Carregando dados...</p>
                 </div>
             </div>
         `;
@@ -148,28 +114,28 @@
             const isAberto = mesesAbertos.includes(m.month) || (m.month === new Date().getMonth() + 1 && mesesAbertos.length === 0);
 
             return `
-                <div class="month-container">
-                    <div class="month-tab" onclick="const c = this.nextElementSibling; c.style.display = c.style.display === 'none' ? 'block' : 'none'">
-                        <h3>${nomesMeses[m.month - 1]}</h3>
-                        <div class="month-tab-info">
+                <div style="margin-bottom: 15px; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
+                    <div style="background: #f1f3f5; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="const c = this.nextElementSibling; c.style.display = c.style.display === 'none' ? 'block' : 'none'">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: var(--azul-fundo);">${nomesMeses[m.month - 1]}</h3>
+                        <div style="display: flex; align-items: center; gap: 20px;">
                             <span style="font-size:0.85rem; color:#666;">Per Capita: ${formatCurrency(m.perCapita)}</span>
-                            <span class="month-tab-total">${formatCurrency(totalMes)}</span>
-                            <span style="color:#003366;">⌄</span>
+                            <span style="font-weight: bold; color: #27ae60;">${formatCurrency(totalMes)}</span>
+                            <span style="color:var(--azul-fundo);">⌄</span>
                         </div>
                     </div>
-                    <div class="month-content" id="content-month-${m.month}" style="display:${isAberto ? 'block' : 'none'};">
-                        <div class="month-config-row">
-                            <div style="flex: 1; max-width: 200px;">
-                                <label style="display:block; font-weight:bold; font-size:0.8rem; margin-bottom:5px;">Per Capita do Mês</label>
-                                <input type="number" step="0.01" value="${m.perCapita}" onchange="Repasse.atualizarPerCapita(${m.month}, this.value)" style="padding:8px; border:1px solid #ccc; border-radius:4px; width:100%;">
+                    <div id="content-month-${m.month}" style="display:${isAberto ? 'block' : 'none'}; padding: 25px; border-top: 1px solid #eee; background: #fff;">
+                        <div class="af-standard-form" style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end; flex-wrap: wrap;">
+                            <div style="flex: 1; max-width: 220px;">
+                                <label>Per Capita do Mês</label>
+                                <input type="number" step="0.01" value="${m.perCapita}" onchange="Repasse.atualizarPerCapita(${m.month}, this.value)">
                             </div>
-                            <div style="flex: 1; text-align: right;">
-                                <button class="btn-repasse-save" onclick="Repasse.salvarMes(${m.month})">💾 Salvar Alterações de ${nomesMeses[m.month-1]}</button>
+                            <div style="flex: 1; text-align: right; min-width: 200px;">
+                                <button class="btn btn-primary" onclick="Repasse.salvarMes(${m.month})" style="padding: 10px 25px;">💾 Salvar ${nomesMeses[m.month-1]}</button>
                             </div>
                         </div>
 
                         <div style="overflow-x:auto;">
-                            <table class="repasse-tabela">
+                            <table class="af-standard-table">
                                 <thead>
                                     <tr>
                                         <th>Localidade</th>
@@ -225,31 +191,25 @@
             return normalizeText(r.lotacao).includes(kw);
         });
 
-        console.log(`[REPASSE_SITE] Filtrando responsáveis para ${loc.lotacao}`, {
-            key: kw,
-            totalOriginal: responsaveisCache.length,
-            totalFiltrado: filteredResps.length
-        });
-
         return `
             <tr>
-                <td style="font-weight:bold; color:#003366;">${loc.lotacao}</td>
-                <td>
-                    <select onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { responsavelId: this.value })">
+                <td style="font-weight:bold; color:var(--azul-fundo);">${loc.lotacao}</td>
+                <td class="af-standard-form">
+                    <select onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { responsavelId: this.value })" style="padding: 5px !important; font-size: 0.85rem !important;">
                         <option value="">Selecione...</option>
                         ${filteredResps.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
                     </select>
                 </td>
                 <td style="text-align:center;">${loc.filiadosAtivos}</td>
-                <td style="text-align:center;">
-                    <input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { prfTotal: this.value })" style="width:70px; text-align:center;">
+                <td style="text-align:center;" class="af-standard-form">
+                    <input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { prfTotal: this.value })" style="width:70px; text-align:center; padding: 5px !important; font-size: 0.85rem !important;">
                 </td>
                 <td style="text-align:center; color:${colorPercent}; font-weight:bold;">
                     ${hasWarning ? '<span title="PRF Total deve ser maior que zero">⚠️</span>' : percentDisplay}
                 </td>
                 <td style="text-align:right; font-weight:bold;">${formatCurrency(loc.creditoMes)}</td>
-                <td style="text-align:right;">
-                    <input type="number" step="0.01" value="${loc.reembolsoMes}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { reembolsoMes: this.value })" style="width:100px; text-align:right;">
+                <td style="text-align:right;" class="af-standard-form">
+                    <input type="number" step="0.01" value="${loc.reembolsoMes}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { reembolsoMes: this.value })" style="width:100px; text-align:right; padding: 5px !important; font-size: 0.85rem !important;">
                 </td>
                 <td style="text-align:right; color:#e67e22; font-weight:bold;">${formatCurrency(loc.acumuladoAno)}</td>
             </tr>
