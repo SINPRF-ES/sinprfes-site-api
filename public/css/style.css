@@ -1844,3 +1844,40 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
     padding: 4px 10px;
     font-size: 0.8rem;
 }
+
+/* =========================================================
+   PALETTE: UTILITÁRIOS DE PADRONIZAÇÃO ESTÉTICA (Incremental)
+   ========================================================= */
+
+.af-title-yellow {
+    color: var(--amarelo) !important;
+}
+
+.af-title-centered {
+    text-align: center !important;
+    justify-content: center !important;
+}
+
+.af-standard-header {
+    text-align: center !important;
+    margin-bottom: 25px !important;
+    border-bottom: 2px solid var(--amarelo) !important;
+    padding-bottom: 15px !important;
+}
+
+.af-standard-header h2 {
+    color: var(--amarelo) !important;
+    margin-bottom: 5px !important;
+}
+
+.af-standard-header p,
+.af-standard-header .section-subtitle {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.af-divider-yellow {
+    border: 0;
+    border-top: 2px solid var(--amarelo) !important;
+    margin: 20px 0;
+    width: 100%;
+}

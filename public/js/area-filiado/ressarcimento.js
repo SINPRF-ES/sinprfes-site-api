@@ -53,7 +53,7 @@
         const opcoesBancos = BANCOS_LISTA.map(b => `<option value="${b.code} - ${b.name}">`).join("");
 
         secRes.innerHTML = `
-            <div class="res-header">
+            <div class="res-header af-standard-header">
                 <h2>💸 Solicitação de Ressarcimento</h2>
                 <p>Preencha os dados abaixo e anexe os comprovantes para processar seu reembolso.</p>
             </div>

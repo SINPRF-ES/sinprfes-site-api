@@ -8,8 +8,6 @@
     let showFullHistory = false;
 
     function inicializarRelatorios(perfil) {
-        console.log("Relatorios: Inicializando para perfil:", perfil);
-
         setupHandlers();
         carregarHistorico();
     }

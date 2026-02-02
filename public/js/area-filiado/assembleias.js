@@ -16,7 +16,6 @@
     let currentPresentes = [];
 
     async function inicializarAssembleias(perfil) {
-        console.log("Inicializando módulo de Assembleias...");
         currentUserPerfil = perfil;
         const userInfo = window.Utils.obterUserInfo();
         currentUserId = userInfo.id || userInfo.sub;
@@ -183,9 +182,9 @@
         section.innerHTML = `
             <div id="sec-assembleias-lista">
                 <div class="section-card">
-                    <div style="display:flex; flex-direction:column; align-items:center; gap:15px; text-align:center;">
-                        <h2 style="color:#fff; margin:0; font-size:1.8rem; font-weight: 800;">🗳️ Assembleias e Votações</h2>
-                        <p style="color:#ccc; margin:0; font-size:1rem;">Participe das decisões do seu sindicato</p>
+                    <div class="af-standard-header" style="display:flex; flex-direction:column; align-items:center; gap:15px; text-align:center;">
+                        <h2 style="margin:0; font-size:1.8rem; font-weight: 800;">🗳️ Assembleias e Votações</h2>
+                        <p style="margin:0; font-size:1rem;">Participe das decisões do seu sindicato</p>
 
                         ${isDiretoria ? `
                             <button class="btn btn-success" style="margin-top:10px; font-weight:800; padding:12px 25px; border-radius:30px;" onclick="Assembleias.abrirCriacao()">➕ Criar Nova Assembleia</button>

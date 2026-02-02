@@ -74,13 +74,15 @@
             if (secFiliados) {
                 const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
                 secFiliados.innerHTML = `
-                    <div class="search-box-container">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div class="search-box-container af-standard-header">
+                        <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px;">
                             <h2 style="margin:0;">👥 Filiados</h2>
-                            <button id="btn-novo-filiado" class="btn btn-primary" style="display:none;">+ Novo Filiado</button>
                         </div>
-                        <div id="filiados-count" style="font-weight: bold; margin-bottom: 10px; color: #fff;">Total: 0</div>
-                        <input type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; padding:10px; border-radius:8px; border:none; color:#333;">
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+                            <button id="btn-novo-filiado" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo Filiado</button>
+                            <div id="filiados-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
+                            <input type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
+                        </div>
                     </div>
                     <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
                     <div id="lista-filiados"></div>
@@ -697,13 +699,6 @@
                     document.getElementById("modal-editar-filiado").style.display = "none";
                     await carregarLista();
                 } else {
-                    // Log detalhado para depuração (B2-4)
-                    console.log("FiliadosAdmin.UpdateErro:", {
-                        endpoint: url,
-                        status: r.status,
-                        errorId: data.errorId || 'N/A'
-                    });
-
                     const msg = data.message || "Erro ao salvar.";
                     const errorId = data.errorId ? `\n(ID do Erro: ${data.errorId})` : "";
                     alert(msg + errorId);
