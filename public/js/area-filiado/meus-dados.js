@@ -83,7 +83,6 @@
 
             return dados;
         } catch (e) {
-            console.error(e);
             conteudo.innerHTML = "<p>Erro ao carregar dados.</p>";
             return null;
         }
@@ -134,7 +133,7 @@
                     color: #fff;
                     padding: 35px 30px;
                     border-radius: 15px;
-                    border-bottom: 6px solid #ffc107;
+                    border-bottom: 6px solid var(--amarelo);
                     margin-bottom: 25px;
                     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
                     display: flex;
@@ -162,7 +161,7 @@
                 .profile-name-title {
                     margin: 0;
                     font-size: 2rem;
-                    color: #fff;
+                    color: var(--amarelo);
                     font-weight: 800;
                 }
                 .profile-badges { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }

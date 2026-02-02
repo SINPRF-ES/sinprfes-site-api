@@ -225,12 +225,6 @@
             return normalizeText(r.lotacao).includes(kw);
         });
 
-        console.log(`[REPASSE_SITE] Filtrando responsáveis para ${loc.lotacao}`, {
-            key: kw,
-            totalOriginal: responsaveisCache.length,
-            totalFiltrado: filteredResps.length
-        });
-
         return `
             <tr>
                 <td style="font-weight:bold; color:#003366;">${loc.lotacao}</td>

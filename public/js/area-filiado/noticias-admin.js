@@ -18,12 +18,12 @@
 
         container.innerHTML = `
             <div class="section-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div class="af-standard-header" style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:20px;">
                     <div>
                         <h2 style="margin:0;">📰 Gerenciar Notícias</h2>
                         <p class="section-subtitle">Crie e publique informes para os filiados.</p>
                     </div>
-                    ${ehGestao ? `<button id="btn-nova-noticia" class="btn btn-primary">+ Nova Notícia</button>` : ''}
+                    ${ehGestao ? `<button id="btn-nova-noticia" class="btn btn-primary" style="margin-top:10px;">+ Nova Notícia</button>` : ''}
                 </div>
 
                 <div id="lista-noticias-admin" class="noticias-grid">
