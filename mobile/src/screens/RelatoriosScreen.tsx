@@ -157,7 +157,10 @@ export default function RelatoriosScreen() {
     };
 
     const params = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
-    const value = params.value || params.filiadoId || "-";
+
+    // Prioriza o nome resolvido (A1)
+    const labelParam = item.report_type === 'INDIVIDUAL' ? 'Filiado' : 'Parâmetro';
+    const value = params.filiadoNome || params.value || params.filiadoId || "-";
 
     return (
       <View style={styles.historyCard}>
@@ -165,7 +168,7 @@ export default function RelatoriosScreen() {
           <Text style={styles.historyType}>{typeLabels[item.report_type] || item.report_type}</Text>
           <Text style={styles.historyDate}>{date}</Text>
         </View>
-        <Text style={styles.historyInfo}>Parâmetro: {value}</Text>
+        <Text style={styles.historyInfo}>{labelParam}: {value}</Text>
         <Text style={styles.historyInfo}>Solicitante: {item.requester_name}</Text>
       </View>
     );

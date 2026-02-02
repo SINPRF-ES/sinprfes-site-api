@@ -1,6 +1,7 @@
 // src/controllers/filiados.controller.js
 const path = require("path");
 const fs = require("fs");
+const { v4: uuidv4 } = require("uuid");
 const { uploadAvatarBuffer, deleteAvatarByPublicId } = require("../services/cloudinary.service");
 
 const pool = require("../config/db");
@@ -336,6 +337,18 @@ exports.atualizarFiliado = async (req, res) => {
 
     const body = req.body || {};
 
+    // Instrumentação de logs (B2)
+    log.info("FiliadosUpdateIniciado", {
+        targetId: idAlvo,
+        loggedId,
+        perfilAtor,
+        bodyKeys: Object.keys(body),
+        sexo_type: typeof body.sexo,
+        nascimento_presente: !!body.data_nascimento,
+        cpf_len: body.cpf ? String(body.cpf).length : 0,
+        tel1_len: body.telefone1 ? String(body.telefone1).length : 0
+    });
+
     if (body.siape) {
       const siapeLimpo = String(body.siape).replace(/\D/g, "");
       if (siapeLimpo && (siapeLimpo.length < 6 || siapeLimpo.length > 7)) {
@@ -448,7 +461,9 @@ exports.atualizarFiliado = async (req, res) => {
       return res.status(409).json({ message: "CPF duplicado no sistema." });
     }
 
+    const errorId = uuidv4().split('-')[0];
     log.error("FiliadosUpdateGestaoErro", {
+        errorId,
         error: err.message,
         stack: err.stack,
         requestId: req.requestId,
@@ -456,7 +471,11 @@ exports.atualizarFiliado = async (req, res) => {
         targetId: idAlvo,
         bodyKeys: Object.keys(req.body || {})
     });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    return res.status(500).json({
+        success: false,
+        message: "Erro ao atualizar filiado",
+        errorId
+    });
   }
 };
 

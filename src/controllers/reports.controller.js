@@ -75,6 +75,9 @@ exports.generateReport = async (req, res) => {
       const dados = await reportsService.buscarDadosDossie(filiadoId);
       if (!dados) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
 
+      // Resolver nome para exibição no histórico (A1)
+      params.filiadoNome = dados.nome;
+
       reportTitle = `Dossiê do Filiado - ${dados.nome}`;
 
       const slug = gerarSlugNome(dados.nome);
