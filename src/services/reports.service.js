@@ -106,6 +106,15 @@ async function buscarDadosAgregados(tipo, valor) {
  * Dados para o Relatório Global (Completo).
  * Agrega ATIVO (com Repasse), VETERANO (com faixas específicas) e PENSIONISTA.
  */
+/**
+ * Remove registros de jobs com mais de 30 dias.
+ */
+async function cleanupOldReports() {
+  const sql = `DELETE FROM report_jobs WHERE created_at < NOW() - INTERVAL '30 days'`;
+  const r = await pool.query(sql);
+  return r.rowCount;
+}
+
 async function buscarDadosGlobal() {
   const ativo = await buscarDadosAgregados("SITUACAO", "ATIVO");
 
@@ -146,5 +155,6 @@ module.exports = {
   listarHistorico,
   buscarDadosDossie,
   buscarDadosAgregados,
-  buscarDadosGlobal
+  buscarDadosGlobal,
+  cleanupOldReports
 };
