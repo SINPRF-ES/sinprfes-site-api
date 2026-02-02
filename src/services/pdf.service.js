@@ -28,28 +28,30 @@ const QR_BASE_URL =
 function drawDistribuicoes(doc, dados, options = {}) {
     const { isVeterano = false, isPensionista = false } = options;
 
-    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:");
+    ensureSpace(doc, 60);
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:", { align: 'left' });
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Masculino: ${dados.masc}`);
-    doc.text(`Feminino: ${dados.fem}`);
+    doc.text(`Masculino: ${dados.masc}`, { align: 'left' });
+    doc.text(`Feminino: ${dados.fem}`, { align: 'left' });
     doc.moveDown(1);
 
     if (!isPensionista) {
-        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:");
+        ensureSpace(doc, 100);
+        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:", { align: 'left' });
         doc.font("Helvetica").fontSize(11);
         if (isVeterano) {
-            doc.text(`50-59 anos: ${dados.range_50_59}`);
-            doc.text(`60-69 anos: ${dados.range_60_69}`);
-            doc.text(`70-79 anos: ${dados.range_70_79}`);
-            doc.text(`80+ anos: ${dados.range_80_plus}`);
+            doc.text(`50-59 anos: ${dados.range_50_59}`, { align: 'left' });
+            doc.text(`60-69 anos: ${dados.range_60_69}`, { align: 'left' });
+            doc.text(`70-79 anos: ${dados.range_70_79}`, { align: 'left' });
+            doc.text(`80+ anos: ${dados.range_80_plus}`, { align: 'left' });
         } else {
-            doc.text(`20-29 anos: ${dados.range_20_29}`);
-            doc.text(`30-39 anos: ${dados.range_30_39}`);
-            doc.text(`40-49 anos: ${dados.range_40_49}`);
-            doc.text(`50-59 anos: ${dados.range_50_59}`);
-            doc.text(`60+ anos: ${dados.range_60_plus}`);
+            doc.text(`20-29 anos: ${dados.range_20_29}`, { align: 'left' });
+            doc.text(`30-39 anos: ${dados.range_30_39}`, { align: 'left' });
+            doc.text(`40-49 anos: ${dados.range_40_49}`, { align: 'left' });
+            doc.text(`50-59 anos: ${dados.range_50_59}`, { align: 'left' });
+            doc.text(`60+ anos: ${dados.range_60_plus}`, { align: 'left' });
         }
-        doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`);
+        doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`, { align: 'left' });
         doc.moveDown(1);
     }
 }
@@ -98,6 +100,99 @@ function formatDateSafe(val) {
         return "Não informada";
     }
     return formatted;
+}
+
+/**
+ * Garante que existe espaço na página para o conteúdo. Se não houver, adiciona nova página.
+ * @returns {boolean} True se uma nova página foi adicionada.
+ */
+function ensureSpace(doc, neededHeight) {
+    const bottomMargin = doc.page.margins.bottom || 70;
+    if (doc.y + neededHeight > doc.page.height - bottomMargin - 10) {
+        doc.addPage();
+        doc.moveDown(2);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Desenha uma tabela com suporte a paginação automática e repetição de cabeçalho.
+ */
+function drawTableWithPagination(doc, options) {
+    const {
+        headers,
+        rows,
+        colWidths,
+        rowHeight = 22,
+        headerHeight = 22,
+        startX = doc.page.margins.left,
+        fontSize = 8
+    } = options;
+
+    const drawHeader = (y) => {
+        doc.font("Helvetica-Bold").fontSize(fontSize);
+        headers.forEach((h, i) => {
+            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+            doc.rect(x, y, colWidths[i], headerHeight).fillAndStroke("#eeeeee", "#333333");
+            // Centralizado horizontalmente via width + align
+            doc.fillColor("#000").text(h, x, y + (headerHeight / 2) - (fontSize / 2) + 1, {
+                width: colWidths[i],
+                align: 'center'
+            });
+        });
+        return y + headerHeight;
+    };
+
+    let currentY = doc.y;
+
+    // Checa espaço para pelo menos o header + 1 linha
+    if (ensureSpace(doc, headerHeight + rowHeight)) {
+        currentY = doc.y;
+    }
+
+    currentY = drawHeader(currentY);
+
+    rows.forEach((row) => {
+        // Se mudar de página, redesenha o header
+        if (ensureSpace(doc, rowHeight)) {
+            currentY = doc.y;
+            currentY = drawHeader(currentY);
+        }
+
+        row.forEach((text, i) => {
+            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+            doc.lineWidth(0.5).strokeColor("#333333");
+            doc.rect(x, currentY, colWidths[i], rowHeight).stroke();
+
+            doc.font("Helvetica").fontSize(fontSize);
+
+            // Truncamento para a primeira coluna (Lotação) se necessário
+            let val = String(text || "");
+            if (i === 0) {
+                const maxWidth = colWidths[i] - 10;
+                if (doc.widthOfString(val) > maxWidth) {
+                    while (doc.widthOfString(val + "...") > maxWidth && val.length > 0) {
+                        val = val.slice(0, -1);
+                    }
+                    val += "...";
+                }
+            }
+
+            // Centralizado horizontalmente em todas as células
+            doc.text(val, x, currentY + (rowHeight / 2) - (fontSize / 2) + 1, {
+                width: colWidths[i],
+                align: "center"
+            });
+        });
+
+        currentY += rowHeight;
+    });
+
+    // Reset de estado pós-tabela para evitar vazamento de alinhamento/posicionamento
+    doc.x = doc.page.margins.left;
+    doc.y = currentY;
+    doc.fillColor("#000");
 }
 
 /**
@@ -927,15 +1022,18 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
             doc.rect(startX, y, col1Width, rowHeight).stroke();
             doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
 
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+            // Alinhamento vertical centralizado
+            const textY = y + (rowHeight / 2) - (10 / 2) + 1;
+
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
 
             if (row[2] === "number") {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
                     width: col2Width - 10,
                     align: "right"
                 });
             } else {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
             }
         });
 
@@ -976,15 +1074,17 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
             doc.lineWidth(0.5).strokeColor("#333333");
             doc.rect(startX, y, col1Width, rowHeight).stroke();
             doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
-            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+            const textY = y + (rowHeight / 2) - (10 / 2) + 1;
+            doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
 
             if (row[2] === "number") {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
                     width: col2Width - 10,
                     align: "right"
                 });
             } else {
-                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+                doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
             }
         });
 
@@ -996,50 +1096,24 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
 
         const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
         const colWidths = [165, 60, 60, 60, 110];
-        startX = doc.x;
-        startY = doc.y;
-        rowHeight = 22;
-
         const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-        // Header
-        headers.forEach((h, i) => {
-            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
-            doc.rect(x, startY, colWidths[i], rowHeight).fillAndStroke("#eeeeee", "#333333");
-            doc.fillColor("#000").font("Helvetica-Bold").fontSize(8).text(h, x + 5, startY + 7);
+        const tableRows = dados.repasseBreakdown.map(r => [
+            r.lotacao,
+            r.prfTotal !== null ? String(r.prfTotal) : "—",
+            String(r.filiadosAtivos),
+            r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
+            r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—"
+        ]);
+
+        drawTableWithPagination(doc, {
+            headers,
+            rows: tableRows,
+            colWidths,
+            rowHeight: 22
         });
 
-        startY += rowHeight;
-        doc.font("Helvetica").fontSize(8);
-
-        dados.repasseBreakdown.forEach((r, idx) => {
-            const y = startY + (idx * rowHeight);
-            const comp = r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—";
-            const rowData = [
-                r.lotacao,
-                r.prfTotal !== null ? String(r.prfTotal) : "—",
-                String(r.filiadosAtivos),
-                r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
-                comp
-            ];
-
-            rowData.forEach((text, i) => {
-                const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
-                doc.lineWidth(0.5).strokeColor("#333333");
-                doc.rect(x, y, colWidths[i], rowHeight).stroke();
-
-                let alignment = "left";
-                if (i >= 1 && i <= 3) alignment = "right";
-
-                if (alignment === "right") {
-                    doc.text(text, x, y + 7, { width: colWidths[i] - 5, align: "right" });
-                } else {
-                    doc.text(text, x + 5, y + 7);
-                }
-            });
-        });
-
-        doc.y = startY + (dados.repasseBreakdown.length * rowHeight) + 20;
+        doc.moveDown(1);
         linha(doc);
     }
 
@@ -1108,15 +1182,17 @@ async function gerarPdfRelatorioGlobal(dados) {
         doc.lineWidth(0.5).strokeColor("#333333");
         doc.rect(startX, y, col1Width, rowHeight).stroke();
         doc.rect(startX + col1Width, y, col2Width, rowHeight).stroke();
-        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, y + 8);
+
+        const textY = y + (rowHeight / 2) - (10 / 2) + 1;
+        doc.font("Helvetica-Bold").fontSize(10).text(row[0], startX + 10, textY, { align: 'left' });
 
         if (row[2] === "number") {
-            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, y + 8, {
+            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width, textY, {
                 width: col2Width - 10,
                 align: "right"
             });
         } else {
-            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, y + 8);
+            doc.font("Helvetica").fontSize(10).text(row[1], startX + col1Width + 10, textY, { align: 'left' });
         }
     });
 
@@ -1127,46 +1203,24 @@ async function gerarPdfRelatorioGlobal(dados) {
 
     const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
     const colWidths = [165, 60, 60, 60, 110];
-    startX = doc.x;
-    startY = doc.y;
-    rowHeight = 22;
-
     const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-    headers.forEach((h, i) => {
-        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
-        doc.rect(x, startY, colWidths[i], rowHeight).fillAndStroke("#eeeeee", "#333333");
-        doc.fillColor("#000").font("Helvetica-Bold").fontSize(8).text(h, x + 5, startY + 7);
+    const tableRows = a.repasseBreakdown.map(r => [
+        r.lotacao,
+        r.prfTotal !== null ? String(r.prfTotal) : "—",
+        String(r.filiadosAtivos),
+        r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
+        r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—"
+    ]);
+
+    drawTableWithPagination(doc, {
+        headers,
+        rows: tableRows,
+        colWidths,
+        rowHeight: 22
     });
 
-    startY += rowHeight;
-    doc.font("Helvetica").fontSize(8);
-    a.repasseBreakdown.forEach((r, idx) => {
-        const y = startY + (idx * rowHeight);
-        const comp = r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—";
-        const rowData = [
-            r.lotacao,
-            r.prfTotal !== null ? String(r.prfTotal) : "—",
-            String(r.filiadosAtivos),
-            r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
-            comp
-        ];
-        rowData.forEach((text, i) => {
-            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
-            doc.lineWidth(0.5).strokeColor("#333333").rect(x, y, colWidths[i], rowHeight).stroke();
-
-            let alignment = "left";
-            if (i >= 1 && i <= 3) alignment = "right";
-
-            if (alignment === "right") {
-                doc.text(text, x, y + 7, { width: colWidths[i] - 5, align: "right" });
-            } else {
-                doc.text(text, x + 5, y + 7);
-            }
-        });
-    });
-
-    doc.y = startY + (a.repasseBreakdown.length * rowHeight) + 15;
+    doc.moveDown(1);
     drawDistribuicoes(doc, a);
 
     doc.addPage();

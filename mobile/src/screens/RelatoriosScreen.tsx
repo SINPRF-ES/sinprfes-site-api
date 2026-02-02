@@ -13,8 +13,8 @@ import {
   Modal,
   Dimensions,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Picker } from '@react-native-picker/picker';
 import * as Canon from '../utils/canon';
 import { maskCPF } from '../utils/masks';
@@ -108,6 +108,9 @@ export default function RelatoriosScreen() {
       params.value = targetValue;
     }
 
+    // Log temporário para depuração
+    console.log('[DEBUG] Gerar Relatório:', { reportType, params });
+
     Alert.alert(
       'Gerar Relatório',
       `O PDF será gerado e enviado para seu e-mail (${usuario?.email1 || 'cadastrado'}). Deseja continuar?`,
@@ -164,14 +167,11 @@ export default function RelatoriosScreen() {
         transparent={true}
         onRequestClose={() => setIsPickerVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <KeyboardAwareScrollView
-            enableOnAndroid
-            extraScrollHeight={50}
-            keyboardOpeningTime={0}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
-            style={{ width: '100%' }}
-          >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Buscar Filiado</Text>
@@ -196,6 +196,7 @@ export default function RelatoriosScreen() {
                   data={filiadosBusca}
                   keyExtractor={(item) => String(item.id)}
                   keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{ paddingBottom: 16 }}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.modalItem}
@@ -217,8 +218,7 @@ export default function RelatoriosScreen() {
               </View>
             )}
           </View>
-          </KeyboardAwareScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <ScrollView
