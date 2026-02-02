@@ -640,45 +640,75 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const fd = new FormData(form);
-            const payload = {};
-            fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
-
-            // Normalização de Nomes (Canônico)
-            if (payload.nome && global.Canon?.normalizeNome) {
-                payload.nome = global.Canon.normalizeNome(payload.nome);
-            }
-            for (let i = 1; i <= 5; i++) {
-                if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
-                    payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
+            const rawPayload = {};
+            fd.forEach((v, k) => {
+                if (!k.includes("_select") && !k.includes("_outro")) {
+                    rawPayload[k] = v;
                 }
-            }
+            });
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-            if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
+            const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
 
-            // Validação e Sanitização CPF
-            const cpfLimp = onlyDigits(payload.cpf);
-            if (cpfLimp.length !== 11) {
+            // Sanitização e Limpeza Obrigatória (B2)
+            const payload = {};
+            Object.keys(rawPayload).forEach(key => {
+                let val = rawPayload[key];
+
+                // 1. Trim strings
+                if (typeof val === 'string') val = val.trim();
+
+                // 2. Remover vazios, null, undefined ou placeholders
+                if (val === "" || val === null || val === undefined || val === "Selecione...") {
+                    return;
+                }
+
+                // 3. Remover campos readonly se não for gestor pleno
+                if (!ehGestao && (key === 'sexo' || key === 'cpf' || key === 'siape')) {
+                    return;
+                }
+
+                // 4. Normalização de Nomes (Canônico)
+                if (key === 'nome' || key.includes('_nome')) {
+                    if (global.Canon?.normalizeNome) val = global.Canon.normalizeNome(val);
+                }
+
+                // 5. Normalização de Documentos/Telefones
+                if (key === 'cpf' || key.includes('_cpf') || key === 'telefone1' || key === 'telefone2' || key === 'cep' || key === 'siape') {
+                    val = onlyDigits(val);
+                }
+
+                payload[key] = val;
+            });
+
+            // Validação final de campos críticos se presentes
+            if (payload.cpf && payload.cpf.length !== 11) {
                 alert("O CPF deve ter exatamente 11 dígitos.");
                 return;
             }
-            payload.cpf = cpfLimp;
-
-            for (let i = 1; i <= 5; i++) {
-                if (payload[`dep${i}_cpf`]) payload[`dep${i}_cpf`] = onlyDigits(payload[`dep${i}_cpf`]);
-            }
 
             try {
-                const r = await window.Api.apiFetch(`/api/filiados/${id}`, { method: "PUT", body: payload });
+                const url = `/api/filiados/${id}`;
+                const r = await window.Api.apiFetch(url, { method: "PUT", body: payload });
+                const data = await r.json();
+
                 if (r.ok) {
                     alert("Sucesso!");
                     document.getElementById("modal-editar-filiado").style.display = "none";
                     await carregarLista();
                 } else {
-                    const err = await r.json();
-                    alert(err.message || "Erro ao salvar.");
+                    // Log detalhado para depuração (B2-4)
+                    console.log("FiliadosAdmin.UpdateErro:", {
+                        endpoint: url,
+                        status: r.status,
+                        errorId: data.errorId || 'N/A'
+                    });
+
+                    const msg = data.message || "Erro ao salvar.";
+                    const errorId = data.errorId ? `\n(ID do Erro: ${data.errorId})` : "";
+                    alert(msg + errorId);
                 }
-            } catch (err) { alert("Erro de conexão."); }
+            } catch (err) { alert("Erro de conexão ao servidor."); }
         };
     }
 

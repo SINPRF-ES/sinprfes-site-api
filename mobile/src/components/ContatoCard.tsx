@@ -43,18 +43,23 @@ const ContatoCard: React.FC<Props> = ({
       />
 
       <Text style={styles.label}>Sexo</Text>
-      <View style={isManagement ? styles.pickerContainer : styles.inputDisabled}>
-        <Picker
-          selectedValue={filiado?.sexo || ''}
-          onValueChange={(val) => setFiliado(f => f ? { ...f, sexo: val as any } : null)}
-          enabled={isManagement}
-          style={styles.picker}
-        >
-          <Picker.Item label="-" value="" />
-          <Picker.Item label="♂️ Masculino" value="M" />
-          <Picker.Item label="♀️ Feminino" value="F" />
-        </Picker>
-      </View>
+      {isManagement ? (
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={filiado?.sexo || ''}
+            onValueChange={(val) => setFiliado(f => f ? { ...f, sexo: val as any } : null)}
+            style={styles.picker}
+          >
+            <Picker.Item label="-" value="" />
+            <Picker.Item label="♂️ Masculino" value="M" />
+            <Picker.Item label="♀️ Feminino" value="F" />
+          </Picker>
+        </View>
+      ) : (
+        <Text style={styles.inputDisabled}>
+          {filiado?.sexo === 'M' ? '♂️ Masculino' : (filiado?.sexo === 'F' ? '♀️ Feminino' : '—')}
+        </Text>
+      )}
 
       <Text style={styles.label}>CPF</Text>
       <TextInput
