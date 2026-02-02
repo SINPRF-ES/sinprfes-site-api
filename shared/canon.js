@@ -23,6 +23,11 @@
     PENSIONISTA: 'PENSIONISTA'
   };
 
+  const SEXO = {
+    M: 'M',
+    F: 'F'
+  };
+
   // 2. Estado do Cadastro (Gestão do Sistema)
   const ESTADO_CADASTRO = {
     CADASTRO_ATIVO: 'CADASTRO_ATIVO',
@@ -59,7 +64,9 @@
     [SITUACAO_FUNCIONAL.VETERANO]: 'Veterano',
     [SITUACAO_FUNCIONAL.PENSIONISTA]: 'Pensionista',
     [ESTADO_CADASTRO.CADASTRO_ATIVO]: 'Ativo',
-    [ESTADO_CADASTRO.ARQUIVADO]: 'Arquivado'
+    [ESTADO_CADASTRO.ARQUIVADO]: 'Arquivado',
+    [SEXO.M]: '♂️ Masculino',
+    [SEXO.F]: '♀️ Feminino'
   };
 
   /**
@@ -69,6 +76,17 @@
     if (typeof str !== 'string') return '';
     return str.trim().toUpperCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  /**
+   * Normaliza o Sexo.
+   */
+  function normalizeSexo(val) {
+    if (!val) return null;
+    const s = slugify(val);
+    if (s === 'M' || s === 'MASCULINO') return SEXO.M;
+    if (s === 'F' || s === 'FEMININO') return SEXO.F;
+    return null;
   }
 
   /**
@@ -129,12 +147,14 @@
 
   return {
     SITUACAO_FUNCIONAL,
+    SEXO,
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
     LOTACOES_REPASSE,
     LOTACOES,
     LABELS,
     normalizeSituacaoFuncional,
+    normalizeSexo,
     normalizePerfil,
     normalizeEstadoCadastro,
     normalizeLotacao,

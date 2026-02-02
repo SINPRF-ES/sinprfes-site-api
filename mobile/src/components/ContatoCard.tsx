@@ -1,6 +1,7 @@
 // src/components/ContatoCard.tsx
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Filiado } from '../types/filiado';
 import { formatTelefone, onlyDigits, formatCpf } from '../shared/format/formatters';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
@@ -41,6 +42,20 @@ const ContatoCard: React.FC<Props> = ({
         autoComplete="name"
       />
 
+      <Text style={styles.label}>Sexo</Text>
+      <View style={isManagement ? styles.pickerContainer : styles.inputDisabled}>
+        <Picker
+          selectedValue={filiado?.sexo || ''}
+          onValueChange={(val) => setFiliado(f => f ? { ...f, sexo: val as any } : null)}
+          enabled={isManagement}
+          style={styles.picker}
+        >
+          <Picker.Item label="-" value="" />
+          <Picker.Item label="♂️ Masculino" value="M" />
+          <Picker.Item label="♀️ Feminino" value="F" />
+        </Picker>
+      </View>
+
       <Text style={styles.label}>CPF</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
@@ -53,6 +68,18 @@ const ContatoCard: React.FC<Props> = ({
         accessibilityLabel="CPF"
         textContentType="username"
         autoComplete="username"
+      />
+
+      <Text style={styles.label}>Matrícula (SIAPE)</Text>
+      <TextInput
+        style={isManagement ? styles.input : styles.inputDisabled}
+        value={isManagement ? (filiado?.siape || '') : (filiado?.siape || '—')}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, siape: onlyDigits(text).slice(0, 7) } : null)}
+        placeholder="6 ou 7 dígitos"
+        keyboardType="numeric"
+        maxLength={7}
+        editable={isManagement}
+        accessibilityLabel="Matrícula (SIAPE)"
       />
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
@@ -170,6 +197,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f0f0f0',
     color: '#999',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 15,
+    backgroundColor: '#fff',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
   },
 });
 

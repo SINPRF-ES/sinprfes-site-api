@@ -12,6 +12,13 @@ export const SITUACAO_FUNCIONAL = {
 
 export type SituacaoFuncional = typeof SITUACAO_FUNCIONAL[keyof typeof SITUACAO_FUNCIONAL];
 
+export const SEXO = {
+  M: 'M',
+  F: 'F'
+} as const;
+
+export type Sexo = typeof SEXO[keyof typeof SEXO];
+
 // 2. Estado do Cadastro (Gestão do Sistema)
 export const ESTADO_CADASTRO = {
   CADASTRO_ATIVO: 'CADASTRO_ATIVO',
@@ -54,8 +61,21 @@ export const LABELS: Record<string, string> = {
   [SITUACAO_FUNCIONAL.VETERANO]: 'Veterano',
   [SITUACAO_FUNCIONAL.PENSIONISTA]: 'Pensionista',
   [ESTADO_CADASTRO.CADASTRO_ATIVO]: 'Ativo',
-  [ESTADO_CADASTRO.ARQUIVADO]: 'Arquivado'
+  [ESTADO_CADASTRO.ARQUIVADO]: 'Arquivado',
+  [SEXO.M]: '♂️ Masculino',
+  [SEXO.F]: '♀️ Feminino'
 };
+
+/**
+ * Normaliza o Sexo.
+ */
+export function normalizeSexo(val: string | null | undefined): Sexo | null {
+  if (!val) return null;
+  const s = slugify(val);
+  if (s === 'M' || s === 'MASCULINO') return SEXO.M;
+  if (s === 'F' || s === 'FEMININO') return SEXO.F;
+  return null;
+}
 
 /**
  * Remove acentos e caracteres especiais para comparação robusta.

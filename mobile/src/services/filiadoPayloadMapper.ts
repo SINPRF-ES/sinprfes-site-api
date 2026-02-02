@@ -22,7 +22,9 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
   if (formState.email2) payload.email2 = formState.email2;
   if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
   if (formState.nome) payload.nome = normalizeNome(formState.nome);
+  if (formState.sexo !== undefined) payload.sexo = formState.sexo || null;
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
+  if (formState.siape !== undefined) payload.siape = onlyDigits(formState.siape || '').slice(0, 7) || null;
   if (formState.lotacao) payload.lotacao = formState.lotacao;
   if (formState.situacao_funcional) payload.situacao = formState.situacao_funcional;
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
@@ -50,7 +52,6 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
   // Campos que NUNCA devem ser enviados no payload de atualização
   const forbiddenFields: (keyof Filiado)[] = [
     'id',
-    'matricula_siape',
     'matricula_sinprf',
     'estado_cadastro',
     'avatar_url',
