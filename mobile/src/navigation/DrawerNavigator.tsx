@@ -18,6 +18,7 @@ import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
 import RepasseScreen from '../screens/RepasseScreen';
+import RelatoriosScreen from '../screens/RelatoriosScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/filiadoUtils';
@@ -127,6 +128,11 @@ const DrawerNavigator = () => {
             name="Repasse"
             component={RepasseScreen}
             options={{ title: '💰 Repasse' }}
+          />
+          <Drawer.Screen
+            name="Relatorios"
+            component={RelatoriosScreen}
+            options={{ title: '📊 Relatórios' }}
           />
           <Drawer.Screen
             name="NotificacoesPush"

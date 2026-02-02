@@ -73,6 +73,9 @@ const assembleiasRoutes = require("./routes/assembleias.routes");
 // 🛠️ NOVO: Rota de Diagnóstico
 const diagnosticoRoutes = require("./routes/diagnostico.routes");
 
+// 📊 NOVO: Rota de Relatórios
+const reportsRoutes = require("./routes/reports.routes");
+
 // ==============================
 // REGISTRO DE ROTAS (Prefixos)
 // ==============================
@@ -119,6 +122,9 @@ app.use("/api/diagnostico", diagnosticoRoutes);
 
 // Push de votações
 app.use("/api/push", pushRoutes);
+
+// 📊 NOVO: Relatórios
+app.use("/api/reports", reportsRoutes);
 
 // Push de eventos
 app.use("/api/eventos", eventosRoutes);
