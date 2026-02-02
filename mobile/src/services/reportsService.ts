@@ -6,6 +6,11 @@ export const generateReport = async (type: string, params: any) => {
   return response.data;
 };
 
+export const previewReport = async (type: string, params: any) => {
+  const response = await api.post('/api/reports/preview', { type, params });
+  return response.data;
+};
+
 export const getHistory = async () => {
   const response = await api.get('/api/reports/history');
   return response.data;
@@ -13,6 +18,7 @@ export const getHistory = async () => {
 
 const reportsService = {
   generateReport,
+  previewReport,
   getHistory,
 };
 

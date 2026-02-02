@@ -135,6 +135,165 @@ exports.generateReport = async (req, res) => {
 };
 
 /**
+ * POST /api/reports/preview
+ */
+exports.previewReport = async (req, res) => {
+  const { type, params } = req.body;
+  const requesterSession = req.user;
+
+  if (!type || typeof params !== 'object' || params === null) {
+    return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios." });
+  }
+
+  try {
+    let data;
+    let baseCompetencia = null;
+
+    if (type === "INDIVIDUAL") {
+      const { filiadoId } = params;
+      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório." });
+      data = await reportsService.buscarDadosDossie(filiadoId);
+      if (!data) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
+    } else if (["LOTACAO", "SITUACAO"].includes(type)) {
+      const { value } = params;
+      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório." });
+      data = await reportsService.buscarDadosAgregados(type, value);
+      if (data.repasse && data.repasse.competencia) {
+        baseCompetencia = `${String(data.repasse.competencia.month).padStart(2, '0')}/${data.repasse.competencia.year}`;
+      }
+    } else if (type === "GLOBAL") {
+      data = await reportsService.buscarDadosGlobal();
+      if (data.ativo && data.ativo.repasse && data.ativo.repasse.competencia) {
+        baseCompetencia = `${String(data.ativo.repasse.competencia.month).padStart(2, '0')}/${data.ativo.repasse.competencia.year}`;
+      }
+    } else {
+      return res.status(400).json({ success: false, message: "Tipo de relatório inválido." });
+    }
+
+    const sections = [];
+
+    if (type === "INDIVIDUAL") {
+      sections.push({
+        kind: "kv",
+        title: "Dados Pessoais",
+        items: [
+          { label: "Nome", value: data.nome },
+          { label: "CPF", value: data.cpf ? (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase()) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
+          { label: "Matrícula (SIAPE)", value: data.siape || "-" },
+          { label: "Sexo", value: data.sexo === 'M' ? '♂️ Masculino' : (data.sexo === 'F' ? '♀️ Feminino' : '-') },
+          { label: "Lotação", value: data.lotacao || "-" },
+          { label: "Situação", value: data.situacao || "-" }
+        ]
+      });
+      if (data.email1 || data.telefone1) {
+        sections.push({
+          kind: "kv",
+          title: "Contato",
+          items: [
+            { label: "E-mail Principal", value: data.email1 || "-" },
+            { label: "Telefone Principal", value: data.telefone1 || "-" }
+          ]
+        });
+      }
+    } else if (type === "LOTACAO") {
+      sections.push({
+        kind: "kv",
+        title: "Resumo da Unidade",
+        items: [
+          { label: "Total de Filiados (Ativos)", value: data.total },
+          { label: "Homens", value: `${data.masc} (${((data.masc / data.total) * 100).toFixed(1)}%)` },
+          { label: "Mulheres", value: `${data.fem} (${((data.fem / data.total) * 100).toFixed(1)}%)` }
+        ]
+      });
+
+      if (data.repasse) {
+        sections.push({
+          kind: "kv",
+          title: "Dados do Repasse",
+          items: [
+            { label: "PRF Total (Efetivo)", value: data.repasse.prfTotal || "Não informado" },
+            { label: "Percentual de Filiação", value: data.repasse.percentual ? `${data.repasse.percentual.toFixed(1)}%` : "N/A" }
+          ]
+        });
+      }
+
+      sections.push({
+        kind: "table",
+        title: "Distribuição por Idade",
+        columns: ["Faixa Etária", "Quantidade"],
+        rows: [
+          ["20-29 anos", data.range_20_29],
+          ["30-39 anos", data.range_30_39],
+          ["40-49 anos", data.range_40_49],
+          ["50-59 anos", data.range_50_59],
+          ["60+ anos", data.range_60_plus],
+          ["Não informada", data.idade_desconhecida]
+        ]
+      });
+    } else if (type === "SITUACAO") {
+      sections.push({
+        kind: "kv",
+        title: `Resumo: ${params.value}`,
+        items: [
+          { label: "Total", value: data.total },
+          { label: "Masculino", value: data.masc },
+          { label: "Feminino", value: data.fem }
+        ]
+      });
+
+      if (params.value === "ATIVO" && data.repasseBreakdown) {
+        sections.push({
+          kind: "table",
+          title: "Distribuição por Lotação",
+          columns: ["Lotação", "Filiados", "Efetivo (PRF)", "%"],
+          rows: data.repasseBreakdown.map(b => [
+            b.lotacao,
+            b.filiadosAtivos,
+            b.prfTotal || "-",
+            b.percentual ? `${b.percentual.toFixed(1)}%` : "-"
+          ])
+        });
+      }
+    } else if (type === "GLOBAL") {
+      sections.push({
+        kind: "kv",
+        title: "Resumo Geral",
+        items: [
+          { label: "Ativos", value: data.ativo.total },
+          { label: "Veteranos", value: data.veterano.total },
+          { label: "Pensionistas", value: data.pensionista.total },
+          { label: "Total Geral", value: data.ativo.total + data.veterano.total + data.pensionista.total }
+        ]
+      });
+
+      sections.push({
+        kind: "table",
+        title: "Distribuição por Sexo",
+        columns: ["Categoria", "Masculino", "Feminino"],
+        rows: [
+          ["Ativos", data.ativo.masc, data.ativo.fem],
+          ["Veteranos", data.veterano.masc, data.veterano.fem],
+          ["Pensionistas", data.pensionista.masc, data.pensionista.fem]
+        ]
+      });
+    }
+
+    return res.json({
+      success: true,
+      type,
+      generatedAt: new Date().toISOString(),
+      baseCompetencia,
+      summary: type === "INDIVIDUAL" ? { nome: data.nome, cpf: data.cpf, situacao: data.situacao } : { total: data.total || (data.ativo ? data.ativo.total + data.veterano.total + data.pensionista.total : 0) },
+      sections
+    });
+
+  } catch (err) {
+    log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId });
+    return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde." });
+  }
+};
+
+/**
  * GET /api/reports/history
  */
 exports.getHistory = async (req, res) => {

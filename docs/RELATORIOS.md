@@ -45,7 +45,19 @@ Este módulo permite a geração de documentos estruturados em PDF com base nos 
 - **Auditoria:** Toda solicitação bem-sucedida é registrada na tabela `report_jobs` com o ID e nome do solicitante, tipo de relatório e parâmetros utilizados.
 - **Cópia Sindicato:** Uma cópia oculta (BCC) é sempre enviada para o e-mail configurado em `REPORTS_COPY_EMAIL`.
 
-### 2. Histórico de Relatórios
+### 2. Visualizar na Tela (Preview)
+`POST /api/reports/preview`
+
+**Permissão:** `RELATORIOS_VER`
+
+**Corpo da Requisição:** Mesmo do endpoint `generate`.
+
+**Comportamento:**
+- **Sem Histórico:** Este endpoint é apenas para consulta imediata. Ele **NÃO** gera PDF, **NÃO** envia e-mail e **NÃO** grava registro na tabela `report_jobs`.
+- **JSON Estruturado:** Retorna os dados em um formato JSON pronto para renderização na interface (cards, tabelas e seções), permitindo uma conferência rápida antes de gerar o documento formal.
+- **Paridade UI:** A visualização na tela busca reutilizar os mesmos padrões visuais do módulo de **Repasse**, garantindo consistência na apresentação de dados estatísticos.
+
+### 3. Histórico de Relatórios
 `GET /api/reports/history`
 
 **Permissão:** `RELATORIOS_VER`

@@ -12,6 +12,13 @@ router.post(
   reportsController.generateReport
 );
 
+router.post(
+  "/preview",
+  authMiddleware,
+  requirePermission("RELATORIOS_VER"),
+  reportsController.previewReport
+);
+
 router.get(
   "/history",
   authMiddleware,

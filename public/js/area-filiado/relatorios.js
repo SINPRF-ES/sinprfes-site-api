@@ -16,11 +16,16 @@
 
     function setupHandlers() {
         const btnGerar = document.getElementById('btn-gerar-relatorio');
+        const btnPreview = document.getElementById('btn-preview-relatorio');
         const tipoSelect = document.getElementById('relatorio-tipo');
         const filiadoSearchInput = document.getElementById('relatorio-filiado-search');
 
         if (btnGerar) {
             btnGerar.onclick = handleGerar;
+        }
+
+        if (btnPreview) {
+            btnPreview.onclick = handlePreview;
         }
 
         if (tipoSelect) {
@@ -82,7 +87,7 @@
         }
     }
 
-    async function handleGerar() {
+    function getFormValues() {
         const tipo = document.getElementById('relatorio-tipo').value;
         let params = {};
 
@@ -90,7 +95,7 @@
             const select = document.getElementById('relatorio-filiado-select');
             if (!select.value) {
                 alert("Selecione um filiado.");
-                return;
+                return null;
             }
             params.filiadoId = select.value;
         } else if (tipo === 'LOTACAO') {
@@ -100,7 +105,14 @@
         } else if (tipo === 'GLOBAL') {
             // Sem filtro
         }
+        return { tipo, params };
+    }
 
+    async function handleGerar() {
+        const formData = getFormValues();
+        if (!formData) return;
+
+        const { tipo, params } = formData;
         const btnGerar = document.getElementById('btn-gerar-relatorio');
         const originalText = btnGerar.innerHTML;
 
@@ -127,6 +139,120 @@
         } finally {
             btnGerar.disabled = false;
             btnGerar.innerHTML = originalText;
+        }
+    }
+
+    async function handlePreview() {
+        const formData = getFormValues();
+        if (!formData) return;
+
+        const { tipo, params } = formData;
+        const btnPreview = document.getElementById('btn-preview-relatorio');
+        const originalText = btnPreview.innerHTML;
+
+        try {
+            btnPreview.disabled = true;
+            btnPreview.innerHTML = "⌛ Carregando Preview...";
+
+            const r = await window.Api.apiFetch('/api/reports/preview', {
+                method: 'POST',
+                body: { type: tipo, params }
+            });
+
+            const data = await r.json();
+
+            if (r.ok) {
+                renderizarPreview(data);
+            } else {
+                alert(data.message || "Erro ao gerar preview.");
+            }
+        } catch (e) {
+            console.error("Relatorios.PreviewErro", e);
+            alert("Erro de conexão ao carregar preview.");
+        } finally {
+            btnPreview.disabled = false;
+            btnPreview.innerHTML = originalText;
+        }
+    }
+
+    function renderizarPreview(data) {
+        const container = document.getElementById('relatorio-preview-container');
+        if (!container) return;
+
+        container.style.display = 'block';
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        let html = `
+            <div style="background: var(--azul-fundo); color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2 style="margin:0; color:var(--amarelo); font-size: 1.4rem;">👁️ Visualização do Relatório</h2>
+                    <div style="font-size:0.8rem; margin-top:8px; opacity:0.8;">
+                        <div>Consulta gerada em: ${new Date(data.generatedAt).toLocaleString('pt-BR')}</div>
+                        ${data.baseCompetencia ? `<div>Base do efetivo: ${data.baseCompetencia}</div>` : ''}
+                    </div>
+                </div>
+                <button onclick="document.getElementById('relatorio-preview-container').style.display='none'" style="background:none; border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius: 4px; padding: 4px 10px; cursor:pointer;">Fechar</button>
+            </div>
+            <div style="padding: 25px; background: #fff; color: #333;">
+                ${data.sections.map(section => {
+                    if (section.kind === 'kv') {
+                        return `
+                            <div style="margin-bottom:30px;">
+                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${section.title}</h4>
+                                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:20px;">
+                                    ${section.items.map(item => `
+                                        <div>
+                                            <span style="display:block; font-size:0.75rem; color:#777; text-transform: uppercase; font-weight: bold;">${item.label}</span>
+                                            <span style="font-size: 1rem; color: #333;">${item.value}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else if (section.kind === 'table') {
+                        return `
+                            <div style="margin-bottom:30px;">
+                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${section.title}</h4>
+                                <div style="overflow-x:auto;">
+                                    <table class="repasse-tabela" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
+                                        <thead>
+                                            <tr style="background:#f8f9fa;">
+                                                ${section.columns.map(col => `<th style="border:1px solid #ddd; padding:12px 10px; text-align:left; color: var(--azul-fundo);">${col}</th>`).join('')}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${section.rows.map(row => `
+                                                <tr>
+                                                    ${row.map(cell => `<td style="border:1px solid #ddd; padding:12px 10px;">${cell}</td>`).join('')}
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    return '';
+                }).join('')}
+
+                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <button class="btn btn-outline" style="color: var(--azul-fundo); border-color: var(--azul-fundo);" onclick="document.getElementById('relatorio-preview-container').style.display='none'">
+                        Ocultar Visualização
+                    </button>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        if (!document.getElementById('style-preview-relatorios')) {
+            const s = document.createElement('style');
+            s.id = 'style-preview-relatorios';
+            s.textContent = `
+                .repasse-tabela tbody tr:nth-child(even) { background: #fafafa; }
+                .repasse-tabela tbody tr:hover { background: #f1f3f5; }
+            `;
+            document.head.appendChild(s);
         }
     }
 
