@@ -12,6 +12,8 @@ import {
   RefreshControl,
   Modal,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import * as Canon from '../utils/canon';
@@ -133,7 +135,8 @@ export default function RelatoriosScreen() {
     const typeLabels: any = {
       INDIVIDUAL: "👤 Dossiê Individual",
       LOTACAO: "📍 Por Lotação",
-      SITUACAO: "📑 Por Situação"
+      SITUACAO: "📑 Por Situação",
+      GLOBAL: "🌏 Global (Completo)"
     };
 
     const params = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
@@ -160,7 +163,10 @@ export default function RelatoriosScreen() {
         onRequestClose={() => setIsPickerVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContent}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Buscar Filiado</Text>
               <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
@@ -201,7 +207,7 @@ export default function RelatoriosScreen() {
                 )}
               />
             )}
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -226,8 +232,9 @@ export default function RelatoriosScreen() {
                 mode="dropdown"
             >
                 <Picker.Item label="👤 Dossiê do Filiado (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="📍 Por Lotação (Consome Repasse)" value="LOTACAO" />
+                <Picker.Item label="📍 Por Lotação" value="LOTACAO" />
                 <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
+                <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
             </Picker>
           </View>
 
