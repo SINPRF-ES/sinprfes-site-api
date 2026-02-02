@@ -843,6 +843,11 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
   const codigo = gerarCodigoVerificacao(dados, "ESTATISTICO");
 
   const pdfBuffer = await new Promise((resolve, reject) => {
+    const mesesPtBr = [
+      "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+      "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+    ];
+
     const doc = new PDFDocument({
       size: "A4",
       margins: { top: 140, bottom: 70, left: 70, right: 70 },
@@ -856,6 +861,35 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
     doc.moveDown(2);
     doc.font("Helvetica-Bold").fontSize(16).text(titulo, { align: "center" });
     doc.moveDown(1);
+
+    // Bloco "Resumo da Lotação" (Exclusivo para relatórios por Lotação que possuem dados de Repasse)
+    if (dados.repasse) {
+        doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Lotação");
+        doc.moveDown(0.5);
+        doc.font("Helvetica").fontSize(11);
+
+        const r = dados.repasse;
+        const comp = r.competencia
+            ? `${mesesPtBr[r.competencia.month - 1]}/${r.competencia.year}`
+            : "—";
+
+        if (r.prfTotal === null) {
+            doc.text(`Dados de Repasse: não informados`);
+            doc.text(`Base do efetivo: —`);
+        } else {
+            doc.text(`Efetivo total (Repasse): ${r.prfTotal}`);
+            doc.text(`Filiados cadastrados: ${r.filiadosAtivos}`);
+            doc.text(`Índice de sindicalização: ${r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—"}`);
+            doc.text(`Base do efetivo (Repasse): ${comp}`);
+        }
+
+        const hoje = new Date();
+        const dataHoje = `${mesesPtBr[hoje.getMonth()]}/${hoje.getFullYear()}`;
+        doc.text(`Relatório gerado em: ${dataHoje}`);
+
+        doc.moveDown(1);
+        linha(doc);
+    }
 
     doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
     doc.moveDown(0.5);

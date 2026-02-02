@@ -183,6 +183,46 @@ async function getRepasseAno(year) {
   };
 }
 
+/**
+ * Obtém os dados de repasse mais recentes para uma lotação específica.
+ * Usado pelo módulo de Relatórios para evitar duplicação de lógica.
+ */
+async function getUltimosDadosParaRelatorio(lotacaoKey) {
+  // 1. Total de filiados ativos atuais (Source of Truth do Repasse)
+  const filiadosAtivos = await getFiliadosAtivosCount(lotacaoKey);
+
+  // 2. Busca o registro mais recente de prf_total para esta lotação
+  const { rows } = await pool.query(`
+    SELECT rl.year, rl.month, rl.prf_total
+    FROM repasse_lotacao rl
+    WHERE rl.lotacao_key = $1
+    ORDER BY rl.year DESC, rl.month DESC
+    LIMIT 1
+  `, [lotacaoKey]);
+
+  if (rows.length === 0) {
+    return {
+      filiadosAtivos,
+      prfTotal: null,
+      percentual: null,
+      competencia: null
+    };
+  }
+
+  const { year, month, prf_total: prfTotal } = rows[0];
+  let percentual = null;
+  if (prfTotal > 0) {
+    percentual = (filiadosAtivos / prfTotal) * 100;
+  }
+
+  return {
+    filiadosAtivos,
+    prfTotal,
+    percentual,
+    competencia: { year, month }
+  };
+}
+
 async function updateRepasseMes(year, month, perCapita, localidadesData) {
   const client = await pool.connect();
   try {
@@ -221,6 +261,7 @@ async function updateRepasseMes(year, month, perCapita, localidadesData) {
 
 module.exports = {
   getRepasseAno,
+  getUltimosDadosParaRelatorio,
   updateRepasseMes,
   listarResponsaveis,
   factorFromPercentual

@@ -165,13 +165,13 @@
             const valor = params.value || params.filiadoId || "-";
 
             return `
-                <div class="history-item" style="padding: 10px; border-bottom: 1px solid #eee;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                <div class="history-item" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom: 4px;">
                         <strong>${tipoLabels[h.report_type] || h.report_type}</strong>
-                        <span style="color:#666;">${data}</span>
+                        <span style="color:var(--texto-fraco); font-size:0.8rem;">${data}</span>
                     </div>
-                    <div style="font-size:0.8rem; color:#444;">
-                        Parâmetro: ${valor} | Solicitante: ${h.requester_name}
+                    <div style="font-size:0.85rem; color:var(--cinza);">
+                        Parâmetro: <span style="color:var(--amarelo);">${valor}</span> | Solicitante: ${h.requester_name}
                     </div>
                 </div>
             `;

@@ -1,6 +1,7 @@
 // src/services/reports.service.js
 const pool = require("../config/db");
 const filiadosService = require("./filiados.service");
+const repasseService = require("./repasse.service");
 const { SITUACAO_FUNCIONAL, LOTACOES } = require("../../shared/canon");
 
 /**
@@ -80,7 +81,15 @@ async function buscarDadosAgregados(tipo, valor) {
   `;
 
   const { rows } = await pool.query(query, params);
-  return rows[0];
+  const result = rows[0];
+
+  // Adiciona dados do Repasse se for relatório por Lotação
+  if (tipo === "LOTACAO") {
+    const repasseData = await repasseService.getUltimosDadosParaRelatorio(valor);
+    result.repasse = repasseData;
+  }
+
+  return result;
 }
 
 module.exports = {

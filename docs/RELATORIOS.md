@@ -28,6 +28,10 @@ Este módulo permite a geração de documentos estruturados em PDF com base nos 
     *   Se nenhum e-mail for encontrado, o PDF é enviado **apenas** para o sindicato com o prefixo `[SOLICITANTE SEM EMAIL]` no assunto.
 - **Formatação de Datas:** Todas as datas no PDF (nascimento do filiado e nascimento dos dependentes) são exibidas no formato brasileiro `dd/MM/yyyy` (ex: 04/07/1987). Caso a data não esteja informada no banco, o PDF exibirá explicitamente `Não informada`.
 - **Labels de Dependentes:** Os tipos de parentesco (vínculo) dos dependentes não são exibidos como códigos do banco (ex: `FILHO_ENTEADO`), mas com seus nomes humanizados (ex: "Filha(o) / Enteada(o)"). Valores desconhecidos são convertidos de snake_case para Title Case.
+- **Integração com Repasse (Lotação):** O relatório por lotação consome dados diretamente do módulo de Repasse.
+    - O Repasse é a **fonte da verdade** para os índices de sindicalização.
+    - O PDF exibe um bloco de "Resumo da Lotação" com: Efetivo total (Repasse), Filiados cadastrados, Índice de sindicalização e a Competência (mês/ano) base do dado de Repasse.
+    - O sistema utiliza o dado mais recente disponível no Repasse para a lotação selecionada.
 - **Nomenclatura de Arquivos (Filename):**
     *   Dossiês: `dossie_<nome-do-filiado-slug>.pdf` (ex: `dossie_joao_da_silva.pdf`). O slug remove acentos, caracteres especiais e substitui espaços por sublinhados.
     *   Relatórios Agregados: `relatorio_<tipo>_<valor>.pdf`.
