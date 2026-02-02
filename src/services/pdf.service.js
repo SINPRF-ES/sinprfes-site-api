@@ -9,6 +9,7 @@ const { PDFDocument: PDFLibDocument } = require("pdf-lib");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
 const { formatarCPF, formatarTelefone, formatarDataBR, formatarAgencia, formatarConta } = require("../utils/format");
+const { labelFromParentesco } = require("../../shared/dependentes/parentesco");
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
 const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");
@@ -52,6 +53,32 @@ function sanitizeForPdf(text) {
   // Substitui quaisquer caracteres fora do BMP (emojis etc.)
   s = s.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, " ");
   return s;
+}
+
+/**
+ * Formata data de forma amigável para o PDF.
+ */
+function formatDateSafe(val) {
+    if (!val) return "Não informada";
+    const formatted = formatarDataBR(val);
+    // Se o formatarDataBR retornou algo inválido (não contém /), tenta fallback
+    if (!formatted || (typeof formatted === 'string' && !formatted.includes('/'))) {
+        return "Não informada";
+    }
+    return formatted;
+}
+
+/**
+ * Humaniza o parentesco para o PDF.
+ */
+function humanizeParentesco(val) {
+    if (!val) return "Dependente";
+    const label = labelFromParentesco(val);
+    if (label === 'Outro' && val !== 'OUTRO' && val !== 'Outro') {
+        // Fallback: SNAKE_CASE para Title Case
+        return val.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return label;
 }
 
 // Carrega o logo como buffer (para pdf-lib)
@@ -260,7 +287,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
 }
 
 // ------------------------------------------------------------------
-// PDF de Filiação (mantido – ajuste só se você quiser mudar layout)
+// PDF de Filiação
 // ------------------------------------------------------------------
 
 async function gerarPdfFichaFiliacao(dados) {
@@ -369,7 +396,7 @@ async function gerarPdfFichaFiliacao(dados) {
 }
 
 // ------------------------------------------------------------------
-// PDF de Ressarcimento (NOVO LAYOUT, sem sumário de anexos)
+// PDF de Ressarcimento
 // ------------------------------------------------------------------
 
 async function gerarPdfRessarcimento(dados, anexos = []) {
@@ -544,15 +571,11 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
   // 3) Se houver anexos, incorpora-os usando pdf-lib (SEM sumário de anexos)
   const pdfDoc = await PDFLibDocument.load(pdfPrincipalBuffer);
 
-  // 🟢 CORREÇÃO: Removido loop que cria páginas de título (intro)
-  // O código agora insere o conteúdo do anexo direto
   for (const anexo of anexos) {
     try {
       const buffer = await fs.readFile(anexo.path);
       const mime = anexo.mimetype || "";
       const nome = anexo.originalname || "";
-
-      // Aqui estava o código da página "intro". Foi removido.
 
       if (mime === "application/pdf" || nome.toLowerCase().endsWith(".pdf")) {
         const pdfAnexo = await PDFLibDocument.load(buffer);
@@ -599,10 +622,6 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
     tipoDocumento: "Pedido de Ressarcimento",
   });
 }
-
-// ------------------------------------------------------------------
-// Export
-// ------------------------------------------------------------------
 
 async function gerarPdfRelatorioAssembleia(dados) {
   const codigo = gerarCodigoVerificacao(dados, "RELATORIO_ASSEMBLEIA");
@@ -732,8 +751,146 @@ async function gerarPdfRelatorioAssembleia(dados) {
   });
 }
 
+// ------------------------------------------------------------------
+// RELATÓRIOS (NOVO)
+// ------------------------------------------------------------------
+
+/**
+ * PDF: DOSSIÊ DO FILIADO
+ */
+async function gerarPdfDossieFiliado(filiado, options = {}) {
+  const { podeVerCpf = false } = options;
+  const codigo = gerarCodigoVerificacao(filiado, "DOSSIE");
+
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 140, bottom: 70, left: 70, right: 70 },
+    });
+
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.moveDown(2);
+    doc.font("Helvetica-Bold").fontSize(16).text("Dossiê do Filiado", { align: "center" });
+    doc.moveDown(1);
+
+    // 1. Identificação
+    doc.font("Helvetica-Bold").fontSize(12).text("1. Identificação");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Nome: ${filiado.nome || ""}`);
+    doc.text(`CPF: ${podeVerCpf ? formatarCPF(filiado.cpf) : "***.***.***-**"}`);
+    doc.text(`Matrícula (SIAPE): ${filiado.siape || "-"}`);
+    doc.text(`Sexo: ${filiado.sexo === 'M' ? 'Masculino' : (filiado.sexo === 'F' ? 'Feminino' : '-')}`);
+    doc.text(`Data de Nascimento: ${formatDateSafe(filiado.data_nascimento)}`);
+    doc.moveDown(1);
+    linha(doc);
+
+    // 2. Dados Funcionais
+    doc.font("Helvetica-Bold").fontSize(12).text("2. Dados Funcionais");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Lotação: ${filiado.lotacao || "SEDE"}`);
+    doc.text(`Situação Funcional: ${filiado.situacao || "ATIVO"}`);
+    doc.moveDown(1);
+    linha(doc);
+
+    // 3. Contatos e Endereço
+    doc.font("Helvetica-Bold").fontSize(12).text("3. Contatos e Endereço");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`E-mail 1: ${filiado.email1 || "-"}`);
+    doc.text(`E-mail 2: ${filiado.email2 || "-"}`);
+    doc.text(`Telefone 1: ${filiado.telefone1 ? formatarTelefone(filiado.telefone1) : "-"}`);
+    doc.text(`Telefone 2: ${filiado.telefone2 ? formatarTelefone(filiado.telefone2) : "-"}`);
+    doc.moveDown(0.5);
+    doc.text(`Endereço: ${filiado.logradouro_bairro || ""}, nº ${filiado.numero || ""} ${filiado.complemento || ""}`);
+    doc.text(`Cidade: ${filiado.cidade || ""} - UF: ${filiado.uf || ""} | CEP: ${filiado.cep || ""}`);
+    doc.moveDown(1);
+    linha(doc);
+
+    // 4. Dependentes
+    doc.font("Helvetica-Bold").fontSize(12).text("4. Dependentes");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+    let temDependente = false;
+    for (let i = 1; i <= 5; i++) {
+        if (filiado[`dep${i}_nome`]) {
+            temDependente = true;
+            const parentescoLabel = humanizeParentesco(filiado[`dep${i}_parentesco`]);
+            doc.text(`${i}. ${filiado[`dep${i}_nome`]} (${parentescoLabel})`);
+            doc.text(`   CPF: ${podeVerCpf ? formatarCPF(filiado[`dep${i}_cpf`]) : "***.***.***-**"} | Nasc: ${formatDateSafe(filiado[`dep${i}_data_nascimento`])}`);
+        }
+    }
+    if (!temDependente) doc.text("Nenhum dependente cadastrado.");
+
+    doc.end();
+  });
+
+  return await aplicarLayoutInstitucional(pdfBuffer, {
+    codigoVerificacao: codigo,
+    tipoDocumento: "Dossiê do Filiado",
+  });
+}
+
+/**
+ * PDF: RELATÓRIO ESTATÍSTICO (Lotação, Situação)
+ */
+async function gerarPdfRelatorioAgregado(dados, titulo) {
+  const codigo = gerarCodigoVerificacao(dados, "ESTATISTICO");
+
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 140, bottom: 70, left: 70, right: 70 },
+    });
+
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.moveDown(2);
+    doc.font("Helvetica-Bold").fontSize(16).text(titulo, { align: "center" });
+    doc.moveDown(1);
+
+    doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(12);
+    doc.text(`Total de servidores: ${dados.total}`);
+    doc.moveDown(1);
+
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:");
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Masculino: ${dados.masc}`);
+    doc.text(`Feminino: ${dados.fem}`);
+    doc.moveDown(1);
+
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:");
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`20-29 anos: ${dados.range_20_29}`);
+    doc.text(`30-39 anos: ${dados.range_30_39}`);
+    doc.text(`40-49 anos: ${dados.range_40_49}`);
+    doc.text(`50-59 anos: ${dados.range_50_59}`);
+    doc.text(`60+ anos: ${dados.range_60_plus}`);
+    doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`);
+
+    doc.end();
+  });
+
+  return await aplicarLayoutInstitucional(pdfBuffer, {
+    codigoVerificacao: codigo,
+    tipoDocumento: "Relatório Estatístico",
+  });
+}
+
 module.exports = {
   gerarPdfFichaFiliacao,
   gerarPdfRessarcimento,
   gerarPdfRelatorioAssembleia,
+  gerarPdfDossieFiliado,
+  gerarPdfRelatorioAgregado
 };

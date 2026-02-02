@@ -145,23 +145,6 @@
     return 'SEDE'; // Fallback seguro para garantir compatibilidade com CHECK CONSTRAINT
   }
 
-  return {
-    SITUACAO_FUNCIONAL,
-    SEXO,
-    ESTADO_CADASTRO,
-    PERFIL_ACESSO,
-    LOTACOES_REPASSE,
-    LOTACOES,
-    LABELS,
-    normalizeSituacaoFuncional,
-    normalizeSexo,
-    normalizePerfil,
-    normalizeEstadoCadastro,
-    normalizeLotacao,
-    normalizeNome,
-    slugify
-  };
-
   /**
    * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
    * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
@@ -181,4 +164,21 @@
     // Regex: início da string OU separador, seguido de um caractere alfabético
     return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
   }
+
+  return {
+    SITUACAO_FUNCIONAL,
+    SEXO,
+    ESTADO_CADASTRO,
+    PERFIL_ACESSO,
+    LOTACOES_REPASSE,
+    LOTACOES,
+    LABELS,
+    normalizeSituacaoFuncional,
+    normalizeSexo,
+    normalizePerfil,
+    normalizeEstadoCadastro,
+    normalizeLotacao,
+    normalizeNome,
+    slugify
+  };
 }));
