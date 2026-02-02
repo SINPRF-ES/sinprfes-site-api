@@ -1,5 +1,6 @@
 // mobile/src/screens/CriarFiliadoScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, Button, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -48,6 +49,12 @@ export default function CriarFiliadoScreen({ navigation }: any) {
 
   const [filiado, setFiliado] = useState<Partial<Filiado>>(initialFiliadoState);
   const [loading, setLoading] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setFiliado(initialFiliadoState);
+    }, [])
+  );
 
   const handleCreate = useCallback(async () => {
     if (!netInfo.isConnected) {

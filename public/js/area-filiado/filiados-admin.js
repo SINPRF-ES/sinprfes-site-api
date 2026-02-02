@@ -755,7 +755,12 @@
     }
 
     function abrirNovoFiliado(container) {
-        container.style.display = container.style.display === "none" ? "block" : "none";
+        if (container.style.display === "none") {
+            renderizarFormularioNovoFiliado(container);
+            container.style.display = "block";
+        } else {
+            container.style.display = "none";
+        }
     }
 
     function renderizarFormularioNovoFiliado(container) {
