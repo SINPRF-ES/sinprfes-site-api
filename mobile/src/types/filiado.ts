@@ -64,4 +64,8 @@ export interface Filiado {
 
   // Para permitir acesso dinâmico a campos de dependentes
   [key: string]: any;
+
+  // Otimizações de busca (Bolt ⚡)
+  _normalizedNome?: string;
+  _onlyDigitsCpf?: string;
 }
