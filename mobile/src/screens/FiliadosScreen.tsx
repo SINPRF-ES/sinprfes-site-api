@@ -42,10 +42,9 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
       const data = await getFiliados(params);
 
-      let processedData = data;
-      // Sanitização básica para perfil de filiado (diretório público interno)
-      if (!ehGestao) {
-        processedData = data.map((f: Filiado) => ({
+      // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter (Bolt ⚡)
+      const processedData = data.map((f: Filiado) => {
+        const item = ehGestao ? f : {
           id: f.id,
           nome: f.nome,
           telefone1: f.telefone1,
@@ -53,8 +52,14 @@ export default function FiliadosScreen({ navigation, route }: any) {
           lotacao: f.lotacao,
           situacao: f.situacao,
           situacao_funcional: f.situacao_funcional,
-        }));
-      }
+        };
+
+        return {
+          ...item,
+          _normalizedNome: normalizeText(f.nome),
+          _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
+        };
+      });
 
       setFiliados(processedData);
       await AsyncStorage.setItem(cacheKey, JSON.stringify(processedData));
@@ -67,10 +72,6 @@ export default function FiliadosScreen({ navigation, route }: any) {
       setRefreshing(false);
     }
   }, [ehGestao, cacheKey, filtroCadastro]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,6 +88,8 @@ export default function FiliadosScreen({ navigation, route }: any) {
           return <HeaderMenu actions={actions} />;
         }
       });
+      // Dispara o fetch. Como removemos o useEffect redundante,
+      // este é o único gatilho de carga inicial e refresh por foco.
       fetchData(true);
     }, [fetchData, ehGestao])
   );
@@ -103,9 +106,9 @@ export default function FiliadosScreen({ navigation, route }: any) {
     const digits = onlyDigits(searchTerm);
 
     return filiados.filter(f => {
-      // Filtro por Nome/CPF
-      const nomeMatch = normalizeText(f.nome).includes(term);
-      const cpfMatch = ehGestao && digits !== '' && onlyDigits(f.cpf || '').includes(digits);
+      // Filtro por Nome/CPF usando campos pré-calculados (Bolt ⚡)
+      const nomeMatch = f._normalizedNome?.includes(term);
+      const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
 
       // Filtro Situação Funcional / Lotação
@@ -131,11 +134,19 @@ export default function FiliadosScreen({ navigation, route }: any) {
     });
   }, [filiados, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
 
-  const handleEdit = (filiado: Filiado) => {
+  const handleEdit = useCallback((filiado: Filiado) => {
     const filiadoId = getCanonicalFiliadoId(filiado);
     logger.info('NAVIGATE_TO_EDITAR_FILIADO', { filiadoId });
     navigation.navigate('EditarFiliado', { filiadoId });
-  };
+  }, [navigation]);
+
+  const renderItem = useCallback(({ item }: { item: Filiado }) => (
+    <FiliadoCard
+      filiado={item}
+      currentUserProfile={usuario?.perfil_acesso as any}
+      onEdit={handleEdit}
+    />
+  ), [usuario?.perfil_acesso, handleEdit]);
 
   if (loading && filiados.length === 0) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
@@ -206,13 +217,12 @@ export default function FiliadosScreen({ navigation, route }: any) {
       <FlatList
         data={filteredFiliados}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <FiliadoCard
-            filiado={item}
-            currentUserProfile={usuario?.perfil_acesso as any}
-            onEdit={handleEdit}
-          />
-        )}
+        renderItem={renderItem}
+        // Otimizações de performance para listas longas (Bolt ⚡)
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
         refreshing={refreshing}
         onRefresh={() => fetchData(true)}
         ListEmptyComponent={

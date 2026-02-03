@@ -15,3 +15,6 @@
 ## 2026-01-29 - [Optimization of Assembly Check-in Broadcast]
 **Learning:** High-frequency endpoints like `checkin` (during the start of an event) should avoid fetching the full application state if only a small subset is needed for the real-time broadcast. In this codebase, `buscarEstadoCompleto` was a major bottleneck because it fetched proposals and speaker lists unnecessarily.
 **Action:** Always prefer targeted service calls over "get everything" state functions in real-time event handlers. Ensure WebSocket payloads match exactly what the client expects to avoid broken "live" features.
+## 2026-02-03 - [FlatList Search Optimization]
+**Learning:** Calling expensive normalization functions (`normalizeText`, `onlyDigits`) inside a `filter` that runs on every keystroke (O(N) * M) causes significant UI lag in large lists. Memoizing the list items (`React.memo`) is insufficient if callbacks passed to them (`onEdit`, `renderItem`) are recreated on every render.
+**Action:** Pre-calculate normalized search fields once when data is fetched/processed. Stabilize callbacks with `useCallback`. Tune `FlatList` props (`windowSize`, `removeClippedSubviews`) to manage memory and render pressure.
