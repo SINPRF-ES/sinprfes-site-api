@@ -52,7 +52,12 @@
           Se não conseguir ler o QR Code, você pode adicionar a conta manualmente usando a chave abaixo:
         </p>
 
-        <pre id="secret-2fa"></pre>
+        <div class="secret-wrapper">
+          <pre id="secret-2fa"></pre>
+          <button id="btn-copiar-secret" class="btn btn-outline btn-sm" style="display: none;" title="Copiar chave" aria-label="Copiar chave manual">
+            📋 Copiar
+          </button>
+        </div>
       </div>
     </section>
   </main>

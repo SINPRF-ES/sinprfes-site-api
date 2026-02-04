@@ -65,6 +65,23 @@ document.addEventListener("DOMContentLoaded", () => {
       // Exibe chave manual
       secretEl.textContent = secret_base32 || "Não informado";
 
+      // Habilita botão de copiar
+      const btnCopiar = document.getElementById("btn-copiar-secret");
+      if (btnCopiar && secret_base32) {
+        btnCopiar.style.display = "inline-flex";
+        btnCopiar.onclick = () => {
+          navigator.clipboard.writeText(secret_base32).then(() => {
+            const originalText = btnCopiar.textContent;
+            btnCopiar.textContent = "✅ Copiado!";
+            setTimeout(() => {
+              btnCopiar.textContent = originalText;
+            }, 2000);
+          }).catch(err => {
+            console.error("Erro ao copiar:", err);
+          });
+        };
+      }
+
     } catch (err) {
       console.error("Erro ao ativar 2FA:", err);
       msg.textContent =
