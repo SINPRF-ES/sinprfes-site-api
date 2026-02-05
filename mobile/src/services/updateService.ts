@@ -220,7 +220,8 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
     }
 
     // Verificação de OTA (Mudanças apenas de JS/UI)
-    if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
+    // O critério correto é compatibilidade de runtimeVersion, não versionCode.
+    if (manifest.ota.enabled && manifest.runtimeVersion === currentRuntimeVersion) {
       try {
         logDebug(`${logPrefix}.checkingOTA`, {
           runtimeVersion: currentRuntimeVersion,
