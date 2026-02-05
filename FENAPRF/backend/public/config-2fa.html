@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ativar 2FA – SINPRF-ES</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="/js/main.js" defer></script>
+  <script src="/js/config-2fa.js" defer></script>
+
+  <!-- Biblioteca do QR Code -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <main class="page container">
+    <section class="card">
+      <h1 class="section-title">
+        <span class="emoji">🔐</span> Ativar autenticação em duas etapas (2FA)
+      </h1>
+
+      <p class="section-subtitle">
+        A autenticação em duas etapas aumenta a segurança da sua conta. Após ativação,
+        será necessário informar o código do aplicativo autenticador ao fazer login.
+      </p>
+
+      <div id="mensagem-2fa" class="field-hint" style="margin-bottom: 16px;"></div>
+
+      <div class="form-actions">
+        <button id="btn-ativar-2fa" class="btn btn-primary">
+          Gerar QR Code para ativar 2FA
+        </button>
+      </div>
+
+      <!-- Área do QR Code (fica oculta até a geração) -->
+      <div id="area-qr" style="display: none; margin-top: 28px;">
+        <h2 class="section-subtitle" style="font-size: 1.1rem; margin-bottom: 12px;">
+          Escaneie o QR Code no aplicativo autenticador
+        </h2>
+
+        <p class="field-hint" style="margin-bottom: 10px;">
+          1. Abra o Google Authenticator (ou app similar).<br />
+          2. Clique em “+” → “Ler código QR”.<br />
+          3. Aponte a câmera para o QR abaixo.
+        </p>
+
+        <div id="qrcode" style="margin: 12px 0;"></div>
+
+        <p class="field-hint" style="margin-top: 14px;">
+          Se não conseguir ler o QR Code, você pode adicionar a conta manualmente usando a chave abaixo:
+        </p>
+
+        <div class="secret-wrapper">
+          <pre id="secret-2fa"></pre>
+          <button id="btn-copiar-secret" class="btn btn-outline btn-sm" style="display: none;" title="Copiar chave" aria-label="Copiar chave manual">
+            📋 Copiar
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>

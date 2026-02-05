@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "607031621166",
+    "project_id": "app-sinprf-es",
+    "storage_bucket": "app-sinprf-es.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:607031621166:android:583245035b0087e62cd1bf",
+        "android_client_info": {
+          "package_name": "com.mfavero138.sinprfesapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApRv240dtItX5VfatcSNLxiZCMlgFEytk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
