@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useRef 
 import { AppState } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
+import { updateAutoScheduler } from '../services/updateAutoScheduler';
 
 import type { AuthContextData } from '../types/auth';
 import type { Usuario } from '../types/usuario';
@@ -50,6 +51,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.remove();
     };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      updateAutoScheduler.start();
+    } else {
+      updateAutoScheduler.stop();
+    }
   }, [token]);
 
   useEffect(() => {
