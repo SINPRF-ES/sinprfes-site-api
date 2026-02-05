@@ -86,6 +86,16 @@
       </section>
 
       <script>
+        function escapeHTML(str) {
+          if (!str) return "";
+          return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        }
+
         function carregarFiliados() {
           const q = document.getElementById('busca-nome').value.trim();
           const situacao = document.getElementById('filtro-situacao').value;
@@ -122,11 +132,11 @@
                 const endereco = f.endereco || '';
 
                 return '<tr>' +
-                  '<td style="padding:6px 4px; white-space:nowrap;">' + (f.nome || '') + '</td>' +
-                  '<td style="padding:6px 4px;">' + (f.situacao || '') + '</td>' +
-                  '<td style="padding:6px 4px; white-space:nowrap;">' + telefone + '</td>' +
-                  '<td style="padding:6px 4px; white-space:nowrap;">' + email + '</td>' +
-                  '<td style="padding:6px 4px;">' + endereco + '</td>' +
+                  '<td style="padding:6px 4px; white-space:nowrap;">' + escapeHTML(f.nome || '') + '</td>' +
+                  '<td style="padding:6px 4px;">' + escapeHTML(f.situacao || '') + '</td>' +
+                  '<td style="padding:6px 4px; white-space:nowrap;">' + escapeHTML(telefone) + '</td>' +
+                  '<td style="padding:6px 4px; white-space:nowrap;">' + escapeHTML(email) + '</td>' +
+                  '<td style="padding:6px 4px;">' + escapeHTML(endereco) + '</td>' +
                   '</tr>';
               }).join('');
 
