@@ -33,7 +33,7 @@
       "checkAutomatically": "NEVER"
     },
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "sdkVersion"
     },
     "plugins": [
       "expo-secure-store",
