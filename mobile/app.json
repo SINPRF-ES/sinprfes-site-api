@@ -32,7 +32,9 @@
       "url": "https://u.expo.dev/c589a042-895e-497e-a61f-a76216580a35",
       "checkAutomatically": "NEVER"
     },
-    "runtimeVersion": "54.0.1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "plugins": [
       "expo-secure-store",
       "expo-sqlite",

@@ -222,6 +222,11 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
     // Verificação de OTA (Mudanças apenas de JS/UI)
     if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
       try {
+        logDebug(`${logPrefix}.checkingOTA`, {
+          runtimeVersion: currentRuntimeVersion,
+          channel: currentChannel,
+          url: (Updates as any).updateUrl || 'N/A'
+        });
         const update = await Updates.checkForUpdateAsync();
         if (update.isAvailable) {
           logDebug(`${logPrefix}.OTA_AVAILABLE`, logMeta);
@@ -233,7 +238,12 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
           };
         }
       } catch (e: any) {
-        logDebug(`${logPrefix}.error`, { reason: 'OTA_CHECK_FAILED', message: e.message });
+        logDebug(`${logPrefix}.error`, { reason: 'OTA_CHECK_FAILED', message: e.message, stack: e.stack });
+        // Se deu erro no serviço da Expo, reportamos para o usuário para transparência
+        return {
+          hasUpdate: false,
+          error: `Erro no serviço Expo Updates: ${e.message}. Verifique a conexão ou se o app está em modo de desenvolvimento sem suporte a updates.`
+        };
       }
     }
 

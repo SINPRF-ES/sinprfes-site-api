@@ -1196,6 +1196,11 @@ footer {
 
 /* Responsivo */
 @media (max-width: 900px) {
+  .af-body {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
   .af-main-layout {
     flex-direction: column;
     height: auto;
