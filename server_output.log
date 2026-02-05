@@ -1,0 +1,47 @@
+ WARN  Unsupported engine: wanted: {"node":"20.x"} (current: {"node":"v22.22.0","pnpm":"10.28.0"})
+
+> sinprfes-site-api@1.0.0 start /app
+> node server.js
+
+{"level":"WARN","timestamp":"2026-02-05T20:46:10.588Z","env":"dev","message":"InstagramTokenNaoConfigurado"}
+[DATABASE] host=localhost port=? db=dummy sslmode=-
+[DATABASE] host=localhost port=? db=dummy sslmode=-
+[BirthdayScheduler] cron scheduled 0 8 * * * America/Sao_Paulo
+[BirthdayScheduler] boot trigger scheduled
+{"level":"INFO","timestamp":"2026-02-05T20:46:12.039Z","env":"dev","message":"Job.PushCleanup.SchedulerIniciado"}
+{"level":"INFO","timestamp":"2026-02-05T20:46:12.043Z","env":"dev","message":"Job.ReportCleanup.SchedulerIniciado"}
+SINPRF-ES rodando na porta 3000
+{"level":"INFO","timestamp":"2026-02-05T20:46:22.044Z","env":"dev","message":"Job.PushCleanup.Iniciado"}
+/app/node_modules/.pnpm/pg-pool@3.11.0_pg@8.17.2/node_modules/pg-pool/index.js:45
+    Error.captureStackTrace(err)
+          ^
+
+AggregateError [ECONNREFUSED]:
+    at /app/node_modules/.pnpm/pg-pool@3.11.0_pg@8.17.2/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async runPushCleanup (/app/src/jobs/pushCleanupCron.js:13:18) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -111,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 5432
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -111,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 5432
+    }
+  ]
+}
+
+Node.js v22.22.0
+ ELIFECYCLE  Command failed with exit code 1.
