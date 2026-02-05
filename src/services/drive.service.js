@@ -4,11 +4,33 @@ const path = require("path");
 const log = require("../utils/log");
 
 const streamifier = require("streamifier");
+const fs = require("fs");
 const KEY_PATH = path.join(__dirname, "../../google.json");
 const SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/drive.file"
 ];
+
+/**
+ * Obtém a instância de autenticação do Google.
+ * Prioriza a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON.
+ * Fallback para o arquivo google.json (local/desenvolvimento).
+ */
+function getGoogleAuth() {
+  const authOptions = { scopes: SCOPES };
+
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    try {
+      authOptions.credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    } catch (e) {
+      log.error("GoogleDriveAuthJsonError", { error: e.message });
+    }
+  } else if (fs.existsSync(KEY_PATH)) {
+    authOptions.keyFile = KEY_PATH;
+  }
+
+  return new google.auth.GoogleAuth(authOptions);
+}
 
 // 🟢 MUDANÇA: Aceita um ID opcional. Se não vier, usa o padrão do .env
 async function listarArquivosPublicos(targetFolderId = null) {
@@ -20,11 +42,7 @@ async function listarArquivosPublicos(targetFolderId = null) {
       return []; 
   }
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: KEY_PATH,
-    scopes: SCOPES,
-  });
-
+  const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
   try {
@@ -46,11 +64,7 @@ async function listarArquivosPublicos(targetFolderId = null) {
 // Adicione isso no final do arquivo src/services/drive.service.js
 
 async function obterArquivoStream(fileId) {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: KEY_PATH,
-    scopes: SCOPES,
-  });
-
+  const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
   try {
@@ -99,11 +113,7 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
     log.warn("GoogleDriveUploadFolderIdMissing");
   }
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: KEY_PATH,
-    scopes: SCOPES,
-  });
-
+  const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
   const fileMetadata = {

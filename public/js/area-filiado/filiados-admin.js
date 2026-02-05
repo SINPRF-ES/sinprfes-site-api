@@ -33,6 +33,7 @@
     }
 
     function avatarHtml(avatarUrl, nome) {
+        const { escapeHTML } = global.Utils || {};
         const safeNome = (nome || "").toString();
         const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
             ? "http://localhost:3000"
@@ -42,7 +43,9 @@
             ? (avatarUrl.startsWith('http') ? avatarUrl : apiBase + avatarUrl)
             : "/img/avatar-placeholder.png";
 
-        return `<img class="avatar-mini" src="${src}" alt="Avatar ${safeNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
+        const escapedNome = escapeHTML ? escapeHTML(safeNome) : safeNome;
+
+        return `<img class="avatar-mini" src="${src}" alt="Avatar ${escapedNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
     }
 
     function formatISOToBRDateTime(isoStr) {
@@ -177,7 +180,8 @@
         const el = document.getElementById("lista-filiados");
         if (!el) return;
 
-        const { filterFiliados, formatarCPF, formatarTelefoneTexto, normalizeText } = global.Utils || {};
+        const { filterFiliados, formatarCPF, formatarTelefoneTexto, normalizeText, escapeHTML } = global.Utils || {};
+        const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
 
         // Reutiliza a lógica unificada de busca (nome/CPF)
         let res = filterFiliados ? filterFiliados(cacheLista, termo, { perfil: perfilAtual }) : cacheLista;
@@ -236,16 +240,16 @@
                         <div class="filiado-left">
                             ${avatarHtml(f.avatar_url, f.nome)}
                             <div>
-                                <div class="filiado-nome">${f.nome}</div>
-                                <div class="filiado-meta">${f.cpf ? formatarCPF(f.cpf) + ' • ' : ''}${f.lotacao || 'SEDE'}</div>
+                                <div class="filiado-nome">${safeEscape(f.nome)}</div>
+                                <div class="filiado-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.lotacao || 'SEDE')}</div>
                                 ${["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
                                 <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <span class="filiado-badge badge-${situacaoLower}">${situacao}</span>
-                            <div style="margin-top:5px; font-size:0.85rem;">${tels || '-'}</div>
+                            <span class="filiado-badge badge-${situacaoLower}">${safeEscape(situacao)}</span>
+                            <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
             ${!["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ?
                                 `<button class="btn btn-outline btn-sm" onclick="FiliadosAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
                         </div>
@@ -271,6 +275,9 @@
 
     function gerarHtmlForm(f) {
         const { toDateInputValue } = global.Formatters || {};
+        const { escapeHTML } = global.Utils || {};
+        const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
+
         const ehAdmin = perfilAtual === "ADMIN";
         const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
         const isArquivado = !!f.arquivado_em;
@@ -281,7 +288,7 @@
         const isSelf = userInfo && String(f.id) === String(userInfo.id);
         const canChangeProfile = (ehAdmin || (["DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN")) && !isSelf;
 
-        const responsavel = f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—");
+        const responsavel = safeEscape(f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—"));
 
         return `
             <div id="alertas-modal"></div>
@@ -302,7 +309,7 @@
                     <div class="archive-details-grid">
                         <div class="archive-item"><strong>Arquivado por:</strong> <span>${responsavel}</span></div>
                         <div class="archive-item"><strong>Arquivado em:</strong> <span>${formatISOToBRDateTime(f.arquivado_em)}</span></div>
-                        <div class="archive-item full-width"><strong>Motivo:</strong> <span>${f.arquivado_motivo || "—"}</span></div>
+                        <div class="archive-item full-width"><strong>Motivo:</strong> <span>${safeEscape(f.arquivado_motivo || "—")}</span></div>
                     </div>
                 </div>
             ` : ''}
@@ -313,7 +320,7 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>Nome</label>
-                            <input name="nome" value="${f.nome || ""}" required>
+                            <input name="nome" value="${safeEscape(f.nome)}" required>
                         </div>
                         <div class="field-group">
                             <label>Sexo</label>
@@ -327,11 +334,11 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>CPF</label>
-                            <input name="cpf" value="${f.cpf || ""}" ${ehGestao ? "" : "readonly"}>
+                            <input name="cpf" value="${safeEscape(f.cpf)}" ${ehGestao ? "" : "readonly"}>
                         </div>
                         <div class="field-group">
                             <label>Matrícula (SIAPE)</label>
-                            <input name="siape" value="${f.siape || ""}" placeholder="6 ou 7 dígitos" maxlength="7" ${ehGestao ? "" : "readonly"}>
+                            <input name="siape" value="${safeEscape(f.siape)}" placeholder="6 ou 7 dígitos" maxlength="7" ${ehGestao ? "" : "readonly"}>
                         </div>
                     </div>
                     <div class="field-row">
@@ -382,21 +389,21 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>Email 1</label>
-                            <input name="email1" value="${f.email1 || ""}">
+                            <input name="email1" value="${safeEscape(f.email1)}">
                         </div>
                         <div class="field-group">
                             <label>Telefone 1</label>
-                            <input name="telefone1" class="campo-telefone" value="${f.telefone1 || ""}">
+                            <input name="telefone1" class="campo-telefone" value="${safeEscape(f.telefone1)}">
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Email 2</label>
-                            <input name="email2" value="${f.email2 || ""}">
+                            <input name="email2" value="${safeEscape(f.email2)}">
                         </div>
                         <div class="field-group">
                             <label>Telefone 2</label>
-                            <input name="telefone2" class="campo-telefone" value="${f.telefone2 || ""}">
+                            <input name="telefone2" class="campo-telefone" value="${safeEscape(f.telefone2)}">
                         </div>
                     </div>
                 </div>
@@ -408,33 +415,33 @@
                         <div class="edit-group cep-group">
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
-                                <input name="cep" id="edit-cep" value="${f.cep || ""}" class="campo-cep">
+                                <input name="cep" id="edit-cep" value="${safeEscape(f.cep)}" class="campo-cep">
                                 <span class="cep-search-icon">🔍</span>
                             </div>
                         </div>
                         <div class="edit-group logradouro-group">
                             <label>Logradouro / Bairro</label>
-                            <input name="logradouro_bairro" id="edit-logradouro" value="${f.logradouro_bairro || ""}" readonly style="background:#f8f9fa;">
+                            <input name="logradouro_bairro" id="edit-logradouro" value="${safeEscape(f.logradouro_bairro)}" readonly style="background:#f8f9fa;">
                         </div>
 
                         <!-- Linha 2: Número + Complemento -->
                         <div class="edit-group">
                             <label>Número</label>
-                            <input name="numero" value="${f.numero || ""}">
+                            <input name="numero" value="${safeEscape(f.numero)}">
                         </div>
                         <div class="edit-group">
                             <label>Complemento</label>
-                            <input name="complemento" value="${f.complemento || ""}">
+                            <input name="complemento" value="${safeEscape(f.complemento)}">
                         </div>
 
                         <!-- Linha 3: Cidade + UF -->
                         <div class="edit-group">
                             <label>Cidade</label>
-                            <input name="cidade" id="edit-cidade" value="${f.cidade || ""}" readonly style="background:#f8f9fa;">
+                            <input name="cidade" id="edit-cidade" value="${safeEscape(f.cidade)}" readonly style="background:#f8f9fa;">
                         </div>
                         <div class="edit-group">
                             <label>UF</label>
-                            <input name="uf" id="edit-uf" value="${f.uf || ""}" readonly style="background:#f8f9fa;">
+                            <input name="uf" id="edit-uf" value="${safeEscape(f.uf)}" readonly style="background:#f8f9fa;">
                         </div>
                     </div>
                 </div>
@@ -571,7 +578,7 @@
                 containerCheckboxes.innerHTML += `
                     <label style="display: flex; align-items: center; gap: 8px; font-weight:normal; cursor:pointer;">
                         <input type="checkbox" name="excluir_dep_index" value="${dep.index}" style="width: auto;">
-                        Dependente ${dep.index}: ${dep.nome}
+                        Dependente ${dep.index}: ${safeEscape(dep.nome)}
                     </label>
                 `;
             });
