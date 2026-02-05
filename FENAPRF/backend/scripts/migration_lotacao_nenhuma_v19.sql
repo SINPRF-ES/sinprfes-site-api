@@ -1,0 +1,9 @@
+-- ============================================================================
+-- SINPRF-ES MIGRATION V19: ADD 'NENHUMA' TO LOTACAO
+-- Allows 'NENHUMA' as a valid lotation value.
+-- ============================================================================
+
+-- Update CHECK constraint for lotacao
+ALTER TABLE filiados DROP CONSTRAINT IF EXISTS chk_filiados_lotacao;
+ALTER TABLE filiados ADD CONSTRAINT chk_filiados_lotacao
+  CHECK (lotacao IN ('SEDE', 'DEL 01 - Viana', 'DEL 02 - Serra', 'DEL 03 - Guarapari', 'DEL 04 - Linhares', 'NENHUMA'));
