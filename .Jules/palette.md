@@ -13,3 +13,7 @@
 ## 2026-05-18 - [Interactive Loading States & Visual Limits]
 **Learning:** Providing immediate visual feedback during async operations (disabling buttons and changing text) significantly reduces user anxiety and prevents double-submissions. Similarly, visual cues on character limits (e.g., changing color at 90% threshold) help users self-correct before hitting a hard validation error.
 **Action:** Implement button loading states in all primary forms. Add visual thresholds to character counters for critical inputs like push notification titles and bodies.
+
+## 2026-02-04 - [Clipboard Feedback UX Pattern]
+**Learning:** For clipboard operations (e.g., 2FA secret copy), buttons should provide transient visual feedback by updating `textContent` to '✅ Copiado!' for 2000ms. Use `textContent` instead of `innerHTML` to avoid XSS risks and maintain a clean interaction loop.
+**Action:** Always provide a "Copy" utility for long, sensitive, or complex alphanumeric strings (tokens, keys, IDs) that users might need to transfer to other apps, ensuring transient text feedback is used.

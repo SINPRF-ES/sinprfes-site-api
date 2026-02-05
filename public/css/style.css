@@ -1881,3 +1881,25 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
     margin: 20px 0;
     width: 100%;
 }
+
+/* =========================================================
+   PALETTE: CONFIG 2FA IMPROVEMENTS
+   ========================================================= */
+.secret-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.secret-wrapper pre {
+    margin: 0 !important;
+    flex: 1;
+}
+
+@media (max-width: 600px) {
+    .secret-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
