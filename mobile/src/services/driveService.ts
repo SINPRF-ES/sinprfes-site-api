@@ -1,6 +1,7 @@
 // mobile/src/services/driveService.ts
 import api from './apiService';
 import { carregarSessao } from './storageService';
+import { AuthStore } from './authStore';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
@@ -26,6 +27,9 @@ export interface DriveFile {
  * @param folderId O ID da pasta a ser listada. Se nulo, lista a raiz.
  */
 export const fetchPublicacoes = async (folderId: string | null = null): Promise<DriveFile[]> => {
+  // Aguarda o bootstrap da sessão antes de chamar a API protegida
+  await AuthStore.waitReady();
+
   const endpoint = folderId ? `/api/publicacoes?folderId=${folderId}` : '/api/publicacoes';
   const { data } = await api.get(endpoint);
 

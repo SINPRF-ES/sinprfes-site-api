@@ -1,8 +1,9 @@
 // src/services/apiService.ts
 import axios from 'axios';
 import { API_BASE_URL } from '../config/env';
-import { carregarSessao, limparSessao, carregarRefreshToken, salvarSessao } from './storageService';
+import { carregarSessao, limparSessao, carregarRefreshToken, salvarSessao, temRefreshTokenGravado } from './storageService';
 import { logger } from '../infra/logger';
+import { AuthStore } from './authStore';
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
@@ -24,6 +25,38 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+/**
+ * Verifica se a URL pertence a uma rota que exige autenticação.
+ */
+const isProtectedRoute = (url: string | undefined): boolean => {
+  if (!url) return false;
+
+  // Rotas públicas explícitas
+  const publicRoutes = [
+    '/api/auth/login',
+    '/api/auth/login/2fa',
+    '/api/senha/recuperar',
+    '/api/auth/refresh'
+  ];
+  if (publicRoutes.some(route => url.includes(route))) return false;
+
+  // Padrões de rotas protegidas conhecidas
+  const protectedPatterns = [
+    '/api/publicacoes',
+    '/api/push/register',
+    '/api/jogos/',
+    '/api/filiados/',
+    '/api/auth/me',
+    '/api/diagnostico/log',
+    '/api/repasse',
+    '/api/eventos',
+    '/api/noticias/gerenciar'
+  ];
+
+  // Por padrão, se estiver na /api/ e não for publicRoute, consideramos protegida para segurança
+  return url.startsWith('/api/') || protectedPatterns.some(pattern => url.includes(pattern));
+};
 
 function maskSensitiveData(obj: any): any {
   try {
@@ -52,9 +85,17 @@ function maskSensitiveData(obj: any): any {
 // Interceptor para injetar o token JWT e loggar a requisição
 api.interceptors.request.use(
   async (config: any) => {
+    // Se for rota protegida, aguarda o bootstrap do AuthStore terminar
+    if (isProtectedRoute(config.url)) {
+      await AuthStore.waitReady();
+    }
+
     const sessao = await carregarSessao();
     if (sessao?.token) {
       config.headers.Authorization = `Bearer ${sessao.token}`;
+      logger.info('API_REQ_AUTH_HEADER_SET: true', { url: config.url });
+    } else {
+      logger.info('API_REQ_AUTH_HEADER_SET: false', { url: config.url });
     }
 
     // Guard-rail: Detectar e sanitizar parâmetros não-serializáveis (ex: React Query Context)
@@ -201,6 +242,37 @@ api.interceptors.response.use(
     
     // Trata erro 401 (Não autorizado / Sessão expirada)
     if (status === 401 && !config._retry) {
+      const errorData = response?.data;
+      const errorMsg = errorData?.error || errorData?.message || '';
+      const isMissingToken = errorMsg.includes('Token de acesso não informado');
+      const authReady = AuthStore.isReady();
+
+      // Caso 1: Se o bootstrap ainda não terminou ou o token está ausente, não limpamos a sessão.
+      // Tentamos aguardar o gate e re-executar uma única vez.
+      if (!authReady || isMissingToken) {
+        if (!authReady) {
+          logger.info('API_401_BOOTSTRAP', { url });
+        } else {
+          const hasRefreshToken = await temRefreshTokenGravado();
+          logger.info('API_401_MISSING_TOKEN', { url, authReady, hasRefreshToken });
+        }
+
+        config._retry = true;
+        await AuthStore.waitReady();
+
+        // Tenta pegar o token novamente agora que o bootstrap terminou
+        const sessao = await carregarSessao();
+        if (sessao?.token) {
+          config.headers.Authorization = `Bearer ${sessao.token}`;
+          logger.info('API_REQ_AUTH_HEADER_SET: true (retry)', { url });
+          return api(config);
+        }
+
+        // Se após o boot ainda não tem token, apenas rejeitamos sem limpar (evita loop)
+        return Promise.reject(error);
+      }
+
+      // Caso 2: Bootstrap terminou, mas deu 401 (Token expirado). Tenta Refresh.
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -217,16 +289,22 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = await carregarRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token available');
+        if (!refreshToken) {
+          isRefreshing = false;
+          logger.warn('API_401_REFRESH_SKIPPED: No refresh token available', { url });
+          // Não limpamos sessão aqui automaticamente para evitar loops em chamadas paralelas
+          return Promise.reject(error);
+        }
 
-        logger.info('[API.401] Tentando renovar sessão via Refresh Token...');
+        logger.info('API_401_REFRESH_START', { url });
 
         // Chamada direta ao axios para evitar interceptor infinito
-        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+        const refreshResponse = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
           refreshToken,
         });
 
-        const { token: newToken, refreshToken: newRefreshToken } = response.data;
+        const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
+        logger.info('API_401_REFRESH_SUCCESS', { url });
 
         // Atualiza a sessão no storage
         const sessaoAtual = await carregarSessao();
@@ -243,11 +321,18 @@ api.interceptors.response.use(
 
         config.headers.Authorization = `Bearer ${newToken}`;
         return api(config);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError, null);
         isRefreshing = false;
 
-        logger.warn(`[API.401] Refresh falhou ou indisponível. Limpando sessão na rota: ${url}`);
+        logger.error('API_401_REFRESH_FAIL', {
+          url,
+          status: refreshError.response?.status,
+          message: refreshError.message
+        });
+
+        // Só limpamos a sessão se realmente falhou o refresh de um token que existia e o boot está pronto
+        logger.warn(`SESSION_CLEARED_REASON: refresh_failed | Route: ${url}`);
         await limparSessao();
 
         if (typeof window !== 'undefined' && (window as any).onSessionExpired) {

@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import api from './apiService';
+import { AuthStore } from './authStore';
 import { logger } from '../infra/logger';
 import { API_BASE_URL } from '../config/env';
 
@@ -52,6 +53,9 @@ async function obterExpoPushToken(): Promise<{ token: string | null; platform: s
  * Registra o dispositivo no backend para receber notificações push.
  */
 export async function registrarDispositivoParaPush(): Promise<void> {
+  // Aguarda inicialização da sessão antes de registrar push (exige token)
+  await AuthStore.waitReady();
+
   const endpoint = '/api/push/register';
   try {
     const { token, platform, permission } = await obterExpoPushToken();

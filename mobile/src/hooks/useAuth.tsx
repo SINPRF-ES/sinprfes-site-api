@@ -15,6 +15,7 @@ import {
   definirBiometriaHabilitada,
   carregarRefreshToken,
 } from '../services/storageService';
+import { AuthStore } from '../services/authStore';
 
 const AuthContext = createContext<AuthContextData | null>(null);
 
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function loadSession() {
+      AuthStore.init();
       try {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
@@ -74,7 +76,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (sessao?.token) {
           // Define o token para que o interceptor do axios possa usá-lo
           setToken(sessao.token);
+        }
 
+        // Marca como pronto após restaurar do storage, permitindo que interceptores sigam
+        AuthStore.setReady();
+
+        if (sessao?.token) {
           try {
             // Valida o token e busca os dados do usuário atualizados
             const { data: usuarioAtualizado } = await api.get('/api/filiados/me');
@@ -96,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } finally {
         setCarregando(false);
+        AuthStore.setReady();
       }
     }
 
