@@ -4,18 +4,44 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
+    "sindicato-development": {
+      "projectRootDirectory": "mobile",
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development"
     },
-    "preview": {
-      "distribution": "internal"
+    "sindicato-preview": {
+      "projectRootDirectory": "mobile",
+      "distribution": "internal",
+      "channel": "preview",
+      "android": { "buildType": "apk" }
     },
-    "production": {
-      "autoIncrement": true
+    "sindicato-production": {
+      "projectRootDirectory": "mobile",
+      "autoIncrement": true,
+      "channel": "production"
+    },
+
+    "fenaprf-development": {
+      "projectRootDirectory": "FENAPRF/mobile",
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development"
+    },
+    "fenaprf-preview": {
+      "projectRootDirectory": "FENAPRF/mobile",
+      "distribution": "internal",
+      "channel": "preview",
+      "android": { "buildType": "apk" }
+    },
+    "fenaprf-production": {
+      "projectRootDirectory": "FENAPRF/mobile",
+      "autoIncrement": true,
+      "channel": "production"
     }
   },
   "submit": {
-    "production": {}
+    "sindicato-production": {},
+    "fenaprf-production": {}
   }
 }
