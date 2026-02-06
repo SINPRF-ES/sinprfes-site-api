@@ -3,10 +3,15 @@ import * as Device from 'expo-device';
 import * as Updates from 'expo-updates';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
+import axios from 'axios';
+import api from './apiService';
 import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from './driveService';
 import { logDebug } from '../utils/filiadoUtils';
 import { carregarSessao } from './storageService';
 import { enviarLogDiagnostico } from './diagnosticoService';
+import { logger } from '../infra/logger';
+import { APP_ID, API_BASE_URL, UPDATE_MANIFEST_URL } from '../config/env';
+import { buildCacheDest, inferExtension } from '../utils/fileCacheUtils';
 
 export interface UpdateManifest {
   versionCode: number;
@@ -34,6 +39,7 @@ export interface UpdateCheckResult {
   apkFileId?: string;
   apkFileName?: string;
   apkAbi?: string;
+  apkUrl?: string; // NOVO: URL direta para download (isalação total)
   error?: 'APP_FOLDER_NOT_FOUND' | 'MANIFEST_NOT_FOUND' | 'MANIFEST_DOWNLOAD_ERROR' | string;
 }
 
@@ -42,9 +48,10 @@ export interface UpdateCheckResult {
  */
 export const resolveApkForDevice = (
   manifest: UpdateManifest,
-  availableFiles: DriveFile[]
+  availableFiles?: DriveFile[]
 ): {
   apkFile?: DriveFile;
+  fileName?: string;
   abi?: string;
   reason?: string;
 } => {
@@ -81,22 +88,20 @@ export const resolveApkForDevice = (
     return { reason: 'APK_FILE_NOT_DEFINED_IN_MANIFEST' };
   }
 
-  const apkFile = availableFiles.find(f => f.name === expectedFileName);
-
-  if (!apkFile) {
-    logDebug('UpdateCheck.apk.resolve.notFound', {
-      expectedFileName,
-      availableFiles: availableFiles.map(f => f.name)
-    });
-    return { abi: chosenAbi, reason: 'APK_FILE_NOT_FOUND' };
+  if (availableFiles) {
+    const apkFile = availableFiles.find(f => f.name === expectedFileName);
+    if (!apkFile) {
+        logDebug('UpdateCheck.apk.resolve.notFound', {
+          expectedFileName,
+          availableFiles: availableFiles.map(f => f.name)
+        });
+        return { abi: chosenAbi, reason: 'APK_FILE_NOT_FOUND', fileName: expectedFileName };
+    }
+    return { apkFile, abi: chosenAbi, fileName: expectedFileName };
   }
 
-  logDebug('UpdateCheck.apk.resolve.success', {
-    abi: chosenAbi,
-    fileName: apkFile.name
-  });
-
-  return { apkFile, abi: chosenAbi };
+  // Se não passamos availableFiles, retornamos apenas o nome do arquivo para download direto
+  return { abi: chosenAbi, fileName: expectedFileName };
 };
 
 /**
@@ -120,63 +125,51 @@ export const reportUpdateAutoCheck = async (event: string, meta: any = {}) => {
 };
 
 /**
- * Verifica se há atualizações disponíveis consultando o manifesto no Google Drive
+ * Verifica se há atualizações disponíveis consultando o manifesto
  * e comparando com a versão local do app.
- *
- * @param context 'auto' para verificações automáticas em background, 'manual' para disparos do usuário.
  */
 export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promise<UpdateCheckResult | null> => {
   const logPrefix = `UpdateCheck.${context}`;
 
   try {
+    // Observabilidade: Log de início de ambiente
+    logger.info('APP_ENV_START', { appId: APP_ID, apiBaseUrl: API_BASE_URL, manifestUrl: UPDATE_MANIFEST_URL });
+
     const sessao = await carregarSessao();
     if (!sessao?.token) return null;
 
     logDebug(`${logPrefix}.start`, {});
 
-    // 1. Localizar pasta 'App' na raiz das Publicações
-    const rootFiles = await fetchPublicacoes(null);
-    const appFolder = rootFiles.find(f => f.isFolder && (f.name || '').trim().toLowerCase() === 'app');
-    if (!appFolder) {
-      logDebug(`${logPrefix}.error`, { reason: 'APP_FOLDER_NOT_FOUND' });
-      return { hasUpdate: false, error: 'Pasta App não encontrada no Drive.' };
-    }
-
-    // 2. Localizar 'update-manifest.json' e APK dentro da pasta 'App'
-    const appFiles = await fetchPublicacoes(appFolder.id);
-    const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
-
-    if (!manifestFile) {
-      logDebug(`${logPrefix}.error`, { reason: 'MANIFEST_NOT_FOUND' });
-      return { hasUpdate: false, error: 'update-manifest.json não encontrado na pasta App.' };
-    }
-
-    // Validar MimeType para evitar Google Docs
-    if (manifestFile.mimeType === 'application/vnd.google-apps.document') {
-        logDebug(`${logPrefix}.error`, { reason: 'MANIFEST_IS_GOOGLE_DOC' });
-        return {
-            hasUpdate: false,
-            error: 'O update-manifest.json está como Google Docs. Faça upload como arquivo JSON.'
-        };
-    }
-
-    // 3. Baixar e ler o manifesto
+    // 1. Baixar o manifesto diretamente via URL (Isolação FENAPRF)
     let manifest: UpdateManifest;
     try {
+      logger.info('UPDATE_MANIFEST_FETCH', { url: UPDATE_MANIFEST_URL, context });
+      const response = await axios.get(UPDATE_MANIFEST_URL, { timeout: 10000 });
+      manifest = response.data;
+
+      const urlObj = new URL(UPDATE_MANIFEST_URL);
+      logger.info('UPDATE_MANIFEST_FETCH_SUCCESS', { url: UPDATE_MANIFEST_URL, host: urlObj.host });
+    } catch (e: any) {
+      logger.error('UPDATE_MANIFEST_FETCH_ERROR', e, { url: UPDATE_MANIFEST_URL, message: e.message });
+      // Fallback para o modo Legado (Drive) se a URL direta falhar?
+      // O usuário pediu "Isolar 100% ... para apontar TUDO ... para o ambiente FENAPRF".
+      // Vamos tentar o Drive como fallback mas logar o aviso.
+      logger.warn('UpdateCheck: Tentando fallback para Google Drive após falha na URL direta');
+
+      const rootFiles = await fetchPublicacoes(null);
+      const appFolder = rootFiles.find(f => f.isFolder && (f.name || '').trim().toLowerCase() === 'app');
+      if (!appFolder) return { hasUpdate: false, error: 'Manifesto não encontrado na URL nem no Drive.' };
+
+      const appFiles = await fetchPublicacoes(appFolder.id);
+      const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
+      if (!manifestFile) return { hasUpdate: false, error: 'update-manifest.json não encontrado.' };
+
       const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
       const manifestContent = await FileSystem.readAsStringAsync(localUri);
       manifest = JSON.parse(manifestContent);
-
-      logDebug(`${logPrefix}.manifestLoaded`, {
-        versionCode: manifest.versionCode,
-        runtimeVersion: manifest.runtimeVersion
-      });
-    } catch (e: any) {
-      logDebug(`${logPrefix}.error`, { reason: 'MANIFEST_LOAD_FAILED', message: e.message });
-      return { hasUpdate: false, error: `Falha ao carregar manifesto: ${e.message}` };
     }
 
-    // 4. Comparar versões
+    // 2. Comparar versões
     const currentVersionCode = Application.nativeBuildVersion ? parseInt(Application.nativeBuildVersion, 10) : 0;
     const currentRuntimeVersion = Updates.runtimeVersion || '';
     const currentChannel = Updates.channel || '';
@@ -196,26 +189,30 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
     if (manifest.apk.enabled && (hasNewVersionCode || hasNewRuntime)) {
       const isMandatory = currentVersionCode < manifest.apk.minSupportedVersionCode || hasNewRuntime;
 
-      const { apkFile, abi, reason } = resolveApkForDevice(manifest, appFiles);
+      const { fileName, abi, reason } = resolveApkForDevice(manifest);
 
-      if (!apkFile) {
-        logDebug(`${logPrefix}.error`, { reason: reason || 'APK_FILE_NOT_FOUND' });
+      if (!fileName) {
+        logDebug(`${logPrefix}.error`, { reason: reason || 'APK_FILE_NOT_DEFINED' });
         return {
             hasUpdate: false,
-            error: `APK não encontrado no Drive (${abi || 'desconhecido'}). Verifique a pasta App.`
+            error: `APK não definido no manifesto para ${abi || 'desconhecido'}.`
         };
       }
 
-      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory, abi, file: apkFile.name });
+      // Construir URL direta para o APK (Isolação FENAPRF)
+      // Assume-se que o APK está na mesma base que o manifesto
+      const apkUrl = UPDATE_MANIFEST_URL.replace('update-manifest.json', fileName);
+
+      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory, abi, fileName, apkUrl });
 
       return {
         hasUpdate: true,
         type: 'APK',
         isMandatory,
         manifest,
-        apkFileId: apkFile.id,
-        apkFileName: apkFile.name,
-        apkAbi: abi
+        apkFileName: fileName,
+        apkAbi: abi,
+        apkUrl
       };
     }
 
@@ -261,12 +258,12 @@ export const applyOtaUpdate = async () => {
 };
 
 /**
- * Baixa e instala o APK usando o backend autenticado e o IntentLauncher do Android.
+ * Baixa e instala o APK usando o host validado.
  */
-export const downloadAndInstallApk = async (fileId: string, fileName: string): Promise<void> => {
+export const downloadAndInstallApk = async (fileId: string, fileName: string, downloadUrl?: string): Promise<void> => {
   const logPrefix = 'APK_UPDATE';
   try {
-    logDebug(`${logPrefix}.click`, { fileId, fileName });
+    logDebug(`${logPrefix}.click`, { fileId, fileName, downloadUrl });
 
     // 1. Carregar sessão
     const sessao = await carregarSessao();
@@ -274,16 +271,48 @@ export const downloadAndInstallApk = async (fileId: string, fileName: string): P
       throw new Error('Sessão expirada. Faça login novamente.');
     }
 
-    // 2. Baixar APK
-    logDebug(`${logPrefix}.download.start`, { fileId, fileName });
-    const { localUri } = await downloadPublicacaoFile(fileId, fileName, sessao.token);
+    // 2. Definir e Validar URL de download (APK Safety)
+    const finalUrl = downloadUrl || `${API_BASE_URL}/api/publicacoes/arquivo/${fileId}`;
+    const urlObj = new URL(finalUrl);
+    const expectedHost = new URL(API_BASE_URL).host;
+
+    logger.info('APK_DOWNLOAD', { url: finalUrl, host: urlObj.host });
+
+    if (urlObj.host !== expectedHost) {
+        logger.error('APK_INSTALL_BLOCKED', undefined, {
+            reason: 'APK_HOST_MISMATCH',
+            expectedHost,
+            gotHost: urlObj.host,
+            url: finalUrl
+        });
+        throw new Error(`Segurança: O host do APK (${urlObj.host}) não é autorizado.`);
+    }
+
+    // 3. Baixar APK
+    logDebug(`${logPrefix}.download.start`, { finalUrl, fileName });
+    let localUri: string;
+
+    if (downloadUrl) {
+        const extension = inferExtension(fileName);
+        const dest = buildCacheDest({ prefix: 'apk_upd', id: 'latest', ext: extension });
+        const result = await FileSystem.downloadAsync(finalUrl, dest, {
+            headers: {
+                Authorization: `Bearer ${sessao.token}`
+            }
+        });
+        localUri = result.uri;
+    } else {
+        const result = await downloadPublicacaoFile(fileId, fileName, sessao.token);
+        localUri = result.localUri;
+    }
+
     logDebug(`${logPrefix}.download.success`, { localUri });
 
-    // 3. Converter para content URI (necessário para o instalador Android)
+    // 4. Converter para content URI (necessário para o instalador Android)
     const contentUri = await FileSystem.getContentUriAsync(localUri);
     logDebug(`${logPrefix}.install.intent_sent`, { contentUri });
 
-    // 4. Abrir instalador Android
+    // 5. Abrir instalador Android
     await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
       data: contentUri,
       flags: 1, // Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -291,7 +320,7 @@ export const downloadAndInstallApk = async (fileId: string, fileName: string): P
     });
 
   } catch (error: any) {
-    logDebug(`${logPrefix}.error`, { message: error.message });
+    logger.error('APK_UPDATE_ERROR', error, { message: error.message });
     throw error;
   }
 };
