@@ -1,21 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated, DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { checkUpdates, applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
-import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
-import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Updates from 'expo-updates';
+import { applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult } from '../services/updateService';
+import { updateAutoScheduler } from '../services/updateAutoScheduler';
+import { FontAwesome } from '@expo/vector-icons';
 import { logDebug } from '../utils/filiadoUtils';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigation } from '@react-navigation/native';
-
-const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
 
 /**
- * Componente global que verifica atualizações automaticamente respeitando throttling.
- *
- * POLÍTICA DE ATUALIZAÇÃO:
- * - O app NUNCA deve aplicar atualizações (OTA ou APK) automaticamente.
- * - Toda atualização deve ser precedida de confirmação do usuário via Modal ou Banner.
+ * Componente global que escuta o agendador de atualizações e exibe o Modal/Banner.
  */
 const UpdateAutoChecker: React.FC = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
@@ -23,82 +17,35 @@ const UpdateAutoChecker: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
 
   const { autenticado, token, bloqueadoPorBiometria } = useAuth();
-  const prevAutenticado = useRef(autenticado);
-  const navigation = useNavigation<any>();
 
   useEffect(() => {
-    // Só roda se houver sessão válida e não estiver bloqueado por biometria
     if (!autenticado || !token || bloqueadoPorBiometria) {
-      if (!autenticado || !token) {
-        logDebug('UpdateCheck.auto.skip', { reason: 'noToken' });
-      }
-      prevAutenticado.current = autenticado;
-      return;
+        setShowModal(false);
+        return;
     }
 
-    const isLoginTrigger = !prevAutenticado.current && autenticado;
-    prevAutenticado.current = autenticado;
+    const unsubscribe = updateAutoScheduler.subscribe(async (result) => {
+        if (result?.hasUpdate) {
+            setUpdateResult(result);
 
-    if (isLoginTrigger) {
-      logDebug('UpdateCheck.auto.loginTriggerDetected', { timestamp: new Date().toISOString() });
-    }
-
-    const performAutoCheck = async () => {
-      try {
-        const lastCheck = await carregarUltimoCheckUpdate();
-        const now = Date.now();
-
-        // Se for gatilho de login, ignoramos o throttle de 6h para garantir que o usuário
-        // veja atualizações críticas logo ao entrar no app.
-        if (!isLoginTrigger && (now - lastCheck < CHECK_INTERVAL)) {
-          logDebug('UpdateCheck.auto.skip', { reason: 'throttled' });
-          return;
-        }
-
-        await reportUpdateAutoCheck(isLoginTrigger ? 'login_start' : 'periodic_start');
-
-        // checkUpdates('auto') já lida com logDebug('UpdateCheck.auto.*') internamente
-        const result = await checkUpdates('auto');
-
-        if (result) {
-            await reportUpdateAutoCheck(result.hasUpdate ? 'success' : 'no_update', {
-                hasUpdate: result.hasUpdate,
-                type: result.type,
-                isMandatory: result.isMandatory,
-                error: result.error
-            });
-
-            if (result.hasUpdate) {
-                setUpdateResult(result);
-
-                // No LOGIN, sempre mostramos o modal amigável (mesmo se opcional).
-                // Em checks de background periódicos, usamos o banner persistente na Home para opcionais.
-                if (result.isMandatory || isLoginTrigger) {
-                    setShowModal(true);
-                    // Limpar banner se o modal for exibido
-                    await AsyncStorage.removeItem('@sinprf/ota_update_available');
-                } else {
-                    // Salvar para o banner na Home
-                    await AsyncStorage.setItem('@sinprf/ota_update_available', JSON.stringify(result));
-                    DeviceEventEmitter.emit('ota_update_detected', result);
-                }
-            } else {
-                // Se não há update, garantir que o banner não apareça (ex: update aplicado ou expirado)
+            // Prioridade para Modal em atualizações obrigatórias ou quando o resultado chega pela primeira vez no app aberto
+            if (result.isMandatory) {
+                setShowModal(true);
                 await AsyncStorage.removeItem('@sinprf/ota_update_available');
-                DeviceEventEmitter.emit('ota_update_detected', null);
+            } else {
+                // Para opcionais, salva para o banner na Home
+                await AsyncStorage.setItem('@sinprf/ota_update_available', JSON.stringify(result));
+                DeviceEventEmitter.emit('ota_update_detected', result);
             }
+        } else {
+            setUpdateResult(null);
+            setShowModal(false);
+            await AsyncStorage.removeItem('@sinprf/ota_update_available');
+            DeviceEventEmitter.emit('ota_update_detected', null);
         }
+    });
 
-        await salvarUltimoCheckUpdate();
-      } catch (error: any) {
-        logDebug('UpdateCheck.auto.error', { message: error.message });
-        await reportUpdateAutoCheck('error', { message: error.message });
-      }
-    };
-
-    const delay = isLoginTrigger ? 1000 : 5000;
-    const timer = setTimeout(performAutoCheck, delay);
-    return () => clearTimeout(timer);
+    return () => unsubscribe();
   }, [autenticado, token, bloqueadoPorBiometria]);
 
   // Bloquear botão voltar se for obrigatório
@@ -161,6 +108,7 @@ const UpdateAutoChecker: React.FC = () => {
   const isMandatory = updateResult.isMandatory;
   const manifest = updateResult.manifest;
   const notes = updateResult.type === 'OTA' ? manifest?.ota?.notes : manifest?.apk?.notes;
+  const isOTAIncompatible = updateResult.type === 'APK' && updateResult.manifest?.runtimeVersion !== Updates.runtimeVersion;
 
   return (
     <>
@@ -199,6 +147,15 @@ const UpdateAutoChecker: React.FC = () => {
                 <FontAwesome name="exclamation-triangle" size={14} color="#d32f2f" style={{ marginRight: 6 }} />
                 <Text style={styles.mandatoryText}>Esta atualização é obrigatória para continuar usando o app.</Text>
               </View>
+            )}
+
+            {isOTAIncompatible && (
+                <View style={[styles.mandatoryBadge, { backgroundColor: '#e3f2fd', borderColor: '#bbdefb', marginTop: 10 }]}>
+                    <FontAwesome name="info-circle" size={14} color="#003366" style={{ marginRight: 6 }} />
+                    <Text style={[styles.mandatoryText, { color: '#003366' }]}>
+                        Migração de sistema necessária. Instale o novo APK para continuar.
+                    </Text>
+                </View>
             )}
           </View>
 

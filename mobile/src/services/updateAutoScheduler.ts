@@ -1,14 +1,30 @@
 import { AppState, AppStateStatus, NativeEventSubscription } from 'react-native';
-import { checkUpdates, applyOtaUpdate, reportUpdateAutoCheck } from './updateService';
+import { checkUpdates, applyOtaUpdate, reportUpdateAutoCheck, UpdateCheckResult } from './updateService';
 import { logDebug } from '../utils/filiadoUtils';
+
+export type UpdateListener = (result: UpdateCheckResult | null) => void;
 
 class UpdateAutoScheduler {
     private intervalId: ReturnType<typeof setInterval> | null = null;
     private appStateSubscription: NativeEventSubscription | null = null;
     private lastCheckTime: number = 0;
     private isChecking: boolean = false;
+    private listeners: Set<UpdateListener> = new Set();
+    private lastResult: UpdateCheckResult | null = null;
     private SIX_HOURS_MS = 6 * 60 * 60 * 1000;
     private DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutos de debounce para evitar spam
+
+    /**
+     * Adiciona um listener para mudanças no status de atualização.
+     */
+    subscribe(listener: UpdateListener) {
+        this.listeners.add(listener);
+        // Notifica imediatamente com o último resultado conhecido (se já houver um)
+        if (this.lastResult !== null) {
+            listener(this.lastResult);
+        }
+        return () => this.listeners.delete(listener);
+    }
 
     /**
      * Inicia o agendador automático.
@@ -75,6 +91,8 @@ class UpdateAutoScheduler {
             await reportUpdateAutoCheck('start', { reason });
 
             const result = await checkUpdates('auto');
+            this.lastResult = result;
+            this.listeners.forEach(l => l(result));
 
             if (result?.hasUpdate && result.type === 'OTA') {
                 logDebug('UpdateAutoScheduler.runCheck.otaFound', { reason });

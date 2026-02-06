@@ -16,6 +16,8 @@ const AtualizacoesScreen = () => {
     const [isApplying, setIsApplying] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string>('');
 
+    const isOTAIncompatible = updateResult?.type === 'APK' && updateResult.manifest?.runtimeVersion !== Updates.runtimeVersion;
+
     const versionCode = Application.nativeBuildVersion;
     const versionName = Application.nativeApplicationVersion;
     const runtimeVersion = Updates.runtimeVersion;
@@ -190,6 +192,24 @@ const AtualizacoesScreen = () => {
                             </View>
                         )}
 
+                        {isOTAIncompatible && (
+                            <View style={styles.incompatibleBox}>
+                                <FontAwesome name="info-circle" size={16} color="#003366" />
+                                <Text style={styles.incompatibleText}>
+                                    OTA não disponível por compatibilidade de sistema. É necessário instalar o novo APK para continuar recebendo atualizações.
+                                </Text>
+                            </View>
+                        )}
+
+                        {updateResult.type === 'APK' && (
+                            <View style={styles.apkGuideBox}>
+                                <Text style={styles.apkGuideTitle}>Instruções de Instalação:</Text>
+                                <Text style={styles.apkGuideText}>1. Clique em "Baixar e Instalar APK" abaixo.</Text>
+                                <Text style={styles.apkGuideText}>2. Se solicitado, autorize a instalação de "Fontes Desconhecidas" para este aplicativo.</Text>
+                                <Text style={styles.apkGuideText}>3. O instalador do Android abrirá automaticamente.</Text>
+                            </View>
+                        )}
+
                         <TouchableOpacity
                             style={[styles.actionButton, { backgroundColor: updateResult.isMandatory ? '#d32f2f' : '#003366' }, isApplying && { opacity: 0.7 }]}
                             onPress={updateResult.type === 'OTA' ? handleApplyOTA : handleDownloadAPK}
@@ -266,6 +286,41 @@ const styles = StyleSheet.create({
     mandatoryWarning: { color: '#d32f2f', fontWeight: 'bold' },
     actionButton: { padding: 16, borderRadius: 8, alignItems: 'center' },
     actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+    incompatibleBox: {
+        backgroundColor: '#e3f2fd',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 15,
+        flexDirection: 'row',
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#bbdefb'
+    },
+    incompatibleText: {
+        fontSize: 13,
+        color: '#003366',
+        flex: 1,
+        lineHeight: 18
+    },
+    apkGuideBox: {
+        backgroundColor: '#fff3e0',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#ffe0b2'
+    },
+    apkGuideTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#e65100',
+        marginBottom: 5
+    },
+    apkGuideText: {
+        fontSize: 12,
+        color: '#5d4037',
+        lineHeight: 18
+    },
     noUpdateCard: { alignItems: 'center', padding: 30, backgroundColor: '#fff', borderRadius: 12, elevation: 2 },
     noUpdateText: { marginTop: 10, fontSize: 16, color: '#2e7d32', fontWeight: 'bold' },
     apkInfoBox: {
