@@ -30,10 +30,10 @@
       "favicon": "./assets/favicon.png"
     },
     "updates": {
-      "url": "https://u.expo.dev/YOUR_PROJECT_ID",
+      "url": "https://u.expo.dev/597c56d7-c08d-4d2c-9030-e9057d85cace",
       "checkAutomatically": "NEVER"
     },
-    "runtimeVersion": "54.0.1",
+    "runtimeVersion": { "policy": "sdkVersion" },
     "plugins": [
       "expo-secure-store",
       "expo-sqlite",
@@ -56,8 +56,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "YOUR_PROJECT_ID"
+        "projectId": "597c56d7-c08d-4d2c-9030-e9057d85cace"
       }
-    }
+    },
+    "owner": "mfavero138"
   }
 }
