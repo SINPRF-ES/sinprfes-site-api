@@ -77,10 +77,14 @@ const AtualizacoesScreen = () => {
     };
 
     const handleDownloadAPK = async () => {
-        if (updateResult?.apkFileId && updateResult?.apkFileName) {
+        if (updateResult?.apkUrl || (updateResult?.apkFileId && updateResult?.apkFileName)) {
             setIsApplying(true);
             try {
-                await downloadAndInstallApk(updateResult.apkFileId, updateResult.apkFileName);
+                await downloadAndInstallApk(
+                    updateResult.apkFileId || '',
+                    updateResult.apkFileName || '',
+                    updateResult.apkUrl
+                );
             } catch (error: any) {
                 Alert.alert('Erro no Download', error.message);
             } finally {

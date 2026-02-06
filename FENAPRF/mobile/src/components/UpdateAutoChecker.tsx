@@ -127,11 +127,19 @@ const UpdateAutoChecker: React.FC = () => {
       }
     } else {
       // APK Update
-      if (updateResult.apkFileId && updateResult.apkFileName) {
+      if (updateResult.apkUrl || (updateResult.apkFileId && updateResult.apkFileName)) {
         setIsUpdating(true);
         try {
-          logDebug('Update.Apk.Download.Start', { fileId: updateResult.apkFileId, fileName: updateResult.apkFileName });
-          await downloadAndInstallApk(updateResult.apkFileId, updateResult.apkFileName);
+          logDebug('Update.Apk.Download.Start', {
+              fileId: updateResult.apkFileId,
+              fileName: updateResult.apkFileName,
+              url: updateResult.apkUrl
+          });
+          await downloadAndInstallApk(
+              updateResult.apkFileId || '',
+              updateResult.apkFileName || '',
+              updateResult.apkUrl
+          );
           logDebug('Update.Apk.Download.Success', {});
 
           // Se não for obrigatório, podemos fechar o modal após disparar o instalador
