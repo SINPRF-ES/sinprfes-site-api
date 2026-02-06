@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "607031621166",
-    "project_id": "app-sinprf-es",
-    "storage_bucket": "app-sinprf-es.firebasestorage.app"
+    "project_number": "102985512868",
+    "project_id": "fenaprf",
+    "storage_bucket": "fenaprf.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:607031621166:android:583245035b0087e62cd1bf",
+        "mobilesdk_app_id": "1:102985512868:android:3cbf1cc7628fae3a133331",
         "android_client_info": {
-          "package_name": "com.mfavero138.sinprfesapp"
+          "package_name": "br.org.fenaprf.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyApRv240dtItX5VfatcSNLxiZCMlgFEytk"
+          "current_key": "AIzaSyBuadRF69ytWp6TRS_mEM_SzpWpwDPOrgY"
         }
       ],
       "services": {
