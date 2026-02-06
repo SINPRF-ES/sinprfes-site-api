@@ -189,12 +189,20 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       manifestRuntimeVersion: manifest.runtimeVersion
     };
 
-    // Verificação de APK (Mudanças Nativas: runtimeVersion diferente OU versionCode superior)
+    // 5. Verificação de APK (Migração de binário/nativo)
     const hasNewRuntime = manifest.runtimeVersion !== currentRuntimeVersion;
     const hasNewVersionCode = currentVersionCode < manifest.versionCode;
+    const isVersionNameDifferent = manifest.versionName !== Application.nativeApplicationVersion;
 
-    if (manifest.apk.enabled && (hasNewVersionCode || hasNewRuntime)) {
+    if (manifest.apk.enabled && (hasNewVersionCode || hasNewRuntime || isVersionNameDifferent)) {
       const isMandatory = currentVersionCode < manifest.apk.minSupportedVersionCode || hasNewRuntime;
+
+      // Logs solicitados
+      if (isMandatory) {
+          await reportUpdateAutoCheck('apk_required', { ...logMeta, reason: hasNewRuntime ? 'runtime_mismatch' : 'min_version_not_met' });
+      } else {
+          await reportUpdateAutoCheck('apk_optional', { ...logMeta });
+      }
 
       const { apkFile, abi, reason } = resolveApkForDevice(manifest, appFiles);
 
@@ -219,31 +227,41 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       };
     }
 
-    // Verificação de OTA (Mudanças apenas de JS/UI)
-    if (manifest.ota.enabled && currentVersionCode === manifest.versionCode) {
-      try {
-        logDebug(`${logPrefix}.checkingOTA`, {
-          runtimeVersion: currentRuntimeVersion,
-          channel: currentChannel,
-          url: (Updates as any).updateUrl || 'N/A'
+    // 6. Verificação de OTA (Mudanças apenas de JS/UI)
+    // O critério correto é compatibilidade de runtimeVersion, não versionCode.
+    if (manifest.ota.enabled) {
+      if (manifest.runtimeVersion !== currentRuntimeVersion) {
+        logDebug(`${logPrefix}.OTA_INCOMPATIBLE`, {
+            manifest: manifest.runtimeVersion,
+            current: currentRuntimeVersion
         });
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          logDebug(`${logPrefix}.OTA_AVAILABLE`, logMeta);
+        await reportUpdateAutoCheck('ota_incompatible_runtime', logMeta);
+      } else {
+        try {
+          logDebug(`${logPrefix}.checkingOTA`, {
+            runtimeVersion: currentRuntimeVersion,
+            channel: currentChannel,
+            url: (Updates as any).updateUrl || 'N/A'
+          });
+          const update = await Updates.checkForUpdateAsync();
+          if (update.isAvailable) {
+            logDebug(`${logPrefix}.OTA_AVAILABLE`, logMeta);
+            await reportUpdateAutoCheck('ota_available', logMeta);
+            return {
+              hasUpdate: true,
+              type: 'OTA',
+              isMandatory: false,
+              manifest
+            };
+          }
+        } catch (e: any) {
+          logDebug(`${logPrefix}.error`, { reason: 'OTA_CHECK_FAILED', message: e.message, stack: e.stack });
+          // Se deu erro no serviço da Expo, reportamos para o usuário para transparência
           return {
-            hasUpdate: true,
-            type: 'OTA',
-            isMandatory: false,
-            manifest
+            hasUpdate: false,
+            error: `Erro no serviço Expo Updates: ${e.message}. Verifique a conexão ou se o app está em modo de desenvolvimento sem suporte a updates.`
           };
         }
-      } catch (e: any) {
-        logDebug(`${logPrefix}.error`, { reason: 'OTA_CHECK_FAILED', message: e.message, stack: e.stack });
-        // Se deu erro no serviço da Expo, reportamos para o usuário para transparência
-        return {
-          hasUpdate: false,
-          error: `Erro no serviço Expo Updates: ${e.message}. Verifique a conexão ou se o app está em modo de desenvolvimento sem suporte a updates.`
-        };
       }
     }
 
