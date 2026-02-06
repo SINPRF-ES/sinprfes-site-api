@@ -10,6 +10,7 @@ interface LoginPayload {
 
 interface LoginResponse {
   token: string;
+  refreshToken?: string;
   requer2fa?: boolean;
 }
 
@@ -32,6 +33,14 @@ export async function loginCom2FA(payload: Required<LoginPayload>): Promise<Logi
     senha: payload.senha,
     code: payload.codigo,
   });
+  return data;
+}
+
+/**
+ * Renova o access token usando um refresh token.
+ */
+export async function refreshSessao(refreshToken: string): Promise<LoginResponse> {
+  const { data } = await api.post<LoginResponse>('/api/auth/refresh', { refreshToken });
   return data;
 }
 
