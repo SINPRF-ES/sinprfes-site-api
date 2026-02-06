@@ -1,8 +1,22 @@
 // src/services/apiService.ts
 import axios from 'axios';
 import { API_BASE_URL } from '../config/env';
-import { carregarSessao, limparSessao } from './storageService';
+import { carregarSessao, limparSessao, carregarRefreshToken, salvarSessao } from './storageService';
 import { logger } from '../infra/logger';
+
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom: any) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -186,15 +200,60 @@ api.interceptors.response.use(
     }
     
     // Trata erro 401 (Não autorizado / Sessão expirada)
-    if (status === 401) {
-      // Se for a rota /me e estiver falhando, é provável que o token seja inválido/expirado
-      // Se for qualquer outra rota, limpamos a sessão para forçar novo login
-      logger.warn(`[API.401] Sessão expirada ou inválida na rota: ${url}`);
-      await limparSessao();
+    if (status === 401 && !config._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            config.headers.Authorization = `Bearer ${token}`;
+            return api(config);
+          })
+          .catch((err) => Promise.reject(err));
+      }
 
-      // Notifica o sistema de que a sessão caiu (opcional, useAuth já lida com falha no /me)
-      if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
-        (window as any).onSessionExpired();
+      config._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = await carregarRefreshToken();
+        if (!refreshToken) throw new Error('No refresh token available');
+
+        logger.info('[API.401] Tentando renovar sessão via Refresh Token...');
+
+        // Chamada direta ao axios para evitar interceptor infinito
+        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+          refreshToken,
+        });
+
+        const { token: newToken, refreshToken: newRefreshToken } = response.data;
+
+        // Atualiza a sessão no storage
+        const sessaoAtual = await carregarSessao();
+        if (sessaoAtual) {
+          await salvarSessao({
+            ...sessaoAtual,
+            token: newToken,
+            refreshToken: newRefreshToken
+          });
+        }
+
+        processQueue(null, newToken);
+        isRefreshing = false;
+
+        config.headers.Authorization = `Bearer ${newToken}`;
+        return api(config);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
+
+        logger.warn(`[API.401] Refresh falhou ou indisponível. Limpando sessão na rota: ${url}`);
+        await limparSessao();
+
+        if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
+          (window as any).onSessionExpired();
+        }
+        return Promise.reject(refreshError);
       }
     }
 

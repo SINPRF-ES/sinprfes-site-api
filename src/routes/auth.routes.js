@@ -8,6 +8,12 @@ const { loginLimiter } = require("../middlewares/securityRateLimit");
 // Login
 router.post("/login", loginLimiter, controller.login);
 
+// Refresh Token
+router.post("/refresh", loginLimiter, controller.refresh);
+
+// Logout (revoga refresh token)
+router.post("/logout", controller.logout);
+
 // Ativar 2FA (precisa estar logado)
 // 🟢 CORREÇÃO AUTOMÁTICA: rota para validar login com 2FA (App chama /api/auth/2fa)
 router.post("/2fa", loginLimiter, controller.login);

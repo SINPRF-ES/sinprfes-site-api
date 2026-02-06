@@ -13,6 +13,7 @@ import {
   limparSessao,
   carregarBiometriaHabilitada,
   definirBiometriaHabilitada,
+  carregarRefreshToken,
 } from '../services/storageService';
 
 const AuthContext = createContext<AuthContextData | null>(null);
@@ -101,14 +102,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadSession();
   }, []);
 
-  async function setSessao(novoToken: string, novoUsuario: Usuario) {
+  async function setSessao(novoToken: string, novoUsuario: Usuario, novoRefreshToken?: string) {
     setToken(novoToken);
     setUsuario(novoUsuario);
     setBloqueadoPorBiometria(false);
-    await salvarSessao({ token: novoToken, usuario: novoUsuario });
+    await salvarSessao({ token: novoToken, usuario: novoUsuario, refreshToken: novoRefreshToken });
   }
 
   async function logout(removerBiometria = false) {
+    try {
+      const refreshToken = await carregarRefreshToken();
+      if (refreshToken) {
+        await api.post('/api/auth/logout', { refreshToken });
+      }
+    } catch (e) {
+      console.warn('[Auth.logout] Erro ao revogar token no servidor', e);
+    }
+
     await limparSessao(!removerBiometria);
     setToken(null);
     setUsuario(null);

@@ -2,6 +2,7 @@ import type { Usuario } from './usuario';
 
 export interface Sessao {
   token: string;
+  refreshToken?: string;
   usuario: Usuario;
 }
 
@@ -15,7 +16,7 @@ export interface AuthContextData {
   biometriaHabilitada: boolean;
   bloqueadoPorBiometria: boolean;
 
-  setSessao: (token: string, usuario: Usuario) => Promise<void>;
+  setSessao: (token: string, usuario: Usuario, refreshToken?: string) => Promise<void>;
   logout: () => Promise<void>;
 
   ativarBiometriaNesteAparelho: (ativar: boolean) => Promise<void>;

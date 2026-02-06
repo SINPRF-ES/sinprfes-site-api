@@ -13,6 +13,7 @@ const {
   registrarUltimoAcesso,
   listarParaPerfil,
 } = require("../services/filiados.service");
+const authService = require("../services/auth.service");
 
 function gerarToken(filiado) {
   const perfil = filiado.perfil_acesso || "FILIADO";
@@ -94,16 +95,29 @@ exports.login = async (req, res) => {
 
     const token = gerarToken(filiado);
 
+    // Geração do Refresh Token para Sessão Persistente
+    const deviceInfo = {
+      deviceId: req.body.device_id,
+      deviceName: req.body.device_name,
+      userAgent: req.headers["user-agent"],
+      ip: req.ip,
+      platform: req.body.platform,
+    };
+
+    const refreshToken = await authService.createRefreshToken(filiado.id, deviceInfo);
+
     log.info("AuthLoginSucesso", { 
       userId: filiado.id, 
       perfil: filiado.perfil_acesso,
       ip: req.ip,
-      requestId: req.requestId
+      requestId: req.requestId,
+      hasRefreshToken: true
     });
 
     return res.json({
       message: Textos.SUCESSO.LOGIN_REALIZADO, // ✨
       token,
+      refreshToken,
       perfil_acesso: filiado.perfil_acesso || "FILIADO",
     });
   } catch (err) {
@@ -138,6 +152,69 @@ exports.ativar2fa = async (req, res) => {
   } catch (err) {
     log.error("Auth2FAAtivarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
+  }
+};
+
+exports.refresh = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: "Refresh token não informado." });
+    }
+
+    const tokenRecord = await authService.verifyRefreshToken(refreshToken);
+
+    if (!tokenRecord) {
+      log.warn("AuthRefreshFalha", { ip: req.ip, reason: "InvalidOrExpired" });
+      return res.status(401).json({ error: "Sessão expirada. Por favor, faça login novamente." });
+    }
+
+    const filiado = await buscarPorId(tokenRecord.filiado_id);
+    if (!filiado || filiado.arquivado_em) {
+      return res.status(401).json({ error: "Usuário inativo ou não encontrado." });
+    }
+
+    // Gera novo Access Token
+    const accessToken = gerarToken(filiado);
+
+    // Rotaciona o Refresh Token
+    const deviceInfo = {
+      deviceId: req.body.device_id || tokenRecord.device_id,
+      deviceName: req.body.device_name || tokenRecord.device_name,
+      userAgent: req.headers["user-agent"] || tokenRecord.user_agent,
+      ip: req.ip,
+      platform: req.body.platform || tokenRecord.platform,
+    };
+
+    const newRefreshToken = await authService.rotateRefreshToken(tokenRecord.id, filiado.id, deviceInfo);
+
+    log.info("AuthRefreshSucesso", { userId: filiado.id, requestId: req.requestId });
+
+    return res.json({
+      token: accessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (err) {
+    log.error("AuthRefreshErroInterno", { error: err, requestId: req.requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN });
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (refreshToken) {
+      // Valida o token antes de revogar para garantir segurança
+      const tokenRecord = await authService.verifyRefreshToken(refreshToken);
+      if (tokenRecord) {
+        await authService.revokeRefreshToken(tokenRecord.id, "Logout");
+      }
+    }
+    return res.json({ message: "Logout realizado com sucesso." });
+  } catch (err) {
+    log.error("AuthLogoutErro", { error: err });
+    return res.status(500).json({ error: "Erro ao realizar logout." });
   }
 };
 

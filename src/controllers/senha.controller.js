@@ -3,6 +3,7 @@ const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { enviarEmailBase } = require("../services/email.service"); 
+const authService = require("../services/auth.service");
 const log = require("../utils/log");
 const Textos = require ("../utils/textos"); // 🟢 TEXTOS
 
@@ -132,6 +133,9 @@ exports.resetarSenha = async (req, res) => {
       WHERE id = $2
     `;
     await pool.query(updateSql, [senhaHash, userId]);
+
+    // Revoga todas as sessões ativas ao trocar a senha por segurança
+    await authService.revokeAllRefreshTokens(userId, "Password Change");
 
     log.info("SenhaAlteradaSucesso", { userId });
 

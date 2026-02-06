@@ -6,10 +6,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
-import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
+import { loginSindicato, loginCom2FA, buscarUsuarioLogado, refreshSessao } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
-import { carregarSessao } from '../services/storageService';
+import { carregarSessao, carregarRefreshToken, temRefreshTokenGravado } from '../services/storageService';
 import { logger } from '../infra/logger';
 
 export default function LoginScreen() {
@@ -26,8 +26,9 @@ export default function LoginScreen() {
 
   useEffect(() => {
     (async () => {
-      const token = await require('../services/storageService').carregarTokenBiometrico();
-      setTemCredencial(!!token);
+      // Usa flag não-protegida para evitar prompt biométrico ao montar a tela
+      const hasToken = await temRefreshTokenGravado();
+      setTemCredencial(hasToken);
     })();
   }, []);
 
@@ -44,44 +45,50 @@ export default function LoginScreen() {
   async function handleBiometricLogin() {
     try {
       console.log('[Biometria.tap]');
-      // Tenta carregar a sessão normal ou a credencial biométrica persistente
-      const sessaoSalva = await carregarSessao();
-      const tokenBiometrico = await require('../services/storageService').carregarTokenBiometrico();
-      const tokenParaUsar = sessaoSalva?.token || tokenBiometrico;
 
-      if (!tokenParaUsar) {
-        console.warn('[Biometria.session.fail] Sem credencial disponível');
+      setLoading(true);
+
+      // Ao ler o refreshToken, o SecureStore solicita biometria (se configurado com requireAuthentication)
+      // Isso substitui a necessidade de chamar desbloquearComBiometria() explicitamente aqui
+      const refreshToken = await carregarRefreshToken();
+
+      if (!refreshToken) {
+        console.warn('[Biometria.session.fail] Sem refresh token disponível');
+        setLoading(false);
         return;
       }
 
-      setLoading(true);
-      const sucesso = await desbloquearComBiometria();
-      if (sucesso) {
-        console.log('[Biometria.session.restore.start]');
-        try {
-           // Tenta validar o token
-           const usuario = await buscarUsuarioLogado(tokenParaUsar);
-           await setSessao(tokenParaUsar, usuario);
-           console.log('[Biometria.session.restore.ok]');
-        } catch (restoreError: any) {
-           console.error('[Biometria.session.restore.fail]', restoreError);
-           if (restoreError?.response?.status === 401) {
-              Alert.alert('Sessão Expirada', 'Sua credencial expirou. Por favor, entre com sua senha.');
-           } else {
-              Alert.alert('Erro', 'Não foi possível validar sua biometria agora. Tente com sua senha.');
-           }
-        }
+      console.log('[Biometria.session.refresh.start]');
+      try {
+          // Usa o refresh token para renovar a sessão
+          const resultado = await refreshSessao(refreshToken);
+          await finalizarLoginComToken(resultado.token, resultado.refreshToken);
+          console.log('[Biometria.session.refresh.ok]');
+      } catch (refreshError: any) {
+          console.error('[Biometria.session.refresh.fail]', refreshError);
+          const status = refreshError?.response?.status;
+          if (status === 401 || status === 403) {
+            Alert.alert('Sessão Expirada', 'Sua sessão expirou ou o token foi revogado. Por favor, entre com sua senha.');
+          } else {
+            Alert.alert('Erro', 'Não foi possível renovar sua sessão agora. Tente novamente mais tarde ou use sua senha.');
+          }
       }
     } catch (e: any) {
       console.error('[Biometria.error]', e);
+      // Se o SecureStore falhar (ex: usuário cancelou biometria no nível de sistema)
+      if (e.message?.includes('User canceled') || e.message?.includes('Canceled by user')) {
+         console.log('[Biometria.cancel]');
+      } else {
+         Alert.alert('Erro', 'Falha na autenticação biométrica.');
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  async function finalizarLoginComToken(token: string) {
+  async function finalizarLoginComToken(token: string, refreshToken?: string) {
     const usuario = await buscarUsuarioLogado(token);
-    await setSessao(token, usuario);
+    await setSessao(token, usuario, refreshToken);
 
     try {
       if (__DEV__) console.log('[Login] Tentando registrar dispositivo para push...');
@@ -119,7 +126,7 @@ export default function LoginScreen() {
       }
 
       if (!resultado.token) throw new Error('Token não retornado pelo servidor.');
-      await finalizarLoginComToken(resultado.token);
+      await finalizarLoginComToken(resultado.token, resultado.refreshToken);
     } catch (e: any) {
       Alert.alert('Erro no login', e?.message || 'Falha ao autenticar.');
     } finally {
@@ -136,7 +143,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       const resultado = await loginCom2FA({ cpf, senha, codigo: codigo2FA });
-      await finalizarLoginComToken(resultado.token);
+      await finalizarLoginComToken(resultado.token, resultado.refreshToken);
     } catch (e: any) {
       Alert.alert('Erro no 2FA', e?.message || 'Código inválido.');
     } finally {
