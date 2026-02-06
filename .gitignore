@@ -7,4 +7,10 @@ tmp
 google.json
 mobile/*.apk
 mobile/build-*.apk
-FENAPRF/
+# FENAPRF - não versionar artefatos
+FENAPRF/**/node_modules
+FENAPRF/**/.expo
+FENAPRF/**/dist
+FENAPRF/**/build
+FENAPRF/**/*.apk
+FENAPRF/**/*.aab
