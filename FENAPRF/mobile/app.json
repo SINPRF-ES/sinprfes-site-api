@@ -33,7 +33,9 @@
       "url": "https://u.expo.dev/597c56d7-c08d-4d2c-9030-e9057d85cace",
       "checkAutomatically": "NEVER"
     },
-    "runtimeVersion": { "policy": "sdkVersion" },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "plugins": [
       "expo-secure-store",
       "expo-sqlite",
@@ -52,7 +54,8 @@
             ]
           }
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "eas": {
