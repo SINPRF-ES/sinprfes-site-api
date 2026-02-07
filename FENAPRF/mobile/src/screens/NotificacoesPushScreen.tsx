@@ -92,14 +92,14 @@ export default function NotificacoesPushScreen() {
   const performSearch = async (q: string) => {
     try {
         setIsSearching(true);
-        const response = await api.get(`/api/filiados?q=${encodeURIComponent(q)}`);
-        const results = response.data.filiados || [];
+        const response = await api.get(`/api/users?q=${encodeURIComponent(q)}`);
+        const results = response.data.users || response.data.filiados || [];
 
         const normalizedQuery = normalizeText(q);
         const queryOnlyDigits = q.replace(/\D/g, '');
 
         const filtered = results.filter((f: any) => {
-          const nNome = normalizeText(f.nome || '');
+          const nNome = normalizeText(f.name || f.nome || '');
           const nCpf = (f.cpf || '').replace(/\D/g, '');
 
           const matchNome = nNome.includes(normalizedQuery);
@@ -129,8 +129,8 @@ export default function NotificacoesPushScreen() {
     }
 
     let targetLabel = targetType;
-    if (targetType === 'FILIADO' && targetValue?.nome) {
-      targetLabel = `Filiado — ${targetValue.nome} (${maskCPF(targetValue.cpf)})`;
+    if (targetType === 'FILIADO' && (targetValue?.name || targetValue?.nome)) {
+      targetLabel = `Filiado — ${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})`;
     } else if (targetValue) {
       targetLabel = `${targetType} (${targetValue})`;
     }
@@ -241,7 +241,7 @@ export default function NotificacoesPushScreen() {
       }
 
       if (obj && typeof obj === 'object') {
-        displayTargetValue = `${obj.nome || ''} (${maskCPF(obj.cpf || '')})`.trim();
+        displayTargetValue = `${obj.name || obj.nome || ''} (${maskCPF(obj.cpf || '')})`.trim();
         if (displayTargetValue === '()') displayTargetValue = obj.id || item.target_value;
       }
     }
@@ -310,7 +310,7 @@ export default function NotificacoesPushScreen() {
                     <TouchableOpacity
                       style={styles.modalItem}
                       onPress={() => {
-                        setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
+                        setTargetValue({ id: item.id, name: item.name || item.nome, cpf: item.cpf });
                         setIsPickerVisible(false);
                         setSearchQuery('');
                         setFiliadosBusca([]);
@@ -318,7 +318,7 @@ export default function NotificacoesPushScreen() {
                     >
                       <View>
                         <Text style={styles.modalItemName} numberOfLines={1} ellipsizeMode="tail">
-                          {item.nome}
+                          {item.name || item.nome}
                         </Text>
                         <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
                       </View>
@@ -392,7 +392,7 @@ export default function NotificacoesPushScreen() {
                   onPress={() => setIsPickerVisible(true)}
                 >
                   <Text style={styles.pickerButtonText} numberOfLines={1}>
-                    {targetValue?.nome ? `${targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar filiado...'}
+                    {(targetValue?.name || targetValue?.nome) ? `${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar filiado...'}
                   </Text>
                   <MaterialCommunityIcons name="magnify" size={20} color="#666" />
                 </TouchableOpacity>

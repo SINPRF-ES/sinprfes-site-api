@@ -36,15 +36,13 @@ export function parseCanonicalFiliadoId(id: any): string {
 }
 
 /**
- * Roles canônicas do sistema.
+ * Roles canônicas do sistema (FENAPRF).
  */
 export const ROLES = {
   ADMIN: 'ADMIN',
   DIRETORIA: 'DIRETORIA',
-  FUNCIONARIO: 'FUNCIONARIO',
-  ORGANIZADOR: 'ORGANIZADOR',
-  COMUNICADOR: 'COMUNICADOR',
-  FILIADO: 'FILIADO',
+  COLABORADOR: 'COLABORADOR',
+  CONSELHEIRO: 'CONSELHEIRO',
 };
 
 /**
@@ -53,7 +51,7 @@ export const ROLES = {
 export const isGestao = (perfil?: string | null) => {
   if (!perfil) return false;
   const p = perfil.toUpperCase();
-  return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO].includes(p);
+  return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.COLABORADOR].includes(p);
 };
 
 /**

@@ -36,7 +36,7 @@ const HeaderInfo: React.FC<Props> = ({ filiado }) => {
         style={styles.avatar}
         resizeMode="cover"
       />
-      <Text style={styles.nome}>{filiado.nome || '—'}</Text>
+      <Text style={styles.nome}>{filiado.name || '—'}</Text>
       <Text style={styles.perfil}>{perfil}</Text>
 
       <Badge

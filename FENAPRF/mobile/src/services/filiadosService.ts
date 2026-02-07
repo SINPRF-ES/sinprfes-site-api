@@ -1,25 +1,25 @@
 // src/services/filiadosService.ts
 import api from './apiService';
 import { API_BASE_URL } from '../config/api';
-import type { Filiado } from '../types/filiado';
+import type { User } from '../types/usuario';
 import { salvarFiliadosOffline, listarFiliadosOffline } from '../database/db';
 import { logError } from '../infra/logger';
 
-const FILIADOS_ENDPOINT = `${API_BASE_URL}/api/filiados`;
+const FILIADOS_ENDPOINT = `${API_BASE_URL}/api/users`;
 // Ajuste se sua rota real for diferente (ex.: /api/restrito/filiados)
 
-interface FiliadoApi {
-  id: number;
-  nome: string;
+interface UserApi {
+  id: string;
+  name: string;
   cpf?: string | null;
-  telefone?: string | null;
+  telefone1?: string | null;
   email?: string | null;
   situacao?: string | null;
-  // se sua API tiver mais campos (matrícula, lotação etc.), adicionamos depois
+  perfil_acesso?: string | null;
 }
 
 // Busca lista de filiados na API
-export async function fetchFiliadosFromApi(token: string): Promise<Filiado[]> {
+export async function fetchFiliadosFromApi(token: string): Promise<User[]> {
   try {
     const resp = await fetch(FILIADOS_ENDPOINT, {
       headers: {
@@ -30,21 +30,23 @@ export async function fetchFiliadosFromApi(token: string): Promise<Filiado[]> {
 
     if (!resp.ok) {
       const text = await resp.text();
-      throw new Error(`Erro ao buscar filiados: ${resp.status} - ${text}`);
+      throw new Error(`Erro ao buscar usuários: ${resp.status} - ${text}`);
     }
 
-    const data: FiliadoApi[] = await resp.json();
+    const data: UserApi[] = await resp.json();
 
-  // Mapeia a resposta da API para o tipo Filiado usado no app/banco
-  const lista: Filiado[] = data.map((item) => ({
+  // Mapeia a resposta da API para o tipo User usado no app/banco
+  const lista: User[] = data.map((item) => ({
+    ...item,
     id: item.id,
-    nome: item.nome,
-    cpf: item.cpf ?? null,
-    telefone: item.telefone ?? null,
+    name: item.name,
+    cpf: item.cpf ?? '',
+    telefone1: item.telefone1 ?? null,
     email: item.email ?? null,
-    situacao: item.situacao ?? null,
-    atualizado_em: new Date().toISOString(),
-  }));
+    situacao: item.situacao ?? 'ATIVO',
+    perfil_acesso: (item.perfil_acesso as any) ?? 'CONSELHEIRO',
+    updated_at: new Date().toISOString(),
+  } as User));
 
     return lista;
   } catch (err) {
@@ -60,7 +62,7 @@ export async function sincronizarFiliadosOffline(token: string): Promise<void> {
 }
 
 // Expor a leitura local (apenas delegando pro db)
-export async function obterFiliadosOffline(): Promise<Filiado[]> {
+export async function obterFiliadosOffline(): Promise<User[]> {
   return listarFiliadosOffline();
 }
 
@@ -82,7 +84,7 @@ export async function uploadAvatar(uri: string) {
   } as any);
 
   // A instância 'api' já tem o interceptor de token
-  const { data } = await api.post('/api/filiados/me/avatar', formData, {
+  const { data } = await api.post('/api/users/me/avatar', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -93,9 +95,9 @@ export async function uploadAvatar(uri: string) {
 
 /**
  * Envia uma requisição para remover o avatar do usuário logado.
- * @returns Os dados do filiado atualizado (sem avatar_url).
+ * @returns Os dados do usuário atualizado (sem avatar_url).
  */
 export async function removerAvatar() {
-  const { data } = await api.delete('/api/filiados/me/avatar');
+  const { data } = await api.delete('/api/users/me/avatar');
   return data;
 }

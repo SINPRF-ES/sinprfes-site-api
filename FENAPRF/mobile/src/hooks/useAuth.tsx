@@ -66,8 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(sessao.token);
 
           try {
-            // Valida o token e busca os dados do usuário atualizados
-            const { data: usuarioAtualizado } = await api.get('/api/filiados/me');
+            // Valida o token e busca os dados do usuário atualizados (FENAPRF)
+            const { data: usuarioAtualizado } = await api.get('/api/users/me');
             setUsuario(usuarioAtualizado);
 
             // Atualiza o usuário no storage

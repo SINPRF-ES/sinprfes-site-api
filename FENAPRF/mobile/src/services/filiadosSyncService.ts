@@ -1,10 +1,10 @@
 import { API_BASE_URL } from '../config/api';
-import type { Filiado } from '../types/filiado';
+import type { User } from '../types/usuario';
 import { salvarFiliadosOffline, initDb } from '../database/db';
 import { setLastSyncFiliados } from './syncMetaService';
 
-type FiliadosApiEnvelope = {
-  filiados?: Filiado[];
+type UsersApiEnvelope = {
+  users?: User[];
   total?: number;
   perfil_acesso?: string;
   [key: string]: unknown;
@@ -18,15 +18,15 @@ async function parseJsonSafe(resp: Response): Promise<any> {
   }
 }
 
-function normalizarLista(data: any): Filiado[] {
+function normalizarLista(data: any): User[] {
   // Caso 1: API retorna lista pura: [ {..}, {..} ]
   if (Array.isArray(data)) {
-    return data as Filiado[];
+    return data as User[];
   }
 
-  // Caso 2: API retorna envelope: { filiados: [...] }
-  if (data && typeof data === 'object' && Array.isArray((data as FiliadosApiEnvelope).filiados)) {
-    return ((data as FiliadosApiEnvelope).filiados ?? []) as Filiado[];
+  // Caso 2: API retorna envelope: { users: [...] }
+  if (data && typeof data === 'object' && Array.isArray((data as UsersApiEnvelope).users)) {
+    return ((data as UsersApiEnvelope).users ?? []) as User[];
   }
 
   // Caso 3: formato inesperado
@@ -41,7 +41,7 @@ export async function sincronizarFiliados(token: string): Promise<{ recebidos: n
   // Garante tabela criada (caso ainda não tenha sido inicializada em App.tsx)
   await initDb();
 
-  const url = `${API_BASE_URL}/api/filiados`;
+  const url = `${API_BASE_URL}/api/users`;
 
   let resp: Response;
   try {
@@ -59,21 +59,21 @@ export async function sincronizarFiliados(token: string): Promise<{ recebidos: n
   const data = await parseJsonSafe(resp);
 
   if (!resp.ok) {
-    throw new Error(data?.error || data?.message || `Erro ao listar filiados (${resp.status})`);
+    throw new Error(data?.error || data?.message || `Erro ao listar usuários (${resp.status})`);
   }
 
   const lista = normalizarLista(data);
 
   const agoraIso = new Date().toISOString();
-  const listaComTimestamp: Filiado[] = lista.map((f) => ({
+  const listaComTimestamp: User[] = lista.map((f) => ({
     ...f,
     // garante que o DB receba string
-    atualizado_em: (f as any).atualizado_em ?? agoraIso,
-    // se o backend não mandar nome, evitamos quebrar NOT NULL
-    nome: (f as any).nome ?? '(SEM NOME)',
+    updated_at: f.updated_at ?? agoraIso,
+    // se o backend não mandar name, evitamos quebrar NOT NULL
+    name: f.name ?? '(SEM NOME)',
   }));
 
-  await salvarFiliadosOffline(listaComTimestamp);
+  await salvarFiliadosOffline(listaComTimestamp as any);
 
   // grava meta de última sincronização
   await setLastSyncFiliados(Date.now());
