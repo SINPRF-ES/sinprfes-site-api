@@ -77,7 +77,7 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Users"
         component={UsersScreen}
-        options={{ title: '👥 Users' }}
+        options={{ title: '👥 Usuários' }}
       />
       <Drawer.Screen
         name="Publicacoes"
@@ -119,7 +119,10 @@ const DrawerNavigator = () => {
         <Drawer.Screen
           name="Logs"
           component={LogsScreen}
-          options={{ title: '🧪 Diagnóstico' }}
+          options={{
+            title: 'Diagnóstico',
+            drawerItemStyle: { display: 'none' }
+          }}
         />
       )}
       {ehGestao && (
