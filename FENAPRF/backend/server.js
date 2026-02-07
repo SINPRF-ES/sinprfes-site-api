@@ -1,5 +1,16 @@
 require("dotenv").config();
 
+// Handlers globais para capturar erros fatais e logar no Render
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[UNHANDLED_REJECTION] em:', promise, 'razão:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('[UNCAUGHT_EXCEPTION] Fatal:', err?.stack || err);
+    // Em caso de erro não tratado, o ideal é deixar o processo cair para o Render reiniciar
+    setTimeout(() => process.exit(1), 1000);
+});
+
 // Validação de variáveis de ambiente críticas
 const CRITICAL_ENV_VARS = ["DATABASE_URL", "JWT_SECRET"];
 const missingVars = CRITICAL_ENV_VARS.filter(v => !process.env[v]);

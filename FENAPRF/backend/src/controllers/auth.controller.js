@@ -1,27 +1,24 @@
 // src/controllers/auth.controller.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const speakeasy = require("speakeasy");
 const { normalizarCpf } = require("../utils/format");
 const log = require("../utils/log");
-const Textos = require("../utils/textos"); // 🟢 TEXTOS
+const Textos = require("../utils/textos");
 
-const {
-  buscarPorCpf,
-  buscarPorId,
-  salvarTwoFaSecret,
-  registrarUltimoAcesso,
-  listarParaPerfil,
-} = require("../services/filiados.service");
+// FENAPRF: Usamos users.service em vez de filiados.service
+const usersService = require("../services/users.service");
 
-function gerarToken(filiado) {
-  const perfil = filiado.perfil_acesso || "CONSELHEIRO";
+/**
+ * Geração de Token JWT com payload mínimo.
+ */
+function gerarToken(user) {
+  const perfil = (user.perfil_acesso || "CONSELHEIRO").toUpperCase();
 
   return jwt.sign(
     {
-      id: filiado.id,
-      cpf: filiado.cpf,
-      nome: filiado.nome || filiado.name,
+      id: user.id,
+      cpf: user.cpf,
+      nome: user.name || user.nome,
       perfil_acesso: perfil,
     },
     process.env.JWT_SECRET,
@@ -29,8 +26,11 @@ function gerarToken(filiado) {
   );
 }
 
-exports.login = async (req, res) => {
-  const { cpf, senha, token_2fa } = req.body || {};
+/**
+ * LOGIN: Autenticação exclusiva via public.users
+ */
+exports.login = async (req, res, next) => {
+  const { cpf, senha } = req.body || {};
   const requestId = req.requestId;
 
   try {
@@ -42,13 +42,14 @@ exports.login = async (req, res) => {
     if (!cpf || !senha) {
       return res
         .status(400)
-        .json({ error: Textos.AUTH.INFORME_CREDENCIAIS }); // ✨
+        .json({ error: Textos.AUTH.INFORME_CREDENCIAIS });
     }
 
     const cpfNormalizado = normalizarCpf(cpf);
-    const filiado = await buscarPorCpf(cpfNormalizado);
+    const user = await usersService.buscarPorCpf(cpfNormalizado);
 
-    if (!filiado) {
+    // 1. Se usuário não existe -> 401
+    if (!user) {
       log.warn("AuthLoginFalha", {
         cpf: cpfNormalizado ? `${cpfNormalizado.substring(0, 3)}.***.***-**` : null,
         motivo: "UserNaoEncontrado",
@@ -59,141 +60,85 @@ exports.login = async (req, res) => {
         .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS });
     }
 
-    log.info("AuthUserEncontrado", {
-      userId: filiado.id,
-      hasPasswordHash: !!filiado.senha_hash,
-      passwordHashPreview: filiado.senha_hash ? filiado.senha_hash.substring(0, 4) : null,
-      requestId
-    });
-
-    if (!filiado.senha_hash || filiado.senha_hash === 'PENDENTE') {
-        log.warn("AuthLoginPendente", { userId: filiado.id, requestId });
-        return res.status(403).json({
-            error: "Sua senha ainda não foi definida ou está pendente. Por favor, utilize a opção 'Esqueci minha senha' ou o link de primeiro acesso enviado por e-mail."
-        });
-    }
-
-    // Verificação de Estado do Cadastro (Arquivado)
-    if (filiado.arquivado_em) {
-        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, status: "arquivado" });
+    // 2. Se bloqueado=true ou arquivado_em não null -> 403
+    if (user.bloqueado || user.arquivado_em) {
+        log.warn("AuthLoginBloqueado", { userId: user.id, requestId });
         return res
           .status(403)
           .json({ error: Textos.AUTH.CADASTRO_INATIVO });
     }
 
-    // Garantimos que o hash parece um hash bcrypt válido antes de comparar
-    const isBcryptHash = filiado.senha_hash.startsWith('$2');
-    if (!isBcryptHash) {
-        log.error("AuthLoginErroHash", { userId: filiado.id, hash: filiado.senha_hash, requestId });
-        return res.status(403).json({ error: "Erro na configuração da conta. Por favor, redefina sua senha." });
+    // 3. Se password_hash é null ou 'PENDENTE' -> 403
+    if (!user.senha_hash || user.senha_hash === 'PENDENTE') {
+        log.warn("AuthLoginPendente", { userId: user.id, requestId });
+        return res.status(403).json({
+            error: "Sua senha ainda não foi definida ou está pendente. Por favor, utilize a opção 'Esqueci minha senha' para definir sua primeira senha."
+        });
     }
 
-    const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);
+    // 4. Validar senha com bcrypt compare
+    // Nota: senha_hash é alias para password_hash no service
+    const senhaOk = await bcrypt.compare(senha, user.senha_hash);
 
     if (!senhaOk) {
-      log.warn("AuthLoginFalha", { userId: filiado.id, motivo: "SenhaIncorreta", requestId });
+      log.warn("AuthLoginFalha", { userId: user.id, motivo: "SenhaIncorreta", requestId });
       return res
         .status(401)
         .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS });
     }
 
-    // Se tiver 2FA cadastrado, exige o token
-    if (filiado.twofa_secret) {
-      if (!token_2fa) {
-        return res.status(400).json({
-          error: Textos.AUTH.CODIGO_2FA_REQUERIDO, // ✨
-          requires_2fa: true,
-        });
-      }
+    await usersService.registrarUltimoAcesso(user.id);
 
-      const valido = speakeasy.totp.verify({
-        secret: filiado.twofa_secret,
-        encoding: "base32",
-        token: token_2fa,
-        window: 1,
-      });
-
-      if (!valido) {
-        log.warn("AuthLogin2FAFalha", { cpf: cpfNormalizado });
-        return res.status(400).json({
-          error: Textos.AUTH.CODIGO_2FA_INVALIDO, // ✨
-        });
-      }
-    }
-
-    await registrarUltimoAcesso(filiado.id);
-
-    const token = gerarToken(filiado);
+    const token = gerarToken(user);
 
     log.info("AuthLoginSucesso", {
-      userId: filiado.id,
-      perfil: filiado.perfil_acesso,
-      ip: req.ip,
-      requestId: req.requestId
+      userId: user.id,
+      perfil: user.perfil_acesso,
+      requestId
     });
 
     return res.json({
-      message: Textos.SUCESSO.LOGIN_REALIZADO, // ✨
+      message: Textos.SUCESSO.LOGIN_REALIZADO,
       token,
       refreshToken: token, // Alias simples para FENAPRF
-      perfil_acesso: filiado.perfil_acesso || "CONSELHEIRO",
+      perfil_acesso: user.perfil_acesso || "CONSELHEIRO",
     });
   } catch (err) {
-    log.error("AuthLoginErroInterno", { error: err, requestId: req.requestId });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN }); // ✨
+    log.error("AuthLoginErroInterno", { error: err.message, requestId });
+    next(err);
   }
 };
 
-exports.ativar2fa = async (req, res) => {
+/**
+ * ME: Dados do próprio usuário logado.
+ */
+exports.me = async (req, res, next) => {
+  const requestId = req.requestId;
   try {
     const userId = req.user.id;
+    const user = await usersService.buscarPorId(userId);
 
-    const secret = speakeasy.generateSecret({
-      name: "SINPRF-ES (Área Restrita)",
-    });
-
-    const atualizado = await salvarTwoFaSecret(userId, secret.base32);
-
-    if (!atualizado) {
-      return res
-        .status(400)
-        .json({ error: "Não foi possível ativar o 2FA." }); // Mantido, pois é uma mensagem específica de falha de DB
+    if (!user) {
+      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    log.info("Auth2FAAtivado", { userId, requestId: req.requestId });
-
-    return res.json({
-      message: "2FA ativado com sucesso. Configure no app autenticador.", // Mantido
-      secret_base32: secret.base32,
-      otpauth_url: secret.otpauth_url,
-    });
-  } catch (err) {
-    log.error("Auth2FAAtivarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
-  }
-};
-
-exports.me = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const filiado = await buscarPorId(userId);
-
-    if (!filiado) {
-      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
-    }
-
-    const { senha_hash, twofa_secret, ...limpo } = filiado;
+    // Sanitização do payload (remover senhas)
+    const { senha_hash, password_hash, twofa_secret, ...limpo } = user;
     return res.json(limpo);
   } catch (err) {
-    log.error("AuthMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨
+    log.error("AuthMeErro", { error: err.message, requestId });
+    next(err);
   }
 };
 
-exports.listarFiliados = async (req, res) => {
+/**
+ * LISTAR: Listagem de usuários para perfis autorizados.
+ */
+exports.listarFiliados = async (req, res, next) => {
+  const requestId = req.requestId;
   try {
-    const perfil = req.user.perfil_acesso || "FILIADO";
-    const lista = await listarParaPerfil(perfil);
+    const perfil = req.user.perfil_acesso || "CONSELHEIRO";
+    const lista = await usersService.listarParaPerfil(perfil);
 
     return res.json({
       perfil_acesso: perfil,
@@ -201,7 +146,12 @@ exports.listarFiliados = async (req, res) => {
       filiados: lista,
     });
   } catch (err) {
-    log.error("AuthListarFiliadosErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS }); // ✨
+    log.error("AuthListarFiliadosErro", { error: err.message, requestId });
+    next(err);
   }
+};
+
+// 2FA removido conforme solicitado (referência a twofa_secret e campos de filiados)
+exports.ativar2fa = async (req, res) => {
+    return res.status(400).json({ error: "Funcionalidade não disponível para este ambiente." });
 };
