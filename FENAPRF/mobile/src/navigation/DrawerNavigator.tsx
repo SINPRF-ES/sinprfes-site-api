@@ -114,17 +114,15 @@ const DrawerNavigator = () => {
         component={AtualizacoesScreen}
         options={{ title: '🔄 Atualizações' }}
       />
-      {/* Tela de Diagnóstico/Logs - Para ADMIN e DIRETORIA */}
-      {ehDiretoria && (
-        <Drawer.Screen
-          name="Logs"
-          component={LogsScreen}
-          options={{
-            title: 'Diagnóstico',
-            drawerItemStyle: { display: 'none' }
-          }}
-        />
-      )}
+      {/* Tela de Diagnóstico/Logs - Aberto para todos para depuração */}
+      <Drawer.Screen
+        name="Logs"
+        component={LogsScreen}
+        options={{
+          title: 'Diagnóstico',
+          drawerItemStyle: { display: 'none' }
+        }}
+      />
       {ehGestao && (
         <>
           <Drawer.Screen

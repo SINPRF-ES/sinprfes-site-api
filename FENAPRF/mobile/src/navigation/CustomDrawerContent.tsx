@@ -57,17 +57,15 @@ const CustomDrawerContent = (props) => {
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="👤 Novo User"
+            label="👤 Novo Usuário"
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('CriarUser')}
           />
-          {ehDiretoria && (
-            <DrawerItem
-              label="Diagnóstico"
-              icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
-              onPress={() => props.navigation.navigate('Logs')}
-            />
-          )}
+          <DrawerItem
+            label="Diagnóstico"
+            icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
+            onPress={() => props.navigation.navigate('Logs')}
+          />
         </>
       )}
 
