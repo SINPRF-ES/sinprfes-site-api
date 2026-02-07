@@ -26,7 +26,7 @@ import { normalizeNome } from '../utils/canon';
 
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
-  const { user, setSessao, token } = useAuth();
+  const { user: authUser, setSessao, token } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -41,7 +41,7 @@ export default function MeusDadosScreen() {
 
       setUser(data);
       logger.info('MEUS_DADOS_STATE_SNAPSHOT', {
-        hasAuthUser: !!user,
+        hasAuthUser: !!authUser,
         hasFetchedData: !!data,
         userKeys: data ? Object.keys(data) : [],
         lotacao: data?.lotacao
@@ -84,9 +84,9 @@ export default function MeusDadosScreen() {
       setUser(refreshedData);
 
       // Atualiza o usuário no contexto de autenticação, se necessário
-      if (user) {
-        const userAtualizado = { ...user, name: refreshedData.name, email: refreshedData.email, avatar_url: refreshedData.avatar_url };
-        await setSessao(token!, userAtualizado);
+      if (authUser) {
+        const authUserAtualizado = { ...authUser, name: refreshedData.name, email: refreshedData.email, avatar_url: refreshedData.avatar_url };
+        await setSessao(token!, authUserAtualizado);
       }
 
       Alert.alert('Sucesso', 'Seus dados foram atualizados.');
@@ -95,17 +95,17 @@ export default function MeusDadosScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user, user, token, setSessao]);
+  }, [user, authUser, token, setSessao]);
 
   const processAndUploadImage = async (uri: string) => {
     try {
       setIsUploading(true);
-      const userAtualizado = await uploadAvatar(uri);
-      setUser(userAtualizado);
+      const dataAtualizada = await uploadAvatar(uri);
+      setUser(dataAtualizada);
 
-      if (user) {
-        const userAtualizado = { ...user, avatar_url: userAtualizado.avatar_url };
-        await setSessao(token!, userAtualizado);
+      if (authUser) {
+        const authUserAtualizado = { ...authUser, avatar_url: dataAtualizada.avatar_url };
+        await setSessao(token!, authUserAtualizado);
       }
 
       Alert.alert('Sucesso', 'Sua foto de perfil foi atualizada.');
@@ -191,12 +191,12 @@ export default function MeusDadosScreen() {
           onPress: async () => {
             try {
               setIsUploading(true); // Reutiliza o estado de loading
-              const userAtualizado = await removerAvatar();
-              setUser(userAtualizado);
+              const dataRemovida = await removerAvatar();
+              setUser(dataRemovida);
 
-              if (user) {
-                const userAtualizado = { ...user, avatar_url: null };
-                await setSessao(token!, userAtualizado);
+              if (authUser) {
+                const authUserLimpo = { ...authUser, avatar_url: null };
+                await setSessao(token!, authUserLimpo);
               }
 
               Alert.alert('Sucesso', 'Sua foto foi removida.');
@@ -210,7 +210,7 @@ export default function MeusDadosScreen() {
         }
       ]
     );
-  }, [user, token, setSessao]);
+  }, [user, authUser, token, setSessao]);
 
   useEffect(() => {
     const actions: MenuAction[] = [

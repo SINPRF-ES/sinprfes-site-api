@@ -4,11 +4,12 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-na
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
-import { isGestao as checkIsGestao } from '../utils/userUtils';
+import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/userUtils';
 
 const CustomDrawerContent = (props) => {
   const { user, logout, setBloqueadoPorBiometria } = useAuth();
   const ehGestao = checkIsGestao(user?.perfil_acesso);
+  const ehDiretoria = checkIsDiretoria(user?.perfil_acesso);
 
   const handleLogoutPress = () => {
     Alert.alert(
@@ -60,6 +61,13 @@ const CustomDrawerContent = (props) => {
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('CriarUser')}
           />
+          {ehDiretoria && (
+            <DrawerItem
+              label="Diagnóstico"
+              icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
+              onPress={() => props.navigation.navigate('Logs')}
+            />
+          )}
         </>
       )}
 
