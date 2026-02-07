@@ -14,3 +14,5 @@ FENAPRF/**/dist
 FENAPRF/**/build
 FENAPRF/**/*.apk
 FENAPRF/**/*.aab
+# Windows Alternate Data Streams
+*:Zone.Identifier
