@@ -91,6 +91,7 @@ app.use("/api", filieseRoutes);
 
 // Gestão de Filiados
 app.use("/api/filiados", filiadosRoutes);
+app.use("/api/users", filiadosRoutes); // Alias para compatibilidade FENAPRF
 
 // Senha
 app.use("/api/senha", senhaRoutes);

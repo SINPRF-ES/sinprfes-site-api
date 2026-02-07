@@ -150,6 +150,7 @@ api.interceptors.response.use(
       message: message,
       status: status,
       contentType: contentType,
+      fullUrl: (error.config?.baseURL || '') + (error.config?.url || ''),
       config: {
         url: error.config?.url,
         method: error.config?.method,

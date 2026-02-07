@@ -5,6 +5,7 @@ import { checkUpdates, applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult 
 import { salvarUltimoCheckUpdate } from '../services/storageService';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
+import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import { FontAwesome } from '@expo/vector-icons';
 import { logDebug } from '../utils/filiadoUtils';
@@ -21,6 +22,12 @@ const AtualizacoesScreen = () => {
     const runtimeVersion = Updates.runtimeVersion;
     const channel = Updates.channel;
     const updateUrl = (Constants.expoConfig as any)?.updates?.url;
+
+    const copyToClipboard = async (text: string) => {
+        if (!text) return;
+        await Clipboard.setStringAsync(text);
+        Alert.alert('Copiado', 'URL copiada para a área de transferência.');
+    };
 
     const handleCheck = async () => {
         setIsChecking(true);
@@ -116,9 +123,16 @@ const AtualizacoesScreen = () => {
                         <Text style={styles.infoLabel}>Canal (EAS):</Text>
                         <Text style={styles.infoValue}>{channel || 'N/A'}</Text>
                     </View>
-                    <View style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>Update URL:</Text>
-                        <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="middle">{updateUrl || 'N/A'}</Text>
+                    <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 4 }}>
+                            <Text style={styles.infoLabel}>Update URL:</Text>
+                            <TouchableOpacity onPress={() => copyToClipboard(updateUrl)}>
+                                <FontAwesome name="copy" size={16} color="#003366" />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={[styles.infoValue, { textAlign: 'left', marginLeft: 0, fontSize: 11, fontFamily: 'monospace', color: '#666', fontWeight: 'normal' }]}>
+                            {updateUrl || 'N/A'}
+                        </Text>
                     </View>
                     <View style={styles.infoRow}>
                         <Text style={styles.infoLabel}>Update ID:</Text>

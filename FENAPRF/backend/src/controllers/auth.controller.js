@@ -15,13 +15,13 @@ const {
 } = require("../services/filiados.service");
 
 function gerarToken(filiado) {
-  const perfil = filiado.perfil_acesso || "FILIADO";
+  const perfil = filiado.perfil_acesso || "CONSELHEIRO";
 
   return jwt.sign(
     {
       id: filiado.id,
       cpf: filiado.cpf,
-      nome: filiado.nome,
+      nome: filiado.nome || filiado.name,
       perfil_acesso: perfil,
     },
     process.env.JWT_SECRET,
@@ -104,7 +104,8 @@ exports.login = async (req, res) => {
     return res.json({
       message: Textos.SUCESSO.LOGIN_REALIZADO, // ✨
       token,
-      perfil_acesso: filiado.perfil_acesso || "FILIADO",
+      refreshToken: token, // Alias simples para FENAPRF
+      perfil_acesso: filiado.perfil_acesso || "CONSELHEIRO",
     });
   } catch (err) {
     log.error("AuthLoginErroInterno", { error: err, requestId: req.requestId });

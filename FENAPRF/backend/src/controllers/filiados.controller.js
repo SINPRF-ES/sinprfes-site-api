@@ -58,25 +58,20 @@ function normalizeDateField(value) {
 }
 
 /**
- * Valida se um ID é numérico e seguro (INTEGER PK).
- * @returns {number|null} O ID convertido ou null se inválido.
+ * Valida se um ID é um UUID válido (FENAPRF).
+ * @returns {string|null} O ID ou null se inválido.
  */
 function parseFiliadoId(req, res) {
   const raw = String(req.params.id ?? "").trim();
 
-  // IDs em produção são numéricos (SERIAL/INTEGER)
-  if (!/^\d+$/.test(raw)) {
-    res.status(400).json({ success: false, message: "ID inválido." });
+  // IDs no FENAPRF são UUIDs
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(raw)) {
+    res.status(400).json({ success: false, message: "ID inválido (UUID esperado)." });
     return null;
   }
 
-  const id = Number(raw);
-  if (!Number.isSafeInteger(id) || id <= 0) {
-    res.status(400).json({ success: false, message: "ID inválido." });
-    return null;
-  }
-
-  return id;
+  return raw;
 }
 
 /**
@@ -542,7 +537,7 @@ exports.criarFiliado = async (req, res) => {
       email2: body.email2 || null,
       lotacao: normalizeLotacao(body.lotacao || "SEDE"),
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
-      perfil_acesso: normalizePerfil(body.perfil_acesso || "FILIADO"),
+      perfil_acesso: normalizePerfil(body.perfil_acesso || "CONSELHEIRO"),
       logradouro_bairro: body.logradouro_bairro || null,
       numero: body.numero || null,
       complemento: body.complemento || null,
@@ -641,7 +636,7 @@ exports.uploadAvatarMe = async (req, res) => {
     if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado." });
 
     const antes = await buscarPorId(userId);
-    const publicId = `sinprfes/avatars/filiado_${userId}`;
+    const publicId = `fenaprf/avatars/user_${userId}`;
 
     if (antes?.avatar_public_id && antes.avatar_public_id !== publicId) {
       try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {}
@@ -678,7 +673,7 @@ exports.uploadAvatarPorId = async (req, res) => {
     const antes = await buscarPorId(idAlvo);
     if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
 
-    const publicId = `sinprfes/avatars/filiado_${idAlvo}`;
+    const publicId = `fenaprf/avatars/user_${idAlvo}`;
     if (antes?.avatar_public_id && antes.avatar_public_id !== publicId) {
       try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {}
     }

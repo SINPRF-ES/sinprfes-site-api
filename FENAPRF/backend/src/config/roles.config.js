@@ -5,11 +5,9 @@ module.exports = {
     "LIST_FILIADOS",
     "CREATE_FILIADO",
     "EDIT_FILIADO",
-
     "VIEW_ALL",
     "VIEW_SELF",
     "EDIT_SELF",
-
     "JOGOS_GERENCIAR",
     "VOTACAO_GERENCIAR",
     "VOTACAO_VOTAR",
@@ -20,15 +18,13 @@ module.exports = {
     "RELATORIOS_VER"
   ],
 
-  FUNCIONARIO: [
+  COLABORADOR: [
     "LIST_FILIADOS",
     "CREATE_FILIADO",
     "EDIT_FILIADO",
-
     "VIEW_ALL",
     "VIEW_SELF",
     "EDIT_SELF",
-
     "VOTACAO_VOTAR",
     "PUSH_GERENCIAR",
     "REPASSE_GERENCIAR",
@@ -36,29 +32,14 @@ module.exports = {
     "RELATORIOS_VER"
   ],
 
-  ORGANIZADOR: [
-    "LIST_FILIADOS",
-
-    "JOGOS_GERENCIAR",
-    "VIEW_INSCRICOES",
-
-    "VIEW_SELF",
-    "EDIT_SELF",
-
-    "VOTACAO_VOTAR"
-  ],
-
-  FILIADO: [
+  CONSELHEIRO: [
     "LIST_FILIADOS",   // diretório: nome, telefone, avatar
     "VIEW_SELF",       // vê todos os próprios dados
     "EDIT_SELF",       // edita apenas campos permitidos
     "VOTACAO_VOTAR"
   ],
 
-  COMUNICADOR: [
-    "VIEW_SELF",
-    "EDIT_SELF",
-    "EDIT_CONTENT",
-    "NOTICIAS_GERENCIAR"
-  ]
+  // Mantendo para retrocompatibilidade se houver resíduos no banco
+  FUNCIONARIO: ["LIST_FILIADOS", "CREATE_FILIADO", "EDIT_FILIADO", "VIEW_ALL", "VIEW_SELF", "EDIT_SELF", "VOTACAO_VOTAR", "PUSH_GERENCIAR", "REPASSE_GERENCIAR", "NOTICIAS_GERENCIAR", "RELATORIOS_VER"],
+  FILIADO: ["LIST_FILIADOS", "VIEW_SELF", "EDIT_SELF", "VOTACAO_VOTAR"]
 };
