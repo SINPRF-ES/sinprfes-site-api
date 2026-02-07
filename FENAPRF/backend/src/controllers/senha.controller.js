@@ -162,6 +162,16 @@ exports.resetarSenha = async (req, res) => {
         return res.status(400).json({ error: "Link de redefinição inválido ou expirado. Por favor, solicite novamente." });
     }
 
+    // VALIDAR TOKEN NO BANCO (FENAPRF)
+    const { rows } = await pool.query(
+        "SELECT id FROM users WHERE id = $1 AND token_acesso_temp = $2 AND token_expiracao > NOW()",
+        [userId, token]
+    );
+
+    if (rows.length === 0) {
+        return res.status(400).json({ error: "Token inválido ou expirado no servidor." });
+    }
+
     const senhaHash = await bcrypt.hash(senha_nova, 10);
 
     const updateSql = `
