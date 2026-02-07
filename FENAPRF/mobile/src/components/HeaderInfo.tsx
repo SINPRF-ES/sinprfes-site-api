@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { User } from '../types/user';
-import { normalizeSituacaoFuncional } from '../utils/userUtils';
+import { normalizeSituacaoFuncional, getBandeiraUF } from '../utils/userUtils';
 import { useAuth } from '../hooks/useAuth';
 import Badge from './Badge';
 
@@ -32,11 +32,19 @@ const HeaderInfo: React.FC<Props> = ({ user: userProp }) => {
 
   return (
     <View style={styles.container}>
-      <Image
-        source={user.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
-        style={styles.avatar}
-        resizeMode="cover"
-      />
+      <View style={styles.avatarRow}>
+        <Image
+          source={user.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
+          style={styles.avatar}
+          resizeMode="cover"
+        />
+        <View style={styles.ufStack}>
+          <Text style={styles.ufText}>{user.perfil_acesso === 'DIRETORIA' || user.perfil_acesso === 'COLABORADOR' ? 'BR' : (user.uf || '—')}</Text>
+          {getBandeiraUF(user.uf, user.perfil_acesso) ? (
+            <Image source={{ uri: getBandeiraUF(user.uf, user.perfil_acesso) }} style={styles.flagIcon} />
+          ) : null}
+        </View>
+      </View>
       <Text style={styles.nome}>{user.name || '—'}</Text>
       <Text style={styles.perfil}>{perfil}</Text>
 
@@ -64,14 +72,43 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    position: 'relative',
+    marginBottom: 16,
+  },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginBottom: 16,
     backgroundColor: '#f0f0f0',
     borderWidth: 3,
     borderColor: '#f8f9fa',
+  },
+  ufStack: {
+    position: 'absolute',
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  ufText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#003366',
+    marginBottom: 4,
+  },
+  flagIcon: {
+    width: 24,
+    height: 16,
+    borderRadius: 2,
   },
   nome: {
     fontSize: 22,

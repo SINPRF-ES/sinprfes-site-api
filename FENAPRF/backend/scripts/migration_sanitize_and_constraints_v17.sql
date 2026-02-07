@@ -1,5 +1,5 @@
 -- ============================================================================
--- SINPRF-ES MIGRATION V17: SANITIZATION AND CHECK CONSTRAINTS
+-- FENAPRF MIGRATION V17: SANITIZATION AND CHECK CONSTRAINTS
 -- Reinforces canonical domain concepts in the database.
 -- ============================================================================
 

@@ -1,5 +1,5 @@
 /**
- * SINPRF-ES - Definições Canônicas do Domínio
+ * FENAPRF - Definições Canônicas do Domínio
  * Centraliza constantes e funções de normalização para evitar divergências entre
  * Backend, Web Frontend e Mobile.
  *

@@ -1,6 +1,6 @@
 // src/services/pdf.service.js
 // Serviço de geração de PDFs para Filiação e Ressarcimento
-// com layout institucional do SINPRF-ES.
+// com layout institucional do FENAPRF.
 
 const PDFDocument = require("pdfkit");
 const fs = require("fs").promises;
@@ -16,7 +16,7 @@ const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");
 
 // URL base para verificação de documentos via QR Code
 const QR_BASE_URL =
-  process.env.QR_VERIFICATION_URL || "https://sinprfes.org.br/verificar";
+  process.env.QR_VERIFICATION_URL || "https://fenaprf.org.br/verificar";
 
 // ------------------------------------------------------------------
 // Utilitários
@@ -342,7 +342,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
     // Rodapé com informações de contato
     const footerLines = [
       "Sede: Av. Nair de Azevedo Silva, 450, salas 14/20, Ed. Shopping Center Vitoria, Mario Cypreste, Vitoria/ES - CEP: 29.020-170",
-      "Sitio eletronico: www.sinprfes.org.br    |    Email: sinprfes@sinprfes.org.br    |    Telefones: (27) 99607-3073 / 99691-9312",
+      "Sitio eletronico: www.fenaprf.org.br    |    Email: contato@fenaprf.org.br    |    Telefones: (27) 99607-3073 / 99691-9312",
     ];
     const footerY = margin + 18;
 
@@ -363,7 +363,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
     });
 
     // Carimbo institucional
-    const carimbo = "Processado via SINPRF-ES";
+    const carimbo = "Processado via FENAPRF";
     page.drawText(sanitizeForPdf(carimbo), {
       x: width - margin - 130,
       y: margin - 4,
@@ -447,7 +447,7 @@ async function gerarPdfFichaFiliacao(dados) {
       .font("Helvetica")
       .fontSize(11)
       .text(
-        "Eu, abaixo assinado(a), venho por meio desta, requerer minha filiação ao Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo – SINPRF/ES, autorizando o desconto em folha da contribuição sindical, conforme legislação vigente e normas internas da entidade.",
+        "Eu, abaixo assinado(a), venho por meio desta, requerer minha filiação ao Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo – FENAPRF, autorizando o desconto em folha da contribuição sindical, conforme legislação vigente e normas internas da entidade.",
         { align: "justify" }
       );
     doc.moveDown(1);
@@ -489,7 +489,7 @@ async function gerarPdfFichaFiliacao(dados) {
       .font("Helvetica")
       .fontSize(11)
       .text(
-        "Declaro estar ciente e de acordo com o Estatuto Social do SINPRF/ES, bem como com as normas internas relativas à contribuição e aos direitos e deveres dos users.",
+        "Declaro estar ciente e de acordo com o Estatuto Social do FENAPRF, bem como com as normas internas relativas à contribuição e aos direitos e deveres dos users.",
         { align: "justify" }
       );
     doc.moveDown(2);
@@ -562,7 +562,7 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
       .font("Helvetica")
       .fontSize(11)
       .text(
-        "Este documento foi gerado automaticamente a partir das informacoes registradas na plataforma eletronica do SINPRF-ES e consolida o pedido de ressarcimento de despesas decorrentes de atividade sindical.",
+        "Este documento foi gerado automaticamente a partir das informacoes registradas na plataforma eletronica do FENAPRF e consolida o pedido de ressarcimento de despesas decorrentes de atividade sindical.",
         { align: "justify" }
       );
     doc.moveDown(1);
@@ -664,13 +664,13 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
       .font("Helvetica")
       .fontSize(11)
       .text(
-        "Declaro, para os devidos fins, que as informacoes prestadas neste documento sao verdadeiras e que as despesas indicadas decorrem exclusivamente de participacao em atividade sindical organizada ou autorizada pelo SINPRF/ES, em conformidade com a Resolucao nº 01/2025.",
+        "Declaro, para os devidos fins, que as informacoes prestadas neste documento sao verdadeiras e que as despesas indicadas decorrem exclusivamente de participacao em atividade sindical organizada ou autorizada pelo FENAPRF, em conformidade com a Resolucao nº 01/2025.",
         { align: "justify" }
       );
     doc.moveDown(0.8);
 
     doc.text(
-      "O presente pedido de ressarcimento foi formalizado de maneira eletronica, mediante autenticacao pessoal na plataforma do SINPRF/ES, nos termos do art. 10, § 2o, da Medida Provisoria nº 2.200-2/2001 e da Resolucao nº 01/2025.",
+      "O presente pedido de ressarcimento foi formalizado de maneira eletronica, mediante autenticacao pessoal na plataforma do FENAPRF, nos termos do art. 10, § 2o, da Medida Provisoria nº 2.200-2/2001 e da Resolucao nº 01/2025.",
       { align: "justify" }
     );
     doc.moveDown(1);
@@ -1096,7 +1096,7 @@ async function gerarPdfRelatorioGlobal(dados) {
     doc.on("error", reject);
 
     doc.moveDown(2);
-    doc.font("Helvetica-Bold").fontSize(18).text("Relatório Global SINPRF/ES", { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(18).text("Relatório Global FENAPRF", { align: "center" });
     doc.moveDown(1);
 
     // -------------------------------------------------------------------------

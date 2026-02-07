@@ -1,5 +1,5 @@
 /**
- * SINPRF-ES - Definições Canônicas do Domínio (Mobile)
+ * FENAPRF - Definições Canônicas do Domínio (Mobile)
  * Centraliza constantes e funções de normalização.
  */
 

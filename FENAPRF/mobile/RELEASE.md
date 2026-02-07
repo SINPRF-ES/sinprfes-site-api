@@ -1,6 +1,6 @@
-# Release Process - SINPRF/ES Mobile
+# Release Process - FENAPRF Mobile
 
-Este documento descreve oficialmente a estratégia de versionamento, política de `runtimeVersion` e o fluxo de publicação do aplicativo SINPRF/ES.
+Este documento descreve oficialmente a estratégia de versionamento, política de `runtimeVersion` e o fluxo de publicação do aplicativo FENAPRF.
 
 ## 1. Política de runtimeVersion e Base Nativa
 
@@ -53,7 +53,7 @@ A `runtimeVersion` identifica a compatibilidade entre o código nativo (APK) e a
   },
   "apk": {
     "enabled": true,
-    "fileName": "sinprfes-app-vc3-1.0.0.apk",
+    "fileName": "fenaprf-app-vc3-1.0.0.apk",
     "minSupportedVersionCode": 3,
     "notes": "Nova base nativa obrigatória"
   }
@@ -107,8 +107,8 @@ Para garantir que o aplicativo permaneça leve, utilizamos a técnica de **ABI S
 
 ### Convenção de Nomes:
 Sempre renomear os arquivos antes de subir para o Drive para facilitar a identificação no `update-manifest.json`:
-- `sinprfes-app-vcX-1.0.0-arm64.apk`
-- `sinprfes-app-vcX-1.0.0-armeabi.apk`
+- `fenaprf-app-vcX-1.0.0-arm64.apk`
+- `fenaprf-app-vcX-1.0.0-armeabi.apk`
 *(Onde `vcX` é o `versionCode` atual)*
 
 ### Guardrail de Build:

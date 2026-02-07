@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Autenticação biométrica SINPRF/ES',
+        promptMessage: 'Autenticação biométrica FENAPRF',
         cancelLabel: 'Usar senha',
         fallbackLabel: 'Usar senha',
         disableDeviceFallback: false,

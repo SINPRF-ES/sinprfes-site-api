@@ -9,16 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TOC_ITEMS = [
   { id: 'topo-estatuto', label: 'Topo' },
-  { id: 'titulo1', label: 'TÍTULO I - Princípios' },
-  { id: 'titulo2', label: 'TÍTULO II - Constituição' },
-  { id: 'titulo3', label: 'TÍTULO III - Organização' },
-  { id: 'titulo4', label: 'TÍTULO IV - Assembleia Geral' },
-  { id: 'titulo5', label: 'TÍTULO V - Diretoria Executiva' },
-  { id: 'titulo6', label: 'TÍTULO VI - Conselho Fiscal' },
-  { id: 'titulo7', label: 'TÍTULO VII - Vacância' },
-  { id: 'titulo8', label: 'TÍTULO VIII - Gestão Financeira' },
-  { id: 'titulo9', label: 'TÍTULO IX - Sindicalizados' },
-  { id: 'titulo10', label: 'TÍTULO X - Disposições Gerais' },
+  { id: 'cap1', label: 'Capítulo I - Denominação' },
+  { id: 'cap2', label: 'Capítulo II - Sindicatos' },
+  { id: 'cap3', label: 'Capítulo III - Órgãos' },
+  { id: 'cap4', label: 'Capítulo IV - Disposições' },
 ];
 
 export default function EstatutoScreen({ navigation }: any) {

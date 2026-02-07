@@ -1,6 +1,6 @@
 # Roteiro de Publicação e Teste de Updates (OTA/APK)
 
-Este guia detalha o fluxo completo para o mantenedor do app SINPRF-ES, focado no canal **preview** e runtime **54.0.1**.
+Este guia detalha o fluxo completo para o mantenedor do app FENAPRF, focado no canal **preview** e runtime **54.0.1**.
 
 ## A) Preparar repo limpo
 Sempre comece com um estado limpo para evitar artefatos de builds anteriores.
@@ -46,12 +46,12 @@ Após o build local, extraia os binários e organize-os.
 
 ```bash
 # 1. Preparar pasta de saída
-mkdir -p /tmp/sinprfes-build-out
+mkdir -p /tmp/fenaprf-build-out
 # Localize o arquivo .tar.gz gerado pelo EAS e extraia-o
-tar -xzvf build-*.tar.gz -C /tmp/sinprfes-build-out
+tar -xzvf build-*.tar.gz -C /tmp/fenaprf-build-out
 
 # 2. Localizar pasta release
-cd /tmp/sinprfes-build-out/release
+cd /tmp/fenaprf-build-out/release
 
 # 3. Definir ferramenta AAPT (ajuste o path conforme seu Android SDK)
 AAPT=$ANDROID_HOME/build-tools/34.0.0/aapt
@@ -63,12 +63,12 @@ $AAPT dump badging app-armeabi-v7a-release.apk | grep versionCode
 # 5. Renomear e organizar (Exemplo para VC 54)
 VC=54
 VN="1.1.0"
-cp app-arm64-v8a-release.apk sinprfes-app-vc$VC-arm64.apk
-cp app-armeabi-v7a-release.apk sinprfes-app-vc$VC-armeabi.apk
+cp app-arm64-v8a-release.apk fenaprf-app-vc$VC-arm64.apk
+cp app-armeabi-v7a-release.apk fenaprf-app-vc$VC-armeabi.apk
 
 # 6. Criar cópias "latest" para o manifesto
-cp sinprfes-app-vc$VC-arm64.apk sinprfes-app-latest-arm64.apk
-cp sinprfes-app-vc$VC-armeabi.apk sinprfes-app-latest-armeabi.apk
+cp fenaprf-app-vc$VC-arm64.apk fenaprf-app-latest-arm64.apk
+cp fenaprf-app-vc$VC-armeabi.apk fenaprf-app-latest-armeabi.apk
 ```
 
 ## F) Checklist final (manual)
@@ -86,13 +86,13 @@ Comandos úteis para depuração via ADB:
 
 ```bash
 # Instalar manualmente via cabo/wifi
-adb install -r sinprfes-app-vc54-arm64.apk
+adb install -r fenaprf-app-vc54-arm64.apk
 
 # Ver logs em tempo real filtrando pelo app
 adb logcat *:S ReactNative:V ReactNativeJS:V
 
 # Limpar cache do app
-adb shell pm clear br.org.sinprfes.app
+adb shell pm clear br.org.fenaprf.app
 ```
 
 ## 📢 PUSH – Depuração
@@ -107,7 +107,7 @@ Para garantir a integridade do módulo de notificações:
 O backend espera:
 ```json
 {
-  "title": "Informativo SINPRF-ES",
+  "title": "Informativo FENAPRF",
   "body": "Conteúdo da mensagem aqui...",
   "targetType": "ALL"
 }

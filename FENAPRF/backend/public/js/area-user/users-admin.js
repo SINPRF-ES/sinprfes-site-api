@@ -37,7 +37,7 @@
         const safeNome = (nome || "").toString();
         const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
             ? "http://localhost:3000"
-            : "https://api.sinprfes.org.br";
+            : "https://fenaprf-sistema.onrender.com";
 
         const src = avatarUrl
             ? (avatarUrl.startsWith('http') ? avatarUrl : apiBase + avatarUrl)
@@ -749,7 +749,7 @@
                 const d = await r.json();
                 const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
                     ? "http://localhost:3000"
-                    : "https://api.sinprfes.org.br";
+                    : "https://fenaprf-sistema.onrender.com";
 
                 const finalUrl = d.avatar_url.startsWith('http') ? d.avatar_url : apiBase + d.avatar_url;
                 document.getElementById("modal-avatar-preview").src = finalUrl;

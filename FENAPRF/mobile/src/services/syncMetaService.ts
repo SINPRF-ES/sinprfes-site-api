@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const KEY_LAST_SYNC_USERS = '@sinprf/last_sync_users';
+const KEY_LAST_SYNC_USERS = '@fenaprf/last_sync_users';
 
 export async function setLastSyncUsers(timestampMs: number): Promise<void> {
   await AsyncStorage.setItem(KEY_LAST_SYNC_USERS, String(timestampMs));

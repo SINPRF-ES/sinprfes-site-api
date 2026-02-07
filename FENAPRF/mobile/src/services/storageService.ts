@@ -4,12 +4,12 @@ import type { User } from '../types/user';
 import type { Sessao } from '../types/auth';
 import { logger } from '../infra/logger';
 
-const TOKEN_KEY = 'sinprf_secure_token';
-const USER_KEY = '@sinprf/user';
-const BIOMETRIA_KEY = '@sinprf/biometria_habilitada'; // Legacy AsyncStorage
-const BIOMETRIA_SECURE_KEY = 'sinprf_biometria_enabled'; // Novo SecureStore
-const BIOMETRIC_CREDENTIAL_KEY = 'sinprf_biometric_token';
-const LAST_UPDATE_CHECK_KEY = '@sinprf/last_update_check';
+const TOKEN_KEY = 'fenaprf_secure_token';
+const USER_KEY = '@fenaprf/user';
+const BIOMETRIA_KEY = '@fenaprf/biometria_habilitada'; // Legacy AsyncStorage
+const BIOMETRIA_SECURE_KEY = 'fenaprf_biometria_enabled'; // Novo SecureStore
+const BIOMETRIC_CREDENTIAL_KEY = 'fenaprf_biometric_token';
+const LAST_UPDATE_CHECK_KEY = '@fenaprf/last_update_check';
 
 export async function salvarSessao(sessao: Sessao): Promise<void> {
   try {

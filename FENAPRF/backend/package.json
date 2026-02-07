@@ -10,7 +10,7 @@
     "preinstall": "node scripts/check-root-deps.js"
   },
   "keywords": [
-    "sinprf-es",
+    "fenaprf",
     "node",
     "express",
     "render"

@@ -104,7 +104,7 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
   const corpoEmail = `
 Prezado(a) ${dados.nome || "user(a)"},
 
-Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma do SINPRF/ES.
+Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma do FENAPRF.
 
 Resumo do pedido:
 - Período da atividade: ${dados.data_inicio || "-"} a ${dados.data_fim || "-"}
@@ -343,7 +343,7 @@ FENAPRF
  */
 async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
   const { MAIL_FROM, BIRTHDAY_REPORT_TO } = process.env;
-  const to = BIRTHDAY_REPORT_TO || "sinprfes@sinprfes.org.br";
+  const to = BIRTHDAY_REPORT_TO || "contato@fenaprf.org.br";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");
@@ -378,7 +378,7 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
 
 async function enviarEmailRelatorioAssembleia(user, assembleia, pdfBuffer, dados = {}) {
   const { MAIL_FROM, REPORT_NOTIFY_EMAIL } = process.env;
-  const unionEmail = REPORT_NOTIFY_EMAIL || "sinprfes@sinprfes.org.br";
+  const unionEmail = REPORT_NOTIFY_EMAIL || "contato@fenaprf.org.br";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");

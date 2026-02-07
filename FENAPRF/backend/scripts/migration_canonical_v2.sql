@@ -1,5 +1,5 @@
 -- ============================================================================
--- SINPRF-ES CANONICAL MIGRATION V2 (Consolidated)
+-- FENAPRF CANONICAL MIGRATION V2 (Consolidated)
 -- This script contains all necessary schema updates for the 2.0 system.
 -- It is designed to be idempotent (using IF NOT EXISTS).
 -- ============================================================================

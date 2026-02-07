@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { User } from '../types/user';
-import { formatTelefone, onlyDigits, formatCpf } from '../shared/format/formatters';
+import { formatTelefone, onlyDigits, formatCpf, formatData } from '../shared/format/formatters';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
 
 interface Props {
@@ -78,11 +78,18 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
-        value={user?.data_nascimento ? toBrazilianDate(user.data_nascimento) : ''}
+        value={isManagement ? formatData(user?.data_nascimento) : (user?.data_nascimento ? toBrazilianDate(user.data_nascimento) : '')}
         onChangeText={(text) => {
-          const formatted = formatDateToDdMmYyyy(text);
-          const isoDate = toISODate(formatted);
-          setUser(f => f ? { ...f, data_nascimento: isoDate || formatted } : null);
+          const digits = onlyDigits(text);
+          if (digits.length <= 8) {
+            setUser(f => f ? { ...f, data_nascimento: digits } : null);
+          }
+        }}
+        onBlur={() => {
+          if (user?.data_nascimento && user.data_nascimento.length === 8) {
+            const isoDate = toISODate(formatData(user.data_nascimento));
+            setUser(f => f ? { ...f, data_nascimento: isoDate || user.data_nascimento } : null);
+          }
         }}
         placeholder="DD/MM/AAAA"
         keyboardType="numeric"

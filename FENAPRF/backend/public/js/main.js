@@ -30,10 +30,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="container header-content">
           <div class="logo-area">
             <a href="/index.html" class="logo-link">
-              <img src="/img/placeholder-sinprf.png" alt="SINPRF-ES" class="logo-img">
+              <img src="/img/placeholder-fenaprf.png" alt="FENAPRF" class="logo-img">
               <span class="logo-text">
-                SINPRF-ES<br>
-                <small>Sindicato dos Policiais Rodoviários Federais no ES</small>
+                FENAPRF
               </span>
             </a>
           </div>
@@ -62,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
     footerEl.innerHTML = `
       <footer class="site-footer">
         <div class="container footer-content">
-          <p>&copy; ${ano} SINPRF-ES – Sindicato dos Policiais Rodoviários Federais no Espírito Santo.</p>
+          <p>&copy; ${ano} FENAPRF.</p>
           <p class="footer-small">
             Desenvolvido para uso institucional. Todos os direitos reservados.
           </p>
