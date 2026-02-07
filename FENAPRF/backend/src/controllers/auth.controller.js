@@ -45,6 +45,7 @@ exports.login = async (req, res, next) => {
         .json({ error: Textos.AUTH.INFORME_CREDENCIAIS });
     }
 
+    // A) Normalizar CPF (somente dígitos)
     const cpfNormalizado = normalizarCpf(cpf);
     const user = await usersService.buscarPorCpf(cpfNormalizado);
 

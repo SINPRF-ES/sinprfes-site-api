@@ -109,15 +109,11 @@ exports.resetarSenha = async (req, res, next) => {
 
   try {
     if (!token || !senha_nova) {
-      return res.status(400).json({
-        error: Textos.SENHA.TOKEN_E_SENHA_OBRIGATORIOS,
-      });
+      return res.status(400).json({ error: Textos.SENHA.TOKEN_E_SENHA_OBRIGATORIOS });
     }
 
     if (senha_nova.length < 6) {
-      return res.status(400).json({
-        error: Textos.SENHA.SENHA_MUITO_CURTA,
-      });
+      return res.status(400).json({ error: Textos.SENHA.SENHA_MUITO_CURTA });
     }
 
     // Busca usuário pelo token e verifica expiração
@@ -141,9 +137,7 @@ exports.resetarSenha = async (req, res, next) => {
 
     log.info("SenhaAlteradaSucesso", { userId, requestId });
 
-    return res.json({
-      message: Textos.SUCESSO.SENHA_REDEFINIDA,
-    });
+    return res.json({ message: Textos.SUCESSO.SENHA_REDEFINIDA });
   } catch (err) {
     log.error("SenhaResetConfirmarErro", { error: err.message, requestId });
     next(err);
