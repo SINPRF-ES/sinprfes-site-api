@@ -9,8 +9,9 @@ const { loginLimiter } = require("../middlewares/securityRateLimit");
 router.post("/login", loginLimiter, controller.login);
 
 // Ativar 2FA (precisa estar logado)
-// 🟢 CORREÇÃO AUTOMÁTICA: rota para validar login com 2FA (App chama /api/auth/2fa)
+// 🟢 CORREÇÃO AUTOMÁTICA: rotas para validar login com 2FA
 router.post("/2fa", loginLimiter, controller.login);
+router.post("/login/2fa", loginLimiter, controller.login);
 
 router.post("/2fa/ativar", authMiddleware, controller.ativar2fa);
 
