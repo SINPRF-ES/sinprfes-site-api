@@ -1,6 +1,6 @@
 // src/services/authService.ts
 import api from './apiService';
-import type { User } from '../types/usuario';
+import type { User } from '../types/user';
 
 interface LoginPayload {
   cpf: string;
@@ -38,7 +38,7 @@ export async function loginCom2FA(payload: Required<LoginPayload>): Promise<Logi
 /**
  * Busca os dados do usuário logado.
  */
-export async function buscarUsuarioLogado(token?: string): Promise<User> {
+export async function buscarUserLogado(token?: string): Promise<User> {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   // No FENAPRF, usamos /api/users/me
   const { data } = await api.get<User>('/api/users/me', { headers });

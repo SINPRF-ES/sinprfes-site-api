@@ -18,7 +18,7 @@ router.post("/2fa/ativar", authMiddleware, controller.ativar2fa);
 // Dados do próprio usuário
 router.get("/me", authMiddleware, controller.me);
 
-// Lista de filiados (com regra de perfil)
-router.get("/filiados", authMiddleware, controller.listarFiliados);
+// Lista de users (com regra de perfil)
+router.get("/users", authMiddleware, controller.listarUsers);
 
 module.exports = router;

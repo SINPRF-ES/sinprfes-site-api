@@ -29,11 +29,11 @@ async function seed() {
     const users = [
       { nome: "Diretor Um", cpf: "11111111111", perfil: "DIRETORIA" },
       { nome: "Diretor Dois", cpf: "22222222222", perfil: "DIRETORIA" },
-      { nome: "Filiado Um", cpf: "33333333333", perfil: "FILIADO" },
-      { nome: "Filiado Dois", cpf: "44444444444", perfil: "FILIADO" },
-      { nome: "Filiado Três", cpf: "55555555555", perfil: "FILIADO" },
-      { nome: "Filiado Quatro", cpf: "66666666666", perfil: "FILIADO" },
-      { nome: "Filiado Cinco", cpf: "77777777777", perfil: "FILIADO" },
+      { nome: "User Um", cpf: "33333333333", perfil: "USER" },
+      { nome: "User Dois", cpf: "44444444444", perfil: "USER" },
+      { nome: "User Três", cpf: "55555555555", perfil: "USER" },
+      { nome: "User Quatro", cpf: "66666666666", perfil: "USER" },
+      { nome: "User Cinco", cpf: "77777777777", perfil: "USER" },
       { nome: "Organizador Um", cpf: "88888888888", perfil: "ORGANIZADOR" },
       { nome: "Admin Teste", cpf: "99999999999", perfil: "ADMIN" },
       { nome: "Comunicador Teste", cpf: "00000000000", perfil: "COMUNICADOR" },
@@ -41,7 +41,7 @@ async function seed() {
 
     for (const u of users) {
       await pool.query(
-        `INSERT INTO filiados (nome, cpf, senha_hash, perfil_acesso, situacao)
+        `INSERT INTO users (nome, cpf, senha_hash, perfil_acesso, situacao)
          VALUES ($1, $2, $3, $4, 'ATIVO')
          ON CONFLICT (cpf) DO UPDATE SET perfil_acesso = $4, situacao = 'ATIVO'`,
         [u.nome, u.cpf, passwordHash, u.perfil]

@@ -164,7 +164,7 @@ describe('Assembleias Service', () => {
     test('realizarCheckin should block ADMIN or COMUNICADOR', async () => {
       pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'ADMIN' }] });
 
-      await expect(service.realizarCheckin({ filiado_id: 999 })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+      await expect(service.realizarCheckin({ user_id: 999 })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
     });
 
     test('criarVotacao should transition if authority is valid', async () => {

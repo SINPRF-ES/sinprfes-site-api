@@ -1,4 +1,4 @@
-// src/routes/filiados.routes.js
+// src/routes/users.routes.js
 const express = require("express");
 const router = express.Router();
 const path = require("path");
@@ -8,7 +8,7 @@ const multer = require("multer");
 const authMiddleware = require("../middlewares/auth");
 const requirePermission = require("../middlewares/requirePermission");
 
-const filiadosController = require("../controllers/filiados.controller");
+const usersController = require("../controllers/users.controller");
 
 const sharp = require("sharp");
 
@@ -73,83 +73,83 @@ async function converterAvatarParaWebp(req, res, next) {
 // =============================================================================
 // ROTAS DO PRÓPRIO USUÁRIO (/me)
 // =============================================================================
-router.get("/me", authMiddleware, filiadosController.getMe);
+router.get("/me", authMiddleware, usersController.getMe);
 
-router.put("/me", authMiddleware, filiadosController.atualizarMeusDados);
+router.put("/me", authMiddleware, usersController.atualizarMeusDados);
 
 router.post(
   "/me/avatar",
   authMiddleware,
   upload.single("avatar"),
   converterAvatarParaWebp,
-  filiadosController.uploadAvatarMe
+  usersController.uploadAvatarMe
 );
 
-router.delete("/me/avatar", authMiddleware, filiadosController.removerAvatarMe);
+router.delete("/me/avatar", authMiddleware, usersController.removerAvatarMe);
 
-router.post("/2fa/desativar", authMiddleware, filiadosController.desativar2fa);
+router.post("/2fa/desativar", authMiddleware, usersController.desativar2fa);
 
 // =============================================================================
 // ROTAS GERAIS (LISTA / CRIAÇÃO) — perfis de gestão
 // =============================================================================
 router.get("/",
   authMiddleware,
-  requirePermission("LIST_FILIADOS"),
-  filiadosController.listarFiliados
+  requirePermission("LIST_USERS"),
+  usersController.listarUsers
 );
 
 router.post("/",
   authMiddleware,
-  requirePermission("CREATE_FILIADO"),
-  filiadosController.criarFiliado
+  requirePermission("CREATE_USER"),
+  usersController.criarUser
 );
 
 // =============================================================================
 // ROTAS ESPECÍFICAS POR ID
 // =============================================================================
-router.get("/:id", authMiddleware, filiadosController.getFiliadoById);
+router.get("/:id", authMiddleware, usersController.getUserById);
 
 router.put(
   "/:id",
   authMiddleware,
-  requirePermission("EDIT_FILIADO"),
-  filiadosController.atualizarFiliado
+  requirePermission("EDIT_USER"),
+  usersController.atualizarUser
 );
 
 router.post(
   "/:id/avatar",
   authMiddleware,
-  requirePermission("EDIT_FILIADO"),
+  requirePermission("EDIT_USER"),
   upload.single("avatar"),
   converterAvatarParaWebp,
-  filiadosController.uploadAvatarPorId
+  usersController.uploadAvatarPorId
 );
 
 router.delete(
   "/:id/avatar",
   authMiddleware,
-  requirePermission("EDIT_FILIADO"),
-  filiadosController.removerAvatarPorId
+  requirePermission("EDIT_USER"),
+  usersController.removerAvatarPorId
 );
 
 router.post(
   "/:id/arquivar",
   authMiddleware,
-  requirePermission("EDIT_FILIADO"),
-  filiadosController.arquivarFiliado
+  requirePermission("EDIT_USER"),
+  usersController.arquivarUser
 );
 
 router.post(
   "/:id/desarquivar",
   authMiddleware,
-  requirePermission("EDIT_FILIADO"),
-  filiadosController.desarquivarFiliado
+  requirePermission("EDIT_USER"),
+  usersController.desarquivarUser
 );
 
 router.delete(
   "/:id/dependentes",
   authMiddleware,
-  filiadosController.excluirDependentes
+  usersController.excluirDependentes
 );
 
 module.exports = router;

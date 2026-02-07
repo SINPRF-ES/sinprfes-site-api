@@ -234,7 +234,7 @@
                         ${filteredResps.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
                     </select>
                 </td>
-                <td style="text-align:center;">${loc.filiadosAtivos}</td>
+                <td style="text-align:center;">${loc.usersAtivos}</td>
                 <td style="text-align:center;">
                     <input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { prfTotal: this.value })" style="width:70px; text-align:center;">
                 </td>
@@ -281,8 +281,8 @@
 
         m.localidades.forEach(loc => {
             if (loc.prfTotal > 0) {
-                loc.percentual = (loc.filiadosAtivos / loc.prfTotal) * 100;
-                const base = loc.filiadosAtivos * perCapita;
+                loc.percentual = (loc.usersAtivos / loc.prfTotal) * 100;
+                const base = loc.usersAtivos * perCapita;
 
                 let factor = 0;
                 if (loc.percentual >= 90) factor = 1.0;

@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (resp.ok) {
         // Token válido → pula o login e vai direto pra Página Inicial
-        window.location.href = "/area-filiado.html";
+        window.location.href = "/area-user.html";
       } else if (resp.status === 401 || resp.status === 403) {
         // Token inválido/expirado → limpa e deixa o usuário logar de novo
         localStorage.removeItem("token");
@@ -176,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Redireciona para Página Inicial
-        window.location.href = "/area-filiado.html";
+        window.location.href = "/area-user.html";
       } catch (err) {
         console.error("Erro no login:", err);
         if (loginMsg) {

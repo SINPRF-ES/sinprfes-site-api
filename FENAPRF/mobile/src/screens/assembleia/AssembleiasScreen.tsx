@@ -7,7 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleias } from '../../services/assembleiaService';
 import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
-import { isDiretoria } from '../../utils/filiadoUtils';
+import { isDiretoria } from '../../utils/userUtils';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/assembleiaLabels';
 
@@ -15,13 +15,13 @@ import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 
 export default function AssembleiasScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { usuario } = useAuth();
+  const { user } = useAuth();
   const [assembleias, setAssembleias] = useState<Assembleia[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'ativas' | 'encerradas' | 'todas'>('ativas');
 
-  const ehDiretoria = isDiretoria(usuario?.perfil_acesso);
+  const ehDiretoria = isDiretoria(user?.perfil_acesso);
 
   const fetchData = async () => {
     try {

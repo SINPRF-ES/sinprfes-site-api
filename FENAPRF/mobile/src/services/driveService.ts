@@ -4,7 +4,7 @@ import { carregarSessao } from './storageService';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
-import { logDebug } from '../utils/filiadoUtils';
+import { logDebug } from '../utils/userUtils';
 import { buildCacheDest, inferExtension } from '../utils/fileCacheUtils';
 
 export interface DriveFile {

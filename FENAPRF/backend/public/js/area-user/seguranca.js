@@ -6,7 +6,7 @@
 (function (global) {
     if (global.Seguranca) return;
 
-    function renderizarSeguranca(filiado, callbackRecarregar) {
+    function renderizarSeguranca(user, callbackRecarregar) {
         let container = document.getElementById('seguranca-container');
 
         if (!container) {
@@ -18,7 +18,7 @@
             } else return;
         }
 
-        if (filiado.twofa_ativo) {
+        if (user.twofa_ativo) {
             container.innerHTML = `
                 <div class="section-box" style="margin-top: 20px; border-left: 5px solid #27ae60;">
                     <h3 class="section-subtitle" style="color: #27ae60; margin-bottom: 8px;">✅ Parabéns! Você está mais seguro.</h3>
@@ -39,7 +39,7 @@
     async function desativar2FA(callbackRecarregar) {
         if (!confirm("Tem certeza que deseja desativar o 2FA?")) return;
         try {
-            const res = await window.Api.apiFetch("/api/filiados/2fa/desativar", { method: "POST" });
+            const res = await window.Api.apiFetch("/api/users/2fa/desativar", { method: "POST" });
             if (res.ok) {
                 alert("2FA Desativado.");
                 if (callbackRecarregar) callbackRecarregar();

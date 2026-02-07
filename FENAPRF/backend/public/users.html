@@ -13,19 +13,19 @@
   <div id="site-header"></div>
 
   <div class="container">
-    <main class="page-content" id="filiados">
+    <main class="page-content" id="users">
 
       <section class="card">
         <h2 class="section-title">
           <span class="emoji">🧾</span>
-          <span>Filiados ao SINPRF-ES</span>
+          <span>Usuários ao SINPRF-ES</span>
         </h2>
         <p class="section-subtitle">
-          Consulta básica dos filiados cadastrados no sistema do sindicato.
+          Consulta básica dos users cadastrados no sistema do sindicato.
         </p>
 
         <div class="section-box" style="margin-bottom: 12px;">
-          <form id="filtro-filiados" onsubmit="return false;">
+          <form id="filtro-users" onsubmit="return false;">
             <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;">
               <div style="flex:1 1 220px; min-width:0;">
                 <label for="busca-nome" style="font-size:11px; color:var(--texto-fraco); display:block; margin-bottom:2px;">
@@ -73,7 +73,7 @@
                 <th style="text-align:left; padding:6px 4px;">Endereço</th>
               </tr>
             </thead>
-            <tbody id="tabela-filiados">
+            <tbody id="tabela-users">
               <tr>
                 <td colspan="5" style="padding:8px 4px; text-align:center; color:var(--texto-fraco);">
                   Carregando dados...
@@ -81,7 +81,7 @@
               </tr>
             </tbody>
           </table>
-          <div id="info-filiados" style="margin-top:6px; font-size:11px; color:var(--texto-fraco);"></div>
+          <div id="info-users" style="margin-top:6px; font-size:11px; color:var(--texto-fraco);"></div>
         </div>
       </section>
 
@@ -96,7 +96,7 @@
             .replace(/'/g, "&#039;");
         }
 
-        function carregarFiliados() {
+        function carregarUsuários() {
           const q = document.getElementById('busca-nome').value.trim();
           const situacao = document.getElementById('filtro-situacao').value;
 
@@ -104,10 +104,10 @@
           if (q) params.append('q', q);
           if (situacao) params.append('situacao', situacao);
 
-          const url = '/api/filiados' + (params.toString() ? '?' + params.toString() : '');
+          const url = '/api/users' + (params.toString() ? '?' + params.toString() : '');
 
-          const tbody = document.getElementById('tabela-filiados');
-          const info  = document.getElementById('info-filiados');
+          const tbody = document.getElementById('tabela-users');
+          const info  = document.getElementById('info-users');
 
           tbody.innerHTML = '<tr><td colspan="5" style="padding:8px 4px; text-align:center; color:var(--texto-fraco);">Carregando ...</td></tr>';
           info.textContent = '';
@@ -121,7 +121,7 @@
               }
 
               if (!data.results || data.results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:8px 4px; text-align:center; color:var(--texto-fraco);">Nenhum filiado encontrado com os filtros informados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:8px 4px; text-align:center; color:var(--texto-fraco);">Nenhum user encontrado com os filtros informados.</td></tr>';
                 info.textContent = '';
                 return;
               }
@@ -149,12 +149,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-          document.getElementById('btn-aplicar-filtro').addEventListener('click', carregarFiliados);
+          document.getElementById('btn-aplicar-filtro').addEventListener('click', carregarUsuários);
           document.getElementById('busca-nome').addEventListener('keyup', ev => {
-            if (ev.key === 'Enter') carregarFiliados();
+            if (ev.key === 'Enter') carregarUsuários();
           });
 
-          carregarFiliados();
+          carregarUsuários();
         });
       </script>
 

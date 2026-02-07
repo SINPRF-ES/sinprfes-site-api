@@ -3,7 +3,7 @@
 -- Cria a tabela de push_tokens se não existir
 CREATE TABLE IF NOT EXISTS push_tokens (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES filiados(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     expo_push_token TEXT UNIQUE NOT NULL,
     device_id TEXT,
     platform TEXT,

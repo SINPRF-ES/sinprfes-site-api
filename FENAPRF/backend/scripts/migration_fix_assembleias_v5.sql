@@ -55,18 +55,18 @@ BEGIN
         CREATE TABLE assembleia_mesa (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
             assembleia_id UUID NOT NULL REFERENCES assembleias(id) ON DELETE CASCADE,
-            presidente_user_id INTEGER REFERENCES filiados(id),
-            secretario_user_id INTEGER REFERENCES filiados(id),
+            presidente_user_id INTEGER REFERENCES users(id),
+            secretario_user_id INTEGER REFERENCES users(id),
             definida_em TIMESTAMP DEFAULT NOW(),
-            definida_por_user_id INTEGER REFERENCES filiados(id),
+            definida_por_user_id INTEGER REFERENCES users(id),
             UNIQUE(assembleia_id)
         );
     END IF;
 
     -- 5. Garantir auditoria com user_id (v4)
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_auditoria' AND column_name = 'filiado_id')
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_auditoria' AND column_name = 'user_id')
        AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_auditoria' AND column_name = 'user_id') THEN
-        ALTER TABLE assembleia_auditoria RENAME COLUMN filiado_id TO user_id;
+        ALTER TABLE assembleia_auditoria RENAME COLUMN user_id TO user_id;
     END IF;
 
 END $$;

@@ -229,7 +229,7 @@
             let user = JSON.parse(localStorage.getItem("userInfo") || "{}");
             if (!user.nome && window.Api.apiFetch) {
                 try {
-                    const r = await window.Api.apiFetch("/api/filiados/me");
+                    const r = await window.Api.apiFetch("/api/users/me");
                     user = await r.json();
                     localStorage.setItem("userInfo", JSON.stringify(user));
                 } catch(e) {}

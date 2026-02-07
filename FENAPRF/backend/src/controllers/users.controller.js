@@ -1,4 +1,4 @@
-// src/controllers/filiados.controller.js
+// src/controllers/users.controller.js
 const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
@@ -10,7 +10,7 @@ const Textos = require("../utils/textos");
 
 const usersService = require("../services/users.service");
 
-const { enviarEmailBoasVindasFiliado } = require("../services/email.service");
+const { enviarEmailBoasVindasUser } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
 const {
   normalizeSituacaoFuncional,
@@ -47,7 +47,7 @@ function normalizeDateField(value) {
 /**
  * Valida se um ID é um UUID válido (FENAPRF).
  */
-function parseFiliadoId(req, res) {
+function parseUserId(req, res) {
   const raw = String(req.params.id ?? "").trim();
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(raw)) {
@@ -92,21 +92,21 @@ function validarESanitizarDependentes(body) {
 }
 
 /**
- * GET /api/filiados/:id
+ * GET /api/users/:id
  */
-exports.getFiliadoById = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+exports.getUserById = async (req, res) => {
+  const idAlvo = parseUserId(req, res);
   if (idAlvo === null) return;
 
   try {
     const user = await usersService.getMe(idAlvo);
 
     if (!user) {
-      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+      return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
     }
 
     const atorId = req.user.id;
-    const perfilAtor = (req.user.perfil_acesso || "FILIADO").toUpperCase();
+    const perfilAtor = (req.user.perfil_acesso || "CONSELHEIRO").toUpperCase();
     const ehGestor = perfilGestao(perfilAtor);
     const ehProprioUsuario = String(atorId) === String(idAlvo);
 
@@ -123,7 +123,7 @@ exports.getFiliadoById = async (req, res) => {
 };
 
 /**
- * GET /api/filiados/me
+ * GET /api/users/me
  */
 exports.getMe = async (req, res) => {
   try {
@@ -131,7 +131,7 @@ exports.getMe = async (req, res) => {
     const user = await usersService.getMe(id);
 
     if (!user) {
-      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+      return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
     }
 
     const { senha_hash, password_hash, twofa_secret, ...dadosLimpos } = user;
@@ -147,11 +147,11 @@ exports.getMe = async (req, res) => {
 };
 
 /**
- * GET /api/filiados
+ * GET /api/users
  */
-exports.listarFiliados = async (req, res) => {
+exports.listarUsers = async (req, res) => {
   try {
-    const perfilAcesso = (req.user.perfil_acesso || "FILIADO").toUpperCase();
+    const perfilAcesso = (req.user.perfil_acesso || "CONSELHEIRO").toUpperCase();
     const termoBusca = (req.query.q || "").toString();
     const incluirArquivados = String(req.query.incluirArquivados || "").trim() === "1";
 
@@ -161,16 +161,16 @@ exports.listarFiliados = async (req, res) => {
 
     return res.json({
       total: lista.length,
-      filiados: lista,
+      users: lista,
     });
   } catch (err) {
     log.error("UsersListarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.LISTAR_USERS });
   }
 };
 
 /**
- * PUT /api/filiados/me
+ * PUT /api/users/me
  */
 exports.atualizarMeusDados = async (req, res) => {
   try {
@@ -208,7 +208,7 @@ exports.atualizarMeusDados = async (req, res) => {
 
     return res.json({
       message: Textos.SUCESSO.DADOS_ATUALIZADOS,
-      filiado: atualizado,
+      user: atualizado,
     });
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
@@ -218,11 +218,11 @@ exports.atualizarMeusDados = async (req, res) => {
 };
 
 /**
- * DELETE /api/filiados/:id/dependentes
+ * DELETE /api/users/:id/dependentes
  */
 exports.excluirDependentes = async (req, res) => {
   try {
-    const idAlvo = parseFiliadoId(req, res);
+    const idAlvo = parseUserId(req, res);
     if (idAlvo === null) return;
 
     const { indices } = req.body;
@@ -234,7 +234,7 @@ exports.excluirDependentes = async (req, res) => {
     if (!ehGestor && !ehProprioUsuario) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
     const user = await usersService.getMe(idAlvo);
-    if (!user) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!user) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     const dependentesAtuais = [];
     for (let i = 1; i <= 5; i++) {
@@ -259,11 +259,11 @@ exports.excluirDependentes = async (req, res) => {
       dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
     }
 
-    const atualizado = await usersService.atualizarFiliadoPorId(idAlvo, dadosDependentes);
+    const atualizado = await usersService.atualizarUserPorId(idAlvo, dadosDependentes);
 
     log.info("DependentesExcluidos", { atorId: req.user.id, alvoId: idAlvo, requestId: req.requestId });
 
-    return res.json({ message: "Dependentes excluídos com sucesso.", filiado: atualizado });
+    return res.json({ message: "Dependentes excluídos com sucesso.", user: atualizado });
   } catch (err) {
     log.error("DependentesExcluirErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -271,11 +271,11 @@ exports.excluirDependentes = async (req, res) => {
 };
 
 /**
- * PUT /api/filiados/:id
+ * PUT /api/users/:id
  */
-exports.atualizarFiliado = async (req, res) => {
+exports.atualizarUser = async (req, res) => {
   const loggedId = req.user?.id;
-  const idAlvo = parseFiliadoId(req, res);
+  const idAlvo = parseUserId(req, res);
   if (idAlvo === null) return;
 
   try {
@@ -337,7 +337,7 @@ exports.atualizarFiliado = async (req, res) => {
       if (loggedId === idAlvo) return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
 
       const alvo = await usersService.getMe(idAlvo);
-      if (!alvo) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+      if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
       if (perfilAtor !== "ADMIN" && (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN")) {
         return res.status(403).json({ message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN." });
@@ -345,11 +345,11 @@ exports.atualizarFiliado = async (req, res) => {
       payload.perfil_acesso = novoPerfil;
     }
 
-    const atualizado = await usersService.atualizarFiliadoPorId(idAlvo, payload);
-    if (!atualizado) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    const atualizado = await usersService.atualizarUserPorId(idAlvo, payload);
+    if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     log.info("UserEditadoPorGestao", { atorId: loggedId, alvoId: idAlvo, requestId: req.requestId });
-    return res.json({ message: Textos.SUCESSO.DADOS_ATUALIZADOS, filiado: atualizado });
+    return res.json({ message: Textos.SUCESSO.DADOS_ATUALIZADOS, user: atualizado });
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
     if (err && (err.code === "23505" || (err.message && err.message.includes("duplicate")))) return res.status(409).json({ message: "CPF duplicado no sistema." });
@@ -360,15 +360,15 @@ exports.atualizarFiliado = async (req, res) => {
 };
 
 /**
- * POST /api/filiados
+ * POST /api/users
  */
-exports.criarFiliado = async (req, res) => {
+exports.criarUser = async (req, res) => {
   try {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilCriador)) return res.status(403).json({ message: Textos.FILIADOS.PERMISSAO_CRIAR });
+    if (!perfilGestao(perfilCriador)) return res.status(403).json({ message: Textos.USERS.PERMISSAO_CRIAR });
 
     const body = req.body || {};
-    if (!body.nome || !body.cpf || (!body.email1 && !body.email)) return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS });
+    if (!body.nome || !body.cpf || (!body.email1 && !body.email)) return res.status(400).json({ message: Textos.USERS.CAMPOS_OBRIGATORIOS });
 
     const cpfLimpo = normalizarCpf(body.cpf);
     if (cpfLimpo.length !== 11) return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
@@ -407,24 +407,24 @@ exports.criarFiliado = async (req, res) => {
       ...dadosDependentes,
     };
 
-    const novo = await usersService.criarFiliadoInicial(dadosNovo, perfilCriador);
+    const novo = await usersService.criarUserInicial(dadosNovo, perfilCriador);
 
-    try { await enviarEmailBoasVindasFiliado(novo); } catch (emailErr) { log.error("UserEmailBoasVindasErro", { error: emailErr.message, requestId: req.requestId }); }
+    try { await enviarEmailBoasVindasUser(novo); } catch (emailErr) { log.error("UserEmailBoasVindasErro", { error: emailErr.message, requestId: req.requestId }); }
 
     log.info("UserCriado", { creatorId: req.user.id, newId: novo.id, requestId: req.requestId });
-    return res.status(201).json({ message: Textos.SUCESSO.CRIADO_SUCESSO, filiado: novo });
+    return res.status(201).json({ message: Textos.SUCESSO.CRIADO_SUCESSO, user: novo });
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
     log.error("UsersCriarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_FILIADO });
+    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_USER });
   }
 };
 
 /**
- * POST /api/filiados/:id/arquivar
+ * POST /api/users/:id/arquivar
  */
-exports.arquivarFiliado = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+exports.arquivarUser = async (req, res) => {
+  const idAlvo = parseUserId(req, res);
   if (idAlvo === null) return;
 
   try {
@@ -434,11 +434,11 @@ exports.arquivarFiliado = async (req, res) => {
     const motivo = String(req.body?.motivo || "").trim();
     if (!motivo) return res.status(400).json({ message: "Motivo é obrigatório." });
 
-    const atualizado = await usersService.arquivarFiliadoPorId(idAlvo, { motivo });
-    if (!atualizado) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    const atualizado = await usersService.arquivarUserPorId(idAlvo, { motivo });
+    if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     log.info("UserArquivado", { atorId: req.user.id, targetId: idAlvo, requestId: req.requestId });
-    return res.json({ message: "Estado do cadastro alterado para: ARQUIVADO.", filiado: atualizado });
+    return res.json({ message: "Estado do cadastro alterado para: ARQUIVADO.", user: atualizado });
   } catch (err) {
     log.error("UsersArquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -446,21 +446,21 @@ exports.arquivarFiliado = async (req, res) => {
 };
 
 /**
- * POST /api/filiados/:id/desarquivar
+ * POST /api/users/:id/desarquivar
  */
-exports.desarquivarFiliado = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+exports.desarquivarUser = async (req, res) => {
+  const idAlvo = parseUserId(req, res);
   if (idAlvo === null) return;
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
-    const atualizado = await usersService.desarquivarFiliadoPorId(idAlvo);
-    if (!atualizado) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    const atualizado = await usersService.desarquivarUserPorId(idAlvo);
+    if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     log.info("UserDesarquivado", { atorId: req.user.id, targetId: idAlvo, requestId: req.requestId });
-    return res.json({ message: "Estado do cadastro alterado para: CADASTRO ATIVO.", filiado: atualizado });
+    return res.json({ message: "Estado do cadastro alterado para: CADASTRO ATIVO.", user: atualizado });
   } catch (err) {
     log.error("UsersDesarquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -468,7 +468,7 @@ exports.desarquivarFiliado = async (req, res) => {
 };
 
 /**
- * POST /api/filiados/me/avatar
+ * POST /api/users/me/avatar
  */
 exports.uploadAvatarMe = async (req, res) => {
   try {
@@ -481,9 +481,9 @@ exports.uploadAvatarMe = async (req, res) => {
     if (antes?.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
     const up = await uploadAvatarBuffer(req.file.buffer, publicId);
-    const atualizado = await usersService.atualizarFiliadoPorId(userId, { avatar_url: up.avatar_url, avatar_public_id: up.avatar_public_id });
+    const atualizado = await usersService.atualizarUserPorId(userId, { avatar_url: up.avatar_url, avatar_public_id: up.avatar_public_id });
 
-    return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado });
+    return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, user: atualizado });
   } catch (err) {
     log.error("UsersUploadAvatarMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -491,10 +491,10 @@ exports.uploadAvatarMe = async (req, res) => {
 };
 
 /**
- * POST /api/filiados/:id/avatar
+ * POST /api/users/:id/avatar
  */
 exports.uploadAvatarPorId = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+  const idAlvo = parseUserId(req, res);
   if (idAlvo === null) return;
 
   try {
@@ -504,15 +504,15 @@ exports.uploadAvatarPorId = async (req, res) => {
     if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado." });
 
     const antes = await usersService.getMe(idAlvo);
-    if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     const publicId = `fenaprf/avatars/user_${idAlvo}`;
     if (antes?.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
     const up = await uploadAvatarBuffer(req.file.buffer, publicId);
-    const atualizado = await usersService.atualizarFiliadoPorId(idAlvo, { avatar_url: up.avatar_url, avatar_public_id: up.avatar_public_id });
+    const atualizado = await usersService.atualizarUserPorId(idAlvo, { avatar_url: up.avatar_url, avatar_public_id: up.avatar_public_id });
 
-    return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado });
+    return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, user: atualizado });
   } catch (err) {
     log.error("UsersUploadAvatarPorIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -520,7 +520,7 @@ exports.uploadAvatarPorId = async (req, res) => {
 };
 
 /**
- * POST /api/filiados/2fa/desativar
+ * POST /api/users/2fa/desativar
  */
 exports.desativar2fa = async (req, res) => {
     return res.status(400).json({ error: "Funcionalidade não disponível para este ambiente." });
@@ -530,11 +530,11 @@ exports.removerAvatarMe = async (req, res) => {
   try {
     const id = req.user.id;
     const antes = await usersService.getMe(id);
-    if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     if (antes.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
-    await usersService.atualizarFiliadoPorId(id, { avatar_url: null, avatar_public_id: null });
+    await usersService.atualizarUserPorId(id, { avatar_url: null, avatar_public_id: null });
     return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
   } catch (err) {
     log.error("UsersRemoverAvatarMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
@@ -543,16 +543,16 @@ exports.removerAvatarMe = async (req, res) => {
 };
 
 exports.removerAvatarPorId = async (req, res) => {
-  const id = parseFiliadoId(req, res);
+  const id = parseUserId(req, res);
   if (id === null) return;
 
   try {
     const antes = await usersService.getMe(id);
-    if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     if (antes.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
-    await usersService.atualizarFiliadoPorId(id, { avatar_url: null, avatar_public_id: null });
+    await usersService.atualizarUserPorId(id, { avatar_url: null, avatar_public_id: null });
     return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
   } catch (err) {
     log.error("UsersRemoverAvatarPorIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });

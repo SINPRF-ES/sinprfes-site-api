@@ -122,7 +122,7 @@ export default function VotacaoAtiva({ assembleiaId, votacao, contagem, votos, t
          <ScrollView style={styles.nominalList} nestedScrollEnabled>
             {votos.length > 0 ? (
                votos.map((v, i) => (
-                  <View key={v.filiado_id || i} style={styles.votoNominalItem}>
+                  <View key={v.user_id || i} style={styles.votoNominalItem}>
                      <Text style={styles.voterName} numberOfLines={1}>{v.nome}</Text>
                      <View style={[styles.miniBadge, { backgroundColor: v.voto === 'SIM' ? '#28a745' : v.voto === 'NAO' ? '#dc3545' : '#6c757d' }]}>
                        <Text style={styles.miniBadgeText}>{v.voto}</Text>

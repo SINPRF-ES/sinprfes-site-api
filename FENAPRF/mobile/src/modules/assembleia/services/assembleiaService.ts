@@ -71,7 +71,7 @@ const assembleiaService = {
     return data;
   },
 
-  async definirMesa(id: string, dados: { filiado_id: string; cargo: 'PRESIDENTE' | 'SECRETARIO' }): Promise<void> {
+  async definirMesa(id: string, dados: { user_id: string; cargo: 'PRESIDENTE' | 'SECRETARIO' }): Promise<void> {
     await api.post(`/api/assembleias/${id}/mesa`, dados);
   }
 };

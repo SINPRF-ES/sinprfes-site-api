@@ -80,7 +80,7 @@ const readData = () => {
           page: 'noticias',
           ordenacao: 1,
           title: 'Nova Sede Inaugurada',
-          body: 'O sindicato agora conta com uma sede moderna para melhor atender todos os filiados.',
+          body: 'O sindicato agora conta com uma sede moderna para melhor atender todos os users.',
           media_type: 'image',
           media_url: 'img/brasao.png',
           is_active: true,

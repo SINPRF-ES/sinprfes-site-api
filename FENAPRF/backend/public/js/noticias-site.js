@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const response = await fetch("/api/noticias", { headers });
 
     if (response.status === 401) {
-      loadingEl.innerHTML = `Para ver as notícias, acesse a <a href="/area-filiado.html">Página Inicial</a>.`;
+      loadingEl.innerHTML = `Para ver as notícias, acesse a <a href="/area-user.html">Página Inicial</a>.`;
       return;
     }
 

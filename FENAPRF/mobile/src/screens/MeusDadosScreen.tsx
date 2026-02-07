@@ -5,8 +5,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../hooks/useAuth';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/apiService';
-import { uploadAvatar, removerAvatar } from '../services/filiadosService';
-import type { User } from '../types/usuario';
+import { uploadAvatar, removerAvatar } from '../services/usersService';
+import type { User } from '../types/user';
 
 // Importando os novos componentes
 import HeaderInfo from '../components/HeaderInfo';
@@ -19,31 +19,31 @@ import SafeScreen from '../components/SafeScreen';
 import { toISODate, toBrazilianDate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { logger } from '../infra/logger';
-import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
+import { getCanonicalUserId } from '../utils/userUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { useNavigation } from '@react-navigation/native';
 import { normalizeNome } from '../utils/canon';
 
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
-  const { usuario, setSessao, token } = useAuth();
-  const [filiado, setFiliado] = useState<User | null>(null);
+  const { user, setSessao, token } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
   // Efeito para buscar os dados completos do usuário
-  const fetchFiliadoData = useCallback(async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
       // O `apiService` já injeta o token
       const { data } = await api.get<User>('/api/users/me');
 
-      setFiliado(data);
+      setUser(data);
       logger.info('MEUS_DADOS_STATE_SNAPSHOT', {
-        hasUser: !!usuario,
-        hasFiliado: !!data,
-        filiadoKeys: data ? Object.keys(data) : [],
+        hasAuthUser: !!user,
+        hasFetchedData: !!data,
+        userKeys: data ? Object.keys(data) : [],
         lotacao: data?.lotacao
       });
     } catch (err: any) {
@@ -54,17 +54,17 @@ export default function MeusDadosScreen() {
   }, []);
 
   useEffect(() => {
-    fetchFiliadoData();
-  }, [fetchFiliadoData]);
+    fetchUserData();
+  }, [fetchUserData]);
 
 
   const handleUpdate = useCallback(async () => {
-    if (!filiado) return;
+    if (!user) return;
 
     try {
       setLoading(true);
 
-      const payload = { ...filiado };
+      const payload = { ...user };
 
       // Normalização de campos antes de enviar ao backend
       if (payload.name) payload.name = normalizeNome(payload.name) || '';
@@ -81,12 +81,12 @@ export default function MeusDadosScreen() {
 
       // Re-fetch dos dados completos para re-hidratar o estado
       const { data: refreshedData } = await api.get<User>('/api/users/me');
-      setFiliado(refreshedData);
+      setUser(refreshedData);
 
       // Atualiza o usuário no contexto de autenticação, se necessário
-      if (usuario) {
-        const usuarioAtualizado = { ...usuario, name: refreshedData.name, email: refreshedData.email, avatar_url: refreshedData.avatar_url };
-        await setSessao(token!, usuarioAtualizado);
+      if (user) {
+        const userAtualizado = { ...user, name: refreshedData.name, email: refreshedData.email, avatar_url: refreshedData.avatar_url };
+        await setSessao(token!, userAtualizado);
       }
 
       Alert.alert('Sucesso', 'Seus dados foram atualizados.');
@@ -95,17 +95,17 @@ export default function MeusDadosScreen() {
     } finally {
       setLoading(false);
     }
-  }, [filiado, usuario, token, setSessao]);
+  }, [user, user, token, setSessao]);
 
   const processAndUploadImage = async (uri: string) => {
     try {
       setIsUploading(true);
-      const filiadoAtualizado = await uploadAvatar(uri);
-      setFiliado(filiadoAtualizado);
+      const userAtualizado = await uploadAvatar(uri);
+      setUser(userAtualizado);
 
-      if (usuario) {
-        const usuarioAtualizado = { ...usuario, avatar_url: filiadoAtualizado.avatar_url };
-        await setSessao(token!, usuarioAtualizado);
+      if (user) {
+        const userAtualizado = { ...user, avatar_url: userAtualizado.avatar_url };
+        await setSessao(token!, userAtualizado);
       }
 
       Alert.alert('Sucesso', 'Sua foto de perfil foi atualizada.');
@@ -191,12 +191,12 @@ export default function MeusDadosScreen() {
           onPress: async () => {
             try {
               setIsUploading(true); // Reutiliza o estado de loading
-              const filiadoAtualizado = await removerAvatar();
-              setFiliado(filiadoAtualizado);
+              const userAtualizado = await removerAvatar();
+              setUser(userAtualizado);
 
-              if (usuario) {
-                const usuarioAtualizado = { ...usuario, avatar_url: null };
-                await setSessao(token!, usuarioAtualizado);
+              if (user) {
+                const userAtualizado = { ...user, avatar_url: null };
+                await setSessao(token!, userAtualizado);
               }
 
               Alert.alert('Sucesso', 'Sua foto foi removida.');
@@ -210,7 +210,7 @@ export default function MeusDadosScreen() {
         }
       ]
     );
-  }, [usuario, token, setSessao]);
+  }, [user, token, setSessao]);
 
   useEffect(() => {
     const actions: MenuAction[] = [
@@ -218,7 +218,7 @@ export default function MeusDadosScreen() {
       { label: 'Alterar Foto', icon: 'camera', onPress: handleAvatarUpload }
     ];
 
-    if (filiado?.avatar_url) {
+    if (user?.avatar_url) {
       actions.push({ label: 'Remover Foto', icon: 'camera-off', onPress: handleAvatarRemove, isDestructive: true });
     }
 
@@ -228,9 +228,9 @@ export default function MeusDadosScreen() {
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
     });
-  }, [navigation, filiado, handleUpdate, handleAvatarUpload, handleAvatarRemove]);
+  }, [navigation, user, handleUpdate, handleAvatarUpload, handleAvatarRemove]);
 
-  if (loading && !filiado) {
+  if (loading && !user) {
     return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
   }
 
@@ -246,15 +246,15 @@ export default function MeusDadosScreen() {
       enableOnAndroid
       extraScrollHeight={50}
     >
-      <HeaderInfo filiado={filiado} />
+      <HeaderInfo user={user} />
 
       <ErrorBoundary>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>👤 Informações Pessoais</Text>
         </View>
         <ContatoCard
-          filiado={filiado}
-          setFiliado={setFiliado}
+          user={user}
+          setUser={setUser}
           isEditing={true}
           isManagement={false}
           hideTitle={true}
@@ -265,14 +265,14 @@ export default function MeusDadosScreen() {
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}>
           <Text style={styles.sectionTitle}>🏠 Endereço</Text>
         </View>
-        <EnderecoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
+        <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
       </ErrorBoundary>
 
       <ErrorBoundary>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text>
         </View>
-        <LotacaoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} />
+        <LotacaoCard user={user} setUser={setUser} hideTitle={true} />
       </ErrorBoundary>
 
     </KeyboardAwareScrollView>

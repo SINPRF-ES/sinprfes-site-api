@@ -10,7 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
 import Badge from '../components/Badge';
-import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
+import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { Image } from 'react-native';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -27,9 +27,9 @@ const NAV_ITEMS = [
     screen: 'Noticias', // Tela a ser criada
   },
   {
-    label: 'Buscar Filiados',
+    label: 'Buscar Users',
     icon: 'account-search-outline',
-    screen: 'Filiados',
+    screen: 'Users',
   },
    {
     label: 'Assembleias e Votações',
@@ -47,16 +47,16 @@ const GESTAO_ITEMS = [
 ];
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-  const { usuario } = useAuth();
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  const { user } = useAuth();
+  const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
 
   const displayedItems = [...NAV_ITEMS];
   if (ehGestao) {
     displayedItems.push(...GESTAO_ITEMS);
   }
 
-  const situacao = normalizeSituacaoFuncional(usuario?.situacao || '');
-  const perfil = (usuario?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+  const situacao = normalizeSituacaoFuncional(user?.situacao || '');
+  const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
 
   const getSituacaoVariant = (s: string) => {
     switch (s) {
@@ -73,14 +73,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Image
-            source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/logo.png')}
+            source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
             style={styles.avatar}
             resizeMode="cover"
           />
           <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              {(usuario?.name || 'Filiado').split(' ')[0]}
+              {(user?.name || 'User').split(' ')[0]}
             </Text>
             <Text style={styles.userProfile}>{perfil}</Text>
 

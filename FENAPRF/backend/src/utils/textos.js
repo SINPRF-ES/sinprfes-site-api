@@ -34,11 +34,11 @@ module.exports = {
     TOKEN_TIPO_INVALIDO: "Token de redefinição inválido.",
   },
 
-  // Mensagens de ERRO e VALIDAÇÃO no fluxo de FILIADOS/CRUD
-  FILIADOS: {
+  // Mensagens de ERRO e VALIDAÇÃO no fluxo de USERS/CRUD
+  USERS: {
     ID_INVALIDO: "ID inválido.",
-    FILIADO_NAO_ENCONTRADO: "Filiado não encontrado.",
-    PERMISSAO_CRIAR: "Você não tem permissão para criar filiados.",
+    USER_NAO_ENCONTRADO: "User não encontrado.",
+    PERMISSAO_CRIAR: "Você não tem permissão para criar users.",
     CAMPOS_OBRIGATORIOS: "Campos obrigatórios: nome, cpf, email1.",
     CPF_DUPLICADO: "CPF já cadastrado na base de dados.",
   },
@@ -47,9 +47,9 @@ module.exports = {
   ERROS_INTERNOS: {
     LOGIN: "Erro interno ao realizar login.",
     CARREGAR_DADOS: "Erro interno ao carregar seus dados.",
-    LISTAR_FILIADOS: "Erro interno ao listar filiados.",
+    LISTAR_USERS: "Erro interno ao listar users.",
     ATUALIZAR_DADOS: "Erro interno ao atualizar dados.",
-    CRIAR_FILIADO: "Erro interno ao criar filiado.",
+    CRIAR_USER: "Erro interno ao criar user.",
     RESET_SENHA: "Erro interno ao redefinir a senha.",
   },
 

@@ -10,9 +10,9 @@ import SafeScreen from '../components/SafeScreen';
 
 const { width } = Dimensions.get('window');
 
-export default function NoticiaDetalheScreen({ route }: any) {
+export default function NoticiaDetalheScreen({ route, navigation }: any) {
   const { newsId } = route.params;
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const { data: noticia, isLoading, isError, refetch } = useQuery({
     queryKey: ['noticia', newsId],
@@ -52,7 +52,7 @@ export default function NoticiaDetalheScreen({ route }: any) {
   }
 
   const coverUrl = noticia.capa_url;
-  const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((user?.perfil_acesso || '').toUpperCase());
 
   return (
     <SafeScreen style={styles.container}>

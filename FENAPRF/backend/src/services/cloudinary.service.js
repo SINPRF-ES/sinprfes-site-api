@@ -6,7 +6,7 @@ cloudinary.config(process.env.CLOUDINARY_URL);
 
 /**
  * Upload de avatar com:
- * - public_id fixo por filiado (URL estável)
+ * - public_id fixo por user (URL estável)
  * - eager transformation única (200x200, face-centered, auto format/quality)
  *
  * Isso garante que só existe UMA variação do avatar (economia de transformações).

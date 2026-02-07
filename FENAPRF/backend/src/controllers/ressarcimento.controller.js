@@ -28,20 +28,20 @@ exports.criarRequerimento = async (req, res) => {
     const normalizarEmail = (v) =>
       (v || "").toString().trim().toLowerCase();
 
-    // E-mails do filiado (vindo do usuário autenticado ou corpo, se um dia você mandar por lá)
+    // E-mails do user (vindo do usuário autenticado ou corpo, se um dia você mandar por lá)
     const email1 = normalizarEmail(
       body.email1 || usuario.email1 || usuario.email
     );
     const email2 = normalizarEmail(body.email2 || usuario.email2);
 
-    // Define o e-mail de destino (cópia para o filiado)
+    // Define o e-mail de destino (cópia para o user)
     const emailDestino =
       normalizarEmail(body.email_destino) || email1 || email2 || "";
 
     // Monta objeto do pedido
     const pedido = {
       // Do usuário autenticado
-      id_filiado: usuario.id,
+      id_user: usuario.id,
       cpf: body.cpf || usuario.cpf || "",
       nome: body.nome || usuario.nome || "",
 
@@ -80,7 +80,7 @@ exports.criarRequerimento = async (req, res) => {
 
     // 🟢 LOG SUCESSO PRELIMINAR (Recebido)
     log.info("RessarcimentoRecebido", {
-      filiadoId: usuario.id,
+      userId: usuario.id,
       valorTotal: pedido.valor_total,
       qtdAnexos: anexos.length,
       emailDestino: pedido.email_destino || "(vazio)",
@@ -90,19 +90,19 @@ exports.criarRequerimento = async (req, res) => {
 
     if (!pedido.email_destino) {
       log.warn("RessarcimentoSemEmailDestino", {
-        filiadoId: usuario.id,
+        userId: usuario.id,
       });
-      // continua mesmo assim: sindicato recebe, filiado talvez não receba cópia
+      // continua mesmo assim: sindicato recebe, user talvez não receba cópia
     }
 
     // 1) Gera PDF consolidado (pedido + anexos)
     const pdfBuffer = await gerarPdfRessarcimento(pedido, anexos);
 
-    // 2) Envia e-mail para sindicato + cópia para filiado (se houver e-mail_destino/email1/email2)
+    // 2) Envia e-mail para sindicato + cópia para user (se houver e-mail_destino/email1/email2)
     await enviarEmailRessarcimento(pedido, pdfBuffer);
 
     // 🟢 LOG SUCESSO FINAL
-    log.info("RessarcimentoProcessado", { filiadoId: usuario.id });
+    log.info("RessarcimentoProcessado", { userId: usuario.id });
 
     return res.status(200).json({
       message: pedido.email_destino

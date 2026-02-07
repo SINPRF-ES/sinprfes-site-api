@@ -5,7 +5,7 @@ const { normalizarCpf } = require("../utils/format");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
 
-// FENAPRF: Usamos users.service em vez de filiados.service
+// FENAPRF: Usamos users.service em vez de users.service
 const usersService = require("../services/users.service");
 
 /**
@@ -120,7 +120,7 @@ exports.me = async (req, res, next) => {
     const user = await usersService.buscarPorId(userId);
 
     if (!user) {
-      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+      return res.status(404).json({ error: Textos.USERS.USER_NAO_ENCONTRADO });
     }
 
     // Sanitização do payload (remover senhas)
@@ -135,7 +135,7 @@ exports.me = async (req, res, next) => {
 /**
  * LISTAR: Listagem de usuários para perfis autorizados.
  */
-exports.listarFiliados = async (req, res, next) => {
+exports.listarUsers = async (req, res, next) => {
   const requestId = req.requestId;
   try {
     const perfil = req.user.perfil_acesso || "CONSELHEIRO";
@@ -144,15 +144,15 @@ exports.listarFiliados = async (req, res, next) => {
     return res.json({
       perfil_acesso: perfil,
       total: lista.length,
-      filiados: lista,
+      users: lista,
     });
   } catch (err) {
-    log.error("AuthListarFiliadosErro", { error: err.message, requestId });
+    log.error("AuthListarUsersErro", { error: err.message, requestId });
     next(err);
   }
 };
 
-// 2FA removido conforme solicitado (referência a twofa_secret e campos de filiados)
+// 2FA removido conforme solicitado (referência a twofa_secret e campos de users)
 exports.ativar2fa = async (req, res) => {
     return res.status(400).json({ error: "Funcionalidade não disponível para este ambiente." });
 };

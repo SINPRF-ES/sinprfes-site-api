@@ -6,7 +6,7 @@ import * as IntentLauncher from 'expo-intent-launcher';
 import axios from 'axios';
 import api from './apiService';
 import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from './driveService';
-import { logDebug } from '../utils/filiadoUtils';
+import { logDebug } from '../utils/userUtils';
 import { carregarSessao } from './storageService';
 import { enviarLogDiagnostico } from './diagnosticoService';
 import { logger } from '../infra/logger';

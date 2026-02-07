@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS push_campaigns (
     target_type TEXT NOT NULL DEFAULT 'ALL',
     target_value JSONB,
     data JSONB,
-    created_by INTEGER REFERENCES filiados(id),
+    created_by INTEGER REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     status TEXT NOT NULL DEFAULT 'SENT',
     sent_at TIMESTAMPTZ,

@@ -1,8 +1,8 @@
 // src/utils/cadastro.js
 const { SITUACAO_FUNCIONAL, ESTADO_CADASTRO } = require("../../shared/canon");
 
-function estadoCadastro(filiado) {
-  return filiado && filiado.arquivado_em ? ESTADO_CADASTRO.ARQUIVADO : ESTADO_CADASTRO.CADASTRO_ATIVO;
+function estadoCadastro(user) {
+  return user && user.arquivado_em ? ESTADO_CADASTRO.ARQUIVADO : ESTADO_CADASTRO.CADASTRO_ATIVO;
 }
 
 function anexarEstadoCadastro(obj) {

@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS content_blocks (
     ordenacao INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_by INTEGER REFERENCES filiados(id)
+    updated_by INTEGER REFERENCES users(id)
 );
 
 -- 3. Assemblies & Voting System
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS assembleias (
     titulo VARCHAR(255) NOT NULL,
     descricao TEXT,
     estado VARCHAR(20) DEFAULT 'CRIADA', -- CRIADA, ABERTA, ENCERRADA
-    criado_por INTEGER REFERENCES filiados(id),
+    criado_por INTEGER REFERENCES users(id),
     aberta_em TIMESTAMP,
     encerrada_em TIMESTAMP,
     criado_em TIMESTAMP DEFAULT NOW(),
@@ -63,15 +63,15 @@ CREATE TABLE IF NOT EXISTS assembleia_quoruns (
 CREATE TABLE IF NOT EXISTS assembleia_checkins (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     quorum_id UUID REFERENCES assembleia_quoruns(id) ON DELETE CASCADE,
-    filiado_id INTEGER REFERENCES filiados(id),
+    user_id INTEGER REFERENCES users(id),
     registrado_em TIMESTAMP DEFAULT NOW(),
-    UNIQUE(quorum_id, filiado_id)
+    UNIQUE(quorum_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS assembleia_mesa (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
-    filiado_id INTEGER REFERENCES filiados(id),
+    user_id INTEGER REFERENCES users(id),
     cargo VARCHAR(20) NOT NULL, -- PRESIDENTE, SECRETARIO
     CONSTRAINT chk_cargo CHECK (cargo IN ('PRESIDENTE', 'SECRETARIO')),
     UNIQUE(assembleia_id, cargo)
@@ -95,17 +95,17 @@ CREATE TABLE IF NOT EXISTS assembleia_votacoes (
 CREATE TABLE IF NOT EXISTS assembleia_votos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     votacao_id UUID REFERENCES assembleia_votacoes(id) ON DELETE CASCADE,
-    filiado_id INTEGER REFERENCES filiados(id),
+    user_id INTEGER REFERENCES users(id),
     voto VARCHAR(15) NOT NULL, -- SIM, NAO, ABSTENCAO
     registrado_em TIMESTAMP DEFAULT NOW(),
     CONSTRAINT chk_voto CHECK (voto IN ('SIM', 'NAO', 'ABSTENCAO')),
-    UNIQUE(votacao_id, filiado_id)
+    UNIQUE(votacao_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS assembleia_pedidos_palavra (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
-    filiado_id INTEGER REFERENCES filiados(id),
+    user_id INTEGER REFERENCES users(id),
     estado VARCHAR(20) DEFAULT 'PENDENTE', -- PENDENTE, EM_FALA, CONCLUIDO, CANCELADO
     ordem INTEGER,
     criado_em TIMESTAMP DEFAULT NOW(),
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS assembleia_pedidos_palavra (
 CREATE TABLE IF NOT EXISTS assembleia_propostas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
-    autor_id INTEGER REFERENCES filiados(id),
+    autor_id INTEGER REFERENCES users(id),
     titulo VARCHAR(255) NOT NULL,
     descricao TEXT,
     estado VARCHAR(20) DEFAULT 'PENDENTE', -- PENDENTE, VOTADA, RETIRADA
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS assembleia_propostas (
 CREATE TABLE IF NOT EXISTS assembleia_auditoria (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assembleia_id UUID REFERENCES assembleias(id) ON DELETE CASCADE,
-    filiado_id INTEGER REFERENCES filiados(id),
+    user_id INTEGER REFERENCES users(id),
     evento VARCHAR(50) NOT NULL,
     payload JSONB,
     criado_em TIMESTAMP DEFAULT NOW()
@@ -137,17 +137,17 @@ CREATE TABLE IF NOT EXISTS assembleia_auditoria (
 -- Phase A: Backfill data from legacy columns to new standard ones
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'filiados' AND column_name = 'motivo_arquivamento') THEN
-        UPDATE filiados SET arquivado_motivo = motivo_arquivamento WHERE arquivado_motivo IS NULL AND motivo_arquivamento IS NOT NULL;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'motivo_arquivamento') THEN
+        UPDATE users SET arquivado_motivo = motivo_arquivamento WHERE arquivado_motivo IS NULL AND motivo_arquivamento IS NOT NULL;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'filiados' AND column_name = 'arquivado_pelo_id') THEN
-        UPDATE filiados SET arquivado_por = arquivado_pelo_id WHERE arquivado_por IS NULL AND arquivado_pelo_id IS NOT NULL;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'arquivado_pelo_id') THEN
+        UPDATE users SET arquivado_por = arquivado_pelo_id WHERE arquivado_por IS NULL AND arquivado_pelo_id IS NOT NULL;
     END IF;
 END $$;
 
 -- Phase B: Drop duplicates
-ALTER TABLE filiados DROP COLUMN IF EXISTS motivo_arquivamento;
-ALTER TABLE filiados DROP COLUMN IF EXISTS arquivado_pelo_id;
+ALTER TABLE users DROP COLUMN IF EXISTS motivo_arquivamento;
+ALTER TABLE users DROP COLUMN IF EXISTS arquivado_pelo_id;
 
 -- 5. Alignment Fixes
 DO $$

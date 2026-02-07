@@ -9,7 +9,7 @@
     let pollingInterval = null;
     let currentAssembleiaId = null;
     let currentFiltro = 'ATIVAS';
-    let currentUserPerfil = 'FILIADO';
+    let currentUserPerfil = 'USER';
     let currentUserId = null;
     let currentBlobUrl = null;
     let selectedDriveFile = null;
@@ -273,10 +273,10 @@
             if (a.estado === 'ENCERRADA') badgeStyle = "background:#f8d7da; color:#842029; border: 1px solid #f5c2c7;";
 
             return `
-                <div class="section-card filiado-card" style="margin-bottom:25px; background:#fff; border-top:5px solid #003366; transition:all 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; color:#333; border-radius:15px; text-align:center;">
+                <div class="section-card user-card" style="margin-bottom:25px; background:#fff; border-top:5px solid #003366; transition:all 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; color:#333; border-radius:15px; text-align:center;">
                     <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
                         <div>
-                            <span class="filiado-badge" style="${badgeStyle} font-weight:800; padding:8px 16px; border-radius:20px; font-size:0.8rem; text-transform:uppercase;">${label}</span>
+                            <span class="user-badge" style="${badgeStyle} font-weight:800; padding:8px 16px; border-radius:20px; font-size:0.8rem; text-transform:uppercase;">${label}</span>
                         </div>
 
                         <h3 style="margin:0; color:#003366; font-size:1.6rem; font-weight:900; line-height:1.3;">${emoji} ${a.tipo} - ${a.titulo}</h3>
@@ -336,7 +336,7 @@
 
                     <div style="text-align:center; margin-bottom:35px; padding-bottom:25px; border-bottom: 2px solid #f0f0f0;">
                         <div style="margin-bottom:15px;">
-                            <span class="filiado-badge" style="background:#003366; color:#fff; padding:8px 16px; font-size:0.85rem;">${label}</span>
+                            <span class="user-badge" style="background:#003366; color:#fff; padding:8px 16px; font-size:0.85rem;">${label}</span>
                         </div>
                         <h2 style="color:#003366; margin:0; font-size:2.2rem; font-weight:800; line-height:1.2;">${a.titulo}</h2>
                         <div style="margin-top:12px; color:#555; font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:1rem;">${a.tipo}</div>
@@ -377,7 +377,7 @@
                             <h4 style="color:#003366; margin-bottom:20px; display:flex; align-items:center; gap:10px; font-weight:800;">👥 Quórum Atual</h4>
                             <div style="text-align:center; flex:1;">
                                 <p style="font-size:3rem; font-weight:900; margin:0; color:#003366;">${estado.quorumVigente?.total || 0}</p>
-                                <p style="font-size:0.9rem; color:#666; margin-bottom:15px; font-weight:700; text-transform:uppercase;">Filiados Presentes</p>
+                                <p style="font-size:0.9rem; color:#666; margin-bottom:15px; font-weight:700; text-transform:uppercase;">Users Presentes</p>
                             </div>
                             ${estado.quorumVigente ? `
                                 <div style="font-size:0.9rem; color:#003366; background:#eef6ff; padding:12px; border-radius:10px; margin-bottom:15px; width:100%; font-weight:600;">
@@ -405,7 +405,7 @@
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #f1c40f; background:#fffdf0; border-radius:15px; padding:25px; text-align:center; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.2);">
                             <h4 style="color:#856404; margin-bottom:15px; text-transform:uppercase; font-size:0.9rem; letter-spacing:1px; font-weight:900;">🔑 Token de Presença Vigente</h4>
                             <div style="font-size:3.5rem; font-weight:900; color:#003366; letter-spacing:10px;">${estado.quorumVigente.token}</div>
-                            <p style="color:#666; margin-top:10px; font-size:0.9rem; font-weight:600;">Compartilhe este código com os filiados presentes.</p>
+                            <p style="color:#666; margin-top:10px; font-size:0.9rem; font-weight:600;">Compartilhe este código com os users presentes.</p>
                         </div>
                     ` : ''}
 
@@ -726,7 +726,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px;">
                     <button class="btn btn-outline btn-sm" style="font-weight:800; color:#003366; border-color:#003366;" onclick="Assembleias.abrirDetalhes('${assembleia.id}')">← Sair da Sala</button>
                     <h3 style="color:#003366; margin:0; text-align:center; flex:1; min-width:200px; font-weight:900; font-size:1.6rem;">🏛️ Sala de Votação Interativa</h3>
-                    <div class="filiado-badge" style="background:#003366; color:#fff; font-weight:800; padding:10px 20px; font-size:1rem; border-radius:10px;">${quorumVigente?.total || 0} Presentes</div>
+                    <div class="user-badge" style="background:#003366; color:#fff; font-weight:800; padding:10px 20px; font-size:1rem; border-radius:10px;">${quorumVigente?.total || 0} Presentes</div>
                 </div>
 
                 <div style="text-align:center; margin-bottom:35px;">
@@ -762,7 +762,7 @@
                     ${votacaoAtiva ? `
                         <div class="section-block" style="border:4px solid #27ae60; background:#f4fff4; border-radius:20px; padding:35px; box-shadow:0 15px 35px rgba(39, 174, 96, 0.15);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                                <span class="filiado-badge" style="background:#27ae60; color:#fff; padding:8px 16px; font-weight:900; font-size:0.9rem;">🗳️ VOTAÇÃO EM CURSO</span>
+                                <span class="user-badge" style="background:#27ae60; color:#fff; padding:8px 16px; font-weight:900; font-size:0.9rem;">🗳️ VOTAÇÃO EM CURSO</span>
                                 <div id="timer-votacao" style="font-weight:900; color:#e74c3c; font-size:2.5rem; font-family:'Courier New', monospace; background:#fff; padding:5px 15px; border-radius:10px; border:2px solid #e74c3c;">--:--</div>
                             </div>
                             <h4 style="margin:0 0 15px 0; color:#003366; font-size:1.8rem; font-weight:800;">${votacaoAtiva.titulo}</h4>
@@ -818,8 +818,8 @@
                             ${pedidosPalavra?.length ? pedidosPalavra.map(p => `
                                 <div style="padding:15px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; align-items:center; background:${p.status === 'EM_FALA' ? '#fff9e6' : 'transparent'}; border-radius:8px;">
                                     <div style="font-size:1rem;">
-                                        <strong style="color:#003366; font-weight:800;">${p.filiado_nome}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(p.criado_em)}</small><br>
-                                        <span class="filiado-badge" style="font-size:0.7rem; margin-top:6px; font-weight:700;">${p.status}</span>
+                                        <strong style="color:#003366; font-weight:800;">${p.user_nome}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(p.criado_em)}</small><br>
+                                        <span class="user-badge" style="font-size:0.7rem; margin-top:6px; font-weight:700;">${p.status}</span>
                                     </div>
                                     ${temAutoridade && p.status === 'PENDENTE' ? `
                                         <button class="btn btn-primary btn-sm" style="font-weight:700;" onclick="Assembleias.concederPalavra('${assembleia.id}', '${p.id}')">Conceder Fala</button>
@@ -840,7 +840,7 @@
                                         <small style="color:#666; font-weight:600;">Autor: ${pr.autor_nome}</small>
                                     </div>
                                     <div style="margin-top:8px;">
-                                        <span class="filiado-badge" style="font-size:0.7rem; font-weight:700;">${pr.status}</span>
+                                        <span class="user-badge" style="font-size:0.7rem; font-weight:700;">${pr.status}</span>
                                     </div>
                                     ${temAutoridade && pr.status === 'ATIVA' ? `
                                         <button class="btn btn-success btn-sm" style="margin-top:12px; width:100%; font-weight:800;" onclick="Assembleias.votarProposta('${assembleia.id}', '${pr.id}')">Lançar para Votação</button>

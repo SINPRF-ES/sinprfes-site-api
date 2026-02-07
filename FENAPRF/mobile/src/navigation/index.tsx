@@ -16,10 +16,10 @@ import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import ResetPasswordScreen from "../screens/ResetPasswordScreen";
 import BiometricLockScreen from "../screens/BiometricLockScreen";
 import HomeScreen from "../screens/HomeScreen";
-import FiliadosScreen from "../screens/FiliadosScreen";
+import UsersScreen from "../screens/UsersScreen";
 import MeusDadosScreen from "../screens/MeusDadosScreen";
-import CriarFiliadoScreen from "../screens/CriarFiliadoScreen";
-import EditarFiliadoScreen from "../screens/EditarFiliadoScreen";
+import CriarUserScreen from "../screens/CriarUserScreen";
+import EditarUserScreen from "../screens/EditarUserScreen";
 import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
 import NoticiasScreen from "../screens/NoticiasScreen";
 import NoticiaDetalheScreen from "../screens/NoticiaDetalheScreen";
@@ -43,9 +43,9 @@ export type RootStackParamList = {
   NoticiaDetalhe: { newsId: string };
   NoticiaEditor: { newsId: string | null };
   Convenios: undefined;
-  Filiados: undefined;
-  CriarFiliado: undefined;
-  EditarFiliado: { filiadoId: string };
+  Users: undefined;
+  CriarUser: undefined;
+  EditarUser: { userId: string };
   Votacao: undefined;
   Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
@@ -156,14 +156,14 @@ export default function RootNavigation() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="CriarFiliado"
-              component={CriarFiliadoScreen}
-              options={{ title: "Novo Filiado" }}
+              name="CriarUser"
+              component={CriarUserScreen}
+              options={{ title: "Novo User" }}
             />
             <Stack.Screen
-              name="EditarFiliado"
-              component={EditarFiliadoScreen}
-              options={{ title: "Editar Filiado" }}
+              name="EditarUser"
+              component={EditarUserScreen}
+              options={{ title: "Editar User" }}
             />
             <Stack.Screen
               name="PdfViewer"

@@ -17,13 +17,13 @@ const factorFromPercentual = (percent) => {
   return 1.0;
 };
 
-async function getFiliadosAtivosCount(lotacaoKey) {
+async function getUsersAtivosCount(lotacaoKey) {
   const keyword = LOTACAO_KEYWORDS[lotacaoKey];
   if (!keyword) return 0;
 
   const { rows } = await pool.query(`
     SELECT COUNT(*) as count
-    FROM filiados
+    FROM users
     WHERE situacao = 'ATIVO'
       AND arquivado_em IS NULL
       AND UPPER(lotacao) LIKE $1
@@ -35,7 +35,7 @@ async function getFiliadosAtivosCount(lotacaoKey) {
 async function listarResponsaveis(lotacaoKey = null) {
   let query = `
     SELECT id, nome, cpf, lotacao, perfil_acesso, situacao, arquivado_em
-    FROM filiados
+    FROM users
     WHERE situacao = 'ATIVO'
       AND arquivado_em IS NULL
   `;
@@ -80,22 +80,22 @@ async function getRepasseAno(year) {
   const { rows: lotacaoRows } = await pool.query(
     `SELECT rl.*, f.nome as responsavel_nome, f.cpf as responsavel_cpf
      FROM repasse_lotacao rl
-     LEFT JOIN filiados f ON rl.responsavel_id = f.id
+     LEFT JOIN users f ON rl.responsavel_id = f.id
      WHERE rl.year = $1`,
     [year]
   );
 
-  // Calcula filiados ativos atuais para cada localidade
-  // (O requisito diz: "Para TODOS os cálculos do módulo 'Repasse': 'Filiados ativos' = SOMENTE SITUAÇÃO FUNCIONAL = ATIVO")
-  // Note: O número de filiados ativos pode variar com o tempo, mas para o cálculo do repasse do MÊS,
+  // Calcula users ativos atuais para cada localidade
+  // (O requisito diz: "Para TODOS os cálculos do módulo 'Repasse': 'Users ativos' = SOMENTE SITUAÇÃO FUNCIONAL = ATIVO")
+  // Note: O número de users ativos pode variar com o tempo, mas para o cálculo do repasse do MÊS,
   // geralmente se usa o valor no momento. O requisito não diz para persistir esse número,
-  // diz para calculá-lo ("Campos calculados (não persistir): filiadosAtivos").
+  // diz para calculá-lo ("Campos calculados (não persistir): usersAtivos").
   // Isso implica que o histórico será recalculado com base no estado ATUAL do banco?
   // Geralmente repasse se baseia no histórico, mas o requisito é explícito: "não persistir".
 
   const ativosPorLotacao = {};
   for (const lot of LOTACOES_REPASSE) {
-    ativosPorLotacao[lot] = await getFiliadosAtivosCount(lot);
+    ativosPorLotacao[lot] = await getUsersAtivosCount(lot);
   }
 
   const meses = [];
@@ -112,15 +112,15 @@ async function getRepasseAno(year) {
         reembolso_mes: 0
       };
 
-      const filiadosAtivos = ativosPorLotacao[lot];
+      const usersAtivos = ativosPorLotacao[lot];
       const prfTotal = parseInt(data.prf_total) || 0;
 
       let percentual = 0;
       let creditoMes = 0;
 
       if (prfTotal > 0) {
-        percentual = (filiadosAtivos / prfTotal) * 100;
-        const base = filiadosAtivos * perCapita;
+        percentual = (usersAtivos / prfTotal) * 100;
+        const base = usersAtivos * perCapita;
         const factor = factorFromPercentual(percentual);
         creditoMes = base * factor;
       }
@@ -130,7 +130,7 @@ async function getRepasseAno(year) {
         responsavelId: data.responsavel_id,
         responsavelNome: data.responsavel_nome,
         responsavelCpf: data.responsavel_cpf,
-        filiadosAtivos,
+        usersAtivos,
         prfTotal,
         percentual: prfTotal > 0 ? percentual : null,
         creditoMes,
@@ -188,8 +188,8 @@ async function getRepasseAno(year) {
  * Usado pelo módulo de Relatórios para evitar duplicação de lógica.
  */
 async function getUltimosDadosParaRelatorio(lotacaoKey) {
-  // 1. Total de filiados ativos atuais (Source of Truth do Repasse)
-  const filiadosAtivos = await getFiliadosAtivosCount(lotacaoKey);
+  // 1. Total de users ativos atuais (Source of Truth do Repasse)
+  const usersAtivos = await getUsersAtivosCount(lotacaoKey);
 
   // 2. Busca o registro mais recente de prf_total para esta lotação
   const { rows } = await pool.query(`
@@ -202,7 +202,7 @@ async function getUltimosDadosParaRelatorio(lotacaoKey) {
 
   if (rows.length === 0) {
     return {
-      filiadosAtivos,
+      usersAtivos,
       prfTotal: null,
       percentual: null,
       competencia: null
@@ -212,11 +212,11 @@ async function getUltimosDadosParaRelatorio(lotacaoKey) {
   const { year, month, prf_total: prfTotal } = rows[0];
   let percentual = null;
   if (prfTotal > 0) {
-    percentual = (filiadosAtivos / prfTotal) * 100;
+    percentual = (usersAtivos / prfTotal) * 100;
   }
 
   return {
-    filiadosAtivos,
+    usersAtivos,
     prfTotal,
     percentual,
     competencia: { year, month }

@@ -40,9 +40,18 @@ export interface User {
   cargo2?: string | null;
   uf2?: string | null;
 
+  // Campos de compatibilidade
+  nome?: string;
+  siape?: string | null;
+  email1?: string;
+  email2?: string | null;
+  situacao_funcional?: string | null;
+
   // Otimizações de busca (Bolt ⚡)
   _normalizedNome?: string;
   _onlyDigitsCpf?: string;
 }
 
-export type Usuario = User; // For compatibility while refactoring
+export type UserProfile = 'ADMIN' | 'DIRETORIA' | 'COLABORADOR' | 'CONSELHEIRO' | 'FUNCIONARIO' | 'USER';
+
+export type Usuario = User;

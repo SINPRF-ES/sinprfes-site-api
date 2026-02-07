@@ -2,9 +2,9 @@ module.exports = {
   ADMIN: ["*"],
 
   DIRETORIA: [
-    "LIST_FILIADOS",
-    "CREATE_FILIADO",
-    "EDIT_FILIADO",
+    "LIST_USERS",
+    "CREATE_USER",
+    "EDIT_USER",
     "VIEW_ALL",
     "VIEW_SELF",
     "EDIT_SELF",
@@ -19,9 +19,9 @@ module.exports = {
   ],
 
   COLABORADOR: [
-    "LIST_FILIADOS",
-    "CREATE_FILIADO",
-    "EDIT_FILIADO",
+    "LIST_USERS",
+    "CREATE_USER",
+    "EDIT_USER",
     "VIEW_ALL",
     "VIEW_SELF",
     "EDIT_SELF",
@@ -33,13 +33,13 @@ module.exports = {
   ],
 
   CONSELHEIRO: [
-    "LIST_FILIADOS",   // diretório: nome, telefone, avatar
+    "LIST_USERS",   // diretório: nome, telefone, avatar
     "VIEW_SELF",       // vê todos os próprios dados
     "EDIT_SELF",       // edita apenas campos permitidos
     "VOTACAO_VOTAR"
   ],
 
   // Mantendo para retrocompatibilidade se houver resíduos no banco
-  FUNCIONARIO: ["LIST_FILIADOS", "CREATE_FILIADO", "EDIT_FILIADO", "VIEW_ALL", "VIEW_SELF", "EDIT_SELF", "VOTACAO_VOTAR", "PUSH_GERENCIAR", "REPASSE_GERENCIAR", "NOTICIAS_GERENCIAR", "RELATORIOS_VER"],
-  FILIADO: ["LIST_FILIADOS", "VIEW_SELF", "EDIT_SELF", "VOTACAO_VOTAR"]
+  FUNCIONARIO: ["LIST_USERS", "CREATE_USER", "EDIT_USER", "VIEW_ALL", "VIEW_SELF", "EDIT_SELF", "VOTACAO_VOTAR", "PUSH_GERENCIAR", "REPASSE_GERENCIAR", "NOTICIAS_GERENCIAR", "RELATORIOS_VER"],
+  USER: ["LIST_USERS", "VIEW_SELF", "EDIT_SELF", "VOTACAO_VOTAR"]
 };

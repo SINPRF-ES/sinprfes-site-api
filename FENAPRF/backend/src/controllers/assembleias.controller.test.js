@@ -1,13 +1,13 @@
 // src/controllers/assembleias.controller.test.js
 const controller = require('./assembleias.controller');
 const service = require('../services/assembleias.service');
-const filiadosService = require('../services/filiados.service');
+const usersService = require('../services/users.service');
 const pdfService = require('../services/pdf.service');
 const emailService = require('../services/email.service');
 const Textos = require('../utils/textos');
 
 jest.mock('../services/assembleias.service');
-jest.mock('../services/filiados.service');
+jest.mock('../services/users.service');
 jest.mock('../services/pdf.service');
 jest.mock('../services/email.service');
 jest.mock('../websocket/assembleia.socket');
@@ -86,11 +86,11 @@ describe('Assembleias Controller', () => {
       }));
     });
 
-    test('should allow FILIADO profile and return success', async () => {
-      req.user.perfil_acesso = 'FILIADO';
+    test('should allow USER profile and return success', async () => {
+      req.user.perfil_acesso = 'USER';
       service.buscarPorId.mockResolvedValue({ id: '1' });
       service.gerarDadosRelatorio.mockResolvedValue({ assembleia: { id: '1' } });
-      filiadosService.buscarPorId.mockResolvedValue({ id: 1, nome: 'Test', email1: 'test@example.com' });
+      usersService.buscarPorId.mockResolvedValue({ id: 1, nome: 'Test', email1: 'test@example.com' });
       pdfService.gerarPdfRelatorioAssembleia.mockResolvedValue(Buffer.from('pdf'));
       emailService.enviarEmailRelatorioAssembleia.mockResolvedValue({});
 

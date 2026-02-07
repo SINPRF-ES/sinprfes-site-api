@@ -1,6 +1,7 @@
 // mobile/src/services/deviceService.ts
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import api from './apiService';
@@ -45,6 +46,23 @@ async function obterExpoPushToken(): Promise<{ token: string | null; platform: s
   } catch (error: any) {
     logger.error('Push info: Erro ao obter o Expo Push Token', error);
     return { token: null, platform: Platform.OS, permission: finalStatus };
+  }
+}
+
+/**
+ * Obtém um identificador único para o dispositivo.
+ */
+export async function getDeviceId(): Promise<string | null> {
+  try {
+    if (Platform.OS === 'android') {
+      return (Application as any).androidId || null;
+    } else if (Platform.OS === 'ios') {
+      return await Application.getIosIdForVendorAsync();
+    }
+    return null;
+  } catch (error) {
+    logger.error('Erro ao obter Device ID', error);
+    return null;
   }
 }
 

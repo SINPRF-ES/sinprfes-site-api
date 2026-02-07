@@ -14,7 +14,7 @@ export default function SessaoAssembleiaScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { id } = route.params;
-  const { usuario } = useAuth();
+  const { user } = useAuth();
 
   const { assembleia, pedidosPalavra, propostas, mesa, quorumVigente: qVigente, votacaoAtiva: vAtiva, socket, carregando, refresh } = useAssembleiaSession(id);
   const { quorumVigente, chamadaAtiva, setChamadaAtiva } = useQuorum(id, socket, qVigente);
@@ -24,7 +24,7 @@ export default function SessaoAssembleiaScreen() {
   const [propostaModalVisible, setPropostaModalVisible] = useState(false);
   const [propostaTitulo, setPropostaTitulo] = useState('');
 
-  const isDiretoria = usuario?.perfil_acesso === 'DIRETORIA' || usuario?.perfil_acesso === 'ADMIN';
+  const isDiretoria = user?.perfil_acesso === 'DIRETORIA' || user?.perfil_acesso === 'ADMIN';
 
   if (carregando) {
     return (
@@ -112,11 +112,11 @@ export default function SessaoAssembleiaScreen() {
           </View>
           <View style={styles.mesaRow}>
             <Text style={styles.mesaLabel}>Presidente:</Text>
-            <Text style={styles.mesaValue}>{mesa.find(m => m.cargo === 'PRESIDENTE')?.filiado_nome || 'Aguardando definição...'}</Text>
+            <Text style={styles.mesaValue}>{mesa.find(m => m.cargo === 'PRESIDENTE')?.user_nome || 'Aguardando definição...'}</Text>
           </View>
           <View style={styles.mesaRow}>
             <Text style={styles.mesaLabel}>Secretário:</Text>
-            <Text style={styles.mesaValue}>{mesa.find(m => m.cargo === 'SECRETARIO')?.filiado_nome || 'Aguardando definição...'}</Text>
+            <Text style={styles.mesaValue}>{mesa.find(m => m.cargo === 'SECRETARIO')?.user_nome || 'Aguardando definição...'}</Text>
           </View>
         </View>
 
@@ -133,7 +133,7 @@ export default function SessaoAssembleiaScreen() {
             pedidosPalavra.map((p, idx) => (
               <View key={p.id} style={styles.filaItem}>
                 <Text style={styles.filaPos}>{idx + 1}º</Text>
-                <Text style={styles.filaNome}>{p.filiado_nome || 'Filiado'}</Text>
+                <Text style={styles.filaNome}>{p.user_nome || 'User'}</Text>
                 {p.estado === 'EM_FALA' && <View style={styles.falaBadge}><Text style={styles.falaBadgeText}>Falando</Text></View>}
               </View>
             ))
@@ -197,7 +197,7 @@ export default function SessaoAssembleiaScreen() {
             propostas.map((prop) => (
               <View key={prop.id} style={styles.propostaItem}>
                 <Text style={styles.propostaTitulo}>{prop.titulo}</Text>
-                <Text style={styles.propostaAutor}>por {prop.autor_nome || 'Filiado'}</Text>
+                <Text style={styles.propostaAutor}>por {prop.autor_nome || 'User'}</Text>
                 <View style={[styles.miniBadge, { alignSelf: 'flex-start', marginTop: 4, backgroundColor: prop.estado === 'PENDENTE' ? '#ffc107' : prop.estado === 'VOTADA' ? '#28a745' : '#dc3545' }]}>
                    <Text style={styles.miniBadgeText}>{prop.estado}</Text>
                 </View>

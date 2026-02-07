@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
-import { loginSindicato, loginCom2FA, buscarUsuarioLogado } from '../services/authService';
+import { loginSindicato, loginCom2FA, buscarUserLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
 import { carregarSessao } from '../services/storageService';
@@ -60,8 +60,8 @@ export default function LoginScreen() {
         console.log('[Biometria.session.restore.start]');
         try {
            // Tenta validar o token
-           const usuario = await buscarUsuarioLogado(tokenParaUsar);
-           await setSessao(tokenParaUsar, usuario);
+           const user = await buscarUserLogado(tokenParaUsar);
+           await setSessao(tokenParaUsar, user);
            console.log('[Biometria.session.restore.ok]');
         } catch (restoreError: any) {
            console.error('[Biometria.session.restore.fail]', restoreError);
@@ -80,18 +80,18 @@ export default function LoginScreen() {
   }
 
   async function finalizarLoginComToken(token: string) {
-    const usuario = await buscarUsuarioLogado(token);
+    const user = await buscarUserLogado(token);
 
     // No FENAPRF, se a senha estiver PENDENTE, redireciona para criar senha
-    if (usuario.password_hash === 'PENDENTE' || !usuario.password_hash) {
+    if (user.password_hash === 'PENDENTE' || !user.password_hash) {
       navigation.navigate('ResetPassword' as never, {
         isFirstAccess: true,
-        cpf: usuario.cpf
+        cpf: user.cpf
       } as never);
       return;
     }
 
-    await setSessao(token, usuario);
+    await setSessao(token, user);
 
     try {
       if (__DEV__) console.log('[Login] Tentando registrar dispositivo para push...');

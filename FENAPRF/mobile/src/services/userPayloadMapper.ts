@@ -1,7 +1,7 @@
-// mobile/src/services/filiadoPayloadMapper.ts
+// mobile/src/services/userPayloadMapper.ts
 import { onlyDigits } from '../shared/format/formatters';
 import { toIsoDateYYYYMMDD } from '../utils/dateNormalize';
-import type { User } from '../types/usuario';
+import type { User } from '../types/user';
 import { normalizeNome } from '../utils/canon';
 
 /**
@@ -11,7 +11,7 @@ import { normalizeNome } from '../utils/canon';
  * @param formState O estado atual do formulário de edição.
  * @returns Um objeto contendo apenas os dados permitidos para a atualização.
  */
-export const buildUpdateFiliadoPayload = (formState: Partial<User>): Partial<User> => {
+export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> => {
   const payload: Partial<User> = {};
 
   // Campos permitidos e sua normalização
@@ -21,7 +21,7 @@ export const buildUpdateFiliadoPayload = (formState: Partial<User>): Partial<Use
   if (formState.email) payload.email = formState.email;
   if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
   if (formState.name) payload.name = normalizeNome(formState.name);
-  if (formState.sexo !== undefined) payload.sexo = formState.sexo || null;
+  if (formState.sexo !== undefined) payload.sexo = formState.sexo;
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
   if (formState.lotacao) payload.lotacao = formState.lotacao;
   if (formState.situacao) payload.situacao = formState.situacao;

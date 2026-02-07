@@ -21,7 +21,7 @@
                 <div class="af-standard-header" style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:20px;">
                     <div>
                         <h2 style="margin:0;">📰 Gerenciar Notícias</h2>
-                        <p class="section-subtitle">Crie e publique informes para os filiados.</p>
+                        <p class="section-subtitle">Crie e publique informes para os users.</p>
                     </div>
                     ${ehGestao ? `<button id="btn-nova-noticia" class="btn btn-primary" style="margin-top:10px;">+ Nova Notícia</button>` : ''}
                 </div>
@@ -99,7 +99,7 @@
 
         const modal = document.getElementById("modal-generic");
         if (!modal) {
-            alert("Estrutura de modal não encontrada. Verifique area-filiado.html");
+            alert("Estrutura de modal não encontrada. Verifique area-user.html");
             return;
         }
 

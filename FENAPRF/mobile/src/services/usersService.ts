@@ -1,12 +1,12 @@
-// src/services/filiadosService.ts
+// src/services/usersService.ts
 import api from './apiService';
 import { API_BASE_URL } from '../config/api';
-import type { User } from '../types/usuario';
-import { salvarFiliadosOffline, listarFiliadosOffline } from '../database/db';
+import type { User } from '../types/user';
+import { salvarUsersOffline, listarUsersOffline } from '../database/db';
 import { logError } from '../infra/logger';
 
-const FILIADOS_ENDPOINT = `${API_BASE_URL}/api/users`;
-// Ajuste se sua rota real for diferente (ex.: /api/restrito/filiados)
+const USERS_ENDPOINT = `${API_BASE_URL}/api/users`;
+// Ajuste se sua rota real for diferente (ex.: /api/restrito/users)
 
 interface UserApi {
   id: string;
@@ -18,10 +18,10 @@ interface UserApi {
   perfil_acesso?: string | null;
 }
 
-// Busca lista de filiados na API
-export async function fetchFiliadosFromApi(token: string): Promise<User[]> {
+// Busca lista de users na API
+export async function fetchUsersFromApi(token: string): Promise<User[]> {
   try {
-    const resp = await fetch(FILIADOS_ENDPOINT, {
+    const resp = await fetch(USERS_ENDPOINT, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -50,26 +50,26 @@ export async function fetchFiliadosFromApi(token: string): Promise<User[]> {
 
     return lista;
   } catch (err) {
-    logError('Service.fetchFiliadosFromApi', err);
+    logError('Service.fetchUsersFromApi', err);
     throw err;
   }
 }
 
 // Sincroniza: API → banco local
-export async function sincronizarFiliadosOffline(token: string): Promise<void> {
-  const lista = await fetchFiliadosFromApi(token);
-  await salvarFiliadosOffline(lista);
+export async function sincronizarUsersOffline(token: string): Promise<void> {
+  const lista = await fetchUsersFromApi(token);
+  await salvarUsersOffline(lista);
 }
 
 // Expor a leitura local (apenas delegando pro db)
-export async function obterFiliadosOffline(): Promise<User[]> {
-  return listarFiliadosOffline();
+export async function obterUsersOffline(): Promise<User[]> {
+  return listarUsersOffline();
 }
 
 /**
  * Envia o avatar do usuário logado para a API.
  * @param uri O URI local do arquivo de imagem.
- * @returns Os dados do filiado atualizado com a nova URL do avatar.
+ * @returns Os dados do user atualizado com a nova URL do avatar.
  */
 export async function uploadAvatar(uri: string) {
   const filename = uri.split('/').pop() || 'avatar.jpg';

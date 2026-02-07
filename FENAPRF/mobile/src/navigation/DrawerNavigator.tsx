@@ -5,12 +5,12 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
-import FiliadosScreen from '../screens/FiliadosScreen';
+import UsersScreen from '../screens/UsersScreen';
 import NoticiasScreen from '../screens/NoticiasScreen';
 import AssembleiaStack from './AssembleiaStack';
 import LogsScreen from '../screens/LogsScreen';
 import SegurancaScreen from '../screens/SegurancaScreen';
-import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
+import CriarUserScreen from '../screens/CriarUserScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
 import RessarcimentoScreen from '../screens/RessarcimentoScreen';
 import JogosScreen from '../screens/JogosScreen';
@@ -21,25 +21,25 @@ import RepasseScreen from '../screens/RepasseScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
-import { isGestao, isDiretoria } from '../utils/filiadoUtils';
+import { isGestao, isDiretoria } from '../utils/userUtils';
 import { logger } from '../infra/logger';
 import { useEffect } from 'react';
 
 const Drawer = createDrawerNavigator();
 
 const DrawerNavigator = () => {
-  const { usuario } = useAuth();
-  const ehGestao = isGestao(usuario?.perfil_acesso);
-  const ehDiretoria = isDiretoria(usuario?.perfil_acesso);
+  const { user } = useAuth();
+  const ehGestao = isGestao(user?.perfil_acesso);
+  const ehDiretoria = isDiretoria(user?.perfil_acesso);
 
   useEffect(() => {
     logger.info('NAV_GATE_EVAL', {
-      profile: usuario?.perfil_acesso,
+      profile: user?.perfil_acesso,
       ehGestao,
       ehDiretoria,
       visibleLogs: ehDiretoria
     });
-  }, [usuario, ehGestao, ehDiretoria]);
+  }, [user, ehGestao, ehDiretoria]);
 
   return (
     <Drawer.Navigator
@@ -60,7 +60,7 @@ const DrawerNavigator = () => {
       })}
     >
       <Drawer.Screen
-        name="Início"
+        name="Home"
         component={HomeScreen}
         options={{ title: '🏠 Página Inicial' }}
       />
@@ -75,9 +75,9 @@ const DrawerNavigator = () => {
         options={{ title: '👤 Meus Dados' }}
       />
       <Drawer.Screen
-        name="Filiados"
-        component={FiliadosScreen}
-        options={{ title: '👥 Filiados' }}
+        name="Users"
+        component={UsersScreen}
+        options={{ title: '👥 Users' }}
       />
       <Drawer.Screen
         name="Publicacoes"
@@ -143,10 +143,10 @@ const DrawerNavigator = () => {
             }}
           />
           <Drawer.Screen
-            name="CriarFiliado"
-            component={CriarFiliadoScreen}
+            name="CriarUser"
+            component={CriarUserScreen}
             options={{
-              title: '👤 Novo Filiado',
+              title: '👤 Novo User',
               drawerItemStyle: { display: 'none' } // Oculta o item da lista padrão
             }}
           />

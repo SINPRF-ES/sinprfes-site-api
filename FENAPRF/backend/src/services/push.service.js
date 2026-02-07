@@ -77,7 +77,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        JOIN filiados f ON pt.user_id = f.id
+        JOIN users f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND f.situacao = 'ATIVO'
       `;
       break;
@@ -85,7 +85,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        JOIN filiados f ON pt.user_id = f.id
+        JOIN users f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
       `;
       break;
@@ -93,7 +93,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        JOIN filiados f ON pt.user_id = f.id
+        JOIN users f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND f.situacao = 'ATIVO' AND f.lotacao = $1
       `;
       params = [targetValue];
@@ -103,11 +103,11 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT DISTINCT pt.expo_push_token
         FROM push_tokens pt
-        JOIN inscricoes_jogos ij ON pt.user_id = ij.filiado_id
+        JOIN inscricoes_jogos ij ON pt.user_id = ij.user_id
         WHERE pt.revoked_at IS NULL
       `;
       break;
-    case 'FILIADO': {
+    case 'USER': {
       const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       sql = `
         SELECT pt.expo_push_token
@@ -132,40 +132,40 @@ async function resolvePushTargets(targetType, targetValue) {
 }
 
 /**
- * Conta quantos filiados no público alvo NÃO possuem token ou negaram
+ * Conta quantos users no público alvo NÃO possuem token ou negaram
  */
 async function countNoTokenTargets(targetType, targetValue) {
   let sql = "";
   let params = [];
 
-  // Subquery para filiados que casam com o critério
-  let filiadosSql = "";
+  // Subquery para users que casam com o critério
+  let usersSql = "";
   switch (targetType) {
     case 'ATIVOS':
-      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO'";
+      usersSql = "SELECT id FROM users WHERE situacao = 'ATIVO'";
       break;
     case 'VETERANOS':
-      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'VETERANO' OR situacao = 'PENSIONISTA'";
+      usersSql = "SELECT id FROM users WHERE situacao = 'VETERANO' OR situacao = 'PENSIONISTA'";
       break;
     case 'LOTACAO':
-      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO' AND lotacao = $1";
+      usersSql = "SELECT id FROM users WHERE situacao = 'ATIVO' AND lotacao = $1";
       params = [targetValue];
       break;
-    case 'FILIADO': {
+    case 'USER': {
       const targetIdCount = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
-      filiadosSql = "SELECT id FROM filiados WHERE id = $1";
+      usersSql = "SELECT id FROM users WHERE id = $1";
       params = [targetIdCount];
       break;
     }
     case 'ALL':
     default:
-      filiadosSql = "SELECT id FROM filiados WHERE situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA')";
+      usersSql = "SELECT id FROM users WHERE situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA')";
       break;
   }
 
   sql = `
     SELECT COUNT(*) as count
-    FROM (${filiadosSql}) f
+    FROM (${usersSql}) f
     LEFT JOIN push_tokens pt ON f.id = pt.user_id AND pt.revoked_at IS NULL
     WHERE pt.id IS NULL OR pt.permission_status = 'denied'
   `;

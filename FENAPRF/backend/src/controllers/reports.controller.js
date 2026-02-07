@@ -2,7 +2,7 @@
 const reportsService = require("../services/reports.service");
 const pdfService = require("../services/pdf.service");
 const emailService = require("../services/email.service");
-const filiadosService = require("../services/filiados.service");
+const usersService = require("../services/users.service");
 const log = require("../utils/log");
 const { formatarCPF } = require("../utils/format");
 const { slugify } = require("../../shared/canon");
@@ -33,11 +33,11 @@ async function getRequesterData(user) {
 
   // 2. Busca no banco de dados pelo ID
   try {
-    const filiado = await filiadosService.buscarPorId(user.id);
-    if (filiado) {
+    const user = await usersService.buscarPorId(user.id);
+    if (user) {
       return {
-          nome: filiado.nome,
-          email: filiado.email1 || filiado.email2 || null
+          nome: user.nome,
+          email: user.email1 || user.email2 || null
       };
     }
   } catch (err) {
@@ -68,25 +68,25 @@ exports.generateReport = async (req, res) => {
     const requester = await getRequesterData(requesterSession);
 
     if (type === "INDIVIDUAL") {
-      // Contrato: INDIVIDUAL => { filiadoId }
-      const { filiadoId } = params;
-      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório para relatório individual." });
+      // Contrato: INDIVIDUAL => { userId }
+      const { userId } = params;
+      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório para relatório individual." });
 
-      const dados = await reportsService.buscarDadosDossie(filiadoId);
-      if (!dados) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
+      const dados = await reportsService.buscarDadosDossie(userId);
+      if (!dados) return res.status(404).json({ success: false, message: "User não encontrado." });
 
       // Resolver nome para exibição no histórico (A1)
-      params.filiadoNome = dados.nome;
+      params.userNome = dados.nome;
       params.paramDisplay = dados.nome; // Campo redundante para robustez
 
-      reportTitle = `Dossiê do Filiado - ${dados.nome}`;
+      reportTitle = `Dossiê do User - ${dados.nome}`;
 
       const slug = gerarSlugNome(dados.nome);
-      filename = slug ? `dossie_${slug}.pdf` : `dossie_filiado_${dados.id}.pdf`;
+      filename = slug ? `dossie_${slug}.pdf` : `dossie_user_${dados.id}.pdf`;
 
       // Regra de permissão para CPF no PDF
       const podeVerCpf = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase());
-      pdfBuffer = await pdfService.gerarPdfDossieFiliado(dados, { podeVerCpf });
+      pdfBuffer = await pdfService.gerarPdfDossieUser(dados, { podeVerCpf });
 
     } else if (["LOTACAO", "SITUACAO"].includes(type)) {
       // Contrato: LOTACAO/SITUACAO => { value }
@@ -150,10 +150,10 @@ exports.previewReport = async (req, res) => {
     let baseCompetencia = null;
 
     if (type === "INDIVIDUAL") {
-      const { filiadoId } = params;
-      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório." });
-      data = await reportsService.buscarDadosDossie(filiadoId);
-      if (!data) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
+      const { userId } = params;
+      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório." });
+      data = await reportsService.buscarDadosDossie(userId);
+      if (!data) return res.status(404).json({ success: false, message: "User não encontrado." });
     } else if (["LOTACAO", "SITUACAO"].includes(type)) {
       const { value } = params;
       if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório." });
@@ -200,7 +200,7 @@ exports.previewReport = async (req, res) => {
         kind: "kv",
         title: "Resumo da Unidade",
         items: [
-          { label: "Total de Filiados (Ativos)", value: data.total },
+          { label: "Total de Users (Ativos)", value: data.total },
           { label: "Homens", value: `${data.masc} (${((data.masc / data.total) * 100).toFixed(1)}%)` },
           { label: "Mulheres", value: `${data.fem} (${((data.fem / data.total) * 100).toFixed(1)}%)` }
         ]
@@ -245,10 +245,10 @@ exports.previewReport = async (req, res) => {
         sections.push({
           kind: "table",
           title: "Distribuição por Lotação",
-          columns: ["Lotação", "Filiados", "Efetivo (PRF)", "%"],
+          columns: ["Lotação", "Users", "Efetivo (PRF)", "%"],
           rows: data.repasseBreakdown.map(b => [
             b.lotacao,
-            b.filiadosAtivos,
+            b.usersAtivos,
             b.prfTotal || "-",
             b.percentual ? `${b.percentual.toFixed(1)}%` : "-"
           ])
@@ -308,15 +308,15 @@ exports.getHistory = async (req, res) => {
     for (const item of history) {
       if (item.report_type === 'INDIVIDUAL') {
         const p = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
-        if (!p.filiadoNome && p.filiadoId) {
+        if (!p.userNome && p.userId) {
           try {
-            const filiado = await filiadosService.buscarPorId(p.filiadoId);
-            if (filiado) {
-              p.filiadoNome = filiado.nome;
+            const user = await usersService.buscarPorId(p.userId);
+            if (user) {
+              p.userNome = user.nome;
               item.params = p; // Atualiza o objeto para a resposta
             }
           } catch (e) {
-            log.error("ErroAoResolverNomeNoHistorico", { id: p.filiadoId });
+            log.error("ErroAoResolverNomeNoHistorico", { id: p.userId });
           }
         }
       }

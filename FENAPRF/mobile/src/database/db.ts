@@ -1,6 +1,6 @@
 // src/database/db.ts
 import * as SQLite from 'expo-sqlite';
-import type { User } from '../types/usuario';
+import type { User } from '../types/user';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -28,8 +28,8 @@ export async function initDb(): Promise<void> {
     );
 
     CREATE TABLE IF NOT EXISTS offline_jogos_inscricoes (
-      filiado_id TEXT PRIMARY KEY NOT NULL,
-      nome_filiado TEXT,
+      user_id TEXT PRIMARY KEY NOT NULL,
+      nome_user TEXT,
       modalidades TEXT,
       sexo TEXT,
       qtd_familiares INTEGER,
@@ -41,7 +41,7 @@ export async function initDb(): Promise<void> {
   `);
 }
 
-export async function salvarFiliadosOffline(lista: User[]): Promise<void> {
+export async function salvarUsersOffline(lista: User[]): Promise<void> {
   const db = await getDb();
   await db.execAsync('DELETE FROM offline_users;');
 
@@ -67,7 +67,7 @@ export async function salvarFiliadosOffline(lista: User[]): Promise<void> {
   }
 }
 
-export async function listarFiliadosOffline(): Promise<User[]> {
+export async function listarUsersOffline(): Promise<User[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<any>(
     'SELECT id, name, cpf, telefone as telefone1, email, situacao, updated_at FROM offline_users ORDER BY name COLLATE NOCASE;'
@@ -81,15 +81,15 @@ export async function salvarJogosInscricoesOffline(lista: any[]): Promise<void> 
 
   const stmt = await db.prepareAsync(
     `INSERT INTO offline_jogos_inscricoes
-       (filiado_id, nome_filiado, modalidades, sexo, qtd_familiares, familiares, observacoes, data_inscricao, data_nascimento)
-     VALUES ($filiado_id, $nome_filiado, $modalidades, $sexo, $qtd_familiares, $familiares, $observacoes, $data_inscricao, $data_nascimento)`
+       (user_id, nome_user, modalidades, sexo, qtd_familiares, familiares, observacoes, data_inscricao, data_nascimento)
+     VALUES ($user_id, $nome_user, $modalidades, $sexo, $qtd_familiares, $familiares, $observacoes, $data_inscricao, $data_nascimento)`
   );
 
   try {
     for (const i of lista) {
       await stmt.executeAsync({
-        $filiado_id: i.filiado_id,
-        $nome_filiado: i.nome_filiado,
+        $user_id: i.user_id,
+        $nome_user: i.nome_user,
         $modalidades: JSON.stringify(i.modalidades || []),
         $sexo: i.sexo,
         $qtd_familiares: i.qtd_familiares,
@@ -106,7 +106,7 @@ export async function salvarJogosInscricoesOffline(lista: any[]): Promise<void> 
 
 export async function listarJogosInscricoesOffline(): Promise<any[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<any>('SELECT * FROM offline_jogos_inscricoes ORDER BY nome_filiado ASC;');
+  const rows = await db.getAllAsync<any>('SELECT * FROM offline_jogos_inscricoes ORDER BY nome_user ASC;');
   return rows.map(r => ({
     ...r,
     modalidades: JSON.parse(r.modalidades || '[]')
