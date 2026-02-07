@@ -80,10 +80,14 @@ export default function LoginScreen() {
   }
 
   async function finalizarLoginComToken(token: string) {
+    logger.info('LOGIN_SUCCESS_PROCEEDING', { hasToken: !!token });
     const user = await buscarUserLogado(token);
+    logger.info('USER_ME_RESULT', { cpf: user.cpf, password_hash: user.password_hash });
 
     // No FENAPRF, se a senha estiver PENDENTE, redireciona para criar senha
-    if (user.password_hash === 'PENDENTE' || !user.password_hash) {
+    // Removida a verificação genérica de !user.password_hash pois o /me sanitiza o hash real
+    if (user.password_hash === 'PENDENTE') {
+      logger.info('NAVIGATING_TO_RESET_PENDENTE');
       navigation.navigate('ResetPassword' as never, {
         isFirstAccess: true,
         cpf: user.cpf
@@ -131,7 +135,19 @@ export default function LoginScreen() {
       if (!resultado.token) throw new Error('Token não retornado pelo servidor.');
       await finalizarLoginComToken(resultado.token);
     } catch (e: any) {
-      Alert.alert('Erro no login', e?.message || 'Falha ao autenticar.');
+      const status = e?.response?.status;
+      const errorMsg = e?.response?.data?.error || e?.message || 'Falha ao autenticar.';
+
+      logger.error('LOGIN_FAIL', { status, message: errorMsg });
+
+      if (status === 403 && errorMsg.includes('pendente')) {
+        Alert.alert('Primeiro Acesso', errorMsg, [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Definir Senha', onPress: () => navigation.navigate('ForgotPassword' as any) }
+        ]);
+      } else {
+        Alert.alert('Erro no login', errorMsg);
+      }
     } finally {
       setLoading(false);
     }
