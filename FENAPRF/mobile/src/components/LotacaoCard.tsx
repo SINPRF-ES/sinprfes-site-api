@@ -41,10 +41,8 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
   const canChangeProfile = (isAdmin && !isSelf) || (isGestao && !isAdmin && !isTargetAdmin);
 
   const profileOptions = [
-    { label: 'Filiado', value: ROLES.FILIADO },
-    { label: 'Organizador', value: ROLES.ORGANIZADOR },
-    { label: 'Comunicador', value: ROLES.COMUNICADOR },
-    { label: 'Funcionário', value: ROLES.FUNCIONARIO },
+    { label: 'Conselheiro', value: ROLES.CONSELHEIRO },
+    { label: 'Colaborador', value: ROLES.COLABORADOR },
     { label: 'Diretoria', value: ROLES.DIRETORIA },
     ...(isAdmin ? [{ label: 'Admin', value: ROLES.ADMIN }] : [])
   ];
@@ -62,22 +60,21 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
         />
       </View>
 
-      <Text style={styles.label}>Situação Funcional</Text>
+      <Text style={styles.label}>Situação</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
         <Picker
-          selectedValue={normalizeSituacaoFuncional(filiado?.situacao_funcional || filiado?.situacao)}
-          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao_funcional: itemValue } : null)}
+          selectedValue={filiado?.situacao || 'ATIVO'}
+          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao: itemValue } : null)}
           enabled={isEditing}
           style={!isEditing ? { color: '#999' } : undefined}
         >
           <Picker.Item label="Ativo" value="ATIVO" />
-          <Picker.Item label="Veterano" value="VETERANO" />
-          <Picker.Item label="Pensionista" value="PENSIONISTA" />
+          <Picker.Item label="Inativo" value="INATIVO" />
         </Picker>
       </View>
 
       <Text style={styles.label}>Perfil de Acesso</Text>
-      {isGestao || perfilUsuario === ROLES.ORGANIZADOR ? (
+      {isGestao ? (
         <View style={canChangeProfile ? styles.pickerContainer : styles.pickerContainerDisabled}>
           <Picker
             selectedValue={filiado?.perfil_acesso}
@@ -98,6 +95,64 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
           accessibilityLabel="Perfil de Acesso"
         />
       )}
+
+      <Text style={styles.label}>Cargo</Text>
+      <TextInput
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={filiado?.cargo || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, cargo: text } : null)}
+        placeholder="Cargo"
+        editable={isEditing}
+      />
+
+      <Text style={styles.label}>Início do Mandato</Text>
+      <TextInput
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={filiado?.cargo_mandato_inicio || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, cargo_mandato_inicio: text } : null)}
+        placeholder="AAAA-MM-DD"
+        editable={isEditing}
+      />
+
+      <Text style={styles.label}>Fim do Mandato</Text>
+      <TextInput
+        style={isEditing ? styles.input : styles.inputDisabled}
+        value={filiado?.cargo_mandato_fim || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, cargo_mandato_fim: text } : null)}
+        placeholder="AAAA-MM-DD"
+        editable={isEditing}
+      />
+
+      <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 20 }}>
+        <Text style={[styles.label, { fontWeight: 'bold' }]}>Campos Adicionais (Design)</Text>
+
+        <Text style={styles.label}>Perfil de Acesso 2</Text>
+        <TextInput
+          style={isEditing ? styles.input : styles.inputDisabled}
+          value={filiado?.perfil_acesso2 || ''}
+          onChangeText={(text) => setFiliado(f => f ? { ...f, perfil_acesso2: text } : null)}
+          placeholder="Perfil secundário"
+          editable={isEditing}
+        />
+
+        <Text style={styles.label}>Cargo 2</Text>
+        <TextInput
+          style={isEditing ? styles.input : styles.inputDisabled}
+          value={filiado?.cargo2 || ''}
+          onChangeText={(text) => setFiliado(f => f ? { ...f, cargo2: text } : null)}
+          placeholder="Cargo secundário"
+          editable={isEditing}
+        />
+
+        <Text style={styles.label}>UF 2</Text>
+        <TextInput
+          style={isEditing ? styles.input : styles.inputDisabled}
+          value={filiado?.uf2 || ''}
+          onChangeText={(text) => setFiliado(f => f ? { ...f, uf2: text } : null)}
+          placeholder="UF secundária"
+          editable={isEditing}
+        />
+      </View>
     </View>
   );
 };

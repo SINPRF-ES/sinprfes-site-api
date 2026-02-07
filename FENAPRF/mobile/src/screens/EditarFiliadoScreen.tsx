@@ -9,9 +9,8 @@ import { getMe, getFiliadoById } from '../services/filiadoService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
-import DependentesCard from '../components/DependentesCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { Filiado } from '../types/filiado';
+import { User } from '../types/usuario';
 import { logDebug, getCanonicalFiliadoId, parseCanonicalFiliadoId, isGestao as checkIsGestao, ROLES } from '../utils/filiadoUtils';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
@@ -25,15 +24,11 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
   const { usuario } = useAuth();
   const netInfo = useNetInfo();
 
-  const [filiado, setFiliado] = useState<Filiado | null>(null);
+  const [filiado, setFiliado] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [motivoAcao, setMotivoAcao] = useState('');
   const [showMotivoInput, setShowMotivoInput] = useState<'ARQUIVAR' | 'DESARQUIVAR' | null>(null);
-
-  const [isDeleteDependentesOpen, setIsDeleteDependentesOpen] = useState(false);
-  const [selectedDependenteIndices, setSelectedDependenteIndices] = useState<number[]>([]);
-  const [isDeletingDependentes, setIsDeletingDependentes] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -45,19 +40,15 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
         data = await getMe();
       }
 
-      setFiliado({
-        ...data,
-        situacao_funcional: data.situacao_funcional || '',
-      });
+      setFiliado(data);
 
       logger.info('EDIT_FILIADO_DATA_READY', {
         id: data.id,
         keys: Object.keys(data),
         hasSituacao: !!data.situacao,
-        hasSituacaoFuncional: !!data.situacao_funcional
       });
 
-      logDebug('EditarFiliado.fetch', { id: data.id, nome: data.nome });
+      logDebug('EditarFiliado.fetch', { id: data.id, name: data.name });
     } catch (err) {
       logger.error('[EditarFiliado.fetch.error]', err);
       Alert.alert('Erro', 'Não foi possível carregar os dados do filiado.');
@@ -82,8 +73,8 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
       return;
     }
 
-    if (!filiado.nome || !filiado.cpf || !filiado.email1) {
-      Alert.alert('Erro de Validação', 'Nome, CPF e Email 1 são obrigatórios.');
+    if (!filiado.name || !filiado.cpf || !filiado.email) {
+      Alert.alert('Erro de Validação', 'Nome, CPF e Email são obrigatórios.');
       return;
     }
 
@@ -93,13 +84,8 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
 
       // Instrumentação de logs para depuração de datas (Step A)
       logger.info('FILIADO_SAVE_PAYLOAD_DATES', {
-        filiado_id: filiado.id,
+        user_id: filiado.id,
         data_nascimento: { value: payload.data_nascimento, type: typeof payload.data_nascimento },
-        dep1_data_nascimento: { value: payload.dep1_data_nascimento, type: typeof payload.dep1_data_nascimento },
-        dep2_data_nascimento: { value: payload.dep2_data_nascimento, type: typeof payload.dep2_data_nascimento },
-        dep3_data_nascimento: { value: payload.dep3_data_nascimento, type: typeof payload.dep3_data_nascimento },
-        dep4_data_nascimento: { value: payload.dep4_data_nascimento, type: typeof payload.dep4_data_nascimento },
-        dep5_data_nascimento: { value: payload.dep5_data_nascimento, type: typeof payload.dep5_data_nascimento },
       });
 
       const canonicalId = getCanonicalFiliadoId(filiado);
@@ -107,7 +93,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
       if (filiadoId) {
         await atualizarFiliado(canonicalId, payload);
       } else {
-        await api.put('/api/filiados/me', payload);
+        await api.put('/api/users/me', payload);
       }
 
       Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
@@ -236,9 +222,6 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text></View>
         <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={ehGestao} hideTitle={true} />
-
-        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>👶 Dependentes</Text></View>
-        <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={true} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
       </KeyboardAwareScrollView>
     </SafeScreen>
   );

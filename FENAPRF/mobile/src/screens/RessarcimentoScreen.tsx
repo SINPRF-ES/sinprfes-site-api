@@ -51,9 +51,9 @@ const RessarcimentoScreen = () => {
   const [fetchingUser, setFetchingUser] = useState(false);
 
   const [form, setForm] = useState({
-    nome_solicitante: usuario?.nome || '',
+    nome_solicitante: usuario?.name || '',
     cpf: usuario?.cpf || '',
-    email_destino: usuario?.email1 || usuario?.email2 || '',
+    email_destino: usuario?.email || '',
     telefone_contato: usuario?.telefone1 || usuario?.telefone2 || '',
     data_inicio: '',
     data_fim: '',
@@ -79,13 +79,13 @@ const RessarcimentoScreen = () => {
     const fetchUserData = async () => {
       try {
         setFetchingUser(true);
-        const { data } = await api.get('/api/filiados/me');
+        const { data } = await api.get('/api/users/me');
         if (data) {
           setForm(prev => ({
             ...prev,
-            nome_solicitante: data.nome || prev.nome_solicitante,
+            nome_solicitante: data.name || prev.nome_solicitante,
             cpf: data.cpf || prev.cpf,
-            email_destino: data.email1 || data.email2 || prev.email_destino,
+            email_destino: data.email || prev.email_destino,
             telefone_contato: data.telefone1 || data.telefone2 || prev.telefone_contato,
           }));
         }

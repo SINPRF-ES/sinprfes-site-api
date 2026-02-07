@@ -468,7 +468,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             <Text style={styles.sectionTitle}>👥 Votos Nominais (Ao vivo)</Text>
             {votosNominais.map((v, i) => (
               <View key={i} style={styles.votoNominalRow}>
-                <Text style={styles.nominalNome}>{v.nome}</Text>
+                <Text style={styles.nominalNome}>{v.name || v.nome}</Text>
                 <Text style={[styles.nominalOpcao, styles[`opcao${v.voto}`]]}>{v.voto}</Text>
               </View>
             ))}
@@ -481,14 +481,14 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             {estado.pedidosPalavra.map((p: any, i: number) => (
               <View key={i} style={styles.itemInteracaoRow}>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.nominalNome}>{p.filiado_nome} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(p.criado_em)}</Text></Text>
+                  <Text style={styles.nominalNome}>{p.user_name || p.filiado_nome} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(p.criado_em)}</Text></Text>
                   <Text style={styles.itemStatus}>{p.status}</Text>
                 </View>
                 {temAutoridade && p.status === 'PENDENTE' && (
                   <TouchableOpacity
                     style={styles.btnAcaoPequeno}
                     onPress={() => handleConcederPalavra(p.id)}
-                    accessibilityLabel={`Conceder palavra para ${p.filiado_nome}`}
+                    accessibilityLabel={`Conceder palavra para ${p.user_name || p.filiado_nome}`}
                     accessibilityRole="button"
                   >
                     <Text style={styles.btnAcaoPequenoText}>Conceder</Text>
@@ -505,7 +505,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             {estado.propostas.map((pr: any, i: number) => (
               <View key={i} style={styles.propostaCard}>
                 <Text style={styles.propostaTitulo}>{pr.titulo} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(pr.criado_em)}</Text></Text>
-                <Text style={styles.propostaAutor}>Por: {pr.autor_nome}</Text>
+                <Text style={styles.propostaAutor}>Por: {pr.author_name || pr.autor_nome}</Text>
                 <Text style={styles.propostaDesc}>{pr.descricao}</Text>
                 <View style={styles.propostaFooter}>
                    <Text style={[styles.itemStatus, { marginBottom: 0 }]}>{pr.status}</Text>

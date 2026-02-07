@@ -48,7 +48,7 @@ const GESTAO_ITEMS = [
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { usuario } = useAuth();
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
 
   const displayedItems = [...NAV_ITEMS];
   if (ehGestao) {
@@ -56,7 +56,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   }
 
   const situacao = normalizeSituacaoFuncional(usuario?.situacao || '');
-  const perfil = (usuario?.perfil_acesso || 'FILIADO').toUpperCase();
+  const perfil = (usuario?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
 
   const getSituacaoVariant = (s: string) => {
     switch (s) {
@@ -80,7 +80,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              {(usuario?.nome || 'Filiado').split(' ')[0]}
+              {(usuario?.name || 'Filiado').split(' ')[0]}
             </Text>
             <Text style={styles.userProfile}>{perfil}</Text>
 

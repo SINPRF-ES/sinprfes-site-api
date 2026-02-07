@@ -239,7 +239,7 @@ const JogosScreen = () => {
                       idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd,
                     ]}
                   >
-                    <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.nome_filiado}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.name || item.nome_filiado}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 80 }]}><Text style={styles.tableCell}>{calculateAge2026(item.data_nascimento)}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 100 }]}><Text style={styles.tableCell}>{formatGender(item.sexo)}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 200 }]}>
@@ -266,7 +266,7 @@ const JogosScreen = () => {
                     <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.familiares || '—'}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.observacoes || '—'}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 120 }]}><Text style={styles.tableCell}>{formatTelefone(item.telefone1) || '—'}</Text></View>
-                    <View style={[styles.tableCellContainer, { width: 180 }]}><Text style={styles.tableCell}>{[item.email1, item.email2].filter(Boolean).join(' / ') || '—'}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 180 }]}><Text style={styles.tableCell}>{item.email || item.email1 || '—'}</Text></View>
                   </View>
                 ))}
               </View>

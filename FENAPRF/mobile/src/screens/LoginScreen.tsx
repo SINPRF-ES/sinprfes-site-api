@@ -81,6 +81,16 @@ export default function LoginScreen() {
 
   async function finalizarLoginComToken(token: string) {
     const usuario = await buscarUsuarioLogado(token);
+
+    // No FENAPRF, se a senha estiver PENDENTE, redireciona para criar senha
+    if (usuario.password_hash === 'PENDENTE' || !usuario.password_hash) {
+      navigation.navigate('ResetPassword' as never, {
+        isFirstAccess: true,
+        cpf: usuario.cpf
+      } as never);
+      return;
+    }
+
     await setSessao(token, usuario);
 
     try {

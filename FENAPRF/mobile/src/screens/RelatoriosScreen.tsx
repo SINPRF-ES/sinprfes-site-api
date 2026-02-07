@@ -93,7 +93,7 @@ export default function RelatoriosScreen() {
       const digits = onlyDigits(searchQuery);
 
       const filtered = allFiliados.filter(f => {
-        const nomeMatch = normalizeText(f.nome || '').includes(term);
+        const nomeMatch = normalizeText(f.name || '').includes(term);
         const cpfMatch = digits !== '' && onlyDigits(f.cpf || '').includes(digits);
         return nomeMatch || cpfMatch;
       });
@@ -127,7 +127,7 @@ export default function RelatoriosScreen() {
 
     Alert.alert(
       'Gerar Relatório',
-      `O PDF será gerado e enviado para seu e-mail (${usuario?.email1 || 'cadastrado'}). Deseja continuar?`,
+      `O PDF será gerado e enviado para seu e-mail (${usuario?.email || 'cadastrado'}). Deseja continuar?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Gerar', onPress: () => processGeneration(params) },
@@ -250,13 +250,13 @@ export default function RelatoriosScreen() {
                     <TouchableOpacity
                       style={styles.modalItem}
                       onPress={() => {
-                        setTargetValue({ id: item.id, nome: item.nome, cpf: item.cpf });
+                        setTargetValue({ id: item.id, name: item.name, cpf: item.cpf });
                         setIsPickerVisible(false);
                         setSearchQuery('');
                       }}
                     >
                       <View>
-                        <Text style={styles.modalItemName}>{item.nome}</Text>
+                        <Text style={styles.modalItemName}>{item.name}</Text>
                         <Text style={styles.modalItemCpf}>{maskCPF(item.cpf)}</Text>
                       </View>
                     </TouchableOpacity>
@@ -308,7 +308,7 @@ export default function RelatoriosScreen() {
                 onPress={() => setIsPickerVisible(true)}
              >
                 <Text style={styles.pickerButtonText}>
-                  {targetValue?.nome ? `${targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar filiado...'}
+                  {targetValue?.name ? `${targetValue.name} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar filiado...'}
                 </Text>
                 <MaterialCommunityIcons name="magnify" size={20} color="#666" />
              </TouchableOpacity>

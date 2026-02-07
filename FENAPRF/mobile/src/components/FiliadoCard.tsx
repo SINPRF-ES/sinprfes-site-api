@@ -60,7 +60,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
         />
         <View style={styles.infoContainer}>
           <View style={styles.nameAndBadgeContainer}>
-            <Text style={styles.nome} numberOfLines={2}>{filiado.nome}</Text>
+            <Text style={styles.nome} numberOfLines={2}>{filiado.name}</Text>
             <View style={[styles.situacao, getBadgeStyle()]}>
               <Text style={styles.situacaoText}>{situacaoLabel}</Text>
             </View>
@@ -90,7 +90,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
           {isGestao && (
             <>
               <Text style={styles.detalhe}>CPF: {formatCpf(filiado.cpf || '')}</Text>
-              <Text style={styles.detalhe}>Email: {filiado.email1}</Text>
+              <Text style={styles.detalhe}>Email: {filiado.email}</Text>
               <Text style={styles.detalhe}>Idade: {calculateAgeBreakdown(filiado.data_nascimento)}</Text>
             </>
           )}

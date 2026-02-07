@@ -5,7 +5,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
 import api, { getFiliados } from '../services/apiService';
 import FiliadoCard from '../components/FiliadoCard';
-import { Filiado } from '../types/filiado';
+import { User } from '../types/usuario';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,7 +20,7 @@ import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 export default function FiliadosScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { usuario } = useAuth();
-  const [filiados, setFiliados] = useState<Filiado[]>([]);
+  const [filiados, setFiliados] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
   const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
@@ -43,20 +43,19 @@ export default function FiliadosScreen({ navigation, route }: any) {
       const data = await getFiliados(params);
 
       // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter (Bolt ⚡)
-      const processedData = data.map((f: Filiado) => {
+      const processedData = data.map((f: User) => {
         const item = ehGestao ? f : {
           id: f.id,
-          nome: f.nome,
+          name: f.name,
           telefone1: f.telefone1,
           avatar_url: f.avatar_url,
           lotacao: f.lotacao,
           situacao: f.situacao,
-          situacao_funcional: f.situacao_funcional,
         };
 
         return {
           ...item,
-          _normalizedNome: normalizeText(f.nome),
+          _normalizedNome: normalizeText(f.name),
           _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
         };
       });
@@ -134,15 +133,15 @@ export default function FiliadosScreen({ navigation, route }: any) {
     });
   }, [filiados, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
 
-  const handleEdit = useCallback((filiado: Filiado) => {
+  const handleEdit = useCallback((filiado: User) => {
     const filiadoId = getCanonicalFiliadoId(filiado);
     logger.info('NAVIGATE_TO_EDITAR_FILIADO', { filiadoId });
     navigation.navigate('EditarFiliado', { filiadoId });
   }, [navigation]);
 
-  const renderItem = useCallback(({ item }: { item: Filiado }) => (
+  const renderItem = useCallback(({ item }: { item: User }) => (
     <FiliadoCard
-      filiado={item}
+      filiado={item as any}
       currentUserProfile={usuario?.perfil_acesso as any}
       onEdit={handleEdit}
     />

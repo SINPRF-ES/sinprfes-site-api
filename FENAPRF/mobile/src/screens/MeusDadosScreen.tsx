@@ -6,14 +6,13 @@ import { useAuth } from '../hooks/useAuth';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/apiService';
 import { uploadAvatar, removerAvatar } from '../services/filiadosService';
-import type { Filiado } from '../types/filiado';
+import type { User } from '../types/usuario';
 
 // Importando os novos componentes
 import HeaderInfo from '../components/HeaderInfo';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
-import DependentesCard from '../components/DependentesCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
@@ -28,29 +27,17 @@ import { normalizeNome } from '../utils/canon';
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
   const { usuario, setSessao, token } = useAuth();
-  const [filiado, setFiliado] = useState<Filiado | null>(null);
+  const [filiado, setFiliado] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
-  const [isDeleteDependentesOpen, setIsDeleteDependentesOpen] = useState(false);
-  const [selectedDependenteIndices, setSelectedDependenteIndices] = useState<number[]>([]);
-  const [isDeletingDependentes, setIsDeletingDependentes] = useState(false);
-
-  // Efeito para buscar os dados completos do filiado
+  // Efeito para buscar os dados completos do usuário
   const fetchFiliadoData = useCallback(async () => {
     try {
       setLoading(true);
       // O `apiService` já injeta o token
-      const { data } = await api.get<Filiado>('/api/filiados/me');
-
-      // Formata as datas dos dependentes para o padrão brasileiro antes de popular o estado
-      for (let i = 1; i <= 5; i++) {
-        const fieldName = `dep${i}_data_nascimento`;
-        if (data[fieldName]) {
-          data[fieldName] = toBrazilianDate(data[fieldName]);
-        }
-      }
+      const { data } = await api.get<User>('/api/users/me');
 
       setFiliado(data);
       logger.info('MEUS_DADOS_STATE_SNAPSHOT', {
@@ -70,158 +57,9 @@ export default function MeusDadosScreen() {
     fetchFiliadoData();
   }, [fetchFiliadoData]);
 
-  const toggleDependenteSelection = (index: number) => {
-    setSelectedDependenteIndices(prev =>
-      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
-    );
-  };
-
-  const confirmDeleteDependentes = () => {
-    if (selectedDependenteIndices.length === 0) {
-      Alert.alert('Seleção Vazia', 'Por favor, selecione pelo menos um dependente para excluir.');
-      return;
-    }
-
-    Alert.alert(
-      'Confirmar Exclusão',
-      `Tem certeza que deseja excluir ${selectedDependenteIndices.length} dependente(s)? Esta ação não pode ser desfeita.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sim, Excluir',
-          style: 'destructive',
-          onPress: handleDeleteDependentes
-        }
-      ]
-    );
-  };
-
-  const handleDeleteDependentes = async () => {
-    if (!filiado) return;
-
-    try {
-      setIsDeletingDependentes(true);
-      const canonicalId = getCanonicalFiliadoId(filiado);
-      logger.info('[MeusDados.deleteDependentes.confirm]', { id: canonicalId, selected: selectedDependenteIndices });
-
-      logger.info('[MeusDados.deleteDependentes.request]', {
-        id: canonicalId,
-        indices: selectedDependenteIndices
-      });
-
-      const response = await api.delete(`/api/filiados/${canonicalId}/dependentes`, {
-        data: { indices: selectedDependenteIndices }
-      });
-
-      if (response.status === 200 || response.status === 204) {
-        logger.info('[MeusDados.deleteDependentes.success]', { count: selectedDependenteIndices.length });
-        Alert.alert('Sucesso', 'Dependentes excluídos com sucesso.');
-        setIsDeleteDependentesOpen(false);
-        setSelectedDependenteIndices([]);
-        await fetchFiliadoData();
-      } else {
-        throw new Error('Falha na exclusão.');
-      }
-    } catch (err: any) {
-      logger.error('[MeusDados.deleteDependentes.error]', err, {
-        message: err.message,
-        responseData: err.response?.data
-      });
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível excluir os dependentes.');
-    } finally {
-      setIsDeletingDependentes(false);
-    }
-  };
-
-  const renderExcluirDependentes = () => {
-    const dependentesAtuais = [];
-    if (filiado) {
-      for (let i = 1; i <= 5; i++) {
-        if (filiado[`dep${i}_nome`]) {
-          dependentesAtuais.push({
-            nome: filiado[`dep${i}_nome`],
-            index: i - 1
-          });
-        }
-      }
-    }
-
-    if (dependentesAtuais.length === 0) return null;
-
-    return (
-      <View>
-        <TouchableOpacity
-          style={styles.toggleDeleteBtn}
-          onPress={() => {
-            setIsDeleteDependentesOpen(!isDeleteDependentesOpen);
-            if (!isDeleteDependentesOpen) logger.info('[MeusDados.deleteDependentes.open]');
-          }}
-          disabled={loading || isDeletingDependentes}
-        >
-          <MaterialCommunityIcons name="delete-outline" size={20} color="#c62828" />
-          <Text style={styles.toggleDeleteBtnText}>
-            {isDeleteDependentesOpen ? 'Cancelar Exclusão' : 'Excluir dependentes'}
-          </Text>
-        </TouchableOpacity>
-
-        {isDeleteDependentesOpen && (
-          <View style={styles.deletePanel}>
-            <Text style={styles.deletePanelTitle}>Selecione para remover:</Text>
-            {dependentesAtuais.map((dep) => (
-              <TouchableOpacity
-                key={dep.index}
-                style={styles.dependenteRow}
-                onPress={() => toggleDependenteSelection(dep.index)}
-                disabled={isDeletingDependentes}
-              >
-                <MaterialCommunityIcons
-                  name={selectedDependenteIndices.includes(dep.index) ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                  size={24}
-                  color={selectedDependenteIndices.includes(dep.index) ? '#c62828' : '#757575'}
-                />
-                <Text style={styles.dependenteRowText}>{dep.nome}</Text>
-              </TouchableOpacity>
-            ))}
-
-            <TouchableOpacity
-              style={[
-                styles.confirmDeleteBtn,
-                (selectedDependenteIndices.length === 0 || isDeletingDependentes) && styles.confirmDeleteBtnDisabled
-              ]}
-              onPress={confirmDeleteDependentes}
-              disabled={selectedDependenteIndices.length === 0 || isDeletingDependentes}
-            >
-              <Text style={styles.confirmDeleteBtnText}>
-                {isDeletingDependentes ? 'Excluindo...' : 'Confirmar Exclusão'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    );
-  };
 
   const handleUpdate = useCallback(async () => {
     if (!filiado) return;
-
-    // Validação de Dependentes
-    for (let i = 1; i <= 5; i++) {
-      const nome = filiado[`dep${i}_nome`];
-      const cpf = filiado[`dep${i}_cpf`];
-
-      if (nome && !cpf) {
-        Alert.alert('Erro de Validação', `O CPF do Dependente ${i} é obrigatório se o nome for preenchido.`);
-        return;
-      }
-      if (cpf && !nome) {
-        Alert.alert('Erro de Validação', `O Nome do Dependente ${i} é obrigatório se o CPF for preenchido.`);
-        return;
-      }
-      if (cpf && cpf.length !== 11) {
-        Alert.alert('Erro de Validação', `O CPF do Dependente ${i} deve conter 11 dígitos.`);
-        return;
-      }
-    }
 
     try {
       setLoading(true);
@@ -229,38 +67,25 @@ export default function MeusDadosScreen() {
       const payload = { ...filiado };
 
       // Normalização de campos antes de enviar ao backend
-      if (payload.nome) payload.nome = normalizeNome(payload.nome);
+      if (payload.name) payload.name = normalizeNome(payload.name) || '';
       payload.cpf = onlyDigits(payload.cpf);
-      payload.telefone1 = onlyDigits(payload.telefone1);
-      payload.telefone2 = onlyDigits(payload.telefone2);
-      payload.cep = onlyDigits(payload.cep);
+      if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
+      if (payload.telefone2) payload.telefone2 = onlyDigits(payload.telefone2);
+      if (payload.cep) payload.cep = onlyDigits(payload.cep);
 
       if (payload.data_nascimento) {
           payload.data_nascimento = toISODate(payload.data_nascimento) || payload.data_nascimento;
       }
 
-      for (let i = 1; i <= 5; i++) {
-        const depNome = `dep${i}_nome`;
-        if (payload[depNome]) payload[depNome] = normalizeNome(payload[depNome] as string);
-
-        const depCpf = `dep${i}_cpf`;
-        if (payload[depCpf]) payload[depCpf] = onlyDigits(payload[depCpf]);
-
-        const fieldName = `dep${i}_data_nascimento`;
-        if (payload[fieldName]) {
-          payload[fieldName] = toISODate(payload[fieldName]) || payload[fieldName];
-        }
-      }
-
-      await api.put<Filiado>('/api/filiados/me', payload);
+      await api.put<User>('/api/users/me', payload);
 
       // Re-fetch dos dados completos para re-hidratar o estado
-      const { data: refreshedData } = await api.get<Filiado>('/api/filiados/me');
+      const { data: refreshedData } = await api.get<User>('/api/users/me');
       setFiliado(refreshedData);
 
       // Atualiza o usuário no contexto de autenticação, se necessário
       if (usuario) {
-        const usuarioAtualizado = { ...usuario, nome: refreshedData.nome, email: refreshedData.email1, avatar_url: refreshedData.avatar_url };
+        const usuarioAtualizado = { ...usuario, name: refreshedData.name, email: refreshedData.email, avatar_url: refreshedData.avatar_url };
         await setSessao(token!, usuarioAtualizado);
       }
 
@@ -450,14 +275,6 @@ export default function MeusDadosScreen() {
         <LotacaoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} />
       </ErrorBoundary>
 
-      <ErrorBoundary>
-        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}>
-          <Text style={styles.sectionTitle}>👶 Dependentes</Text>
-        </View>
-        <DependentesCard filiado={filiado} setFiliado={setFiliado} isEditing={true} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
-      </ErrorBoundary>
-
-      {renderExcluirDependentes()}
     </KeyboardAwareScrollView>
     </SafeScreen>
   );

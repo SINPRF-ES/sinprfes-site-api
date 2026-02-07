@@ -33,8 +33,8 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Nome Completo</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
-        value={filiado?.nome || ''}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, nome: text } : null)}
+        value={filiado?.name || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, name: text } : null)}
         placeholder="Nome completo"
         editable={isManagement}
         accessibilityLabel="Nome Completo"
@@ -75,17 +75,6 @@ const ContatoCard: React.FC<Props> = ({
         autoComplete="username"
       />
 
-      <Text style={styles.label}>Matrícula (SIAPE)</Text>
-      <TextInput
-        style={isManagement ? styles.input : styles.inputDisabled}
-        value={isManagement ? (filiado?.siape || '') : (filiado?.siape || '—')}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, siape: onlyDigits(text).slice(0, 7) } : null)}
-        placeholder="6 ou 7 dígitos"
-        keyboardType="numeric"
-        maxLength={7}
-        editable={isManagement}
-        accessibilityLabel="Matrícula (SIAPE)"
-      />
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
@@ -137,27 +126,15 @@ const ContatoCard: React.FC<Props> = ({
         textContentType="telephoneNumber"
         autoComplete="tel"
       />
-      <Text style={styles.label}>Email 1</Text>
+      <Text style={styles.label}>Email</Text>
       <TextInput
         style={styles.input}
-        value={filiado?.email1 || ''}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, email1: text } : null)}
+        value={filiado?.email || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, email: text } : null)}
         placeholder="seu@email.com"
         keyboardType="email-address"
         autoCapitalize="none"
-        accessibilityLabel="Email 1"
-        textContentType="emailAddress"
-        autoComplete="email"
-      />
-      <Text style={styles.label}>Email 2</Text>
-      <TextInput
-        style={styles.input}
-        value={filiado?.email2 || ''}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, email2: text } : null)}
-        placeholder="Opcional"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        accessibilityLabel="Email 2"
+        accessibilityLabel="Email"
         textContentType="emailAddress"
         autoComplete="email"
       />

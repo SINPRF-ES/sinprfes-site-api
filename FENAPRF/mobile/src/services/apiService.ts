@@ -209,34 +209,34 @@ api.interceptors.response.use(
 );
 
 /**
- * Busca a lista de filiados.
+ * Busca a lista de usuários (FENAPRF).
  * A API retornará os campos de acordo com o perfil do usuário logado.
  */
 export const getFiliados = async (params?: any) => {
-  const response = await api.get('/api/filiados', { params });
-  return response.data.filiados || response.data || [];
+  const response = await api.get('/api/users', { params });
+  return response.data.users || response.data || [];
 };
 
-export const criarFiliado = async (filiadoData) => {
-  return await api.post('/api/filiados', filiadoData);
+export const criarFiliado = async (userData) => {
+  return await api.post('/api/users', userData);
 };
 
-export const atualizarFiliado = async (id, filiadoData) => {
+export const atualizarFiliado = async (id, userData) => {
   if (__DEV__) {
-    console.log('--- [DEV] Payload para atualizarFiliado ---');
+    console.log('--- [DEV] Payload para atualizarUser ---');
     console.log('ID:', id);
-    console.log('Payload:', JSON.stringify(filiadoData, null, 2));
+    console.log('Payload:', JSON.stringify(userData, null, 2));
     console.log('-------------------------------------------');
   }
-  return await api.put(`/api/filiados/${id}`, filiadoData);
+  return await api.put(`/api/users/${id}`, userData);
 };
 
 export const arquivarFiliado = async (id, motivo) => {
-  return await api.post(`/api/filiados/${id}/arquivar`, { motivo });
+  return await api.post(`/api/users/${id}/arquivar`, { motivo });
 };
 
 export const desarquivarFiliado = async (id, motivo) => {
-  return await api.post(`/api/filiados/${id}/desarquivar`, { motivo });
+  return await api.post(`/api/users/${id}/desarquivar`, { motivo });
 };
 
 export default api;

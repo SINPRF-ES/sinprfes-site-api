@@ -1,6 +1,6 @@
 // src/services/authService.ts
 import api from './apiService';
-import type { Usuario } from '../types/usuario';
+import type { User } from '../types/usuario';
 
 interface LoginPayload {
   cpf: string;
@@ -38,9 +38,10 @@ export async function loginCom2FA(payload: Required<LoginPayload>): Promise<Logi
 /**
  * Busca os dados do usuário logado.
  */
-export async function buscarUsuarioLogado(token?: string): Promise<Usuario> {
+export async function buscarUsuarioLogado(token?: string): Promise<User> {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  const { data } = await api.get<Usuario>('/api/auth/me', { headers });
+  // No FENAPRF, usamos /api/users/me
+  const { data } = await api.get<User>('/api/users/me', { headers });
   return data;
 }
 
@@ -49,5 +50,13 @@ export async function buscarUsuarioLogado(token?: string): Promise<Usuario> {
  */
 export async function solicitarResetSenha(cpf: string): Promise<{ message: string; email_destino: string | null }> {
   const { data } = await api.post('/api/senha/recuperar', { cpf });
+  return data;
+}
+
+/**
+ * Redefine a senha do usuário utilizando o token enviado por e-mail.
+ */
+export async function resetarSenha(token: string, novaSenha: string): Promise<{ message: string }> {
+  const { data } = await api.post('/api/senha/resetar', { token, novaSenha });
   return data;
 }

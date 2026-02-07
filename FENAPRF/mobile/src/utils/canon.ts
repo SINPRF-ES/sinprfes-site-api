@@ -27,14 +27,12 @@ export const ESTADO_CADASTRO = {
 
 export type EstadoCadastro = typeof ESTADO_CADASTRO[keyof typeof ESTADO_CADASTRO];
 
-// 3. Perfis de Acesso
+// 3. Perfis de Acesso (FENAPRF)
 export const PERFIL_ACESSO = {
   ADMIN: 'ADMIN',
   DIRETORIA: 'DIRETORIA',
-  FUNCIONARIO: 'FUNCIONARIO',
-  FILIADO: 'FILIADO',
-  ORGANIZADOR: 'ORGANIZADOR',
-  COMUNICADOR: 'COMUNICADOR'
+  COLABORADOR: 'COLABORADOR',
+  CONSELHEIRO: 'CONSELHEIRO'
 } as const;
 
 export type PerfilAcesso = typeof PERFIL_ACESSO[keyof typeof PERFIL_ACESSO];
@@ -106,7 +104,7 @@ export function normalizeSituacaoFuncional(val: string | null | undefined): Situ
 export function normalizePerfil(val: string | null | undefined): PerfilAcesso {
   const s = slugify(val) as any;
   if (Object.values(PERFIL_ACESSO).includes(s)) return s;
-  return PERFIL_ACESSO.FILIADO;
+  return PERFIL_ACESSO.CONSELHEIRO;
 }
 
 /**
