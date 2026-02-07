@@ -58,7 +58,7 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     to: MAIL_TO_FILIACAO,
     cc: emailFiliado || undefined,
     subject,
-    text: `Prezado(a),\n\nSegue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.\n\nPor favor, assine e devolva este documento.\n\nAtenciosamente,\nSINPRF-ES`,
+    text: `Prezado(a),\n\nSegue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.\n\nPor favor, assine e devolva este documento.\n\nAtenciosamente,\nFENAPRF`,
     attachments: [{ filename: "ficha_filiacao.pdf", content: pdfBuffer.toString("base64") }],
   };
 
@@ -114,7 +114,7 @@ Resumo do pedido:
 Este e-mail foi gerado automaticamente. Em anexo, segue o PDF consolidado com os dados do pedido, para sua conferência.
 
 Atenciosamente,
-SINPRF-ES
+FENAPRF
 `;
 
   // 1. Envio para o Sindicato
@@ -161,33 +161,35 @@ SINPRF-ES
 async function enviarEmailBoasVindasFiliado(dados) {
   const { MAIL_FROM } = process.env;
 
-  if (!MAIL_FROM || !dados.email1) {
-    console.log("⚠️ E-mail de boas-vindas não enviado por falta de MAIL_FROM ou email1 do filiado.");
+  const emailDestino = dados.email1 || dados.email;
+
+  if (!MAIL_FROM || !emailDestino) {
+    console.log("⚠️ E-mail de boas-vindas não enviado por falta de MAIL_FROM ou e-mail do filiado.");
     return;
   }
 
   const primeiroNome = (dados.nome || "").split(" ")[0] || "Colega";
-  const subject = `Bem-vindo ao SINPRF-ES – acesso à Área do Filiado`;
+  const subject = `Bem-vindo à FENAPRF – acesso à Área Restrita`;
 
   const corpo = `
 Olá, ${primeiroNome}!
 
-Seja muito bem-vindo(a) ao SINPRF-ES. É uma honra tê-lo(a) conosco.
+Seja muito bem-vindo(a) à FENAPRF. É uma honra tê-lo(a) conosco.
 
 Seu cadastro foi realizado com sucesso em nosso sistema.
-Você já pode acessar a Área do Filiado para atualizar seus dados, consultar informações e utilizar nossos serviços.
+Você já pode acessar a Área Restrita para atualizar seus dados, consultar informações e utilizar nossos serviços.
 
 Para o primeiro acesso:
-1. Acesse o site do sindicato (Área do Filiado).
+1. Acesse o app da FENAPRF.
 2. Utilize seu CPF e a senha provisória ou solicite a recuperação de senha ("Esqueci minha senha").
 
 Em caso de dúvidas, entre em contato conosco.
 
 Atenciosamente,
-Diretoria SINPRF-ES
+Diretoria FENAPRF
 `;
 
-  await enviarEmailBase(dados.email1, subject, corpo);
+  await enviarEmailBase(emailDestino, subject, corpo);
 }
 
 // --------------------------
@@ -292,7 +294,7 @@ Resumo:
 Este e-mail foi gerado automaticamente.
 
 Atenciosamente,
-SINPRF-ES
+FENAPRF
 `;
 
   await enviarEmailBase(emailDestino, subject, corpo);
@@ -330,7 +332,7 @@ Sua pré-inscrição para os Jogos foi cancelada com sucesso.
 Este e-mail foi gerado automaticamente.
 
 Atenciosamente,
-SINPRF-ES
+FENAPRF
 `;
 
   await enviarEmailBase(emailDestino, subject, corpo);
@@ -368,7 +370,7 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
     });
   }
 
-  corpo += `\nAtenciosamente,\nSistema SINPRF-ES`;
+  corpo += `\nAtenciosamente,\nSistema FENAPRF`;
 
   await enviarEmailBase(to, subject, corpo);
   console.log(`📧 Relatório de aniversariantes enviado para ${to}.`);
@@ -391,12 +393,12 @@ async function enviarEmailRelatorioAssembleia(filiado, assembleia, pdfBuffer, da
   const corpo = `
 Prezado(a) ${filiado.nome || "filiado(a)"},
 
-Segue em anexo o relatório consolidado da assembleia "${assembleia.titulo}", conforme solicitado via plataforma SINPRF-ES.
+Segue em anexo o relatório consolidado da assembleia "${assembleia.titulo}", conforme solicitado via plataforma FENAPRF.
 
 Este documento contém o registro da mesa diretora, quórum de presença e o resultado das votações realizadas.
 
 Atenciosamente,
-SINPRF-ES
+FENAPRF
 `;
 
   // 1. Envio para o Filiado
@@ -460,7 +462,7 @@ SINPRF-ES
  */
 async function enviarEmailRelatorio(filiado, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;
-  const unionEmail = REPORTS_COPY_EMAIL || "sinprfes@sinprfes.org.br";
+  const unionEmail = REPORTS_COPY_EMAIL || "contato@fenaprf.org.br";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");
@@ -471,10 +473,10 @@ async function enviarEmailRelatorio(filiado, reportTitle, pdfBuffer, filename) {
   const corpo = `
 Prezado(a) ${filiado.nome || "solicitante"},
 
-Segue em anexo o relatório "${reportTitle}" solicitado via plataforma SINPRF-ES.
+Segue em anexo o relatório "${reportTitle}" solicitado via plataforma FENAPRF.
 
 Atenciosamente,
-SINPRF-ES
+FENAPRF
 `;
 
   const attachments = [{ filename, content: pdfBuffer.toString("base64") }];

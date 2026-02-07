@@ -3,7 +3,6 @@ const pool = require("../config/db");
 const log = require("../utils/log");
 const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
-const { normalizeParentesco } = require("../../shared/dependentes/parentesco");
 const {
   normalizeSituacaoFuncional,
   normalizeSexo,
@@ -12,67 +11,14 @@ const {
   normalizeNome
 } = require("../../shared/canon");
 
-/**
- * Garante que os dependentes sejam salvos de forma compacta (da esquerda para a direita).
- * Se dep1 e dep3 estiverem preenchidos, eles se tornam dep1 e dep2.
- */
-function compactarDependentes(dados) {
-  const dependentesCompactados = [];
-  let houveAlgumCampoDependente = false;
-
-  for (let i = 1; i <= 5; i++) {
-    const nome = dados[`dep${i}_nome`];
-    const cpf = dados[`dep${i}_cpf`];
-    const data = dados[`dep${i}_data_nascimento`];
-    const parentesco = dados[`dep${i}_parentesco`];
-
-    if (nome !== undefined || cpf !== undefined || data !== undefined || parentesco !== undefined) {
-      houveAlgumCampoDependente = true;
-    }
-
-    if (nome || cpf || data || parentesco) {
-      dependentesCompactados.push({
-        nome: nome || null,
-        cpf: cpf || null,
-        data_nascimento: data || null,
-        parentesco: parentesco || null,
-      });
-    }
-
-    // Remove os campos originais para evitar duplicidade ou resíduos
-    delete dados[`dep${i}_nome`];
-    delete dados[`dep${i}_cpf`];
-    delete dados[`dep${i}_data_nascimento`];
-    delete dados[`dep${i}_parentesco`];
-  }
-
-  // Se não recebemos nenhum campo de dependente, não alteramos nada (mantém como estava no banco)
-  if (!houveAlgumCampoDependente) return dados;
-
-  // Preenche os slots compactados
-  for (let i = 0; i < 5; i++) {
-    const dep = dependentesCompactados[i];
-    dados[`dep${i + 1}_nome`] = dep ? dep.nome : null;
-    dados[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
-    dados[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
-    dados[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
-  }
-
-  return dados;
-}
-
-// Colunas completas (retornadas nos UPDATE/INSERT/GET internos)
+// Colunas completas (mapeadas para compatibilidade com o app)
 const FILIADO_COLUMNS = `
-  id, nome, cpf, siape, sexo, data_nascimento, telefone1, telefone2, email1, email2,
-  logradouro_bairro, numero, complemento, cidade, uf, cep,
-  lotacao, situacao, senha_hash, twofa_secret, perfil_acesso,
-  avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
-  arquivado_em, arquivado_motivo, arquivado_por,
-  dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
-  dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
-  dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
-  dep4_nome, dep4_cpf, dep4_data_nascimento, dep4_parentesco,
-  dep5_nome, dep5_cpf, dep5_data_nascimento, dep5_parentesco
+  id, name, name as nome, cpf, sexo, data_nascimento, telefone1, telefone2, email, email as email1,
+  logradouro, bairro, numero, complemento, cidade, uf, cep,
+  lotacao, situacao, password_hash, password_hash as senha_hash, twofa_secret, perfil_acesso,
+  avatar_url, bloqueado, ultimo_acesso, created_at, created_at as criado_em, updated_at, updated_at as atualizado_em,
+  arquivado_em, arquivado_motivo,
+  cargo, cargo2, uf2, perfil_acesso2
 `;
 
 const FILIADO_COLUMNS_WITH_ALIAS = FILIADO_COLUMNS.split(",")
@@ -80,17 +26,15 @@ const FILIADO_COLUMNS_WITH_ALIAS = FILIADO_COLUMNS.split(",")
   .join(", ");
 
 /**
- * Busca filiado pelo CPF (normalizado).
+ * Busca usuário pelo CPF (normalizado).
  */
 async function buscarPorCpf(cpfRaw) {
   const cpf = normalizarCpf(cpfRaw);
   const { rows } = await pool.query(
     `
     SELECT
-      ${FILIADO_COLUMNS_WITH_ALIAS},
-      responsavel.nome AS arquivado_por_nome
-    FROM filiados f
-    LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
+      ${FILIADO_COLUMNS_WITH_ALIAS}
+    FROM users f
     WHERE f.cpf = $1
     LIMIT 1
     `,
@@ -100,16 +44,14 @@ async function buscarPorCpf(cpfRaw) {
 }
 
 /**
- * Busca filiado pelo ID.
+ * Busca usuário pelo ID (UUID).
  */
 async function buscarPorId(id) {
   const { rows } = await pool.query(
     `
     SELECT
-      ${FILIADO_COLUMNS_WITH_ALIAS},
-      responsavel.nome AS arquivado_por_nome
-    FROM filiados f
-    LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
+      ${FILIADO_COLUMNS_WITH_ALIAS}
+    FROM users f
     WHERE f.id = $1
     LIMIT 1
     `,
@@ -119,31 +61,18 @@ async function buscarPorId(id) {
 }
 
 /**
- * Atualiza o campo ultimo_acesso do filiado.
+ * Atualiza o campo ultimo_acesso do usuário.
  */
 async function registrarUltimoAcesso(id) {
-  await pool.query(`UPDATE filiados SET ultimo_acesso = NOW() WHERE id = $1`, [id]);
+  await pool.query(`UPDATE users SET ultimo_acesso = NOW() WHERE id = $1`, [id]);
 }
 
 /**
- * Atualiza dados básicos do próprio filiado ("Meus dados").
- * Observação: avatar é tratado em rota dedicada (upload), mas também aceitamos avatar_url se necessário.
+ * Atualiza dados básicos do próprio usuário ("Meus dados").
  */
 async function atualizarDadosProprios(id, dados) {
-  compactarDependentes(dados);
-
   if (dados.nome) {
-    const original = dados.nome;
-    dados.nome = normalizeNome(dados.nome);
-    if (original !== dados.nome) {
-      log.info("NomeNormalizado", {
-        context: "atualizarDadosProprios",
-        id,
-        nomeNormalized: true,
-        lenBefore: original.length,
-        lenAfter: dados.nome.length
-      });
-    }
+    dados.name = normalizeNome(dados.nome);
   }
 
   const campos = [];
@@ -151,7 +80,6 @@ async function atualizarDadosProprios(id, dados) {
   let idx = 1;
 
   const addCampo = (campoSql, valor, raw = false) => {
-    // Apenas adiciona à query se o valor não for undefined
     if (valor !== undefined) {
       if (raw) {
         campos.push(`${campoSql} = ${valor}`);
@@ -163,96 +91,50 @@ async function atualizarDadosProprios(id, dados) {
     }
   };
 
-  // Campos existentes
   addCampo("sexo", normalizeSexo(dados.sexo));
-  if (dados.siape !== undefined) {
-    addCampo("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
-  }
-
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
-  addCampo("email1", dados.email1);
-  addCampo("email2", dados.email2);
+  addCampo("email", dados.email1 || dados.email);
+
   if (dados.lotacao !== undefined) {
     addCampo("lotacao", normalizeLotacao(dados.lotacao));
   }
-  addCampo("logradouro_bairro", dados.logradouro_bairro);
+
+  // No FENAPRF logradouro_bairro pode vir do app, mas salvamos separado se possível
+  // ou apenas logradouro. Como o app manda logradouro_bairro (SINPRF-ES), vamos mapear.
+  if (dados.logradouro_bairro) {
+      addCampo("logradouro", dados.logradouro_bairro);
+  } else {
+      addCampo("logradouro", dados.logradouro);
+      addCampo("bairro", dados.bairro);
+  }
+
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
   addCampo("uf", dados.uf);
 
   if (dados.cep !== undefined) {
-    const cepNorm = normalizarCep(dados.cep);
-    if (cepNorm && cepNorm.length !== 8) {
-      const err = new Error("CEP deve conter 8 dígitos.");
-      err.isValidationError = true;
-      throw err;
-    }
-    addCampo("cep", cepNorm);
+    addCampo("cep", normalizarCep(dados.cep));
   }
 
   addCampo("avatar_url", dados.avatar_url);
+  addCampo("updated_at", "NOW()", true);
 
-  // Campos dos dependentes
-  for (let i = 1; i <= 5; i++) {
-    if (dados[`dep${i}_nome`]) {
-      dados[`dep${i}_nome`] = normalizeNome(dados[`dep${i}_nome`]);
-    }
-    addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
-    addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
-
-    if (dados[`dep${i}_data_nascimento`] !== undefined) {
-      campos.push(`dep${i}_data_nascimento = NULLIF($${idx}, '')::date`);
-      valores.push(dados[`dep${i}_data_nascimento`]);
-      idx += 1;
-    }
-
-    if (dados[`dep${i}_parentesco`] !== undefined) {
-      addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
-    }
-  }
-
-  // Sempre atualiza o timestamp
-  addCampo("atualizado_em", "NOW()", true);
-
-  if (campos.length === 1) { // Só tem o atualizado_em
-    return buscarPorId(id);
-  }
+  if (campos.length === 1) return buscarPorId(id);
 
   valores.push(id);
-
-  await pool.query(
-    `
-    UPDATE filiados
-    SET ${campos.join(", ")}
-    WHERE id = $${idx}
-  `,
-    valores
-  );
+  await pool.query(`UPDATE users SET ${campos.join(", ")} WHERE id = $${idx}`, valores);
 
   return await buscarPorId(id);
 }
 
 /**
- * Atualização completa de um filiado (usada por perfis de gestão).
- * Atualiza apenas campos presentes (valor !== undefined).
+ * Atualização completa de um usuário (usada por perfis de gestão).
  */
 async function atualizarFiliadoPorId(id, dados) {
-  compactarDependentes(dados);
-
   if (dados.nome) {
-    const original = dados.nome;
-    dados.nome = normalizeNome(dados.nome);
-    if (original !== dados.nome) {
-      log.info("NomeNormalizado", {
-        context: "atualizarFiliadoPorId",
-        id,
-        nomeNormalized: true,
-        lenBefore: original.length,
-        lenAfter: dados.nome.length
-      });
-    }
+    dados.name = normalizeNome(dados.nome);
   }
 
   const campos = [];
@@ -270,18 +152,11 @@ async function atualizarFiliadoPorId(id, dados) {
     }
   }
 
-  addCampo("nome", dados.nome);
-  if (dados.sexo !== undefined) {
-    addCampo("sexo", normalizeSexo(dados.sexo));
-  }
+  addCampo("name", dados.name);
+  if (dados.sexo !== undefined) addCampo("sexo", normalizeSexo(dados.sexo));
   addCampo("cpf", dados.cpf);
-  if (dados.siape !== undefined) {
-    addCampo("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
-  }
 
-  // ✅ PATCH: tipar explicitamente como date no SQL (evita "expression is of type text")
   if (dados.data_nascimento !== undefined) {
-    // Converte '' -> NULL no lado do SQL e faz cast para DATE
     campos.push(`data_nascimento = NULLIF($${idx}, '')::date`);
     valores.push(dados.data_nascimento);
     idx += 1;
@@ -289,88 +164,50 @@ async function atualizarFiliadoPorId(id, dados) {
 
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
-  addCampo("email1", dados.email1);
-  addCampo("email2", dados.email2);
-  if (dados.lotacao !== undefined) {
-    addCampo("lotacao", normalizeLotacao(dados.lotacao));
+  addCampo("email", dados.email1 || dados.email);
+
+  if (dados.lotacao !== undefined) addCampo("lotacao", normalizeLotacao(dados.lotacao));
+  if (dados.situacao !== undefined) addCampo("situacao", normalizeSituacaoFuncional(dados.situacao));
+  if (dados.perfil_acesso !== undefined) addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
+
+  if (dados.logradouro_bairro) {
+      addCampo("logradouro", dados.logradouro_bairro);
+  } else {
+      addCampo("logradouro", dados.logradouro);
+      addCampo("bairro", dados.bairro);
   }
-  if (dados.situacao !== undefined) {
-    addCampo("situacao", normalizeSituacaoFuncional(dados.situacao));
-  }
-  if (dados.perfil_acesso !== undefined) {
-    addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
-  }
-  addCampo("logradouro_bairro", dados.logradouro_bairro);
+
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
   addCampo("uf", dados.uf);
 
-  if (dados.cep !== undefined) {
-    const cepNorm = normalizarCep(dados.cep);
-    if (cepNorm && cepNorm.length !== 8) {
-      const err = new Error("CEP deve conter 8 dígitos.");
-      err.isValidationError = true;
-      throw err;
-    }
-    addCampo("cep", cepNorm);
-  }
+  if (dados.cep !== undefined) addCampo("cep", normalizarCep(dados.cep));
 
   addCampo("avatar_url", dados.avatar_url);
+  addCampo("updated_at", "NOW()", true);
 
-  // Campos dos dependentes
-  for (let i = 1; i <= 5; i++) {
-    addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
-    addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
-
-    if (dados[`dep${i}_data_nascimento`] !== undefined) {
-      campos.push(`dep${i}_data_nascimento = NULLIF($${idx}, '')::date`);
-      valores.push(dados[`dep${i}_data_nascimento`]);
-      idx += 1;
-    }
-
-    if (dados[`dep${i}_parentesco`] !== undefined) {
-      addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
-    }
-  }
-
-  // sempre atualiza timestamp
-  addCampo("atualizado_em", "NOW()", true);
-
-  if (campos.length === 0) return await buscarPorId(id);
+  if (campos.length === 1) return await buscarPorId(id);
 
   valores.push(id);
-
-  await pool.query(
-    `
-    UPDATE filiados
-    SET ${campos.join(", ")}
-    WHERE id = $${idx}
-  `,
-    valores
-  );
+  await pool.query(`UPDATE users SET ${campos.join(", ")} WHERE id = $${idx}`, valores);
 
   return await buscarPorId(id);
 }
 
 /**
  * Listagem para perfil (com busca e opção de incluir arquivados).
- *
- * incluirArquivados:
- * - false: apenas ativos (arquivado_em IS NULL)
- * - true: ativos + arquivados
  */
 async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados = false) {
-  const perfil = (perfilAcesso || "FILIADO").toUpperCase();
+  const perfil = (perfilAcesso || "CONSELHEIRO").toUpperCase();
   const filtro = (termoBusca || "").trim();
 
   const params = [];
   const conds = [];
 
-  const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+  const perfisGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"];
   const isGestao = perfisGestao.includes(perfil);
 
-  // Apenas gestores podem incluir arquivados
   if (!isGestao || !incluirArquivados) {
     conds.push("f.arquivado_em IS NULL");
   }
@@ -378,19 +215,16 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   if (filtro) {
     const termoLimpo = filtro.toLowerCase();
     const apenasDigitos = filtro.replace(/\D/g, "");
-
     const searchConds = [];
 
-    // Busca por nome (parcial)
     if (termoLimpo) {
       params.push(`%${termoLimpo}%`);
-      searchConds.push(`LOWER(f.nome) LIKE $${params.length}`);
+      searchConds.push(`LOWER(f.name) LIKE $${params.length}`);
     }
 
-    // Busca por CPF (somente se houver dígitos na busca)
     if (apenasDigitos) {
       params.push(`%${apenasDigitos}%`);
-      searchConds.push(`regexp_replace(f.cpf, '[^0-9]', '', 'g') LIKE $${params.length}`);
+      searchConds.push(`f.cpf LIKE $${params.length}`);
     }
 
     if (searchConds.length > 0) {
@@ -400,59 +234,30 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 
   const whereSql = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
 
-  if (isGestao) {
-    // gestão: devolve campos necessários para edição, incluindo dependentes
-    const { rows } = await pool.query(
-      `
-      SELECT
-        f.id, f.nome, f.cpf, f.siape, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email1, f.email2,
-        f.lotacao, f.situacao, f.perfil_acesso,
-        f.logradouro_bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
-        f.avatar_url,
-        f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
-        responsavel.nome AS arquivado_por_nome,
-        f.dep1_nome, f.dep1_cpf, f.dep1_data_nascimento, f.dep1_parentesco,
-        f.dep2_nome, f.dep2_cpf, f.dep2_data_nascimento, f.dep2_parentesco,
-        f.dep3_nome, f.dep3_cpf, f.dep3_data_nascimento, f.dep3_parentesco,
-        f.dep4_nome, f.dep4_cpf, f.dep4_data_nascimento, f.dep4_parentesco,
-        f.dep5_nome, f.dep5_cpf, f.dep5_data_nascimento, f.dep5_parentesco
-      FROM filiados f
-      LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
-      ${whereSql}
-      ORDER BY f.nome ASC
-    `,
-      params
-    );
-    return anexarEstadoCadastroLista(rows);
-  }
-
-  // filiado: devolve só diretório (inclui avatar e lotação p/ visualização)
-  const { rows } = await pool.query(
-    `
+  const query = `
     SELECT
-      f.id, f.nome, f.telefone1, f.avatar_url, f.lotacao, f.situacao, f.arquivado_em
-    FROM filiados f
+      f.id, f.name as nome, f.cpf, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email as email1,
+      f.lotacao, f.situacao, f.perfil_acesso,
+      f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
+      f.avatar_url,
+      f.arquivado_em, f.arquivado_motivo
+    FROM users f
     ${whereSql}
-    ORDER BY f.nome ASC
-  `,
-    params
-  );
+    ORDER BY f.name ASC
+  `;
 
+  const { rows } = await pool.query(query, params);
   return anexarEstadoCadastroLista(rows);
 }
 
 /**
- * Criação inicial de filiado (ADMIN/DIRETORIA/FUNCIONARIO).
- * Observação: verificação proativa de CPF duplicado é feita no controller.
+ * Criação inicial de usuário.
  */
-async function criarFiliadoInicial(dados, perfilCriador) {
-  compactarDependentes(dados);
+async function criarFiliadoInicial(dados) {
   const cpfNormalizado = normalizarCpf(dados.cpf);
 
-  // Fallback: se bater constraint única por race-condition
-  // (o controller já tenta evitar)
   try {
-    const perfilNovo = (dados.perfil_acesso || "FILIADO").toUpperCase();
+    const perfilNovo = (dados.perfil_acesso || "CONSELHEIRO").toUpperCase();
 
     const {
       nome,
@@ -460,276 +265,90 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       telefone1 = null,
       telefone2 = null,
       email1 = null,
-      email2 = null,
-      logradouro_bairro = null,
-      numero = null,
-      complemento = null,
-      cidade = null,
-      uf = null,
-      cep = null,
+      email = null,
       lotacao = "SEDE",
       situacao = "ATIVO",
     } = dados;
 
-    const colunas = [];
-    const placeholders = [];
-    const params = [];
-    let p = 1;
-
-    function push(col, val, castSql = "") {
-      colunas.push(col);
-      params.push(val === undefined ? null : val);
-      placeholders.push(`$${p}${castSql}`);
-      p++;
-    }
-
-    const nomeNorm = normalizeNome(nome);
-    if (nome !== nomeNorm) {
-      log.info("NomeNormalizado", {
-        context: "criarFiliadoInicial",
-        nomeNormalized: true,
-        lenBefore: nome.length,
-        lenAfter: (nomeNorm || "").length
-      });
-    }
-    push("nome", nomeNorm);
-    push("sexo", normalizeSexo(dados.sexo));
-    push("cpf", cpfNormalizado);
-    push("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
-    // Explicit date cast with NULLIF for empty strings
-    colunas.push("data_nascimento");
-    params.push(data_nascimento === undefined ? null : data_nascimento);
-    placeholders.push(`NULLIF($${p}, '')::date`);
-    p++;
-
-    push("telefone1", telefone1);
-    push("telefone2", telefone2);
-    push("email1", email1);
-    push("email2", email2);
-    push("logradouro_bairro", logradouro_bairro);
-    push("numero", numero);
-    push("complemento", complemento);
-    push("cidade", cidade);
-    push("uf", uf);
-
-    const cepNorm = normalizarCep(cep);
-    if (cepNorm && cepNorm.length !== 8) {
-      const err = new Error("CEP deve conter 8 dígitos.");
-      err.isValidationError = true;
-      throw err;
-    }
-    push("cep", cepNorm);
-
-    push("lotacao", normalizeLotacao(lotacao));
-    push("situacao", normalizeSituacaoFuncional(situacao));
-    push("perfil_acesso", normalizePerfil(perfilNovo));
-
-    // NOW() directly in SQL, no parameter increment
-    colunas.push("criado_em");
-    placeholders.push("NOW()");
-    colunas.push("atualizado_em");
-    placeholders.push("NOW()");
-
-    push("bloqueado", false);
-    push("arquivado_em", null);
-    push("arquivado_motivo", null);
-
-    for (let i = 1; i <= 5; i++) {
-      if (dados[`dep${i}_nome`]) {
-        dados[`dep${i}_nome`] = normalizeNome(dados[`dep${i}_nome`]);
-      }
-      push(`dep${i}_nome`, dados[`dep${i}_nome`]);
-      push(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
-
-      // Explicit date cast for dependents
-      colunas.push(`dep${i}_data_nascimento`);
-      params.push(dados[`dep${i}_data_nascimento`] === undefined ? null : dados[`dep${i}_data_nascimento`]);
-      placeholders.push(`NULLIF($${p}, '')::date`);
-      p++;
-
-      push(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
-    }
+    const emailFinal = email1 || email || null;
 
     const { rows } = await pool.query(
       `
-      INSERT INTO filiados (${colunas.join(", ")})
-      VALUES (${placeholders.join(", ")})
-      RETURNING id
-    `,
-      params
+      INSERT INTO users (
+        name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
+        lotacao, situacao, perfil_acesso, created_at, updated_at, bloqueado
+      ) VALUES (
+        $1, $2, $3, NULLIF($4, '')::date, $5, $6, $7,
+        $8, $9, $10, NOW(), NOW(), false
+      ) RETURNING id
+      `,
+      [
+        normalizeNome(nome),
+        cpfNormalizado,
+        normalizeSexo(dados.sexo),
+        data_nascimento,
+        telefone1,
+        telefone2,
+        emailFinal,
+        normalizeLotacao(lotacao),
+        normalizeSituacaoFuncional(situacao),
+        normalizePerfil(perfilNovo)
+      ]
     );
 
     return await buscarPorId(rows[0].id);
   } catch (err) {
-    if (err && err.code === "23505") {
-      err.code = "CPF_DUPLICADO";
-    }
+    if (err && err.code === "23505") err.code = "CPF_DUPLICADO";
     throw err;
-  }
-}
-
-/**
- * Auditoria (tabela própria): registra evento.
- * Se a tabela não existir, falha silenciosamente para não quebrar o fluxo principal.
- */
-async function registrarEventoAuditoria({
-  filiadoId,
-  acao,
-  motivo = null,
-  atorId,
-  atorPerfil,
-  payloadAntes = null,
-  payloadDepois = null,
-}) {
-  try {
-    const query = `
-      INSERT INTO filiados_eventos
-        (filiado_id, acao, motivo, ator_id, ator_perfil, payload_antes, payload_depois, criado_em)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, NOW())
-    `;
-    const params = [
-      filiadoId,
-      acao,
-      motivo,
-      atorId,
-      atorPerfil,
-      payloadAntes ? JSON.stringify(payloadAntes) : null,
-      payloadDepois ? JSON.stringify(payloadDepois) : null,
-    ];
-
-    await pool.query(query, params);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn("Auditoria não registrada (verifique migração filiados_eventos).", e?.message || e);
   }
 }
 
 /**
  * Arquivar
  */
-async function arquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
-  const antes = await buscarPorId(id);
-  if (!antes) return null;
-
+async function arquivarFiliadoPorId(id, { motivo }) {
   await pool.query(
-    `
-    UPDATE filiados
-    SET
-      arquivado_em = NOW(),
-      arquivado_motivo = $1,
-      arquivado_por = $2,
-      atualizado_em = NOW()
-    WHERE id = $3
-  `,
-    [motivo, atorId, id]
+    `UPDATE users SET arquivado_em = NOW(), arquivado_motivo = $1, updated_at = NOW() WHERE id = $2`,
+    [motivo, id]
   );
-
-  const depois = await buscarPorId(id);
-
-  await registrarEventoAuditoria({
-    filiadoId: id,
-    acao: "ARQUIVAR",
-    motivo,
-    atorId,
-    atorPerfil,
-    payloadAntes: antes,
-    payloadDepois: depois,
-  });
-
-  return depois;
+  return await buscarPorId(id);
 }
 
 /**
  * Desarquivar
  */
-async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
-  const antes = await buscarPorId(id);
-  if (!antes) return null;
-
+async function desarquivarFiliadoPorId(id) {
   await pool.query(
-    `
-    UPDATE filiados
-    SET
-      arquivado_em = NULL,
-      arquivado_motivo = NULL,
-      arquivado_por = NULL,
-      atualizado_em = NOW()
-    WHERE id = $1
-  `,
+    `UPDATE users SET arquivado_em = NULL, arquivado_motivo = NULL, updated_at = NOW() WHERE id = $1`,
     [id]
   );
+  return await buscarPorId(id);
+}
 
-  const depois = await buscarPorId(id);
-
-  await registrarEventoAuditoria({
-    filiadoId: id,
-    acao: "DESARQUIVAR",
-    motivo: motivo || null,
-    atorId,
-    atorPerfil,
-    payloadAntes: antes,
-    payloadDepois: depois,
-  });
-
-  return depois;
+async function buscarAniversariantesDoDia() {
+  const query = `
+    SELECT
+      id, name as nome, situacao, perfil_acesso, 'FILIADO' as tipo,
+      NULL as nome_filiado_vinculo, NULL as situacao_filiado_vinculo,
+      data_nascimento
+    FROM users
+    WHERE
+      data_nascimento IS NOT NULL AND
+      EXTRACT(DAY FROM data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
+      EXTRACT(MONTH FROM data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
+      arquivado_em IS NULL
+    ORDER BY nome ASC
+  `;
+  const { rows } = await pool.query(query);
+  return rows;
 }
 
 async function salvarTwoFaSecret(userId, secret) {
   await pool.query(
-    `
-    UPDATE filiados
-    SET twofa_secret = $1, atualizado_em = NOW()
-    WHERE id = $2
-  `,
+    `UPDATE users SET twofa_secret = $1, updated_at = NOW() WHERE id = $2`,
     [secret, userId]
   );
   return await buscarPorId(userId);
-}
-
-/**
- * Busca aniversariantes do dia (filiados e dependentes)
- */
-async function buscarAniversariantesDoDia() {
-  const query = `
-    SELECT * FROM (
-      -- Filiados
-      SELECT
-        id, nome, situacao, perfil_acesso, 'FILIADO' as tipo,
-        NULL as nome_filiado_vinculo, NULL as situacao_filiado_vinculo,
-        data_nascimento
-      FROM filiados
-      WHERE
-        data_nascimento IS NOT NULL AND
-        EXTRACT(DAY FROM data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
-        EXTRACT(MONTH FROM data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
-        arquivado_em IS NULL
-
-      UNION ALL
-
-      -- Dependentes (dep1 a dep5)
-      ${[1, 2, 3, 4, 5]
-        .map(
-          (i) => `
-      SELECT
-        f.id, f.dep${i}_nome as nome, 'DEPENDENTE' as situacao, f.perfil_acesso, 'DEPENDENTE' as tipo,
-        f.nome as nome_filiado_vinculo, f.situacao as situacao_filiado_vinculo,
-        f.dep${i}_data_nascimento as data_nascimento
-      FROM filiados f
-      WHERE
-        f.dep${i}_data_nascimento IS NOT NULL AND
-        EXTRACT(DAY FROM f.dep${i}_data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
-        EXTRACT(MONTH FROM f.dep${i}_data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
-        f.arquivado_em IS NULL
-      `
-        )
-        .join(" UNION ALL ")}
-    ) as niver
-    ORDER BY tipo ASC, nome ASC
-  `;
-
-  const { rows } = await pool.query(query);
-  return rows;
 }
 
 module.exports = {
