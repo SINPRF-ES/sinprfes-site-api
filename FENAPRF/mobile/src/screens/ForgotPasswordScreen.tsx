@@ -21,7 +21,7 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
       const response = await solicitarResetSenha(cpfLimpo);
-      Alert.alert('Solicitação Enviada', response.message || 'Verifique seu e-mail para as instruções.', [
+      Alert.alert('E-mail Enviado', response.message || 'Verifique seu e-mail e clique no link para redefinir sua senha.', [
         { text: 'OK', onPress: () => navigation.navigate('ResetPassword' as any) },
       ]);
     } catch (error: any) {
@@ -36,7 +36,7 @@ export default function ForgotPasswordScreen() {
     <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid>
       <View style={styles.card}>
         <Text style={styles.instructions}>
-          Digite seu CPF abaixo. Enviaremos um link e um código de redefinição para o e-mail cadastrado.
+          Digite seu CPF abaixo. Enviaremos um e-mail com um link para você redefinir sua senha com segurança.
         </Text>
         <TextInput
           style={styles.input}

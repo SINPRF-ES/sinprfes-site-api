@@ -139,7 +139,7 @@ exports.resetarSenha = async (req, res, next) => {
 
     return res.json({ message: Textos.SUCESSO.SENHA_REDEFINIDA });
   } catch (err) {
-    log.error("SenhaResetConfirmarErro", { error: err.message, requestId });
+    log.error("SenhaResetConfirmarErro", { error: err.message, stack: err.stack, requestId });
     next(err);
   }
 };
