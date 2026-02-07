@@ -1,20 +1,24 @@
 // src/controllers/senha.controller.js
-const pool = require("../config/db");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { enviarEmailBase } = require("../services/email.service");
 const log = require("../utils/log");
 const Textos = require ("../utils/textos");
 
-function getEmailPrincipal(row) {
-  if (row.email && row.email.trim() !== "") return row.email.trim();
-  if (row.email1 && row.email1.trim() !== "") return row.email1.trim();
+// FENAPRF: Usamos users.service
+const usersService = require("../services/users.service");
+
+function getEmailPrincipal(user) {
+  if (user.email && user.email.trim() !== "") return user.email.trim();
+  // Fallback para campos legados se ainda existirem
+  if (user.email1 && user.email1.trim() !== "") return user.email1.trim();
   return null;
 }
 
 /**
  * Solicitação de reset de senha.
- * Grava token_acesso_temp + token_expiracao em users.
+ * Gera um token hexadecimal seguro e salva no banco.
  */
 exports.solicitarResetSenha = async (req, res, next) => {
   const { cpf } = req.body || {};
@@ -31,18 +35,12 @@ exports.solicitarResetSenha = async (req, res, next) => {
     }
 
     const cpfLimpo = cpf.replace(/\D/g, "");
-
-    // Busca apenas em public.users (Isolamento FENAPRF)
-    const query = `
-      SELECT id, name as nome, cpf, email
-      FROM users
-      WHERE cpf = $1
-    `;
-    const { rows: userRows } = await pool.query(query, [cpfLimpo]);
+    const user = await usersService.buscarPorCpf(cpfLimpo);
 
     const mensagemPadrao = Textos.SENHA.MENSAGEM_RESET_PADRAO;
 
-    if (userRows.length === 0) {
+    // Se usuário não existe, retornamos 200 para evitar enumeração de usuários
+    if (!user) {
       log.warn("SenhaResetUserNaoEncontrado", { requestId });
       return res.json({
         message: mensagemPadrao,
@@ -50,41 +48,34 @@ exports.solicitarResetSenha = async (req, res, next) => {
       });
     }
 
-    const user = userRows[0];
     const emailDestino = getEmailPrincipal(user);
 
     if (!emailDestino) {
       log.warn("SenhaResetSemEmail", { userId: user.id, requestId });
+      // Retornamos 200 conforme solicitado, mas informamos que não há e-mail
       return res.json({
         message: Textos.SENHA.EMAIL_NAO_CADASTRADO,
         email_destino: null,
       });
     }
 
-    // Gera token de reset de senha (1h)
-    const token = jwt.sign(
-      { id: user.id, cpf: user.cpf, tipo: "reset-senha" },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    // Grava token_acesso_temp + token_expiracao em users (Requirement D)
+    // Gera token seguro (hex) em vez de JWT para evitar problemas de tamanho e complexidade
+    const token = crypto.randomBytes(24).toString('hex');
     const expiracao = new Date();
     expiracao.setHours(expiracao.getHours() + 1);
 
-    await pool.query(
-        `UPDATE users SET token_acesso_temp = $1, token_expiracao = $2 WHERE id = $3`,
-        [token, expiracao, user.id]
-    );
+    // Salva no banco (users.token_acesso_temp e users.token_expiracao)
+    await usersService.setResetToken(user.id, token, expiracao);
 
     log.info("SenhaResetTokenPersistido", { userId: user.id, requestId });
 
+    // Link aponta para o sistema FENAPRF
     const baseUrl = process.env.APP_BASE_URL || "https://fenaprf-sistema.onrender.com";
     const linkRedefinicao = `${baseUrl.replace(/\/$/, "")}/redefinir-senha.html?token=${encodeURIComponent(token)}`;
 
     const subject = "FENAPRF – Redefinição de senha";
     const corpoEmail =
-        `Olá, ${user.nome}.\n\n` +
+        `Olá, ${user.name || user.nome}.\n\n` +
         `Recebemos uma solicitação para redefinir a senha da sua conta na FENAPRF.\n\n` +
         `Para criar uma nova senha, acesse o link abaixo (válido por 1 hora):\n\n` +
         `${linkRedefinicao}\n\n` +
@@ -93,18 +84,16 @@ exports.solicitarResetSenha = async (req, res, next) => {
 
     try {
         await enviarEmailBase(emailDestino, subject, corpoEmail);
+        log.info("SenhaResetEmailEnviado", { userId: user.id, requestId });
     } catch (e) {
         log.error("SenhaResetEmailFalha", { error: e.message, userId: user.id, requestId });
     }
-
-    log.info("SenhaResetEmailEnviado", { userId: user.id, requestId });
 
     return res.json({
       message: mensagemPadrao,
       email_destino: emailDestino,
     });
   } catch (err) {
-    // Log stacktrace com requestId se falhar (Requirement D)
     log.error("SenhaResetSolicitarErro", { error: err.message, stack: err.stack, requestId });
     next(err);
   }
@@ -114,10 +103,10 @@ exports.solicitarResetSenha = async (req, res, next) => {
  * Efetivação do reset de senha.
  */
 exports.resetarSenha = async (req, res, next) => {
+  const { token, senha_nova } = req.body || {};
   const requestId = req.requestId;
-  try {
-    const { token, senha_nova } = req.body || {};
 
+  try {
     if (!token || !senha_nova) {
       return res.status(400).json({ error: Textos.SENHA.TOKEN_E_SENHA_OBRIGATORIOS });
     }
@@ -126,45 +115,31 @@ exports.resetarSenha = async (req, res, next) => {
       return res.status(400).json({ error: Textos.SENHA.SENHA_MUITO_CURTA });
     }
 
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      log.warn("SenhaResetTokenInvalido", { error: err.message, requestId });
-      return res.status(400).json({ error: Textos.SENHA.TOKEN_SENHA_EXPIRADO });
-    }
-
-    if (payload.tipo !== "reset-senha") {
-      return res.status(400).json({ error: Textos.SENHA.TOKEN_TIPO_INVALIDO });
-    }
-
-    const userId = payload.id;
-
-    // Validar token no banco (Requirement D)
+    // Busca usuário pelo token e verifica expiração
+    const pool = require("../config/db");
     const { rows: tokenRows } = await pool.query(
-        "SELECT id FROM users WHERE id = $1 AND token_acesso_temp = $2 AND token_expiracao > NOW()",
-        [userId, token]
+        "SELECT id FROM users WHERE token_acesso_temp = $1 AND token_expiracao > NOW()",
+        [token]
     );
 
     if (tokenRows.length === 0) {
-        log.warn("SenhaResetTokenInvalidoNoDB", { userId, requestId });
-        return res.status(400).json({ error: "Link de redefinição inválido ou expirado." });
+        log.warn("SenhaResetTokenInvalidoOuExpirado", { token, requestId });
+        return res.status(400).json({
+          error: Textos.SENHA.TOKEN_SENHA_EXPIRADO,
+        });
     }
 
+    const userId = tokenRows[0].id;
     const senhaHash = await bcrypt.hash(senha_nova, 10);
 
-    const updateSql = `
-      UPDATE users
-      SET password_hash = $1, token_acesso_temp = NULL, token_expiracao = NULL, updated_at = NOW()
-      WHERE id = $2
-    `;
-    await pool.query(updateSql, [senhaHash, userId]);
+    // Atualiza senha e limpa tokens
+    await usersService.setPassword(userId, senhaHash);
 
     log.info("SenhaAlteradaSucesso", { userId, requestId });
 
     return res.json({ message: Textos.SUCESSO.SENHA_REDEFINIDA });
   } catch (err) {
-    log.error("SenhaResetConfirmarErro", { error: err.message, stack: err.stack, requestId });
+    log.error("SenhaResetConfirmarErro", { error: err.message, requestId });
     next(err);
   }
 };
