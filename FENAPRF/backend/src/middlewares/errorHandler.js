@@ -26,8 +26,14 @@ module.exports = (err, req, res, next) => {
     profile: req.user?.perfil_acesso,
     payload: sanitizeBody(req.body),
     errorMessage: err.message,
-    stack: err.stack
+    stack: err.stack,
+    name: err.name,
+    code: err.code
   });
+
+  // Também logamos no console para visibilidade imediata no Render
+  console.error(`[ERROR][${requestId}] ${req.method} ${req.originalUrl}: ${err.message}`);
+  if (err.stack) console.error(err.stack);
 
   res.status(status).json({
     success: false,

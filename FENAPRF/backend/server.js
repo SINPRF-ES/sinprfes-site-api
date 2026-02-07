@@ -1,4 +1,15 @@
 require("dotenv").config();
+
+// Validação de variáveis de ambiente críticas
+const CRITICAL_ENV_VARS = ["DATABASE_URL", "JWT_SECRET"];
+const missingVars = CRITICAL_ENV_VARS.filter(v => !process.env[v]);
+
+if (missingVars.length > 0) {
+    console.error("❌ ERRO CRÍTICO: Variáveis de ambiente obrigatórias ausentes:");
+    missingVars.forEach(v => console.error(`   - ${v}`));
+    process.exit(1);
+}
+
 const { logDbSafeInfo } = require("./src/utils/dbLog");
 const app = require("./src/app");
 const http = require("http");

@@ -30,7 +30,7 @@ describe('Filiados Service', () => {
         const result = await filiadosService.listarParaPerfil('ADMIN');
 
         expect(pool.query).toHaveBeenCalledWith(
-          expect.stringContaining('f.dep1_nome'),
+          expect.stringContaining('f.cpf'),
           expect.any(Array)
         );
         expect(result[0]).toHaveProperty('lotacao', 'SEDE');

@@ -24,7 +24,7 @@ module.exports = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      "SELECT id, cpf, nome, perfil_acesso, bloqueado, arquivado_em FROM filiados WHERE id = $1 LIMIT 1",
+      "SELECT id, cpf, name, perfil_acesso, bloqueado, arquivado_em FROM users WHERE id = $1 LIMIT 1",
       [payload.id]
     );
 
@@ -45,8 +45,8 @@ module.exports = async (req, res, next) => {
     req.user = {
       id: userDb.id,
       cpf: userDb.cpf,
-      nome: userDb.nome,
-      perfil_acesso: (userDb.perfil_acesso || "FILIADO").toUpperCase(),
+      nome: userDb.name, // Mapeia name -> nome para o app
+      perfil_acesso: (userDb.perfil_acesso || "CONSELHEIRO").toUpperCase(),
     };
 
     return next();
