@@ -41,13 +41,13 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
   }
 
-  const emailFiliado =
+  const emailUser =
     (dados.email_destino && String(dados.email_destino).trim()) ||
     (dados.email_pessoal && String(dados.email_pessoal).trim()) ||
     (dados.email && String(dados.email).trim()) ||
     "";
 
-  if (!emailFiliado) {
+  if (!emailUser) {
     console.warn("⚠️ Aviso: Ficha de filiação será enviada sem cópia para o solicitante (e-mail não identificado).");
   }
 
@@ -56,7 +56,7 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
   const payload = {
     from: MAIL_FROM,
     to: MAIL_TO_FILIACAO,
-    cc: emailFiliado || undefined,
+    cc: emailUser || undefined,
     subject,
     text: `Prezado(a),\n\nSegue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.\n\nPor favor, assine e devolva este documento.\n\nAtenciosamente,\nFENAPRF`,
     attachments: [{ filename: "ficha_filiacao.pdf", content: pdfBuffer.toString("base64") }],
@@ -69,8 +69,8 @@ async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
     throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
   }
 
-  console.log("📧 DEBUG_CC_FILIACAO:", { emailFiliado });
-  console.log("📧 E-mail de filiação enviado. ID:", data.id, "Cópia para:", emailFiliado);
+  console.log("📧 DEBUG_CC_FILIACAO:", { emailUser });
+  console.log("📧 E-mail de filiação enviado. ID:", data.id, "Cópia para:", emailUser);
 }
 
 /**
@@ -89,20 +89,20 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
     throw new Error("❌ MAIL_FROM ou MAIL_TO_RESSARCIMENTO não configurados.");
   }
 
-  const emailFiliado =
+  const emailUser =
     (dados.email_destino && String(dados.email_destino).trim()) ||
     (dados.email1 && String(dados.email1).trim()) ||
     (dados.email2 && String(dados.email2).trim()) ||
     "";
 
-  if (!emailFiliado) {
-    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ filiadoId: dados.id_filiado || dados.id }));
+  if (!emailUser) {
+    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ userId: dados.id_user || dados.id }));
   }
 
   const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
 
   const corpoEmail = `
-Prezado(a) ${dados.nome || "filiado(a)"},
+Prezado(a) ${dados.nome || "user(a)"},
 
 Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma do SINPRF/ES.
 
@@ -135,11 +135,11 @@ FENAPRF
   }
 
   // 2. Envio da Cópia para o Solicitante
-  if (emailFiliado) {
+  if (emailUser) {
     try {
       const payloadSolicitante = {
         from: MAIL_FROM,
-        to: emailFiliado,
+        to: emailUser,
         subject: `CÓPIA: ${subject}`,
         text: corpoEmail,
         attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
@@ -156,15 +156,15 @@ FENAPRF
 }
 
 /**
- * E-mail de boas-vindas para novo filiado.
+ * E-mail de boas-vindas para novo user.
  */
-async function enviarEmailBoasVindasFiliado(dados) {
+async function enviarEmailBoasVindasUser(dados) {
   const { MAIL_FROM } = process.env;
 
   const emailDestino = dados.email1 || dados.email;
 
   if (!MAIL_FROM || !emailDestino) {
-    console.log("⚠️ E-mail de boas-vindas não enviado por falta de MAIL_FROM ou e-mail do filiado.");
+    console.log("⚠️ E-mail de boas-vindas não enviado por falta de MAIL_FROM ou e-mail do user.");
     return;
   }
 
@@ -263,18 +263,18 @@ function extrairEmailDestino(obj = {}) {
 }
 
 async function enviarEmailConfirmacaoInscricaoJogos(payload) {
-  const filiado = payload?.filiado || payload || {};
+  const user = payload?.user || payload || {};
   const inscricao = payload?.inscricao || payload || {};
 
-  const filiadoId = filiado.id || filiado.id_filiado || payload?.id || payload?.id_filiado;
+  const userId = user.id || user.id_user || payload?.id || payload?.id_user;
 
-  const emailDestino = extrairEmailDestino(filiado);
+  const emailDestino = extrairEmailDestino(user);
   if (!emailDestino) {
-    console.warn("⚠️ EmailJogosConfirmacao: filiado sem email1/email2.", JSON.stringify({ filiadoId }));
+    console.warn("⚠️ EmailJogosConfirmacao: user sem email1/email2.", JSON.stringify({ userId }));
     return;
   }
 
-  const primeiroNome = (filiado.nome || "").split(" ")[0] || "Colega";
+  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
   const subject = `Confirmação de Pré-inscrição - Jogos`;
 
   const modalidadesTexto = formatarModalidadesJogos(inscricao.modalidades);
@@ -301,18 +301,18 @@ FENAPRF
 }
 
 async function enviarEmailCancelamentoInscricaoJogos(payload) {
-  const filiado = payload?.filiado || payload || {};
+  const user = payload?.user || payload || {};
   const inscricao = payload?.inscricao || payload || {};
 
-  const filiadoId = filiado.id || filiado.id_filiado || payload?.id || payload?.id_filiado;
+  const userId = user.id || user.id_user || payload?.id || payload?.id_user;
 
-  const emailDestino = extrairEmailDestino(filiado);
+  const emailDestino = extrairEmailDestino(user);
   if (!emailDestino) {
-    console.warn("⚠️ EmailJogosCancelamento: filiado sem email1/email2.", JSON.stringify({ filiadoId }));
+    console.warn("⚠️ EmailJogosCancelamento: user sem email1/email2.", JSON.stringify({ userId }));
     return;
   }
 
-  const primeiroNome = (filiado.nome || "").split(" ")[0] || "Colega";
+  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
   const subject = `Cancelamento de Pré-inscrição - Jogos`;
 
   const modalidadesTexto = formatarModalidadesJogos(inscricao.modalidades);
@@ -362,10 +362,10 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
         ? new Date(p.data_nascimento).toLocaleDateString("pt-BR", { timeZone: "UTC" })
         : "-";
 
-      if (p.tipo === "FILIADO") {
-        corpo += `${index + 1}. ${p.nome} (Filiado - Nasc: ${dataNascStr})\n`;
+      if (p.tipo === "USER") {
+        corpo += `${index + 1}. ${p.nome} (User - Nasc: ${dataNascStr})\n`;
       } else {
-        corpo += `${index + 1}. ${p.nome} (Dependente de ${p.nome_filiado_vinculo} - Nasc: ${dataNascStr})\n`;
+        corpo += `${index + 1}. ${p.nome} (Dependente de ${p.nome_user_vinculo} - Nasc: ${dataNascStr})\n`;
       }
     });
   }
@@ -376,7 +376,7 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
   console.log(`📧 Relatório de aniversariantes enviado para ${to}.`);
 }
 
-async function enviarEmailRelatorioAssembleia(filiado, assembleia, pdfBuffer, dados = {}) {
+async function enviarEmailRelatorioAssembleia(user, assembleia, pdfBuffer, dados = {}) {
   const { MAIL_FROM, REPORT_NOTIFY_EMAIL } = process.env;
   const unionEmail = REPORT_NOTIFY_EMAIL || "sinprfes@sinprfes.org.br";
 
@@ -384,14 +384,14 @@ async function enviarEmailRelatorioAssembleia(filiado, assembleia, pdfBuffer, da
     throw new Error("❌ MAIL_FROM não configurado.");
   }
 
-  const emailDestino = extrairEmailDestino(filiado);
+  const emailDestino = extrairEmailDestino(user);
   if (!emailDestino) {
-    console.warn("⚠️ RelatorioAssembleiaSemEmail", JSON.stringify({ filiadoId: filiado.id }));
+    console.warn("⚠️ RelatorioAssembleiaSemEmail", JSON.stringify({ userId: user.id }));
   }
 
   const subject = `Relatório de Assembleia - ${assembleia.titulo}`;
   const corpo = `
-Prezado(a) ${filiado.nome || "filiado(a)"},
+Prezado(a) ${user.nome || "user(a)"},
 
 Segue em anexo o relatório consolidado da assembleia "${assembleia.titulo}", conforme solicitado via plataforma FENAPRF.
 
@@ -401,29 +401,29 @@ Atenciosamente,
 FENAPRF
 `;
 
-  // 1. Envio para o Filiado
+  // 1. Envio para o User
   if (emailDestino) {
     try {
-      const payloadFiliado = {
+      const payloadUser = {
         from: MAIL_FROM,
         to: emailDestino,
         subject,
         text: corpo,
         attachments: [{ filename: `relatorio_assembleia_${assembleia.id.slice(0, 8)}.pdf`, content: pdfBuffer.toString("base64") }],
       };
-      const resFiliado = await resend.emails.send(payloadFiliado);
-      if (resFiliado.error) throw resFiliado.error;
-      console.log("📧 [emailRelatorioFiliadoOk]", resFiliado.data.id);
+      const resUser = await resend.emails.send(payloadUser);
+      if (resUser.error) throw resUser.error;
+      console.log("📧 [emailRelatorioUserOk]", resUser.data.id);
     } catch (err) {
-      console.error("💥 [emailRelatorioFiliadoErro]", err);
-      throw new Error(`Falha ao enviar e-mail para o filiado: ${err.message}`);
+      console.error("💥 [emailRelatorioUserErro]", err);
+      throw new Error(`Falha ao enviar e-mail para o user: ${err.message}`);
     }
   }
 
   // 2. Notificação ao Sindicato
   try {
     const agora = dados.solicitante?.data_geracao || new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    const maskedCpf = filiado.cpf ? filiado.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4") : "CPF não informado";
+    const maskedCpf = user.cpf ? user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4") : "CPF não informado";
 
     // Busca resumo do quórum mais recente se disponível
     const ultimoQuorum = (dados.quorums || []).slice(-1)[0];
@@ -441,7 +441,7 @@ FENAPRF
             <hr />
             <p><strong>Assembleia:</strong> ${assembleia.titulo} (ID: ${assembleia.id})</p>
             <p><strong>Tipo:</strong> ${assembleia.tipo} | <strong>Status:</strong> ${assembleia.estado}</p>
-            <p><strong>Solicitante:</strong> ${filiado.nome} (CPF: ${maskedCpf} | Perfil: ${dados.solicitante?.perfil || 'N/A'})</p>
+            <p><strong>Solicitante:</strong> ${user.nome} (CPF: ${maskedCpf} | Perfil: ${dados.solicitante?.perfil || 'N/A'})</p>
             <p><strong>Data/Hora da Solicitação:</strong> ${agora}</p>
             <p><strong>Resumo do Quórum:</strong> ${resumoQuorum}</p>
             <hr />
@@ -460,7 +460,7 @@ FENAPRF
 /**
  * Envia e-mail de relatório genérico (Individual, Lotação, Setor, Situação)
  */
-async function enviarEmailRelatorio(filiado, reportTitle, pdfBuffer, filename) {
+async function enviarEmailRelatorio(user, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;
   const unionEmail = REPORTS_COPY_EMAIL || "contato@fenaprf.org.br";
 
@@ -468,10 +468,10 @@ async function enviarEmailRelatorio(filiado, reportTitle, pdfBuffer, filename) {
     throw new Error("❌ MAIL_FROM não configurado.");
   }
 
-  const emailDestino = extrairEmailDestino(filiado);
+  const emailDestino = extrairEmailDestino(user);
   const subject = `Relatório Gerado - ${reportTitle}`;
   const corpo = `
-Prezado(a) ${filiado.nome || "solicitante"},
+Prezado(a) ${user.nome || "solicitante"},
 
 Segue em anexo o relatório "${reportTitle}" solicitado via plataforma FENAPRF.
 
@@ -505,7 +505,7 @@ FENAPRF
         from: MAIL_FROM,
         to: unionEmail,
         subject: `[SOLICITANTE SEM EMAIL] ${subject}`,
-        text: `O usuário ${filiado.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
+        text: `O usuário ${user.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
         attachments
       });
       console.log("📧 [emailRelatorioUnionOnlyOk] enviado para", unionEmail);
@@ -519,7 +519,7 @@ module.exports = {
   enviarEmailBase,
   enviarEmailFichaFiliacao,
   enviarEmailRessarcimento,
-  enviarEmailBoasVindasFiliado,
+  enviarEmailBoasVindasUser,
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
   enviarRelatorioAniversariantes,

@@ -1,5 +1,5 @@
 import api from './apiService';
-import { User } from '../types/usuario';
+import { User } from '../types/user';
 import { onlyDigits } from '../shared/format/formatters';
 
 const unmaskUser = (user: Partial<User>) => {
@@ -17,7 +17,7 @@ export const getMe = async (): Promise<User> => {
   return response.data;
 };
 
-export const getFiliadoById = async (id: string): Promise<User> => {
+export const getUserById = async (id: string): Promise<User> => {
   const response = await api.get(`/api/users/${id}`);
   return response.data;
 };
@@ -27,7 +27,7 @@ export const updateMe = async (data: Partial<User>): Promise<User> => {
   return response.data;
 };
 
-export const updateFiliado = async (id: string, data: Partial<User>): Promise<User> => {
+export const updateUser = async (id: string, data: Partial<User>): Promise<User> => {
   const response = await api.put(`/api/users/${id}`, unmaskUser(data));
   return response.data;
 };

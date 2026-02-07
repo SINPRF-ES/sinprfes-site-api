@@ -1,4 +1,4 @@
-// mobile/src/screens/CriarFiliadoScreen.tsx
+// mobile/src/screens/CriarUserScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, Button, StyleSheet, Alert, ScrollView } from 'react-native';
@@ -10,14 +10,14 @@ import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
-import { User } from '../types/usuario';
+import { User } from '../types/user';
 import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
-import { isGestao as checkIsGestao, ROLES } from '../utils/filiadoUtils';
+import { isGestao as checkIsGestao, ROLES } from '../utils/userUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { normalizeNome } from '../utils/canon';
 
-const initialFiliadoState: Partial<User> = {
+const initialUserState: Partial<User> = {
   name: '',
   sexo: null,
   cpf: '',
@@ -41,16 +41,16 @@ const initialFiliadoState: Partial<User> = {
   uf2: '',
 };
 
-export default function CriarFiliadoScreen({ navigation }: any) {
-  const { usuario } = useAuth();
+export default function CriarUserScreen({ navigation }: any) {
+  const { user: authUser } = useAuth();
   const netInfo = useNetInfo();
 
-  const [filiado, setFiliado] = useState<Partial<User>>(initialFiliadoState);
+  const [user, setUser] = useState<Partial<User>>(initialUserState);
   const [loading, setLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      setFiliado(initialFiliadoState);
+      setUser(initialUserState);
     }, [])
   );
 
@@ -60,11 +60,11 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       return;
     }
 
-    if (!filiado.name || !filiado.cpf || !filiado.email || !filiado.telefone1) {
+    if (!user.name || !user.cpf || !user.email || !user.telefone1) {
       Alert.alert('Erro de Validação', 'Nome, CPF, Email e Telefone são obrigatórios.');
       return;
     }
-    if (filiado.cpf.length !== 11) {
+    if (user.cpf.length !== 11) {
       Alert.alert('Erro de Validação', 'O CPF deve conter 11 dígitos.');
       return;
     }
@@ -72,33 +72,33 @@ export default function CriarFiliadoScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-      const payload = { ...filiado };
+      const payload = { ...user };
 
       // Normalização
       if (payload.name) payload.name = normalizeNome(payload.name);
-      if (payload.sexo === '') payload.sexo = null;
-      payload.cpf = onlyDigits(payload.cpf);
-      payload.telefone1 = onlyDigits(payload.telefone1);
+      if ((payload.sexo as any) === '') payload.sexo = null;
+      if (payload.cpf) payload.cpf = onlyDigits(payload.cpf);
+      if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
       if (payload.telefone2) payload.telefone2 = onlyDigits(payload.telefone2);
       if (payload.cep) payload.cep = onlyDigits(payload.cep);
 
       if (payload.data_nascimento) {
-        payload.data_nascimento = toISODate(payload.data_nascimento) || payload.data_nascimento;
+        payload.data_nascimento = toISODate(payload.data_nascimento) || (payload.data_nascimento as any);
       }
 
       await api.post('/api/users', payload);
       Alert.alert('Sucesso', 'Usuário criado com sucesso.');
-      navigation.navigate('Filiados', { refresh: true });
+      navigation.navigate('Users', { refresh: true });
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível criar o filiado.');
+      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível criar o user.');
     } finally {
       setLoading(false);
     }
-  }, [filiado, netInfo.isConnected, navigation]);
+  }, [user, netInfo.isConnected, navigation]);
 
   useEffect(() => {
     const actions: MenuAction[] = [
-      { label: 'Criar Filiado', icon: 'account-plus', onPress: handleCreate }
+      { label: 'Criar User', icon: 'account-plus', onPress: handleCreate }
     ];
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,
@@ -106,10 +106,10 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
     });
-  }, [navigation, filiado, loading, handleCreate]);
+  }, [navigation, user, loading, handleCreate]);
 
   // Renderiza apenas se for perfil de GESTAO
-  if (!usuario || !checkIsGestao(usuario.perfil_acesso)) {
+  if (!authUser || !checkIsGestao(authUser.perfil_acesso)) {
     return (
       <View style={styles.centered}>
         <Text>Acesso negado.</Text>
@@ -128,13 +128,13 @@ export default function CriarFiliadoScreen({ navigation }: any) {
     >
       {/* Reutilizar os cards para entrada de dados */}
       <ContatoCard
-        filiado={filiado as User}
-        setFiliado={setFiliado as any}
+        user={user as User}
+        setUser={setUser as any}
         isEditing={true}
         isManagement={true}
       />
-      <EnderecoCard filiado={filiado as User} setFiliado={setFiliado as any} />
-      <LotacaoCard filiado={filiado as User} setFiliado={setFiliado as any} isEditing={true} />
+      <EnderecoCard user={user as User} setUser={setUser as any} />
+      <LotacaoCard user={user as User} setUser={setUser as any} isEditing={true} />
 
     </KeyboardAwareScrollView>
     </SafeScreen>

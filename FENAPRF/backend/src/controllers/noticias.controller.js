@@ -50,7 +50,7 @@ exports.listar = async (req, res) => {
     query = `
       SELECT n.*, f.nome as autor_nome
       FROM noticias n
-      LEFT JOIN filiados f ON n.autor_id = f.id
+      LEFT JOIN users f ON n.autor_id = f.id
     `;
 
     if (!isGestao) {
@@ -126,7 +126,7 @@ exports.detalhar = async (req, res) => {
     const { rows: newsRows } = await pool.query(
       `SELECT n.*, f.nome as autor_nome
        FROM noticias n
-       LEFT JOIN filiados f ON n.autor_id = f.id
+       LEFT JOIN users f ON n.autor_id = f.id
        WHERE n.id = $1`,
       [id]
     );

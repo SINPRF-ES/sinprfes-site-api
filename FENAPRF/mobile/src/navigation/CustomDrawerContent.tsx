@@ -4,11 +4,11 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-na
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
-import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
+import { isGestao as checkIsGestao } from '../utils/userUtils';
 
 const CustomDrawerContent = (props) => {
-  const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
-  const ehGestao = checkIsGestao(usuario?.perfil_acesso);
+  const { user, logout, setBloqueadoPorBiometria } = useAuth();
+  const ehGestao = checkIsGestao(user?.perfil_acesso);
 
   const handleLogoutPress = () => {
     Alert.alert(
@@ -33,12 +33,12 @@ const CustomDrawerContent = (props) => {
     <DrawerContentScrollView {...props}>
       <View style={styles.header}>
         <Image
-          source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/logo.png')}
+          source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
           style={styles.avatar}
           resizeMode="contain"
         />
-        <Text style={styles.nome}>{usuario?.nome || 'Usuário'}</Text>
-        <Text style={styles.status}>{usuario?.situacao || 'ATIVO'}</Text>
+        <Text style={styles.nome}>{user?.nome || 'Usuário'}</Text>
+        <Text style={styles.status}>{user?.situacao || 'ATIVO'}</Text>
       </View>
       <DrawerItemList {...props} />
 
@@ -56,9 +56,9 @@ const CustomDrawerContent = (props) => {
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="👤 Novo Filiado"
+            label="👤 Novo User"
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
-            onPress={() => props.navigation.navigate('CriarFiliado')}
+            onPress={() => props.navigation.navigate('CriarUser')}
           />
         </>
       )}

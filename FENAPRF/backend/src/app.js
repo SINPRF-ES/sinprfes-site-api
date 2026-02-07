@@ -48,7 +48,7 @@ app.use("/shared", express.static(path.join(process.cwd(), "shared")));
 
 // --- IMPORTAÇÃO DAS ROTAS ---
 const filieseRoutes = require("./routes/filiese.routes");
-const filiadosRoutes = require("./routes/filiados.routes");
+const usersRoutes = require("./routes/users.routes");
 const senhaRoutes = require("./routes/senha.routes");
 const authRoutes = require("./routes/auth.routes");
 const ressarcimentoRoutes = require("./routes/ressarcimento.routes");
@@ -88,9 +88,8 @@ app.use("/api/auth", authRoutes);
 // Filie-se (Público)
 app.use("/api", filieseRoutes);
 
-// Gestão de Filiados
-app.use("/api/filiados", filiadosRoutes);
-app.use("/api/users", filiadosRoutes); // Alias para compatibilidade FENAPRF
+// Gestão de Usuários
+app.use("/api/users", usersRoutes);
 
 // Senha
 app.use("/api/senha", senhaRoutes);

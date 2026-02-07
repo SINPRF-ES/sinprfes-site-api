@@ -15,7 +15,7 @@ BEGIN
 
     -- 3. Garantir criado_por (se estiver faltando ou com nome antigo)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleias' AND column_name = 'criado_por') THEN
-        ALTER TABLE assembleias ADD COLUMN criado_por INTEGER REFERENCES filiados(id);
+        ALTER TABLE assembleias ADD COLUMN criado_por INTEGER REFERENCES users(id);
     END IF;
 
     -- 4. Garantir criado_em (usado no ORDER BY do listar)

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS noticias (
     titulo VARCHAR(255) NOT NULL,
     conteudo TEXT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'RASCUNHO', -- RASCUNHO | PUBLICADA
-    autor_id INTEGER REFERENCES filiados(id),
+    autor_id INTEGER REFERENCES users(id),
     capa_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

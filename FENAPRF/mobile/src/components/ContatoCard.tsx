@@ -2,28 +2,28 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Filiado } from '../types/filiado';
+import { User } from '../types/user';
 import { formatTelefone, onlyDigits, formatCpf } from '../shared/format/formatters';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
 
 interface Props {
-  filiado: Filiado | null;
-  setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isEditing?: boolean;
   isManagement?: boolean;
   hideTitle?: boolean;
 }
 
 const ContatoCard: React.FC<Props> = ({
-  filiado,
-  setFiliado,
+  user,
+  setUser,
   isEditing = false,
   isManagement = false,
   hideTitle = false
 }) => {
   const handlePhoneChange = (field: 'telefone1' | 'telefone2', value: string) => {
     const digits = onlyDigits(value);
-    setFiliado(f => (f ? { ...f, [field]: digits } : null));
+    setUser(f => (f ? { ...f, [field]: digits } : null));
   };
 
   return (
@@ -33,8 +33,8 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Nome Completo</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
-        value={filiado?.name || ''}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, name: text } : null)}
+        value={user?.name || ''}
+        onChangeText={(text) => setUser(f => f ? { ...f, name: text } : null)}
         placeholder="Nome completo"
         editable={isManagement}
         accessibilityLabel="Nome Completo"
@@ -46,8 +46,8 @@ const ContatoCard: React.FC<Props> = ({
       {isManagement ? (
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={filiado?.sexo || ''}
-            onValueChange={(val) => setFiliado(f => f ? { ...f, sexo: val as any } : null)}
+            selectedValue={user?.sexo || ''}
+            onValueChange={(val) => setUser(f => f ? { ...f, sexo: val as any } : null)}
             style={styles.picker}
           >
             <Picker.Item label="-" value="" />
@@ -57,15 +57,15 @@ const ContatoCard: React.FC<Props> = ({
         </View>
       ) : (
         <Text style={styles.inputDisabled}>
-          {filiado?.sexo === 'M' ? '♂️ Masculino' : (filiado?.sexo === 'F' ? '♀️ Feminino' : '—')}
+          {user?.sexo === 'M' ? '♂️ Masculino' : (user?.sexo === 'F' ? '♀️ Feminino' : '—')}
         </Text>
       )}
 
       <Text style={styles.label}>CPF</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
-        value={formatCpf(filiado?.cpf || '')}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, cpf: onlyDigits(text).slice(0, 11) } : null)}
+        value={formatCpf(user?.cpf || '')}
+        onChangeText={(text) => setUser(f => f ? { ...f, cpf: onlyDigits(text).slice(0, 11) } : null)}
         placeholder="000.000.000-00"
         keyboardType="numeric"
         maxLength={14}
@@ -78,11 +78,11 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
-        value={filiado?.data_nascimento ? toBrazilianDate(filiado.data_nascimento) : ''}
+        value={user?.data_nascimento ? toBrazilianDate(user.data_nascimento) : ''}
         onChangeText={(text) => {
           const formatted = formatDateToDdMmYyyy(text);
           const isoDate = toISODate(formatted);
-          setFiliado(f => f ? { ...f, data_nascimento: isoDate || formatted } : null);
+          setUser(f => f ? { ...f, data_nascimento: isoDate || formatted } : null);
         }}
         placeholder="DD/MM/AAAA"
         keyboardType="numeric"
@@ -95,7 +95,7 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Idade</Text>
       <TextInput
         style={styles.inputDisabled}
-        value={calculateAgeBreakdown(filiado?.data_nascimento || null)}
+        value={calculateAgeBreakdown(user?.data_nascimento || null)}
         editable={false}
         accessibilityLabel="Idade"
       />
@@ -103,7 +103,7 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Telefone 1</Text>
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
-        value={isEditing ? formatTelefone(filiado?.telefone1 || '') : (formatTelefone(filiado?.telefone1) || '—')}
+        value={isEditing ? formatTelefone(user?.telefone1 || '') : (formatTelefone(user?.telefone1) || '—')}
         onChangeText={(text) => handlePhoneChange('telefone1', text)}
         placeholder="(00) 00000-0000"
         keyboardType="phone-pad"
@@ -116,7 +116,7 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Telefone 2</Text>
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
-        value={isEditing ? formatTelefone(filiado?.telefone2 || '') : (formatTelefone(filiado?.telefone2) || '—')}
+        value={isEditing ? formatTelefone(user?.telefone2 || '') : (formatTelefone(user?.telefone2) || '—')}
         onChangeText={(text) => handlePhoneChange('telefone2', text)}
         placeholder="Opcional"
         keyboardType="phone-pad"
@@ -129,8 +129,8 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Email</Text>
       <TextInput
         style={styles.input}
-        value={filiado?.email || ''}
-        onChangeText={(text) => setFiliado(f => f ? { ...f, email: text } : null)}
+        value={user?.email || ''}
+        onChangeText={(text) => setUser(f => f ? { ...f, email: text } : null)}
         placeholder="seu@email.com"
         keyboardType="email-address"
         autoCapitalize="none"

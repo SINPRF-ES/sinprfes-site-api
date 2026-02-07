@@ -21,7 +21,7 @@ import { normalizeText, maskCPF } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
 import { useAuth } from '../hooks/useAuth';
 import reportsService from '../services/reportsService';
-import api, { getFiliados } from '../services/apiService';
+import api, { getUsers } from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -36,11 +36,11 @@ interface ReportJob {
 }
 
 export default function RelatoriosScreen() {
-  const { usuario } = useAuth();
+  const { user } = useAuth();
   const [reportType, setReportType] = useState('INDIVIDUAL');
   const [targetValue, setTargetValue] = useState<any>(null);
-  const [allFiliados, setAllFiliados] = useState<any[]>([]);
-  const [filteredFiliados, setFilteredFiliados] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isPickerVisible, setIsPickerVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,49 +69,49 @@ export default function RelatoriosScreen() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const loadFiliados = useCallback(async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setIsSearching(true);
-      const data = await getFiliados(); // Busca filiados ativos
-      setAllFiliados(data);
+      const data = await getUsers(); // Busca users ativos
+      setAllUsers(data);
     } catch (e) {
-      console.error('[Reports.loadFiliados]', e);
+      console.error('[Reports.loadUsers]', e);
     } finally {
       setIsSearching(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isPickerVisible && allFiliados.length === 0) {
-      loadFiliados();
+    if (isPickerVisible && allUsers.length === 0) {
+      loadUsers();
     }
-  }, [isPickerVisible, allFiliados.length, loadFiliados]);
+  }, [isPickerVisible, allUsers.length, loadUsers]);
 
   useEffect(() => {
     if (searchQuery.length >= 2) {
       const term = normalizeText(searchQuery);
       const digits = onlyDigits(searchQuery);
 
-      const filtered = allFiliados.filter(f => {
+      const filtered = allUsers.filter(f => {
         const nomeMatch = normalizeText(f.name || '').includes(term);
         const cpfMatch = digits !== '' && onlyDigits(f.cpf || '').includes(digits);
         return nomeMatch || cpfMatch;
       });
-      setFilteredFiliados(filtered.slice(0, 20));
+      setFilteredUsers(filtered.slice(0, 20));
     } else {
-      setFilteredFiliados([]);
+      setFilteredUsers([]);
     }
-  }, [searchQuery, allFiliados]);
+  }, [searchQuery, allUsers]);
 
   const handleGenerate = async () => {
     let params: any = {};
 
     if (reportType === 'INDIVIDUAL') {
       if (!targetValue?.id) {
-        Alert.alert('Erro', 'Selecione um filiado.');
+        Alert.alert('Erro', 'Selecione um user.');
         return;
       }
-      params.filiadoId = targetValue.id;
+      params.userId = targetValue.id;
     } else if (reportType === 'GLOBAL') {
       // Sem filtro obrigatório
     } else {
@@ -127,7 +127,7 @@ export default function RelatoriosScreen() {
 
     Alert.alert(
       'Gerar Relatório',
-      `O PDF será gerado e enviado para seu e-mail (${usuario?.email || 'cadastrado'}). Deseja continuar?`,
+      `O PDF será gerado e enviado para seu e-mail (${user?.email || 'cadastrado'}). Deseja continuar?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Gerar', onPress: () => processGeneration(params) },
@@ -154,10 +154,10 @@ export default function RelatoriosScreen() {
 
     if (reportType === 'INDIVIDUAL') {
       if (!targetValue?.id) {
-        Alert.alert('Erro', 'Selecione um filiado.');
+        Alert.alert('Erro', 'Selecione um user.');
         return;
       }
-      params.filiadoId = targetValue.id;
+      params.userId = targetValue.id;
     } else if (reportType === 'GLOBAL') {
       // Sem filtro
     } else {
@@ -193,8 +193,8 @@ export default function RelatoriosScreen() {
     const params = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
 
     // Prioriza o nome resolvido (A1)
-    const labelParam = item.report_type === 'INDIVIDUAL' ? 'Filiado' : 'Parâmetro';
-    const value = params.filiadoNome || params.paramDisplay || params.value || params.filiadoId || "-";
+    const labelParam = item.report_type === 'INDIVIDUAL' ? 'User' : 'Parâmetro';
+    const value = params.userNome || params.paramDisplay || params.value || params.userId || "-";
 
     return (
       <View style={styles.historyCard}>
@@ -223,7 +223,7 @@ export default function RelatoriosScreen() {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Buscar Filiado</Text>
+              <Text style={styles.modalTitle}>Buscar User</Text>
               <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -242,7 +242,7 @@ export default function RelatoriosScreen() {
             ) : (
               <View style={{ maxHeight: 300 }}>
                 <FlatList
-                  data={filteredFiliados}
+                  data={filteredUsers}
                   keyExtractor={(item) => String(item.id)}
                   keyboardShouldPersistTaps="handled"
                   contentContainerStyle={{ paddingBottom: 16 }}
@@ -265,7 +265,7 @@ export default function RelatoriosScreen() {
                     <Text style={styles.modalEmptyText}>
                       {searchQuery.length < 2
                         ? "Digite pelo menos 2 caracteres para buscar..."
-                        : "Nenhum filiado encontrado."}
+                        : "Nenhum user encontrado."}
                     </Text>
                   )}
                 />
@@ -295,7 +295,7 @@ export default function RelatoriosScreen() {
                 style={styles.picker}
                 mode="dropdown"
             >
-                <Picker.Item label="👤 Dossiê do Filiado (Individual)" value="INDIVIDUAL" />
+                <Picker.Item label="👤 Dossiê do User (Individual)" value="INDIVIDUAL" />
                 <Picker.Item label="📍 Por Lotação" value="LOTACAO" />
                 <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
                 <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
@@ -308,7 +308,7 @@ export default function RelatoriosScreen() {
                 onPress={() => setIsPickerVisible(true)}
              >
                 <Text style={styles.pickerButtonText}>
-                  {targetValue?.name ? `${targetValue.name} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar filiado...'}
+                  {targetValue?.name ? `${targetValue.name} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar user...'}
                 </Text>
                 <MaterialCommunityIcons name="magnify" size={20} color="#666" />
              </TouchableOpacity>

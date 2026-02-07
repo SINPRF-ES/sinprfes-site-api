@@ -199,9 +199,9 @@
                             btnCancelar.title = "";
                         }
 
-                        // Se for filiado comum, recarrega a planilha restrita
+                        // Se for user comum, recarrega a planilha restrita
                         if (!isManager) {
-                            renderizarPlanilhaFiliado(data);
+                            renderizarPlanilhaUser(data);
                         }
                     } else {
                         resetarEstadoInscricao();
@@ -323,7 +323,7 @@
             }
         }
 
-        function renderizarPlanilhaFiliado(inscricao) {
+        function renderizarPlanilhaUser(inscricao) {
             const wrapper = document.getElementById("tabela-jogos-wrapper");
             if (!wrapper) return;
             if (!inscricao) {
@@ -332,7 +332,7 @@
             }
             renderizarTabela([inscricao]);
 
-            // Oculta botões de export para filiados (se houver)
+            // Oculta botões de export para users (se houver)
             const exportActions = document.getElementById("jogos-export-actions");
             if (exportActions) exportActions.style.display = "none";
         }
@@ -357,7 +357,7 @@
             cardBody.appendChild(container);
 
             if (!isManager) {
-                // Para filiado, a tabela será preenchida pelo carregarInscricao()
+                // Para user, a tabela será preenchida pelo carregarInscricao()
                 const wrapper = document.getElementById("tabela-jogos-wrapper");
                 if (wrapper) wrapper.innerHTML = "<em>Carregando seus dados...</em>";
             }
@@ -409,7 +409,7 @@
 
                             return `
                                 <tr>
-                                    <td style="font-weight:bold;">${i.nome_filiado || "-"}</td>
+                                    <td style="font-weight:bold;">${i.nome_user || "-"}</td>
                                     <td style="text-align:center;">${idade || "-"}</td>
                                     <td>${sexoFormatado}</td>
                                     <td style="font-size:0.85rem;">${modsLabels}</td>
@@ -448,7 +448,7 @@
                 const telefoneFormatado = window.Utils && window.Utils.formatarTelefoneTexto ? window.Utils.formatarTelefoneTexto(i.telefone1) : (i.telefone1 || "");
 
                 return [
-                    i.nome_filiado || "",
+                    i.nome_user || "",
                     idade,
                     sexoFormatado,
                     mods,

@@ -6,7 +6,7 @@ export interface LocalidadeRepasse {
   responsavelId: number | null;
   responsavelNome: string | null;
   responsavelCpf: string | null;
-  filiadosAtivos: number;
+  usersAtivos: number;
   prfTotal: number;
   percentual: number | null;
   creditoMes: number;

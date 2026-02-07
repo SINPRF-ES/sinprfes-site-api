@@ -1,26 +1,25 @@
-// mobile/src/components/FiliadoCard.tsx
+// mobile/src/components/UserCard.tsx
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
-import { Filiado } from '../types/filiado';
-import { UserProfile } from '../hooks/useAuth';
+import { User, UserProfile } from '../types/user';
 import { formatCpf, formatTelefone } from '../shared/format/formatters';
-import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
+import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { calculateAgeBreakdown, formatISOToBRDateTime } from '../utils/date';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
-interface FiliadoCardProps {
-  filiado: Filiado & { situacaoFuncional?: string };
+interface UserCardProps {
+  user: User & { situacaoFuncional?: string };
   currentUserProfile: UserProfile;
-  onEdit: (filiado: Filiado) => void;
+  onEdit: (user: User) => void;
 }
 
-const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, onEdit }) => {
+const UserCard: React.FC<UserCardProps> = ({ user, currentUserProfile, onEdit }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(currentUserProfile);
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 
-  const situacaoNormalizada = normalizeSituacaoFuncional(filiado.situacao_funcional || filiado.situacao);
+  const situacaoNormalizada = normalizeSituacaoFuncional(user.situacao_funcional || user.situacao);
 
   const getBadgeStyle = () => {
     switch (situacaoNormalizada) {
@@ -49,24 +48,24 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
   };
 
   const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
-  const isArquivado = !!filiado.arquivado_em;
+  const isArquivado = !!user.arquivado_em;
 
   return (
     <TouchableOpacity style={[styles.card, getLeftBorderStyle(), isArquivado && styles.cardArquivado]} onPress={toggleExpand} activeOpacity={0.7}>
       <View style={styles.headerContainer}>
         <Image
-          source={{ uri: filiado.avatar_url || 'https://via.placeholder.com/50' }}
+          source={{ uri: user.avatar_url || 'https://via.placeholder.com/50' }}
           style={styles.avatar}
         />
         <View style={styles.infoContainer}>
           <View style={styles.nameAndBadgeContainer}>
-            <Text style={styles.nome} numberOfLines={2}>{filiado.name}</Text>
+            <Text style={styles.nome} numberOfLines={2}>{user.name}</Text>
             <View style={[styles.situacao, getBadgeStyle()]}>
               <Text style={styles.situacaoText}>{situacaoLabel}</Text>
             </View>
           </View>
-          <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
-          <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1) || '—'}</Text>
+          <Text style={styles.lotacao}>Lotação: {user.lotacao || 'Não informada'}</Text>
+          <Text style={styles.detalhe}>Telefone: {formatTelefone(user.telefone1) || '—'}</Text>
         </View>
       </View>
 
@@ -76,35 +75,35 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
             <View style={styles.archiveDetails}>
               <Text style={styles.archiveTitle}>📋 Detalhes do arquivamento</Text>
               <Text style={styles.detalhe}>
-                <Text style={styles.bold}>Arquivado por:</Text> {filiado.arquivado_por_nome || filiado.arquivado_por || '—'}
+                <Text style={styles.bold}>Arquivado por:</Text> {user.arquivado_por_nome || user.arquivado_por || '—'}
               </Text>
               <Text style={styles.detalhe}>
-                <Text style={styles.bold}>Arquivado em:</Text> {formatISOToBRDateTime(filiado.arquivado_em)}
+                <Text style={styles.bold}>Arquivado em:</Text> {formatISOToBRDateTime(user.arquivado_em)}
               </Text>
               <Text style={[styles.detalhe, { marginBottom: 10 }]}>
-                <Text style={styles.bold}>Motivo:</Text> {filiado.arquivado_motivo || '—'}
+                <Text style={styles.bold}>Motivo:</Text> {user.arquivado_motivo || '—'}
               </Text>
             </View>
           )}
 
           {isGestao && (
             <>
-              <Text style={styles.detalhe}>CPF: {formatCpf(filiado.cpf || '')}</Text>
-              <Text style={styles.detalhe}>Email: {filiado.email}</Text>
-              <Text style={styles.detalhe}>Idade: {calculateAgeBreakdown(filiado.data_nascimento)}</Text>
+              <Text style={styles.detalhe}>CPF: {formatCpf(user.cpf || '')}</Text>
+              <Text style={styles.detalhe}>Email: {user.email}</Text>
+              <Text style={styles.detalhe}>Idade: {calculateAgeBreakdown(user.data_nascimento)}</Text>
             </>
           )}
 
           <View style={styles.footer}>
-            {filiado.situacao && (
-              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
-                {filiado.situacao}
+            {user.situacao && (
+              <Text style={[styles.situacao, styles[`situacao${user.situacao.replace(/\s+/g, '')}`]]}>
+                {user.situacao}
               </Text>
             )}
             <View style={styles.buttonContainerSpacer} />
             {isGestao && (
               <View style={styles.editButtonContainer}>
-                <Button title="✏️ Editar" onPress={() => onEdit(filiado)} color="#003366" />
+                <Button title="✏️ Editar" onPress={() => onEdit(user)} color="#003366" />
               </View>
             )}
           </View>
@@ -114,7 +113,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
   );
 };
 
-export default React.memo(FiliadoCard);
+export default React.memo(UserCard);
 
 const styles = StyleSheet.create({
   nomeContainer: {

@@ -1,4 +1,4 @@
-// public/js/area-filiado/cms-admin.js
+// public/js/area-user/cms-admin.js
 (function() {
     const CMSAdmin = {
         async init() {

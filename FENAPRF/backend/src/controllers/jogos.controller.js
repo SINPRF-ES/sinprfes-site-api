@@ -16,8 +16,8 @@ const PERFIS_JOGOS_MANAGER = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"
 function getUserId(req) {
   return (
     req?.user?.id ??
-    req?.user?.filiado_id ??
-    req?.user?.filiadoId ??
+    req?.user?.user_id ??
+    req?.user?.userId ??
     req?.user?.userId ??
     req?.user?.uid ??
     null
@@ -29,14 +29,14 @@ function getUserNome(req) {
 }
 
 /**
- * Registra (ou atualiza) a pré-inscrição do filiado nos jogos.
+ * Registra (ou atualiza) a pré-inscrição do user nos jogos.
  * - Mantém os campos: modalidades, observacoes, familiares, qtd_familiares, sexo
  * - Dispara e-mail de confirmação (best-effort: não derruba a inscrição se falhar)
  */
 exports.registrarInscricao = async (req, res) => {
   try {
     const userId = getUserId(req);
-    const filiadoNome = getUserNome(req);
+    const userNome = getUserNome(req);
 
     if (!userId) {
       log.error("JogosInscricaoErroUserId", { user: req?.user });
@@ -59,9 +59,9 @@ exports.registrarInscricao = async (req, res) => {
 
     const query = `
       INSERT INTO pre_inscricoes_jogos (
-        filiado_id, nome_filiado, modalidades, observacoes, familiares, qtd_familiares, sexo, data_inscricao
+        user_id, nome_user, modalidades, observacoes, familiares, qtd_familiares, sexo, data_inscricao
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-      ON CONFLICT (filiado_id) DO UPDATE SET
+      ON CONFLICT (user_id) DO UPDATE SET
         modalidades = EXCLUDED.modalidades,
         observacoes = EXCLUDED.observacoes,
         familiares = EXCLUDED.familiares,
@@ -73,7 +73,7 @@ exports.registrarInscricao = async (req, res) => {
 
     const { rows } = await pool.query(query, [
       userId,
-      filiadoNome,
+      userNome,
       modalidadesTexto,
       obsLimpa,
       familiaresLimpo,
@@ -90,26 +90,26 @@ exports.registrarInscricao = async (req, res) => {
       const { rows: fRows } = await pool.query(
         `
         SELECT id, nome, email1, email2, telefone1, data_nascimento
-        FROM filiados
+        FROM users
         WHERE id = $1
         LIMIT 1
       `,
         [userId]
       );
 
-      const filiado = fRows && fRows[0];
+      const user = fRows && fRows[0];
 
       // Log diagnóstico (remova depois se quiser)
       log.info("JogosEmailConfirmacaoDebug", {
         userId,
-        filiadoEncontrado: !!filiado,
-        email1: filiado?.email1 || null,
-        email2: filiado?.email2 || null,
+        userEncontrado: !!user,
+        email1: user?.email1 || null,
+        email2: user?.email2 || null,
       });
 
-      if (filiado && (filiado.email1 || filiado.email2)) {
+      if (user && (user.email1 || user.email2)) {
         await enviarEmailConfirmacaoInscricaoJogos({
-          filiado,
+          user,
           inscricao: {
             modalidades: inscricao?.modalidades ?? modalidadesTexto,
             observacoes: inscricao?.observacoes ?? obsLimpa,
@@ -120,8 +120,8 @@ exports.registrarInscricao = async (req, res) => {
           },
         });
       } else {
-        log.warn("EmailJogosConfirmacao: filiado sem email1/email2.", {
-          filiadoId: filiado?.id,
+        log.warn("EmailJogosConfirmacao: user sem email1/email2.", {
+          userId: user?.id,
           userId,
         });
       }
@@ -142,7 +142,7 @@ exports.registrarInscricao = async (req, res) => {
 };
 
 /**
- * Cancela a pré-inscrição do filiado.
+ * Cancela a pré-inscrição do user.
  * - Captura a inscrição antes do DELETE para poder enviar e-mail com contexto.
  * - Dispara e-mail de cancelamento (best-effort).
  */
@@ -162,15 +162,15 @@ exports.cancelarInscricao = async (req, res) => {
         `
         SELECT
           pi.*,
-          f.id as filiado_id,
-          f.nome as filiado_nome,
+          f.id as user_id,
+          f.nome as user_nome,
           f.email1,
           f.email2,
           f.telefone1,
           f.data_nascimento
         FROM pre_inscricoes_jogos pi
-        JOIN filiados f ON pi.filiado_id = f.id
-        WHERE pi.filiado_id = $1
+        JOIN users f ON pi.user_id = f.id
+        WHERE pi.user_id = $1
         LIMIT 1
       `,
         [userId]
@@ -181,7 +181,7 @@ exports.cancelarInscricao = async (req, res) => {
       log.error("JogosCancelarSnapshotErro", e);
     }
 
-    const query = `DELETE FROM pre_inscricoes_jogos WHERE filiado_id = $1`;
+    const query = `DELETE FROM pre_inscricoes_jogos WHERE user_id = $1`;
     await pool.query(query, [userId]);
 
     log.info("JogosInscricaoCancelada", { userId });
@@ -190,9 +190,9 @@ exports.cancelarInscricao = async (req, res) => {
     try {
       if (snapshot && (snapshot.email1 || snapshot.email2)) {
         await enviarEmailCancelamentoInscricaoJogos({
-          filiado: {
-            id: snapshot.filiado_id,
-            nome: snapshot.filiado_nome || snapshot.nome_filiado,
+          user: {
+            id: snapshot.user_id,
+            nome: snapshot.user_nome || snapshot.nome_user,
             email1: snapshot.email1,
             email2: snapshot.email2,
             telefone1: snapshot.telefone1,
@@ -208,8 +208,8 @@ exports.cancelarInscricao = async (req, res) => {
           },
         });
       } else {
-        log.warn("EmailJogosCancelamento: filiado sem email1/email2.", {
-          filiadoId: snapshot?.filiado_id,
+        log.warn("EmailJogosCancelamento: user sem email1/email2.", {
+          userId: snapshot?.user_id,
           userId,
         });
       }
@@ -225,7 +225,7 @@ exports.cancelarInscricao = async (req, res) => {
 };
 
 /**
- * Obtém a inscrição do próprio filiado logado (inclui dados auxiliares do filiado).
+ * Obtém a inscrição do próprio user logado (inclui dados auxiliares do user).
  * IMPORTANTE: inclui data_nascimento para cálculo de idade no frontend.
  */
 exports.obterMinhaInscricao = async (req, res) => {
@@ -244,8 +244,8 @@ exports.obterMinhaInscricao = async (req, res) => {
         f.email1,
         f.email2
       FROM pre_inscricoes_jogos pi
-      JOIN filiados f ON pi.filiado_id = f.id
-      WHERE pi.filiado_id = $1
+      JOIN users f ON pi.user_id = f.id
+      WHERE pi.user_id = $1
       LIMIT 1;
     `;
 
@@ -261,7 +261,7 @@ exports.obterMinhaInscricao = async (req, res) => {
   } catch (err) {
     log.error("JogosMinhaInscricaoErro", err);
     return res.status(500).json({
-      error: Textos?.ERROS_INTERNOS?.LISTAR_FILIADOS || "Erro ao obter inscrição.",
+      error: Textos?.ERROS_INTERNOS?.LISTAR_USERS || "Erro ao obter inscrição.",
     });
   }
 };
@@ -286,8 +286,8 @@ exports.listarInscricoes = async (req, res) => {
         f.email1,
         f.email2
       FROM pre_inscricoes_jogos pi
-      JOIN filiados f ON pi.filiado_id = f.id
-      ORDER BY pi.nome_filiado ASC;
+      JOIN users f ON pi.user_id = f.id
+      ORDER BY pi.nome_user ASC;
     `;
 
     const { rows } = await pool.query(query);
@@ -298,7 +298,7 @@ exports.listarInscricoes = async (req, res) => {
   } catch (err) {
     log.error("JogosListagemErro", err);
     return res.status(500).json({
-      error: Textos?.ERROS_INTERNOS?.LISTAR_FILIADOS || "Erro ao listar inscrições.",
+      error: Textos?.ERROS_INTERNOS?.LISTAR_USERS || "Erro ao listar inscrições.",
     });
   }
 };

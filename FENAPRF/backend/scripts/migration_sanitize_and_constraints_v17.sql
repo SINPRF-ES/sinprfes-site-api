@@ -4,7 +4,7 @@
 -- ============================================================================
 
 -- 1. Normalize existing data to UPPERCASE and canonical values
-UPDATE filiados
+UPDATE users
 SET
   situacao = CASE
     WHEN UPPER(situacao) IN ('ATIVO', 'ATIVOS') THEN 'ATIVO'
@@ -18,7 +18,7 @@ SET
     WHEN UPPER(perfil_acesso) = 'FUNCIONARIO' THEN 'FUNCIONARIO'
     WHEN UPPER(perfil_acesso) = 'ORGANIZADOR' THEN 'ORGANIZADOR'
     WHEN UPPER(perfil_acesso) = 'COMUNICADOR' THEN 'COMUNICADOR'
-    ELSE 'FILIADO'
+    ELSE 'USER'
   END,
   lotacao = CASE
     WHEN UPPER(lotacao) LIKE '%VIANA%' THEN 'DEL 01 - Viana'
@@ -30,17 +30,17 @@ SET
   END;
 
 -- 2. Add CHECK constraints to prevent future divergences
-ALTER TABLE filiados DROP CONSTRAINT IF EXISTS chk_filiados_situacao;
-ALTER TABLE filiados ADD CONSTRAINT chk_filiados_situacao
+ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_situacao;
+ALTER TABLE users ADD CONSTRAINT chk_users_situacao
   CHECK (situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA'));
 
-ALTER TABLE filiados DROP CONSTRAINT IF EXISTS chk_filiados_perfil;
-ALTER TABLE filiados ADD CONSTRAINT chk_filiados_perfil
-  CHECK (perfil_acesso IN ('ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'FILIADO', 'ORGANIZADOR', 'COMUNICADOR'));
+ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_perfil;
+ALTER TABLE users ADD CONSTRAINT chk_users_perfil
+  CHECK (perfil_acesso IN ('ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'USER', 'ORGANIZADOR', 'COMUNICADOR'));
 
-ALTER TABLE filiados DROP CONSTRAINT IF EXISTS chk_filiados_lotacao;
-ALTER TABLE filiados ADD CONSTRAINT chk_filiados_lotacao
+ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_lotacao;
+ALTER TABLE users ADD CONSTRAINT chk_users_lotacao
   CHECK (lotacao IN ('SEDE', 'DEL 01 - Viana', 'DEL 02 - Serra', 'DEL 03 - Guarapari', 'DEL 04 - Linhares'));
 
 -- 3. Ensure CPF is numeric-only
-UPDATE filiados SET cpf = regexp_replace(cpf, '\D', '', 'g') WHERE cpf ~ '\D';
+UPDATE users SET cpf = regexp_replace(cpf, '\D', '', 'g') WHERE cpf ~ '\D';

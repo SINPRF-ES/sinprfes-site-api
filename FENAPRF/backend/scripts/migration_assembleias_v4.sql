@@ -34,7 +34,7 @@ BEGIN
 
     -- 2. Tabela assembleia_quoruns
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_quoruns' AND column_name = 'gerado_por_user_id') THEN
-        ALTER TABLE assembleia_quoruns ADD COLUMN gerado_por_user_id INTEGER REFERENCES filiados(id);
+        ALTER TABLE assembleia_quoruns ADD COLUMN gerado_por_user_id INTEGER REFERENCES users(id);
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_quoruns' AND column_name = 'encerrado_em') THEN
@@ -72,10 +72,10 @@ BEGIN
     CREATE TABLE assembleia_mesa (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         assembleia_id UUID NOT NULL REFERENCES assembleias(id) ON DELETE CASCADE,
-        presidente_user_id INTEGER REFERENCES filiados(id),
-        secretario_user_id INTEGER REFERENCES filiados(id),
+        presidente_user_id INTEGER REFERENCES users(id),
+        secretario_user_id INTEGER REFERENCES users(id),
         definida_em TIMESTAMP DEFAULT NOW(),
-        definida_por_user_id INTEGER REFERENCES filiados(id),
+        definida_por_user_id INTEGER REFERENCES users(id),
         UNIQUE(assembleia_id)
     );
 
@@ -88,7 +88,7 @@ BEGIN
     ALTER TABLE assembleia_votacoes ADD CONSTRAINT chk_status_vot CHECK (status IN ('ATIVA', 'ENCERRADA', 'AGUARDANDO', 'RETIRADA'));
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_votacoes' AND column_name = 'iniciada_por_user_id') THEN
-        ALTER TABLE assembleia_votacoes ADD COLUMN iniciada_por_user_id INTEGER REFERENCES filiados(id);
+        ALTER TABLE assembleia_votacoes ADD COLUMN iniciada_por_user_id INTEGER REFERENCES users(id);
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_votacoes' AND column_name = 'duracao_segundos') THEN
@@ -112,15 +112,15 @@ BEGIN
     ALTER TABLE assembleia_propostas ADD CONSTRAINT chk_status_proposta CHECK (status IN ('ATIVA', 'RETIRADA', 'APROVADA', 'REJEITADA', 'PENDENTE', 'VOTADA'));
 
     -- 8. Tabela assembleia_votos (ajuste de FK se necessário, mas parece ok)
-    -- O nome do campo é filiado_id, o que é consistente com o resto do sistema
+    -- O nome do campo é user_id, o que é consistente com o resto do sistema
 
     -- 9. Auditoria (Garantir campos)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_auditoria' AND column_name = 'user_id') THEN
-        -- Se filiado_id existe, podemos renomear ou apenas adicionar user_id
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_auditoria' AND column_name = 'filiado_id') THEN
-            ALTER TABLE assembleia_auditoria RENAME COLUMN filiado_id TO user_id;
+        -- Se user_id existe, podemos renomear ou apenas adicionar user_id
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleia_auditoria' AND column_name = 'user_id') THEN
+            ALTER TABLE assembleia_auditoria RENAME COLUMN user_id TO user_id;
         ELSE
-            ALTER TABLE assembleia_auditoria ADD COLUMN user_id INTEGER REFERENCES filiados(id);
+            ALTER TABLE assembleia_auditoria ADD COLUMN user_id INTEGER REFERENCES users(id);
         END IF;
     END IF;
 

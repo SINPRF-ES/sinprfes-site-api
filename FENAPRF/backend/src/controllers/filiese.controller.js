@@ -59,7 +59,7 @@ exports.enviarFichaFiliacao = async (req, res) => {
       lotacao: dados.lotacao || "",
 
       // Contatos
-      email_destino: emailPessoal,    // filiado (cc)
+      email_destino: emailPessoal,    // user (cc)
       email_pessoal: emailPessoal,    // redundante para segurança
       email_funcional: normalizarEmail(dados.email_funcional || ""),
       telefone1: dados.telefone1,

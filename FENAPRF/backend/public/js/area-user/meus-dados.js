@@ -18,41 +18,41 @@
         }
     }
 
-    function compactarDependentes(filiado) {
+    function compactarDependentes(user) {
         const dependentesValidos = [];
         for (let i = 1; i <= 5; i++) {
-            if (filiado[`dep${i}_nome`]) {
+            if (user[`dep${i}_nome`]) {
                 dependentesValidos.push({
-                    nome: filiado[`dep${i}_nome`],
-                    cpf: filiado[`dep${i}_cpf`],
-                    data_nascimento: filiado[`dep${i}_data_nascimento`],
-                    parentesco: filiado[`dep${i}_parentesco`]
+                    nome: user[`dep${i}_nome`],
+                    cpf: user[`dep${i}_cpf`],
+                    data_nascimento: user[`dep${i}_data_nascimento`],
+                    parentesco: user[`dep${i}_parentesco`]
                 });
             }
         }
 
         // Limpa todos os slots originais
         for (let i = 1; i <= 5; i++) {
-            filiado[`dep${i}_nome`] = null;
-            filiado[`dep${i}_cpf`] = null;
-            filiado[`dep${i}_data_nascimento`] = null;
-            filiado[`dep${i}_parentesco`] = null;
+            user[`dep${i}_nome`] = null;
+            user[`dep${i}_cpf`] = null;
+            user[`dep${i}_data_nascimento`] = null;
+            user[`dep${i}_parentesco`] = null;
         }
 
         // Preenche sequencialmente
         dependentesValidos.forEach((dep, idx) => {
             const i = idx + 1;
-            filiado[`dep${i}_nome`] = dep.nome;
-            filiado[`dep${i}_cpf`] = dep.cpf;
-            filiado[`dep${i}_data_nascimento`] = dep.data_nascimento;
-            filiado[`dep${i}_parentesco`] = dep.parentesco;
+            user[`dep${i}_nome`] = dep.nome;
+            user[`dep${i}_cpf`] = dep.cpf;
+            user[`dep${i}_data_nascimento`] = dep.data_nascimento;
+            user[`dep${i}_parentesco`] = dep.parentesco;
         });
     }
 
     async function carregarMeusDados() {
         if (!window.Api.apiFetch) return null;
 
-        const conteudo = document.getElementById("area-filiado-conteudo");
+        const conteudo = document.getElementById("area-user-conteudo");
         const alerta = document.getElementById("alerta-endereco-desatualizado");
 
         if (!conteudo) return null;
@@ -60,7 +60,7 @@
         if (alerta) alerta.style.display = 'none';
 
         try {
-            const resp = await window.Api.apiFetch("/api/filiados/me");
+            const resp = await window.Api.apiFetch("/api/users/me");
             if (!resp.ok) throw new Error();
             const dados = await resp.json();
 
@@ -316,7 +316,7 @@
             ? `<img src="${avatarFullUrl}" alt="Avatar" onerror="this.remove();">`
             : `<div class="avatar-fallback"></div>`;
 
-        // AgeUtils é carregado como global em area-filiado.html
+        // AgeUtils é carregado como global em area-user.html
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
         const situacaoLower = situacaoUpper.toLowerCase();
@@ -593,7 +593,7 @@
 
             if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
                 try {
-                    const r = await window.Api.apiFetch(`/api/filiados/${dados.id}/dependentes`, {
+                    const r = await window.Api.apiFetch(`/api/users/${dados.id}/dependentes`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ indices: indicesParaExcluir })
@@ -699,7 +699,7 @@
             }
 
             try {
-                const r = await window.Api.apiFetch("/api/filiados/me", { method: "PUT", body: payload });
+                const r = await window.Api.apiFetch("/api/users/me", { method: "PUT", body: payload });
                 if (r.ok) {
                     await carregarMeusDados();
                     alert("Dados salvos com sucesso!");
@@ -742,7 +742,7 @@
             fd.append("avatar", file);
 
             try {
-                const r = await window.Api.apiFetch("/api/filiados/me/avatar", { method: "POST", body: fd });
+                const r = await window.Api.apiFetch("/api/users/me/avatar", { method: "POST", body: fd });
                 if (r.ok) {
                     alert("Foto atualizada com sucesso!");
                     btnSalvarFoto.style.display = "none";
@@ -766,7 +766,7 @@
           btnRemoverFoto.innerText = "Removendo...";
 
           try {
-            const r = await window.Api.apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
+            const r = await window.Api.apiFetch("/api/users/me/avatar", { method: "DELETE" });
             if (r.ok) {
               alert("Foto removida com sucesso!");
               previewContainer.innerHTML = `<div class="avatar-fallback"></div>`;
@@ -811,8 +811,8 @@
     global.MeusDados = {
         carregarMeusDados,
         labelSituacaoFuncional: (valor) => `Situação funcional do servidor: ${(valor || 'ATIVO').toString().toUpperCase()}`,
-        labelEstadoCadastro: (filiado) => {
-            const raw = (filiado && (filiado.estado_cadastro || (filiado.arquivado_em ? 'ARQUIVADO' : 'CADASTRO_ATIVO'))) || 'CADASTRO_ATIVO';
+        labelEstadoCadastro: (user) => {
+            const raw = (user && (user.estado_cadastro || (user.arquivado_em ? 'ARQUIVADO' : 'CADASTRO_ATIVO'))) || 'CADASTRO_ATIVO';
             const txt = raw === 'CADASTRO_ATIVO' ? 'CADASTRO ATIVO' : 'ARQUIVADO';
             return `Estado do cadastro: ${txt}`;
         }

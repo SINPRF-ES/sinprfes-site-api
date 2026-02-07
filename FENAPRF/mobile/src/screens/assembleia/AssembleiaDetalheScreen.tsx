@@ -18,7 +18,7 @@ import * as Sharing from 'expo-sharing';
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { id } = route.params;
-  const { usuario, token } = useAuth();
+  const { user, token } = useAuth();
   const [assembleia, setAssembleia] = useState<Assembleia | null>(null);
   const [estado, setEstado] = useState<AssembleiaEstado | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,11 +26,11 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [actionLoading, setActionLoading] = useState(false);
   const [editalLoading, setEditalLoading] = useState(false);
 
-  const perfil = (usuario?.perfil_acesso || '').toUpperCase();
+  const perfil = (user?.perfil_acesso || '').toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
-  const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
-  const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
-  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
+  const isElegivel = ['DIRETORIA', 'USER', 'ORGANIZADOR'].includes(perfil);
+  const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
+  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
   const canGenerateReport = (assembleia?.estado === 'ENCERRADA' || assembleia?.estado === 'EM_CURSO' || assembleia?.estado === 'ABERTA') && perfil !== 'COMUNICADOR';
 
   const [estadoLoading, setEstadoLoading] = useState(false);
@@ -50,7 +50,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      logger.info('ASSEMBLEIA_DETALHE_FETCH_START', { id, profile: usuario?.perfil_acesso });
+      logger.info('ASSEMBLEIA_DETALHE_FETCH_START', { id, profile: user?.perfil_acesso });
 
       // Detalhe básico é obrigatório
       const data = await getAssembleiaDetalhe(id);
@@ -289,7 +289,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
       }
     } else if (assembleia && canGenerateReport) {
-      // Caso não seja diretoria nem presidente (ex: FILIADO), mas pode gerar relatório
+      // Caso não seja diretoria nem presidente (ex: USER), mas pode gerar relatório
       actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
     }
     navigation.setOptions({
@@ -406,7 +406,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         <View style={styles.tokenCardVigente}>
             <Text style={styles.tokenLabelVigente}>🔑 Token de Presença Vigente</Text>
             <Text style={styles.tokenValueVigente}>{estado?.quorumVigente?.token}</Text>
-            <Text style={styles.tokenHintVigente}>Compartilhe este código com os filiados presentes</Text>
+            <Text style={styles.tokenHintVigente}>Compartilhe este código com os users presentes</Text>
         </View>
       )}
 
@@ -481,7 +481,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                                 {estado.quorumVigente.tipo_chamada === 'PRIMEIRA' ? '1ª Chamada (Qualificado)' : '2ª Chamada (Real)'}
                             </Text>
                             <Text style={styles.quorumStatus}>
-                                Total de Filiados Aptos: {estado.quorumVigente.quorum_total_ativos || 0}
+                                Total de Users Aptos: {estado.quorumVigente.quorum_total_ativos || 0}
                             </Text>
                             <Text style={styles.quorumStatus}>
                                 Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}

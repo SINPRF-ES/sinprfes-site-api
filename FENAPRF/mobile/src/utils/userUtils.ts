@@ -1,4 +1,4 @@
-// mobile/src/utils/filiadoUtils.ts
+// mobile/src/utils/userUtils.ts
 
 /**
  * Normaliza a situação funcional para os valores canônicos: ATIVO, VETERANO, PENSIONISTA.
@@ -17,22 +17,22 @@ export function normalizeSituacaoFuncional(value?: string | null): 'ATIVO' | 'VE
 }
 
 /**
- * Canoniza o ID do filiado para string numérica, garantindo consistência
+ * Canoniza o ID do user para string numérica, garantindo consistência
  * entre o app (que prefere strings) e o backend (que usa INTEGER/SERIAL).
  */
-export function getCanonicalFiliadoId(obj: any): string {
+export function getCanonicalUserId(obj: any): string {
   if (!obj) return '';
-  // Se for um objeto (filiado ou usuario), pega o .id
+  // Se for um objeto (user ou user), pega o .id
   const id = typeof obj === 'object' ? obj.id : obj;
   if (id === undefined || id === null) return '';
   return String(id);
 }
 
 /**
- * Alias para getCanonicalFiliadoId para expressar intenção de parsear um ID vindo de rota.
+ * Alias para getCanonicalUserId para expressar intenção de parsear um ID vindo de rota.
  */
-export function parseCanonicalFiliadoId(id: any): string {
-  return getCanonicalFiliadoId(id);
+export function parseCanonicalUserId(id: any): string {
+  return getCanonicalUserId(id);
 }
 
 /**
@@ -43,6 +43,9 @@ export const ROLES = {
   DIRETORIA: 'DIRETORIA',
   COLABORADOR: 'COLABORADOR',
   CONSELHEIRO: 'CONSELHEIRO',
+  FUNCIONARIO: 'FUNCIONARIO',
+  ORGANIZADOR: 'ORGANIZADOR',
+  COMUNICADOR: 'COMUNICADOR',
 };
 
 /**

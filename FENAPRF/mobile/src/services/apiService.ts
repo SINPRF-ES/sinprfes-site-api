@@ -72,7 +72,7 @@ api.interceptors.request.use(
     logger.info(`API_REQ: ${method?.toUpperCase()} ${url}`, {
       params: maskSensitiveData(params),
       dataKeys: maskedDataKeys,
-      profile: sessao?.usuario?.perfil_acesso
+      profile: sessao?.user?.perfil_acesso
     });
     config.meta = { requestStartedAt: new Date().getTime() };
 
@@ -213,16 +213,16 @@ api.interceptors.response.use(
  * Busca a lista de usuários (FENAPRF).
  * A API retornará os campos de acordo com o perfil do usuário logado.
  */
-export const getFiliados = async (params?: any) => {
+export const getUsers = async (params?: any) => {
   const response = await api.get('/api/users', { params });
   return response.data.users || response.data || [];
 };
 
-export const criarFiliado = async (userData) => {
+export const criarUser = async (userData: any) => {
   return await api.post('/api/users', userData);
 };
 
-export const atualizarFiliado = async (id, userData) => {
+export const atualizarUser = async (id: string, userData: any) => {
   if (__DEV__) {
     console.log('--- [DEV] Payload para atualizarUser ---');
     console.log('ID:', id);
@@ -232,11 +232,11 @@ export const atualizarFiliado = async (id, userData) => {
   return await api.put(`/api/users/${id}`, userData);
 };
 
-export const arquivarFiliado = async (id, motivo) => {
+export const arquivarUser = async (id: string, motivo: string) => {
   return await api.post(`/api/users/${id}/arquivar`, { motivo });
 };
 
-export const desarquivarFiliado = async (id, motivo) => {
+export const desarquivarUser = async (id: string, motivo: string) => {
   return await api.post(`/api/users/${id}/desarquivar`, { motivo });
 };
 

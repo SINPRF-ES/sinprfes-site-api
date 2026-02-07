@@ -1,24 +1,25 @@
 // src/components/HeaderInfo.tsx
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
-import { Filiado } from '../types/filiado';
-import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
+import { User } from '../types/user';
+import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { useAuth } from '../hooks/useAuth';
 import Badge from './Badge';
 
 interface Props {
-  filiado: Filiado | null;
+  user: User | null;
 }
 
-const HeaderInfo: React.FC<Props> = ({ filiado }) => {
-  const { usuario } = useAuth();
+const HeaderInfo: React.FC<Props> = ({ user: userProp }) => {
+  const { user: authUser } = useAuth();
+  const user = userProp || authUser;
 
-  if (!filiado) {
+  if (!user) {
     return null;
   }
 
-  const situacao = normalizeSituacaoFuncional(filiado.situacao_funcional || filiado.situacao);
-  const perfil = (usuario?.perfil_acesso || 'FILIADO').toUpperCase();
+  const situacao = normalizeSituacaoFuncional(user.situacao_funcional || user.situacao);
+  const perfil = (user?.perfil_acesso || 'USER').toUpperCase();
 
   const getSituacaoVariant = (s: string) => {
     switch (s) {
@@ -32,11 +33,11 @@ const HeaderInfo: React.FC<Props> = ({ filiado }) => {
   return (
     <View style={styles.container}>
       <Image
-        source={filiado.avatar_url ? { uri: filiado.avatar_url } : require('../../assets/logo.png')}
+        source={user.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
         style={styles.avatar}
         resizeMode="cover"
       />
-      <Text style={styles.nome}>{filiado.name || '—'}</Text>
+      <Text style={styles.nome}>{user.name || '—'}</Text>
       <Text style={styles.perfil}>{perfil}</Text>
 
       <Badge

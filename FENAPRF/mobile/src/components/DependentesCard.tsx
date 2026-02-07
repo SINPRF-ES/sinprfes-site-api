@@ -2,16 +2,16 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Filiado } from '../types/filiado';
+import { User } from '../types/user';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
 import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate, calculateAgeBreakdown } from '../utils/date';
 import { PARENTESCO_OPTIONS, normalizeParentesco } from '../shared/parentesco';
 
 // Subcomponente para cada item de dependente
-const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
+const DependenteItem = ({ user, setUser, index, isEditing = false }) => {
   const handleDateChange = (text: string) => {
     const formatted = formatDateToDdMmYyyy(text);
-    setFiliado(f => {
+    setUser(f => {
       if (!f) return null;
       return { ...f, [`dep${index}_data_nascimento`]: formatted };
     });
@@ -22,7 +22,7 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
     if (field === 'cpf') {
       finalValue = finalValue.slice(0, 11);
     }
-    setFiliado(f => {
+    setUser(f => {
       if (!f) return null;
       return { ...f, [`dep${index}_${field}`]: finalValue };
     });
@@ -33,7 +33,7 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
     ...PARENTESCO_OPTIONS.map(opt => ({ label: opt.label, value: opt.value }))
   ];
 
-  const rawValue = filiado?.[`dep${index}_parentesco`] || '';
+  const rawValue = user?.[`dep${index}_parentesco`] || '';
   const currentParentescoValue = normalizeParentesco(rawValue);
 
   // No site, se for uma opção padrão, o select mostra ela. Se não for, e tiver valor, mostra "OUTRO".
@@ -58,7 +58,7 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
         placeholder="Nome completo"
-        value={filiado?.[`dep${index}_nome`] || ''}
+        value={user?.[`dep${index}_nome`] || ''}
         onChangeText={(text) => handleDependentChange('nome', text)}
         editable={isEditing}
         accessibilityLabel={`Nome do Dependente ${index}`}
@@ -68,7 +68,7 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
         placeholder="apenas números"
-        value={formatCpf(filiado?.[`dep${index}_cpf`] || '')}
+        value={formatCpf(user?.[`dep${index}_cpf`] || '')}
         onChangeText={(text) => handleDependentChange('cpf', text, true)}
         keyboardType="numeric"
         maxLength={14}
@@ -80,7 +80,7 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
         placeholder="DD/MM/AAAA"
-        value={toBrazilianDate(filiado?.[`dep${index}_data_nascimento`] || '')}
+        value={toBrazilianDate(user?.[`dep${index}_data_nascimento`] || '')}
         onChangeText={handleDateChange}
         keyboardType="numeric"
         maxLength={10}
@@ -91,7 +91,7 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
       <Text style={styles.label}>Idade</Text>
       <TextInput
         style={styles.inputDisabled}
-        value={calculateAgeBreakdown(filiado?.[`dep${index}_data_nascimento`] || null)}
+        value={calculateAgeBreakdown(user?.[`dep${index}_data_nascimento`] || null)}
         editable={false}
         accessibilityLabel={`Idade do Dependente ${index}`}
       />
@@ -126,12 +126,12 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
   );
 };
 
-const DependentesCard: React.FC<{filiado: Filiado | null, setFiliado: any, hideTitle?: boolean, cardStyle?: any, isEditing?: boolean}> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {}, isEditing = false }) => {
+const DependentesCard: React.FC<{user: User | null, setUser: any, hideTitle?: boolean, cardStyle?: any, isEditing?: boolean}> = ({ user, setUser, hideTitle = false, cardStyle = {}, isEditing = false }) => {
   return (
     <View style={[styles.card, cardStyle]}>
       {!hideTitle && <Text style={styles.cardTitle}>Dependentes</Text>}
       {[1, 2, 3, 4, 5].map(i => (
-        <DependenteItem key={i} index={i} filiado={filiado} setFiliado={setFiliado} isEditing={isEditing} />
+        <DependenteItem key={i} index={i} user={user} setUser={setUser} isEditing={isEditing} />
       ))}
     </View>
   );

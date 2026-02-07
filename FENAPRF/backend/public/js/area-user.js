@@ -18,7 +18,7 @@
         const { obterUserInfo, exibirAlertaFlutuante } = window.Utils || {};
         const { configurarNavegacao } = window.Navegacao || {};
         const { carregarMeusDados } = window.MeusDados || {};
-        const { inicializarFiliados } = window.FiliadosAdmin || {};
+        const { inicializarUsers } = window.UsersAdmin || {};
         const { inicializarRessarcimento } = window.Ressarcimento || {};
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
@@ -30,7 +30,7 @@
         const { Notificacoes } = window || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
-        let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
+        let perfil = (userInfo.perfil_acesso || userInfo.perfil || "USER").toUpperCase();
 
         console.log("Perfil inicial (Cache):", perfil);
 
@@ -39,7 +39,7 @@
             configurarNavegacao((abaAlvo) => {
                 console.log("Navegando para:", abaAlvo);
                 if (abaAlvo === 'sec-meus-dados' && carregarMeusDados) carregarMeusDados();
-                else if (abaAlvo === 'sec-filiados' && inicializarFiliados) inicializarFiliados(perfil);
+                else if (abaAlvo === 'sec-users' && inicializarUsers) inicializarUsers(perfil);
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
@@ -73,7 +73,7 @@
                         console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
                         perfil = perfilReal;
                         // Força re-render do menu/módulos se necessário
-                        if (inicializarFiliados) inicializarFiliados(perfil);
+                        if (inicializarUsers) inicializarUsers(perfil);
                         if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                     }
                 }

@@ -454,7 +454,7 @@ async function gerarPdfFichaFiliacao(dados) {
 
     linha(doc);
 
-    doc.font("Helvetica-Bold").fontSize(12).text("Dados do Filiado:");
+    doc.font("Helvetica-Bold").fontSize(12).text("Dados do User:");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
 
@@ -489,7 +489,7 @@ async function gerarPdfFichaFiliacao(dados) {
       .font("Helvetica")
       .fontSize(11)
       .text(
-        "Declaro estar ciente e de acordo com o Estatuto Social do SINPRF/ES, bem como com as normas internas relativas à contribuição e aos direitos e deveres dos filiados.",
+        "Declaro estar ciente e de acordo com o Estatuto Social do SINPRF/ES, bem como com as normas internas relativas à contribuição e aos direitos e deveres dos users.",
         { align: "justify" }
       );
     doc.moveDown(2);
@@ -506,7 +506,7 @@ async function gerarPdfFichaFiliacao(dados) {
     doc.text("_____________________________________________", {
       align: "center",
     });
-    doc.text("Assinatura do Filiado", { align: "center" });
+    doc.text("Assinatura do User", { align: "center" });
 
     doc.moveDown(2);
     doc
@@ -569,8 +569,8 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
 
     linha(doc);
 
-    // Dados do filiado
-    doc.font("Helvetica-Bold").fontSize(12).text("Dados do Filiado:");
+    // Dados do user
+    doc.font("Helvetica-Bold").fontSize(12).text("Dados do User:");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
     doc.text(`Nome: ${dados.nome || ""}`);
@@ -829,7 +829,7 @@ async function gerarPdfRelatorioAssembleia(dados) {
 
             doc.font("Helvetica-Bold").fontSize(10).text(`Fase: ${tipoDesc}`);
             doc.font("Helvetica").fontSize(10).text(`Início: ${dataHora} | Token: ${q.token}`);
-            doc.text(`Filiados Aptos: ${q.quorum_total_ativos || '-'} | Mínimo Necessário: ${q.quorum_necessario || 'Qualquer número'}`);
+            doc.text(`Users Aptos: ${q.quorum_total_ativos || '-'} | Mínimo Necessário: ${q.quorum_necessario || 'Qualquer número'}`);
             doc.text(`Total de presentes registrados: ${q.presentes?.length || 0}`);
 
             if (q.presentes && q.presentes.length > 0) {
@@ -886,11 +886,11 @@ async function gerarPdfRelatorioAssembleia(dados) {
 // ------------------------------------------------------------------
 
 /**
- * PDF: DOSSIÊ DO FILIADO
+ * PDF: DOSSIÊ DO USER
  */
-async function gerarPdfDossieFiliado(filiado, options = {}) {
+async function gerarPdfDossieUser(user, options = {}) {
   const { podeVerCpf = false } = options;
-  const codigo = gerarCodigoVerificacao(filiado, "DOSSIE");
+  const codigo = gerarCodigoVerificacao(user, "DOSSIE");
 
   const pdfBuffer = await new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -904,18 +904,18 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
     doc.on("error", reject);
 
     doc.moveDown(2);
-    doc.font("Helvetica-Bold").fontSize(16).text("Dossiê do Filiado", { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(16).text("Dossiê do User", { align: "center" });
     doc.moveDown(1);
 
     // 1. Identificação
     doc.font("Helvetica-Bold").fontSize(12).text("1. Identificação");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Nome: ${filiado.nome || ""}`);
-    doc.text(`CPF: ${podeVerCpf ? formatarCPF(filiado.cpf) : "***.***.***-**"}`);
-    doc.text(`Matrícula (SIAPE): ${filiado.siape || "-"}`);
-    doc.text(`Sexo: ${filiado.sexo === 'M' ? 'Masculino' : (filiado.sexo === 'F' ? 'Feminino' : '-')}`);
-    doc.text(`Data de Nascimento: ${formatDateSafe(filiado.data_nascimento)}`);
+    doc.text(`Nome: ${user.nome || ""}`);
+    doc.text(`CPF: ${podeVerCpf ? formatarCPF(user.cpf) : "***.***.***-**"}`);
+    doc.text(`Matrícula (SIAPE): ${user.siape || "-"}`);
+    doc.text(`Sexo: ${user.sexo === 'M' ? 'Masculino' : (user.sexo === 'F' ? 'Feminino' : '-')}`);
+    doc.text(`Data de Nascimento: ${formatDateSafe(user.data_nascimento)}`);
     doc.moveDown(1);
     linha(doc);
 
@@ -923,8 +923,8 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
     doc.font("Helvetica-Bold").fontSize(12).text("2. Dados Funcionais");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Lotação: ${filiado.lotacao || "SEDE"}`);
-    doc.text(`Situação Funcional: ${filiado.situacao || "ATIVO"}`);
+    doc.text(`Lotação: ${user.lotacao || "SEDE"}`);
+    doc.text(`Situação Funcional: ${user.situacao || "ATIVO"}`);
     doc.moveDown(1);
     linha(doc);
 
@@ -932,13 +932,13 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
     doc.font("Helvetica-Bold").fontSize(12).text("3. Contatos e Endereço");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`E-mail 1: ${filiado.email1 || "-"}`);
-    doc.text(`E-mail 2: ${filiado.email2 || "-"}`);
-    doc.text(`Telefone 1: ${filiado.telefone1 ? formatarTelefone(filiado.telefone1) : "-"}`);
-    doc.text(`Telefone 2: ${filiado.telefone2 ? formatarTelefone(filiado.telefone2) : "-"}`);
+    doc.text(`E-mail 1: ${user.email1 || "-"}`);
+    doc.text(`E-mail 2: ${user.email2 || "-"}`);
+    doc.text(`Telefone 1: ${user.telefone1 ? formatarTelefone(user.telefone1) : "-"}`);
+    doc.text(`Telefone 2: ${user.telefone2 ? formatarTelefone(user.telefone2) : "-"}`);
     doc.moveDown(0.5);
-    doc.text(`Endereço: ${filiado.logradouro_bairro || ""}, nº ${filiado.numero || ""} ${filiado.complemento || ""}`);
-    doc.text(`Cidade: ${filiado.cidade || ""} - UF: ${filiado.uf || ""} | CEP: ${filiado.cep || ""}`);
+    doc.text(`Endereço: ${user.logradouro_bairro || ""}, nº ${user.numero || ""} ${user.complemento || ""}`);
+    doc.text(`Cidade: ${user.cidade || ""} - UF: ${user.uf || ""} | CEP: ${user.cep || ""}`);
     doc.moveDown(1);
     linha(doc);
 
@@ -948,11 +948,11 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
     doc.font("Helvetica").fontSize(11);
     let temDependente = false;
     for (let i = 1; i <= 5; i++) {
-        if (filiado[`dep${i}_nome`]) {
+        if (user[`dep${i}_nome`]) {
             temDependente = true;
-            const parentescoLabel = humanizeParentesco(filiado[`dep${i}_parentesco`]);
-            doc.text(`${i}. ${filiado[`dep${i}_nome`]} (${parentescoLabel})`);
-            doc.text(`   CPF: ${podeVerCpf ? formatarCPF(filiado[`dep${i}_cpf`]) : "***.***.***-**"} | Nasc: ${formatDateSafe(filiado[`dep${i}_data_nascimento`])}`);
+            const parentescoLabel = humanizeParentesco(user[`dep${i}_parentesco`]);
+            doc.text(`${i}. ${user[`dep${i}_nome`]} (${parentescoLabel})`);
+            doc.text(`   CPF: ${podeVerCpf ? formatarCPF(user[`dep${i}_cpf`]) : "***.***.***-**"} | Nasc: ${formatDateSafe(user[`dep${i}_data_nascimento`])}`);
         }
     }
     if (!temDependente) doc.text("Nenhum dependente cadastrado.");
@@ -962,7 +962,7 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
 
   return await aplicarLayoutInstitucional(pdfBuffer, {
     codigoVerificacao: codigo,
-    tipoDocumento: "Dossiê do Filiado",
+    tipoDocumento: "Dossiê do User",
   });
 }
 
@@ -1006,7 +1006,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
 
         doc.font("Helvetica").fontSize(11);
         doc.text(`Efetivo total: ${r.prfTotal !== null ? String(r.prfTotal) : "Não informado"}`, { align: 'left' });
-        doc.text(`Filiados cadastrados: ${r.filiadosAtivos !== null ? String(r.filiadosAtivos) : "—"}`, { align: 'left' });
+        doc.text(`Users cadastrados: ${r.usersAtivos !== null ? String(r.usersAtivos) : "—"}`, { align: 'left' });
         doc.text(`Índice de sindicalização: ${r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—"}`, { align: 'left' });
         doc.text(`Base do efetivo: ${comp}`, { align: 'left' });
         doc.text(`Relatório gerado em: ${dataHoje}`, { align: 'left' });
@@ -1019,7 +1019,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
         doc.moveDown(0.5);
         doc.font("Helvetica").fontSize(12);
-        doc.text(`Total de filiados: ${dados.total}`);
+        doc.text(`Total de users: ${dados.total}`);
         doc.moveDown(1);
     } else if (dados.repasseBreakdown) {
         // ESPECIAL: Relatório por Situação ATIVO (LAYOUT TIPO DOSSIÊ - B1)
@@ -1027,12 +1027,12 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.moveDown(0.5);
 
         const totalPrf = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.prfTotal || 0), 0);
-        const totalFiliadosAtivos = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.filiadosAtivos || 0), 0);
-        const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
+        const totalUsersAtivos = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.usersAtivos || 0), 0);
+        const percentualGlobal = totalPrf > 0 ? (totalUsersAtivos / totalPrf) * 100 : 0;
 
         doc.font("Helvetica").fontSize(11);
         doc.text(`Efetivo total: ${totalPrf}`, { align: 'left' });
-        doc.text(`Filiados cadastrados: ${totalFiliadosAtivos}`, { align: 'left' });
+        doc.text(`Users cadastrados: ${totalUsersAtivos}`, { align: 'left' });
         doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
         doc.text(`Base do efetivo: Dados por lotação (ver tabela abaixo)`, { align: 'left' });
         doc.moveDown(1);
@@ -1041,13 +1041,13 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Efetivo PRF)");
         doc.moveDown(0.5);
 
-        const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
+        const headers = ["Lotação", "Efetivo", "Users", "%", "Base"];
         const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
         const tableRows = dados.repasseBreakdown.map(r => [
             r.lotacao,
             r.prfTotal !== null ? String(r.prfTotal) : "—",
-            String(r.filiadosAtivos),
+            String(r.usersAtivos),
             r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
             r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—"
         ]);
@@ -1102,30 +1102,30 @@ async function gerarPdfRelatorioGlobal(dados) {
     // -------------------------------------------------------------------------
     // SEÇÃO 1: ATIVO
     // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. FILIADOS ATIVOS");
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. USERS ATIVOS");
     doc.fillColor("#000").moveDown(0.5);
 
     const a = dados.ativo;
     const totalPrf = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.prfTotal || 0), 0);
-    const totalFiliadosAtivos = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.filiadosAtivos || 0), 0);
-    const percentualGlobal = totalPrf > 0 ? (totalFiliadosAtivos / totalPrf) * 100 : 0;
+    const totalUsersAtivos = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.usersAtivos || 0), 0);
+    const percentualGlobal = totalPrf > 0 ? (totalUsersAtivos / totalPrf) * 100 : 0;
 
     doc.font("Helvetica").fontSize(11);
     doc.text(`Efetivo total (PRF): ${totalPrf}`, { align: 'left' });
-    doc.text(`Filiados ativos: ${totalFiliadosAtivos}`, { align: 'left' });
+    doc.text(`Users ativos: ${totalUsersAtivos}`, { align: 'left' });
     doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
     doc.moveDown(1);
 
     doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Ativos)");
     doc.moveDown(0.5);
 
-    const headers = ["Lotação", "Efetivo", "Filiados", "%", "Base"];
+    const headers = ["Lotação", "Efetivo", "Users", "%", "Base"];
     const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
     const tableRows = a.repasseBreakdown.map(r => [
         r.lotacao,
         r.prfTotal !== null ? String(r.prfTotal) : "—",
-        String(r.filiadosAtivos),
+        String(r.usersAtivos),
         r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
         r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—"
     ]);
@@ -1178,7 +1178,7 @@ module.exports = {
   gerarPdfFichaFiliacao,
   gerarPdfRessarcimento,
   gerarPdfRelatorioAssembleia,
-  gerarPdfDossieFiliado,
+  gerarPdfDossieUser,
   gerarPdfRelatorioAgregado,
   gerarPdfRelatorioGlobal
 };

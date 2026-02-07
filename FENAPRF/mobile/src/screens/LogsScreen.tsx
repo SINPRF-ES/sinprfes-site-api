@@ -5,24 +5,24 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { LogEntry, getLogs, clearLogs, getLogsAsText } from '../infra/logger';
 import { useAuth } from '../hooks/useAuth';
-import { ROLES, isDiretoria } from '../utils/filiadoUtils';
+import { ROLES, isDiretoria } from '../utils/userUtils';
 import api from '../services/apiService';
 
 const LogsScreen = () => {
-  const { usuario } = useAuth();
+  const { user } = useAuth();
   const navigation = useNavigation();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isAdmin = usuario?.perfil_acesso === ROLES.ADMIN;
-  const ehDiretoria = isDiretoria(usuario?.perfil_acesso);
+  const isAdmin = user?.perfil_acesso === ROLES.ADMIN;
+  const ehDiretoria = isDiretoria(user?.perfil_acesso);
 
   useEffect(() => {
     if (!ehDiretoria) {
       Alert.alert('Acesso Negado', 'Esta área é restrita a administradores ou diretoria.');
       navigation.goBack();
     }
-  }, [usuario, navigation, ehDiretoria]);
+  }, [user, navigation, ehDiretoria]);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);

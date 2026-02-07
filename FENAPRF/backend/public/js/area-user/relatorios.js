@@ -16,7 +16,7 @@
         const btnGerar = document.getElementById('btn-gerar-relatorio');
         const btnPreview = document.getElementById('btn-preview-relatorio');
         const tipoSelect = document.getElementById('relatorio-tipo');
-        const filiadoSearchInput = document.getElementById('relatorio-filiado-search');
+        const userSearchInput = document.getElementById('relatorio-user-search');
 
         if (btnGerar) {
             btnGerar.onclick = handleGerar;
@@ -30,11 +30,11 @@
             tipoSelect.onchange = handleTipoChange;
         }
 
-        if (filiadoSearchInput) {
+        if (userSearchInput) {
             let debounceTimer;
-            filiadoSearchInput.oninput = () => {
+            userSearchInput.oninput = () => {
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => handleFiliadoSearch(filiadoSearchInput.value), 400);
+                debounceTimer = setTimeout(() => handleUserSearch(userSearchInput.value), 400);
             };
         }
     }
@@ -43,19 +43,19 @@
         const tipo = document.getElementById('relatorio-tipo').value;
         const label = document.getElementById('relatorio-param-label');
 
-        const filiadoWrapper = document.getElementById('relatorio-filiado-wrapper');
+        const userWrapper = document.getElementById('relatorio-user-wrapper');
         const lotacaoSelect = document.getElementById('relatorio-lotacao-select');
         const situacaoSelect = document.getElementById('relatorio-situacao-select');
 
         // Esconde tudo
-        filiadoWrapper.style.display = 'none';
+        userWrapper.style.display = 'none';
         lotacaoSelect.style.display = 'none';
         situacaoSelect.style.display = 'none';
         document.getElementById('relatorio-param-container').style.display = 'block';
 
         if (tipo === 'INDIVIDUAL') {
-            label.textContent = 'Filiado:';
-            filiadoWrapper.style.display = 'block';
+            label.textContent = 'User:';
+            userWrapper.style.display = 'block';
         } else if (tipo === 'LOTACAO') {
             label.textContent = 'Selecionar Lotação:';
             lotacaoSelect.style.display = 'block';
@@ -67,20 +67,20 @@
         }
     }
 
-    async function handleFiliadoSearch(query) {
+    async function handleUserSearch(query) {
         if (!query || query.length < 2) return;
-        const select = document.getElementById('relatorio-filiado-select');
+        const select = document.getElementById('relatorio-user-select');
         select.innerHTML = '<option>Buscando...</option>';
 
         try {
-            const filiados = await window.Utils.searchFiliados(query);
-            if (filiados.length === 0) {
+            const users = await window.Utils.searchUsers(query);
+            if (users.length === 0) {
                 select.innerHTML = '<option value="">Nenhum encontrado</option>';
             } else {
-                select.innerHTML = filiados.map(f => `<option value="${f.id}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
+                select.innerHTML = users.map(f => `<option value="${f.id}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
             }
         } catch (e) {
-            console.error("Erro na busca de filiados", e);
+            console.error("Erro na busca de users", e);
             select.innerHTML = '<option value="">Erro na busca</option>';
         }
     }
@@ -90,12 +90,12 @@
         let params = {};
 
         if (tipo === 'INDIVIDUAL') {
-            const select = document.getElementById('relatorio-filiado-select');
+            const select = document.getElementById('relatorio-user-select');
             if (!select.value) {
-                alert("Selecione um filiado.");
+                alert("Selecione um user.");
                 return null;
             }
-            params.filiadoId = select.value;
+            params.userId = select.value;
         } else if (tipo === 'LOTACAO') {
             params.value = document.getElementById('relatorio-lotacao-select').value;
         } else if (tipo === 'SITUACAO') {
@@ -295,8 +295,8 @@
                     const params = typeof h.params === 'string' ? JSON.parse(h.params) : h.params;
 
                     // Prioriza o nome resolvido (A1)
-                    const labelParam = h.report_type === 'INDIVIDUAL' ? 'Filiado' : 'Parâmetro';
-                    const valor = params.filiadoNome || params.paramDisplay || params.value || params.filiadoId || "-";
+                    const labelParam = h.report_type === 'INDIVIDUAL' ? 'User' : 'Parâmetro';
+                    const valor = params.userNome || params.paramDisplay || params.value || params.userId || "-";
 
                     return `
                         <div class="history-card">

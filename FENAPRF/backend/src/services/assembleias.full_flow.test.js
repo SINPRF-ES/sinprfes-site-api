@@ -93,7 +93,7 @@ describe('Assembleias Full Flow (Service Layer Integration)', () => {
     await service.criarVotacao({ assembleia_id: assId, quorum_snapshot_id: quorumId, titulo: 'Item 1', iniciada_por_user_id: 10 });
 
     // 7. Votar
-    pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'FILIADO' }] }); // perfil check
+    pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'USER' }] }); // perfil check
     pool.query.mockResolvedValueOnce({ rows: [{ id: 'vote-1', voto: 'SIM' }] }); // insert vote
     pool.query.mockResolvedValueOnce({ rows: [] }); // Audit
     await service.registrarVoto(votId, 30, 'SIM', assId);

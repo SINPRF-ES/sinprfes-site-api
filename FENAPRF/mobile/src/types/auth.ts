@@ -1,12 +1,12 @@
-import type { Usuario } from './usuario';
+import type { User } from './user';
 
 export interface Sessao {
   token: string;
-  usuario: Usuario;
+  user: User;
 }
 
 export interface AuthContextData {
-  usuario: Usuario | null;
+  user: User | null;
   token: string | null;
 
   autenticado: boolean;
@@ -15,7 +15,7 @@ export interface AuthContextData {
   biometriaHabilitada: boolean;
   bloqueadoPorBiometria: boolean;
 
-  setSessao: (token: string, usuario: Usuario) => Promise<void>;
+  setSessao: (token: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
 
   ativarBiometriaNesteAparelho: (ativar: boolean) => Promise<void>;

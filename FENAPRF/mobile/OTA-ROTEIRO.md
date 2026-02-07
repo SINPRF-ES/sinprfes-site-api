@@ -101,7 +101,7 @@ Para garantir a integridade do módulo de notificações:
 
 ### Como testar envio
 1.  **Pelo App**: Acesse `Menu -> Notificações`. Digite título e mensagem. Confirme o envio.
-2.  **Pelo Site**: Acesse o Painel do Filiado (com perfil ADMIN/DIRETORIA). Vá em `📢 Notificações`. Digite e envie.
+2.  **Pelo Site**: Acesse o Painel do User (com perfil ADMIN/DIRETORIA). Vá em `📢 Notificações`. Digite e envie.
 
 ### Exemplos de payload correto
 O backend espera:

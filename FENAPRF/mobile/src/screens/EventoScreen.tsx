@@ -100,7 +100,7 @@ function formatDateTime(iso?: string | null) {
 }
 
 export default function EventoScreen() {
-  const { token, usuario } = useAuth() as any;
+  const { token, user } = useAuth() as any;
 
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,12 +109,12 @@ export default function EventoScreen() {
   const [evento, setEvento] = useState<Evento | null>(null);
   const [presencas, setPresencas] = useState<Presenca[]>([]);
 
-  const userId = useMemo(() => String(usuario?.id ?? ""), [usuario?.id]);
+  const userId = useMemo(() => String(user?.id ?? ""), [user?.id]);
 
   const isAdmin = useMemo(() => {
-    const perfil = String(usuario?.perfil ?? usuario?.role ?? "").toUpperCase();
-    const roles = Array.isArray(usuario?.roles)
-      ? usuario.roles.map((r: any) => String(r).toUpperCase())
+    const perfil = String(user?.perfil ?? user?.role ?? "").toUpperCase();
+    const roles = Array.isArray(user?.roles)
+      ? user.roles.map((r: any) => String(r).toUpperCase())
       : [];
     return (
       perfil === "ADMIN" ||
@@ -122,7 +122,7 @@ export default function EventoScreen() {
       roles.includes("DIRETORIA") ||
       roles.includes("PRESIDENTE")
     );
-  }, [usuario]);
+  }, [user]);
 
   const minhaPresencaAtiva = useMemo(() => {
     if (!userId) return null;

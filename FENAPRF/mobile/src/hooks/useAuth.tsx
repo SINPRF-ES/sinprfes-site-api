@@ -4,7 +4,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
 
 import type { AuthContextData } from '../types/auth';
-import type { Usuario } from '../types/usuario';
+import type { User } from '../types/user';
 
 import {
   carregarSessao,
@@ -17,7 +17,7 @@ import {
 const AuthContext = createContext<AuthContextData | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
 
@@ -67,11 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           try {
             // Valida o token e busca os dados do usuário atualizados (FENAPRF)
-            const { data: usuarioAtualizado } = await api.get('/api/users/me');
-            setUsuario(usuarioAtualizado);
+            const { data: userAtualizado } = await api.get('/api/users/me');
+            setUser(userAtualizado);
 
             // Atualiza o usuário no storage
-            await salvarSessao({ token: sessao.token, usuario: usuarioAtualizado });
+            await salvarSessao({ token: sessao.token, user: userAtualizado });
 
             if (bio) {
               setBloqueadoPorBiometria(true);
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Se o token for inválido (401), o interceptor de resposta já limpou o storage.
             // Aqui limpamos o estado local para forçar redirecionamento para Login.
             setToken(null);
-            setUsuario(null);
+            setUser(null);
           }
         }
       } finally {
@@ -92,17 +92,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadSession();
   }, []);
 
-  async function setSessao(novoToken: string, novoUsuario: Usuario) {
+  async function setSessao(novoToken: string, novoUser: User) {
     setToken(novoToken);
-    setUsuario(novoUsuario);
+    setUser(novoUser);
     setBloqueadoPorBiometria(false);
-    await salvarSessao({ token: novoToken, usuario: novoUsuario });
+    await salvarSessao({ token: novoToken, user: novoUser });
   }
 
   async function logout(removerBiometria = false) {
     await limparSessao(!removerBiometria);
     setToken(null);
-    setUsuario(null);
+    setUser(null);
 
     if (removerBiometria) {
       setBiometriaHabilitada(false);
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Limpeza adicional de caches específicos de telas
     try {
       const allKeys = await AsyncStorage.getAllKeys();
-      const keysToRemove = allKeys.filter(key => key.startsWith('filiados_cache_'));
+      const keysToRemove = allKeys.filter(key => key.startsWith('users_cache_'));
       if (keysToRemove.length > 0) {
         await AsyncStorage.multiRemove(keysToRemove);
       }
@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const value = useMemo<AuthContextData>(() => ({
-    usuario,
+    user,
     token,
     autenticado: !!token,
     carregando,
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ativarBiometriaNesteAparelho,
     desbloquearComBiometria,
     setBloqueadoPorBiometria,
-  }), [usuario, token, carregando, biometriaHabilitada, bloqueadoPorBiometria]);
+  }), [user, token, carregando, biometriaHabilitada, bloqueadoPorBiometria]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

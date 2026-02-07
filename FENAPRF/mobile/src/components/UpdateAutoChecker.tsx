@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkUpdates, applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
 import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
-import { logDebug } from '../utils/filiadoUtils';
+import { logDebug } from '../utils/userUtils';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 

@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '../config/api';
-import type { User } from '../types/usuario';
-import { salvarFiliadosOffline, initDb } from '../database/db';
-import { setLastSyncFiliados } from './syncMetaService';
+import type { User } from '../types/user';
+import { salvarUsersOffline, initDb } from '../database/db';
+import { setLastSyncUsers } from './syncMetaService';
 
 type UsersApiEnvelope = {
   users?: User[];
@@ -33,7 +33,7 @@ function normalizarLista(data: any): User[] {
   return [];
 }
 
-export async function sincronizarFiliados(token: string): Promise<{ recebidos: number }> {
+export async function sincronizarUsers(token: string): Promise<{ recebidos: number }> {
   if (!token) {
     throw new Error('Token ausente. Faça login novamente.');
   }
@@ -73,10 +73,10 @@ export async function sincronizarFiliados(token: string): Promise<{ recebidos: n
     name: f.name ?? '(SEM NOME)',
   }));
 
-  await salvarFiliadosOffline(listaComTimestamp as any);
+  await salvarUsersOffline(listaComTimestamp as any);
 
   // grava meta de última sincronização
-  await setLastSyncFiliados(Date.now());
+  await setLastSyncUsers(Date.now());
 
   return { recebidos: listaComTimestamp.length };
 }

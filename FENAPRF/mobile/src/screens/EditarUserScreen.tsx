@@ -1,17 +1,17 @@
-// mobile/src/screens/EditarFiliadoScreen.tsx
+// mobile/src/screens/EditarUserScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator, TextInput } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { buildUpdateFiliadoPayload } from '../services/filiadoPayloadMapper';
-import { atualizarFiliado, arquivarFiliado, desarquivarFiliado } from '../services/apiService';
-import { getMe, getFiliadoById } from '../services/filiadoService';
+import { buildUpdateUserPayload } from '../services/userPayloadMapper';
+import { atualizarUser, arquivarUser, desarquivarUser } from '../services/apiService';
+import { getMe, getUserById } from '../services/userService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import LotacaoCard from '../components/LotacaoCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { User } from '../types/usuario';
-import { logDebug, getCanonicalFiliadoId, parseCanonicalFiliadoId, isGestao as checkIsGestao, ROLES } from '../utils/filiadoUtils';
+import { User } from '../types/user';
+import { logDebug, getCanonicalUserId, parseCanonicalUserId, isGestao as checkIsGestao, ROLES } from '../utils/userUtils';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
 import api from '../services/apiService';
@@ -19,12 +19,12 @@ import { TouchableOpacity } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
-export default function EditarFiliadoScreen({ route, navigation }: any) {
-  const filiadoId = parseCanonicalFiliadoId(route.params?.filiadoId);
-  const { usuario } = useAuth();
+export default function EditarUserScreen({ route, navigation }: any) {
+  const userId = parseCanonicalUserId(route.params?.userId);
+  const { user: authUser } = useAuth();
   const netInfo = useNetInfo();
 
-  const [filiado, setFiliado] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [motivoAcao, setMotivoAcao] = useState('');
@@ -34,92 +34,92 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     try {
       setLoading(true);
       let data;
-      if (filiadoId) {
-        data = await getFiliadoById(filiadoId);
+      if (userId) {
+        data = await getUserById(userId);
       } else {
         data = await getMe();
       }
 
-      setFiliado(data);
+      setUser(data);
 
-      logger.info('EDIT_FILIADO_DATA_READY', {
+      logger.info('EDIT_USER_DATA_READY', {
         id: data.id,
         keys: Object.keys(data),
         hasSituacao: !!data.situacao,
       });
 
-      logDebug('EditarFiliado.fetch', { id: data.id, name: data.name });
+      logDebug('EditarUser.fetch', { id: data.id, name: data.name });
     } catch (err) {
-      logger.error('[EditarFiliado.fetch.error]', err);
-      Alert.alert('Erro', 'Não foi possível carregar os dados do filiado.');
+      logger.error('[EditarUser.fetch.error]', err);
+      Alert.alert('Erro', 'Não foi possível carregar os dados do user.');
     } finally {
       setLoading(false);
     }
-  }, [filiadoId]);
+  }, [userId]);
 
   useEffect(() => {
-    logger.info('EDIT_FILIADO_MOUNT', {
-      filiadoIdParam: route.params?.filiadoId,
+    logger.info('EDIT_USER_MOUNT', {
+      userIdParam: route.params?.userId,
       hasRouteParams: !!route.params,
-      profile: usuario?.perfil_acesso
+      profile: user?.perfil_acesso
     });
     fetchData();
   }, [fetchData]);
 
   const handleUpdate = useCallback(async () => {
-    if (!filiado) return;
+    if (!user) return;
     if (!netInfo.isConnected) {
-      Alert.alert('Offline', 'A edição de filiados só está disponível online.');
+      Alert.alert('Offline', 'A edição de users só está disponível online.');
       return;
     }
 
-    if (!filiado.name || !filiado.cpf || !filiado.email) {
+    if (!user.name || !user.cpf || !user.email) {
       Alert.alert('Erro de Validação', 'Nome, CPF e Email são obrigatórios.');
       return;
     }
 
     try {
       setSaving(true);
-      const payload = buildUpdateFiliadoPayload(filiado);
+      const payload = buildUpdateUserPayload(user);
 
       // Instrumentação de logs para depuração de datas (Step A)
-      logger.info('FILIADO_SAVE_PAYLOAD_DATES', {
-        user_id: filiado.id,
+      logger.info('USER_SAVE_PAYLOAD_DATES', {
+        user_id: user.id,
         data_nascimento: { value: payload.data_nascimento, type: typeof payload.data_nascimento },
       });
 
-      const canonicalId = getCanonicalFiliadoId(filiado);
+      const canonicalId = getCanonicalUserId(user);
 
-      if (filiadoId) {
-        await atualizarFiliado(canonicalId, payload);
+      if (userId) {
+        await atualizarUser(canonicalId, payload);
       } else {
         await api.put('/api/users/me', payload);
       }
 
-      Alert.alert('Sucesso', 'Filiado atualizado com sucesso.');
+      Alert.alert('Sucesso', 'User atualizado com sucesso.');
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o filiado.');
+      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o user.');
     } finally {
       setSaving(false);
     }
-  }, [filiado, netInfo.isConnected, filiadoId, navigation]);
+  }, [user, netInfo.isConnected, userId, navigation]);
 
   const handleConfirmarAcao = useCallback(async () => {
-    if (!filiado || !motivoAcao) {
+    if (!user || !motivoAcao) {
         Alert.alert('Aviso', 'Informe o motivo da ação.');
         return;
     }
 
     try {
         setSaving(true);
-        const canonicalId = getCanonicalFiliadoId(filiado);
+        const canonicalId = getCanonicalUserId(user);
 
         if (showMotivoInput === 'ARQUIVAR') {
-            await arquivarFiliado(canonicalId, motivoAcao);
-            Alert.alert('Sucesso', 'Filiado arquivado com sucesso.');
+            await arquivarUser(canonicalId, motivoAcao);
+            Alert.alert('Sucesso', 'User arquivado com sucesso.');
         } else {
-            await desarquivarFiliado(canonicalId, motivoAcao);
+            await desarquivarUser(canonicalId, motivoAcao);
             Alert.alert('Sucesso', 'Cadastro reativado com sucesso.');
         }
 
@@ -131,16 +131,16 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     } finally {
         setSaving(false);
     }
-  }, [filiado, motivoAcao, showMotivoInput, fetchData]);
+  }, [user, motivoAcao, showMotivoInput, fetchData]);
 
   useEffect(() => {
-    const ehGestao = checkIsGestao(usuario?.perfil_acesso);
+    const ehGestao = checkIsGestao(user?.perfil_acesso);
     const actions: MenuAction[] = [
       { label: 'Salvar Alterações', icon: 'content-save', onPress: handleUpdate }
     ];
 
-    if (ehGestao && filiadoId && filiado) {
-      if (filiado.arquivado_em) {
+    if (ehGestao && userId && user) {
+      if (user.arquivado_em) {
         actions.push({ label: 'Desarquivar', icon: 'archive-arrow-up', onPress: () => setShowMotivoInput('DESARQUIVAR') });
       } else {
         actions.push({ label: 'Arquivar Cadastro', icon: 'archive-arrow-down', onPress: () => setShowMotivoInput('ARQUIVAR'), isDestructive: true });
@@ -153,13 +153,13 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
     });
-  }, [navigation, filiado, usuario, handleUpdate, filiadoId]);
+  }, [navigation, user, user, handleUpdate, userId]);
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
 
-  if (!filiado) {
+  if (!user) {
     return (
       <View style={styles.centered}>
         <Text>Dados indisponíveis.</Text>
@@ -168,7 +168,7 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
     );
   }
 
-  const ehGestao = checkIsGestao(usuario?.perfil_acesso);
+  const ehGestao = checkIsGestao(user?.perfil_acesso);
 
   return (
     <SafeScreen style={styles.container}>
@@ -195,33 +195,33 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
       )}
 
       <KeyboardAwareScrollView contentContainerStyle={styles.contentContainer} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
-        {filiado.arquivado_em && (
+        {user.arquivado_em && (
           <View style={styles.archiveBadge}>
             <MaterialCommunityIcons name="archive-alert" size={24} color="#721c24" />
             <View style={{ flex: 1 }}>
               <Text style={styles.archiveBadgeTitle}>Cadastro Arquivado</Text>
               <Text style={styles.archiveBadgeInfo}>
-                Por: {filiado.arquivado_por_nome || 'N/A'} em {new Date(filiado.arquivado_em).toLocaleDateString('pt-BR')}
+                Por: {user.arquivado_por_nome || 'N/A'} em {new Date(user.arquivado_em).toLocaleDateString('pt-BR')}
               </Text>
-              <Text style={styles.archiveBadgeMotivo}>Motivo: {filiado.arquivado_motivo}</Text>
+              <Text style={styles.archiveBadgeMotivo}>Motivo: {user.arquivado_motivo}</Text>
             </View>
           </View>
         )}
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>👤 Informações Pessoais</Text></View>
         <ContatoCard
-          filiado={filiado}
-          setFiliado={setFiliado}
+          user={user}
+          setUser={setUser}
           isEditing={true}
           isManagement={ehGestao}
           hideTitle={true}
         />
 
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>🏠 Endereço</Text></View>
-        <EnderecoCard filiado={filiado} setFiliado={setFiliado} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
+        <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text></View>
-        <LotacaoCard filiado={filiado} setFiliado={setFiliado} isEditing={ehGestao} hideTitle={true} />
+        <LotacaoCard user={user} setUser={setUser} isEditing={ehGestao} hideTitle={true} />
       </KeyboardAwareScrollView>
     </SafeScreen>
   );

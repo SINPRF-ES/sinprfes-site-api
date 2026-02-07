@@ -130,13 +130,13 @@ async function abrir(id, userId) {
   return atualizada;
 }
 
-async function contarFiliadosAtivosParaQuorum(client = null) {
+async function contarUsersAtivosParaQuorum(client = null) {
   const db = client || pool;
   const { rows } = await db.query(
     `SELECT COUNT(*)::INTEGER as total
-     FROM filiados
+     FROM users
      WHERE arquivado_em IS NULL
-       AND perfil_acesso IN ('DIRETORIA', 'FILIADO', 'ORGANIZADOR')`
+       AND perfil_acesso IN ('DIRETORIA', 'USER', 'ORGANIZADOR')`
   );
   return parseInt(rows?.[0]?.total || 0);
 }
@@ -147,16 +147,16 @@ async function contarFiliadosAtivosParaQuorum(client = null) {
 async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
   if (!userId) return;
 
-  const { rows: userRows } = await client.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [userId]);
+  const { rows: userRows } = await client.query("SELECT perfil_acesso FROM users WHERE id = $1", [userId]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
 
   // ADMIN e COMUNICADOR não contam quórum nem votam, logo não fazem check-in
   if (perfil !== 'ADMIN' && perfil !== 'COMUNICADOR') {
     const origem = tipoChamada === 'RECONTAGEM' ? 'AUTO_PRESIDENTE' : 'AUTO_GERADOR';
     await client.query(
-      `INSERT INTO assembleia_checkins (assembleia_quorum_id, filiado_id, origem)
+      `INSERT INTO assembleia_checkins (assembleia_quorum_id, user_id, origem)
        VALUES ($1, $2, $3)
-       ON CONFLICT (assembleia_quorum_id, filiado_id) DO UPDATE SET registrado_em = NOW()`,
+       ON CONFLICT (assembleia_quorum_id, user_id) DO UPDATE SET registrado_em = NOW()`,
       [quorumId, userId, origem]
     );
     return true;
@@ -228,13 +228,13 @@ async function encerrar(id, userId) {
     );
     for (const v of activeVotations) {
       await client.query(
-        `INSERT INTO assembleia_votos (votacao_id, filiado_id, voto)
-         SELECT v.id, c.filiado_id, 'ABSTENCAO'
+        `INSERT INTO assembleia_votos (votacao_id, user_id, voto)
+         SELECT v.id, c.user_id, 'ABSTENCAO'
          FROM assembleia_votacoes v
          JOIN assembleia_checkins c ON v.quorum_snapshot_id = c.assembleia_quorum_id
-         LEFT JOIN assembleia_votos vo ON v.id = vo.votacao_id AND c.filiado_id = vo.filiado_id
+         LEFT JOIN assembleia_votos vo ON v.id = vo.votacao_id AND c.user_id = vo.user_id
          WHERE v.id = $1 AND vo.id IS NULL
-         ON CONFLICT (votacao_id, filiado_id) DO NOTHING`,
+         ON CONFLICT (votacao_id, user_id) DO NOTHING`,
         [v.id]
       );
       await client.query(`UPDATE assembleia_votacoes SET status = 'ENCERRADA', finalizada_em = NOW() WHERE id = $1`, [v.id]);
@@ -302,7 +302,7 @@ async function gerarQuorum(dados) {
       }
     }
 
-    const totalAtivos = await contarFiliadosAtivosParaQuorum(client);
+    const totalAtivos = await contarUsersAtivosParaQuorum(client);
     // 1ª Chamada: 50% + 1 dos ativos. Outras chamadas: qualquer número (0).
     let quorumNecessario = (tipo_chamada === 'PRIMEIRA') ? Math.floor(totalAtivos / 2) + 1 : 0;
 
@@ -401,10 +401,10 @@ async function contarPresentesNoQuorum(quorumId) {
 }
 
 async function realizarCheckin(dados) {
-  const { assembleia_quorum_id, filiado_id, origem, assembleia_id } = dados;
+  const { assembleia_quorum_id, user_id, origem, assembleia_id } = dados;
 
   // Blindagem de perfil: ADMIN e COMUNICADOR não fazem check-in
-  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [filiado_id]);
+  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM users WHERE id = $1", [user_id]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
   if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
     throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
@@ -412,21 +412,21 @@ async function realizarCheckin(dados) {
 
   // Idempotência de auditoria
   const { rows: existing } = await pool.query(
-    `SELECT id FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND filiado_id = $2`,
-    [assembleia_quorum_id, filiado_id]
+    `SELECT id FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = $2`,
+    [assembleia_quorum_id, user_id]
   );
 
   const { rows } = await pool.query(
-    `INSERT INTO assembleia_checkins (assembleia_quorum_id, filiado_id, origem)
+    `INSERT INTO assembleia_checkins (assembleia_quorum_id, user_id, origem)
      VALUES ($1, $2, $3)
-     ON CONFLICT (assembleia_quorum_id, filiado_id) DO UPDATE SET registrado_em = NOW()
+     ON CONFLICT (assembleia_quorum_id, user_id) DO UPDATE SET registrado_em = NOW()
      RETURNING id`,
-    [assembleia_quorum_id, filiado_id, origem]
+    [assembleia_quorum_id, user_id, origem]
   );
   const res = rows[0];
 
   if (assembleia_id && existing.length === 0) {
-    await registrarAuditoria(assembleia_id, filiado_id, 'CHECKIN_REALIZADO', { assembleia_quorum_id, origem });
+    await registrarAuditoria(assembleia_id, user_id, 'CHECKIN_REALIZADO', { assembleia_quorum_id, origem });
   }
   return res;
 }
@@ -518,47 +518,47 @@ async function buscarVotacaoAtiva(assembleiaId) {
   }
 }
 
-async function verificarElegibilidade(votacaoId, filiadoId) {
+async function verificarElegibilidade(votacaoId, userId) {
   const { rows } = await pool.query(
     `SELECT 1 FROM assembleia_checkins c
      JOIN assembleia_votacoes v ON c.assembleia_quorum_id = v.quorum_snapshot_id
-     WHERE v.id = $1 AND c.filiado_id = $2`,
-    [votacaoId, filiadoId]
+     WHERE v.id = $1 AND c.user_id = $2`,
+    [votacaoId, userId]
   );
   return rows.length > 0;
 }
 
-async function verificarElegibilidadePorQuorum(quorumId, filiadoId, client = null) {
+async function verificarElegibilidadePorQuorum(quorumId, userId, client = null) {
   const db = client || pool;
   const { rows } = await db.query(
-    `SELECT 1 FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND filiado_id = $2`,
-    [quorumId, filiadoId]
+    `SELECT 1 FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = $2`,
+    [quorumId, userId]
   );
   return rows.length > 0;
 }
 
-async function registrarVoto(votacaoId, filiadoId, voto, assembleiaId) {
+async function registrarVoto(votacaoId, userId, voto, assembleiaId) {
   if (voto !== 'SIM' && voto !== 'NAO') {
     throw new Error("Apenas votos SIM ou NAO são permitidos manualmente.");
   }
 
   // Blindagem de perfil: ADMIN e COMUNICADOR não votam
-  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [filiadoId]);
+  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM users WHERE id = $1", [userId]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
   if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
     throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO assembleia_votos (votacao_id, filiado_id, voto)
+    `INSERT INTO assembleia_votos (votacao_id, user_id, voto)
      VALUES ($1, $2, $3)
-     ON CONFLICT (votacao_id, filiado_id) DO UPDATE SET voto = $3, registrado_em = NOW()
+     ON CONFLICT (votacao_id, user_id) DO UPDATE SET voto = $3, registrado_em = NOW()
      RETURNING *`,
-    [votacaoId, filiadoId, voto]
+    [votacaoId, userId, voto]
   );
   const res = rows[0];
   if (assembleiaId) {
-    await registrarAuditoria(assembleiaId, filiadoId, 'VOTO_REGISTRADO', { votacao_id: votacaoId, voto });
+    await registrarAuditoria(assembleiaId, userId, 'VOTO_REGISTRADO', { votacao_id: votacaoId, voto });
   }
   return res;
 }
@@ -583,9 +583,9 @@ async function contarVotos(votacaoId) {
 
 async function listarVotosNominais(votacaoId) {
   const { rows } = await pool.query(
-    `SELECT v.filiado_id, f.nome, v.voto, v.registrado_em
+    `SELECT v.user_id, f.nome, v.voto, v.registrado_em
      FROM assembleia_votos v
-     JOIN filiados f ON v.filiado_id = f.id
+     JOIN users f ON v.user_id = f.id
      WHERE v.votacao_id = $1
      ORDER BY v.registrado_em DESC`,
     [votacaoId]
@@ -606,13 +606,13 @@ async function finalizarVotacao(votacaoId, userId = null) {
     }
 
     const { rowCount: abstençõesAplicadas } = await client.query(
-      `INSERT INTO assembleia_votos (votacao_id, filiado_id, voto)
-       SELECT v.id, c.filiado_id, 'ABSTENCAO'
+      `INSERT INTO assembleia_votos (votacao_id, user_id, voto)
+       SELECT v.id, c.user_id, 'ABSTENCAO'
        FROM assembleia_votacoes v
        JOIN assembleia_checkins c ON v.quorum_snapshot_id = c.assembleia_quorum_id
-       LEFT JOIN assembleia_votos vo ON v.id = vo.votacao_id AND c.filiado_id = vo.filiado_id
+       LEFT JOIN assembleia_votos vo ON v.id = vo.votacao_id AND c.user_id = vo.user_id
        WHERE v.id = $1 AND vo.id IS NULL
-       ON CONFLICT (votacao_id, filiado_id) DO NOTHING`,
+       ON CONFLICT (votacao_id, user_id) DO NOTHING`,
       [votacaoId]
     );
 
@@ -795,15 +795,15 @@ async function buscarMesa(assembleiaId) {
   const { rows } = await pool.query(
     `SELECT m.*, fp.nome as presidente_nome, fs.nome as secretario_nome
      FROM assembleia_mesa m
-     LEFT JOIN filiados fp ON m.presidente_user_id = fp.id
-     LEFT JOIN filiados fs ON m.secretario_user_id = fs.id
+     LEFT JOIN users fp ON m.presidente_user_id = fp.id
+     LEFT JOIN users fs ON m.secretario_user_id = fs.id
      WHERE m.assembleia_id = $1`,
     [assembleiaId]
   );
   return rows[0];
 }
 
-async function pedirPalavra(assembleiaId, filiadoId) {
+async function pedirPalavra(assembleiaId, userId) {
   const assembleia = await buscarPorId(assembleiaId);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
   if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADA) {
@@ -817,20 +817,20 @@ async function pedirPalavra(assembleiaId, filiadoId) {
   const novaOrdem = maxRows[0].max_ordem + 1;
 
   const { rows } = await pool.query(
-    `INSERT INTO assembleia_pedidos_palavra (assembleia_id, filiado_id, ordem, status)
+    `INSERT INTO assembleia_pedidos_palavra (assembleia_id, user_id, ordem, status)
      VALUES ($1, $2, $3, 'PENDENTE')
      ON CONFLICT DO NOTHING
      RETURNING *`,
-    [assembleiaId, filiadoId, novaOrdem]
+    [assembleiaId, userId, novaOrdem]
   );
   return rows[0];
 }
 
 async function listarPedidosPalavra(assembleiaId) {
   const { rows } = await pool.query(
-    `SELECT p.*, f.nome as filiado_nome, f.avatar_url
+    `SELECT p.*, f.nome as user_nome, f.avatar_url
      FROM assembleia_pedidos_palavra p
-     JOIN filiados f ON p.filiado_id = f.id
+     JOIN users f ON p.user_id = f.id
      WHERE p.assembleia_id = $1 AND p.status IN ('PENDENTE', 'CONCEDIDO', 'EM_FALA')
      ORDER BY p.ordem ASC`,
     [assembleiaId]
@@ -847,7 +847,7 @@ async function concederPalavra(assembleiaId, pedidoId, userId) {
     [pedidoId, assembleiaId]
   );
   if (rows[0]) {
-    await registrarAuditoria(assembleiaId, userId, 'PALAVRA_CONCEDIDA', { pedido_id: pedidoId, filiado_id: rows[0].filiado_id });
+    await registrarAuditoria(assembleiaId, userId, 'PALAVRA_CONCEDIDA', { pedido_id: pedidoId, user_id: rows[0].user_id });
   }
   return rows[0];
 }
@@ -913,7 +913,7 @@ async function listarPropostas(assembleiaId) {
   const { rows } = await pool.query(
     `SELECT p.*, f.nome as autor_nome, f.avatar_url
      FROM assembleia_propostas p
-     JOIN filiados f ON p.autor_id = f.id
+     JOIN users f ON p.autor_id = f.id
      WHERE p.assembleia_id = $1
      ORDER BY p.criado_em ASC`,
     [assembleiaId]
@@ -1098,7 +1098,7 @@ async function buscarEstadoResumido(assembleiaId) {
   }
 }
 
-async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
+async function buscarEstadoCompleto(assembleiaId, userId = null) {
   try {
     // Otimização Bolt: Busca inicial paralela agressiva para reduzir latência de rede e DB
     const [assembleia, mesa, pedidosPalavra, propostas, ultimoQuorum, votacaoAtiva] = await Promise.all([
@@ -1127,8 +1127,8 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
       subTasks.push(Promise.all([
         contarVotos(votacaoAtiva.id).catch(() => ({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 })),
         listarVotosNominais(votacaoAtiva.id).catch(() => []),
-        filiadoId ? verificarElegibilidade(votacaoAtiva.id, filiadoId).catch(() => false) : Promise.resolve(false),
-        filiadoId ? verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, filiadoId).catch(() => false) : Promise.resolve(false)
+        userId ? verificarElegibilidade(votacaoAtiva.id, userId).catch(() => false) : Promise.resolve(false),
+        userId ? verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, userId).catch(() => false) : Promise.resolve(false)
       ]));
     }
 
@@ -1137,7 +1137,7 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
       subTasks.push(pool.query(
         `SELECT f.id, f.nome, f.avatar_url, c.registrado_em
          FROM assembleia_checkins c
-         JOIN filiados f ON c.filiado_id = f.id
+         JOIN users f ON c.user_id = f.id
          WHERE c.assembleia_quorum_id = $1
          ORDER BY f.nome ASC`,
         [ultimoQuorum.id]
@@ -1152,11 +1152,11 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
       let jaVotou = false;
       let motivo_inelegibilidade = null;
 
-      if (filiadoId) {
+      if (userId) {
         if (!elegivel) {
           motivo_inelegibilidade = !presencaNoQuorum ? "Ausente na chamada de quórum deste item." : "Restrição de elegibilidade técnica.";
         } else {
-          jaVotou = (votos || []).some(v => v.filiado_id === filiadoId);
+          jaVotou = (votos || []).some(v => v.user_id === userId);
         }
       }
 
@@ -1175,8 +1175,8 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
     if (quorumTaskIdx !== -1) {
       presentesNominais = subResults[quorumTaskIdx].rows || [];
       totalPresentes = presentesNominais.length; // Otimização Bolt: Evita query redundante de COUNT(*)
-      if (filiadoId) {
-        userHasCheckedIn = presentesNominais.some(p => p.id === filiadoId);
+      if (userId) {
+        userHasCheckedIn = presentesNominais.some(p => p.id === userId);
       }
     }
 
@@ -1213,26 +1213,26 @@ async function gerarDadosRelatorio(id) {
     pool.query(`
       SELECT q.*, f.nome as gerado_por_nome
       FROM assembleia_quoruns q
-      LEFT JOIN filiados f ON q.gerado_por_user_id = f.id
+      LEFT JOIN users f ON q.gerado_por_user_id = f.id
       WHERE q.assembleia_id = $1
       ORDER BY q.criado_em ASC
     `, [id]).then(r => r.rows),
     pool.query(`
       SELECT v.*, f.nome as iniciada_por_nome
       FROM assembleia_votacoes v
-      LEFT JOIN filiados f ON v.iniciada_por_user_id = f.id
+      LEFT JOIN users f ON v.iniciada_por_user_id = f.id
       WHERE v.assembleia_id = $1
       ORDER BY v.aberta_em ASC
     `, [id]).then(r => r.rows),
     pool.query(`
       SELECT p.*, f.nome as autor_nome
       FROM assembleia_propostas p
-      LEFT JOIN filiados f ON p.autor_id = f.id
+      LEFT JOIN users f ON p.autor_id = f.id
       WHERE p.assembleia_id = $1
       ORDER BY p.criado_em ASC
     `, [id]).then(r => r.rows),
     pool.query(`
-      SELECT COUNT(DISTINCT c.filiado_id)::INTEGER as total
+      SELECT COUNT(DISTINCT c.user_id)::INTEGER as total
       FROM assembleia_checkins c
       JOIN assembleia_quoruns q ON c.assembleia_quorum_id = q.id
       WHERE q.assembleia_id = $1
@@ -1247,14 +1247,14 @@ async function gerarDadosRelatorio(id) {
     quorumIds.length > 0 ? pool.query(`
       SELECT c.assembleia_quorum_id, f.nome, c.registrado_em
       FROM assembleia_checkins c
-      JOIN filiados f ON c.filiado_id = f.id
+      JOIN users f ON c.user_id = f.id
       WHERE c.assembleia_quorum_id = ANY($1)
       ORDER BY f.nome ASC
     `, [quorumIds]).then(r => r.rows) : Promise.resolve([]),
     votacaoIds.length > 0 ? pool.query(`
-      SELECT v.votacao_id, v.filiado_id, f.nome, v.voto, v.registrado_em
+      SELECT v.votacao_id, v.user_id, f.nome, v.voto, v.registrado_em
       FROM assembleia_votos v
-      JOIN filiados f ON v.filiado_id = f.id
+      JOIN users f ON v.user_id = f.id
       WHERE v.votacao_id = ANY($1)
       ORDER BY v.registrado_em DESC
     `, [votacaoIds]).then(r => r.rows) : Promise.resolve([])

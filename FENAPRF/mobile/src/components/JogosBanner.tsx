@@ -6,18 +6,18 @@ import { useNavigation } from '@react-navigation/native';
 import { getMinhaInscricaoJogos } from '../services/jogosService';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
-import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
+import { getCanonicalUserId } from '../utils/userUtils';
 
 const JogosBanner = () => {
   const navigation = useNavigation<any>();
-  const { usuario } = useAuth();
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkStatus = async () => {
-      if (!usuario) return;
-      const userId = getCanonicalFiliadoId(usuario);
+      if (!user) return;
+      const userId = getCanonicalUserId(user);
       const storageKey = `jogos_banner_hidden_${userId}`;
 
       try {
@@ -51,15 +51,15 @@ const JogosBanner = () => {
     };
 
     checkStatus();
-  }, [usuario]);
+  }, [user]);
 
   const handleClose = () => {
     setVisible(false);
   };
 
   const handleDontShowAgain = async () => {
-    if (!usuario) return;
-    const userId = getCanonicalFiliadoId(usuario);
+    if (!user) return;
+    const userId = getCanonicalUserId(user);
     const storageKey = `jogos_banner_hidden_${userId}`;
 
     try {

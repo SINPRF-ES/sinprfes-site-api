@@ -12,18 +12,18 @@ import { useAuth } from '../../hooks/useAuth';
 export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { id } = route.params;
-  const { usuario, token } = useAuth();
+  const { user, token } = useAuth();
   const [estado, setEstado] = useState<AssembleiaEstado | null>(null);
   const [loading, setLoading] = useState(true);
   const [sendingVoto, setSendingVoto] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-  const perfil = (usuario?.perfil_acesso || '').toUpperCase();
+  const perfil = (user?.perfil_acesso || '').toUpperCase();
   const isDiretoria = perfil === 'DIRETORIA' || perfil === 'ADMIN';
-  const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === usuario?.id;
-  const isElegivel = ['DIRETORIA', 'FILIADO', 'ORGANIZADOR'].includes(perfil);
+  const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
+  const isElegivel = ['DIRETORIA', 'USER', 'ORGANIZADOR'].includes(perfil);
   const temAutoridade = isPresidente || isDiretoria;
-  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || usuario?.id === (estado.quorumVigente as any).gerado_por_user_id);
+  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
 
   const handlePedirPalavra = useCallback(async () => {
     try {
@@ -481,14 +481,14 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             {estado.pedidosPalavra.map((p: any, i: number) => (
               <View key={i} style={styles.itemInteracaoRow}>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.nominalNome}>{p.user_name || p.filiado_nome} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(p.criado_em)}</Text></Text>
+                  <Text style={styles.nominalNome}>{p.user_name || p.user_nome} <Text style={{ color: '#999', fontSize: 11, fontWeight: 'normal' }}>· {formatTimeSP(p.criado_em)}</Text></Text>
                   <Text style={styles.itemStatus}>{p.status}</Text>
                 </View>
                 {temAutoridade && p.status === 'PENDENTE' && (
                   <TouchableOpacity
                     style={styles.btnAcaoPequeno}
                     onPress={() => handleConcederPalavra(p.id)}
-                    accessibilityLabel={`Conceder palavra para ${p.user_name || p.filiado_nome}`}
+                    accessibilityLabel={`Conceder palavra para ${p.user_name || p.user_nome}`}
                     accessibilityRole="button"
                   >
                     <Text style={styles.btnAcaoPequenoText}>Conceder</Text>

@@ -17,7 +17,7 @@ O aplicativo utiliza formatadores centralizados em `mobile/src/shared/formatters
 * **Datas:** `DD/MM/YYYY` (UI) / `YYYY-MM-DD` (API/Banco).
 
 ### Valores Canônicos (Enums)
-* **Perfis:** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR`, `FILIADO`.
+* **Perfis:** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR`, `USER`.
 * **Situação Funcional:** `ATIVO`, `VETERANO`, `PENSIONISTA`.
 * **Parentesco:** `FILHO_ENTEADO`, `CONJUGE_COMPANHEIRO`, `PAI_MAE`, `IRMAO`, `OUTRO`.
 
@@ -30,7 +30,7 @@ O aplicativo utiliza formatadores centralizados em `mobile/src/shared/formatters
 * Botões "Salvar" e "Arquivar" fixos no topo em telas de edição.
 
 ### Regras por Perfil
-* **FILIADO:** Não visualiza CPF de terceiros, não visualiza arquivados e não tem campo de busca por CPF.
+* **USER:** Não visualiza CPF de terceiros, não visualiza arquivados e não tem campo de busca por CPF.
 * **Gestão:** Visualização completa e filtros avançados.
 
 ## Desenvolvimento e Testes

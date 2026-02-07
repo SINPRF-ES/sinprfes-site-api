@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 exports.sendCampaign = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;
-  const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
+  const perfil = req.user?.perfil_acesso || req.user?.perfil || "USER";
 
   const payloadForLog = req.body ? {
     ...req.body,
@@ -54,7 +54,7 @@ exports.sendCampaign = async (req, res) => {
       }
     }
 
-    const allowedTargetTypes = ['ALL', 'ATIVOS', 'VETERANOS', 'LOTACAO', 'JOGOS', 'FILIADO'];
+    const allowedTargetTypes = ['ALL', 'ATIVOS', 'VETERANOS', 'LOTACAO', 'JOGOS', 'USER'];
     if (targetType && !allowedTargetTypes.includes(targetType)) {
       errors.targetType = `Tipo de alvo inválido. Permitidos: ${allowedTargetTypes.join(', ')}`;
     }
@@ -132,7 +132,7 @@ exports.sendCampaign = async (req, res) => {
 exports.pushHealth = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const userId = req.user?.id;
-  const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
+  const perfil = req.user?.perfil_acesso || req.user?.perfil || "USER";
 
   try {
     const tokens = await pushService.listActiveTokens(10);
@@ -169,7 +169,7 @@ exports.pushHealth = async (req, res) => {
 exports.listCampaigns = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;
-  const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
+  const perfil = req.user?.perfil_acesso || req.user?.perfil || "USER";
 
   try {
     const includeArchived = req.query?.includeArchived === '1';

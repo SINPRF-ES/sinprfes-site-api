@@ -1,6 +1,6 @@
 // src/controllers/assembleias.controller.js
 const service = require("../services/assembleias.service");
-const filiadosService = require("../services/filiados.service");
+const usersService = require("../services/users.service");
 const pdfService = require("../services/pdf.service");
 const emailService = require("../services/email.service");
 const socket = require("../websocket/assembleia.socket");
@@ -468,7 +468,7 @@ async function checkin(req, res) {
 
     await service.realizarCheckin({
       assembleia_quorum_id: quorum.id,
-      filiado_id: req.user.id,
+      user_id: req.user.id,
       origem: 'TOKEN',
       assembleia_id: id
     });
@@ -864,18 +864,18 @@ async function gerarRelatorio(req, res) {
     }
 
 
-    const [dados, filiado] = await Promise.all([
+    const [dados, user] = await Promise.all([
       service.gerarDadosRelatorio(id),
-      filiadosService.buscarPorId(req.user.id)
+      usersService.buscarPorId(req.user.id)
     ]);
 
-    if (!filiado) {
+    if (!user) {
         return res.status(404).json({ error: "Dados do solicitante não encontrados." });
     }
 
     // Adiciona metadados do solicitante para o PDF e e-mail
     dados.solicitante = {
-        nome: filiado.nome,
+        nome: user.nome,
         perfil: perfil,
         data_geracao: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     };
@@ -884,10 +884,10 @@ async function gerarRelatorio(req, res) {
     log.info("REPORT_PDF_GENERATED", { requestId: req.requestId, assembleiaId: id, size: pdfBuffer.length });
 
     // Enviar PDF para o solicitante (O serviço também notifica o sindicato internamente)
-    await emailService.enviarEmailRelatorioAssembleia(filiado, dados.assembleia, pdfBuffer, dados);
+    await emailService.enviarEmailRelatorioAssembleia(user, dados.assembleia, pdfBuffer, dados);
     log.info("REPORT_EMAIL_USER_SENT", { requestId: req.requestId, assembleiaId: id, userId: req.user.id });
 
-    const maskedEmail = filiado.email1 ? filiado.email1.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
+    const maskedEmail = user.email1 ? user.email1.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
 
     await service.registrarAuditoria(id, req.user.id, "RELATORIO_GERADO", {
       requestedBy: { id: req.user.id, nome: req.user.nome },

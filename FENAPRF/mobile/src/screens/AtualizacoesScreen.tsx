@@ -8,7 +8,7 @@ import * as Updates from 'expo-updates';
 import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import { FontAwesome } from '@expo/vector-icons';
-import { logDebug } from '../utils/filiadoUtils';
+import { logDebug } from '../utils/userUtils';
 
 const AtualizacoesScreen = () => {
     const [isChecking, setIsChecking] = useState(false);

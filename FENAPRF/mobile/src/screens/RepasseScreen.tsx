@@ -16,7 +16,7 @@ import { Picker } from '@react-native-picker/picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SafeScreen from '../components/SafeScreen';
 import repasseService, { MesRepasse, Responsavel } from '../services/repasseService';
-import { getFiliados } from '../services/apiService';
+import { getUsers } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 import * as Canon from '../utils/canon';
@@ -65,7 +65,7 @@ class RepasseErrorBoundary extends Component<{ children: ReactNode, breadcrumbs:
 }
 
 export default function RepasseScreen() {
-  const { usuario } = useAuth();
+  const { user } = useAuth();
   const breadcrumbsRef = useRef<string[]>([]);
 
   const bc = (msg: string, meta?: any) => {
@@ -117,11 +117,11 @@ export default function RepasseScreen() {
     totalAcumuladoGeral,
     responsaveisCount: responsaveis?.length,
     expandedMonth,
-    usuarioPerfil: usuario?.perfil_acesso,
+    userPerfil: user?.perfil_acesso,
   });
 
   // Implementação local para máxima robustez contra erros de importação (UI_RENDER_CRASH)
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((user?.perfil_acesso || '').toUpperCase());
 
   const fetchData = useCallback(async () => {
     bc('fetch:start', { year });
@@ -129,15 +129,15 @@ export default function RepasseScreen() {
       setLoading(true);
 
       bc('api:call:start', { year, ehGestao });
-      const [respAno, respResps, respFiliados] = await Promise.allSettled([
+      const [respAno, respResps, respUsers] = await Promise.allSettled([
         repasseService.getRepasseAno(year),
         ehGestao ? repasseService.listarResponsaveis() : Promise.resolve([]),
-        getFiliados()
+        getUsers()
       ]);
       bc('api:call:end', {
         anoStatus: respAno.status,
         respsStatus: respResps.status,
-        filiadosStatus: respFiliados.status
+        usersStatus: respUsers.status
       });
 
       if (respAno.status === 'fulfilled') {
@@ -153,7 +153,7 @@ export default function RepasseScreen() {
           localidades: Array.isArray(m?.localidades) ? m.localidades.map(l => ({
             ...l,
             lotacao: String(l?.lotacao || ''),
-            filiadosAtivos: safeNumber(l?.filiadosAtivos, 0),
+            usersAtivos: safeNumber(l?.usersAtivos, 0),
             prfTotal: safeNumber(l?.prfTotal, 0),
             percentual: (l?.percentual == null) ? null : safeNumber(l.percentual),
             creditoMes: safeNumber(l?.creditoMes, 0),
@@ -164,12 +164,12 @@ export default function RepasseScreen() {
           })) : [],
         }));
 
-        // Task 2: Unificar contagem de filiados ativos (Fonte: Listar Filiados)
-        if (respFiliados.status === 'fulfilled') {
-          const allFiliados = Array.isArray(respFiliados.value) ? respFiliados.value : [];
-          bc('REPASSE_LOCALIDADE_NORMALIZATION', { allFiliadosCount: allFiliados.length });
+        // Task 2: Unificar contagem de users ativos (Fonte: Listar Users)
+        if (respUsers.status === 'fulfilled') {
+          const allUsers = Array.isArray(respUsers.value) ? respUsers.value : [];
+          bc('REPASSE_LOCALIDADE_NORMALIZATION', { allUsersCount: allUsers.length });
 
-          const activeFiliados = allFiliados.filter(f => {
+          const activeUsers = allUsers.filter(f => {
             const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
             return situacao === 'ATIVO' && !f.arquivado_em;
           });
@@ -177,7 +177,7 @@ export default function RepasseScreen() {
           const counts: any = {};
           Object.keys(LOTACAO_KEYWORDS).forEach(lot => {
             const kw = LOTACAO_KEYWORDS[lot];
-            counts[lot] = activeFiliados.filter(f =>
+            counts[lot] = activeUsers.filter(f =>
               normalizeLocalidade(f.lotacao || 'SEDE').includes(kw)
             ).length;
           });
@@ -187,12 +187,12 @@ export default function RepasseScreen() {
           mesesNorm.forEach(m => {
             m.localidades.forEach(l => {
               if (counts[l.lotacao] !== undefined) {
-                l.filiadosAtivos = counts[l.lotacao];
+                l.usersAtivos = counts[l.lotacao];
                 // Recalcular percentual e crédito com base no novo número de ativos
                 const perCapita = Number(m.perCapita || 0);
                 if (l.prfTotal > 0) {
-                  l.percentual = (l.filiadosAtivos / l.prfTotal) * 100;
-                  const base = l.filiadosAtivos * perCapita;
+                  l.percentual = (l.usersAtivos / l.prfTotal) * 100;
+                  const base = l.usersAtivos * perCapita;
                   let factor = 0;
                   if (l.percentual >= 90) factor = 1.0;
                   else if (l.percentual >= 80) factor = 0.7;
@@ -207,7 +207,7 @@ export default function RepasseScreen() {
             m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + (l.creditoMes || 0), 0);
           });
         } else {
-          logger.warn('REPASSE_FILIADOS_COUNT_FALLBACK', { reason: respFiliados.status });
+          logger.warn('REPASSE_USERS_COUNT_FALLBACK', { reason: respUsers.status });
         }
 
         // Recalcular acumulado anual após unificação de contagens
@@ -333,11 +333,11 @@ export default function RepasseScreen() {
     console.info('[REPASSE][FOR_EACH][recalculate.localidades]', { count: m.localidades?.length });
     (m.localidades || []).forEach(loc => {
       const prfTotal = Number(loc.prfTotal || 0);
-      const filiadosAtivos = Number(loc.filiadosAtivos || 0);
+      const usersAtivos = Number(loc.usersAtivos || 0);
 
       if (prfTotal > 0) {
-        loc.percentual = (filiadosAtivos / prfTotal) * 100;
-        const base = filiadosAtivos * perCapita;
+        loc.percentual = (usersAtivos / prfTotal) * 100;
+        const base = usersAtivos * perCapita;
         let factor = 0;
         if (loc.percentual >= 90) factor = 1.0;
         else if (loc.percentual >= 80) factor = 0.7;
@@ -570,10 +570,10 @@ export default function RepasseScreen() {
                                           optionIds: filtered.map(o => o.id).slice(0, 10)
                                         });
 
-                                        if (filtered.length === 0 && loc.filiadosAtivos > 0) {
+                                        if (filtered.length === 0 && loc.usersAtivos > 0) {
                                           console.warn("[REPASSE_UI] lotacao sem responsaveis", {
                                             lotacao: loc.lotacao,
-                                            filiadosAtivos: loc.filiadosAtivos
+                                            usersAtivos: loc.usersAtivos
                                           });
                                         }
 
@@ -586,7 +586,7 @@ export default function RepasseScreen() {
                                 </View>
                               )}
 
-                              <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{Number(loc.filiadosAtivos || 0)}</Text></View>
+                              <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{Number(loc.usersAtivos || 0)}</Text></View>
 
                               <View style={[styles.tableCell, { width: 90 }]}>
                                 {ehGestao ? (

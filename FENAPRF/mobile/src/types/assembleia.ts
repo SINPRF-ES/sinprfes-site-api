@@ -66,7 +66,7 @@ export interface VotacaoItem {
 }
 
 export interface VotoNominal {
-  filiado_id: string;
+  user_id: string;
   nome: string;
   voto: 'SIM' | 'NAO' | 'ABSTENCAO';
   registrado_em: string;
@@ -74,8 +74,8 @@ export interface VotoNominal {
 
 export interface PedidoPalavra {
   id: string;
-  filiado_id: string;
-  filiado_nome: string;
+  user_id: string;
+  user_nome: string;
   estado: 'PENDENTE' | 'EM_FALA' | 'CONCLUIDO' | 'CANCELADO';
   ordem: number;
 }

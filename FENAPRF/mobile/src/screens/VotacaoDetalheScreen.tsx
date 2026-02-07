@@ -64,7 +64,7 @@ export default function VotacaoDetalheScreen() {
 
       const res = await votar(token, votacao.id, {
         opcao_id: opcaoSelecionada,
-        device_id: deviceId,
+        device_id: deviceId || 'unknown',
         biometria_confirmada: biometriaConfirmada,
       });
 

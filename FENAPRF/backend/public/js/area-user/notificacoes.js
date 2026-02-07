@@ -37,7 +37,7 @@
         const titleInput = document.getElementById('push-title');
         const messageInput = document.getElementById('push-message');
         const targetTypeSelect = document.getElementById('push-target-type');
-        const filiadoSearchInput = document.getElementById('push-target-filiado-search');
+        const userSearchInput = document.getElementById('push-target-user-search');
 
         if (titleInput) {
             titleInput.oninput = () => {
@@ -67,11 +67,11 @@
             targetTypeSelect.onchange = handleTargetTypeChange;
         }
 
-        if (filiadoSearchInput) {
+        if (userSearchInput) {
             let debounceTimer;
-            filiadoSearchInput.oninput = () => {
+            userSearchInput.oninput = () => {
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => handleFiliadoSearch(filiadoSearchInput.value), 400);
+                debounceTimer = setTimeout(() => handleUserSearch(userSearchInput.value), 400);
             };
         }
     }
@@ -80,42 +80,42 @@
         const type = document.getElementById('push-target-type').value;
         const container = document.getElementById('push-target-value-container');
         const lotacaoSelect = document.getElementById('push-target-lotacao');
-        const filiadoWrapper = document.getElementById('push-target-filiado-wrapper');
+        const userWrapper = document.getElementById('push-target-user-wrapper');
         const label = document.getElementById('push-target-value-label');
 
         container.style.display = 'none';
         lotacaoSelect.style.display = 'none';
-        filiadoWrapper.style.display = 'none';
+        userWrapper.style.display = 'none';
 
         if (type === 'LOTACAO') {
             container.style.display = 'block';
             label.textContent = 'Selecionar Lotação:';
             lotacaoSelect.style.display = 'block';
-        } else if (type === 'FILIADO') {
+        } else if (type === 'USER') {
             container.style.display = 'block';
-            label.textContent = 'Buscar Filiado:';
-            filiadoWrapper.style.display = 'block';
+            label.textContent = 'Buscar User:';
+            userWrapper.style.display = 'block';
         }
     }
 
-    async function handleFiliadoSearch(query) {
+    async function handleUserSearch(query) {
         if (!query || query.length < 2) return;
-        const select = document.getElementById('push-target-filiado-select');
+        const select = document.getElementById('push-target-user-select');
         select.innerHTML = '<option>Buscando...</option>';
 
         try {
-            const r = await window.Api.apiFetch(`/api/filiados?q=${encodeURIComponent(query)}`);
+            const r = await window.Api.apiFetch(`/api/users?q=${encodeURIComponent(query)}`);
             if (r.ok) {
                 const data = await r.json();
-                const filiados = data.filiados || [];
-                if (filiados.length === 0) {
+                const users = data.users || [];
+                if (users.length === 0) {
                     select.innerHTML = '<option value="">Nenhum encontrado</option>';
                 } else {
-                    select.innerHTML = filiados.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
+                    select.innerHTML = users.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
                 }
             }
         } catch (e) {
-            console.error("Erro na busca de filiados", e);
+            console.error("Erro na busca de users", e);
             select.innerHTML = '<option value="">Erro na busca</option>';
         }
     }
@@ -137,11 +137,11 @@
         let targetValue = null;
         if (targetType === 'LOTACAO') {
             targetValue = document.getElementById('push-target-lotacao').value;
-        } else if (targetType === 'FILIADO') {
-            const select = document.getElementById('push-target-filiado-select');
+        } else if (targetType === 'USER') {
+            const select = document.getElementById('push-target-user-select');
             const opt = select.options[select.selectedIndex];
             if (!opt || !opt.value) {
-                alert("Selecione um filiado válido.");
+                alert("Selecione um user válido.");
                 return;
             }
             targetValue = {
@@ -152,8 +152,8 @@
         }
 
         let targetLabel = targetType;
-        if (targetType === 'FILIADO' && targetValue && typeof targetValue === 'object') {
-            targetLabel = `Filiado — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
+        if (targetType === 'USER' && targetValue && typeof targetValue === 'object') {
+            targetLabel = `User — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
         } else if (targetValue) {
             targetLabel = `${targetType} (${targetValue})`;
         }
@@ -247,7 +247,7 @@
             const statusLabel = c.status === 'SENT' ? 'Enviado' : 'Falhou';
 
             let displayTargetValue = c.target_value;
-            if (c.target_type === 'FILIADO' && c.target_value) {
+            if (c.target_type === 'USER' && c.target_value) {
                 let parsed = null;
                 if (typeof c.target_value === 'object') {
                     parsed = c.target_value;

@@ -3,32 +3,32 @@ import { View, Text, FlatList, TextInput, StyleSheet, ActivityIndicator, Touchab
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
-import api, { getFiliados } from '../services/apiService';
-import FiliadoCard from '../components/FiliadoCard';
-import { User } from '../types/usuario';
+import api, { getUsers } from '../services/apiService';
+import UserCard from '../components/UserCard';
+import { User } from '../types/user';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
-import { getCanonicalFiliadoId, isGestao } from '../utils/filiadoUtils';
+import { getCanonicalUserId, isGestao } from '../utils/userUtils';
 import * as Canon from '../utils/canon';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
-export default function FiliadosScreen({ navigation, route }: any) {
+export default function UsersScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
-  const { usuario } = useAuth();
-  const [filiados, setFiliados] = useState<User[]>([]);
+  const { user } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
   const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const ehGestao = isGestao(usuario?.perfil_acesso);
-  const cacheKey = `filiados_cache_${usuario?.id}`;
+  const ehGestao = isGestao(user?.perfil_acesso);
+  const cacheKey = `users_cache_${user?.id}`;
 
   const fetchData = useCallback(async (isRefresh = false) => {
     try {
@@ -40,7 +40,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
         params.incluirArquivados = '1';
       }
 
-      const data = await getFiliados(params);
+      const data = await getUsers(params);
 
       // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter (Bolt ⚡)
       const processedData = data.map((f: User) => {
@@ -60,12 +60,12 @@ export default function FiliadosScreen({ navigation, route }: any) {
         };
       });
 
-      setFiliados(processedData);
+      setUsers(processedData);
       await AsyncStorage.setItem(cacheKey, JSON.stringify(processedData));
     } catch (err) {
-      console.error('[Filiados.fetch]', err);
+      console.error('[Users.fetch]', err);
       const cached = await AsyncStorage.getItem(cacheKey);
-      if (cached) setFiliados(JSON.parse(cached));
+      if (cached) setUsers(JSON.parse(cached));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -79,9 +79,9 @@ export default function FiliadosScreen({ navigation, route }: any) {
           const actions: MenuAction[] = [];
           if (ehGestao) {
             actions.push({
-              label: 'Novo Filiado',
+              label: 'Novo User',
               icon: 'account-plus',
-              onPress: () => navigation.navigate('CriarFiliado')
+              onPress: () => navigation.navigate('CriarUser')
             });
           }
           return <HeaderMenu actions={actions} />;
@@ -100,11 +100,11 @@ export default function FiliadosScreen({ navigation, route }: any) {
     }
   }, [route.params?.refresh, fetchData, navigation]);
 
-  const filteredFiliados = useMemo(() => {
+  const filteredUsers = useMemo(() => {
     const term = normalizeText(searchTerm);
     const digits = onlyDigits(searchTerm);
 
-    return filiados.filter(f => {
+    return users.filter(f => {
       // Filtro por Nome/CPF usando campos pré-calculados (Bolt ⚡)
       const nomeMatch = f._normalizedNome?.includes(term);
       const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
@@ -131,30 +131,30 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
       return true;
     });
-  }, [filiados, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
+  }, [users, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
 
-  const handleEdit = useCallback((filiado: User) => {
-    const filiadoId = getCanonicalFiliadoId(filiado);
-    logger.info('NAVIGATE_TO_EDITAR_FILIADO', { filiadoId });
-    navigation.navigate('EditarFiliado', { filiadoId });
+  const handleEdit = useCallback((user: User) => {
+    const userId = getCanonicalUserId(user);
+    logger.info('NAVIGATE_TO_EDITAR_USER', { userId });
+    navigation.navigate('EditarUser', { userId });
   }, [navigation]);
 
   const renderItem = useCallback(({ item }: { item: User }) => (
-    <FiliadoCard
-      filiado={item as any}
-      currentUserProfile={usuario?.perfil_acesso as any}
+    <UserCard
+      user={item as any}
+      currentUserProfile={user?.perfil_acesso as any}
       onEdit={handleEdit}
     />
-  ), [usuario?.perfil_acesso, handleEdit]);
+  ), [user?.perfil_acesso, handleEdit]);
 
-  if (loading && filiados.length === 0) {
+  if (loading && users.length === 0) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
 
   return (
     <SafeScreen style={styles.container}>
       <View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
-        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#003366' }}>Total: {filteredFiliados.length}</Text>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#003366' }}>Total: {filteredUsers.length}</Text>
       </View>
       <View style={styles.searchBar}>
         <MaterialCommunityIcons name="magnify" size={24} color="#666" />
@@ -214,7 +214,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
       </View>
 
       <FlatList
-        data={filteredFiliados}
+        data={filteredUsers}
         keyExtractor={item => item.id}
         renderItem={renderItem}
         // Otimizações de performance para listas longas (Bolt ⚡)
@@ -226,7 +226,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
         onRefresh={() => fetchData(true)}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text>{searchTerm ? 'Nenhum filiado encontrado.' : 'Carregando lista...'}</Text>
+            <Text>{searchTerm ? 'Nenhum user encontrado.' : 'Carregando lista...'}</Text>
           </View>
         }
       />

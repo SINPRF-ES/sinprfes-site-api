@@ -20,7 +20,7 @@ import { formatAgencia, formatConta, onlyDigits, formatCpf, formatTelefone } fro
 import { formatDateToDdMmYyyy } from '../utils/date';
 import { criarRessarcimento } from '../services/ressarcimentoService';
 import { logger } from '../infra/logger';
-import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
+import { getCanonicalUserId } from '../utils/userUtils';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import api from '../services/apiService';
 
@@ -45,16 +45,16 @@ const BANCOS_LISTA = [
 ];
 
 const RessarcimentoScreen = () => {
-  const { usuario } = useAuth();
+  const { user } = useAuth();
   const netInfo = useNetInfo();
   const [loading, setLoading] = useState(false);
   const [fetchingUser, setFetchingUser] = useState(false);
 
   const [form, setForm] = useState({
-    nome_solicitante: usuario?.name || '',
-    cpf: usuario?.cpf || '',
-    email_destino: usuario?.email || '',
-    telefone_contato: usuario?.telefone1 || usuario?.telefone2 || '',
+    nome_solicitante: user?.name || '',
+    cpf: user?.cpf || '',
+    email_destino: user?.email || '',
+    telefone_contato: user?.telefone1 || user?.telefone2 || '',
     data_inicio: '',
     data_fim: '',
     local: '',
@@ -221,8 +221,8 @@ const RessarcimentoScreen = () => {
 
     try {
       setLoading(true);
-      const filiadoId = getCanonicalFiliadoId(usuario);
-      logger.info('[Ressarcimento.submit.start]', { filiadoId });
+      const userId = getCanonicalUserId(user);
+      logger.info('[Ressarcimento.submit.start]', { userId });
 
       const formData = new FormData();
 

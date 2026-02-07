@@ -2,7 +2,7 @@ const request = require('supertest');
 const pool = require('../config/db');
 const emailService = require('../services/email.service');
 const pdfService = require('../services/pdf.service');
-const filiadosService = require('../services/filiados.service');
+const usersService = require('../services/users.service');
 
 // Mock pool
 jest.mock('../config/db', () => ({
@@ -16,7 +16,7 @@ jest.mock('../config/db', () => ({
 // Mock services
 jest.mock('../services/email.service');
 jest.mock('../services/pdf.service');
-jest.mock('../services/filiados.service');
+jest.mock('../services/users.service');
 
 // Mock auth
 let mockUser = { id: 'user-1', perfil_acesso: 'DIRETORIA' };
@@ -35,7 +35,7 @@ describe('Assembleia Report API', () => {
 
     // Default mocks
     pdfService.gerarPdfRelatorioAssembleia.mockResolvedValue(Buffer.from('pdf-content'));
-    filiadosService.buscarPorId.mockResolvedValue({ id: 'user-1', nome: 'Test User', email1: 'test@test.com' });
+    usersService.buscarPorId.mockResolvedValue({ id: 'user-1', nome: 'Test User', email1: 'test@test.com' });
   });
 
   test('should allow DIRETORIA to generate report during EM_CURSO', async () => {
@@ -48,8 +48,8 @@ describe('Assembleia Report API', () => {
     expect(emailService.enviarEmailRelatorioAssembleia).toHaveBeenCalled();
   });
 
-  test('should allow FILIADO to generate report during EM_CURSO', async () => {
-    mockUser = { id: 'user-2', perfil_acesso: 'FILIADO' };
+  test('should allow USER to generate report during EM_CURSO', async () => {
+    mockUser = { id: 'user-2', perfil_acesso: 'USER' };
     pool.query.mockResolvedValue({ rows: [{ id: 'ass-1', estado: 'EM_CURSO', titulo: 'Ass 1' }] });
 
     const response = await request(app).post('/api/assembleias/ass-1/relatorio');
@@ -58,8 +58,8 @@ describe('Assembleia Report API', () => {
     expect(response.body.success).toBe(true);
   });
 
-  test('should allow FILIADO to generate report when ENCERRADA', async () => {
-    mockUser = { id: 'user-2', perfil_acesso: 'FILIADO' };
+  test('should allow USER to generate report when ENCERRADA', async () => {
+    mockUser = { id: 'user-2', perfil_acesso: 'USER' };
     pool.query.mockResolvedValue({ rows: [{ id: 'ass-1', estado: 'ENCERRADA', titulo: 'Ass 1' }] });
 
     const response = await request(app).post('/api/assembleias/ass-1/relatorio');

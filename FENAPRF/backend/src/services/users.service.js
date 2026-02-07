@@ -12,7 +12,7 @@ const {
 /**
  * Busca usuário pelo CPF (normalizado).
  */
-async function buscarPorCpf(cpfRaw) {
+async function buscarUserPorCpf(cpfRaw) {
   const cpf = normalizarCpf(cpfRaw);
   const { rows } = await pool.query(
     "SELECT *, name as nome, password_hash as senha_hash FROM users WHERE cpf = $1 LIMIT 1",
@@ -24,7 +24,7 @@ async function buscarPorCpf(cpfRaw) {
 /**
  * Busca usuário pelo ID (UUID).
  */
-async function buscarPorId(id) {
+async function buscarUserPorId(id) {
   const { rows } = await pool.query(
     "SELECT *, name as nome, password_hash as senha_hash FROM users WHERE id = $1 LIMIT 1",
     [id]
@@ -107,7 +107,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const isGestao = perfisGestao.includes(perfil);
 
   if (!isGestao || !incluirArquivados) {
-    conds.push("arquivado_em IS NULL");
+    conds.push("f.arquivado_em IS NULL");
   }
 
   if (filtro) {
@@ -117,12 +117,12 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 
     if (termoLimpo) {
       params.push(`%${termoLimpo}%`);
-      searchConds.push(`LOWER(name) LIKE $${params.length}`);
+      searchConds.push(`LOWER(f.name) LIKE $${params.length}`);
     }
 
     if (apenasDigitos) {
       params.push(`%${apenasDigitos}%`);
-      searchConds.push(`cpf LIKE $${params.length}`);
+      searchConds.push(`f.cpf LIKE $${params.length}`);
     }
 
     if (searchConds.length > 0) {
@@ -134,14 +134,14 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 
   const query = `
     SELECT
-      id, name, name as nome, cpf, sexo, data_nascimento, telefone1, telefone2, email as email1,
-      lotacao, situacao, perfil_acesso,
-      logradouro, bairro, numero, complemento, cidade, uf, cep,
-      avatar_url,
-      arquivado_em, arquivado_motivo
-    FROM users
+      f.id, f.name, f.name as nome, f.cpf, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email as email1,
+      f.lotacao, f.situacao, f.perfil_acesso,
+      f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
+      f.avatar_url,
+      f.arquivado_em, f.arquivado_motivo
+    FROM users f
     ${whereSql}
-    ORDER BY name ASC
+    ORDER BY f.name ASC
   `;
 
   const { rows } = await pool.query(query, params);
@@ -211,7 +211,7 @@ async function atualizarDadosProprios(id, dados) {
 /**
  * Atualização completa de um usuário (usada por perfis de gestão).
  */
-async function atualizarFiliadoPorId(id, dados) {
+async function atualizarUserPorId(id, dados) {
   if (dados.nome) {
     dados.name = normalizeNome(dados.nome);
   }
@@ -280,7 +280,7 @@ async function atualizarFiliadoPorId(id, dados) {
 /**
  * Criação inicial de usuário.
  */
-async function criarFiliadoInicial(dados) {
+async function criarUserInicial(dados) {
   const cpfNormalizado = normalizarCpf(dados.cpf);
 
   try {
@@ -333,7 +333,7 @@ async function criarFiliadoInicial(dados) {
 /**
  * Arquivar
  */
-async function arquivarFiliadoPorId(id, { motivo }) {
+async function arquivarUserPorId(id, { motivo }) {
   await pool.query(
     `UPDATE users SET arquivado_em = NOW(), arquivado_motivo = $1, updated_at = NOW() WHERE id = $2`,
     [motivo, id]
@@ -344,7 +344,7 @@ async function arquivarFiliadoPorId(id, { motivo }) {
 /**
  * Desarquivar
  */
-async function desarquivarFiliadoPorId(id) {
+async function desarquivarUserPorId(id) {
   await pool.query(
     `UPDATE users SET arquivado_em = NULL, arquivado_motivo = NULL, updated_at = NOW() WHERE id = $1`,
     [id]
@@ -355,8 +355,8 @@ async function desarquivarFiliadoPorId(id) {
 async function buscarAniversariantesDoDia() {
   const query = `
     SELECT
-      id, name as nome, situacao, perfil_acesso, 'FILIADO' as tipo,
-      NULL as nome_filiado_vinculo, NULL as situacao_filiado_vinculo,
+      id, name as nome, situacao, perfil_acesso, 'USER' as tipo,
+      NULL as nome_user_vinculo, NULL as situacao_user_vinculo,
       data_nascimento
     FROM users
     WHERE
@@ -364,24 +364,33 @@ async function buscarAniversariantesDoDia() {
       EXTRACT(DAY FROM data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
       EXTRACT(MONTH FROM data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
       arquivado_em IS NULL
-    ORDER BY nome ASC
+    ORDER BY name ASC
   `;
   const { rows } = await pool.query(query);
   return rows;
 }
 
+async function salvarTwoFaSecret(userId, secret) {
+  await pool.query(
+    `UPDATE users SET twofa_secret = $1, updated_at = NOW() WHERE id = $2`,
+    [secret, userId]
+  );
+  return await getMe(userId);
+}
+
 module.exports = {
-  buscarPorCpf,
-  buscarPorId,
+  buscarUserPorCpf,
+  buscarUserPorId,
   getMe,
   setResetToken,
   setPassword,
   registrarUltimoAcesso,
   listarParaPerfil,
   atualizarDadosProprios,
-  atualizarFiliadoPorId,
-  criarFiliadoInicial,
-  arquivarFiliadoPorId,
-  desarquivarFiliadoPorId,
+  atualizarUserPorId,
+  criarUserInicial,
+  arquivarUserPorId,
+  desarquivarUserPorId,
   buscarAniversariantesDoDia,
+  salvarTwoFaSecret,
 };

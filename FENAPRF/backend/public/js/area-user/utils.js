@@ -282,17 +282,17 @@
     gerarCamposDependentes,
     normalizeText,
     escapeHTML,
-    searchFiliados,
-    filterFiliados
+    searchUsers,
+    filterUsers
   };
 
-  let _filiadosCache = null;
+  let _usersCache = null;
 
   /**
-   * Filtra uma lista de filiados com base em uma query de nome ou CPF.
+   * Filtra uma lista de users com base em uma query de nome ou CPF.
    * Centraliza a lógica de busca para garantir paridade entre módulos.
    */
-  function filterFiliados(lista, query, options = {}) {
+  function filterUsers(lista, query, options = {}) {
     if (!query || query.length < 2) return lista;
 
     const termo = normalizeText(query);
@@ -300,7 +300,7 @@
 
     // Regra de segurança: Perfis básicos não buscam por CPF
     const perfil = (options.perfil || "").toUpperCase();
-    const canSearchCpf = !perfil || !["FILIADO", "ORGANIZADOR"].includes(perfil);
+    const canSearchCpf = !perfil || !["USER", "ORGANIZADOR"].includes(perfil);
 
     return (lista || []).filter(f => {
       // Busca por nome (normalizado)
@@ -319,22 +319,22 @@
   }
 
   /**
-   * Busca unificada de filiados (Frontend).
-   * Carrega todos os filiados uma vez e filtra localmente para garantir
-   * paridade entre as telas de Filiados e Relatórios.
+   * Busca unificada de users (Frontend).
+   * Carrega todos os users uma vez e filtra localmente para garantir
+   * paridade entre as telas de Users e Relatórios.
    */
-  async function searchFiliados(query, options = {}) {
-    if (!_filiadosCache || options.forceRefresh) {
-      const r = await global.Utils.apiFetch('/api/filiados');
+  async function searchUsers(query, options = {}) {
+    if (!_usersCache || options.forceRefresh) {
+      const r = await global.Utils.apiFetch('/api/users');
       if (r.ok) {
         const d = await r.json();
-        _filiadosCache = d.filiados || d || [];
+        _usersCache = d.users || d || [];
       } else {
-        console.error("Erro ao carregar cache de filiados");
+        console.error("Erro ao carregar cache de users");
         return [];
       }
     }
 
-    return filterFiliados(_filiadosCache, query);
+    return filterUsers(_usersCache, query);
   }
 })(typeof window !== 'undefined' ? window : global);

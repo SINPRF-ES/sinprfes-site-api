@@ -1,27 +1,27 @@
 // src/components/EnderecoCard.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert, ActivityIndicator } from 'react-native';
-import { Filiado } from '../types/filiado';
+import { User } from '../types/user';
 import { formatCep, onlyDigits } from '../shared/format/formatters';
 import { buscarCep } from '../services/cepService';
 
 interface Props {
-  filiado: Filiado | null;
-  setFiliado: React.Dispatch<React.SetStateAction<Filiado | null>>;
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   hideTitle?: boolean;
   cardStyle?: any;
 }
 
-const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {} }) => {
+const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardStyle = {} }) => {
   const [isBuscando, setIsBuscando] = useState(false);
 
   const handleCepChange = (value: string) => {
     const digits = onlyDigits(value);
-    setFiliado(f => (f ? { ...f, cep: digits } : null));
+    setUser(f => (f ? { ...f, cep: digits } : null));
   };
 
   const handleBuscarCep = async () => {
-    const cep = filiado?.cep;
+    const cep = user?.cep;
     if (!cep || cep.length !== 8) {
       Alert.alert('CEP Inválido', 'Por favor, insira um CEP com 8 dígitos.');
       return;
@@ -31,7 +31,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
     try {
       const endereco = await buscarCep(cep);
       if (endereco) {
-        setFiliado(f => f ? { ...f, ...endereco } : null);
+        setUser(f => f ? { ...f, ...endereco } : null);
         Alert.alert('Sucesso', 'Endereço encontrado e preenchido.');
       } else {
         Alert.alert('CEP não encontrado', 'O CEP informado não foi localizado.');
@@ -51,7 +51,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
           <Text style={styles.label}>CEP</Text>
           <TextInput
             style={styles.input}
-            value={formatCep(filiado?.cep || '')}
+            value={formatCep(user?.cep || '')}
             onChangeText={handleCepChange}
             placeholder="00000-000"
             keyboardType="numeric"
@@ -70,7 +70,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
       <Text style={styles.label}>Logradouro e Bairro</Text>
       <TextInput
         style={styles.inputDisabled}
-        value={filiado?.logradouro_bairro || ''}
+        value={user?.logradouro_bairro || ''}
         placeholder="Preenchido pela busca de CEP"
         editable={false}
         accessibilityLabel="Logradouro e Bairro"
@@ -81,8 +81,8 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
           <Text style={styles.label}>Número</Text>
           <TextInput
             style={styles.input}
-            value={filiado?.numero || ''}
-            onChangeText={(text) => setFiliado(f => f ? { ...f, numero: text } : null)}
+            value={user?.numero || ''}
+            onChangeText={(text) => setUser(f => f ? { ...f, numero: text } : null)}
             placeholder="Nº"
             accessibilityLabel="Número"
           />
@@ -91,8 +91,8 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
           <Text style={styles.label}>Complemento</Text>
           <TextInput
             style={styles.input}
-            value={filiado?.complemento || ''}
-            onChangeText={(text) => setFiliado(f => f ? { ...f, complemento: text } : null)}
+            value={user?.complemento || ''}
+            onChangeText={(text) => setUser(f => f ? { ...f, complemento: text } : null)}
             placeholder="Opcional"
             accessibilityLabel="Complemento"
             textContentType="streetAddressLine2"
@@ -104,7 +104,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
           <Text style={styles.label}>Cidade</Text>
           <TextInput
             style={styles.inputDisabled}
-            value={filiado?.cidade || ''}
+            value={user?.cidade || ''}
             placeholder="Cidade"
             editable={false}
             accessibilityLabel="Cidade"
@@ -115,7 +115,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
           <Text style={styles.label}>UF</Text>
           <TextInput
             style={styles.inputDisabled}
-            value={filiado?.uf || ''}
+            value={user?.uf || ''}
             placeholder="UF"
             maxLength={2}
             editable={false}

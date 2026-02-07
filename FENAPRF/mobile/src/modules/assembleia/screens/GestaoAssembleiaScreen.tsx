@@ -19,7 +19,7 @@ export default function GestaoAssembleiaScreen() {
   const [votDuracao, setVotDuracao] = useState('1');
   const [selectedPropostaId, setSelectedPropostaId] = useState<string | null>(null);
 
-  const [mesaFiliadoId, setMesaFiliadoId] = useState('');
+  const [mesaUserId, setMesaUserId] = useState('');
   const [mesaCargo, setMesaCargo] = useState<'PRESIDENTE' | 'SECRETARIO'>('PRESIDENTE');
 
   const handleGerarQuorum = async () => {
@@ -169,9 +169,9 @@ export default function GestaoAssembleiaScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="ID do Filiado"
-            value={mesaFiliadoId}
-            onChangeText={setMesaFiliadoId}
+            placeholder="ID do User"
+            value={mesaUserId}
+            onChangeText={setMesaUserId}
           />
 
           <View style={styles.row}>
@@ -192,11 +192,11 @@ export default function GestaoAssembleiaScreen() {
           <TouchableOpacity
             style={[styles.primaryButton, { marginTop: 12 }]}
             onPress={async () => {
-              if (!mesaFiliadoId) return;
+              if (!mesaUserId) return;
               setLoading(true);
               try {
-                await assembleiaService.definirMesa(id, { filiado_id: mesaFiliadoId, cargo: mesaCargo });
-                setMesaFiliadoId('');
+                await assembleiaService.definirMesa(id, { user_id: mesaUserId, cargo: mesaCargo });
+                setMesaUserId('');
                 Alert.alert('Sucesso', 'Mesa atualizada!');
               } catch (error) {
                 Alert.alert('Erro', 'Falha ao definir mesa.');

@@ -10,29 +10,29 @@
   <!-- Scripts Utilitários (Ordem Crítica) -->
   <script src="/shared/canon.js"></script>
   <script src="/js/shared/format/formatters.js"></script>
-  <script src="/js/area-filiado/utils.js"></script>
-  <script src="/js/area-filiado/age-utils.js"></script>
-  <script src="/js/area-filiado/parentesco-utils.js"></script>
+  <script src="/js/area-user/utils.js"></script>
+  <script src="/js/area-user/age-utils.js"></script>
+  <script src="/js/area-user/parentesco-utils.js"></script>
 
   <!-- Módulos de Seção -->
-  <script src="/js/area-filiado/navegacao.js"></script>
-  <script src="/js/area-filiado/seguranca.js"></script>
-  <script src="/js/area-filiado/meus-dados.js"></script>
-  <script src="/js/area-filiado/filiados-admin.js"></script>
-  <script src="/js/area-filiado/ressarcimento.js"></script>
+  <script src="/js/area-user/navegacao.js"></script>
+  <script src="/js/area-user/seguranca.js"></script>
+  <script src="/js/area-user/meus-dados.js"></script>
+  <script src="/js/area-user/users-admin.js"></script>
+  <script src="/js/area-user/ressarcimento.js"></script>
   <script src="/shared/repasse.constants.js"></script>
-  <script src="/js/area-filiado/jogos.js"></script>
-  <script src="/js/area-filiado/publicacoes.js"></script>
-  <script src="/js/area-filiado/repasse.js"></script>
-  <script src="/js/area-filiado/notificacoes.js"></script>
-  <script src="/js/area-filiado/assembleia-utils.js"></script>
-  <script src="/js/area-filiado/assembleias.js"></script>
-  <script src="/js/area-filiado/noticias-admin.js"></script>
-  <script src="/js/area-filiado/cms-admin.js"></script>
-  <script src="/js/area-filiado/relatorios.js"></script>
+  <script src="/js/area-user/jogos.js"></script>
+  <script src="/js/area-user/publicacoes.js"></script>
+  <script src="/js/area-user/repasse.js"></script>
+  <script src="/js/area-user/notificacoes.js"></script>
+  <script src="/js/area-user/assembleia-utils.js"></script>
+  <script src="/js/area-user/assembleias.js"></script>
+  <script src="/js/area-user/noticias-admin.js"></script>
+  <script src="/js/area-user/cms-admin.js"></script>
+  <script src="/js/area-user/relatorios.js"></script>
 
   <!-- Inicializador Principal -->
-  <script src="/js/area-filiado.js"></script>
+  <script src="/js/area-user.js"></script>
 </head>
 <body class="af-body">
   <div class="af-container">
@@ -46,7 +46,7 @@
 
         <div class="af-sidebar-nav">
           <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
-          <button class="af-nav-item" data-target="sec-filiados">👥 Filiados</button>
+          <button class="af-nav-item" data-target="sec-users">👥 Usuários</button>
           <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
           <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
           <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
@@ -66,13 +66,13 @@
       <!-- Conteúdo Principal -->
       <main class="af-content">
         <section id="sec-meus-dados" class="af-section active">
-          <div id="area-filiado-conteudo">
+          <div id="area-user-conteudo">
             <p>Carregando seus dados...</p>
           </div>
           <div id="alerta-endereco-desatualizado" class="alerta alerta-warning" style="display:none; margin-top:20px;"></div>
         </section>
 
-        <section id="sec-filiados" class="af-section" style="display:none;">
+        <section id="sec-users" class="af-section" style="display:none;">
           <!-- Conteúdo carregado via JS -->
         </section>
 
@@ -152,7 +152,7 @@
                   <div class="field-group">
                       <label style="font-weight: bold; color: #333;">Tipo de Relatório</label>
                       <select id="relatorio-tipo" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
-                          <option value="INDIVIDUAL">Dossiê do Filiado (Individual)</option>
+                          <option value="INDIVIDUAL">Dossiê do Usuário (Individual)</option>
                           <option value="LOTACAO">Distribuição por Lotação</option>
                           <option value="SITUACAO">Distribuição por Situação Funcional</option>
                           <option value="GLOBAL">Global (Completo)</option>
@@ -160,11 +160,11 @@
                   </div>
 
                   <div id="relatorio-param-container" class="field-group" style="margin-top: 20px;">
-                      <label id="relatorio-param-label" style="font-weight: bold; color: var(--texto-claro);">Filiado</label>
+                      <label id="relatorio-param-label" style="font-weight: bold; color: var(--texto-claro);">Usuário</label>
 
-                      <div id="relatorio-filiado-wrapper">
-                          <input type="text" id="relatorio-filiado-search" placeholder="Buscar por nome ou CPF..." style="padding: 12px; border-radius: 8px;" />
-                          <select id="relatorio-filiado-select" style="margin-top: 8px; padding: 10px; border-radius: 8px;">
+                      <div id="relatorio-user-wrapper">
+                          <input type="text" id="relatorio-user-search" placeholder="Buscar por nome ou CPF..." style="padding: 12px; border-radius: 8px;" />
+                          <select id="relatorio-user-select" style="margin-top: 8px; padding: 10px; border-radius: 8px;">
                               <option value="">Aguardando busca...</option>
                           </select>
                       </div>
@@ -214,19 +214,19 @@
           <div class="section-card">
               <div class="af-standard-header">
                   <h2>📢 Notificações Push</h2>
-                  <p class="section-subtitle">Envie mensagens para todos os filiados com o app instalado.</p>
+                  <p class="section-subtitle">Envie mensagens para todos os users com o app instalado.</p>
               </div>
 
               <div class="form-container" style="max-width: 600px; margin: 20px auto 0 auto;">
                   <div class="field-group">
                       <label>Público de Destino</label>
                       <select id="push-target-type">
-                          <option value="ALL">Todos os filiados com app</option>
+                          <option value="ALL">Todos os users com app</option>
                           <option value="ATIVOS">Apenas ATIVOS</option>
                           <option value="VETERANOS">Veteranos / Pensionistas</option>
                           <option value="LOTACAO">Por Lotação (somente ativos)</option>
                           <option value="JOGOS">Inscritos nos Jogos</option>
-                          <option value="FILIADO">Especificar um Filiado</option>
+                          <option value="USER">Especificar um Usuário</option>
                       </select>
                   </div>
 
@@ -241,9 +241,9 @@
                           <option value="4ª DEL (Linhares)">4ª DEL (Linhares)</option>
                       </select>
 
-                      <div id="push-target-filiado-wrapper" style="display: none;">
-                          <input type="text" id="push-target-filiado-search" placeholder="Buscar por nome ou CPF..." inputmode="search" autocomplete="off" />
-                          <select id="push-target-filiado-select" style="margin-top: 5px;">
+                      <div id="push-target-user-wrapper" style="display: none;">
+                          <input type="text" id="push-target-user-search" placeholder="Buscar por nome ou CPF..." inputmode="search" autocomplete="off" />
+                          <select id="push-target-user-select" style="margin-top: 5px;">
                               <option value="">Aguardando busca...</option>
                           </select>
                       </div>
@@ -278,12 +278,12 @@
     </div>
   </div>
 
-  <!-- Modal de Edição de Filiado -->
-  <div id="modal-editar-filiado" class="modal">
+  <!-- Modal de Edição de Usuário -->
+  <div id="modal-editar-user" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modal-titulo">Editar Filiado</h2>
-        <button type="button" class="modal-close" onclick="document.getElementById('modal-editar-filiado').style.display='none'">×</button>
+        <h2 id="modal-titulo">Editar Usuário</h2>
+        <button type="button" class="modal-close" onclick="document.getElementById('modal-editar-user').style.display='none'">×</button>
       </div>
       <div class="modal-body" id="modal-corpo">
         <!-- Form carregado dinamicamente -->

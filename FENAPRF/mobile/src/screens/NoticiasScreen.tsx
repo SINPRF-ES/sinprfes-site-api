@@ -11,7 +11,7 @@ import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 export default function NoticiasScreen() {
   const navigation = useNavigation<any>();
-  const { token, usuario } = useAuth();
+  const { token, user } = useAuth();
 
   const { data: noticias, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['noticias'],
@@ -74,7 +74,7 @@ export default function NoticiasScreen() {
 
   let ehGestaoNoticias = false;
   try {
-    ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+    ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((user?.perfil_acesso || '').toUpperCase());
   } catch (err) {
     logger.error('Error checking management permission in NoticiasScreen', err);
   }

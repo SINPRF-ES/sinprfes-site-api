@@ -39,7 +39,7 @@
     ADMIN: 'ADMIN',
     DIRETORIA: 'DIRETORIA',
     FUNCIONARIO: 'FUNCIONARIO',
-    FILIADO: 'FILIADO',
+    USER: 'USER',
     ORGANIZADOR: 'ORGANIZADOR',
     COMUNICADOR: 'COMUNICADOR'
   };
@@ -110,7 +110,7 @@
   function normalizePerfil(val) {
     const s = slugify(val);
     if (PERFIL_ACESSO[s]) return PERFIL_ACESSO[s];
-    return PERFIL_ACESSO.FILIADO; // Default seguro
+    return PERFIL_ACESSO.USER; // Default seguro
   }
 
   /**

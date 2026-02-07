@@ -1,10 +1,10 @@
 /**
- * Módulo Filiados Admin (Página Inicial)
- * Carregado como script clássico (window.FiliadosAdmin)
+ * Módulo Users Admin (Página Inicial)
+ * Carregado como script clássico (window.UsersAdmin)
  */
 
 (function (global) {
-    if (global.FiliadosAdmin) return;
+    if (global.UsersAdmin) return;
 
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
@@ -66,29 +66,29 @@
         }
     }
 
-    async function inicializarFiliados(perfil) {
-        const listaEl = document.getElementById("lista-filiados");
+    async function inicializarUsers(perfil) {
+        const listaEl = document.getElementById("lista-users");
         perfilAtual = (perfil || "").toUpperCase();
-        const isReadOnlyProfile = ["FILIADO", "ORGANIZADOR"].includes(perfilAtual);
+        const isReadOnlyProfile = ["USER", "ORGANIZADOR"].includes(perfilAtual);
         const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
 
         if (!listaEl) {
-            const secFiliados = document.getElementById("sec-filiados");
-            if (secFiliados) {
+            const secUsers = document.getElementById("sec-users");
+            if (secUsers) {
                 const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
-                secFiliados.innerHTML = `
+                secUsers.innerHTML = `
                     <div class="search-box-container af-standard-header">
                         <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px;">
-                            <h2 style="margin:0;">👥 Filiados</h2>
+                            <h2 style="margin:0;">👥 Users</h2>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-                            <button id="btn-novo-filiado" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo Filiado</button>
-                            <div id="filiados-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
-                            <input type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
+                            <button id="btn-novo-user" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo User</button>
+                            <div id="users-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
+                            <input type="text" id="busca-users" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
                         </div>
                     </div>
-                    <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
-                    <div id="lista-filiados"></div>
+                    <div id="novo-user-container" style="display:none; margin-bottom:20px;"></div>
+                    <div id="lista-users"></div>
                 `;
             }
         }
@@ -96,18 +96,18 @@
         const canManageProfiles = ehGestao;
 
         if (!handlersConfigurados) {
-            const btnNovo = document.getElementById("btn-novo-filiado");
-            const containerNovo = document.getElementById("novo-filiado-container");
+            const btnNovo = document.getElementById("btn-novo-user");
+            const containerNovo = document.getElementById("novo-user-container");
 
             if (btnNovo) {
                 if (ehGestao) {
                     btnNovo.style.display = "inline-block";
-                    btnNovo.onclick = () => abrirNovoFiliado(containerNovo);
-                    renderizarFormularioNovoFiliado(containerNovo);
+                    btnNovo.onclick = () => abrirNovoUser(containerNovo);
+                    renderizarFormularioNovoUser(containerNovo);
                 }
             }
 
-            const campoBusca = document.getElementById("busca-filiados");
+            const campoBusca = document.getElementById("busca-users");
             if (campoBusca) {
                 campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
 
@@ -156,20 +156,20 @@
     }
 
     async function carregarLista() {
-        const listaEl = document.getElementById("lista-filiados");
+        const listaEl = document.getElementById("lista-users");
         if (!listaEl) return;
 
         try {
             listaEl.innerHTML = `<p style="text-align:center; color:#fff;">Carregando...</p>`;
             const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
-            let url = "/api/filiados";
+            let url = "/api/users";
             if (estado !== "CADASTRO_ATIVO") url += "?incluirArquivados=1";
 
             const r = await window.Api.apiFetch(url);
             if (r.ok) {
                 const d = await r.json();
-                cacheLista = d.filiados || d || [];
-                filtrarLista(document.getElementById("busca-filiados")?.value || "");
+                cacheLista = d.users || d || [];
+                filtrarLista(document.getElementById("busca-users")?.value || "");
             }
         } catch (e) {
             listaEl.innerHTML = `<p style="text-align:center; color:red;">Erro ao carregar.</p>`;
@@ -177,14 +177,14 @@
     }
 
     function filtrarLista(termo) {
-        const el = document.getElementById("lista-filiados");
+        const el = document.getElementById("lista-users");
         if (!el) return;
 
-        const { filterFiliados, formatarCPF, formatarTelefoneTexto, normalizeText, escapeHTML } = global.Utils || {};
+        const { filterUsers, formatarCPF, formatarTelefoneTexto, normalizeText, escapeHTML } = global.Utils || {};
         const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
 
         // Reutiliza a lógica unificada de busca (nome/CPF)
-        let res = filterFiliados ? filterFiliados(cacheLista, termo, { perfil: perfilAtual }) : cacheLista;
+        let res = filterUsers ? filterUsers(cacheLista, termo, { perfil: perfilAtual }) : cacheLista;
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {
@@ -217,11 +217,11 @@
             res = res.filter(f => !f.arquivado_em);
         }
 
-        const countEl = document.getElementById("filiados-count");
+        const countEl = document.getElementById("users-count");
         if (countEl) countEl.textContent = `Total: ${res.length}`;
 
         if (!res.length) {
-            el.innerHTML = `<div class="filiado-card" style="text-align:center;">Nenhum registro.</div>`;
+            el.innerHTML = `<div class="user-card" style="text-align:center;">Nenhum registro.</div>`;
             return;
         }
 
@@ -235,23 +235,23 @@
             const tels = [f.telefone1, f.telefone2].filter(Boolean).map(t => formatarTelefoneTexto ? formatarTelefoneTexto(t) : t).join(" / ");
 
             return `
-                <div class="filiado-card ${classeStatus}">
-                    <div class="filiado-header">
-                        <div class="filiado-left">
+                <div class="user-card ${classeStatus}">
+                    <div class="user-header">
+                        <div class="user-left">
                             ${avatarHtml(f.avatar_url, f.nome)}
                             <div>
-                                <div class="filiado-nome">${safeEscape(f.nome)}</div>
-                                <div class="filiado-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.lotacao || 'SEDE')}</div>
-                                ${["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
-                                <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
+                                <div class="user-nome">${safeEscape(f.nome)}</div>
+                                <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.lotacao || 'SEDE')}</div>
+                                ${["USER", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
+                                <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <span class="filiado-badge badge-${situacaoLower}">${safeEscape(situacao)}</span>
+                            <span class="user-badge badge-${situacaoLower}">${safeEscape(situacao)}</span>
                             <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
-            ${!["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ?
-                                `<button class="btn btn-outline btn-sm" onclick="FiliadosAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
+            ${!["USER", "ORGANIZADOR"].includes(perfilAtual) ?
+                                `<button class="btn btn-outline btn-sm" onclick="UsersAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -260,14 +260,14 @@
     }
 
     function abrirModalEdicao(id) {
-        const filiado = cacheLista.find(f => f.id == id);
-        if (!filiado) return;
+        const user = cacheLista.find(f => f.id == id);
+        if (!user) return;
 
-        const modal = document.getElementById("modal-editar-filiado");
+        const modal = document.getElementById("modal-editar-user");
         const corpo = document.getElementById("modal-corpo");
         if (!modal || !corpo) return;
 
-        corpo.innerHTML = gerarHtmlForm(filiado);
+        corpo.innerHTML = gerarHtmlForm(user);
         modal.style.display = "flex";
 
         configurarFormEdicao(id);
@@ -293,13 +293,13 @@
         return `
             <div id="alertas-modal"></div>
 
-            <!-- Barra de Status do Filiado -->
+            <!-- Barra de Status do User -->
             <div class="status-bar-modal">
                 <span>Estado: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
                 <div>
                     ${isArquivado ?
-                        `<button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.confirmarDesarquivar(${f.id})">📤 Desarquivar</button>` :
-                        `<button type="button" class="btn btn-outline btn-sm" onclick="FiliadosAdmin.confirmarArquivar(${f.id})">📥 Arquivar</button>`}
+                        `<button type="button" class="btn btn-outline btn-sm" onclick="UsersAdmin.confirmarDesarquivar(${f.id})">📤 Desarquivar</button>` :
+                        `<button type="button" class="btn btn-outline btn-sm" onclick="UsersAdmin.confirmarArquivar(${f.id})">📥 Arquivar</button>`}
                 </div>
             </div>
 
@@ -371,7 +371,7 @@
                             <div class="field-group">
                                 <label>Perfil de Acesso</label>
                                 <select name="perfil_acesso">
-                                    <option value="FILIADO" ${f.perfil_acesso === "FILIADO" ? "selected" : ""}>FILIADO</option>
+                                    <option value="USER" ${f.perfil_acesso === "USER" ? "selected" : ""}>USER</option>
                                     <option value="COMUNICADOR" ${f.perfil_acesso === "COMUNICADOR" ? "selected" : ""}>COMUNICADOR</option>
                                     <option value="ORGANIZADOR" ${f.perfil_acesso === "ORGANIZADOR" ? "selected" : ""}>ORGANIZADOR</option>
                                     <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>
@@ -470,15 +470,15 @@
                         <div class="avatar-actions" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:10px;">
                             <input type="file" id="modal-avatar-input" accept="image/*">
                             <div style="display:flex; gap:10px;">
-                                <button type="button" class="btn btn-primary btn-sm" onclick="FiliadosAdmin.uploadAvatar(${f.id})" style="flex:1;">Upload</button>
-                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="FiliadosAdmin.removerAvatar(${f.id})" style="flex:1;">Remover</button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="UsersAdmin.uploadAvatar(${f.id})" style="flex:1;">Upload</button>
+                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="UsersAdmin.removerAvatar(${f.id})" style="flex:1;">Remover</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-outline btn-lg" onclick="document.getElementById('modal-editar-filiado').style.display='none'">Cancelar</button>
+                    <button type="button" class="btn btn-outline btn-lg" onclick="document.getElementById('modal-editar-user').style.display='none'">Cancelar</button>
                     <button type="submit" class="btn btn-primary btn-lg">Salvar Alterações</button>
                 </div>
             </form>
@@ -494,7 +494,7 @@
             if (cpfInput) aplicarMascaraCPF(cpfInput);
         }
 
-        const filiado = cacheLista.find(f => f.id == id);
+        const user = cacheLista.find(f => f.id == id);
 
         if (gerarCamposDependentes) {
             const container = document.getElementById("modal-dependentes-container");
@@ -504,8 +504,8 @@
 
             // Preencher dependentes
             for (let i = 1; i <= 5; i++) {
-                if (filiado[`dep${i}_nome`]) {
-                    dependentesAtuais.push({ nome: filiado[`dep${i}_nome`], index: i });
+                if (user[`dep${i}_nome`]) {
+                    dependentesAtuais.push({ nome: user[`dep${i}_nome`], index: i });
                 }
 
                 const nome = document.getElementById(`mod-dep${i}_nome`);
@@ -515,13 +515,13 @@
                 const outro = document.getElementById(`mod-dep${i}_parentesco_outro`);
                 const hidden = document.getElementById(`mod-dep${i}_parentesco`);
 
-                if (nome) nome.value = filiado[`dep${i}_nome`] || "";
+                if (nome) nome.value = user[`dep${i}_nome`] || "";
                 if (cpf) {
-                    cpf.value = filiado[`dep${i}_cpf`] || "";
+                    cpf.value = user[`dep${i}_cpf`] || "";
                     if (aplicarMascaraCPF) aplicarMascaraCPF(cpf);
                 }
                 if (data) {
-                    data.value = filiado[`dep${i}_data_nascimento`] ? filiado[`dep${i}_data_nascimento`].split('T')[0] : "";
+                    data.value = user[`dep${i}_data_nascimento`] ? user[`dep${i}_data_nascimento`].split('T')[0] : "";
                     const depIdade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(data.value) : '—';
                     const idadeLabel = document.createElement('div');
                     idadeLabel.style.fontSize = '0.75rem';
@@ -536,7 +536,7 @@
                     };
                 }
 
-                const pVal = filiado[`dep${i}_parentesco`] || "";
+                const pVal = user[`dep${i}_parentesco`] || "";
                 if (select && hidden) {
                     hidden.value = pVal;
                     const options = Array.from(select.options).map(o => o.value);
@@ -697,13 +697,13 @@
             }
 
             try {
-                const url = `/api/filiados/${id}`;
+                const url = `/api/users/${id}`;
                 const r = await window.Api.apiFetch(url, { method: "PUT", body: payload });
                 const data = await r.json();
 
                 if (r.ok) {
                     alert("Sucesso!");
-                    document.getElementById("modal-editar-filiado").style.display = "none";
+                    document.getElementById("modal-editar-user").style.display = "none";
                     await carregarLista();
                 } else {
                     const msg = data.message || "Erro ao salvar.";
@@ -717,20 +717,20 @@
     async function confirmarArquivar(id) {
         const motivo = prompt("Motivo do arquivamento:");
         if (!motivo) return;
-        const r = await window.Api.apiFetch(`/api/filiados/${id}/arquivar`, { method: "POST", body: { motivo } });
+        const r = await window.Api.apiFetch(`/api/users/${id}/arquivar`, { method: "POST", body: { motivo } });
         if (r.ok) {
             alert("Arquivado.");
-            document.getElementById("modal-editar-filiado").style.display = "none";
+            document.getElementById("modal-editar-user").style.display = "none";
             await carregarLista();
         }
     }
 
     async function confirmarDesarquivar(id) {
         const motivo = prompt("Motivo do desarquivamento (opcional):") || "Reativado via Web";
-        const r = await window.Api.apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST", body: { motivo } });
+        const r = await window.Api.apiFetch(`/api/users/${id}/desarquivar`, { method: "POST", body: { motivo } });
         if (r.ok) {
             alert("Desarquivado.");
-            document.getElementById("modal-editar-filiado").style.display = "none";
+            document.getElementById("modal-editar-user").style.display = "none";
             await carregarLista();
         }
     }
@@ -744,7 +744,7 @@
         fd.append("avatar", file);
 
         try {
-            const r = await window.Api.apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
+            const r = await window.Api.apiFetch(`/api/users/${id}/avatar`, { method: "POST", body: fd });
             if (r.ok) {
                 const d = await r.json();
                 const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -762,7 +762,7 @@
     async function removerAvatar(id) {
         if (!confirm("Remover foto?")) return;
         try {
-            const r = await window.Api.apiFetch(`/api/filiados/${id}/avatar`, { method: "DELETE" });
+            const r = await window.Api.apiFetch(`/api/users/${id}/avatar`, { method: "DELETE" });
             if (r.ok) {
                 document.getElementById("modal-avatar-preview").src = "/img/avatar-placeholder.png";
                 alert("Foto removida.");
@@ -771,23 +771,23 @@
         } catch(e) { alert("Erro ao remover."); }
     }
 
-    function abrirNovoFiliado(container) {
+    function abrirNovoUser(container) {
         if (container.style.display === "none") {
-            renderizarFormularioNovoFiliado(container);
+            renderizarFormularioNovoUser(container);
             container.style.display = "block";
         } else {
             container.style.display = "none";
         }
     }
 
-    function renderizarFormularioNovoFiliado(container) {
+    function renderizarFormularioNovoUser(container) {
         if (!container) return;
         const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, aplicarMascaraCEP, aplicarMascaraData } = global.Utils || {};
 
         container.innerHTML = `
-            <div class="filiado-card" style="border-left-color: var(--amarelo);">
-                <h3>👤 Novo Filiado</h3>
-                <form id="form-novo-filiado-admin">
+            <div class="user-card" style="border-left-color: var(--amarelo);">
+                <h3>👤 Novo User</h3>
+                <form id="form-novo-user-admin">
                     <div class="edit-grid">
                         <div class="edit-group">
                             <label>Nome *</label>
@@ -854,7 +854,7 @@
                     </div>
                     <div id="novo-dependentes-container" style="margin-top:15px;"></div>
                     <div style="text-align:right; margin-top:25px;">
-                        <button type="button" class="btn btn-outline" onclick="this.closest('.filiado-card').parentElement.style.display='none'">Cancelar</button>
+                        <button type="button" class="btn btn-outline" onclick="this.closest('.user-card').parentElement.style.display='none'">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Criar Cadastro</button>
                     </div>
                 </form>
@@ -865,7 +865,7 @@
             gerarCamposDependentes(container.querySelector("#novo-dependentes-container"), "new");
         }
 
-        const form = container.querySelector("#form-novo-filiado-admin");
+        const form = container.querySelector("#form-novo-user-admin");
 
         // Aplicar Máscaras
         if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
@@ -931,7 +931,7 @@
             }
 
             try {
-                const r = await window.Api.apiFetch("/api/filiados", { method: "POST", body: payload });
+                const r = await window.Api.apiFetch("/api/users", { method: "POST", body: payload });
                 if (r.ok) {
                     alert("Criado com sucesso!");
                     container.style.display = "none";
@@ -963,8 +963,8 @@
 
     // No local declarations of apiFetch here. Using window.Api.apiFetch everywhere.
 
-    global.FiliadosAdmin = {
-        inicializarFiliados,
+    global.UsersAdmin = {
+        inicializarUsers,
         abrirModalEdicao,
         confirmarArquivar,
         confirmarDesarquivar,

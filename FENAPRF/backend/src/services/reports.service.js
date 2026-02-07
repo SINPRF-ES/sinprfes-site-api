@@ -1,6 +1,6 @@
 // src/services/reports.service.js
 const pool = require("../config/db");
-const filiadosService = require("./filiados.service");
+const usersService = require("./users.service");
 const repasseService = require("./repasse.service");
 const { SITUACAO_FUNCIONAL, LOTACOES, LOTACOES_REPASSE } = require("../../shared/canon");
 
@@ -35,9 +35,9 @@ async function listarHistorico(requester_id = null) {
 /**
  * Dados para Relatório Individual (Dossiê).
  */
-async function buscarDadosDossie(filiadoId) {
-  const filiado = await filiadosService.buscarPorId(filiadoId);
-  return filiado;
+async function buscarDadosDossie(userId) {
+  const user = await usersService.buscarPorId(userId);
+  return user;
 }
 
 /**
@@ -76,7 +76,7 @@ async function buscarDadosAgregados(tipo, valor) {
       COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 40 AND 49)::INTEGER as range_40_49,
       COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 50 AND 59)::INTEGER as range_50_59,
       COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) >= 60)::INTEGER as range_60_plus
-    FROM filiados
+    FROM users
     ${whereClause}
   `;
 
@@ -129,7 +129,7 @@ async function buscarDadosGlobal() {
       COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 60 AND 69)::INTEGER as range_60_69,
       COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 70 AND 79)::INTEGER as range_70_79,
       COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) >= 80)::INTEGER as range_80_plus
-    FROM filiados
+    FROM users
     WHERE situacao = 'VETERANO' AND arquivado_em IS NULL
   `);
 
@@ -139,7 +139,7 @@ async function buscarDadosGlobal() {
       COUNT(*)::INTEGER as total,
       COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
       COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem
-    FROM filiados
+    FROM users
     WHERE situacao = 'PENSIONISTA' AND arquivado_em IS NULL
   `);
 

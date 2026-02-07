@@ -20,21 +20,21 @@ import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } f
 import NetInfo from '@react-native-community/netinfo';
 import { salvarJogosInscricoesOffline, listarJogosInscricoesOffline } from '../database/db';
 import { formatTelefone } from '../shared/format/formatters';
-import { getCanonicalFiliadoId, ROLES } from '../utils/filiadoUtils';
+import { getCanonicalUserId, ROLES } from '../utils/userUtils';
 import { MODALIDADES_JOGOS_2026 } from '../constants/jogos';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { useNavigation } from '@react-navigation/native';
 
 const JogosScreen = () => {
   const navigation = useNavigation<any>();
-  const { usuario } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [inscricao, setInscricao] = useState<any>(null);
   const [inscricoesGerais, setInscricoesGerais] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(true);
 
-  const isManager = [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO, ROLES.ORGANIZADOR].includes(usuario?.perfil_acesso || '');
+  const isManager = [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO, ROLES.ORGANIZADOR].includes(user?.perfil_acesso || '');
 
   const [form, setForm] = useState({
     sexo: '',
@@ -68,8 +68,8 @@ const JogosScreen = () => {
         hasModalidades: inscricoes?.[0] ? !!inscricoes[0].modalidades : false
       });
 
-      const currentUserId = getCanonicalFiliadoId(usuario);
-      const minha = inscricoes.find((i: any) => String(i.filiado_id) === currentUserId);
+      const currentUserId = getCanonicalUserId(user);
+      const minha = inscricoes.find((i: any) => String(i.user_id) === currentUserId);
 
       if (minha) {
         setInscricao(minha);
@@ -93,7 +93,7 @@ const JogosScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [isManager, usuario?.id, isConnected]);
+  }, [isManager, user?.id, isConnected]);
 
   useEffect(() => {
     fetchData();
@@ -239,7 +239,7 @@ const JogosScreen = () => {
                       idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd,
                     ]}
                   >
-                    <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.name || item.nome_filiado}</Text></View>
+                    <View style={[styles.tableCellContainer, { width: 150 }]}><Text style={styles.tableCell}>{item.name || item.nome_user}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 80 }]}><Text style={styles.tableCell}>{calculateAge2026(item.data_nascimento)}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 100 }]}><Text style={styles.tableCell}>{formatGender(item.sexo)}</Text></View>
                     <View style={[styles.tableCellContainer, { width: 200 }]}>
@@ -247,7 +247,7 @@ const JogosScreen = () => {
                         {(() => {
                           const mods = item.modalidades || [];
                           if (typeof mods.map !== 'function') {
-                            logger.error('JOGOS_RENDER_TYPE_ERROR', new Error(`modalidades is ${typeof mods}`), { item: { id: item.id, filiado_id: item.filiado_id } });
+                            logger.error('JOGOS_RENDER_TYPE_ERROR', new Error(`modalidades is ${typeof mods}`), { item: { id: item.id, user_id: item.user_id } });
                             return 'Erro nos dados';
                           }
                           return mods.map((mid: string) => {

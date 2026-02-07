@@ -39,7 +39,7 @@ describe('Controller Governance Rules', () => {
       service.buscarMesa.mockResolvedValue({ presidente_user_id: 10, estabelecida_em: new Date() });
 
       req.user.id = 1; // Not the president (10)
-      req.user.perfil_acesso = 'FILIADO'; // Not Diretoria
+      req.user.perfil_acesso = 'USER'; // Not Diretoria
       req.body = { tipo_chamada: 'PRIMEIRA' };
       await controller.gerarTokenQuorum(req, res);
 

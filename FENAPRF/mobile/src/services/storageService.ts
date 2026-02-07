@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import type { Usuario } from '../types/usuario';
+import type { User } from '../types/user';
 import type { Sessao } from '../types/auth';
 import { logger } from '../infra/logger';
 
 const TOKEN_KEY = 'sinprf_secure_token';
-const USER_KEY = '@sinprf/usuario';
+const USER_KEY = '@sinprf/user';
 const BIOMETRIA_KEY = '@sinprf/biometria_habilitada'; // Legacy AsyncStorage
 const BIOMETRIA_SECURE_KEY = 'sinprf_biometria_enabled'; // Novo SecureStore
 const BIOMETRIC_CREDENTIAL_KEY = 'sinprf_biometric_token';
@@ -14,7 +14,7 @@ const LAST_UPDATE_CHECK_KEY = '@sinprf/last_update_check';
 export async function salvarSessao(sessao: Sessao): Promise<void> {
   try {
     await SecureStore.setItemAsync(TOKEN_KEY, sessao.token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(sessao.usuario));
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(sessao.user));
 
     // Se a biometria estiver habilitada, salvamos também o token persistente
     const bioEnabled = await carregarBiometriaHabilitada();
@@ -33,8 +33,8 @@ export async function carregarSessao(): Promise<Sessao | null> {
 
     if (!token || !userJson) return null;
 
-    const usuario = JSON.parse(userJson) as Usuario;
-    return { token, usuario };
+    const user = JSON.parse(userJson) as User;
+    return { token, user };
   } catch (e) {
     logger.error('[Storage.carregarSessao]', e);
     return null;
