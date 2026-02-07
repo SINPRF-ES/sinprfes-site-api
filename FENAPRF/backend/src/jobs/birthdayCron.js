@@ -1,7 +1,7 @@
 // src/jobs/birthdayCron.js
 require('dotenv').config();
 const pool = require('../config/db');
-const filiadosService = require('../services/filiados.service');
+const usersService = require('../services/users.service');
 const emailService = require('../services/email.service');
 
 /**
@@ -48,7 +48,7 @@ async function runBirthdayScan() {
     console.log(`🎂 [Job] Iniciando busca de aniversariantes para ${todayStr}...`);
 
     // 4. Executa a lógica de negócio
-    const aniversariantes = await filiadosService.buscarAniversariantesDoDia();
+    const aniversariantes = await usersService.buscarAniversariantesDoDia();
     const count = aniversariantes.length;
     console.log(`✅ [Job] BUSCA aniversariantes OK (count: ${count})`);
 

@@ -2,6 +2,7 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const pool = require("../config/db");
 const { enviarEmailBase } = require("../services/email.service");
 const log = require("../utils/log");
 const Textos = require ("../utils/textos");
@@ -116,7 +117,6 @@ exports.resetarSenha = async (req, res, next) => {
     }
 
     // Busca usuário pelo token e verifica expiração
-    const pool = require("../config/db");
     const { rows: tokenRows } = await pool.query(
         "SELECT id FROM users WHERE token_acesso_temp = $1 AND token_expiracao > NOW()",
         [token]
