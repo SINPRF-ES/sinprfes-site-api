@@ -2,9 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const log = require('../utils/log');
 
 module.exports = (err, req, res, next) => {
-  const errorId = uuidv4().split('-')[0]; // UUID curto
   const status = err.status || 500;
-  const requestId = req.requestId || errorId;
+  const requestId = req.requestId || uuidv4().split('-')[0];
 
   // Sanitização do payload (remover senhas, etc)
   const sanitizeBody = (body) => {
@@ -17,13 +16,12 @@ module.exports = (err, req, res, next) => {
     return sanitized;
   };
 
+  // Log estruturado
   log.error("GLOBAL_ERROR_HANDLER", {
-    errorId,
     requestId,
     method: req.method,
     url: req.originalUrl,
     userId: req.user?.id,
-    profile: req.user?.perfil_acesso,
     payload: sanitizeBody(req.body),
     errorMessage: err.message,
     stack: err.stack,
@@ -31,15 +29,19 @@ module.exports = (err, req, res, next) => {
     code: err.code
   });
 
-  // Também logamos no console para visibilidade imediata no Render
-  console.error(`[ERROR][${requestId}] ${req.method} ${req.originalUrl}: ${err.message}`);
-  if (err.stack) console.error(err.stack);
+  // Log explícito no console para o Render (conforme solicitado)
+  console.error(`[ERR][${requestId}] ${req.method} ${req.originalUrl}: ${err?.stack || err}`);
+
+  if (status === 500) {
+    return res.status(500).json({
+      error: "INTERNAL_SERVER_ERROR",
+      requestId: requestId
+    });
+  }
 
   res.status(status).json({
-    success: false,
-    message: status === 500 ? "Erro interno no servidor." : err.message,
-    errorId: errorId,
-    requestId: requestId,
-    code: err.code || "INTERNAL_ERROR"
+    error: err.code || "ERROR",
+    message: err.message,
+    requestId: requestId
   });
 };

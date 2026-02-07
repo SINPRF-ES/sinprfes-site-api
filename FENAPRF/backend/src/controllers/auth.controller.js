@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
 const { normalizarCpf } = require("../utils/format");
 const log = require("../utils/log");
-const Textos = require("../utils/textos"); // 🟢 TEXTOS
+const Textos = require("../utils/textos");
 
 const {
   buscarPorCpf,
@@ -14,8 +14,11 @@ const {
   listarParaPerfil,
 } = require("../services/filiados.service");
 
+/**
+ * Geração de Token JWT assinado com JWT_SECRET.
+ */
 function gerarToken(filiado) {
-  const perfil = filiado.perfil_acesso || "CONSELHEIRO";
+  const perfil = (filiado.perfil_acesso || "CONSELHEIRO").toUpperCase();
 
   return jwt.sign(
     {
@@ -29,7 +32,10 @@ function gerarToken(filiado) {
   );
 }
 
-exports.login = async (req, res) => {
+/**
+ * LOGIN: Autenticação via CPF e Senha.
+ */
+exports.login = async (req, res, next) => {
   const { cpf, senha, token_2fa } = req.body || {};
   const requestId = req.requestId;
 
@@ -42,12 +48,16 @@ exports.login = async (req, res) => {
     if (!cpf || !senha) {
       return res
         .status(400)
-        .json({ error: Textos.AUTH.INFORME_CREDENCIAIS }); // ✨
+        .json({ error: Textos.AUTH.INFORME_CREDENCIAIS });
     }
 
+    // A) Normalizar CPF (somente dígitos)
     const cpfNormalizado = normalizarCpf(cpf);
+
+    // B) Buscar em public.users por CPF
     const filiado = await buscarPorCpf(cpfNormalizado);
 
+    // C) Se não achar: 401
     if (!filiado) {
       log.warn("AuthLoginFalha", {
         cpf: cpfNormalizado ? `${cpfNormalizado.substring(0, 3)}.***.***-**` : null,
@@ -59,13 +69,7 @@ exports.login = async (req, res) => {
         .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS });
     }
 
-    log.info("AuthUserEncontrado", {
-      userId: filiado.id,
-      hasPasswordHash: !!filiado.senha_hash,
-      passwordHashPreview: filiado.senha_hash ? filiado.senha_hash.substring(0, 4) : null,
-      requestId
-    });
-
+    // D) Se password_hash é NULL ou 'PENDENTE': 403 (senha pendente)
     if (!filiado.senha_hash || filiado.senha_hash === 'PENDENTE') {
         log.warn("AuthLoginPendente", { userId: filiado.id, requestId });
         return res.status(403).json({
@@ -75,33 +79,29 @@ exports.login = async (req, res) => {
 
     // Verificação de Estado do Cadastro (Arquivado)
     if (filiado.arquivado_em) {
-        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, status: "arquivado" });
+        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, status: "arquivado", requestId });
         return res
           .status(403)
           .json({ error: Textos.AUTH.CADASTRO_INATIVO });
     }
 
-    // Garantimos que o hash parece um hash bcrypt válido antes de comparar
-    const isBcryptHash = filiado.senha_hash.startsWith('$2');
-    if (!isBcryptHash) {
-        log.error("AuthLoginErroHash", { userId: filiado.id, hash: filiado.senha_hash, requestId });
-        return res.status(403).json({ error: "Erro na configuração da conta. Por favor, redefina sua senha." });
-    }
-
+    // E) Comparação de senha com bcrypt
+    // Se falhar (erro no bcrypt), o catch vai capturar e o errorHandler retornará 500
     const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);
 
     if (!senhaOk) {
       log.warn("AuthLoginFalha", { userId: filiado.id, motivo: "SenhaIncorreta", requestId });
+      // Ideal é retornar 401 se senha errada
       return res
         .status(401)
         .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS });
     }
 
-    // Se tiver 2FA cadastrado, exige o token
+    // F) 2FA (se ativo)
     if (filiado.twofa_secret) {
       if (!token_2fa) {
         return res.status(400).json({
-          error: Textos.AUTH.CODIGO_2FA_REQUERIDO, // ✨
+          error: Textos.AUTH.CODIGO_2FA_REQUERIDO,
           requires_2fa: true,
         });
       }
@@ -114,83 +114,81 @@ exports.login = async (req, res) => {
       });
 
       if (!valido) {
-        log.warn("AuthLogin2FAFalha", { cpf: cpfNormalizado });
+        log.warn("AuthLogin2FAFalha", { cpf: cpfNormalizado, requestId });
         return res.status(400).json({
-          error: Textos.AUTH.CODIGO_2FA_INVALIDO, // ✨
+          error: Textos.AUTH.CODIGO_2FA_INVALIDO,
         });
       }
     }
 
     await registrarUltimoAcesso(filiado.id);
 
+    // G) JWT assinado com JWT_SECRET
     const token = gerarToken(filiado);
 
     log.info("AuthLoginSucesso", {
       userId: filiado.id,
       perfil: filiado.perfil_acesso,
-      ip: req.ip,
-      requestId: req.requestId
+      requestId
     });
 
     return res.json({
-      message: Textos.SUCESSO.LOGIN_REALIZADO, // ✨
+      message: Textos.SUCESSO.LOGIN_REALIZADO,
       token,
-      refreshToken: token, // Alias simples para FENAPRF
+      refreshToken: token,
       perfil_acesso: filiado.perfil_acesso || "CONSELHEIRO",
     });
   } catch (err) {
-    log.error("AuthLoginErroInterno", { error: err, requestId: req.requestId });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN }); // ✨
+    // Erros inesperados ou falha no bcrypt.compare: 500 COM LOG via global handler
+    log.error("AuthLoginErroInterno", { error: err.message, stack: err.stack, requestId });
+    next(err);
   }
 };
 
-exports.ativar2fa = async (req, res) => {
+exports.ativar2fa = async (req, res, next) => {
+  const requestId = req.requestId;
   try {
     const userId = req.user.id;
-
-    const secret = speakeasy.generateSecret({
-      name: "SINPRF-ES (Área Restrita)",
-    });
-
+    const secret = speakeasy.generateSecret({ name: "FENAPRF" });
     const atualizado = await salvarTwoFaSecret(userId, secret.base32);
 
     if (!atualizado) {
-      return res
-        .status(400)
-        .json({ error: "Não foi possível ativar o 2FA." }); // Mantido, pois é uma mensagem específica de falha de DB
+      return res.status(400).json({ error: "Não foi possível ativar o 2FA." });
     }
 
-    log.info("Auth2FAAtivado", { userId, requestId: req.requestId });
+    log.info("Auth2FAAtivado", { userId, requestId });
 
     return res.json({
-      message: "2FA ativado com sucesso. Configure no app autenticador.", // Mantido
+      message: "2FA ativado com sucesso.",
       secret_base32: secret.base32,
       otpauth_url: secret.otpauth_url,
     });
   } catch (err) {
-    log.error("Auth2FAAtivarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS }); // ✨
+    log.error("Auth2FAAtivarErro", { error: err.message, requestId });
+    next(err);
   }
 };
 
-exports.me = async (req, res) => {
+exports.me = async (req, res, next) => {
+  const requestId = req.requestId;
   try {
     const userId = req.user.id;
     const filiado = await buscarPorId(userId);
 
     if (!filiado) {
-      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
+      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
     }
 
-    const { senha_hash, twofa_secret, ...limpo } = filiado;
+    const { senha_hash, password_hash, twofa_secret, ...limpo } = filiado;
     return res.json(limpo);
   } catch (err) {
-    log.error("AuthMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨
+    log.error("AuthMeErro", { error: err.message, requestId });
+    next(err);
   }
 };
 
-exports.listarFiliados = async (req, res) => {
+exports.listarFiliados = async (req, res, next) => {
+  const requestId = req.requestId;
   try {
     const perfil = req.user.perfil_acesso || "FILIADO";
     const lista = await listarParaPerfil(perfil);
@@ -201,7 +199,7 @@ exports.listarFiliados = async (req, res) => {
       filiados: lista,
     });
   } catch (err) {
-    log.error("AuthListarFiliadosErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS }); // ✨
+    log.error("AuthListarFiliadosErro", { error: err.message, requestId });
+    next(err);
   }
 };
