@@ -30,8 +30,14 @@ function gerarToken(filiado) {
 }
 
 exports.login = async (req, res) => {
+  const { cpf, senha, token_2fa } = req.body || {};
+  const requestId = req.requestId;
+
   try {
-    const { cpf, senha, token_2fa } = req.body || {};
+    log.info("AuthLoginIniciado", {
+      cpf: cpf ? `${cpf.substring(0, 3)}.***.***-**` : null,
+      requestId
+    });
 
     if (!cpf || !senha) {
       return res
@@ -42,11 +48,29 @@ exports.login = async (req, res) => {
     const cpfNormalizado = normalizarCpf(cpf);
     const filiado = await buscarPorCpf(cpfNormalizado);
 
-    if (!filiado || !filiado.senha_hash) {
-      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "CredenciaisInvalidas" });
+    if (!filiado) {
+      log.warn("AuthLoginFalha", {
+        cpf: cpfNormalizado ? `${cpfNormalizado.substring(0, 3)}.***.***-**` : null,
+        motivo: "UserNaoEncontrado",
+        requestId
+      });
       return res
-        .status(400)
-        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS }); // ✨
+        .status(401)
+        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS });
+    }
+
+    log.info("AuthUserEncontrado", {
+      userId: filiado.id,
+      hasPasswordHash: !!filiado.senha_hash,
+      passwordHashPreview: filiado.senha_hash ? filiado.senha_hash.substring(0, 4) : null,
+      requestId
+    });
+
+    if (!filiado.senha_hash || filiado.senha_hash === 'PENDENTE') {
+        log.warn("AuthLoginPendente", { userId: filiado.id, requestId });
+        return res.status(403).json({
+            error: "Sua senha ainda não foi definida ou está pendente. Por favor, utilize a opção 'Esqueci minha senha' ou o link de primeiro acesso enviado por e-mail."
+        });
     }
 
     // Verificação de Estado do Cadastro (Arquivado)
@@ -57,13 +81,20 @@ exports.login = async (req, res) => {
           .json({ error: Textos.AUTH.CADASTRO_INATIVO });
     }
 
+    // Garantimos que o hash parece um hash bcrypt válido antes de comparar
+    const isBcryptHash = filiado.senha_hash.startsWith('$2');
+    if (!isBcryptHash) {
+        log.error("AuthLoginErroHash", { userId: filiado.id, hash: filiado.senha_hash, requestId });
+        return res.status(403).json({ error: "Erro na configuração da conta. Por favor, redefina sua senha." });
+    }
+
     const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);
 
     if (!senhaOk) {
-      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "SenhaIncorreta" });
+      log.warn("AuthLoginFalha", { userId: filiado.id, motivo: "SenhaIncorreta", requestId });
       return res
-        .status(400)
-        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS }); // ✨
+        .status(401)
+        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS });
     }
 
     // Se tiver 2FA cadastrado, exige o token

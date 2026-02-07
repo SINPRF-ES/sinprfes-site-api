@@ -14,8 +14,14 @@ function getEmailPrincipal(row) {
 }
 
 exports.solicitarResetSenha = async (req, res) => {
+  const { cpf } = req.body || {};
+  const requestId = req.requestId;
+
   try {
-    const { cpf } = req.body || {};
+    log.info("SenhaResetSolicitada", {
+        cpf: cpf ? `${cpf.substring(0, 3)}.***.***-**` : null,
+        requestId
+    });
 
     if (!cpf) {
       return res.status(400).json({ error: Textos.SENHA.INFORME_CPF });
@@ -33,6 +39,7 @@ exports.solicitarResetSenha = async (req, res) => {
     const mensagemPadrao = Textos.SENHA.MENSAGEM_RESET_PADRAO;
 
     if (rows.length === 0) {
+      log.warn("SenhaResetUserNaoEncontrado", { requestId });
       return res.json({
         message: mensagemPadrao,
         email_destino: null,
@@ -69,6 +76,8 @@ exports.solicitarResetSenha = async (req, res) => {
         `UPDATE users SET token_acesso_temp = $1, token_expiracao = $2 WHERE id = $3`,
         [token, expiracao, user.id]
     );
+
+    log.info("SenhaResetTokenPersistido", { userId: user.id, requestId });
 
     const baseUrl = process.env.APP_BASE_URL || "https://fenaprf.org.br";
     const linkRedefinicao = `${baseUrl.replace(/\/$/, "")}/redefinir-senha.html?token=${encodeURIComponent(
@@ -138,6 +147,20 @@ exports.resetarSenha = async (req, res) => {
     }
 
     const userId = payload.id;
+    const requestId = req.requestId;
+
+    log.info("SenhaResetConfirmacaoIniciada", { userId, requestId });
+
+    // VALIDAR TOKEN NO BANCO (FENAPRF)
+    const { rows } = await pool.query(
+        "SELECT id FROM users WHERE id = $1 AND token_acesso_temp = $2 AND token_expiracao > NOW()",
+        [userId, token]
+    );
+
+    if (rows.length === 0) {
+        log.warn("SenhaResetTokenInvalidoNoDB", { userId, requestId });
+        return res.status(400).json({ error: "Link de redefinição inválido ou expirado. Por favor, solicite novamente." });
+    }
 
     // VALIDAR TOKEN NO BANCO (FENAPRF)
     const { rows } = await pool.query(
