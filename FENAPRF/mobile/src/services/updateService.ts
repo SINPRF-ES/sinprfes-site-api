@@ -291,19 +291,74 @@ export const downloadAndInstallApk = async (fileId: string, fileName: string, do
     // 3. Baixar APK
     logDebug(`${logPrefix}.download.start`, { finalUrl, fileName });
     let localUri: string;
+    let downloadResult: any;
 
     if (downloadUrl) {
         const extension = inferExtension(fileName);
         const dest = buildCacheDest({ prefix: 'apk_upd', id: 'latest', ext: extension });
-        const result = await FileSystem.downloadAsync(finalUrl, dest, {
+
+        downloadResult = await FileSystem.downloadAsync(finalUrl, dest, {
             headers: {
                 Authorization: `Bearer ${sessao.token}`
             }
         });
-        localUri = result.uri;
+
+        localUri = downloadResult.uri;
+
+        const contentType = downloadResult.headers['content-type'] || downloadResult.headers['Content-Type'];
+        const contentLength = downloadResult.headers['content-length'] || downloadResult.headers['Content-Length'];
+
+        logger.info('APK_DOWNLOAD_COMPLETE', {
+            status: downloadResult.status,
+            contentType,
+            contentLength,
+            uri: downloadResult.uri,
+            finalUrl
+        });
+
+        if (downloadResult.status !== 200) {
+            throw new Error(`Erro ao baixar APK: Servidor retornou status ${downloadResult.status}`);
+        }
+
+        if (contentType && contentType.includes('text/html')) {
+            throw new Error('O download retornou uma página HTML em vez de um arquivo APK. Verifique sua conexão ou se o link expirou.');
+        }
     } else {
         const result = await downloadPublicacaoFile(fileId, fileName, sessao.token);
         localUri = result.localUri;
+        // Mock downloadResult para o bloco de métricas abaixo
+        downloadResult = { status: 200, headers: { 'content-type': result.mimeType } };
+    }
+
+    // Diagnósticos Adicionais do Arquivo
+    try {
+        const fileInfo = await FileSystem.getInfoAsync(localUri);
+        if (fileInfo.exists) {
+            const firstBytesBase64 = await FileSystem.readAsStringAsync(localUri, {
+                encoding: FileSystem.EncodingType.Base64,
+                length: 16,
+                position: 0
+            });
+
+            logger.info('APK_FILE_METRICS', {
+                sizeBytes: fileInfo.size,
+                firstBytesBase64,
+                exists: fileInfo.exists
+            });
+
+            // Verificação básica de cabeçalho PK (APK é um ZIP)
+            // PK em Base64 começa com UEs
+            if (firstBytesBase64 && !firstBytesBase64.startsWith('UEs')) {
+                logger.warn('APK_HEADER_WARNING', {
+                    hint: 'O arquivo não parece ser um APK/ZIP válido (cabeçalho PK ausente).',
+                    firstBytesBase64
+                });
+            }
+        } else {
+            logger.error('APK_FILE_NOT_FOUND_AFTER_DOWNLOAD', undefined, { localUri });
+        }
+    } catch (diagError: any) {
+        logger.warn('APK_DIAGNOSTICS_FAILED', { message: diagError.message });
     }
 
     logDebug(`${logPrefix}.download.success`, { localUri });
@@ -313,11 +368,20 @@ export const downloadAndInstallApk = async (fileId: string, fileName: string, do
     logDebug(`${logPrefix}.install.intent_sent`, { contentUri });
 
     // 5. Abrir instalador Android
-    await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-      data: contentUri,
-      flags: 1, // Intent.FLAG_GRANT_READ_URI_PERMISSION
-      type: 'application/vnd.android.package-archive',
-    });
+    try {
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1, // Intent.FLAG_GRANT_READ_URI_PERMISSION
+          type: 'application/vnd.android.package-archive',
+        });
+    } catch (intentError: any) {
+        logger.error('APK_INSTALL_INTENT_ERROR', intentError, {
+            message: intentError.message,
+            contentUri,
+            hint: 'Falha ao abrir o instalador do sistema. Pode ser incompatibilidade de versão ou arquivo corrompido.'
+        });
+        throw new Error(`Falha ao iniciar instalação: ${intentError.message}`);
+    }
 
   } catch (error: any) {
     logger.error('APK_UPDATE_ERROR', error, { message: error.message });
