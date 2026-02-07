@@ -380,7 +380,9 @@ async function salvarTwoFaSecret(userId, secret) {
 
 module.exports = {
   buscarUserPorCpf,
+  buscarPorCpf: buscarUserPorCpf,
   buscarUserPorId,
+  buscarPorId: buscarUserPorId,
   getMe,
   setResetToken,
   setPassword,

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useRef } from 'react';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
 
