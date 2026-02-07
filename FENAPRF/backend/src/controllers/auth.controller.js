@@ -125,9 +125,16 @@ exports.me = async (req, res, next) => {
 
     // Sanitização do payload (remover senhas)
     const { senha_hash, password_hash, twofa_secret, ...limpo } = user;
+
+    // Se o hash for PENDENTE, enviamos para o app saber que precisa definir senha
+    if (password_hash === 'PENDENTE' || senha_hash === 'PENDENTE') {
+        limpo.password_hash = 'PENDENTE';
+    }
+
+    log.info("AuthMeSucesso", { userId: user.id, requestId });
     return res.json(limpo);
   } catch (err) {
-    log.error("AuthMeErro", { error: err.message, requestId });
+    log.error("AuthMeErro", { error: err.message, stack: err.stack, requestId });
     next(err);
   }
 };

@@ -50,6 +50,7 @@ export type RootStackParamList = {
   Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
+  ResetPassword: { token?: string; isFirstAccess?: boolean; cpf?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -58,6 +59,20 @@ type PendingNav =
   | { screen: "Noticias" }
   | { screen: "Votacao" }
   | null;
+
+const linking = {
+  prefixes: ['fenaprf://', 'https://fenaprf-sistema.onrender.com'],
+  config: {
+    screens: {
+      ResetPassword: {
+        path: 'redefinir-senha.html',
+        parse: {
+          token: (token: string) => token,
+        },
+      },
+    },
+  },
+};
 
 export default function RootNavigation() {
   const { autenticado, carregando, bloqueadoPorBiometria } = useAuth();
@@ -98,6 +113,7 @@ export default function RootNavigation() {
 
   return (
     <NavigationContainer
+      linking={linking}
       ref={(ref) => {
         navigationRef.current = ref;
         tryConsumePendingNav();
