@@ -4,16 +4,19 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { enviarEmailBase } = require("../services/email.service");
 const log = require("../utils/log");
-const Textos = require ("../utils/textos"); // 🟢 TEXTOS
+const Textos = require ("../utils/textos");
 
 function getEmailPrincipal(row) {
   if (row.email && row.email.trim() !== "") return row.email.trim();
-  // Fallback para campos legados se ainda existirem em alguma view/tabela
   if (row.email1 && row.email1.trim() !== "") return row.email1.trim();
   return null;
 }
 
-exports.solicitarResetSenha = async (req, res) => {
+/**
+ * Solicitação de reset de senha.
+ * Grava token_acesso_temp + token_expiracao em users.
+ */
+exports.solicitarResetSenha = async (req, res, next) => {
   const { cpf } = req.body || {};
   const requestId = req.requestId;
 
@@ -29,6 +32,7 @@ exports.solicitarResetSenha = async (req, res) => {
 
     const cpfLimpo = cpf.replace(/\D/g, "");
 
+    // Busca apenas em public.users (Isolamento FENAPRF)
     const query = `
       SELECT id, name as nome, cpf, email
       FROM users
@@ -50,25 +54,21 @@ exports.solicitarResetSenha = async (req, res) => {
     const emailDestino = getEmailPrincipal(user);
 
     if (!emailDestino) {
-      log.warn("SenhaResetSemEmail", { userId: user.id });
+      log.warn("SenhaResetSemEmail", { userId: user.id, requestId });
       return res.json({
         message: Textos.SENHA.EMAIL_NAO_CADASTRADO,
         email_destino: null,
       });
     }
 
-    // 2. Gera token de reset de senha (1h)
+    // Gera token de reset de senha (1h)
     const token = jwt.sign(
-      {
-        id: user.id,
-        cpf: user.cpf,
-        tipo: "reset-senha",
-      },
+      { id: user.id, cpf: user.cpf, tipo: "reset-senha" },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    // PERSISTÊNCIA NO BANCO (FENAPRF)
+    // Grava token_acesso_temp + token_expiracao em users (Requirement D)
     const expiracao = new Date();
     expiracao.setHours(expiracao.getHours() + 1);
 
@@ -79,10 +79,8 @@ exports.solicitarResetSenha = async (req, res) => {
 
     log.info("SenhaResetTokenPersistido", { userId: user.id, requestId });
 
-    const baseUrl = process.env.APP_BASE_URL || "https://fenaprf.org.br";
-    const linkRedefinicao = `${baseUrl.replace(/\/$/, "")}/redefinir-senha.html?token=${encodeURIComponent(
-      token
-    )}`;
+    const baseUrl = process.env.APP_BASE_URL || "https://fenaprf-sistema.onrender.com";
+    const linkRedefinicao = `${baseUrl.replace(/\/$/, "")}/redefinir-senha.html?token=${encodeURIComponent(token)}`;
 
     const subject = "FENAPRF – Redefinição de senha";
     const corpoEmail =
@@ -93,65 +91,56 @@ exports.solicitarResetSenha = async (req, res) => {
         `Se você não fez esta solicitação, ignore este e-mail.\n\n` +
         `Atenciosamente,\nFENAPRF`;
 
-    // Envio de e-mail (se falhar, não travamos o retorno de sucesso para o usuário)
     try {
         await enviarEmailBase(emailDestino, subject, corpoEmail);
     } catch (e) {
-        log.error("SenhaResetEmailFalha", { error: e.message, userId: user.id });
+        log.error("SenhaResetEmailFalha", { error: e.message, userId: user.id, requestId });
     }
 
-    log.info("SenhaResetEmailEnviado", { userId: user.id, email: emailDestino });
+    log.info("SenhaResetEmailEnviado", { userId: user.id, requestId });
 
     return res.json({
       message: mensagemPadrao,
       email_destino: emailDestino,
     });
   } catch (err) {
-    log.error("SenhaResetSolicitarErro", err);
-    return res.status(500).json({
-      error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS,
-    });
+    // Log stacktrace com requestId se falhar (Requirement D)
+    log.error("SenhaResetSolicitarErro", { error: err.message, stack: err.stack, requestId });
+    next(err);
   }
 };
 
-exports.resetarSenha = async (req, res) => {
+/**
+ * Efetivação do reset de senha.
+ */
+exports.resetarSenha = async (req, res, next) => {
+  const requestId = req.requestId;
   try {
     const { token, senha_nova } = req.body || {};
 
     if (!token || !senha_nova) {
-      return res.status(400).json({
-        error: Textos.SENHA.TOKEN_E_SENHA_OBRIGATORIOS,
-      });
+      return res.status(400).json({ error: Textos.SENHA.TOKEN_E_SENHA_OBRIGATORIOS });
     }
 
     if (senha_nova.length < 6) {
-      return res.status(400).json({
-        error: Textos.SENHA.SENHA_MUITO_CURTA,
-      });
+      return res.status(400).json({ error: Textos.SENHA.SENHA_MUITO_CURTA });
     }
 
     let payload;
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      log.warn("SenhaResetTokenInvalido", { error: err.message });
-      return res.status(400).json({
-        error: Textos.SENHA.TOKEN_SENHA_EXPIRADO,
-      });
+      log.warn("SenhaResetTokenInvalido", { error: err.message, requestId });
+      return res.status(400).json({ error: Textos.SENHA.TOKEN_SENHA_EXPIRADO });
     }
 
     if (payload.tipo !== "reset-senha") {
-      return res.status(400).json({
-        error: Textos.SENHA.TOKEN_TIPO_INVALIDO,
-      });
+      return res.status(400).json({ error: Textos.SENHA.TOKEN_TIPO_INVALIDO });
     }
 
     const userId = payload.id;
-    const requestId = req.requestId;
 
-    log.info("SenhaResetConfirmacaoIniciada", { userId, requestId });
-
-    // VALIDAR TOKEN NO BANCO (FENAPRF)
+    // Validar token no banco (Requirement D)
     const { rows: tokenRows } = await pool.query(
         "SELECT id FROM users WHERE id = $1 AND token_acesso_temp = $2 AND token_expiracao > NOW()",
         [userId, token]
@@ -159,7 +148,7 @@ exports.resetarSenha = async (req, res) => {
 
     if (tokenRows.length === 0) {
         log.warn("SenhaResetTokenInvalidoNoDB", { userId, requestId });
-        return res.status(400).json({ error: "Link de redefinição inválido ou expirado. Por favor, solicite novamente." });
+        return res.status(400).json({ error: "Link de redefinição inválido ou expirado." });
     }
 
     const senhaHash = await bcrypt.hash(senha_nova, 10);
@@ -171,15 +160,11 @@ exports.resetarSenha = async (req, res) => {
     `;
     await pool.query(updateSql, [senhaHash, userId]);
 
-    log.info("SenhaAlteradaSucesso", { userId });
+    log.info("SenhaAlteradaSucesso", { userId, requestId });
 
-    return res.json({
-      message: Textos.SUCESSO.SENHA_REDEFINIDA,
-    });
+    return res.json({ message: Textos.SUCESSO.SENHA_REDEFINIDA });
   } catch (err) {
-    log.error("SenhaResetConfirmarErro", err);
-    return res.status(500).json({
-      error: Textos.ERROS_INTERNOS.RESET_SENHA,
-    });
+    log.error("SenhaResetConfirmarErro", { error: err.message, stack: err.stack, requestId });
+    next(err);
   }
 };

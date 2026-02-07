@@ -29,8 +29,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
-app.use(require("./middlewares/requestId"));
-app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições
+app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições e RequestID
 
 // Configurações de Segurança de Cabeçalhos (Defense in Depth)
 app.use((req, res, next) => {
