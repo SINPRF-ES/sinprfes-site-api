@@ -306,7 +306,7 @@
         const avatarUrlSafe = (avatar_url || "").toString().trim();
         const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
             ? "http://localhost:3000"
-            : "https://api.sinprfes.org.br";
+            : "https://fenaprf-sistema.onrender.com";
 
         const avatarFullUrl = avatarUrlSafe
             ? (avatarUrlSafe.startsWith('http') ? avatarUrlSafe : apiBase + avatarUrlSafe)

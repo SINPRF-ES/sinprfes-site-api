@@ -8,7 +8,7 @@
 
   const API_BASE = (window.location.hostname === "localhost")
     ? "http://localhost:3000"
-    : "https://api.sinprfes.org.br";
+    : "https://fenaprf-sistema.onrender.com";
 
   window.Api = window.Api || {};
 

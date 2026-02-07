@@ -1,5 +1,5 @@
 -- ============================================================================
--- SINPRF-ES MIGRATION V20: RELATÓRIOS AND NEW FIELDS
+-- FENAPRF MIGRATION V20: RELATÓRIOS AND NEW FIELDS
 -- Adds support for the new Reports module and canonical fields.
 -- ============================================================================
 

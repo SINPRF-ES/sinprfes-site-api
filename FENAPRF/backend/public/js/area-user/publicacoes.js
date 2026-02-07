@@ -186,7 +186,7 @@
                 navHtml = `<div class="nav-bar"><button id="btn-pub-voltar" class="btn-back">⬅️ Voltar</button><span>📂 Subpasta</span></div>`;
             } else {
                 folderStack = [];
-                navHtml = `<div class="pub-header af-standard-header"><h2>📚 Biblioteca Digital</h2><p>Documentos oficiais do SINPRF-ES</p></div>`;
+                navHtml = `<div class="pub-header af-standard-header"><h2>📚 Biblioteca Digital</h2><p>Documentos oficiais do FENAPRF</p></div>`;
             }
 
             if (!lista || lista.length === 0) {

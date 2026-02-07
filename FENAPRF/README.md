@@ -1,6 +1,6 @@
 # FENAPRF - Sistema Híbrido (Mobile + Backend)
 
-Este diretório contém uma cópia isolada do sistema do SINPRF-ES, adaptada para o projeto FENAPRF.
+Este diretório contém uma cópia isolada do sistema do FENAPRF, adaptada para o projeto FENAPRF.
 
 ## Estrutura
 - `mobile/`: Aplicativo React Native (Expo/EAS).

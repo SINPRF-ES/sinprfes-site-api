@@ -4,7 +4,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-na
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
-import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/userUtils';
+import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria, getBandeiraUF } from '../utils/userUtils';
 
 const CustomDrawerContent = (props) => {
   const { user, logout, setBloqueadoPorBiometria } = useAuth();
@@ -33,11 +33,19 @@ const CustomDrawerContent = (props) => {
   return (
     <DrawerContentScrollView {...props}>
       <View style={styles.header}>
-        <Image
-          source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
-          style={styles.avatar}
-          resizeMode="contain"
-        />
+        <View style={styles.avatarWrapper}>
+          <Image
+            source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
+            style={styles.avatar}
+            resizeMode="contain"
+          />
+          <View style={styles.ufStackMini}>
+            <Text style={styles.ufTextMini}>{user?.perfil_acesso === 'DIRETORIA' || user?.perfil_acesso === 'COLABORADOR' ? 'BR' : (user?.uf || '—')}</Text>
+            {getBandeiraUF(user?.uf, user?.perfil_acesso) ? (
+              <Image source={{ uri: getBandeiraUF(user?.uf, user?.perfil_acesso) }} style={styles.flagIconMini} />
+            ) : null}
+          </View>
+        </View>
         <Text style={styles.nome}>{user?.nome || 'Usuário'}</Text>
         <Text style={styles.status}>{user?.situacao || 'ATIVO'}</Text>
       </View>
@@ -97,6 +105,32 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#003366',
     alignItems: 'center',
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 10,
+  },
+  ufStackMini: {
+    position: 'absolute',
+    bottom: -5,
+    right: -10,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    padding: 3,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#eee',
+    minWidth: 30,
+  },
+  ufTextMini: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  flagIconMini: {
+    width: 16,
+    height: 10,
+    borderRadius: 1,
   },
   avatar: {
     width: 80,

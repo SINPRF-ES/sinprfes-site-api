@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { User, UserProfile } from '../types/user';
 import { formatCpf, formatTelefone } from '../shared/format/formatters';
-import { normalizeSituacaoFuncional } from '../utils/userUtils';
+import { normalizeSituacaoFuncional, getBandeiraUF } from '../utils/userUtils';
 import { calculateAgeBreakdown, formatISOToBRDateTime } from '../utils/date';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
@@ -66,6 +66,12 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserProfile, onEdit })
           </View>
           <Text style={styles.lotacao}>Lotação: {user.lotacao || 'Não informada'}</Text>
           <Text style={styles.detalhe}>Telefone: {formatTelefone(user.telefone1) || '—'}</Text>
+        </View>
+        <View style={styles.ufStack}>
+          <Text style={styles.ufText}>{user.perfil_acesso === 'DIRETORIA' || user.perfil_acesso === 'COLABORADOR' ? 'BR' : (user.uf || '—')}</Text>
+          {getBandeiraUF(user.uf, user.perfil_acesso) ? (
+            <Image source={{ uri: getBandeiraUF(user.uf, user.perfil_acesso) }} style={styles.flagIcon} />
+          ) : null}
         </View>
       </View>
 
@@ -147,6 +153,23 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     flex: 1, // Permite que o container de info ocupe o espaço restante
+  },
+  ufStack: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+    minWidth: 40,
+  },
+  ufText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#003366',
+    marginBottom: 4,
+  },
+  flagIcon: {
+    width: 24,
+    height: 16,
+    borderRadius: 2,
   },
   nameAndBadgeContainer: {
     flexDirection: 'row',
