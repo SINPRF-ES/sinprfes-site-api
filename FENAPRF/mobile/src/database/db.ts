@@ -6,7 +6,7 @@ let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync('sinprf_offline.db');
+    dbPromise = SQLite.openDatabaseAsync('fenaprf_offline.db');
   }
   return dbPromise;
 }

@@ -17,7 +17,7 @@
     "@react-navigation/drawer": "^7.7.11",
     "@react-navigation/native": "^7.1.27",
     "@react-navigation/native-stack": "^7.8.6",
-    "@sinprfes/shared-format": "file:../backend/shared/format",
+    "@fenaprf/shared-format": "file:../backend/shared/format",
     "@tanstack/react-query": "^5.90.17",
     "axios": "^1.13.2",
     "babel-preset-expo": "~54.0.10",

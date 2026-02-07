@@ -267,6 +267,11 @@ async function atualizarUserPorId(id, dados) {
 
   addCampo("avatar_url", dados.avatar_url);
   addCampo("avatar_public_id", dados.avatar_public_id);
+
+  addCampo("perfil_acesso2", dados.perfil_acesso2);
+  addCampo("cargo2", dados.cargo2);
+  addCampo("uf2", dados.uf2);
+
   addCampo("updated_at", "NOW()", true);
 
   if (campos.length === 1) return await getMe(id);
@@ -303,10 +308,12 @@ async function criarUserInicial(dados) {
       `
       INSERT INTO users (
         name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
-        lotacao, situacao, perfil_acesso, created_at, updated_at, bloqueado
+        lotacao, situacao, perfil_acesso, cargo, uf,
+        perfil_acesso2, cargo2, uf2,
+        created_at, updated_at, bloqueado
       ) VALUES (
         $1, $2, $3, NULLIF($4, '')::date, $5, $6, $7,
-        $8, $9, $10, NOW(), NOW(), false
+        $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW(), false
       ) RETURNING id
       `,
       [
@@ -319,7 +326,12 @@ async function criarUserInicial(dados) {
         emailFinal,
         normalizeLotacao(lotacao),
         normalizeSituacaoFuncional(situacao),
-        normalizePerfil(perfilNovo)
+        normalizePerfil(perfilNovo),
+        dados.cargo || null,
+        dados.uf || null,
+        dados.perfil_acesso2 || null,
+        dados.cargo2 || null,
+        dados.uf2 || null
       ]
     );
 

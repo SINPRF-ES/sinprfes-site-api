@@ -195,7 +195,7 @@ export default function LoginScreen() {
           <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         </View>
 
-        <Text style={styles.title}>SINPRF/ES</Text>
+        <Text style={styles.title}>FENAPRF</Text>
         <Text style={styles.subtitle}>Página Inicial</Text>
 
         {biometriaHabilitada && temCredencial && isEtapaCredenciais && (

@@ -4,7 +4,7 @@ const router = express.Router();
 router.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    origem: 'sinprfes-site-api',
+    origem: 'fenaprf-sistema-api',
     horario: new Date().toISOString()
   });
 });

@@ -1,2 +1,2 @@
-// C:\D\sinprfes-app\src\config
-export const API_BASE_URL = 'https://sinprfes-site-api.onrender.com';
+// C:\D\fenaprf-app\src\config
+export const API_BASE_URL = 'https://fenaprf-site-api.onrender.com';

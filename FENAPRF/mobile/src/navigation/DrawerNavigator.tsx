@@ -147,7 +147,7 @@ const DrawerNavigator = () => {
             name="CriarUser"
             component={CriarUserScreen}
             options={{
-              title: '👤 Novo User',
+          title: '👤 Novo Usuário',
               drawerItemStyle: { display: 'none' } // Oculta o item da lista padrão
             }}
           />

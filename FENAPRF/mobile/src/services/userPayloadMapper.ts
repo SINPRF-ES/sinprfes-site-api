@@ -28,6 +28,7 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
 
   // Novos campos FENAPRF
+  if (formState.uf) payload.uf = formState.uf;
   if (formState.cargo) payload.cargo = formState.cargo;
   if (formState.cargo_mandato_inicio) payload.cargo_mandato_inicio = toIsoDateYYYYMMDD(formState.cargo_mandato_inicio) || formState.cargo_mandato_inicio;
   if (formState.cargo_mandato_fim) payload.cargo_mandato_fim = toIsoDateYYYYMMDD(formState.cargo_mandato_fim) || formState.cargo_mandato_fim;
@@ -45,7 +46,6 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
     'logradouro',
     'bairro',
     'cidade',
-    'uf',
     'created_at',
     'updated_at',
   ];

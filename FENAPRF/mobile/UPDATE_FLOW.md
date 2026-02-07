@@ -1,4 +1,4 @@
-# Fluxo Operacional de Atualizações (SINPRF-ES)
+# Fluxo Operacional de Atualizações (FENAPRF)
 
 Este documento descreve os critérios para decidir entre uma atualização via OTA (Over-the-Air) ou um novo Build de APK.
 
@@ -36,8 +36,8 @@ Este documento descreve os critérios para decidir entre uma atualização via O
 2. **Runtime**: Se houver mudança nativa, o `runtimeVersion` deve ser atualizado.
 3. **Build**: Execute `eas build --platform android --profile production --local` (ou via nuvem).
 4. **Distribuição**:
-   - Renomeie o APK gerado para o padrão histórico (ex: `sinprfes-app-vc3-1.0.1.apk`).
-   - Sobrescreva o `sinprfes-app-latest.apk` na pasta `Publicações/App` do Drive.
+   - Renomeie o APK gerado para o padrão histórico (ex: `fenaprf-app-vc3-1.0.1.apk`).
+   - Sobrescreva o `fenaprf-app-latest.apk` na pasta `Publicações/App` do Drive.
 5. **Manifesto**:
    - Atualize `versionCode`, `versionName` e `runtimeVersion` no `update-manifest.json`.
    - Preencha `apk.files` com os nomes dos arquivos por ABI (veja seção "ABI Split" abaixo).
@@ -60,8 +60,8 @@ No `update-manifest.json`, use o campo `files` dentro de `apk`:
   "minSupportedVersionCode": 7,
   "notes": "Nova versão com melhorias nativas.",
   "files": {
-    "arm64-v8a": "sinprfes-app-vc7-arm64.apk",
-    "armeabi-v7a": "sinprfes-app-vc7-v7a.apk"
+    "arm64-v8a": "fenaprf-app-vc7-arm64.apk",
+    "armeabi-v7a": "fenaprf-app-vc7-v7a.apk"
   }
 }
 ```

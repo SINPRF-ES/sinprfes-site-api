@@ -21,7 +21,37 @@ const {
 
 function perfilGestao(perfil) {
   const p = normalizePerfil(perfil);
-  return ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
+  return ["ADMIN", "DIRETORIA", "COLABORADOR", "FUNCIONARIO"].includes(p);
+}
+
+async function verificarConflitoCargo(perfil, cargo, uf, userId = null) {
+  if (!perfil || !cargo || !uf) return null;
+  if (perfil === "ADMIN" || perfil === "COLABORADOR") return null;
+
+  // Verifica no primeiro vínculo
+  const q1 = `
+    SELECT id, name FROM users
+    WHERE perfil_acesso = $1 AND cargo = $2 AND uf = $3
+    AND arquivado_em IS NULL
+    ${userId ? "AND id != $4" : ""}
+    LIMIT 1
+  `;
+  const params1 = userId ? [perfil, cargo, uf, userId] : [perfil, cargo, uf];
+  const res1 = await pool.query(q1, params1);
+  if (res1.rows.length > 0) return res1.rows[0];
+
+  // Verifica no segundo vínculo
+  const q2 = `
+    SELECT id, name FROM users
+    WHERE perfil_acesso2 = $1 AND cargo2 = $2 AND uf2 = $3
+    AND arquivado_em IS NULL
+    ${userId ? "AND id != $4" : ""}
+    LIMIT 1
+  `;
+  const res2 = await pool.query(q2, params1);
+  if (res2.rows.length > 0) return res2.rows[0];
+
+  return null;
 }
 
 /**
@@ -345,6 +375,36 @@ exports.atualizarUser = async (req, res) => {
       payload.perfil_acesso = novoPerfil;
     }
 
+    // Suporte a Dual Role
+    if (body.perfil_acesso2 !== undefined) payload.perfil_acesso2 = body.perfil_acesso2;
+    if (body.cargo2 !== undefined) payload.cargo2 = body.cargo2;
+    if (body.uf2 !== undefined) payload.uf2 = body.uf2;
+
+    // Verificação de Conflito de Cargo
+    const p1 = payload.perfil_acesso || (await usersService.getMe(idAlvo)).perfil_acesso;
+    const c1 = payload.cargo || (await usersService.getMe(idAlvo)).cargo;
+    const u1 = payload.uf || (await usersService.getMe(idAlvo)).uf;
+
+    const conflito1 = await verificarConflitoCargo(p1, c1, u1, idAlvo);
+    if (conflito1) {
+      return res.status(409).json({
+        code: "CARGO_JA_OCUPADO",
+        message: `O cargo ${c1} em ${u1} já está ocupado por ${conflito1.name}.`,
+        details: { conflictUserId: conflito1.id, conflictUserName: conflito1.name }
+      });
+    }
+
+    if (payload.perfil_acesso2) {
+      const conflito2 = await verificarConflitoCargo(payload.perfil_acesso2, payload.cargo2, payload.uf2, idAlvo);
+      if (conflito2) {
+        return res.status(409).json({
+          code: "CARGO_JA_OCUPADO",
+          message: `O segundo cargo (${payload.cargo2} em ${payload.uf2}) já está ocupado por ${conflito2.name}.`,
+          details: { conflictUserId: conflito2.id, conflictUserName: conflito2.name }
+        });
+      }
+    }
+
     const atualizado = await usersService.atualizarUserPorId(idAlvo, payload);
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
@@ -386,6 +446,20 @@ exports.criarUser = async (req, res) => {
       dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
     }
 
+    const perfil_acesso = normalizePerfil(body.perfil_acesso || "CONSELHEIRO");
+    const cargo = body.cargo || null;
+    const uf = body.uf || null;
+
+    // Verificação de Conflito de Cargo
+    const conflito1 = await verificarConflitoCargo(perfil_acesso, cargo, uf);
+    if (conflito1) {
+      return res.status(409).json({
+        code: "CARGO_JA_OCUPADO",
+        message: `O cargo ${cargo} em ${uf} já está ocupado por ${conflito1.name}.`,
+        details: { conflictUserId: conflito1.id, conflictUserName: conflito1.name }
+      });
+    }
+
     const dadosNovo = {
       nome: String(body.nome).trim(),
       sexo: body.sexo ? normalizeSexo(body.sexo) : null,
@@ -397,12 +471,16 @@ exports.criarUser = async (req, res) => {
       email: body.email || null,
       lotacao: normalizeLotacao(body.lotacao || "SEDE"),
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
-      perfil_acesso: normalizePerfil(body.perfil_acesso || "CONSELHEIRO"),
+      perfil_acesso,
+      cargo,
+      uf,
+      perfil_acesso2: body.perfil_acesso2 || null,
+      cargo2: body.cargo2 || null,
+      uf2: body.uf2 || null,
       logradouro_bairro: body.logradouro_bairro || null,
       numero: body.numero || null,
       complemento: body.complemento || null,
       cidade: body.cidade || null,
-      uf: body.uf || null,
       cep: body.cep || null,
       ...dadosDependentes,
     };
