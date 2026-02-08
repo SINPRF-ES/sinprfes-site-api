@@ -47,18 +47,15 @@ const CustomDrawerContent = (props) => {
             onPress={() => {}} // Não faz nada, é apenas um título
           />
           <DrawerItem
-            label="Notificações"
-            icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
+            label="📢 Notificações"
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="Novo Membro"
-            icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
+            label="👤 Novo Membro"
             onPress={() => props.navigation.navigate('CriarUser')}
           />
           <DrawerItem
-            label="Diagnóstico"
-            icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
+            label="🧪 Diagnóstico"
             onPress={() => props.navigation.navigate('Logs')}
           />
         </>

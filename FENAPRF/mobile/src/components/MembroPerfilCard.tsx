@@ -5,6 +5,8 @@ import { User } from '../types/user';
 import { getCanonicalUserId, ROLES, isGestao as checkIsGestao, CARGOS_DIRETORIA, CARGOS_CONSELHO, UFS } from '../utils/userUtils';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
+import { formatData, onlyDigits } from '../shared/format/formatters';
+import { toISODate, toBrazilianDate } from '../utils/date';
 
 import { Picker } from '@react-native-picker/picker';
 import { TextInput, TouchableOpacity, Alert } from 'react-native';
@@ -149,18 +151,44 @@ const MembroPerfilCard: React.FC<Props> = ({ user, setUser, isEditing = false, h
       <Text style={styles.label}>Início do Mandato</Text>
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
-        value={user?.cargo_mandato_inicio || ''}
-        onChangeText={(text) => setUser(f => f ? { ...f, cargo_mandato_inicio: text } : null)}
-        placeholder="AAAA-MM-DD"
+        value={isEditing ? formatData(user?.cargo_mandato_inicio) : (user?.cargo_mandato_inicio ? toBrazilianDate(user.cargo_mandato_inicio) : '')}
+        onChangeText={(text) => {
+          const digits = onlyDigits(text);
+          if (digits.length <= 8) {
+            setUser(f => f ? { ...f, cargo_mandato_inicio: digits } : null);
+          }
+        }}
+        onBlur={() => {
+          if (user?.cargo_mandato_inicio && user.cargo_mandato_inicio.length === 8) {
+            const isoDate = toISODate(formatData(user.cargo_mandato_inicio));
+            setUser(f => f ? { ...f, cargo_mandato_inicio: isoDate || user.cargo_mandato_inicio } : null);
+          }
+        }}
+        placeholder="DD/MM/AAAA"
+        keyboardType="numeric"
+        maxLength={10}
         editable={isEditing}
       />
 
       <Text style={styles.label}>Fim do Mandato</Text>
       <TextInput
         style={isEditing ? styles.input : styles.inputDisabled}
-        value={user?.cargo_mandato_fim || ''}
-        onChangeText={(text) => setUser(f => f ? { ...f, cargo_mandato_fim: text } : null)}
-        placeholder="AAAA-MM-DD"
+        value={isEditing ? formatData(user?.cargo_mandato_fim) : (user?.cargo_mandato_fim ? toBrazilianDate(user.cargo_mandato_fim) : '')}
+        onChangeText={(text) => {
+          const digits = onlyDigits(text);
+          if (digits.length <= 8) {
+            setUser(f => f ? { ...f, cargo_mandato_fim: digits } : null);
+          }
+        }}
+        onBlur={() => {
+          if (user?.cargo_mandato_fim && user.cargo_mandato_fim.length === 8) {
+            const isoDate = toISODate(formatData(user.cargo_mandato_fim));
+            setUser(f => f ? { ...f, cargo_mandato_fim: isoDate || user.cargo_mandato_fim } : null);
+          }
+        }}
+        placeholder="DD/MM/AAAA"
+        keyboardType="numeric"
+        maxLength={10}
         editable={isEditing}
       />
 

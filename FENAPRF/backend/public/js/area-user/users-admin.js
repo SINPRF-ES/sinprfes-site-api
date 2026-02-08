@@ -60,8 +60,8 @@
     async function inicializarUsers(perfil) {
         const listaEl = document.getElementById("lista-users");
         perfilAtual = (perfil || "").toUpperCase();
-        const isReadOnlyProfile = ["USER", "ORGANIZADOR"].includes(perfilAtual);
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+        const isReadOnlyProfile = ["CONSELHEIRO", "ORGANIZADOR"].includes(perfilAtual);
+        const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR", "FUNCIONARIO"].includes(perfilAtual);
 
         if (!listaEl) {
             const secUsers = document.getElementById("sec-users");
@@ -208,7 +208,7 @@
                             <div>
                                 <div class="user-nome">${safeEscape(f.nome)}</div>
                                 <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) : ''}</div>
-                                ${["USER", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
+                                ${["CONSELHEIRO", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
                                 <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
                             </div>
@@ -216,7 +216,7 @@
                         <div style="text-align:right;">
                             <span class="user-badge badge-${situacaoLower}">${safeEscape(situacao)}</span>
                             <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
-            ${!["USER", "ORGANIZADOR"].includes(perfilAtual) ?
+            ${!["CONSELHEIRO", "ORGANIZADOR"].includes(perfilAtual) ?
                                 `<button class="btn btn-outline btn-sm" onclick="UsersAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
                         </div>
                     </div>
@@ -328,7 +328,8 @@
                             <div class="field-group">
                                 <label>Perfil de Acesso</label>
                                 <select name="perfil_acesso">
-                                    <option value="USER" ${f.perfil_acesso === "USER" ? "selected" : ""}>USER</option>
+                                    <option value="CONSELHEIRO" ${f.perfil_acesso === "CONSELHEIRO" ? "selected" : ""}>CONSELHEIRO</option>
+                                    <option value="COLABORADOR" ${f.perfil_acesso === "COLABORADOR" ? "selected" : ""}>COLABORADOR</option>
                                     <option value="COMUNICADOR" ${f.perfil_acesso === "COMUNICADOR" ? "selected" : ""}>COMUNICADOR</option>
                                     <option value="ORGANIZADOR" ${f.perfil_acesso === "ORGANIZADOR" ? "selected" : ""}>ORGANIZADOR</option>
                                     <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>

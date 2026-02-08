@@ -46,6 +46,16 @@ export const formatCep = (cep: string | null | undefined): string => {
 
 export const formatData = (data: string | null | undefined): string => {
   if (!data) return '';
+
+  // Se vier no formato ISO YYYY-MM-DD, converte para DD/MM/AAAA antes de mascarar
+  if (data.includes('-') && data.length >= 10) {
+    const parts = data.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const [y, m, d] = parts;
+      return `${d}/${m}/${y}`;
+    }
+  }
+
   const digits = onlyDigits(data).slice(0, 8);
   const len = digits.length;
   if (len === 0) return '';

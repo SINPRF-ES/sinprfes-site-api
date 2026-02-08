@@ -13,9 +13,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { listarEventosLogistica, LogisticaEvento } from '../services/logisticaService';
 import { logger } from '../infra/logger';
+import { useAuth } from '../hooks/useAuth';
+import { isGestao } from '../utils/userUtils';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 const LogisticaScreen = () => {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const ehGestao = isGestao(user?.perfil_acesso);
   const [eventos, setEventos] = useState<LogisticaEvento[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +39,21 @@ const LogisticaScreen = () => {
   useEffect(() => {
     fetchEventos();
   }, [fetchEventos]);
+
+  useEffect(() => {
+    if (ehGestao) {
+      const actions: MenuAction[] = [
+        {
+          label: 'Criar Evento',
+          icon: 'plus',
+          onPress: () => navigation.navigate('LogisticaEventoEditor', { eventoId: null })
+        }
+      ];
+      navigation.setOptions({
+        headerRight: () => <HeaderMenu actions={actions} />
+      });
+    }
+  }, [ehGestao, navigation]);
 
   const renderItem = ({ item }: { item: LogisticaEvento }) => (
     <TouchableOpacity

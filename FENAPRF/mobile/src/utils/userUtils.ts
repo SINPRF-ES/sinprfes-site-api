@@ -172,11 +172,11 @@ export function getBandeiraUF(ufSigla?: string | null, perfil?: string | null): 
   const p = (perfil || "").toUpperCase();
   let uf = (ufSigla || "").trim().toLowerCase();
 
-  if (p === ROLES.DIRETORIA || p === ROLES.COLABORADOR) {
+  if (p === ROLES.DIRETORIA || p === ROLES.COLABORADOR || p === ROLES.ADMIN) {
     uf = "br";
   }
 
-  if (!uf) return "";
+  if (!uf) uf = "br";
   if (uf === "br") return "https://atlasescolar.ibge.gov.br/images/bandeiras/brasil.png";
   if (uf.length !== 2) return "";
 
