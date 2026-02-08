@@ -30,7 +30,7 @@ import { checkConflict } from '../constants/logistica';
 import { isGestao, getCanonicalUserId } from '../utils/userUtils';
 import { formatCpf, formatTelefone } from '../shared/format/formatters';
 import { formatISOToBRDateTime } from '../utils/date';
-import * as Linking from 'expo-linking';
+import { Linking } from 'react-native';
 import { API_BASE_URL } from '../config/env';
 
 const parseBRDateTimeToISO = (brStr: string): string | null => {
