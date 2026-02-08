@@ -151,6 +151,62 @@ Diretoria FENAPRF
 }
 
 // --------------------------
+// Logística (confirmação / cancelamento)
+// --------------------------
+
+async function enviarEmailLogistica(user, evento, inscricao) {
+  const emailDestino = extrairEmailDestino(user);
+  if (!emailDestino) {
+    console.warn("⚠️ EmailLogistica: user sem email.", JSON.stringify({ userId: user.id }));
+    return;
+  }
+
+  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
+  const subject = `Confirmação de Inscrição - Logística: ${evento.titulo}`;
+
+  const corpo = `
+Olá, ${primeiroNome}!
+
+Sua inscrição para o evento logístico "${evento.titulo}" foi registrada/atualizada com sucesso.
+
+Detalhes da Logística:
+- Chegada: ${new Date(inscricao.data_chegada).toLocaleString('pt-BR')}
+- Saída: ${new Date(inscricao.data_saida).toLocaleString('pt-BR')}
+- Observações: ${inscricao.observacoes || "-"}
+
+${inscricao.justificativa ? `Observação da Gestão: ${inscricao.justificativa}\n` : ""}
+Este e-mail foi gerado automaticamente.
+
+Atenciosamente,
+FENAPRF
+`;
+
+  await enviarEmailBase(emailDestino, subject, corpo);
+}
+
+async function enviarEmailCancelamentoLogistica(user, evento, inscricao) {
+  const emailDestino = extrairEmailDestino(user);
+  if (!emailDestino) return;
+
+  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
+  const subject = `Cancelamento de Inscrição - Logística: ${evento.titulo}`;
+
+  const corpo = `
+Olá, ${primeiroNome}!
+
+Sua inscrição para o evento "${evento.titulo}" foi cancelada.
+
+${inscricao.justificativa ? `Justificativa: ${inscricao.justificativa}\n` : ""}
+Este e-mail foi gerado automaticamente.
+
+Atenciosamente,
+FENAPRF
+`;
+
+  await enviarEmailBase(emailDestino, subject, corpo);
+}
+
+// --------------------------
 // Jogos (confirmação / cancelamento)
 // --------------------------
 
@@ -479,6 +535,8 @@ module.exports = {
   enviarEmailBoasVindasUser,
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
+  enviarEmailLogistica,
+  enviarEmailCancelamentoLogistica,
   enviarRelatorioAniversariantes,
   enviarEmailRelatorioAssembleia,
   enviarEmailRelatorio,

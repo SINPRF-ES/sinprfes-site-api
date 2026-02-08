@@ -14,6 +14,7 @@ import CriarUserScreen from '../screens/CriarUserScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
 import RessarcimentoScreen from '../screens/RessarcimentoScreen';
 import JogosScreen from '../screens/JogosScreen';
+import LogisticaScreen from '../screens/LogisticaScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
@@ -92,6 +93,11 @@ const DrawerNavigator = () => {
         name="Jogos2026"
         component={JogosScreen}
         options={{ title: '🏆 Jogos 2026' }}
+      />
+      <Drawer.Screen
+        name="Logistica"
+        component={LogisticaScreen}
+        options={{ title: '🚚 Logística' }}
       />
       <Drawer.Screen
         name="Votacao"
