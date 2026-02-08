@@ -44,18 +44,9 @@
     COMUNICADOR: 'COMUNICADOR'
   };
 
-  // 4. Lotações Padronizadas
-  const LOTACOES_REPASSE = [
-    "SEDE",
-    "DEL 01 - Viana",
-    "DEL 02 - Serra",
-    "DEL 03 - Guarapari",
-    "DEL 04 - Linhares"
-  ];
-
-  const LOTACOES = [
-    ...LOTACOES_REPASSE,
-    "NENHUMA"
+  const UFS = [
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+    "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
   ];
 
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
@@ -124,28 +115,6 @@
   }
 
   /**
-   * Normaliza a Lotação.
-   * Tenta encontrar a correspondência exata ou via keyword.
-   */
-  function normalizeLotacao(val) {
-    const s = slugify(val);
-    if (!s || s === 'NENHUMA') return 'NENHUMA';
-
-    for (const lot of LOTACOES) {
-      if (slugify(lot) === s) return lot;
-    }
-
-    // Fallbacks por keyword
-    if (s.includes('VIANA')) return "DEL 01 - Viana";
-    if (s.includes('SERRA')) return "DEL 02 - Serra";
-    if (s.includes('GUARAPARI')) return "DEL 03 - Guarapari";
-    if (s.includes('LINHARES')) return "DEL 04 - Linhares";
-    if (s.includes('SEDE')) return "SEDE";
-
-    return 'SEDE'; // Fallback seguro para garantir compatibilidade com CHECK CONSTRAINT
-  }
-
-  /**
    * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
    * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
    * @param {string} input - Nome a ser normalizado.
@@ -170,14 +139,12 @@
     SEXO,
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
-    LOTACOES_REPASSE,
-    LOTACOES,
+    UFS,
     LABELS,
     normalizeSituacaoFuncional,
     normalizeSexo,
     normalizePerfil,
     normalizeEstadoCadastro,
-    normalizeLotacao,
     normalizeNome,
     slugify
   };

@@ -22,14 +22,14 @@
 
         setupHandlers();
         carregarHistorico();
-        popularLotacoes();
+        popularUFs();
     }
 
-    function popularLotacoes() {
-        const select = document.getElementById('push-target-lotacao');
+    function popularUFs() {
+        const select = document.getElementById('push-target-uf');
         if (!select) return;
-        const lotacoes = global.Canon?.LOTACOES || ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
-        select.innerHTML = lotacoes.map(l => `<option value="${l}">${l}</option>`).join('');
+        const ufs = global.Canon?.UFS || ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+        select.innerHTML = ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
     }
 
     function setupHandlers() {
@@ -79,18 +79,18 @@
     function handleTargetTypeChange() {
         const type = document.getElementById('push-target-type').value;
         const container = document.getElementById('push-target-value-container');
-        const lotacaoSelect = document.getElementById('push-target-lotacao');
+        const ufSelect = document.getElementById('push-target-uf');
         const userWrapper = document.getElementById('push-target-user-wrapper');
         const label = document.getElementById('push-target-value-label');
 
         container.style.display = 'none';
-        lotacaoSelect.style.display = 'none';
+        if (ufSelect) ufSelect.style.display = 'none';
         userWrapper.style.display = 'none';
 
-        if (type === 'LOTACAO') {
+        if (type === 'UF') {
             container.style.display = 'block';
-            label.textContent = 'Selecionar Lotação:';
-            lotacaoSelect.style.display = 'block';
+            label.textContent = 'Selecionar UF:';
+            if (ufSelect) ufSelect.style.display = 'block';
         } else if (type === 'USER') {
             container.style.display = 'block';
             label.textContent = 'Buscar User:';
@@ -135,8 +135,8 @@
         }
 
         let targetValue = null;
-        if (targetType === 'LOTACAO') {
-            targetValue = document.getElementById('push-target-lotacao').value;
+        if (targetType === 'UF') {
+            targetValue = document.getElementById('push-target-uf').value;
         } else if (targetType === 'USER') {
             const select = document.getElementById('push-target-user-select');
             const opt = select.options[select.selectedIndex];

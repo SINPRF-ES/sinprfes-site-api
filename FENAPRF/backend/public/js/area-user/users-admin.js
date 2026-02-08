@@ -9,14 +9,6 @@
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
-    const LOTACAO_OPCOES = global.Canon?.LOTACOES || [
-      "SEDE",
-      "DEL 01 - Viana",
-      "DEL 02 - Serra",
-      "DEL 03 - Guarapari",
-      "DEL 04 - Linhares",
-      "NENHUMA"
-    ];
 
     let perfilAtual = null;
     let handlersConfigurados = false;
@@ -133,12 +125,6 @@
                             <option value="ATIVO">Ativo</option>
                             <option value="VETERANO">Veterano</option>
                             <option value="PENSIONISTA">Pensionista</option>
-                            <option value="SEDE">SEDE</option>
-                            <option value="DEL 01 - Viana">DEL 01 - Viana</option>
-                            <option value="DEL 02 - Serra">DEL 02 - Serra</option>
-                            <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
-                            <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
-                            <option value="NENHUMA">NENHUMA</option>
                         </select>
                     </label>
                 `;
@@ -188,26 +174,7 @@
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {
-            const lotacoesLabels = global.Canon?.LOTACOES || ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
-            if (lotacoesLabels.includes(fSituacao)) {
-                const keywords = {
-                    "SEDE": "SEDE",
-                    "DEL 01 - Viana": "VIANA",
-                    "DEL 02 - Serra": "SERRA",
-                    "DEL 03 - Guarapari": "GUARAPARI",
-                    "DEL 04 - Linhares": "LINHARES",
-                    "NENHUMA": "NENHUMA"
-                };
-                const keyword = keywords[fSituacao];
-                res = res.filter(f => {
-                    const s = (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase();
-                    let l = (f.lotacao || "SEDE").toUpperCase();
-                    if (normalizeText) l = normalizeText(l).toUpperCase();
-                    return s === "ATIVO" && l.includes(keyword);
-                });
-            } else {
-                res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
-            }
+            res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
         }
 
         const fEstado = document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO";
@@ -241,7 +208,7 @@
                             ${avatarHtml(f.avatar_url, f.nome)}
                             <div>
                                 <div class="user-nome">${safeEscape(f.nome)}</div>
-                                <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.lotacao || 'SEDE')}</div>
+                                <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.uf || '')}</div>
                                 ${["USER", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
                                 <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
@@ -356,13 +323,6 @@
                             <label>Situação Funcional</label>
                             <select name="situacao">
                                 ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
-                            </select>
-                        </div>
-                        <div class="field-group">
-                            <label>Lotação</label>
-                            <select name="lotacao">
-                                <option value="">Selecione...</option>
-                                ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
                             </select>
                         </div>
                     </div>

@@ -1,14 +1,5 @@
 const pool = require("../config/db");
-const { LOTACOES_REPASSE, normalizeLotacao } = require("../../shared/canon");
-
-// Keywords para busca robusta se necessário, mas agora usamos a normalização canônica
-const LOTACAO_KEYWORDS = {
-  "SEDE": "SEDE",
-  "DEL 01 - Viana": "VIANA",
-  "DEL 02 - Serra": "SERRA",
-  "DEL 03 - Guarapari": "GUARAPARI",
-  "DEL 04 - Linhares": "LINHARES"
-};
+const { UFS } = require("../../shared/canon");
 
 const factorFromPercentual = (percent) => {
   if (percent < 70) return 0;
@@ -17,36 +8,30 @@ const factorFromPercentual = (percent) => {
   return 1.0;
 };
 
-async function getUsersAtivosCount(lotacaoKey) {
-  const keyword = LOTACAO_KEYWORDS[lotacaoKey];
-  if (!keyword) return 0;
-
+async function getUsersAtivosCount(uf) {
   const { rows } = await pool.query(`
     SELECT COUNT(*) as count
     FROM users
     WHERE situacao = 'ATIVO'
       AND arquivado_em IS NULL
-      AND UPPER(lotacao) LIKE $1
-  `, [`%${keyword.toUpperCase()}%`]);
+      AND uf = $1
+  `, [uf]);
 
   return parseInt(rows[0].count);
 }
 
-async function listarResponsaveis(lotacaoKey = null) {
+async function listarResponsaveis(uf = null) {
   let query = `
-    SELECT id, nome, cpf, lotacao, perfil_acesso, situacao, arquivado_em
+    SELECT id, nome, cpf, uf, perfil_acesso, situacao, arquivado_em
     FROM users
     WHERE situacao = 'ATIVO'
       AND arquivado_em IS NULL
   `;
   const params = [];
 
-  if (lotacaoKey) {
-    const keyword = LOTACAO_KEYWORDS[lotacaoKey];
-    if (keyword) {
-      query += ` AND UPPER(lotacao) LIKE $1`;
-      params.push(`%${keyword.toUpperCase()}%`);
-    }
+  if (uf) {
+    query += ` AND uf = $1`;
+    params.push(uf);
   }
 
   query += ` ORDER BY nome ASC`;
@@ -55,16 +40,16 @@ async function listarResponsaveis(lotacaoKey = null) {
 
   // Logging backend (obrigatório)
   const total = rows.length;
-  const byLotacao = {};
+  const byUf = {};
   const organizadores = rows.filter(r => (r.perfil_acesso || '').toUpperCase() === 'ORGANIZADOR');
 
   rows.forEach(r => {
-    const lot = r.lotacao || 'SEM LOTACAO';
-    byLotacao[lot] = (byLotacao[lot] || 0) + 1;
+    const ufVal = r.uf || 'SEM UF';
+    byUf[ufVal] = (byUf[ufVal] || 0) + 1;
   });
 
-  console.info(`[REPASSE_RESP] total=${total} byLotacao=${JSON.stringify(byLotacao)}`);
-  console.info(`[REPASSE_RESP] organizadores=${organizadores.length} lotacoes=${JSON.stringify(organizadores.map(o => o.lotacao))}`);
+  console.info(`[REPASSE_RESP] total=${total} byUf=${JSON.stringify(byUf)}`);
+  console.info(`[REPASSE_RESP] organizadores=${organizadores.length} ufs=${JSON.stringify(organizadores.map(o => o.uf))}`);
 
   return rows;
 }
@@ -93,9 +78,9 @@ async function getRepasseAno(year) {
   // Isso implica que o histórico será recalculado com base no estado ATUAL do banco?
   // Geralmente repasse se baseia no histórico, mas o requisito é explícito: "não persistir".
 
-  const ativosPorLotacao = {};
-  for (const lot of LOTACOES_REPASSE) {
-    ativosPorLotacao[lot] = await getUsersAtivosCount(lot);
+  const ativosPorUf = {};
+  for (const uf of UFS) {
+    ativosPorUf[uf] = await getUsersAtivosCount(uf);
   }
 
   const meses = [];
@@ -103,8 +88,8 @@ async function getRepasseAno(year) {
     const config = configRows.find(r => r.month === month) || { per_capita: 0 };
     const perCapita = parseFloat(config.per_capita);
 
-    const localidades = LOTACOES_REPASSE.map(lot => {
-      const data = lotacaoRows.find(r => r.month === month && r.lotacao_key === lot) || {
+    const localidades = UFS.map(uf => {
+      const data = lotacaoRows.find(r => r.month === month && r.lotacao_key === uf) || {
         responsavel_id: null,
         responsavel_nome: null,
         responsavel_cpf: null,
@@ -112,7 +97,7 @@ async function getRepasseAno(year) {
         reembolso_mes: 0
       };
 
-      const usersAtivos = ativosPorLotacao[lot];
+      const usersAtivos = ativosPorUf[uf];
       const prfTotal = parseInt(data.prf_total) || 0;
 
       let percentual = 0;
@@ -126,7 +111,7 @@ async function getRepasseAno(year) {
       }
 
       return {
-        lotacao: lot,
+        uf,
         responsavelId: data.responsavel_id,
         responsavelNome: data.responsavel_nome,
         responsavelCpf: data.responsavel_cpf,
@@ -150,18 +135,18 @@ async function getRepasseAno(year) {
 
   // Cálculo do acumulado por localidade no ano
   // acumuladoAno = soma(créditos mensais) – soma(reembolsos)
-  const lotacoesAcumulado = LOTACOES_REPASSE.map(lot => {
+  const lotacoesAcumulado = UFS.map(uf => {
     let somaCreditos = 0;
     let somaReembolsos = 0;
 
     meses.forEach(m => {
-      const loc = m.localidades.find(l => l.lotacao === lot);
+      const loc = m.localidades.find(l => l.lotacao === uf);
       somaCreditos += loc.creditoMes;
       somaReembolsos += loc.reembolsoMes;
     });
 
     return {
-      lotacao: lot,
+      uf,
       acumuladoAno: somaCreditos - somaReembolsos
     };
   });
@@ -169,7 +154,7 @@ async function getRepasseAno(year) {
   // Anexar o acumulado em cada localidade de cada mês (para exibição na tela)
   meses.forEach(m => {
     m.localidades.forEach(loc => {
-      const acc = lotacoesAcumulado.find(la => la.lotacao === loc.lotacao);
+      const acc = lotacoesAcumulado.find(la => la.uf === loc.uf);
       loc.acumuladoAno = acc.acumuladoAno;
     });
   });
@@ -184,21 +169,21 @@ async function getRepasseAno(year) {
 }
 
 /**
- * Obtém os dados de repasse mais recentes para uma lotação específica.
+ * Obtém os dados de repasse mais recentes para uma UF específica.
  * Usado pelo módulo de Relatórios para evitar duplicação de lógica.
  */
-async function getUltimosDadosParaRelatorio(lotacaoKey) {
+async function getUltimosDadosParaRelatorio(uf) {
   // 1. Total de users ativos atuais (Source of Truth do Repasse)
-  const usersAtivos = await getUsersAtivosCount(lotacaoKey);
+  const usersAtivos = await getUsersAtivosCount(uf);
 
-  // 2. Busca o registro mais recente de prf_total para esta lotação
+  // 2. Busca o registro mais recente de prf_total para esta UF
   const { rows } = await pool.query(`
     SELECT rl.year, rl.month, rl.prf_total
     FROM repasse_lotacao rl
     WHERE rl.lotacao_key = $1
     ORDER BY rl.year DESC, rl.month DESC
     LIMIT 1
-  `, [lotacaoKey]);
+  `, [uf]);
 
   if (rows.length === 0) {
     return {
@@ -237,8 +222,8 @@ async function updateRepasseMes(year, month, perCapita, localidadesData) {
 
     // Update each location
     for (const loc of localidadesData) {
-      // Proteção: Apenas lotações do repasse
-      if (!LOTACOES_REPASSE.includes(loc.lotacaoKey)) continue;
+      // Proteção: Apenas lotações do repasse (agora UFs)
+      if (!UFS.includes(loc.lotacaoKey)) continue;
 
       await client.query(`
         INSERT INTO repasse_lotacao (year, month, lotacao_key, responsavel_id, prf_total, reembolso_mes)

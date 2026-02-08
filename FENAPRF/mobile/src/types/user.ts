@@ -22,7 +22,6 @@ export interface User {
   cidade?: string | null;
   uf?: string | null;
   uf_endereco?: string | null;
-  lotacao?: string | null;
   data_nascimento?: string | null;
   sexo?: 'M' | 'F' | null;
   cargo?: string | null;

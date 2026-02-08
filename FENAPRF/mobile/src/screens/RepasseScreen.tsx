@@ -20,19 +20,12 @@ import { getUsers } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 import * as Canon from '../utils/canon';
+import { UFS } from '../utils/userUtils';
 
 const nomesMeses = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
-
-const LOTACAO_KEYWORDS: any = {
-  "SEDE": "SEDE",
-  "DEL 01 - Viana": "VIANA",
-  "DEL 02 - Serra": "SERRA",
-  "DEL 03 - Guarapari": "GUARAPARI",
-  "DEL 04 - Linhares": "LINHARES"
-};
 
 class RepasseErrorBoundary extends Component<{ children: ReactNode, breadcrumbs: string[] }, { hasError: boolean }> {
   constructor(props: any) {
@@ -152,7 +145,7 @@ export default function RepasseScreen() {
           totalRepasseMes: safeNumber(m?.totalRepasseMes, 0),
           localidades: Array.isArray(m?.localidades) ? m.localidades.map(l => ({
             ...l,
-            lotacao: String(l?.lotacao || ''),
+            uf: String(l?.uf || l?.lotacao || ''),
             usersAtivos: safeNumber(l?.usersAtivos, 0),
             prfTotal: safeNumber(l?.prfTotal, 0),
             percentual: (l?.percentual == null) ? null : safeNumber(l.percentual),
@@ -175,19 +168,16 @@ export default function RepasseScreen() {
           });
 
           const counts: any = {};
-          Object.keys(LOTACAO_KEYWORDS).forEach(lot => {
-            const kw = LOTACAO_KEYWORDS[lot];
-            counts[lot] = activeUsers.filter(f =>
-              normalizeLocalidade(f.lotacao || 'SEDE').includes(kw)
-            ).length;
+          UFS.forEach(uf => {
+            counts[uf] = activeUsers.filter(f => (f.uf || '') === uf).length;
           });
 
           bc('unify_counts:done', counts);
 
           mesesNorm.forEach(m => {
             m.localidades.forEach(l => {
-              if (counts[l.lotacao] !== undefined) {
-                l.usersAtivos = counts[l.lotacao];
+              if (counts[l.uf] !== undefined) {
+                l.usersAtivos = counts[l.uf];
                 // Recalcular percentual e crédito com base no novo número de ativos
                 const perCapita = Number(m.perCapita || 0);
                 if (l.prfTotal > 0) {
@@ -212,22 +202,22 @@ export default function RepasseScreen() {
 
         // Recalcular acumulado anual após unificação de contagens
         const acumulados: any = {};
-        Canon.LOTACOES_REPASSE.forEach(lot => {
+        UFS.forEach(uf => {
           let somaCred = 0;
           let somaReem = 0;
           mesesNorm.forEach(mes => {
-            const l = mes.localidades.find(ll => ll.lotacao === lot);
+            const l = mes.localidades.find(ll => ll.uf === uf);
             if (l) {
               somaCred += l.creditoMes;
               somaReem += l.reembolsoMes;
             }
           });
-          acumulados[lot] = somaCred - somaReem;
+          acumulados[uf] = somaCred - somaReem;
         });
 
         mesesNorm.forEach(mes => {
           mes.localidades.forEach(l => {
-            l.acumuladoAno = acumulados[l.lotacao] || 0;
+            l.acumuladoAno = acumulados[l.uf] || 0;
           });
         });
 
@@ -255,18 +245,18 @@ export default function RepasseScreen() {
 
         // Mobile logs (obrigatório)
         const total = respList.length;
-        const byLotacaoCounts: any = {};
+        const byUfCounts: any = {};
         const orgs = respList.filter(r => (r.perfil_acesso || '').toUpperCase() === 'ORGANIZADOR');
         respList.forEach(r => {
-          const l = r.lotacao || 'SEM LOTACAO';
-          byLotacaoCounts[l] = (byLotacaoCounts[l] || 0) + 1;
+          const ufVal = r.uf || 'SEM UF';
+          byUfCounts[ufVal] = (byUfCounts[ufVal] || 0) + 1;
         });
 
         console.info("[REPASSE_UI] responsaveis loaded", {
           total,
-          byLotacaoCounts,
+          byUfCounts,
           organizadores: orgs.length,
-          organizadorLotacoes: orgs.map(o => o.lotacao)
+          organizadorUfs: orgs.map(o => o.uf)
         });
 
         setResponsaveis(respList);
@@ -295,12 +285,12 @@ export default function RepasseScreen() {
     fetchData();
   }, [fetchData]);
 
-  const handleUpdateLocalidade = (month: number, lotacao: string, field: string, value: any) => {
+  const handleUpdateLocalidade = (month: number, uf: string, field: string, value: any) => {
     const newMeses = [...meses];
     const mesIndex = newMeses.findIndex(m => m.month === month);
     if (mesIndex === -1) return;
 
-    const locIndex = newMeses[mesIndex].localidades.findIndex(l => l.lotacao === lotacao);
+    const locIndex = newMeses[mesIndex].localidades.findIndex(l => l.uf === uf);
     if (locIndex === -1) return;
 
     const loc = { ...newMeses[mesIndex].localidades[locIndex] };
@@ -353,25 +343,25 @@ export default function RepasseScreen() {
     m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + Number(l.creditoMes || 0), 0);
 
     const acumulados: any = {};
-    console.info('[REPASSE][FOR_EACH][lotacoes]');
-    Canon.LOTACOES_REPASSE.forEach(lot => {
+    console.info('[REPASSE][FOR_EACH][ufs]');
+    UFS.forEach(uf => {
       let somaCred = 0;
       let somaReem = 0;
-      console.info(`[REPASSE][FOR_EACH][mesesList] for lotacao ${lot}`);
+      console.info(`[REPASSE][FOR_EACH][mesesList] for uf ${uf}`);
       (mesesList || []).forEach(mes => {
-        const l = (mes.localidades || []).find(ll => ll.lotacao === lot);
+        const l = (mes.localidades || []).find(ll => ll.uf === uf);
         if (l) {
             somaCred += Number(l.creditoMes || 0);
             somaReem += Number(l.reembolsoMes || 0);
         }
       });
-      acumulados[lot] = somaCred - somaReem;
+      acumulados[uf] = somaCred - somaReem;
     });
 
     console.info('[REPASSE][FOR_EACH][mesesList] update acumuladoAno');
     (mesesList || []).forEach(mes => {
       (mes.localidades || []).forEach(l => {
-        l.acumuladoAno = Number(acumulados[l.lotacao] || 0);
+        l.acumuladoAno = Number(acumulados[l.uf] || 0);
       });
     });
 
@@ -391,7 +381,7 @@ export default function RepasseScreen() {
         month,
         m.perCapita,
         (m.localidades || []).map(l => ({
-          lotacaoKey: l.lotacao,
+          lotacaoKey: l.uf,
           responsavelId: l.responsavelId,
           prfTotal: l.prfTotal,
           reembolsoMes: l.reembolsoMes
@@ -437,7 +427,7 @@ export default function RepasseScreen() {
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.title}>💱 Repasse Mensal</Text>
-              <Text style={styles.subtitle}>Gestão de créditos por localidade</Text>
+              <Text style={styles.subtitle}>Gestão de créditos por UF</Text>
             </View>
           </View>
 
@@ -512,7 +502,7 @@ export default function RepasseScreen() {
                     <ScrollView horizontal showsHorizontalScrollIndicator={true}>
                       <View style={styles.tableContainer}>
                         <View style={styles.tableHeader}>
-                          <View style={[styles.tableHeaderCell, { width: 130 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
+                        <View style={[styles.tableHeaderCell, { width: 130 }]}><Text style={styles.tableHeaderText}>UF</Text></View>
                           {ehGestao && <View style={[styles.tableHeaderCell, { width: 200 }]}><Text style={styles.tableHeaderText}>Responsável</Text></View>}
                           <View style={[styles.tableHeaderCell, { width: 70 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
                           <View style={[styles.tableHeaderCell, { width: 90 }]}><Text style={styles.tableHeaderText}>PRF Total</Text></View>
@@ -531,48 +521,46 @@ export default function RepasseScreen() {
 
                           return m.localidades.map((loc, idx) => (
                             <View
-                              key={loc.lotacao}
+                              key={loc.uf}
                               style={[
                                 styles.tableRow,
                                 idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
                               ]}
                             >
-                              <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{String(loc.lotacao || '—')}</Text></View>
+                              <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{String(loc.uf || '—')}</Text></View>
 
                               {ehGestao && (
                                 <View style={[styles.tableCell, { width: 200 }]}>
                                   <View style={styles.pickerWrapperCell}>
                                     <Picker
                                       selectedValue={loc.responsavelId}
-                                      onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
+                                      onValueChange={(v) => handleUpdateLocalidade(m.month, loc.uf, 'responsavelId', v)}
                                       style={styles.pickerCell}
                                       mode="dropdown"
                                       dropdownIconColor="#003366"
                                     >
                                       <Picker.Item label="Selecione..." value={null} />
                                       {(() => {
-                                        const kw = LOTACAO_KEYWORDS[loc.lotacao];
+                                        const currentUf = loc.uf;
                                         const respList = (responsaveis || []);
 
-                                        // Filtro estrito por localidade (obrigatório)
-                                        // Remove o fallback de "vazar" usuários sem lotação ou ORGANIZADORES globais
+                                        // Filtro por UF
                                         const filtered = respList.filter(r => {
-                                          if (!kw) return true;
-                                          if (!r.lotacao) return false;
-                                          return normalizeLocalidade(r.lotacao).includes(kw);
+                                          if (!currentUf) return true;
+                                          if (!r.uf) return false;
+                                          return r.uf === currentUf;
                                         });
 
                                         // Mobile logs (obrigatório)
                                         console.info("[REPASSE_UI] picker options", {
-                                          lotacao: loc.lotacao,
-                                          key: kw,
+                                          uf: loc.uf,
                                           optionsCount: filtered.length,
                                           optionIds: filtered.map(o => o.id).slice(0, 10)
                                         });
 
                                         if (filtered.length === 0 && loc.usersAtivos > 0) {
-                                          console.warn("[REPASSE_UI] lotacao sem responsaveis", {
-                                            lotacao: loc.lotacao,
+                                          console.warn("[REPASSE_UI] uf sem responsaveis", {
+                                            uf: loc.uf,
                                             usersAtivos: loc.usersAtivos
                                           });
                                         }
@@ -594,7 +582,7 @@ export default function RepasseScreen() {
                                     style={styles.inputCell}
                                     value={String(loc.prfTotal || 0)}
                                     keyboardType="numeric"
-                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
+                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.uf, 'prfTotal', v)}
                                   />
                                 ) : (
                                   <Text style={styles.valueCell}>{Number(loc.prfTotal || 0)}</Text>
@@ -615,7 +603,7 @@ export default function RepasseScreen() {
                                     style={styles.inputCell}
                                     value={String(loc.reembolsoMes || 0)}
                                     keyboardType="numeric"
-                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
+                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.uf, 'reembolsoMes', v)}
                                   />
                                 ) : (
                                   <Text style={styles.valueCell}>{formatCurrency(loc.reembolsoMes)}</Text>

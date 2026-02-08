@@ -37,22 +37,6 @@ export const PERFIL_ACESSO = {
 
 export type PerfilAcesso = typeof PERFIL_ACESSO[keyof typeof PERFIL_ACESSO];
 
-// 4. Lotações Padronizadas
-export const LOTACOES_REPASSE = [
-  "SEDE",
-  "DEL 01 - Viana",
-  "DEL 02 - Serra",
-  "DEL 03 - Guarapari",
-  "DEL 04 - Linhares"
-] as const;
-
-export const LOTACOES = [
-  ...LOTACOES_REPASSE,
-  "NENHUMA"
-] as const;
-
-export type Lotacao = typeof LOTACOES[number];
-
 // Mapeamento para labels de exibição
 export const LABELS: Record<string, string> = {
   [SITUACAO_FUNCIONAL.ATIVO]: 'Ativo',
@@ -115,27 +99,6 @@ export function normalizeEstadoCadastro(val: string | null | undefined): EstadoC
   if (s === 'CADASTRO_ATIVO' || s === 'ATIVO') return ESTADO_CADASTRO.CADASTRO_ATIVO;
   if (s === 'ARQUIVADO' || s === 'ARQUIVADOS') return ESTADO_CADASTRO.ARQUIVADO;
   return ESTADO_CADASTRO.CADASTRO_ATIVO;
-}
-
-/**
- * Normaliza a Lotação.
- */
-export function normalizeLotacao(val: string | null | undefined): string {
-  const s = slugify(val);
-  if (!s || s === 'NENHUMA') return 'NENHUMA';
-
-  for (const lot of LOTACOES) {
-    if (slugify(lot) === s) return lot;
-  }
-
-  // Fallbacks por keyword
-  if (s.includes('VIANA')) return "DEL 01 - Viana";
-  if (s.includes('SERRA')) return "DEL 02 - Serra";
-  if (s.includes('GUARAPARI')) return "DEL 03 - Guarapari";
-  if (s.includes('LINHARES')) return "DEL 04 - Linhares";
-  if (s.includes('SEDE')) return "SEDE";
-
-  return 'SEDE'; // Fallback seguro
 }
 
 /**

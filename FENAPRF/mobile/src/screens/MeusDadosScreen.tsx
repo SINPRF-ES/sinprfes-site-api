@@ -12,7 +12,6 @@ import type { User } from '../types/user';
 import HeaderInfo from '../components/HeaderInfo';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
-import LotacaoCard from '../components/LotacaoCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
@@ -44,7 +43,6 @@ export default function MeusDadosScreen() {
         hasAuthUser: !!authUser,
         hasFetchedData: !!data,
         userKeys: data ? Object.keys(data) : [],
-        lotacao: data?.lotacao
       });
     } catch (err: any) {
       setError(err.message || 'Não foi possível carregar os dados.');
@@ -268,12 +266,6 @@ export default function MeusDadosScreen() {
         <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
       </ErrorBoundary>
 
-      <ErrorBoundary>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text>
-        </View>
-        <LotacaoCard user={user} setUser={setUser} hideTitle={true} />
-      </ErrorBoundary>
 
     </KeyboardAwareScrollView>
     </SafeScreen>

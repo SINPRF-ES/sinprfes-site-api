@@ -10,6 +10,14 @@
     function inicializarRelatorios(perfil) {
         setupHandlers();
         carregarHistorico();
+        popularUFs();
+    }
+
+    function popularUFs() {
+        const select = document.getElementById('relatorio-uf-select');
+        if (!select) return;
+        const ufs = global.Canon?.UFS || ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+        select.innerHTML = ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
     }
 
     function setupHandlers() {
@@ -44,21 +52,21 @@
         const label = document.getElementById('relatorio-param-label');
 
         const userWrapper = document.getElementById('relatorio-user-wrapper');
-        const lotacaoSelect = document.getElementById('relatorio-lotacao-select');
+        const ufSelect = document.getElementById('relatorio-uf-select');
         const situacaoSelect = document.getElementById('relatorio-situacao-select');
 
         // Esconde tudo
         userWrapper.style.display = 'none';
-        lotacaoSelect.style.display = 'none';
+        if (ufSelect) ufSelect.style.display = 'none';
         situacaoSelect.style.display = 'none';
         document.getElementById('relatorio-param-container').style.display = 'block';
 
         if (tipo === 'INDIVIDUAL') {
             label.textContent = 'User:';
             userWrapper.style.display = 'block';
-        } else if (tipo === 'LOTACAO') {
-            label.textContent = 'Selecionar Lotação:';
-            lotacaoSelect.style.display = 'block';
+        } else if (tipo === 'UF') {
+            label.textContent = 'Selecionar UF:';
+            if (ufSelect) ufSelect.style.display = 'block';
         } else if (tipo === 'SITUACAO') {
             label.textContent = 'Selecionar Situação Funcional:';
             situacaoSelect.style.display = 'block';
@@ -96,8 +104,8 @@
                 return null;
             }
             params.userId = select.value;
-        } else if (tipo === 'LOTACAO') {
-            params.value = document.getElementById('relatorio-lotacao-select').value;
+        } else if (tipo === 'UF') {
+            params.value = document.getElementById('relatorio-uf-select').value;
         } else if (tipo === 'SITUACAO') {
             params.value = document.getElementById('relatorio-situacao-select').value;
         } else if (tipo === 'GLOBAL') {
@@ -281,7 +289,7 @@
 
         const tipoLabels = {
             INDIVIDUAL: "👤 Dossiê Individual",
-            LOTACAO: "📍 Por Lotação",
+            UF: "📍 Por UF",
             SITUACAO: "📑 Por Situação",
             GLOBAL: "🌏 Global (Completo)"
         };

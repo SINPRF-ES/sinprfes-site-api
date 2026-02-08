@@ -88,15 +88,15 @@ exports.generateReport = async (req, res) => {
       const podeVerCpf = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase());
       pdfBuffer = await pdfService.gerarPdfDossieUser(dados, { podeVerCpf });
 
-    } else if (["LOTACAO", "SITUACAO"].includes(type)) {
-      // Contrato: LOTACAO/SITUACAO => { value }
+    } else if (["UF", "SITUACAO"].includes(type)) {
+      // Contrato: UF/SITUACAO => { value }
       const { value } = params;
       if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório." });
 
       const dados = await reportsService.buscarDadosAgregados(type, value);
 
       const titulos = {
-        LOTACAO: `Relatório por Lotação: ${value}`,
+        UF: `Relatório por UF: ${value}`,
         SITUACAO: `Relatório por Situação Funcional: ${value}`
       };
 
@@ -154,13 +154,10 @@ exports.previewReport = async (req, res) => {
       if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório." });
       data = await reportsService.buscarDadosDossie(userId);
       if (!data) return res.status(404).json({ success: false, message: "User não encontrado." });
-    } else if (["LOTACAO", "SITUACAO"].includes(type)) {
+    } else if (["UF", "SITUACAO"].includes(type)) {
       const { value } = params;
       if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório." });
       data = await reportsService.buscarDadosAgregados(type, value);
-      if (data.repasse && data.repasse.competencia) {
-        baseCompetencia = `${String(data.repasse.competencia.month).padStart(2, '0')}/${data.repasse.competencia.year}`;
-      }
     } else if (type === "GLOBAL") {
       data = await reportsService.buscarDadosGlobal();
       if (data.ativo && data.ativo.repasse && data.ativo.repasse.competencia) {
@@ -181,7 +178,7 @@ exports.previewReport = async (req, res) => {
           { label: "CPF", value: data.cpf ? (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase()) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
           { label: "Matrícula (SIAPE)", value: data.siape || "-" },
           { label: "Sexo", value: data.sexo === 'M' ? '♂️ Masculino' : (data.sexo === 'F' ? '♀️ Feminino' : '-') },
-          { label: "Lotação", value: data.lotacao || "-" },
+          { label: "UF", value: data.uf || "-" },
           { label: "Situação", value: data.situacao || "-" }
         ]
       });
@@ -195,27 +192,16 @@ exports.previewReport = async (req, res) => {
           ]
         });
       }
-    } else if (type === "LOTACAO") {
+    } else if (type === "UF") {
       sections.push({
         kind: "kv",
-        title: "Resumo da Unidade",
+        title: "Resumo da Unidade (UF)",
         items: [
-          { label: "Total de Users (Ativos)", value: data.total },
+          { label: "Total de Users", value: data.total },
           { label: "Homens", value: `${data.masc} (${((data.masc / data.total) * 100).toFixed(1)}%)` },
           { label: "Mulheres", value: `${data.fem} (${((data.fem / data.total) * 100).toFixed(1)}%)` }
         ]
       });
-
-      if (data.repasse) {
-        sections.push({
-          kind: "kv",
-          title: "Dados do Repasse",
-          items: [
-            { label: "PRF Total (Efetivo)", value: data.repasse.prfTotal || "Não informado" },
-            { label: "Percentual de Filiação", value: data.repasse.percentual ? `${data.repasse.percentual.toFixed(1)}%` : "N/A" }
-          ]
-        });
-      }
 
       sections.push({
         kind: "table",
@@ -240,20 +226,6 @@ exports.previewReport = async (req, res) => {
           { label: "Feminino", value: data.fem }
         ]
       });
-
-      if (params.value === "ATIVO" && data.repasseBreakdown) {
-        sections.push({
-          kind: "table",
-          title: "Distribuição por Lotação",
-          columns: ["Lotação", "Users", "Efetivo (PRF)", "%"],
-          rows: data.repasseBreakdown.map(b => [
-            b.lotacao,
-            b.usersAtivos,
-            b.prfTotal || "-",
-            b.percentual ? `${b.percentual.toFixed(1)}%` : "-"
-          ])
-        });
-      }
     } else if (type === "GLOBAL") {
       sections.push({
         kind: "kv",

@@ -2,7 +2,7 @@ import apiService from './apiService';
 import { logger } from '../infra/logger';
 
 export interface LocalidadeRepasse {
-  lotacao: string;
+  uf: string;
   responsavelId: number | null;
   responsavelNome: string | null;
   responsavelCpf: string | null;
@@ -32,7 +32,7 @@ export interface Responsavel {
   id: number;
   nome: string;
   cpf: string;
-  lotacao?: string;
+  uf?: string;
   perfil_acesso?: string;
   situacao?: string;
   arquivado_em?: string | null;
@@ -84,10 +84,10 @@ const repasseService = {
     }
   },
 
-  listarResponsaveis: async (lotacao?: string): Promise<Responsavel[]> => {
+  listarResponsaveis: async (uf?: string): Promise<Responsavel[]> => {
     try {
-      logger.info('REPASSE_API_CALL', { fn: 'listarResponsaveis', lotacao });
-      const url = lotacao ? `/api/repasse/responsaveis?lotacao=${encodeURIComponent(lotacao)}` : '/api/repasse/responsaveis';
+      logger.info('REPASSE_API_CALL', { fn: 'listarResponsaveis', uf });
+      const url = uf ? `/api/repasse/responsaveis?uf=${encodeURIComponent(uf)}` : '/api/repasse/responsaveis';
       const response = await apiService.get(url);
 
       // Suporta retorno direto ou dentro de .responsaveis, garantindo sempre um array
