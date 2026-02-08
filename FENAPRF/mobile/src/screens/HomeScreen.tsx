@@ -2,14 +2,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
-import JogosBanner from '../components/JogosBanner';
-import OtaUpdateBanner from '../components/OtaUpdateBanner';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
-import Badge from '../components/Badge';
 import { Image } from 'react-native';
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -44,12 +41,23 @@ function HomeScreenComponent({ navigation }: HomeScreenProps) {
   const displayedItems = [...NAV_ITEMS];
 
   let perfil = 'CONSELHEIRO';
+  let primeiroNome = 'Membro';
 
   try {
-    perfil = String(user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+    if (user) {
+      perfil = String(user.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+      primeiroNome = String(user.name || 'Membro').split(' ')[0];
+    }
   } catch (err) {
     console.error('[HomeScreen] Error calculating profile/status:', err);
   }
+
+  const avatarSource = React.useMemo(() => {
+    if (typeof user?.avatar_url === 'string' && user.avatar_url.startsWith('http')) {
+      return { uri: user.avatar_url };
+    }
+    return require('../../assets/logo.png');
+  }, [user?.avatar_url]);
 
   return (
     <SafeScreen style={styles.container}>
@@ -57,24 +65,19 @@ function HomeScreenComponent({ navigation }: HomeScreenProps) {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Image
-            source={typeof user?.avatar_url === 'string' && user.avatar_url.startsWith('http')
-              ? { uri: user.avatar_url }
-              : require('../../assets/logo.png')}
+            source={avatarSource}
             style={styles.avatar}
             resizeMode="cover"
           />
           <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              {String(user?.name || 'Membro').split(' ')[0]}
+              {primeiroNome}
             </Text>
-            <Text style={styles.userProfile}>{String(perfil)}</Text>
+            <Text style={styles.userProfile}>{perfil}</Text>
           </View>
         </View>
       </View>
-
-      <OtaUpdateBanner />
-      <JogosBanner />
 
       <View style={styles.grid}>
         {displayedItems.map((item) => (
@@ -152,16 +155,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 6,
-  },
-  headerBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 0,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  headerBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
   },
   grid: {
     flexDirection: 'row',

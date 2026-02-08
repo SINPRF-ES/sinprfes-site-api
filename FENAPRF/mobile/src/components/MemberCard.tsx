@@ -11,6 +11,8 @@ interface MemberCardProps {
 }
 
 const MemberCard: React.FC<MemberCardProps> = ({ member, containerStyle }) => {
+  if (!member) return null;
+
   const mandateStart = member.cargo_mandato_inicio;
   const mandateEnd = member.cargo_mandato_fim;
   const today = new Date().toISOString();

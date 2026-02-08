@@ -29,7 +29,6 @@ import ConveniosScreen from "../screens/ConveniosScreen";
 import PdfViewerScreen from "../screens/PdfViewerScreen";
 import FileViewerScreen from "../screens/FileViewerScreen";
 import DrawerNavigator from "./DrawerNavigator"; // Importa o Drawer
-import UpdateAutoChecker from "../components/UpdateAutoChecker";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -124,7 +123,6 @@ export default function RootNavigation() {
         tryConsumePendingNav();
       }}
     >
-      <UpdateAutoChecker />
       <Stack.Navigator screenOptions={({ navigation }) => ({
         headerTintColor: '#fff',
         headerStyle: { backgroundColor: '#003366' },

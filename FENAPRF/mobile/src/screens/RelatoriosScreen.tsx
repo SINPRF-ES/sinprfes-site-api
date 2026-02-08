@@ -186,7 +186,6 @@ export default function RelatoriosScreen() {
     const date = new Date(item.created_at).toLocaleString('pt-BR');
     const typeLabels: any = {
       INDIVIDUAL: "👤 Dossiê Individual",
-      SITUACAO: "📑 Por Situação",
       GLOBAL: "🌏 Global (Completo)"
     };
 

@@ -57,7 +57,7 @@ export default function UsersScreen({ navigation, route }: any) {
 
         return {
           ...item,
-          _normalizedNome: normalizeText(f.name),
+          _normalizedNome: normalizeText(f.name || ''),
           _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
         };
       });
