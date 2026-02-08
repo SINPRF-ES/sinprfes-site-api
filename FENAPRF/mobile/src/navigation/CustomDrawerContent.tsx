@@ -9,8 +9,16 @@ import MemberCard from '../components/MemberCard';
 
 const CustomDrawerContent = (props) => {
   const { user, logout, setBloqueadoPorBiometria } = useAuth();
-  const ehGestao = checkIsGestao(user?.perfil_acesso);
-  const ehDiretoria = checkIsDiretoria(user?.perfil_acesso);
+
+  let ehGestao = false;
+  let ehDiretoria = false;
+
+  try {
+    ehGestao = checkIsGestao(user?.perfil_acesso);
+    ehDiretoria = checkIsDiretoria(user?.perfil_acesso);
+  } catch (err) {
+    console.error('[CustomDrawerContent] Error checking roles:', err);
+  }
 
   const handleLogoutPress = () => {
     Alert.alert(

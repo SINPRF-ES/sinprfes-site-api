@@ -44,8 +44,15 @@ function HomeScreenComponent({ navigation }: HomeScreenProps) {
 
   const displayedItems = [...NAV_ITEMS];
 
-  const situacao = normalizeSituacaoFuncional(user?.situacao || '');
-  const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+  let situacao = '';
+  let perfil = 'CONSELHEIRO';
+
+  try {
+    situacao = normalizeSituacaoFuncional(user?.situacao || '');
+    perfil = String(user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+  } catch (err) {
+    console.error('[HomeScreen] Error calculating profile/status:', err);
+  }
 
   const getSituacaoVariant = (s: string) => {
     switch (s) {
@@ -62,7 +69,9 @@ function HomeScreenComponent({ navigation }: HomeScreenProps) {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Image
-            source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
+            source={typeof user?.avatar_url === 'string' && user.avatar_url.startsWith('http')
+              ? { uri: user.avatar_url }
+              : require('../../assets/logo.png')}
             style={styles.avatar}
             resizeMode="cover"
           />
@@ -71,7 +80,7 @@ function HomeScreenComponent({ navigation }: HomeScreenProps) {
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
               {String(user?.name || 'Membro').split(' ')[0]}
             </Text>
-            <Text style={styles.userProfile}>{perfil}</Text>
+            <Text style={styles.userProfile}>{String(perfil)}</Text>
 
             {situacao && (
               <Badge

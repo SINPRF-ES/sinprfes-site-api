@@ -124,14 +124,14 @@ export default function NotificacoesPushScreen() {
       return;
     }
 
-    if (targetType === 'USER' && !targetValue) {
-        Alert.alert('Erro', 'Selecione um user para o destino específico.');
+    if (targetType === 'ESPECIFICO' && !targetValue) {
+        Alert.alert('Erro', 'Selecione um membro para o destino específico.');
         return;
     }
 
     let targetLabel = targetType;
-    if (targetType === 'USER' && (targetValue?.name || targetValue?.nome)) {
-      targetLabel = `User — ${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})`;
+    if (targetType === 'ESPECIFICO' && (targetValue?.name || targetValue?.nome)) {
+      targetLabel = `Membro — ${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})`;
     } else if (targetValue) {
       targetLabel = `${targetType} (${targetValue})`;
     }
@@ -229,7 +229,7 @@ export default function NotificacoesPushScreen() {
     };
 
     let displayTargetValue: any = item.target_value;
-    if (item.target_type === 'USER' && item.target_value) {
+    if (item.target_type === 'ESPECIFICO' && item.target_value) {
       let obj: any = null;
       if (typeof item.target_value === 'object') {
         obj = item.target_value;
@@ -287,7 +287,7 @@ export default function NotificacoesPushScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Buscar User</Text>
+                <Text style={styles.modalTitle}>Buscar Membro</Text>
                 <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
                   <MaterialCommunityIcons name="close" size={24} color="#666" />
                 </TouchableOpacity>
@@ -330,7 +330,7 @@ export default function NotificacoesPushScreen() {
                     <Text style={styles.modalEmptyText}>
                       {searchQuery.length < 2
                         ? "Digite pelo menos 2 caracteres para buscar..."
-                        : "Nenhum user encontrado."}
+                        : "Nenhum membro encontrado."}
                     </Text>
                   )}
                   keyboardShouldPersistTaps="handled"
@@ -385,20 +385,20 @@ export default function NotificacoesPushScreen() {
              </PickerWrapper>
           )}
 
-          {targetType === 'USER' && (
+          {targetType === 'ESPECIFICO' && (
              <View>
                 <TouchableOpacity
                   style={styles.pickerButton}
                   onPress={() => setIsPickerVisible(true)}
                 >
                   <Text style={styles.pickerButtonText} numberOfLines={1}>
-                    {(targetValue?.name || targetValue?.nome) ? `${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar user...'}
+                    {(targetValue?.name || targetValue?.nome) ? `${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar membro...'}
                   </Text>
                   <MaterialCommunityIcons name="magnify" size={20} color="#666" />
                 </TouchableOpacity>
 
                 {!targetValue?.id && (
-                  <Text style={styles.infoLabel}>Selecione um user para o envio específico.</Text>
+                  <Text style={styles.infoLabel}>Selecione um membro para o envio específico.</Text>
                 )}
              </View>
           )}

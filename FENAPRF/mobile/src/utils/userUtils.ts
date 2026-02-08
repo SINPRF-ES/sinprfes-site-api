@@ -102,6 +102,7 @@ export function normalizeCargo(raw?: string | null): string {
  * Retorna o título formatado do cargo com a UF.
  */
 export function tituloCargoUf({ perfil_acesso, cargo, uf }: { perfil_acesso?: string, cargo?: string, uf?: string }): string {
+  try {
     const perfil = String(perfil_acesso || "").toUpperCase();
     const c = normalizeCargo(cargo);
     const ufSigla = String(uf || "").toUpperCase();
@@ -116,6 +117,10 @@ export function tituloCargoUf({ perfil_acesso, cargo, uf }: { perfil_acesso?: st
     if (perfil === ROLES.COLABORADOR) return "Colaborador";
     if (perfil === ROLES.ADMIN) return c || "Administrador";
     return c || "Membro";
+  } catch (err) {
+    console.error('[userUtils] Error in tituloCargoUf:', err);
+    return "Membro";
+  }
 }
 
 /**
