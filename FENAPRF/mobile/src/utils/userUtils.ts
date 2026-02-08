@@ -79,6 +79,17 @@ export const UFS = [
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
+const ROLE_RANK: Record<string, number> = {
+  [ROLES.ADMIN]: 100,
+  [ROLES.DIRETORIA]: 80,
+  [ROLES.COLABORADOR]: 60,
+  [ROLES.CONSELHEIRO]: 40,
+  [ROLES.ORGANIZADOR]: 30,
+  [ROLES.COMUNICADOR]: 30,
+  [ROLES.FUNCIONARIO]: 30,
+  [ROLES.USER]: 10,
+};
+
 /**
  * Verifica se o perfil tem acesso de gestão (administrativo geral).
  */
@@ -86,6 +97,23 @@ export const isGestao = (perfil?: string | null) => {
   if (!perfil) return false;
   const p = perfil.toUpperCase();
   return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.COLABORADOR].includes(p);
+};
+
+/**
+ * Verifica se o ator pode editar o alvo com base na hierarquia.
+ */
+export const podeEditarPerfil = (perfilAtor?: string | null, perfilAlvo?: string | null) => {
+  if (!perfilAtor) return false;
+  const pAtor = perfilAtor.toUpperCase();
+  const pAlvo = (perfilAlvo || ROLES.USER).toUpperCase();
+
+  const ehAdminAtor = pAtor === ROLES.ADMIN;
+  if (ehAdminAtor) return true; // Admin edita tudo
+
+  if (!isGestao(pAtor)) return false; // Não gestão não edita ninguém (exceto a si mesmo, tratado na Screen)
+
+  // Gestão edita entre si e abaixo
+  return ROLE_RANK[pAtor] >= ROLE_RANK[pAlvo];
 };
 
 /**

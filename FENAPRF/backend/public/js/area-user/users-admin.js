@@ -9,15 +9,6 @@
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
 
-    const LOTACAO_OPCOES = global.Canon?.LOTACOES || [
-      "SEDE",
-      "DEL 01 - Viana",
-      "DEL 02 - Serra",
-      "DEL 03 - Guarapari",
-      "DEL 04 - Linhares",
-      "NENHUMA"
-    ];
-
     let perfilAtual = null;
     let handlersConfigurados = false;
 
@@ -75,14 +66,14 @@
         if (!listaEl) {
             const secUsers = document.getElementById("sec-users");
             if (secUsers) {
-                const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
+                const placeholder = isReadOnlyProfile ? "Buscar membros por nome..." : "Buscar membros por nome ou CPF...";
                 secUsers.innerHTML = `
                     <div class="search-box-container af-standard-header">
                         <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px;">
-                            <h2 style="margin:0;">👥 Users</h2>
+                            <h2 style="margin:0;">👥 Membros</h2>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-                            <button id="btn-novo-user" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo User</button>
+                            <button id="btn-novo-user" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo Membro</button>
                             <div id="users-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
                             <input type="text" id="busca-users" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
                         </div>
@@ -133,12 +124,6 @@
                             <option value="ATIVO">Ativo</option>
                             <option value="VETERANO">Veterano</option>
                             <option value="PENSIONISTA">Pensionista</option>
-                            <option value="SEDE">SEDE</option>
-                            <option value="DEL 01 - Viana">DEL 01 - Viana</option>
-                            <option value="DEL 02 - Serra">DEL 02 - Serra</option>
-                            <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
-                            <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
-                            <option value="NENHUMA">NENHUMA</option>
                         </select>
                     </label>
                 `;
@@ -188,26 +173,7 @@
 
         const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
         if (fSituacao !== "TODOS") {
-            const lotacoesLabels = global.Canon?.LOTACOES || ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
-            if (lotacoesLabels.includes(fSituacao)) {
-                const keywords = {
-                    "SEDE": "SEDE",
-                    "DEL 01 - Viana": "VIANA",
-                    "DEL 02 - Serra": "SERRA",
-                    "DEL 03 - Guarapari": "GUARAPARI",
-                    "DEL 04 - Linhares": "LINHARES",
-                    "NENHUMA": "NENHUMA"
-                };
-                const keyword = keywords[fSituacao];
-                res = res.filter(f => {
-                    const s = (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase();
-                    let l = (f.lotacao || "SEDE").toUpperCase();
-                    if (normalizeText) l = normalizeText(l).toUpperCase();
-                    return s === "ATIVO" && l.includes(keyword);
-                });
-            } else {
-                res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
-            }
+            res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
         }
 
         const fEstado = document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO";
@@ -241,7 +207,7 @@
                             ${avatarHtml(f.avatar_url, f.nome)}
                             <div>
                                 <div class="user-nome">${safeEscape(f.nome)}</div>
-                                <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.lotacao || 'SEDE')}</div>
+                                <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) : ''}</div>
                                 ${["USER", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
                                 <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
@@ -293,7 +259,7 @@
         return `
             <div id="alertas-modal"></div>
 
-            <!-- Barra de Status do User -->
+            <!-- Barra de Status do Membro -->
             <div class="status-bar-modal">
                 <span>Estado: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
                 <div>
@@ -336,10 +302,7 @@
                             <label>CPF</label>
                             <input name="cpf" value="${safeEscape(f.cpf)}" ${ehGestao ? "" : "readonly"}>
                         </div>
-                        <div class="field-group">
-                            <label>Matrícula (SIAPE)</label>
-                            <input name="siape" value="${safeEscape(f.siape)}" placeholder="6 ou 7 dígitos" maxlength="7" ${ehGestao ? "" : "readonly"}>
-                        </div>
+                        <div class="field-group"></div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
@@ -358,13 +321,7 @@
                                 ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
                             </select>
                         </div>
-                        <div class="field-group">
-                            <label>Lotação</label>
-                            <select name="lotacao">
-                                <option value="">Selecione...</option>
-                                ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
-                            </select>
-                        </div>
+                        <div class="field-group"></div>
                     </div>
                     ${canChangeProfile ? `
                         <div class="field-row">
@@ -673,7 +630,7 @@
                 }
 
                 // 3. Remover campos readonly se não for gestor pleno
-                if (!ehGestao && (key === 'sexo' || key === 'cpf' || key === 'siape')) {
+                if (!ehGestao && (key === 'sexo' || key === 'cpf')) {
                     return;
                 }
 
@@ -683,7 +640,7 @@
                 }
 
                 // 5. Normalização de Documentos/Telefones
-                if (key === 'cpf' || key.includes('_cpf') || key === 'telefone1' || key === 'telefone2' || key === 'cep' || key === 'siape') {
+                if (key === 'cpf' || key.includes('_cpf') || key === 'telefone1' || key === 'telefone2' || key === 'cep') {
                     val = onlyDigits(val);
                 }
 
@@ -786,7 +743,7 @@
 
         container.innerHTML = `
             <div class="user-card" style="border-left-color: var(--amarelo);">
-                <h3>👤 Novo User</h3>
+                <h3>👤 Novo Membro</h3>
                 <form id="form-novo-user-admin">
                     <div class="edit-grid">
                         <div class="edit-group">
@@ -804,10 +761,6 @@
                         <div class="edit-group">
                             <label>CPF *</label>
                             <input name="cpf" required placeholder="000.000.000-00">
-                        </div>
-                        <div class="edit-group">
-                            <label>Matrícula (SIAPE)</label>
-                            <input name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
                         </div>
                         <div class="edit-group">
                             <label>Email *</label>

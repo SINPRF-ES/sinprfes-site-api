@@ -22,14 +22,6 @@
 
         setupHandlers();
         carregarHistorico();
-        popularLotacoes();
-    }
-
-    function popularLotacoes() {
-        const select = document.getElementById('push-target-lotacao');
-        if (!select) return;
-        const lotacoes = global.Canon?.LOTACOES || ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
-        select.innerHTML = lotacoes.map(l => `<option value="${l}">${l}</option>`).join('');
     }
 
     function setupHandlers() {
@@ -79,21 +71,15 @@
     function handleTargetTypeChange() {
         const type = document.getElementById('push-target-type').value;
         const container = document.getElementById('push-target-value-container');
-        const lotacaoSelect = document.getElementById('push-target-lotacao');
         const userWrapper = document.getElementById('push-target-user-wrapper');
         const label = document.getElementById('push-target-value-label');
 
         container.style.display = 'none';
-        lotacaoSelect.style.display = 'none';
         userWrapper.style.display = 'none';
 
-        if (type === 'LOTACAO') {
+        if (type === 'USER') {
             container.style.display = 'block';
-            label.textContent = 'Selecionar Lotação:';
-            lotacaoSelect.style.display = 'block';
-        } else if (type === 'USER') {
-            container.style.display = 'block';
-            label.textContent = 'Buscar User:';
+            label.textContent = 'Buscar Membro:';
             userWrapper.style.display = 'block';
         }
     }
@@ -135,9 +121,7 @@
         }
 
         let targetValue = null;
-        if (targetType === 'LOTACAO') {
-            targetValue = document.getElementById('push-target-lotacao').value;
-        } else if (targetType === 'USER') {
+        if (targetType === 'USER') {
             const select = document.getElementById('push-target-user-select');
             const opt = select.options[select.selectedIndex];
             if (!opt || !opt.value) {
@@ -153,7 +137,7 @@
 
         let targetLabel = targetType;
         if (targetType === 'USER' && targetValue && typeof targetValue === 'object') {
-            targetLabel = `User — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
+            targetLabel = `Membro — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
         } else if (targetValue) {
             targetLabel = `${targetType} (${targetValue})`;
         }

@@ -17,7 +17,6 @@ import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
-import RepasseScreen from '../screens/RepasseScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
@@ -77,7 +76,7 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Users"
         component={UsersScreen}
-        options={{ title: '👥 Usuários' }}
+        options={{ title: '👥 Membros' }}
       />
       <Drawer.Screen
         name="Publicacoes"
@@ -126,11 +125,6 @@ const DrawerNavigator = () => {
       {ehGestao && (
         <>
           <Drawer.Screen
-            name="Repasse"
-            component={RepasseScreen}
-            options={{ title: '💰 Repasse' }}
-          />
-          <Drawer.Screen
             name="Relatorios"
             component={RelatoriosScreen}
             options={{ title: '📊 Relatórios' }}
@@ -147,7 +141,7 @@ const DrawerNavigator = () => {
             name="CriarUser"
             component={CriarUserScreen}
             options={{
-          title: '👤 Novo Usuário',
+          title: '👤 Novo Membro',
               drawerItemStyle: { display: 'none' } // Oculta o item da lista padrão
             }}
           />

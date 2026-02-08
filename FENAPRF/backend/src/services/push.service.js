@@ -89,15 +89,6 @@ async function resolvePushTargets(targetType, targetValue) {
         WHERE pt.revoked_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
       `;
       break;
-    case 'LOTACAO':
-      sql = `
-        SELECT pt.expo_push_token
-        FROM push_tokens pt
-        JOIN users f ON pt.user_id = f.id
-        WHERE pt.revoked_at IS NULL AND f.situacao = 'ATIVO' AND f.lotacao = $1
-      `;
-      params = [targetValue];
-      break;
     case 'JOGOS':
       // Exemplo: inscritos em qualquer modalidade dos jogos
       sql = `
@@ -146,10 +137,6 @@ async function countNoTokenTargets(targetType, targetValue) {
       break;
     case 'VETERANOS':
       usersSql = "SELECT id FROM users WHERE situacao = 'VETERANO' OR situacao = 'PENSIONISTA'";
-      break;
-    case 'LOTACAO':
-      usersSql = "SELECT id FROM users WHERE situacao = 'ATIVO' AND lotacao = $1";
-      params = [targetValue];
       break;
     case 'USER': {
       const targetIdCount = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;

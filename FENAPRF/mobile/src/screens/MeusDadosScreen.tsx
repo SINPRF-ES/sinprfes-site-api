@@ -9,17 +9,17 @@ import { uploadAvatar, removerAvatar } from '../services/usersService';
 import type { User } from '../types/user';
 
 // Importando os novos componentes
-import HeaderInfo from '../components/HeaderInfo';
+import MemberCard from '../components/MemberCard';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
-import LotacaoCard from '../components/LotacaoCard';
+import MembroPerfilCard from '../components/MembroPerfilCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
 import { toISODate, toBrazilianDate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { logger } from '../infra/logger';
-import { getCanonicalUserId } from '../utils/userUtils';
+import { getCanonicalUserId, isGestao } from '../utils/userUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { useNavigation } from '@react-navigation/native';
 import { normalizeNome } from '../utils/canon';
@@ -28,6 +28,8 @@ export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
   const { user: authUser, setSessao, token } = useAuth();
   const [user, setUser] = useState<User | null>(null);
+
+  const ehGestaoAtor = isGestao(authUser?.perfil_acesso);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +46,6 @@ export default function MeusDadosScreen() {
         hasAuthUser: !!authUser,
         hasFetchedData: !!data,
         userKeys: data ? Object.keys(data) : [],
-        lotacao: data?.lotacao
       });
     } catch (err: any) {
       setError(err.message || 'Não foi possível carregar os dados.');
@@ -246,7 +247,7 @@ export default function MeusDadosScreen() {
       enableOnAndroid
       extraScrollHeight={50}
     >
-      <HeaderInfo user={user} />
+      {user && <MemberCard member={user} containerStyle={{ marginHorizontal: 20, marginTop: 20 }} />}
 
       <ErrorBoundary>
         <View style={styles.sectionHeader}>
@@ -256,7 +257,7 @@ export default function MeusDadosScreen() {
           user={user}
           setUser={setUser}
           isEditing={true}
-          isManagement={false}
+          isManagement={ehGestaoAtor}
           hideTitle={true}
         />
       </ErrorBoundary>
@@ -270,9 +271,9 @@ export default function MeusDadosScreen() {
 
       <ErrorBoundary>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text>
+          <Text style={styles.sectionTitle}>🏢 Situação e Perfil</Text>
         </View>
-        <LotacaoCard user={user} setUser={setUser} hideTitle={true} />
+        <MembroPerfilCard user={user} setUser={setUser} isEditing={ehGestaoAtor} hideTitle={true} />
       </ErrorBoundary>
 
     </KeyboardAwareScrollView>

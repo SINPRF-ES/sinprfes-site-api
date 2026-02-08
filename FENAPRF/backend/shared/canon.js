@@ -39,24 +39,11 @@
     ADMIN: 'ADMIN',
     DIRETORIA: 'DIRETORIA',
     FUNCIONARIO: 'FUNCIONARIO',
-    USER: 'USER',
+    COLABORADOR: 'COLABORADOR',
+    CONSELHEIRO: 'CONSELHEIRO',
     ORGANIZADOR: 'ORGANIZADOR',
     COMUNICADOR: 'COMUNICADOR'
   };
-
-  // 4. Lotações Padronizadas
-  const LOTACOES_REPASSE = [
-    "SEDE",
-    "DEL 01 - Viana",
-    "DEL 02 - Serra",
-    "DEL 03 - Guarapari",
-    "DEL 04 - Linhares"
-  ];
-
-  const LOTACOES = [
-    ...LOTACOES_REPASSE,
-    "NENHUMA"
-  ];
 
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
   const LABELS = {
@@ -110,7 +97,7 @@
   function normalizePerfil(val) {
     const s = slugify(val);
     if (PERFIL_ACESSO[s]) return PERFIL_ACESSO[s];
-    return PERFIL_ACESSO.USER; // Default seguro
+    return PERFIL_ACESSO.CONSELHEIRO; // Default seguro
   }
 
   /**
@@ -121,28 +108,6 @@
     if (s === 'CADASTRO_ATIVO' || s === 'ATIVO') return ESTADO_CADASTRO.CADASTRO_ATIVO;
     if (s === 'ARQUIVADO' || s === 'ARQUIVADOS') return ESTADO_CADASTRO.ARQUIVADO;
     return ESTADO_CADASTRO.CADASTRO_ATIVO;
-  }
-
-  /**
-   * Normaliza a Lotação.
-   * Tenta encontrar a correspondência exata ou via keyword.
-   */
-  function normalizeLotacao(val) {
-    const s = slugify(val);
-    if (!s || s === 'NENHUMA') return 'NENHUMA';
-
-    for (const lot of LOTACOES) {
-      if (slugify(lot) === s) return lot;
-    }
-
-    // Fallbacks por keyword
-    if (s.includes('VIANA')) return "DEL 01 - Viana";
-    if (s.includes('SERRA')) return "DEL 02 - Serra";
-    if (s.includes('GUARAPARI')) return "DEL 03 - Guarapari";
-    if (s.includes('LINHARES')) return "DEL 04 - Linhares";
-    if (s.includes('SEDE')) return "SEDE";
-
-    return 'SEDE'; // Fallback seguro para garantir compatibilidade com CHECK CONSTRAINT
   }
 
   /**
@@ -170,14 +135,11 @@
     SEXO,
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
-    LOTACOES_REPASSE,
-    LOTACOES,
     LABELS,
     normalizeSituacaoFuncional,
     normalizeSexo,
     normalizePerfil,
     normalizeEstadoCadastro,
-    normalizeLotacao,
     normalizeNome,
     slugify
   };

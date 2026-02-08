@@ -32,48 +32,6 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
 }
 
 /**
- * Envia o e-mail para o sindicato com a ficha de filiação em PDF anexa.
- */
-async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
-  const { MAIL_FROM, MAIL_TO_FILIACAO } = process.env;
-
-  if (!MAIL_FROM || !MAIL_TO_FILIACAO) {
-    throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
-  }
-
-  const emailUser =
-    (dados.email_destino && String(dados.email_destino).trim()) ||
-    (dados.email_pessoal && String(dados.email_pessoal).trim()) ||
-    (dados.email && String(dados.email).trim()) ||
-    "";
-
-  if (!emailUser) {
-    console.warn("⚠️ Aviso: Ficha de filiação será enviada sem cópia para o solicitante (e-mail não identificado).");
-  }
-
-  const subject = `Ficha de Filiação - ${dados.nome || ""} (${dados.cpf || ""})`;
-
-  const payload = {
-    from: MAIL_FROM,
-    to: MAIL_TO_FILIACAO,
-    cc: emailUser || undefined,
-    subject,
-    text: `Prezado(a),\n\nSegue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.\n\nPor favor, assine e devolva este documento.\n\nAtenciosamente,\nFENAPRF`,
-    attachments: [{ filename: "ficha_filiacao.pdf", content: pdfBuffer.toString("base64") }],
-  };
-
-  const { data, error } = await resend.emails.send(payload);
-
-  if (error) {
-    console.error("💥 Erro ao enviar e-mail de filiação com Resend:", error);
-    throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
-  }
-
-  console.log("📧 DEBUG_CC_FILIACAO:", { emailUser });
-  console.log("📧 E-mail de filiação enviado. ID:", data.id, "Cópia para:", emailUser);
-}
-
-/**
  * Envia o e-mail de pedido de ressarcimento
  */
 async function enviarEmailRessarcimento(dados, pdfBuffer) {
@@ -517,7 +475,6 @@ FENAPRF
 
 module.exports = {
   enviarEmailBase,
-  enviarEmailFichaFiliacao,
   enviarEmailRessarcimento,
   enviarEmailBoasVindasUser,
   enviarEmailConfirmacaoInscricaoJogos,

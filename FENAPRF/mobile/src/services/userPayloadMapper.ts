@@ -23,7 +23,6 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   if (formState.name) payload.name = normalizeNome(formState.name);
   if (formState.sexo !== undefined) payload.sexo = formState.sexo;
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
-  if (formState.lotacao) payload.lotacao = formState.lotacao;
   if (formState.situacao) payload.situacao = formState.situacao;
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
 

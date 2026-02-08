@@ -8,11 +8,12 @@ import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TOC_ITEMS = [
-  { id: 'topo-estatuto', label: 'Topo' },
-  { id: 'cap1', label: 'Capítulo I - Denominação' },
-  { id: 'cap2', label: 'Capítulo II - Sindicatos' },
-  { id: 'cap3', label: 'Capítulo III - Órgãos' },
-  { id: 'cap4', label: 'Capítulo IV - Disposições' },
+  { id: 'cap1', label: 'Capítulo I - Constituição' },
+  { id: 'cap3', label: 'Capítulo III - Objetivos' },
+  { id: 'cap6', label: 'Capítulo VI - Sindicatos Regionais' },
+  { id: 'cap14', label: 'Capítulo XIV - Diretoria Executiva' },
+  { id: 'cap15', label: 'Capítulo XV - Conselho Fiscal' },
+  { id: 'cap18', label: 'Capítulo XVIII - Processo Eleitoral' },
 ];
 
 export default function EstatutoScreen({ navigation }: any) {
@@ -75,23 +76,12 @@ export default function EstatutoScreen({ navigation }: any) {
   };
 
   const injectedCSS = `
-    #site-header, #site-footer, .estatuto-nav { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
+    #site-header, #site-footer, .estatuto-nav, .estatuto-header { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
     body {
-      padding: 10px !important;
       background-color: #fff !important;
-      color: #333 !important;
-      font-size: 16px !important;
-      font-family: sans-serif !important;
     }
-    .estatuto-card {
-      width: 100% !important;
-      max-width: 100% !important;
-      box-shadow: none !important;
-      padding: 10px !important;
-      margin: 0 !important;
-    }
-    .estatuto-documento { padding-top: 0 !important; }
-    .estatuto-documento h2, .estatuto-documento h3 { scroll-margin-top: 20px !important; }
+    .stl_02 { box-shadow: none !important; }
+    [id^="cap"] { scroll-margin-top: 20px !important; }
   `;
 
   return (
