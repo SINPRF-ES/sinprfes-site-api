@@ -25,6 +25,7 @@ import api, { getUsers } from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { PickerWrapper } from '../components/PickerWrapper';
 
 interface ReportJob {
   id: string;
@@ -282,22 +283,20 @@ export default function RelatoriosScreen() {
           <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
 
           <Text style={styles.label}>Tipo de Relatório</Text>
-          <View style={styles.pickerContainer}>
+          <PickerWrapper style={styles.pickerContainer}>
             <Picker
                 selectedValue={reportType}
                 onValueChange={(v) => {
                   setReportType(v);
-                  if (v === 'SITUACAO') setTargetValue('ATIVO');
-                  else setTargetValue(null);
+                  setTargetValue(null);
                 }}
                 style={styles.picker}
                 mode="dropdown"
             >
                 <Picker.Item label="👤 Dossiê do Membro (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
                 <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
             </Picker>
-          </View>
+          </PickerWrapper>
 
           {reportType === 'INDIVIDUAL' && (
              <TouchableOpacity
@@ -312,19 +311,6 @@ export default function RelatoriosScreen() {
           )}
 
 
-          {reportType === 'SITUACAO' && (
-             <View style={styles.pickerContainer}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    <Picker.Item label="ATIVO" value="ATIVO" />
-                    <Picker.Item label="VETERANO" value="VETERANO" />
-                    <Picker.Item label="PENSIONISTA" value="PENSIONISTA" />
-                </Picker>
-             </View>
-          )}
 
           <TouchableOpacity
             style={[styles.button, (loading || loadingPreview) && styles.buttonDisabled]}
