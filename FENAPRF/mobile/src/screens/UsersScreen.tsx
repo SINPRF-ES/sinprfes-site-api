@@ -49,7 +49,6 @@ export default function UsersScreen({ navigation, route }: any) {
           name: f.name,
           telefone1: f.telefone1,
           avatar_url: f.avatar_url,
-          lotacao: f.lotacao,
           situacao: f.situacao,
         };
 
@@ -110,17 +109,10 @@ export default function UsersScreen({ navigation, route }: any) {
       const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
 
-      // Filtro Situação Funcional / Lotação
+      // Filtro Situação Funcional
       if (filtroFuncional !== 'TODOS') {
         const situacao = Canon.normalizeSituacaoFuncional(f.situacao_funcional || f.situacao || 'ATIVO');
-
-        if (Canon.LOTACOES.includes(filtroFuncional as any)) {
-          if (situacao !== Canon.SITUACAO_FUNCIONAL.ATIVO) return false;
-          const lotacaoNorm = Canon.normalizeLotacao(f.lotacao || 'SEDE');
-          if (lotacaoNorm !== filtroFuncional) return false;
-        } else {
-          if (situacao !== filtroFuncional) return false;
-        }
+        if (situacao !== filtroFuncional) return false;
       }
 
       // Filtro Estado do Cadastro (local filter additionally)
@@ -204,9 +196,6 @@ export default function UsersScreen({ navigation, route }: any) {
               <Picker.Item label="Todos" value="TODOS" />
               {Object.values(Canon.SITUACAO_FUNCIONAL).map(s => (
                 <Picker.Item key={s} label={Canon.LABELS[s]} value={s} />
-              ))}
-              {Canon.LOTACOES.map(l => (
-                <Picker.Item key={l} label={l} value={l} />
               ))}
             </Picker>
           </View>

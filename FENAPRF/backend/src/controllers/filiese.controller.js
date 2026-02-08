@@ -56,7 +56,6 @@ exports.enviarFichaFiliacao = async (req, res) => {
       nome: dados.nome,
       cpf: cpfFormatado,
       matricula: dados.siape || "",
-      lotacao: dados.lotacao || "",
 
       // Contatos
       email_destino: emailPessoal,    // user (cc)

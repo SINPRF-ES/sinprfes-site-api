@@ -8,7 +8,6 @@ import { atualizarUser, arquivarUser, desarquivarUser } from '../services/apiSer
 import { getMe, getUserById } from '../services/userService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
-import LotacaoCard from '../components/LotacaoCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { User } from '../types/user';
 import { logDebug, getCanonicalUserId, parseCanonicalUserId, isGestao as checkIsGestao, ROLES } from '../utils/userUtils';
@@ -219,9 +218,6 @@ export default function EditarUserScreen({ route, navigation }: any) {
 
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>🏠 Endereço</Text></View>
         <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
-
-        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text></View>
-        <LotacaoCard user={user} setUser={setUser} isEditing={ehGestao} hideTitle={true} />
       </KeyboardAwareScrollView>
     </SafeScreen>
   );

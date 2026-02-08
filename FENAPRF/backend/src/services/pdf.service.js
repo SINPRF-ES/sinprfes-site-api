@@ -461,7 +461,6 @@ async function gerarPdfFichaFiliacao(dados) {
     doc.text(`Nome: ${dados.nome || ""}`);
     doc.text(`CPF: ${dados.cpf || ""}`);
     doc.text(`Matrícula: ${dados.matricula || ""}`);
-    doc.text(`Lotação: ${dados.lotacao || ""}`);
     doc.text(`E-mail: ${dados.email || ""}`);
     doc.text(`Telefone 1: ${dados.telefone1 || ""}`);
     doc.text(`Telefone 2: ${dados.telefone2 || ""}`);
@@ -923,7 +922,7 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.font("Helvetica-Bold").fontSize(12).text("2. Dados Funcionais");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Lotação: ${user.lotacao || "SEDE"}`);
+    doc.text(`UF: ${user.uf || "-"}`);
     doc.text(`Situação Funcional: ${user.situacao || "ATIVO"}`);
     doc.moveDown(1);
     linha(doc);
@@ -994,7 +993,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
 
     // Bloco "Resumo da Lotação" (LAYOUT TIPO DOSSIÊ - B1)
     if (dados.repasse) {
-        doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Lotação");
+        doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Unidade (UF)");
         doc.moveDown(0.5);
 
         const r = dados.repasse;
@@ -1034,18 +1033,18 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.text(`Efetivo total: ${totalPrf}`, { align: 'left' });
         doc.text(`Users cadastrados: ${totalUsersAtivos}`, { align: 'left' });
         doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
-        doc.text(`Base do efetivo: Dados por lotação (ver tabela abaixo)`, { align: 'left' });
+        doc.text(`Base do efetivo: Dados por UF (ver tabela abaixo)`, { align: 'left' });
         doc.moveDown(1);
 
-        // Tabela por Lotação
-        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Efetivo PRF)");
+        // Tabela por UF
+        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por UF (Efetivo PRF)");
         doc.moveDown(0.5);
 
-        const headers = ["Lotação", "Efetivo", "Users", "%", "Base"];
+        const headers = ["UF", "Efetivo", "Users", "%", "Base"];
         const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
         const tableRows = dados.repasseBreakdown.map(r => [
-            r.lotacao,
+            r.uf || "—",
             r.prfTotal !== null ? String(r.prfTotal) : "—",
             String(r.usersAtivos),
             r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
@@ -1116,14 +1115,14 @@ async function gerarPdfRelatorioGlobal(dados) {
     doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
     doc.moveDown(1);
 
-    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Ativos)");
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por UF (Ativos)");
     doc.moveDown(0.5);
 
-    const headers = ["Lotação", "Efetivo", "Users", "%", "Base"];
+    const headers = ["UF", "Efetivo", "Users", "%", "Base"];
     const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
     const tableRows = a.repasseBreakdown.map(r => [
-        r.lotacao,
+        r.uf || "—",
         r.prfTotal !== null ? String(r.prfTotal) : "—",
         String(r.usersAtivos),
         r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",

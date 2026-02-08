@@ -21,6 +21,7 @@ import { normalizeText, maskCPF } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
 import { logger } from '../infra/logger';
+import { UFS } from '../utils/userUtils';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -358,27 +359,27 @@ export default function NotificacoesPushScreen() {
                 selectedValue={targetType}
                 onValueChange={(v) => {
                   setTargetType(v);
-                  setTargetValue(v === 'LOTACAO' ? Canon.LOTACOES[0] : '');
+                  setTargetValue(v === 'UF' ? UFS[0] : '');
                 }}
                 style={styles.picker}
             >
                 <Picker.Item label="Todos com app" value="ALL" />
                 <Picker.Item label="Apenas ATIVOS" value="ATIVOS" />
                 <Picker.Item label="Veteranos / Pensionistas" value="VETERANOS" />
-                <Picker.Item label="Por Lotação" value="LOTACAO" />
+                <Picker.Item label="Por UF" value="UF" />
                 <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
                 <Picker.Item label="Especificar User" value="USER" />
             </Picker>
           </View>
 
-          {targetType === 'LOTACAO' && (
+          {targetType === 'UF' && (
              <View style={styles.pickerContainer}>
                 <Picker
                     selectedValue={targetValue}
                     onValueChange={setTargetValue}
                     style={styles.picker}
                 >
-                    {Canon.LOTACOES.map((opt) => (
+                    {UFS.map((opt) => (
                       <Picker.Item key={opt} label={opt} value={opt} />
                     ))}
                 </Picker>

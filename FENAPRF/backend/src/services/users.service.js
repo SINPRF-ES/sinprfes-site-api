@@ -5,7 +5,6 @@ const {
   normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil,
-  normalizeLotacao,
   normalizeNome
 } = require("../../shared/canon");
 
@@ -43,7 +42,7 @@ async function getMe(id) {
       perfil_acesso, situacao, bloqueado,
       telefone1, telefone2,
       cep, logradouro, numero, complemento, bairro, cidade, uf,
-      lotacao, data_nascimento, cargo,
+      data_nascimento, cargo,
       avatar_url, avatar_public_id,
       uf_endereco,
       created_at, updated_at, ultimo_acesso,
@@ -135,7 +134,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const query = `
     SELECT
       f.id, f.name, f.name as nome, f.cpf, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email as email1,
-      f.lotacao, f.situacao, f.perfil_acesso,
+      f.situacao, f.perfil_acesso,
       f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
       f.avatar_url,
       f.arquivado_em, f.arquivado_motivo
@@ -176,10 +175,6 @@ async function atualizarDadosProprios(id, dados) {
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
   addCampo("email", dados.email1 || dados.email);
-
-  if (dados.lotacao !== undefined) {
-    addCampo("lotacao", normalizeLotacao(dados.lotacao));
-  }
 
   if (dados.logradouro_bairro) {
       addCampo("logradouro", dados.logradouro_bairro);
@@ -245,7 +240,6 @@ async function atualizarUserPorId(id, dados) {
   addCampo("telefone2", dados.telefone2);
   addCampo("email", dados.email1 || dados.email);
 
-  if (dados.lotacao !== undefined) addCampo("lotacao", normalizeLotacao(dados.lotacao));
   if (dados.situacao !== undefined) addCampo("situacao", normalizeSituacaoFuncional(dados.situacao));
   if (dados.perfil_acesso !== undefined) addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
 
@@ -298,7 +292,6 @@ async function criarUserInicial(dados) {
       telefone2 = null,
       email1 = null,
       email = null,
-      lotacao = "SEDE",
       situacao = "ATIVO",
     } = dados;
 
@@ -308,12 +301,12 @@ async function criarUserInicial(dados) {
       `
       INSERT INTO users (
         name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
-        lotacao, situacao, perfil_acesso, cargo, uf,
+        situacao, perfil_acesso, cargo, uf,
         perfil_acesso2, cargo2, uf2,
         created_at, updated_at, bloqueado
       ) VALUES (
         $1, $2, $3, NULLIF($4, '')::date, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW(), false
+        $8, $9, $10, $11, $12, $13, $14, NOW(), NOW(), false
       ) RETURNING id
       `,
       [
@@ -324,7 +317,6 @@ async function criarUserInicial(dados) {
         telefone1,
         telefone2,
         emailFinal,
-        normalizeLotacao(lotacao),
         normalizeSituacaoFuncional(situacao),
         normalizePerfil(perfilNovo),
         dados.cargo || null,

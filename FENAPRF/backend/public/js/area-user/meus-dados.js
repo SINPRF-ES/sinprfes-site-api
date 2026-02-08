@@ -92,7 +92,7 @@
         const {
             nome, cpf, situacao, situacao_funcional, perfil_acesso,
             telefone1, telefone2, email1, email2,
-            logradouro_bairro, numero, complemento, cidade, uf, cep, lotacao,
+            logradouro_bairro, numero, complemento, cidade, uf, cep,
             avatar_url
         } = dados;
 
@@ -115,14 +115,6 @@
             classeBadge = 'badge-pensionista';
         }
 
-        const lotacoesParaSelect = (global.Canon && global.Canon.LOTACOES) ? global.Canon.LOTACOES : ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
-        const currentLotNorm = (global.Canon && global.Canon.normalizeLotacao) ? global.Canon.normalizeLotacao(lotacao || "SEDE") : (lotacao || "SEDE").toUpperCase();
-        const opcoes = lotacoesParaSelect
-            .map(op => {
-                const opNorm = (global.Canon && global.Canon.normalizeLotacao) ? global.Canon.normalizeLotacao(op) : op.toUpperCase();
-                return `<option value="${op}" ${currentLotNorm === opNorm ? "selected" : ""}>${op}</option>`;
-            })
-            .join("");
 
         if (!document.getElementById('style-meus-dados')) {
             const s = document.createElement('style');
@@ -381,15 +373,6 @@
                             <label>Idade</label>
                             <input type="text" value="${idadeTxt}" readonly />
                         </div>
-                    </div>
-                    <div class="field-row">
-                        <div class="field-group">
-                            <label>Lotação</label>
-                            <select id="me-lotacao">
-                                ${opcoes}
-                            </select>
-                        </div>
-                        <div class="field-group"></div>
                     </div>
                 </div>
 
@@ -688,7 +671,6 @@
             payload.cidade = document.getElementById("me-cidade").value;
             payload.uf = document.getElementById("me-uf").value;
             payload.cep = onlyDigitsFn(document.getElementById("me-cep").value);
-            payload.lotacao = document.getElementById("me-lotacao").value;
 
             // Sanitiza CPF dos dependentes
             for (let i = 1; i <= 5; i++) {

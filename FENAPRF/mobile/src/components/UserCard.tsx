@@ -64,7 +64,6 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserProfile, onEdit })
               <Text style={styles.situacaoText}>{situacaoLabel}</Text>
             </View>
           </View>
-          <Text style={styles.lotacao}>Lotação: {user.lotacao || 'Não informada'}</Text>
           <Text style={styles.detalhe}>Telefone: {formatTelefone(user.telefone1) || '—'}</Text>
         </View>
         <View style={styles.ufStack}>
@@ -182,10 +181,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1, // Faz o nome ocupar o espaço e quebrar a linha
     marginRight: 8, // Espaçamento entre o nome e o badge
-  },
-  lotacao: {
-    fontSize: 14,
-    color: '#666',
   },
   detalhe: {
     fontSize: 14,

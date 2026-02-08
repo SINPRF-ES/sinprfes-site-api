@@ -153,7 +153,7 @@
                       <label style="font-weight: bold; color: #333;">Tipo de Relatório</label>
                       <select id="relatorio-tipo" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
                           <option value="INDIVIDUAL">Dossiê do Usuário (Individual)</option>
-                          <option value="LOTACAO">Distribuição por Lotação</option>
+                          <option value="UF">Distribuição por UF</option>
                           <option value="SITUACAO">Distribuição por Situação Funcional</option>
                           <option value="GLOBAL">Global (Completo)</option>
                       </select>
@@ -169,13 +169,8 @@
                           </select>
                       </div>
 
-                      <select id="relatorio-lotacao-select" style="display: none; padding: 12px; border-radius: 8px;">
-                          <option value="SEDE">SEDE</option>
-                          <option value="DEL 01 - Viana">DEL 01 - Viana</option>
-                          <option value="DEL 02 - Serra">DEL 02 - Serra</option>
-                          <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
-                          <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
-                          <option value="NENHUMA">NENHUMA</option>
+                      <select id="relatorio-uf-select" style="display: none; padding: 12px; border-radius: 8px;">
+                          <!-- Preenchido via JS com Canon.UFS -->
                       </select>
 
                       <select id="relatorio-situacao-select" style="display: none; padding: 12px; border-radius: 8px;">
@@ -224,7 +219,7 @@
                           <option value="ALL">Todos os users com app</option>
                           <option value="ATIVOS">Apenas ATIVOS</option>
                           <option value="VETERANOS">Veteranos / Pensionistas</option>
-                          <option value="LOTACAO">Por Lotação (somente ativos)</option>
+                          <option value="UF">Por UF</option>
                           <option value="JOGOS">Inscritos nos Jogos</option>
                           <option value="USER">Especificar um Usuário</option>
                       </select>
@@ -233,12 +228,8 @@
                   <div id="push-target-value-container" class="field-group" style="margin-top: 15px; display: none;">
                       <label id="push-target-value-label">Valor do Filtro</label>
 
-                      <select id="push-target-lotacao" style="display: none;">
-                          <option value="SEDE">SEDE</option>
-                          <option value="1ª DEL (Viana)">1ª DEL (Viana)</option>
-                          <option value="2ª DEL (Serra)">2ª DEL (Serra)</option>
-                          <option value="3ª DEL (Guarapari)">3ª DEL (Guarapari)</option>
-                          <option value="4ª DEL (Linhares)">4ª DEL (Linhares)</option>
+                      <select id="push-target-uf" style="display: none;">
+                          <!-- Preenchido via JS com Canon.UFS -->
                       </select>
 
                       <div id="push-target-user-wrapper" style="display: none;">

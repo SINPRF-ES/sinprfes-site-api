@@ -25,6 +25,7 @@ import api, { getUsers } from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { UFS } from '../utils/userUtils';
 
 interface ReportJob {
   id: string;
@@ -185,7 +186,7 @@ export default function RelatoriosScreen() {
     const date = new Date(item.created_at).toLocaleString('pt-BR');
     const typeLabels: any = {
       INDIVIDUAL: "👤 Dossiê Individual",
-      LOTACAO: "📍 Por Lotação",
+      UF: "📍 Por UF",
       SITUACAO: "📑 Por Situação",
       GLOBAL: "🌏 Global (Completo)"
     };
@@ -288,7 +289,7 @@ export default function RelatoriosScreen() {
                 selectedValue={reportType}
                 onValueChange={(v) => {
                   setReportType(v);
-                  if (v === 'LOTACAO') setTargetValue(Canon.LOTACOES[0]);
+                  if (v === 'UF') setTargetValue(UFS[0]);
                   else if (v === 'SITUACAO') setTargetValue('ATIVO');
                   else setTargetValue(null);
                 }}
@@ -296,7 +297,7 @@ export default function RelatoriosScreen() {
                 mode="dropdown"
             >
                 <Picker.Item label="👤 Dossiê do User (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="📍 Por Lotação" value="LOTACAO" />
+                <Picker.Item label="📍 Por UF" value="UF" />
                 <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
                 <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
             </Picker>
@@ -314,14 +315,14 @@ export default function RelatoriosScreen() {
              </TouchableOpacity>
           )}
 
-          {reportType === 'LOTACAO' && (
+          {reportType === 'UF' && (
              <View style={styles.pickerContainer}>
                 <Picker
                     selectedValue={targetValue}
                     onValueChange={setTargetValue}
                     style={styles.picker}
                 >
-                    {Canon.LOTACOES.map((opt) => (
+                    {UFS.map((opt) => (
                       <Picker.Item key={opt} label={opt} value={opt} />
                     ))}
                 </Picker>

@@ -12,7 +12,7 @@
     let repasseData = null;
     let perfilLogado = null;
 
-    const LOTACOES_REPASSE = global.Canon?.LOTACOES_REPASSE || [];
+    const UFS_REPASSE = global.Canon?.UFS || [];
 
     async function inicializarRepasse(perfil) {
         perfilLogado = (perfil || "").toUpperCase();
@@ -193,14 +193,6 @@
         }).join("");
     }
 
-    const LOTACAO_KEYWORDS = {
-        "SEDE": "SEDE",
-        "DEL 01 - Viana": "VIANA",
-        "DEL 02 - Serra": "SERRA",
-        "DEL 03 - Guarapari": "GUARAPARI",
-        "DEL 04 - Linhares": "LINHARES"
-    };
-
     function normalizeText(str) {
         return (str || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
@@ -217,33 +209,33 @@
             else colorPercent = "#27ae60";
         }
 
-        // Paridade com o app: filtrar responsáveis por lotação
-        const kw = LOTACAO_KEYWORDS[loc.lotacao];
+        // Paridade com o app: filtrar responsáveis por UF
+        const currentUf = loc.uf || loc.lotacao;
         const filteredResps = responsaveisCache.filter(r => {
-            if (!kw) return true;
-            if (!r.lotacao) return false;
-            return normalizeText(r.lotacao).includes(kw);
+            if (!currentUf) return true;
+            if (!r.uf) return false;
+            return r.uf === currentUf;
         });
 
         return `
             <tr>
-                <td style="font-weight:bold; color:#003366;">${loc.lotacao}</td>
+                <td style="font-weight:bold; color:#003366;">${currentUf}</td>
                 <td>
-                    <select onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { responsavelId: this.value })">
+                    <select onchange="Repasse.atualizarLocalidade(${month}, '${currentUf}', { responsavelId: this.value })">
                         <option value="">Selecione...</option>
                         ${filteredResps.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
                     </select>
                 </td>
                 <td style="text-align:center;">${loc.usersAtivos}</td>
                 <td style="text-align:center;">
-                    <input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { prfTotal: this.value })" style="width:70px; text-align:center;">
+                    <input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${currentUf}', { prfTotal: this.value })" style="width:70px; text-align:center;">
                 </td>
                 <td style="text-align:center; color:${colorPercent}; font-weight:bold;">
                     ${hasWarning ? '<span title="PRF Total deve ser maior que zero">⚠️</span>' : percentDisplay}
                 </td>
                 <td style="text-align:right; font-weight:bold;">${formatCurrency(loc.creditoMes)}</td>
                 <td style="text-align:right;">
-                    <input type="number" step="0.01" value="${loc.reembolsoMes}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { reembolsoMes: this.value })" style="width:100px; text-align:right;">
+                    <input type="number" step="0.01" value="${loc.reembolsoMes}" onchange="Repasse.atualizarLocalidade(${month}, '${currentUf}', { reembolsoMes: this.value })" style="width:100px; text-align:right;">
                 </td>
                 <td style="text-align:right; color:#e67e22; font-weight:bold;">${formatCurrency(loc.acumuladoAno)}</td>
             </tr>
@@ -259,11 +251,10 @@
         }
     }
 
-    function atualizarLocalidade(month, lotacao, data) {
+    function atualizarLocalidade(month, uf, data) {
         const m = repasseData.meses.find(m => m.month === month);
         if (m) {
-            const canonLot = global.Canon?.normalizeLotacao(lotacao);
-            const loc = m.localidades.find(l => l.lotacao === canonLot);
+            const loc = m.localidades.find(l => l.lotacao === uf);
             if (loc) {
                 if (data.responsavelId !== undefined) loc.responsavelId = data.responsavelId;
                 if (data.prfTotal !== undefined) loc.prfTotal = parseInt(data.prfTotal) || 0;
@@ -299,22 +290,22 @@
         m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + l.creditoMes, 0);
 
         const acumulados = {};
-        LOTACOES_REPASSE.forEach(lot => {
+        UFS_REPASSE.forEach(uf => {
             let somaCred = 0;
             let somaReem = 0;
             repasseData.meses.forEach(mes => {
-                const l = mes.localidades.find(ll => global.Canon?.normalizeLotacao(ll.lotacao) === lot);
+                const l = mes.localidades.find(ll => ll.lotacao === uf);
                 if (l) {
                     somaCred += l.creditoMes;
                     somaReem += l.reembolsoMes;
                 }
             });
-            acumulados[lot] = somaCred - somaReem;
+            acumulados[uf] = somaCred - somaReem;
         });
 
         repasseData.meses.forEach(mes => {
             mes.localidades.forEach(l => {
-                l.acumuladoAno = acumulados[global.Canon?.normalizeLotacao(l.lotacao)];
+                l.acumuladoAno = acumulados[l.uf || l.lotacao];
             });
         });
 
@@ -330,7 +321,7 @@
             month: month,
             perCapita: m.perCapita,
             localidades: m.localidades.map(l => ({
-                lotacaoKey: l.lotacao,
+                lotacaoKey: l.uf || l.lotacao,
                 responsavelId: l.responsavelId || null,
                 prfTotal: l.prfTotal,
                 reembolsoMes: l.reembolsoMes

@@ -7,7 +7,6 @@ import { useNetInfo } from '@react-native-community/netinfo';
 import api from '../services/apiService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
-import LotacaoCard from '../components/LotacaoCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
 import { User } from '../types/user';
@@ -30,7 +29,6 @@ const initialUserState: Partial<User> = {
   complemento: '',
   cidade: '',
   uf: '',
-  lotacao: 'SEDE', // Valor padrão
   situacao: 'ATIVO', // Valor padrão
   perfil_acesso: ROLES.CONSELHEIRO as any, // Valor padrão FENAPRF
   cargo: '',
@@ -134,7 +132,6 @@ export default function CriarUserScreen({ navigation }: any) {
         isManagement={true}
       />
       <EnderecoCard user={user as User} setUser={setUser as any} />
-      <LotacaoCard user={user as User} setUser={setUser as any} isEditing={true} />
 
     </KeyboardAwareScrollView>
     </SafeScreen>
