@@ -142,27 +142,27 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
 
     // 1. Baixar o manifesto diretamente via URL (Isolação FENAPRF)
     let manifest: UpdateManifest;
+    let fetchedFromUrl = false;
+    let driveAppFiles: DriveFile[] = [];
+
     try {
       logger.info('UPDATE_MANIFEST_FETCH', { url: UPDATE_MANIFEST_URL, context });
       const response = await axios.get(UPDATE_MANIFEST_URL, { timeout: 10000 });
       manifest = response.data;
+      fetchedFromUrl = true;
 
       const urlObj = new URL(UPDATE_MANIFEST_URL);
       logger.info('UPDATE_MANIFEST_FETCH_SUCCESS', { url: UPDATE_MANIFEST_URL, host: urlObj.host });
     } catch (e: any) {
-      logger.error('UPDATE_MANIFEST_FETCH_ERROR', e, { url: UPDATE_MANIFEST_URL, message: e.message });
-      // Fallback para o modo Legado (Drive) se a URL direta falhar?
-      // O usuário pediu "Isolar 100% ... para apontar TUDO ... para o ambiente FENAPRF".
-      // Vamos tentar o Drive como fallback mas logar o aviso.
-      logger.warn('UpdateCheck: Tentando fallback para Google Drive após falha na URL direta');
+      logger.warn('UpdateCheck: Tentando fallback para Google Drive após falha na URL direta', { message: e.message });
 
       const rootFiles = await fetchPublicacoes(null);
       const appFolder = rootFiles.find(f => f.isFolder && (f.name || '').trim().toLowerCase() === 'app');
-      if (!appFolder) return { hasUpdate: false, error: 'Manifesto não encontrado na URL nem no Drive.' };
+      if (!appFolder) return { hasUpdate: false, error: 'Pasta "app" não encontrada no Drive.' };
 
-      const appFiles = await fetchPublicacoes(appFolder.id);
-      const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
-      if (!manifestFile) return { hasUpdate: false, error: 'update-manifest.json não encontrado.' };
+      driveAppFiles = await fetchPublicacoes(appFolder.id);
+      const manifestFile = driveAppFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
+      if (!manifestFile) return { hasUpdate: false, error: 'update-manifest.json não encontrado no Drive.' };
 
       const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
       const manifestContent = await FileSystem.readAsStringAsync(localUri);
@@ -189,9 +189,9 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
     if (manifest.apk.enabled && (hasNewVersionCode || hasNewRuntime)) {
       const isMandatory = currentVersionCode < manifest.apk.minSupportedVersionCode || hasNewRuntime;
 
-      const { fileName, abi, reason } = resolveApkForDevice(manifest);
+      const { fileName, apkFile, abi, reason } = resolveApkForDevice(manifest, driveAppFiles.length > 0 ? driveAppFiles : undefined);
 
-      if (!fileName) {
+      if (!fileName && !apkFile) {
         logDebug(`${logPrefix}.error`, { reason: reason || 'APK_FILE_NOT_DEFINED' });
         return {
             hasUpdate: false,
@@ -199,18 +199,26 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
         };
       }
 
-      // Construir URL direta para o APK (Isolação FENAPRF)
-      // Assume-se que o APK está na mesma base que o manifesto
-      const apkUrl = UPDATE_MANIFEST_URL.replace('update-manifest.json', fileName);
+      let apkUrl: string | undefined;
+      let apkFileId: string | undefined;
 
-      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory, abi, fileName, apkUrl });
+      if (fetchedFromUrl) {
+          // Se o manifesto veio da URL, tentamos o APK pela URL também
+          apkUrl = UPDATE_MANIFEST_URL.replace('update-manifest.json', fileName!);
+      } else if (apkFile) {
+          // Se veio do Drive, usamos o ID do arquivo
+          apkFileId = apkFile.id;
+      }
+
+      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory, abi, fileName, apkUrl, apkFileId });
 
       return {
         hasUpdate: true,
         type: 'APK',
         isMandatory,
         manifest,
-        apkFileName: fileName,
+        apkFileName: fileName || apkFile?.name,
+        apkFileId,
         apkAbi: abi,
         apkUrl
       };

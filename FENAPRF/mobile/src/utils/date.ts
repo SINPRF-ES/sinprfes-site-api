@@ -73,26 +73,45 @@ export const formatDateToDdMmYyyy = (text: string): string => {
 };
 
 export const calculateAgeBreakdown = (dateStr: string | null | undefined): string => {
-  if (!dateStr) return '—';
+  return calculateDuration(dateStr, new Date().toISOString());
+};
+
+/**
+ * Calcula a diferença entre duas datas em anos, meses e dias.
+ * @param fromDateStr Data de início (ISO ou BR)
+ * @param toDateStr Data de fim (ISO ou BR)
+ */
+export const calculateDuration = (fromDateStr: string | null | undefined, toDateStr: string | null | undefined): string => {
+  if (!fromDateStr || !toDateStr) return '—';
   try {
-    let birthDate;
-    if (dateStr.includes('/')) {
-      const parts = dateStr.split('/').map(Number);
-      birthDate = new Date(parts[2], parts[1] - 1, parts[0]);
-    } else {
-      birthDate = new Date(dateStr);
-    }
+    const parseDate = (d: string) => {
+      if (d.includes('/')) {
+        const parts = d.split('/').map(Number);
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+      return new Date(d);
+    };
 
-    if (isNaN(birthDate.getTime())) return '—';
+    const start = parseDate(fromDateStr);
+    const end = parseDate(toDateStr);
 
-    const today = new Date();
-    let years = today.getFullYear() - birthDate.getFullYear();
-    let months = today.getMonth() - birthDate.getMonth();
-    let days = today.getDate() - birthDate.getDate();
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return '—';
+
+    let diff = end.getTime() - start.getTime();
+    const isNegative = diff < 0;
+
+    // Para simplificar o cálculo de anos/meses/dias, trabalhamos com o absoluto e ajustamos depois se necessário
+    // mas a lógica abaixo já lida bem com a ordem se invertermos as datas para positivo.
+    const d1 = isNegative ? end : start;
+    const d2 = isNegative ? start : end;
+
+    let years = d2.getFullYear() - d1.getFullYear();
+    let months = d2.getMonth() - d1.getMonth();
+    let days = d2.getDate() - d1.getDate();
 
     if (days < 0) {
       months--;
-      const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      const lastMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
       days += lastMonth.getDate();
     }
     if (months < 0) {
@@ -105,7 +124,8 @@ export const calculateAgeBreakdown = (dateStr: string | null | undefined): strin
     if (months > 0) parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
     if (days > 0) parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
 
-    return parts.length > 0 ? parts.join(', ').replace(/, ([^,]*)$/, ' e $1') : '0 dias';
+    const result = parts.length > 0 ? parts.join(', ').replace(/, ([^,]*)$/, ' e $1') : '0 dias';
+    return isNegative ? `passou do prazo (${result})` : result;
   } catch (e) {
     return '—';
   }

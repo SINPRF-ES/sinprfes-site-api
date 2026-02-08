@@ -23,7 +23,6 @@
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
-        const { inicializarRepasse } = window.Repasse || {};
         const { inicializarNoticias } = window.NoticiasAdmin || {};
         const { inicializarRelatorios } = window.Relatorios || {};
         const { CMSAdmin } = window || {};
@@ -46,7 +45,6 @@
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
                 else if (abaAlvo === 'sec-noticias' && inicializarNoticias) inicializarNoticias(perfil);
                 else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
-                else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
             });
@@ -85,9 +83,6 @@
             // Exibe abas restritas conforme perfil (Regra de Ouro)
             const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
             const perfisComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
-
-            const navRepasse = document.getElementById("nav-repasse");
-            if (navRepasse) navRepasse.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
             const navNoticias = document.getElementById("nav-noticias");
             if (navNoticias) navNoticias.style.display = perfisComunicacao.includes(perfil) ? "block" : "none";

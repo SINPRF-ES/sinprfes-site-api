@@ -1,8 +1,7 @@
 // src/services/reports.service.js
 const pool = require("../config/db");
 const usersService = require("./users.service");
-const repasseService = require("./repasse.service");
-const { SITUACAO_FUNCIONAL, LOTACOES, LOTACOES_REPASSE } = require("../../shared/canon");
+const { SITUACAO_FUNCIONAL } = require("../../shared/canon");
 
 /**
  * Registra um novo job de relatório para auditoria.
@@ -47,22 +46,12 @@ async function buscarDadosAgregados(tipo, valor) {
   let whereClause = "WHERE arquivado_em IS NULL";
   const params = [];
 
-  if (tipo === "LOTACAO") {
-    // Busca por keyword conforme padrão do projeto
-    const keywords = {
-        "SEDE": "SEDE",
-        "DEL 01 - Viana": "VIANA",
-        "DEL 02 - Serra": "SERRA",
-        "DEL 03 - Guarapari": "GUARAPARI",
-        "DEL 04 - Linhares": "LINHARES",
-        "NENHUMA": "NENHUMA"
-    };
-    const kw = keywords[valor] || valor;
-    whereClause += " AND UPPER(lotacao) LIKE $1 AND situacao = 'ATIVO'";
-    params.push(`%${kw.toUpperCase()}%`);
-  } else if (tipo === "SITUACAO") {
+  if (tipo === "SITUACAO") {
     whereClause += " AND situacao = $1";
     params.push(valor);
+  } else {
+      // Outros tipos não suportados ou legados
+      return null;
   }
 
   const query = `
@@ -82,22 +71,6 @@ async function buscarDadosAgregados(tipo, valor) {
 
   const { rows } = await pool.query(query, params);
   const result = rows[0];
-
-  // Adiciona dados do Repasse se for relatório por Lotação
-  if (tipo === "LOTACAO") {
-    const repasseData = await repasseService.getUltimosDadosParaRelatorio(valor);
-    result.repasse = repasseData;
-  }
-
-  // Especial: Situação ATIVO deve consumir Repasse globalmente e por lotação
-  if (tipo === "SITUACAO" && valor === "ATIVO") {
-    const breakdown = [];
-    for (const lot of LOTACOES_REPASSE) {
-      const repData = await repasseService.getUltimosDadosParaRelatorio(lot);
-      breakdown.push({ lotacao: lot, ...repData });
-    }
-    result.repasseBreakdown = breakdown;
-  }
 
   return result;
 }

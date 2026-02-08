@@ -6,24 +6,24 @@ jest.mock('../config/db');
 
 describe('Users Service', () => {
   describe('listarParaPerfil', () => {
-    test('should include lotacao for USER profile', async () => {
+    test('should include avatar_url for USER profile', async () => {
       const mockRows = [
-        { id: 1, nome: 'User 1', lotacao: 'SEDE', avatar_url: null, situacao: 'ATIVO' }
+        { id: 1, nome: 'User 1', avatar_url: 'url', situacao: 'ATIVO' }
       ];
       pool.query.mockResolvedValue({ rows: mockRows });
 
       const result = await usersService.listarParaPerfil('USER');
 
       expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining('f.lotacao'),
+        expect.stringContaining('f.avatar_url'),
         expect.any(Array)
       );
-      expect(result[0]).toHaveProperty('lotacao', 'SEDE');
+      expect(result[0]).toHaveProperty('avatar_url', 'url');
     });
 
     test('should include all fields for ADMIN profile', async () => {
         const mockRows = [
-          { id: 1, nome: 'User 1', lotacao: 'SEDE', cpf: '123' }
+          { id: 1, nome: 'User 1', cpf: '123' }
         ];
         pool.query.mockResolvedValue({ rows: mockRows });
 
@@ -33,7 +33,7 @@ describe('Users Service', () => {
           expect.stringContaining('f.cpf'),
           expect.any(Array)
         );
-        expect(result[0]).toHaveProperty('lotacao', 'SEDE');
+        expect(result[0]).toHaveProperty('cpf', '123');
       });
   });
 });

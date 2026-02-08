@@ -19,6 +19,9 @@
     },
     "android": {
       "package": "br.org.fenaprf.app",
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundColor": "#0B2A4A"
@@ -35,7 +38,7 @@
       "checkAutomatically": "NEVER"
     },
     "runtimeVersion": {
-      "policy": "sdkVersion"
+      "policy": "appVersion"
     },
     "plugins": [
       "expo-secure-store",

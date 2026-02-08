@@ -11,18 +11,6 @@ describe('Reports Service', () => {
     jest.resetAllMocks();
   });
 
-  test('buscarDadosAgregados LOTACAO should use keyword search', async () => {
-    pool.query.mockResolvedValue({ rows: [{ total: 5 }] });
-
-    const res = await reportsService.buscarDadosAgregados('LOTACAO', 'DEL 01 - Viana');
-
-    expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("UPPER(lotacao) LIKE $1"),
-      expect.arrayContaining(["%VIANA%"])
-    );
-    expect(res.total).toBe(5);
-  });
-
   test('buscarDadosAgregados SITUACAO should use exact match', async () => {
     pool.query.mockResolvedValue({ rows: [{ total: 10 }] });
 

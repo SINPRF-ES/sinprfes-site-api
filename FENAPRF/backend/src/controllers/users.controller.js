@@ -15,8 +15,7 @@ const { normalizarCpf } = require("../utils/format");
 const {
   normalizeSituacaoFuncional,
   normalizeSexo,
-  normalizePerfil,
-  normalizeLotacao
+  normalizePerfil
 } = require("../../shared/canon");
 
 function perfilGestao(perfil) {
@@ -222,7 +221,6 @@ exports.atualizarMeusDados = async (req, res) => {
       telefone2: body.telefone2,
       email1: body.email1,
       email: body.email,
-      lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
       logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
@@ -351,7 +349,6 @@ exports.atualizarUser = async (req, res) => {
       telefone2: body.telefone2,
       email1: body.email1,
       email: body.email,
-      lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
       logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
@@ -469,7 +466,6 @@ exports.criarUser = async (req, res) => {
       telefone2: body.telefone2 || null,
       email1: body.email1 || null,
       email: body.email || null,
-      lotacao: normalizeLotacao(body.lotacao || "SEDE"),
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       perfil_acesso,
       cargo,

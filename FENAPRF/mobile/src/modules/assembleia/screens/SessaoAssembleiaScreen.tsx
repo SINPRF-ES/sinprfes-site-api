@@ -133,7 +133,7 @@ export default function SessaoAssembleiaScreen() {
             pedidosPalavra.map((p, idx) => (
               <View key={p.id} style={styles.filaItem}>
                 <Text style={styles.filaPos}>{idx + 1}º</Text>
-                <Text style={styles.filaNome}>{p.user_nome || 'User'}</Text>
+                <Text style={styles.filaNome}>{p.user_nome || 'Membro'}</Text>
                 {p.estado === 'EM_FALA' && <View style={styles.falaBadge}><Text style={styles.falaBadgeText}>Falando</Text></View>}
               </View>
             ))
@@ -197,7 +197,7 @@ export default function SessaoAssembleiaScreen() {
             propostas.map((prop) => (
               <View key={prop.id} style={styles.propostaItem}>
                 <Text style={styles.propostaTitulo}>{prop.titulo}</Text>
-                <Text style={styles.propostaAutor}>por {prop.autor_nome || 'User'}</Text>
+                <Text style={styles.propostaAutor}>por {prop.autor_nome || 'Membro'}</Text>
                 <View style={[styles.miniBadge, { alignSelf: 'flex-start', marginTop: 4, backgroundColor: prop.estado === 'PENDENTE' ? '#ffc107' : prop.estado === 'VOTADA' ? '#28a745' : '#dc3545' }]}>
                    <Text style={styles.miniBadgeText}>{prop.estado}</Text>
                 </View>

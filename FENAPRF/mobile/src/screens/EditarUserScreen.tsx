@@ -8,10 +8,10 @@ import { atualizarUser, arquivarUser, desarquivarUser } from '../services/apiSer
 import { getMe, getUserById } from '../services/userService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
-import LotacaoCard from '../components/LotacaoCard';
+import MembroPerfilCard from '../components/MembroPerfilCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { User } from '../types/user';
-import { logDebug, getCanonicalUserId, parseCanonicalUserId, isGestao as checkIsGestao, ROLES } from '../utils/userUtils';
+import { logDebug, getCanonicalUserId, parseCanonicalUserId, isGestao as checkIsGestao, ROLES, podeEditarPerfil } from '../utils/userUtils';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
 import api from '../services/apiService';
@@ -51,7 +51,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
       logDebug('EditarUser.fetch', { id: data.id, name: data.name });
     } catch (err) {
       logger.error('[EditarUser.fetch.error]', err);
-      Alert.alert('Erro', 'Não foi possível carregar os dados do user.');
+      Alert.alert('Erro', 'Não foi possível carregar os dados do membro.');
     } finally {
       setLoading(false);
     }
@@ -96,10 +96,10 @@ export default function EditarUserScreen({ route, navigation }: any) {
         await api.put('/api/users/me', payload);
       }
 
-      Alert.alert('Sucesso', 'User atualizado com sucesso.');
+      Alert.alert('Sucesso', 'Membro atualizado com sucesso.');
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o user.');
+      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o membro.');
     } finally {
       setSaving(false);
     }
@@ -117,7 +117,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
 
         if (showMotivoInput === 'ARQUIVAR') {
             await arquivarUser(canonicalId, motivoAcao);
-            Alert.alert('Sucesso', 'User arquivado com sucesso.');
+            Alert.alert('Sucesso', 'Cadastro arquivado com sucesso.');
         } else {
             await desarquivarUser(canonicalId, motivoAcao);
             Alert.alert('Sucesso', 'Cadastro reativado com sucesso.');
@@ -168,7 +168,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
     );
   }
 
-  const ehGestao = checkIsGestao(user?.perfil_acesso);
+  const podeEditarAlvo = podeEditarPerfil(authUser?.perfil_acesso, user?.perfil_acesso);
 
   return (
     <SafeScreen style={styles.container}>
@@ -212,16 +212,16 @@ export default function EditarUserScreen({ route, navigation }: any) {
         <ContatoCard
           user={user}
           setUser={setUser}
-          isEditing={true}
-          isManagement={ehGestao}
+          isEditing={podeEditarAlvo}
+          isManagement={podeEditarAlvo}
           hideTitle={true}
         />
 
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>🏠 Endereço</Text></View>
         <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
 
-        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Lotação e Perfil</Text></View>
-        <LotacaoCard user={user} setUser={setUser} isEditing={ehGestao} hideTitle={true} />
+        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Situação e Perfil</Text></View>
+        <MembroPerfilCard user={user} setUser={setUser} isEditing={podeEditarAlvo} hideTitle={true} />
       </KeyboardAwareScrollView>
     </SafeScreen>
   );

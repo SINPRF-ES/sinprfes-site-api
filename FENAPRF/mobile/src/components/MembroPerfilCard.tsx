@@ -1,9 +1,8 @@
-// src/components/LotacaoCard.tsx
+// src/components/MembroPerfilCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { User } from '../types/user';
-import LotacaoPicker from './LotacaoPicker'; // Importando o novo componente
-import { normalizeSituacaoFuncional, getCanonicalUserId, ROLES, isGestao as checkIsGestao, CARGOS_DIRETORIA, CARGOS_CONSELHO, UFS } from '../utils/userUtils';
+import { getCanonicalUserId, ROLES, isGestao as checkIsGestao, CARGOS_DIRETORIA, CARGOS_CONSELHO, UFS } from '../utils/userUtils';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 
@@ -18,9 +17,9 @@ interface Props {
   hideTitle?: boolean;
 }
 
-const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTitle = false }) => {
+const MembroPerfilCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTitle = false }) => {
   if (!user) {
-    logger.error('LOTACAO_CARD_MISSING_DATA', new Error('User data is null in LotacaoCard'));
+    logger.error('PERFIL_CARD_MISSING_DATA', new Error('User data is null in MembroPerfilCard'));
     return (
       <View style={styles.card}>
         <Text style={styles.textError}>⚠️ Seção de Lotação indisponível (dados ausentes).</Text>
@@ -58,18 +57,13 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
 
   const hasSecondRole = !!(user?.perfil_acesso2 || user?.cargo2 || user?.uf2);
 
+  const primaryPerfil = (user?.perfil_acesso || "").toUpperCase();
+  const canHaveSecondRole = primaryPerfil === ROLES.DIRETORIA || primaryPerfil === ROLES.CONSELHEIRO;
+  const secondPerfilValue = primaryPerfil === ROLES.DIRETORIA ? ROLES.CONSELHEIRO : ROLES.DIRETORIA;
+
   return (
     <View style={styles.card}>
-      {!hideTitle && <Text style={styles.cardTitle}>Lotação, Situação e Perfil</Text>}
-
-      <Text style={styles.label}>Unidade de Lotação</Text>
-      <View style={(isEditing || isSelf) ? styles.pickerContainer : styles.pickerContainerDisabled}>
-        <LotacaoPicker
-          selectedValue={user?.lotacao || 'SEDE'}
-          onValueChange={(itemValue) => setUser(f => f ? { ...f, lotacao: itemValue } : null)}
-          enabled={(isEditing || isSelf) ?? false}
-        />
-      </View>
+      {!hideTitle && <Text style={styles.cardTitle}>Situação e Perfil</Text>}
 
       <Text style={styles.label}>Situação</Text>
       <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
@@ -172,9 +166,14 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
 
       <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 20 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={[styles.label, { fontWeight: 'bold' }]}>Segundo Vínculo (Opcional)</Text>
-          {isEditing && !hasSecondRole && (
-            <TouchableOpacity onPress={() => setUser(f => f ? { ...f, perfil_acesso2: ROLES.CONSELHEIRO } : null)}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.label, { fontWeight: 'bold' }]}>Segundo Vínculo (Opcional)</Text>
+            {!canHaveSecondRole && isEditing && (
+                <Text style={{ fontSize: 10, color: '#999' }}>Apenas para Diretoria ou Conselheiro.</Text>
+            )}
+          </View>
+          {isEditing && !hasSecondRole && canHaveSecondRole && (
+            <TouchableOpacity onPress={() => setUser(f => f ? { ...f, perfil_acesso2: secondPerfilValue } : null)}>
               <MaterialCommunityIcons name="plus-circle" size={24} color="#003366" />
             </TouchableOpacity>
           )}
@@ -188,16 +187,11 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
         {hasSecondRole && (
           <>
             <Text style={styles.label}>Perfil de Acesso 2</Text>
-            <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
-              <Picker
-                selectedValue={user?.perfil_acesso2 || ''}
-                onValueChange={(val) => setUser(f => f ? { ...f, perfil_acesso2: val } : null)}
-                enabled={isEditing}
-              >
-                <Picker.Item label="Conselheiro" value={ROLES.CONSELHEIRO} />
-                <Picker.Item label="Diretoria" value={ROLES.DIRETORIA} />
-              </Picker>
-            </View>
+            <TextInput
+                style={styles.inputDisabled}
+                value={user?.perfil_acesso2 || ''}
+                editable={false}
+            />
 
             <Text style={styles.label}>Cargo 2</Text>
             {isEditing ? (
@@ -307,4 +301,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LotacaoCard;
+export default MembroPerfilCard;

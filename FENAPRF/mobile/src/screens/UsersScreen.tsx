@@ -4,18 +4,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
 import api, { getUsers } from '../services/apiService';
-import UserCard from '../components/UserCard';
+import MemberListItem from '../components/MemberListItem';
+import MemberCard from '../components/MemberCard';
 import { User } from '../types/user';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
-import { getCanonicalUserId, isGestao } from '../utils/userUtils';
+import { getCanonicalUserId, isGestao, podeEditarPerfil } from '../utils/userUtils';
 import * as Canon from '../utils/canon';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
+import { Modal, Button } from 'react-native';
 
 export default function UsersScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
@@ -23,9 +25,10 @@ export default function UsersScreen({ navigation, route }: any) {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
-  const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
+  const [filtroFuncional, setFiltroFuncional] = useState('PADRAO');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<User | null>(null);
 
   const ehGestao = isGestao(user?.perfil_acesso);
   const cacheKey = `users_cache_${user?.id}`;
@@ -49,7 +52,6 @@ export default function UsersScreen({ navigation, route }: any) {
           name: f.name,
           telefone1: f.telefone1,
           avatar_url: f.avatar_url,
-          lotacao: f.lotacao,
           situacao: f.situacao,
         };
 
@@ -79,7 +81,7 @@ export default function UsersScreen({ navigation, route }: any) {
           const actions: MenuAction[] = [];
           if (ehGestao) {
             actions.push({
-              label: 'Novo User',
+              label: 'Novo Membro',
               icon: 'account-plus',
               onPress: () => navigation.navigate('CriarUser')
             });
@@ -104,24 +106,11 @@ export default function UsersScreen({ navigation, route }: any) {
     const term = normalizeText(searchTerm);
     const digits = onlyDigits(searchTerm);
 
-    return users.filter(f => {
+    let list = users.filter(f => {
       // Filtro por Nome/CPF usando campos pré-calculados (Bolt ⚡)
       const nomeMatch = f._normalizedNome?.includes(term);
       const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
-
-      // Filtro Situação Funcional / Lotação
-      if (filtroFuncional !== 'TODOS') {
-        const situacao = Canon.normalizeSituacaoFuncional(f.situacao_funcional || f.situacao || 'ATIVO');
-
-        if (Canon.LOTACOES.includes(filtroFuncional as any)) {
-          if (situacao !== Canon.SITUACAO_FUNCIONAL.ATIVO) return false;
-          const lotacaoNorm = Canon.normalizeLotacao(f.lotacao || 'SEDE');
-          if (lotacaoNorm !== filtroFuncional) return false;
-        } else {
-          if (situacao !== filtroFuncional) return false;
-        }
-      }
 
       // Filtro Estado do Cadastro (local filter additionally)
       if (ehGestao) {
@@ -129,23 +118,55 @@ export default function UsersScreen({ navigation, route }: any) {
         if (filtroCadastro === 'CADASTRO_ATIVO' && f.arquivado_em) return false;
       }
 
+      const situacao = Canon.normalizeSituacaoFuncional(f.situacao_funcional || f.situacao || 'ATIVO');
+      const perfil = (f.perfil_acesso || '').toUpperCase();
+      const cargoNorm = Canon.normalizeCargo(f.cargo);
+
+      // Filtro por Tipo/Cargo
+      if (filtroFuncional === 'DIRETORIA') {
+        if (perfil !== Canon.PERFIL_ACESSO.DIRETORIA) return false;
+      } else if (filtroFuncional === 'PRESIDENTES') {
+        if (!cargoNorm.toLowerCase().includes('presidente')) return false;
+      } else if (filtroFuncional === 'VICES') {
+        if (!cargoNorm.toLowerCase().includes('vice')) return false;
+      } else if (filtroFuncional === 'DR') {
+        if (cargoNorm !== 'Delegado Representante') return false;
+      } else if (filtroFuncional === 'DS') {
+        if (cargoNorm !== 'Delegado Substituto') return false;
+      } else if (filtroFuncional === 'ADMIN_COLAB') {
+        if (![Canon.PERFIL_ACESSO.ADMIN, Canon.PERFIL_ACESSO.COLABORADOR].includes(perfil)) return false;
+      } else if (filtroFuncional === 'ATIVO' || filtroFuncional === 'VETERANO' || filtroFuncional === 'PENSIONISTA') {
+          if (situacao !== filtroFuncional) return false;
+      }
+
+      // Regra Ouro: Esconder ADMIN/COLABORADOR por padrão
+      if (filtroFuncional !== 'ADMIN_COLAB' && [Canon.PERFIL_ACESSO.ADMIN, Canon.PERFIL_ACESSO.COLABORADOR].includes(perfil)) {
+          return false;
+      }
+
       return true;
     });
+
+    return Canon.ordenarMembros(list);
   }, [users, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
 
-  const handleEdit = useCallback((user: User) => {
-    const userId = getCanonicalUserId(user);
-    logger.info('NAVIGATE_TO_EDITAR_USER', { userId });
+  const handleMemberPress = useCallback((member: User) => {
+    setSelectedMember(member);
+  }, []);
+
+  const handleEdit = useCallback((member: User) => {
+    const userId = getCanonicalUserId(member);
+    setSelectedMember(null);
+    logger.info('NAVIGATE_TO_EDITAR_MEMBER', { userId });
     navigation.navigate('EditarUser', { userId });
   }, [navigation]);
 
   const renderItem = useCallback(({ item }: { item: User }) => (
-    <UserCard
-      user={item as any}
-      currentUserProfile={user?.perfil_acesso as any}
-      onEdit={handleEdit}
+    <MemberListItem
+      member={item}
+      onPress={handleMemberPress}
     />
-  ), [user?.perfil_acesso, handleEdit]);
+  ), [handleMemberPress]);
 
   if (loading && users.length === 0) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
@@ -160,7 +181,7 @@ export default function UsersScreen({ navigation, route }: any) {
         <MaterialCommunityIcons name="magnify" size={24} color="#666" />
         <TextInput
           style={styles.searchInput}
-          placeholder={ehGestao ? "Buscar por nome ou CPF..." : "Buscar por nome..."}
+          placeholder={ehGestao ? "Buscar membros por nome ou CPF..." : "Buscar membros por nome..."}
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
@@ -192,7 +213,7 @@ export default function UsersScreen({ navigation, route }: any) {
           </View>
         )}
         <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Situação:</Text>
+          <Text style={styles.filterLabel}>Filtro:</Text>
           <View style={styles.pickerWrapper}>
             <Picker
               selectedValue={filtroFuncional}
@@ -201,12 +222,13 @@ export default function UsersScreen({ navigation, route }: any) {
               mode="dropdown"
               dropdownIconColor="#003366"
             >
-              <Picker.Item label="Todos" value="TODOS" />
+              {Canon.FILTROS_MEMBROS.map(f => (
+                <Picker.Item key={f.value} label={f.label} value={f.value} />
+              ))}
+              <Picker.Item label="Todos (Sem filtros)" value="TODOS" />
+              <Picker.Item label="--- Por Situação ---" value="HEADER_SIT" enabled={false} />
               {Object.values(Canon.SITUACAO_FUNCIONAL).map(s => (
                 <Picker.Item key={s} label={Canon.LABELS[s]} value={s} />
-              ))}
-              {Canon.LOTACOES.map(l => (
-                <Picker.Item key={l} label={l} value={l} />
               ))}
             </Picker>
           </View>
@@ -226,10 +248,49 @@ export default function UsersScreen({ navigation, route }: any) {
         onRefresh={() => fetchData(true)}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text>{searchTerm ? 'Nenhum user encontrado.' : 'Carregando lista...'}</Text>
+            <Text>{searchTerm ? 'Nenhum membro encontrado.' : 'Carregando lista...'}</Text>
           </View>
         }
       />
+
+      <Modal
+        visible={!!selectedMember}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedMember(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalhes do Membro</Text>
+              <TouchableOpacity onPress={() => setSelectedMember(null)}>
+                <MaterialCommunityIcons name="close" size={28} color="#003366" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              {selectedMember && <MemberCard member={selectedMember} />}
+
+              <View style={styles.modalActions}>
+                {podeEditarPerfil(user?.perfil_acesso, selectedMember?.perfil_acesso) && (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => selectedMember && handleEdit(selectedMember)}
+                  >
+                    <MaterialCommunityIcons name="pencil" size={20} color="#fff" />
+                    <Text style={styles.editButtonText}>Editar Dados</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setSelectedMember(null)}
+                >
+                  <Text style={styles.closeButtonText}>Fechar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </SafeScreen>
   );
@@ -247,4 +308,61 @@ const styles = StyleSheet.create({
   picker: { height: 50, color: '#333' },
   empty: { padding: 40, alignItems: 'center' },
   fab: { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#003366', justifyContent: 'center', alignItems: 'center', elevation: 4 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  modalActions: {
+    marginTop: 16,
+    gap: 10,
+  },
+  editButton: {
+    backgroundColor: '#003366',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 10,
+    gap: 8,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  closeButton: {
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  closeButtonText: {
+    color: '#666',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });

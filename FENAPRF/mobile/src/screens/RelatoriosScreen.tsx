@@ -185,7 +185,6 @@ export default function RelatoriosScreen() {
     const date = new Date(item.created_at).toLocaleString('pt-BR');
     const typeLabels: any = {
       INDIVIDUAL: "👤 Dossiê Individual",
-      LOTACAO: "📍 Por Lotação",
       SITUACAO: "📑 Por Situação",
       GLOBAL: "🌏 Global (Completo)"
     };
@@ -193,7 +192,7 @@ export default function RelatoriosScreen() {
     const params = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
 
     // Prioriza o nome resolvido (A1)
-    const labelParam = item.report_type === 'INDIVIDUAL' ? 'User' : 'Parâmetro';
+    const labelParam = item.report_type === 'INDIVIDUAL' ? 'Membro' : 'Parâmetro';
     const value = params.userNome || params.paramDisplay || params.value || params.userId || "-";
 
     return (
@@ -288,15 +287,13 @@ export default function RelatoriosScreen() {
                 selectedValue={reportType}
                 onValueChange={(v) => {
                   setReportType(v);
-                  if (v === 'LOTACAO') setTargetValue(Canon.LOTACOES[0]);
-                  else if (v === 'SITUACAO') setTargetValue('ATIVO');
+                  if (v === 'SITUACAO') setTargetValue('ATIVO');
                   else setTargetValue(null);
                 }}
                 style={styles.picker}
                 mode="dropdown"
             >
-                <Picker.Item label="👤 Dossiê do User (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="📍 Por Lotação" value="LOTACAO" />
+                <Picker.Item label="👤 Dossiê do Membro (Individual)" value="INDIVIDUAL" />
                 <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
                 <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
             </Picker>
@@ -314,19 +311,6 @@ export default function RelatoriosScreen() {
              </TouchableOpacity>
           )}
 
-          {reportType === 'LOTACAO' && (
-             <View style={styles.pickerContainer}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    {Canon.LOTACOES.map((opt) => (
-                      <Picker.Item key={opt} label={opt} value={opt} />
-                    ))}
-                </Picker>
-             </View>
-          )}
 
           {reportType === 'SITUACAO' && (
              <View style={styles.pickerContainer}>

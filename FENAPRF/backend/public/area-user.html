@@ -23,7 +23,6 @@
   <script src="/shared/repasse.constants.js"></script>
   <script src="/js/area-user/jogos.js"></script>
   <script src="/js/area-user/publicacoes.js"></script>
-  <script src="/js/area-user/repasse.js"></script>
   <script src="/js/area-user/notificacoes.js"></script>
   <script src="/js/area-user/assembleia-utils.js"></script>
   <script src="/js/area-user/assembleias.js"></script>
@@ -46,13 +45,12 @@
 
         <div class="af-sidebar-nav">
           <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
-          <button class="af-nav-item" data-target="sec-users">👥 Usuários</button>
+          <button class="af-nav-item" data-target="sec-users">👥 Membros</button>
           <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
           <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
           <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
           <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
           <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" style="display:none;">📰 Notícias</button>
-          <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;">💱 Repasse</button>
           <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
           <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;">📊 Relatórios</button>
           <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
@@ -106,9 +104,6 @@
           </div>
         </section>
 
-        <section id="sec-repasse" class="af-section" style="display:none;">
-          <!-- Conteúdo carregado via JS -->
-        </section>
 
         <section id="sec-noticias" class="af-section" style="display:none;">
           <!-- Conteúdo carregado via NoticiasAdmin -->
@@ -152,15 +147,14 @@
                   <div class="field-group">
                       <label style="font-weight: bold; color: #333;">Tipo de Relatório</label>
                       <select id="relatorio-tipo" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
-                          <option value="INDIVIDUAL">Dossiê do Usuário (Individual)</option>
-                          <option value="LOTACAO">Distribuição por Lotação</option>
+                          <option value="INDIVIDUAL">Dossiê do Membro (Individual)</option>
                           <option value="SITUACAO">Distribuição por Situação Funcional</option>
                           <option value="GLOBAL">Global (Completo)</option>
                       </select>
                   </div>
 
                   <div id="relatorio-param-container" class="field-group" style="margin-top: 20px;">
-                      <label id="relatorio-param-label" style="font-weight: bold; color: var(--texto-claro);">Usuário</label>
+                      <label id="relatorio-param-label" style="font-weight: bold; color: var(--texto-claro);">Membro</label>
 
                       <div id="relatorio-user-wrapper">
                           <input type="text" id="relatorio-user-search" placeholder="Buscar por nome ou CPF..." style="padding: 12px; border-radius: 8px;" />
@@ -169,14 +163,6 @@
                           </select>
                       </div>
 
-                      <select id="relatorio-lotacao-select" style="display: none; padding: 12px; border-radius: 8px;">
-                          <option value="SEDE">SEDE</option>
-                          <option value="DEL 01 - Viana">DEL 01 - Viana</option>
-                          <option value="DEL 02 - Serra">DEL 02 - Serra</option>
-                          <option value="DEL 03 - Guarapari">DEL 03 - Guarapari</option>
-                          <option value="DEL 04 - Linhares">DEL 04 - Linhares</option>
-                          <option value="NENHUMA">NENHUMA</option>
-                      </select>
 
                       <select id="relatorio-situacao-select" style="display: none; padding: 12px; border-radius: 8px;">
                           <option value="ATIVO">ATIVO</option>
@@ -214,32 +200,23 @@
           <div class="section-card">
               <div class="af-standard-header">
                   <h2>📢 Notificações Push</h2>
-                  <p class="section-subtitle">Envie mensagens para todos os users com o app instalado.</p>
+                  <p class="section-subtitle">Envie mensagens para todos os membros com o app instalado.</p>
               </div>
 
               <div class="form-container" style="max-width: 600px; margin: 20px auto 0 auto;">
                   <div class="field-group">
                       <label>Público de Destino</label>
                       <select id="push-target-type">
-                          <option value="ALL">Todos os users com app</option>
+                          <option value="ALL">Todos os membros com app</option>
                           <option value="ATIVOS">Apenas ATIVOS</option>
                           <option value="VETERANOS">Veteranos / Pensionistas</option>
-                          <option value="LOTACAO">Por Lotação (somente ativos)</option>
                           <option value="JOGOS">Inscritos nos Jogos</option>
-                          <option value="USER">Especificar um Usuário</option>
+                          <option value="USER">Especificar um Membro</option>
                       </select>
                   </div>
 
                   <div id="push-target-value-container" class="field-group" style="margin-top: 15px; display: none;">
                       <label id="push-target-value-label">Valor do Filtro</label>
-
-                      <select id="push-target-lotacao" style="display: none;">
-                          <option value="SEDE">SEDE</option>
-                          <option value="1ª DEL (Viana)">1ª DEL (Viana)</option>
-                          <option value="2ª DEL (Serra)">2ª DEL (Serra)</option>
-                          <option value="3ª DEL (Guarapari)">3ª DEL (Guarapari)</option>
-                          <option value="4ª DEL (Linhares)">4ª DEL (Linhares)</option>
-                      </select>
 
                       <div id="push-target-user-wrapper" style="display: none;">
                           <input type="text" id="push-target-user-search" placeholder="Buscar por nome ou CPF..." inputmode="search" autocomplete="off" />
@@ -278,11 +255,11 @@
     </div>
   </div>
 
-  <!-- Modal de Edição de Usuário -->
+  <!-- Modal de Edição de Membro -->
   <div id="modal-editar-user" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modal-titulo">Editar Usuário</h2>
+        <h2 id="modal-titulo">Editar Membro</h2>
         <button type="button" class="modal-close" onclick="document.getElementById('modal-editar-user').style.display='none'">×</button>
       </div>
       <div class="modal-body" id="modal-corpo">

@@ -27,7 +27,7 @@ const NAV_ITEMS = [
     screen: 'Noticias', // Tela a ser criada
   },
   {
-    label: 'Buscar Users',
+    label: 'Buscar Membros',
     icon: 'account-search-outline',
     screen: 'Users',
   },
@@ -38,22 +38,10 @@ const NAV_ITEMS = [
   },
 ];
 
-const GESTAO_ITEMS = [
-  {
-    label: 'Repasse por Localidade',
-    icon: 'cash-multiple',
-    screen: 'Repasse',
-  },
-];
-
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { user } = useAuth();
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
 
   const displayedItems = [...NAV_ITEMS];
-  if (ehGestao) {
-    displayedItems.push(...GESTAO_ITEMS);
-  }
 
   const situacao = normalizeSituacaoFuncional(user?.situacao || '');
   const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
@@ -80,7 +68,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              {(user?.name || 'User').split(' ')[0]}
+              {(user?.name || 'Membro').split(' ')[0]}
             </Text>
             <Text style={styles.userProfile}>{perfil}</Text>
 

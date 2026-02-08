@@ -37,21 +37,52 @@ export const PERFIL_ACESSO = {
 
 export type PerfilAcesso = typeof PERFIL_ACESSO[keyof typeof PERFIL_ACESSO];
 
-// 4. Lotações Padronizadas
-export const LOTACOES_REPASSE = [
-  "SEDE",
-  "DEL 01 - Viana",
-  "DEL 02 - Serra",
-  "DEL 03 - Guarapari",
-  "DEL 04 - Linhares"
-] as const;
+export const UF_NOME: Record<string, string> = {
+    'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
+    'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
+    'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
+    'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí',
+    'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul',
+    'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo',
+    'SE': 'Sergipe', 'TO': 'Tocantins', 'BR': 'Brasil'
+};
 
-export const LOTACOES = [
-  ...LOTACOES_REPASSE,
-  "NENHUMA"
-] as const;
+export const CARGOS_CONSELHO = [
+  "Presidente",
+  "Vice-Presidente",
+  "Delegado Representante",
+  "Delegado Substituto",
+];
 
-export type Lotacao = typeof LOTACOES[number];
+export const CARGOS_DIRETORIA = [
+  "Presidente da FENAPRF",
+  "Vice-Presidente da FENAPRF",
+  "Diretor de Secretaria",
+  "Diretor de Secretaria Substituto",
+  "Diretor de Finanças",
+  "Diretor de Finanças Substituto",
+  "Diretor de Relações de Trabalho e e Formação Sindical",
+  "Diretor de Relações de Trabalho e e Formação Sindical Substituto",
+  "Diretor Jurídico",
+  "Diretor Jurídico Substituto",
+  "Diretor de Assuntos Institucionais",
+  "Diretor de Assuntos Institucionais Substituto",
+  "Diretor de Comunicação e Divulgação",
+  "Diretor de Comunicação e Divulgação Substituto",
+  "Diretor de Direitos Humanos e Políticas Sociais",
+  "Diretor de Direitos Humanos e Políticas Sociais Substituto",
+];
+
+export const FILTROS_MEMBROS = [
+  { value: "PADRAO", label: "Exibição padrão (Diretoria + Conselheiros por UF)" },
+  { value: "DIRETORIA", label: "Apenas Diretoria" },
+  { value: "PRESIDENTES", label: "Apenas Presidentes" },
+  { value: "VICES", label: "Apenas Vices" },
+  { value: "DR", label: "Delegados Representantes (DR)" },
+  { value: "DS", label: "Delegados Substitutos (DS)" },
+  { value: "UF", label: "Filtrar por UF" },
+  { value: "ADMIN_COLAB", label: "Admin/Colaborador" },
+];
 
 // Mapeamento para labels de exibição
 export const LABELS: Record<string, string> = {
@@ -118,27 +149,6 @@ export function normalizeEstadoCadastro(val: string | null | undefined): EstadoC
 }
 
 /**
- * Normaliza a Lotação.
- */
-export function normalizeLotacao(val: string | null | undefined): string {
-  const s = slugify(val);
-  if (!s || s === 'NENHUMA') return 'NENHUMA';
-
-  for (const lot of LOTACOES) {
-    if (slugify(lot) === s) return lot;
-  }
-
-  // Fallbacks por keyword
-  if (s.includes('VIANA')) return "DEL 01 - Viana";
-  if (s.includes('SERRA')) return "DEL 02 - Serra";
-  if (s.includes('GUARAPARI')) return "DEL 03 - Guarapari";
-  if (s.includes('LINHARES')) return "DEL 04 - Linhares";
-  if (s.includes('SEDE')) return "SEDE";
-
-  return 'SEDE'; // Fallback seguro
-}
-
-/**
  * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
  * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
  */
@@ -153,4 +163,92 @@ export function normalizeNome(input?: string | null): string | null {
 
   // 2) Title Case por "palavra", preservando separadores: espaço, hífen e apóstrofo
   return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
+}
+
+export function normalizeCargo(raw?: string | null): string {
+  const s = (raw || "").toString().trim();
+  if (!s) return "";
+  const lower = s.toLowerCase();
+
+  const map = new Map([
+    ["presidente", "Presidente"],
+    ["vice-presidente", "Vice-Presidente"],
+    ["delegado representante", "Delegado Representante"],
+    ["delegado substituto", "Delegado Substituto"],
+  ]);
+
+  return map.get(lower) || s;
+}
+
+export function tituloCargoUf({ perfil_acesso, cargo, uf }: { perfil_acesso?: string, cargo?: string, uf?: string }): string {
+    const perfil = (perfil_acesso || "").toUpperCase();
+    const c = normalizeCargo(cargo);
+    const ufSigla = (uf || "").toUpperCase();
+    const ufNome = UF_NOME[ufSigla] || ufSigla || "—";
+
+    if (perfil === PERFIL_ACESSO.CONSELHEIRO) {
+      return c
+        ? `${c} do Sindicato de ${ufNome}`
+        : `Conselheiro do Sindicato de ${ufNome}`;
+    }
+    if (perfil === PERFIL_ACESSO.DIRETORIA) return c || "Diretoria";
+    if (perfil === PERFIL_ACESSO.COLABORADOR) return "Colaborador";
+    if (perfil === PERFIL_ACESSO.ADMIN) return c || "Administrador";
+    return c || "Membro";
+}
+
+export function cargoRankDiretoria(cargo?: string | null): number {
+  const c = normalizeCargo(cargo);
+  const idx = CARGOS_DIRETORIA.findIndex((x) => x.toLowerCase() === String(c || "").toLowerCase());
+  return idx === -1 ? 999 : idx;
+}
+
+export function cargoRankConselho(cargo?: string | null): number {
+  const c = normalizeCargo(cargo);
+  const idx = CARGOS_CONSELHO.findIndex((x) => x.toLowerCase() === String(c || "").toLowerCase());
+  return idx === -1 ? 999 : idx;
+}
+
+function byName(a: any, b: any): number {
+  return String(a?.name || "").localeCompare(String(b?.name || ""), "pt-BR", { sensitivity: "base" });
+}
+
+export function ordenarMembros(membros: any[]): any[] {
+  const list = Array.isArray(membros) ? [...membros] : [];
+
+  const diretoria = list
+    .filter((m) => String(m?.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.DIRETORIA)
+    .sort((a, b) => {
+      const ra = cargoRankDiretoria(a?.cargo);
+      const rb = cargoRankDiretoria(b?.cargo);
+      if (ra !== rb) return ra - rb;
+      return byName(a, b);
+    });
+
+  const conselheiros = list
+    .filter((m) => String(m?.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.CONSELHEIRO)
+    .sort((a, b) => {
+      const ufa = String(a?.uf || "").toUpperCase();
+      const ufb = String(b?.uf || "").toUpperCase();
+      if (ufa !== ufb) return ufa.localeCompare(ufb, "pt-BR");
+      const ra = cargoRankConselho(a?.cargo);
+      const rb = cargoRankConselho(b?.cargo);
+      if (ra !== rb) return ra - rb;
+      return byName(a, b);
+    });
+
+  const adminColab = list
+    .filter((m) => [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.COLABORADOR].includes(String(m?.perfil_acesso || "").toUpperCase()))
+    .sort(byName);
+
+  const outros = list
+    .filter(
+      (m) =>
+        ![PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO, PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.COLABORADOR].includes(
+          String(m?.perfil_acesso || "").toUpperCase()
+        )
+    )
+    .sort(byName);
+
+  return [...diretoria, ...conselheiros, ...adminColab, ...outros];
 }

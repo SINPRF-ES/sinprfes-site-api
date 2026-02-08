@@ -79,6 +79,64 @@ export const UFS = [
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
+export const UF_NOME: Record<string, string> = {
+    'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
+    'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
+    'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
+    'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí',
+    'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul',
+    'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo',
+    'SE': 'Sergipe', 'TO': 'Tocantins', 'BR': 'Brasil'
+};
+
+const ROLE_RANK: Record<string, number> = {
+  [ROLES.ADMIN]: 100,
+  [ROLES.DIRETORIA]: 80,
+  [ROLES.COLABORADOR]: 60,
+  [ROLES.CONSELHEIRO]: 40,
+  [ROLES.ORGANIZADOR]: 30,
+  [ROLES.COMUNICADOR]: 30,
+  [ROLES.FUNCIONARIO]: 30,
+};
+
+/**
+ * Normaliza o cargo para exibição.
+ */
+export function normalizeCargo(raw?: string | null): string {
+  const s = (raw || "").toString().trim();
+  if (!s) return "";
+  const lower = s.toLowerCase();
+
+  const map = new Map([
+    ["presidente", "Presidente"],
+    ["vice-presidente", "Vice-Presidente"],
+    ["delegado representante", "Delegado Representante"],
+    ["delegado substituto", "Delegado Substituto"],
+  ]);
+
+  return map.get(lower) || s;
+}
+
+/**
+ * Retorna o título formatado do cargo com a UF.
+ */
+export function tituloCargoUf({ perfil_acesso, cargo, uf }: { perfil_acesso?: string, cargo?: string, uf?: string }): string {
+    const perfil = (perfil_acesso || "").toUpperCase();
+    const c = normalizeCargo(cargo);
+    const ufSigla = (uf || "").toUpperCase();
+    const ufNome = UF_NOME[ufSigla] || ufSigla || "—";
+
+    if (perfil === ROLES.CONSELHEIRO) {
+      return c
+        ? `${c} do Sindicato de ${ufNome}`
+        : `Conselheiro do Sindicato de ${ufNome}`;
+    }
+    if (perfil === ROLES.DIRETORIA) return c || "Diretoria";
+    if (perfil === ROLES.COLABORADOR) return "Colaborador";
+    if (perfil === ROLES.ADMIN) return c || "Administrador";
+    return c || "Membro";
+}
+
 /**
  * Verifica se o perfil tem acesso de gestão (administrativo geral).
  */
@@ -86,6 +144,25 @@ export const isGestao = (perfil?: string | null) => {
   if (!perfil) return false;
   const p = perfil.toUpperCase();
   return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.COLABORADOR].includes(p);
+};
+
+/**
+ * Verifica se o ator pode editar o alvo com base na hierarquia.
+ */
+export const podeEditarPerfil = (perfilAtor?: string | null, perfilAlvo?: string | null) => {
+  if (!perfilAtor) return false;
+  const pAtor = perfilAtor.toUpperCase();
+  const pAlvo = (perfilAlvo || 'CONSELHEIRO').toUpperCase();
+
+  const ehAdminAtor = pAtor === ROLES.ADMIN;
+  if (ehAdminAtor) return true; // Admin edita tudo
+
+  if (!isGestao(pAtor)) return false; // Não gestão não edita ninguém (exceto a si mesmo, tratado na Screen)
+
+  // Gestão edita entre si e abaixo
+  const rankAtor = ROLE_RANK[pAtor] || 0;
+  const rankAlvo = ROLE_RANK[pAlvo] || 0;
+  return rankAtor >= rankAlvo;
 };
 
 /**
