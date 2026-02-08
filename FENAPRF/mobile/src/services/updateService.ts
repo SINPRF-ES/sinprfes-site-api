@@ -182,12 +182,13 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       manifestRuntimeVersion: manifest.runtimeVersion
     };
 
-    // Verificação de APK (Mudanças Nativas: runtimeVersion diferente OU versionCode superior)
-    const hasNewRuntime = manifest.runtimeVersion !== currentRuntimeVersion;
+    // Verificação de APK (Mudanças Nativas: versionCode superior)
+    // Nota: Ignoramos hasNewRuntime se o versionCode for igual para evitar loops de instalação
     const hasNewVersionCode = currentVersionCode < manifest.versionCode;
+    const hasNewRuntime = !!(manifest.runtimeVersion && currentRuntimeVersion && manifest.runtimeVersion !== currentRuntimeVersion);
 
-    if (manifest.apk.enabled && (hasNewVersionCode || hasNewRuntime)) {
-      const isMandatory = currentVersionCode < manifest.apk.minSupportedVersionCode || hasNewRuntime;
+    if (manifest.apk.enabled && hasNewVersionCode) {
+      const isMandatory = currentVersionCode < manifest.apk.minSupportedVersionCode;
 
       const { fileName, apkFile, abi, reason } = resolveApkForDevice(manifest, driveAppFiles.length > 0 ? driveAppFiles : undefined);
 
@@ -202,6 +203,9 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       let apkUrl: string | undefined;
       let apkFileId: string | undefined;
 
+      // Log de depuração com hasNewRuntime para rastro de auditoria
+      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory, abi, fileName, apkUrl, apkFileId, hasNewRuntime });
+
       if (fetchedFromUrl) {
           // Se o manifesto veio da URL, tentamos o APK pela URL também
           apkUrl = UPDATE_MANIFEST_URL.replace('update-manifest.json', fileName!);
@@ -209,8 +213,6 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
           // Se veio do Drive, usamos o ID do arquivo
           apkFileId = apkFile.id;
       }
-
-      logDebug(`${logPrefix}.APK_REQUIRED`, { ...logMeta, isMandatory, abi, fileName, apkUrl, apkFileId });
 
       return {
         hasUpdate: true,

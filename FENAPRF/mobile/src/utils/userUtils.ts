@@ -1,4 +1,7 @@
 // mobile/src/utils/userUtils.ts
+import { normalizeSituacaoFuncional } from './canon';
+
+export { normalizeSituacaoFuncional };
 
 /**
  * Canoniza o ID do user para string numérica, garantindo consistência
