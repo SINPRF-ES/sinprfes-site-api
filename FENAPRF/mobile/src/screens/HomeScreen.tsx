@@ -12,6 +12,7 @@ import type { RootStackParamList } from '../navigation';
 import Badge from '../components/Badge';
 import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { Image } from 'react-native';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -38,7 +39,7 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function HomeScreen({ navigation }: HomeScreenProps) {
+function HomeScreenComponent({ navigation }: HomeScreenProps) {
   const { user } = useAuth();
 
   const displayedItems = [...NAV_ITEMS];
@@ -115,6 +116,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       </View>
     </ScrollView>
     </SafeScreen>
+  );
+}
+
+export default function HomeScreen(props: HomeScreenProps) {
+  return (
+    <ErrorBoundary>
+      <HomeScreenComponent {...props} />
+    </ErrorBoundary>
   );
 }
 
