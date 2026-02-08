@@ -11,8 +11,8 @@ import MembroPerfilCard from '../components/MembroPerfilCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
 import { User } from '../types/user';
-import { toISODate } from '../utils/date';
-import { onlyDigits } from '../shared/format/formatters';
+import { toIsoDateYYYYMMDD } from '../utils/dateNormalize';
+import { onlyDigits, formatData } from '../shared/format/formatters';
 import { isGestao as checkIsGestao, ROLES } from '../utils/userUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { normalizeNome } from '../utils/canon';
@@ -82,7 +82,13 @@ export default function CriarUserScreen({ navigation }: any) {
       if (payload.cep) payload.cep = onlyDigits(payload.cep);
 
       if (payload.data_nascimento) {
-        payload.data_nascimento = toISODate(payload.data_nascimento) || (payload.data_nascimento as any);
+        payload.data_nascimento = toIsoDateYYYYMMDD(payload.data_nascimento.includes('/') ? payload.data_nascimento : formatData(payload.data_nascimento)) || (payload.data_nascimento as any);
+      }
+      if (payload.cargo_mandato_inicio) {
+        payload.cargo_mandato_inicio = toIsoDateYYYYMMDD(payload.cargo_mandato_inicio.includes('/') ? payload.cargo_mandato_inicio : formatData(payload.cargo_mandato_inicio)) || (payload.cargo_mandato_inicio as any);
+      }
+      if (payload.cargo_mandato_fim) {
+        payload.cargo_mandato_fim = toIsoDateYYYYMMDD(payload.cargo_mandato_fim.includes('/') ? payload.cargo_mandato_fim : formatData(payload.cargo_mandato_fim)) || (payload.cargo_mandato_fim as any);
       }
 
       await api.post('/api/users', payload);

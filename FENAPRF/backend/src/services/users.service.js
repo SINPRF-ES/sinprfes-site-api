@@ -262,6 +262,18 @@ async function atualizarUserPorId(id, dados) {
   addCampo("avatar_url", dados.avatar_url);
   addCampo("avatar_public_id", dados.avatar_public_id);
 
+  addCampo("cargo", dados.cargo);
+  if (dados.cargo_mandato_inicio !== undefined) {
+    campos.push(`cargo_mandato_inicio = NULLIF($${idx}, '')::date`);
+    valores.push(dados.cargo_mandato_inicio);
+    idx += 1;
+  }
+  if (dados.cargo_mandato_fim !== undefined) {
+    campos.push(`cargo_mandato_fim = NULLIF($${idx}, '')::date`);
+    valores.push(dados.cargo_mandato_fim);
+    idx += 1;
+  }
+
   addCampo("perfil_acesso2", dados.perfil_acesso2);
   addCampo("cargo2", dados.cargo2);
   addCampo("uf2", dados.uf2);

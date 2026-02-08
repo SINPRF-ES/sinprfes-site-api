@@ -68,7 +68,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              {(user?.name || 'Membro').split(' ')[0]}
+              {String(user?.name || 'Membro').split(' ')[0]}
             </Text>
             <Text style={styles.userProfile}>{perfil}</Text>
 
