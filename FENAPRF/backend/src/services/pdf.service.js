@@ -417,115 +417,6 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
 }
 
 // ------------------------------------------------------------------
-// PDF de Filiação
-// ------------------------------------------------------------------
-
-async function gerarPdfFichaFiliacao(dados) {
-  const codigo = gerarCodigoVerificacao(dados, "FILIACAO");
-
-  const pdfBuffer = await new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      size: "A4",
-      margins: { top: 140, bottom: 70, left: 70, right: 70 },
-    });
-
-    const chunks = [];
-    doc.on("data", (chunk) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
-
-    // Conteúdo da ficha de filiação (mantido do seu projeto original)
-
-    doc.moveDown(2);
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(16)
-      .text("Ficha de Filiação", { align: "center" });
-    doc.moveDown(1);
-
-    doc
-      .font("Helvetica")
-      .fontSize(11)
-      .text(
-        "Eu, abaixo assinado(a), venho por meio desta, requerer minha filiação ao Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo – FENAPRF, autorizando o desconto em folha da contribuição sindical, conforme legislação vigente e normas internas da entidade.",
-        { align: "justify" }
-      );
-    doc.moveDown(1);
-
-    linha(doc);
-
-    doc.font("Helvetica-Bold").fontSize(12).text("Dados do User:");
-    doc.moveDown(0.5);
-    doc.font("Helvetica").fontSize(11);
-
-    doc.text(`Nome: ${dados.nome || ""}`);
-    doc.text(`CPF: ${dados.cpf || ""}`);
-    doc.text(`Matrícula: ${dados.matricula || ""}`);
-    doc.text(`Lotação: ${dados.lotacao || ""}`);
-    doc.text(`E-mail: ${dados.email || ""}`);
-    doc.text(`Telefone 1: ${dados.telefone1 || ""}`);
-    doc.text(`Telefone 2: ${dados.telefone2 || ""}`);
-    doc.moveDown(1);
-
-    linha(doc);
-
-    doc.font("Helvetica-Bold").fontSize(12).text("Endereço Residencial:");
-    doc.moveDown(0.5);
-    doc.font("Helvetica").fontSize(11);
-
-    doc.text(
-      `Endereço: ${dados.logradouro || ""}, nº ${dados.numero || ""} ${
-        dados.complemento || ""
-      }`
-    );
-    doc.text(`Bairro: ${dados.bairro || ""}`);
-    doc.text(`Cidade: ${dados.cidade || ""} - UF: ${dados.uf || ""}`);
-    doc.text(`CEP: ${dados.cep || ""}`);
-    doc.moveDown(1);
-
-    linha(doc);
-
-    doc
-      .font("Helvetica")
-      .fontSize(11)
-      .text(
-        "Declaro estar ciente e de acordo com o Estatuto Social do FENAPRF, bem como com as normas internas relativas à contribuição e aos direitos e deveres dos users.",
-        { align: "justify" }
-      );
-    doc.moveDown(2);
-
-    const hoje = new Date();
-    const dia = String(hoje.getDate()).padStart(2, "0");
-    const mes = String(hoje.getMonth() + 1).padStart(2, "0");
-    const ano = hoje.getFullYear();
-    const dataStr = `${dia}/${mes}/${ano}`;
-
-    doc.text(`Vitória/ES, ${dataStr}.`);
-    doc.moveDown(3);
-
-    doc.text("_____________________________________________", {
-      align: "center",
-    });
-    doc.text("Assinatura do User", { align: "center" });
-
-    doc.moveDown(2);
-    doc
-      .fontSize(8)
-      .fillColor("#666")
-      .text(
-        `Documento gerado eletronicamente. Código de verificação: ${codigo}`
-      );
-
-    doc.end();
-  });
-
-  return await aplicarLayoutInstitucional(pdfBuffer, {
-    codigoVerificacao: codigo,
-    tipoDocumento: "Ficha de Filiação",
-  });
-}
-
-// ------------------------------------------------------------------
 // PDF de Ressarcimento
 // ------------------------------------------------------------------
 
@@ -913,7 +804,6 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.font("Helvetica").fontSize(11);
     doc.text(`Nome: ${user.nome || ""}`);
     doc.text(`CPF: ${podeVerCpf ? formatarCPF(user.cpf) : "***.***.***-**"}`);
-    doc.text(`Matrícula (SIAPE): ${user.siape || "-"}`);
     doc.text(`Sexo: ${user.sexo === 'M' ? 'Masculino' : (user.sexo === 'F' ? 'Feminino' : '-')}`);
     doc.text(`Data de Nascimento: ${formatDateSafe(user.data_nascimento)}`);
     doc.moveDown(1);
@@ -923,7 +813,6 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.font("Helvetica-Bold").fontSize(12).text("2. Dados Funcionais");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Lotação: ${user.lotacao || "SEDE"}`);
     doc.text(`Situação Funcional: ${user.situacao || "ATIVO"}`);
     doc.moveDown(1);
     linha(doc);
@@ -989,78 +878,14 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
     doc.on("error", reject);
 
     doc.moveDown(2);
-    doc.font("Helvetica-Bold").fontSize(16).text(titulo, { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(16).text(sanitizeForPdf(titulo), { align: "center" });
     doc.moveDown(1);
 
-    // Bloco "Resumo da Lotação" (LAYOUT TIPO DOSSIÊ - B1)
-    if (dados.repasse) {
-        doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Lotação");
-        doc.moveDown(0.5);
-
-        const r = dados.repasse;
-        const comp = r.competencia
-            ? `${mesesPtBr[r.competencia.month - 1]}/${r.competencia.year}`
-            : "—";
-        const hoje = new Date();
-        const dataHoje = `${mesesPtBr[hoje.getMonth()]}/${hoje.getFullYear()}`;
-
-        doc.font("Helvetica").fontSize(11);
-        doc.text(`Efetivo total: ${r.prfTotal !== null ? String(r.prfTotal) : "Não informado"}`, { align: 'left' });
-        doc.text(`Users cadastrados: ${r.usersAtivos !== null ? String(r.usersAtivos) : "—"}`, { align: 'left' });
-        doc.text(`Índice de sindicalização: ${r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—"}`, { align: 'left' });
-        doc.text(`Base do efetivo: ${comp}`, { align: 'left' });
-        doc.text(`Relatório gerado em: ${dataHoje}`, { align: 'left' });
-
-        doc.moveDown(1);
-        linha(doc);
-    }
-
-    if (!dados.repasse && !dados.repasseBreakdown) {
-        doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
-        doc.moveDown(0.5);
-        doc.font("Helvetica").fontSize(12);
-        doc.text(`Total de users: ${dados.total}`);
-        doc.moveDown(1);
-    } else if (dados.repasseBreakdown) {
-        // ESPECIAL: Relatório por Situação ATIVO (LAYOUT TIPO DOSSIÊ - B1)
-        doc.font("Helvetica-Bold").fontSize(14).text("Resumo Global do Efetivo (Ativos)");
-        doc.moveDown(0.5);
-
-        const totalPrf = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.prfTotal || 0), 0);
-        const totalUsersAtivos = dados.repasseBreakdown.reduce((acc, curr) => acc + (curr.usersAtivos || 0), 0);
-        const percentualGlobal = totalPrf > 0 ? (totalUsersAtivos / totalPrf) * 100 : 0;
-
-        doc.font("Helvetica").fontSize(11);
-        doc.text(`Efetivo total: ${totalPrf}`, { align: 'left' });
-        doc.text(`Users cadastrados: ${totalUsersAtivos}`, { align: 'left' });
-        doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
-        doc.text(`Base do efetivo: Dados por lotação (ver tabela abaixo)`, { align: 'left' });
-        doc.moveDown(1);
-
-        // Tabela por Lotação
-        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Efetivo PRF)");
-        doc.moveDown(0.5);
-
-        const headers = ["Lotação", "Efetivo", "Users", "%", "Base"];
-        const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-        const tableRows = dados.repasseBreakdown.map(r => [
-            r.lotacao,
-            r.prfTotal !== null ? String(r.prfTotal) : "—",
-            String(r.usersAtivos),
-            r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
-            r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—"
-        ]);
-
-        drawTableWithPagination(doc, {
-            headers,
-            rows: tableRows,
-            rowHeight: 22
-        });
-
-        doc.moveDown(1);
-        linha(doc);
-    }
+    doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(12);
+    doc.text(`Total de membros: ${dados.total}`);
+    doc.moveDown(1);
 
     drawDistribuicoes(doc, dados);
 
@@ -1102,40 +927,12 @@ async function gerarPdfRelatorioGlobal(dados) {
     // -------------------------------------------------------------------------
     // SEÇÃO 1: ATIVO
     // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. USERS ATIVOS");
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. MEMBROS ATIVOS");
     doc.fillColor("#000").moveDown(0.5);
 
     const a = dados.ativo;
-    const totalPrf = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.prfTotal || 0), 0);
-    const totalUsersAtivos = a.repasseBreakdown.reduce((acc, curr) => acc + (curr.usersAtivos || 0), 0);
-    const percentualGlobal = totalPrf > 0 ? (totalUsersAtivos / totalPrf) * 100 : 0;
-
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Efetivo total (PRF): ${totalPrf}`, { align: 'left' });
-    doc.text(`Users ativos: ${totalUsersAtivos}`, { align: 'left' });
-    doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
-    doc.moveDown(1);
-
-    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Lotação (Ativos)");
-    doc.moveDown(0.5);
-
-    const headers = ["Lotação", "Efetivo", "Users", "%", "Base"];
-    const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-    const tableRows = a.repasseBreakdown.map(r => [
-        r.lotacao,
-        r.prfTotal !== null ? String(r.prfTotal) : "—",
-        String(r.usersAtivos),
-        r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—",
-        r.competencia ? `${mesesAbrev[r.competencia.month - 1]}/${String(r.competencia.year).slice(-2)}` : "—"
-    ]);
-
-    drawTableWithPagination(doc, {
-        headers,
-        rows: tableRows,
-        rowHeight: 22
-    });
-
+    doc.text(`Total de ativos: ${a.total}`, { align: 'left' });
     doc.moveDown(1);
     drawDistribuicoes(doc, a);
 
@@ -1175,7 +972,6 @@ async function gerarPdfRelatorioGlobal(dados) {
 }
 
 module.exports = {
-  gerarPdfFichaFiliacao,
   gerarPdfRessarcimento,
   gerarPdfRelatorioAssembleia,
   gerarPdfDossieUser,

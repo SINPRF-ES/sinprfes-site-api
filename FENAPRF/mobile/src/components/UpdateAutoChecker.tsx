@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated, DeviceEventEmitter } from 'react-native';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated, DeviceEventEmitter, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkUpdates, applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
 import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
@@ -24,81 +24,88 @@ const UpdateAutoChecker: React.FC = () => {
 
   const { autenticado, token, bloqueadoPorBiometria } = useAuth();
   const prevAutenticado = useRef(autenticado);
-  const navigation = useNavigation<any>();
+  const appState = useRef(AppState.currentState);
+
+  const performAutoCheck = async (reason: 'login' | 'interval' | 'foreground' | 'manual' = 'interval') => {
+    try {
+      if (!autenticado || !token || bloqueadoPorBiometria) return;
+
+      const lastCheck = await carregarUltimoCheckUpdate();
+      const now = Date.now();
+
+      // Se for gatilho de login, ignoramos o throttle de 6h
+      if (reason !== 'login' && (now - lastCheck < CHECK_INTERVAL)) {
+        logDebug('UpdateCheck.auto.skip', { reason: 'throttled', trigger: reason });
+        return;
+      }
+
+      logDebug(`UpdateCheck.auto.${reason}_start`, { timestamp: new Date().toISOString() });
+      await reportUpdateAutoCheck(`${reason}_start`);
+
+      const result = await checkUpdates('auto');
+
+      if (result) {
+          await reportUpdateAutoCheck(result.hasUpdate ? 'success' : 'no_update', {
+              hasUpdate: result.hasUpdate,
+              type: result.type,
+              trigger: reason,
+              isMandatory: result.isMandatory,
+              error: result.error
+          });
+
+          if (result.hasUpdate) {
+              setUpdateResult(result);
+
+              if (result.isMandatory || reason === 'login' || reason === 'manual') {
+                  setShowModal(true);
+                  await AsyncStorage.removeItem('@fenaprf/ota_update_available');
+              } else {
+                  await AsyncStorage.setItem('@fenaprf/ota_update_available', JSON.stringify(result));
+                  DeviceEventEmitter.emit('ota_update_detected', result);
+              }
+          } else {
+              await AsyncStorage.removeItem('@fenaprf/ota_update_available');
+              DeviceEventEmitter.emit('ota_update_detected', null);
+          }
+      }
+
+      await salvarUltimoCheckUpdate();
+    } catch (error: any) {
+      logDebug('UpdateCheck.auto.error', { message: error.message });
+      await reportUpdateAutoCheck('error', { message: error.message });
+    }
+  };
 
   useEffect(() => {
-    // Só roda se houver sessão válida e não estiver bloqueado por biometria
-    if (!autenticado || !token || bloqueadoPorBiometria) {
-      if (!autenticado || !token) {
-        logDebug('UpdateCheck.auto.skip', { reason: 'noToken' });
-      }
-      prevAutenticado.current = autenticado;
-      return;
-    }
-
     const isLoginTrigger = !prevAutenticado.current && autenticado;
     prevAutenticado.current = autenticado;
 
-    if (isLoginTrigger) {
-      logDebug('UpdateCheck.auto.loginTriggerDetected', { timestamp: new Date().toISOString() });
+    if (isLoginTrigger && token && !bloqueadoPorBiometria) {
+      const timer = setTimeout(() => performAutoCheck('login'), 1000);
+      return () => clearTimeout(timer);
     }
+  }, [autenticado, token, bloqueadoPorBiometria]);
 
-    const performAutoCheck = async () => {
-      try {
-        const lastCheck = await carregarUltimoCheckUpdate();
-        const now = Date.now();
+  useEffect(() => {
+    if (!autenticado || !token || bloqueadoPorBiometria) return;
 
-        // Se for gatilho de login, ignoramos o throttle de 6h para garantir que o usuário
-        // veja atualizações críticas logo ao entrar no app.
-        if (!isLoginTrigger && (now - lastCheck < CHECK_INTERVAL)) {
-          logDebug('UpdateCheck.auto.skip', { reason: 'throttled' });
-          return;
-        }
+    // Checagem periódica a cada 1 hora (o performAutoCheck filtrará pelo CHECK_INTERVAL de 6h)
+    const interval = setInterval(() => performAutoCheck('interval'), 60 * 60 * 1000);
 
-        await reportUpdateAutoCheck(isLoginTrigger ? 'login_start' : 'periodic_start');
-
-        // checkUpdates('auto') já lida com logDebug('UpdateCheck.auto.*') internamente
-        const result = await checkUpdates('auto');
-
-        if (result) {
-            await reportUpdateAutoCheck(result.hasUpdate ? 'success' : 'no_update', {
-                hasUpdate: result.hasUpdate,
-                type: result.type,
-                isMandatory: result.isMandatory,
-                error: result.error
-            });
-
-            if (result.hasUpdate) {
-                setUpdateResult(result);
-
-                // No LOGIN, sempre mostramos o modal amigável (mesmo se opcional).
-                // Em checks de background periódicos, usamos o banner persistente na Home para opcionais.
-                if (result.isMandatory || isLoginTrigger) {
-                    setShowModal(true);
-                    // Limpar banner se o modal for exibido
-                    await AsyncStorage.removeItem('@fenaprf/ota_update_available');
-                } else {
-                    // Salvar para o banner na Home
-                    await AsyncStorage.setItem('@fenaprf/ota_update_available', JSON.stringify(result));
-                    DeviceEventEmitter.emit('ota_update_detected', result);
-                }
-            } else {
-                // Se não há update, garantir que o banner não apareça (ex: update aplicado ou expirado)
-                await AsyncStorage.removeItem('@fenaprf/ota_update_available');
-                DeviceEventEmitter.emit('ota_update_detected', null);
-            }
-        }
-
-        await salvarUltimoCheckUpdate();
-      } catch (error: any) {
-        logDebug('UpdateCheck.auto.error', { message: error.message });
-        await reportUpdateAutoCheck('error', { message: error.message });
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        performAutoCheck('foreground');
       }
-    };
+      appState.current = nextAppState;
+    });
 
-    const delay = isLoginTrigger ? 1000 : 5000;
-    const timer = setTimeout(performAutoCheck, delay);
-    return () => clearTimeout(timer);
+    // Executa uma vez no mount se já logado
+    performAutoCheck('interval');
+
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
   }, [autenticado, token, bloqueadoPorBiometria]);
 
   // Bloquear botão voltar se for obrigatório

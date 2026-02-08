@@ -46,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </nav>
 
           <div class="header-actions">
-            <a href="/filiese.html" class="btn btn-outline">Filie-se</a>
             <!-- 🔽 aqui é a mudança: agora aponta direto para a Página Inicial -->
             <a href="/area-user.html" class="btn btn-primary">Página Inicial</a>
           </div>

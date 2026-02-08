@@ -70,33 +70,32 @@ exports.generateReport = async (req, res) => {
     if (type === "INDIVIDUAL") {
       // Contrato: INDIVIDUAL => { userId }
       const { userId } = params;
-      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório para relatório individual." });
+      if (!userId) return res.status(400).json({ success: false, message: "ID do membro é obrigatório para relatório individual." });
 
       const dados = await reportsService.buscarDadosDossie(userId);
-      if (!dados) return res.status(404).json({ success: false, message: "User não encontrado." });
+      if (!dados) return res.status(404).json({ success: false, message: "Membro não encontrado." });
 
       // Resolver nome para exibição no histórico (A1)
       params.userNome = dados.nome;
       params.paramDisplay = dados.nome; // Campo redundante para robustez
 
-      reportTitle = `Dossiê do User - ${dados.nome}`;
+      reportTitle = `Dossiê do Membro - ${dados.nome}`;
 
       const slug = gerarSlugNome(dados.nome);
-      filename = slug ? `dossie_${slug}.pdf` : `dossie_user_${dados.id}.pdf`;
+      filename = slug ? `dossie_${slug}.pdf` : `dossie_membro_${dados.id}.pdf`;
 
       // Regra de permissão para CPF no PDF
       const podeVerCpf = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase());
       pdfBuffer = await pdfService.gerarPdfDossieUser(dados, { podeVerCpf });
 
-    } else if (["LOTACAO", "SITUACAO"].includes(type)) {
-      // Contrato: LOTACAO/SITUACAO => { value }
+    } else if (["SITUACAO"].includes(type)) {
+      // Contrato: SITUACAO => { value }
       const { value } = params;
       if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório." });
 
       const dados = await reportsService.buscarDadosAgregados(type, value);
 
       const titulos = {
-        LOTACAO: `Relatório por Lotação: ${value}`,
         SITUACAO: `Relatório por Situação Funcional: ${value}`
       };
 
@@ -151,21 +150,15 @@ exports.previewReport = async (req, res) => {
 
     if (type === "INDIVIDUAL") {
       const { userId } = params;
-      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório." });
+      if (!userId) return res.status(400).json({ success: false, message: "ID do membro é obrigatório." });
       data = await reportsService.buscarDadosDossie(userId);
-      if (!data) return res.status(404).json({ success: false, message: "User não encontrado." });
-    } else if (["LOTACAO", "SITUACAO"].includes(type)) {
+      if (!data) return res.status(404).json({ success: false, message: "Membro não encontrado." });
+    } else if (["SITUACAO"].includes(type)) {
       const { value } = params;
       if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório." });
       data = await reportsService.buscarDadosAgregados(type, value);
-      if (data.repasse && data.repasse.competencia) {
-        baseCompetencia = `${String(data.repasse.competencia.month).padStart(2, '0')}/${data.repasse.competencia.year}`;
-      }
     } else if (type === "GLOBAL") {
       data = await reportsService.buscarDadosGlobal();
-      if (data.ativo && data.ativo.repasse && data.ativo.repasse.competencia) {
-        baseCompetencia = `${String(data.ativo.repasse.competencia.month).padStart(2, '0')}/${data.ativo.repasse.competencia.year}`;
-      }
     } else {
       return res.status(400).json({ success: false, message: "Tipo de relatório inválido." });
     }
@@ -179,9 +172,7 @@ exports.previewReport = async (req, res) => {
         items: [
           { label: "Nome", value: data.nome },
           { label: "CPF", value: data.cpf ? (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase()) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
-          { label: "Matrícula (SIAPE)", value: data.siape || "-" },
           { label: "Sexo", value: data.sexo === 'M' ? '♂️ Masculino' : (data.sexo === 'F' ? '♀️ Feminino' : '-') },
-          { label: "Lotação", value: data.lotacao || "-" },
           { label: "Situação", value: data.situacao || "-" }
         ]
       });
@@ -195,41 +186,6 @@ exports.previewReport = async (req, res) => {
           ]
         });
       }
-    } else if (type === "LOTACAO") {
-      sections.push({
-        kind: "kv",
-        title: "Resumo da Unidade",
-        items: [
-          { label: "Total de Users (Ativos)", value: data.total },
-          { label: "Homens", value: `${data.masc} (${((data.masc / data.total) * 100).toFixed(1)}%)` },
-          { label: "Mulheres", value: `${data.fem} (${((data.fem / data.total) * 100).toFixed(1)}%)` }
-        ]
-      });
-
-      if (data.repasse) {
-        sections.push({
-          kind: "kv",
-          title: "Dados do Repasse",
-          items: [
-            { label: "PRF Total (Efetivo)", value: data.repasse.prfTotal || "Não informado" },
-            { label: "Percentual de Filiação", value: data.repasse.percentual ? `${data.repasse.percentual.toFixed(1)}%` : "N/A" }
-          ]
-        });
-      }
-
-      sections.push({
-        kind: "table",
-        title: "Distribuição por Idade",
-        columns: ["Faixa Etária", "Quantidade"],
-        rows: [
-          ["20-29 anos", data.range_20_29],
-          ["30-39 anos", data.range_30_39],
-          ["40-49 anos", data.range_40_49],
-          ["50-59 anos", data.range_50_59],
-          ["60+ anos", data.range_60_plus],
-          ["Não informada", data.idade_desconhecida]
-        ]
-      });
     } else if (type === "SITUACAO") {
       sections.push({
         kind: "kv",
@@ -240,20 +196,6 @@ exports.previewReport = async (req, res) => {
           { label: "Feminino", value: data.fem }
         ]
       });
-
-      if (params.value === "ATIVO" && data.repasseBreakdown) {
-        sections.push({
-          kind: "table",
-          title: "Distribuição por Lotação",
-          columns: ["Lotação", "Users", "Efetivo (PRF)", "%"],
-          rows: data.repasseBreakdown.map(b => [
-            b.lotacao,
-            b.usersAtivos,
-            b.prfTotal || "-",
-            b.percentual ? `${b.percentual.toFixed(1)}%` : "-"
-          ])
-        });
-      }
     } else if (type === "GLOBAL") {
       sections.push({
         kind: "kv",

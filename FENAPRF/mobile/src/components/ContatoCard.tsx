@@ -135,12 +135,13 @@ const ContatoCard: React.FC<Props> = ({
       />
       <Text style={styles.label}>Email</Text>
       <TextInput
-        style={styles.input}
+        style={isEditing ? styles.input : styles.inputDisabled}
         value={user?.email || ''}
         onChangeText={(text) => setUser(f => f ? { ...f, email: text } : null)}
         placeholder="seu@email.com"
         keyboardType="email-address"
         autoCapitalize="none"
+        editable={isEditing}
         accessibilityLabel="Email"
         textContentType="emailAddress"
         autoComplete="email"

@@ -22,7 +22,6 @@ export interface User {
   cidade?: string | null;
   uf?: string | null;
   uf_endereco?: string | null;
-  lotacao?: string | null;
   data_nascimento?: string | null;
   sexo?: 'M' | 'F' | null;
   cargo?: string | null;
@@ -42,7 +41,6 @@ export interface User {
 
   // Campos de compatibilidade
   nome?: string;
-  siape?: string | null;
   email1?: string;
   email2?: string | null;
   situacao_funcional?: string | null;

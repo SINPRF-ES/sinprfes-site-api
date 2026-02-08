@@ -44,21 +44,16 @@
         const label = document.getElementById('relatorio-param-label');
 
         const userWrapper = document.getElementById('relatorio-user-wrapper');
-        const lotacaoSelect = document.getElementById('relatorio-lotacao-select');
         const situacaoSelect = document.getElementById('relatorio-situacao-select');
 
         // Esconde tudo
         userWrapper.style.display = 'none';
-        lotacaoSelect.style.display = 'none';
         situacaoSelect.style.display = 'none';
         document.getElementById('relatorio-param-container').style.display = 'block';
 
         if (tipo === 'INDIVIDUAL') {
-            label.textContent = 'User:';
+            label.textContent = 'Membro:';
             userWrapper.style.display = 'block';
-        } else if (tipo === 'LOTACAO') {
-            label.textContent = 'Selecionar Lotação:';
-            lotacaoSelect.style.display = 'block';
         } else if (tipo === 'SITUACAO') {
             label.textContent = 'Selecionar Situação Funcional:';
             situacaoSelect.style.display = 'block';
@@ -96,8 +91,6 @@
                 return null;
             }
             params.userId = select.value;
-        } else if (tipo === 'LOTACAO') {
-            params.value = document.getElementById('relatorio-lotacao-select').value;
         } else if (tipo === 'SITUACAO') {
             params.value = document.getElementById('relatorio-situacao-select').value;
         } else if (tipo === 'GLOBAL') {
@@ -212,7 +205,7 @@
                             <div style="margin-bottom:30px;">
                                 <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${section.title}</h4>
                                 <div style="overflow-x:auto;">
-                                    <table class="repasse-tabela" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
+                                    <table class="relatorio-tabela" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
                                         <thead>
                                             <tr style="background:#f8f9fa;">
                                                 ${section.columns.map(col => `<th style="border:1px solid #ddd; padding:12px 10px; text-align:left; color: var(--azul-fundo);">${col}</th>`).join('')}
@@ -247,8 +240,8 @@
             const s = document.createElement('style');
             s.id = 'style-preview-relatorios';
             s.textContent = `
-                .repasse-tabela tbody tr:nth-child(even) { background: #fafafa; }
-                .repasse-tabela tbody tr:hover { background: #f1f3f5; }
+                .relatorio-tabela tbody tr:nth-child(even) { background: #fafafa; }
+                .relatorio-tabela tbody tr:hover { background: #f1f3f5; }
             `;
             document.head.appendChild(s);
         }
@@ -281,7 +274,6 @@
 
         const tipoLabels = {
             INDIVIDUAL: "👤 Dossiê Individual",
-            LOTACAO: "📍 Por Lotação",
             SITUACAO: "📑 Por Situação",
             GLOBAL: "🌏 Global (Completo)"
         };

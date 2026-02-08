@@ -19,7 +19,7 @@ const HeaderInfo: React.FC<Props> = ({ user: userProp }) => {
   }
 
   const situacao = normalizeSituacaoFuncional(user.situacao_funcional || user.situacao);
-  const perfil = (user?.perfil_acesso || 'USER').toUpperCase();
+  const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
 
   const getSituacaoVariant = (s: string) => {
     switch (s) {

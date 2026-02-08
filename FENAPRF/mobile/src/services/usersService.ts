@@ -30,7 +30,7 @@ export async function fetchUsersFromApi(token: string): Promise<User[]> {
 
     if (!resp.ok) {
       const text = await resp.text();
-      throw new Error(`Erro ao buscar usuários: ${resp.status} - ${text}`);
+      throw new Error(`Erro ao buscar membros: ${resp.status} - ${text}`);
     }
 
     const data: UserApi[] = await resp.json();
