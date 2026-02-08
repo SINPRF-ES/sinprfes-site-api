@@ -41,7 +41,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   const messages = tokens.map((token) => ({
     to: token,
     sound: "default",
-    title: title || "SINPRF-ES",
+    title: title || "FENAPRF",
     body: body,
     data: data || {},
     priority: "high",

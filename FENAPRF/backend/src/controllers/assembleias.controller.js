@@ -1030,7 +1030,7 @@ async function uploadEdital(req, res) {
     const resourceType = isImage ? "image" : "auto";
 
     const result = await uploadFileBuffer(req.file.buffer, {
-      folder: "sinprfes/editais",
+      folder: "fenaprf/editais",
       public_id: `edital_${Date.now()}`,
       resource_type: resourceType,
       type: "authenticated"

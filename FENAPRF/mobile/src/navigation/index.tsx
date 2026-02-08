@@ -174,12 +174,12 @@ export default function RootNavigation() {
             <Stack.Screen
               name="CriarUser"
               component={CriarUserScreen}
-              options={{ title: "Novo User" }}
+              options={{ title: "Novo Usuário" }}
             />
             <Stack.Screen
               name="EditarUser"
               component={EditarUserScreen}
-              options={{ title: "Editar User" }}
+              options={{ title: "Editar Usuário" }}
             />
             <Stack.Screen
               name="PdfViewer"

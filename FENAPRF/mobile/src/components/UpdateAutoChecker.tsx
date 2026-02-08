@@ -76,15 +76,15 @@ const UpdateAutoChecker: React.FC = () => {
                 if (result.isMandatory || isLoginTrigger) {
                     setShowModal(true);
                     // Limpar banner se o modal for exibido
-                    await AsyncStorage.removeItem('@sinprf/ota_update_available');
+                    await AsyncStorage.removeItem('@fenaprf/ota_update_available');
                 } else {
                     // Salvar para o banner na Home
-                    await AsyncStorage.setItem('@sinprf/ota_update_available', JSON.stringify(result));
+                    await AsyncStorage.setItem('@fenaprf/ota_update_available', JSON.stringify(result));
                     DeviceEventEmitter.emit('ota_update_detected', result);
                 }
             } else {
                 // Se não há update, garantir que o banner não apareça (ex: update aplicado ou expirado)
-                await AsyncStorage.removeItem('@sinprf/ota_update_available');
+                await AsyncStorage.removeItem('@fenaprf/ota_update_available');
                 DeviceEventEmitter.emit('ota_update_detected', null);
             }
         }

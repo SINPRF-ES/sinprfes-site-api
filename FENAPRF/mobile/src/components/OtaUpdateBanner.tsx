@@ -12,7 +12,7 @@ const OtaUpdateBanner = () => {
   useEffect(() => {
     const loadStoredUpdate = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@sinprf/ota_update_available');
+        const stored = await AsyncStorage.getItem('@fenaprf/ota_update_available');
         if (stored) {
           const parsed = JSON.parse(stored);
           setUpdate(parsed);

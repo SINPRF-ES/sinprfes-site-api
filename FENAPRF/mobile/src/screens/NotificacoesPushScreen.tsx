@@ -408,7 +408,7 @@ export default function NotificacoesPushScreen() {
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder="Ex: Informativo SINPRF-ES"
+            placeholder="Ex: Informativo FENAPRF"
             maxLength={60}
           />
           <Text style={styles.counter}>{title.length}/60</Text>

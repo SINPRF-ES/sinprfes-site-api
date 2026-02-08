@@ -44,6 +44,17 @@ export const formatCep = (cep: string | null | undefined): string => {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
 
+export const formatData = (data: string | null | undefined): string => {
+  if (!data) return '';
+  const digits = onlyDigits(data).slice(0, 8);
+  const len = digits.length;
+  if (len === 0) return '';
+
+  if (len <= 2) return digits;
+  if (len <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+};
+
 export const formatAgencia = (agencia: string | null | undefined): string => {
   const digits = onlyDigits(agencia);
   if (!digits) return '';
@@ -65,6 +76,7 @@ const Formatters = {
   formatCpf,
   formatTelefone,
   formatCep,
+  formatData,
   formatAgencia,
   formatConta
 };

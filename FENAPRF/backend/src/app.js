@@ -9,8 +9,8 @@ app.set('trust proxy', 1);
 const cors = require("cors");
 
 const allowedOrigins = [
-  "https://sinprfes.org.br",
-  "https://www.sinprfes.org.br",
+  "https://fenaprf.org.br",
+  "https://www.fenaprf.org.br",
   "http://localhost:3000",
   "http://localhost:5173",
 ];

@@ -1,5 +1,5 @@
 -- ============================================================================
--- SINPRF-ES MIGRATION V19: ADD 'NENHUMA' TO LOTACAO
+-- FENAPRF MIGRATION V19: ADD 'NENHUMA' TO LOTACAO
 -- Allows 'NENHUMA' as a valid lotation value.
 -- ============================================================================
 

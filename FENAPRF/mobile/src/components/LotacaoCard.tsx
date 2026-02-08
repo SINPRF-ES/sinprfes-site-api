@@ -3,12 +3,13 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { User } from '../types/user';
 import LotacaoPicker from './LotacaoPicker'; // Importando o novo componente
-import { normalizeSituacaoFuncional, getCanonicalUserId, ROLES, isGestao as checkIsGestao } from '../utils/userUtils';
+import { normalizeSituacaoFuncional, getCanonicalUserId, ROLES, isGestao as checkIsGestao, CARGOS_DIRETORIA, CARGOS_CONSELHO, UFS } from '../utils/userUtils';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 
 import { Picker } from '@react-native-picker/picker';
-import { TextInput } from 'react-native';
+import { TextInput, TouchableOpacity, Alert } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface Props {
   user: User | null;
@@ -36,8 +37,8 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
   const isSelf = user && authUser && getCanonicalUserId(user) === getCanonicalUserId(authUser);
 
   // Regra de UI:
-  // ADMIN muda qualquer um (menos a si mesmo por segurança).
-  // DIRETORIA/FUNCIONARIO mudam quem não é ADMIN.
+  // ADMIN muda qualquer um (menos a si mesmo por segurança - bloqueio de auto-demote).
+  // DIRETORIA e COLABORADOR podem conceder entre si e para outros (exceto para/de ADMIN).
   const canChangeProfile = (isAdmin && !isSelf) || (isGestao && !isAdmin && !isTargetAdmin);
 
   const profileOptions = [
@@ -46,6 +47,16 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
     { label: 'Diretoria', value: ROLES.DIRETORIA },
     ...(isAdmin ? [{ label: 'Admin', value: ROLES.ADMIN }] : [])
   ];
+
+  const getCargoOptions = (perfil?: string | null) => {
+    const p = (perfil || "").toUpperCase();
+    if (p === ROLES.DIRETORIA) return CARGOS_DIRETORIA;
+    if (p === ROLES.CONSELHEIRO) return CARGOS_CONSELHO;
+    if (p === ROLES.ADMIN) return [...CARGOS_DIRETORIA, ...CARGOS_CONSELHO];
+    return [];
+  };
+
+  const hasSecondRole = !!(user?.perfil_acesso2 || user?.cargo2 || user?.uf2);
 
   return (
     <View style={styles.card}>
@@ -77,7 +88,7 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
       {isGestao ? (
         <View style={canChangeProfile ? styles.pickerContainer : styles.pickerContainerDisabled}>
           <Picker
-            selectedValue={user?.perfil_acesso}
+            selectedValue={user?.perfil_acesso || ROLES.CONSELHEIRO}
             onValueChange={(val) => setUser(f => f ? { ...f, perfil_acesso: val } : null)}
             enabled={canChangeProfile}
             style={!canChangeProfile ? { color: '#999' } : undefined}
@@ -97,13 +108,49 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
       )}
 
       <Text style={styles.label}>Cargo</Text>
-      <TextInput
-        style={isEditing ? styles.input : styles.inputDisabled}
-        value={user?.cargo || ''}
-        onChangeText={(text) => setUser(f => f ? { ...f, cargo: text } : null)}
-        placeholder="Cargo"
-        editable={isEditing}
-      />
+      {isEditing && (user?.perfil_acesso === ROLES.DIRETORIA || user?.perfil_acesso === ROLES.CONSELHEIRO) ? (
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={user?.cargo || ''}
+            onValueChange={(val) => setUser(f => f ? { ...f, cargo: val } : null)}
+          >
+            <Picker.Item label="Selecione..." value="" />
+            {getCargoOptions(user?.perfil_acesso).map(c => (
+              <Picker.Item key={c} label={c} value={c} />
+            ))}
+          </Picker>
+        </View>
+      ) : (
+        <TextInput
+          style={isEditing ? styles.input : styles.inputDisabled}
+          value={user?.cargo || ''}
+          onChangeText={(text) => setUser(f => f ? { ...f, cargo: text } : null)}
+          placeholder="Cargo"
+          editable={isEditing}
+        />
+      )}
+
+      <Text style={styles.label}>UF do Mandato</Text>
+      {isEditing ? (
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={user?.uf || ''}
+            onValueChange={(val) => setUser(f => f ? { ...f, uf: val } : null)}
+          >
+            <Picker.Item label="Selecione..." value="" />
+            <Picker.Item label="Brasil (BR)" value="BR" />
+            {UFS.map(uf => (
+              <Picker.Item key={uf} label={uf} value={uf} />
+            ))}
+          </Picker>
+        </View>
+      ) : (
+        <TextInput
+          style={styles.inputDisabled}
+          value={user?.uf || ''}
+          editable={false}
+        />
+      )}
 
       <Text style={styles.label}>Início do Mandato</Text>
       <TextInput
@@ -124,34 +171,78 @@ const LotacaoCard: React.FC<Props> = ({ user, setUser, isEditing = false, hideTi
       />
 
       <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 20 }}>
-        <Text style={[styles.label, { fontWeight: 'bold' }]}>Campos Adicionais (Design)</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={[styles.label, { fontWeight: 'bold' }]}>Segundo Vínculo (Opcional)</Text>
+          {isEditing && !hasSecondRole && (
+            <TouchableOpacity onPress={() => setUser(f => f ? { ...f, perfil_acesso2: ROLES.CONSELHEIRO } : null)}>
+              <MaterialCommunityIcons name="plus-circle" size={24} color="#003366" />
+            </TouchableOpacity>
+          )}
+          {isEditing && hasSecondRole && (
+            <TouchableOpacity onPress={() => setUser(f => f ? { ...f, perfil_acesso2: null, cargo2: null, uf2: null } : null)}>
+              <MaterialCommunityIcons name="minus-circle" size={24} color="#c0392b" />
+            </TouchableOpacity>
+          )}
+        </View>
 
-        <Text style={styles.label}>Perfil de Acesso 2</Text>
-        <TextInput
-          style={isEditing ? styles.input : styles.inputDisabled}
-          value={user?.perfil_acesso2 || ''}
-          onChangeText={(text) => setUser(f => f ? { ...f, perfil_acesso2: text } : null)}
-          placeholder="Perfil secundário"
-          editable={isEditing}
-        />
+        {hasSecondRole && (
+          <>
+            <Text style={styles.label}>Perfil de Acesso 2</Text>
+            <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
+              <Picker
+                selectedValue={user?.perfil_acesso2 || ''}
+                onValueChange={(val) => setUser(f => f ? { ...f, perfil_acesso2: val } : null)}
+                enabled={isEditing}
+              >
+                <Picker.Item label="Conselheiro" value={ROLES.CONSELHEIRO} />
+                <Picker.Item label="Diretoria" value={ROLES.DIRETORIA} />
+              </Picker>
+            </View>
 
-        <Text style={styles.label}>Cargo 2</Text>
-        <TextInput
-          style={isEditing ? styles.input : styles.inputDisabled}
-          value={user?.cargo2 || ''}
-          onChangeText={(text) => setUser(f => f ? { ...f, cargo2: text } : null)}
-          placeholder="Cargo secundário"
-          editable={isEditing}
-        />
+            <Text style={styles.label}>Cargo 2</Text>
+            {isEditing ? (
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={user?.cargo2 || ''}
+                  onValueChange={(val) => setUser(f => f ? { ...f, cargo2: val } : null)}
+                >
+                  <Picker.Item label="Selecione..." value="" />
+                  {getCargoOptions(user?.perfil_acesso2).map(c => (
+                    <Picker.Item key={c} label={c} value={c} />
+                  ))}
+                </Picker>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.inputDisabled}
+                value={user?.cargo2 || ''}
+                editable={false}
+              />
+            )}
 
-        <Text style={styles.label}>UF 2</Text>
-        <TextInput
-          style={isEditing ? styles.input : styles.inputDisabled}
-          value={user?.uf2 || ''}
-          onChangeText={(text) => setUser(f => f ? { ...f, uf2: text } : null)}
-          placeholder="UF secundária"
-          editable={isEditing}
-        />
+            <Text style={styles.label}>UF 2</Text>
+            {isEditing ? (
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={user?.uf2 || ''}
+                  onValueChange={(val) => setUser(f => f ? { ...f, uf2: val } : null)}
+                >
+                  <Picker.Item label="Selecione..." value="" />
+                  <Picker.Item label="Brasil (BR)" value="BR" />
+                  {UFS.map(uf => (
+                    <Picker.Item key={uf} label={uf} value={uf} />
+                  ))}
+                </Picker>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.inputDisabled}
+                value={user?.uf2 || ''}
+                editable={false}
+              />
+            )}
+          </>
+        )}
       </View>
     </View>
   );

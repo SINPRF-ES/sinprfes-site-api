@@ -1,4 +1,4 @@
-# Mobile - SINPRF-ES
+# Mobile - FENAPRF
 
 Aplicativo mobile desenvolvido com Expo e React Native.
 
