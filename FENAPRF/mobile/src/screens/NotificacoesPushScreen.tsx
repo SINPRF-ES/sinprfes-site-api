@@ -23,6 +23,7 @@ import api from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { PickerWrapper } from '../components/PickerWrapper';
 
 interface Campaign {
   id: string;
@@ -353,7 +354,7 @@ export default function NotificacoesPushScreen() {
           <Text style={styles.cardTitle}>📢 Nova Notificação</Text>
 
           <Text style={styles.label}>Público de Destino</Text>
-          <View style={styles.pickerContainer}>
+          <PickerWrapper style={styles.pickerContainer}>
             <Picker
                 selectedValue={targetType}
                 onValueChange={(v) => {
@@ -364,15 +365,14 @@ export default function NotificacoesPushScreen() {
             >
                 <Picker.Item label="Todos com app" value="ALL" />
                 <Picker.Item label="Apenas ATIVOS" value="ATIVOS" />
-                <Picker.Item label="Veteranos / Pensionistas" value="VETERANOS" />
                 <Picker.Item label="Por UF" value="UF" />
                 <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
                 <Picker.Item label="Especificar Membro" value="USER" />
             </Picker>
-          </View>
+          </PickerWrapper>
 
           {targetType === 'LOTACAO' && (
-             <View style={styles.pickerContainer}>
+             <PickerWrapper style={styles.pickerContainer}>
                 <Picker
                     selectedValue={targetValue}
                     onValueChange={setTargetValue}
@@ -382,7 +382,7 @@ export default function NotificacoesPushScreen() {
                       <Picker.Item key={opt} label={opt} value={opt} />
                     ))}
                 </Picker>
-             </View>
+             </PickerWrapper>
           )}
 
           {targetType === 'USER' && (

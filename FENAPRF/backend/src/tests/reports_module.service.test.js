@@ -11,14 +11,14 @@ describe('Reports Service', () => {
     jest.resetAllMocks();
   });
 
-  test('buscarDadosAgregados SITUACAO should use exact match', async () => {
+  test('buscarDadosAgregados should return counts for all active users', async () => {
     pool.query.mockResolvedValue({ rows: [{ total: 10 }] });
 
-    const res = await reportsService.buscarDadosAgregados('SITUACAO', 'VETERANO');
+    const res = await reportsService.buscarDadosAgregados('GLOBAL', null);
 
     expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("situacao = $1"),
-      expect.arrayContaining(["VETERANO"])
+      expect.stringContaining("WHERE arquivado_em IS NULL"),
+      expect.any(Array)
     );
     expect(res.total).toBe(10);
   });

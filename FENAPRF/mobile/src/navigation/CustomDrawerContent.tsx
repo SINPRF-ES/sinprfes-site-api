@@ -47,24 +47,24 @@ const CustomDrawerContent = (props) => {
             onPress={() => {}} // Não faz nada, é apenas um título
           />
           <DrawerItem
-            label="📢 Notificações"
+            label="Notificações"
             icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="👤 Novo Membro"
+            label="Novo Membro"
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('CriarUser')}
+          />
+          <DrawerItem
+            label="Diagnóstico"
+            icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
+            onPress={() => props.navigation.navigate('Logs')}
           />
         </>
       )}
 
       <View style={styles.separator} />
-      <DrawerItem
-        label="Diagnóstico"
-        icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
-        onPress={() => props.navigation.navigate('Logs')}
-      />
 
       <View style={styles.closeAppContainer}>
         <TouchableOpacity
