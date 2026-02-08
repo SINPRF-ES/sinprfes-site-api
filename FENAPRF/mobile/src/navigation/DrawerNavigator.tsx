@@ -24,10 +24,11 @@ import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/userUtils';
 import { logger } from '../infra/logger';
 import { useEffect } from 'react';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const Drawer = createDrawerNavigator();
 
-const DrawerNavigator = () => {
+const DrawerNavigatorContent = () => {
   const { user } = useAuth();
   const ehGestao = isGestao(user?.perfil_acesso);
   const ehDiretoria = isDiretoria(user?.perfil_acesso);
@@ -154,6 +155,14 @@ const DrawerNavigator = () => {
         </>
       )}
     </Drawer.Navigator>
+  );
+};
+
+const DrawerNavigator = () => {
+  return (
+    <ErrorBoundary>
+      <DrawerNavigatorContent />
+    </ErrorBoundary>
   );
 };
 
