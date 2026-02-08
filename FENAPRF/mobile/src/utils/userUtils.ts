@@ -1,22 +1,6 @@
 // mobile/src/utils/userUtils.ts
 
 /**
- * Normaliza a situação funcional para os valores canônicos: ATIVO, VETERANO, PENSIONISTA.
- * Lida com variações de plural, espaços e caixa alta/baixa.
- */
-export function normalizeSituacaoFuncional(value?: string | null): 'ATIVO' | 'VETERANO' | 'PENSIONISTA' | '' {
-  if (!value) return '';
-
-  const v = value.trim().toUpperCase();
-
-  if (v === 'VETERANO' || v === 'VETERANOS' || v === 'APOSENTADO' || v === 'APOSENTADOS') return 'VETERANO';
-  if (v === 'PENSIONISTA' || v === 'PENSIONISTAS') return 'PENSIONISTA';
-  if (v === 'ATIVO' || v === 'ATIVOS') return 'ATIVO';
-
-  return '';
-}
-
-/**
  * Canoniza o ID do user para string numérica, garantindo consistência
  * entre o app (que prefere strings) e o backend (que usa INTEGER/SERIAL).
  */
@@ -43,9 +27,6 @@ export const ROLES = {
   DIRETORIA: 'DIRETORIA',
   COLABORADOR: 'COLABORADOR',
   CONSELHEIRO: 'CONSELHEIRO',
-  FUNCIONARIO: 'FUNCIONARIO',
-  ORGANIZADOR: 'ORGANIZADOR',
-  COMUNICADOR: 'COMUNICADOR',
 };
 
 export const CARGOS_CONSELHO = [
@@ -94,9 +75,6 @@ const ROLE_RANK: Record<string, number> = {
   [ROLES.DIRETORIA]: 80,
   [ROLES.COLABORADOR]: 60,
   [ROLES.CONSELHEIRO]: 40,
-  [ROLES.ORGANIZADOR]: 30,
-  [ROLES.COMUNICADOR]: 30,
-  [ROLES.FUNCIONARIO]: 30,
 };
 
 /**
