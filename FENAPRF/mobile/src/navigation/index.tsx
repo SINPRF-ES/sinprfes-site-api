@@ -21,6 +21,7 @@ import MeusDadosScreen from "../screens/MeusDadosScreen";
 import CriarUserScreen from "../screens/CriarUserScreen";
 import EditarUserScreen from "../screens/EditarUserScreen";
 import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
+import LogisticaEventoScreen from "../screens/LogisticaEventoScreen";
 import NoticiasScreen from "../screens/NoticiasScreen";
 import NoticiaDetalheScreen from "../screens/NoticiaDetalheScreen";
 import NoticiaEditorScreen from "../screens/NoticiaEditorScreen";
@@ -48,6 +49,8 @@ export type RootStackParamList = {
   EditarUser: { userId: string };
   Votacao: undefined;
   Jogos2026: undefined;
+  Logistica: undefined;
+  LogisticaEvento: { eventoId: number };
   Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
@@ -201,6 +204,11 @@ export default function RootNavigation() {
               name="NoticiaEditor"
               component={NoticiaEditorScreen}
               options={{ title: "Editor de Notícia" }}
+            />
+            <Stack.Screen
+              name="LogisticaEvento"
+              component={LogisticaEventoScreen}
+              options={{ title: "Evento Logístico" }}
             />
           </>
         )}

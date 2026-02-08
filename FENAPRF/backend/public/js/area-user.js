@@ -21,6 +21,7 @@
         const { inicializarUsers } = window.UsersAdmin || {};
         const { inicializarRessarcimento } = window.Ressarcimento || {};
         const { inicializarJogos } = window.Jogos || {};
+        const { inicializarLogistica } = window.Logistica || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
         const { inicializarNoticias } = window.NoticiasAdmin || {};
@@ -41,6 +42,7 @@
                 else if (abaAlvo === 'sec-users' && inicializarUsers) inicializarUsers(perfil);
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
+                else if (abaAlvo === 'sec-logistica' && inicializarLogistica) inicializarLogistica(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
                 else if (abaAlvo === 'sec-noticias' && inicializarNoticias) inicializarNoticias(perfil);
