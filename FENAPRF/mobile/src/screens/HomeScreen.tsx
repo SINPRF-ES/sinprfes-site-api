@@ -38,22 +38,10 @@ const NAV_ITEMS = [
   },
 ];
 
-const GESTAO_ITEMS = [
-  {
-    label: 'Repasse por Localidade',
-    icon: 'cash-multiple',
-    screen: 'Repasse',
-  },
-];
-
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { user } = useAuth();
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
 
   const displayedItems = [...NAV_ITEMS];
-  if (ehGestao) {
-    displayedItems.push(...GESTAO_ITEMS);
-  }
 
   const situacao = normalizeSituacaoFuncional(user?.situacao || '');
   const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();

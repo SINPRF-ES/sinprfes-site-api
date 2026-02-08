@@ -47,6 +47,7 @@ export type RootStackParamList = {
   CriarUser: undefined;
   EditarUser: { userId: string };
   Votacao: undefined;
+  Jogos2026: undefined;
   Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
