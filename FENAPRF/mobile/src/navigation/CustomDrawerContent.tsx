@@ -56,15 +56,15 @@ const CustomDrawerContent = (props) => {
             icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('CriarUser')}
           />
-          <DrawerItem
-            label="Diagnóstico"
-            icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
-            onPress={() => props.navigation.navigate('Logs')}
-          />
         </>
       )}
 
       <View style={styles.separator} />
+      <DrawerItem
+        label="Diagnóstico"
+        icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
+        onPress={() => props.navigation.navigate('Logs')}
+      />
 
       <View style={styles.closeAppContainer}>
         <TouchableOpacity
