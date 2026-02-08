@@ -37,6 +37,36 @@ export const listarEventosLogistica = async (): Promise<LogisticaEvento[]> => {
   }
 };
 
+export const cancelarEventoLogistica = async (id: number, justificativa: string) => {
+  try {
+    const response = await api.delete(`/api/logistica/eventos/${id}`, { data: { justificativa } });
+    return response.data;
+  } catch (err) {
+    logger.error('Service.cancelarEventoLogistica', err);
+    throw err;
+  }
+};
+
+export const criarEventoLogistica = async (dados: any) => {
+  try {
+    const response = await api.post('/api/logistica/eventos', dados);
+    return response.data;
+  } catch (err) {
+    logger.error('Service.criarEventoLogistica', err);
+    throw err;
+  }
+};
+
+export const atualizarEventoLogistica = async (id: number, dados: any) => {
+  try {
+    const response = await api.put(`/api/logistica/eventos/${id}`, dados);
+    return response.data;
+  } catch (err) {
+    logger.error('Service.atualizarEventoLogistica', err);
+    throw err;
+  }
+};
+
 export const obterEventoLogistica = async (id: number): Promise<LogisticaEvento> => {
   try {
     const response = await api.get(`/api/logistica/eventos/${id}`);

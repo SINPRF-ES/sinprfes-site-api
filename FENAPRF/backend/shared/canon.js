@@ -60,9 +60,12 @@
    * Remove acentos e caracteres especiais para comparação robusta.
    */
   function slugify(str) {
-    if (typeof str !== 'string') return '';
-    return str.trim().toUpperCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (!str) return '';
+    var s = String(str).trim().toUpperCase();
+    if (typeof s.normalize === 'function') {
+      return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+    return s;
   }
 
   /**

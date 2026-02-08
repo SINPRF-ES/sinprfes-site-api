@@ -102,9 +102,10 @@ export function normalizeCargo(raw?: string | null): string {
  * Retorna o título formatado do cargo com a UF.
  */
 export function tituloCargoUf({ perfil_acesso, cargo, uf }: { perfil_acesso?: string, cargo?: string, uf?: string }): string {
-    const perfil = (perfil_acesso || "").toUpperCase();
+  try {
+    const perfil = String(perfil_acesso || "").toUpperCase();
     const c = normalizeCargo(cargo);
-    const ufSigla = (uf || "").toUpperCase();
+    const ufSigla = String(uf || "").toUpperCase();
     const ufNome = UF_NOME[ufSigla] || ufSigla || "—";
 
     if (perfil === ROLES.CONSELHEIRO) {
@@ -116,6 +117,10 @@ export function tituloCargoUf({ perfil_acesso, cargo, uf }: { perfil_acesso?: st
     if (perfil === ROLES.COLABORADOR) return "Colaborador";
     if (perfil === ROLES.ADMIN) return c || "Administrador";
     return c || "Membro";
+  } catch (err) {
+    console.error('[userUtils] Error in tituloCargoUf:', err);
+    return "Membro";
+  }
 }
 
 /**
@@ -123,7 +128,7 @@ export function tituloCargoUf({ perfil_acesso, cargo, uf }: { perfil_acesso?: st
  */
 export const isGestao = (perfil?: string | null) => {
   if (!perfil) return false;
-  const p = perfil.toUpperCase();
+  const p = String(perfil).toUpperCase();
   return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.COLABORADOR].includes(p);
 };
 
@@ -151,7 +156,7 @@ export const podeEditarPerfil = (perfilAtor?: string | null, perfilAlvo?: string
  */
 export const isDiretoria = (perfil?: string | null) => {
   if (!perfil) return false;
-  const p = perfil.toUpperCase();
+  const p = String(perfil).toUpperCase();
   return [ROLES.ADMIN, ROLES.DIRETORIA].includes(p);
 };
 
@@ -169,14 +174,14 @@ export const logDebug = (tag: string, data: any) => {
  * Se for DIRETORIA ou COLABORADOR, a UF é BR.
  */
 export function getBandeiraUF(ufSigla?: string | null, perfil?: string | null): string {
-  const p = (perfil || "").toUpperCase();
-  let uf = (ufSigla || "").trim().toLowerCase();
+  const p = String(perfil || "").toUpperCase();
+  let uf = String(ufSigla || "").trim().toLowerCase();
 
-  if (p === ROLES.DIRETORIA || p === ROLES.COLABORADOR) {
+  if (p === ROLES.DIRETORIA || p === ROLES.COLABORADOR || p === ROLES.ADMIN) {
     uf = "br";
   }
 
-  if (!uf) return "";
+  if (!uf) uf = "br";
   if (uf === "br") return "https://atlasescolar.ibge.gov.br/images/bandeiras/brasil.png";
   if (uf.length !== 2) return "";
 

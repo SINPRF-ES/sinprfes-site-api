@@ -24,6 +24,9 @@ router.post("/eventos", requirePermission("LOGISTICA_GERENCIAR"), logisticaContr
 // Atualizar evento (apenas Gestão)
 router.put("/eventos/:id", requirePermission("LOGISTICA_GERENCIAR"), logisticaController.atualizarEvento);
 
+// Cancelar evento (apenas Gestão)
+router.delete("/eventos/:id", requirePermission("LOGISTICA_GERENCIAR"), logisticaController.cancelarEvento);
+
 /**
  * ROTAS DE INSCRIÇÕES
  */

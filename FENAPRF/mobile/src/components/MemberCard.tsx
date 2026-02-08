@@ -18,23 +18,38 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, containerStyle }) => {
   const elapsed = calculateDuration(mandateStart, today);
   const remaining = calculateDuration(today, mandateEnd);
 
-  const flagUrl = getBandeiraUF(member.uf, member.perfil_acesso);
-  const isWhiteFlag = member.uf === 'ES' || member.uf === 'PR' || member.uf === 'SC' || member.uf === 'SP';
+  let flagUrl = '';
+  let isWhiteFlag = false;
+  let cargo1 = '';
 
-  const cargo1 = tituloCargoUf({ perfil_acesso: member.perfil_acesso, cargo: member.cargo, uf: member.uf });
+  try {
+    flagUrl = getBandeiraUF(member.uf, member.perfil_acesso);
+    isWhiteFlag = member.uf === 'ES' || member.uf === 'PR' || member.uf === 'SC' || member.uf === 'SP';
+    cargo1 = tituloCargoUf({ perfil_acesso: member.perfil_acesso, cargo: member.cargo, uf: member.uf });
+  } catch (err) {
+    console.error('[MemberCard] Error calculating initial fields:', err);
+  }
+
   const hasSecondLink = !!(member.perfil_acesso2 && member.cargo2);
-  const cargo2 = hasSecondLink ? tituloCargoUf({ perfil_acesso: member.perfil_acesso2!, cargo: member.cargo2!, uf: member.uf2 }) : null;
+  let cargo2 = null;
+  if (hasSecondLink) {
+    try {
+      cargo2 = tituloCargoUf({ perfil_acesso: member.perfil_acesso2!, cargo: member.cargo2!, uf: member.uf2 });
+    } catch (err) {
+      console.error('[MemberCard] Error calculating cargo2:', err);
+    }
+  }
 
   return (
     <View style={[styles.card, containerStyle]}>
       {/* Parte Superior */}
       <View style={styles.topSection}>
         <Image
-          source={{ uri: member.avatar_url || 'https://via.placeholder.com/60' }}
+          source={{ uri: (typeof member.avatar_url === 'string' && member.avatar_url) ? member.avatar_url : 'https://via.placeholder.com/60' }}
           style={styles.avatar}
         />
         <View style={styles.centerInfo}>
-          <Text style={styles.name} numberOfLines={2}>{member.name}</Text>
+          <Text style={styles.name} numberOfLines={2}>{String(member.name || '—')}</Text>
           <Text style={styles.cargo}>{cargo1}</Text>
           {cargo2 && (
             <Text style={styles.cargo2}>

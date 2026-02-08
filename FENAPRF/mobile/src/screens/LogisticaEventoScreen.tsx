@@ -21,6 +21,7 @@ import {
   inscreverProprioLogistica,
   atualizarInscricaoLogistica,
   cancelarInscricaoLogistica,
+  cancelarEventoLogistica,
   LogisticaEvento,
   LogisticaInscricao,
 } from '../services/logisticaService';
@@ -32,6 +33,7 @@ import { formatCpf, formatTelefone } from '../shared/format/formatters';
 import { formatISOToBRDateTime } from '../utils/date';
 import { Linking } from 'react-native';
 import { API_BASE_URL } from '../config/env';
+import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 const parseBRDateTimeToISO = (brStr: string): string | null => {
   if (!brStr) return null;
@@ -76,6 +78,9 @@ const LogisticaEventoScreen = () => {
     justificativa: '',
   });
 
+  const [cancelEventoModalVisible, setCancelEventoModalVisible] = useState(false);
+  const [justificativaCancelamento, setJustificativaCancelamento] = useState('');
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -105,6 +110,31 @@ const LogisticaEventoScreen = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (ehGestao && evento) {
+        const actions: MenuAction[] = [
+            {
+                label: 'Editar Evento',
+                icon: 'pencil',
+                onPress: () => navigation.navigate('LogisticaEventoEditor', { eventoId: evento.id })
+            }
+        ];
+
+        if (evento.status !== 'cancelado') {
+            actions.push({
+                label: 'Cancelar Evento',
+                icon: 'delete',
+                onPress: () => setCancelEventoModalVisible(true),
+                isDestructive: true
+            });
+        }
+
+        navigation.setOptions({
+            headerRight: () => <HeaderMenu actions={actions} />
+        });
+    }
+  }, [ehGestao, evento, navigation]);
 
   const handleSalvarMinha = async () => {
     const isoChegada = parseBRDateTimeToISO(form.data_chegada);
@@ -200,6 +230,25 @@ const LogisticaEventoScreen = () => {
       fetchData();
     } catch (err) {
       Alert.alert('Erro', 'Erro ao cancelar.');
+    }
+  };
+
+  const handleCancelarEvento = async () => {
+    if (!justificativaCancelamento.trim()) {
+        Alert.alert('Erro', 'Justificativa é obrigatória para cancelar o evento.');
+        return;
+    }
+
+    try {
+        setSubmitting(true);
+        await cancelarEventoLogistica(eventoId, justificativaCancelamento);
+        Alert.alert('Sucesso', 'Evento cancelado.');
+        setCancelEventoModalVisible(false);
+        fetchData();
+    } catch (err) {
+        Alert.alert('Erro', 'Erro ao cancelar evento.');
+    } finally {
+        setSubmitting(false);
     }
   };
 
@@ -395,6 +444,42 @@ const LogisticaEventoScreen = () => {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancel Event Modal */}
+      <Modal visible={cancelEventoModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cancelar Evento: {evento?.titulo}</Text>
+              <TouchableOpacity onPress={() => setCancelEventoModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <View style={styles.justificationBox}>
+                <Text style={[styles.label, { color: '#d32f2f' }]}>Justificativa de Cancelamento *</Text>
+                <TextInput
+                  style={[styles.input, { borderColor: '#d32f2f' }]}
+                  placeholder="Por que está cancelando este evento?"
+                  value={justificativaCancelamento}
+                  onChangeText={setJustificativaCancelamento}
+                  multiline
+                  numberOfLines={3}
+                  autoFocus
+                />
+              </View>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.btnCancel} onPress={() => setCancelEventoModalVisible(false)}>
+                  <Text style={[styles.btnText, { color: '#666' }]}>Voltar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnDanger} onPress={handleCancelarEvento}>
+                  <Text style={styles.btnText}>Confirmar Cancelamento</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </Modal>
