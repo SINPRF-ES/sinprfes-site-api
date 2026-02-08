@@ -7,7 +7,7 @@
     if (global.UsersAdmin) return;
 
     let cacheLista = [];
-    const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
+    const SITUACAO_OPCOES = ["ATIVO"];
 
     let perfilAtual = null;
     let handlersConfigurados = false;
@@ -122,8 +122,6 @@
                         <select id="filtro-situacao-funcional">
                             <option value="TODOS" selected>Todos</option>
                             <option value="ATIVO">Ativo</option>
-                            <option value="VETERANO">Veterano</option>
-                            <option value="PENSIONISTA">Pensionista</option>
                         </select>
                     </label>
                 `;
@@ -313,15 +311,6 @@
                             <label>Idade (Calculada)</label>
                             <input type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f8f9fa;">
                         </div>
-                    </div>
-                    <div class="field-row">
-                        <div class="field-group">
-                            <label>Situação Funcional</label>
-                            <select name="situacao">
-                                ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
-                            </select>
-                        </div>
-                        <div class="field-group"></div>
                     </div>
                     ${canChangeProfile ? `
                         <div class="field-row">

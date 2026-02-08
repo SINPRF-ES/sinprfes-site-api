@@ -65,20 +65,7 @@ const MembroPerfilCard: React.FC<Props> = ({ user, setUser, isEditing = false, h
 
   return (
     <View style={styles.card}>
-      {!hideTitle && <Text style={styles.cardTitle}>Situação e Perfil</Text>}
-
-      <Text style={styles.label}>Situação</Text>
-      <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
-        <Picker
-          selectedValue={user?.situacao || 'ATIVO'}
-          onValueChange={(itemValue) => setUser(f => f ? { ...f, situacao: itemValue } : null)}
-          enabled={isEditing}
-          style={!isEditing ? { color: '#999' } : undefined}
-        >
-          <Picker.Item label="Ativo" value="ATIVO" />
-          <Picker.Item label="Inativo" value="INATIVO" />
-        </Picker>
-      </View>
+      {!hideTitle && <Text style={styles.cardTitle}>Perfil de Acesso</Text>}
 
       <Text style={styles.label}>Perfil de Acesso</Text>
       {isGestao ? (

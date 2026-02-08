@@ -13,7 +13,6 @@ const usersService = require("../services/users.service");
 const { enviarEmailBoasVindasUser } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
 const {
-  normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil
 } = require("../../shared/canon");
@@ -352,7 +351,6 @@ exports.atualizarUser = async (req, res) => {
       telefone2: body.telefone2,
       email1: body.email1,
       email: body.email,
-      situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
       cargo: body.cargo,
       cargo_mandato_inicio: normalizeDateField(body.cargo_mandato_inicio) || undefined,
       cargo_mandato_fim: normalizeDateField(body.cargo_mandato_fim) || undefined,
@@ -469,7 +467,6 @@ exports.criarUser = async (req, res) => {
       telefone2: body.telefone2 || null,
       email1: body.email1 || null,
       email: body.email || null,
-      situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       perfil_acesso,
       cargo,
       uf,

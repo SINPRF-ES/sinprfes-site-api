@@ -2,7 +2,6 @@ const pool = require("../config/db");
 const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const {
-  normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil,
   normalizeNome
@@ -39,7 +38,7 @@ async function getMe(id) {
   const query = `
     SELECT
       id, cpf, name, name as nome, email, email as email1,
-      perfil_acesso, situacao, bloqueado,
+      perfil_acesso, bloqueado,
       telefone1, telefone2,
       cep, logradouro, numero, complemento, bairro, cidade, uf,
       data_nascimento, cargo,
@@ -134,7 +133,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const query = `
     SELECT
       f.id, f.name, f.name as nome, f.cpf, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email as email1,
-      f.situacao, f.perfil_acesso,
+      f.perfil_acesso,
       f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
       f.avatar_url,
       f.arquivado_em, f.arquivado_motivo
@@ -240,7 +239,6 @@ async function atualizarUserPorId(id, dados) {
   addCampo("telefone2", dados.telefone2);
   addCampo("email", dados.email1 || dados.email);
 
-  if (dados.situacao !== undefined) addCampo("situacao", normalizeSituacaoFuncional(dados.situacao));
   if (dados.perfil_acesso !== undefined) addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
 
   if (dados.logradouro_bairro) {
@@ -304,7 +302,6 @@ async function criarUserInicial(dados) {
       telefone2 = null,
       email1 = null,
       email = null,
-      situacao = "ATIVO",
     } = dados;
 
     const emailFinal = email1 || email || null;
@@ -313,12 +310,12 @@ async function criarUserInicial(dados) {
       `
       INSERT INTO users (
         name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
-        situacao, perfil_acesso, cargo, uf,
+        perfil_acesso, cargo, uf,
         perfil_acesso2, cargo2, uf2,
         created_at, updated_at, bloqueado
       ) VALUES (
         $1, $2, $3, NULLIF($4, '')::date, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14, NOW(), NOW(), false
+        $8, $9, $10, $11, $12, $13, NOW(), NOW(), false
       ) RETURNING id
       `,
       [
@@ -329,7 +326,6 @@ async function criarUserInicial(dados) {
         telefone1,
         telefone2,
         emailFinal,
-        normalizeSituacaoFuncional(situacao),
         normalizePerfil(perfilNovo),
         dados.cargo || null,
         dados.uf || null,
@@ -371,8 +367,8 @@ async function desarquivarUserPorId(id) {
 async function buscarAniversariantesDoDia() {
   const query = `
     SELECT
-      id, name as nome, situacao, perfil_acesso, 'USER' as tipo,
-      NULL as nome_user_vinculo, NULL as situacao_user_vinculo,
+      id, name as nome, perfil_acesso, 'USER' as tipo,
+      NULL as nome_user_vinculo,
       data_nascimento
     FROM users
     WHERE

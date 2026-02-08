@@ -10,7 +10,6 @@ import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
 import Badge from '../components/Badge';
-import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { Image } from 'react-native';
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -44,24 +43,13 @@ function HomeScreenComponent({ navigation }: HomeScreenProps) {
 
   const displayedItems = [...NAV_ITEMS];
 
-  let situacao = '';
   let perfil = 'CONSELHEIRO';
 
   try {
-    situacao = normalizeSituacaoFuncional(user?.situacao || '');
     perfil = String(user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
   } catch (err) {
     console.error('[HomeScreen] Error calculating profile/status:', err);
   }
-
-  const getSituacaoVariant = (s: string) => {
-    switch (s) {
-      case 'ATIVO': return 'success';
-      case 'VETERANO': return 'warning';
-      case 'PENSIONISTA': return 'pink';
-      default: return 'default';
-    }
-  };
 
   return (
     <SafeScreen style={styles.container}>
@@ -81,15 +69,6 @@ function HomeScreenComponent({ navigation }: HomeScreenProps) {
               {String(user?.name || 'Membro').split(' ')[0]}
             </Text>
             <Text style={styles.userProfile}>{String(perfil)}</Text>
-
-            {situacao && (
-              <Badge
-                label={situacao}
-                variant={getSituacaoVariant(situacao)}
-                style={styles.headerBadge}
-                textStyle={styles.headerBadgeText}
-              />
-            )}
           </View>
         </View>
       </View>

@@ -118,7 +118,6 @@ export default function UsersScreen({ navigation, route }: any) {
         if (filtroCadastro === 'CADASTRO_ATIVO' && f.arquivado_em) return false;
       }
 
-      const situacao = Canon.normalizeSituacaoFuncional(f.situacao_funcional || f.situacao || 'ATIVO');
       const perfil = (f.perfil_acesso || '').toUpperCase();
       const cargoNorm = Canon.normalizeCargo(f.cargo);
 
@@ -135,8 +134,6 @@ export default function UsersScreen({ navigation, route }: any) {
         if (cargoNorm !== 'Delegado Substituto') return false;
       } else if (filtroFuncional === 'ADMIN_COLAB') {
         if (![Canon.PERFIL_ACESSO.ADMIN, Canon.PERFIL_ACESSO.COLABORADOR].includes(perfil)) return false;
-      } else if (filtroFuncional === 'ATIVO' || filtroFuncional === 'VETERANO' || filtroFuncional === 'PENSIONISTA') {
-          if (situacao !== filtroFuncional) return false;
       }
 
       // Regra Ouro: Esconder ADMIN/COLABORADOR por padrão
@@ -226,10 +223,6 @@ export default function UsersScreen({ navigation, route }: any) {
                 <Picker.Item key={f.value} label={f.label} value={f.value} />
               ))}
               <Picker.Item label="Todos (Sem filtros)" value="TODOS" />
-              <Picker.Item label="--- Por Situação ---" value="HEADER_SIT" enabled={false} />
-              {Object.values(Canon.SITUACAO_FUNCIONAL).map(s => (
-                <Picker.Item key={s} label={Canon.LABELS[s]} value={s} />
-              ))}
             </Picker>
           </View>
         </View>

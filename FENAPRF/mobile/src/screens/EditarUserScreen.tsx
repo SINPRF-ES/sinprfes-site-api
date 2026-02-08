@@ -45,7 +45,6 @@ export default function EditarUserScreen({ route, navigation }: any) {
       logger.info('EDIT_USER_DATA_READY', {
         id: data.id,
         keys: Object.keys(data),
-        hasSituacao: !!data.situacao,
       });
 
       logDebug('EditarUser.fetch', { id: data.id, name: data.name });
@@ -220,7 +219,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>🏠 Endereço</Text></View>
         <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
 
-        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Situação e Perfil</Text></View>
+        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>🏢 Perfil de Acesso</Text></View>
         <MembroPerfilCard user={user} setUser={setUser} isEditing={podeEditarAlvo} hideTitle={true} />
       </KeyboardAwareScrollView>
     </SafeScreen>

@@ -6,12 +6,6 @@
 -- 1. Normalize existing data to UPPERCASE and canonical values
 UPDATE users
 SET
-  situacao = CASE
-    WHEN UPPER(situacao) IN ('ATIVO', 'ATIVOS') THEN 'ATIVO'
-    WHEN UPPER(situacao) IN ('VETERANO', 'VETERANOS', 'APOSENTADO', 'APOSENTADOS') THEN 'VETERANO'
-    WHEN UPPER(situacao) IN ('PENSIONISTA', 'PENSIONISTAS') THEN 'PENSIONISTA'
-    ELSE 'ATIVO' -- Default safe value
-  END,
   perfil_acesso = CASE
     WHEN UPPER(perfil_acesso) = 'ADMIN' THEN 'ADMIN'
     WHEN UPPER(perfil_acesso) = 'DIRETORIA' THEN 'DIRETORIA'
@@ -31,8 +25,6 @@ SET
 
 -- 2. Add CHECK constraints to prevent future divergences
 ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_situacao;
-ALTER TABLE users ADD CONSTRAINT chk_users_situacao
-  CHECK (situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA'));
 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_perfil;
 ALTER TABLE users ADD CONSTRAINT chk_users_perfil

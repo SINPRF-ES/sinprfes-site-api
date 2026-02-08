@@ -364,7 +364,6 @@ export default function NotificacoesPushScreen() {
                 style={styles.picker}
             >
                 <Picker.Item label="Todos com app" value="ALL" />
-                <Picker.Item label="Apenas ATIVOS" value="ATIVOS" />
                 <Picker.Item label="Por UF" value="UF" />
                 <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
                 <Picker.Item label="Especificar Membro" value="ESPECIFICO" />

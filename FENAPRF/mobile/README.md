@@ -18,7 +18,6 @@ O aplicativo utiliza formatadores centralizados em `mobile/src/shared/formatters
 
 ### Valores Canônicos (Enums)
 * **Perfis:** `ADMIN`, `DIRETORIA`, `FUNCIONARIO`, `ORGANIZADOR`, `USER`.
-* **Situação Funcional:** `ATIVO`, `VETERANO`, `PENSIONISTA`.
 * **Parentesco:** `FILHO_ENTEADO`, `CONJUGE_COMPANHEIRO`, `PAI_MAE`, `IRMAO`, `OUTRO`.
 
 ## Regras de Interface e UX
@@ -26,7 +25,6 @@ O aplicativo utiliza formatadores centralizados em `mobile/src/shared/formatters
 ### Visual Parity
 * Seções com títulos centralizados e emojis.
 * Alternância de cores de fundo entre cartões (`#ffffff` e `#f7f9fc`).
-* Badges de status sem prefixos (ex: apenas `ATIVO`).
 * Botões "Salvar" e "Arquivar" fixos no topo em telas de edição.
 
 ### Regras por Perfil

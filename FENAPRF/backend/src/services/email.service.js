@@ -472,7 +472,7 @@ FENAPRF
 }
 
 /**
- * Envia e-mail de relatório genérico (Individual, Lotação, Setor, Situação)
+ * Envia e-mail de relatório genérico (Individual, Global)
  */
 async function enviarEmailRelatorio(user, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;

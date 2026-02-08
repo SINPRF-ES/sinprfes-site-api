@@ -30,7 +30,6 @@ const initialUserState: Partial<User> = {
   complemento: '',
   cidade: '',
   uf: '',
-  situacao: 'ATIVO', // Valor padrão
   perfil_acesso: ROLES.CONSELHEIRO as any, // Valor padrão FENAPRF
   cargo: '',
   cargo_mandato_inicio: '',

@@ -3,15 +3,6 @@
  * Centraliza constantes e funções de normalização.
  */
 
-// 1. Situação Funcional (Domínio de Negócio)
-export const SITUACAO_FUNCIONAL = {
-  ATIVO: 'ATIVO',
-  VETERANO: 'VETERANO',
-  PENSIONISTA: 'PENSIONISTA'
-} as const;
-
-export type SituacaoFuncional = typeof SITUACAO_FUNCIONAL[keyof typeof SITUACAO_FUNCIONAL];
-
 export const SEXO = {
   M: 'M',
   F: 'F'
@@ -86,9 +77,6 @@ export const FILTROS_MEMBROS = [
 
 // Mapeamento para labels de exibição
 export const LABELS: Record<string, string> = {
-  [SITUACAO_FUNCIONAL.ATIVO]: 'Ativo',
-  [SITUACAO_FUNCIONAL.VETERANO]: 'Veterano',
-  [SITUACAO_FUNCIONAL.PENSIONISTA]: 'Pensionista',
   [ESTADO_CADASTRO.CADASTRO_ATIVO]: 'Ativo',
   [ESTADO_CADASTRO.ARQUIVADO]: 'Arquivado',
   [SEXO.M]: '♂️ Masculino',
@@ -118,19 +106,6 @@ export function slugify(str: string | null | undefined): string {
   return s;
 }
 
-/**
- * Normaliza a Situação Funcional.
- */
-export function normalizeSituacaoFuncional(val: string | null | undefined): SituacaoFuncional {
-  const s = slugify(val);
-  if (!s) return SITUACAO_FUNCIONAL.ATIVO;
-
-  if (s === 'ATIVO' || s === 'ATIVOS') return SITUACAO_FUNCIONAL.ATIVO;
-  if (s === 'VETERANO' || s === 'VETERANOS' || s === 'APOSENTADO' || s === 'APOSENTADOS') return SITUACAO_FUNCIONAL.VETERANO;
-  if (s === 'PENSIONISTA' || s === 'PENSIONISTAS') return SITUACAO_FUNCIONAL.PENSIONISTA;
-
-  return SITUACAO_FUNCIONAL.ATIVO;
-}
 
 /**
  * Normaliza o Perfil de Acesso.
