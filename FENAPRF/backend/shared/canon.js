@@ -16,13 +16,6 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // 1. Situação Funcional (Domínio de Negócio)
-  const SITUACAO_FUNCIONAL = {
-    ATIVO: 'ATIVO',
-    VETERANO: 'VETERANO',
-    PENSIONISTA: 'PENSIONISTA'
-  };
-
   const SEXO = {
     M: 'M',
     F: 'F'
@@ -47,9 +40,6 @@
 
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
   const LABELS = {
-    [SITUACAO_FUNCIONAL.ATIVO]: 'Ativo',
-    [SITUACAO_FUNCIONAL.VETERANO]: 'Veterano',
-    [SITUACAO_FUNCIONAL.PENSIONISTA]: 'Pensionista',
     [ESTADO_CADASTRO.CADASTRO_ATIVO]: 'Ativo',
     [ESTADO_CADASTRO.ARQUIVADO]: 'Arquivado',
     [SEXO.M]: '♂️ Masculino',
@@ -60,9 +50,12 @@
    * Remove acentos e caracteres especiais para comparação robusta.
    */
   function slugify(str) {
-    if (typeof str !== 'string') return '';
-    return str.trim().toUpperCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (!str) return '';
+    var s = String(str).trim().toUpperCase();
+    if (typeof s.normalize === 'function') {
+      return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+    return s;
   }
 
   /**
@@ -74,21 +67,6 @@
     if (s === 'M' || s === 'MASCULINO') return SEXO.M;
     if (s === 'F' || s === 'FEMININO') return SEXO.F;
     return null;
-  }
-
-  /**
-   * Normaliza a Situação Funcional.
-   * Mapeia variações como 'ATIVOS', 'APOSENTADO' para os valores canônicos.
-   */
-  function normalizeSituacaoFuncional(val) {
-    const s = slugify(val);
-    if (!s) return SITUACAO_FUNCIONAL.ATIVO; // Default seguro
-
-    if (s === 'ATIVO' || s === 'ATIVOS') return SITUACAO_FUNCIONAL.ATIVO;
-    if (s === 'VETERANO' || s === 'VETERANOS' || s === 'APOSENTADO' || s === 'APOSENTADOS') return SITUACAO_FUNCIONAL.VETERANO;
-    if (s === 'PENSIONISTA' || s === 'PENSIONISTAS') return SITUACAO_FUNCIONAL.PENSIONISTA;
-
-    return SITUACAO_FUNCIONAL.ATIVO;
   }
 
   /**
@@ -131,12 +109,10 @@
   }
 
   return {
-    SITUACAO_FUNCIONAL,
     SEXO,
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
     LABELS,
-    normalizeSituacaoFuncional,
     normalizeSexo,
     normalizePerfil,
     normalizeEstadoCadastro,

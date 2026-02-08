@@ -13,7 +13,6 @@ const usersService = require("../services/users.service");
 const { enviarEmailBoasVindasUser } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
 const {
-  normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil
 } = require("../../shared/canon");
@@ -310,6 +309,9 @@ exports.atualizarUser = async (req, res) => {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
+    const alvo = await usersService.getMe(idAlvo);
+    if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
+
     const body = req.body || {};
 
     log.info("UsersUpdateIniciado", { targetId: idAlvo, loggedId, perfilAtor, bodyKeys: Object.keys(body), requestId: req.requestId });
@@ -341,7 +343,7 @@ exports.atualizarUser = async (req, res) => {
     }
 
     const payload = {
-      nome: body.nome,
+      nome: body.nome || body.name,
       sexo: body.sexo ? normalizeSexo(body.sexo) : undefined,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
       data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
@@ -349,7 +351,9 @@ exports.atualizarUser = async (req, res) => {
       telefone2: body.telefone2,
       email1: body.email1,
       email: body.email,
-      situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
+      cargo: body.cargo,
+      cargo_mandato_inicio: normalizeDateField(body.cargo_mandato_inicio) || undefined,
+      cargo_mandato_fim: normalizeDateField(body.cargo_mandato_fim) || undefined,
       logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
@@ -363,9 +367,6 @@ exports.atualizarUser = async (req, res) => {
       const novoPerfil = normalizePerfil(body.perfil_acesso);
       if (loggedId === idAlvo) return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
 
-      const alvo = await usersService.getMe(idAlvo);
-      if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
-
       if (perfilAtor !== "ADMIN" && (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN")) {
         return res.status(403).json({ message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN." });
       }
@@ -378,9 +379,9 @@ exports.atualizarUser = async (req, res) => {
     if (body.uf2 !== undefined) payload.uf2 = body.uf2;
 
     // Verificação de Conflito de Cargo
-    const p1 = payload.perfil_acesso || (await usersService.getMe(idAlvo)).perfil_acesso;
-    const c1 = payload.cargo || (await usersService.getMe(idAlvo)).cargo;
-    const u1 = payload.uf || (await usersService.getMe(idAlvo)).uf;
+    const p1 = payload.perfil_acesso || alvo.perfil_acesso;
+    const c1 = payload.cargo || alvo.cargo;
+    const u1 = payload.uf || alvo.uf;
 
     const conflito1 = await verificarConflitoCargo(p1, c1, u1, idAlvo);
     if (conflito1) {
@@ -466,7 +467,6 @@ exports.criarUser = async (req, res) => {
       telefone2: body.telefone2 || null,
       email1: body.email1 || null,
       email: body.email || null,
-      situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       perfil_acesso,
       cargo,
       uf,

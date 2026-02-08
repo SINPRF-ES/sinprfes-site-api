@@ -1,5 +1,5 @@
 // src/utils/cadastro.js
-const { SITUACAO_FUNCIONAL, ESTADO_CADASTRO } = require("../../shared/canon");
+const { ESTADO_CADASTRO } = require("../../shared/canon");
 
 function estadoCadastro(user) {
   return user && user.arquivado_em ? ESTADO_CADASTRO.ARQUIVADO : ESTADO_CADASTRO.CADASTRO_ATIVO;
@@ -15,7 +15,6 @@ function anexarEstadoCadastroLista(lista) {
 }
 
 module.exports = {
-  SITUACAO_FUNCIONAL: Object.values(SITUACAO_FUNCIONAL),
   ESTADO_CADASTRO: Object.values(ESTADO_CADASTRO),
   estadoCadastro,
   anexarEstadoCadastro,

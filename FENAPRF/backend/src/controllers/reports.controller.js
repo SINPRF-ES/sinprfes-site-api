@@ -88,21 +88,6 @@ exports.generateReport = async (req, res) => {
       const podeVerCpf = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase());
       pdfBuffer = await pdfService.gerarPdfDossieUser(dados, { podeVerCpf });
 
-    } else if (["SITUACAO"].includes(type)) {
-      // Contrato: SITUACAO => { value }
-      const { value } = params;
-      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório." });
-
-      const dados = await reportsService.buscarDadosAgregados(type, value);
-
-      const titulos = {
-        SITUACAO: `Relatório por Situação Funcional: ${value}`
-      };
-
-      reportTitle = titulos[type];
-      filename = `relatorio_${type.toLowerCase()}_${value.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
-      pdfBuffer = await pdfService.gerarPdfRelatorioAgregado(dados, reportTitle);
-
     } else if (type === "GLOBAL") {
       // Contrato: GLOBAL => {}
       const dados = await reportsService.buscarDadosGlobal();
@@ -153,10 +138,6 @@ exports.previewReport = async (req, res) => {
       if (!userId) return res.status(400).json({ success: false, message: "ID do membro é obrigatório." });
       data = await reportsService.buscarDadosDossie(userId);
       if (!data) return res.status(404).json({ success: false, message: "Membro não encontrado." });
-    } else if (["SITUACAO"].includes(type)) {
-      const { value } = params;
-      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório." });
-      data = await reportsService.buscarDadosAgregados(type, value);
     } else if (type === "GLOBAL") {
       data = await reportsService.buscarDadosGlobal();
     } else {
@@ -172,8 +153,7 @@ exports.previewReport = async (req, res) => {
         items: [
           { label: "Nome", value: data.nome },
           { label: "CPF", value: data.cpf ? (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase()) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
-          { label: "Sexo", value: data.sexo === 'M' ? '♂️ Masculino' : (data.sexo === 'F' ? '♀️ Feminino' : '-') },
-          { label: "Situação", value: data.situacao || "-" }
+          { label: "Sexo", value: data.sexo === 'M' ? '♂️ Masculino' : (data.sexo === 'F' ? '♀️ Feminino' : '-') }
         ]
       });
       if (data.email1 || data.telefone1) {
@@ -186,36 +166,12 @@ exports.previewReport = async (req, res) => {
           ]
         });
       }
-    } else if (type === "SITUACAO") {
-      sections.push({
-        kind: "kv",
-        title: `Resumo: ${params.value}`,
-        items: [
-          { label: "Total", value: data.total },
-          { label: "Masculino", value: data.masc },
-          { label: "Feminino", value: data.fem }
-        ]
-      });
     } else if (type === "GLOBAL") {
       sections.push({
         kind: "kv",
         title: "Resumo Geral",
         items: [
-          { label: "Ativos", value: data.ativo.total },
-          { label: "Veteranos", value: data.veterano.total },
-          { label: "Pensionistas", value: data.pensionista.total },
-          { label: "Total Geral", value: data.ativo.total + data.veterano.total + data.pensionista.total }
-        ]
-      });
-
-      sections.push({
-        kind: "table",
-        title: "Distribuição por Sexo",
-        columns: ["Categoria", "Masculino", "Feminino"],
-        rows: [
-          ["Ativos", data.ativo.masc, data.ativo.fem],
-          ["Veteranos", data.veterano.masc, data.veterano.fem],
-          ["Pensionistas", data.pensionista.masc, data.pensionista.fem]
+          { label: "Total Geral", value: (data.global && data.global.total) || 0 }
         ]
       });
     }
@@ -225,7 +181,7 @@ exports.previewReport = async (req, res) => {
       type,
       generatedAt: new Date().toISOString(),
       baseCompetencia,
-      summary: type === "INDIVIDUAL" ? { nome: data.nome, cpf: data.cpf, situacao: data.situacao } : { total: data.total || (data.ativo ? data.ativo.total + data.veterano.total + data.pensionista.total : 0) },
+      summary: type === "INDIVIDUAL" ? { nome: data.nome, cpf: data.cpf } : { total: (data.global && data.global.total) || 0 },
       sections
     });
 

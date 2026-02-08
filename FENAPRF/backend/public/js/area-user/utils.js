@@ -300,7 +300,7 @@
 
     // Regra de segurança: Perfis básicos não buscam por CPF
     const perfil = (options.perfil || "").toUpperCase();
-    const canSearchCpf = !perfil || !["USER", "ORGANIZADOR"].includes(perfil);
+    const canSearchCpf = !perfil || !["CONSELHEIRO", "ORGANIZADOR"].includes(perfil);
 
     return (lista || []).filter(f => {
       // Busca por nome (normalizado)

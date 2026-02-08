@@ -30,7 +30,7 @@
         const { Notificacoes } = window || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
-        let perfil = (userInfo.perfil_acesso || userInfo.perfil || "USER").toUpperCase();
+        let perfil = (userInfo.perfil_acesso || userInfo.perfil || "CONSELHEIRO").toUpperCase();
 
         console.log("Perfil inicial (Cache):", perfil);
 

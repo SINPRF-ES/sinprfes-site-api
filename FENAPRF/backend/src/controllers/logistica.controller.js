@@ -113,6 +113,40 @@ exports.atualizarEvento = async (req, res) => {
   }
 };
 
+exports.cancelarEvento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { justificativa } = req.body;
+    const actorId = getUserId(req);
+
+    if (!justificativa) {
+      return res.status(400).json({ error: "Justificativa é obrigatória para cancelar um evento." });
+    }
+
+    const { rows } = await pool.query(
+      `UPDATE logistica_eventos
+       SET status = 'cancelado', updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Evento não encontrado." });
+    }
+
+    log.info("LogisticaEventoCancelado", { eventoId: id, by: actorId, justificativa });
+
+    // Opcionalmente: cancelar todas as inscrições do evento ou notificar
+    // Para simplificar, apenas marcamos o evento como cancelado.
+
+    return res.json({ message: "Evento cancelado com sucesso.", evento: rows[0] });
+  } catch (err) {
+    log.error("LogisticaCancelarEventoErro", err);
+    return res.status(500).json({ error: "Erro ao cancelar evento." });
+  }
+};
+
 /**
  * INSCRIÇÕES
  */

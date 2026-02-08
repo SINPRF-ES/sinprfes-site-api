@@ -107,12 +107,6 @@
         if (situacaoUpper === 'ATIVO') {
             corStatus = '#27ae60';
             classeBadge = 'badge-ativo';
-        } else if (situacaoUpper === 'VETERANO') {
-            corStatus = '#f39c12';
-            classeBadge = 'badge-veterano';
-        } else if (situacaoUpper === 'PENSIONISTA') {
-            corStatus = '#e91e63';
-            classeBadge = 'badge-pensionista';
         }
 
 

@@ -109,7 +109,7 @@ export default function RelatoriosScreen() {
 
     if (reportType === 'INDIVIDUAL') {
       if (!targetValue?.id) {
-        Alert.alert('Erro', 'Selecione um user.');
+        Alert.alert('Erro', 'Selecione um membro.');
         return;
       }
       params.userId = targetValue.id;
@@ -155,7 +155,7 @@ export default function RelatoriosScreen() {
 
     if (reportType === 'INDIVIDUAL') {
       if (!targetValue?.id) {
-        Alert.alert('Erro', 'Selecione um user.');
+        Alert.alert('Erro', 'Selecione um membro.');
         return;
       }
       params.userId = targetValue.id;
@@ -223,7 +223,7 @@ export default function RelatoriosScreen() {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Buscar User</Text>
+              <Text style={styles.modalTitle}>Buscar Membro</Text>
               <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -265,7 +265,7 @@ export default function RelatoriosScreen() {
                     <Text style={styles.modalEmptyText}>
                       {searchQuery.length < 2
                         ? "Digite pelo menos 2 caracteres para buscar..."
-                        : "Nenhum user encontrado."}
+                        : "Nenhum membro encontrado."}
                     </Text>
                   )}
                 />
@@ -304,7 +304,7 @@ export default function RelatoriosScreen() {
                 onPress={() => setIsPickerVisible(true)}
              >
                 <Text style={styles.pickerButtonText}>
-                  {targetValue?.name ? `${targetValue.name} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar user...'}
+                  {targetValue?.name ? `${targetValue.name} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar membro...'}
                 </Text>
                 <MaterialCommunityIcons name="magnify" size={20} color="#666" />
              </TouchableOpacity>

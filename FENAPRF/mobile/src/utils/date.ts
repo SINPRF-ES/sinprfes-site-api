@@ -2,7 +2,8 @@ import { onlyDigits } from '../shared/format/formatters';
 
 export const formatISOToBR = (isoDate: string | null | undefined): string => {
   if (!isoDate) return '';
-  const datePart = isoDate.split('T')[0];
+  const strDate = String(isoDate);
+  const datePart = strDate.split('T')[0];
   const parts = datePart.split('-');
   if (parts.length !== 3) return isoDate;
   const [year, month, day] = parts;
@@ -84,12 +85,14 @@ export const calculateAgeBreakdown = (dateStr: string | null | undefined): strin
 export const calculateDuration = (fromDateStr: string | null | undefined, toDateStr: string | null | undefined): string => {
   if (!fromDateStr || !toDateStr) return '—';
   try {
-    const parseDate = (d: string) => {
-      if (d.includes('/')) {
-        const parts = d.split('/').map(Number);
+    const parseDate = (d: any) => {
+      if (!d) return new Date(NaN);
+      const str = String(d);
+      if (str.includes('/')) {
+        const parts = str.split('/').map(Number);
         return new Date(parts[2], parts[1] - 1, parts[0]);
       }
-      return new Date(d);
+      return new Date(str);
     };
 
     const start = parseDate(fromDateStr);

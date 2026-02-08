@@ -60,7 +60,7 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
   const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
 
   const corpoEmail = `
-Prezado(a) ${dados.nome || "user(a)"},
+Prezado(a) ${dados.nome || "membro(a)"},
 
 Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma do FENAPRF.
 
@@ -376,8 +376,8 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
         ? new Date(p.data_nascimento).toLocaleDateString("pt-BR", { timeZone: "UTC" })
         : "-";
 
-      if (p.tipo === "USER") {
-        corpo += `${index + 1}. ${p.nome} (User - Nasc: ${dataNascStr})\n`;
+      if (p.tipo === "USER" || p.tipo === "MEMBRO") {
+        corpo += `${index + 1}. ${p.nome} (Membro - Nasc: ${dataNascStr})\n`;
       } else {
         corpo += `${index + 1}. ${p.nome} (Dependente de ${p.nome_user_vinculo} - Nasc: ${dataNascStr})\n`;
       }
@@ -405,7 +405,7 @@ async function enviarEmailRelatorioAssembleia(user, assembleia, pdfBuffer, dados
 
   const subject = `Relatório de Assembleia - ${assembleia.titulo}`;
   const corpo = `
-Prezado(a) ${user.nome || "user(a)"},
+Prezado(a) ${user.nome || "membro(a)"},
 
 Segue em anexo o relatório consolidado da assembleia "${assembleia.titulo}", conforme solicitado via plataforma FENAPRF.
 
@@ -472,7 +472,7 @@ FENAPRF
 }
 
 /**
- * Envia e-mail de relatório genérico (Individual, Lotação, Setor, Situação)
+ * Envia e-mail de relatório genérico (Individual, Global)
  */
 async function enviarEmailRelatorio(user, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;

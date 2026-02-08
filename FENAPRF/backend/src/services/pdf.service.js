@@ -813,8 +813,7 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.font("Helvetica-Bold").fontSize(12).text("2. Dados Funcionais");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Situação Funcional: ${user.situacao || "ATIVO"}`);
-    doc.moveDown(1);
+    doc.moveDown(0.5);
     linha(doc);
 
     // 3. Contatos e Endereço
@@ -925,42 +924,16 @@ async function gerarPdfRelatorioGlobal(dados) {
     doc.moveDown(1);
 
     // -------------------------------------------------------------------------
-    // SEÇÃO 1: ATIVO
+    // RESUMO GERAL
     // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. MEMBROS ATIVOS");
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("RESUMO GERAL");
     doc.fillColor("#000").moveDown(0.5);
 
-    const a = dados.ativo;
+    const g = dados.global;
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Total de ativos: ${a.total}`, { align: 'left' });
+    doc.text(`Total de membros cadastrados: ${g.total}`, { align: 'left' });
     doc.moveDown(1);
-    drawDistribuicoes(doc, a);
-
-    doc.addPage();
-    doc.moveDown(2);
-
-    // -------------------------------------------------------------------------
-    // SEÇÃO 2: VETERANO
-    // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("2. VETERANOS");
-    doc.fillColor("#000").moveDown(0.5);
-
-    const v = dados.veterano;
-    doc.font("Helvetica").fontSize(11).text(`Total de veteranos cadastrados: ${v.total}`);
-    doc.moveDown(1);
-    drawDistribuicoes(doc, v, { isVeterano: true });
-    doc.moveDown(1);
-
-    // -------------------------------------------------------------------------
-    // SEÇÃO 3: PENSIONISTA
-    // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("3. PENSIONISTAS");
-    doc.fillColor("#000").moveDown(0.5);
-
-    const p = dados.pensionista;
-    doc.font("Helvetica").fontSize(11).text(`Total de pensionistas cadastrados: ${p.total}`);
-    doc.moveDown(1);
-    drawDistribuicoes(doc, p, { isPensionista: true });
+    drawDistribuicoes(doc, g);
 
     doc.end();
   });

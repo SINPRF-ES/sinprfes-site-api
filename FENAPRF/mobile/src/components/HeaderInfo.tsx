@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { User } from '../types/user';
-import { normalizeSituacaoFuncional, getBandeiraUF } from '../utils/userUtils';
+import { getBandeiraUF } from '../utils/userUtils';
 import { useAuth } from '../hooks/useAuth';
 import Badge from './Badge';
 
@@ -18,17 +18,7 @@ const HeaderInfo: React.FC<Props> = ({ user: userProp }) => {
     return null;
   }
 
-  const situacao = normalizeSituacaoFuncional(user.situacao_funcional || user.situacao);
   const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
-
-  const getSituacaoVariant = (s: string) => {
-    switch (s) {
-      case 'ATIVO': return 'success';
-      case 'VETERANO': return 'warning';
-      case 'PENSIONISTA': return 'pink';
-      default: return 'default';
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -47,12 +37,6 @@ const HeaderInfo: React.FC<Props> = ({ user: userProp }) => {
       </View>
       <Text style={styles.nome}>{user.name || '—'}</Text>
       <Text style={styles.perfil}>{perfil}</Text>
-
-      <Badge
-        label={situacao || '—'}
-        variant={getSituacaoVariant(situacao)}
-        style={styles.badge}
-      />
     </View>
   );
 };

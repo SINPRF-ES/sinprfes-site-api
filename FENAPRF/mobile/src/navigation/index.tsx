@@ -51,6 +51,7 @@ export type RootStackParamList = {
   Jogos2026: undefined;
   Logistica: undefined;
   LogisticaEvento: { eventoId: number };
+  LogisticaEventoEditor: { eventoId?: number };
   Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
@@ -209,6 +210,11 @@ export default function RootNavigation() {
               name="LogisticaEvento"
               component={LogisticaEventoScreen}
               options={{ title: "Evento Logístico" }}
+            />
+            <Stack.Screen
+              name="LogisticaEventoEditor"
+              component={LogisticaEventoEditorScreen}
+              options={{ title: "Editor de Evento" }}
             />
           </>
         )}

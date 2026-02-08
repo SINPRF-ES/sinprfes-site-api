@@ -85,7 +85,12 @@ const LogsScreen = () => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const message = (log.message || '').toLowerCase();
-        const meta = JSON.stringify(log.meta || {}).toLowerCase();
+        let meta = '';
+        try {
+          meta = JSON.stringify(log.meta || {}).toLowerCase();
+        } catch (e) {
+          meta = '[Complex Metadata]';
+        }
         const stack = (log.stack || '').toLowerCase();
 
         if (!message.includes(query) && !meta.includes(query) && !stack.includes(query)) {
@@ -190,12 +195,12 @@ const LogsScreen = () => {
 
   const renderItem = ({ item }: { item: LogEntry }) => (
     <View style={styles.logItem}>
-      <Text style={styles.logTimestamp}>{new Date(item.timestamp).toLocaleString()}</Text>
+      <Text style={styles.logTimestamp}>{new Date(item.timestamp || 0).toLocaleString()}</Text>
       <Text style={[styles.logLevel, { color: item.level === 'ERROR' ? 'red' : 'gray' }]}>
-        [{item.level}]
+        [{String(item.level || 'UNKNOWN')}]
       </Text>
-      <Text style={styles.logMessage}>{item.message}</Text>
-      {item.stack && <Text style={styles.logStack}>{item.stack}</Text>}
+      <Text style={styles.logMessage}>{String(item.message || '—')}</Text>
+      {item.stack && <Text style={styles.logStack}>{String(item.stack)}</Text>}
     </View>
   );
 

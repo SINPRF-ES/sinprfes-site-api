@@ -9,8 +9,16 @@ import MemberCard from '../components/MemberCard';
 
 const CustomDrawerContent = (props) => {
   const { user, logout, setBloqueadoPorBiometria } = useAuth();
-  const ehGestao = checkIsGestao(user?.perfil_acesso);
-  const ehDiretoria = checkIsDiretoria(user?.perfil_acesso);
+
+  let ehGestao = false;
+  let ehDiretoria = false;
+
+  try {
+    ehGestao = checkIsGestao(user?.perfil_acesso);
+    ehDiretoria = checkIsDiretoria(user?.perfil_acesso);
+  } catch (err) {
+    console.error('[CustomDrawerContent] Error checking roles:', err);
+  }
 
   const handleLogoutPress = () => {
     Alert.alert(
@@ -47,18 +55,15 @@ const CustomDrawerContent = (props) => {
             onPress={() => {}} // Não faz nada, é apenas um título
           />
           <DrawerItem
-            label="Notificações"
-            icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
+            label="📢 Notificações"
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="Novo Membro"
-            icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
+            label="👤 Novo Membro"
             onPress={() => props.navigation.navigate('CriarUser')}
           />
           <DrawerItem
-            label="Diagnóstico"
-            icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
+            label="🧪 Diagnóstico"
             onPress={() => props.navigation.navigate('Logs')}
           />
         </>

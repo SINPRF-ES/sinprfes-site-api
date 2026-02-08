@@ -7,7 +7,6 @@ export interface User {
   token_acesso_temp?: string | null;
   token_expiracao?: string | null;
   perfil_acesso: 'ADMIN' | 'DIRETORIA' | 'COLABORADOR' | 'CONSELHEIRO';
-  situacao: string;
   bloqueado: boolean;
   created_at: string;
   updated_at: string;
@@ -43,7 +42,6 @@ export interface User {
   nome?: string;
   email1?: string;
   email2?: string | null;
-  situacao_funcional?: string | null;
 
   // Otimizações de busca (Bolt ⚡)
   _normalizedNome?: string;

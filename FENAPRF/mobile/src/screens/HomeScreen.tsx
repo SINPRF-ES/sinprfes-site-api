@@ -10,7 +10,6 @@ import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
 import Badge from '../components/Badge';
-import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { Image } from 'react-native';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -43,17 +42,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   const displayedItems = [...NAV_ITEMS];
 
-  const situacao = normalizeSituacaoFuncional(user?.situacao || '');
-  const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+  let perfil = 'CONSELHEIRO';
 
-  const getSituacaoVariant = (s: string) => {
-    switch (s) {
-      case 'ATIVO': return 'success';
-      case 'VETERANO': return 'warning';
-      case 'PENSIONISTA': return 'pink';
-      default: return 'default';
-    }
-  };
+  try {
+    perfil = String(user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+  } catch (err) {
+    console.error('[HomeScreen] Error calculating profile/status:', err);
+  }
 
   return (
     <SafeScreen style={styles.container}>
@@ -61,25 +56,18 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Image
-            source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
+            source={typeof user?.avatar_url === 'string' && user.avatar_url.startsWith('http')
+              ? { uri: user.avatar_url }
+              : require('../../assets/logo.png')}
             style={styles.avatar}
             resizeMode="cover"
           />
           <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              {(user?.name || 'Membro').split(' ')[0]}
+              {String(user?.name || 'Membro').split(' ')[0]}
             </Text>
-            <Text style={styles.userProfile}>{perfil}</Text>
-
-            {situacao && (
-              <Badge
-                label={situacao}
-                variant={getSituacaoVariant(situacao)}
-                style={styles.headerBadge}
-                textStyle={styles.headerBadgeText}
-              />
-            )}
+            <Text style={styles.userProfile}>{String(perfil)}</Text>
           </View>
         </View>
       </View>

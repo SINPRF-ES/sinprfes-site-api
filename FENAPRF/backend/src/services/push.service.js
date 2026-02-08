@@ -73,22 +73,6 @@ async function resolvePushTargets(targetType, targetValue) {
   let params = [];
 
   switch (targetType) {
-    case 'ATIVOS':
-      sql = `
-        SELECT pt.expo_push_token
-        FROM push_tokens pt
-        JOIN users f ON pt.user_id = f.id
-        WHERE pt.revoked_at IS NULL AND f.situacao = 'ATIVO'
-      `;
-      break;
-    case 'VETERANOS':
-      sql = `
-        SELECT pt.expo_push_token
-        FROM push_tokens pt
-        JOIN users f ON pt.user_id = f.id
-        WHERE pt.revoked_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
-      `;
-      break;
     case 'JOGOS':
       // Exemplo: inscritos em qualquer modalidade dos jogos
       sql = `
@@ -98,6 +82,16 @@ async function resolvePushTargets(targetType, targetValue) {
         WHERE pt.revoked_at IS NULL
       `;
       break;
+    case 'UF':
+      sql = `
+        SELECT pt.expo_push_token
+        FROM push_tokens pt
+        JOIN users f ON pt.user_id = f.id
+        WHERE pt.revoked_at IS NULL AND f.uf = $1
+      `;
+      params = [targetValue];
+      break;
+    case 'ESPECIFICO':
     case 'USER': {
       const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       sql = `
@@ -132,12 +126,11 @@ async function countNoTokenTargets(targetType, targetValue) {
   // Subquery para users que casam com o critério
   let usersSql = "";
   switch (targetType) {
-    case 'ATIVOS':
-      usersSql = "SELECT id FROM users WHERE situacao = 'ATIVO'";
+    case 'UF':
+      usersSql = "SELECT id FROM users WHERE uf = $1";
+      params = [targetValue];
       break;
-    case 'VETERANOS':
-      usersSql = "SELECT id FROM users WHERE situacao = 'VETERANO' OR situacao = 'PENSIONISTA'";
-      break;
+    case 'ESPECIFICO':
     case 'USER': {
       const targetIdCount = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       usersSql = "SELECT id FROM users WHERE id = $1";
@@ -146,7 +139,7 @@ async function countNoTokenTargets(targetType, targetValue) {
     }
     case 'ALL':
     default:
-      usersSql = "SELECT id FROM users WHERE situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA')";
+      usersSql = "SELECT id FROM users";
       break;
   }
 
