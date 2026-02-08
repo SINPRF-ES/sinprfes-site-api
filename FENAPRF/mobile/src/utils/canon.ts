@@ -111,8 +111,11 @@ export function normalizeSexo(val: string | null | undefined): Sexo | null {
  */
 export function slugify(str: string | null | undefined): string {
   if (!str) return '';
-  return str.trim().toUpperCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const s = String(str).trim().toUpperCase();
+  if (typeof s.normalize === 'function') {
+    return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  return s;
 }
 
 /**
