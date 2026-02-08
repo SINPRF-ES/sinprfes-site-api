@@ -971,10 +971,61 @@ async function gerarPdfRelatorioGlobal(dados) {
   });
 }
 
+/**
+ * PDF: RELATÓRIO DE LOGÍSTICA
+ */
+async function gerarPdfLogistica(evento, inscricoes) {
+  const codigo = gerarCodigoVerificacao(evento, "LOGISTICA");
+
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: "landscape", // Paisagem para caber a tabela
+      margins: { top: 100, bottom: 50, left: 50, right: 50 },
+    });
+
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.moveDown(1);
+    doc.font("Helvetica-Bold").fontSize(14).text(`Relatório de Inscrições: ${evento.titulo}`, { align: "center" });
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(10).text(`Período do Evento: ${formatarDataBR(evento.data_inicio)} a ${formatarDataBR(evento.data_fim)}`, { align: "center" });
+    doc.moveDown(1);
+
+    const headers = ["Nome", "Cargo/UF", "CPF", "Telefone", "Chegada", "Saída"];
+    const rows = inscricoes.map(i => [
+        i.nome || i.name || "-",
+        `${i.cargo || "-"}/${i.uf || "-"}`,
+        formatarCPF(i.cpf) || "-",
+        formatarTelefone(i.telefone) || "-",
+        new Date(i.data_chegada).toLocaleString('pt-BR'),
+        new Date(i.data_saida).toLocaleString('pt-BR')
+    ]);
+
+    drawTableWithPagination(doc, {
+        headers,
+        rows,
+        colWidths: [180, 150, 90, 90, 110, 110], // Ajustado para landscape
+        fontSize: 8
+    });
+
+    doc.end();
+  });
+
+  return await aplicarLayoutInstitucional(pdfBuffer, {
+    codigoVerificacao: codigo,
+    tipoDocumento: "Relatório de Logística",
+  });
+}
+
 module.exports = {
   gerarPdfRessarcimento,
   gerarPdfRelatorioAssembleia,
   gerarPdfDossieUser,
   gerarPdfRelatorioAgregado,
-  gerarPdfRelatorioGlobal
+  gerarPdfRelatorioGlobal,
+  gerarPdfLogistica
 };

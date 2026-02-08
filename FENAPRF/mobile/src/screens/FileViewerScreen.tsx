@@ -55,7 +55,7 @@ export default function FileViewerScreen({ route, navigation }: any) {
 
       let result;
 
-      // Para editais de assembleia, SEMPRE usamos o proxy do sistema para garantir autenticação e evitar 403 do Cloudinary
+      // Para editais de assembleia ou publicações, usamos o proxy do sistema para garantir autenticação
       if (context === 'assembleia-edital' && fileId) {
           const proxyUrl = `${API_BASE_URL}/api/assembleias/${fileId}/edital`;
           logger.info('[file.download.proxy.start]', { proxyUrl, dest });
@@ -66,6 +66,16 @@ export default function FileViewerScreen({ route, navigation }: any) {
               }
           });
           logger.info('[file.download.proxy.success]', { status: result.status });
+      } else if (context === 'publicacoes' && fileId) {
+          const proxyUrl = `${API_BASE_URL}/api/publicacoes/arquivo/${fileId}`;
+          logger.info('[file.download.pub.start]', { proxyUrl, dest });
+
+          result = await FileSystem.downloadAsync(proxyUrl, dest, {
+              headers: {
+                  'Authorization': `Bearer ${token}`
+              }
+          });
+          logger.info('[file.download.pub.success]', { status: result.status });
       } else {
           logger.info('[file.download.direct.start]', { remoteUrl, dest });
           result = await FileSystem.downloadAsync(remoteUrl, dest);
