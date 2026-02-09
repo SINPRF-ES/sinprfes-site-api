@@ -47,11 +47,9 @@ app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/shared", express.static(path.join(process.cwd(), "shared")));
 
 // --- IMPORTAÇÃO DAS ROTAS ---
-const filieseRoutes = require("./routes/filiese.routes");
 const usersRoutes = require("./routes/users.routes");
 const senhaRoutes = require("./routes/senha.routes");
 const authRoutes = require("./routes/auth.routes");
-const ressarcimentoRoutes = require("./routes/ressarcimento.routes");
 const jogosRoutes = require("./routes/jogos.routes");
 const instagramRoutes = require("./routes/instagram.routes");
 const pushRoutes = require("./routes/push.routes");
@@ -60,8 +58,6 @@ const eventoVotacoesRoutes = require("./routes/eventoVotacoes.routes");
 
 // 🟢 Rota de Publicações (Google Drive)
 const publicacoesRoutes = require("./routes/publicacoes.routes");
-const noticiasRoutes = require("./routes/noticias.routes");
-const repasseRoutes = require("./routes/repasse.routes");
 
 // 🟣 NOVO: Rota de Votações
 const votacoesRoutes = require("./routes/votacoes.routes");
@@ -85,17 +81,11 @@ app.use("/api/status", require("./routes/statusRouter"));
 // Autenticação (Login, 2FA, Me)
 app.use("/api/auth", authRoutes);
 
-// Filie-se (Público)
-app.use("/api", filieseRoutes);
-
 // Gestão de Membros
 app.use("/api/users", usersRoutes);
 
 // Senha
 app.use("/api/senha", senhaRoutes);
-
-// Ressarcimentos
-app.use("/api/ressarcimentos", ressarcimentoRoutes);
 
 // Jogos
 app.use("/api/jogos", jogosRoutes);
@@ -105,10 +95,6 @@ app.use("/api/instagram", instagramRoutes);
 
 // Publicações
 app.use("/api/publicacoes", publicacoesRoutes);
-app.use("/api/noticias", noticiasRoutes);
-
-// 💱 NOVO: Repasse
-app.use("/api/repasse", repasseRoutes);
 
 // 🟣 NOVO: Votações
 app.use("/api/votacoes", votacoesRoutes);

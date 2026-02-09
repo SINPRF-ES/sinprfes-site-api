@@ -41,12 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/index.html" class="${isActive("index.html")}">Início</a>
             <a href="/diretoria.html" class="${isActive("diretoria.html")}">Diretoria</a>
             <a href="/estatuto.html" class="${isActive("estatuto.html")}">Estatuto</a>
-            <a href="/noticias.html" class="${isActive("noticias.html")}">Notícias</a>
             <a href="/contato.html" class="${isActive("contato.html")}">Contato</a>
           </nav>
 
           <div class="header-actions">
-            <a href="/filiese.html" class="btn btn-outline">Filie-se</a>
             <!-- 🔽 aqui é a mudança: agora aponta direto para a Página Inicial -->
             <a href="/area-user.html" class="btn btn-primary">Página Inicial</a>
           </div>

@@ -19,15 +19,11 @@
   <script src="/js/area-user/seguranca.js"></script>
   <script src="/js/area-user/meus-dados.js"></script>
   <script src="/js/area-user/users-admin.js"></script>
-  <script src="/js/area-user/ressarcimento.js"></script>
-  <script src="/shared/repasse.constants.js"></script>
   <script src="/js/area-user/jogos.js"></script>
   <script src="/js/area-user/publicacoes.js"></script>
-  <script src="/js/area-user/repasse.js"></script>
   <script src="/js/area-user/notificacoes.js"></script>
   <script src="/js/area-user/assembleia-utils.js"></script>
   <script src="/js/area-user/assembleias.js"></script>
-  <script src="/js/area-user/noticias-admin.js"></script>
   <script src="/js/area-user/cms-admin.js"></script>
   <script src="/js/area-user/relatorios.js"></script>
 
@@ -48,11 +44,8 @@
           <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
           <button class="af-nav-item" data-target="sec-users">👥 Membros</button>
           <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
-          <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
-          <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
+          <button class="af-nav-item" data-target="sec-jogos" style="display:none;">🏆 Jogos 2026</button>
           <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
-          <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" style="display:none;">📰 Notícias</button>
-          <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;">💱 Repasse</button>
           <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
           <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;">📊 Relatórios</button>
           <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
@@ -82,10 +75,6 @@
            </div>
         </section>
 
-        <section id="sec-ressarcimento" class="af-section" style="display:none;">
-          <!-- Conteúdo carregado via JS -->
-        </section>
-
         <section id="sec-jogos" class="af-section" style="display:none;">
           <!-- Conteúdo carregado via JS -->
         </section>
@@ -104,14 +93,6 @@
           <div id="sec-assembleias-sala" style="display:none;">
              <div id="area-assembleia-sala-conteudo"></div>
           </div>
-        </section>
-
-        <section id="sec-repasse" class="af-section" style="display:none;">
-          <!-- Conteúdo carregado via JS -->
-        </section>
-
-        <section id="sec-noticias" class="af-section" style="display:none;">
-          <!-- Conteúdo carregado via NoticiasAdmin -->
         </section>
 
         <section id="sec-cms" class="af-section" style="display:none;">

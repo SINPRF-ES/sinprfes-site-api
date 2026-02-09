@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import SafeScreen from '../components/SafeScreen';
 import JogosBanner from '../components/JogosBanner';
 import OtaUpdateBanner from '../components/OtaUpdateBanner';
+import { ENABLE_JOGOS } from '../config/features';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
@@ -22,11 +23,6 @@ const NAV_ITEMS = [
     screen: 'MeusDados',
   },
   {
-    label: 'Notícias e Comunicados',
-    icon: 'newspaper-variant-outline',
-    screen: 'Noticias',
-  },
-  {
     label: 'Buscar Membros',
     icon: 'account-search-outline',
     screen: 'Users',
@@ -38,13 +34,7 @@ const NAV_ITEMS = [
   },
 ];
 
-const GESTAO_ITEMS = [
-  {
-    label: 'Repasse por Localidade',
-    icon: 'cash-multiple',
-    screen: 'Repasse',
-  },
-];
+const GESTAO_ITEMS: any[] = [];
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { user } = useAuth();
@@ -97,7 +87,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       </View>
 
       <OtaUpdateBanner />
-      <JogosBanner />
+      {ENABLE_JOGOS && <JogosBanner />}
 
       <View style={styles.grid}>
         {displayedItems.map((item) => (

@@ -21,14 +21,11 @@ import MeusDadosScreen from "../screens/MeusDadosScreen";
 import CriarUserScreen from "../screens/CriarUserScreen";
 import EditarUserScreen from "../screens/EditarUserScreen";
 import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
-import NoticiasScreen from "../screens/NoticiasScreen";
-import NoticiaDetalheScreen from "../screens/NoticiaDetalheScreen";
-import NoticiaEditorScreen from "../screens/NoticiaEditorScreen";
-import ConveniosScreen from "../screens/ConveniosScreen";
 import PdfViewerScreen from "../screens/PdfViewerScreen";
 import FileViewerScreen from "../screens/FileViewerScreen";
 import DrawerNavigator from "./DrawerNavigator"; // Importa o Drawer
 import UpdateAutoChecker from "../components/UpdateAutoChecker";
+import { ENABLE_PUSH } from "../config/features";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -39,10 +36,6 @@ export type RootStackParamList = {
   // As telas individuais ainda podem ser necessárias para navegação profunda
   Home: undefined;
   MeusDados: undefined;
-  Noticias: undefined;
-  NoticiaDetalhe: { newsId: string };
-  NoticiaEditor: { newsId: string | null };
-  Convenios: undefined;
   Users: undefined;
   CriarUser: undefined;
   EditarUser: { userId: string };
@@ -56,7 +49,6 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 type PendingNav =
-  | { screen: "Noticias" }
   | { screen: "Votacao" }
   | null;
 
@@ -87,7 +79,6 @@ export default function RootNavigation() {
     const pending = pendingNavRef.current;
     if (!nav || !pending || !autenticado || bloqueadoPorBiometria) return;
 
-    if (pending.screen === "Noticias") nav.navigate("Drawer", { screen: "Noticias" });
     // TODO: A rota 'Votacao' também precisa ser aninhada se estiver dentro do Drawer.
     // Assumindo que sim por enquanto. Se 'Votacao' for uma tela no Stack principal, isso precisa ser ajustado.
     if (pending.screen === "Votacao") nav.navigate("Drawer", { screen: "Votacao" });
@@ -96,10 +87,10 @@ export default function RootNavigation() {
   }
 
   useEffect(() => {
+    if (!ENABLE_PUSH) return;
     const sub = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response?.notification?.request?.content?.data as any;
-      if (data?.screen === "Noticias") pendingNavRef.current = { screen: "Noticias" };
-      else if (data?.screen === "Votacao") pendingNavRef.current = { screen: "Votacao" };
+      if (data?.screen === "Votacao") pendingNavRef.current = { screen: "Votacao" };
       tryConsumePendingNav();
     });
     return () => sub.remove();
@@ -190,16 +181,6 @@ export default function RootNavigation() {
               name="FileViewer"
               component={FileViewerScreen}
               options={({ route }) => ({ title: route.params.title || "Visualizador" })}
-            />
-            <Stack.Screen
-              name="NoticiaDetalhe"
-              component={NoticiaDetalheScreen}
-              options={{ title: "Notícia" }}
-            />
-            <Stack.Screen
-              name="NoticiaEditor"
-              component={NoticiaEditorScreen}
-              options={{ title: "Editor de Notícia" }}
             />
           </>
         )}

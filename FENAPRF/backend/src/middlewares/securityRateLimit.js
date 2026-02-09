@@ -25,18 +25,6 @@ const passwordResetLimiter = rateLimit({
 });
 
 /**
- * Limiter para Filie-se (formulário público)
- * Protege contra abuso e spam de cadastros.
- */
-const publicFormLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hora
-  max: 5, // limite de 5 envios por IP
-  message: { error: 'Limite de envios atingido. Se precisar de ajuda, entre em contato com o sindicato.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-/**
  * Limiter para Campanhas de Push
  */
 const pushCampaignLimiter = rateLimit({
@@ -50,6 +38,5 @@ const pushCampaignLimiter = rateLimit({
 module.exports = {
   loginLimiter,
   passwordResetLimiter,
-  publicFormLimiter,
   pushCampaignLimiter
 };

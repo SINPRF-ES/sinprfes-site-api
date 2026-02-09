@@ -160,9 +160,6 @@ exports.previewReport = async (req, res) => {
       data = await reportsService.buscarDadosAgregados(type, value);
     } else if (type === "GLOBAL") {
       data = await reportsService.buscarDadosGlobal();
-      if (data.ativo && data.ativo.repasse && data.ativo.repasse.competencia) {
-        baseCompetencia = `${String(data.ativo.repasse.competencia.month).padStart(2, '0')}/${data.ativo.repasse.competencia.year}`;
-      }
     } else {
       return res.status(400).json({ success: false, message: "Tipo de relatório inválido." });
     }

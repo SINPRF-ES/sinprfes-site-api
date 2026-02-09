@@ -31,129 +31,7 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
   return data;
 }
 
-/**
- * Envia o e-mail para o sindicato com a ficha de filiação em PDF anexa.
- */
-async function enviarEmailFichaFiliacao(dados, pdfBuffer) {
-  const { MAIL_FROM, MAIL_TO_FILIACAO } = process.env;
 
-  if (!MAIL_FROM || !MAIL_TO_FILIACAO) {
-    throw new Error("❌ MAIL_FROM ou MAIL_TO_FILIACAO não configurados.");
-  }
-
-  const emailUser =
-    (dados.email_destino && String(dados.email_destino).trim()) ||
-    (dados.email_pessoal && String(dados.email_pessoal).trim()) ||
-    (dados.email && String(dados.email).trim()) ||
-    "";
-
-  if (!emailUser) {
-    console.warn("⚠️ Aviso: Ficha de filiação será enviada sem cópia para o solicitante (e-mail não identificado).");
-  }
-
-  const subject = `Ficha de Filiação - ${dados.nome || ""} (${dados.cpf || ""})`;
-
-  const payload = {
-    from: MAIL_FROM,
-    to: MAIL_TO_FILIACAO,
-    cc: emailUser || undefined,
-    subject,
-    text: `Prezado(a),\n\nSegue em anexo a ficha de filiação de ${dados.nome || ""}, CPF ${dados.cpf || ""}.\n\nPor favor, assine e devolva este documento.\n\nAtenciosamente,\nFENAPRF`,
-    attachments: [{ filename: "ficha_filiacao.pdf", content: pdfBuffer.toString("base64") }],
-  };
-
-  const { data, error } = await resend.emails.send(payload);
-
-  if (error) {
-    console.error("💥 Erro ao enviar e-mail de filiação com Resend:", error);
-    throw new Error(`Falha no envio do e-mail: ${error.name || error.message}`);
-  }
-
-  console.log("📧 DEBUG_CC_FILIACAO:", { emailUser });
-  console.log("📧 E-mail de filiação enviado. ID:", data.id, "Cópia para:", emailUser);
-}
-
-/**
- * Envia o e-mail de pedido de ressarcimento
- */
-async function enviarEmailRessarcimento(dados, pdfBuffer) {
-  const { MAIL_FROM, MAIL_TO_RESSARCIMENTO, MAIL_TO_FILIACAO } = process.env;
-
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("❌ RESEND_API_KEY não configurada.");
-  }
-
-  const mailSindicato = MAIL_TO_RESSARCIMENTO || MAIL_TO_FILIACAO;
-
-  if (!MAIL_FROM || !mailSindicato) {
-    throw new Error("❌ MAIL_FROM ou MAIL_TO_RESSARCIMENTO não configurados.");
-  }
-
-  const emailUser =
-    (dados.email_destino && String(dados.email_destino).trim()) ||
-    (dados.email1 && String(dados.email1).trim()) ||
-    (dados.email2 && String(dados.email2).trim()) ||
-    "";
-
-  if (!emailUser) {
-    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ userId: dados.user_id || dados.id_user || dados.id }));
-  }
-
-  const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
-
-  const corpoEmail = `
-Prezado(a) ${dados.nome || "user(a)"},
-
-Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma do FENAPRF.
-
-Resumo do pedido:
-- Período da atividade: ${dados.data_inicio || "-"} a ${dados.data_fim || "-"}
-- Local / destino: ${dados.local || "-"}
-- Valor total solicitado: R$ ${(dados.valor_total || 0).toFixed ? dados.valor_total.toFixed(2) : Number(dados.valor_total || 0).toFixed(2)}
-
-Este e-mail foi gerado automaticamente. Em anexo, segue o PDF consolidado com os dados do pedido, para sua conferência.
-
-Atenciosamente,
-FENAPRF
-`;
-
-  // 1. Envio para o Sindicato
-  try {
-    const payloadSindicato = {
-      from: MAIL_FROM,
-      to: mailSindicato,
-      subject,
-      text: corpoEmail,
-      attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
-    };
-    const resSindicato = await resend.emails.send(payloadSindicato);
-    if (resSindicato.error) throw resSindicato.error;
-    console.log("📧 [emailSindicatoOk]", resSindicato.data.id);
-  } catch (err) {
-    console.error("💥 [emailSindicatoErro]", err);
-    // Não paramos aqui, tentamos enviar a cópia mesmo se o do sindicato falhar
-  }
-
-  // 2. Envio da Cópia para o Solicitante
-  if (emailUser) {
-    try {
-      const payloadSolicitante = {
-        from: MAIL_FROM,
-        to: emailUser,
-        subject: `CÓPIA: ${subject}`,
-        text: corpoEmail,
-        attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
-      };
-      const resSolicitante = await resend.emails.send(payloadSolicitante);
-      if (resSolicitante.error) throw resSolicitante.error;
-      console.log("📧 [emailSolicitanteOk]", resSolicitante.data.id);
-    } catch (err) {
-      console.error("💥 [emailSolicitanteErro]", err);
-    }
-  } else {
-    console.warn("⚠️ [emailSolicitanteSkip] E-mail não identificado.");
-  }
-}
 
 /**
  * E-mail de boas-vindas para novo user.
@@ -517,8 +395,6 @@ FENAPRF
 
 module.exports = {
   enviarEmailBase,
-  enviarEmailFichaFiliacao,
-  enviarEmailRessarcimento,
   enviarEmailBoasVindasUser,
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,

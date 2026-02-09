@@ -19,12 +19,9 @@
         const { configurarNavegacao } = window.Navegacao || {};
         const { carregarMeusDados } = window.MeusDados || {};
         const { inicializarUsers } = window.UsersAdmin || {};
-        const { inicializarRessarcimento } = window.Ressarcimento || {};
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
-        const { inicializarRepasse } = window.Repasse || {};
-        const { inicializarNoticias } = window.NoticiasAdmin || {};
         const { inicializarRelatorios } = window.Relatorios || {};
         const { CMSAdmin } = window || {};
         const { Notificacoes } = window || {};
@@ -40,13 +37,10 @@
                 console.log("Navegando para:", abaAlvo);
                 if (abaAlvo === 'sec-meus-dados' && carregarMeusDados) carregarMeusDados();
                 else if (abaAlvo === 'sec-users' && inicializarUsers) inicializarUsers(perfil);
-                else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
-                else if (abaAlvo === 'sec-noticias' && inicializarNoticias) inicializarNoticias(perfil);
                 else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
-                else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
             });
@@ -84,13 +78,6 @@
 
             // Exibe abas restritas conforme perfil (Regra de Ouro)
             const perfisGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"];
-            const perfisComunicacao = ["ADMIN", "DIRETORIA", "COLABORADOR", "COMUNICADOR"];
-
-            const navRepasse = document.getElementById("nav-repasse");
-            if (navRepasse) navRepasse.style.display = perfisGestao.includes(perfil) ? "block" : "none";
-
-            const navNoticias = document.getElementById("nav-noticias");
-            if (navNoticias) navNoticias.style.display = perfisComunicacao.includes(perfil) ? "block" : "none";
 
             const navCms = document.getElementById("nav-cms");
             if (navCms) navCms.style.display = perfisGestao.includes(perfil) ? "block" : "none";

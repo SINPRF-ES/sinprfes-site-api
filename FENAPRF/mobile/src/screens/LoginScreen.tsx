@@ -6,11 +6,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
-import { loginSindicato, loginCom2FA, buscarUserLogado } from '../services/authService';
+import { loginSindicato, buscarUserLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
 import { carregarSessao } from '../services/storageService';
 import { logger } from '../infra/logger';
+import { ENABLE_PUSH } from '../config/features';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -19,8 +20,6 @@ export default function LoginScreen() {
   const [cpf, setCpf] = useState<string>('');
   const [senha, setSenha] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [codigo2FA, setCodigo2FA] = useState<string>('');
-  const [etapa, setEtapa] = useState<'credenciais' | '2fa'>('credenciais');
   const [loading, setLoading] = useState<boolean>(false);
   const [temCredencial, setTemCredencial] = useState<boolean>(false);
 
@@ -97,11 +96,13 @@ export default function LoginScreen() {
 
     await setSessao(token, user);
 
-    try {
-      if (__DEV__) console.log('[Login] Tentando registrar dispositivo para push...');
-      await registrarDispositivoParaPush();
-    } catch (error) {
-      if (__DEV__) console.warn('[Login] Falha ao registrar dispositivo para push:', error);
+    if (ENABLE_PUSH) {
+      try {
+        if (__DEV__) console.log('[Login] Tentando registrar dispositivo para push...');
+        await registrarDispositivoParaPush();
+      } catch (error) {
+        if (__DEV__) console.warn('[Login] Falha ao registrar dispositivo para push:', error);
+      }
     }
 
     if (!biometriaHabilitada) {
@@ -126,12 +127,6 @@ export default function LoginScreen() {
       setLoading(true);
       const resultado = await loginSindicato({ cpf, senha });
 
-      if (resultado.requer2fa) {
-        setEtapa('2fa');
-        Alert.alert('2FA necessário', 'Informe o código do seu aplicativo autenticador.');
-        return;
-      }
-
       if (!resultado.token) throw new Error('Token não retornado pelo servidor.');
       await finalizarLoginComToken(resultado.token);
     } catch (e: any) {
@@ -153,24 +148,7 @@ export default function LoginScreen() {
     }
   }
 
-  async function handleLogin2FA() {
-    if (!codigo2FA) {
-      Alert.alert('Atenção', 'Informe o código 2FA.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const resultado = await loginCom2FA({ cpf, senha, codigo: codigo2FA });
-      await finalizarLoginComToken(resultado.token);
-    } catch (e: any) {
-      Alert.alert('Erro no 2FA', e?.message || 'Código inválido.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const isEtapaCredenciais = etapa === 'credenciais';
+  const isEtapaCredenciais = true;
 
   const cpfPlaceholder = "000.000.000-00";
 
@@ -258,44 +236,17 @@ export default function LoginScreen() {
           </Pressable>
         </View>
 
-        {isEtapaCredenciais ? (
-          <>
-            <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
-            <Pressable
-              onPress={() => navigation.navigate('ForgotPassword')}
-              disabled={loading}
-              accessibilityRole="link"
-              accessibilityLabel="Esqueci minha senha ou Primeiro acesso"
-            >
-              <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <Text style={styles.info2fa}>Digite o código gerado pelo seu aplicativo autenticador (2FA).</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Código 2FA"
-              value={codigo2FA}
-              onChangeText={setCodigo2FA}
-              keyboardType="numeric"
-              accessibilityLabel="Código 2FA"
-              textContentType="oneTimeCode"
-              autoComplete="one-time-code"
-              returnKeyType="done"
-              onSubmitEditing={handleLogin2FA}
-            />
-
-            <View style={styles.buttonRow}>
-              <View style={styles.buttonCol}>
-                <Button title={loading ? 'Confirmando...' : 'Confirmar'} onPress={handleLogin2FA} disabled={loading} color="#FFC300" />
-              </View>
-              <View style={styles.buttonCol}>
-                <Button title="Voltar" onPress={() => { setEtapa('credenciais'); setCodigo2FA(''); }} color="#666" disabled={loading} />
-              </View>
-            </View>
-          </>
-        )}
+        <>
+          <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
+          <Pressable
+            onPress={() => navigation.navigate('ForgotPassword')}
+            disabled={loading}
+            accessibilityRole="link"
+            accessibilityLabel="Esqueci minha senha ou Primeiro acesso"
+          >
+            <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
+          </Pressable>
+        </>
       </View>
     </KeyboardAwareScrollView>
     </SafeScreen>

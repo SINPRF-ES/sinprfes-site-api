@@ -111,7 +111,7 @@ exports.getUserById = async (req, res) => {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
     }
 
-    const { senha_hash, password_hash, twofa_secret, ...dadosLimpos } = user;
+    const { senha_hash, password_hash, ...dadosLimpos } = user;
     return res.json(dadosLimpos);
   } catch (err) {
     log.error("UsersGetByIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id, targetId: idAlvo });
@@ -131,12 +131,9 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
     }
 
-    const { senha_hash, password_hash, twofa_secret, ...dadosLimpos } = user;
+    const { senha_hash, password_hash, ...dadosLimpos } = user;
 
-    return res.json({
-      ...dadosLimpos,
-      twofa_ativo: false,
-    });
+    return res.json(dadosLimpos);
   } catch (err) {
     log.error("UsersGetMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
@@ -475,13 +472,6 @@ exports.uploadAvatarPorId = async (req, res) => {
     log.error("UsersUploadAvatarPorIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
-};
-
-/**
- * POST /api/users/2fa/desativar
- */
-exports.desativar2fa = async (req, res) => {
-    return res.status(400).json({ error: "Funcionalidade não disponível para este ambiente." });
 };
 
 exports.removerAvatarMe = async (req, res) => {

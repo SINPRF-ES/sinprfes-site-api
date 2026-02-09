@@ -5,12 +5,10 @@ import type { User } from '../types/user';
 interface LoginPayload {
   cpf: string;
   senha?: string;
-  codigo?: string;
 }
 
 interface LoginResponse {
   token: string;
-  requer2fa?: boolean;
 }
 
 /**
@@ -23,17 +21,6 @@ export async function loginSindicato(
   return data;
 }
 
-/**
- * Valida o código de autenticação de dois fatores (2FA).
- */
-export async function loginCom2FA(payload: Required<LoginPayload>): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('/api/auth/login/2fa', {
-    cpf: payload.cpf,
-    senha: payload.senha,
-    code: payload.codigo,
-  });
-  return data;
-}
 
 /**
  * Busca os dados do membro logado.

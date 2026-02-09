@@ -124,7 +124,7 @@ exports.me = async (req, res, next) => {
     }
 
     // Sanitização do payload (remover senhas)
-    const { senha_hash, password_hash, twofa_secret, ...limpo } = user;
+    const { senha_hash, password_hash, ...limpo } = user;
 
     // Se o hash for PENDENTE, enviamos para o app saber que precisa definir senha
     if (password_hash === 'PENDENTE' || senha_hash === 'PENDENTE') {
@@ -159,7 +159,3 @@ exports.listarUsers = async (req, res, next) => {
   }
 };
 
-// 2FA removido conforme solicitado (referência a twofa_secret e campos de users)
-exports.ativar2fa = async (req, res) => {
-    return res.status(400).json({ error: "Funcionalidade não disponível para este ambiente." });
-};
