@@ -3,6 +3,8 @@ import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
+import { registrarDispositivoParaPush } from '../services/deviceService';
+import { ENABLE_PUSH } from '../config/features';
 
 import type { AuthContextData } from '../types/auth';
 import type { User } from '../types/user';
@@ -74,6 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Atualiza o membro no storage
             await salvarSessao({ token: sessao.token, user: userAtualizado });
 
+            if (ENABLE_PUSH) {
+              registrarDispositivoParaPush().catch(e => console.warn('Push registration failed', e));
+            }
+
             if (bio) {
               setBloqueadoPorBiometria(true);
             }
@@ -98,6 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(novoUser);
     setBloqueadoPorBiometria(false);
     await salvarSessao({ token: novoToken, user: novoUser });
+
+    if (ENABLE_PUSH) {
+      registrarDispositivoParaPush().catch(e => console.warn('Push registration failed', e));
+    }
   }
 
   async function logout(removerBiometria = false) {

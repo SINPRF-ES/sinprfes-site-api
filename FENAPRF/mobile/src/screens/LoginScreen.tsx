@@ -104,15 +104,6 @@ export default function LoginScreen() {
 
     await setSessao(token, user);
 
-    if (ENABLE_PUSH) {
-      try {
-        if (__DEV__) console.log('[Login] Tentando registrar dispositivo para push...');
-        await registrarDispositivoParaPush();
-      } catch (error) {
-        if (__DEV__) console.warn('[Login] Falha ao registrar dispositivo para push:', error);
-      }
-    }
-
     if (!biometriaHabilitada) {
       Alert.alert(
         'Login com biometria',
