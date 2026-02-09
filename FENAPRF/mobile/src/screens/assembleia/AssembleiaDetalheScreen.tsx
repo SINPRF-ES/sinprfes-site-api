@@ -28,10 +28,10 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
   const perfil = (user?.perfil_acesso || '').toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
-  const isElegivel = ['DIRETORIA', 'USER', 'ORGANIZADOR'].includes(perfil);
+  const isElegivel = ['DIRETORIA', 'CONSELHEIRO', 'COLABORADOR'].includes(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
   const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
-  const canGenerateReport = (assembleia?.estado === 'ENCERRADA' || assembleia?.estado === 'EM_CURSO' || assembleia?.estado === 'ABERTA') && perfil !== 'COMUNICADOR';
+  const canGenerateReport = (assembleia?.estado === 'ENCERRADA' || assembleia?.estado === 'EM_CURSO' || assembleia?.estado === 'ABERTA');
 
   const [estadoLoading, setEstadoLoading] = useState(false);
 
@@ -289,7 +289,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
       }
     } else if (assembleia && canGenerateReport) {
-      // Caso não seja diretoria nem presidente (ex: USER), mas pode gerar relatório
+      // Caso não seja diretoria nem presidente (ex: CONSELHEIRO), mas pode gerar relatório
       actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
     }
     navigation.setOptions({
@@ -570,7 +570,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         </View>
       )}
 
-      {isEncerrada && perfil !== 'COMUNICADOR' && (
+      {isEncerrada && (
         <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366', alignItems: 'center' }]}>
             <MaterialCommunityIcons name="file-check" size={48} color="#003366" />
             <Text style={[styles.tituloText, { fontSize: 18, marginTop: 10, textAlign: 'center' }]}>Assembleia Encerrada</Text>

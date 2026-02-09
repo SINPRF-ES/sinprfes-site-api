@@ -1,6 +1,7 @@
 // src/screens/HomeScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SafeScreen from '../components/SafeScreen';
 import JogosBanner from '../components/JogosBanner';
 import OtaUpdateBanner from '../components/OtaUpdateBanner';
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
 const GESTAO_ITEMS: any[] = [];
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
 
@@ -54,7 +56,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   return (
     <SafeScreen style={styles.container}>
     <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <View style={styles.headerContent}>
            <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
@@ -101,7 +103,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#003366',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 60,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   memberCardContainer: {
-    marginTop: -40,
+    marginTop: -60, // Increased to compensate for removal of negative margin in MemberCard
   },
   headerText: {
     flex: 1,

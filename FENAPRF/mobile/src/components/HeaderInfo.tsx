@@ -17,7 +17,7 @@ const HeaderInfo: React.FC<Props> = ({ user: userProp }) => {
     return null;
   }
 
-  const perfil = (user?.perfil_acesso || 'USER').toUpperCase();
+  const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
 
   return (
     <View style={styles.container}>

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   TextInput,
   Modal,
@@ -34,6 +33,7 @@ import { isGestao, getCanonicalUserId, UF_NOME } from '../utils/user';
 import { formatDateTimeMask, parseBRDateTimeToISO, formatISOToBRDateTime } from '../utils/date';
 import { formatCPF, formatTelefone } from '../utils/format';
 import api from '../services/apiService';
+import SafeScreen from '../components/SafeScreen';
 
 const LogisticaScreen = () => {
   const navigation = useNavigation<any>();
@@ -389,7 +389,7 @@ const LogisticaScreen = () => {
 
     navigation.setOptions({
       headerRight: () => actions.length > 0 ? <HeaderMenu actions={actions} /> : null,
-      title: 'Módulo de Logística',
+      title: 'Logística',
       headerStyle: { backgroundColor: '#003366' },
       headerTintColor: '#fff',
     });
@@ -412,7 +412,7 @@ const LogisticaScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeScreen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Seletor de Eventos se houver mais de um ativo */}
         {eventos.filter(e => e.status === STATUS_EVENTO.ATIVO).length > 1 && (
@@ -542,7 +542,6 @@ const LogisticaScreen = () => {
         )}
       </ScrollView>
 
-      {/* MODAL EVENTO */}
       <Modal visible={modalEventoVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -626,7 +625,7 @@ const LogisticaScreen = () => {
         </View>
       </Modal>
 
-    </SafeAreaView>
+    </SafeScreen>
   );
 };
 

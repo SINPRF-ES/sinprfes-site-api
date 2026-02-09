@@ -10,7 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/format';
-import { onlyDigits } from '../utils/format';
+import { onlyDigits, maskCPF, maskPhone } from '../utils/format';
 import { getCanonicalUserId, isGestao, ROLES, ordenarMembrosTodos, tituloCargoUf } from '../utils/user';
 import * as Canon from '../utils/user';
 import { logger } from '../infra/logger';
@@ -289,10 +289,10 @@ export default function UsersScreen({ navigation, route }: any) {
               {selectedMember && (
                 <View style={styles.memberDetails}>
                   <Text style={styles.detailText}><Text style={styles.detailLabel}>Email:</Text> {selectedMember.email || selectedMember.email1 || '—'}</Text>
-                  <Text style={styles.detailText}><Text style={styles.detailLabel}>Telefone:</Text> {selectedMember.telefone1 || '—'}</Text>
+                  <Text style={styles.detailText}><Text style={styles.detailLabel}>Telefone:</Text> {maskPhone(selectedMember.telefone1) || '—'}</Text>
                   {ehGestao && (
                     <>
-                      <Text style={styles.detailText}><Text style={styles.detailLabel}>CPF:</Text> {selectedMember.cpf || '—'}</Text>
+                      <Text style={styles.detailText}><Text style={styles.detailLabel}>CPF:</Text> {maskCPF(selectedMember.cpf) || '—'}</Text>
                     </>
                   )}
                   {selectedMember.perfil_acesso2 && (

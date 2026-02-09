@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   cardProfile: {
-    marginTop: -30,
+    // Negative margin removed to prevent overlap in screens other than Home
     marginBottom: 20,
   },
   topSection: {

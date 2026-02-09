@@ -9,7 +9,7 @@
 
     function inicializarNotificacoes(perfil) {
         // Controle de visibilidade do menu
-        const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        const perfisAutorizados = ["ADMIN", "DIRETORIA", "COLABORADOR"];
         const navItem = document.getElementById('nav-notificacoes');
 
         if (navItem) {
@@ -91,7 +91,7 @@
             container.style.display = 'block';
             label.textContent = 'Selecionar UF:';
             if (ufSelect) ufSelect.style.display = 'block';
-        } else if (type === 'USER') {
+        } else if (type === 'MEMBRO' || type === 'USER') {
             container.style.display = 'block';
             label.textContent = 'Buscar Membro:';
             userWrapper.style.display = 'block';
@@ -152,7 +152,7 @@
         }
 
         let targetLabel = targetType;
-        if (targetType === 'USER' && targetValue && typeof targetValue === 'object') {
+        if ((targetType === 'MEMBRO' || targetType === 'USER') && targetValue && typeof targetValue === 'object') {
             targetLabel = `Membro — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
         } else if (targetValue) {
             targetLabel = `${targetType} (${targetValue})`;
@@ -247,7 +247,7 @@
             const statusLabel = c.status === 'SENT' ? 'Enviado' : 'Falhou';
 
             let displayTargetValue = c.target_value;
-            if (c.target_type === 'USER' && c.target_value) {
+            if ((c.target_type === 'USER' || c.target_type === 'MEMBRO') && c.target_value) {
                 let parsed = null;
                 if (typeof c.target_value === 'object') {
                     parsed = c.target_value;

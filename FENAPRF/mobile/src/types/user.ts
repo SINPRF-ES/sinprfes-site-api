@@ -49,6 +49,6 @@ export interface User {
   _onlyDigitsCpf?: string;
 }
 
-export type UserProfile = 'ADMIN' | 'DIRETORIA' | 'COLABORADOR' | 'CONSELHEIRO' | 'FUNCIONARIO' | 'USER';
+export type UserProfile = 'ADMIN' | 'DIRETORIA' | 'COLABORADOR' | 'CONSELHEIRO';
 
 export type Usuario = User;
