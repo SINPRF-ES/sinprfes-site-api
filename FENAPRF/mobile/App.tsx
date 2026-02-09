@@ -8,6 +8,7 @@ import { initDb } from './src/database/db';
 import { setupGlobalErrorHandling } from './src/infra/errorHandling';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { logger } from './src/infra/logger';
+import UpdateAutoChecker from './src/components/UpdateAutoChecker';
 
 // Inicializa o sistema de captura de erros globalmente
 setupGlobalErrorHandling();
@@ -30,6 +31,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <RootNavigation />
+          <UpdateAutoChecker />
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

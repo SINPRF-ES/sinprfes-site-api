@@ -15,7 +15,7 @@ const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
  *
  * POLÍTICA DE ATUALIZAÇÃO:
  * - O app NUNCA deve aplicar atualizações (OTA ou APK) automaticamente.
- * - Toda atualização deve ser precedida de confirmação do usuário via Modal ou Banner.
+ * - Toda atualização deve ser precedida de confirmação do membro via Modal ou Banner.
  */
 const UpdateAutoChecker: React.FC = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
@@ -48,7 +48,7 @@ const UpdateAutoChecker: React.FC = () => {
         const lastCheck = await carregarUltimoCheckUpdate();
         const now = Date.now();
 
-        // Se for gatilho de login, ignoramos o throttle de 6h para garantir que o usuário
+        // Se for gatilho de login, ignoramos o throttle de 6h para garantir que o membro
         // veja atualizações críticas logo ao entrar no app.
         if (!isLoginTrigger && (now - lastCheck < CHECK_INTERVAL)) {
           logDebug('UpdateCheck.auto.skip', { reason: 'throttled' });

@@ -41,7 +41,7 @@ const publicFormLimiter = rateLimit({
  */
 const pushCampaignLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 2, // limite de 2 envios por IP/usuário
+  max: 2, // limite de 2 envios por IP/membro
   message: { error: 'Limite de envio de notificações atingido (máx 2 por minuto).' },
   standardHeaders: true,
   legacyHeaders: false,

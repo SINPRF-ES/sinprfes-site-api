@@ -177,8 +177,7 @@ exports.atualizarMeusDados = async (req, res) => {
     const payload = {
       telefone1: body.telefone1,
       telefone2: body.telefone2,
-      email1: body.email1,
-      email: body.email,
+      email: body.email || body.email1,
       // ViaCEP fields blocked for all in /me
       numero: body.numero,
       complemento: body.complemento,
@@ -241,8 +240,7 @@ exports.atualizarUser = async (req, res) => {
       data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
-      email1: body.email1,
-      email: body.email,
+      email: body.email || body.email1,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
       // ViaCEP fields blocked for all in gestao update too
       // logradouro_bairro: body.logradouro_bairro,
@@ -310,7 +308,7 @@ exports.atualizarUser = async (req, res) => {
     if (err && (err.code === "23505" || (err.message && err.message.includes("duplicate")))) return res.status(409).json({ message: "CPF duplicado no sistema." });
 
     log.error("UsersUpdateGestaoErro", { message: err.message, stack: err.stack, requestId: req.requestId, loggedId, targetId: idAlvo });
-    return res.status(500).json({ success: false, message: "Erro ao atualizar usuário" });
+    return res.status(500).json({ success: false, message: "Erro ao atualizar membro" });
   }
 };
 
@@ -323,13 +321,13 @@ exports.criarUser = async (req, res) => {
     if (!perfilGestao(perfilCriador)) return res.status(403).json({ message: Textos.USERS.PERMISSAO_CRIAR });
 
     const body = req.body || {};
-    if (!body.nome || !body.cpf || (!body.email1 && !body.email)) return res.status(400).json({ message: Textos.USERS.CAMPOS_OBRIGATORIOS });
+    if (!body.nome || !body.cpf || (!body.email && !body.email1)) return res.status(400).json({ message: Textos.USERS.CAMPOS_OBRIGATORIOS });
 
     const cpfLimpo = normalizarCpf(body.cpf);
     if (cpfLimpo.length !== 11) return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
 
     const checkCpf = await pool.query("SELECT name FROM users WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
-    if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já pertence ao usuário: ${checkCpf.rows[0].name}.` });
+    if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já pertence ao membro: ${checkCpf.rows[0].name}.` });
 
     const perfil_acesso = normalizePerfil(body.perfil_acesso || "CONSELHEIRO");
     const cargo = body.cargo || null;
@@ -352,8 +350,7 @@ exports.criarUser = async (req, res) => {
       data_nascimento: normalizeDateField(body.data_nascimento),
       telefone1: body.telefone1 || null,
       telefone2: body.telefone2 || null,
-      email1: body.email1 || null,
-      email: body.email || null,
+      email: body.email || body.email1 || null,
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       perfil_acesso,
       cargo,

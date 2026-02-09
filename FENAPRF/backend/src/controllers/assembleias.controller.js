@@ -296,7 +296,7 @@ async function encerrarAssembleia(req, res) {
   }
 }
 
-// Helper para validar se o usuário é o Presidente da Mesa ou Diretoria
+// Helper para validar se o membro é o Presidente da Mesa ou Diretoria
 async function verificarAutoridadeMesa(assembleiaId, user) {
   const mesa = await service.buscarMesa(assembleiaId);
   const isDiretoria = user.perfil_acesso === 'DIRETORIA' || user.perfil_acesso === 'ADMIN';
@@ -620,7 +620,7 @@ async function votar(req, res) {
 
     const elegivel = await service.verificarElegibilidade(vid, req.user.id);
     if (!elegivel) {
-        log.warn("AssembleiaVotoRejeitado", { requestId: req.requestId, userId: req.user.id, assembleiaId: id, votacaoId: vid, motivo: "Usuário Inelegível" });
+        log.warn("AssembleiaVotoRejeitado", { requestId: req.requestId, userId: req.user.id, assembleiaId: id, votacaoId: vid, motivo: "Membro Inelegível" });
         return res.status(403).json({ error: Textos.ASSEMBLEIA.NAO_ELEGIVEL });
     }
 
@@ -887,7 +887,8 @@ async function gerarRelatorio(req, res) {
     await emailService.enviarEmailRelatorioAssembleia(user, dados.assembleia, pdfBuffer, dados);
     log.info("REPORT_EMAIL_USER_SENT", { requestId: req.requestId, assembleiaId: id, userId: req.user.id });
 
-    const maskedEmail = user.email1 ? user.email1.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
+    const userEmail = user.email || user.email1;
+    const maskedEmail = userEmail ? userEmail.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
 
     await service.registrarAuditoria(id, req.user.id, "RELATORIO_GERADO", {
       requestedBy: { id: req.user.id, nome: req.user.nome },

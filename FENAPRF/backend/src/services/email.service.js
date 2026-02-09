@@ -96,7 +96,7 @@ async function enviarEmailRessarcimento(dados, pdfBuffer) {
     "";
 
   if (!emailUser) {
-    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ userId: dados.id_user || dados.id }));
+    console.warn("⚠️ RessarcimentoSemEmailDestino", JSON.stringify({ userId: dados.user_id || dados.id_user || dados.id }));
   }
 
   const subject = `Pedido de Ressarcimento - ${dados.nome || ""} (${dados.cpf || ""})`;
@@ -266,7 +266,7 @@ async function enviarEmailConfirmacaoInscricaoJogos(payload) {
   const user = payload?.user || payload || {};
   const inscricao = payload?.inscricao || payload || {};
 
-  const userId = user.id || user.id_user || payload?.id || payload?.id_user;
+  const userId = user.id || user.user_id || user.id_user || payload?.id || payload?.user_id || payload?.id_user;
 
   const emailDestino = extrairEmailDestino(user);
   if (!emailDestino) {
@@ -304,7 +304,7 @@ async function enviarEmailCancelamentoInscricaoJogos(payload) {
   const user = payload?.user || payload || {};
   const inscricao = payload?.inscricao || payload || {};
 
-  const userId = user.id || user.id_user || payload?.id || payload?.id_user;
+  const userId = user.id || user.user_id || user.id_user || payload?.id || payload?.user_id || payload?.id_user;
 
   const emailDestino = extrairEmailDestino(user);
   if (!emailDestino) {
@@ -362,8 +362,8 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
         ? new Date(p.data_nascimento).toLocaleDateString("pt-BR", { timeZone: "UTC" })
         : "-";
 
-      if (p.tipo === "USER") {
-        corpo += `${index + 1}. ${p.nome} (User - Nasc: ${dataNascStr})\n`;
+      if (p.tipo === "MEMBRO") {
+        corpo += `${index + 1}. ${p.nome} (Membro - Nasc: ${dataNascStr})\n`;
       } else {
         corpo += `${index + 1}. ${p.nome} (Dependente de ${p.nome_user_vinculo} - Nasc: ${dataNascStr})\n`;
       }
@@ -458,7 +458,7 @@ FENAPRF
 }
 
 /**
- * Envia e-mail de relatório genérico (Individual, Lotação, Setor, Situação)
+ * Envia e-mail de relatório genérico (Individual, UF, Setor, Situação)
  */
 async function enviarEmailRelatorio(user, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;
@@ -505,7 +505,7 @@ FENAPRF
         from: MAIL_FROM,
         to: unionEmail,
         subject: `[SOLICITANTE SEM EMAIL] ${subject}`,
-        text: `O usuário ${user.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
+        text: `O membro ${user.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
         attachments
       });
       console.log("📧 [emailRelatorioUnionOnlyOk] enviado para", unionEmail);

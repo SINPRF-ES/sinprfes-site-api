@@ -14,7 +14,7 @@ interface LoginResponse {
 }
 
 /**
- * Autentica o usuário com CPF e senha.
+ * Autentica o membro com CPF e senha.
  */
 export async function loginSindicato(
   payload: Pick<LoginPayload, 'cpf' | 'senha'>
@@ -36,7 +36,7 @@ export async function loginCom2FA(payload: Required<LoginPayload>): Promise<Logi
 }
 
 /**
- * Busca os dados do usuário logado.
+ * Busca os dados do membro logado.
  */
 export async function buscarUserLogado(token?: string): Promise<User> {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -54,7 +54,7 @@ export async function solicitarResetSenha(cpf: string): Promise<{ message: strin
 }
 
 /**
- * Redefine a senha do usuário utilizando o token enviado por e-mail.
+ * Redefine a senha do membro utilizando o token enviado por e-mail.
  */
 export async function resetarSenha(token: string, novaSenha: string): Promise<{ message: string }> {
   const { data } = await api.post('/api/senha/resetar', { token, novaSenha });

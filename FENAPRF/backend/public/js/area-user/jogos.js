@@ -199,7 +199,7 @@
                             btnCancelar.title = "";
                         }
 
-                        // Se for user comum, recarrega a planilha restrita
+                        // Se for membro comum, recarrega a planilha restrita
                         if (!isManager) {
                             renderizarPlanilhaUser(data);
                         }
@@ -357,7 +357,7 @@
             cardBody.appendChild(container);
 
             if (!isManager) {
-                // Para user, a tabela será preenchida pelo carregarInscricao()
+                // Para membro, a tabela será preenchida pelo carregarInscricao()
                 const wrapper = document.getElementById("tabela-jogos-wrapper");
                 if (wrapper) wrapper.innerHTML = "<em>Carregando seus dados...</em>";
             }
@@ -409,7 +409,7 @@
 
                             return `
                                 <tr>
-                                    <td style="font-weight:bold;">${i.nome_user || "-"}</td>
+                                    <td style="font-weight:bold;">${i.nome_membro || "-"}</td>
                                     <td style="text-align:center;">${idade || "-"}</td>
                                     <td>${sexoFormatado}</td>
                                     <td style="font-size:0.85rem;">${modsLabels}</td>
@@ -448,7 +448,7 @@
                 const telefoneFormatado = window.Utils && window.Utils.formatarTelefoneTexto ? window.Utils.formatarTelefoneTexto(i.telefone1) : (i.telefone1 || "");
 
                 return [
-                    i.nome_user || "",
+                    i.nome_membro || "",
                     idade,
                     sexoFormatado,
                     mods,

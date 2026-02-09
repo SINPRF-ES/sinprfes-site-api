@@ -71,7 +71,7 @@ async function converterAvatarParaWebp(req, res, next) {
 }
 
 // =============================================================================
-// ROTAS DO PRÓPRIO USUÁRIO (/me)
+// ROTAS DO PRÓPRIO MEMBRO (/me)
 // =============================================================================
 router.get("/me", authMiddleware, usersController.getMe);
 

@@ -45,7 +45,7 @@ const DependenteItem = ({ user, setUser, index, isEditing = false }) => {
 
   const handleParentescoChange = (mode) => {
     setParentescoMode(mode);
-    // Se mudar para OUTRO, inicialmente deixa o valor vazio no hidden para o usuário digitar
+    // Se mudar para OUTRO, inicialmente deixa o valor vazio no hidden para o membro digitar
     const newValue = mode === 'OUTRO' ? '' : mode;
     handleDependentChange('parentesco', newValue);
   };

@@ -24,20 +24,20 @@ function gerarSlugNome(nome) {
  */
 async function getRequesterData(user) {
   // 1. Tenta do e-mail na sessão (JWT)
-  if (user.email1 || user.email) {
+  if (user.email || user.email1) {
     return {
         nome: user.nome,
-        email: user.email1 || user.email
+        email: user.email || user.email1
     };
   }
 
   // 2. Busca no banco de dados pelo ID
   try {
-    const user = await usersService.buscarPorId(user.id);
-    if (user) {
+    const dbUser = await usersService.buscarPorId(user.id);
+    if (dbUser) {
       return {
-          nome: user.nome,
-          email: user.email1 || user.email2 || null
+          nome: dbUser.nome,
+          email: dbUser.email || dbUser.email1 || dbUser.email2 || null
       };
     }
   } catch (err) {
@@ -181,12 +181,12 @@ exports.previewReport = async (req, res) => {
           { label: "Situação", value: data.situacao || "-" }
         ]
       });
-      if (data.email1 || data.telefone1) {
+      if (data.email || data.email1 || data.telefone1) {
         sections.push({
           kind: "kv",
           title: "Contato",
           items: [
-            { label: "E-mail Principal", value: data.email1 || "-" },
+            { label: "E-mail Principal", value: data.email || data.email1 || "-" },
             { label: "Telefone Principal", value: data.telefone1 || "-" }
           ]
         });

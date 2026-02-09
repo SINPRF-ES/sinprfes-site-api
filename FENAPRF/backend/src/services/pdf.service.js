@@ -929,8 +929,7 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.font("Helvetica-Bold").fontSize(12).text("3. Contatos e Endereço");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`E-mail 1: ${user.email1 || "-"}`);
-    doc.text(`E-mail 2: ${user.email2 || "-"}`);
+    doc.text(`E-mail: ${user.email || user.email1 || "-"}`);
     doc.text(`Telefone 1: ${user.telefone1 ? formatarTelefone(user.telefone1) : "-"}`);
     doc.text(`Telefone 2: ${user.telefone2 ? formatarTelefone(user.telefone2) : "-"}`);
     doc.moveDown(0.5);
@@ -964,7 +963,7 @@ async function gerarPdfDossieUser(user, options = {}) {
 }
 
 /**
- * PDF: RELATÓRIO ESTATÍSTICO (Lotação, Situação)
+ * PDF: RELATÓRIO ESTATÍSTICO (UF, Situação)
  */
 async function gerarPdfRelatorioAgregado(dados, titulo) {
   const codigo = gerarCodigoVerificacao(dados, "ESTATISTICO");
@@ -989,7 +988,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
     doc.font("Helvetica-Bold").fontSize(16).text(titulo, { align: "center" });
     doc.moveDown(1);
 
-    // Bloco "Resumo da Lotação" (LAYOUT TIPO DOSSIÊ - B1)
+    // Bloco "Resumo por UF" (LAYOUT TIPO DOSSIÊ - B1)
     if (dados.repasse) {
         doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Unidade (UF)");
         doc.moveDown(0.5);

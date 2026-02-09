@@ -34,7 +34,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       logDebug('Publicacoes.fetch.start', { folderId: currentFolder.id });
       let data = await fetchPublicacoes(currentFolder.id);
 
-      // 🛑 Ocultar pastas técnicas na raiz para não confundir usuários
+      // 🛑 Ocultar pastas técnicas na raiz para não confundir membros
       if (currentFolder.id === null) {
         data = data.filter(item => {
           const name = (item.name || '').toLowerCase();

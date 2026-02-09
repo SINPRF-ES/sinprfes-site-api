@@ -1,0 +1,7 @@
+
+> fenaprf-backend@1.0.0 start
+> node server.js
+
+❌ ERRO CRÍTICO: Variáveis de ambiente obrigatórias ausentes:
+   - DATABASE_URL
+   - JWT_SECRET

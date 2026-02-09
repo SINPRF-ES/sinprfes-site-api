@@ -102,6 +102,37 @@ export const UFS = [
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
+export const UF_NOME: Record<string, string> = {
+  "AC": "Acre",
+  "AL": "Alagoas",
+  "AP": "Amapá",
+  "AM": "Amazonas",
+  "BA": "Bahia",
+  "CE": "Ceará",
+  "DF": "Distrito Federal",
+  "ES": "Espírito Santo",
+  "GO": "Goiás",
+  "MA": "Maranhão",
+  "MT": "Mato Grosso",
+  "MS": "Mato Grosso do Sul",
+  "MG": "Minas Gerais",
+  "PA": "Pará",
+  "PB": "Paraíba",
+  "PR": "Paraná",
+  "PE": "Pernambuco",
+  "PI": "Piauí",
+  "RJ": "Rio de Janeiro",
+  "RN": "Rio Grande do Norte",
+  "RS": "Rio Grande do Sul",
+  "RO": "Rondônia",
+  "RR": "Roraima",
+  "SC": "Santa Catarina",
+  "SP": "São Paulo",
+  "SE": "Sergipe",
+  "TO": "Tocantins",
+  "BR": "Brasil"
+};
+
 /**
  * Verifica se o perfil tem acesso de gestão (administrativo geral).
  */
@@ -130,6 +161,44 @@ export const logDebug = (tag: string, data: any) => {
 };
 
 /**
+ * Normaliza o nome do cargo.
+ */
+export function normalizeCargo(raw?: string | null) {
+  const s = (raw || "").toString().trim();
+  if (!s) return "";
+  const lower = s.toLowerCase();
+
+  const map = new Map([
+    ["presidente", "Presidente"],
+    ["vice-presidente", "Vice-Presidente"],
+    ["delegado representante", "Delegado Representante"],
+    ["delegado substituto", "Delegado Substituto"],
+  ]);
+
+  return map.get(lower) || s;
+}
+
+/**
+ * Retorna o título formatado do cargo e UF do membro.
+ */
+export function tituloCargoUf(m: { perfil_acesso?: string | null, cargo?: string | null, uf?: string | null }) {
+  const perfil = (m.perfil_acesso || "").toUpperCase();
+  const c = normalizeCargo(m.cargo);
+  const ufSigla = (m.uf || "").toUpperCase();
+  const ufNome = UF_NOME[ufSigla] || ufSigla || "—";
+
+  if (perfil === ROLES.CONSELHEIRO) {
+    return c
+      ? `${c} do Sindicato de ${ufNome}`
+      : `Conselheiro do Sindicato de ${ufNome}`;
+  }
+  if (perfil === ROLES.DIRETORIA) return c || "Diretoria";
+  if (perfil === ROLES.COLABORADOR) return "Colaborador";
+  if (perfil === ROLES.ADMIN) return c || "Administrador";
+  return c || "Membro";
+}
+
+/**
  * Retorna a URL da bandeira da UF via IBGE.
  * Se for DIRETORIA ou COLABORADOR, a UF é BR.
  */
@@ -146,4 +215,44 @@ export function getBandeiraUF(ufSigla?: string | null, perfil?: string | null): 
   if (uf.length !== 2) return "";
 
   return `https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/${uf}.png`;
+}
+
+/**
+ * Ordenação completa da lista de membros.
+ * Diretoria no topo (por hierarquia), seguida por Conselheiros (por UF).
+ */
+export function ordenarMembrosTodos(membros: any[]) {
+  if (!membros || !Array.isArray(membros)) return [];
+
+  const list = [...membros];
+
+  const diretoria = list
+    .filter((m) => (m?.perfil_acesso || "").toUpperCase() === ROLES.DIRETORIA)
+    .sort((a, b) => {
+      const ra = CARGO_RANK[a?.cargo || ""] || 999;
+      const rb = CARGO_RANK[b?.cargo || ""] || 999;
+      if (ra !== rb) return ra - rb;
+      return (a?.name || "").localeCompare(b?.name || "");
+    });
+
+  const conselheiros = list
+    .filter((m) => (m?.perfil_acesso || "").toUpperCase() === ROLES.CONSELHEIRO)
+    .sort((a, b) => {
+      const ufa = (a?.uf || "ZZ").toUpperCase();
+      const ufb = (b?.uf || "ZZ").toUpperCase();
+      if (ufa !== ufb) return ufa.localeCompare(ufb);
+      const ra = CARGO_RANK[a?.cargo || ""] || 999;
+      const rb = CARGO_RANK[b?.cargo || ""] || 999;
+      if (ra !== rb) return ra - rb;
+      return (a?.name || "").localeCompare(b?.name || "");
+    });
+
+  const outros = list
+    .filter(
+      (m) =>
+        ![ROLES.DIRETORIA, ROLES.CONSELHEIRO].includes((m?.perfil_acesso || "").toUpperCase())
+    )
+    .sort((a, b) => (a?.name || "").localeCompare(b?.name || ""));
+
+  return [...diretoria, ...conselheiros, ...outros];
 }

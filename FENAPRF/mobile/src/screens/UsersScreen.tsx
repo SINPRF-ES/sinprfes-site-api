@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
-import { getCanonicalUserId, isGestao, ROLES, CARGO_RANK } from '../utils/userUtils';
+import { getCanonicalUserId, isGestao, ROLES, CARGO_RANK, ordenarMembrosTodos, tituloCargoUf } from '../utils/userUtils';
 import * as Canon from '../utils/canon';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
@@ -134,30 +134,7 @@ export default function UsersScreen({ navigation, route }: any) {
     });
 
     // Ordenação Avançada: Diretoria (Rank) -> Conselheiros (UF)
-    return result.sort((a, b) => {
-        const pA = (a.perfil_acesso || '').toUpperCase();
-        const pB = (b.perfil_acesso || '').toUpperCase();
-
-        const isDirA = pA === ROLES.DIRETORIA;
-        const isDirB = pB === ROLES.DIRETORIA;
-
-        if (isDirA && !isDirB) return -1;
-        if (!isDirA && isDirB) return 1;
-
-        if (isDirA && isDirB) {
-            const rankA = CARGO_RANK[a.cargo || ''] || 99;
-            const rankB = CARGO_RANK[b.cargo || ''] || 99;
-            if (rankA !== rankB) return rankA - rankB;
-            return a.name.localeCompare(b.name);
-        }
-
-        // Conselheiros e outros: por UF, depois por nome
-        const ufA = a.uf || 'ZZ';
-        const ufB = b.uf || 'ZZ';
-        if (ufA !== ufB) return ufA.localeCompare(ufB);
-
-        return a.name.localeCompare(b.name);
-    });
+    return ordenarMembrosTodos(result);
   }, [users, searchTerm, ehGestao, filtroCadastro, filtroFuncional, mostrarGestaoInterna]);
 
   const handleEdit = useCallback((user: User) => {
@@ -278,8 +255,19 @@ export default function UsersScreen({ navigation, route }: any) {
                   {ehGestao && (
                     <>
                       <Text style={styles.detailText}><Text style={styles.detailLabel}>CPF:</Text> {selectedMember.cpf || '—'}</Text>
-                      <Text style={styles.detailText}><Text style={styles.detailLabel}>Situação:</Text> {selectedMember.situacao || '—'}</Text>
                     </>
+                  )}
+                  {selectedMember.perfil_acesso2 && (
+                    <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#eee' }}>
+                        <Text style={[styles.detailLabel, { marginBottom: 4 }]}>Segundo Vínculo:</Text>
+                        <Text style={styles.detailText}>
+                            {tituloCargoUf({
+                                perfil_acesso: selectedMember.perfil_acesso2,
+                                cargo: selectedMember.cargo2,
+                                uf: selectedMember.uf2
+                            })}
+                        </Text>
+                    </View>
                   )}
                 </View>
               )}

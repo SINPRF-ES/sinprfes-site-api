@@ -67,11 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(sessao.token);
 
           try {
-            // Valida o token e busca os dados do usuário atualizados (FENAPRF)
+            // Valida o token e busca os dados do membro atualizados (FENAPRF)
             const { data: userAtualizado } = await api.get('/api/users/me');
             setUser(userAtualizado);
 
-            // Atualiza o usuário no storage
+            // Atualiza o membro no storage
             await salvarSessao({ token: sessao.token, user: userAtualizado });
 
             if (bio) {
