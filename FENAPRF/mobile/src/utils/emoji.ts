@@ -10,7 +10,7 @@ export const EMOJIS = {
   MEUS_DADOS: '👤',
   MEMBROS: '👥',
   PUBLICACOES: '📚',
-  LOGISTICA: '📦',
+  LOGISTICA: '🏨',
   JOGOS: '🏆',
   VOTACOES: '🗳️',
   ESTATUTO: '⚖️',
