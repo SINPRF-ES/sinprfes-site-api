@@ -4,7 +4,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-na
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
-import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/userUtils';
+import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/user';
 import MemberCard from '../components/MemberCard';
 import { ENABLE_PUSH } from '../config/features';
 

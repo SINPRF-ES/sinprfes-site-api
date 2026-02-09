@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { User } from '../types/user';
-import { getBandeiraUF, tituloCargoUf } from '../utils/userUtils';
+import { getBandeiraUF, tituloCargoUf } from '../utils/user';
 import { calculateMandateTime, toBrazilianDate } from '../utils/date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 

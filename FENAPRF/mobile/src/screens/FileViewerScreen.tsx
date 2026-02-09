@@ -7,7 +7,7 @@ import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL } from '../config/env';
 import SafeScreen from '../components/SafeScreen';
-import { inferExtension, buildCacheDest } from '../utils/fileCacheUtils';
+import { inferExtension, buildCacheDest } from '../utils/fileCache';
 
 export default function FileViewerScreen({ route, navigation }: any) {
   const { localUri, remoteUrl, title, fileId, type, context, format, resourceType } = route.params;

@@ -3,9 +3,9 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { User } from '../types/user';
-import { formatData, onlyDigits } from '../shared/format/formatters';
+import { formatData, onlyDigits } from '../utils/format';
 import { toISODate, toBrazilianDate } from '../utils/date';
-import { ROLES, UFS, CARGOS_CONSELHO, CARGOS_DIRETORIA } from '../utils/userUtils';
+import { ROLES, UFS, CARGOS_CONSELHO, CARGOS_DIRETORIA } from '../utils/user';
 import PickerWrapper from './PickerWrapper';
 
 interface Props {

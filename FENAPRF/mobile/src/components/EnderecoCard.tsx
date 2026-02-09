@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert, ActivityIndicator } from 'react-native';
 import { User } from '../types/user';
-import { formatCep, onlyDigits } from '../shared/format/formatters';
+import { formatCep, onlyDigits } from '../utils/format';
 import { buscarCep } from '../services/cepService';
 
 interface Props {

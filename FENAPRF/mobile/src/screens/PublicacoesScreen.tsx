@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from '../services/driveService';
 import { FontAwesome } from '@expo/vector-icons';
 import { Linking } from 'react-native';
-import { logDebug } from '../utils/userUtils';
+import { logDebug } from '../utils/user';
 import api from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import * as Sharing from 'expo-sharing';

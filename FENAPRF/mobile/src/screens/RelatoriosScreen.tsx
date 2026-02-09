@@ -16,16 +16,16 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import * as Canon from '../utils/canon';
-import { normalizeText, maskCPF } from '../utils/masks';
-import { onlyDigits } from '../shared/format/formatters';
+import * as Canon from '../utils/user';
+import { normalizeText, maskCPF } from '../utils/format';
+import { onlyDigits } from '../utils/format';
 import { useAuth } from '../hooks/useAuth';
 import reportsService from '../services/reportsService';
 import api, { getUsers } from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { UFS } from '../utils/userUtils';
+import { UFS } from '../utils/user';
 
 interface ReportJob {
   id: string;
@@ -187,7 +187,6 @@ export default function RelatoriosScreen() {
     const typeLabels: any = {
       INDIVIDUAL: "👤 Dossiê Individual",
       UF: "📍 Por UF",
-      SITUACAO: "📑 Por Situação",
       GLOBAL: "🌏 Global (Completo)"
     };
 
@@ -290,7 +289,6 @@ export default function RelatoriosScreen() {
                 onValueChange={(v) => {
                   setReportType(v);
                   if (v === 'UF') setTargetValue(UFS[0]);
-                  else if (v === 'SITUACAO') setTargetValue('ATIVO');
                   else setTargetValue(null);
                 }}
                 style={styles.picker}
@@ -298,7 +296,6 @@ export default function RelatoriosScreen() {
             >
                 <Picker.Item label="👤 Dossiê do User (Individual)" value="INDIVIDUAL" />
                 <Picker.Item label="📍 Por UF" value="UF" />
-                <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
                 <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
             </Picker>
           </View>
@@ -329,19 +326,6 @@ export default function RelatoriosScreen() {
              </View>
           )}
 
-          {reportType === 'SITUACAO' && (
-             <View style={styles.pickerContainer}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    <Picker.Item label="ATIVO" value="ATIVO" />
-                    <Picker.Item label="VETERANO" value="VETERANO" />
-                    <Picker.Item label="PENSIONISTA" value="PENSIONISTA" />
-                </Picker>
-             </View>
-          )}
 
           <TouchableOpacity
             style={[styles.button, (loading || loadingPreview) && styles.buttonDisabled]}

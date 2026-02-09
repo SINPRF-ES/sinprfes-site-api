@@ -10,8 +10,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
-import Badge from '../components/Badge';
-import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { Image } from 'react-native';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -45,17 +43,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     displayedItems.push(...GESTAO_ITEMS);
   }
 
-  const situacao = normalizeSituacaoFuncional(user?.situacao || '');
   const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
-
-  const getSituacaoVariant = (s: string) => {
-    switch (s) {
-      case 'ATIVO': return 'success';
-      case 'VETERANO': return 'warning';
-      case 'PENSIONISTA': return 'pink';
-      default: return 'default';
-    }
-  };
 
   return (
     <SafeScreen style={styles.container}>
@@ -73,15 +61,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               {String(user?.name || user?.nome || 'Membro').split(' ')[0]}
             </Text>
             <Text style={styles.userProfile}>{String(perfil || 'MEMBRO').toUpperCase()}</Text>
-
-            {situacao && (
-              <Badge
-                label={situacao}
-                variant={getSituacaoVariant(situacao)}
-                style={styles.headerBadge}
-                textStyle={styles.headerBadgeText}
-              />
-            )}
           </View>
         </View>
       </View>
