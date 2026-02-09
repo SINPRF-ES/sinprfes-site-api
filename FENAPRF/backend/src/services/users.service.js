@@ -134,6 +134,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const query = `
     SELECT
       f.id, f.name, f.name as nome, f.cpf, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email as email1,
+      NULL as email2,
       f.situacao, f.perfil_acesso,
       f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
       f.avatar_url,

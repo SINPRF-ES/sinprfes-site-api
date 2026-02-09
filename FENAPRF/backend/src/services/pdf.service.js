@@ -929,8 +929,7 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.font("Helvetica-Bold").fontSize(12).text("3. Contatos e Endereço");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
-    doc.text(`E-mail 1: ${user.email1 || "-"}`);
-    doc.text(`E-mail 2: ${user.email2 || "-"}`);
+    doc.text(`E-mail: ${user.email || user.email1 || "-"}`);
     doc.text(`Telefone 1: ${user.telefone1 ? formatarTelefone(user.telefone1) : "-"}`);
     doc.text(`Telefone 2: ${user.telefone2 ? formatarTelefone(user.telefone2) : "-"}`);
     doc.moveDown(0.5);

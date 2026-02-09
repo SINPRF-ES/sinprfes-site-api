@@ -887,7 +887,8 @@ async function gerarRelatorio(req, res) {
     await emailService.enviarEmailRelatorioAssembleia(user, dados.assembleia, pdfBuffer, dados);
     log.info("REPORT_EMAIL_USER_SENT", { requestId: req.requestId, assembleiaId: id, userId: req.user.id });
 
-    const maskedEmail = user.email1 ? user.email1.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
+    const userEmail = user.email || user.email1;
+    const maskedEmail = userEmail ? userEmail.replace(/^(..)(.*)(@.*)$/, "$1***$3") : "N/A";
 
     await service.registrarAuditoria(id, req.user.id, "RELATORIO_GERADO", {
       requestedBy: { id: req.user.id, nome: req.user.nome },

@@ -328,7 +328,7 @@
                             <div class="field-group">
                                 <label>Perfil de Acesso</label>
                                 <select name="perfil_acesso">
-                                    <option value="USER" ${f.perfil_acesso === "USER" ? "selected" : ""}>USER</option>
+                                    <option value="USER" ${f.perfil_acesso === "USER" ? "selected" : ""}>MEMBRO</option>
                                     <option value="COMUNICADOR" ${f.perfil_acesso === "COMUNICADOR" ? "selected" : ""}>COMUNICADOR</option>
                                     <option value="ORGANIZADOR" ${f.perfil_acesso === "ORGANIZADOR" ? "selected" : ""}>ORGANIZADOR</option>
                                     <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>

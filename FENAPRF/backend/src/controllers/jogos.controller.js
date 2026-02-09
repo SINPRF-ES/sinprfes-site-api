@@ -89,7 +89,7 @@ exports.registrarInscricao = async (req, res) => {
     try {
       const { rows: fRows } = await pool.query(
         `
-        SELECT id, nome, email1, email2, telefone1, data_nascimento
+        SELECT id, name as nome, email as email1, NULL as email2, telefone1, data_nascimento
         FROM users
         WHERE id = $1
         LIMIT 1
@@ -163,9 +163,9 @@ exports.cancelarInscricao = async (req, res) => {
         SELECT
           pi.*,
           f.id as user_id,
-          f.nome as user_nome,
-          f.email1,
-          f.email2,
+          f.name as user_nome,
+          f.email as email1,
+          NULL as email2,
           f.telefone1,
           f.data_nascimento
         FROM pre_inscricoes_jogos pi
@@ -241,8 +241,8 @@ exports.obterMinhaInscricao = async (req, res) => {
         pi.*,
         f.telefone1,
         f.data_nascimento,
-        f.email1,
-        f.email2
+        f.email as email1,
+        NULL as email2
       FROM pre_inscricoes_jogos pi
       JOIN users f ON pi.user_id = f.id
       WHERE pi.user_id = $1
@@ -283,8 +283,8 @@ exports.listarInscricoes = async (req, res) => {
         pi.*,
         f.telefone1,
         f.data_nascimento,
-        f.email1,
-        f.email2
+        f.email as email1,
+        NULL as email2
       FROM pre_inscricoes_jogos pi
       JOIN users f ON pi.user_id = f.id
       ORDER BY pi.nome_user ASC;

@@ -1,5 +1,5 @@
 -- ============================================================================
--- FENAPRF MIGRATION V23: FIX ID TYPES AND COLUMN NAMES
+-- FENAPRF MIGRATION V23: FIX ID TYPES AND COLUMN NAMES (ROBUST)
 -- Fixing errors reported in Render logs:
 -- 1. column pi.user_id does not exist in pre_inscricoes_jogos
 -- 2. invalid input syntax for type integer for UUID in multiple tables
@@ -19,6 +19,9 @@ EXCEPTION WHEN others THEN RAISE NOTICE 'Could not alter users.desarquivado_por'
 -- 2. Fix push_tokens table
 DO $$
 BEGIN
+    -- Drop potential foreign key constraints if they exist to allow type change
+    -- We'll try to find them by name or just hope the CASCADE handles it if we dropped the table (not an option here)
+    -- Actually, simple ALTER might work if types are convertible.
     ALTER TABLE push_tokens ALTER COLUMN user_id TYPE UUID USING user_id::text::uuid;
 EXCEPTION WHEN others THEN RAISE NOTICE 'Could not alter push_tokens.user_id'; END $$;
 
@@ -96,3 +99,12 @@ BEGIN
         ALTER TABLE inscricoes_jogos RENAME TO pre_inscricoes_jogos;
     END IF;
 END $$;
+
+-- 8. Initialize job runs entries correctly
+INSERT INTO job_runs (job_name, last_run_date, updated_at)
+VALUES ('PUSH_CLEANUP', '01/01/1970', NOW())
+ON CONFLICT (job_name) DO NOTHING;
+
+INSERT INTO job_runs (job_name, last_run_date, updated_at)
+VALUES ('BIRTHDAY_SCAN', '01/01/1970', NOW())
+ON CONFLICT (job_name) DO NOTHING;

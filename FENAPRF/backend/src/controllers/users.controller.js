@@ -177,8 +177,7 @@ exports.atualizarMeusDados = async (req, res) => {
     const payload = {
       telefone1: body.telefone1,
       telefone2: body.telefone2,
-      email1: body.email1,
-      email: body.email,
+      email: body.email || body.email1,
       // ViaCEP fields blocked for all in /me
       numero: body.numero,
       complemento: body.complemento,
@@ -241,8 +240,7 @@ exports.atualizarUser = async (req, res) => {
       data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
-      email1: body.email1,
-      email: body.email,
+      email: body.email || body.email1,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
       // ViaCEP fields blocked for all in gestao update too
       // logradouro_bairro: body.logradouro_bairro,
@@ -323,7 +321,7 @@ exports.criarUser = async (req, res) => {
     if (!perfilGestao(perfilCriador)) return res.status(403).json({ message: Textos.USERS.PERMISSAO_CRIAR });
 
     const body = req.body || {};
-    if (!body.nome || !body.cpf || (!body.email1 && !body.email)) return res.status(400).json({ message: Textos.USERS.CAMPOS_OBRIGATORIOS });
+    if (!body.nome || !body.cpf || (!body.email && !body.email1)) return res.status(400).json({ message: Textos.USERS.CAMPOS_OBRIGATORIOS });
 
     const cpfLimpo = normalizarCpf(body.cpf);
     if (cpfLimpo.length !== 11) return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
@@ -352,8 +350,7 @@ exports.criarUser = async (req, res) => {
       data_nascimento: normalizeDateField(body.data_nascimento),
       telefone1: body.telefone1 || null,
       telefone2: body.telefone2 || null,
-      email1: body.email1 || null,
-      email: body.email || null,
+      email: body.email || body.email1 || null,
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       perfil_acesso,
       cargo,
