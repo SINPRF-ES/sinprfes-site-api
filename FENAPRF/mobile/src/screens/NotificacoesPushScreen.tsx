@@ -24,6 +24,7 @@ import { logger } from '../infra/logger';
 import { UFS } from '../utils/user';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import PickerWrapper from '../components/PickerWrapper';
 
 interface Campaign {
   id: string;
@@ -354,7 +355,7 @@ export default function NotificacoesPushScreen() {
           <Text style={styles.cardTitle}>📢 Nova Notificação</Text>
 
           <Text style={styles.label}>Público de Destino</Text>
-          <View style={styles.pickerContainer}>
+          <PickerWrapper style={styles.pickerWrapper}>
             <Picker
                 selectedValue={targetType}
                 onValueChange={(v) => {
@@ -368,10 +369,10 @@ export default function NotificacoesPushScreen() {
                 <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
                 <Picker.Item label="Especificar Membro" value="USER" />
             </Picker>
-          </View>
+          </PickerWrapper>
 
           {targetType === 'UF' && (
-             <View style={styles.pickerContainer}>
+             <PickerWrapper style={styles.pickerWrapper}>
                 <Picker
                     selectedValue={targetValue}
                     onValueChange={setTargetValue}
@@ -381,7 +382,7 @@ export default function NotificacoesPushScreen() {
                       <Picker.Item key={opt} label={opt} value={opt} />
                     ))}
                 </Picker>
-             </View>
+             </PickerWrapper>
           )}
 
           {targetType === 'USER' && (
@@ -476,13 +477,8 @@ export default function NotificacoesPushScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f0f0' },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
+  pickerWrapper: {
     marginBottom: 10,
-    // overflow: 'hidden' // Removido para evitar corte no Android em alguns casos
   },
   picker: {
     height: 60, // Aumentado para evitar corte

@@ -13,7 +13,6 @@ const usersService = require("../services/users.service");
 const { enviarEmailBoasVindasUser } = require("../services/email.service");
 const { normalizarCpf } = require("../utils/format");
 const {
-  normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil
 } = require("../../shared/canon");
@@ -256,14 +255,13 @@ exports.atualizarUser = async (req, res) => {
     }
 
     const payload = {
-      nome: body.nome,
+      nome: body.nome || body.name,
       sexo: body.sexo ? normalizeSexo(body.sexo) : undefined,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
       data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email: body.email || body.email1,
-      situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
       // ViaCEP fields blocked for all in FENAPRF
       // logradouro, bairro, cidade, uf (endereco) are read-only
       numero: body.numero,
@@ -367,14 +365,13 @@ exports.criarUser = async (req, res) => {
     }
 
     const dadosNovo = {
-      nome: String(body.nome).trim(),
+      nome: String(body.nome || body.name).trim(),
       sexo: body.sexo ? normalizeSexo(body.sexo) : null,
       cpf: cpfLimpo,
       data_nascimento: normalizeDateField(body.data_nascimento),
       telefone1: body.telefone1 || null,
       telefone2: body.telefone2 || null,
       email: body.email || body.email1 || null,
-      situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       perfil_acesso,
       cargo,
       uf,

@@ -2,7 +2,6 @@ const pool = require("../config/db");
 const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const {
-  normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil,
   normalizeNome
@@ -241,7 +240,6 @@ async function atualizarUserPorId(id, dados) {
   addCampo("telefone2", dados.telefone2);
   addCampo("email", dados.email1 || dados.email);
 
-  if (dados.situacao !== undefined) addCampo("situacao", normalizeSituacaoFuncional(dados.situacao));
   if (dados.perfil_acesso !== undefined) addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
 
   if (dados.logradouro_bairro) {
@@ -306,7 +304,6 @@ async function criarUserInicial(dados) {
       telefone2 = null,
       email1 = null,
       email = null,
-      situacao = "ATIVO",
     } = dados;
 
     const emailFinal = email1 || email || null;
@@ -315,12 +312,12 @@ async function criarUserInicial(dados) {
       `
       INSERT INTO users (
         name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
-        situacao, perfil_acesso, cargo, uf,
+        perfil_acesso, cargo, uf,
         perfil_acesso2, cargo2, uf2,
         created_at, updated_at, bloqueado
       ) VALUES (
         $1, $2, $3, NULLIF($4, '')::date, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14, NOW(), NOW(), false
+        $8, $9, $10, $11, $12, $13, NOW(), NOW(), false
       ) RETURNING id
       `,
       [
@@ -331,7 +328,6 @@ async function criarUserInicial(dados) {
         telefone1,
         telefone2,
         emailFinal,
-        normalizeSituacaoFuncional(situacao),
         normalizePerfil(perfilNovo),
         dados.cargo || null,
         dados.uf || null,

@@ -90,30 +90,13 @@
 
     function renderizarFormularioMeusDados(dados, container) {
         const {
-            nome, cpf, situacao, situacao_funcional, perfil_acesso,
+            nome, cpf, perfil_acesso,
             telefone1, telefone2, email1, email2,
             logradouro_bairro, numero, complemento, cidade, uf, cep,
             avatar_url
         } = dados;
 
         const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF } = global.Utils || {};
-
-        let situacaoRaw = (situacao || situacao_funcional || "NÃO INFORMADO").toUpperCase();
-        // Strip "[OK] " or "OK " prefixes
-        const situacaoUpper = situacaoRaw.replace(/^(\[OK\]\s*|OK\s*)/i, "");
-        let corStatus = '#95a5a6'; // Cinza
-        let classeBadge = 'badge-desconhecido';
-
-        if (situacaoUpper === 'ATIVO') {
-            corStatus = '#27ae60';
-            classeBadge = 'badge-ativo';
-        } else if (situacaoUpper === 'VETERANO') {
-            corStatus = '#f39c12';
-            classeBadge = 'badge-veterano';
-        } else if (situacaoUpper === 'PENSIONISTA') {
-            corStatus = '#e91e63';
-            classeBadge = 'badge-pensionista';
-        }
 
 
         if (!document.getElementById('style-meus-dados')) {
@@ -166,10 +149,6 @@
                     color: #333;
                 }
                 .badge-perfil { background: #3498db; color: #fff; }
-                .badge-ativo { background: #27ae60; }
-                .badge-veterano { background: #f39c12; }
-                .badge-pensionista { background: #e91e63; }
-                .badge-desconhecido { background: #95a5a6; }
                 .data-card {
                     background: #fff;
                     color: #333;
@@ -332,7 +311,6 @@
                         <h2 class="profile-name-title">${nome || ""}</h2>
                         <div class="profile-badges">
                             <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
-                            <span class="badge badge-${situacaoLower}">${situacaoUpper}</span>
                         </div>
                     </div>
                 </div>
@@ -789,7 +767,6 @@
 
     global.MeusDados = {
         carregarMeusDados,
-        labelSituacaoFuncional: (valor) => `Situação funcional do servidor: ${(valor || 'ATIVO').toString().toUpperCase()}`,
         labelEstadoCadastro: (user) => {
             const raw = (user && (user.estado_cadastro || (user.arquivado_em ? 'ARQUIVADO' : 'CADASTRO_ATIVO'))) || 'CADASTRO_ATIVO';
             const txt = raw === 'CADASTRO_ATIVO' ? 'CADASTRO ATIVO' : 'ARQUIVADO';

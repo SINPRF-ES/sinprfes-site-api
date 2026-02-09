@@ -26,6 +26,7 @@ import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { UFS } from '../utils/user';
+import PickerWrapper from '../components/PickerWrapper';
 
 interface ReportJob {
   id: string;
@@ -283,7 +284,7 @@ export default function RelatoriosScreen() {
           <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
 
           <Text style={styles.label}>Tipo de Relatório</Text>
-          <View style={styles.pickerContainer}>
+          <PickerWrapper style={styles.pickerWrapper}>
             <Picker
                 selectedValue={reportType}
                 onValueChange={(v) => {
@@ -298,7 +299,7 @@ export default function RelatoriosScreen() {
                 <Picker.Item label="📍 Por UF" value="UF" />
                 <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
             </Picker>
-          </View>
+          </PickerWrapper>
 
           {reportType === 'INDIVIDUAL' && (
              <TouchableOpacity
@@ -313,7 +314,7 @@ export default function RelatoriosScreen() {
           )}
 
           {reportType === 'UF' && (
-             <View style={styles.pickerContainer}>
+             <PickerWrapper style={styles.pickerWrapper}>
                 <Picker
                     selectedValue={targetValue}
                     onValueChange={setTargetValue}
@@ -323,7 +324,7 @@ export default function RelatoriosScreen() {
                       <Picker.Item key={opt} label={opt} value={opt} />
                     ))}
                 </Picker>
-             </View>
+             </PickerWrapper>
           )}
 
 
@@ -467,14 +468,8 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 16 },
   label: { fontSize: 14, color: '#666', marginBottom: 8, fontWeight: 'bold' },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    backgroundColor: '#fff',
+  pickerWrapper: {
     marginBottom: 20,
-    overflow: 'hidden',
-    justifyContent: 'center',
   },
   picker: {
     height: 55,

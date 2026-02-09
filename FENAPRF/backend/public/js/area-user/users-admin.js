@@ -7,7 +7,7 @@
     if (global.UsersAdmin) return;
 
     let cacheLista = [];
-    const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
+    const SITUACAO_OPCOES = [];
 
 
     let perfilAtual = null;
@@ -118,22 +118,12 @@
                             <option value="TODOS">Todos</option>
                         </select>
                     </label>` : '<input type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
-                    <label>
-                        Situação:
-                        <select id="filtro-situacao-funcional">
-                            <option value="TODOS" selected>Todos</option>
-                            <option value="ATIVO">Ativo</option>
-                            <option value="VETERANO">Veterano</option>
-                            <option value="PENSIONISTA">Pensionista</option>
-                        </select>
-                    </label>
                 `;
                 campoBusca.insertAdjacentElement("afterend", filtros);
 
                 if (ehGestao) {
                     document.getElementById("filtro-estado-cadastro").addEventListener("change", carregarLista);
                 }
-                document.getElementById("filtro-situacao-funcional").addEventListener("change", () => filtrarLista(campoBusca.value));
             }
             handlersConfigurados = true;
         }
@@ -172,10 +162,6 @@
         // Reutiliza a lógica unificada de busca (nome/CPF)
         let res = filterUsers ? filterUsers(cacheLista, termo, { perfil: perfilAtual }) : cacheLista;
 
-        const fSituacao = document.getElementById("filtro-situacao-funcional")?.value || "TODOS";
-        if (fSituacao !== "TODOS") {
-            res = res.filter(f => (f.situacao_funcional || f.situacao || "ATIVO").toUpperCase() === fSituacao);
-        }
 
         const fEstado = document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO";
         if (fEstado === "ARQUIVADOS") {
@@ -193,9 +179,8 @@
         }
 
         el.innerHTML = res.map(f => {
-            const situacao = (f.situacao || f.situacao_funcional || 'ATIVO').toUpperCase();
-            const situacaoLower = situacao.toLowerCase();
-            const classeStatus = `status-${situacaoLower}`;
+            const situacaoLower = 'ativo';
+            const classeStatus = `status-ativo`;
             const nascimento = f.data_nascimento;
             const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
 
@@ -215,7 +200,6 @@
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <span class="user-badge badge-${situacaoLower}">${safeEscape(situacao)}</span>
                             <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
             ${!["USER", "ORGANIZADOR"].includes(perfilAtual) ?
                                 `<button class="btn btn-outline btn-sm" onclick="UsersAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
@@ -313,14 +297,6 @@
                         <div class="field-group">
                             <label>Idade (Calculada)</label>
                             <input type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f8f9fa;">
-                        </div>
-                    </div>
-                    <div class="field-row">
-                        <div class="field-group">
-                            <label>Situação Funcional</label>
-                            <select name="situacao">
-                                ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
-                            </select>
                         </div>
                     </div>
                     ${canChangeProfile ? `

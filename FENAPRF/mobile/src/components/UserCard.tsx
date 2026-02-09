@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { User, UserProfile } from '../types/user';
 import { formatCpf, formatTelefone } from '../utils/format';
-import { getBandeiraUF } from '../utils/user';
+import { getBandeiraUF, tituloCargoUf } from '../utils/user';
 import { calculateAgeBreakdown, formatISOToBRDateTime } from '../utils/date';
 
 interface UserCardProps {
@@ -31,6 +31,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserProfile, onEdit })
           <View style={styles.nameAndBadgeContainer}>
             <Text style={styles.nome} numberOfLines={2}>{user.name}</Text>
           </View>
+          <Text style={styles.cargo} numberOfLines={1}>{tituloCargoUf(user)}</Text>
           <Text style={styles.detalhe}>Telefone: {formatTelefone(user.telefone1) || '—'}</Text>
         </View>
         <View style={styles.ufStack}>
@@ -146,8 +147,12 @@ const styles = StyleSheet.create({
   nome: {
     fontSize: 16,
     fontWeight: 'bold',
-    flex: 1, // Faz o nome ocupar o espaço e quebrar a linha
-    marginRight: 8, // Espaçamento entre o nome e o badge
+    color: '#003366',
+  },
+  cargo: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
   detalhe: {
     fontSize: 14,

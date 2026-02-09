@@ -135,7 +135,6 @@
                       <select id="relatorio-tipo" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
                           <option value="INDIVIDUAL">Dossiê do Membro (Individual)</option>
                           <option value="UF">Distribuição por UF</option>
-                          <option value="SITUACAO">Distribuição por Situação Funcional</option>
                           <option value="GLOBAL">Global (Completo)</option>
                       </select>
                   </div>
@@ -152,12 +151,6 @@
 
                       <select id="relatorio-uf-select" style="display: none; padding: 12px; border-radius: 8px;">
                           <!-- Preenchido via JS com Canon.UFS -->
-                      </select>
-
-                      <select id="relatorio-situacao-select" style="display: none; padding: 12px; border-radius: 8px;">
-                          <option value="ATIVO">ATIVO</option>
-                          <option value="VETERANO">VETERANO</option>
-                          <option value="PENSIONISTA">PENSIONISTA</option>
                       </select>
                   </div>
 
@@ -198,8 +191,6 @@
                       <label>Público de Destino</label>
                       <select id="push-target-type">
                           <option value="ALL">Todos os membros com app</option>
-                          <option value="ATIVOS">Apenas ATIVOS</option>
-                          <option value="VETERANOS">Veteranos / Pensionistas</option>
                           <option value="UF">Por UF</option>
                           <option value="JOGOS">Inscritos nos Jogos</option>
                           <option value="USER">Especificar um Membro</option>
