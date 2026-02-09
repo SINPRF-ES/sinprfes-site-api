@@ -38,34 +38,39 @@ export default function UsersScreen({ navigation, route }: any) {
       if (!isRefresh) setLoading(true);
       else setRefreshing(true);
 
-      const params: any = {};
-      if (filtroCadastro !== 'CADASTRO_ATIVO' && ehGestao) {
-        params.incluirArquivados = '1';
-      }
+      const params: any = { incluirArquivados: '1' }; // Sempre busca para poder filtrar localmente se necessário, mas oculta por padrão no switch
 
       const data = await getUsers(params);
+      if (!Array.isArray(data)) {
+        setUsers([]);
+        return;
+      }
 
       // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter
-      const processedData = data.map((f: User) => {
-        const item = ehGestao ? f : {
-          id: f.id,
-          name: f.name,
-          telefone1: f.telefone1,
-          avatar_url: f.avatar_url,
-          situacao: f.situacao,
-          uf: f.uf,
-          cargo: f.cargo,
-          perfil_acesso: f.perfil_acesso,
-          cargo_mandato_inicio: f.cargo_mandato_inicio,
-          cargo_mandato_fim: f.cargo_mandato_fim
-        };
+      const processedData = data
+        .filter(f => !!f && f.id)
+        .map((f: User) => {
+          const item = ehGestao ? f : {
+            id: f.id,
+            name: f.name,
+            nome: f.nome,
+            telefone1: f.telefone1,
+            avatar_url: f.avatar_url,
+            situacao: f.situacao,
+            uf: f.uf,
+            cargo: f.cargo,
+            perfil_acesso: f.perfil_acesso,
+            cargo_mandato_inicio: f.cargo_mandato_inicio,
+            cargo_mandato_fim: f.cargo_mandato_fim,
+            arquivado_em: f.arquivado_em
+          };
 
-        return {
-          ...item,
-          _normalizedNome: normalizeText(f.name || f.nome || ''),
-          _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
-        };
-      });
+          return {
+            ...item,
+            _normalizedNome: normalizeText(f.name || f.nome || ''),
+            _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
+          };
+        });
 
       setUsers(processedData);
       await AsyncStorage.setItem(cacheKey, JSON.stringify(processedData));
@@ -77,7 +82,7 @@ export default function UsersScreen({ navigation, route }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [ehGestao, cacheKey, filtroCadastro]);
+  }, [ehGestao, cacheKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -111,6 +116,8 @@ export default function UsersScreen({ navigation, route }: any) {
     const digits = onlyDigits(searchTerm);
 
     let result = users.filter(f => {
+      if (!f) return false;
+
       // 0. Sempre oculta arquivados na listagem principal (Requisito 5)
       if (f.arquivado_em) return false;
 

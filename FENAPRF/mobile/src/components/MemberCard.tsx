@@ -54,13 +54,11 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
         <View style={styles.centerInfo}>
           <Text
             style={[styles.name, isDrawer && styles.textWhite]}
-            numberOfLines={0}
           >
             {member.name || member.nome || 'Membro'}
           </Text>
           <Text
             style={[styles.cargo, isDrawer && styles.textLight]}
-            numberOfLines={0}
           >
             {tituloCargoUf(member)}
           </Text>
@@ -163,6 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#003366',
+    flex: 1,
     flexWrap: 'wrap',
   },
   textWhite: {
@@ -175,6 +174,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+    flex: 1,
     flexWrap: 'wrap',
   },
   rightStack: {

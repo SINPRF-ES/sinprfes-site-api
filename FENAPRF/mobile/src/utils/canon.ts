@@ -107,7 +107,7 @@ export const CARGOS_DIRETORIA = [
  * Filtros da página Membros
  */
 export const FILTROS_MEMBROS = [
-  { value: "PADRAO", label: "Exibição padrão (Diretoria + Conselho)" },
+  { value: "PADRAO", label: "Exibição padrão (Diretoria + Conselheiros por UF)" },
   { value: "DIRETORIA", label: "Apenas Diretoria" },
   { value: "PRESIDENTES", label: "Apenas Presidentes" },
   { value: "VICES", label: "Apenas Vices" },
@@ -236,7 +236,7 @@ function byName(a: any, b: any): number {
 
 export function ordenarMembrosTodos(membros: any[]): any[] {
   if (!Array.isArray(membros)) return [];
-  const list = [...membros];
+  const list = membros.filter(m => !!m);
 
   const diretoria = list
     .filter((m) => String(m?.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.DIRETORIA)
