@@ -61,22 +61,17 @@ async function getRepasseAno(year) {
     [year]
   );
 
-  // Busca todos os dados de lotação para o ano
-  const { rows: lotacaoRows } = await pool.query(
-    `SELECT rl.*, f.nome as responsavel_nome, f.cpf as responsavel_cpf
-     FROM repasse_lotacao rl
-     LEFT JOIN users f ON rl.responsavel_id = f.id
-     WHERE rl.year = $1`,
+  // Busca todos os dados de unidades (UF) para o ano
+  const { rows: unidadesRows } = await pool.query(
+    `SELECT ru.*, f.nome as responsavel_nome, f.cpf as responsavel_cpf
+     FROM repasse_unidades ru
+     LEFT JOIN users f ON ru.responsavel_id = f.id
+     WHERE ru.year = $1`,
     [year]
   );
 
-  // Calcula users ativos atuais para cada localidade
-  // (O requisito diz: "Para TODOS os cálculos do módulo 'Repasse': 'Users ativos' = SOMENTE SITUAÇÃO FUNCIONAL = ATIVO")
-  // Note: O número de users ativos pode variar com o tempo, mas para o cálculo do repasse do MÊS,
-  // geralmente se usa o valor no momento. O requisito não diz para persistir esse número,
-  // diz para calculá-lo ("Campos calculados (não persistir): usersAtivos").
-  // Isso implica que o histórico será recalculado com base no estado ATUAL do banco?
-  // Geralmente repasse se baseia no histórico, mas o requisito é explícito: "não persistir".
+  // Calcula membros ativos atuais para cada UF
+  // (O requisito diz: "Para TODOS os cálculos do módulo 'Repasse': 'Membros ativos' = SOMENTE SITUAÇÃO FUNCIONAL = ATIVO")
 
   const ativosPorUf = {};
   for (const uf of UFS) {
@@ -89,7 +84,7 @@ async function getRepasseAno(year) {
     const perCapita = parseFloat(config.per_capita);
 
     const localidades = UFS.map(uf => {
-      const data = lotacaoRows.find(r => r.month === month && r.lotacao_key === uf) || {
+      const data = unidadesRows.find(r => r.month === month && r.uf_key === uf) || {
         responsavel_id: null,
         responsavel_nome: null,
         responsavel_cpf: null,
@@ -133,14 +128,13 @@ async function getRepasseAno(year) {
     });
   }
 
-  // Cálculo do acumulado por localidade no ano
-  // acumuladoAno = soma(créditos mensais) – soma(reembolsos)
-  const lotacoesAcumulado = UFS.map(uf => {
+  // Cálculo do acumulado por UF no ano
+  const ufsAcumulado = UFS.map(uf => {
     let somaCreditos = 0;
     let somaReembolsos = 0;
 
     meses.forEach(m => {
-      const loc = m.localidades.find(l => l.lotacao === uf);
+      const loc = m.localidades.find(l => l.uf === uf);
       somaCreditos += loc.creditoMes;
       somaReembolsos += loc.reembolsoMes;
     });
@@ -151,15 +145,15 @@ async function getRepasseAno(year) {
     };
   });
 
-  // Anexar o acumulado em cada localidade de cada mês (para exibição na tela)
+  // Anexar o acumulado em cada UF de cada mês
   meses.forEach(m => {
     m.localidades.forEach(loc => {
-      const acc = lotacoesAcumulado.find(la => la.uf === loc.uf);
+      const acc = ufsAcumulado.find(la => la.uf === loc.uf);
       loc.acumuladoAno = acc.acumuladoAno;
     });
   });
 
-  const totalAcumuladoGeral = lotacoesAcumulado.reduce((acc, curr) => acc + curr.acumuladoAno, 0);
+  const totalAcumuladoGeral = ufsAcumulado.reduce((acc, curr) => acc + curr.acumuladoAno, 0);
 
   return {
     year,
@@ -173,15 +167,15 @@ async function getRepasseAno(year) {
  * Usado pelo módulo de Relatórios para evitar duplicação de lógica.
  */
 async function getUltimosDadosParaRelatorio(uf) {
-  // 1. Total de users ativos atuais (Source of Truth do Repasse)
+  // 1. Total de membros ativos atuais (Source of Truth do Repasse)
   const usersAtivos = await getUsersAtivosCount(uf);
 
   // 2. Busca o registro mais recente de prf_total para esta UF
   const { rows } = await pool.query(`
-    SELECT rl.year, rl.month, rl.prf_total
-    FROM repasse_lotacao rl
-    WHERE rl.lotacao_key = $1
-    ORDER BY rl.year DESC, rl.month DESC
+    SELECT ru.year, ru.month, ru.prf_total
+    FROM repasse_unidades ru
+    WHERE ru.uf_key = $1
+    ORDER BY ru.year DESC, ru.month DESC
     LIMIT 1
   `, [uf]);
 
@@ -222,17 +216,18 @@ async function updateRepasseMes(year, month, perCapita, localidadesData) {
 
     // Update each location
     for (const loc of localidadesData) {
-      // Proteção: Apenas lotações do repasse (agora UFs)
-      if (!UFS.includes(loc.lotacaoKey)) continue;
+      const ufKey = loc.ufKey;
+      // Proteção: Apenas UFs válidas
+      if (!UFS.includes(ufKey)) continue;
 
       await client.query(`
-        INSERT INTO repasse_lotacao (year, month, lotacao_key, responsavel_id, prf_total, reembolso_mes)
+        INSERT INTO repasse_unidades (year, month, uf_key, responsavel_id, prf_total, reembolso_mes)
         VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (year, month, lotacao_key) DO UPDATE SET
+        ON CONFLICT (year, month, uf_key) DO UPDATE SET
           responsavel_id = $4,
           prf_total = $5,
           reembolso_mes = $6
-      `, [year, month, loc.lotacaoKey, loc.responsavelId, loc.prfTotal, loc.reembolsoMes]);
+      `, [year, month, ufKey, loc.responsavelId, loc.prfTotal, loc.reembolsoMes]);
     }
 
     await client.query("COMMIT");

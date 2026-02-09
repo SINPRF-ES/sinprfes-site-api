@@ -122,5 +122,5 @@ Este script garante que as configurações de split e `universalApk false` perma
 
 ### Janeiro 2026
 - **Push Notifications**: Adicionada validação estrita no backend para `title` e `body` (devem ser strings). Erros de payload agora retornam HTTP 400 em vez de 500. Instrumentação reforçada com `errorId` e logs detalhados para diagnóstico.
-- **Diretório de Users**: O campo `lotacao` agora é retornado para o perfil `USER`, permitindo que todos os usuários visualizem a lotação dos colegas na listagem.
-- **Push Notifications v2**: Adicionado suporte a filtros de público (ATIVOS, VETERANOS, LOTACAO, JOGOS, USER). Histórico agora exibe métricas de `noTokenOrDenied`. Implementada retenção automática de 60 dias para o histórico de campanhas.
+- **Diretório de Membros**: O campo `uf` é retornado para todos os perfis, permitindo que todos os membros visualizem a UF dos colegas na listagem.
+- **Push Notifications v2**: Adicionado suporte a filtros de público (ATIVOS, VETERANOS, UF, JOGOS, USER). Histórico agora exibe métricas de `noTokenOrDenied`. Implementada retenção automática de 60 dias para o histórico de campanhas.

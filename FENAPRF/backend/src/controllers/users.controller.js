@@ -20,7 +20,7 @@ const {
 
 function perfilGestao(perfil) {
   const p = normalizePerfil(perfil);
-  return ["ADMIN", "DIRETORIA", "COLABORADOR", "FUNCIONARIO"].includes(p);
+  return ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(p);
 }
 
 async function verificarConflitoCargo(perfil, cargo, uf, userId = null) {
@@ -86,39 +86,7 @@ function parseUserId(req, res) {
   return raw;
 }
 
-/**
- * Valida, sanitiza e normaliza os dados dos dependentes.
- */
-function validarESanitizarDependentes(body) {
-  const dependentesValidos = [];
-  const erros = [];
-
-  for (let i = 1; i <= 5; i++) {
-    const nome = (body[`dep${i}_nome`] || "").trim();
-    const cpf = (body[`dep${i}_cpf`] || "").replace(/\D/g, "");
-    const dataNascimento = normalizeDateField(body[`dep${i}_data_nascimento`]);
-    const parentesco = (body[`dep${i}_parentesco`] || "").trim();
-
-    const temAlgumDado = nome || cpf || dataNascimento || parentesco;
-
-    if (temAlgumDado) {
-      const numeroDependenteAtual = dependentesValidos.length + 1;
-      if (nome && !cpf) erros.push(`Dependente ${numeroDependenteAtual}: CPF é obrigatório se o nome for preenchido.`);
-      if (cpf && !nome) erros.push(`Dependente ${numeroDependenteAtual}: Nome é obrigatório se o CPF for preenchido.`);
-      if (cpf && cpf.length !== 11) erros.push(`Dependente ${numeroDependenteAtual}: CPF inválido (deve ter 11 dígitos).`);
-      if (dataNascimento && !/^\d{4}-\d{2}-\d{2}$/.test(dataNascimento)) erros.push(`Dependente ${numeroDependenteAtual}: Data de nascimento inválida (use AAAA-MM-DD).`);
-
-      dependentesValidos.push({ nome: nome || null, cpf: cpf || null, data_nascimento: dataNascimento || null, parentesco: parentesco || null });
-    }
-  }
-
-  if (erros.length > 0) {
-    const error = new Error(erros.join(" \n"));
-    error.isValidationError = true;
-    throw error;
-  }
-  return dependentesValidos;
-}
+// Dependentes removidos conforme política FENAPRF
 
 /**
  * GET /api/users/:id
@@ -206,28 +174,15 @@ exports.atualizarMeusDados = async (req, res) => {
     const id = req.user.id;
     const body = req.body || {};
 
-    const dependentesArray = validarESanitizarDependentes(body);
-    const dadosDependentes = {};
-    for (let i = 0; i < 5; i++) {
-      const dep = dependentesArray[i];
-      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
-      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
-      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
-      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
-    }
-
     const payload = {
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email1: body.email1,
       email: body.email,
-      logradouro_bairro: body.logradouro_bairro,
+      // ViaCEP fields blocked for all in /me
       numero: body.numero,
       complemento: body.complemento,
-      cidade: body.cidade,
-      uf: body.uf,
       cep: body.cep,
-      ...dadosDependentes,
     };
 
     const atualizado = await usersService.atualizarDadosProprios(id, payload);
@@ -245,58 +200,7 @@ exports.atualizarMeusDados = async (req, res) => {
   }
 };
 
-/**
- * DELETE /api/users/:id/dependentes
- */
-exports.excluirDependentes = async (req, res) => {
-  try {
-    const idAlvo = parseUserId(req, res);
-    if (idAlvo === null) return;
-
-    const { indices } = req.body;
-    if (!Array.isArray(indices)) return res.status(400).json({ message: "Indices inválidos." });
-
-    const ehGestor = perfilGestao(req.user.perfil_acesso);
-    const ehProprioUsuario = String(req.user.id) === String(idAlvo);
-
-    if (!ehGestor && !ehProprioUsuario) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
-
-    const user = await usersService.getMe(idAlvo);
-    if (!user) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
-
-    const dependentesAtuais = [];
-    for (let i = 1; i <= 5; i++) {
-      if (user[`dep${i}_nome`]) {
-        dependentesAtuais.push({
-          nome: user[`dep${i}_nome`],
-          cpf: user[`dep${i}_cpf`],
-          data_nascimento: user[`dep${i}_data_nascimento`],
-          parentesco: user[`dep${i}_parentesco`],
-        });
-      }
-    }
-
-    const dependentesMantidos = dependentesAtuais.filter((_, index) => !indices.includes(index));
-
-    const dadosDependentes = {};
-    for (let i = 0; i < 5; i++) {
-      const dep = dependentesMantidos[i];
-      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
-      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
-      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
-      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
-    }
-
-    const atualizado = await usersService.atualizarUserPorId(idAlvo, dadosDependentes);
-
-    log.info("DependentesExcluidos", { atorId: req.user.id, alvoId: idAlvo, requestId: req.requestId });
-
-    return res.json({ message: "Dependentes excluídos com sucesso.", user: atualizado });
-  } catch (err) {
-    log.error("DependentesExcluirErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
-  }
-};
+// Excluir dependentes removido conforme política FENAPRF
 
 /**
  * PUT /api/users/:id
@@ -330,16 +234,6 @@ exports.atualizarUser = async (req, res) => {
       if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já cadastrado para: ${checkCpf.rows[0].name}.` });
     }
 
-    const dependentesArray = validarESanitizarDependentes(body);
-    const dadosDependentes = {};
-    for (let i = 0; i < 5; i++) {
-      const dep = dependentesArray[i];
-      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
-      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
-      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
-      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
-    }
-
     const payload = {
       nome: body.nome,
       sexo: body.sexo ? normalizeSexo(body.sexo) : undefined,
@@ -350,13 +244,17 @@ exports.atualizarUser = async (req, res) => {
       email1: body.email1,
       email: body.email,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
-      logradouro_bairro: body.logradouro_bairro,
+      // ViaCEP fields blocked for all in gestao update too
+      // logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
-      cidade: body.cidade,
-      uf: body.uf,
+      // cidade: body.cidade,
+      // uf: body.uf,
       cep: body.cep,
-      ...dadosDependentes,
+      cargo: body.cargo,
+      uf: body.uf_voto || body.uf, // preserva se vier como uf_voto ou similar
+      cargo_mandato_inicio: normalizeDateField(body.cargo_mandato_inicio),
+      cargo_mandato_fim: normalizeDateField(body.cargo_mandato_fim),
     };
 
     if (body.perfil_acesso) {
@@ -433,16 +331,6 @@ exports.criarUser = async (req, res) => {
     const checkCpf = await pool.query("SELECT name FROM users WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
     if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já pertence ao usuário: ${checkCpf.rows[0].name}.` });
 
-    const dependentesArray = validarESanitizarDependentes(body);
-    const dadosDependentes = {};
-    for (let i = 0; i < 5; i++) {
-      const dep = dependentesArray[i];
-      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
-      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
-      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
-      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
-    }
-
     const perfil_acesso = normalizePerfil(body.perfil_acesso || "CONSELHEIRO");
     const cargo = body.cargo || null;
     const uf = body.uf || null;
@@ -478,7 +366,6 @@ exports.criarUser = async (req, res) => {
       complemento: body.complemento || null,
       cidade: body.cidade || null,
       cep: body.cep || null,
-      ...dadosDependentes,
     };
 
     const novo = await usersService.criarUserInicial(dadosNovo, perfilCriador);

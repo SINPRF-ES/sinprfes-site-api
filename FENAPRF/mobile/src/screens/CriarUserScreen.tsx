@@ -7,6 +7,7 @@ import { useNetInfo } from '@react-native-community/netinfo';
 import api from '../services/apiService';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
+import VinculoCard from '../components/VinculoCard';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
 import { User } from '../types/user';
@@ -54,7 +55,7 @@ export default function CriarUserScreen({ navigation }: any) {
 
   const handleCreate = useCallback(async () => {
     if (!netInfo.isConnected) {
-      Alert.alert('Offline', 'A criação de usuários só está disponível online.');
+      Alert.alert('Offline', 'A criação de membros só está disponível online.');
       return;
     }
 
@@ -85,10 +86,10 @@ export default function CriarUserScreen({ navigation }: any) {
       }
 
       await api.post('/api/users', payload);
-      Alert.alert('Sucesso', 'Usuário criado com sucesso.');
+      Alert.alert('Sucesso', 'Membro criado com sucesso.');
       navigation.navigate('Users', { refresh: true });
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível criar o user.');
+      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível criar o membro.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,7 @@ export default function CriarUserScreen({ navigation }: any) {
 
   useEffect(() => {
     const actions: MenuAction[] = [
-      { label: 'Criar User', icon: 'account-plus', onPress: handleCreate }
+      { label: 'Criar Membro', icon: 'account-plus', onPress: handleCreate }
     ];
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,
@@ -132,6 +133,13 @@ export default function CriarUserScreen({ navigation }: any) {
         isManagement={true}
       />
       <EnderecoCard user={user as User} setUser={setUser as any} />
+
+      <VinculoCard
+        user={user as User}
+        setUser={setUser as any}
+        isGestao={true}
+        currentUserProfile={authUser?.perfil_acesso}
+      />
 
     </KeyboardAwareScrollView>
     </SafeScreen>

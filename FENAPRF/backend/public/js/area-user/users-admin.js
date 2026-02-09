@@ -71,10 +71,10 @@
                 secUsers.innerHTML = `
                     <div class="search-box-container af-standard-header">
                         <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px;">
-                            <h2 style="margin:0;">👥 Users</h2>
+                            <h2 style="margin:0;">👥 Membros</h2>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-                            <button id="btn-novo-user" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo User</button>
+                            <button id="btn-novo-user" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo Membro</button>
                             <div id="users-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
                             <input type="text" id="busca-users" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
                         </div>
@@ -303,10 +303,7 @@
                             <label>CPF</label>
                             <input name="cpf" value="${safeEscape(f.cpf)}" ${ehGestao ? "" : "readonly"}>
                         </div>
-                        <div class="field-group">
-                            <label>Matrícula (SIAPE)</label>
-                            <input name="siape" value="${safeEscape(f.siape)}" placeholder="6 ou 7 dígitos" maxlength="7" ${ehGestao ? "" : "readonly"}>
-                        </div>
+                        <div class="field-group"></div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
@@ -633,7 +630,7 @@
                 }
 
                 // 3. Remover campos readonly se não for gestor pleno
-                if (!ehGestao && (key === 'sexo' || key === 'cpf' || key === 'siape')) {
+                if (!ehGestao && (key === 'sexo' || key === 'cpf')) {
                     return;
                 }
 
@@ -643,7 +640,7 @@
                 }
 
                 // 5. Normalização de Documentos/Telefones
-                if (key === 'cpf' || key.includes('_cpf') || key === 'telefone1' || key === 'telefone2' || key === 'cep' || key === 'siape') {
+                if (key === 'cpf' || key.includes('_cpf') || key === 'telefone1' || key === 'telefone2' || key === 'cep') {
                     val = onlyDigits(val);
                 }
 
@@ -746,7 +743,7 @@
 
         container.innerHTML = `
             <div class="user-card" style="border-left-color: var(--amarelo);">
-                <h3>👤 Novo User</h3>
+                <h3>👤 Novo Membro</h3>
                 <form id="form-novo-user-admin">
                     <div class="edit-grid">
                         <div class="edit-group">
@@ -765,10 +762,7 @@
                             <label>CPF *</label>
                             <input name="cpf" required placeholder="000.000.000-00">
                         </div>
-                        <div class="edit-group">
-                            <label>Matrícula (SIAPE)</label>
-                            <input name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
-                        </div>
+                        <div class="edit-group"></div>
                         <div class="edit-group">
                             <label>Email *</label>
                             <input type="email" name="email1" required>

@@ -77,7 +77,7 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Users"
         component={UsersScreen}
-        options={{ title: '👥 Usuários' }}
+        options={{ title: '👥 Membros' }}
       />
       <Drawer.Screen
         name="Publicacoes"
@@ -139,7 +139,7 @@ const DrawerNavigator = () => {
             name="NotificacoesPush"
             component={NotificacoesPushScreen}
             options={{
-              title: '📢 Notificações',
+              title: 'Notificações',
               drawerItemStyle: { display: 'none' }
             }}
           />
@@ -147,7 +147,7 @@ const DrawerNavigator = () => {
             name="CriarUser"
             component={CriarUserScreen}
             options={{
-          title: '👤 Novo Usuário',
+              title: 'Novo Membro',
               drawerItemStyle: { display: 'none' } // Oculta o item da lista padrão
             }}
           />

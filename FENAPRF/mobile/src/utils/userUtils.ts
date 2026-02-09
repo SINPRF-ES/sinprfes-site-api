@@ -74,6 +74,29 @@ export const CARGOS_DIRETORIA = [
   "Diretor de Direitos Humanos e Políticas Sociais Substituto",
 ];
 
+export const CARGO_RANK: Record<string, number> = {
+  "Presidente da FENAPRF": 1,
+  "Vice-Presidente da FENAPRF": 2,
+  "Diretor de Secretaria": 3,
+  "Diretor de Secretaria Substituto": 4,
+  "Diretor de Finanças": 5,
+  "Diretor de Finanças Substituto": 6,
+  "Diretor de Relações de Trabalho e e Formação Sindical": 7,
+  "Diretor de Relações de Trabalho e e Formação Sindical Substituto": 8,
+  "Diretor Jurídico": 9,
+  "Diretor Jurídico Substituto": 10,
+  "Diretor de Assuntos Institucionais": 11,
+  "Diretor de Assuntos Institucionais Substituto": 12,
+  "Diretor de Comunicação e Divulgação": 13,
+  "Diretor de Comunicação e Divulgação Substituto": 14,
+  "Diretor de Direitos Humanos e Políticas Sociais": 15,
+  "Diretor de Direitos Humanos e Políticas Sociais Substituto": 16,
+  "Presidente": 17,
+  "Vice-Presidente": 18,
+  "Delegado Representante": 19,
+  "Delegado Substituto": 20,
+};
+
 export const UFS = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"

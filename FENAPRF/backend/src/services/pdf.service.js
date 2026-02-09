@@ -454,13 +454,12 @@ async function gerarPdfFichaFiliacao(dados) {
 
     linha(doc);
 
-    doc.font("Helvetica-Bold").fontSize(12).text("Dados do User:");
+    doc.font("Helvetica-Bold").fontSize(12).text("Dados do Membro:");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
 
     doc.text(`Nome: ${dados.nome || ""}`);
     doc.text(`CPF: ${dados.cpf || ""}`);
-    doc.text(`Matrícula: ${dados.matricula || ""}`);
     doc.text(`E-mail: ${dados.email || ""}`);
     doc.text(`Telefone 1: ${dados.telefone1 || ""}`);
     doc.text(`Telefone 2: ${dados.telefone2 || ""}`);
@@ -505,7 +504,7 @@ async function gerarPdfFichaFiliacao(dados) {
     doc.text("_____________________________________________", {
       align: "center",
     });
-    doc.text("Assinatura do User", { align: "center" });
+    doc.text("Assinatura do Membro", { align: "center" });
 
     doc.moveDown(2);
     doc
@@ -568,8 +567,8 @@ async function gerarPdfRessarcimento(dados, anexos = []) {
 
     linha(doc);
 
-    // Dados do user
-    doc.font("Helvetica-Bold").fontSize(12).text("Dados do User:");
+    // Dados do membro
+    doc.font("Helvetica-Bold").fontSize(12).text("Dados do Membro:");
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
     doc.text(`Nome: ${dados.nome || ""}`);
@@ -885,7 +884,7 @@ async function gerarPdfRelatorioAssembleia(dados) {
 // ------------------------------------------------------------------
 
 /**
- * PDF: DOSSIÊ DO USER
+ * PDF: DOSSIÊ DO MEMBRO
  */
 async function gerarPdfDossieUser(user, options = {}) {
   const { podeVerCpf = false } = options;
@@ -903,7 +902,7 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.on("error", reject);
 
     doc.moveDown(2);
-    doc.font("Helvetica-Bold").fontSize(16).text("Dossiê do User", { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(16).text("Dossiê do Membro", { align: "center" });
     doc.moveDown(1);
 
     // 1. Identificação
@@ -912,7 +911,6 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.font("Helvetica").fontSize(11);
     doc.text(`Nome: ${user.nome || ""}`);
     doc.text(`CPF: ${podeVerCpf ? formatarCPF(user.cpf) : "***.***.***-**"}`);
-    doc.text(`Matrícula (SIAPE): ${user.siape || "-"}`);
     doc.text(`Sexo: ${user.sexo === 'M' ? 'Masculino' : (user.sexo === 'F' ? 'Feminino' : '-')}`);
     doc.text(`Data de Nascimento: ${formatDateSafe(user.data_nascimento)}`);
     doc.moveDown(1);
@@ -961,7 +959,7 @@ async function gerarPdfDossieUser(user, options = {}) {
 
   return await aplicarLayoutInstitucional(pdfBuffer, {
     codigoVerificacao: codigo,
-    tipoDocumento: "Dossiê do User",
+    tipoDocumento: "Dossiê do Membro",
   });
 }
 
@@ -1005,7 +1003,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
 
         doc.font("Helvetica").fontSize(11);
         doc.text(`Efetivo total: ${r.prfTotal !== null ? String(r.prfTotal) : "Não informado"}`, { align: 'left' });
-        doc.text(`Users cadastrados: ${r.usersAtivos !== null ? String(r.usersAtivos) : "—"}`, { align: 'left' });
+        doc.text(`Membros cadastrados: ${r.usersAtivos !== null ? String(r.usersAtivos) : "—"}`, { align: 'left' });
         doc.text(`Índice de sindicalização: ${r.percentual !== null ? r.percentual.toFixed(2) + "%" : "—"}`, { align: 'left' });
         doc.text(`Base do efetivo: ${comp}`, { align: 'left' });
         doc.text(`Relatório gerado em: ${dataHoje}`, { align: 'left' });
@@ -1018,7 +1016,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.font("Helvetica-Bold").fontSize(14).text("Resumo Geral");
         doc.moveDown(0.5);
         doc.font("Helvetica").fontSize(12);
-        doc.text(`Total de users: ${dados.total}`);
+        doc.text(`Total de membros: ${dados.total}`);
         doc.moveDown(1);
     } else if (dados.repasseBreakdown) {
         // ESPECIAL: Relatório por Situação ATIVO (LAYOUT TIPO DOSSIÊ - B1)
@@ -1031,7 +1029,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
 
         doc.font("Helvetica").fontSize(11);
         doc.text(`Efetivo total: ${totalPrf}`, { align: 'left' });
-        doc.text(`Users cadastrados: ${totalUsersAtivos}`, { align: 'left' });
+        doc.text(`Membros cadastrados: ${totalUsersAtivos}`, { align: 'left' });
         doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
         doc.text(`Base do efetivo: Dados por UF (ver tabela abaixo)`, { align: 'left' });
         doc.moveDown(1);
@@ -1040,7 +1038,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
         doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por UF (Efetivo PRF)");
         doc.moveDown(0.5);
 
-        const headers = ["UF", "Efetivo", "Users", "%", "Base"];
+        const headers = ["UF", "Efetivo", "Membros", "%", "Base"];
         const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
         const tableRows = dados.repasseBreakdown.map(r => [
@@ -1101,7 +1099,7 @@ async function gerarPdfRelatorioGlobal(dados) {
     // -------------------------------------------------------------------------
     // SEÇÃO 1: ATIVO
     // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. USERS ATIVOS");
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. MEMBROS ATIVOS");
     doc.fillColor("#000").moveDown(0.5);
 
     const a = dados.ativo;
@@ -1111,14 +1109,14 @@ async function gerarPdfRelatorioGlobal(dados) {
 
     doc.font("Helvetica").fontSize(11);
     doc.text(`Efetivo total (PRF): ${totalPrf}`, { align: 'left' });
-    doc.text(`Users ativos: ${totalUsersAtivos}`, { align: 'left' });
+    doc.text(`Membros ativos: ${totalUsersAtivos}`, { align: 'left' });
     doc.text(`Índice de sindicalização global: ${percentualGlobal.toFixed(2)}%`, { align: 'left' });
     doc.moveDown(1);
 
     doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por UF (Ativos)");
     doc.moveDown(0.5);
 
-    const headers = ["UF", "Efetivo", "Users", "%", "Base"];
+    const headers = ["UF", "Efetivo", "Membros", "%", "Base"];
     const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
     const tableRows = a.repasseBreakdown.map(r => [

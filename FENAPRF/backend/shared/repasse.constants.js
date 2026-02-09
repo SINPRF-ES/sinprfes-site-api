@@ -8,12 +8,9 @@
   }
 }(typeof self !== 'undefined' ? self : this, function () {
   return {
-    REPASSE_LOTACOES: [
-      "SEDE",
-      "DEL 01 - Viana",
-      "DEL 02 - Serra",
-      "DEL 03 - Guarapari",
-      "DEL 04 - Linhares"
+    REPASSE_UNIDADES: [
+      "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+      "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
     ]
   };
 }));

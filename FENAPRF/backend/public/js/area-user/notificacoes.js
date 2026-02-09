@@ -93,7 +93,7 @@
             if (ufSelect) ufSelect.style.display = 'block';
         } else if (type === 'USER') {
             container.style.display = 'block';
-            label.textContent = 'Buscar User:';
+            label.textContent = 'Buscar Membro:';
             userWrapper.style.display = 'block';
         }
     }
@@ -153,7 +153,7 @@
 
         let targetLabel = targetType;
         if (targetType === 'USER' && targetValue && typeof targetValue === 'object') {
-            targetLabel = `User — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
+            targetLabel = `Membro — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
         } else if (targetValue) {
             targetLabel = `${targetType} (${targetValue})`;
         }

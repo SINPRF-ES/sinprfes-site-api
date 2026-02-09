@@ -125,13 +125,13 @@ export default function NotificacoesPushScreen() {
     }
 
     if (targetType === 'USER' && !targetValue) {
-        Alert.alert('Erro', 'Selecione um user para o destino específico.');
+        Alert.alert('Erro', 'Selecione um membro para o destino específico.');
         return;
     }
 
     let targetLabel = targetType;
     if (targetType === 'USER' && (targetValue?.name || targetValue?.nome)) {
-      targetLabel = `User — ${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})`;
+      targetLabel = `Membro — ${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})`;
     } else if (targetValue) {
       targetLabel = `${targetType} (${targetValue})`;
     }
@@ -287,7 +287,7 @@ export default function NotificacoesPushScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Buscar User</Text>
+                <Text style={styles.modalTitle}>Buscar Membro</Text>
                 <TouchableOpacity onPress={() => setIsPickerVisible(false)}>
                   <MaterialCommunityIcons name="close" size={24} color="#666" />
                 </TouchableOpacity>
@@ -330,7 +330,7 @@ export default function NotificacoesPushScreen() {
                     <Text style={styles.modalEmptyText}>
                       {searchQuery.length < 2
                         ? "Digite pelo menos 2 caracteres para buscar..."
-                        : "Nenhum user encontrado."}
+                        : "Nenhum membro encontrado."}
                     </Text>
                   )}
                   keyboardShouldPersistTaps="handled"
@@ -368,7 +368,7 @@ export default function NotificacoesPushScreen() {
                 <Picker.Item label="Veteranos / Pensionistas" value="VETERANOS" />
                 <Picker.Item label="Por UF" value="UF" />
                 <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
-                <Picker.Item label="Especificar User" value="USER" />
+                <Picker.Item label="Especificar Membro" value="USER" />
             </Picker>
           </View>
 
@@ -393,13 +393,13 @@ export default function NotificacoesPushScreen() {
                   onPress={() => setIsPickerVisible(true)}
                 >
                   <Text style={styles.pickerButtonText} numberOfLines={1}>
-                    {(targetValue?.name || targetValue?.nome) ? `${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar user...'}
+                    {(targetValue?.name || targetValue?.nome) ? `${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar membro...'}
                   </Text>
                   <MaterialCommunityIcons name="magnify" size={20} color="#666" />
                 </TouchableOpacity>
 
                 {!targetValue?.id && (
-                  <Text style={styles.infoLabel}>Selecione um user para o envio específico.</Text>
+                  <Text style={styles.infoLabel}>Selecione um membro para o envio específico.</Text>
                 )}
              </View>
           )}

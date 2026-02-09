@@ -34,11 +34,11 @@ module.exports = {
     TOKEN_TIPO_INVALIDO: "Token de redefinição inválido.",
   },
 
-  // Mensagens de ERRO e VALIDAÇÃO no fluxo de USERS/CRUD
+  // Mensagens de ERRO e VALIDAÇÃO no fluxo de MEMBROS/CRUD
   USERS: {
     ID_INVALIDO: "ID inválido.",
-    USER_NAO_ENCONTRADO: "User não encontrado.",
-    PERMISSAO_CRIAR: "Você não tem permissão para criar users.",
+    USER_NAO_ENCONTRADO: "Membro não encontrado.",
+    PERMISSAO_CRIAR: "Você não tem permissão para criar membros.",
     CAMPOS_OBRIGATORIOS: "Campos obrigatórios: nome, cpf, email1.",
     CPF_DUPLICADO: "CPF já cadastrado na base de dados.",
   },
@@ -47,9 +47,9 @@ module.exports = {
   ERROS_INTERNOS: {
     LOGIN: "Erro interno ao realizar login.",
     CARREGAR_DADOS: "Erro interno ao carregar seus dados.",
-    LISTAR_USERS: "Erro interno ao listar users.",
+    LISTAR_USERS: "Erro interno ao listar membros.",
     ATUALIZAR_DADOS: "Erro interno ao atualizar dados.",
-    CRIAR_USER: "Erro interno ao criar user.",
+    CRIAR_USER: "Erro interno ao criar membro.",
     RESET_SENHA: "Erro interno ao redefinir a senha.",
   },
 

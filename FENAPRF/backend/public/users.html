@@ -18,14 +18,14 @@
       <section class="card">
         <h2 class="section-title">
           <span class="emoji">🧾</span>
-          <span>Usuários ao FENAPRF</span>
+          <span>Membros ao FENAPRF</span>
         </h2>
         <p class="section-subtitle">
-          Consulta básica dos users cadastrados no sistema do sindicato.
+          Consulta básica dos membros cadastrados no sistema.
         </p>
 
         <div class="section-box" style="margin-bottom: 12px;">
-          <form id="filtro-users" onsubmit="return false;">
+          <form id="filtro-membros" onsubmit="return false;">
             <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;">
               <div style="flex:1 1 220px; min-width:0;">
                 <label for="busca-nome" style="font-size:11px; color:var(--texto-fraco); display:block; margin-bottom:2px;">
@@ -121,7 +121,7 @@
               }
 
               if (!data.results || data.results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:8px 4px; text-align:center; color:var(--texto-fraco);">Nenhum user encontrado com os filtros informados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:8px 4px; text-align:center; color:var(--texto-fraco);">Nenhum membro encontrado com os filtros informados.</td></tr>';
                 info.textContent = '';
                 return;
               }

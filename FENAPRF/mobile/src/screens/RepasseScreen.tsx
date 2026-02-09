@@ -113,8 +113,7 @@ export default function RepasseScreen() {
     userPerfil: user?.perfil_acesso,
   });
 
-  // Implementação local para máxima robustez contra erros de importação (UI_RENDER_CRASH)
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((user?.perfil_acesso || '').toUpperCase());
+  const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
 
   const fetchData = useCallback(async () => {
     bc('fetch:start', { year });
@@ -145,8 +144,8 @@ export default function RepasseScreen() {
           totalRepasseMes: safeNumber(m?.totalRepasseMes, 0),
           localidades: Array.isArray(m?.localidades) ? m.localidades.map(l => ({
             ...l,
-            uf: String(l?.uf || l?.lotacao || ''),
-            usersAtivos: safeNumber(l?.usersAtivos, 0),
+            uf: String(l?.uf || ''),
+            usersAtivos: safeNumber(l?.usersAtivos || l?.membrosAtivos, 0),
             prfTotal: safeNumber(l?.prfTotal, 0),
             percentual: (l?.percentual == null) ? null : safeNumber(l.percentual),
             creditoMes: safeNumber(l?.creditoMes, 0),
@@ -157,10 +156,10 @@ export default function RepasseScreen() {
           })) : [],
         }));
 
-        // Task 2: Unificar contagem de users ativos (Fonte: Listar Users)
+        // Unificar contagem de membros ativos (Fonte: Listar Users)
         if (respUsers.status === 'fulfilled') {
           const allUsers = Array.isArray(respUsers.value) ? respUsers.value : [];
-          bc('REPASSE_LOCALIDADE_NORMALIZATION', { allUsersCount: allUsers.length });
+          bc('REPASSE_UF_NORMALIZATION', { allUsersCount: allUsers.length });
 
           const activeUsers = allUsers.filter(f => {
             const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
@@ -285,7 +284,7 @@ export default function RepasseScreen() {
     fetchData();
   }, [fetchData]);
 
-  const handleUpdateLocalidade = (month: number, uf: string, field: string, value: any) => {
+  const handleUpdateUF = (month: number, uf: string, field: string, value: any) => {
     const newMeses = [...meses];
     const mesIndex = newMeses.findIndex(m => m.month === month);
     if (mesIndex === -1) return;
@@ -381,7 +380,7 @@ export default function RepasseScreen() {
         month,
         m.perCapita,
         (m.localidades || []).map(l => ({
-          lotacaoKey: l.uf,
+          ufKey: l.uf,
           responsavelId: l.responsavelId,
           prfTotal: l.prfTotal,
           reembolsoMes: l.reembolsoMes
@@ -534,7 +533,7 @@ export default function RepasseScreen() {
                                   <View style={styles.pickerWrapperCell}>
                                     <Picker
                                       selectedValue={loc.responsavelId}
-                                      onValueChange={(v) => handleUpdateLocalidade(m.month, loc.uf, 'responsavelId', v)}
+                                      onValueChange={(v) => handleUpdateUF(m.month, loc.uf, 'responsavelId', v)}
                                       style={styles.pickerCell}
                                       mode="dropdown"
                                       dropdownIconColor="#003366"
@@ -582,7 +581,7 @@ export default function RepasseScreen() {
                                     style={styles.inputCell}
                                     value={String(loc.prfTotal || 0)}
                                     keyboardType="numeric"
-                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.uf, 'prfTotal', v)}
+                                    onChangeText={(v) => handleUpdateUF(m.month, loc.uf, 'prfTotal', v)}
                                   />
                                 ) : (
                                   <Text style={styles.valueCell}>{Number(loc.prfTotal || 0)}</Text>
@@ -603,7 +602,7 @@ export default function RepasseScreen() {
                                     style={styles.inputCell}
                                     value={String(loc.reembolsoMes || 0)}
                                     keyboardType="numeric"
-                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.uf, 'reembolsoMes', v)}
+                                    onChangeText={(v) => handleUpdateUF(m.month, loc.uf, 'reembolsoMes', v)}
                                   />
                                 ) : (
                                   <Text style={styles.valueCell}>{formatCurrency(loc.reembolsoMes)}</Text>

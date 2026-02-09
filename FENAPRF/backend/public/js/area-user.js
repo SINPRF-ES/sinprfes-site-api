@@ -30,7 +30,7 @@
         const { Notificacoes } = window || {};
 
         let userInfo = obterUserInfo ? obterUserInfo() : {};
-        let perfil = (userInfo.perfil_acesso || userInfo.perfil || "USER").toUpperCase();
+        let perfil = (userInfo.perfil_acesso || userInfo.perfil || "CONSELHEIRO").toUpperCase();
 
         console.log("Perfil inicial (Cache):", perfil);
 
@@ -83,8 +83,8 @@
             if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
 
             // Exibe abas restritas conforme perfil (Regra de Ouro)
-            const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-            const perfisComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
+            const perfisGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"];
+            const perfisComunicacao = ["ADMIN", "DIRETORIA", "COLABORADOR", "COMUNICADOR"];
 
             const navRepasse = document.getElementById("nav-repasse");
             if (navRepasse) navRepasse.style.display = perfisGestao.includes(perfil) ? "block" : "none";

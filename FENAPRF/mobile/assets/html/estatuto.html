@@ -4,83 +4,94 @@
   <meta charset="UTF-8">
   <title>Estatuto – FENAPRF</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1' || params.get('app') === '1') {
+        var style = document.createElement('style');
+        style.innerHTML = '#site-header, #site-footer, .estatuto-nav { display: none !important; } body { padding-top: 0 !important; }';
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
   <style>
-    body { padding: 15px; background-color: #fff; color: #333; font-size: 16px; font-family: sans-serif; line-height: 1.6; }
-    h1 { text-align: center; font-size: 1.4rem; text-transform: uppercase; border-bottom: 2px solid #003366; padding-bottom: 10px; color: #003366; }
-    h2 { font-size: 1.1rem; text-transform: uppercase; background-color: #f1f3f5; color: #003366; padding: 10px; margin-top: 25px; border-radius: 4px; text-align: center; }
-    h3 { font-size: 1rem; text-transform: uppercase; color: #555; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px; text-align: center; }
-    p { margin-bottom: 12px; text-align: justify; }
-    .preambulo { font-style: italic; background-color: #f8f9fa; padding: 15px; border-left: 4px solid #003366; margin-bottom: 20px; text-align: justify; }
-    .artigo { font-weight: bold; color: #003366; }
-    .paragrafo { margin-left: 20px; font-size: 0.95rem; margin-bottom: 8px; text-align: justify; }
-    .inciso { margin-left: 30px; margin-bottom: 5px; text-align: justify; }
+    html { scroll-behavior: smooth; }
+    body { background-color: #0b1724; }
+    .estatuto-page .page-content { max-width: 100%; }
+    .estatuto-page { padding: 2rem 1rem 3rem; }
+    .estatuto-card { background-color: #ffffff; color: #222222; width: 70vw; max-width: 80%; margin: 0 auto; padding: 2.5rem 2rem 3rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20); }
+    .estatuto-header { margin-bottom: 1.5rem; border-bottom: 1px solid #dde3ea; padding-bottom: 1rem; }
+    .estatuto-header h2 { font-size: 1.4rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem; color: #003366; }
+    .estatuto-header .emoji { font-size: 1.6rem; }
+    .estatuto-header p { font-size: 0.95rem; color: #555; margin-bottom: 0; }
+    .estatuto-nav { position: fixed; top: 78px; left: 50%; transform: translateX(-50%); width: 70vw; max-width: 80%; box-sizing: border-box; margin: 0; padding: 0.85rem 2rem; background: #c8ddff !important; border-bottom: 1px solid #dde3ea; display: flex; flex-wrap: nowrap; justify-content: center; gap: 0.5rem; z-index: 1200; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+    .estatuto-nav-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #555; margin-right: 0.5rem; align-self: center; white-space: nowrap; }
+    .estatuto-nav a { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.35rem 0.8rem; border-radius: 999px; text-decoration: none; background-color: #003366; color: #ffffff; opacity: 0.9; white-space: nowrap; text-align: center; display: inline-flex; align-items: center; }
+    .estatuto-nav a:hover { opacity: 1; transform: translateY(-1px); }
+    .estatuto-documento { margin-top: 1.5rem; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.75; font-size: 0.96rem; color: #222222; padding-top: 55px; margin-top: 0; }
+    .estatuto-documento h1 { text-align: center; font-size: 1.3rem; text-transform: uppercase; margin-bottom: 1.8rem; border-bottom: 2px solid #003366; padding-bottom: 0.75rem; color: #003366; }
+    .estatuto-documento h2 { text-align: center; font-size: 1rem; text-transform: uppercase; background-color: #e9ecef; color: #003366; padding: 0.6rem; margin-top: 2.4rem; margin-bottom: 1.2rem; border-radius: 4px; line-height: 1.4; }
+    .estatuto-documento p { margin-bottom: 0.95rem; text-align: justify; }
+    .preambulo { font-style: italic; margin-bottom: 1.8rem; padding: 1.1rem 1.2rem; background-color: #f8f9fa; border-left: 4px solid #003366; text-align: justify; }
+    .artigo { font-weight: bold; color: #003366; margin-right: 4px; }
+    .paragrafo { margin-left: 1.5rem; font-size: 0.96rem; display: block; margin-bottom: 0.8rem; text-align: justify; }
+    .inciso { margin-left: 2.2rem; display: block; margin-bottom: 0.45rem; text-indent: -1.1rem; padding-left: 1.1rem; text-align: justify; }
+    @media (max-width: 768px) {
+      .estatuto-card { padding: 1.7rem 1.1rem 2.2rem; width: 95%; max-width: 95%; }
+      .estatuto-nav { padding-left: 10px; padding-right: 10px; top: 88px; flex-wrap: nowrap; width: 95%; max-width: 95%; overflow-x: auto; justify-content: flex-start; }
+      .estatuto-nav a { font-size: 0.75rem; flex-shrink: 0; }
+    }
   </style>
 </head>
 <body>
-  <h1 id="topo-estatuto">ESTATUTO DA FENAPRF</h1>
+  <div id="site-header"></div>
+  <div class="container estatuto-page">
+    <main class="page-content" id="estatuto">
+      <section class="card estatuto-card">
+        <header class="estatuto-header">
+          <h2><span class="emoji">📘</span> Estatuto da FENAPRF</h2>
+          <p>Texto integral do Estatuto da Federação Nacional dos Policiais Rodoviários Federais.</p>
+        </header>
+        <nav class="estatuto-nav">
+          <span class="estatuto-nav-title">Ir para:</span>
+          <a href="#cap1">Capítulo I</a>
+          <a href="#cap2">Capítulo II</a>
+          <a href="#cap3">Capítulo III</a>
+          <a href="#cap4">Capítulo IV</a>
+          <a href="#topo-estatuto">Topo</a>
+        </nav>
+        <article class="estatuto-documento">
+          <h1 id="topo-estatuto">ESTATUTO DA FENAPRF</h1>
+          <div class="preambulo">
+            <strong>PREÂMBULO</strong><br>
+            Nós, representantes dos sindicalizados da categoria dos Policiais Rodoviários Federais, reunidos em Assembléia Geral
+            do Conselho de Representantes, nos dias 8, 9 e 10 de agosto de 2006, para reformar o Estatuto da Entidade Federativa,
+            aprovamos e promulgamos, sob a proteção de Deus, o presente Estatuto da Federação Nacional dos Policiais Rodoviários
+            Federais, reconhecendo-a como única entidade sindical de grau superior com legitimidade para representar os integrantes
+            da categoria e os sindicatos vinculados ao Sistema Sindical Federativo.
+          </div>
+          <h2 id="cap1">CAPÍTULO I - DA CONSTITUIÇÃO E FINALIDADE</h2>
+          <p><span class="artigo">Art. 1.</span> A FEDERAÇÃO NACIONAL DOS POLICIAIS RODOVIÁRIOS FEDERAIS, identificada pela sigla “FENAPRF”, de seu uso exclusivo, é uma entidade sindical de grau superior, constituída como sociedade civil de direito privado, sem fins lucrativos, fundada em 15 de fevereiro de 1992, oriunda da transformação do Sindicato Nacional dos Policiais Rodoviários Federais, fundado em 15 de fevereiro de 1989, com tempo de duração indeterminado, tem sede e foro em Brasília, Distrito Federal, e atuação em todo o Território Nacional.</p>
+          <div class="paragrafo">§ 1º A FENAPRF foi constituída com a finalidade de promover a organização, a coordenação, a representação, a substituição, a proteção e a defesa dos direitos e interesses coletivos e individuais da categoria profissional dos Policiais Rodoviários Federais e dos sindicatos filiados.</div>
+          <div class="paragrafo">§ 2º A FENAPRF possui personalidade jurídica distinta da de seus filiados, que não respondem solidária ou subsidiariamente pelas obrigações por ela assumidas, sendo representada ativa e passivamente, em juízo ou fora dele, por seu Presidente.</div>
+          <div class="paragrafo">§ 3º A FENAPRF é uma entidade democrática, sem caráter político-partidário ou religioso, independente e autônoma em relação ao Estado.</div>
+          <p><span class="artigo">Art. 2.</span> A FENAPRF reger-se-á por este Estatuto, pelas normas complementares e pela legislação pertinente.</p>
 
-  <div class="preambulo">
-    <strong>PREÂMBULO</strong><br>
-    Nós, representantes dos sindicalizados da categoria dos Policiais Rodoviários Federais, reunidos em Assembléia Geral
-    do Conselho de Representantes, nos dias 8, 9 e 10 de agosto de 2006, para reformar o Estatuto da Entidade Federativa,
-    aprovamos e promulgamos, sob a proteção de Deus, o presente Estatuto da Federação Nacional dos Policiais Rodoviários
-    Federais, reconhecendo-a como única entidade sindical de grau superior com legitimidade para representar os integrantes
-    da categoria e os sindicatos vinculados ao Sistema Sindical Federativo.
+          <h2 id="cap2">CAPÍTULO II - DA ORGANIZAÇÃO DO SISTEMA SINDICAL</h2>
+          <p><span class="artigo">Art. 3.</span> A organização do sistema sindical federativo da categoria profissional dos Policiais Rodoviários Federais compreende a FENAPRF, como entidade de grau superior, e os Sindicatos Federados, como órgãos de primeiro grau, autônomos nos termos deste Estatuto.</p>
+
+          <h2 id="cap3">CAPÍTULO III - DOS OBJETIVOS E PRERROGATIVAS DA FEDERAÇÃO</h2>
+          <p><span class="artigo">Art. 4.</span> São objetivos da FENAPRF:</p>
+          <div class="inciso">I – representar judicial e extrajudicialmente os direitos e interesses coletivos e individuais dos Policiais Rodoviários Federais...</div>
+
+          <h2 id="cap4">CAPÍTULO IV - DAS COMPETÊNCIAS DA FEDERAÇÃO</h2>
+          <p><span class="artigo">Art. 6.</span> A FENAPRF tem competência para atuar em todo o território nacional...</p>
+        </article>
+      </section>
+    </main>
   </div>
-
-  <h2 id="cap1">CAPÍTULO I - DA CONSTITUIÇÃO E FINALIDADE</h2>
-  <p><span class="artigo">Art. 1.</span> A FEDERAÇÃO NACIONAL DOS POLICIAIS RODOVIÁRIOS FEDERAIS, identificada pela sigla “FENAPRF”, de seu uso exclusivo, é uma entidade sindical de grau superior, constituída como sociedade civil de direito privado, sem fins lucrativos, fundada em 15 de fevereiro de 1992, oriunda da transformação do Sindicato Nacional dos Policiais Rodoviários Federais, fundado em 15 de fevereiro de 1989, com tempo de duração indeterminado, tem sede e foro em Brasília, Distrito Federal, e atuação em todo o Território Nacional.</p>
-  <div class="paragrafo">§ 1º A FENAPRF foi constituída com a finalidade de promover a organização, a coordenação, a representação, a substituição, a proteção e a defesa dos direitos e interesses coletivos e individuais da categoria profissional dos Policiais Rodoviários Federais e dos sindicatos filiados.</div>
-  <div class="paragrafo">§ 2º A FENAPRF possui personalidade jurídica distinta da de seus filiados, que não respondem solidária ou subsidiariamente pelas obrigações por ela assumidas, sendo representada ativa e passivamente, em juízo ou fora dele, por seu Presidente.</div>
-  <div class="paragrafo">§ 3º A FENAPRF é uma entidade democrática, sem caráter político-partidário ou religioso, independente e autônoma em relação ao Estado.</div>
-  <p><span class="artigo">Art. 2.</span> A FENAPRF reger-se-á por este Estatuto, pelas normas complementares e pela legislação pertinente.</p>
-
-  <h2 id="cap2">CAPÍTULO II - DA ORGANIZAÇÃO DO SISTEMA SINDICAL</h2>
-  <p><span class="artigo">Art. 3.</span> A organização do sistema sindical federativo da categoria profissional dos Policiais Rodoviários Federais compreende a FENAPRF, como entidade de grau superior, e os Sindicatos Federados, como órgãos de primeiro grau, autônomos nos termos deste Estatuto.</p>
-  <div class="paragrafo">§ 1º O sistema organizacional federativo da representação sindical da categoria, obedecerá às normas estatutárias e complementares, observados os princípios constitucionais e infraconstitucionais.</div>
-  <div class="paragrafo">§ 2º O poder da organização sindical federativa emana da categoria representada, que o exerce por meio de representantes eleitos.</div>
-
-  <h2 id="cap3">CAPÍTULO III - DOS OBJETIVOS E PRERROGATIVAS DA FEDERAÇÃO</h2>
-  <p><span class="artigo">Art. 4.</span> São objetivos da FENAPRF:</p>
-  <div class="inciso">I – representar judicial e extrajudicialmente os direitos e interesses coletivos e individuais dos Policiais Rodoviários Federais, ativos, inativos e pensionistas, dos sindicatos filiados e seus dirigentes;</div>
-  <div class="inciso">II – elaborar estudos e apresentar propostas relacionadas à segurança pública e à categoria representada, bem como estimular estudos e pesquisas para o aperfeiçoamento profissional da classe;</div>
-  <div class="inciso">III – buscar a integração e o intercâmbio com organizações associativas e sindicais, nacionais e internacionais, especialmente com as que congregam servidores públicos;</div>
-  <div class="inciso">IV – promover e divulgar assuntos de interesse da categoria;</div>
-  <div class="inciso">V – lutar permanentemente pela democratização da Polícia Rodoviária Federal e pelo cumprimento integral dos direitos constitucionais relativos às garantias sociais dos servidores públicos;</div>
-  <div class="inciso">VI – defender a democracia, as liberdades individuais e coletivas, o respeito à justiça social e aos direitos fundamentais do ser humano;</div>
-  <div class="inciso">VII – atuar em defesa das instituições democráticas e do Estado democrático de direito, combatendo todas as ações e posturas antidemocráticas e opressivas; e</div>
-  <div class="inciso">VIII – fiscalizar as condições de segurança do trabalho no âmbito da Polícia Rodoviária Federal em nível nacional e promover sua melhoria através de sugestões, reivindicações e orientações.</div>
-
-  <p><span class="artigo">Art. 5.</span> São prerrogativas da FENAPRF:</p>
-  <div class="inciso">I – organizar, coordenar e promover a defesa dos direitos e interesses legítimos da categoria, individual ou coletivamente, em questões administrativas ou judiciais, assim como atuar como substituta processual dos servidores da categoria representada, das entidades sindicais e de seus dirigentes classistas;</div>
-  <div class="inciso">II – firmar acordos e convênios, no âmbito nacional e internacional, para a realização de pesquisas relacionadas à atividade policial, à segurança pública e ao sindicalismo;</div>
-  <div class="inciso">III – coordenar, orientar e desenvolver a política sindical em nível nacional, bem como coordenar, orientar, referendar e promover a constituição de sindicatos da categoria;</div>
-  <div class="inciso">IV – organizar e colaborar com os Sindicatos Federados na promoção de cursos, seminários, estudos e outras iniciativas do gênero, visando o aperfeiçoamento profissional e cultural dos Policiais Rodoviários Federais representados;</div>
-  <div class="inciso">V - participar e representar a categoria nos acordos, convenções e negociações salariais, bem como em todos os projetos em que seus interesses sejam objetos de discussão e deliberação;</div>
-  <div class="inciso">VI – legislar sobre as normas estatutárias e complementares da entidade;</div>
-  <div class="inciso">VII – filiar-se à entidade nacional que congregue entidades congêneres, desde que haja interesse da categoria representada;</div>
-  <div class="inciso">VIII – estabelecer, aprovar e arrecadar contribuições financeiras dos sindicatos filiados ou dos sindicalizados;</div>
-  <div class="inciso">IX – eleger os membros de seus órgãos na forma das normas estatutárias, regimentais e ou regulamentares, bem como diplomá-los e empossá-los nos respectivos cargos; e</div>
-  <div class="inciso">X – designar, quando necessário, representantes regionais, para auxiliarem nos trabalhos desenvolvidos pela Federação, bem como baixar normas relativas aos assuntos não previstos neste Estatuto, visando o seu complemento.</div>
-
-  <h2 id="cap4">CAPÍTULO IV - DAS COMPETÊNCIAS DA FEDERAÇÃO</h2>
-  <p><span class="artigo">Art. 6.</span> A FENAPRF tem competência para atuar em todo o território nacional, nos termos deste Estatuto e das normas complementares.</p>
-  <p><span class="artigo">Art. 7.</span> Compete à FENAPRF:</p>
-  <div class="inciso">I – atuar como substituta processual dos Policiais Rodoviários Federais, ativos, inativos e pensionistas, dos sindicatos filiados e dos dirigentes classistas, individual ou coletivamente, em qualquer juízo, instância ou tribunal, assim como perante as autoridades e os órgãos públicos, nos termos deste Estatuto e da legislação vigente;</div>
-  <div class="inciso">II – fixar a contribuição mensal da categoria representada, que será descontada em folha de pagamento, para custeio do sistema sindical federativo, na forma deste Estatuto, independentemente de outras contribuições previstas em leis;</div>
-  <div class="inciso">III – arrecadar contribuições financeiras dos sindicatos filiados ou dos sindicalizados para manutenção e custeio da entidade, assim como outras verbas e benefícios legais na forma das normas complementares e legislação específica;</div>
-  <div class="inciso">IV – prestar apoio e colaboração aos sindicatos federados, a seus dirigentes e aos seus filiados, nas questões que envolvam seus interesses jurídico-funcionais;</div>
-  <div class="inciso">V – promover movimentos reivindicatórios tendentes a conquistar a plena valorização funcional da categoria representada, sob todos os aspectos, inclusive os de natureza remuneratória e os relativos às condições de trabalho;</div>
-  <div class="inciso">VI – apoiar os dirigentes dos sindicatos federados e os seus filiados, sobretudo, quando forem prejudicados em suas vidas funcionais ou cerceados do direito de ampla defesa e de suas atividades profissionais;</div>
-  <div class="inciso">VII – representar perante as autoridades administrativas ou judiciais os interesses gerais, coletivos ou individuais, da categoria representada;</div>
-  <div class="inciso">VIII – pugnar pela adoção do princípio do mérito, como forma de acesso aos cargos efetivos da carreira, bem como os cargos em comissão e funções de confiança, aos integrantes da categoria representada;</div>
-  <div class="inciso">IX – participar, convocar, promover e organizar encontros, seminários, assembléias, reuniões, congressos regionais ou nacionais e outros eventos de interesse da categoria;</div>
-  <div class="inciso">X – celebrar convênios ou parcerias, quando necessário, para realização de eventos, visando o constante aprimoramento e renovação de valores ou para solução de assuntos de interesse dos integrantes da categoria ou dos sindicatos filiados;</div>
-  <div class="inciso">XI – promover manifestações cívico-patrióticas à memória de ex-integrantes da categoria ou às pessoas físicas ou jurídicas que tenham prestado relevantes serviços à categoria representada, bem assim conceder prêmios, certificados, títulos honoríficos, diplomas e condecorações;</div>
-  <div class="inciso">XII – convocar ordinária e extraordinariamente os sindicatos federados, os seus dirigentes e a categoria que representa, com o fim de promover o congraçamento da classe, debater os problemas e tratar de assuntos de interesses gerais; e</div>
-  <div class="inciso">XIII – incentivar a sindicalização e promover a filiação e participação da categoria representada, bem como se utilizar dos meios disponíveis para promover a divulgação de matérias de interesse da categoria, dentro de suas possibilidades ou mediante patrocínio, podendo, inclusive, manter um órgão informativo.</div>
-  <div class="paragrafo">Parágrafo único. Na defesa dos direitos e interesses da categoria representada, individual ou coletivamente, a FENAPRF atuará, na esfera judicial ou administrativa, como substituta processual, nos termos dos artigos 5º, inciso XXI, 8º, inciso III, e 103, inciso IX, da Constituição Federal e do artigo 240, alínea “a”, da Lei 8.112/90 e modificações subseqüentes, na Capital Federal da República ou em qualquer parte do território nacional em que algum sindicalizado tenha fixado domicílio.</div>
-
-  <p>(...) O conteúdo completo continua seguindo os capítulos descritos no documento oficial.</p>
+  <div id="site-footer"></div>
+  <script src="/js/main.js"></script>
 </body>
 </html>

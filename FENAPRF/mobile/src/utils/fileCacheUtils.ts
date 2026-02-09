@@ -15,7 +15,7 @@ export function inferExtension(remoteUrl: string, contentType?: string, fallback
   const urlExtension = cleanUrl.split('.').pop()?.toLowerCase();
 
   // 1. Se tem extensao conhecida na URL, usa
-  if (urlExtension && ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'].includes(urlExtension)) {
+  if (urlExtension && ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'apk'].includes(urlExtension)) {
     return urlExtension;
   }
 
