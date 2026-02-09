@@ -94,7 +94,7 @@ async function registrarUltimoAcesso(id) {
 /**
  * Listagem para perfil (com busca e opção de incluir arquivados).
  */
-async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados = false) {
+async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados = false, apenasArquivados = false) {
   const perfil = (perfilAcesso || "CONSELHEIRO").toUpperCase();
   const filtro = (termoBusca || "").trim();
 
@@ -104,7 +104,9 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const perfisGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"];
   const isGestao = perfisGestao.includes(perfil);
 
-  if (!isGestao || !incluirArquivados) {
+  if (isGestao && apenasArquivados) {
+    conds.push("f.arquivado_em IS NOT NULL");
+  } else if (!isGestao || !incluirArquivados) {
     conds.push("f.arquivado_em IS NULL");
   }
 
@@ -137,10 +139,12 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
       f.situacao, f.perfil_acesso,
       f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
       f.avatar_url,
-      f.arquivado_em, f.arquivado_motivo,
+      f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
+      u_arq.name as arquivado_por_nome,
       f.cargo, f.cargo_mandato_inicio, f.cargo_mandato_fim,
       f.perfil_acesso2, f.cargo2, f.uf2
     FROM users f
+    LEFT JOIN users u_arq ON f.arquivado_por = u_arq.id
     ${whereSql}
     ORDER BY f.name ASC
   `;

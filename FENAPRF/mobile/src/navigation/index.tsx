@@ -33,6 +33,7 @@ export type RootStackParamList = {
   Home: undefined;
   MeusDados: undefined;
   Users: undefined;
+  Arquivados: { refresh?: boolean };
   CriarUser: undefined;
   EditarUser: { userId: string };
   Votacao: undefined;

@@ -66,7 +66,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
     fetchData();
   }, [fetchData]);
 
-  const handleUpdate = useCallback(async () => {
+  const handleUpdate = useCallback(async (ignoreWarnings = false) => {
     if (!user) return;
     if (!netInfo.isConnected) {
       Alert.alert('Offline', 'A edição de membros só está disponível online.');
@@ -96,12 +96,12 @@ export default function EditarUserScreen({ route, navigation }: any) {
 
     try {
       setSaving(true);
-      const payload = buildUpdateUserPayload(user);
+      const payload = { ...buildUpdateUserPayload(user), ignoreWarnings };
 
       // Instrumentação de logs para depuração de datas (Step A)
       logger.info('USER_SAVE_PAYLOAD_DATES', {
         user_id: user.id,
-        data_nascimento: { value: payload.data_nascimento, type: typeof payload.data_nascimento },
+        data_nascimento: { value: (payload as any).data_nascimento, type: typeof (payload as any).data_nascimento },
       });
 
       const canonicalId = getCanonicalUserId(user);
@@ -115,7 +115,18 @@ export default function EditarUserScreen({ route, navigation }: any) {
       Alert.alert('Sucesso', 'Membro atualizado com sucesso.');
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o membro.');
+      if (err.response?.data?.code === 'DATA_DUPLICATED_WARNING') {
+        Alert.alert(
+          'Aviso de Duplicidade',
+          err.response.data.message,
+          [
+            { text: 'Voltar e corrigir', style: 'cancel' },
+            { text: 'Continuar mesmo assim', onPress: () => handleUpdate(true) }
+          ]
+        );
+      } else {
+        Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o membro.');
+      }
     } finally {
       setSaving(false);
     }
