@@ -289,7 +289,7 @@
   let _usersCache = null;
 
   /**
-   * Filtra uma lista de users com base em uma query de nome ou CPF.
+   * Filtra uma lista de membros com base em uma query de nome ou CPF.
    * Centraliza a lógica de busca para garantir paridade entre módulos.
    */
   function filterUsers(lista, query, options = {}) {
@@ -300,7 +300,7 @@
 
     // Regra de segurança: Perfis básicos não buscam por CPF
     const perfil = (options.perfil || "").toUpperCase();
-    const canSearchCpf = !perfil || !["USER", "ORGANIZADOR"].includes(perfil);
+    const canSearchCpf = !perfil || !["CONSELHEIRO"].includes(perfil);
 
     return (lista || []).filter(f => {
       // Busca por nome (normalizado)
@@ -319,9 +319,9 @@
   }
 
   /**
-   * Busca unificada de users (Frontend).
-   * Carrega todos os users uma vez e filtra localmente para garantir
-   * paridade entre as telas de Users e Relatórios.
+   * Busca unificada de membros (Frontend).
+   * Carrega todos os membros uma vez e filtra localmente para garantir
+   * paridade entre as telas de Membros e Relatórios.
    */
   async function searchUsers(query, options = {}) {
     if (!_usersCache || options.forceRefresh) {
@@ -330,7 +330,7 @@
         const d = await r.json();
         _usersCache = d.users || d || [];
       } else {
-        console.error("Erro ao carregar cache de users");
+        console.error("Erro ao carregar cache de membros");
         return [];
       }
     }

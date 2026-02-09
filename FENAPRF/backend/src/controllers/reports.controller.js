@@ -175,8 +175,7 @@ exports.previewReport = async (req, res) => {
         title: "Dados Pessoais",
         items: [
           { label: "Nome", value: data.nome },
-          { label: "CPF", value: data.cpf ? (["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase()) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
-          { label: "Matrícula (SIAPE)", value: data.siape || "-" },
+          { label: "CPF", value: data.cpf ? (["ADMIN", "DIRETORIA", "COLABORADOR"].includes((requesterSession.perfil_acesso || "").toUpperCase()) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
           { label: "Sexo", value: data.sexo === 'M' ? '♂️ Masculino' : (data.sexo === 'F' ? '♀️ Feminino' : '-') },
           { label: "UF", value: data.uf || "-" },
           { label: "Situação", value: data.situacao || "-" }

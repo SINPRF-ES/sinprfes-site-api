@@ -27,6 +27,76 @@ export const formatISOToBRDateTime = (isoDate: string | null | undefined): strin
   }
 };
 
+export interface MandateTimeResult {
+  elapsed: string;
+  remaining: string;
+}
+
+/**
+ * Calcula o tempo decorrido e restante de um mandato.
+ */
+export const calculateMandateTime = (inicioStr?: string | null, fimStr?: string | null): MandateTimeResult => {
+  const fallback = { elapsed: '—', remaining: '—' };
+  if (!inicioStr || !fimStr) return fallback;
+
+  try {
+    const parse = (d: string) => {
+        if (d.includes('/')) {
+            const [dia, mes, ano] = d.split('/').map(Number);
+            return new Date(ano, mes - 1, dia);
+        }
+        return new Date(d);
+    };
+
+    const inicio = parse(inicioStr);
+    const fim = parse(fimStr);
+    const hoje = new Date();
+
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) return fallback;
+
+    const formatDiff = (start: Date, end: Date) => {
+      let isPast = false;
+      let s = start;
+      let e = end;
+
+      if (start > end) {
+          isPast = true;
+          s = end;
+          e = start;
+      }
+
+      let years = e.getFullYear() - s.getFullYear();
+      let months = e.getMonth() - s.getMonth();
+      let days = e.getDate() - s.getDate();
+
+      if (days < 0) {
+        months--;
+        const lastMonth = new Date(e.getFullYear(), e.getMonth(), 0);
+        days += lastMonth.getDate();
+      }
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+
+      const parts = [];
+      if (years > 0) parts.push(`${years} ${years === 1 ? 'ano' : 'anos'}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
+      if (days > 0) parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
+
+      const text = parts.length > 0 ? parts.join(', ').replace(/, ([^,]*)$/, ' e $1') : '0 dias';
+      return isPast ? `Expirado há ${text}` : text;
+    };
+
+    const elapsed = formatDiff(inicio, hoje);
+    const remaining = hoje > fim ? 'Encerrado' : formatDiff(hoje, fim);
+
+    return { elapsed, remaining };
+  } catch (e) {
+    return fallback;
+  }
+};
+
 /**
  * Formata uma data ISO para HH:MM:SS no timezone America/Sao_Paulo.
  */

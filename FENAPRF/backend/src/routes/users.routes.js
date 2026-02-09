@@ -146,10 +146,4 @@ router.post(
   usersController.desarquivarUser
 );
 
-router.delete(
-  "/:id/dependentes",
-  authMiddleware,
-  usersController.excluirDependentes
-);
-
 module.exports = router;

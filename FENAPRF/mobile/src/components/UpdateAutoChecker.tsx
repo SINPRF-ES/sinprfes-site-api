@@ -101,13 +101,7 @@ const UpdateAutoChecker: React.FC = () => {
     return () => clearTimeout(timer);
   }, [autenticado, token, bloqueadoPorBiometria]);
 
-  // Bloquear botão voltar se for obrigatório
-  useEffect(() => {
-    if (updateResult?.isMandatory && showModal) {
-      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
-      return () => backHandler.remove();
-    }
-  }, [updateResult]);
+  // Removido bloqueio do botão voltar para permitir adiar atualização
 
   const handleUpdate = async () => {
     if (!updateResult) return;
@@ -218,19 +212,17 @@ const UpdateAutoChecker: React.FC = () => {
               </View>
             ) : (
               <View style={styles.buttonRow}>
-                {!isMandatory && (
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => {
-                        setShowModal(false);
-                        setUpdateResult(null);
-                    }}
-                  >
-                    <Text style={styles.cancelButtonText}>Depois</Text>
-                  </TouchableOpacity>
-                )}
                 <TouchableOpacity
-                  style={[styles.updateButton, isMandatory && styles.fullWidth]}
+                  style={styles.cancelButton}
+                  onPress={() => {
+                      setShowModal(false);
+                      setUpdateResult(null);
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Depois</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.updateButton}
                   onPress={handleUpdate}
                 >
                   <Text style={styles.updateButtonText}>

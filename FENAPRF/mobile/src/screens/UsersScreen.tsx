@@ -4,18 +4,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
 import api, { getUsers } from '../services/apiService';
-import UserCard from '../components/UserCard';
+import MemberCard from '../components/MemberCard';
 import { User } from '../types/user';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
-import { getCanonicalUserId, isGestao } from '../utils/userUtils';
+import { getCanonicalUserId, isGestao, ROLES, CARGO_RANK } from '../utils/userUtils';
 import * as Canon from '../utils/canon';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
+import { Modal, ScrollView, Button as RNButton } from 'react-native';
 
 export default function UsersScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
@@ -24,8 +25,10 @@ export default function UsersScreen({ navigation, route }: any) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
   const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
+  const [mostrarGestaoInterna, setMostrarGestaoInterna] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<User | null>(null);
 
   const ehGestao = isGestao(user?.perfil_acesso);
   const cacheKey = `users_cache_${user?.id}`;
@@ -74,11 +77,12 @@ export default function UsersScreen({ navigation, route }: any) {
   useFocusEffect(
     useCallback(() => {
       navigation.setOptions({
+        headerTitle: 'Membros',
         headerRight: () => {
           const actions: MenuAction[] = [];
           if (ehGestao) {
             actions.push({
-              label: 'Novo User',
+              label: 'Novo Membro',
               icon: 'account-plus',
               onPress: () => navigation.navigate('CriarUser')
             });
@@ -103,7 +107,7 @@ export default function UsersScreen({ navigation, route }: any) {
     const term = normalizeText(searchTerm);
     const digits = onlyDigits(searchTerm);
 
-    return users.filter(f => {
+    let result = users.filter(f => {
       // Filtro por Nome/CPF usando campos pré-calculados (Bolt ⚡)
       const nomeMatch = f._normalizedNome?.includes(term);
       const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
@@ -121,9 +125,40 @@ export default function UsersScreen({ navigation, route }: any) {
         if (filtroCadastro === 'CADASTRO_ATIVO' && f.arquivado_em) return false;
       }
 
+      // Filtro de perfis ocultos (ADMIN/COLABORADOR)
+      const perfil = (f.perfil_acesso || '').toUpperCase();
+      const isInternal = perfil === ROLES.ADMIN || perfil === ROLES.COLABORADOR;
+      if (isInternal && !mostrarGestaoInterna) return false;
+
       return true;
     });
-  }, [users, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
+
+    // Ordenação Avançada: Diretoria (Rank) -> Conselheiros (UF)
+    return result.sort((a, b) => {
+        const pA = (a.perfil_acesso || '').toUpperCase();
+        const pB = (b.perfil_acesso || '').toUpperCase();
+
+        const isDirA = pA === ROLES.DIRETORIA;
+        const isDirB = pB === ROLES.DIRETORIA;
+
+        if (isDirA && !isDirB) return -1;
+        if (!isDirA && isDirB) return 1;
+
+        if (isDirA && isDirB) {
+            const rankA = CARGO_RANK[a.cargo || ''] || 99;
+            const rankB = CARGO_RANK[b.cargo || ''] || 99;
+            if (rankA !== rankB) return rankA - rankB;
+            return a.name.localeCompare(b.name);
+        }
+
+        // Conselheiros e outros: por UF, depois por nome
+        const ufA = a.uf || 'ZZ';
+        const ufB = b.uf || 'ZZ';
+        if (ufA !== ufB) return ufA.localeCompare(ufB);
+
+        return a.name.localeCompare(b.name);
+    });
+  }, [users, searchTerm, ehGestao, filtroCadastro, filtroFuncional, mostrarGestaoInterna]);
 
   const handleEdit = useCallback((user: User) => {
     const userId = getCanonicalUserId(user);
@@ -132,12 +167,11 @@ export default function UsersScreen({ navigation, route }: any) {
   }, [navigation]);
 
   const renderItem = useCallback(({ item }: { item: User }) => (
-    <UserCard
-      user={item as any}
-      currentUserProfile={user?.perfil_acesso as any}
-      onEdit={handleEdit}
+    <MemberCard
+      member={item as any}
+      onPress={() => setSelectedMember(item)}
     />
-  ), [user?.perfil_acesso, handleEdit]);
+  ), []);
 
   if (loading && users.length === 0) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
@@ -166,19 +200,17 @@ export default function UsersScreen({ navigation, route }: any) {
       <View style={styles.filterRow}>
         {ehGestao && (
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Cadastro:</Text>
+            <Text style={styles.filterLabel}>Visão:</Text>
             <View style={styles.pickerWrapper}>
               <Picker
-                selectedValue={filtroCadastro}
-                onValueChange={(v) => v && setFiltroCadastro(v)}
+                selectedValue={mostrarGestaoInterna ? 'INTERNA' : 'PADRAO'}
+                onValueChange={(v) => setMostrarGestaoInterna(v === 'INTERNA')}
                 style={styles.picker}
                 mode="dropdown"
                 dropdownIconColor="#003366"
               >
-                <Picker.Item label="Selecione..." value="" color="#999" />
-                <Picker.Item label="Ativos" value={Canon.ESTADO_CADASTRO.CADASTRO_ATIVO} />
-                <Picker.Item label="Arquivados" value={Canon.ESTADO_CADASTRO.ARQUIVADO} />
-                <Picker.Item label="Todos" value="TODOS" />
+                <Picker.Item label="Membros" value="PADRAO" />
+                <Picker.Item label="Gestão Interna" value="INTERNA" />
               </Picker>
             </View>
           </View>
@@ -215,10 +247,62 @@ export default function UsersScreen({ navigation, route }: any) {
         onRefresh={() => fetchData(true)}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text>{searchTerm ? 'Nenhum user encontrado.' : 'Carregando lista...'}</Text>
+            <Text>{searchTerm ? 'Nenhum membro encontrado.' : 'Carregando lista...'}</Text>
           </View>
         }
       />
+
+      {/* Modal de Detalhes do Membro */}
+      <Modal
+        visible={!!selectedMember}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedMember(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalhes do Membro</Text>
+              <TouchableOpacity onPress={() => setSelectedMember(null)}>
+                <MaterialCommunityIcons name="close" size={28} color="#003366" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+              <MemberCard member={selectedMember} />
+
+              {selectedMember && (
+                <View style={styles.memberDetails}>
+                  <Text style={styles.detailText}><Text style={styles.detailLabel}>Email:</Text> {selectedMember.email || selectedMember.email1 || '—'}</Text>
+                  <Text style={styles.detailText}><Text style={styles.detailLabel}>Telefone:</Text> {selectedMember.telefone1 || '—'}</Text>
+                  {ehGestao && (
+                    <>
+                      <Text style={styles.detailText}><Text style={styles.detailLabel}>CPF:</Text> {selectedMember.cpf || '—'}</Text>
+                      <Text style={styles.detailText}><Text style={styles.detailLabel}>Situação:</Text> {selectedMember.situacao || '—'}</Text>
+                    </>
+                  )}
+                </View>
+              )}
+
+              {ehGestao && selectedMember && (
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => {
+                      const memberToEdit = selectedMember;
+                      setSelectedMember(null);
+                      handleEdit(memberToEdit);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="pencil" size={20} color="#fff" />
+                    <Text style={styles.editButtonText}>Editar Membro</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
     </SafeScreen>
   );
@@ -236,4 +320,61 @@ const styles = StyleSheet.create({
   picker: { height: 50, color: '#333' },
   empty: { padding: 40, alignItems: 'center' },
   fab: { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#003366', justifyContent: 'center', alignItems: 'center', elevation: 4 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#f0f0f0',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    paddingTop: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  memberDetails: {
+    backgroundColor: '#fff',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  detailText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  detailLabel: {
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  modalActions: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  editButton: {
+    backgroundColor: '#003366',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    borderRadius: 12,
+    gap: 10,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

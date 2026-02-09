@@ -136,7 +136,7 @@ async function contarUsersAtivosParaQuorum(client = null) {
     `SELECT COUNT(*)::INTEGER as total
      FROM users
      WHERE arquivado_em IS NULL
-       AND perfil_acesso IN ('DIRETORIA', 'USER', 'ORGANIZADOR')`
+       AND perfil_acesso IN ('DIRETORIA', 'CONSELHEIRO', 'COLABORADOR')`
   );
   return parseInt(rows?.[0]?.total || 0);
 }
@@ -151,6 +151,7 @@ async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
 
   // ADMIN e COMUNICADOR não contam quórum nem votam, logo não fazem check-in
+  // Nota: COMUNICADOR foi removido dos perfis canônicos, mas mantido aqui por segurança de tipos
   if (perfil !== 'ADMIN' && perfil !== 'COMUNICADOR') {
     const origem = tipoChamada === 'RECONTAGEM' ? 'AUTO_PRESIDENTE' : 'AUTO_GERADOR';
     await client.query(

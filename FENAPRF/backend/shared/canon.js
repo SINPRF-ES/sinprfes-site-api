@@ -34,14 +34,12 @@
     ARQUIVADO: 'ARQUIVADO'
   };
 
-  // 3. Perfis de Acesso
+  // 3. Perfis de Acesso (FENAPRF)
   const PERFIL_ACESSO = {
     ADMIN: 'ADMIN',
     DIRETORIA: 'DIRETORIA',
-    FUNCIONARIO: 'FUNCIONARIO',
-    USER: 'USER',
-    ORGANIZADOR: 'ORGANIZADOR',
-    COMUNICADOR: 'COMUNICADOR'
+    COLABORADOR: 'COLABORADOR',
+    CONSELHEIRO: 'CONSELHEIRO'
   };
 
   const UFS = [
@@ -101,7 +99,12 @@
   function normalizePerfil(val) {
     const s = slugify(val);
     if (PERFIL_ACESSO[s]) return PERFIL_ACESSO[s];
-    return PERFIL_ACESSO.USER; // Default seguro
+
+    // Mapeamentos de retrocompatibilidade
+    if (s === 'FUNCIONARIO' || s === 'ORGANIZADOR' || s === 'COMUNICADOR') return PERFIL_ACESSO.COLABORADOR;
+    if (s === 'USER') return PERFIL_ACESSO.CONSELHEIRO;
+
+    return PERFIL_ACESSO.CONSELHEIRO; // Default seguro
   }
 
   /**

@@ -4,7 +4,8 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-na
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
-import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria, getBandeiraUF } from '../utils/userUtils';
+import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/userUtils';
+import MemberCard from '../components/MemberCard';
 
 const CustomDrawerContent = (props) => {
   const { user, logout, setBloqueadoPorBiometria } = useAuth();
@@ -33,21 +34,11 @@ const CustomDrawerContent = (props) => {
   return (
     <DrawerContentScrollView {...props}>
       <View style={styles.header}>
-        <View style={styles.avatarWrapper}>
-          <Image
-            source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
-            style={styles.avatar}
-            resizeMode="contain"
-          />
-          <View style={styles.ufStackMini}>
-            <Text style={styles.ufTextMini}>{user?.perfil_acesso === 'DIRETORIA' || user?.perfil_acesso === 'COLABORADOR' ? 'BR' : (user?.uf || '—')}</Text>
-            {getBandeiraUF(user?.uf, user?.perfil_acesso) ? (
-              <Image source={{ uri: getBandeiraUF(user?.uf, user?.perfil_acesso) }} style={styles.flagIconMini} />
-            ) : null}
-          </View>
-        </View>
-        <Text style={styles.nome}>{user?.nome || 'Usuário'}</Text>
-        <Text style={styles.status}>{user?.situacao || 'ATIVO'}</Text>
+        <MemberCard
+          member={user as any}
+          variant="drawer"
+          onPress={() => props.navigation.navigate('MeusDados')}
+        />
       </View>
       <DrawerItemList {...props} />
 
@@ -61,17 +52,14 @@ const CustomDrawerContent = (props) => {
           />
           <DrawerItem
             label="📢 Notificações"
-            icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="👤 Novo Usuário"
-            icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
+            label="👤 Novo Membro"
             onPress={() => props.navigation.navigate('CriarUser')}
           />
           <DrawerItem
-            label="Diagnóstico"
-            icon={({ color, size }) => <Ionicons name="flask-outline" color={color} size={size} />}
+            label="🧪 Diagnóstico"
             onPress={() => props.navigation.navigate('Logs')}
           />
         </>
@@ -102,51 +90,7 @@ const CustomDrawerContent = (props) => {
 
 const styles = StyleSheet.create({
   header: {
-    padding: 20,
     backgroundColor: '#003366',
-    alignItems: 'center',
-  },
-  avatarWrapper: {
-    position: 'relative',
-    marginBottom: 10,
-  },
-  ufStackMini: {
-    position: 'absolute',
-    bottom: -5,
-    right: -10,
-    backgroundColor: '#fff',
-    borderRadius: 6,
-    padding: 3,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-    minWidth: 30,
-  },
-  ufTextMini: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#003366',
-  },
-  flagIconMini: {
-    width: 16,
-    height: 10,
-    borderRadius: 1,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 10,
-    backgroundColor: '#ccc',
-  },
-  nome: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  status: {
-    color: '#fff',
-    fontSize: 14,
   },
   separator: {
     height: 1,

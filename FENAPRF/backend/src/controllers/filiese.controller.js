@@ -55,7 +55,6 @@ exports.enviarFichaFiliacao = async (req, res) => {
     const payloadPdfEmail = {
       nome: dados.nome,
       cpf: cpfFormatado,
-      matricula: dados.siape || "",
 
       // Contatos
       email_destino: emailPessoal,    // user (cc)

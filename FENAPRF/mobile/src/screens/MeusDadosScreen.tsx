@@ -9,7 +9,7 @@ import { uploadAvatar, removerAvatar } from '../services/usersService';
 import type { User } from '../types/user';
 
 // Importando os novos componentes
-import HeaderInfo from '../components/HeaderInfo';
+import MemberCard from '../components/MemberCard';
 import ContatoCard from '../components/ContatoCard';
 import EnderecoCard from '../components/EnderecoCard';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -244,7 +244,7 @@ export default function MeusDadosScreen() {
       enableOnAndroid
       extraScrollHeight={50}
     >
-      <HeaderInfo user={user} />
+      <MemberCard member={user} variant="profile" />
 
       <ErrorBoundary>
         <View style={styles.sectionHeader}>
@@ -254,7 +254,7 @@ export default function MeusDadosScreen() {
           user={user}
           setUser={setUser}
           isEditing={true}
-          isManagement={false}
+          isManagement={['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((authUser?.perfil_acesso || '').toUpperCase())}
           hideTitle={true}
         />
       </ErrorBoundary>

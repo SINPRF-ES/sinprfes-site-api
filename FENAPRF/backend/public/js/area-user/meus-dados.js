@@ -359,10 +359,7 @@
                             <label>CPF</label>
                             <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
                         </div>
-                        <div class="field-group">
-                            <label>Matrícula (SIAPE)</label>
-                            <input type="text" id="me-siape" value="${dados.siape || "-"}" readonly />
-                        </div>
+                        <div class="field-group"></div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">

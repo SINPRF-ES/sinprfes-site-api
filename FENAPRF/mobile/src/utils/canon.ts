@@ -88,6 +88,11 @@ export function normalizeSituacaoFuncional(val: string | null | undefined): Situ
 export function normalizePerfil(val: string | null | undefined): PerfilAcesso {
   const s = slugify(val) as any;
   if (Object.values(PERFIL_ACESSO).includes(s)) return s;
+
+  // Mapeamentos de retrocompatibilidade
+  if (s === 'FUNCIONARIO' || s === 'ORGANIZADOR' || s === 'COMUNICADOR') return PERFIL_ACESSO.COLABORADOR;
+  if (s === 'USER') return PERFIL_ACESSO.CONSELHEIRO;
+
   return PERFIL_ACESSO.CONSELHEIRO;
 }
 

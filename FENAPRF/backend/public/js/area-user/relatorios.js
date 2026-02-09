@@ -62,7 +62,7 @@
         document.getElementById('relatorio-param-container').style.display = 'block';
 
         if (tipo === 'INDIVIDUAL') {
-            label.textContent = 'User:';
+            label.textContent = 'Membro:';
             userWrapper.style.display = 'block';
         } else if (tipo === 'UF') {
             label.textContent = 'Selecionar UF:';
@@ -303,7 +303,7 @@
                     const params = typeof h.params === 'string' ? JSON.parse(h.params) : h.params;
 
                     // Prioriza o nome resolvido (A1)
-                    const labelParam = h.report_type === 'INDIVIDUAL' ? 'User' : 'Parâmetro';
+                    const labelParam = h.report_type === 'INDIVIDUAL' ? 'Membro' : 'Parâmetro';
                     const valor = params.userNome || params.paramDisplay || params.value || params.userId || "-";
 
                     return `

@@ -57,7 +57,7 @@
             <div class="repasse-card">
                 <div class="repasse-header-main">
                     <div>
-                        <h2>💱 Repasse por Localidade</h2>
+                        <h2>💱 Repasse por Unidade</h2>
                         <p style="margin: 5px 0 0 0; opacity: 0.9;">Gestão de créditos e reembolsos mensais</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
@@ -172,7 +172,7 @@
                             <table class="repasse-tabela">
                                 <thead>
                                     <tr>
-                                        <th>Localidade</th>
+                                        <th>UF</th>
                                         <th>Responsável</th>
                                         <th style="text-align:center;">Ativos</th>
                                         <th style="text-align:center;">PRF Total</th>
@@ -210,7 +210,7 @@
         }
 
         // Paridade com o app: filtrar responsáveis por UF
-        const currentUf = loc.uf || loc.lotacao;
+        const currentUf = loc.uf;
         const filteredResps = responsaveisCache.filter(r => {
             if (!currentUf) return true;
             if (!r.uf) return false;
@@ -254,7 +254,7 @@
     function atualizarLocalidade(month, uf, data) {
         const m = repasseData.meses.find(m => m.month === month);
         if (m) {
-            const loc = m.localidades.find(l => l.lotacao === uf);
+            const loc = m.localidades.find(l => l.uf === uf);
             if (loc) {
                 if (data.responsavelId !== undefined) loc.responsavelId = data.responsavelId;
                 if (data.prfTotal !== undefined) loc.prfTotal = parseInt(data.prfTotal) || 0;
@@ -294,7 +294,7 @@
             let somaCred = 0;
             let somaReem = 0;
             repasseData.meses.forEach(mes => {
-                const l = mes.localidades.find(ll => ll.lotacao === uf);
+                const l = mes.localidades.find(ll => ll.uf === uf);
                 if (l) {
                     somaCred += l.creditoMes;
                     somaReem += l.reembolsoMes;
@@ -305,7 +305,7 @@
 
         repasseData.meses.forEach(mes => {
             mes.localidades.forEach(l => {
-                l.acumuladoAno = acumulados[l.uf || l.lotacao];
+                l.acumuladoAno = acumulados[l.uf];
             });
         });
 
@@ -321,7 +321,7 @@
             month: month,
             perCapita: m.perCapita,
             localidades: m.localidades.map(l => ({
-                lotacaoKey: l.uf || l.lotacao,
+                ufKey: l.uf,
                 responsavelId: l.responsavelId || null,
                 prfTotal: l.prfTotal,
                 reembolsoMes: l.reembolsoMes

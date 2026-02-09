@@ -196,7 +196,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.title}>FENAPRF</Text>
-        <Text style={styles.subtitle}>Página Inicial</Text>
+        <Text style={styles.subtitle}>Conselho de Representantes</Text>
 
         {biometriaHabilitada && temCredencial && isEtapaCredenciais && (
           <Pressable

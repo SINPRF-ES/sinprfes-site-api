@@ -265,6 +265,19 @@ async function atualizarUserPorId(id, dados) {
   addCampo("perfil_acesso2", dados.perfil_acesso2);
   addCampo("cargo2", dados.cargo2);
   addCampo("uf2", dados.uf2);
+  addCampo("cargo", dados.cargo);
+  addCampo("uf", dados.uf);
+
+  if (dados.cargo_mandato_inicio !== undefined) {
+    campos.push(`cargo_mandato_inicio = NULLIF($${idx}, '')::date`);
+    valores.push(dados.cargo_mandato_inicio);
+    idx += 1;
+  }
+  if (dados.cargo_mandato_fim !== undefined) {
+    campos.push(`cargo_mandato_fim = NULLIF($${idx}, '')::date`);
+    valores.push(dados.cargo_mandato_fim);
+    idx += 1;
+  }
 
   addCampo("updated_at", "NOW()", true);
 
@@ -359,7 +372,7 @@ async function desarquivarUserPorId(id) {
 async function buscarAniversariantesDoDia() {
   const query = `
     SELECT
-      id, name as nome, situacao, perfil_acesso, 'USER' as tipo,
+      id, name as nome, situacao, perfil_acesso, 'MEMBRO' as tipo,
       NULL as nome_user_vinculo, NULL as situacao_user_vinculo,
       data_nascimento
     FROM users
