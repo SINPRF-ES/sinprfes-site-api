@@ -7,6 +7,10 @@ interface PickerWrapperProps {
   style?: any;
 }
 
+/**
+ * Componente utilitário para garantir que os Pickers (especialmente no Android)
+ * tenham altura adequada e não truncamento de texto.
+ */
 const PickerWrapper: React.FC<PickerWrapperProps> = ({ children, style }) => {
   return (
     <View style={[styles.container, style]}>
@@ -23,11 +27,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     ...Platform.select({
       ios: {
-        paddingVertical: 0,
+        // No iOS o Picker tem comportamento de modal/roda,
+        // mas o wrapper ajuda na consistência visual do campo.
+        minHeight: 50,
+        justifyContent: 'center',
       },
       android: {
-        height: 55,
+        // No Android, o Picker costuma ser cortado se a altura for pequena.
+        height: 60,
         justifyContent: 'center',
+        paddingHorizontal: 4,
       },
     }),
   },

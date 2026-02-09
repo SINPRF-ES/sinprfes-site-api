@@ -11,12 +11,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
-import { getCanonicalUserId, isGestao, ROLES, CARGO_RANK, ordenarMembrosTodos, tituloCargoUf } from '../utils/userUtils';
+import { getCanonicalUserId, isGestao, ROLES, ordenarMembrosTodos, tituloCargoUf } from '../utils/userUtils';
 import * as Canon from '../utils/canon';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
-import { Modal, ScrollView, Button as RNButton } from 'react-native';
+import PickerWrapper from '../components/PickerWrapper';
+import { Modal, ScrollView } from 'react-native';
 
 export default function UsersScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
@@ -24,7 +25,6 @@ export default function UsersScreen({ navigation, route }: any) {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
-  const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
   const [mostrarGestaoInterna, setMostrarGestaoInterna] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +45,7 @@ export default function UsersScreen({ navigation, route }: any) {
 
       const data = await getUsers(params);
 
-      // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter (Bolt ⚡)
+      // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter
       const processedData = data.map((f: User) => {
         const item = ehGestao ? f : {
           id: f.id,
@@ -53,11 +53,16 @@ export default function UsersScreen({ navigation, route }: any) {
           telefone1: f.telefone1,
           avatar_url: f.avatar_url,
           situacao: f.situacao,
+          uf: f.uf,
+          cargo: f.cargo,
+          perfil_acesso: f.perfil_acesso,
+          cargo_mandato_inicio: f.cargo_mandato_inicio,
+          cargo_mandato_fim: f.cargo_mandato_fim
         };
 
         return {
           ...item,
-          _normalizedNome: normalizeText(f.name),
+          _normalizedNome: normalizeText(f.name || f.nome || ''),
           _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
         };
       });
@@ -82,7 +87,7 @@ export default function UsersScreen({ navigation, route }: any) {
           const actions: MenuAction[] = [];
           if (ehGestao) {
             actions.push({
-              label: 'Novo Membro',
+              label: 'Novo membro',
               icon: 'account-plus',
               onPress: () => navigation.navigate('CriarUser')
             });
@@ -90,8 +95,6 @@ export default function UsersScreen({ navigation, route }: any) {
           return <HeaderMenu actions={actions} />;
         }
       });
-      // Dispara o fetch. Como removemos o useEffect redundante,
-      // este é o único gatilho de carga inicial e refresh por foco.
       fetchData(true);
     }, [fetchData, ehGestao])
   );
@@ -108,18 +111,12 @@ export default function UsersScreen({ navigation, route }: any) {
     const digits = onlyDigits(searchTerm);
 
     let result = users.filter(f => {
-      // Filtro por Nome/CPF usando campos pré-calculados (Bolt ⚡)
+      // Filtro por Nome/CPF
       const nomeMatch = f._normalizedNome?.includes(term);
       const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
 
-      // Filtro Situação Funcional
-      if (filtroFuncional !== 'TODOS') {
-        const situacao = Canon.normalizeSituacaoFuncional(f.situacao_funcional || f.situacao || 'ATIVO');
-        if (situacao !== filtroFuncional) return false;
-      }
-
-      // Filtro Estado do Cadastro (local filter additionally)
+      // Filtro Estado do Cadastro
       if (ehGestao) {
         if (filtroCadastro === 'ARQUIVADOS' && !f.arquivado_em) return false;
         if (filtroCadastro === 'CADASTRO_ATIVO' && f.arquivado_em) return false;
@@ -128,17 +125,23 @@ export default function UsersScreen({ navigation, route }: any) {
       // Filtro de perfis ocultos (ADMIN/COLABORADOR)
       const perfil = (f.perfil_acesso || '').toUpperCase();
       const isInternal = perfil === ROLES.ADMIN || perfil === ROLES.COLABORADOR;
-      if (isInternal && !mostrarGestaoInterna) return false;
+
+      // Se NÃO estamos mostrando gestão interna, oculta ADMIN e COLABORADOR
+      if (!mostrarGestaoInterna && isInternal) return false;
+
+      // Se ESTAMOS mostrando gestão interna, exibe apenas ADMIN e COLABORADOR?
+      // Ou exibe todos incluindo eles?
+      // A regra diz: "ADMIN e COLABORADOR não aparecem no default. Só aparecem via picker / filtro específico."
+      if (mostrarGestaoInterna && !isInternal) return false;
 
       return true;
     });
 
-    // Ordenação Avançada: Diretoria (Rank) -> Conselheiros (UF)
     return ordenarMembrosTodos(result);
-  }, [users, searchTerm, ehGestao, filtroCadastro, filtroFuncional, mostrarGestaoInterna]);
+  }, [users, searchTerm, ehGestao, filtroCadastro, mostrarGestaoInterna]);
 
-  const handleEdit = useCallback((user: User) => {
-    const userId = getCanonicalUserId(user);
+  const handleEdit = useCallback((u: User) => {
+    const userId = getCanonicalUserId(u);
     logger.info('NAVIGATE_TO_EDITAR_USER', { userId });
     navigation.navigate('EditarUser', { userId });
   }, [navigation]);
@@ -163,7 +166,7 @@ export default function UsersScreen({ navigation, route }: any) {
         <MaterialCommunityIcons name="magnify" size={24} color="#666" />
         <TextInput
           style={styles.searchInput}
-          placeholder={ehGestao ? "Buscar por nome ou CPF..." : "Buscar por nome..."}
+          placeholder="Buscar membros..."
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
@@ -174,48 +177,30 @@ export default function UsersScreen({ navigation, route }: any) {
         )}
       </View>
 
-      <View style={styles.filterRow}>
-        {ehGestao && (
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Visão:</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={mostrarGestaoInterna ? 'INTERNA' : 'PADRAO'}
-                onValueChange={(v) => setMostrarGestaoInterna(v === 'INTERNA')}
-                style={styles.picker}
-                mode="dropdown"
-                dropdownIconColor="#003366"
-              >
-                <Picker.Item label="Membros" value="PADRAO" />
-                <Picker.Item label="Gestão Interna" value="INTERNA" />
-              </Picker>
+      {ehGestao && (
+        <View style={styles.filterRow}>
+            <View style={styles.filterGroup}>
+              <Text style={styles.filterLabel}>Visão:</Text>
+              <PickerWrapper>
+                <Picker
+                  selectedValue={mostrarGestaoInterna ? 'INTERNA' : 'PADRAO'}
+                  onValueChange={(v) => setMostrarGestaoInterna(v === 'INTERNA')}
+                  style={styles.picker}
+                  mode="dropdown"
+                  dropdownIconColor="#003366"
+                >
+                  <Picker.Item label="Membros" value="PADRAO" />
+                  <Picker.Item label="Gestão Interna (Admin/Colab)" value="INTERNA" />
+                </Picker>
+              </PickerWrapper>
             </View>
-          </View>
-        )}
-        <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Situação:</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={filtroFuncional}
-              onValueChange={(v) => v && setFiltroFuncional(v)}
-              style={styles.picker}
-              mode="dropdown"
-              dropdownIconColor="#003366"
-            >
-              <Picker.Item label="Todos" value="TODOS" />
-              {Object.values(Canon.SITUACAO_FUNCIONAL).map(s => (
-                <Picker.Item key={s} label={Canon.LABELS[s]} value={s} />
-              ))}
-            </Picker>
-          </View>
         </View>
-      </View>
+      )}
 
       <FlatList
         data={filteredUsers}
         keyExtractor={item => item.id}
         renderItem={renderItem}
-        // Otimizações de performance para listas longas (Bolt ⚡)
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
@@ -283,7 +268,7 @@ export default function UsersScreen({ navigation, route }: any) {
                     }}
                   >
                     <MaterialCommunityIcons name="pencil" size={20} color="#fff" />
-                    <Text style={styles.editButtonText}>Editar Membro</Text>
+                    <Text style={styles.editButtonText}>Editar membro</Text>
                   </TouchableOpacity>
                 </View>
               )}
