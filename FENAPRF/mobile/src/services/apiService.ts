@@ -210,8 +210,8 @@ api.interceptors.response.use(
 );
 
 /**
- * Busca a lista de usuários (FENAPRF).
- * A API retornará os campos de acordo com o perfil do usuário logado.
+ * Busca a lista de membros (FENAPRF).
+ * A API retornará os campos de acordo com o perfil do membro logado.
  */
 export const getUsers = async (params?: any) => {
   const response = await api.get('/api/users', { params });

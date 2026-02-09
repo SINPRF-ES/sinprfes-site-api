@@ -40,7 +40,7 @@ exports.solicitarResetSenha = async (req, res, next) => {
 
     const mensagemPadrao = Textos.SENHA.MENSAGEM_RESET_PADRAO;
 
-    // Se usuário não existe, retornamos 200 para evitar enumeração de usuários
+    // Se membro não existe, retornamos 200 para evitar enumeração de membros
     if (!user) {
       log.warn("SenhaResetUserNaoEncontrado", { requestId });
       return res.json({
@@ -116,7 +116,7 @@ exports.resetarSenha = async (req, res, next) => {
       return res.status(400).json({ error: Textos.SENHA.SENHA_MUITO_CURTA });
     }
 
-    // Busca usuário pelo token e verifica expiração
+    // Busca membro pelo token e verifica expiração
     const { rows: tokenRows } = await pool.query(
         "SELECT id FROM users WHERE token_acesso_temp = $1 AND token_expiracao > NOW()",
         [token]

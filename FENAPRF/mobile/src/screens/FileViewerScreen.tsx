@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Text, Share, Platform, Dimensions, Image } from 'react-native';
 import Pdf from 'react-native-pdf';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import { logger } from '../infra/logger';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';

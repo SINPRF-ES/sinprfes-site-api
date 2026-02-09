@@ -964,7 +964,7 @@ async function gerarPdfDossieUser(user, options = {}) {
 }
 
 /**
- * PDF: RELATÓRIO ESTATÍSTICO (Lotação, Situação)
+ * PDF: RELATÓRIO ESTATÍSTICO (UF, Situação)
  */
 async function gerarPdfRelatorioAgregado(dados, titulo) {
   const codigo = gerarCodigoVerificacao(dados, "ESTATISTICO");
@@ -989,7 +989,7 @@ async function gerarPdfRelatorioAgregado(dados, titulo) {
     doc.font("Helvetica-Bold").fontSize(16).text(titulo, { align: "center" });
     doc.moveDown(1);
 
-    // Bloco "Resumo da Lotação" (LAYOUT TIPO DOSSIÊ - B1)
+    // Bloco "Resumo por UF" (LAYOUT TIPO DOSSIÊ - B1)
     if (dados.repasse) {
         doc.font("Helvetica-Bold").fontSize(14).text("Resumo da Unidade (UF)");
         doc.moveDown(0.5);

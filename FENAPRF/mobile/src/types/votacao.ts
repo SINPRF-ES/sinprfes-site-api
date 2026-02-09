@@ -19,6 +19,6 @@ export interface VotacaoDetalhe {
   abre_em?: string;
   encerra_em?: string;
   opcoes: VotacaoOpcao[];
-  // se o backend quiser informar se o usuário já votou
+  // se o backend quiser informar se o membro já votou
   ja_votou?: boolean;
 }

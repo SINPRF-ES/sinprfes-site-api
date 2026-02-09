@@ -310,7 +310,7 @@ exports.atualizarUser = async (req, res) => {
     if (err && (err.code === "23505" || (err.message && err.message.includes("duplicate")))) return res.status(409).json({ message: "CPF duplicado no sistema." });
 
     log.error("UsersUpdateGestaoErro", { message: err.message, stack: err.stack, requestId: req.requestId, loggedId, targetId: idAlvo });
-    return res.status(500).json({ success: false, message: "Erro ao atualizar usuário" });
+    return res.status(500).json({ success: false, message: "Erro ao atualizar membro" });
   }
 };
 
@@ -329,7 +329,7 @@ exports.criarUser = async (req, res) => {
     if (cpfLimpo.length !== 11) return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
 
     const checkCpf = await pool.query("SELECT name FROM users WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
-    if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já pertence ao usuário: ${checkCpf.rows[0].name}.` });
+    if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já pertence ao membro: ${checkCpf.rows[0].name}.` });
 
     const perfil_acesso = normalizePerfil(body.perfil_acesso || "CONSELHEIRO");
     const cargo = body.cargo || null;

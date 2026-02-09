@@ -88,7 +88,7 @@ app.use("/api/auth", authRoutes);
 // Filie-se (Público)
 app.use("/api", filieseRoutes);
 
-// Gestão de Usuários
+// Gestão de Membros
 app.use("/api/users", usersRoutes);
 
 // Senha

@@ -7,7 +7,7 @@ const expo = new Expo();
 async function upsertToken({ userId, expoPushToken, deviceId, platform, permissionStatus }) {
   // Se for negado, podemos não ter o token, mas registramos o status se tivermos userId
   if (permissionStatus === 'denied' && !expoPushToken) {
-    // Apenas log de interesse para saber que o usuário negou
+    // Apenas log de interesse para saber que o membro negou
     return { status: 'denied_recorded' };
   }
 

@@ -96,7 +96,7 @@
             .replace(/'/g, "&#039;");
         }
 
-        function carregarUsuários() {
+        function carregarMembros() {
           const q = document.getElementById('busca-nome').value.trim();
           const situacao = document.getElementById('filtro-situacao').value;
 
@@ -149,12 +149,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-          document.getElementById('btn-aplicar-filtro').addEventListener('click', carregarUsuários);
+          document.getElementById('btn-aplicar-filtro').addEventListener('click', carregarMembros);
           document.getElementById('busca-nome').addEventListener('keyup', ev => {
-            if (ev.key === 'Enter') carregarUsuários();
+            if (ev.key === 'Enter') carregarMembros();
           });
 
-          carregarUsuários();
+          carregarMembros();
         });
       </script>
 

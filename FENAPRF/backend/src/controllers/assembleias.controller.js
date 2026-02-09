@@ -296,7 +296,7 @@ async function encerrarAssembleia(req, res) {
   }
 }
 
-// Helper para validar se o usuário é o Presidente da Mesa ou Diretoria
+// Helper para validar se o membro é o Presidente da Mesa ou Diretoria
 async function verificarAutoridadeMesa(assembleiaId, user) {
   const mesa = await service.buscarMesa(assembleiaId);
   const isDiretoria = user.perfil_acesso === 'DIRETORIA' || user.perfil_acesso === 'ADMIN';
@@ -620,7 +620,7 @@ async function votar(req, res) {
 
     const elegivel = await service.verificarElegibilidade(vid, req.user.id);
     if (!elegivel) {
-        log.warn("AssembleiaVotoRejeitado", { requestId: req.requestId, userId: req.user.id, assembleiaId: id, votacaoId: vid, motivo: "Usuário Inelegível" });
+        log.warn("AssembleiaVotoRejeitado", { requestId: req.requestId, userId: req.user.id, assembleiaId: id, votacaoId: vid, motivo: "Membro Inelegível" });
         return res.status(403).json({ error: Textos.ASSEMBLEIA.NAO_ELEGIVEL });
     }
 

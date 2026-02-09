@@ -30,7 +30,7 @@ export async function fetchUsersFromApi(token: string): Promise<User[]> {
 
     if (!resp.ok) {
       const text = await resp.text();
-      throw new Error(`Erro ao buscar usuários: ${resp.status} - ${text}`);
+      throw new Error(`Erro ao buscar membros: ${resp.status} - ${text}`);
     }
 
     const data: UserApi[] = await resp.json();
@@ -67,7 +67,7 @@ export async function obterUsersOffline(): Promise<User[]> {
 }
 
 /**
- * Envia o avatar do usuário logado para a API.
+ * Envia o avatar do membro logado para a API.
  * @param uri O URI local do arquivo de imagem.
  * @returns Os dados do user atualizado com a nova URL do avatar.
  */
@@ -94,8 +94,8 @@ export async function uploadAvatar(uri: string) {
 }
 
 /**
- * Envia uma requisição para remover o avatar do usuário logado.
- * @returns Os dados do usuário atualizado (sem avatar_url).
+ * Envia uma requisição para remover o avatar do membro logado.
+ * @returns Os dados do membro atualizado (sem avatar_url).
  */
 export async function removerAvatar() {
   const { data } = await api.delete('/api/users/me/avatar');

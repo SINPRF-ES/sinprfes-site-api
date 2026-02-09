@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const token = localStorage.getItem("token");
 
-  // Se o usuário não estiver logado, não pode ativar 2FA
+  // Se o membro não estiver logado, não pode ativar 2FA
   if (!token) {
     if (msg) {
       msg.textContent = "Você precisa estar logado para ativar o 2FA.";

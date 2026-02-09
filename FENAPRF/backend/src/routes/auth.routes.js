@@ -15,7 +15,7 @@ router.post("/login/2fa", loginLimiter, controller.login);
 
 router.post("/2fa/ativar", authMiddleware, controller.ativar2fa);
 
-// Dados do próprio usuário
+// Dados do próprio membro
 router.get("/me", authMiddleware, controller.me);
 
 // Lista de users (com regra de perfil)

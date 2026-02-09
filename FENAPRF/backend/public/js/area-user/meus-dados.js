@@ -657,7 +657,7 @@
 
             // Adiciona campos que não estão no form ou precisam de normalização
             payload.sexo = document.getElementById("me-sexo").value;
-            payload.siape = document.getElementById("me-siape").value;
+
             payload.telefone1 = onlyDigitsFn(document.getElementById("me-telefone1").value);
             payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
             payload.email1 = document.getElementById("me-email1").value;

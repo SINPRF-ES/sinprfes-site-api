@@ -117,6 +117,58 @@ const VinculoCard: React.FC<Props> = ({
           />
         </View>
       </View>
+
+      {/* SEGUNDO VÍNCULO */}
+      <View style={{ marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#eee' }}>
+        <Text style={[styles.cardTitle, { fontSize: 16 }]}>Segundo Vínculo (Opcional)</Text>
+
+        <Text style={styles.label}>Perfil de Acesso (2º)</Text>
+        <PickerWrapper style={styles.pickerWrapper}>
+            <Picker
+                enabled={!isSelf}
+                selectedValue={user?.perfil_acesso2 || ''}
+                onValueChange={(val) => setUser(f => (f ? { ...f, perfil_acesso2: val as any } : null))}
+                style={styles.picker}
+            >
+                <Picker.Item label="Nenhum" value="" />
+                <Picker.Item label="Conselheiro" value={ROLES.CONSELHEIRO} />
+                <Picker.Item label="Diretoria" value={ROLES.DIRETORIA} />
+            </Picker>
+        </PickerWrapper>
+
+        {user?.perfil_acesso2 ? (
+            <>
+                <Text style={styles.label}>UF (2º)</Text>
+                <PickerWrapper style={styles.pickerWrapper}>
+                    <Picker
+                        selectedValue={user?.uf2 || ''}
+                        onValueChange={(val) => setUser(f => (f ? { ...f, uf2: val as any } : null))}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Selecione..." value="" />
+                        {UFS.map(uf => (
+                            <Picker.Item key={uf} label={uf} value={uf} />
+                        ))}
+                    </Picker>
+                </PickerWrapper>
+
+                <Text style={styles.label}>Cargo (2º)</Text>
+                <PickerWrapper style={styles.pickerWrapper}>
+                    <Picker
+                        selectedValue={user?.cargo2 || ''}
+                        onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val as any } : null))}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Selecione um cargo..." value="" />
+                        {user.perfil_acesso2 === ROLES.CONSELHEIRO ?
+                            CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />) :
+                            CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)
+                        }
+                    </Picker>
+                </PickerWrapper>
+            </>
+        ) : null}
+      </View>
     </View>
   );
 };

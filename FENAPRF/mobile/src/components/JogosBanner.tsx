@@ -21,7 +21,7 @@ const JogosBanner = () => {
       const storageKey = `jogos_banner_hidden_${userId}`;
 
       try {
-        // 1. Verificar se o usuário marcou "não mostrar novamente"
+        // 1. Verificar se o membro marcou "não mostrar novamente"
         const isHidden = await AsyncStorage.getItem(storageKey);
         if (isHidden === 'true') {
           setLoading(false);
@@ -31,11 +31,11 @@ const JogosBanner = () => {
         // 2. Verificar se já está inscrito
         try {
           const inscricao = await getMinhaInscricaoJogos();
-          // Se inscricao for null (204 ou 404), o usuário não está inscrito -> Mostrar banner
+          // Se inscricao for null (204 ou 404), o membro não está inscrito -> Mostrar banner
           if (!inscricao) {
             setVisible(true);
           } else {
-            // Se houver dados, o usuário já está inscrito
+            // Se houver dados, o membro já está inscrito
             setVisible(false);
           }
         } catch (err: any) {

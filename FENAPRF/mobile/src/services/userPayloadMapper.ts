@@ -5,7 +5,7 @@ import type { User } from '../types/user';
 import { normalizeNome } from '../utils/canon';
 
 /**
- * Constrói o payload para a atualização de um usuário, garantindo que os dados
+ * Constrói o payload para a atualização de um membro, garantindo que os dados
  * estejam limpos, normalizados e contenham apenas os campos permitidos para edição.
  *
  * @param formState O estado atual do formulário de edição.

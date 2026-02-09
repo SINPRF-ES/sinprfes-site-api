@@ -28,7 +28,7 @@ exports.criarRequerimento = async (req, res) => {
     const normalizarEmail = (v) =>
       (v || "").toString().trim().toLowerCase();
 
-    // E-mails do user (vindo do usuário autenticado ou corpo, se um dia você mandar por lá)
+    // E-mails do user (vindo do membro autenticado ou corpo, se um dia você mandar por lá)
     const email1 = normalizarEmail(
       body.email1 || usuario.email1 || usuario.email
     );
@@ -40,7 +40,7 @@ exports.criarRequerimento = async (req, res) => {
 
     // Monta objeto do pedido
     const pedido = {
-      // Do usuário autenticado
+      // Do membro autenticado
       id_user: usuario.id,
       cpf: body.cpf || usuario.cpf || "",
       nome: body.nome || usuario.nome || "",
