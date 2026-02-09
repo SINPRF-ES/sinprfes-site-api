@@ -87,8 +87,6 @@ router.post(
 
 router.delete("/me/avatar", authMiddleware, usersController.removerAvatarMe);
 
-router.post("/2fa/desativar", authMiddleware, usersController.desativar2fa);
-
 // =============================================================================
 // ROTAS GERAIS (LISTA / CRIAÇÃO) — perfis de gestão
 // =============================================================================

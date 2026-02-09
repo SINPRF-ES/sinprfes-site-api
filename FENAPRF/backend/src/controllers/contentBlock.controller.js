@@ -75,17 +75,6 @@ const readData = () => {
           is_active: true,
           updated_at: new Date().toISOString()
         },
-        {
-          id: 'news-1',
-          page: 'noticias',
-          ordenacao: 1,
-          title: 'Nova Sede Inaugurada',
-          body: 'O sindicato agora conta com uma sede moderna para melhor atender todos os users.',
-          media_type: 'image',
-          media_url: 'img/brasao.png',
-          is_active: true,
-          updated_at: new Date().toISOString()
-        }
       ];
       if (!fs.existsSync(path.dirname(DATA_PATH))) {
         fs.mkdirSync(path.dirname(DATA_PATH), { recursive: true });
@@ -144,7 +133,7 @@ const updateBlock = async (req, res) => {
   if (title && title.length > 120) return res.status(400).json({ error: "Título muito longo (máx 120)" });
   if (body && body.length > 5000) return res.status(400).json({ error: "Corpo muito longo (máx 5000)" });
   if (media_type && !['image', 'video'].includes(media_type)) return res.status(400).json({ error: "Tipo de mídia inválido" });
-  if (page && !['home', 'noticias'].includes(page)) return res.status(400).json({ error: "Página inválida" });
+  if (page && !['home'].includes(page)) return res.status(400).json({ error: "Página inválida" });
   if (media_url) {
     if (typeof media_url !== 'string' || media_url.length > 500) return res.status(400).json({ error: "URL de mídia inválida ou muito longa" });
     if (media_url.toLowerCase().includes('javascript:')) return res.status(400).json({ error: "URL de mídia perigosa detectada" });

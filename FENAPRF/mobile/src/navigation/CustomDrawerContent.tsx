@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/userUtils';
 import MemberCard from '../components/MemberCard';
+import { ENABLE_PUSH } from '../config/features';
 
 const CustomDrawerContent = (props) => {
   const { user, logout, setBloqueadoPorBiometria } = useAuth();
@@ -50,10 +51,12 @@ const CustomDrawerContent = (props) => {
             labelStyle={styles.sectionHeader}
             onPress={() => {}} // Não faz nada, é apenas um título
           />
-          <DrawerItem
-            label="📢 Notificações"
-            onPress={() => props.navigation.navigate('NotificacoesPush')}
-          />
+          {ENABLE_PUSH && (
+            <DrawerItem
+              label="📢 Notificações"
+              onPress={() => props.navigation.navigate('NotificacoesPush')}
+            />
+          )}
           <DrawerItem
             label="👤 Novo Membro"
             onPress={() => props.navigation.navigate('CriarUser')}

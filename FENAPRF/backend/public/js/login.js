@@ -45,10 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
   aplicarMascaraCpf(loginCpfInput);
   aplicarMascaraCpf(forgotCpfInput);
 
-  // Campo extra para 2FA (se existir no HTML)
-  const campo2fa = document.getElementById("campo-2fa");
-  const inputToken2fa = document.getElementById("login-token-2fa");
-
   // Util: normaliza CPF
   function normalizarCpf(cpf) {
     return (cpf || "").replace(/\D/g, "");
@@ -109,16 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // Monta payload básico
       const payload = { cpf, senha };
 
-      // Se o campo 2FA estiver visível e preenchido, envia também
-      if (
-        campo2fa &&
-        campo2fa.style.display !== "none" &&
-        inputToken2fa &&
-        inputToken2fa.value.trim() !== ""
-      ) {
-        payload.token_2fa = inputToken2fa.value.trim();
-      }
-
       const btnSubmit = loginForm.querySelector('button[type="submit"]');
       const originalBtnText = btnSubmit.innerHTML;
 
@@ -137,23 +123,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
-          // Caso em que o backend exige 2FA
-          if (data && data.requires_2fa) {
-            if (campo2fa) {
-              campo2fa.style.display = "block";
-            }
-            if (loginMsg) {
-              loginMsg.textContent =
-                data.error ||
-                "Este membro possui 2FA habilitado. Informe o código do aplicativo autenticador.";
-            }
-            // Foca no campo de 2FA, se existir
-            if (inputToken2fa) {
-              inputToken2fa.focus();
-            }
-            return;
-          }
-
           if (loginMsg) {
             loginMsg.textContent =
               (data && data.error) ||

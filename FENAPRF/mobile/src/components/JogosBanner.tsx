@@ -7,6 +7,7 @@ import { getMinhaInscricaoJogos } from '../services/jogosService';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 import { getCanonicalUserId } from '../utils/userUtils';
+import { ENABLE_JOGOS } from '../config/features';
 
 const JogosBanner = () => {
   const navigation = useNavigation<any>();
@@ -75,7 +76,7 @@ const JogosBanner = () => {
     setVisible(false);
   };
 
-  if (loading || !visible) return null;
+  if (!ENABLE_JOGOS || loading || !visible) return null;
 
   return (
     <View style={styles.container}>

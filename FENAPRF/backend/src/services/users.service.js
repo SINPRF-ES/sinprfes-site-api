@@ -388,14 +388,6 @@ async function buscarAniversariantesDoDia() {
   return rows;
 }
 
-async function salvarTwoFaSecret(userId, secret) {
-  await pool.query(
-    `UPDATE users SET twofa_secret = $1, updated_at = NOW() WHERE id = $2`,
-    [secret, userId]
-  );
-  return await getMe(userId);
-}
-
 module.exports = {
   buscarUserPorCpf,
   buscarPorCpf: buscarUserPorCpf,
@@ -412,5 +404,4 @@ module.exports = {
   arquivarUserPorId,
   desarquivarUserPorId,
   buscarAniversariantesDoDia,
-  salvarTwoFaSecret,
 };
