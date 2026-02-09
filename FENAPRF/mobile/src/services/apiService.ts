@@ -92,7 +92,7 @@ api.interceptors.response.use(
     const duration = new Date().getTime() - config.meta.requestStartedAt;
 
     logger.info(`API_RES: ${method?.toUpperCase()} ${url} | Status: ${status} | ${duration}ms`, {
-      dataShape: data ? Object.keys(data) : undefined
+      dataShape: (data && typeof data === 'object') ? Object.keys(data) : undefined
     });
 
     return response;

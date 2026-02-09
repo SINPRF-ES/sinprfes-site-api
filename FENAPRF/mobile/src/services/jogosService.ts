@@ -4,7 +4,7 @@ import { logError } from '../infra/logger';
 export const getMinhaInscricaoJogos = async () => {
   try {
     const response = await api.get('/api/jogos/inscricao');
-    if (response.status === 204) return null;
+    if (response.status === 204 || !response.data || response.data.hasInscricao === false) return null;
     return response.data;
   } catch (err: any) {
     if (err.response?.status === 404) {
@@ -38,6 +38,7 @@ export const cancelarInscricaoJogos = async () => {
 export const getInscricoesJogos = async () => {
   try {
     const response = await api.get('/api/jogos/inscricoes');
+    if (!response.data || !response.data.inscricoes) return [];
     return response.data.inscricoes || [];
   } catch (err) {
     logError('Service.getInscricoesJogos', err);

@@ -147,6 +147,10 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       const response = await axios.get(UPDATE_MANIFEST_URL, { timeout: 10000 });
       manifest = response.data;
 
+      if (!manifest || typeof manifest !== 'object') {
+        throw new Error('Manifesto retornado em formato inválido.');
+      }
+
       const urlObj = new URL(UPDATE_MANIFEST_URL);
       logger.info('UPDATE_MANIFEST_FETCH_SUCCESS', { url: UPDATE_MANIFEST_URL, host: urlObj.host });
     } catch (e: any) {
@@ -156,17 +160,22 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
       // Vamos tentar o Drive como fallback mas logar o aviso.
       logger.warn('UpdateCheck: Tentando fallback para Google Drive após falha na URL direta');
 
-      const rootFiles = await fetchPublicacoes(null);
-      const appFolder = rootFiles.find(f => f.isFolder && (f.name || '').trim().toLowerCase() === 'app');
-      if (!appFolder) return { hasUpdate: false, error: 'Manifesto não encontrado na URL nem no Drive.' };
+      try {
+        const rootFiles = await fetchPublicacoes(null);
+        const appFolder = Array.isArray(rootFiles) ? rootFiles.find(f => f.isFolder && (f.name || '').trim().toLowerCase() === 'app') : null;
+        if (!appFolder) return { hasUpdate: false, error: 'Manifesto não encontrado na URL nem pasta "app" no Drive.' };
 
-      const appFiles = await fetchPublicacoes(appFolder.id);
-      const manifestFile = appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json');
-      if (!manifestFile) return { hasUpdate: false, error: 'update-manifest.json não encontrado.' };
+        const appFiles = await fetchPublicacoes(appFolder.id);
+        const manifestFile = Array.isArray(appFiles) ? appFiles.find(f => (f.name || '').trim().toLowerCase() === 'update-manifest.json') : null;
+        if (!manifestFile) return { hasUpdate: false, error: 'update-manifest.json não encontrado no Drive.' };
 
-      const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
-      const manifestContent = await FileSystem.readAsStringAsync(localUri);
-      manifest = JSON.parse(manifestContent);
+        const { localUri } = await downloadPublicacaoFile(manifestFile.id, manifestFile.name, sessao.token);
+        const manifestContent = await FileSystem.readAsStringAsync(localUri);
+        manifest = JSON.parse(manifestContent);
+      } catch (fallbackError: any) {
+        logger.error('UPDATE_MANIFEST_FALLBACK_ERROR', fallbackError);
+        return { hasUpdate: false, error: `Falha ao obter manifesto (URL e Drive): ${fallbackError.message}` };
+      }
     }
 
     // 2. Comparar versões

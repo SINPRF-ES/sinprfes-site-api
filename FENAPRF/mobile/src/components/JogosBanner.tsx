@@ -31,11 +31,11 @@ const JogosBanner = () => {
         // 2. Verificar se já está inscrito
         try {
           const inscricao = await getMinhaInscricaoJogos();
-          // Se inscricao for null (204 ou 404), o membro não está inscrito -> Mostrar banner
+          // getMinhaInscricaoJogos retorna null se 204, 404 ou hasInscricao: false
           if (!inscricao) {
             setVisible(true);
           } else {
-            // Se houver dados, o membro já está inscrito
+            // Se houver dados (hasInscricao: true), o membro já está inscrito
             setVisible(false);
           }
         } catch (err: any) {

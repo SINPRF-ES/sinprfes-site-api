@@ -69,7 +69,7 @@ const JogosScreen = () => {
       });
 
       const currentUserId = getCanonicalUserId(user);
-      const minha = inscricoes.find((i: any) => String(i.user_id) === currentUserId);
+      const minha = Array.isArray(inscricoes) ? inscricoes.find((i: any) => String(i.user_id) === currentUserId) : null;
 
       if (minha) {
         setInscricao(minha);
