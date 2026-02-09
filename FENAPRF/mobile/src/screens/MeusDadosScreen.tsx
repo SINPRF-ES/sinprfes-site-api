@@ -22,6 +22,7 @@ import { getCanonicalUserId } from '../utils/userUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { useNavigation } from '@react-navigation/native';
 import { normalizeNome } from '../utils/canon';
+import { tituloCargoUf } from '../utils/userUtils';
 
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
@@ -31,7 +32,7 @@ export default function MeusDadosScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
-  // Efeito para buscar os dados completos do usuário
+  // Efeito para buscar os dados completos do membro
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
@@ -81,7 +82,7 @@ export default function MeusDadosScreen() {
       const { data: refreshedData } = await api.get<User>('/api/users/me');
       setUser(refreshedData);
 
-      // Atualiza o usuário no contexto de autenticação, se necessário
+      // Atualiza o membro no contexto de autenticação, se necessário
       if (authUser) {
         const authUserAtualizado = { ...authUser, name: refreshedData.name, email: refreshedData.email, avatar_url: refreshedData.avatar_url };
         await setSessao(token!, authUserAtualizado);
@@ -266,6 +267,22 @@ export default function MeusDadosScreen() {
         <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
       </ErrorBoundary>
 
+      {user?.perfil_acesso2 && (
+        <ErrorBoundary>
+          <View style={[styles.sectionHeader, { backgroundColor: '#fff' }]}>
+            <Text style={styles.sectionTitle}>🔗 Segundo Vínculo</Text>
+          </View>
+          <View style={styles.secondVinculoContainer}>
+            <Text style={styles.secondVinculoText}>
+              {tituloCargoUf({
+                perfil_acesso: user.perfil_acesso2,
+                cargo: user.cargo2,
+                uf: user.uf2
+              })}
+            </Text>
+          </View>
+        </ErrorBoundary>
+      )}
 
     </KeyboardAwareScrollView>
     </SafeScreen>
@@ -310,6 +327,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#003366',
+  },
+  secondVinculoContainer: {
+    padding: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  secondVinculoText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
   },
   // Estilos para Excluir Dependentes
   deletePanel: {

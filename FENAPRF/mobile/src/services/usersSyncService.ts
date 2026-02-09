@@ -59,7 +59,7 @@ export async function sincronizarUsers(token: string): Promise<{ recebidos: numb
   const data = await parseJsonSafe(resp);
 
   if (!resp.ok) {
-    throw new Error(data?.error || data?.message || `Erro ao listar usuários (${resp.status})`);
+    throw new Error(data?.error || data?.message || `Erro ao listar membros (${resp.status})`);
   }
 
   const lista = normalizarLista(data);

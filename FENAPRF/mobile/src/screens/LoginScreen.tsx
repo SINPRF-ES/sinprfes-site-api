@@ -35,7 +35,7 @@ export default function LoginScreen() {
   useEffect(() => {
     (async () => {
       if (biometriaHabilitada) {
-        // Um pequeno delay para dar tempo da UI renderizar e o usuário ver o prompt
+        // Um pequeno delay para dar tempo da UI renderizar e o membro ver o prompt
         setTimeout(handleBiometricLogin, 500);
       }
     })();

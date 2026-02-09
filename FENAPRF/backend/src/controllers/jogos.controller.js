@@ -40,7 +40,7 @@ exports.registrarInscricao = async (req, res) => {
 
     if (!userId) {
       log.error("JogosInscricaoErroUserId", { user: req?.user });
-      return res.status(401).json({ error: "Usuário não autenticado." });
+      return res.status(401).json({ error: "Membro não autenticado." });
     }
 
     const { modalidades, observacoes, familiares, qtd_familiares, sexo } = req.body || {};
@@ -152,7 +152,7 @@ exports.cancelarInscricao = async (req, res) => {
 
     if (!userId) {
       log.error("JogosCancelarErroUserId", { user: req?.user });
-      return res.status(401).json({ error: "Usuário não autenticado." });
+      return res.status(401).json({ error: "Membro não autenticado." });
     }
 
     // Captura dados para e-mail antes de apagar
@@ -233,7 +233,7 @@ exports.obterMinhaInscricao = async (req, res) => {
     const userId = getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ error: "Usuário não autenticado." });
+      return res.status(401).json({ error: "Membro não autenticado." });
     }
 
     const query = `

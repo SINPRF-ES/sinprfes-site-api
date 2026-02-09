@@ -1,7 +1,7 @@
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import * as Updates from 'expo-updates';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import * as IntentLauncher from 'expo-intent-launcher';
 import axios from 'axios';
 import api from './apiService';
@@ -152,7 +152,7 @@ export const checkUpdates = async (context: 'auto' | 'manual' = 'manual'): Promi
     } catch (e: any) {
       logger.error('UPDATE_MANIFEST_FETCH_ERROR', e, { url: UPDATE_MANIFEST_URL, message: e.message });
       // Fallback para o modo Legado (Drive) se a URL direta falhar?
-      // O usuário pediu "Isolar 100% ... para apontar TUDO ... para o ambiente FENAPRF".
+      // O membro pediu "Isolar 100% ... para apontar TUDO ... para o ambiente FENAPRF".
       // Vamos tentar o Drive como fallback mas logar o aviso.
       logger.warn('UpdateCheck: Tentando fallback para Google Drive após falha na URL direta');
 
@@ -297,11 +297,18 @@ export const downloadAndInstallApk = async (fileId: string, fileName: string, do
         const extension = inferExtension(fileName);
         const dest = buildCacheDest({ prefix: 'apk_upd', id: 'latest', ext: extension });
 
-        downloadResult = await FileSystem.downloadAsync(finalUrl, dest, {
-            headers: {
+        // Se for uma URL direta para arquivo estático, removemos o Header de Autorização
+        // para evitar que proxies ou o servidor rejeitem a requisição (403/401).
+        const isStaticFile = finalUrl.endsWith('.apk') || !finalUrl.includes('/api/');
+
+        const downloadOptions: any = {};
+        if (!isStaticFile) {
+            downloadOptions.headers = {
                 Authorization: `Bearer ${sessao.token}`
-            }
-        });
+            };
+        }
+
+        downloadResult = await FileSystem.downloadAsync(finalUrl, dest, downloadOptions);
 
         localUri = downloadResult.uri;
 
