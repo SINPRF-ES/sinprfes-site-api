@@ -88,6 +88,10 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
+function isUuid(val) {
+  return typeof val === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
+}
+
 /**
  * Aplica máscara de Agência: 0000-0 ou 0000
  */
@@ -123,5 +127,6 @@ module.exports = {
   formatarAgencia,
   formatarConta,
   escapeHtml,
+  isUuid,
   // normalizarDataEntrada e normalizarDataBanco removidas.
 };

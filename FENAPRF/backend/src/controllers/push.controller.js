@@ -2,6 +2,7 @@
 const pushService = require("../services/push.service");
 const log = require("../utils/log");
 const { v4: uuidv4 } = require("uuid");
+const { isUuid } = require("../utils/format");
 
 function getUserId(req) {
   // Seu middleware auth normalmente seta req.user
@@ -21,12 +22,16 @@ exports.register = async (req, res) => {
   const { expoPushToken, deviceId, platform, permissionStatus } = req.body || {};
   const bodyKeys = req.body ? Object.keys(req.body) : [];
 
+  const isInt = (val) => (typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val)));
+  const userIdType = isUuid(userId) ? 'uuid' : (isInt(userId) ? 'int' : 'invalid');
+
   try {
     log.info("PushRegisterIniciado", {
       requestId,
       method: req.method,
       route: req.originalUrl,
       userId,
+      userId_type: userIdType,
       platform,
       permissionStatus,
       expoPushTokenMasked: maskToken(expoPushToken),
@@ -35,6 +40,10 @@ exports.register = async (req, res) => {
 
     if (!userId) {
       return res.status(401).json({ success: false, error: "Membro não autenticado (req.user ausente)." });
+    }
+
+    if (userIdType === 'invalid') {
+        return res.status(400).json({ success: false, error: "ID de usuário inválido (deve ser UUID ou Inteiro)." });
     }
 
     // Se negou, registramos mesmo sem token
@@ -89,9 +98,23 @@ exports.unregister = async (req, res) => {
   const userId = getUserId(req);
   const { expoPushToken } = req.body || {};
 
+  const isInt = (val) => (typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val)));
+  const userIdType = isUuid(userId) ? 'uuid' : (isInt(userId) ? 'int' : 'invalid');
+
   try {
+    log.info("PushUnregisterIniciado", {
+      requestId,
+      userId,
+      userId_type: userIdType,
+      expoPushTokenMasked: maskToken(expoPushToken)
+    });
+
     if (!userId) {
       return res.status(401).json({ success: false, error: "Membro não autenticado (req.user ausente)." });
+    }
+
+    if (userIdType === 'invalid') {
+        return res.status(400).json({ success: false, error: "ID de usuário inválido (deve ser UUID ou Inteiro)." });
     }
 
     if (!expoPushToken) {
