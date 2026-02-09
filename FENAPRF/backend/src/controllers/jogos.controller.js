@@ -252,12 +252,12 @@ exports.obterMinhaInscricao = async (req, res) => {
     const { rows } = await pool.query(query, [userId]);
 
     if (!rows || rows.length === 0) {
-      return res.status(204).send();
+      return res.status(200).json({ hasInscricao: false });
     }
 
     log.info("JogosMinhaInscricaoVisualizada", { userId });
 
-    return res.json(rows[0]);
+    return res.json({ ...rows[0], hasInscricao: true });
   } catch (err) {
     log.error("JogosMinhaInscricaoErro", err);
     return res.status(500).json({

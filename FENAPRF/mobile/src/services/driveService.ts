@@ -29,6 +29,10 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
   const endpoint = folderId ? `/api/publicacoes?folderId=${folderId}` : '/api/publicacoes';
   const { data } = await api.get(endpoint);
 
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
   // Mapeia a resposta para garantir robustez entre name/titulo, webViewLink/arquivo_url, etc.
   return data.map((item: any) => {
     const isFolder = item.isFolder ?? item.mimeType === 'application/vnd.google-apps.folder';
