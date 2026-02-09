@@ -1,5 +1,11 @@
-import { onlyDigits } from '../shared/format/formatters';
+/**
+ * FENAPRF - Utilitários de Data
+ */
+import { onlyDigits } from './format';
 
+/**
+ * Converte data ISO (YYYY-MM-DD) para formato brasileiro (DD/MM/YYYY).
+ */
 export const formatISOToBR = (isoDate: string | null | undefined): string => {
   if (!isoDate) return '';
   const datePart = isoDate.split('T')[0];
@@ -9,6 +15,9 @@ export const formatISOToBR = (isoDate: string | null | undefined): string => {
   return `${day}/${month}/${year}`;
 };
 
+/**
+ * Converte data ISO para formato brasileiro com hora (DD/MM/YYYY HH:mm).
+ */
 export const formatISOToBRDateTime = (isoDate: string | null | undefined): string => {
   if (!isoDate) return '—';
   try {
@@ -117,10 +126,16 @@ export const formatTimeSP = (isoDate: string | null | undefined): string => {
   }
 };
 
+/**
+ * Alias para formatISOToBR.
+ */
 export const toBrazilianDate = (isoDate: string | null | undefined): string => {
   return formatISOToBR(isoDate);
 };
 
+/**
+ * Converte data brasileira (DD/MM/YYYY) para ISO (YYYY-MM-DD).
+ */
 export const parseBRToISO = (brDate: string | null | undefined): string | null => {
   if (!brDate) return null;
   const parts = brDate.split('/');
@@ -129,10 +144,16 @@ export const parseBRToISO = (brDate: string | null | undefined): string | null =
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
+/**
+ * Alias para parseBRToISO.
+ */
 export const toISODate = (brDate: string | null | undefined): string | null => {
   return parseBRToISO(brDate);
 };
 
+/**
+ * Formata texto para máscara de data DD/MM/YYYY conforme digitação.
+ */
 export const formatDateToDdMmYyyy = (text: string): string => {
   const digits = onlyDigits(text);
   if (digits.length <= 2) return digits;
@@ -140,6 +161,9 @@ export const formatDateToDdMmYyyy = (text: string): string => {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
 };
 
+/**
+ * Calcula a idade detalhada (anos, meses, dias) a partir de uma data de nascimento.
+ */
 export const calculateAgeBreakdown = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '—';
   try {
@@ -178,3 +202,47 @@ export const calculateAgeBreakdown = (dateStr: string | null | undefined): strin
     return '—';
   }
 };
+
+/**
+ * Normaliza diferentes formatos de data para o padrão ISO YYYY-MM-DD.
+ */
+export function toIsoDateYYYYMMDD(input: string | Date | null | undefined): string | null {
+  if (!input) return null;
+
+  if (input instanceof Date) {
+    if (isNaN(input.getTime())) return null;
+    const year = input.getFullYear();
+    const month = String(input.getMonth() + 1).padStart(2, '0');
+    const day = String(input.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  const dateStr = String(input).trim();
+  if (!dateStr) return null;
+
+  // Caso 1: ISO completa ou apenas data (YYYY-MM-DD...)
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    return dateStr.substring(0, 10);
+  }
+
+  // Caso 2: Formato brasileiro (DD/MM/YYYY)
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
+    const [d, m, y] = dateStr.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // Fallback: Tenta dar parse no que sobrar
+  try {
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const day = String(parsed.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return null;
+}

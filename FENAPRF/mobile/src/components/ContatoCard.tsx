@@ -4,7 +4,7 @@ import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import PickerWrapper from './PickerWrapper';
 import { User } from '../types/user';
-import { formatTelefone, onlyDigits, formatCpf, formatData } from '../shared/format/formatters';
+import { formatTelefone, onlyDigits, formatCpf, formatData } from '../utils/format';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
 
 interface Props {
@@ -79,7 +79,7 @@ const ContatoCard: React.FC<Props> = ({
       <Text style={styles.label}>Data de Nascimento</Text>
       <TextInput
         style={isManagement ? styles.input : styles.inputDisabled}
-        value={isManagement ? formatData(user?.data_nascimento) : (user?.data_nascimento ? toBrazilianDate(user.data_nascimento) : '')}
+        value={user?.data_nascimento?.includes('-') ? toBrazilianDate(user.data_nascimento) : formatData(user?.data_nascimento)}
         onChangeText={(text) => {
           const digits = onlyDigits(text);
           if (digits.length <= 8) {

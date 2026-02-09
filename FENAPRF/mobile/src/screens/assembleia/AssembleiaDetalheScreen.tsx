@@ -10,7 +10,7 @@ import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
-import { getAssembleiaStatusLabel } from '../../utils/assembleiaLabels';
+import { getAssembleiaStatusLabel } from '../../utils/format';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';

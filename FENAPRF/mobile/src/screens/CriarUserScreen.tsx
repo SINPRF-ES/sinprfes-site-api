@@ -12,10 +12,10 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import SafeScreen from '../components/SafeScreen';
 import { User } from '../types/user';
 import { toISODate } from '../utils/date';
-import { onlyDigits } from '../shared/format/formatters';
-import { isGestao as checkIsGestao, ROLES } from '../utils/userUtils';
+import { onlyDigits } from '../utils/format';
+import { isGestao as checkIsGestao, ROLES } from '../utils/user';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
-import { normalizeNome } from '../utils/canon';
+import { normalizeNome } from '../utils/user';
 
 const initialUserState: Partial<User> = {
   name: '',

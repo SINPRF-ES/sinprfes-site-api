@@ -43,7 +43,6 @@ export interface User {
   nome?: string;
   email1?: string;
   email2?: string | null;
-  situacao_funcional?: string | null;
 
   // Otimizações de busca (Bolt ⚡)
   _normalizedNome?: string;

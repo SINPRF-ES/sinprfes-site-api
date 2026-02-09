@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { User } from '../types/user';
-import { formatCpf, onlyDigits } from '../shared/format/formatters';
+import { formatCpf, onlyDigits } from '../utils/format';
 import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate, calculateAgeBreakdown } from '../utils/date';
 import { PARENTESCO_OPTIONS, normalizeParentesco } from '../shared/parentesco';
 

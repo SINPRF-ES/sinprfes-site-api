@@ -3,9 +3,9 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { User } from '../types/user';
-import { formatData, onlyDigits } from '../shared/format/formatters';
+import { formatData, onlyDigits } from '../utils/format';
 import { toISODate, toBrazilianDate } from '../utils/date';
-import { ROLES, UFS, CARGOS_CONSELHO, CARGOS_DIRETORIA } from '../utils/userUtils';
+import { ROLES, UFS, CARGOS_CONSELHO, CARGOS_DIRETORIA } from '../utils/user';
 import PickerWrapper from './PickerWrapper';
 
 interface Props {
@@ -109,7 +109,7 @@ const VinculoCard: React.FC<Props> = ({
           <TextInput
             editable={isGestao}
             style={isGestao ? styles.input : styles.inputDisabled}
-            value={formatData(user?.cargo_mandato_inicio)}
+            value={user?.cargo_mandato_inicio?.includes('-') ? toBrazilianDate(user.cargo_mandato_inicio) : formatData(user?.cargo_mandato_inicio)}
             onChangeText={(t) => handleDateChange('cargo_mandato_inicio', t)}
             onBlur={() => handleDateBlur('cargo_mandato_inicio')}
             placeholder="DD/MM/AAAA"
@@ -122,7 +122,7 @@ const VinculoCard: React.FC<Props> = ({
           <TextInput
             editable={isGestao}
             style={isGestao ? styles.input : styles.inputDisabled}
-            value={formatData(user?.cargo_mandato_fim)}
+            value={user?.cargo_mandato_fim?.includes('-') ? toBrazilianDate(user.cargo_mandato_fim) : formatData(user?.cargo_mandato_fim)}
             onChangeText={(t) => handleDateChange('cargo_mandato_fim', t)}
             onBlur={() => handleDateBlur('cargo_mandato_fim')}
             placeholder="DD/MM/AAAA"

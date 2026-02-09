@@ -10,9 +10,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
-import Badge from '../components/Badge';
-import { normalizeSituacaoFuncional } from '../utils/userUtils';
 import { Image } from 'react-native';
+import MemberCard from '../components/MemberCard';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -45,45 +44,24 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     displayedItems.push(...GESTAO_ITEMS);
   }
 
-  const situacao = normalizeSituacaoFuncional(user?.situacao || '');
   const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
-
-  const getSituacaoVariant = (s: string) => {
-    switch (s) {
-      case 'ATIVO': return 'success';
-      case 'VETERANO': return 'warning';
-      case 'PENSIONISTA': return 'pink';
-      default: return 'default';
-    }
-  };
 
   return (
     <SafeScreen style={styles.container}>
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Image
-            source={user?.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.png')}
-            style={styles.avatar}
-            resizeMode="cover"
-          />
-          <View style={styles.headerText}>
+           <View style={styles.headerText}>
             <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
               {String(user?.name || user?.nome || 'Membro').split(' ')[0]}
             </Text>
-            <Text style={styles.userProfile}>{String(perfil || 'MEMBRO').toUpperCase()}</Text>
-
-            {situacao && (
-              <Badge
-                label={situacao}
-                variant={getSituacaoVariant(situacao)}
-                style={styles.headerBadge}
-                textStyle={styles.headerBadgeText}
-              />
-            )}
           </View>
         </View>
+      </View>
+
+      <View style={styles.memberCardContainer}>
+        <MemberCard member={user} variant="profile" />
       </View>
 
       <OtaUpdateBanner />
@@ -128,13 +106,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    backgroundColor: '#f0f0f0',
+  memberCardContainer: {
+    marginTop: -40,
   },
   headerText: {
     flex: 1,

@@ -18,7 +18,7 @@ import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
-import { isGestao, isDiretoria } from '../utils/userUtils';
+import { isGestao, isDiretoria } from '../utils/user';
 import { ENABLE_JOGOS, ENABLE_PUSH } from '../config/features';
 import { logger } from '../infra/logger';
 import { useEffect } from 'react';

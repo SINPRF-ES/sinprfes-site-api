@@ -1,5 +1,5 @@
 import api from './apiService';
-import { logDebug } from '../utils/userUtils';
+import { logDebug } from '../utils/user';
 
 export interface LogPayload {
   source: string;

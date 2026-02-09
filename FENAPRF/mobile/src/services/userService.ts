@@ -1,6 +1,6 @@
 import api from './apiService';
 import { User } from '../types/user';
-import { onlyDigits } from '../shared/format/formatters';
+import { onlyDigits } from '../utils/format';
 
 const unmaskUser = (user: Partial<User>) => {
   const result = { ...user };

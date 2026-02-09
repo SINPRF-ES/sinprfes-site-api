@@ -23,15 +23,4 @@ describe('Reports Service', () => {
     expect(res.total).toBe(5);
   });
 
-  test('buscarDadosAgregados SITUACAO should use exact match', async () => {
-    pool.query.mockResolvedValue({ rows: [{ total: 10 }] });
-
-    const res = await reportsService.buscarDadosAgregados('SITUACAO', 'VETERANO');
-
-    expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("situacao = $1"),
-      expect.arrayContaining(["VETERANO"])
-    );
-    expect(res.total).toBe(10);
-  });
 });

@@ -39,9 +39,7 @@ function ensureSpace(doc, neededHeight) {
 /**
  * Renderiza blocos de Sexo e Faixa Etária.
  */
-function drawDistribuicoes(doc, dados, options = {}) {
-    const { isVeterano = false, isPensionista = false } = options;
-
+function drawDistribuicoes(doc, dados) {
     ensureSpace(doc, 60);
     doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Sexo:", { align: 'left' });
     doc.font("Helvetica").fontSize(11);
@@ -49,25 +47,16 @@ function drawDistribuicoes(doc, dados, options = {}) {
     doc.text(`Feminino: ${dados.fem}`, { align: 'left' });
     doc.moveDown(1);
 
-    if (!isPensionista) {
-        ensureSpace(doc, 100);
-        doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:", { align: 'left' });
-        doc.font("Helvetica").fontSize(11);
-        if (isVeterano) {
-            doc.text(`50-59 anos: ${dados.range_50_59}`, { align: 'left' });
-            doc.text(`60-69 anos: ${dados.range_60_69}`, { align: 'left' });
-            doc.text(`70-79 anos: ${dados.range_70_79}`, { align: 'left' });
-            doc.text(`80+ anos: ${dados.range_80_plus}`, { align: 'left' });
-        } else {
-            doc.text(`20-29 anos: ${dados.range_20_29}`, { align: 'left' });
-            doc.text(`30-39 anos: ${dados.range_30_39}`, { align: 'left' });
-            doc.text(`40-49 anos: ${dados.range_40_49}`, { align: 'left' });
-            doc.text(`50-59 anos: ${dados.range_50_59}`, { align: 'left' });
-            doc.text(`60+ anos: ${dados.range_60_plus}`, { align: 'left' });
-        }
-        doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`, { align: 'left' });
-        doc.moveDown(1);
-    }
+    ensureSpace(doc, 100);
+    doc.font("Helvetica-Bold").fontSize(12).text("Distribuição por Faixa Etária:", { align: 'left' });
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`20-29 anos: ${dados.range_20_29}`, { align: 'left' });
+    doc.text(`30-39 anos: ${dados.range_30_39}`, { align: 'left' });
+    doc.text(`40-49 anos: ${dados.range_40_49}`, { align: 'left' });
+    doc.text(`50-59 anos: ${dados.range_50_59}`, { align: 'left' });
+    doc.text(`60+ anos: ${dados.range_60_plus}`, { align: 'left' });
+    doc.text(`Idade desconhecida: ${dados.idade_desconhecida}`, { align: 'left' });
+    doc.moveDown(1);
 }
 
 function linha(doc) {
@@ -588,7 +577,6 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(11);
     doc.text(`UF: ${user.uf || "-"}`);
-    doc.text(`Situação Funcional: ${user.situacao || "ATIVO"}`);
     doc.moveDown(1);
     linha(doc);
 
@@ -699,14 +687,14 @@ async function gerarPdfRelatorioGlobal(dados) {
     doc.moveDown(1);
 
     // -------------------------------------------------------------------------
-    // SEÇÃO 1: ATIVO
+    // SEÇÃO 1: MEMBROS
     // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. MEMBROS ATIVOS");
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("1. QUADRO DE MEMBROS");
     doc.fillColor("#000").moveDown(0.5);
 
-    const a = dados.ativo;
+    const a = dados.membros;
     doc.font("Helvetica").fontSize(11);
-    doc.text(`Total de membros ativos: ${a.total}`, { align: 'left' });
+    doc.text(`Total de membros: ${a.total}`, { align: 'left' });
     doc.moveDown(1);
 
     drawDistribuicoes(doc, a);
@@ -714,28 +702,6 @@ async function gerarPdfRelatorioGlobal(dados) {
     doc.addPage();
     doc.moveDown(2);
 
-    // -------------------------------------------------------------------------
-    // SEÇÃO 2: VETERANO
-    // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("2. VETERANOS");
-    doc.fillColor("#000").moveDown(0.5);
-
-    const v = dados.veterano;
-    doc.font("Helvetica").fontSize(11).text(`Total de veteranos cadastrados: ${v.total}`);
-    doc.moveDown(1);
-    drawDistribuicoes(doc, v, { isVeterano: true });
-    doc.moveDown(1);
-
-    // -------------------------------------------------------------------------
-    // SEÇÃO 3: PENSIONISTA
-    // -------------------------------------------------------------------------
-    doc.font("Helvetica-Bold").fontSize(16).fillColor("#003366").text("3. PENSIONISTAS");
-    doc.fillColor("#000").moveDown(0.5);
-
-    const p = dados.pensionista;
-    doc.font("Helvetica").fontSize(11).text(`Total de pensionistas cadastrados: ${p.total}`);
-    doc.moveDown(1);
-    drawDistribuicoes(doc, p, { isPensionista: true });
 
     doc.end();
   });
