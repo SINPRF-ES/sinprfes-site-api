@@ -207,7 +207,13 @@ exports.atualizarMeusDados = async (req, res) => {
     });
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
-    log.error("UsersUpdateMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersUpdateMeErro", {
+      message: err.message,
+      stack: err.stack,
+      requestId: req.requestId,
+      userId: req.user?.id,
+      payloadKeys: Object.keys(req.body || {})
+    });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
@@ -341,6 +347,7 @@ exports.atualizarUser = async (req, res) => {
         requestId: req.requestId,
         loggedId,
         targetId: idAlvo,
+        payloadKeys: Object.keys(req.body || {}),
         payload_debug: {
             perfil_acesso: req.body?.perfil_acesso,
             cargo: req.body?.cargo,

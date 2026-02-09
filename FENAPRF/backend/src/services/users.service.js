@@ -137,7 +137,9 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
       f.situacao, f.perfil_acesso,
       f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
       f.avatar_url,
-      f.arquivado_em, f.arquivado_motivo
+      f.arquivado_em, f.arquivado_motivo,
+      f.cargo, f.cargo_mandato_inicio, f.cargo_mandato_fim,
+      f.perfil_acesso2, f.cargo2, f.uf2
     FROM users f
     ${whereSql}
     ORDER BY f.name ASC
@@ -252,7 +254,6 @@ async function atualizarUserPorId(id, dados) {
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
-  addCampo("uf", dados.uf);
 
   if (dados.cep !== undefined) {
     addCampo("cep", normalizarCep(dados.cep));

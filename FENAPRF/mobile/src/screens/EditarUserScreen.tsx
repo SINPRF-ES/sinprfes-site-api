@@ -76,8 +76,21 @@ export default function EditarUserScreen({ route, navigation }: any) {
     const nomeEfetivo = user.nome || user.name;
     const emailEfetivo = (user as any).email1 || user.email;
 
+    const perfil = user.perfil_acesso as string;
+    const isCouncil = perfil === ROLES.CONSELHEIRO || perfil === ROLES.DIRETORIA;
+
     if (!nomeEfetivo || !user.cpf || !emailEfetivo) {
       Alert.alert('Erro de Validação', 'Nome, CPF e Email são obrigatórios.');
+      return;
+    }
+
+    if (perfil === ROLES.CONSELHEIRO && (!user.uf || user.uf === 'BR')) {
+      Alert.alert('Erro de Validação', 'UF é obrigatória para Conselheiros.');
+      return;
+    }
+
+    if (isCouncil && !user.cargo) {
+      Alert.alert('Erro de Validação', 'O cargo é obrigatório para este perfil.');
       return;
     }
 

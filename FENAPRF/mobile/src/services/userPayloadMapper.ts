@@ -34,16 +34,36 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
 
   if (formState.sexo !== undefined) payload.sexo = (formState.sexo as any) || undefined;
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
-  if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
 
-  // Novos campos FENAPRF
-  if (formState.uf) payload.uf = formState.uf;
-  if (formState.cargo) payload.cargo = formState.cargo;
-  if (formState.cargo_mandato_inicio) payload.cargo_mandato_inicio = toIsoDateYYYYMMDD(formState.cargo_mandato_inicio) || formState.cargo_mandato_inicio;
-  if (formState.cargo_mandato_fim) payload.cargo_mandato_fim = toIsoDateYYYYMMDD(formState.cargo_mandato_fim) || formState.cargo_mandato_fim;
-  if (formState.perfil_acesso2) payload.perfil_acesso2 = formState.perfil_acesso2;
-  if (formState.cargo2) payload.cargo2 = formState.cargo2;
-  if (formState.uf2) payload.uf2 = formState.uf2;
+  const perfil = formState.perfil_acesso;
+  if (perfil) payload.perfil_acesso = perfil;
+
+  // Novos campos FENAPRF com sanitização por perfil
+  const isCouncil = perfil === 'CONSELHEIRO' || perfil === 'DIRETORIA';
+
+  payload.uf = (perfil === 'CONSELHEIRO') ? (formState.uf || '') : 'BR';
+  payload.cargo = isCouncil ? (formState.cargo || '') : (perfil === 'ADMIN' ? 'Administrador' : 'Colaborador');
+
+  if (isCouncil) {
+    if (formState.cargo_mandato_inicio) payload.cargo_mandato_inicio = toIsoDateYYYYMMDD(formState.cargo_mandato_inicio) || formState.cargo_mandato_inicio;
+    if (formState.cargo_mandato_fim) payload.cargo_mandato_fim = toIsoDateYYYYMMDD(formState.cargo_mandato_fim) || formState.cargo_mandato_fim;
+    if (formState.perfil_acesso2) {
+      payload.perfil_acesso2 = formState.perfil_acesso2;
+      payload.cargo2 = formState.cargo2 || '';
+      payload.uf2 = formState.uf2 || '';
+    } else {
+      payload.perfil_acesso2 = null as any;
+      payload.cargo2 = null as any;
+      payload.uf2 = null as any;
+    }
+  } else {
+    // Para ADMIN/COLABORADOR, removemos campos do conselho para evitar "lixo" no payload
+    payload.cargo_mandato_inicio = null as any;
+    payload.cargo_mandato_fim = null as any;
+    payload.perfil_acesso2 = null as any;
+    payload.cargo2 = null as any;
+    payload.uf2 = null as any;
+  }
 
   // Endereço: Apenas o CEP é enviado. Outros campos são preenchidos via buscaCEP no backend.
   // Campos como logradouro, bairro, cidade, uf NÃO devem ser enviados.

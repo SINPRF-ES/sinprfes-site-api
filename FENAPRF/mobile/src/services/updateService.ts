@@ -333,10 +333,19 @@ export const downloadAndInstallApk = async (fileId: string, fileName: string, do
         });
 
         if (downloadResult.status !== 200) {
+            logger.error('APK_DOWNLOAD_FAILED_STATUS', undefined, {
+                status: downloadResult.status,
+                url: finalUrl,
+                headers: downloadResult.headers
+            });
             throw new Error(`Erro ao baixar APK: Servidor retornou status ${downloadResult.status}`);
         }
 
         if (contentType && contentType.includes('text/html')) {
+            logger.error('APK_DOWNLOAD_HTML_ERROR', undefined, {
+                url: finalUrl,
+                contentType
+            });
             throw new Error('O download retornou uma página HTML em vez de um arquivo APK. Verifique sua conexão ou se o link expirou.');
         }
     } else {

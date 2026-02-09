@@ -62,7 +62,10 @@ export default function UsersScreen({ navigation, route }: any) {
             perfil_acesso: f.perfil_acesso,
             cargo_mandato_inicio: f.cargo_mandato_inicio,
             cargo_mandato_fim: f.cargo_mandato_fim,
-            arquivado_em: f.arquivado_em
+            arquivado_em: f.arquivado_em,
+            perfil_acesso2: f.perfil_acesso2,
+            cargo2: f.cargo2,
+            uf2: f.uf2
           };
 
           return {
