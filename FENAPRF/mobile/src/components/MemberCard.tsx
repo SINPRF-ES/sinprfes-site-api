@@ -18,42 +18,53 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
   const { elapsed, remaining } = calculateMandateTime(member.cargo_mandato_inicio, member.cargo_mandato_fim);
 
   const isDrawer = variant === 'drawer';
+  const isProfile = variant === 'profile';
 
   // Determinando UF e Bandeira
   const isNacional = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((member.perfil_acesso || '').toUpperCase());
   const displayUf = isNacional ? 'BR' : (member.uf || '—');
   const flagUrl = getBandeiraUF(member.uf, member.perfil_acesso);
 
+  const mandateStart = toBrazilianDate(member.cargo_mandato_inicio) || 'não informado';
+  const mandateEnd = toBrazilianDate(member.cargo_mandato_fim) || 'não informado';
+
   return (
     <TouchableOpacity
       style={[
         styles.card,
         isDrawer && styles.cardDrawer,
-        variant === 'profile' && styles.cardProfile
+        isProfile && styles.cardProfile
       ]}
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.7}
     >
-      {/* PARTE SUPERIOR */}
+      {/* PARTE SUPERIOR (DIVIDIDA HORIZONTALMENTE) */}
       <View style={styles.topSection}>
+        {/* ESQUERDA: AVATAR CIRCULAR */}
         <View style={styles.avatarContainer}>
           <Image
             source={member.avatar_url ? { uri: member.avatar_url } : require('../../assets/logo.png')}
-            style={[styles.avatar, isDrawer && styles.avatarSmall]}
+            style={styles.avatar}
             resizeMode="cover"
           />
         </View>
 
+        {/* CENTRO: NOME E CARGO (PROTEÇÃO CONTRA TRUNCAMENTO) */}
         <View style={styles.centerInfo}>
-          <Text style={[styles.name, isDrawer && styles.textWhite]} numberOfLines={1}>
+          <Text
+            style={[styles.name, isDrawer && styles.textWhite]}
+          >
             {member.name || member.nome || 'Membro'}
           </Text>
-          <Text style={[styles.cargo, isDrawer && styles.textLight]} numberOfLines={2}>
+          <Text
+            style={[styles.cargo, isDrawer && styles.textLight]}
+          >
             {tituloCargoUf(member)}
           </Text>
         </View>
 
+        {/* DIREITA: UF E BANDEIRA (CONTRASTE OBRIGATÓRIO) */}
         <View style={styles.rightStack}>
           <Text style={[styles.ufText, isDrawer && styles.textWhite]}>{displayUf}</Text>
           {flagUrl ? (
@@ -66,16 +77,16 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
         </View>
       </View>
 
-      {/* PARTE INFERIOR */}
+      {/* PARTE INFERIOR (MANDATOS) */}
       <View style={[styles.bottomSection, isDrawer && styles.bottomSectionDrawer]}>
         <View style={styles.mandateRow}>
           <View style={styles.mandateCol}>
-            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Início</Text>
-            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{toBrazilianDate(member.cargo_mandato_inicio) || '—'}</Text>
+            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Início do mandato</Text>
+            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateStart}</Text>
           </View>
           <View style={styles.mandateCol}>
-            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Fim</Text>
-            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{toBrazilianDate(member.cargo_mandato_fim) || '—'}</Text>
+            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Fim do mandato</Text>
+            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateEnd}</Text>
           </View>
         </View>
 
@@ -121,7 +132,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   cardProfile: {
-    marginTop: -30, // Efeito de sobreposição
+    marginTop: -30,
     marginBottom: 20,
   },
   topSection: {
@@ -130,9 +141,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#f0f0f0',
     overflow: 'hidden',
     borderWidth: 2,
@@ -142,16 +153,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  avatarSmall: {
-    // estilos menores se for drawer? O container ja limita.
-  },
   centerInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   name: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#003366',
+    flex: 1,
+    flexWrap: 'wrap',
   },
   textWhite: {
     color: '#fff',
@@ -163,11 +174,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+    flex: 1,
+    flexWrap: 'wrap',
   },
   rightStack: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 45,
+    minWidth: 50,
   },
   ufText: {
     fontSize: 14,
@@ -176,20 +189,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   flagContainer: {
-    width: 32,
-    height: 22,
+    width: 36,
+    height: 24,
     borderRadius: 4,
-    backgroundColor: '#fff', // Fundo branco para contraste
+    backgroundColor: '#f5f5f5', // Fundo neutro (cinza muito claro) para contraste
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#ddd', // Borda suave
     justifyContent: 'center',
     alignItems: 'center',
-    // Sombra suave para destacar em fundos claros
+    // Sombra leve
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 1,
-    elevation: 2,
+    elevation: 1,
+    overflow: 'hidden',
   },
   flag: {
     width: '100%',
@@ -208,6 +222,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
+    gap: 10,
   },
   mandateCol: {
     flex: 1,
@@ -219,7 +234,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   mandateValue: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#333',
     fontWeight: '600',
   },

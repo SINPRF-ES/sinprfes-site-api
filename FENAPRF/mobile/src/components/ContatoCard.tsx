@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import PickerWrapper from './PickerWrapper';
 import { User } from '../types/user';
 import { formatTelefone, onlyDigits, formatCpf, formatData } from '../shared/format/formatters';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
@@ -44,7 +45,7 @@ const ContatoCard: React.FC<Props> = ({
 
       <Text style={styles.label}>Sexo</Text>
       {isManagement ? (
-        <View style={styles.pickerContainer}>
+        <PickerWrapper style={styles.pickerWrapper}>
           <Picker
             selectedValue={user?.sexo || ''}
             onValueChange={(val) => setUser(f => f ? { ...f, sexo: val as any } : null)}
@@ -54,7 +55,7 @@ const ContatoCard: React.FC<Props> = ({
             <Picker.Item label="♂️ Masculino" value="M" />
             <Picker.Item label="♀️ Feminino" value="F" />
           </Picker>
-        </View>
+        </PickerWrapper>
       ) : (
         <Text style={styles.inputDisabled}>
           {user?.sexo === 'M' ? '♂️ Masculino' : (user?.sexo === 'F' ? '♀️ Feminino' : '—')}
@@ -188,12 +189,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     color: '#999',
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
+  pickerWrapper: {
     marginBottom: 15,
-    backgroundColor: '#fff',
   },
   picker: {
     height: 50,
