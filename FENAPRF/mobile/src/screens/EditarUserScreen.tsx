@@ -73,7 +73,10 @@ export default function EditarUserScreen({ route, navigation }: any) {
       return;
     }
 
-    if (!user.name || !user.cpf || !user.email) {
+    const nomeEfetivo = user.nome || user.name;
+    const emailEfetivo = (user as any).email1 || user.email;
+
+    if (!nomeEfetivo || !user.cpf || !emailEfetivo) {
       Alert.alert('Erro de Validação', 'Nome, CPF e Email são obrigatórios.');
       return;
     }
