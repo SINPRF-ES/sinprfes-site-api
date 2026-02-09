@@ -71,6 +71,69 @@ Diretoria FENAPRF
 }
 
 // --------------------------
+// Logística (confirmação / cancelamento)
+// --------------------------
+
+async function enviarEmailConfirmacaoInscricaoLogistica(payload) {
+  const user = payload?.user || payload || {};
+  const inscricao = payload?.inscricao || payload || {};
+  const evento = payload?.evento || {};
+
+  const emailDestino = extrairEmailDestino(user);
+  if (!emailDestino) return;
+
+  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
+  const subject = `Confirmação de Inscrição - ${evento.titulo || 'Evento Logístico'}`;
+
+  const corpo = `
+Olá, ${primeiroNome}!
+
+Sua inscrição para o evento "${evento.titulo || 'Logística'}" foi registrada com sucesso.
+
+Resumo da Inscrição:
+- Data/Hora de Chegada: ${inscricao.data_chegada ? new Date(inscricao.data_chegada).toLocaleString('pt-BR') : "-"}
+- Data/Hora de Saída: ${inscricao.data_saida ? new Date(inscricao.data_saida).toLocaleString('pt-BR') : "-"}
+- Observações: ${inscricao.observacoes || "-"}
+
+Este e-mail foi gerado automaticamente.
+
+Atenciosamente,
+FENAPRF
+`;
+
+  await enviarEmailBase(emailDestino, subject, corpo);
+}
+
+async function enviarEmailCancelamentoInscricaoLogistica(payload) {
+  const user = payload?.user || payload || {};
+  const inscricao = payload?.inscricao || payload || {};
+  const evento = payload?.evento || {};
+
+  const emailDestino = extrairEmailDestino(user);
+  if (!emailDestino) return;
+
+  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
+  const subject = `Cancelamento de Inscrição - ${evento.titulo || 'Evento Logístico'}`;
+
+  const corpo = `
+Olá, ${primeiroNome}!
+
+Sua inscrição para o evento "${evento.titulo || 'Logística'}" foi cancelada.
+
+(Dados da inscrição cancelada):
+- Data/Hora de Chegada: ${inscricao.data_chegada ? new Date(inscricao.data_chegada).toLocaleString('pt-BR') : "-"}
+- Data/Hora de Saída: ${inscricao.data_saida ? new Date(inscricao.data_saida).toLocaleString('pt-BR') : "-"}
+
+Este e-mail foi gerado automaticamente.
+
+Atenciosamente,
+FENAPRF
+`;
+
+  await enviarEmailBase(emailDestino, subject, corpo);
+}
+
+// --------------------------
 // Jogos (confirmação / cancelamento)
 // --------------------------
 
@@ -398,6 +461,8 @@ module.exports = {
   enviarEmailBoasVindasUser,
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
+  enviarEmailConfirmacaoInscricaoLogistica,
+  enviarEmailCancelamentoInscricaoLogistica,
   enviarRelatorioAniversariantes,
   enviarEmailRelatorioAssembleia,
   enviarEmailRelatorio,

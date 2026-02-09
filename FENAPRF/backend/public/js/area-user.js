@@ -23,6 +23,7 @@
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
         const { inicializarRelatorios } = window.Relatorios || {};
+        const { inicializarLogistica } = window.Logistica || {};
         const { CMSAdmin } = window || {};
         const { Notificacoes } = window || {};
 
@@ -43,6 +44,7 @@
                 else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
+                else if (abaAlvo === 'sec-logistica' && inicializarLogistica) inicializarLogistica(perfil);
             });
         }
 

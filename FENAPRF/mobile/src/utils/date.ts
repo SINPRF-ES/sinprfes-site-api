@@ -162,6 +162,32 @@ export const formatDateToDdMmYyyy = (text: string): string => {
 };
 
 /**
+ * Formata texto para máscara de data e hora DD/MM/YYYY HH:mm conforme digitação.
+ */
+export const formatDateTimeMask = (text: string): string => {
+  const digits = onlyDigits(text);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  if (digits.length <= 10) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)} ${digits.slice(8)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)} ${digits.slice(8, 10)}:${digits.slice(10, 12)}`;
+};
+
+/**
+ * Converte data e hora brasileira (DD/MM/YYYY HH:mm) para ISO.
+ */
+export const parseBRDateTimeToISO = (brDateTime: string): string | null => {
+  const digits = onlyDigits(brDateTime);
+  if (digits.length < 12) return null;
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+  const hour = digits.slice(8, 10);
+  const minute = digits.slice(10, 12);
+  return `${year}-${month}-${day}T${hour}:${minute}:00`;
+};
+
+/**
  * Calcula a idade detalhada (anos, meses, dias) a partir de uma data de nascimento.
  */
 export const calculateAgeBreakdown = (dateStr: string | null | undefined): string => {

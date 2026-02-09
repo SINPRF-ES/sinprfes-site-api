@@ -40,6 +40,32 @@
     "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
   ];
 
+  const CARGOS_CONSELHO = [
+    "Presidente",
+    "Vice-Presidente",
+    "Delegado Representante",
+    "Delegado Substituto",
+  ];
+
+  const CARGOS_DIRETORIA = [
+    "Presidente da FENAPRF",
+    "Vice-Presidente da FENAPRF",
+    "Diretor de Secretaria",
+    "Diretor de Secretaria Substituto",
+    "Diretor de Finanças",
+    "Diretor de Finanças Substituto",
+    "Diretor de Relações de Trabalho e e Formação Sindical",
+    "Diretor de Relações de Trabalho e e Formação Sindical Substituto",
+    "Diretor Jurídico",
+    "Diretor Jurídico Substituto",
+    "Diretor de Assuntos Institucionais",
+    "Diretor de Assuntos Institucionais Substituto",
+    "Diretor de Comunicação e Divulgação",
+    "Diretor de Comunicação e Divulgação Substituto",
+    "Diretor de Direitos Humanos e Políticas Sociais",
+    "Diretor de Direitos Humanos e Políticas Sociais Substituto",
+  ];
+
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
   const LABELS = {
     [ESTADO_CADASTRO.CADASTRO_ATIVO]: 'Ativo',
@@ -117,6 +143,8 @@
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
     UFS,
+    CARGOS_CONSELHO,
+    CARGOS_DIRETORIA,
     LABELS,
     normalizeSexo,
     normalizePerfil,
