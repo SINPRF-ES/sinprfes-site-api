@@ -103,7 +103,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT DISTINCT pt.expo_push_token
         FROM push_tokens pt
-        JOIN inscricoes_jogos ij ON pt.user_id = ij.user_id
+        JOIN pre_inscricoes_jogos ij ON pt.user_id = ij.user_id
         WHERE pt.revoked_at IS NULL
       `;
       break;
