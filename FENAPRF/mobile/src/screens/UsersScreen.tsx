@@ -24,8 +24,8 @@ export default function UsersScreen({ navigation, route }: any) {
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
-  const [mostrarGestaoInterna, setMostrarGestaoInterna] = useState(false);
+  const [filtroVisualizacao, setFiltroVisualizacao] = useState('PADRAO');
+  const [filtroUf, setFiltroUf] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
@@ -111,34 +111,58 @@ export default function UsersScreen({ navigation, route }: any) {
     const digits = onlyDigits(searchTerm);
 
     let result = users.filter(f => {
-      // Filtro por Nome/CPF
+      // 0. Sempre oculta arquivados na listagem principal (Requisito 5)
+      if (f.arquivado_em) return false;
+
+      // 1. Filtro por Nome/CPF
       const nomeMatch = f._normalizedNome?.includes(term);
       const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
 
-      // Filtro Estado do Cadastro
-      if (ehGestao) {
-        if (filtroCadastro === 'ARQUIVADOS' && !f.arquivado_em) return false;
-        if (filtroCadastro === 'CADASTRO_ATIVO' && f.arquivado_em) return false;
-      }
-
-      // Filtro de perfis ocultos (ADMIN/COLABORADOR)
+      // 2. Filtro de Visualização Avançado
       const perfil = (f.perfil_acesso || '').toUpperCase();
+      const cargo = Canon.normalizeCargo(f.cargo);
+      const uf = (f.uf || '').toUpperCase();
+
       const isInternal = perfil === ROLES.ADMIN || perfil === ROLES.COLABORADOR;
 
-      // Se NÃO estamos mostrando gestão interna, oculta ADMIN e COLABORADOR
-      if (!mostrarGestaoInterna && isInternal) return false;
-
-      // Se ESTAMOS mostrando gestão interna, exibe apenas ADMIN e COLABORADOR?
-      // Ou exibe todos incluindo eles?
-      // A regra diz: "ADMIN e COLABORADOR não aparecem no default. Só aparecem via picker / filtro específico."
-      if (mostrarGestaoInterna && !isInternal) return false;
+      switch (filtroVisualizacao) {
+        case 'PADRAO':
+          // Diretoria + Conselheiros (oculta Admin/Colab)
+          if (isInternal) return false;
+          break;
+        case 'DIRETORIA':
+          if (perfil !== ROLES.DIRETORIA) return false;
+          break;
+        case 'PRESIDENTES':
+          if (cargo !== 'Presidente') return false;
+          break;
+        case 'VICES':
+          if (cargo !== 'Vice-Presidente') return false;
+          break;
+        case 'DR':
+          if (cargo !== 'Delegado Representante') return false;
+          break;
+        case 'DS':
+          if (cargo !== 'Delegado Substituto') return false;
+          break;
+        case 'UF':
+          if (filtroUf && uf !== filtroUf) return false;
+          // Se for filtro por UF, geralmente queremos ver os conselheiros daquela UF
+          if (perfil !== ROLES.CONSELHEIRO) return false;
+          break;
+        case 'ADMIN_COLAB':
+          if (!isInternal) return false;
+          break;
+        default:
+          break;
+      }
 
       return true;
     });
 
     return ordenarMembrosTodos(result);
-  }, [users, searchTerm, ehGestao, filtroCadastro, mostrarGestaoInterna]);
+  }, [users, searchTerm, ehGestao, filtroVisualizacao, filtroUf]);
 
   const handleEdit = useCallback((u: User) => {
     const userId = getCanonicalUserId(u);
@@ -177,25 +201,47 @@ export default function UsersScreen({ navigation, route }: any) {
         )}
       </View>
 
-      {ehGestao && (
-        <View style={styles.filterRow}>
+      <View style={styles.filterRow}>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Visualização:</Text>
+            <PickerWrapper>
+              <Picker
+                selectedValue={filtroVisualizacao}
+                onValueChange={(v) => {
+                    setFiltroVisualizacao(v);
+                    if (v !== 'UF') setFiltroUf('');
+                }}
+                style={styles.picker}
+                mode="dropdown"
+                dropdownIconColor="#003366"
+              >
+                {Canon.FILTROS_MEMBROS.map(f => (
+                  <Picker.Item key={f.value} label={f.label} value={f.value} />
+                ))}
+              </Picker>
+            </PickerWrapper>
+          </View>
+
+          {filtroVisualizacao === 'UF' && (
             <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Visão:</Text>
+              <Text style={styles.filterLabel}>UF:</Text>
               <PickerWrapper>
                 <Picker
-                  selectedValue={mostrarGestaoInterna ? 'INTERNA' : 'PADRAO'}
-                  onValueChange={(v) => setMostrarGestaoInterna(v === 'INTERNA')}
+                  selectedValue={filtroUf}
+                  onValueChange={(v) => setFiltroUf(v)}
                   style={styles.picker}
                   mode="dropdown"
                   dropdownIconColor="#003366"
                 >
-                  <Picker.Item label="Membros" value="PADRAO" />
-                  <Picker.Item label="Gestão Interna (Admin/Colab)" value="INTERNA" />
+                  <Picker.Item label="Todas" value="" />
+                  {Canon.UFS_DETALHADAS.filter(u => u.sigla !== 'BR').map(u => (
+                    <Picker.Item key={u.sigla} label={u.sigla} value={u.sigla} />
+                  ))}
                 </Picker>
               </PickerWrapper>
             </View>
-        </View>
-      )}
+          )}
+      </View>
 
       <FlatList
         data={filteredUsers}

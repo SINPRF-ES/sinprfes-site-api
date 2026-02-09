@@ -104,6 +104,20 @@ export const CARGOS_DIRETORIA = [
 ];
 
 /**
+ * Filtros da página Membros
+ */
+export const FILTROS_MEMBROS = [
+  { value: "PADRAO", label: "Exibição padrão (Diretoria + Conselho)" },
+  { value: "DIRETORIA", label: "Apenas Diretoria" },
+  { value: "PRESIDENTES", label: "Apenas Presidentes" },
+  { value: "VICES", label: "Apenas Vices" },
+  { value: "DR", label: "Delegados Representantes (DR)" },
+  { value: "DS", label: "Delegados Substitutos (DS)" },
+  { value: "UF", label: "Filtrar por UF" },
+  { value: "ADMIN_COLAB", label: "Admin/Colaborador" },
+];
+
+/**
  * Normaliza o Sexo.
  */
 export function normalizeSexo(val: string | null | undefined): Sexo | null {

@@ -80,16 +80,24 @@ const VinculoCard: React.FC<Props> = ({
       <Text style={styles.label}>Cargo</Text>
       <PickerWrapper style={styles.pickerWrapper}>
         <Picker
-          enabled={isGestao}
+          enabled={isGestao && !!user?.perfil_acesso}
           selectedValue={user?.cargo || ''}
           onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val as any } : null))}
           style={styles.picker}
         >
           <Picker.Item label="Selecione um cargo..." value="" />
-          <Picker.Item label="-- CONSELHO --" value="" enabled={false} />
-          {CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)}
-          <Picker.Item label="-- DIRETORIA --" value="" enabled={false} />
-          {CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)}
+          {user?.perfil_acesso === ROLES.CONSELHEIRO && (
+            CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
+          )}
+          {user?.perfil_acesso === ROLES.DIRETORIA && (
+            CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)
+          )}
+          {user?.perfil_acesso === ROLES.COLABORADOR && (
+            <Picker.Item label="Colaborador" value="Colaborador" />
+          )}
+          {user?.perfil_acesso === ROLES.ADMIN && (
+             <Picker.Item label="Administrador" value="Administrador" />
+          )}
         </Picker>
       </PickerWrapper>
 
@@ -160,16 +168,18 @@ const VinculoCard: React.FC<Props> = ({
                 <Text style={styles.label}>Cargo (2º)</Text>
                 <PickerWrapper style={styles.pickerWrapper}>
                     <Picker
-                        enabled={isGestao}
+                        enabled={isGestao && !!user?.perfil_acesso2}
                         selectedValue={user?.cargo2 || ''}
                         onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val as any } : null))}
                         style={styles.picker}
                     >
                         <Picker.Item label="Selecione um cargo..." value="" />
-                        {user.perfil_acesso2 === ROLES.CONSELHEIRO ?
-                            CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />) :
+                        {user.perfil_acesso2 === ROLES.CONSELHEIRO && (
+                            CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
+                        )}
+                        {user.perfil_acesso2 === ROLES.DIRETORIA && (
                             CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)
-                        }
+                        )}
                     </Picker>
                 </PickerWrapper>
             </>

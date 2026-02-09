@@ -85,14 +85,19 @@ export function getBandeiraUF(ufSigla?: string | null, perfil?: string | null): 
   const p = (perfil || "").toUpperCase();
   let uf = (ufSigla || "").trim().toLowerCase();
 
-  if (p === ROLES.DIRETORIA || p === ROLES.COLABORADOR) {
+  // Perfis nacionais usam a bandeira do Brasil
+  if (p === ROLES.DIRETORIA || p === ROLES.COLABORADOR || p === ROLES.ADMIN) {
     uf = "br";
   }
 
   if (!uf) return "";
-  if (uf === "br") return "https://atlasescolar.ibge.gov.br/images/bandeiras/brasil.png";
+
+  // FlagCDN é mais confiável para a bandeira do Brasil
+  if (uf === "br") return "https://flagcdn.com/w160/br.png";
+
   if (uf.length !== 2) return "";
 
+  // Para UFs, o IBGE ainda é a fonte primária, mas vamos garantir que o subdomínio esteja correto
   return `https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/${uf}.png`;
 }
 
