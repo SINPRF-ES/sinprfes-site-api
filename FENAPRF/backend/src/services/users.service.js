@@ -37,22 +37,26 @@ async function buscarUserPorId(id) {
 async function getMe(id) {
   const query = `
     SELECT
-      id, cpf, name, name as nome, email, email as email1,
-      perfil_acesso, situacao, bloqueado,
-      telefone1, telefone2,
-      cep, logradouro, numero, complemento, bairro, cidade, uf,
-      data_nascimento, cargo,
-      avatar_url, avatar_public_id,
-      uf_endereco,
-      created_at, updated_at, ultimo_acesso,
-      arquivado_em, arquivado_motivo, arquivado_por,
-      desarquivado_em, desarquivado_motivo, desarquivado_por,
-      perfil_acesso2, cargo2, uf2,
-      cargo_mandato_inicio, cargo_mandato_fim,
-      sexo,
-      password_hash as senha_hash
-    FROM users
-    WHERE id = $1
+      f.id, f.cpf, f.name, f.name as nome, f.email, f.email as email1,
+      f.perfil_acesso, f.situacao, f.bloqueado,
+      f.telefone1, f.telefone2,
+      f.cep, f.logradouro, f.numero, f.complemento, f.bairro, f.cidade, f.uf,
+      f.data_nascimento, f.cargo,
+      f.avatar_url, f.avatar_public_id,
+      f.uf_endereco,
+      f.created_at, f.updated_at, f.ultimo_acesso,
+      f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
+      u_arq.name as arquivado_por_nome,
+      f.desarquivado_em, f.desarquivado_motivo, f.desarquivado_por,
+      u_des.name as desarquivado_por_nome,
+      f.perfil_acesso2, f.cargo2, f.uf2,
+      f.cargo_mandato_inicio, f.cargo_mandato_fim,
+      f.sexo,
+      f.password_hash as senha_hash
+    FROM users f
+    LEFT JOIN users u_arq ON f.arquivado_por = u_arq.id
+    LEFT JOIN users u_des ON f.desarquivado_por = u_des.id
+    WHERE f.id = $1
     LIMIT 1;
   `;
   const { rows } = await pool.query(query, [id]);
@@ -141,10 +145,13 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
       f.avatar_url,
       f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
       u_arq.name as arquivado_por_nome,
+      f.desarquivado_em, f.desarquivado_motivo, f.desarquivado_por,
+      u_des.name as desarquivado_por_nome,
       f.cargo, f.cargo_mandato_inicio, f.cargo_mandato_fim,
       f.perfil_acesso2, f.cargo2, f.uf2
     FROM users f
     LEFT JOIN users u_arq ON f.arquivado_por = u_arq.id
+    LEFT JOIN users u_des ON f.desarquivado_por = u_des.id
     ${whereSql}
     ORDER BY f.name ASC
   `;
@@ -352,10 +359,19 @@ async function criarUserInicial(dados) {
 /**
  * Arquivar
  */
-async function arquivarUserPorId(id, { motivo }) {
+async function arquivarUserPorId(id, { motivo, atorId }) {
   await pool.query(
-    `UPDATE users SET arquivado_em = NOW(), arquivado_motivo = $1, updated_at = NOW() WHERE id = $2`,
-    [motivo, id]
+    `UPDATE users
+     SET arquivado_em = NOW(),
+         arquivado_motivo = $1,
+         arquivado_por = $2,
+         cargo = NULL,
+         cargo2 = NULL,
+         perfil_acesso2 = NULL,
+         uf2 = NULL,
+         updated_at = NOW()
+     WHERE id = $3`,
+    [motivo, atorId, id]
   );
   return await getMe(id);
 }
@@ -363,10 +379,18 @@ async function arquivarUserPorId(id, { motivo }) {
 /**
  * Desarquivar
  */
-async function desarquivarUserPorId(id) {
+async function desarquivarUserPorId(id, { motivo, atorId }) {
   await pool.query(
-    `UPDATE users SET arquivado_em = NULL, arquivado_motivo = NULL, updated_at = NOW() WHERE id = $1`,
-    [id]
+    `UPDATE users
+     SET arquivado_em = NULL,
+         arquivado_motivo = NULL,
+         arquivado_por = NULL,
+         desarquivado_em = NOW(),
+         desarquivado_motivo = $1,
+         desarquivado_por = $2,
+         updated_at = NOW()
+     WHERE id = $3`,
+    [motivo, atorId, id]
   );
   return await getMe(id);
 }

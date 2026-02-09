@@ -83,13 +83,26 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
           <View style={styles.archiveInfo}>
             <Text style={styles.archiveLabel}>Membro Arquivado</Text>
             <Text style={styles.archiveText}>
-              Arquivado por <Text style={styles.archiveBold}>{member.arquivado_por_nome || 'N/A'}</Text>
+              Arquivado por <Text style={styles.archiveBold}>{member.arquivado_por_nome || '(usuário não encontrado)'}</Text>
             </Text>
             <Text style={styles.archiveText}>
               Em <Text style={styles.archiveBold}>{toBrazilianDate(member.arquivado_em)}</Text>
             </Text>
             <Text style={styles.archiveText}>
               Motivo: <Text style={styles.archiveItalic}>{member.arquivado_motivo || 'Não informado'}</Text>
+            </Text>
+          </View>
+        ) : member.desarquivado_em ? (
+          <View style={[styles.archiveInfo, { backgroundColor: '#f0fff4', borderColor: '#9ae6b4' }]}>
+            <Text style={[styles.archiveLabel, { color: '#2f855a' }]}>Cadastro Reativado</Text>
+            <Text style={[styles.archiveText, { color: '#276749' }]}>
+              Reativado por <Text style={styles.archiveBold}>{member.desarquivado_por_nome || '(usuário não encontrado)'}</Text>
+            </Text>
+            <Text style={[styles.archiveText, { color: '#276749' }]}>
+              Em <Text style={styles.archiveBold}>{toBrazilianDate(member.desarquivado_em)}</Text>
+            </Text>
+            <Text style={[styles.archiveText, { color: '#276749' }]}>
+              Motivo: <Text style={styles.archiveItalic}>{member.desarquivado_motivo || 'Não informado'}</Text>
             </Text>
           </View>
         ) : !['ADMIN', 'COLABORADOR'].includes((member.perfil_acesso || '').toUpperCase()) && (

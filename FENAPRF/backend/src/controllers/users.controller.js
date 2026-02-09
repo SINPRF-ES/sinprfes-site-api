@@ -300,6 +300,7 @@ exports.atualizarUser = async (req, res) => {
   if (idAlvo === null) return;
 
   try {
+    const atorId = req.user.id;
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
@@ -581,10 +582,10 @@ exports.arquivarUser = async (req, res) => {
     const motivo = String(req.body?.motivo || "").trim();
     if (!motivo) return res.status(400).json({ message: "Motivo é obrigatório." });
 
-    const atualizado = await usersService.arquivarUserPorId(idAlvo, { motivo });
+    const atualizado = await usersService.arquivarUserPorId(idAlvo, { motivo, atorId });
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
-    log.info("UserArquivado", { atorId: req.user.id, targetId: idAlvo, requestId: req.requestId });
+    log.info("UserArquivado", { atorId, targetId: idAlvo, requestId: req.requestId });
     return res.json({ message: "Estado do cadastro alterado para: ARQUIVADO.", user: atualizado });
   } catch (err) {
     log.error("UsersArquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
@@ -600,6 +601,7 @@ exports.desarquivarUser = async (req, res) => {
   if (idAlvo === null) return;
 
   try {
+    const atorId = req.user.id;
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
@@ -610,10 +612,13 @@ exports.desarquivarUser = async (req, res) => {
       return res.status(403).json({ message: "Você não tem permissão para desarquivar este perfil." });
     }
 
-    const atualizado = await usersService.desarquivarUserPorId(idAlvo);
+    const motivo = String(req.body?.motivo || "").trim();
+    if (!motivo) return res.status(400).json({ message: "Informe o motivo da reativação." });
+
+    const atualizado = await usersService.desarquivarUserPorId(idAlvo, { motivo, atorId });
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
-    log.info("UserDesarquivado", { atorId: req.user.id, targetId: idAlvo, requestId: req.requestId });
+    log.info("UserDesarquivado", { atorId, targetId: idAlvo, requestId: req.requestId });
     return res.json({ message: "Estado do cadastro alterado para: CADASTRO ATIVO.", user: atualizado });
   } catch (err) {
     log.error("UsersDesarquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
