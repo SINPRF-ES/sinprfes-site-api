@@ -12,14 +12,14 @@
 <body>
   <div id="site-header"></div>
 
-  <main class="page container">
+  <main class="page container" style="max-width: 500px; margin-top: 40px;">
     <section class="card login-card">
-      <h1>Redefinir senha</h1>
-      <p class="page-intro">
-        Defina uma nova senha para sua Página Inicial.
+      <h1 style="text-align: center; color: var(--amarelo);">Redefinir senha</h1>
+      <p class="page-intro" style="text-align: center;">
+        Defina uma nova senha segura para sua conta FENAPRF.
       </p>
 
-      <form id="reset-form" class="form-grid">
+      <form id="reset-form" class="form-grid" style="margin-top: 20px;">
         <div class="form-group form-group-full">
           <label for="senha-nova">Nova senha</label>
           <input
@@ -27,6 +27,7 @@
             id="senha-nova"
             name="senha_nova"
             autocomplete="new-password"
+            placeholder="Mínimo 6 caracteres"
             required
           />
         </div>
@@ -38,21 +39,24 @@
             id="senha-confirma"
             name="senha_confirma"
             autocomplete="new-password"
+            placeholder="Repita a nova senha"
             required
           />
         </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
+        <div class="form-actions" style="margin-top: 20px;">
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
             Salvar nova senha
           </button>
         </div>
       </form>
 
-      <p id="reset-mensagem" class="field-hint"></p>
+      <p id="reset-mensagem" class="field-hint" style="text-align: center; font-weight: bold; margin-top: 15px; min-height: 1.5em;"></p>
 
-      <p class="field-hint">
-        Se este link estiver expirado ou inválido, volte à página de login
+      <hr class="form-separator" />
+
+      <p class="field-hint" style="text-align: center;">
+        Se este link estiver expirado ou inválido, volte à <a href="/login.html" style="color: var(--amarelo); text-decoration: underline;">página de login</a>
         e utilize a opção "Esqueci minha senha" novamente.
       </p>
     </section>

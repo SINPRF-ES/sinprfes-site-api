@@ -77,29 +77,46 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
         </View>
       </View>
 
-      {/* PARTE INFERIOR (MANDATOS) */}
+      {/* PARTE INFERIOR (MANDATOS OU METADADOS DE ARQUIVAMENTO) */}
       <View style={[styles.bottomSection, isDrawer && styles.bottomSectionDrawer]}>
-        <View style={styles.mandateRow}>
-          <View style={styles.mandateCol}>
-            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Início do mandato</Text>
-            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateStart}</Text>
+        {member.arquivado_em ? (
+          <View style={styles.archiveInfo}>
+            <Text style={styles.archiveLabel}>Membro Arquivado</Text>
+            <Text style={styles.archiveText}>
+              Arquivado por <Text style={styles.archiveBold}>{member.arquivado_por_nome || 'N/A'}</Text>
+            </Text>
+            <Text style={styles.archiveText}>
+              Em <Text style={styles.archiveBold}>{toBrazilianDate(member.arquivado_em)}</Text>
+            </Text>
+            <Text style={styles.archiveText}>
+              Motivo: <Text style={styles.archiveItalic}>{member.arquivado_motivo || 'Não informado'}</Text>
+            </Text>
           </View>
-          <View style={styles.mandateCol}>
-            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Fim do mandato</Text>
-            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateEnd}</Text>
-          </View>
-        </View>
+        ) : !['ADMIN', 'COLABORADOR'].includes((member.perfil_acesso || '').toUpperCase()) && (
+          <>
+            <View style={styles.mandateRow}>
+              <View style={styles.mandateCol}>
+                <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Início do mandato</Text>
+                <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateStart}</Text>
+              </View>
+              <View style={styles.mandateCol}>
+                <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Fim do mandato</Text>
+                <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateEnd}</Text>
+              </View>
+            </View>
 
-        <View style={styles.auxInfo}>
-          <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
-            <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo decorrido: </Text>
-            {elapsed}
-          </Text>
-          <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
-            <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo restante: </Text>
-            {remaining}
-          </Text>
-        </View>
+            <View style={styles.auxInfo}>
+              <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
+                <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo decorrido: </Text>
+                {elapsed}
+              </Text>
+              <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
+                <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo restante: </Text>
+                {remaining}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -248,6 +265,30 @@ const styles = StyleSheet.create({
   auxLabel: {
     fontWeight: 'bold',
     color: '#666',
+  },
+  archiveInfo: {
+    padding: 10,
+    backgroundColor: '#fff5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#feb2b2',
+  },
+  archiveLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#c53030',
+    marginBottom: 4,
+  },
+  archiveText: {
+    fontSize: 12,
+    color: '#742a2a',
+    marginBottom: 2,
+  },
+  archiveBold: {
+    fontWeight: 'bold',
+  },
+  archiveItalic: {
+    fontStyle: 'italic',
   },
 });
 
