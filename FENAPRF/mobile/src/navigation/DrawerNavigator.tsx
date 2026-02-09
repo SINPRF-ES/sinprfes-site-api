@@ -11,6 +11,7 @@ import LogsScreen from '../screens/LogsScreen';
 import SegurancaScreen from '../screens/SegurancaScreen';
 import CriarUserScreen from '../screens/CriarUserScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
+import LogisticaScreen from '../screens/LogisticaScreen';
 import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
@@ -76,6 +77,11 @@ const DrawerNavigator = () => {
         name="Publicacoes"
         component={PublicacoesScreen}
         options={{ title: '📚 Publicações' }}
+      />
+      <Drawer.Screen
+        name="Logistica"
+        component={LogisticaScreen}
+        options={{ title: '🚚 Logística' }}
       />
       {ENABLE_JOGOS && (
         <Drawer.Screen

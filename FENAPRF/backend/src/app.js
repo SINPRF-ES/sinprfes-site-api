@@ -71,6 +71,9 @@ const diagnosticoRoutes = require("./routes/diagnostico.routes");
 // 📊 NOVO: Rota de Relatórios
 const reportsRoutes = require("./routes/reports.routes");
 
+// 🚚 NOVO: Rota de Logística
+const logisticaRoutes = require("./routes/logistica.routes");
+
 // ==============================
 // REGISTRO DE ROTAS (Prefixos)
 // ==============================
@@ -110,6 +113,9 @@ app.use("/api/push", pushRoutes);
 
 // 📊 NOVO: Relatórios
 app.use("/api/reports", reportsRoutes);
+
+// 🚚 NOVO: Logística
+app.use("/api/logistica", logisticaRoutes);
 
 // Push de eventos
 app.use("/api/eventos", eventosRoutes);

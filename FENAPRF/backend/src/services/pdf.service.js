@@ -712,9 +712,66 @@ async function gerarPdfRelatorioGlobal(dados) {
   });
 }
 
+async function gerarPdfInscricoesLogistica(evento, inscricoes, options = {}) {
+  const { podeVerCpf = false } = options;
+  const codigo = gerarCodigoVerificacao({ eventoId: evento.id, count: inscricoes.length }, "LOGISTICA");
+
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: "landscape",
+      margins: { top: 120, bottom: 60, left: 50, right: 50 },
+    });
+
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    // Título
+    doc.moveDown(1);
+    doc.font("Helvetica-Bold").fontSize(16).text(`Relatório de Inscrições: ${evento.titulo}`, { align: "center" });
+    doc.font("Helvetica").fontSize(10).text(`Período do Evento: ${formatDateSafe(evento.data_inicio)} a ${formatDateSafe(evento.data_fim)}`, { align: "center" });
+    doc.moveDown(1);
+
+    const headers = ["Nome", "Cargo", "UF", "CPF", "Telefone", "E-mail", "Chegada", "Saída", "Obs."];
+    // A4 Landscape width = 841.89. Margins left 50 + right 50 = 100. Available = 741.89
+    const colWidths = [120, 80, 30, 80, 80, 110, 80, 80, 80];
+
+    const rows = inscricoes.map(i => [
+      i.nome || i.name || "-",
+      i.cargo || "-",
+      i.uf || "-",
+      podeVerCpf ? formatarCPF(i.cpf) : "***.***.***-**",
+      formatarTelefone(i.telefone1 || i.telefone) || "-",
+      i.email || i.email1 || "-",
+      i.data_chegada ? new Date(i.data_chegada).toLocaleString('pt-BR') : "-",
+      i.data_saida ? new Date(i.data_saida).toLocaleString('pt-BR') : "-",
+      i.observacoes || "-"
+    ]);
+
+    drawTableWithPagination(doc, {
+      headers,
+      rows,
+      colWidths,
+      startX: 50,
+      fontSize: 7,
+      rowHeight: 25
+    });
+
+    doc.end();
+  });
+
+  return await aplicarLayoutInstitucional(pdfBuffer, {
+    codigoVerificacao: codigo,
+    tipoDocumento: "Relatório de Logística",
+  });
+}
+
 module.exports = {
   gerarPdfRelatorioAssembleia,
   gerarPdfDossieUser,
   gerarPdfRelatorioAgregado,
-  gerarPdfRelatorioGlobal
+  gerarPdfRelatorioGlobal,
+  gerarPdfInscricoesLogistica
 };

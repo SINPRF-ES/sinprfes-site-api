@@ -31,6 +31,11 @@ const NAV_ITEMS = [
     icon: 'vote-outline',
     screen: 'Votacao',
   },
+  {
+    label: 'Logística',
+    icon: 'truck-delivery-outline',
+    screen: 'Logistica',
+  },
 ];
 
 const GESTAO_ITEMS: any[] = [];
