@@ -18,9 +18,26 @@ const {
   normalizePerfil
 } = require("../../shared/canon");
 
+const PERFIL_RANK = {
+  ADMIN: 100,
+  DIRETORIA: 50,
+  COLABORADOR: 30,
+  CONSELHEIRO: 10
+};
+
 function perfilGestao(perfil) {
   const p = normalizePerfil(perfil);
   return ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(p);
+}
+
+function canEditorEditTarget(editorPerfil, targetPerfil) {
+  const e = (editorPerfil || "").toUpperCase();
+  const t = (targetPerfil || "").toUpperCase();
+  const eRank = PERFIL_RANK[e] || 0;
+  const tRank = PERFIL_RANK[t] || 0;
+
+  if (e === "ADMIN") return true;
+  return eRank > tRank;
 }
 
 async function verificarConflitoCargo(perfil, cargo, uf, userId = null) {
@@ -210,6 +227,14 @@ exports.atualizarUser = async (req, res) => {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
+    const alvo = await usersService.getMe(idAlvo);
+    if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
+
+    // Regra de Hierarquia FENAPRF
+    if (!canEditorEditTarget(perfilAtor, alvo.perfil_acesso)) {
+      return res.status(403).json({ message: "Você não tem permissão para editar este perfil." });
+    }
+
     const body = req.body || {};
 
     log.info("UsersUpdateIniciado", { targetId: idAlvo, loggedId, perfilAtor, bodyKeys: Object.keys(body), requestId: req.requestId });
@@ -239,12 +264,10 @@ exports.atualizarUser = async (req, res) => {
       telefone2: body.telefone2,
       email: body.email || body.email1,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
-      // ViaCEP fields blocked for all in gestao update too
-      // logradouro_bairro: body.logradouro_bairro,
+      // ViaCEP fields blocked for all in FENAPRF
+      // logradouro, bairro, cidade, uf (endereco) are read-only
       numero: body.numero,
       complemento: body.complemento,
-      // cidade: body.cidade,
-      // uf: body.uf,
       cep: body.cep,
       cargo: body.cargo,
       uf: body.uf_voto || body.uf, // preserva se vier como uf_voto ou similar
@@ -256,12 +279,15 @@ exports.atualizarUser = async (req, res) => {
       const novoPerfil = normalizePerfil(body.perfil_acesso);
       if (loggedId === idAlvo) return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
 
-      const alvo = await usersService.getMe(idAlvo);
-      if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
-
       if (perfilAtor !== "ADMIN" && (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN")) {
         return res.status(403).json({ message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN." });
       }
+
+      // Garante que o editor pode atribuir o novo perfil (não pode promover alguém acima de si)
+      if (perfilAtor !== "ADMIN" && PERFIL_RANK[novoPerfil] >= PERFIL_RANK[perfilAtor]) {
+         return res.status(403).json({ message: "Você não pode atribuir um perfil igual ou superior ao seu." });
+      }
+
       payload.perfil_acesso = novoPerfil;
     }
 
@@ -386,6 +412,13 @@ exports.arquivarUser = async (req, res) => {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
+    const alvo = await usersService.getMe(idAlvo);
+    if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
+
+    if (!canEditorEditTarget(perfilAtor, alvo.perfil_acesso)) {
+      return res.status(403).json({ message: "Você não tem permissão para arquivar este perfil." });
+    }
+
     const motivo = String(req.body?.motivo || "").trim();
     if (!motivo) return res.status(400).json({ message: "Motivo é obrigatório." });
 
@@ -410,6 +443,13 @@ exports.desarquivarUser = async (req, res) => {
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+
+    const alvo = await usersService.getMe(idAlvo);
+    if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
+
+    if (!canEditorEditTarget(perfilAtor, alvo.perfil_acesso)) {
+      return res.status(403).json({ message: "Você não tem permissão para desarquivar este perfil." });
+    }
 
     const atualizado = await usersService.desarquivarUserPorId(idAlvo);
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });

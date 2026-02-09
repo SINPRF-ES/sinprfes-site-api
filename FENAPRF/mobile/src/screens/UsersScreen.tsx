@@ -11,21 +11,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeText } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
-import { getCanonicalUserId, isGestao, ROLES, CARGO_RANK, ordenarMembrosTodos, tituloCargoUf } from '../utils/userUtils';
+import { getCanonicalUserId, isGestao, ROLES, ordenarMembrosTodos, tituloCargoUf } from '../utils/userUtils';
 import * as Canon from '../utils/canon';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
-import { Modal, ScrollView, Button as RNButton } from 'react-native';
+import PickerWrapper from '../components/PickerWrapper';
+import { Modal, ScrollView } from 'react-native';
 
 export default function UsersScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
-  const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
-  const [mostrarGestaoInterna, setMostrarGestaoInterna] = useState(false);
+  const [filtroVisualizacao, setFiltroVisualizacao] = useState('PADRAO');
+  const [filtroUf, setFiltroUf] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
@@ -45,7 +45,7 @@ export default function UsersScreen({ navigation, route }: any) {
 
       const data = await getUsers(params);
 
-      // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter (Bolt ⚡)
+      // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter
       const processedData = data.map((f: User) => {
         const item = ehGestao ? f : {
           id: f.id,
@@ -53,11 +53,16 @@ export default function UsersScreen({ navigation, route }: any) {
           telefone1: f.telefone1,
           avatar_url: f.avatar_url,
           situacao: f.situacao,
+          uf: f.uf,
+          cargo: f.cargo,
+          perfil_acesso: f.perfil_acesso,
+          cargo_mandato_inicio: f.cargo_mandato_inicio,
+          cargo_mandato_fim: f.cargo_mandato_fim
         };
 
         return {
           ...item,
-          _normalizedNome: normalizeText(f.name),
+          _normalizedNome: normalizeText(f.name || f.nome || ''),
           _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
         };
       });
@@ -82,7 +87,7 @@ export default function UsersScreen({ navigation, route }: any) {
           const actions: MenuAction[] = [];
           if (ehGestao) {
             actions.push({
-              label: 'Novo Membro',
+              label: 'Novo membro',
               icon: 'account-plus',
               onPress: () => navigation.navigate('CriarUser')
             });
@@ -90,8 +95,6 @@ export default function UsersScreen({ navigation, route }: any) {
           return <HeaderMenu actions={actions} />;
         }
       });
-      // Dispara o fetch. Como removemos o useEffect redundante,
-      // este é o único gatilho de carga inicial e refresh por foco.
       fetchData(true);
     }, [fetchData, ehGestao])
   );
@@ -108,37 +111,61 @@ export default function UsersScreen({ navigation, route }: any) {
     const digits = onlyDigits(searchTerm);
 
     let result = users.filter(f => {
-      // Filtro por Nome/CPF usando campos pré-calculados (Bolt ⚡)
+      // 0. Sempre oculta arquivados na listagem principal (Requisito 5)
+      if (f.arquivado_em) return false;
+
+      // 1. Filtro por Nome/CPF
       const nomeMatch = f._normalizedNome?.includes(term);
       const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
 
-      // Filtro Situação Funcional
-      if (filtroFuncional !== 'TODOS') {
-        const situacao = Canon.normalizeSituacaoFuncional(f.situacao_funcional || f.situacao || 'ATIVO');
-        if (situacao !== filtroFuncional) return false;
-      }
-
-      // Filtro Estado do Cadastro (local filter additionally)
-      if (ehGestao) {
-        if (filtroCadastro === 'ARQUIVADOS' && !f.arquivado_em) return false;
-        if (filtroCadastro === 'CADASTRO_ATIVO' && f.arquivado_em) return false;
-      }
-
-      // Filtro de perfis ocultos (ADMIN/COLABORADOR)
+      // 2. Filtro de Visualização Avançado
       const perfil = (f.perfil_acesso || '').toUpperCase();
+      const cargo = Canon.normalizeCargo(f.cargo);
+      const uf = (f.uf || '').toUpperCase();
+
       const isInternal = perfil === ROLES.ADMIN || perfil === ROLES.COLABORADOR;
-      if (isInternal && !mostrarGestaoInterna) return false;
+
+      switch (filtroVisualizacao) {
+        case 'PADRAO':
+          // Diretoria + Conselheiros (oculta Admin/Colab)
+          if (isInternal) return false;
+          break;
+        case 'DIRETORIA':
+          if (perfil !== ROLES.DIRETORIA) return false;
+          break;
+        case 'PRESIDENTES':
+          if (cargo !== 'Presidente') return false;
+          break;
+        case 'VICES':
+          if (cargo !== 'Vice-Presidente') return false;
+          break;
+        case 'DR':
+          if (cargo !== 'Delegado Representante') return false;
+          break;
+        case 'DS':
+          if (cargo !== 'Delegado Substituto') return false;
+          break;
+        case 'UF':
+          if (filtroUf && uf !== filtroUf) return false;
+          // Se for filtro por UF, geralmente queremos ver os conselheiros daquela UF
+          if (perfil !== ROLES.CONSELHEIRO) return false;
+          break;
+        case 'ADMIN_COLAB':
+          if (!isInternal) return false;
+          break;
+        default:
+          break;
+      }
 
       return true;
     });
 
-    // Ordenação Avançada: Diretoria (Rank) -> Conselheiros (UF)
     return ordenarMembrosTodos(result);
-  }, [users, searchTerm, ehGestao, filtroCadastro, filtroFuncional, mostrarGestaoInterna]);
+  }, [users, searchTerm, ehGestao, filtroVisualizacao, filtroUf]);
 
-  const handleEdit = useCallback((user: User) => {
-    const userId = getCanonicalUserId(user);
+  const handleEdit = useCallback((u: User) => {
+    const userId = getCanonicalUserId(u);
     logger.info('NAVIGATE_TO_EDITAR_USER', { userId });
     navigation.navigate('EditarUser', { userId });
   }, [navigation]);
@@ -163,7 +190,7 @@ export default function UsersScreen({ navigation, route }: any) {
         <MaterialCommunityIcons name="magnify" size={24} color="#666" />
         <TextInput
           style={styles.searchInput}
-          placeholder={ehGestao ? "Buscar por nome ou CPF..." : "Buscar por nome..."}
+          placeholder="Buscar membros..."
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
@@ -175,47 +202,51 @@ export default function UsersScreen({ navigation, route }: any) {
       </View>
 
       <View style={styles.filterRow}>
-        {ehGestao && (
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Visão:</Text>
-            <View style={styles.pickerWrapper}>
+            <Text style={styles.filterLabel}>Visualização:</Text>
+            <PickerWrapper>
               <Picker
-                selectedValue={mostrarGestaoInterna ? 'INTERNA' : 'PADRAO'}
-                onValueChange={(v) => setMostrarGestaoInterna(v === 'INTERNA')}
+                selectedValue={filtroVisualizacao}
+                onValueChange={(v) => {
+                    setFiltroVisualizacao(v);
+                    if (v !== 'UF') setFiltroUf('');
+                }}
                 style={styles.picker}
                 mode="dropdown"
                 dropdownIconColor="#003366"
               >
-                <Picker.Item label="Membros" value="PADRAO" />
-                <Picker.Item label="Gestão Interna" value="INTERNA" />
+                {Canon.FILTROS_MEMBROS.map(f => (
+                  <Picker.Item key={f.value} label={f.label} value={f.value} />
+                ))}
               </Picker>
+            </PickerWrapper>
+          </View>
+
+          {filtroVisualizacao === 'UF' && (
+            <View style={styles.filterGroup}>
+              <Text style={styles.filterLabel}>UF:</Text>
+              <PickerWrapper>
+                <Picker
+                  selectedValue={filtroUf}
+                  onValueChange={(v) => setFiltroUf(v)}
+                  style={styles.picker}
+                  mode="dropdown"
+                  dropdownIconColor="#003366"
+                >
+                  <Picker.Item label="Todas" value="" />
+                  {Canon.UFS_DETALHADAS.filter(u => u.sigla !== 'BR').map(u => (
+                    <Picker.Item key={u.sigla} label={u.sigla} value={u.sigla} />
+                  ))}
+                </Picker>
+              </PickerWrapper>
             </View>
-          </View>
-        )}
-        <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Situação:</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={filtroFuncional}
-              onValueChange={(v) => v && setFiltroFuncional(v)}
-              style={styles.picker}
-              mode="dropdown"
-              dropdownIconColor="#003366"
-            >
-              <Picker.Item label="Todos" value="TODOS" />
-              {Object.values(Canon.SITUACAO_FUNCIONAL).map(s => (
-                <Picker.Item key={s} label={Canon.LABELS[s]} value={s} />
-              ))}
-            </Picker>
-          </View>
-        </View>
+          )}
       </View>
 
       <FlatList
         data={filteredUsers}
         keyExtractor={item => item.id}
         renderItem={renderItem}
-        // Otimizações de performance para listas longas (Bolt ⚡)
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
@@ -283,7 +314,7 @@ export default function UsersScreen({ navigation, route }: any) {
                     }}
                   >
                     <MaterialCommunityIcons name="pencil" size={20} color="#fff" />
-                    <Text style={styles.editButtonText}>Editar Membro</Text>
+                    <Text style={styles.editButtonText}>Editar membro</Text>
                   </TouchableOpacity>
                 </View>
               )}

@@ -58,7 +58,7 @@ const CustomDrawerContent = (props) => {
             />
           )}
           <DrawerItem
-            label="👤 Novo Membro"
+            label="👤 Novo membro"
             onPress={() => props.navigation.navigate('CriarUser')}
           />
           <DrawerItem
