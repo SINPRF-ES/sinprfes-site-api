@@ -3,7 +3,7 @@ import { logger } from '../infra/logger';
 
 export const getEventosLogistica = async (status?: string) => {
     try {
-        const response = await api.get('/logistica/eventos', { params: { status } });
+        const response = await api.get('/api/logistica/eventos', { params: { status } });
         return response.data;
     } catch (err) {
         logger.error('logisticaService.getEventos', err);
@@ -13,7 +13,7 @@ export const getEventosLogistica = async (status?: string) => {
 
 export const criarEventoLogistica = async (dados: any) => {
     try {
-        const response = await api.post('/logistica/eventos', dados);
+        const response = await api.post('/api/logistica/eventos', dados);
         return response.data;
     } catch (err) {
         logger.error('logisticaService.criarEvento', err);
@@ -23,7 +23,7 @@ export const criarEventoLogistica = async (dados: any) => {
 
 export const atualizarEventoLogistica = async (id: string, dados: any) => {
     try {
-        const response = await api.put(`/logistica/eventos/${id}`, dados);
+        const response = await api.put(`/api/logistica/eventos/${id}`, dados);
         return response.data;
     } catch (err) {
         logger.error('logisticaService.atualizarEvento', err);
@@ -33,7 +33,7 @@ export const atualizarEventoLogistica = async (id: string, dados: any) => {
 
 export const getInscricoesLogistica = async (eventoId: string) => {
     try {
-        const response = await api.get(`/logistica/eventos/${eventoId}/inscricoes`);
+        const response = await api.get(`/api/logistica/eventos/${eventoId}/inscricoes`);
         return response.data;
     } catch (err) {
         logger.error('logisticaService.getInscricoes', err);
@@ -43,7 +43,7 @@ export const getInscricoesLogistica = async (eventoId: string) => {
 
 export const registrarMinhaInscricaoLogistica = async (dados: any) => {
     try {
-        const response = await api.post('/logistica/inscricoes', dados);
+        const response = await api.post('/api/logistica/inscricoes', dados);
         return response.data;
     } catch (err) {
         logger.error('logisticaService.registrarInscricao', err);
@@ -53,7 +53,7 @@ export const registrarMinhaInscricaoLogistica = async (dados: any) => {
 
 export const cancelarMinhaInscricaoLogistica = async (eventoId: string) => {
     try {
-        const response = await api.delete(`/logistica/eventos/${eventoId}/minha-inscricao`);
+        const response = await api.delete(`/api/logistica/eventos/${eventoId}/minha-inscricao`);
         return response.data;
     } catch (err) {
         logger.error('logisticaService.cancelarMinhaInscricao', err);
@@ -63,7 +63,7 @@ export const cancelarMinhaInscricaoLogistica = async (eventoId: string) => {
 
 export const atualizarInscricaoTerceiroLogistica = async (id: string, dados: any) => {
     try {
-        const response = await api.put(`/logistica/inscricoes/${id}`, dados);
+        const response = await api.put(`/api/logistica/inscricoes/${id}`, dados);
         return response.data;
     } catch (err) {
         logger.error('logisticaService.atualizarInscricaoTerceiro', err);
@@ -73,7 +73,7 @@ export const atualizarInscricaoTerceiroLogistica = async (id: string, dados: any
 
 export const cancelarInscricaoTerceiroLogistica = async (id: string, dados: any) => {
     try {
-        const response = await api.delete(`/logistica/inscricoes/${id}`, { data: dados });
+        const response = await api.delete(`/api/logistica/inscricoes/${id}`, { data: dados });
         return response.data;
     } catch (err) {
         logger.error('logisticaService.cancelarInscricaoTerceiro', err);

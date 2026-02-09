@@ -17,10 +17,12 @@ import { isGestao as checkIsGestao, ROLES } from '../utils/user';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { normalizeNome } from '../utils/user';
 
-const initialUserState: Partial<User> = {
+const initialUserState: any = {
+  nome: '',
   name: '',
   sexo: null,
   cpf: '',
+  email1: '',
   email: '',
   telefone1: '',
   telefone2: '',
@@ -59,7 +61,10 @@ export default function CriarUserScreen({ navigation }: any) {
       return;
     }
 
-    if (!user.name || !user.cpf || !user.email || !user.telefone1) {
+    const nomeEfetivo = user.nome || user.name;
+    const emailEfetivo = user.email1 || user.email;
+
+    if (!nomeEfetivo || !user.cpf || !emailEfetivo || !user.telefone1) {
       Alert.alert('Erro de Validação', 'Nome, CPF, Email e Telefone são obrigatórios.');
       return;
     }
@@ -71,18 +76,38 @@ export default function CriarUserScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-      const payload = { ...user };
+      // Sanitização e normalização do payload
+      const payload: any = {
+          nome: normalizeNome(user.nome || user.name || ''),
+          name: normalizeNome(user.nome || user.name || ''),
+          cpf: onlyDigits(user.cpf || ''),
+          email1: user.email1 || user.email,
+          email: user.email1 || user.email,
+          sexo: user.sexo || null,
+          telefone1: onlyDigits(user.telefone1 || ''),
+          telefone2: onlyDigits(user.telefone2 || ''),
+          cep: onlyDigits(user.cep || ''),
+          logradouro: user.logradouro,
+          numero: user.numero,
+          complemento: user.complemento,
+          cidade: user.cidade,
+          uf: user.uf || 'BR',
+          perfil_acesso: user.perfil_acesso,
+          cargo: user.cargo,
+      };
 
-      // Normalização
-      if (payload.name) payload.name = normalizeNome(payload.name);
-      if ((payload.sexo as any) === '') payload.sexo = null;
-      if (payload.cpf) payload.cpf = onlyDigits(payload.cpf);
-      if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
-      if (payload.telefone2) payload.telefone2 = onlyDigits(payload.telefone2);
-      if (payload.cep) payload.cep = onlyDigits(payload.cep);
+      if (user.data_nascimento) {
+        payload.data_nascimento = toISODate(user.data_nascimento) || (user.data_nascimento as any);
+      }
 
-      if (payload.data_nascimento) {
-        payload.data_nascimento = toISODate(payload.data_nascimento) || (payload.data_nascimento as any);
+      // Regras de negócio FENAPRF para limpeza de campos do conselho
+      const isConselho = ['CONSELHEIRO', 'DIRETORIA'].includes(user.perfil_acesso as string || '');
+      if (isConselho) {
+          payload.cargo_mandato_inicio = user.cargo_mandato_inicio ? toISODate(user.cargo_mandato_inicio) || user.cargo_mandato_inicio : null;
+          payload.cargo_mandato_fim = user.cargo_mandato_fim ? toISODate(user.cargo_mandato_fim) || user.cargo_mandato_fim : null;
+          payload.perfil_acesso2 = user.perfil_acesso2 || null;
+          payload.cargo2 = user.cargo2 || null;
+          payload.uf2 = user.uf2 || null;
       }
 
       await api.post('/api/users', payload);

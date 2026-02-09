@@ -13,28 +13,29 @@ import { logNavigation } from '../infra/logger';
 import type { RootStackParamList } from '../navigation';
 import { Image } from 'react-native';
 import MemberCard from '../components/MemberCard';
+import { EMOJIS } from '../utils/emoji';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const NAV_ITEMS = [
   {
     label: 'Meus Dados',
-    icon: 'account-details-outline',
+    emoji: EMOJIS.MEUS_DADOS,
     screen: 'MeusDados',
   },
   {
     label: 'Buscar Membros',
-    icon: 'account-search-outline',
+    emoji: EMOJIS.MEMBROS,
     screen: 'Users',
   },
    {
     label: 'Assembleias e Votações',
-    icon: 'vote-outline',
+    emoji: EMOJIS.VOTACOES,
     screen: 'Votacao',
   },
   {
     label: 'Logística',
-    icon: 'truck-delivery-outline',
+    emoji: EMOJIS.LOGISTICA,
     screen: 'Logistica',
   },
 ];
@@ -86,7 +87,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             accessibilityRole="link"
             accessibilityLabel={item.label}
           >
-            <MaterialCommunityIcons name={item.icon as any} size={40} color="#003366" />
+            <Text style={{ fontSize: 40 }}>{item.emoji}</Text>
             <Text style={styles.cardLabel}>{item.label}</Text>
           </TouchableOpacity>
         ))}

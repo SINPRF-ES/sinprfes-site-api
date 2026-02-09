@@ -186,7 +186,7 @@ async function atualizarDadosProprios(id, dados) {
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
-  addCampo("uf", dados.uf);
+  // addCampo("uf", dados.uf); // Removido para evitar duplicidade com o campo de vínculo funcional
 
   if (dados.cep !== undefined) {
     addCampo("cep", normalizarCep(dados.cep));

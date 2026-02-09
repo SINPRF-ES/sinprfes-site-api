@@ -43,6 +43,16 @@ const VinculoCard: React.FC<Props> = ({
     }
   };
 
+  const isConselheiro = (user?.perfil_acesso as string) === ROLES.CONSELHEIRO;
+  const isDiretoria = (user?.perfil_acesso as string) === ROLES.DIRETORIA;
+  const isColaborador = (user?.perfil_acesso as string) === ROLES.COLABORADOR;
+  const isAdmin = (user?.perfil_acesso as string) === ROLES.ADMIN;
+
+  const showCargo = isConselheiro || isDiretoria;
+  const showUF = isConselheiro;
+  const showMandato = isConselheiro || isDiretoria;
+  const showSegundoVinculo = isConselheiro || isDiretoria;
+
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Vínculo e Mandato</Text>
@@ -53,7 +63,32 @@ const VinculoCard: React.FC<Props> = ({
           enabled={!isSelf && (canChangeAdmin || !targetIsAdmin)}
           selectedValue={user?.perfil_acesso || ''}
           onValueChange={(val) => {
-              setUser(f => (f ? { ...f, perfil_acesso: val as any, cargo: '' } : null));
+              setUser(f => {
+                  if (!f) return null;
+                  const newProfile = val as any;
+                  const newState = { ...f, perfil_acesso: newProfile };
+
+                  // Limpeza e regras automáticas de UF por perfil
+                  if (newProfile === ROLES.ADMIN || newProfile === ROLES.COLABORADOR || newProfile === ROLES.DIRETORIA) {
+                      newState.uf = 'BR';
+                  } else if (newProfile === ROLES.CONSELHEIRO && f.uf === 'BR') {
+                      newState.uf = '';
+                  }
+
+                  // Limpeza de campos não aplicáveis
+                  if (newProfile === ROLES.ADMIN || newProfile === ROLES.COLABORADOR) {
+                      newState.cargo = newProfile === ROLES.ADMIN ? 'Administrador' : 'Colaborador';
+                      newState.cargo_mandato_inicio = '';
+                      newState.cargo_mandato_fim = '';
+                      newState.perfil_acesso2 = '';
+                      newState.cargo2 = '';
+                      newState.uf2 = '';
+                  } else {
+                      newState.cargo = '';
+                  }
+
+                  return newState;
+              });
           }}
           style={styles.picker}
         >
@@ -64,46 +99,54 @@ const VinculoCard: React.FC<Props> = ({
         </Picker>
       </PickerWrapper>
 
-      <Text style={styles.label}>Cargo</Text>
-      <PickerWrapper style={styles.pickerWrapper}>
-        <Picker
-          enabled={isGestao && !!user?.perfil_acesso}
-          selectedValue={user?.cargo || ''}
-          onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val as any } : null))}
-          style={styles.picker}
-        >
-          <Picker.Item label="Selecione um cargo..." value="" />
-          {user?.perfil_acesso === ROLES.CONSELHEIRO && (
-            CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
-          )}
-          {user?.perfil_acesso === ROLES.DIRETORIA && (
-            CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)
-          )}
-          {user?.perfil_acesso === ROLES.COLABORADOR && (
-            <Picker.Item label="Colaborador" value="Colaborador" />
-          )}
-          {user?.perfil_acesso === ROLES.ADMIN && (
-             <Picker.Item label="Administrador" value="Administrador" />
-          )}
-        </Picker>
-      </PickerWrapper>
+      {showCargo && (
+        <>
+          <Text style={styles.label}>Cargo</Text>
+          <PickerWrapper style={styles.pickerWrapper}>
+            <Picker
+              enabled={isGestao}
+              selectedValue={user?.cargo || ''}
+              onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val as any } : null))}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione um cargo..." value="" />
+              {isConselheiro && (
+                CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
+              )}
+              {isDiretoria && (
+                CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)
+              )}
+            </Picker>
+          </PickerWrapper>
+        </>
+      )}
 
-      <Text style={styles.label}>UF de Atuação</Text>
-      <PickerWrapper style={styles.pickerWrapper}>
-        <Picker
-          enabled={isGestao}
-          selectedValue={user?.uf || ''}
-          onValueChange={(val) => setUser(f => (f ? { ...f, uf: val as any } : null))}
-          style={styles.picker}
-        >
-          <Picker.Item label="Selecione..." value="" />
-          {UFS.map(uf => (
-            <Picker.Item key={uf} label={uf} value={uf} />
-          ))}
-        </Picker>
-      </PickerWrapper>
+      {showUF ? (
+        <>
+          <Text style={styles.label}>UF de Atuação</Text>
+          <PickerWrapper style={styles.pickerWrapper}>
+            <Picker
+              enabled={isGestao}
+              selectedValue={user?.uf || ''}
+              onValueChange={(val) => setUser(f => (f ? { ...f, uf: val as any } : null))}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione..." value="" />
+              {UFS.map(uf => (
+                <Picker.Item key={uf} label={uf} value={uf} />
+              ))}
+            </Picker>
+          </PickerWrapper>
+        </>
+      ) : (
+        <View style={{ marginBottom: 15 }}>
+            <Text style={styles.label}>UF de Atuação</Text>
+            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333' }}>{user?.uf || 'BR'}</Text>
+        </View>
+      )}
 
-      <View style={styles.row}>
+      {showMandato && (
+        <View style={styles.row}>
         <View style={styles.col}>
           <Text style={styles.label}>Início Mandato</Text>
           <TextInput
@@ -131,64 +174,89 @@ const VinculoCard: React.FC<Props> = ({
           />
         </View>
       </View>
+      )}
 
       {/* SEGUNDO VÍNCULO */}
-      <View style={{ marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#eee' }}>
-        <Text style={[styles.cardTitle, { fontSize: 16 }]}>Segundo Vínculo (Opcional)</Text>
+      {showSegundoVinculo && (
+        <View style={{ marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#eee' }}>
+            <Text style={[styles.cardTitle, { fontSize: 16 }]}>Segundo Vínculo (Opcional)</Text>
 
-        <Text style={styles.label}>Perfil de Acesso (2º)</Text>
-        <PickerWrapper style={styles.pickerWrapper}>
-            <Picker
-                enabled={!isSelf}
-                selectedValue={user?.perfil_acesso2 || ''}
-                onValueChange={(val) => {
-                    setUser(f => (f ? { ...f, perfil_acesso2: val as any, cargo2: '' } : null));
-                }}
-                style={styles.picker}
-            >
-                <Picker.Item label="Nenhum" value="" />
-                <Picker.Item label="Conselheiro" value={ROLES.CONSELHEIRO} />
-                <Picker.Item label="Diretoria" value={ROLES.DIRETORIA} />
-            </Picker>
-        </PickerWrapper>
+            <Text style={styles.label}>Perfil de Acesso (2º)</Text>
+            <PickerWrapper style={styles.pickerWrapper}>
+                <Picker
+                    enabled={!isSelf}
+                    selectedValue={user?.perfil_acesso2 || ''}
+                    onValueChange={(val) => {
+                        setUser(f => {
+                            if (!f) return null;
+                            const newP2 = val as any;
+                            const newState = { ...f, perfil_acesso2: newP2, cargo2: '' };
+                            if (newP2 === ROLES.DIRETORIA) {
+                                newState.uf2 = 'BR';
+                            } else if (newP2 === ROLES.CONSELHEIRO) {
+                                newState.uf2 = f.uf2 === 'BR' ? '' : f.uf2;
+                            } else {
+                                newState.uf2 = '';
+                                newState.cargo2 = '';
+                            }
+                            return newState;
+                        });
+                    }}
+                    style={styles.picker}
+                >
+                    <Picker.Item label="Nenhum" value="" />
+                    <Picker.Item label="Conselheiro" value={ROLES.CONSELHEIRO} />
+                    <Picker.Item label="Diretoria" value={ROLES.DIRETORIA} />
+                </Picker>
+            </PickerWrapper>
 
-        {user?.perfil_acesso2 ? (
-            <>
-                <Text style={styles.label}>Cargo (2º)</Text>
-                <PickerWrapper style={styles.pickerWrapper}>
-                    <Picker
-                        enabled={isGestao && !!user?.perfil_acesso2}
-                        selectedValue={user?.cargo2 || ''}
-                        onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val as any } : null))}
-                        style={styles.picker}
-                    >
-                        <Picker.Item label="Selecione um cargo..." value="" />
-                        {user.perfil_acesso2 === ROLES.CONSELHEIRO && (
-                            CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
-                        )}
-                        {user.perfil_acesso2 === ROLES.DIRETORIA && (
-                            CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)
-                        )}
-                    </Picker>
-                </PickerWrapper>
+            {user?.perfil_acesso2 ? (
+                <>
+                    <Text style={styles.label}>Cargo (2º)</Text>
+                    <PickerWrapper style={styles.pickerWrapper}>
+                        <Picker
+                            enabled={isGestao && !!user?.perfil_acesso2}
+                            selectedValue={user?.cargo2 || ''}
+                            onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val as any } : null))}
+                            style={styles.picker}
+                        >
+                            <Picker.Item label="Selecione um cargo..." value="" />
+                            {user.perfil_acesso2 === ROLES.CONSELHEIRO && (
+                                CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
+                            )}
+                            {user.perfil_acesso2 === ROLES.DIRETORIA && (
+                                CARGOS_DIRETORIA.map(c => <Picker.Item key={c} label={c} value={c} />)
+                            )}
+                        </Picker>
+                    </PickerWrapper>
 
-                <Text style={styles.label}>UF (2º)</Text>
-                <PickerWrapper style={styles.pickerWrapper}>
-                    <Picker
-                        enabled={isGestao}
-                        selectedValue={user?.uf2 || ''}
-                        onValueChange={(val) => setUser(f => (f ? { ...f, uf2: val as any } : null))}
-                        style={styles.picker}
-                    >
-                        <Picker.Item label="Selecione..." value="" />
-                        {UFS.map(uf => (
-                            <Picker.Item key={uf} label={uf} value={uf} />
-                        ))}
-                    </Picker>
-                </PickerWrapper>
-            </>
-        ) : null}
-      </View>
+                    {user.perfil_acesso2 === ROLES.CONSELHEIRO ? (
+                        <>
+                            <Text style={styles.label}>UF (2º)</Text>
+                            <PickerWrapper style={styles.pickerWrapper}>
+                                <Picker
+                                    enabled={isGestao}
+                                    selectedValue={user?.uf2 || ''}
+                                    onValueChange={(val) => setUser(f => (f ? { ...f, uf2: val as any } : null))}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Selecione..." value="" />
+                                    {UFS.map(uf => (
+                                        <Picker.Item key={uf} label={uf} value={uf} />
+                                    ))}
+                                </Picker>
+                            </PickerWrapper>
+                        </>
+                    ) : (
+                        <View style={{ marginBottom: 15 }}>
+                            <Text style={styles.label}>UF (2º)</Text>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333' }}>{user?.uf2 || 'BR'}</Text>
+                        </View>
+                    )}
+                </>
+            ) : null}
+        </View>
+      )}
     </View>
   );
 };

@@ -23,6 +23,7 @@ import { isGestao, isDiretoria } from '../utils/user';
 import { ENABLE_JOGOS, ENABLE_PUSH } from '../config/features';
 import { logger } from '../infra/logger';
 import { useEffect } from 'react';
+import { EMOJIS } from '../utils/emoji';
 
 const Drawer = createDrawerNavigator();
 
@@ -62,60 +63,58 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: '🏠 Página Inicial' }}
+        options={{ title: `${EMOJIS.HOME} Página Inicial` }}
       />
       <Drawer.Screen
         name="MeusDados"
         component={MeusDadosScreen}
-        options={{ title: '👤 Meus Dados' }}
+        options={{ title: `${EMOJIS.MEUS_DADOS} Meus Dados` }}
       />
       <Drawer.Screen
         name="Users"
         component={UsersScreen}
-        options={{ title: '👥 Membros' }}
+        options={{ title: `${EMOJIS.MEMBROS} Membros` }}
       />
       <Drawer.Screen
         name="Publicacoes"
         component={PublicacoesScreen}
         options={{
-          title: 'Publicações',
-          drawerIcon: ({ color, size }) => <Ionicons name="library-outline" size={size} color={color} />
+          title: `${EMOJIS.PUBLICACOES} Publicações`,
         }}
       />
       <Drawer.Screen
         name="Logistica"
         component={LogisticaScreen}
         options={{
-          title: 'Logística',
-          drawerIcon: ({ color, size }) => <MaterialCommunityIcons name="truck-delivery-outline" size={size} color={color} />
+          title: `${EMOJIS.LOGISTICA} Logística`,
         }}
       />
       {ENABLE_JOGOS && (
         <Drawer.Screen
           name="Jogos2026"
           component={JogosScreen}
-          options={{ title: '🏆 Jogos 2026' }}
+          options={{ title: `${EMOJIS.JOGOS} Jogos 2026` }}
         />
       )}
       <Drawer.Screen
         name="Votacao"
         component={AssembleiaStack}
-        options={{ title: '🗳️ Assembleias e Votações', headerShown: false }}
+        options={{ title: `${EMOJIS.VOTACOES} Assembleias e Votações`, headerShown: false }}
       />
       <Drawer.Screen
         name="Estatuto"
         component={EstatutoScreen}
-        options={{ title: '⚖️ Estatuto' }}
+        options={{ title: `${EMOJIS.ESTATUTO} Estatuto` }}
       />
       <Drawer.Screen
         name="Seguranca"
         component={SegurancaScreen}
-        options={{ title: '🛡️ Segurança' }}
+        options={{ title: `${EMOJIS.SEGURANCA} Segurança` }}
       />
       <Drawer.Screen
         name="Atualizacoes"
         component={AtualizacoesScreen}
-        options={{ title: '🔄 Atualizações' }}
+        options={{ title: `${EMOJIS.ATUALIZACOES} Atualizações` }}
       />
       {/* Tela de Diagnóstico/Logs - Aberto para todos para depuração */}
       <Drawer.Screen
@@ -131,7 +130,7 @@ const DrawerNavigator = () => {
           <Drawer.Screen
             name="Relatorios"
             component={RelatoriosScreen}
-            options={{ title: '📊 Relatórios' }}
+            options={{ title: `${EMOJIS.RELATORIOS} Relatórios` }}
           />
           {ENABLE_PUSH && (
             <Drawer.Screen

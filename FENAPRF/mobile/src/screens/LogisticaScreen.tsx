@@ -31,7 +31,7 @@ import {
 import { STATUS_EVENTO, verificarConflitosUF } from '../constants/logistica';
 import { isGestao, getCanonicalUserId, UF_NOME } from '../utils/user';
 import { formatDateTimeMask, parseBRDateTimeToISO, formatISOToBRDateTime } from '../utils/date';
-import { formatCPF, formatTelefone } from '../utils/format';
+import { formatCpf, formatTelefone } from '../utils/format';
 import api from '../services/apiService';
 import SafeScreen from '../components/SafeScreen';
 
@@ -506,7 +506,7 @@ const LogisticaScreen = () => {
                       hasConflict && styles.tableRowConflict
                     ]}>
                       <View style={[styles.cell, { width: 180 }]}>
-                        <Text style={styles.cellText}>{item.nome}</Text>
+                        <Text style={styles.cellText}>{item.nome || item.name}</Text>
                         {hasConflict && (
                             <TouchableOpacity
                                 style={styles.conflictBadge}

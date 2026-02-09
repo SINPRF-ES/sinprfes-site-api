@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/user';
 import MemberCard from '../components/MemberCard';
 import { ENABLE_PUSH } from '../config/features';
+import { EMOJIS } from '../utils/emoji';
 
 const CustomDrawerContent = (props) => {
   const { user, logout, setBloqueadoPorBiometria } = useAuth();
@@ -47,22 +48,22 @@ const CustomDrawerContent = (props) => {
         <>
           <View style={styles.separator} />
           <DrawerItem
-            label="🛠️ Gestão"
+            label={`${EMOJIS.GESTAO} Gestão`}
             labelStyle={styles.sectionHeader}
             onPress={() => {}} // Não faz nada, é apenas um título
           />
           {ENABLE_PUSH && (
             <DrawerItem
-              label="📢 Notificações"
+              label={`${EMOJIS.NOTIFICACOES} Notificações`}
               onPress={() => props.navigation.navigate('NotificacoesPush')}
             />
           )}
           <DrawerItem
-            label="👤 Novo membro"
+            label={`${EMOJIS.NOVO_MEMBRO} Novo membro`}
             onPress={() => props.navigation.navigate('CriarUser')}
           />
           <DrawerItem
-            label="🧪 Diagnóstico"
+            label={`${EMOJIS.DIAGNOSTICO} Diagnóstico`}
             onPress={() => props.navigation.navigate('Logs')}
           />
         </>
@@ -75,14 +76,12 @@ const CustomDrawerContent = (props) => {
           style={styles.closeAppButton}
           onPress={() => setBloqueadoPorBiometria(true)}
         >
-          <Ionicons name="lock-closed-outline" size={20} color="#fff" />
-          <Text style={styles.closeAppButtonText}>🔒 Fechar App</Text>
+          <Text style={styles.closeAppButtonText}>{EMOJIS.FECHAR} Fechar App</Text>
         </TouchableOpacity>
       </View>
 
       <DrawerItem
-        label="🚪 Sair da conta"
-        icon={({ color, size }) => <Ionicons name="log-out-outline" color={color} size={size} />}
+        label={`${EMOJIS.SAIR} Sair da conta`}
         onPress={handleLogoutPress}
         inactiveTintColor="#666"
         labelStyle={{ fontSize: 12 }}

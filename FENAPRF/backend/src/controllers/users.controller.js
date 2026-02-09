@@ -275,7 +275,7 @@ exports.atualizarUser = async (req, res) => {
       complemento: body.complemento,
       cep: body.cep,
       cargo: body.cargo,
-      uf: body.uf_voto || body.uf, // preserva se vier como uf_voto ou similar
+      uf: body.uf || body.uf_voto, // prioriza 'uf' canônico
       cargo_mandato_inicio: body.cargo_mandato_inicio !== undefined ? normalizeDateField(body.cargo_mandato_inicio) : undefined,
       cargo_mandato_fim: body.cargo_mandato_fim !== undefined ? normalizeDateField(body.cargo_mandato_fim) : undefined,
     };
@@ -335,8 +335,21 @@ exports.atualizarUser = async (req, res) => {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
     if (err && (err.code === "23505" || (err.message && err.message.includes("duplicate")))) return res.status(409).json({ message: "CPF duplicado no sistema." });
 
-    log.error("UsersUpdateGestaoErro", { message: err.message, stack: err.stack, requestId: req.requestId, loggedId, targetId: idAlvo });
-    return res.status(500).json({ success: false, message: "Erro ao atualizar membro" });
+    log.error("UsersUpdateGestaoErro", {
+        message: err.message,
+        stack: err.stack,
+        requestId: req.requestId,
+        loggedId,
+        targetId: idAlvo,
+        payload_debug: {
+            perfil_acesso: req.body?.perfil_acesso,
+            cargo: req.body?.cargo,
+            uf: req.body?.uf,
+            mandato_inicio: req.body?.cargo_mandato_inicio,
+            mandato_fim: req.body?.cargo_mandato_fim
+        }
+    });
+    return res.status(500).json({ success: false, message: `Erro ao atualizar membro: ${err.message}` });
   }
 };
 
@@ -349,7 +362,14 @@ exports.criarUser = async (req, res) => {
     if (!perfilGestao(perfilCriador)) return res.status(403).json({ message: Textos.USERS.PERMISSAO_CRIAR });
 
     const body = req.body || {};
-    if (!body.nome || !body.cpf || (!body.email && !body.email1)) return res.status(400).json({ message: Textos.USERS.CAMPOS_OBRIGATORIOS });
+
+    // Suporte a 'name' como alias de 'nome' e 'email' como alias de 'email1' para compatibilidade com Mobile
+    const nomeEfetivo = body.nome || body.name;
+    const emailEfetivo = body.email1 || body.email;
+
+    if (!nomeEfetivo || !body.cpf || !emailEfetivo) {
+        return res.status(400).json({ message: Textos.USERS.CAMPOS_OBRIGATORIOS });
+    }
 
     const cpfLimpo = normalizarCpf(body.cpf);
     if (cpfLimpo.length !== 11) return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });

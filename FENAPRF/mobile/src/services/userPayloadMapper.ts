@@ -18,10 +18,21 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   if (formState.telefone1) payload.telefone1 = onlyDigits(formState.telefone1);
   if (formState.telefone2) payload.telefone2 = onlyDigits(formState.telefone2);
   if (formState.cep) payload.cep = onlyDigits(formState.cep);
-  if (formState.email) payload.email = formState.email;
+
+  // Alinhamento com Backend FENAPRF: usar 'nome' e 'email1'
+  if (formState.email || (formState as any).email1) {
+    (payload as any).email1 = (formState as any).email1 || formState.email;
+    payload.email = (formState as any).email1 || formState.email; // mantém ambos por segurança
+  }
+
   if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
-  if (formState.name) payload.name = normalizeNome(formState.name);
-  if (formState.sexo !== undefined) payload.sexo = formState.sexo;
+
+  if (formState.name || (formState as any).nome) {
+    (payload as any).nome = normalizeNome((formState as any).nome || formState.name);
+    payload.name = normalizeNome((formState as any).nome || formState.name);
+  }
+
+  if (formState.sexo !== undefined) payload.sexo = (formState.sexo as any) || undefined;
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
 
