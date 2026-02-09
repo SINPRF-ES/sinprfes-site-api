@@ -1,13 +1,18 @@
 // src/services/push.service.js
 const { Expo } = require("expo-server-sdk");
 const pool = require("../config/db");
+const { isUuid } = require("../utils/format");
 
 const expo = new Expo();
 
 async function upsertToken({ userId, expoPushToken, deviceId, platform, permissionStatus }) {
+  const userIdInt = isUuid(userId) ? null : parseInt(userId, 10);
+  const userIdUuid = isUuid(userId) ? userId : null;
+
   // Se for negado, podemos não ter o token, mas registramos o status se tivermos userId
   if (permissionStatus === 'denied' && !expoPushToken) {
     // Apenas log de interesse para saber que o membro negou
+    // Nota: Futuramente podemos persistir o status 'denied' vinculado ao user_id_uuid + device_id
     return { status: 'denied_recorded' };
   }
 
@@ -16,11 +21,12 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
   }
 
   const sql = `
-    INSERT INTO push_tokens (user_id, expo_push_token, device_id, platform, last_seen, revoked_at, permission_status)
-    VALUES ($1, $2, $3, $4, NOW(), NULL, $5)
+    INSERT INTO push_tokens (user_id, user_id_uuid, expo_push_token, device_id, platform, last_seen, revoked_at, permission_status)
+    VALUES ($1, $2, $3, $4, $5, NOW(), NULL, $6)
     ON CONFLICT (expo_push_token)
     DO UPDATE SET
       user_id = EXCLUDED.user_id,
+      user_id_uuid = EXCLUDED.user_id_uuid,
       device_id = EXCLUDED.device_id,
       platform = EXCLUDED.platform,
       last_seen = NOW(),
@@ -30,7 +36,8 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
   `;
 
   const r = await pool.query(sql, [
-    userId,
+    userIdInt,
+    userIdUuid,
     expoPushToken,
     deviceId || null,
     platform || null,
@@ -41,14 +48,17 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
 }
 
 async function revokeToken({ userId, expoPushToken }) {
+  const userIdInt = isUuid(userId) ? null : parseInt(userId, 10);
+  const userIdUuid = isUuid(userId) ? userId : null;
+
   const sql = `
     UPDATE push_tokens
     SET revoked_at = NOW(), last_seen = NOW()
-    WHERE user_id = $1 AND expo_push_token = $2
+    WHERE (user_id = $1 OR user_id_uuid = $2) AND expo_push_token = $3
     RETURNING id;
   `;
 
-  const r = await pool.query(sql, [userId, expoPushToken]);
+  const r = await pool.query(sql, [userIdInt, userIdUuid, expoPushToken]);
   return r.rowCount > 0;
 }
 
@@ -77,7 +87,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        JOIN users f ON pt.user_id = f.id
+        JOIN users f ON (pt.user_id_uuid = f.id)
         WHERE pt.revoked_at IS NULL AND f.situacao = 'ATIVO'
       `;
       break;
@@ -85,7 +95,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        JOIN users f ON pt.user_id = f.id
+        JOIN users f ON (pt.user_id_uuid = f.id)
         WHERE pt.revoked_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
       `;
       break;
@@ -93,7 +103,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        JOIN users f ON pt.user_id = f.id
+        JOIN users f ON (pt.user_id_uuid = f.id)
         WHERE pt.revoked_at IS NULL AND f.uf = $1
       `;
       params = [targetValue];
@@ -103,16 +113,17 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT DISTINCT pt.expo_push_token
         FROM push_tokens pt
-        JOIN pre_inscricoes_jogos ij ON pt.user_id = ij.user_id
+        JOIN pre_inscricoes_jogos ij ON (pt.user_id_uuid = ij.user_id)
         WHERE pt.revoked_at IS NULL
       `;
       break;
     case 'USER': {
       const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
+      const targetIsUuid = isUuid(targetId);
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        WHERE pt.revoked_at IS NULL AND pt.user_id = $1
+        WHERE pt.revoked_at IS NULL AND (${targetIsUuid ? 'pt.user_id_uuid' : 'pt.user_id'} = $1)
       `;
       params = [targetId];
       break;
@@ -166,7 +177,7 @@ async function countNoTokenTargets(targetType, targetValue) {
   sql = `
     SELECT COUNT(*) as count
     FROM (${usersSql}) f
-    LEFT JOIN push_tokens pt ON f.id = pt.user_id AND pt.revoked_at IS NULL
+    LEFT JOIN push_tokens pt ON (f.id = pt.user_id_uuid) AND pt.revoked_at IS NULL
     WHERE pt.id IS NULL OR pt.permission_status = 'denied'
   `;
 
