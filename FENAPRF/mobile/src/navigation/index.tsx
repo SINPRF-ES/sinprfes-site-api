@@ -15,15 +15,11 @@ import LoginScreen from "../screens/LoginScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import ResetPasswordScreen from "../screens/ResetPasswordScreen";
 import BiometricLockScreen from "../screens/BiometricLockScreen";
-import HomeScreen from "../screens/HomeScreen";
-import UsersScreen from "../screens/UsersScreen";
-import MeusDadosScreen from "../screens/MeusDadosScreen";
 import CriarUserScreen from "../screens/CriarUserScreen";
 import EditarUserScreen from "../screens/EditarUserScreen";
-import VotacaoScreen from "../modules/votacao/screens/VotacaoScreen";
 import PdfViewerScreen from "../screens/PdfViewerScreen";
 import FileViewerScreen from "../screens/FileViewerScreen";
-import DrawerNavigator from "./DrawerNavigator"; // Importa o Drawer
+import DrawerNavigator from "./DrawerNavigator";
 import UpdateAutoChecker from "../components/UpdateAutoChecker";
 import { ENABLE_PUSH } from "../config/features";
 
@@ -31,9 +27,9 @@ export type RootStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
   BiometricLock: undefined;
-  Drawer: undefined; // Adiciona a rota do Drawer
+  Drawer: undefined;
 
-  // As telas individuais ainda podem ser necessárias para navegação profunda
+  // Telas individuais para navegação profunda
   Home: undefined;
   MeusDados: undefined;
   Users: undefined;
@@ -42,22 +38,27 @@ export type RootStackParamList = {
   Votacao: undefined;
   Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
-  FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
+  FileViewer: {
+    localUri?: string;
+    remoteUrl?: string;
+    title: string;
+    fileId?: string;
+    type?: string;
+    context?: string;
+  };
   ResetPassword: { token?: string; isFirstAccess?: boolean; cpf?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-type PendingNav =
-  | { screen: "Votacao" }
-  | null;
+type PendingNav = { screen: "Votacao" } | null;
 
 const linking = {
-  prefixes: ['fenaprf://', 'https://fenaprf-sistema.onrender.com'],
+  prefixes: ["fenaprf://", "https://fenaprf-sistema.onrender.com"],
   config: {
     screens: {
       ResetPassword: {
-        path: 'redefinir-senha.html',
+        path: "redefinir-senha.html",
         parse: {
           token: (token: string) => token,
         },
@@ -79,20 +80,25 @@ export default function RootNavigation() {
     const pending = pendingNavRef.current;
     if (!nav || !pending || !autenticado || bloqueadoPorBiometria) return;
 
-    // TODO: A rota 'Votacao' também precisa ser aninhada se estiver dentro do Drawer.
-    // Assumindo que sim por enquanto. Se 'Votacao' for uma tela no Stack principal, isso precisa ser ajustado.
-    if (pending.screen === "Votacao") nav.navigate("Drawer", { screen: "Votacao" });
+    // Se 'Votacao' estiver aninhada no Drawer:
+    if (pending.screen === "Votacao") {
+      nav.navigate("Drawer" as never, { screen: "Votacao" } as never);
+    }
 
     pendingNavRef.current = null;
   }
 
   useEffect(() => {
     if (!ENABLE_PUSH) return;
-    const sub = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response?.notification?.request?.content?.data as any;
-      if (data?.screen === "Votacao") pendingNavRef.current = { screen: "Votacao" };
-      tryConsumePendingNav();
-    });
+
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response?.notification?.request?.content?.data as any;
+        if (data?.screen === "Votacao") pendingNavRef.current = { screen: "Votacao" };
+        tryConsumePendingNav();
+      }
+    );
+
     return () => sub.remove();
   }, [autenticado, bloqueadoPorBiometria]);
 
@@ -110,27 +116,38 @@ export default function RootNavigation() {
         tryConsumePendingNav();
       }}
     >
+      {/* ✅ Precisa estar dentro do NavigationContainer */}
       <UpdateAutoChecker />
-      <Stack.Navigator screenOptions={({ navigation }) => ({
-        headerTintColor: '#fff',
-        headerStyle: { backgroundColor: '#003366' },
-        headerTitleAlign: 'center',
-        headerLeft: () => {
-          const canGoBack = navigation.canGoBack();
-          if (!canGoBack) return null;
-          return (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center' }}
-            >
-              <Ionicons name="arrow-back" size={26} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', marginLeft: 4 }}>
-                Voltar
-              </Text>
-            </TouchableOpacity>
-          );
-        }
-      })}>
+
+      <Stack.Navigator
+        screenOptions={({ navigation }) => ({
+          headerTintColor: "#fff",
+          headerStyle: { backgroundColor: "#003366" },
+          headerTitleAlign: "center",
+          headerLeft: () => {
+            const canGoBack = navigation.canGoBack();
+            if (!canGoBack) return null;
+            return (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: "row", alignItems: "center" }}
+              >
+                <Ionicons name="arrow-back" size={26} color="#fff" />
+                <Text
+                  style={{
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: "bold",
+                    marginLeft: 4,
+                  }}
+                >
+                  Voltar
+                </Text>
+              </TouchableOpacity>
+            );
+          },
+        })}
+      >
         {!autenticado ? (
           <>
             <Stack.Screen
@@ -141,12 +158,12 @@ export default function RootNavigation() {
             <Stack.Screen
               name="ForgotPassword"
               component={ForgotPasswordScreen}
-              options={{ title: 'Recuperar Senha' }}
+              options={{ title: "Recuperar Senha" }}
             />
             <Stack.Screen
               name="ResetPassword"
               component={ResetPasswordScreen}
-              options={{ title: 'Redefinir Senha' }}
+              options={{ title: "Redefinir Senha" }}
             />
           </>
         ) : bloqueadoPorBiometria ? (
@@ -175,12 +192,16 @@ export default function RootNavigation() {
             <Stack.Screen
               name="PdfViewer"
               component={PdfViewerScreen}
-              options={({ route }) => ({ title: route.params.title || "Visualizador PDF" })}
+              options={({ route }) => ({
+                title: route.params.title || "Visualizador PDF",
+              })}
             />
             <Stack.Screen
               name="FileViewer"
               component={FileViewerScreen}
-              options={({ route }) => ({ title: route.params.title || "Visualizador" })}
+              options={({ route }) => ({
+                title: route.params.title || "Visualizador",
+              })}
             />
           </>
         )}
