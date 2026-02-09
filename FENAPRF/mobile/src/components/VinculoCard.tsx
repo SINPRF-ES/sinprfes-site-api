@@ -110,10 +110,10 @@ const VinculoCard: React.FC<Props> = ({
             <Picker
               enabled={isGestao}
               selectedValue={user?.cargo || ''}
-              onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val as any } : null))}
+              onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val === '' ? null : (val as any) } : null))}
               style={styles.picker}
             >
-              <Picker.Item label="Selecione um cargo..." value="" />
+              <Picker.Item label="Sem cargo" value="" />
               {isConselheiro && (
                 CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
               )}
@@ -223,10 +223,10 @@ const VinculoCard: React.FC<Props> = ({
                         <Picker
                             enabled={isGestao && !!user?.perfil_acesso2}
                             selectedValue={user?.cargo2 || ''}
-                            onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val as any } : null))}
+                            onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val === '' ? null : (val as any) } : null))}
                             style={styles.picker}
                         >
-                            <Picker.Item label="Selecione um cargo..." value="" />
+                            <Picker.Item label="Sem cargo" value="" />
                             {user.perfil_acesso2 === ROLES.CONSELHEIRO && (
                                 CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
                             )}

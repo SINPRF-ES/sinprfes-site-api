@@ -63,6 +63,10 @@ const CustomDrawerContent = (props) => {
             onPress={() => props.navigation.navigate('CriarUser')}
           />
           <DrawerItem
+            label={`${EMOJIS.ARQUIVADOS} Arquivados`}
+            onPress={() => props.navigation.navigate('Arquivados')}
+          />
+          <DrawerItem
             label={`${EMOJIS.DIAGNOSTICO} Diagnóstico`}
             onPress={() => props.navigation.navigate('Logs')}
           />

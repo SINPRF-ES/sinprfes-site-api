@@ -17,6 +17,7 @@ import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
+import ArquivadosScreen from '../screens/ArquivadosScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/user';
@@ -131,6 +132,11 @@ const DrawerNavigator = () => {
             name="Relatorios"
             component={RelatoriosScreen}
             options={{ title: `${EMOJIS.RELATORIOS} Relatórios` }}
+          />
+          <Drawer.Screen
+            name="Arquivados"
+            component={ArquivadosScreen}
+            options={{ title: `${EMOJIS.ARQUIVADOS} Arquivados` }}
           />
           {ENABLE_PUSH && (
             <Drawer.Screen

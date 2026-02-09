@@ -17,6 +17,7 @@ export const EMOJIS = {
   SEGURANCA: '🛡️',
   ATUALIZACOES: '🔄',
   RELATORIOS: '📊',
+  ARQUIVADOS: '📦',
   NOTIFICACOES: '📢',
   NOVO_MEMBRO: '➕',
   DIAGNOSTICO: '🧪',
