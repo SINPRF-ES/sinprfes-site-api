@@ -582,6 +582,7 @@ exports.arquivarUser = async (req, res) => {
     const motivo = String(req.body?.motivo || "").trim();
     if (!motivo) return res.status(400).json({ message: "Motivo é obrigatório." });
 
+    const atorId = req.user.id;
     const atualizado = await usersService.arquivarUserPorId(idAlvo, { motivo, atorId });
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 

@@ -87,8 +87,17 @@ const VinculoCard: React.FC<Props> = ({
                       newState.perfil_acesso2 = '';
                       newState.cargo2 = '';
                       newState.uf2 = '';
-                  } else {
+                  } else if (newProfile === ROLES.CONSELHEIRO || newProfile === ROLES.DIRETORIA) {
                       newState.cargo = '';
+                  } else {
+                      // Sem Perfil
+                      newState.cargo = '';
+                      newState.cargo_mandato_inicio = '';
+                      newState.cargo_mandato_fim = '';
+                      newState.perfil_acesso2 = '';
+                      newState.cargo2 = '';
+                      newState.uf2 = '';
+                      newState.uf = '';
                   }
 
                   return newState;
@@ -96,6 +105,7 @@ const VinculoCard: React.FC<Props> = ({
           }}
           style={styles.picker}
         >
+          <Picker.Item label="Sem acesso" value="" />
           <Picker.Item label="Conselheiro" value={ROLES.CONSELHEIRO} />
           <Picker.Item label="Colaborador" value={ROLES.COLABORADOR} />
           <Picker.Item label="Diretoria" value={ROLES.DIRETORIA} />

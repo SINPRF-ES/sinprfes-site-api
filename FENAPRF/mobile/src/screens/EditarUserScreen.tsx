@@ -19,6 +19,20 @@ import { TouchableOpacity } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
+const PERFIL_RANK: Record<string, number> = {
+  ADMIN: 100,
+  DIRETORIA: 50,
+  COLABORADOR: 30,
+  CONSELHEIRO: 10
+};
+
+const canEditorEditTargetCore = (editorPerfil: string, targetPerfil: string) => {
+  const e = (editorPerfil || "").toUpperCase();
+  const t = (targetPerfil || "").toUpperCase();
+  if (e === 'ADMIN') return true;
+  return (PERFIL_RANK[e] || 0) > (PERFIL_RANK[t] || 0);
+};
+
 export default function EditarUserScreen({ route, navigation }: any) {
   const userId = parseCanonicalUserId(route.params?.userId);
   const { user: authUser } = useAuth();
@@ -161,12 +175,17 @@ export default function EditarUserScreen({ route, navigation }: any) {
   }, [user, motivoAcao, showMotivoInput, fetchData]);
 
   useEffect(() => {
-    const ehGestao = checkIsGestao(user?.perfil_acesso);
     const actions: MenuAction[] = [
       { label: 'Salvar Alterações', icon: 'content-save', onPress: handleUpdate }
     ];
 
-    if (ehGestao && userId && user) {
+    // Se houver um editor logado e um alvo (userId), e o editor tiver rank superior ou for Admin
+    const canArchive = authUser && user && userId && (
+      authUser.perfil_acesso === ROLES.ADMIN ||
+      (checkIsGestao(authUser.perfil_acesso) && canEditorEditTargetCore(authUser.perfil_acesso, user.perfil_acesso || ''))
+    );
+
+    if (canArchive && user) {
       if (user.arquivado_em) {
         actions.push({ label: 'Desarquivar', icon: 'archive-arrow-up', onPress: () => setShowMotivoInput('DESARQUIVAR') });
       } else {
@@ -186,6 +205,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
 
+
   if (!user) {
     return (
       <View style={styles.centered}>
@@ -194,20 +214,6 @@ export default function EditarUserScreen({ route, navigation }: any) {
       </View>
     );
   }
-
-  const PERFIL_RANK: Record<string, number> = {
-    ADMIN: 100,
-    DIRETORIA: 50,
-    COLABORADOR: 30,
-    CONSELHEIRO: 10
-  };
-
-  const canEditorEditTargetCore = (editorPerfil: string, targetPerfil: string) => {
-    const e = (editorPerfil || "").toUpperCase();
-    const t = (targetPerfil || "").toUpperCase();
-    if (e === 'ADMIN') return true;
-    return (PERFIL_RANK[e] || 0) > (PERFIL_RANK[t] || 0);
-  };
 
   const canEditCore = canEditorEditTargetCore(authUser?.perfil_acesso || '', user?.perfil_acesso || '');
 

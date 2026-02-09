@@ -66,14 +66,15 @@ const CustomDrawerContent = (props) => {
             label={`${EMOJIS.ARQUIVADOS} Arquivados`}
             onPress={() => props.navigation.navigate('Arquivados')}
           />
-          <DrawerItem
-            label={`${EMOJIS.DIAGNOSTICO} Diagnóstico`}
-            onPress={() => props.navigation.navigate('Logs')}
-          />
         </>
       )}
 
       <View style={styles.separator} />
+
+      <DrawerItem
+        label={`${EMOJIS.DIAGNOSTICO} Diagnóstico`}
+        onPress={() => props.navigation.navigate('Logs')}
+      />
 
       <View style={styles.closeAppContainer}>
         <TouchableOpacity

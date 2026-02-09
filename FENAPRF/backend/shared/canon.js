@@ -98,10 +98,11 @@
    * Normaliza o Perfil de Acesso.
    */
   function normalizePerfil(val) {
+    if (!val) return null;
     const s = slugify(val);
     if (PERFIL_ACESSO[s]) return PERFIL_ACESSO[s];
 
-    return PERFIL_ACESSO.CONSELHEIRO; // Default seguro
+    return null;
   }
 
   /**
