@@ -12,7 +12,7 @@ export default function BiometricLockScreen() {
     try {
       const success = await desbloquearComBiometria();
       if (!success) {
-        // O usuário cancelou ou a biometria falhou.
+        // O membro cancelou ou a biometria falhou.
         // O estado `bloqueadoPorBiometria` permanece `true`.
         Alert.alert('Falha', 'A autenticação biométrica falhou. Por favor, tente novamente.');
       }

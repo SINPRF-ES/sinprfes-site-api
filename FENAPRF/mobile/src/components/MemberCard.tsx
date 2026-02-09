@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { User } from '../types/user';
-import { getBandeiraUF } from '../utils/userUtils';
+import { getBandeiraUF, tituloCargoUf } from '../utils/userUtils';
 import { calculateMandateTime, toBrazilianDate } from '../utils/date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -46,52 +46,50 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
         </View>
 
         <View style={styles.centerInfo}>
-          <Text style={[styles.name, isDrawer && styles.nameSmall]} numberOfLines={1}>
+          <Text style={[styles.name, isDrawer && styles.textWhite]} numberOfLines={1}>
             {member.name || member.nome || 'Membro'}
           </Text>
-          <Text style={styles.cargo} numberOfLines={2}>
-            {member.cargo || (isNacional ? 'Diretoria Nacional' : 'Conselheiro Federal')}
+          <Text style={[styles.cargo, isDrawer && styles.textLight]} numberOfLines={2}>
+            {tituloCargoUf(member)}
           </Text>
         </View>
 
         <View style={styles.rightStack}>
-          <Text style={styles.ufText}>{displayUf}</Text>
+          <Text style={[styles.ufText, isDrawer && styles.textWhite]}>{displayUf}</Text>
           {flagUrl ? (
             <View style={styles.flagContainer}>
               <Image source={{ uri: flagUrl }} style={styles.flag} resizeMode="contain" />
             </View>
           ) : (
-             <MaterialCommunityIcons name="flag-variant" size={24} color="#ccc" />
+             <MaterialCommunityIcons name="flag-variant" size={24} color={isDrawer ? "#fff" : "#ccc"} />
           )}
         </View>
       </View>
 
-      {/* PARTE INFERIOR (Omitida no drawer se necessário, mas o requisito pede o componente padronizado) */}
-      {!isDrawer && (
-        <View style={styles.bottomSection}>
-          <View style={styles.mandateRow}>
-            <View style={styles.mandateCol}>
-              <Text style={styles.mandateLabel}>Início</Text>
-              <Text style={styles.mandateValue}>{toBrazilianDate(member.cargo_mandato_inicio) || '—'}</Text>
-            </View>
-            <View style={styles.mandateCol}>
-              <Text style={styles.mandateLabel}>Fim</Text>
-              <Text style={styles.mandateValue}>{toBrazilianDate(member.cargo_mandato_fim) || '—'}</Text>
-            </View>
+      {/* PARTE INFERIOR */}
+      <View style={[styles.bottomSection, isDrawer && styles.bottomSectionDrawer]}>
+        <View style={styles.mandateRow}>
+          <View style={styles.mandateCol}>
+            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Início</Text>
+            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{toBrazilianDate(member.cargo_mandato_inicio) || '—'}</Text>
           </View>
-
-          <View style={styles.auxInfo}>
-            <Text style={styles.auxText}>
-              <Text style={styles.auxLabel}>Tempo decorrido: </Text>
-              {elapsed}
-            </Text>
-            <Text style={styles.auxText}>
-              <Text style={styles.auxLabel}>Tempo restante: </Text>
-              {remaining}
-            </Text>
+          <View style={styles.mandateCol}>
+            <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Fim</Text>
+            <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{toBrazilianDate(member.cargo_mandato_fim) || '—'}</Text>
           </View>
         </View>
-      )}
+
+        <View style={styles.auxInfo}>
+          <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
+            <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo decorrido: </Text>
+            {elapsed}
+          </Text>
+          <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
+            <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo restante: </Text>
+            {remaining}
+          </Text>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -155,9 +153,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#003366',
   },
-  nameSmall: {
-    fontSize: 16,
-    color: '#fff', // No drawer o fundo é azul
+  textWhite: {
+    color: '#fff',
+  },
+  textLight: {
+    color: 'rgba(255,255,255,0.7)',
   },
   cargo: {
     fontSize: 13,
@@ -200,6 +200,9 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
+  },
+  bottomSectionDrawer: {
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   mandateRow: {
     flexDirection: 'row',

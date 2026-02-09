@@ -458,7 +458,7 @@ FENAPRF
 }
 
 /**
- * Envia e-mail de relatório genérico (Individual, Lotação, Setor, Situação)
+ * Envia e-mail de relatório genérico (Individual, UF, Setor, Situação)
  */
 async function enviarEmailRelatorio(user, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;
@@ -505,7 +505,7 @@ FENAPRF
         from: MAIL_FROM,
         to: unionEmail,
         subject: `[SOLICITANTE SEM EMAIL] ${subject}`,
-        text: `O usuário ${user.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
+        text: `O membro ${user.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
         attachments
       });
       console.log("📧 [emailRelatorioUnionOnlyOk] enviado para", unionEmail);

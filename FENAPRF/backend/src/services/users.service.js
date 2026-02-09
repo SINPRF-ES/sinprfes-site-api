@@ -9,7 +9,7 @@ const {
 } = require("../../shared/canon");
 
 /**
- * Busca usuário pelo CPF (normalizado).
+ * Busca membro pelo CPF (normalizado).
  */
 async function buscarUserPorCpf(cpfRaw) {
   const cpf = normalizarCpf(cpfRaw);
@@ -21,7 +21,7 @@ async function buscarUserPorCpf(cpfRaw) {
 }
 
 /**
- * Busca usuário pelo ID (UUID).
+ * Busca membro pelo ID (UUID).
  */
 async function buscarUserPorId(id) {
   const { rows } = await pool.query(
@@ -148,7 +148,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 }
 
 /**
- * Atualiza dados básicos do próprio usuário ("Meus dados").
+ * Atualiza dados básicos do próprio membro ("Meus dados").
  */
 async function atualizarDadosProprios(id, dados) {
   if (dados.nome) {
@@ -204,7 +204,7 @@ async function atualizarDadosProprios(id, dados) {
 }
 
 /**
- * Atualização completa de um usuário (usada por perfis de gestão).
+ * Atualização completa de um membro (usada por perfis de gestão).
  */
 async function atualizarUserPorId(id, dados) {
   if (dados.nome) {
@@ -290,7 +290,7 @@ async function atualizarUserPorId(id, dados) {
 }
 
 /**
- * Criação inicial de usuário.
+ * Criação inicial de membro.
  */
 async function criarUserInicial(dados) {
   const cpfNormalizado = normalizarCpf(dados.cpf);

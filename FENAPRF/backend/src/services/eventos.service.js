@@ -182,7 +182,7 @@ exports.encerrarEvento = async ({ eventoId }) => {
  * - se já está presente (ativa=true), retorna a presença existente
  */
 exports.entrarNoEvento = async ({ eventoId, userId, deviceId }) => {
-  if (!userId) throw new Error("Usuário inválido.");
+  if (!userId) throw new Error("Membro inválido.");
 
   const client = await pool.connect();
   try {
@@ -239,7 +239,7 @@ exports.entrarNoEvento = async ({ eventoId, userId, deviceId }) => {
  * Sair do evento (encerrar presença ativa)
  */
 exports.sairDoEvento = async ({ eventoId, userId }) => {
-  if (!userId) throw new Error("Usuário inválido.");
+  if (!userId) throw new Error("Membro inválido.");
 
   const r = await pool.query(
     `UPDATE evento_presencas

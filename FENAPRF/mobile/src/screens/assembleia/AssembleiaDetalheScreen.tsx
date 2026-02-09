@@ -12,7 +12,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel } from '../../utils/assembleiaLabels';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
-import * as FileSystemLegacy from 'expo-file-system/legacy';
+import * as FileSystemLegacy from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {

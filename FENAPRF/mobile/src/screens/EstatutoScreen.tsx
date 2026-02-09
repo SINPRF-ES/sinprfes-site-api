@@ -8,11 +8,27 @@ import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TOC_ITEMS = [
-  { id: 'topo-estatuto', label: 'Topo' },
+  { id: 'topo-estatuto', label: '🏠 Topo' },
   { id: 'cap1', label: 'Capítulo I - Denominação' },
   { id: 'cap2', label: 'Capítulo II - Sindicatos' },
   { id: 'cap3', label: 'Capítulo III - Órgãos' },
-  { id: 'cap4', label: 'Capítulo IV - Disposições' },
+  { id: 'cap4', label: 'Capítulo IV - Competências' },
+  { id: 'cap5', label: 'Capítulo V - Patrimônio' },
+  { id: 'cap6', label: 'Capítulo VI - Receitas' },
+  { id: 'cap7', label: 'Capítulo VII - Despesas' },
+  { id: 'cap8', label: 'Capítulo VIII - Penalidades' },
+  { id: 'cap9', label: 'Capítulo IX - Conselho de Representantes' },
+  { id: 'cap10', label: 'Capítulo X - Reuniões' },
+  { id: 'cap11', label: 'Capítulo XI - Votações' },
+  { id: 'cap12', label: 'Capítulo XII - Assembléias' },
+  { id: 'cap13', label: 'Capítulo XIII - Mesa Diretora' },
+  { id: 'cap14', label: 'Capítulo XIV - Diretoria Executiva' },
+  { id: 'cap15', label: 'Capítulo XV - Conselho Fiscal' },
+  { id: 'cap16', label: 'Capítulo XVI - Conselho de Ética' },
+  { id: 'cap17', label: 'Capítulo XVII - Administração Patrimonial' },
+  { id: 'cap18', label: 'Capítulo XVIII - Processo Eleitoral' },
+  { id: 'cap19', label: 'Capítulo XIX - Vacância' },
+  { id: 'cap20', label: 'Capítulo XX - Disposições Gerais' },
 ];
 
 export default function EstatutoScreen({ navigation }: any) {

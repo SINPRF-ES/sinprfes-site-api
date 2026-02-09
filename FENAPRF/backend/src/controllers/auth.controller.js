@@ -49,7 +49,7 @@ exports.login = async (req, res, next) => {
     const cpfNormalizado = normalizarCpf(cpf);
     const user = await usersService.buscarPorCpf(cpfNormalizado);
 
-    // 1. Se usuário não existe -> 401
+    // 1. Se membro não existe -> 401
     if (!user) {
       log.warn("AuthLoginFalha", {
         cpf: cpfNormalizado ? `${cpfNormalizado.substring(0, 3)}.***.***-**` : null,
@@ -111,7 +111,7 @@ exports.login = async (req, res, next) => {
 };
 
 /**
- * ME: Dados do próprio usuário logado.
+ * ME: Dados do próprio membro logado.
  */
 exports.me = async (req, res, next) => {
   const requestId = req.requestId;
@@ -140,7 +140,7 @@ exports.me = async (req, res, next) => {
 };
 
 /**
- * LISTAR: Listagem de usuários para perfis autorizados.
+ * LISTAR: Listagem de membros para perfis autorizados.
  */
 exports.listarUsers = async (req, res, next) => {
   const requestId = req.requestId;

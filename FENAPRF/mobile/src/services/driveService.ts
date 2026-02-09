@@ -1,7 +1,7 @@
 // mobile/src/services/driveService.ts
 import api from './apiService';
 import { carregarSessao } from './storageService';
-import * as FileSystemLegacy from 'expo-file-system/legacy';
+import * as FileSystemLegacy from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 import { logDebug } from '../utils/userUtils';
@@ -46,7 +46,7 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
  * Baixa um arquivo de publicação de forma autenticada.
  * @param fileId ID do arquivo no backend/Drive.
  * @param fileName Nome original do arquivo.
- * @param token Token JWT do usuário.
+ * @param token Token JWT do membro.
  */
 export const downloadPublicacaoFile = async (
   fileId: string,

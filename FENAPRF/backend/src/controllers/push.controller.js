@@ -34,7 +34,7 @@ exports.register = async (req, res) => {
     });
 
     if (!userId) {
-      return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente)." });
+      return res.status(401).json({ success: false, error: "Membro não autenticado (req.user ausente)." });
     }
 
     // Se negou, registramos mesmo sem token
@@ -91,7 +91,7 @@ exports.unregister = async (req, res) => {
 
   try {
     if (!userId) {
-      return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente)." });
+      return res.status(401).json({ success: false, error: "Membro não autenticado (req.user ausente)." });
     }
 
     if (!expoPushToken) {

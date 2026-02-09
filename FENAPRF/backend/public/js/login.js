@@ -73,13 +73,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Token válido → pula o login e vai direto pra Página Inicial
         window.location.href = "/area-user.html";
       } else if (resp.status === 401 || resp.status === 403) {
-        // Token inválido/expirado → limpa e deixa o usuário logar de novo
+        // Token inválido/expirado → limpa e deixa o membro logar de novo
         localStorage.removeItem("token");
         localStorage.removeItem("perfil_acesso");
       }
     } catch (err) {
       console.error("Erro ao verificar sessão existente:", err);
-      // Em caso de erro de rede, apenas não redireciona; o usuário vê o login normalmente
+      // Em caso de erro de rede, apenas não redireciona; o membro vê o login normalmente
     }
   })();
 
@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (loginMsg) {
               loginMsg.textContent =
                 data.error ||
-                "Este usuário possui 2FA habilitado. Informe o código do aplicativo autenticador.";
+                "Este membro possui 2FA habilitado. Informe o código do aplicativo autenticador.";
             }
             // Foca no campo de 2FA, se existir
             if (inputToken2fa) {

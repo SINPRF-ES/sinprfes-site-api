@@ -1084,7 +1084,7 @@ async function buscarEstadoResumido(assembleiaId) {
       assembleia: { id: assembleiaId, estado: assembleia.estado },
       quorumVigente: ultimoQuorum ? {
         id: ultimoQuorum.id,
-        token: ultimoQuorum.token, // O controller deve filtrar se o usuário pode ver
+        token: ultimoQuorum.token, // O controller deve filtrar se o membro pode ver
         total: totalPresentes,
         tipo_chamada: ultimoQuorum.tipo_chamada,
         gerado_por_user_id: ultimoQuorum.gerado_por_user_id,
