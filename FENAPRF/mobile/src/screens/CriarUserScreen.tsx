@@ -55,7 +55,7 @@ export default function CriarUserScreen({ navigation }: any) {
     }, [])
   );
 
-  const handleCreate = useCallback(async () => {
+  const handleCreate = useCallback(async (ignoreWarnings = false) => {
     if (!netInfo.isConnected) {
       Alert.alert('Offline', 'A criação de membros só está disponível online.');
       return;
@@ -108,6 +108,7 @@ export default function CriarUserScreen({ navigation }: any) {
           uf: (perfil === ROLES.CONSELHEIRO) ? user.uf : 'BR',
           perfil_acesso: perfil,
           cargo: isCouncil ? user.cargo : (perfil === ROLES.ADMIN ? 'Administrador' : 'Colaborador'),
+          ignoreWarnings
       };
 
       if (user.data_nascimento) {
@@ -127,7 +128,18 @@ export default function CriarUserScreen({ navigation }: any) {
       Alert.alert('Sucesso', 'Membro criado com sucesso.');
       navigation.navigate('Users', { refresh: true });
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível criar o membro.');
+      if (err.response?.data?.code === 'DATA_DUPLICATED_WARNING') {
+        Alert.alert(
+          'Aviso de Duplicidade',
+          err.response.data.message,
+          [
+            { text: 'Voltar e corrigir', style: 'cancel' },
+            { text: 'Continuar mesmo assim', onPress: () => handleCreate(true) }
+          ]
+        );
+      } else {
+        Alert.alert('Erro', err.response?.data?.message || 'Não foi possível criar o membro.');
+      }
     } finally {
       setLoading(false);
     }

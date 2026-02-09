@@ -162,11 +162,12 @@ export function normalizeSexo(val: string | null | undefined): Sexo | null {
 /**
  * Normaliza o Perfil de Acesso.
  */
-export function normalizePerfil(val: string | null | undefined): PerfilAcesso {
+export function normalizePerfil(val: string | null | undefined): PerfilAcesso | null {
+  if (!val) return null;
   const s = slugify(val) as any;
   if (Object.values(PERFIL_ACESSO).includes(s)) return s;
 
-  return PERFIL_ACESSO.CONSELHEIRO;
+  return null;
 }
 
 /**

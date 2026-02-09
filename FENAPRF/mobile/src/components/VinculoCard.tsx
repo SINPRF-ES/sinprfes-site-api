@@ -87,8 +87,17 @@ const VinculoCard: React.FC<Props> = ({
                       newState.perfil_acesso2 = '';
                       newState.cargo2 = '';
                       newState.uf2 = '';
-                  } else {
+                  } else if (newProfile === ROLES.CONSELHEIRO || newProfile === ROLES.DIRETORIA) {
                       newState.cargo = '';
+                  } else {
+                      // Sem Perfil
+                      newState.cargo = '';
+                      newState.cargo_mandato_inicio = '';
+                      newState.cargo_mandato_fim = '';
+                      newState.perfil_acesso2 = '';
+                      newState.cargo2 = '';
+                      newState.uf2 = '';
+                      newState.uf = '';
                   }
 
                   return newState;
@@ -96,6 +105,7 @@ const VinculoCard: React.FC<Props> = ({
           }}
           style={styles.picker}
         >
+          <Picker.Item label="Sem acesso" value="" />
           <Picker.Item label="Conselheiro" value={ROLES.CONSELHEIRO} />
           <Picker.Item label="Colaborador" value={ROLES.COLABORADOR} />
           <Picker.Item label="Diretoria" value={ROLES.DIRETORIA} />
@@ -110,10 +120,10 @@ const VinculoCard: React.FC<Props> = ({
             <Picker
               enabled={isGestao}
               selectedValue={user?.cargo || ''}
-              onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val as any } : null))}
+              onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val === '' ? null : (val as any) } : null))}
               style={styles.picker}
             >
-              <Picker.Item label="Selecione um cargo..." value="" />
+              <Picker.Item label="Sem cargo" value="" />
               {isConselheiro && (
                 CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
               )}
@@ -223,10 +233,10 @@ const VinculoCard: React.FC<Props> = ({
                         <Picker
                             enabled={isGestao && !!user?.perfil_acesso2}
                             selectedValue={user?.cargo2 || ''}
-                            onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val as any } : null))}
+                            onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val === '' ? null : (val as any) } : null))}
                             style={styles.picker}
                         >
-                            <Picker.Item label="Selecione um cargo..." value="" />
+                            <Picker.Item label="Sem cargo" value="" />
                             {user.perfil_acesso2 === ROLES.CONSELHEIRO && (
                                 CARGOS_CONSELHO.map(c => <Picker.Item key={c} label={c} value={c} />)
                             )}

@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="container header-content">
           <div class="logo-area">
             <a href="/index.html" class="logo-link">
-              <img src="/img/placeholder-fenaprf.png" alt="FENAPRF" class="logo-img">
+              <img src="/img/logo-fenaprf.png" alt="FENAPRF" class="logo-img">
               <span class="logo-text">
                 FENAPRF
               </span>

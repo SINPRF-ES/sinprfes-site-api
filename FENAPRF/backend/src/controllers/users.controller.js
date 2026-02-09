@@ -40,33 +40,97 @@ function canEditorEditTarget(editorPerfil, targetPerfil) {
 }
 
 async function verificarConflitoCargo(perfil, cargo, uf, userId = null) {
-  if (!perfil || !cargo || !uf) return null;
+  if (!perfil || !cargo) return null;
   if (perfil === "ADMIN" || perfil === "COLABORADOR") return null;
 
+  const isDiretoria = perfil === "DIRETORIA";
+
   // Verifica no primeiro vínculo
-  const q1 = `
-    SELECT id, name FROM users
-    WHERE perfil_acesso = $1 AND cargo = $2 AND uf = $3
-    AND arquivado_em IS NULL
-    ${userId ? "AND id != $4" : ""}
-    LIMIT 1
-  `;
-  const params1 = userId ? [perfil, cargo, uf, userId] : [perfil, cargo, uf];
+  let cond1 = "perfil_acesso = $1 AND cargo = $2";
+  let params1 = [perfil, cargo];
+  if (!isDiretoria) {
+    if (!uf) return null;
+    cond1 += " AND uf = $3";
+    params1.push(uf);
+  }
+  if (userId) {
+    cond1 += ` AND id != $${params1.length + 1}`;
+    params1.push(userId);
+  }
+
+  const q1 = `SELECT id, name FROM users WHERE ${cond1} AND arquivado_em IS NULL LIMIT 1`;
   const res1 = await pool.query(q1, params1);
   if (res1.rows.length > 0) return res1.rows[0];
 
   // Verifica no segundo vínculo
-  const q2 = `
-    SELECT id, name FROM users
-    WHERE perfil_acesso2 = $1 AND cargo2 = $2 AND uf2 = $3
-    AND arquivado_em IS NULL
-    ${userId ? "AND id != $4" : ""}
-    LIMIT 1
-  `;
-  const res2 = await pool.query(q2, params1);
+  let cond2 = "perfil_acesso2 = $1 AND cargo2 = $2";
+  let params2 = [perfil, cargo];
+  if (!isDiretoria) {
+    cond2 += " AND uf2 = $3";
+    params2.push(uf);
+  }
+  if (userId) {
+    cond2 += ` AND id != $${params2.length + 1}`;
+    params2.push(userId);
+  }
+
+  const q2 = `SELECT id, name FROM users WHERE ${cond2} AND arquivado_em IS NULL LIMIT 1`;
+  const res2 = await pool.query(q2, params2);
   if (res2.rows.length > 0) return res2.rows[0];
 
   return null;
+}
+
+/**
+ * Verifica se telefone ou e-mail já existem em outros cadastros ativos.
+ * Retorna lista de nomes dos membros que já possuem estes dados.
+ */
+async function verificarAvisosDuplicidade(payload, userId = null) {
+  const names = new Set();
+  const email = payload.email || payload.email1;
+  const tel1 = payload.telefone1 ? String(payload.telefone1).replace(/\D/g, "") : null;
+  const tel2 = payload.telefone2 ? String(payload.telefone2).replace(/\D/g, "") : null;
+
+  const conditions = [];
+  const params = [];
+  let idx = 1;
+
+  if (email) {
+    conditions.push(`email = $${idx}`);
+    params.push(email);
+    idx++;
+  }
+  if (tel1 && tel1.length >= 8) {
+    conditions.push(`(REPLACE(REPLACE(REPLACE(REPLACE(telefone1, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx} OR REPLACE(REPLACE(REPLACE(REPLACE(telefone2, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx})`);
+    params.push(tel1);
+    idx++;
+  }
+  if (tel2 && tel2.length >= 8) {
+    conditions.push(`(REPLACE(REPLACE(REPLACE(REPLACE(telefone1, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx} OR REPLACE(REPLACE(REPLACE(REPLACE(telefone2, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx})`);
+    params.push(tel2);
+    idx++;
+  }
+
+  if (conditions.length === 0) return [];
+
+  const where = `(${conditions.join(" OR ")})`;
+  const query = `
+    SELECT name FROM users
+    WHERE ${where}
+    AND arquivado_em IS NULL
+    ${userId ? `AND id != $${idx}` : ""}
+    LIMIT 5
+  `;
+  if (userId) params.push(userId);
+
+  try {
+    const { rows } = await pool.query(query, params);
+    rows.forEach(r => names.add(r.name));
+  } catch (err) {
+    log.error("Erro ao verificar avisos de duplicidade", { error: err.message });
+  }
+
+  return Array.from(names);
 }
 
 /**
@@ -164,10 +228,17 @@ exports.listarUsers = async (req, res) => {
     const perfilAcesso = (req.user.perfil_acesso || "CONSELHEIRO").toUpperCase();
     const termoBusca = (req.query.q || "").toString();
     const incluirArquivados = String(req.query.incluirArquivados || "").trim() === "1";
+    const apenasArquivados = String(req.query.apenasArquivados || "").trim() === "1";
 
     const incluirArquivadosEfetivo = incluirArquivados && perfilGestao(perfilAcesso);
+    const apenasArquivadosEfetivo = apenasArquivados && perfilGestao(perfilAcesso);
 
-    const lista = await usersService.listarParaPerfil(perfilAcesso, termoBusca, incluirArquivadosEfetivo);
+    const lista = await usersService.listarParaPerfil(
+      perfilAcesso,
+      termoBusca,
+      incluirArquivadosEfetivo,
+      apenasArquivadosEfetivo
+    );
 
     return res.json({
       total: lista.length,
@@ -229,6 +300,7 @@ exports.atualizarUser = async (req, res) => {
   if (idAlvo === null) return;
 
   try {
+    const atorId = req.user.id;
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
@@ -314,9 +386,13 @@ exports.atualizarUser = async (req, res) => {
 
     const conflito1 = await verificarConflitoCargo(p1, c1, u1, idAlvo);
     if (conflito1) {
+      const msg = (p1 === "DIRETORIA")
+        ? `O cargo ${c1} já é ocupado por ${conflito1.name}.`
+        : `O cargo ${c1} na UF ${u1} já é ocupado por ${conflito1.name}.`;
+
       return res.status(409).json({
         code: "CARGO_JA_OCUPADO",
-        message: `O cargo ${c1} em ${u1} já está ocupado por ${conflito1.name}.`,
+        message: msg,
         details: { conflictUserId: conflito1.id, conflictUserName: conflito1.name }
       });
     }
@@ -324,10 +400,26 @@ exports.atualizarUser = async (req, res) => {
     if (payload.perfil_acesso2) {
       const conflito2 = await verificarConflitoCargo(payload.perfil_acesso2, payload.cargo2, payload.uf2, idAlvo);
       if (conflito2) {
+        const msg2 = (payload.perfil_acesso2 === "DIRETORIA")
+          ? `O segundo cargo (${payload.cargo2}) já é ocupado por ${conflito2.name}.`
+          : `O segundo cargo (${payload.cargo2} na UF ${payload.uf2}) já é ocupado por ${conflito2.name}.`;
+
         return res.status(409).json({
           code: "CARGO_JA_OCUPADO",
-          message: `O segundo cargo (${payload.cargo2} em ${payload.uf2}) já está ocupado por ${conflito2.name}.`,
+          message: msg2,
           details: { conflictUserId: conflito2.id, conflictUserName: conflito2.name }
+        });
+      }
+    }
+
+    // Verificação de Avisos de Duplicidade (Telefone/Email) - AVISO apenas
+    if (!body.ignoreWarnings) {
+      const duplicados = await verificarAvisosDuplicidade(payload, idAlvo);
+      if (duplicados.length > 0) {
+        return res.status(409).json({
+          code: "DATA_DUPLICATED_WARNING",
+          message: `O telefone/e-mail já é utilizado por: ${duplicados.join(", ")}.`,
+          details: { names: duplicados }
         });
       }
     }
@@ -391,11 +483,48 @@ exports.criarUser = async (req, res) => {
     // Verificação de Conflito de Cargo
     const conflito1 = await verificarConflitoCargo(perfil_acesso, cargo, uf);
     if (conflito1) {
+      const msg = (perfil_acesso === "DIRETORIA")
+        ? `O cargo ${cargo} já é ocupado por ${conflito1.name}.`
+        : `O cargo ${cargo} na UF ${uf} já é ocupado por ${conflito1.name}.`;
+
       return res.status(409).json({
         code: "CARGO_JA_OCUPADO",
-        message: `O cargo ${cargo} em ${uf} já está ocupado por ${conflito1.name}.`,
+        message: msg,
         details: { conflictUserId: conflito1.id, conflictUserName: conflito1.name }
       });
+    }
+
+    if (body.perfil_acesso2) {
+      const conflito2 = await verificarConflitoCargo(body.perfil_acesso2, body.cargo2, body.uf2);
+      if (conflito2) {
+        const msg2 = (body.perfil_acesso2 === "DIRETORIA")
+          ? `O segundo cargo (${body.cargo2}) já é ocupado por ${conflito2.name}.`
+          : `O segundo cargo (${body.cargo2} na UF ${body.uf2}) já é ocupado por ${conflito2.name}.`;
+
+        return res.status(409).json({
+          code: "CARGO_JA_OCUPADO",
+          message: msg2,
+          details: { conflictUserId: conflito2.id, conflictUserName: conflito2.name }
+        });
+      }
+    }
+
+    // Verificação de Avisos de Duplicidade (Telefone/Email) - AVISO apenas
+    const tempPayloadParaAviso = {
+      email: emailEfetivo,
+      telefone1: body.telefone1,
+      telefone2: body.telefone2
+    };
+
+    if (!body.ignoreWarnings) {
+      const duplicados = await verificarAvisosDuplicidade(tempPayloadParaAviso);
+      if (duplicados.length > 0) {
+        return res.status(409).json({
+          code: "DATA_DUPLICATED_WARNING",
+          message: `O telefone/e-mail já é utilizado por: ${duplicados.join(", ")}.`,
+          details: { names: duplicados }
+        });
+      }
     }
 
     const dadosNovo = {
@@ -453,10 +582,11 @@ exports.arquivarUser = async (req, res) => {
     const motivo = String(req.body?.motivo || "").trim();
     if (!motivo) return res.status(400).json({ message: "Motivo é obrigatório." });
 
-    const atualizado = await usersService.arquivarUserPorId(idAlvo, { motivo });
+    const atorId = req.user.id;
+    const atualizado = await usersService.arquivarUserPorId(idAlvo, { motivo, atorId });
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
-    log.info("UserArquivado", { atorId: req.user.id, targetId: idAlvo, requestId: req.requestId });
+    log.info("UserArquivado", { atorId, targetId: idAlvo, requestId: req.requestId });
     return res.json({ message: "Estado do cadastro alterado para: ARQUIVADO.", user: atualizado });
   } catch (err) {
     log.error("UsersArquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
@@ -472,6 +602,7 @@ exports.desarquivarUser = async (req, res) => {
   if (idAlvo === null) return;
 
   try {
+    const atorId = req.user.id;
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
@@ -482,10 +613,13 @@ exports.desarquivarUser = async (req, res) => {
       return res.status(403).json({ message: "Você não tem permissão para desarquivar este perfil." });
     }
 
-    const atualizado = await usersService.desarquivarUserPorId(idAlvo);
+    const motivo = String(req.body?.motivo || "").trim();
+    if (!motivo) return res.status(400).json({ message: "Informe o motivo da reativação." });
+
+    const atualizado = await usersService.desarquivarUserPorId(idAlvo, { motivo, atorId });
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
-    log.info("UserDesarquivado", { atorId: req.user.id, targetId: idAlvo, requestId: req.requestId });
+    log.info("UserDesarquivado", { atorId, targetId: idAlvo, requestId: req.requestId });
     return res.json({ message: "Estado do cadastro alterado para: CADASTRO ATIVO.", user: atualizado });
   } catch (err) {
     log.error("UsersDesarquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });

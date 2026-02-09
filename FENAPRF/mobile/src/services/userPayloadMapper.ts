@@ -36,13 +36,23 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
 
   const perfil = formState.perfil_acesso;
-  if (perfil) payload.perfil_acesso = perfil;
+  if (perfil !== undefined) payload.perfil_acesso = perfil;
 
   // Novos campos FENAPRF com sanitização por perfil
   const isCouncil = perfil === 'CONSELHEIRO' || perfil === 'DIRETORIA';
+  const isAdminOrColab = perfil === 'ADMIN' || perfil === 'COLABORADOR';
 
-  payload.uf = (perfil === 'CONSELHEIRO') ? (formState.uf || '') : 'BR';
-  payload.cargo = isCouncil ? (formState.cargo || '') : (perfil === 'ADMIN' ? 'Administrador' : 'Colaborador');
+  payload.uf = (perfil === 'CONSELHEIRO') ? (formState.uf || '') : (isAdminOrColab || perfil === 'DIRETORIA' ? 'BR' : '');
+
+  if (isCouncil) {
+    payload.cargo = formState.cargo || '';
+  } else if (perfil === 'ADMIN') {
+    payload.cargo = 'Administrador';
+  } else if (perfil === 'COLABORADOR') {
+    payload.cargo = 'Colaborador';
+  } else {
+    payload.cargo = '';
+  }
 
   if (isCouncil) {
     if (formState.cargo_mandato_inicio) payload.cargo_mandato_inicio = toIsoDateYYYYMMDD(formState.cargo_mandato_inicio) || formState.cargo_mandato_inicio;

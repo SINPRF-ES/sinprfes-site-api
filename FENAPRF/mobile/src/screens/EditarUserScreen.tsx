@@ -19,6 +19,20 @@ import { TouchableOpacity } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
+const PERFIL_RANK: Record<string, number> = {
+  ADMIN: 100,
+  DIRETORIA: 50,
+  COLABORADOR: 30,
+  CONSELHEIRO: 10
+};
+
+const canEditorEditTargetCore = (editorPerfil: string, targetPerfil: string) => {
+  const e = (editorPerfil || "").toUpperCase();
+  const t = (targetPerfil || "").toUpperCase();
+  if (e === 'ADMIN') return true;
+  return (PERFIL_RANK[e] || 0) > (PERFIL_RANK[t] || 0);
+};
+
 export default function EditarUserScreen({ route, navigation }: any) {
   const userId = parseCanonicalUserId(route.params?.userId);
   const { user: authUser } = useAuth();
@@ -66,7 +80,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
     fetchData();
   }, [fetchData]);
 
-  const handleUpdate = useCallback(async () => {
+  const handleUpdate = useCallback(async (ignoreWarnings = false) => {
     if (!user) return;
     if (!netInfo.isConnected) {
       Alert.alert('Offline', 'A edição de membros só está disponível online.');
@@ -96,12 +110,12 @@ export default function EditarUserScreen({ route, navigation }: any) {
 
     try {
       setSaving(true);
-      const payload = buildUpdateUserPayload(user);
+      const payload = { ...buildUpdateUserPayload(user), ignoreWarnings };
 
       // Instrumentação de logs para depuração de datas (Step A)
       logger.info('USER_SAVE_PAYLOAD_DATES', {
         user_id: user.id,
-        data_nascimento: { value: payload.data_nascimento, type: typeof payload.data_nascimento },
+        data_nascimento: { value: (payload as any).data_nascimento, type: typeof (payload as any).data_nascimento },
       });
 
       const canonicalId = getCanonicalUserId(user);
@@ -115,7 +129,18 @@ export default function EditarUserScreen({ route, navigation }: any) {
       Alert.alert('Sucesso', 'Membro atualizado com sucesso.');
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o membro.');
+      if (err.response?.data?.code === 'DATA_DUPLICATED_WARNING') {
+        Alert.alert(
+          'Aviso de Duplicidade',
+          err.response.data.message,
+          [
+            { text: 'Voltar e corrigir', style: 'cancel' },
+            { text: 'Continuar mesmo assim', onPress: () => handleUpdate(true) }
+          ]
+        );
+      } else {
+        Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar o membro.');
+      }
     } finally {
       setSaving(false);
     }
@@ -150,12 +175,17 @@ export default function EditarUserScreen({ route, navigation }: any) {
   }, [user, motivoAcao, showMotivoInput, fetchData]);
 
   useEffect(() => {
-    const ehGestao = checkIsGestao(user?.perfil_acesso);
     const actions: MenuAction[] = [
       { label: 'Salvar Alterações', icon: 'content-save', onPress: handleUpdate }
     ];
 
-    if (ehGestao && userId && user) {
+    // Se houver um editor logado e um alvo (userId), e o editor tiver rank superior ou for Admin
+    const canArchive = authUser && user && userId && (
+      authUser.perfil_acesso === ROLES.ADMIN ||
+      (checkIsGestao(authUser.perfil_acesso) && canEditorEditTargetCore(authUser.perfil_acesso, user.perfil_acesso || ''))
+    );
+
+    if (canArchive && user) {
       if (user.arquivado_em) {
         actions.push({ label: 'Desarquivar', icon: 'archive-arrow-up', onPress: () => setShowMotivoInput('DESARQUIVAR') });
       } else {
@@ -175,6 +205,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
 
+
   if (!user) {
     return (
       <View style={styles.centered}>
@@ -183,20 +214,6 @@ export default function EditarUserScreen({ route, navigation }: any) {
       </View>
     );
   }
-
-  const PERFIL_RANK: Record<string, number> = {
-    ADMIN: 100,
-    DIRETORIA: 50,
-    COLABORADOR: 30,
-    CONSELHEIRO: 10
-  };
-
-  const canEditorEditTargetCore = (editorPerfil: string, targetPerfil: string) => {
-    const e = (editorPerfil || "").toUpperCase();
-    const t = (targetPerfil || "").toUpperCase();
-    if (e === 'ADMIN') return true;
-    return (PERFIL_RANK[e] || 0) > (PERFIL_RANK[t] || 0);
-  };
 
   const canEditCore = canEditorEditTargetCore(authUser?.perfil_acesso || '', user?.perfil_acesso || '');
 
@@ -225,18 +242,29 @@ export default function EditarUserScreen({ route, navigation }: any) {
       )}
 
       <KeyboardAwareScrollView contentContainerStyle={styles.contentContainer} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
-        {user.arquivado_em && (
+        {user.arquivado_em ? (
           <View style={styles.archiveBadge}>
             <MaterialCommunityIcons name="archive-alert" size={24} color="#721c24" />
             <View style={{ flex: 1 }}>
               <Text style={styles.archiveBadgeTitle}>Cadastro Arquivado</Text>
               <Text style={styles.archiveBadgeInfo}>
-                Por: {user.arquivado_por_nome || 'N/A'} em {new Date(user.arquivado_em).toLocaleDateString('pt-BR')}
+                Por: {user.arquivado_por_nome || '(usuário não encontrado)'} em {new Date(user.arquivado_em).toLocaleDateString('pt-BR')}
               </Text>
               <Text style={styles.archiveBadgeMotivo}>Motivo: {user.arquivado_motivo}</Text>
             </View>
           </View>
-        )}
+        ) : user.desarquivado_em ? (
+          <View style={[styles.archiveBadge, { backgroundColor: '#f0fff4', borderColor: '#9ae6b4' }]}>
+            <MaterialCommunityIcons name="check-circle" size={24} color="#2f855a" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.archiveBadgeTitle, { color: '#2f855a' }]}>Cadastro Reativado</Text>
+              <Text style={[styles.archiveBadgeInfo, { color: '#276749' }]}>
+                Por: {user.desarquivado_por_nome || '(usuário não encontrado)'} em {new Date(user.desarquivado_em).toLocaleDateString('pt-BR')}
+              </Text>
+              <Text style={[styles.archiveBadgeMotivo, { color: '#276749' }]}>Motivo: {user.desarquivado_motivo}</Text>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>👤 Informações Pessoais</Text></View>
         <ContatoCard
