@@ -43,15 +43,19 @@ const VinculoCard: React.FC<Props> = ({
     }
   };
 
-  const isConselheiro = (user?.perfil_acesso as string) === ROLES.CONSELHEIRO;
-  const isDiretoria = (user?.perfil_acesso as string) === ROLES.DIRETORIA;
-  const isColaborador = (user?.perfil_acesso as string) === ROLES.COLABORADOR;
-  const isAdmin = (user?.perfil_acesso as string) === ROLES.ADMIN;
+  const perfil = (user?.perfil_acesso as string) || '';
+  const isConselheiro = perfil === ROLES.CONSELHEIRO;
+  const isDiretoria = perfil === ROLES.DIRETORIA;
+  const isColaborador = perfil === ROLES.COLABORADOR;
+  const isAdmin = perfil === ROLES.ADMIN;
 
   const showCargo = isConselheiro || isDiretoria;
   const showUF = isConselheiro;
   const showMandato = isConselheiro || isDiretoria;
   const showSegundoVinculo = isConselheiro || isDiretoria;
+
+  // Regra FENAPRF: ADMIN e COLABORADOR não mostram UF de Atuação
+  const showUFSection = isConselheiro || isDiretoria;
 
   return (
     <View style={styles.card}>
@@ -121,28 +125,30 @@ const VinculoCard: React.FC<Props> = ({
         </>
       )}
 
-      {showUF ? (
-        <>
-          <Text style={styles.label}>UF de Atuação</Text>
-          <PickerWrapper style={styles.pickerWrapper}>
-            <Picker
-              enabled={isGestao}
-              selectedValue={user?.uf || ''}
-              onValueChange={(val) => setUser(f => (f ? { ...f, uf: val as any } : null))}
-              style={styles.picker}
-            >
-              <Picker.Item label="Selecione..." value="" />
-              {UFS.map(uf => (
-                <Picker.Item key={uf} label={uf} value={uf} />
-              ))}
-            </Picker>
-          </PickerWrapper>
-        </>
-      ) : (
-        <View style={{ marginBottom: 15 }}>
+      {showUFSection && (
+        showUF ? (
+            <>
             <Text style={styles.label}>UF de Atuação</Text>
-            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333' }}>{user?.uf || 'BR'}</Text>
-        </View>
+            <PickerWrapper style={styles.pickerWrapper}>
+                <Picker
+                enabled={isGestao}
+                selectedValue={user?.uf || ''}
+                onValueChange={(val) => setUser(f => (f ? { ...f, uf: val as any } : null))}
+                style={styles.picker}
+                >
+                <Picker.Item label="Selecione..." value="" />
+                {UFS.map(uf => (
+                    <Picker.Item key={uf} label={uf} value={uf} />
+                ))}
+                </Picker>
+            </PickerWrapper>
+            </>
+        ) : (
+            <View style={{ marginBottom: 15 }}>
+                <Text style={styles.label}>UF de Atuação</Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333' }}>{user?.uf || 'BR'}</Text>
+            </View>
+        )
       )}
 
       {showMandato && (

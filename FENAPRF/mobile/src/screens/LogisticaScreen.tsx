@@ -85,8 +85,13 @@ const LogisticaScreen = () => {
       } else {
         setEventoSelecionado(null);
       }
-    } catch (err) {
-      logger.error('Logistica.fetchData', err);
+    } catch (err: any) {
+      logger.error('Logistica.fetchData', err, {
+        message: err.message,
+        status: err.response?.status,
+        url: err.config?.url,
+        baseURL: err.config?.baseURL
+      });
     } finally {
       setLoading(false);
     }
@@ -359,15 +364,19 @@ const LogisticaScreen = () => {
   const exportData = async (type: 'pdf' | 'xls') => {
     if (!eventoSelecionado) return;
     try {
-        const url = `/logistica/eventos/${eventoSelecionado.id}/exportar/${type}`;
-        // Reutilizando o token do apiService
-        const response = await api.get(url, { responseType: 'blob' });
+        // Correção: Adicionado prefixo /api para alinhar com o backend FENAPRF
+        const url = `/api/logistica/eventos/${eventoSelecionado.id}/exportar/${type}`;
+
         // No mobile, abrir o link no navegador costuma ser mais fácil para download
         // Mas o ideal seria salvar o arquivo. Como é uma AGO, o gestor fará no PC via Web se possível.
         // Se precisar no mobile, usamos o link autenticado.
-        const downloadUrl = `${api.defaults.baseURL}${url}?token=${api.defaults.headers.common['Authorization']?.toString().split(' ')[1]}`;
+        const token = api.defaults.headers.common['Authorization']?.toString().split(' ')[1];
+        const downloadUrl = `${api.defaults.baseURL}${url}${token ? `?token=${token}` : ''}`;
+
+        logger.info('Logistica.exportData', { type, url: downloadUrl });
         Linking.openURL(downloadUrl);
     } catch (e) {
+        logger.error('Logistica.exportError', e);
         Alert.alert('Erro', 'Falha ao exportar.');
     }
   };

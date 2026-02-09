@@ -64,11 +64,25 @@ export default function CriarUserScreen({ navigation }: any) {
     const nomeEfetivo = user.nome || user.name;
     const emailEfetivo = user.email1 || user.email;
 
-    if (!nomeEfetivo || !user.cpf || !emailEfetivo || !user.telefone1) {
-      Alert.alert('Erro de Validação', 'Nome, CPF, Email e Telefone são obrigatórios.');
+    const perfil = user.perfil_acesso as string;
+    const isCouncil = perfil === ROLES.CONSELHEIRO || perfil === ROLES.DIRETORIA;
+
+    if (!nomeEfetivo || !user.cpf || !emailEfetivo) {
+      Alert.alert('Erro de Validação', 'Nome, CPF e Email são obrigatórios.');
       return;
     }
-    if (user.cpf.length !== 11) {
+
+    if (perfil === ROLES.CONSELHEIRO && (!user.uf || user.uf === 'BR')) {
+      Alert.alert('Erro de Validação', 'UF é obrigatória para Conselheiros.');
+      return;
+    }
+
+    if (isCouncil && !user.cargo) {
+      Alert.alert('Erro de Validação', 'O cargo é obrigatório para este perfil.');
+      return;
+    }
+
+    if (onlyDigits(user.cpf).length !== 11) {
       Alert.alert('Erro de Validação', 'O CPF deve conter 11 dígitos.');
       return;
     }
@@ -76,7 +90,7 @@ export default function CriarUserScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-      // Sanitização e normalização do payload
+      // Sanitização e normalização do payload (Fiel às regras de isolamento FENAPRF)
       const payload: any = {
           nome: normalizeNome(user.nome || user.name || ''),
           name: normalizeNome(user.nome || user.name || ''),
@@ -91,18 +105,17 @@ export default function CriarUserScreen({ navigation }: any) {
           numero: user.numero,
           complemento: user.complemento,
           cidade: user.cidade,
-          uf: user.uf || 'BR',
-          perfil_acesso: user.perfil_acesso,
-          cargo: user.cargo,
+          uf: (perfil === ROLES.CONSELHEIRO) ? user.uf : 'BR',
+          perfil_acesso: perfil,
+          cargo: isCouncil ? user.cargo : (perfil === ROLES.ADMIN ? 'Administrador' : 'Colaborador'),
       };
 
       if (user.data_nascimento) {
         payload.data_nascimento = toISODate(user.data_nascimento) || (user.data_nascimento as any);
       }
 
-      // Regras de negócio FENAPRF para limpeza de campos do conselho
-      const isConselho = ['CONSELHEIRO', 'DIRETORIA'].includes(user.perfil_acesso as string || '');
-      if (isConselho) {
+      // Regras de negócio FENAPRF: Enviar campos de mandato/2º vínculo apenas para o conselho
+      if (isCouncil) {
           payload.cargo_mandato_inicio = user.cargo_mandato_inicio ? toISODate(user.cargo_mandato_inicio) || user.cargo_mandato_inicio : null;
           payload.cargo_mandato_fim = user.cargo_mandato_fim ? toISODate(user.cargo_mandato_fim) || user.cargo_mandato_fim : null;
           payload.perfil_acesso2 = user.perfil_acesso2 || null;
