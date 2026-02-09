@@ -1,3 +1,4 @@
+// src/screens/LoginScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, Image, Pressable } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -22,6 +23,10 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [temCredencial, setTemCredencial] = useState<boolean>(false);
+
+  // ✅ Corrige o crash do cold start: a variável "etapa" era usada sem existir.
+  // Se no futuro você tiver etapas reais (ex.: "cpf" -> "senha"), troque para um union type.
+  const etapa = 'credenciais';
 
   useEffect(() => {
     (async () => {
@@ -58,17 +63,17 @@ export default function LoginScreen() {
       if (sucesso) {
         console.log('[Biometria.session.restore.start]');
         try {
-           // Tenta validar o token
-           const user = await buscarUserLogado(tokenParaUsar);
-           await setSessao(tokenParaUsar, user);
-           console.log('[Biometria.session.restore.ok]');
+          // Tenta validar o token
+          const user = await buscarUserLogado(tokenParaUsar);
+          await setSessao(tokenParaUsar, user);
+          console.log('[Biometria.session.restore.ok]');
         } catch (restoreError: any) {
-           console.error('[Biometria.session.restore.fail]', restoreError);
-           if (restoreError?.response?.status === 401) {
-              Alert.alert('Sessão Expirada', 'Sua credencial expirou. Por favor, entre com sua senha.');
-           } else {
-              Alert.alert('Erro', 'Não foi possível validar sua biometria agora. Tente com sua senha.');
-           }
+          console.error('[Biometria.session.restore.fail]', restoreError);
+          if (restoreError?.response?.status === 401) {
+            Alert.alert('Sessão Expirada', 'Sua credencial expirou. Por favor, entre com sua senha.');
+          } else {
+            Alert.alert('Erro', 'Não foi possível validar sua biometria agora. Tente com sua senha.');
+          }
         }
       }
     } catch (e: any) {
@@ -87,10 +92,13 @@ export default function LoginScreen() {
     // Removida a verificação genérica de !user.password_hash pois o /me sanitiza o hash real
     if (user.password_hash === 'PENDENTE') {
       logger.info('NAVIGATING_TO_RESET_PENDENTE');
-      navigation.navigate('ResetPassword' as never, {
-        isFirstAccess: true,
-        cpf: user.cpf
-      } as never);
+      navigation.navigate(
+        'ResetPassword' as never,
+        {
+          isFirstAccess: true,
+          cpf: user.cpf,
+        } as never
+      );
       return;
     }
 
@@ -138,7 +146,7 @@ export default function LoginScreen() {
       if (status === 403 && errorMsg.includes('pendente')) {
         Alert.alert('Primeiro Acesso', errorMsg, [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Definir Senha', onPress: () => navigation.navigate('ForgotPassword' as any) }
+          { text: 'Definir Senha', onPress: () => navigation.navigate('ForgotPassword' as any) },
         ]);
       } else {
         Alert.alert('Erro no login', errorMsg);
@@ -149,106 +157,107 @@ export default function LoginScreen() {
   }
 
   const isEtapaCredenciais = true;
-
-  const cpfPlaceholder = "000.000.000-00";
+  const cpfPlaceholder = '000.000.000-00';
 
   useEffect(() => {
     logger.info('LOGIN_SCREEN_MOUNT', {
       etapa,
       hasInitialCpf: !!cpf,
       cpfPlaceholder,
-      isBiometriaEnabled: biometriaHabilitada
+      isBiometriaEnabled: biometriaHabilitada,
     });
 
-    if (cpfPlaceholder.includes('_') || cpfPlaceholder.includes('-') && !cpfPlaceholder.includes('.')) {
+    if (cpfPlaceholder.includes('_') || (cpfPlaceholder.includes('-') && !cpfPlaceholder.includes('.'))) {
       logger.warn('CPF_PLACEHOLDER_RESIDUE_DETECTED', { placeholder: cpfPlaceholder });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <SafeScreen style={{ backgroundColor: '#001A33' }}>
-    <KeyboardAwareScrollView contentContainerStyle={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
-      <View style={styles.card}>
-        <View style={styles.logoContainer}>
-          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        </View>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        enableOnAndroid
+        extraScrollHeight={50}
+        keyboardOpeningTime={0}
+      >
+        <View style={styles.card}>
+          <View style={styles.logoContainer}>
+            <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          </View>
 
-        <Text style={styles.title}>FENAPRF</Text>
-        <Text style={styles.subtitle}>Conselho de Representantes</Text>
+          <Text style={styles.title}>FENAPRF</Text>
+          <Text style={styles.subtitle}>Conselho de Representantes</Text>
 
-        {biometriaHabilitada && temCredencial && isEtapaCredenciais && (
-          <Pressable
-            style={styles.biometricButton}
-            onPress={handleBiometricLogin}
-            disabled={loading}
-            accessibilityLabel="Entrar com Biometria"
-            accessibilityRole="button"
-          >
-            <MaterialCommunityIcons name="fingerprint" size={24} color="#FFF" />
-            <Text style={styles.biometricButtonText}>Entrar com Biometria</Text>
-          </Pressable>
-        )}
+          {biometriaHabilitada && temCredencial && isEtapaCredenciais && (
+            <Pressable
+              style={styles.biometricButton}
+              onPress={handleBiometricLogin}
+              disabled={loading}
+              accessibilityLabel="Entrar com Biometria"
+              accessibilityRole="button"
+            >
+              <MaterialCommunityIcons name="fingerprint" size={24} color="#FFF" />
+              <Text style={styles.biometricButtonText}>Entrar com Biometria</Text>
+            </Pressable>
+          )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="000.000.000-00"
-          accessibilityLabel="CPF"
-          value={formatCpf(cpf)}
-          onChangeText={(text) => {
-            const digits = onlyDigits(text);
-            if (digits.length <= 11) {
-              setCpf(digits);
-            }
-          }}
-          keyboardType="numeric"
-          maxLength={14}
-          editable={isEtapaCredenciais}
-          textContentType="username"
-          autoComplete="username"
-          returnKeyType="next"
-        />
-
-        <View style={styles.passwordContainer}>
           <TextInput
-            style={styles.passwordInput}
-            placeholder="Senha"
-            value={senha}
-            onChangeText={setSenha}
-            secureTextEntry={!showPassword}
+            style={styles.input}
+            placeholder="000.000.000-00"
+            accessibilityLabel="CPF"
+            value={formatCpf(cpf)}
+            onChangeText={(text) => {
+              const digits = onlyDigits(text);
+              if (digits.length <= 11) {
+                setCpf(digits);
+              }
+            }}
+            keyboardType="numeric"
+            maxLength={14}
             editable={isEtapaCredenciais}
-            accessibilityLabel="Senha"
-            textContentType="password"
-            autoComplete="password"
-            returnKeyType="done"
-            onSubmitEditing={handleLoginCredenciais}
+            textContentType="username"
+            autoComplete="username"
+            returnKeyType="next"
           />
-          <Pressable
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.showPasswordButton}
-            accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
-            accessibilityRole="button"
-          >
-            <MaterialCommunityIcons
-              name={showPassword ? "eye-off" : "eye"}
-              size={24}
-              color="#666"
-            />
-          </Pressable>
-        </View>
 
-        <>
-          <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
-          <Pressable
-            onPress={() => navigation.navigate('ForgotPassword')}
-            disabled={loading}
-            accessibilityRole="link"
-            accessibilityLabel="Esqueci minha senha ou Primeiro acesso"
-          >
-            <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
-          </Pressable>
-        </>
-      </View>
-    </KeyboardAwareScrollView>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Senha"
+              value={senha}
+              onChangeText={setSenha}
+              secureTextEntry={!showPassword}
+              editable={isEtapaCredenciais}
+              accessibilityLabel="Senha"
+              textContentType="password"
+              autoComplete="password"
+              returnKeyType="done"
+              onSubmitEditing={handleLoginCredenciais}
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.showPasswordButton}
+              accessibilityLabel={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              accessibilityRole="button"
+            >
+              <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#666" />
+            </Pressable>
+          </View>
+
+          <>
+            <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
+            <Pressable
+              onPress={() => navigation.navigate('ForgotPassword' as any)}
+              disabled={loading}
+              accessibilityRole="link"
+              accessibilityLabel="Esqueci minha senha ou Primeiro acesso"
+            >
+              <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
+            </Pressable>
+          </>
+        </View>
+      </KeyboardAwareScrollView>
     </SafeScreen>
   );
 }
