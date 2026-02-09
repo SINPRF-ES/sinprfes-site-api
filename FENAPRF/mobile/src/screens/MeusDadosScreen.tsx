@@ -16,13 +16,13 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
 import { toISODate, toBrazilianDate } from '../utils/date';
-import { onlyDigits } from '../shared/format/formatters';
+import { onlyDigits } from '../utils/format';
 import { logger } from '../infra/logger';
-import { getCanonicalUserId } from '../utils/userUtils';
+import { getCanonicalUserId } from '../utils/user';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { useNavigation } from '@react-navigation/native';
-import { normalizeNome } from '../utils/canon';
-import { tituloCargoUf } from '../utils/userUtils';
+import { normalizeNome } from '../utils/user';
+import { tituloCargoUf } from '../utils/user';
 
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();

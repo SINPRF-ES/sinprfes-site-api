@@ -1,8 +1,8 @@
 // mobile/src/services/userPayloadMapper.ts
-import { onlyDigits } from '../shared/format/formatters';
-import { toIsoDateYYYYMMDD } from '../utils/dateNormalize';
+import { onlyDigits } from '../utils/format';
+import { toIsoDateYYYYMMDD } from '../utils/date';
 import type { User } from '../types/user';
-import { normalizeNome } from '../utils/canon';
+import { normalizeNome } from '../utils/user';
 
 /**
  * Constrói o payload para a atualização de um membro, garantindo que os dados

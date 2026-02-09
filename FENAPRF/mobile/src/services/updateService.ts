@@ -6,12 +6,12 @@ import * as IntentLauncher from 'expo-intent-launcher';
 import axios from 'axios';
 import api from './apiService';
 import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from './driveService';
-import { logDebug } from '../utils/userUtils';
+import { logDebug } from '../utils/user';
 import { carregarSessao } from './storageService';
 import { enviarLogDiagnostico } from './diagnosticoService';
 import { logger } from '../infra/logger';
 import { APP_ID, API_BASE_URL, UPDATE_MANIFEST_URL } from '../config/env';
-import { buildCacheDest, inferExtension } from '../utils/fileCacheUtils';
+import { buildCacheDest, inferExtension } from '../utils/fileCache';
 
 export interface UpdateManifest {
   versionCode: number;

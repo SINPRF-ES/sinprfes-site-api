@@ -11,7 +11,7 @@ import * as Updates from 'expo-updates';
 import { Ionicons } from '@expo/vector-icons';
 import { LogEntry, getLogs, clearLogs, getLogsAsText, LogLevel } from '../infra/logger';
 import { useAuth } from '../hooks/useAuth';
-import { ROLES, isDiretoria } from '../utils/userUtils';
+import { ROLES, isDiretoria } from '../utils/user';
 import api from '../services/apiService';
 
 /**

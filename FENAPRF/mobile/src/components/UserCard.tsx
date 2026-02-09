@@ -2,13 +2,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { User, UserProfile } from '../types/user';
-import { formatCpf, formatTelefone } from '../shared/format/formatters';
-import { normalizeSituacaoFuncional, getBandeiraUF } from '../utils/userUtils';
+import { formatCpf, formatTelefone } from '../utils/format';
+import { getBandeiraUF } from '../utils/user';
 import { calculateAgeBreakdown, formatISOToBRDateTime } from '../utils/date';
 
-// Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface UserCardProps {
-  user: User & { situacaoFuncional?: string };
+  user: User;
   currentUserProfile: UserProfile;
   onEdit: (user: User) => void;
 }
@@ -19,39 +18,10 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserProfile, onEdit })
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 
-  const situacaoNormalizada = normalizeSituacaoFuncional(user.situacao_funcional || user.situacao);
-
-  const getBadgeStyle = () => {
-    switch (situacaoNormalizada) {
-      case 'ATIVO':
-        return styles.situacaoATIVO;
-      case 'VETERANO':
-        return styles.situacaoVETERANO;
-      case 'PENSIONISTA':
-        return styles.situacaoPENSIONISTA;
-      default:
-        return styles.situacaoDefault;
-    }
-  };
-
-  const getLeftBorderStyle = () => {
-    switch (situacaoNormalizada) {
-      case 'ATIVO':
-        return { borderLeftColor: '#27ae60' };
-      case 'VETERANO':
-        return { borderLeftColor: '#f39c12' };
-      case 'PENSIONISTA':
-        return { borderLeftColor: '#e91e63' };
-      default:
-        return { borderLeftColor: '#95a5a6' };
-    }
-  };
-
-  const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
   const isArquivado = !!user.arquivado_em;
 
   return (
-    <TouchableOpacity style={[styles.card, getLeftBorderStyle(), isArquivado && styles.cardArquivado]} onPress={toggleExpand} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.card, isArquivado && styles.cardArquivado]} onPress={toggleExpand} activeOpacity={0.7}>
       <View style={styles.headerContainer}>
         <Image
           source={{ uri: user.avatar_url || 'https://via.placeholder.com/50' }}
@@ -60,9 +30,6 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserProfile, onEdit })
         <View style={styles.infoContainer}>
           <View style={styles.nameAndBadgeContainer}>
             <Text style={styles.nome} numberOfLines={2}>{user.name}</Text>
-            <View style={[styles.situacao, getBadgeStyle()]}>
-              <Text style={styles.situacaoText}>{situacaoLabel}</Text>
-            </View>
           </View>
           <Text style={styles.detalhe}>Telefone: {formatTelefone(user.telefone1) || '—'}</Text>
         </View>
@@ -225,29 +192,5 @@ const styles = StyleSheet.create({
   },
   buttonContainerSpacer: {
     flex: 1,
-  },
-  situacao: {
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  situacaoText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#fff',
-    textTransform: 'uppercase',
-  },
-  situacaoATIVO: {
-    backgroundColor: '#27ae60', // Verde
-  },
-  situacaoVETERANO: {
-    backgroundColor: '#f39c12', // Amarelo
-  },
-  situacaoPENSIONISTA: {
-    backgroundColor: '#e91e63', // Rosa
-  },
-  situacaoDefault: {
-    backgroundColor: '#95a5a6', // Cinza
   },
 });

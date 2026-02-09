@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import SafeScreen from '../components/SafeScreen';
 import { useNavigation } from '@react-navigation/native';
 import { solicitarResetSenha } from '../services/authService';
-import { formatCpf, onlyDigits } from '../shared/format/formatters';
+import { formatCpf, onlyDigits } from '../utils/format';
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation();

@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { getMinhaInscricaoJogos } from '../services/jogosService';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
-import { getCanonicalUserId } from '../utils/userUtils';
+import { getCanonicalUserId } from '../utils/user';
 import { ENABLE_JOGOS } from '../config/features';
 
 const JogosBanner = () => {

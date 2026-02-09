@@ -4,7 +4,7 @@ import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import PickerWrapper from './PickerWrapper';
 import { User } from '../types/user';
-import { formatTelefone, onlyDigits, formatCpf, formatData } from '../shared/format/formatters';
+import { formatTelefone, onlyDigits, formatCpf, formatData } from '../utils/format';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
 
 interface Props {

@@ -7,9 +7,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleias } from '../../services/assembleiaService';
 import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
-import { isDiretoria } from '../../utils/userUtils';
+import { isDiretoria } from '../../utils/user';
 import { logger } from '../../infra/logger';
-import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/assembleiaLabels';
+import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/format';
 
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 

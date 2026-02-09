@@ -1,7 +1,9 @@
 /**
- * FENAPRF - Definições Canônicas do Domínio (Mobile)
- * Centraliza constantes e funções de normalização.
+ * FENAPRF - Utilitários de Usuário e Domínio
  */
+
+export { slugify, normalizeNome } from './format';
+import { slugify } from './format';
 
 export const SEXO = {
   M: 'M',
@@ -10,7 +12,9 @@ export const SEXO = {
 
 export type Sexo = typeof SEXO[keyof typeof SEXO];
 
-// 1. Estado do Cadastro (Gestão do Sistema)
+/**
+ * Estado do Cadastro (Gestão do Sistema)
+ */
 export const ESTADO_CADASTRO = {
   CADASTRO_ATIVO: 'CADASTRO_ATIVO',
   ARQUIVADO: 'ARQUIVADO'
@@ -18,7 +22,9 @@ export const ESTADO_CADASTRO = {
 
 export type EstadoCadastro = typeof ESTADO_CADASTRO[keyof typeof ESTADO_CADASTRO];
 
-// 2. Perfis de Acesso (FENAPRF)
+/**
+ * Perfis de Acesso (FENAPRF)
+ */
 export const PERFIL_ACESSO = {
   ADMIN: 'ADMIN',
   DIRETORIA: 'DIRETORIA',
@@ -28,7 +34,14 @@ export const PERFIL_ACESSO = {
 
 export type PerfilAcesso = typeof PERFIL_ACESSO[keyof typeof PERFIL_ACESSO];
 
-// Mapeamento para labels de exibição
+/**
+ * Alias para PERFIL_ACESSO.
+ */
+export const ROLES = PERFIL_ACESSO;
+
+/**
+ * Mapeamento para labels de exibição.
+ */
 export const LABELS: Record<string, string> = {
   [ESTADO_CADASTRO.CADASTRO_ATIVO]: 'Ativo',
   [ESTADO_CADASTRO.ARQUIVADO]: 'Arquivado',
@@ -74,6 +87,10 @@ export const UF_NOME: Record<string, string> = Object.fromEntries(
   UFS_DETALHADAS.map((u) => [u.sigla, u.nome])
 );
 
+export const UFS = UFS_DETALHADAS
+  .map(u => u.sigla)
+  .filter(s => s !== 'BR');
+
 /**
  * Cargos
  */
@@ -118,6 +135,20 @@ export const FILTROS_MEMBROS = [
 ];
 
 /**
+ * Canoniza o ID do user para string numérica ou UUID.
+ */
+export function getCanonicalUserId(obj: any): string {
+  if (!obj) return '';
+  const id = typeof obj === 'object' ? obj.id : obj;
+  if (id === undefined || id === null) return '';
+  return String(id);
+}
+
+export function parseCanonicalUserId(id: any): string {
+  return getCanonicalUserId(id);
+}
+
+/**
  * Normaliza o Sexo.
  */
 export function normalizeSexo(val: string | null | undefined): Sexo | null {
@@ -126,15 +157,6 @@ export function normalizeSexo(val: string | null | undefined): Sexo | null {
   if (s === 'M' || s === 'MASCULINO') return SEXO.M;
   if (s === 'F' || s === 'FEMININO') return SEXO.F;
   return null;
-}
-
-/**
- * Remove acentos e caracteres especiais para comparação robusta.
- */
-export function slugify(str: string | null | undefined): string {
-  if (!str) return '';
-  return str.trim().toUpperCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /**
@@ -162,20 +184,6 @@ export function normalizeEstadoCadastro(val: string | null | undefined): EstadoC
 }
 
 /**
- * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
- */
-export function normalizeNome(input?: string | null): string | null {
-  if (!input) return null;
-
-  const s = input
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase("pt-BR");
-
-  return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
-}
-
-/**
  * Normaliza o nome do cargo.
  */
 export function normalizeCargo(raw?: string | null): string {
@@ -192,6 +200,24 @@ export function normalizeCargo(raw?: string | null): string {
 
   return map.get(lower) || s;
 }
+
+/**
+ * Verifica se o perfil tem acesso de gestão (administrativo geral).
+ */
+export const isGestao = (perfil?: string | null) => {
+  if (!perfil) return false;
+  const p = perfil.toUpperCase();
+  return [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.COLABORADOR].includes(p);
+};
+
+/**
+ * Verifica se o perfil tem acesso de diretoria.
+ */
+export const isDiretoria = (perfil?: string | null) => {
+  if (!perfil) return false;
+  const p = perfil.toUpperCase();
+  return [ROLES.ADMIN, ROLES.DIRETORIA].includes(p);
+};
 
 /**
  * Retorna o título formatado do cargo e UF do membro.
@@ -274,3 +300,32 @@ export function ordenarMembrosTodos(membros: any[]): any[] {
 
   return [...diretoria, ...conselheiros, ...adminColab, ...outros];
 }
+
+/**
+ * Retorna a URL da bandeira da UF via IBGE ou FlagCDN.
+ */
+export function getBandeiraUF(ufSigla?: string | null, perfil?: string | null): string {
+  const p = (perfil || "").toUpperCase();
+  let uf = (ufSigla || "").trim().toLowerCase();
+
+  // Perfis nacionais usam a bandeira do Brasil
+  if (p === PERFIL_ACESSO.DIRETORIA || p === PERFIL_ACESSO.COLABORADOR || p === PERFIL_ACESSO.ADMIN) {
+    uf = "br";
+  }
+
+  if (!uf) return "";
+
+  if (uf === "br") return "https://flagcdn.com/w160/br.png";
+  if (uf.length !== 2) return "";
+
+  return `https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/${uf}.png`;
+}
+
+/**
+ * Log de depuração apenas em ambiente de desenvolvimento.
+ */
+export const logDebug = (tag: string, data: any) => {
+  if (__DEV__) {
+    console.log(`[DEBUG][${tag}]`, typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
+  }
+};

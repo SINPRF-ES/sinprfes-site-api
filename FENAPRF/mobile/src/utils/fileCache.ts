@@ -1,4 +1,4 @@
-// mobile/src/utils/fileCacheUtils.ts
+// mobile/src/utils/fileCache.ts
 import * as FileSystem from 'expo-file-system/legacy';
 
 export interface CacheDestOptions {

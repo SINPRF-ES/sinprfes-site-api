@@ -9,7 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
 import { loginSindicato, buscarUserLogado } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
-import { formatCpf, onlyDigits } from '../shared/format/formatters';
+import { formatCpf, onlyDigits } from '../utils/format';
 import { carregarSessao } from '../services/storageService';
 import { logger } from '../infra/logger';
 import { ENABLE_PUSH } from '../config/features';

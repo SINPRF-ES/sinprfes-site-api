@@ -16,12 +16,12 @@ import {
   Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import * as Canon from '../utils/canon';
-import { normalizeText, maskCPF } from '../utils/masks';
+import * as Canon from '../utils/user';
+import { normalizeText, maskCPF } from '../utils/format';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/apiService';
 import { logger } from '../infra/logger';
-import { UFS } from '../utils/userUtils';
+import { UFS } from '../utils/user';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -364,8 +364,6 @@ export default function NotificacoesPushScreen() {
                 style={styles.picker}
             >
                 <Picker.Item label="Todos com app" value="ALL" />
-                <Picker.Item label="Apenas ATIVOS" value="ATIVOS" />
-                <Picker.Item label="Veteranos / Pensionistas" value="VETERANOS" />
                 <Picker.Item label="Por UF" value="UF" />
                 <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
                 <Picker.Item label="Especificar Membro" value="USER" />
