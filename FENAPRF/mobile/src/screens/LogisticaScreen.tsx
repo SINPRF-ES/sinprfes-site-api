@@ -191,10 +191,12 @@ const LogisticaScreen = () => {
           data_fim: isoFim
         });
       }
+      logger.info('Logistica.CreateEvent.API_OK');
       setModalEventoVisible(false);
       fetchData();
       Alert.alert('Sucesso', 'Evento salvo com sucesso!');
     } catch (err) {
+      logger.error('Logistica.CreateEvent.API_FAIL', err);
       Alert.alert('Erro', 'Não foi possível salvar o evento.');
     }
   };
@@ -385,8 +387,10 @@ const LogisticaScreen = () => {
     const actions: MenuAction[] = [];
     if (canManage) {
       actions.push({ label: 'Novo Evento', icon: 'plus-circle', onPress: () => {
+        logger.info('Logistica.CreateEvent.Click', { source: 'menu' });
         setFormEvento({ id: '', titulo: '', descricao: '', data_inicio: '', data_fim: '', documento_url: '', documento_id: '', status: STATUS_EVENTO.ATIVO, justificativa: '' });
         setModalEventoVisible(true);
+        logger.info('Logistica.CreateEvent.ModalOpen');
       }});
       if (eventoSelecionado) {
         actions.push({ label: 'Alterar Evento', icon: 'pencil', onPress: handleEditEvento });
@@ -406,23 +410,31 @@ const LogisticaScreen = () => {
 
   if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
 
-  if (eventos.length === 0) {
-    return (
-      <View style={styles.emptyState}>
-        <MaterialCommunityIcons name="truck-delivery" size={80} color="#ccc" />
-        <Text style={styles.emptyText}>Nenhum evento logístico disponível.</Text>
-        {canManage && (
-          <TouchableOpacity style={styles.btnPrimary} onPress={() => setModalEventoVisible(true)}>
-            <Text style={styles.btnText}>Criar Primeiro Evento</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  }
-
   return (
     <SafeScreen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {canManage && (
+          <TouchableOpacity
+            style={[styles.btnPrimary, { marginBottom: 20 }]}
+            onPress={() => {
+              logger.info('Logistica.CreateEvent.Click', { source: 'body' });
+              setFormEvento({ id: '', titulo: '', descricao: '', data_inicio: '', data_fim: '', documento_url: '', documento_id: '', status: STATUS_EVENTO.ATIVO, justificativa: '' });
+              setModalEventoVisible(true);
+              logger.info('Logistica.CreateEvent.ModalOpen');
+            }}
+          >
+            <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
+            <Text style={styles.btnText}>Criar Novo Evento</Text>
+          </TouchableOpacity>
+        )}
+
+        {eventos.length === 0 && (
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="truck-delivery" size={80} color="#ccc" />
+            <Text style={styles.emptyText}>Nenhum evento logístico disponível.</Text>
+          </View>
+        )}
+
         {/* Seletor de Eventos se houver mais de um ativo */}
         {eventos.filter(e => e.status === STATUS_EVENTO.ATIVO).length > 1 && (
             <View style={styles.selectorContainer}>
