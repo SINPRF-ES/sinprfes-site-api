@@ -2,7 +2,7 @@
 import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import UsersScreen from '../screens/UsersScreen';
@@ -47,6 +47,7 @@ const DrawerNavigator = () => {
         headerTintColor: '#fff',
         headerStyle: { backgroundColor: '#003366' },
         headerTitleAlign: 'center',
+        headerTitleContainerStyle: { paddingHorizontal: 20 },
         headerLeft: () => (
           <TouchableOpacity
             onPress={() => navigation.toggleDrawer()}
@@ -76,12 +77,18 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Publicacoes"
         component={PublicacoesScreen}
-        options={{ title: '📚 Publicações' }}
+        options={{
+          title: 'Publicações',
+          drawerIcon: ({ color, size }) => <Ionicons name="library-outline" size={size} color={color} />
+        }}
       />
       <Drawer.Screen
         name="Logistica"
         component={LogisticaScreen}
-        options={{ title: '🚚 Logística' }}
+        options={{
+          title: 'Logística',
+          drawerIcon: ({ color, size }) => <MaterialCommunityIcons name="truck-delivery-outline" size={size} color={color} />
+        }}
       />
       {ENABLE_JOGOS && (
         <Drawer.Screen

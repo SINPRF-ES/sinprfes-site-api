@@ -130,11 +130,11 @@ export default function NotificacoesPushScreen() {
         return;
     }
 
-    let targetLabel = targetType;
+    let targetLabel = targetType === 'USER' ? 'Membro' : targetType;
     if (targetType === 'USER' && (targetValue?.name || targetValue?.nome)) {
       targetLabel = `Membro — ${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})`;
     } else if (targetValue) {
-      targetLabel = `${targetType} (${targetValue})`;
+      targetLabel = `${targetLabel} (${targetValue})`;
     }
 
     Alert.alert(
@@ -248,7 +248,8 @@ export default function NotificacoesPushScreen() {
       }
     }
 
-    const targetLabel = item.target_type + (displayTargetValue ? `: ${displayTargetValue}` : '');
+    const typeLabel = item.target_type === 'USER' ? 'MEMBRO' : item.target_type;
+    const targetLabel = typeLabel + (displayTargetValue ? `: ${displayTargetValue}` : '');
 
     return (
       <View style={styles.historyCard}>

@@ -236,7 +236,14 @@ exports.atualizarUser = async (req, res) => {
 
     const body = req.body || {};
 
-    log.info("UsersUpdateIniciado", { targetId: idAlvo, loggedId, perfilAtor, bodyKeys: Object.keys(body), requestId: req.requestId });
+    log.info("UsersUpdateIniciado", {
+      targetId: idAlvo,
+      loggedId,
+      perfilAtor,
+      bodyKeys: Object.keys(body),
+      requestId: req.requestId,
+      payload_body: body
+    });
 
     if (body.sexo) {
       const sexoNorm = normalizeSexo(body.sexo);
@@ -258,7 +265,7 @@ exports.atualizarUser = async (req, res) => {
       nome: body.nome || body.name,
       sexo: body.sexo ? normalizeSexo(body.sexo) : undefined,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
-      data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
+      data_nascimento: body.data_nascimento !== undefined ? normalizeDateField(body.data_nascimento) : undefined,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email: body.email || body.email1,
@@ -269,8 +276,8 @@ exports.atualizarUser = async (req, res) => {
       cep: body.cep,
       cargo: body.cargo,
       uf: body.uf_voto || body.uf, // preserva se vier como uf_voto ou similar
-      cargo_mandato_inicio: normalizeDateField(body.cargo_mandato_inicio),
-      cargo_mandato_fim: normalizeDateField(body.cargo_mandato_fim),
+      cargo_mandato_inicio: body.cargo_mandato_inicio !== undefined ? normalizeDateField(body.cargo_mandato_inicio) : undefined,
+      cargo_mandato_fim: body.cargo_mandato_fim !== undefined ? normalizeDateField(body.cargo_mandato_fim) : undefined,
     };
 
     if (body.perfil_acesso) {
@@ -294,10 +301,10 @@ exports.atualizarUser = async (req, res) => {
     if (body.cargo2 !== undefined) payload.cargo2 = body.cargo2;
     if (body.uf2 !== undefined) payload.uf2 = body.uf2;
 
-    // Verificação de Conflito de Cargo
-    const p1 = payload.perfil_acesso || (await usersService.getMe(idAlvo)).perfil_acesso;
-    const c1 = payload.cargo || (await usersService.getMe(idAlvo)).cargo;
-    const u1 = payload.uf || (await usersService.getMe(idAlvo)).uf;
+    // Verificação de Conflito de Cargo (reutilizando objeto 'alvo' para evitar chamadas redundantes)
+    const p1 = payload.perfil_acesso || alvo.perfil_acesso;
+    const c1 = payload.cargo || alvo.cargo;
+    const u1 = payload.uf || alvo.uf;
 
     const conflito1 = await verificarConflitoCargo(p1, c1, u1, idAlvo);
     if (conflito1) {

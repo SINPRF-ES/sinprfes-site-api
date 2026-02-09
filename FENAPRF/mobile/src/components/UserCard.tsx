@@ -14,7 +14,7 @@ interface UserCardProps {
 
 const UserCard: React.FC<UserCardProps> = ({ user, currentUserProfile, onEdit }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(currentUserProfile);
+  const isGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes(currentUserProfile);
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 

@@ -101,10 +101,6 @@
     const s = slugify(val);
     if (PERFIL_ACESSO[s]) return PERFIL_ACESSO[s];
 
-    // Mapeamentos de retrocompatibilidade
-    if (s === 'FUNCIONARIO' || s === 'ORGANIZADOR' || s === 'COMUNICADOR') return PERFIL_ACESSO.COLABORADOR;
-    if (s === 'USER') return PERFIL_ACESSO.CONSELHEIRO;
-
     return PERFIL_ACESSO.CONSELHEIRO; // Default seguro
   }
 

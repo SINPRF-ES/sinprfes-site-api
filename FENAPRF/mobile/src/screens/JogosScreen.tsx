@@ -34,7 +34,7 @@ const JogosScreen = () => {
   const [inscricoesGerais, setInscricoesGerais] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(true);
 
-  const isManager = [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.FUNCIONARIO, ROLES.ORGANIZADOR].includes(user?.perfil_acesso || '');
+  const isManager = [ROLES.ADMIN, ROLES.DIRETORIA, ROLES.COLABORADOR].includes(user?.perfil_acesso || '');
 
   const [form, setForm] = useState({
     sexo: '',

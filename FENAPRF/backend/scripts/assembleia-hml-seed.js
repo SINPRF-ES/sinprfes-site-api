@@ -29,14 +29,14 @@ async function seed() {
     const users = [
       { nome: "Diretor Um", cpf: "11111111111", perfil: "DIRETORIA" },
       { nome: "Diretor Dois", cpf: "22222222222", perfil: "DIRETORIA" },
-      { nome: "User Um", cpf: "33333333333", perfil: "USER" },
-      { nome: "User Dois", cpf: "44444444444", perfil: "USER" },
-      { nome: "User Três", cpf: "55555555555", perfil: "USER" },
-      { nome: "User Quatro", cpf: "66666666666", perfil: "USER" },
-      { nome: "User Cinco", cpf: "77777777777", perfil: "USER" },
-      { nome: "Organizador Um", cpf: "88888888888", perfil: "ORGANIZADOR" },
+      { nome: "Conselheiro Um", cpf: "33333333333", perfil: "CONSELHEIRO" },
+      { nome: "Conselheiro Dois", cpf: "44444444444", perfil: "CONSELHEIRO" },
+      { nome: "Conselheiro Três", cpf: "55555555555", perfil: "CONSELHEIRO" },
+      { nome: "Conselheiro Quatro", cpf: "66666666666", perfil: "CONSELHEIRO" },
+      { nome: "Conselheiro Cinco", cpf: "77777777777", perfil: "CONSELHEIRO" },
+      { nome: "Colaborador Um", cpf: "88888888888", perfil: "COLABORADOR" },
       { nome: "Admin Teste", cpf: "99999999999", perfil: "ADMIN" },
-      { nome: "Comunicador Teste", cpf: "00000000000", perfil: "COMUNICADOR" },
+      { nome: "Colaborador Dois", cpf: "00000000000", perfil: "COLABORADOR" },
     ];
 
     for (const u of users) {

@@ -61,8 +61,8 @@
     async function inicializarUsers(perfil) {
         const listaEl = document.getElementById("lista-users");
         perfilAtual = (perfil || "").toUpperCase();
-        const isReadOnlyProfile = ["USER", "ORGANIZADOR"].includes(perfilAtual);
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+        const isReadOnlyProfile = ["CONSELHEIRO"].includes(perfilAtual);
+        const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
         if (!listaEl) {
             const secUsers = document.getElementById("sec-users");
@@ -106,7 +106,7 @@
                 const filtros = document.createElement("div");
                 filtros.className = "row-filtros";
 
-                const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+                const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
                 filtros.innerHTML = `
                     ${ehGestao ? `
@@ -194,14 +194,14 @@
                             <div>
                                 <div class="user-nome">${safeEscape(f.nome)}</div>
                                 <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.uf || '')}</div>
-                                ${["USER", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
+                                ${["CONSELHEIRO"].includes(perfilAtual) ? '' : `
                                 <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
                             </div>
                         </div>
                         <div style="text-align:right;">
                             <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
-            ${!["USER", "ORGANIZADOR"].includes(perfilAtual) ?
+            ${!["CONSELHEIRO"].includes(perfilAtual) ?
                                 `<button class="btn btn-outline btn-sm" onclick="UsersAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
                         </div>
                     </div>
@@ -230,14 +230,14 @@
         const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
 
         const ehAdmin = perfilAtual === "ADMIN";
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+        const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
         const isArquivado = !!f.arquivado_em;
         const nascimento = f.data_nascimento;
         const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
 
         const userInfo = window.Utils && window.Utils.obterUserInfo ? window.Utils.obterUserInfo() : null;
         const isSelf = userInfo && String(f.id) === String(userInfo.id);
-        const canChangeProfile = (ehAdmin || (["DIRETORIA", "FUNCIONARIO"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN")) && !isSelf;
+        const canChangeProfile = (ehAdmin || (["DIRETORIA", "COLABORADOR"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN")) && !isSelf;
 
         const responsavel = safeEscape(f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—"));
 
@@ -304,10 +304,8 @@
                             <div class="field-group">
                                 <label>Perfil de Acesso</label>
                                 <select name="perfil_acesso">
-                                    <option value="USER" ${f.perfil_acesso === "USER" ? "selected" : ""}>MEMBRO</option>
-                                    <option value="COMUNICADOR" ${f.perfil_acesso === "COMUNICADOR" ? "selected" : ""}>COMUNICADOR</option>
-                                    <option value="ORGANIZADOR" ${f.perfil_acesso === "ORGANIZADOR" ? "selected" : ""}>ORGANIZADOR</option>
-                                    <option value="FUNCIONARIO" ${f.perfil_acesso === "FUNCIONARIO" ? "selected" : ""}>FUNCIONÁRIO</option>
+                                    <option value="CONSELHEIRO" ${f.perfil_acesso === "CONSELHEIRO" ? "selected" : ""}>CONSELHEIRO</option>
+                                    <option value="COLABORADOR" ${f.perfil_acesso === "COLABORADOR" ? "selected" : ""}>COLABORADOR</option>
                                     <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
                                     ${ehAdmin ? `<option value="ADMIN" ${f.perfil_acesso === "ADMIN" ? "selected" : ""}>ADMIN</option>` : ""}
                                 </select>
@@ -590,7 +588,7 @@
             });
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-            const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilAtual);
+                const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
             // Sanitização e Limpeza Obrigatória (B2)
             const payload = {};
