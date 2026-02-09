@@ -33,19 +33,21 @@ export interface MandateTimeResult {
 }
 
 /**
- * Calcula o tempo decorrido e restante de um mandato.
+ * Calcula o tempo decorrido e restante de um mandato (Regra FENAPRF).
  */
 export const calculateMandateTime = (inicioStr?: string | null, fimStr?: string | null): MandateTimeResult => {
-  const fallback = { elapsed: '—', remaining: '—' };
+  const naoInformado = 'não informado';
+  const fallback = { elapsed: naoInformado, remaining: naoInformado };
+
   if (!inicioStr || !fimStr) return fallback;
 
   try {
     const parse = (d: string) => {
-        if (d.includes('/')) {
-            const [dia, mes, ano] = d.split('/').map(Number);
-            return new Date(ano, mes - 1, dia);
-        }
-        return new Date(d);
+      if (d.includes('/')) {
+        const [dia, mes, ano] = d.split('/').map(Number);
+        return new Date(ano, mes - 1, dia);
+      }
+      return new Date(d);
     };
 
     const inicio = parse(inicioStr);
@@ -55,14 +57,11 @@ export const calculateMandateTime = (inicioStr?: string | null, fimStr?: string 
     if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) return fallback;
 
     const formatDiff = (start: Date, end: Date) => {
-      let isPast = false;
       let s = start;
       let e = end;
 
       if (start > end) {
-          isPast = true;
-          s = end;
-          e = start;
+        return '0 anos, 0 meses e 0 dias';
       }
 
       let years = e.getFullYear() - s.getFullYear();
@@ -80,16 +79,15 @@ export const calculateMandateTime = (inicioStr?: string | null, fimStr?: string 
       }
 
       const parts = [];
-      if (years > 0) parts.push(`${years} ${years === 1 ? 'ano' : 'anos'}`);
-      if (months > 0) parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
-      if (days > 0) parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
+      parts.push(`${years} ${years === 1 ? 'ano' : 'anos'}`);
+      parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
+      parts.push(`${days} ${days === 1 ? 'dia' : 'dias'}`);
 
-      const text = parts.length > 0 ? parts.join(', ').replace(/, ([^,]*)$/, ' e $1') : '0 dias';
-      return isPast ? `Expirado há ${text}` : text;
+      return parts.join(', ').replace(/, ([^,]*)$/, ' e $1');
     };
 
     const elapsed = formatDiff(inicio, hoje);
-    const remaining = hoje > fim ? 'Encerrado' : formatDiff(hoje, fim);
+    const remaining = hoje >= fim ? 'Mandato encerrado' : formatDiff(hoje, fim);
 
     return { elapsed, remaining };
   } catch (e) {

@@ -168,7 +168,21 @@ export default function EditarUserScreen({ route, navigation }: any) {
     );
   }
 
-  const ehGestao = checkIsGestao(user?.perfil_acesso);
+  const PERFIL_RANK: Record<string, number> = {
+    ADMIN: 100,
+    DIRETORIA: 50,
+    COLABORADOR: 30,
+    CONSELHEIRO: 10
+  };
+
+  const canEditorEditTargetCore = (editorPerfil: string, targetPerfil: string) => {
+    const e = (editorPerfil || "").toUpperCase();
+    const t = (targetPerfil || "").toUpperCase();
+    if (e === 'ADMIN') return true;
+    return (PERFIL_RANK[e] || 0) > (PERFIL_RANK[t] || 0);
+  };
+
+  const canEditCore = canEditorEditTargetCore(authUser?.perfil_acesso || '', user?.perfil_acesso || '');
 
   return (
     <SafeScreen style={styles.container}>
@@ -213,20 +227,20 @@ export default function EditarUserScreen({ route, navigation }: any) {
           user={user}
           setUser={setUser}
           isEditing={true}
-          isManagement={ehGestao}
+          isManagement={canEditCore}
           hideTitle={true}
         />
 
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>🏠 Endereço</Text></View>
         <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
 
-        {ehGestao && (
+        {checkIsGestao(authUser?.perfil_acesso) && (
           <>
             <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>⛓️ Vínculo e Mandato</Text></View>
             <VinculoCard
               user={user}
               setUser={setUser}
-              isGestao={true}
+              isGestao={canEditCore}
               isSelf={String(user.id) === String(authUser?.id)}
               currentUserProfile={authUser?.perfil_acesso}
             />

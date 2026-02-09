@@ -65,6 +65,7 @@ const VinculoCard: React.FC<Props> = ({
       <Text style={styles.label}>UF de Atuação</Text>
       <PickerWrapper style={styles.pickerWrapper}>
         <Picker
+          enabled={isGestao}
           selectedValue={user?.uf || ''}
           onValueChange={(val) => setUser(f => (f ? { ...f, uf: val as any } : null))}
           style={styles.picker}
@@ -79,6 +80,7 @@ const VinculoCard: React.FC<Props> = ({
       <Text style={styles.label}>Cargo</Text>
       <PickerWrapper style={styles.pickerWrapper}>
         <Picker
+          enabled={isGestao}
           selectedValue={user?.cargo || ''}
           onValueChange={(val) => setUser(f => (f ? { ...f, cargo: val as any } : null))}
           style={styles.picker}
@@ -95,7 +97,8 @@ const VinculoCard: React.FC<Props> = ({
         <View style={styles.col}>
           <Text style={styles.label}>Início Mandato</Text>
           <TextInput
-            style={styles.input}
+            editable={isGestao}
+            style={isGestao ? styles.input : styles.inputDisabled}
             value={formatData(user?.cargo_mandato_inicio)}
             onChangeText={(t) => handleDateChange('cargo_mandato_inicio', t)}
             onBlur={() => handleDateBlur('cargo_mandato_inicio')}
@@ -107,7 +110,8 @@ const VinculoCard: React.FC<Props> = ({
         <View style={styles.col}>
           <Text style={styles.label}>Fim Mandato</Text>
           <TextInput
-            style={styles.input}
+            editable={isGestao}
+            style={isGestao ? styles.input : styles.inputDisabled}
             value={formatData(user?.cargo_mandato_fim)}
             onChangeText={(t) => handleDateChange('cargo_mandato_fim', t)}
             onBlur={() => handleDateBlur('cargo_mandato_fim')}
@@ -141,6 +145,7 @@ const VinculoCard: React.FC<Props> = ({
                 <Text style={styles.label}>UF (2º)</Text>
                 <PickerWrapper style={styles.pickerWrapper}>
                     <Picker
+                        enabled={isGestao}
                         selectedValue={user?.uf2 || ''}
                         onValueChange={(val) => setUser(f => (f ? { ...f, uf2: val as any } : null))}
                         style={styles.picker}
@@ -155,6 +160,7 @@ const VinculoCard: React.FC<Props> = ({
                 <Text style={styles.label}>Cargo (2º)</Text>
                 <PickerWrapper style={styles.pickerWrapper}>
                     <Picker
+                        enabled={isGestao}
                         selectedValue={user?.cargo2 || ''}
                         onValueChange={(val) => setUser(f => (f ? { ...f, cargo2: val as any } : null))}
                         style={styles.picker}
@@ -200,6 +206,17 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
     fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  inputDisabled: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f0f0f0',
+    color: '#999',
   },
   pickerWrapper: {
     marginBottom: 15,
