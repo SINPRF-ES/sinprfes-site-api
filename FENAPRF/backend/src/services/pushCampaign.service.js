@@ -156,6 +156,10 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
 }
 
 async function saveCampaignRecord({ title, body, targetType, targetValue, data, createdBy, status, sentAt, result }) {
+  // Garantir que createdBy seja um UUID string ou null para evitar erros de sintaxe no Postgres
+  // se o valor vier como objeto ou algo inesperado.
+  const authorId = (createdBy && typeof createdBy === 'string') ? createdBy : null;
+
   const sql = `
     INSERT INTO push_campaigns (title, body, target_type, target_value, data, created_by, status, sent_at, result)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -167,7 +171,7 @@ async function saveCampaignRecord({ title, body, targetType, targetValue, data, 
     targetType || 'ALL',
     targetValue ? JSON.stringify(targetValue) : null,
     data ? JSON.stringify(data) : null,
-    createdBy,
+    authorId,
     status,
     sentAt,
     result ? JSON.stringify(result) : null

@@ -71,7 +71,7 @@ exports.criarEvento = async ({
     durMin,
     normStr(editalPdfUrl),
     statusNorm,
-    createdBy ?? null,
+    (createdBy && typeof createdBy === 'string') ? createdBy : null,
   ]);
 
   return r.rows[0];
@@ -222,7 +222,7 @@ exports.entrarNoEvento = async ({ eventoId, userId, deviceId }) => {
       `INSERT INTO evento_presencas (evento_id, user_id, entrou_em, ativa, quorum_versao, device_id)
        VALUES ($1, $2, NOW(), true, $3, $4)
        RETURNING id, evento_id, user_id, entrou_em, saiu_em, ativa, quorum_versao, device_id`,
-      [eventoId, userId, quorumVersao, deviceId ? String(deviceId) : null]
+      [eventoId, (userId && typeof userId === 'string') ? userId : null, quorumVersao, deviceId ? String(deviceId) : null]
     );
 
     await client.query("COMMIT");
