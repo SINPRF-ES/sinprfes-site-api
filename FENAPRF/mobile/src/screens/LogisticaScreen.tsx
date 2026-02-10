@@ -43,7 +43,7 @@ import PickerWrapper from '../components/PickerWrapper';
 
 const LogisticaScreen = ({ route }: any) => {
   const navigation = useNavigation<any>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [eventos, setEventos] = useState<any[]>([]);
   const [assembleias, setAssembleias] = useState<any[]>([]);
@@ -151,21 +151,28 @@ const LogisticaScreen = ({ route }: any) => {
     if (eventoSelecionado?.documento_id) {
       try {
         setLoading(true);
-        const token = api.defaults.headers.common['Authorization']?.toString().split(' ')[1] || '';
         const { localUri, mimeType } = await downloadPublicacaoFile(
           eventoSelecionado.documento_id,
           'Documento_Evento.pdf',
-          token
+          token || ''
         );
+
+        const safeMimeType = mimeType || 'application/pdf';
 
         navigation.navigate('FileViewer', {
           localUri,
           title: 'Documento do Evento',
           fileId: eventoSelecionado.documento_id,
-          type: 'pdf',
+          type: safeMimeType.includes('pdf') ? 'pdf' : (safeMimeType.startsWith('image/') ? 'image' : 'other'),
           context: 'publicacoes'
         });
-      } catch (err) {
+      } catch (err: any) {
+        logger.error('Logistica.openDoc.fail', err, {
+          eventoId: eventoSelecionado.id,
+          documento_id: eventoSelecionado.documento_id,
+          tokenPresent: !!token,
+          message: err.message
+        });
         Alert.alert('Erro', 'Não foi possível baixar o documento.');
       } finally {
         setLoading(false);

@@ -99,12 +99,14 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       return;
     }
 
+    const isPDF = file.mimeType?.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+
     setIsDownloading(true);
     try {
       logDebug('Publicacoes.openLocal.start', { fileId: file.id, name: file.name, mimeType: file.mimeType });
 
-      const { localUri, mimeType } = await downloadPublicacaoFile(file.id, file.name, token);
-      const safeMimeType = mimeType || file.mimeType || '';
+      const { localUri, mimeType: downloadedMimeType } = await downloadPublicacaoFile(file.id, file.name, token);
+      const safeMimeType = downloadedMimeType || file.mimeType || '';
 
       navigation.navigate('FileViewer', {
           localUri,
@@ -114,10 +116,17 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
           context: 'publicacoes'
       });
     } catch (err: any) {
-      logDebug('Publicacoes.openLocal.error', { message: err.message });
+      logger.error('Publicacoes.openLocal.fail', err, {
+        fileId: file.id,
+        fileName: file.name,
+        isPDF,
+        message: err.message
+      });
 
-      // Fallback para webViewLink se o download falhar e houver link do Drive
-      if (file.webViewLink) {
+      if (isPDF) {
+        // Para PDFs, evitamos abrir link externo conforme requisito de segurança/identidade
+        Alert.alert('Erro ao Abrir PDF', 'Não foi possível baixar o documento para visualização interna. Verifique sua conexão.');
+      } else if (file.webViewLink) {
         logDebug('Publicacoes.openLocal.fallback', { url: file.webViewLink });
         Linking.openURL(file.webViewLink).catch(() => {});
       } else {

@@ -12,7 +12,7 @@ const { formatarCPF, formatarTelefone, formatarDataBR, formatarAgencia, formatar
 const { labelFromParentesco } = require("../../shared/dependentes/parentesco");
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
-const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");
+const LOGO_PATH = path.join(__dirname, "../assets/logo-fenaprf.png");
 
 // URL base para verificação de documentos via QR Code
 const QR_BASE_URL =
@@ -299,10 +299,9 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
     }
 
     if (idx === 0) {
-      const title1 = "Sindicato dos Policiais Rodoviarios Federais";
-      const title2 = "no Estado do Espirito Santo";
-      const subtitle = "Fundado em 28 de marco de 1992";
-      const cnpj = "CNPJ nº 39.387.378/0001-25";
+      const title1 = "FEDERAÇÃO NACIONAL DOS POLICIAIS RODOVIÁRIOS FEDERAIS";
+      const title2 = "FENAPRF";
+      const cnpj = "CNPJ nº 03.658.044/0001-00";
 
       const baseY = height - margin - 20;
 
@@ -316,22 +315,17 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
         y: baseY - 12,
         size: 10,
       });
-      page.drawText(sanitizeForPdf(subtitle), {
-        x: margin + 60,
-        y: baseY - 26,
-        size: 9,
-      });
       page.drawText(sanitizeForPdf(cnpj), {
         x: margin + 60,
-        y: baseY - 40,
+        y: baseY - 26,
         size: 9,
       });
     }
 
     // Rodapé com informações de contato
     const footerLines = [
-      "Sede: Av. Nair de Azevedo Silva, 450, salas 14/20, Ed. Shopping Center Vitoria, Mario Cypreste, Vitoria/ES - CEP: 29.020-170",
-      "Sitio eletronico: www.fenaprf.org.br    |    Email: contato@fenaprf.org.br    |    Telefones: (27) 99607-3073 / 99691-9312",
+      "Sede: SHN Quadra 02, Bloco F, Ed. Executive Office Tower, Salas 1815 a 1820, Brasília/DF - CEP: 70.702-906",
+      "Sítio eletrônico: www.fenaprf.org.br    |    E-mail: fenaprf@fenaprf.org.br    |    Telefones: (61) 3244-4647 / 3244-9698",
     ];
     const footerY = margin + 18;
 
@@ -374,6 +368,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
 
       const label = tipoDocumento || "Documento";
       const textX = qrX - 160;
+      const maxWidth = 150;
       let textY = qrY - 14;
 
       page.drawText("Verificacao:", {
@@ -383,20 +378,29 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       });
 
       textY -= 12;
-      page.drawText(
-        sanitizeForPdf(`${label} - codigo: ${codigoVerificacao}`),
-        {
-          x: textX,
-          y: textY,
-          size: 8,
-        }
-      );
+      const verifLine = sanitizeForPdf(`${label} - codigo: ${codigoVerificacao}`);
+      // Ajuste dinâmico de fonte para não truncar
+      let verifSize = 8;
+      if (verifLine.length > 35) verifSize = 7;
+      if (verifLine.length > 45) verifSize = 6;
 
-      textY -= 12;
-      page.drawText(sanitizeForPdf(verUrl), {
+      page.drawText(verifLine, {
         x: textX,
         y: textY,
-        size: 8,
+        size: verifSize,
+      });
+
+      textY -= 10;
+      const urlLine = sanitizeForPdf(verUrl);
+      let urlSize = 8;
+      if (urlLine.length > 35) urlSize = 7;
+      if (urlLine.length > 45) urlSize = 6;
+      if (urlLine.length > 55) urlSize = 5;
+
+      page.drawText(urlLine, {
+        x: textX,
+        y: textY,
+        size: urlSize,
       });
     }
   });
@@ -730,8 +734,14 @@ async function gerarPdfInscricoesLogistica(evento, inscricoes, options = {}) {
 
     // Título
     doc.moveDown(1);
-    doc.font("Helvetica-Bold").fontSize(16).text(`Relatório de Inscrições: ${evento.titulo}`, { align: "center" });
-    doc.font("Helvetica").fontSize(10).text(`Período do Evento: ${formatDateSafe(evento.data_inicio)} a ${formatDateSafe(evento.data_fim)}`, { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(16).text(`Relatório de Inscrições: ${evento.titulo}`, {
+      align: "center",
+      width: 742 // A4 Landscape (842) - margins (50+50)
+    });
+    doc.font("Helvetica").fontSize(10).text(`Período do Evento: ${formatDateSafe(evento.data_inicio)} a ${formatDateSafe(evento.data_fim)}`, {
+      align: "center",
+      width: 742
+    });
     doc.moveDown(1);
 
     const headers = ["Nome", "Cargo", "UF", "CPF", "Telefone", "E-mail", "Chegada", "Saída", "Obs."];

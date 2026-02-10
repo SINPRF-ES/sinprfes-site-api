@@ -27,9 +27,11 @@ export interface DriveFile {
  */
 export const fetchPublicacoes = async (folderId: string | null = null): Promise<DriveFile[]> => {
   const endpoint = folderId ? `/api/publicacoes?folderId=${folderId}` : '/api/publicacoes';
+  logDebug('DriveService.fetchPublicacoes.start', { folderId });
   const { data } = await api.get(endpoint);
 
   if (!Array.isArray(data)) {
+    logDebug('DriveService.fetchPublicacoes.notArray', { typeofData: typeof data });
     return [];
   }
 
@@ -64,6 +66,13 @@ export const downloadPublicacaoFile = async (
   logDebug('Publicacoes.download.start', { fileId, fileName, localUri });
 
   try {
+    // Verificar se o arquivo já existe e tem conteúdo (cache sujo/vazio)
+    const fileInfo = await FileSystemLegacy.getInfoAsync(localUri);
+    if (fileInfo.exists && fileInfo.size === 0) {
+        logDebug('Publicacoes.download.dirtyCacheDetected', { localUri });
+        await FileSystemLegacy.deleteAsync(localUri, { idempotent: true });
+    }
+
     const result = await FileSystemLegacy.downloadAsync(url, localUri, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -84,10 +93,17 @@ export const downloadPublicacaoFile = async (
       throw new Error(`Erro no servidor (Status ${status})`);
     }
 
+    // Validar se o arquivo baixado não é um erro JSON mascarado
     if (contentType.includes('application/json') && !fileName.endsWith('.json')) {
-       // Se o status for 200 mas o tipo for JSON (e não esperávamos um JSON), pode ser um erro mascarado do backend
        logDebug('Publicacoes.download.error', { reason: 'RECEIVED_JSON_INSTEAD_OF_FILE' });
        throw new Error('O servidor retornou uma mensagem de erro em vez do arquivo.');
+    }
+
+    // Verificar se o arquivo final tem tamanho > 0
+    const finalInfo = await FileSystemLegacy.getInfoAsync(uri);
+    if (!finalInfo.exists || finalInfo.size === 0) {
+        logDebug('Publicacoes.download.error', { reason: 'ZERO_BYTE_FILE' });
+        throw new Error('O arquivo foi baixado mas está vazio.');
     }
 
     return { localUri: uri, mimeType: contentType };
