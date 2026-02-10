@@ -15,18 +15,17 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import * as Canon from '../utils/user';
 import { normalizeText, maskCPF } from '../utils/format';
 import { onlyDigits } from '../utils/format';
 import { useAuth } from '../hooks/useAuth';
 import reportsService from '../services/reportsService';
-import api, { getUsers } from '../services/apiService';
+import { getUsers } from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { UFS } from '../utils/user';
-import PickerWrapper from '../components/PickerWrapper';
+import CanonicalPicker from '../components/CanonicalPicker';
 
 interface ReportJob {
   id: string;
@@ -284,22 +283,20 @@ export default function RelatoriosScreen() {
           <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
 
           <Text style={styles.label}>Tipo de Relatório</Text>
-          <PickerWrapper style={styles.pickerWrapper}>
-            <Picker
-                selectedValue={reportType}
-                onValueChange={(v) => {
-                  setReportType(v);
-                  if (v === 'UF') setTargetValue(UFS[0]);
-                  else setTargetValue(null);
-                }}
-                style={styles.picker}
-                mode="dropdown"
-            >
-                <Picker.Item label="👤 Dossiê do User (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="📍 Por UF" value="UF" />
-                <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
-            </Picker>
-          </PickerWrapper>
+          <CanonicalPicker
+            selectedValue={reportType}
+            onValueChange={(v) => {
+              setReportType(v);
+              if (v === 'UF') setTargetValue(UFS[0]);
+              else setTargetValue(null);
+            }}
+            wrapperStyle={styles.pickerWrapper}
+            items={[
+              { label: '👤 Dossiê do User (Individual)', value: 'INDIVIDUAL' },
+              { label: '📍 Por UF', value: 'UF' },
+              { label: '🌏 Global (Completo)', value: 'GLOBAL' }
+            ]}
+          />
 
           {reportType === 'INDIVIDUAL' && (
              <TouchableOpacity
@@ -314,17 +311,12 @@ export default function RelatoriosScreen() {
           )}
 
           {reportType === 'UF' && (
-             <PickerWrapper style={styles.pickerWrapper}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    {UFS.map((opt) => (
-                      <Picker.Item key={opt} label={opt} value={opt} />
-                    ))}
-                </Picker>
-             </PickerWrapper>
+             <CanonicalPicker
+                selectedValue={targetValue}
+                onValueChange={setTargetValue}
+                wrapperStyle={styles.pickerWrapper}
+                items={UFS.map(opt => ({ label: opt, value: opt }))}
+             />
           )}
 
 

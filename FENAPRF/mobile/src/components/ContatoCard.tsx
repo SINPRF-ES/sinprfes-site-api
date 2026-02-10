@@ -1,8 +1,7 @@
 // src/components/ContatoCard.tsx
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import PickerWrapper from './PickerWrapper';
+import CanonicalPicker from './CanonicalPicker';
 import { User } from '../types/user';
 import { formatTelefone, onlyDigits, formatCpf, formatData } from '../utils/format';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
@@ -45,17 +44,16 @@ const ContatoCard: React.FC<Props> = ({
 
       <Text style={styles.label}>Sexo</Text>
       {isManagement ? (
-        <PickerWrapper style={styles.pickerWrapper}>
-          <Picker
-            selectedValue={user?.sexo || ''}
-            onValueChange={(val) => setUser(f => f ? { ...f, sexo: val as any } : null)}
-            style={styles.picker}
-          >
-            <Picker.Item label="-" value="" />
-            <Picker.Item label="♂️ Masculino" value="M" />
-            <Picker.Item label="♀️ Feminino" value="F" />
-          </Picker>
-        </PickerWrapper>
+        <CanonicalPicker
+          selectedValue={user?.sexo || ''}
+          onValueChange={(val) => setUser(f => f ? { ...f, sexo: val as any } : null)}
+          wrapperStyle={styles.pickerWrapper}
+          placeholder="-"
+          items={[
+            { label: '♂️ Masculino', value: 'M' },
+            { label: '♀️ Feminino', value: 'F' }
+          ]}
+        />
       ) : (
         <Text style={styles.inputDisabled}>
           {user?.sexo === 'M' ? '♂️ Masculino' : (user?.sexo === 'F' ? '♀️ Feminino' : '—')}

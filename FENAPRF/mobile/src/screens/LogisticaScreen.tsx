@@ -40,8 +40,7 @@ import { formatCpf, formatTelefone } from '../utils/format';
 import api from '../services/apiService';
 import SafeScreen from '../components/SafeScreen';
 import { EMOJIS } from '../utils/emoji';
-import { Picker } from '@react-native-picker/picker';
-import PickerWrapper from '../components/PickerWrapper';
+import CanonicalPicker from '../components/CanonicalPicker';
 import Badge from '../components/Badge';
 
 const LogisticaScreen = ({ route }: any) => {
@@ -510,19 +509,17 @@ const LogisticaScreen = ({ route }: any) => {
     <SafeScreen style={styles.container}>
       <View style={styles.filterBar}>
         <Text style={styles.filterLabel}>Filtrar:</Text>
-        <PickerWrapper style={styles.filterPickerWrapper}>
-          <Picker
-            selectedValue={statusFilter}
-            onValueChange={(v) => setStatusFilter(v)}
-            style={styles.filterPicker}
-            itemStyle={Platform.OS === 'android' ? { height: 52 } : undefined}
-          >
-            <Picker.Item label="Ativos" value={STATUS_EVENTO.ATIVO} />
-            <Picker.Item label="Encerrados" value={STATUS_EVENTO.ENCERRADO} />
-            <Picker.Item label="Cancelados" value={STATUS_EVENTO.CANCELADO} />
-            <Picker.Item label="Todos" value="ALL" />
-          </Picker>
-        </PickerWrapper>
+        <CanonicalPicker
+          selectedValue={statusFilter}
+          onValueChange={(v) => setStatusFilter(v)}
+          wrapperStyle={styles.filterPickerWrapper}
+          items={[
+            { label: 'Ativos', value: STATUS_EVENTO.ATIVO },
+            { label: 'Encerrados', value: STATUS_EVENTO.ENCERRADO },
+            { label: 'Cancelados', value: STATUS_EVENTO.CANCELADO },
+            { label: 'Todos', value: 'ALL' }
+          ]}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -744,19 +741,13 @@ const LogisticaScreen = ({ route }: any) => {
               </TouchableOpacity>
 
               <Text style={styles.label}>Assembleia Vinculada (Opcional)</Text>
-              <PickerWrapper style={styles.pickerWrapper}>
-                <Picker
-                    selectedValue={formEvento.assembleia_id}
-                    onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
-                    style={styles.picker}
-                    itemStyle={Platform.OS === 'android' ? { height: 52 } : undefined}
-                >
-                    <Picker.Item label="Nenhuma" value="" />
-                    {assembleias.map(a => (
-                        <Picker.Item key={a.id} label={`${a.tipo} - ${a.titulo}`} value={a.id} />
-                    ))}
-                </Picker>
-              </PickerWrapper>
+              <CanonicalPicker
+                selectedValue={formEvento.assembleia_id}
+                onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
+                wrapperStyle={styles.pickerWrapper}
+                placeholder="Nenhuma"
+                items={assembleias.map(a => ({ label: `${a.tipo} - ${a.titulo}`, value: a.id }))}
+              />
 
               {formEvento.id && (
                 <>

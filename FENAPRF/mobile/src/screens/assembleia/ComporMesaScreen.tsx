@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { Picker } from '@react-native-picker/picker';
 import { getAssembleiaEstado, definirMesa, substituirMesa } from '../../services/assembleiaService';
+import CanonicalPicker from '../../components/CanonicalPicker';
 import SafeScreen from '../../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -91,34 +91,22 @@ export default function ComporMesaScreen({ route, navigation }: any) {
       <Text style={styles.subtitle}>Selecione os membros entre os participantes presentes.</Text>
 
       <Text style={styles.label}>Presidente da Mesa</Text>
-      <View style={styles.pickerBox}>
-        <Picker
-          selectedValue={presidenteId}
-          onValueChange={setPresidenteId}
-          style={styles.picker}
-          dropdownIconColor="#003366"
-        >
-          <Picker.Item label="Selecione..." value="" />
-          {presentes.map(p => (
-            <Picker.Item key={p.id} label={p.nome} value={p.id} />
-          ))}
-        </Picker>
-      </View>
+      <CanonicalPicker
+        selectedValue={presidenteId}
+        onValueChange={setPresidenteId}
+        placeholder="Selecione..."
+        wrapperStyle={{ marginBottom: 20 }}
+        items={presentes.map(p => ({ label: p.nome, value: String(p.id) }))}
+      />
 
       <Text style={styles.label}>Secretário da Mesa</Text>
-      <View style={styles.pickerBox}>
-        <Picker
-          selectedValue={secretarioId}
-          onValueChange={setSecretarioId}
-          style={styles.picker}
-          dropdownIconColor="#003366"
-        >
-          <Picker.Item label="Selecione..." value="" />
-          {presentes.map(p => (
-            <Picker.Item key={p.id} label={p.nome} value={p.id} />
-          ))}
-        </Picker>
-      </View>
+      <CanonicalPicker
+        selectedValue={secretarioId}
+        onValueChange={setSecretarioId}
+        placeholder="Selecione..."
+        wrapperStyle={{ marginBottom: 20 }}
+        items={presentes.map(p => ({ label: p.nome, value: String(p.id) }))}
+      />
 
       {substituir && (
         <>

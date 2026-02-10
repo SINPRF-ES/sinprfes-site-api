@@ -7,11 +7,14 @@ const { UFS } = require("../../shared/canon");
  * Registra um novo job de relatório para auditoria.
  */
 async function registrarJob(report_type, params, requester) {
+  // Garantir que requesterId seja uma string (UUID) ou null
+  const requesterId = (requester?.id && typeof requester.id === 'string') ? requester.id : null;
+
   const { rows } = await pool.query(
     `INSERT INTO report_jobs (report_type, params, requester_id, requester_name)
      VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [report_type, JSON.stringify(params), requester.id, requester.nome]
+    [report_type, JSON.stringify(params), requesterId, requester.nome]
   );
   return rows[0];
 }
