@@ -3,176 +3,150 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Estatuto (versão para app) — FENAPRF</title>
+  <title>Estatuto — FENAPRF</title>
   <style>
-    :root{
-      --bg:#0b1220;
-      --card:#0f1a2e;
-      --text:#e9eef7;
-      --muted:#b8c3d9;
-      --line:rgba(255,255,255,.10);
-
-      --stripe-blue: rgba(59,130,246,.22);
-      --stripe-yellow: rgba(250,204,21,.22);
-      --stripe-border: rgba(255,255,255,.12);
-
-      --h1:#ffffff;
-      --h2:#ffffff;
-      --h3:#dbe7ff;
+    :root {
+      --primary: #003366;
+      --secondary: #FACC15;
+      --bg: #ffffff;
+      --card-bg: #f8faff;
+      --text: #333333;
+      --text-muted: #666666;
+      --border: #e0e6ed;
+      --line: rgba(0, 51, 102, 0.1);
     }
 
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      background: radial-gradient(1200px 900px at 20% 0%, rgba(59,130,246,.18), transparent 60%),
-                  radial-gradient(1200px 900px at 80% 20%, rgba(250,204,21,.10), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-      font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, sans-serif;
       -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
     }
 
-    .wrap{
-      max-width: 980px;
+    .wrap {
+      max-width: 800px;
       margin: 0 auto;
-      padding: 24px 16px 72px;
+      padding: 20px 16px 80px;
     }
 
-    header{
-      margin: 12px 0 18px;
-      padding: 18px 18px 12px;
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border: 1px solid var(--line);
-      border-radius: 16px;
-    }
-    h1{
-      margin:0 0 6px;
-      color:var(--h1);
-      font-size: 1.55rem;
-      letter-spacing: .2px;
-    }
-    .subtitle{
-      margin:0;
-      color:var(--muted);
-      font-size: .98rem;
+    header {
+      margin-bottom: 30px;
+      padding: 24px;
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      border-left: 6px solid var(--primary);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    .chapter{
-      margin-top: 18px;
-      padding: 0;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      overflow: hidden;
-      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    h1 {
+      margin: 0 0 8px;
+      color: var(--primary);
+      font-size: 1.6rem;
+      line-height: 1.2;
     }
 
-    /* Faixa azul e amarela suave (antes de cada capítulo) */
-    .chapter .stripe{
-      height: 14px;
-      background:
-        linear-gradient(90deg,
-          var(--stripe-blue) 0%,
-          rgba(59,130,246,.10) 35%,
-          rgba(250,204,21,.10) 65%,
-          var(--stripe-yellow) 100%);
-      border-bottom: 1px solid var(--stripe-border);
+    .subtitle {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 500;
     }
 
-    .chapter .inner{
-      padding: 18px 18px 14px;
+    .chapter {
+      margin-top: 32px;
+      scroll-margin-top: 20px;
     }
 
-    .chapter-title{
-      margin: 0 0 10px;
-      font-size: 1.15rem;
-      color: var(--h2);
-      letter-spacing: .3px;
+    .chapter-title {
+      margin: 0 0 16px;
+      padding-bottom: 8px;
+      font-size: 1.25rem;
+      color: var(--primary);
       text-transform: uppercase;
+      border-bottom: 2px solid var(--secondary);
+      letter-spacing: 0.5px;
     }
 
-    .article{
-      margin: 12px 0;
-      padding-top: 10px;
-      border-top: 1px dashed rgba(255,255,255,.10);
-    }
-    .article:first-of-type{
-      border-top: 0;
-      padding-top: 0;
+    .article {
+      margin: 20px 0;
+      padding: 16px;
+      background-color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
     }
 
-    .art-no{
-      margin:0 0 6px;
-      font-weight: 700;
-      color: var(--h3);
+    .art-no {
+      margin: 0 0 8px;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 1.1rem;
     }
-    p{
-      margin: 6px 0;
-      color:var(--text);
+
+    p {
+      margin: 8px 0;
       white-space: pre-wrap;
     }
-    .muted{
-      color: var(--muted);
+
+    .paragrafo {
+      margin-top: 12px;
+      padding-left: 16px;
+      border-left: 3px solid var(--line);
     }
 
-    .paragrafo{
-      margin-left: 0;
-      padding-left: 14px;
-      border-left: 3px solid rgba(255,255,255,.10);
-    }
-
-    .incisos{
-      margin: 8px 0 8px 0;
+    .incisos {
+      margin: 12px 0;
       padding: 0;
       list-style: none;
     }
-    .incisos li{
-      margin: 6px 0;
-      padding-left: 14px;
+
+    .incisos li {
+      margin: 8px 0;
+      padding-left: 28px;
       position: relative;
     }
-    .incisos li::before{
+
+    .incisos li::before {
       content: "•";
-      position:absolute;
-      left:0;
-      color: rgba(250,204,21,.85);
+      position: absolute;
+      left: 8px;
+      color: var(--primary);
+      font-weight: bold;
     }
-    .inciso-tag{
-      display:inline-block;
-      min-width: 28px;
+
+    .inciso-tag {
       font-weight: 700;
-      color: #fff;
-      opacity: .92;
+      color: var(--primary);
     }
 
-    .assinaturas{
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid var(--line);
+    .assinaturas {
+      margin-top: 40px;
+      padding: 24px;
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      text-align: center;
     }
 
-    .center{
-      text-align:center;
-    }
-
-    .hr{
-      height:1px;
-      background: var(--line);
-      margin: 14px 0;
+    .center { text-align: center; }
+    .muted { color: var(--text-muted); }
+    .hr {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
     }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <header>
+    <header id="topo-estatuto">
       <h1>Estatuto (versão para app)</h1>
       <p class="subtitle">Federação Nacional dos Policiais Rodoviários Federais — FENAPRF</p>
     </header>
 
     <!-- PREÂMBULO -->
     <section class="chapter" id="preambulo">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">PREÂMBULO</h2>
         <p>Nós, representantes dos sindicalizados da categoria dos Policiais Rodoviários Federais, reunidos em Assembleia Geral do Conselho de Representantes, nos dias 8, 9 e 10 de agosto de 2006, para reformar o Estatuto da Entidade Federativa, aprovamos e promulgamos, sob a proteção de Deus, o presente Estatuto da Federação Nacional dos Policiais Rodoviários Federais, reconhecendo-a como única entidade sindical de grau superior com legitimidade para representar os integrantes da categoria e os sindicatos vinculados ao Sistema Sindical Federativo.</p>
@@ -181,7 +155,6 @@
 
     <!-- CAPÍTULO I -->
     <section class="chapter" id="capitulo-1">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO I — DA CONSTITUIÇÃO E FINALIDADE</h2>
 
@@ -205,7 +178,6 @@
 
     <!-- CAPÍTULO II -->
     <section class="chapter" id="capitulo-2">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO II — DA ORGANIZAÇÃO DO SISTEMA SINDICAL</h2>
 
@@ -223,7 +195,6 @@
 
     <!-- CAPÍTULO III -->
     <section class="chapter" id="capitulo-3">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO III — DOS OBJETIVOS E PRERROGATIVAS DA FEDERAÇÃO</h2>
 
@@ -263,7 +234,6 @@
 
     <!-- CAPÍTULO IV -->
     <section class="chapter" id="capitulo-4">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO IV — DAS COMPETÊNCIAS DA FEDERAÇÃO</h2>
 
@@ -300,7 +270,6 @@
 
     <!-- CAPÍTULO V -->
     <section class="chapter" id="capitulo-5">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO V — DAS CONTRIBUIÇÕES PARA CUSTEIO DO SISTEMA FEDERATIVO</h2>
 
@@ -328,7 +297,6 @@
 
     <!-- CAPÍTULO VI -->
     <section class="chapter" id="capitulo-6">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO VI — DOS SINDICATOS REGIONAIS</h2>
 
@@ -349,7 +317,6 @@
 
     <!-- CAPÍTULO VII -->
     <section class="chapter" id="capitulo-7">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO VII — DOS REQUISITOS PARA FILIAÇÃO</h2>
 
@@ -381,7 +348,6 @@
 
     <!-- CAPÍTULO VIII -->
     <section class="chapter" id="capitulo-8">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO VIII — DOS REQUISITOS PARA DESFILIAÇÃO</h2>
 
@@ -398,7 +364,6 @@
 
     <!-- CAPÍTULO IX -->
     <section class="chapter" id="capitulo-9">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO IX — DOS DIREITOS SINDICAIS</h2>
 
@@ -426,7 +391,6 @@
 
     <!-- CAPÍTULO X -->
     <section class="chapter" id="capitulo-10">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO X — DOS DEVERES SINDICAIS</h2>
 
@@ -462,7 +426,6 @@
 
     <!-- CAPÍTULO XI -->
     <section class="chapter" id="capitulo-11">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XI — DAS SANÇÕES</h2>
 
@@ -493,7 +456,6 @@
 
     <!-- CAPÍTULO XII -->
     <section class="chapter" id="capitulo-12">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XII — DA ORGANIZAÇÃO FEDERATIVA</h2>
 
@@ -517,7 +479,6 @@
 
     <!-- CAPÍTULO XIII -->
     <section class="chapter" id="capitulo-13">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XIII — DO CONSELHO DE REPRESENTANTES</h2>
 
@@ -663,7 +624,6 @@
 
     <!-- CAPÍTULO XIV -->
     <section class="chapter" id="capitulo-14">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XIV — DA DIRETORIA EXECUTIVA</h2>
 
@@ -834,7 +794,6 @@
 
     <!-- CAPÍTULO XV -->
     <section class="chapter" id="capitulo-15">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XV — DO CONSELHO FISCAL</h2>
 
@@ -871,7 +830,6 @@
 
     <!-- CAPÍTULO XVI -->
     <section class="chapter" id="capitulo-16">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XVI — DO CONSELHO DE ÉTICA</h2>
 
@@ -901,7 +859,6 @@
 
     <!-- CAPÍTULO XVII -->
     <section class="chapter" id="capitulo-17">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XVII — DA ADMINISTRAÇÃO PATRIMONIAL</h2>
 
@@ -950,7 +907,6 @@
 
     <!-- CAPÍTULO XVIII -->
     <section class="chapter" id="capitulo-18">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XVIII — DO PROCESSO ELEITORAL</h2>
 
@@ -1039,7 +995,6 @@
 
     <!-- CAPÍTULO XIX -->
     <section class="chapter" id="capitulo-19">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XIX — DA VACÂNCIA E DOS IMPEDIMENTOS DOS CARGOS</h2>
 
@@ -1080,7 +1035,6 @@
 
     <!-- CAPÍTULO XX -->
     <section class="chapter" id="capitulo-20">
-      <div class="stripe" aria-hidden="true"></div>
       <div class="inner">
         <h2 class="chapter-title">CAPÍTULO XX — DAS DISPOSIÇÕES GERAIS E TRANSITÓRIAS</h2>
 
@@ -1159,6 +1113,12 @@
         </div>
       </div>
     </section>
+
+    <footer>
+      <div class="assinaturas">
+        <p class="center muted">CNPJ 03.658.044/0001-00<br/>SHN – Quadra 02, Bloco F, Ed. Executive Office Tower, Salas 1815-1820, Brasília/DF</p>
+      </div>
+    </footer>
 
   </div>
 </body>

@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, TextInput } from 'react-native';
 import { WebView } from 'react-native-webview';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,33 +8,36 @@ import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TOC_ITEMS = [
-  { id: 'topo-estatuto', label: '🏠 Topo' },
-  { id: 'cap1', label: 'Capítulo I - Denominação' },
-  { id: 'cap2', label: 'Capítulo II - Sindicatos' },
-  { id: 'cap3', label: 'Capítulo III - Órgãos' },
-  { id: 'cap4', label: 'Capítulo IV - Competências' },
-  { id: 'cap5', label: 'Capítulo V - Patrimônio' },
-  { id: 'cap6', label: 'Capítulo VI - Receitas' },
-  { id: 'cap7', label: 'Capítulo VII - Despesas' },
-  { id: 'cap8', label: 'Capítulo VIII - Penalidades' },
-  { id: 'cap9', label: 'Capítulo IX - Conselho de Representantes' },
-  { id: 'cap10', label: 'Capítulo X - Reuniões' },
-  { id: 'cap11', label: 'Capítulo XI - Votações' },
-  { id: 'cap12', label: 'Capítulo XII - Assembléias' },
-  { id: 'cap13', label: 'Capítulo XIII - Mesa Diretora' },
-  { id: 'cap14', label: 'Capítulo XIV - Diretoria Executiva' },
-  { id: 'cap15', label: 'Capítulo XV - Conselho Fiscal' },
-  { id: 'cap16', label: 'Capítulo XVI - Conselho de Ética' },
-  { id: 'cap17', label: 'Capítulo XVII - Administração Patrimonial' },
-  { id: 'cap18', label: 'Capítulo XVIII - Processo Eleitoral' },
-  { id: 'cap19', label: 'Capítulo XIX - Vacância' },
-  { id: 'cap20', label: 'Capítulo XX - Disposições Gerais' },
+  { id: 'topo-estatuto', label: '🏠 Início' },
+  { id: 'preambulo', label: 'Preâmbulo' },
+  { id: 'capitulo-1', label: 'Capítulo I — Constituição e Finalidade' },
+  { id: 'capitulo-2', label: 'Capítulo II — Organização do Sistema' },
+  { id: 'capitulo-3', label: 'Capítulo III — Objetivos e Prerrogativas' },
+  { id: 'capitulo-4', label: 'Capítulo IV — Competências' },
+  { id: 'capitulo-5', label: 'Capítulo V — Contribuições' },
+  { id: 'capitulo-6', label: 'Capítulo VI — Sindicatos Regionais' },
+  { id: 'capitulo-7', label: 'Capítulo VII — Requisitos para Filiação' },
+  { id: 'capitulo-8', label: 'Capítulo VIII — Requisitos para Desfiliação' },
+  { id: 'capitulo-9', label: 'Capítulo IX — Direitos Sindicais' },
+  { id: 'capitulo-10', label: 'Capítulo X — Deveres Sindicais' },
+  { id: 'capitulo-11', label: 'Capítulo XI — Sanções' },
+  { id: 'capitulo-12', label: 'Capítulo XII — Organização Federativa' },
+  { id: 'capitulo-13', label: 'Capítulo XIII — Conselho de Representantes' },
+  { id: 'capitulo-14', label: 'Capítulo XIV — Diretoria Executiva' },
+  { id: 'capitulo-15', label: 'Capítulo XV — Conselho Fiscal' },
+  { id: 'capitulo-16', label: 'Capítulo XVI — Conselho de Ética' },
+  { id: 'capitulo-17', label: 'Capítulo XVII — Administração Patrimonial' },
+  { id: 'capitulo-18', label: 'Capítulo XVIII — Processo Eleitoral' },
+  { id: 'capitulo-19', label: 'Capítulo XIX — Vacância e Impedimentos' },
+  { id: 'capitulo-20', label: 'Capítulo XX — Disposições Gerais' },
+  { id: 'assinaturas', label: 'Assinaturas' },
 ];
 
 export default function EstatutoScreen({ navigation }: any) {
   const webViewRef = useRef<WebView>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [htmlUri, setHtmlUri] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -64,13 +67,11 @@ export default function EstatutoScreen({ navigation }: any) {
         const updateId = Updates.updateId || 'none';
         const cb = `${runtimeVersion}-${updateId}`;
 
-        // Sempre adiciona cb e embed=1, mesmo se for file:// (ajudando no cacheBust se o asset mudar em OTA)
         const finalUri = uri.includes('?')
           ? `${uri}&embed=1&cb=${cb}`
           : `${uri}?embed=1&cb=${cb}`;
 
         setHtmlUri(finalUri);
-        console.log('[Estatuto] URL carregada:', finalUri);
       } catch (err) {
         console.error('Erro ao carregar asset do estatuto:', err);
       }
@@ -88,26 +89,19 @@ export default function EstatutoScreen({ navigation }: any) {
     `;
     webViewRef.current?.injectJavaScript(js);
     setModalVisible(false);
+    setSearchText('');
   };
 
+  const filteredItems = useMemo(() => {
+    if (!searchText) return TOC_ITEMS;
+    return TOC_ITEMS.filter(item =>
+      item.label.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [searchText]);
+
   const injectedCSS = `
-    #site-header, #site-footer, .estatuto-nav { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
-    body {
-      padding: 10px !important;
-      background-color: #fff !important;
-      color: #333 !important;
-      font-size: 16px !important;
-      font-family: sans-serif !important;
-    }
-    .estatuto-card {
-      width: 100% !important;
-      max-width: 100% !important;
-      box-shadow: none !important;
-      padding: 10px !important;
-      margin: 0 !important;
-    }
-    .estatuto-documento { padding-top: 0 !important; }
-    .estatuto-documento h2, .estatuto-documento h3 { scroll-margin-top: 20px !important; }
+    body { padding-top: 10px !important; }
+    .wrap { padding-top: 10px !important; }
   `;
 
   return (
@@ -117,46 +111,14 @@ export default function EstatutoScreen({ navigation }: any) {
           ref={webViewRef}
           source={{ uri: htmlUri }}
           style={styles.webview}
-          cacheEnabled={false}
-          incognito={true}
-          cacheMode="LOAD_NO_CACHE"
-          domStorageEnabled={true}
           javaScriptEnabled={true}
-          onLoadStart={() => console.log('[Estatuto] onLoadStart')}
-          onLoadEnd={() => console.log('[Estatuto] onLoadEnd')}
-          onMessage={(event) => {
-            console.log('[Estatuto] onMessage:', event.nativeEvent.data);
-          }}
+          domStorageEnabled={true}
           injectedJavaScriptBeforeContentLoaded={
             "(function() {" +
-              "console.log('[Estatuto][inject] start');" +
-              "document.documentElement.classList.add('is-embed');" +
               "var cssText = " + JSON.stringify(injectedCSS) + ";" +
               "var style = document.createElement('style');" +
-              "style.id = 'app-injected-style';" +
               "style.appendChild(document.createTextNode(cssText));" +
               "document.documentElement.appendChild(style);" +
-              "console.log('[Estatuto][inject] css_applied');" +
-              "var kill = function() {" +
-                "var selectors = ['#site-header', '#site-footer', '.estatuto-nav', '.estatuto-nav-title', '.barra-azul', 'header', 'nav', '.navbar', '.site-header', '#header', '#nav'];" +
-                "var removedCount = 0;" +
-                "selectors.forEach(function(s) {" +
-                  "var elements = document.querySelectorAll(s);" +
-                  "for (var i = 0; i < elements.length; i++) {" +
-                    "elements[i].parentNode.removeChild(elements[i]);" +
-                    "removedCount++;" +
-                  "}" +
-                "});" +
-                "if (removedCount > 0) log('[Estatuto][inject] removed_nav count: ' + removedCount);" +
-              "};" +
-              "kill();" +
-              "var obs = new MutationObserver(kill);" +
-              "obs.observe(document.documentElement, { childList: true, subtree: true });" +
-              "log('[Estatuto][inject] observer_active');" +
-              "document.addEventListener('DOMContentLoaded', kill);" +
-              "setTimeout(kill, 300);" +
-              "setTimeout(kill, 1000);" +
-              "setTimeout(kill, 3000);" +
             "})();"
           }
           originWhitelist={['*']}
@@ -165,7 +127,7 @@ export default function EstatutoScreen({ navigation }: any) {
       ) : (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#003366" />
-          <Text style={{ marginTop: 10 }}>Carregando...</Text>
+          <Text style={styles.loadingText}>Carregando Estatuto...</Text>
         </View>
       )}
 
@@ -176,23 +138,49 @@ export default function EstatutoScreen({ navigation }: any) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 10 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Sumário</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                accessibilityLabel="Fechar Sumário"
+                accessibilityRole="button"
+              >
                 <MaterialCommunityIcons name="close" size={28} color="#003366" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.tocList}>
-              {TOC_ITEMS.map((item) => (
+
+            <View style={styles.searchContainer}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar no sumário..."
+                value={searchText}
+                onChangeText={setSearchText}
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+                accessibilityLabel="Campo de busca no sumário"
+              />
+            </View>
+
+            <ScrollView style={styles.tocList} keyboardShouldPersistTaps="handled">
+              {filteredItems.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.tocItem}
                   onPress={() => scrollToAnchor(item.id)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Ir para ${item.label}`}
                 >
                   <Text style={styles.tocItemText}>{item.label}</Text>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
                 </TouchableOpacity>
               ))}
+              {filteredItems.length === 0 && (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>Nenhum item encontrado.</Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -204,14 +192,20 @@ export default function EstatutoScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, color: '#003366', fontWeight: '500' },
   headerTocButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, gap: 4, marginRight: 10 },
   headerTocButtonText: { color: '#fff', fontWeight: '600', fontSize: 12 },
   webview: { flex: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#003366' },
-  tocList: { padding: 10 },
-  tocItem: { paddingVertical: 15, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  tocItemText: { fontSize: 16, color: '#333' },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f5f5', margin: 15, paddingHorizontal: 10, borderRadius: 10, height: 45 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 16, color: '#333' },
+  tocList: { paddingHorizontal: 10 },
+  tocItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 15, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  tocItemText: { fontSize: 16, color: '#333', flex: 1 },
+  emptyContainer: { padding: 40, alignItems: 'center' },
+  emptyText: { color: '#999', fontSize: 16 },
 });
