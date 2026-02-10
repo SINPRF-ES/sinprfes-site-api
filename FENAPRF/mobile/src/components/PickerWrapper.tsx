@@ -25,20 +25,10 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 8,
     backgroundColor: '#fff',
-    ...Platform.select({
-      ios: {
-        // No iOS o Picker tem comportamento de modal/roda,
-        // mas o wrapper ajuda na consistência visual do campo.
-        minHeight: 50,
-        justifyContent: 'center',
-      },
-      android: {
-        // No Android, o Picker costuma ser cortado se a altura for pequena.
-        height: 60,
-        justifyContent: 'center',
-        paddingHorizontal: 4,
-      },
-    }),
+    minHeight: 52,
+    paddingVertical: 6,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
 });
 

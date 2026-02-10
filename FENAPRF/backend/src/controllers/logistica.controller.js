@@ -140,6 +140,102 @@ exports.atualizarEvento = async (req, res) => {
     }
 };
 
+exports.encerrarEvento = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { id } = req.params;
+        const gestorId = getUserId(req);
+        const { justificativa } = req.body;
+
+        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para encerrar evento." });
+
+        await client.query("BEGIN");
+
+        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [id]);
+        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
+        const oldData = oldRows[0];
+
+        if (oldData.status === STATUS_EVENTO.ENCERRADO) return res.status(400).json({ error: "Evento já está encerrado." });
+
+        const query = `
+            UPDATE logistica_eventos
+            SET status = $1, encerrado_em = NOW(), encerrado_por = $2, encerrado_motivo = $3, atualizado_em = NOW()
+            WHERE id = $4
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [STATUS_EVENTO.ENCERRADO, gestorId, justificativa, id]);
+        const evento = rows[0];
+
+        await registrarAuditoria(client, {
+            resourceType: RECURSO_TIPO.EVENTO,
+            resourceId: id,
+            eventId: id,
+            gestorId,
+            action: ACOES_AUDITORIA.ALTERAR,
+            justification: justificativa,
+            oldData,
+            newData: evento
+        });
+
+        await client.query("COMMIT");
+        res.json(evento);
+    } catch (err) {
+        await client.query("ROLLBACK");
+        log.error("Logistica.encerrarEvento.Erro", err);
+        res.status(500).json({ error: "Erro ao encerrar evento." });
+    } finally {
+        client.release();
+    }
+};
+
+exports.cancelarEvento = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { id } = req.params;
+        const gestorId = getUserId(req);
+        const { justificativa } = req.body;
+
+        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para cancelar evento." });
+
+        await client.query("BEGIN");
+
+        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [id]);
+        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
+        const oldData = oldRows[0];
+
+        if (oldData.status === STATUS_EVENTO.CANCELADO) return res.status(400).json({ error: "Evento já está cancelado." });
+
+        const query = `
+            UPDATE logistica_eventos
+            SET status = $1, cancelado_em = NOW(), cancelado_por = $2, cancelado_motivo = $3, atualizado_em = NOW()
+            WHERE id = $4
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [STATUS_EVENTO.CANCELADO, gestorId, justificativa, id]);
+        const evento = rows[0];
+
+        await registrarAuditoria(client, {
+            resourceType: RECURSO_TIPO.EVENTO,
+            resourceId: id,
+            eventId: id,
+            gestorId,
+            action: ACOES_AUDITORIA.CANCELAR,
+            justification: justificativa,
+            oldData,
+            newData: evento
+        });
+
+        await client.query("COMMIT");
+        res.json(evento);
+    } catch (err) {
+        await client.query("ROLLBACK");
+        log.error("Logistica.cancelarEvento.Erro", err);
+        res.status(500).json({ error: "Erro ao cancelar evento." });
+    } finally {
+        client.release();
+    }
+};
+
 // --- INSCRIÇÕES ---
 
 exports.listarInscricoes = async (req, res) => {
@@ -191,7 +287,11 @@ exports.registrarMinhaInscricao = async (req, res) => {
         // Verificar se evento está ativo
         const { rows: evRows } = await client.query("SELECT status, titulo, data_inicio, data_fim FROM logistica_eventos WHERE id = $1", [evento_id]);
         if (evRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
-        if (evRows[0].status === STATUS_EVENTO.ENCERRADO) return res.status(400).json({ error: "Evento encerrado." });
+
+        if (evRows[0].status !== STATUS_EVENTO.ATIVO) {
+            const msg = evRows[0].status === STATUS_EVENTO.ENCERRADO ? "Evento encerrado." : "Evento cancelado.";
+            return res.status(400).json({ error: msg });
+        }
 
         await client.query("BEGIN");
 
@@ -241,8 +341,9 @@ exports.cancelarMinhaInscricao = async (req, res) => {
         await client.query("BEGIN");
 
         const { rows: evRows } = await client.query("SELECT status, titulo FROM logistica_eventos WHERE id = $1", [eventoId]);
-        if (evRows.length > 0 && evRows[0].status === STATUS_EVENTO.ENCERRADO) {
-            return res.status(400).json({ error: "Evento encerrado." });
+        if (evRows.length > 0 && evRows[0].status !== STATUS_EVENTO.ATIVO) {
+            const msg = evRows[0].status === STATUS_EVENTO.ENCERRADO ? "Evento encerrado." : "Evento cancelado.";
+            return res.status(400).json({ error: msg });
         }
 
         const { rows: iRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE evento_id = $1 AND user_id = $2", [eventoId, userId]);

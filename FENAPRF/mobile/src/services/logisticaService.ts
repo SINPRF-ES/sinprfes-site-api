@@ -11,6 +11,26 @@ export const getEventosLogistica = async (status?: string) => {
     }
 };
 
+export const encerrarEventoLogistica = async (id: string, justificativa: string) => {
+    try {
+        const response = await api.patch(`/api/logistica/eventos/${id}/encerrar`, { justificativa });
+        return response.data;
+    } catch (err) {
+        logger.error('logisticaService.encerrarEvento', err);
+        throw err;
+    }
+};
+
+export const cancelarEventoLogistica = async (id: string, justificativa: string) => {
+    try {
+        const response = await api.patch(`/api/logistica/eventos/${id}/cancelar`, { justificativa });
+        return response.data;
+    } catch (err) {
+        logger.error('logisticaService.cancelarEvento', err);
+        throw err;
+    }
+};
+
 export const criarEventoLogistica = async (dados: any) => {
     try {
         const response = await api.post('/api/logistica/eventos', dados);

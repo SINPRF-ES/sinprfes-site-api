@@ -360,43 +360,116 @@ async function criarUserInicial(dados) {
  * Arquivar
  */
 async function arquivarUserPorId(id, { motivo, atorId }) {
-  await pool.query(
-    `UPDATE users
-     SET arquivado_em = NOW(),
-         arquivado_motivo = $1,
-         arquivado_por = $2,
-         perfil_acesso = NULL,
-         cargo = NULL,
-         uf = NULL,
-         cargo_mandato_inicio = NULL,
-         cargo_mandato_fim = NULL,
-         perfil_acesso2 = NULL,
-         cargo2 = NULL,
-         uf2 = NULL,
-         updated_at = NOW()
-     WHERE id = $3`,
-    [motivo, atorId, id]
-  );
-  return await getMe(id);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `UPDATE users
+       SET arquivado_em = NOW(),
+           arquivado_motivo = $1,
+           arquivado_por = $2,
+           perfil_acesso = NULL,
+           cargo = NULL,
+           uf = NULL,
+           cargo_mandato_inicio = NULL,
+           cargo_mandato_fim = NULL,
+           perfil_acesso2 = NULL,
+           cargo2 = NULL,
+           uf2 = NULL,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [motivo, atorId, id]
+    );
+
+    await client.query(
+      `INSERT INTO user_movimentacoes (user_id, acao, por_id, motivo)
+       VALUES ($1, 'ARQUIVADO', $2, $3)`,
+      [id, atorId, motivo]
+    );
+
+    await client.query("COMMIT");
+    return await getMe(id);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /**
  * Desarquivar
  */
 async function desarquivarUserPorId(id, { motivo, atorId }) {
-  await pool.query(
-    `UPDATE users
-     SET arquivado_em = NULL,
-         arquivado_motivo = NULL,
-         arquivado_por = NULL,
-         desarquivado_em = NOW(),
-         desarquivado_motivo = $1,
-         desarquivado_por = $2,
-         updated_at = NOW()
-     WHERE id = $3`,
-    [motivo, atorId, id]
-  );
-  return await getMe(id);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `UPDATE users
+       SET arquivado_em = NULL,
+           arquivado_motivo = NULL,
+           arquivado_por = NULL,
+           desarquivado_em = NOW(),
+           desarquivado_motivo = $1,
+           desarquivado_por = $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [motivo, atorId, id]
+    );
+
+    await client.query(
+      `INSERT INTO user_movimentacoes (user_id, acao, por_id, motivo)
+       VALUES ($1, 'DESARQUIVADO', $2, $3)`,
+      [id, atorId, motivo]
+    );
+
+    await client.query("COMMIT");
+    return await getMe(id);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Lista histórico de movimentações (arquivamento/desarquivamento)
+ */
+async function listarHistoricoMovimentacoes(userId = null, termoBusca = "") {
+  let query = `
+    SELECT
+      m.*,
+      u_target.name as user_nome,
+      u_target.cpf as user_cpf,
+      u_por.name as por_nome
+    FROM user_movimentacoes m
+    JOIN users u_target ON m.user_id = u_target.id
+    JOIN users u_por ON m.por_id = u_por.id
+  `;
+  const conds = [];
+  const params = [];
+
+  if (userId) {
+    conds.push(`m.user_id = $${params.length + 1}`);
+    params.push(userId);
+  }
+
+  if (termoBusca) {
+    const termo = `%${termoBusca.toLowerCase()}%`;
+    const apenasDigitos = `%${termoBusca.replace(/\D/g, "")}%`;
+    conds.push(`(LOWER(u_target.name) LIKE $${params.length + 1} OR u_target.cpf LIKE $${params.length + 2})`);
+    params.push(termo, apenasDigitos);
+  }
+
+  if (conds.length > 0) {
+    query += " WHERE " + conds.join(" AND ");
+  }
+
+  query += " ORDER BY m.criado_em DESC";
+
+  const { rows } = await pool.query(query, params);
+  return rows;
 }
 
 async function buscarAniversariantesDoDia() {
@@ -432,5 +505,6 @@ module.exports = {
   criarUserInicial,
   arquivarUserPorId,
   desarquivarUserPorId,
+  listarHistoricoMovimentacoes,
   buscarAniversariantesDoDia,
 };
