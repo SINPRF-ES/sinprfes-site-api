@@ -6,6 +6,7 @@ import { fetchPublicacoes, downloadPublicacaoFile, DriveFile } from '../services
 import { FontAwesome } from '@expo/vector-icons';
 import { Linking } from 'react-native';
 import { logDebug } from '../utils/user';
+import { logger } from '../infra/logger';
 import api from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import * as Sharing from 'expo-sharing';
@@ -99,13 +100,16 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       return;
     }
 
-    const isPDF = file.mimeType?.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
-
     setIsDownloading(true);
     try {
       logDebug('Publicacoes.openLocal.start', { fileId: file.id, name: file.name, mimeType: file.mimeType });
 
-      const { localUri, mimeType: downloadedMimeType } = await downloadPublicacaoFile(file.id, file.name, token);
+      const { localUri, mimeType: downloadedMimeType } = await downloadPublicacaoFile(
+        file.id,
+        file.name,
+        token,
+        file.mimeType || undefined
+      );
       const safeMimeType = downloadedMimeType || file.mimeType || '';
 
       navigation.navigate('FileViewer', {
@@ -115,23 +119,15 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
           type: safeMimeType.includes('pdf') ? 'pdf' : (safeMimeType.startsWith('image/') ? 'image' : 'other'),
           context: 'publicacoes'
       });
-    } catch (err: any) {
-      logger.error('Publicacoes.openLocal.fail', err, {
+    } catch (err: unknown) {
+      const error = err as Error;
+      logger.error('Publicacoes.openLocal.fail', error, {
         fileId: file.id,
         fileName: file.name,
-        isPDF,
-        message: err.message
+        message: error.message
       });
 
-      if (isPDF) {
-        // Para PDFs, evitamos abrir link externo conforme requisito de segurança/identidade
-        Alert.alert('Erro ao Abrir PDF', 'Não foi possível baixar o documento para visualização interna. Verifique sua conexão.');
-      } else if (file.webViewLink) {
-        logDebug('Publicacoes.openLocal.fallback', { url: file.webViewLink });
-        Linking.openURL(file.webViewLink).catch(() => {});
-      } else {
-        Alert.alert('Erro', err.message || 'Não foi possível abrir o arquivo.');
-      }
+      Alert.alert('Erro ao Abrir Arquivo', 'Não foi possível baixar o documento para visualização interna. Verifique sua conexão.');
     } finally {
       setIsDownloading(false);
     }

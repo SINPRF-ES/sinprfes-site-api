@@ -100,8 +100,8 @@ const LogisticaScreen = ({ route }: any) => {
         setEventoSelecionado(null);
       }
     } catch (err: any) {
-      logger.error('Logistica.fetchData', err, {
-        message: err.message,
+      logger.error('Logistica.fetchData', err as Error, {
+        message: (err as Error).message,
         status: err.response?.status,
         url: err.config?.url,
         baseURL: err.config?.baseURL
@@ -120,8 +120,8 @@ const LogisticaScreen = ({ route }: any) => {
       const currentUserId = getCanonicalUserId(user);
       const minha = ins.find((i: any) => String(i.user_id) === currentUserId);
       setMinhaInscricao(minha || null);
-    } catch (err) {
-      logger.error('Logistica.fetchInscricoes', err);
+    } catch (err: any) {
+      logger.error('Logistica.fetchInscricoes', err as Error);
     }
   }, [eventoSelecionado, user]);
 
@@ -149,12 +149,18 @@ const LogisticaScreen = ({ route }: any) => {
 
   const handleOpenDoc = async () => {
     if (eventoSelecionado?.documento_id) {
+      if (!token) {
+        Alert.alert('Acesso Negado', 'Sua sessão expirou. Por favor, faça login novamente.');
+        return;
+      }
+
       try {
         setLoading(true);
         const { localUri, mimeType } = await downloadPublicacaoFile(
           eventoSelecionado.documento_id,
           'Documento_Evento.pdf',
-          token || ''
+          token,
+          'application/pdf'
         );
 
         const safeMimeType = mimeType || 'application/pdf';
@@ -166,19 +172,32 @@ const LogisticaScreen = ({ route }: any) => {
           type: safeMimeType.includes('pdf') ? 'pdf' : (safeMimeType.startsWith('image/') ? 'image' : 'other'),
           context: 'publicacoes'
         });
-      } catch (err: any) {
-        logger.error('Logistica.openDoc.fail', err, {
+      } catch (err: unknown) {
+        const error = err as Error;
+        logger.error('Logistica.openDoc.fail', error, {
           eventoId: eventoSelecionado.id,
           documento_id: eventoSelecionado.documento_id,
           tokenPresent: !!token,
-          message: err.message
+          message: error.message
         });
         Alert.alert('Erro', 'Não foi possível baixar o documento.');
       } finally {
         setLoading(false);
       }
     } else if (eventoSelecionado?.documento_url) {
-      Linking.openURL(eventoSelecionado.documento_url).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
+      const url = eventoSelecionado.documento_url;
+      const isPDF = url.toLowerCase().split('?')[0].endsWith('.pdf');
+
+      if (isPDF) {
+          navigation.navigate('FileViewer', {
+              remoteUrl: url,
+              title: 'Documento do Evento',
+              type: 'pdf',
+              context: 'publicacoes'
+          });
+      } else {
+          Linking.openURL(url).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
+      }
     }
   };
 
@@ -238,8 +257,8 @@ const LogisticaScreen = ({ route }: any) => {
       setModalEventoVisible(false);
       fetchData();
       Alert.alert('Sucesso', 'Evento salvo com sucesso!');
-    } catch (err) {
-      logger.error('Logistica.CreateEvent.API_FAIL', err);
+    } catch (err: any) {
+      logger.error('Logistica.CreateEvent.API_FAIL', err as Error);
       Alert.alert('Erro', 'Não foi possível salvar o evento.');
     }
   };
@@ -325,7 +344,8 @@ const LogisticaScreen = ({ route }: any) => {
       setModalInscricaoVisible(false);
       fetchInscricoes();
       Alert.alert('Sucesso', 'Inscrição salva!');
-    } catch (err) {
+    } catch (err: any) {
+      logger.error('Logistica.saveInscricao', err as Error);
       Alert.alert('Erro', 'Não foi possível salvar a inscrição.');
     }
   };
@@ -387,7 +407,10 @@ const LogisticaScreen = ({ route }: any) => {
               await cancelarMinhaInscricaoLogistica(eventoSelecionado.id);
               fetchInscricoes();
               Alert.alert('Sucesso', 'Inscrição cancelada.');
-            } catch (e) { Alert.alert('Erro', 'Falha ao cancelar.'); }
+            } catch (err: any) {
+              logger.error('Logistica.cancelMinhaInscricao', err as Error);
+              Alert.alert('Erro', 'Falha ao cancelar.');
+            }
           }
         }
       ]
@@ -404,7 +427,10 @@ const LogisticaScreen = ({ route }: any) => {
           setModalJustificativaVisible(false);
           fetchInscricoes();
           Alert.alert('Sucesso', 'Inscrição cancelada.');
-      } catch (e) { Alert.alert('Erro', 'Falha ao cancelar.'); }
+      } catch (err: any) {
+          logger.error('Logistica.cancelInscricaoTerceiro', err as Error);
+          Alert.alert('Erro', 'Falha ao cancelar.');
+      }
   };
 
   const exportData = async (type: 'pdf' | 'xls') => {
@@ -415,9 +441,9 @@ const LogisticaScreen = ({ route }: any) => {
 
         const response = await api.get(url);
         Alert.alert('Exportação solicitada', response.data.message || 'Enviaremos o arquivo para seu e-mail.');
-    } catch (e: any) {
-        logger.error('Logistica.exportError', e);
-        const msg = e.response?.data?.error || e.response?.data?.message || 'Falha ao solicitar exportação.';
+    } catch (err: any) {
+        logger.error('Logistica.exportError', err as Error);
+        const msg = err.response?.data?.error || err.response?.data?.message || 'Falha ao solicitar exportação.';
         Alert.alert('Erro', msg);
     }
   };

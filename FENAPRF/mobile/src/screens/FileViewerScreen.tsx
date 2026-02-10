@@ -7,7 +7,7 @@ import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL } from '../config/env';
 import SafeScreen from '../components/SafeScreen';
-import { inferExtension, buildCacheDest } from '../utils/fileCache';
+import { inferExtension, buildCacheDest, ensureDownloadDir } from '../utils/fileCache';
 
 export default function FileViewerScreen({ route, navigation }: any) {
   const { localUri, remoteUrl, title, fileId, type, context, format, resourceType } = route.params;
@@ -43,6 +43,9 @@ export default function FileViewerScreen({ route, navigation }: any) {
   const downloadToCache = async () => {
     try {
       setLoading(true);
+
+      // Garantir que o diretório de download existe
+      await ensureDownloadDir();
 
       let extension = inferExtension(remoteUrl);
 
@@ -86,8 +89,8 @@ export default function FileViewerScreen({ route, navigation }: any) {
       else inferMimeType();
 
     } catch (err: any) {
-      logger.error('[file.download.error]', err, { remoteUrl });
-      Alert.alert('Erro', err.message || 'Não foi possível carregar o arquivo.');
+      logger.error('[file.download.error]', err as Error, { remoteUrl });
+      Alert.alert('Erro', (err as Error).message || 'Não foi possível carregar o arquivo.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -111,7 +114,7 @@ export default function FileViewerScreen({ route, navigation }: any) {
       });
       logger.info('[file.share.success]');
     } catch (err: any) {
-      logger.error('[file.share.error]', err);
+      logger.error('[file.share.error]', err as Error);
     }
   };
 
@@ -149,7 +152,7 @@ export default function FileViewerScreen({ route, navigation }: any) {
         handleShare();
       }
     } catch (err: any) {
-      logger.error('[file.save.error]', err);
+      logger.error('[file.save.error]', err as Error);
       handleShare();
     }
   };
