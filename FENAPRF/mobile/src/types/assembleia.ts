@@ -1,11 +1,11 @@
-export type AssembleiaEstadoFiltro = 'CRIADA' | 'ABERTA' | 'ENCERRADA';
+export type AssembleiaEstadoFiltro = 'CRIADO' | 'EM_CREDENCIAMENTO' | 'INICIADO' | 'SUSPENSA' | 'ENCERRADO';
 
 export interface Assembleia {
   id: string;
   tipo: 'AGE' | 'AGO';
   titulo: string;
   pauta: string;
-  estado: AssembleiaEstadoFiltro | 'EM_CURSO';
+  estado: AssembleiaEstadoFiltro;
   criado_em: string;
   aberta_em?: string;
   encerrada_em?: string;
@@ -20,6 +20,8 @@ export interface Assembleia {
   edital_type?: string;
   edital_format?: string;
   edital_drive_file_id?: string;
+  suspensao_motivo?: string;
+  data_hora_retorno?: string;
 }
 
 export interface AssembleiaEstado {
@@ -33,11 +35,21 @@ export interface AssembleiaEstado {
     presentes?: any[];
     tipo_chamada?: string;
     quorum_total_ativos?: number;
+    is_global?: boolean;
   } | null;
   votacaoAtiva: VotacaoItem | null;
-  mesa: any[];
-  pedidosPalavra: any[];
-  propostas: any[];
+  mesa: {
+    presidente_user_id?: string;
+    presidente_nome?: string;
+    vice_presidente_user_id?: string;
+    vice_presidente_nome?: string;
+    secretario_user_id?: string;
+    secretario_nome?: string;
+    secretario_2_user_id?: string;
+    secretario_2_nome?: string;
+  } | null;
+  pedidosPalavra: PedidoPalavra[];
+  propostas: Proposta[];
 }
 
 export interface VotacaoItem {

@@ -154,14 +154,16 @@ export function normalizeNome(input?: string | null): string | null {
  */
 export const getAssembleiaStatusLabel = (status: string): string => {
   switch (status) {
-    case 'CRIADA':
-      return 'AGENDADA';
-    case 'ABERTA':
-      return 'ABERTA';
-    case 'EM_CURSO':
-      return 'EM ANDAMENTO';
-    case 'ENCERRADA':
-      return 'ENCERRADA';
+    case 'CRIADO':
+      return 'CRIADO (AGENDADO)';
+    case 'EM_CREDENCIAMENTO':
+      return 'EM CREDENCIAMENTO';
+    case 'INICIADO':
+      return 'INICIADO';
+    case 'SUSPENSA':
+      return 'SUSPENSA';
+    case 'ENCERRADO':
+      return 'ENCERRADO';
     default:
       return status || 'STATUS DESCONHECIDO';
   }
@@ -172,14 +174,16 @@ export const getAssembleiaStatusLabel = (status: string): string => {
  */
 export const getAssembleiaStatusEmoji = (status: string): string => {
   switch (status) {
-    case 'ABERTA':
+    case 'EM_CREDENCIAMENTO':
+      return '🎟️ ';
+    case 'INICIADO':
       return '🟢 ';
-    case 'EM_CURSO':
-      return '🟡 ';
-    case 'ENCERRADA':
+    case 'SUSPENSA':
+      return '⏸️ ';
+    case 'ENCERRADO':
       return '🔴 ';
-    case 'CRIADA':
-      return '🔵 ';
+    case 'CRIADO':
+      return '🗓️ ';
     default:
       return '⚪ ';
   }

@@ -38,7 +38,6 @@
     "pdfkit": "^0.17.2",
     "pg": "^8.18.0",
     "qrcode": "^1.5.4",
-    "resend": "^6.9.1",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "speakeasy": "^2.0.0",
@@ -48,6 +47,7 @@
   "devDependencies": {
     "jest": "^30.2.0",
     "nodemon": "^3.1.0",
+    "resend": "^6.9.1",
     "socket.io-client": "^4.8.3",
     "supertest": "^7.2.2"
   },

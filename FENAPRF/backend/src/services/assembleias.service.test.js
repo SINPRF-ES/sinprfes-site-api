@@ -28,75 +28,73 @@ describe('Assembleias Service', () => {
   });
 
   describe('State Machine Transitions', () => {
-    test('abrir should transition from CRIADA to ABERTA', async () => {
+    test('abrir should transition from CRIADO to EM_CREDENCIAMENTO', async () => {
       // Mock buscarPorId (uses pool.query)
       pool.query.mockResolvedValueOnce({
-        rows: [{ id: '1', estado: 'CRIADA' }]
+        rows: [{ id: '1', estado: 'CRIADO' }]
       });
       // Mock UPDATE (uses pool.query)
       pool.query.mockResolvedValueOnce({
-        rows: [{ id: '1', estado: 'ABERTA' }]
+        rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }]
       });
-      // Mock Audits (2 calls)
+      // Mock Audits
       pool.query.mockResolvedValue({ rows: [] });
 
       const result = await service.abrir('1', 1);
-      expect(result.estado).toBe('ABERTA');
-      expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE assembleias SET estado = 'ABERTA'/), ['1']);
+      expect(result.estado).toBe('EM_CREDENCIAMENTO');
+      expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE assembleias SET estado = 'EM_CREDENCIAMENTO'/), ['1']);
     });
 
-    test('abrir should throw error if not in CRIADA state', async () => {
+    test('abrir should throw error if not in CRIADO state', async () => {
       pool.query.mockResolvedValueOnce({
-        rows: [{ id: '1', estado: 'ABERTA' }]
+        rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }]
       });
 
       await expect(service.abrir('1', 1)).rejects.toThrow(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     });
 
-    test('iniciarExecucao should transition from ABERTA to EM_CURSO if mesa is defined and present', async () => {
+    test('iniciarExecucao should transition from EM_CREDENCIAMENTO to INICIADO if mesa is defined', async () => {
       // 1. buscarPorId
-      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }] });
       // 2. buscarMesa
       pool.query.mockResolvedValueOnce({ rows: [{ assembleia_id: '1', presidente_user_id: 10, secretario_user_id: 20 }] });
-      // 3. buscarUltimoQuorum
-      pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1' }] });
-      // 4. verificarElegibilidadePorQuorum (Presidente)
-      pool.query.mockResolvedValueOnce({ rows: [{ 1: 1 }] });
-      // 5. verificarElegibilidadePorQuorum (Secretário)
-      pool.query.mockResolvedValueOnce({ rows: [{ 1: 1 }] });
-      // 6. UPDATE
-      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CURSO' }] });
-      // 7. Audit
-      pool.query.mockResolvedValueOnce({ rows: [] });
+      // 3. UPDATE
+      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'INICIADO' }] });
+      // 4. Audit
+      pool.query.mockResolvedValue({ rows: [] });
 
       const result = await service.iniciarExecucao('1', 1);
-      expect(result.estado).toBe('EM_CURSO');
+      expect(result.estado).toBe('INICIADO');
     });
 
     test('iniciarExecucao should fail if mesa is not defined', async () => {
-      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }] });
       pool.query.mockResolvedValueOnce({ rows: [] }); // No mesa
 
       await expect(service.iniciarExecucao('1', 1)).rejects.toThrow(Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA);
     });
 
-    test('encerrar should transition to ENCERRADA and auto-close active votations', async () => {
+    test('encerrar should transition to ENCERRADO and auto-close active votations', async () => {
       // client.query calls
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CURSO' }] }) // SELECT FOR UPDATE
+        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'INICIADO' }] }) // SELECT FOR UPDATE
         .mockResolvedValueOnce({ rows: [{ id: 'v1' }] }) // active votations
         .mockResolvedValueOnce({ rowCount: 1 }) // abstenções
         .mockResolvedValueOnce({ rows: [] }) // UPDATE status item
-        .mockResolvedValueOnce({ rows: [] }) // audit item
-        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ENCERRADA' }] }) // UPDATE assembleia
+        .mockResolvedValueOnce({ rows: [] }) // audit item (1st call in finalize)
+        .mockResolvedValueOnce({ rows: [] }) // audit item (2nd call in finalize)
+        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ENCERRADO' }] }) // UPDATE assembleia
         .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum
         .mockResolvedValueOnce({ rows: [] }) // audit ass 1
         .mockResolvedValueOnce({ rows: [] }) // audit ass 2
         .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
+      // Mock for registrarAuditoria mesa checks (called within service)
+      pool.query.mockResolvedValue({ rows: [] });
+
       const result = await service.encerrar('1', 1);
-      expect(result.estado).toBe('ENCERRADA');
+      expect(result.estado).toBe('ENCERRADO');
       expect(mockClient.query).toHaveBeenCalledWith(expect.stringMatching(/BEGIN/));
       expect(mockClient.query).toHaveBeenCalledWith(expect.stringMatching(/COMMIT/));
     });
@@ -107,7 +105,7 @@ describe('Assembleias Service', () => {
     test('gerarQuorum should calculate correct quorum for PRIMEIRA chamada', async () => {
        mockClient.query
          .mockResolvedValueOnce({ rows: [] }) // BEGIN
-         .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] }) // SELECT FOR UPDATE
+         .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }] }) // SELECT FOR UPDATE
          .mockResolvedValueOnce({ rows: [] }) // Idempotency check
          .mockResolvedValueOnce({ rows: [{ total: '100' }] }) // actives count
          .mockResolvedValueOnce({ rows: [] }) // collision check
@@ -117,6 +115,9 @@ describe('Assembleias Service', () => {
          .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // SELECT user perfil
          .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // INSERT checkin
          .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+       // Mock for registrarAuditoria mesa checks
+       pool.query.mockResolvedValue({ rows: [] });
 
        const result = await service.gerarQuorum({
          assembleia_id: '1',
@@ -134,7 +135,7 @@ describe('Assembleias Service', () => {
     test('gerarQuorum should forceNew if tipo_chamada is RECONTAGEM', async () => {
        mockClient.query
          .mockResolvedValueOnce({ rows: [] }) // BEGIN
-         .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] }) // SELECT FOR UPDATE
+         .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }] }) // SELECT FOR UPDATE
          // NOT checking idempotency because RECONTAGEM should skip it
          .mockResolvedValueOnce({ rows: [{ total: '100' }] }) // actives count
          .mockResolvedValueOnce({ rows: [{ presidente_user_id: 1 }] }) // check presidente
@@ -147,6 +148,9 @@ describe('Assembleias Service', () => {
          .mockResolvedValueOnce({ rows: [] }) // Audit checkin
          .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
+       // Mock for registrarAuditoria mesa checks
+       pool.query.mockResolvedValue({ rows: [] });
+
        const result = await service.gerarQuorum({
          assembleia_id: '1',
          token: '999999',
@@ -155,8 +159,6 @@ describe('Assembleias Service', () => {
        });
 
        expect(result.id).toBe('q_rec');
-       // Verify skip idempotency: query 3 should NOT be the idempotency check for RECONTAGEM
-       // Actually, I should check the query string to be sure.
     });
   });
 
@@ -170,11 +172,14 @@ describe('Assembleias Service', () => {
     test('criarVotacao should transition if authority is valid', async () => {
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CURSO' }] }) // FOR UPDATE ass
+        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'INICIADO' }] }) // FOR UPDATE ass
         .mockResolvedValueOnce({ rows: [] }) // No active votations
         .mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'Test' }] }) // INSERT votacao
         .mockResolvedValueOnce({ rows: [] }) // Audit
         .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+      // Mock for registrarAuditoria mesa checks
+      pool.query.mockResolvedValue({ rows: [] });
 
       const result = await service.criarVotacao({
         assembleia_id: '1',
@@ -218,6 +223,12 @@ describe('Assembleias Service', () => {
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1' }] });
       // 2d. propostas
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'pr1', titulo: 'Proposta 1', autor_nome: 'Autor 1' }] });
+      // 2e. presentesGlobal
+      pool.query.mockResolvedValueOnce({ rows: [{ total: 3 }] });
+      // 2f. auditoria
+      pool.query.mockResolvedValueOnce({ rows: [] });
+      // 2g. pedidosPalavra
+      pool.query.mockResolvedValueOnce({ rows: [] });
 
       // 3. allCheckins (Batch)
       pool.query.mockResolvedValueOnce({ rows: [
@@ -243,8 +254,8 @@ describe('Assembleias Service', () => {
       expect(res.votacoes[0].contagem.total).toBe(2);
 
       // Verify that pool.query was NOT called for each quorum/votacao separately after batch fetch
-      // Total calls expected: 1 (buscarPorId) + 4 (mesa, quoruns, votacoes, propostas) + 1 (allCheckins) + 1 (allVotos) = 7
-      expect(pool.query).toHaveBeenCalledTimes(7);
+      // Total calls expected: 1 (buscarPorId) + 7 (mesa, quoruns, votacoes, propostas, presentesGlobal, auditoria, pedidosPalavra) + 1 (allCheckins) + 1 (allVotos) = 10
+      expect(pool.query).toHaveBeenCalledTimes(10);
 
       // Verify batch queries use ANY
       expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/assembleia_quorum_id = ANY/), expect.anything());
@@ -255,7 +266,7 @@ describe('Assembleias Service', () => {
   describe('Lightweight State Tracking', () => {
     test('buscarEstadoResumido should return essentials only', async () => {
       // 1. pool.query for assembleia state
-      pool.query.mockResolvedValueOnce({ rows: [{ estado: 'EM_CURSO' }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ estado: 'INICIADO' }] });
       // 2. buscarUltimoQuorum
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1', token: '123456', gerado_por_user_id: 'u1' }] });
       // 3. buscarVotacaoAtiva
@@ -266,7 +277,7 @@ describe('Assembleias Service', () => {
       pool.query.mockResolvedValueOnce({ rows: [{ SIM: 2, NAO: 1, ABSTENCAO: 0 }] });
 
       const res = await service.buscarEstadoResumido('1');
-      expect(res.assembleia.estado).toBe('EM_CURSO');
+      expect(res.assembleia.estado).toBe('INICIADO');
       expect(res.quorumVigente.token).toBe('123456');
       expect(res.quorumVigente.total).toBe(5);
       expect(res.votacaoAtiva.tempoRestanteSegundos).toBeGreaterThan(0);

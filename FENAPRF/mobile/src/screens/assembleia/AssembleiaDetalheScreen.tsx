@@ -31,7 +31,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isElegivel = ['DIRETORIA', 'CONSELHEIRO', 'COLABORADOR'].includes(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
   const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
-  const canGenerateReport = (assembleia?.estado === 'ENCERRADA' || assembleia?.estado === 'EM_CURSO' || assembleia?.estado === 'ABERTA');
+  const canGenerateReport = (assembleia?.estado === 'ENCERRADO' || assembleia?.estado === 'INICIADO' || assembleia?.estado === 'EM_CREDENCIAMENTO' || assembleia?.estado === 'SUSPENSA');
 
   const [estadoLoading, setEstadoLoading] = useState(false);
 
@@ -234,11 +234,12 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }
   }, [id]);
 
-  const handleGerarToken = useCallback(async () => {
+  const handleGerarToken = useCallback(async (isGlobal = false) => {
     try {
       setActionLoading(true);
-      const res = await gerarTokenQuorum(id, { tipo_chamada: 'PRIMEIRA' });
-      logger.info('TOKEN_GENERATED_AUTO_CHECKIN_START', { assembleiaId: id, token: res.token });
+      const tipoChamada = isGlobal ? 'GLOBAL' : 'PRIMEIRA';
+      const res = await gerarTokenQuorum(id, { tipo_chamada: tipoChamada, is_global: isGlobal });
+      logger.info('TOKEN_GENERATED_AUTO_CHECKIN_START', { assembleiaId: id, token: res.token, isGlobal });
 
       try {
         await realizarCheckin(id, res.token);
@@ -258,13 +259,13 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }, [id, fetchData]);
 
   useEffect(() => {
-    const isAberta = assembleia?.estado === 'ABERTA';
+    const isCredenciamento = assembleia?.estado === 'EM_CREDENCIAMENTO';
     const actions: MenuAction[] = [];
     if ((isDiretoria || isPresidente) && assembleia) {
-      if (isDiretoria && assembleia.estado === 'CRIADA') {
-        actions.push({ label: 'Abrir Assembleia', icon: 'play-circle-outline', onPress: handleAbrir });
+      if (isDiretoria && assembleia.estado === 'CRIADO') {
+        actions.push({ label: 'Gerar QR Global', icon: 'qrcode', onPress: () => handleGerarToken(true) });
       }
-      if (isAberta && isDiretoria) {
+      if (isCredenciamento && isDiretoria) {
         const isMesaEstabelecida = !!(estado?.mesa as any)?.estabelecida_em;
         actions.push({
             label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
@@ -272,12 +273,11 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             onPress: () => navigation.navigate('ComporMesa', { id, substituir: isMesaEstabelecida })
         });
         actions.push({ label: 'Iniciar Execução', icon: 'play-box-multiple-outline', onPress: handleIniciarExecucao });
-        actions.push({ label: 'Gerar Token Quórum', icon: 'key-variant', onPress: handleGerarToken });
+        actions.push({ label: 'Novo Token Quórum', icon: 'key-variant', onPress: () => handleGerarToken(false) });
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
-      if (assembleia.estado === 'EM_CURSO') {
-        actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: () => {
-            // No mobile, redirecionamos para a sala onde o presidente tem esse controle ou fazemos aqui
+      if (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') {
+        actions.push({ label: 'Ir para Sala', icon: 'door-open', onPress: () => {
             navigation.navigate('AssembleiaSala', { id });
         }});
         if (isDiretoria || isPresidente) {
@@ -354,9 +354,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }
 
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
-  const isParticipavel = assembleia.estado === 'ABERTA' || assembleia.estado === 'EM_CURSO';
-  const isEncerrada = assembleia.estado === 'ENCERRADA';
-  const isIniciado = assembleia.estado === 'EM_CURSO';
+  const isParticipavel = assembleia.estado === 'EM_CREDENCIAMENTO' || assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
+  const isEncerrada = assembleia.estado === 'ENCERRADO';
+  const isIniciado = assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
 
   return (
     <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
@@ -416,12 +416,22 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             <View style={styles.mesaRow}>
                 <MaterialCommunityIcons name="account-tie" size={20} color="#003366" />
                 <Text style={styles.mesaLabel}>Presidente:</Text>
-                <Text style={styles.mesaValue}>{(estado.mesa as any).presidente_nome}</Text>
+                <Text style={styles.mesaValue}>{estado.mesa.presidente_nome}</Text>
+            </View>
+            <View style={styles.mesaRow}>
+                <MaterialCommunityIcons name="account-tie-outline" size={20} color="#003366" />
+                <Text style={styles.mesaLabel}>Vice-Pres:</Text>
+                <Text style={styles.mesaValue}>{estado.mesa.vice_presidente_nome || '-'}</Text>
             </View>
             <View style={styles.mesaRow}>
                 <MaterialCommunityIcons name="account-edit" size={20} color="#003366" />
-                <Text style={styles.mesaLabel}>Secretário:</Text>
-                <Text style={styles.mesaValue}>{(estado.mesa as any).secretario_nome}</Text>
+                <Text style={styles.mesaLabel}>1º Sec:</Text>
+                <Text style={styles.mesaValue}>{estado.mesa.secretario_nome}</Text>
+            </View>
+            <View style={styles.mesaRow}>
+                <MaterialCommunityIcons name="account-edit-outline" size={20} color="#003366" />
+                <Text style={styles.mesaLabel}>2º Sec:</Text>
+                <Text style={styles.mesaValue}>{estado.mesa.secretario_2_nome || '-'}</Text>
             </View>
         </View>
       )}
@@ -518,15 +528,15 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         <View style={[styles.infoCard, styles.diretoriaSection]}>
             <Text style={styles.infoTitle}>⚡ Ações e Gestão</Text>
             <View style={styles.diretoriaButtons}>
-                {isDiretoria && assembleia.estado === 'CRIADA' && (
+                {isDiretoria && assembleia.estado === 'CRIADO' && (
                     <TouchableOpacity
                       style={styles.btnManagement}
-                      onPress={handleAbrir}
+                      onPress={() => handleGerarToken(true)}
                     >
-                        <Text style={styles.btnActionText}>Abrir</Text>
+                        <Text style={styles.btnActionText}>Gerar QR Global</Text>
                     </TouchableOpacity>
                 )}
-                {isDiretoria && assembleia.estado === 'ABERTA' && (
+                {isDiretoria && assembleia.estado === 'EM_CREDENCIAMENTO' && (
                     <>
                         <TouchableOpacity
                           style={styles.btnManagement}
@@ -536,13 +546,13 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.btnManagement}
-                          onPress={handleGerarToken}
+                          onPress={() => handleGerarToken(false)}
                         >
-                            <Text style={styles.btnActionText}>Token</Text>
+                            <Text style={styles.btnActionText}>Novo Token</Text>
                         </TouchableOpacity>
                     </>
                 )}
-                {isDiretoria && assembleia.estado === 'EM_CURSO' && (
+                {isDiretoria && (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') && (
                     <>
                         <TouchableOpacity
                           style={styles.btnManagement}
@@ -684,10 +694,11 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10 },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  badgeCRIADA: { backgroundColor: '#cfe2ff' },
-  badgeABERTA: { backgroundColor: '#d1e7dd' },
-  badgeEM_CURSO: { backgroundColor: '#fff3cd' },
-  badgeENCERRADA: { backgroundColor: '#f8d7da' },
+  badgeCRIADO: { backgroundColor: '#cfe2ff' },
+  badgeEM_CREDENCIAMENTO: { backgroundColor: '#d1e7dd' },
+  badgeINICIADO: { backgroundColor: '#fff3cd' },
+  badgeSUSPENSA: { backgroundColor: '#e2e3e5' },
+  badgeENCERRADO: { backgroundColor: '#f8d7da' },
   badgeText: { fontSize: 12, fontWeight: 'bold', color: '#333' },
   tipoText: { fontWeight: 'bold', color: '#666', fontSize: 16 },
   tituloText: { fontSize: 24, fontWeight: 'bold', color: '#003366', marginBottom: 8 },

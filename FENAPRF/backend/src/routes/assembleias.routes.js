@@ -39,6 +39,8 @@ router.post("/", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLi
 router.post("/upload-edital", auth, requirePermission("VOTACAO_GERENCIAR"), upload.single("edital"), controller.uploadEdital);
 router.post("/:id/abrir", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.abrir);
 router.post("/:id/iniciar-execucao", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.iniciarExecucao);
+router.post("/:id/suspender", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.suspender);
+router.post("/:id/retomar", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.retomar);
 router.post("/:id/encerrar", auth, requirePermission("VOTACAO_GERENCIAR"), assemblyCommandLimiter, controller.encerrarAssembleia);
 
 // Presença e Quórum

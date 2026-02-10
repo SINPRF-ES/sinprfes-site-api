@@ -5,16 +5,18 @@ const log = require("../utils/log");
 const { escapeHtml } = require("../utils/format");
 
 const ASSEMBLEIA_STATES = {
-  CRIADA: 'CRIADA',
-  ABERTA: 'ABERTA',
-  EM_CURSO: 'EM_CURSO',
-  ENCERRADA: 'ENCERRADA'
+  CRIADO: 'CRIADO',
+  EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
+  INICIADO: 'INICIADO',
+  SUSPENSA: 'SUSPENSA',
+  ENCERRADO: 'ENCERRADO'
 };
 
 const ASSEMBLEIA_COLUMNS = `
   id, tipo, titulo, pauta, estado, criado_por as criada_por_user_id, aberta_em, encerrada_em, criado_em,
   data_hora_inicio, edital_url, data_evento, hora_primeira_chamada, hora_segunda_chamada,
-  edital_public_id, edital_resource_type, edital_type, edital_format, edital_drive_file_id
+  edital_public_id, edital_resource_type, edital_type, edital_format, edital_drive_file_id,
+  suspensao_motivo, data_hora_retorno
 `;
 
 /**
@@ -40,10 +42,29 @@ async function registrarAuditoria(assembleiaId, userId, evento, payload, client 
   const db = client || pool;
   const env = process.env.ASSEMBLEIA_ENV || "dev";
   try {
+    const { rows: mesaRows } = await db.query(
+      "SELECT presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id FROM assembleia_mesa WHERE assembleia_id = $1",
+      [assembleiaId]
+    );
+    const mesa = mesaRows[0];
+    let actingAs = null;
+    if (mesa) {
+      if (mesa.presidente_user_id === userId) {
+        actingAs = "Presidente";
+      } else if (mesa.vice_presidente_user_id === userId) {
+        actingAs = "Por ordem do Presidente, o Vice-Presidente";
+      } else if (mesa.secretario_user_id === userId) {
+        actingAs = "Por ordem do Presidente, o 1º Secretário";
+      } else if (mesa.secretario_2_user_id === userId) {
+        actingAs = "Por ordem do Presidente, o 2º Secretário";
+      }
+    }
+
     const fullPayload = {
       ...payload,
       _env: env,
-      _timestamp: new Date().toISOString()
+      _timestamp: new Date().toISOString(),
+      _acting_as: actingAs
     };
     await db.query(
       "INSERT INTO assembleia_auditoria (assembleia_id, user_id, evento, payload) VALUES ($1, $2, $3, $4)",
@@ -97,7 +118,7 @@ async function criar(dados) {
      )
      VALUES (
         $1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''),
-        NULLIF($7, '')::DATE, NULLIF($8, '')::TIME, NULLIF($9, '')::TIME, 'CRIADA',
+        NULLIF($7, '')::DATE, NULLIF($8, '')::TIME, NULLIF($9, '')::TIME, 'CRIADO',
         $10, $11, $12, $13, $14
      )
      RETURNING ${ASSEMBLEIA_COLUMNS}`,
@@ -116,18 +137,18 @@ async function criar(dados) {
 async function abrir(id, userId) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-  if (assembleia.estado !== ASSEMBLEIA_STATES.CRIADA) {
-    throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> ABERTA)`);
+  if (assembleia.estado !== ASSEMBLEIA_STATES.CRIADO) {
+    throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> EM_CREDENCIAMENTO)`);
   }
 
   const { rows } = await pool.query(
-    `UPDATE assembleias SET estado = 'ABERTA', aberta_em = NOW() WHERE id = $1 RETURNING *`,
+    `UPDATE assembleias SET estado = 'EM_CREDENCIAMENTO', aberta_em = NOW() WHERE id = $1 RETURNING *`,
     [id]
   );
   const atualizada = rows[0];
-  await registrarAuditoria(id, userId, 'ASSEMBLEIA_ABERTA', { de: assembleia.estado, para: 'ABERTA' });
-  await registrarAuditoria(id, userId, 'TRANSICAO_STATUS', { de: assembleia.estado, para: 'ABERTA' });
-  return atualizada;
+  await registrarAuditoria(id, userId, 'ASSEMBLEIA_ABERTA', { de: assembleia.estado, para: 'EM_CREDENCIAMENTO' });
+  await registrarAuditoria(id, userId, 'TRANSICAO_STATUS', { de: assembleia.estado, para: 'EM_CREDENCIAMENTO' });
+  return normalizarAssembleia(atualizada);
 }
 
 async function contarUsersAtivosParaQuorum(client = null) {
@@ -169,39 +190,61 @@ async function iniciarExecucao(id, userId) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-  if (assembleia.estado === ASSEMBLEIA_STATES.EM_CURSO) {
+  if (assembleia.estado === ASSEMBLEIA_STATES.INICIADO) {
     return assembleia;
   }
 
-  if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA) {
-    throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> EM_CURSO)`);
+  if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO) {
+    throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> INICIADO)`);
   }
 
-  // Pré-condição: mesa definida e presentes
+  // Pré-condição: mesa definida
   const mesa = await buscarMesa(id);
-  if (!mesa || !mesa.presidente_user_id || !mesa.secretario_user_id) {
-    throw new Error(Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA);
-  }
-
-  const quorumVigente = await buscarUltimoQuorum(id);
-  if (!quorumVigente) throw new Error(Textos.ASSEMBLEIA.TOKEN_INVALIDO);
-
-  const [presencaPresidente, presencaSecretario] = await Promise.all([
-    verificarElegibilidadePorQuorum(quorumVigente.id, mesa.presidente_user_id),
-    verificarElegibilidadePorQuorum(quorumVigente.id, mesa.secretario_user_id)
-  ]);
-
-  if (!presencaPresidente || !presencaSecretario) {
+  if (!mesa || !mesa.presidente_user_id) {
     throw new Error(Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA);
   }
 
   const { rows } = await pool.query(
-    `UPDATE assembleias SET estado = 'EM_CURSO' WHERE id = $1 RETURNING *`,
+    `UPDATE assembleias SET estado = 'INICIADO' WHERE id = $1 RETURNING *`,
     [id]
   );
   const atualizada = rows[0];
-  await registrarAuditoria(id, userId, 'TRANSICAO_STATUS', { de: assembleia.estado, para: 'EM_CURSO' });
-  return atualizada;
+  await registrarAuditoria(id, userId, 'TRANSICAO_STATUS', { de: assembleia.estado, para: 'INICIADO' });
+  return normalizarAssembleia(atualizada);
+}
+
+async function suspender(id, userId, motivo, dataHoraRetorno) {
+  const assembleia = await buscarPorId(id);
+  if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
+
+  if (assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
+    throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> SUSPENSA)`);
+  }
+
+  const { rows } = await pool.query(
+    `UPDATE assembleias SET estado = 'SUSPENSA', suspensao_motivo = $1, data_hora_retorno = $2 WHERE id = $3 RETURNING *`,
+    [escapeHtml(motivo), dataHoraRetorno, id]
+  );
+  const atualizada = rows[0];
+  await registrarAuditoria(id, userId, 'ASSEMBLEIA_SUSPENSA', { motivo, data_hora_retorno: dataHoraRetorno });
+  return normalizarAssembleia(atualizada);
+}
+
+async function retomar(id, userId) {
+  const assembleia = await buscarPorId(id);
+  if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
+
+  if (assembleia.estado !== ASSEMBLEIA_STATES.SUSPENSA) {
+    throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> INICIADO)`);
+  }
+
+  const { rows } = await pool.query(
+    `UPDATE assembleias SET estado = 'INICIADO', suspensao_motivo = NULL, data_hora_retorno = NULL WHERE id = $1 RETURNING *`,
+    [id]
+  );
+  const atualizada = rows[0];
+  await registrarAuditoria(id, userId, 'ASSEMBLEIA_RETOMADA', { de: 'SUSPENSA', para: 'INICIADO' });
+  return normalizarAssembleia(atualizada);
 }
 
 async function encerrar(id, userId) {
@@ -213,13 +256,13 @@ async function encerrar(id, userId) {
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADA) {
+    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
       await client.query('COMMIT');
       return await buscarPorId(id);
     }
 
-    if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA && assembleia.estado !== ASSEMBLEIA_STATES.EM_CURSO) {
-      throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> ENCERRADA)`);
+    if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO && assembleia.estado !== ASSEMBLEIA_STATES.SUSPENSA) {
+      throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> ENCERRADO)`);
     }
 
     // Estratégia A: encerrar votação ativa automaticamente
@@ -243,7 +286,7 @@ async function encerrar(id, userId) {
     }
 
     const { rows } = await client.query(
-      `UPDATE assembleias SET estado = 'ENCERRADA', encerrada_em = NOW() WHERE id = $1 RETURNING *`,
+      `UPDATE assembleias SET estado = 'ENCERRADO', encerrada_em = NOW() WHERE id = $1 RETURNING *`,
       [id]
     );
     const atualizada = rows[0];
@@ -254,8 +297,8 @@ async function encerrar(id, userId) {
       [id]
     );
 
-    await registrarAuditoria(id, userId, 'ASSEMBLEIA_ENCERRADA', { de: assembleia.estado, para: 'ENCERRADA' }, client);
-    await registrarAuditoria(id, userId, 'TRANSICAO_STATUS', { de: assembleia.estado, para: 'ENCERRADA' }, client);
+    await registrarAuditoria(id, userId, 'ASSEMBLEIA_ENCERRADA', { de: assembleia.estado, para: 'ENCERRADO' }, client);
+    await registrarAuditoria(id, userId, 'TRANSICAO_STATUS', { de: assembleia.estado, para: 'ENCERRADO' }, client);
 
     await client.query('COMMIT');
     return atualizada;
@@ -272,7 +315,7 @@ async function gerarQuorum(dados) {
   try {
     await client.query('BEGIN');
 
-    const { assembleia_id, gerado_por_user_id, tipo_chamada, observacao, forceNew } = dados;
+    const { assembleia_id, gerado_por_user_id, tipo_chamada, observacao, forceNew, is_global } = dados;
     let { token } = dados;
 
     // Lock na assembleia para garantir consistência de estado e evitar corridas
@@ -280,17 +323,22 @@ async function gerarQuorum(dados) {
     const assembleia = assRows[0];
 
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-    if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA && assembleia.estado !== ASSEMBLEIA_STATES.EM_CURSO) {
+    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
+    }
+
+    // Se for Global, o estado muda para EM_CREDENCIAMENTO
+    if (is_global && assembleia.estado === ASSEMBLEIA_STATES.CRIADO) {
+      await client.query("UPDATE assembleias SET estado = 'EM_CREDENCIAMENTO', aberta_em = NOW() WHERE id = $1", [assembleia_id]);
     }
 
     // Idempotência: Se NÃO for forceNew e já existe token ativo para este MESMO tipo_chamada, retorna ele
     // RECONTAGEM sempre força um novo token para invalidar o snapshot anterior
     if (!forceNew && tipo_chamada !== 'RECONTAGEM') {
       const { rows: existingRows } = await client.query(
-        `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario
+        `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, is_global
          FROM assembleia_quoruns
-         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL`,
+         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL ${is_global ? 'AND is_global = TRUE' : ''}`,
         [assembleia_id, tipo_chamada]
       );
 
@@ -329,16 +377,21 @@ async function gerarQuorum(dados) {
 
     // Encerrar quórum anterior antes de criar o novo (garante que só 1 esteja aberto por vez se for forceNew)
     // Se for um novo snapshot, ele "limpa" o anterior (snapshotting).
-    await client.query(
-      `UPDATE assembleia_quoruns SET encerrado_em = NOW() WHERE assembleia_id = $1 AND encerrado_em IS NULL`,
-      [assembleia_id]
-    );
+    // EXCEÇÃO: O QR Global não é encerrado por novos snapshots de quórum.
+    if (!is_global) {
+        await client.query(
+            `UPDATE assembleia_quoruns SET encerrado_em = NOW() WHERE assembleia_id = $1 AND encerrado_em IS NULL AND is_global = FALSE`,
+            [assembleia_id]
+        );
+    }
+
+    const validoAte = is_global ? "NOW() + INTERVAL '10 years'" : "NOW() + INTERVAL '10 minutes'";
 
     const { rows: qRows } = await client.query(
-      `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao, valido_ate)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '10 minutes')
-       RETURNING id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, tipo_chamada`,
-      [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao]
+      `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao, valido_ate, is_global)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, ${validoAte}, $8)
+       RETURNING id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, tipo_chamada, is_global`,
+      [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao, !!is_global]
     );
     const quorum = { ...qRows[0], isNew: true };
 
@@ -454,7 +507,7 @@ async function criarVotacao(dados, externalClient = null) {
     const { rows: assRows } = await client.query(`SELECT estado FROM assembleias WHERE id = $1 FOR UPDATE`, [assembleia_id]);
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-    if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CURSO) {
+    if (assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
@@ -648,11 +701,48 @@ async function buscarVotacaoPorId(votacaoId) {
   return rows[0];
 }
 
-async function definirMesa(dados) {
-  const { assembleia_id, presidente_user_id, secretario_user_id, definida_por_user_id } = dados;
+async function registrarRejeicaoMesa(assembleiaId, userId, cargo, client = null) {
+  const db = client || pool;
+  await db.query(
+    "INSERT INTO assembleia_mesa_rejeicoes (assembleia_id, user_id, cargo) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+    [assembleiaId, userId, cargo]
+  );
+}
 
-  if (presidente_user_id === secretario_user_id) {
-    throw new Error("Presidente e Secretário devem ser pessoas diferentes");
+async function verificarRejeicaoMesa(assembleiaId, userId, cargo) {
+  const { rows } = await pool.query(
+    "SELECT 1 FROM assembleia_mesa_rejeicoes WHERE assembleia_id = $1 AND user_id = $2 AND cargo = $3",
+    [assembleiaId, userId, cargo]
+  );
+  return rows.length > 0;
+}
+
+async function definirMesa(dados) {
+  const {
+    assembleia_id,
+    presidente_user_id,
+    vice_presidente_user_id,
+    secretario_user_id,
+    secretario_2_user_id,
+    definida_por_user_id
+  } = dados;
+
+  const ids = [presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id];
+  const uniqueIds = new Set(ids);
+  if (uniqueIds.size !== ids.length) {
+    throw new Error("Os membros da mesa devem ser pessoas diferentes");
+  }
+
+  // Verificar se algum já foi rejeitado para o mesmo cargo
+  const rejeicoes = await Promise.all([
+    verificarRejeicaoMesa(assembleia_id, presidente_user_id, 'PRESIDENTE'),
+    verificarRejeicaoMesa(assembleia_id, vice_presidente_user_id, 'VICE_PRESIDENTE'),
+    verificarRejeicaoMesa(assembleia_id, secretario_user_id, 'PRIMEIRO_SECRETARIO'),
+    verificarRejeicaoMesa(assembleia_id, secretario_2_user_id, 'SEGUNDO_SECRETARIO')
+  ]);
+
+  if (rejeicoes.some(r => r)) {
+    throw new Error("Um ou mais indicados já foram rejeitados para os cargos propostos neste evento.");
   }
 
   const client = await pool.connect();
@@ -663,49 +753,62 @@ async function definirMesa(dados) {
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-    if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA) {
+    if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
     const { rows: mesaExistente } = await client.query(`SELECT estabelecida_em FROM assembleia_mesa WHERE assembleia_id = $1`, [assembleia_id]);
-    if (mesaExistente[0]?.estabelecida_em) {
-      throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (Mesa já estabelecida. Use substituição.)`);
+    if (mesaExistente[0]?.estabelecida_em && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
+       // Se já está estabelecida, só permite re-definição se for via substituição ou se for a transição inicial
+      throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (Mesa já estabelecida.)`);
     }
 
-    // Validar presença dos escolhidos no quórum vigente
-    const quorumVigente = await buscarUltimoQuorum(assembleia_id);
-    if (!quorumVigente) throw new Error(Textos.ASSEMBLEIA.TOKEN_INVALIDO);
+    // Validar presença dos escolhidos no quórum GLOBAL
+    const { rows: qGlobalRows } = await client.query(
+        "SELECT id FROM assembleia_quoruns WHERE assembleia_id = $1 AND is_global = TRUE",
+        [assembleia_id]
+    );
+    const quorumGlobal = qGlobalRows[0];
+    if (!quorumGlobal) throw new Error("O Check-in Global ainda não foi aberto.");
 
-    const [presencaP, presencaS] = await Promise.all([
-      verificarElegibilidadePorQuorum(quorumVigente.id, presidente_user_id),
-      verificarElegibilidadePorQuorum(quorumVigente.id, secretario_user_id)
-    ]);
+    const checkins = await client.query(
+        "SELECT user_id FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = ANY($2)",
+        [quorumGlobal.id, ids]
+    ).then(r => r.rows.map(row => row.user_id));
 
-    if (!presencaP || !presencaS) {
-      throw new Error(Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA);
+    const missing = [];
+    if (!checkins.includes(presidente_user_id)) missing.push("Presidente");
+    if (!checkins.includes(vice_presidente_user_id)) missing.push("Vice-Presidente");
+    if (!checkins.includes(secretario_user_id)) missing.push("1º Secretário");
+    if (!checkins.includes(secretario_2_user_id)) missing.push("2º Secretário");
+
+    if (missing.length > 0) {
+        throw new Error(`Os seguintes indicados não realizaram Check-in Global: ${missing.join(", ")}`);
     }
 
     const { rows } = await client.query(
-      `INSERT INTO assembleia_mesa (assembleia_id, presidente_user_id, secretario_user_id, definida_por_user_id, definida_em, estabelecida_em)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
+      `INSERT INTO assembleia_mesa (assembleia_id, presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id, definida_por_user_id, definida_em, estabelecida_em)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
        ON CONFLICT (assembleia_id) DO UPDATE SET
          presidente_user_id = $2,
-         secretario_user_id = $3,
-         definida_por_user_id = $4,
+         vice_presidente_user_id = $3,
+         secretario_user_id = $4,
+         secretario_2_user_id = $5,
+         definida_por_user_id = $6,
          definida_em = NOW(),
          estabelecida_em = COALESCE(assembleia_mesa.estabelecida_em, NOW())
        RETURNING *`,
-      [assembleia_id, presidente_user_id, secretario_user_id, definida_por_user_id]
+      [assembleia_id, presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id, definida_por_user_id]
     );
     const mesa = rows[0];
-    await registrarAuditoria(assembleia_id, definida_por_user_id, 'MESA_DEFINIDA', { presidente_user_id, secretario_user_id }, client);
+    await registrarAuditoria(assembleia_id, definida_por_user_id, 'MESA_DEFINIDA', { presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id }, client);
 
-    // Transição automática para EM_CURSO (Phase 3) conforme nova diretriz
+    // Transição para INICIADO
     await client.query(
-      "UPDATE assembleias SET estado = 'EM_CURSO' WHERE id = $1",
+      "UPDATE assembleias SET estado = 'INICIADO' WHERE id = $1",
       [assembleia_id]
     );
-    await registrarAuditoria(assembleia_id, definida_por_user_id, 'ASSEMBLEIA_INICIADA', { estado: 'EM_CURSO', motivo: 'MESA_DEFINIDA' }, client);
+    await registrarAuditoria(assembleia_id, definida_por_user_id, 'ASSEMBLEIA_INICIADA', { estado: 'INICIADO', motivo: 'MESA_DEFINIDA' }, client);
 
     await client.query('COMMIT');
     return mesa;
@@ -718,13 +821,23 @@ async function definirMesa(dados) {
 }
 
 async function substituirMesa(dados) {
-  let { assembleia_id, presidente_user_id, secretario_user_id, substituida_por_user_id, justificativa } = dados;
+  let {
+    assembleia_id,
+    presidente_user_id,
+    vice_presidente_user_id,
+    secretario_user_id,
+    secretario_2_user_id,
+    substituida_por_user_id,
+    justificativa
+  } = dados;
 
   // Sanitização contra XSS
   justificativa = escapeHtml(justificativa);
 
-  if (presidente_user_id === secretario_user_id) {
-    throw new Error("Presidente e Secretário devem ser pessoas diferentes");
+  const ids = [presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id];
+  const uniqueIds = new Set(ids);
+  if (uniqueIds.size !== ids.length) {
+    throw new Error("Os membros da mesa devem ser pessoas diferentes");
   }
 
   if (!justificativa || justificativa.trim().length < 20) {
@@ -739,34 +852,40 @@ async function substituirMesa(dados) {
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-    if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA && assembleia.estado !== ASSEMBLEIA_STATES.EM_CURSO) {
+    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
     const mesaAnterior = await buscarMesa(assembleia_id);
 
-    // Validar presença dos escolhidos no quórum vigente
-    const quorumVigente = await buscarUltimoQuorum(assembleia_id);
-    if (!quorumVigente) throw new Error(Textos.ASSEMBLEIA.TOKEN_INVALIDO);
+    // Validar presença dos escolhidos no quórum GLOBAL
+    const { rows: qGlobalRows } = await client.query(
+        "SELECT id FROM assembleia_quoruns WHERE assembleia_id = $1 AND is_global = TRUE",
+        [assembleia_id]
+    );
+    const quorumGlobal = qGlobalRows[0];
+    if (!quorumGlobal) throw new Error("O Check-in Global ainda não foi aberto.");
 
-    const [presencaP, presencaS] = await Promise.all([
-      verificarElegibilidadePorQuorum(quorumVigente.id, presidente_user_id),
-      verificarElegibilidadePorQuorum(quorumVigente.id, secretario_user_id)
-    ]);
+    const checkins = await client.query(
+        "SELECT user_id FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = ANY($2)",
+        [quorumGlobal.id, ids]
+    ).then(r => r.rows.map(row => row.user_id));
 
-    if (!presencaP || !presencaS) {
-      throw new Error("Os novos membros da mesa devem estar presentes (check-in realizado).");
+    if (checkins.length < ids.length) {
+        throw new Error("Todos os novos membros da mesa devem ter realizado Check-in Global.");
     }
 
     const { rows } = await client.query(
       `UPDATE assembleia_mesa SET
          presidente_user_id = $2,
-         secretario_user_id = $3,
-         definida_por_user_id = $4,
+         vice_presidente_user_id = $3,
+         secretario_user_id = $4,
+         secretario_2_user_id = $5,
+         definida_por_user_id = $6,
          definida_em = NOW()
        WHERE assembleia_id = $1
        RETURNING *`,
-      [assembleia_id, presidente_user_id, secretario_user_id, substituida_por_user_id]
+      [assembleia_id, presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id, substituida_por_user_id]
     );
     const mesa = rows[0];
 
@@ -794,10 +913,16 @@ async function substituirMesa(dados) {
 
 async function buscarMesa(assembleiaId) {
   const { rows } = await pool.query(
-    `SELECT m.*, fp.nome as presidente_nome, fs.nome as secretario_nome
+    `SELECT m.*,
+            fp.nome as presidente_nome,
+            fv.nome as vice_presidente_nome,
+            fs.nome as secretario_nome,
+            fs2.nome as secretario_2_nome
      FROM assembleia_mesa m
      LEFT JOIN users fp ON m.presidente_user_id = fp.id
+     LEFT JOIN users fv ON m.vice_presidente_user_id = fv.id
      LEFT JOIN users fs ON m.secretario_user_id = fs.id
+     LEFT JOIN users fs2 ON m.secretario_2_user_id = fs2.id
      WHERE m.assembleia_id = $1`,
     [assembleiaId]
   );
@@ -807,7 +932,7 @@ async function buscarMesa(assembleiaId) {
 async function pedirPalavra(assembleiaId, userId) {
   const assembleia = await buscarPorId(assembleiaId);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-  if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADA) {
+  if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
     throw new Error("Assembleia encerrada");
   }
 
@@ -881,12 +1006,12 @@ async function criarProposta(dados) {
 
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-    // Permitir propostas em ABERTA ou EM_CURSO (conforme CANON)
-    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADA) {
+    // Permitir propostas conforme novo fluxo
+    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
       throw new Error("Assembleia encerrada");
     }
 
-    if (assembleia.estado !== ASSEMBLEIA_STATES.ABERTA && assembleia.estado !== ASSEMBLEIA_STATES.EM_CURSO) {
+    if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO && assembleia.estado !== ASSEMBLEIA_STATES.SUSPENSA) {
       throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (Estado: ${assembleia.estado})`);
     }
 
@@ -1005,8 +1130,8 @@ async function buscarDiagnostico(assembleiaId) {
   }
 
   const inconsistencias = [];
-  if (assembleia.estado === ASSEMBLEIA_STATES.EM_CURSO) {
-    if (!mesa) inconsistencias.push("Mesa não definida em assembleia em curso.");
+  if (assembleia.estado === ASSEMBLEIA_STATES.INICIADO) {
+    if (!mesa) inconsistencias.push("Mesa não definida em assembleia iniciada.");
     if (ultimoQuorum && totalCheckins < (ultimoQuorum.quorum_necessario || 0)) {
        inconsistencias.push("Quórum abaixo do necessário para o tipo de chamada.");
     }
@@ -1209,7 +1334,7 @@ async function gerarDadosRelatorio(id) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-  const [mesa, quoruns, votacoes, propostas, presentesGlobal] = await Promise.all([
+  const [mesa, quoruns, votacoes, propostas, presentesGlobal, auditoria, pedidosPalavra] = await Promise.all([
     buscarMesa(id),
     pool.query(`
       SELECT q.*, f.nome as gerado_por_nome
@@ -1237,7 +1362,21 @@ async function gerarDadosRelatorio(id) {
       FROM assembleia_checkins c
       JOIN assembleia_quoruns q ON c.assembleia_quorum_id = q.id
       WHERE q.assembleia_id = $1
-    `, [id]).then(r => r.rows[0])
+    `, [id]).then(r => r.rows[0]),
+    pool.query(`
+      SELECT a.*, f.nome as user_nome
+      FROM assembleia_auditoria a
+      LEFT JOIN users f ON a.user_id = f.id
+      WHERE a.assembleia_id = $1
+      ORDER BY a.criado_em ASC
+    `, [id]).then(r => r.rows),
+    pool.query(`
+      SELECT p.*, f.nome as user_nome
+      FROM assembleia_pedidos_palavra p
+      LEFT JOIN users f ON p.user_id = f.id
+      WHERE p.assembleia_id = $1
+      ORDER BY p.ordem ASC
+    `, [id]).then(r => r.rows)
   ]);
 
   // Otimização Bolt: Resolve N+1 queries para quóruns e votações no relatório
@@ -1296,6 +1435,8 @@ async function gerarDadosRelatorio(id) {
     quoruns,
     votacoes,
     propostas,
+    auditoria,
+    pedidosPalavra,
     presentes_total: parseInt(presentesGlobal?.total || 0)
   };
 }
@@ -1330,6 +1471,10 @@ module.exports = {
   verificarElegibilidadePorQuorum,
   definirMesa,
   substituirMesa,
+  suspender,
+  retomar,
+  registrarRejeicaoMesa,
+  verificarRejeicaoMesa,
   buscarMesa,
   buscarEstadoCompleto,
   contarPresentesNoQuorum,
