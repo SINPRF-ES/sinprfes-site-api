@@ -32,10 +32,12 @@ function perfilGestao(perfil) {
 function canEditorEditTarget(editorPerfil, targetPerfil) {
   const e = (editorPerfil || "").toUpperCase();
   const t = (targetPerfil || "").toUpperCase();
-  const eRank = PERFIL_RANK[e] || 0;
-  const tRank = PERFIL_RANK[t] || 0;
 
   if (e === "ADMIN") return true;
+  if (e === "COLABORADOR") return t !== "ADMIN";
+
+  const eRank = PERFIL_RANK[e] || 0;
+  const tRank = PERFIL_RANK[t] || 0;
   return eRank > tRank;
 }
 

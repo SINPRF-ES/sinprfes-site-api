@@ -71,6 +71,7 @@ describe("Logística Controller", () => {
   });
 
   test("registrarMinhaInscricao deve falhar se data_chegada >= data_saida", async () => {
+    req.user.perfil_acesso = 'CONSELHEIRO';
     req.body = {
       evento_id: 'evento-id',
       data_chegada: '2026-01-02',

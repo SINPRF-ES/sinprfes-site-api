@@ -11,6 +11,8 @@ import {
   Modal,
   FlatList,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,18 +30,23 @@ import {
   atualizarInscricaoTerceiroLogistica,
   cancelarInscricaoTerceiroLogistica
 } from '../services/logisticaService';
+import { downloadPublicacaoFile } from '../services/driveService';
 import { STATUS_EVENTO, verificarConflitosUF } from '../constants/logistica';
 import { isGestao, getCanonicalUserId, UF_NOME } from '../utils/user';
 import { formatDateTimeMask, parseBRDateTimeToISO, formatISOToBRDateTime } from '../utils/date';
 import { formatCpf, formatTelefone } from '../utils/format';
 import api from '../services/apiService';
 import SafeScreen from '../components/SafeScreen';
+import { EMOJIS } from '../utils/emoji';
+import { Picker } from '@react-native-picker/picker';
+import PickerWrapper from '../components/PickerWrapper';
 
-const LogisticaScreen = () => {
+const LogisticaScreen = ({ route }: any) => {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [eventos, setEventos] = useState<any[]>([]);
+  const [assembleias, setAssembleias] = useState<any[]>([]);
   const [eventoSelecionado, setEventoSelecionado] = useState<any>(null);
   const [inscricoes, setInscricoes] = useState<any[]>([]);
   const [minhaInscricao, setMinhaInscricao] = useState<any>(null);
@@ -57,7 +64,8 @@ const LogisticaScreen = () => {
     documento_url: '',
     documento_id: '',
     status: STATUS_EVENTO.ATIVO,
-    justificativa: ''
+    justificativa: '',
+    assembleia_id: ''
   });
 
   const [formInscricao, setFormInscricao] = useState({
@@ -71,12 +79,18 @@ const LogisticaScreen = () => {
   });
 
   const canManage = isGestao(user?.perfil_acesso);
+  const perfil = (user?.perfil_acesso || "").toUpperCase();
+  const canParticipate = perfil !== "ADMIN" && perfil !== "COLABORADOR";
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const evs = await getEventosLogistica();
+      const [evs, ass] = await Promise.all([
+        getEventosLogistica(),
+        api.get('/api/assembleias').then(res => res.data).catch(() => [])
+      ]);
       setEventos(evs);
+      setAssembleias(ass.filter((a: any) => a.estado !== 'ENCERRADA'));
 
       if (evs.length > 0) {
         // Seleciona o primeiro evento ativo por padrão, ou o primeiro se nenhum ativo
@@ -133,14 +147,29 @@ const LogisticaScreen = () => {
     return result;
   }, [inscricoes]);
 
-  const handleOpenDoc = () => {
+  const handleOpenDoc = async () => {
     if (eventoSelecionado?.documento_id) {
-      navigation.navigate('FileViewer', {
-        fileId: eventoSelecionado.documento_id,
-        title: 'Documento do Evento',
-        context: 'publicacoes',
-        type: 'pdf'
-      });
+      try {
+        setLoading(true);
+        const token = api.defaults.headers.common['Authorization']?.toString().split(' ')[1] || '';
+        const { localUri, mimeType } = await downloadPublicacaoFile(
+          eventoSelecionado.documento_id,
+          'Documento_Evento.pdf',
+          token
+        );
+
+        navigation.navigate('FileViewer', {
+          localUri,
+          title: 'Documento do Evento',
+          fileId: eventoSelecionado.documento_id,
+          type: 'pdf',
+          context: 'publicacoes'
+        });
+      } catch (err) {
+        Alert.alert('Erro', 'Não foi possível baixar o documento.');
+      } finally {
+        setLoading(false);
+      }
     } else if (eventoSelecionado?.documento_url) {
       Linking.openURL(eventoSelecionado.documento_url).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
     }
@@ -149,15 +178,22 @@ const LogisticaScreen = () => {
   const handleSelectDocument = () => {
     navigation.navigate('Publicacoes', {
       mode: 'picker',
-      onSelectFile: (file: any) => {
-        setFormEvento(prev => ({
-          ...prev,
-          documento_id: file.id,
-          documento_url: file.webViewLink || ''
-        }));
-      }
+      returnTo: 'Logistica'
     });
   };
+
+  useEffect(() => {
+    if (route.params?.selectedFile) {
+        const file = route.params.selectedFile;
+        setFormEvento(prev => ({
+            ...prev,
+            documento_id: file.id,
+            documento_url: file.webViewLink || ''
+        }));
+        // Limpar param para não re-setar ao voltar de outras telas
+        navigation.setParams({ selectedFile: undefined });
+    }
+  }, [route.params?.selectedFile]);
 
   const saveEvento = async () => {
     if (!formEvento.titulo || !formEvento.data_inicio || !formEvento.data_fim) {
@@ -211,7 +247,8 @@ const LogisticaScreen = () => {
       documento_url: eventoSelecionado.documento_url || '',
       documento_id: eventoSelecionado.documento_id || '',
       status: eventoSelecionado.status,
-      justificativa: ''
+      justificativa: '',
+      assembleia_id: eventoSelecionado.assembleia_id || ''
     });
     setModalEventoVisible(true);
   };
@@ -366,20 +403,15 @@ const LogisticaScreen = () => {
   const exportData = async (type: 'pdf' | 'xls') => {
     if (!eventoSelecionado) return;
     try {
-        // Correção: Adicionado prefixo /api para alinhar com o backend FENAPRF
         const url = `/api/logistica/eventos/${eventoSelecionado.id}/exportar/${type}`;
+        logger.info('Logistica.exportData.Request', { type, eventoId: eventoSelecionado.id });
 
-        // No mobile, abrir o link no navegador costuma ser mais fácil para download
-        // Mas o ideal seria salvar o arquivo. Como é uma AGO, o gestor fará no PC via Web se possível.
-        // Se precisar no mobile, usamos o link autenticado.
-        const token = api.defaults.headers.common['Authorization']?.toString().split(' ')[1];
-        const downloadUrl = `${api.defaults.baseURL}${url}${token ? `?token=${token}` : ''}`;
-
-        logger.info('Logistica.exportData', { type, url: downloadUrl });
-        Linking.openURL(downloadUrl);
-    } catch (e) {
+        const response = await api.get(url);
+        Alert.alert('Exportação solicitada', response.data.message || 'Enviaremos o arquivo para seu e-mail.');
+    } catch (e: any) {
         logger.error('Logistica.exportError', e);
-        Alert.alert('Erro', 'Falha ao exportar.');
+        const msg = e.response?.data?.error || e.response?.data?.message || 'Falha ao solicitar exportação.';
+        Alert.alert('Erro', msg);
     }
   };
 
@@ -388,7 +420,15 @@ const LogisticaScreen = () => {
     if (canManage) {
       actions.push({ label: 'Novo Evento', icon: 'plus-circle', onPress: () => {
         logger.info('Logistica.CreateEvent.Click', { source: 'menu' });
-        setFormEvento({ id: '', titulo: '', descricao: '', data_inicio: '', data_fim: '', documento_url: '', documento_id: '', status: STATUS_EVENTO.ATIVO, justificativa: '' });
+        const initialForm: any = { id: '', titulo: '', descricao: '', data_inicio: '', data_fim: '', documento_url: '', documento_id: '', status: STATUS_EVENTO.ATIVO, justificativa: '', assembleia_id: '' };
+
+        if (route.params?.prefill) {
+            Object.assign(initialForm, route.params.prefill);
+            // Limpar prefill para não repetir ao reabrir
+            navigation.setParams({ prefill: undefined });
+        }
+
+        setFormEvento(initialForm);
         setModalEventoVisible(true);
         logger.info('Logistica.CreateEvent.ModalOpen');
       }});
@@ -402,7 +442,7 @@ const LogisticaScreen = () => {
 
     navigation.setOptions({
       headerRight: () => actions.length > 0 ? <HeaderMenu actions={actions} /> : null,
-      title: 'Logística',
+      title: `${EMOJIS.LOGISTICA} Logística`,
       headerStyle: { backgroundColor: '#003366' },
       headerTintColor: '#fff',
     });
@@ -418,7 +458,12 @@ const LogisticaScreen = () => {
             style={[styles.btnPrimary, { marginBottom: 20 }]}
             onPress={() => {
               logger.info('Logistica.CreateEvent.Click', { source: 'body' });
-              setFormEvento({ id: '', titulo: '', descricao: '', data_inicio: '', data_fim: '', documento_url: '', documento_id: '', status: STATUS_EVENTO.ATIVO, justificativa: '' });
+              const initialForm: any = { id: '', titulo: '', descricao: '', data_inicio: '', data_fim: '', documento_url: '', documento_id: '', status: STATUS_EVENTO.ATIVO, justificativa: '', assembleia_id: '' };
+              if (route.params?.prefill) {
+                  Object.assign(initialForm, route.params.prefill);
+                  navigation.setParams({ prefill: undefined });
+              }
+              setFormEvento(initialForm);
               setModalEventoVisible(true);
               logger.info('Logistica.CreateEvent.ModalOpen');
             }}
@@ -457,7 +502,15 @@ const LogisticaScreen = () => {
 
         {eventoSelecionado && (
           <View style={styles.eventCard}>
-            <Text style={styles.eventTitle}>{eventoSelecionado.titulo}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Text style={[styles.eventTitle, { flex: 1 }]}>{eventoSelecionado.titulo}</Text>
+                {eventoSelecionado.assembleia_id && (
+                    <View style={styles.linkedBadge}>
+                        <MaterialCommunityIcons name="link-variant" size={12} color="#003366" />
+                        <Text style={styles.linkedBadgeText}>Vinculado à Assembleia</Text>
+                    </View>
+                )}
+            </View>
             {eventoSelecionado.descricao ? <Text style={styles.eventDesc}>{eventoSelecionado.descricao}</Text> : null}
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="calendar-range" size={18} color="#666" />
@@ -479,21 +532,27 @@ const LogisticaScreen = () => {
             ) : (
               <View style={styles.actionsRow}>
                 {minhaInscricao ? (
-                  <>
+                  <View style={styles.buttonGroupRow}>
                     <TouchableOpacity style={styles.btnEdit} onPress={() => handleEditInscricao()}>
                       <MaterialCommunityIcons name="pencil" size={18} color="#fff" />
-                      <Text style={styles.btnTextSmall}>Alterar Minha Inscrição</Text>
+                      <Text style={styles.btnTextSmall}>Alterar Inscrição</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.btnCancel} onPress={() => handleCancelInscricao()}>
                       <MaterialCommunityIcons name="delete" size={18} color="#fff" />
                       <Text style={styles.btnTextSmall}>Cancelar</Text>
                     </TouchableOpacity>
-                  </>
+                  </View>
                 ) : (
-                  <TouchableOpacity style={styles.btnPrimary} onPress={() => handleEditInscricao()}>
-                    <MaterialCommunityIcons name="check-circle-outline" size={20} color="#fff" />
-                    <Text style={styles.btnText}>Quero me inscrever</Text>
-                  </TouchableOpacity>
+                  canParticipate ? (
+                    <TouchableOpacity style={styles.btnPrimary} onPress={() => handleEditInscricao()}>
+                      <MaterialCommunityIcons name="check-circle-outline" size={20} color="#fff" />
+                      <Text style={styles.btnText}>Quero me inscrever</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={[styles.closedBadge, { flex: 1, marginTop: 0 }]}>
+                      <Text style={[styles.closedText, { fontSize: 13 }]}>Perfil de gestão não participa de eventos</Text>
+                    </View>
+                  )
                 )}
               </View>
             )}
@@ -512,6 +571,7 @@ const LogisticaScreen = () => {
                   <View style={[styles.cellHeader, { width: 140 }]}><Text style={styles.cellHeaderText}>Telefone</Text></View>
                   <View style={[styles.cellHeader, { width: 150 }]}><Text style={styles.cellHeaderText}>Chegada</Text></View>
                   <View style={[styles.cellHeader, { width: 150 }]}><Text style={styles.cellHeaderText}>Saída</Text></View>
+                  <View style={[styles.cellHeader, { width: 150 }]}><Text style={styles.cellHeaderText}>Observação</Text></View>
                   {canManage && <View style={[styles.cellHeader, { width: 100 }]}><Text style={styles.cellHeaderText}>Ações</Text></View>}
                 </View>
 
@@ -543,6 +603,7 @@ const LogisticaScreen = () => {
                       <View style={[styles.cell, { width: 140 }]}><Text style={styles.cellText}>{formatTelefone(item.telefone) || '—'}</Text></View>
                       <View style={[styles.cell, { width: 150 }]}><Text style={styles.cellText}>{formatISOToBRDateTime(item.data_chegada)}</Text></View>
                       <View style={[styles.cell, { width: 150 }]}><Text style={styles.cellText}>{formatISOToBRDateTime(item.data_saida)}</Text></View>
+                      <View style={[styles.cell, { width: 150 }]}><Text style={styles.cellText}>{item.observacoes || '—'}</Text></View>
                       {canManage && (
                         <View style={[styles.cell, { width: 100, flexDirection: 'row', gap: 10 }]}>
                           <TouchableOpacity onPress={() => handleEditInscricao(item)}>
@@ -564,10 +625,13 @@ const LogisticaScreen = () => {
       </ScrollView>
 
       <Modal visible={modalEventoVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{formEvento.id ? 'Alterar Evento' : 'Novo Evento'}</Text>
-            <KeyboardAwareScrollView>
+            <KeyboardAwareScrollView enableOnAndroid extraScrollHeight={100}>
               <Text style={styles.label}>Título *</Text>
               <TextInput style={styles.input} value={formEvento.titulo} onChangeText={t => setFormEvento({...formEvento, titulo: t})} placeholder="Ex: AGO 2026" />
 
@@ -585,6 +649,20 @@ const LogisticaScreen = () => {
                 <Text style={styles.docSelectText}>{formEvento.documento_id ? '✓ Documento Selecionado' : 'Selecionar nas Publicações'}</Text>
               </TouchableOpacity>
 
+              <Text style={styles.label}>Assembleia Vinculada (Opcional)</Text>
+              <PickerWrapper style={styles.pickerWrapper}>
+                <Picker
+                    selectedValue={formEvento.assembleia_id}
+                    onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
+                    style={styles.picker}
+                >
+                    <Picker.Item label="Nenhuma" value="" />
+                    {assembleias.map(a => (
+                        <Picker.Item key={a.id} label={`${a.tipo} - ${a.titulo}`} value={a.id} />
+                    ))}
+                </Picker>
+              </PickerWrapper>
+
               {formEvento.id && (
                 <>
                   <Text style={styles.label}>Justificativa da Alteração *</Text>
@@ -598,15 +676,18 @@ const LogisticaScreen = () => {
               <TouchableOpacity style={styles.btnSaveModal} onPress={saveEvento}><Text style={styles.btnText}>Salvar</Text></TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL INSCRIÇÃO */}
       <Modal visible={modalInscricaoVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{formInscricao.isTerceiro ? 'Gerenciar Inscrição' : 'Minha Inscrição'}</Text>
-            <KeyboardAwareScrollView>
+            <KeyboardAwareScrollView enableOnAndroid extraScrollHeight={100}>
               <Text style={styles.label}>Data/Hora Chegada *</Text>
               <TextInput style={styles.input} value={formInscricao.data_chegada} onChangeText={t => setFormInscricao({...formInscricao, data_chegada: formatDateTimeMask(t)})} placeholder="00/00/0000 00:00" keyboardType="numeric" />
 
@@ -629,12 +710,15 @@ const LogisticaScreen = () => {
               <TouchableOpacity style={styles.btnSaveModal} onPress={saveInscricao}><Text style={styles.btnText}>Salvar</Text></TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL JUSTIFICATIVA (CANCELAMENTO) */}
       <Modal visible={modalJustificativaVisible} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalContent, { height: 250 }]}>
             <Text style={styles.modalTitle}>Justificativa de Cancelamento</Text>
             <TextInput style={[styles.input, { flex: 1 }]} multiline value={formInscricao.justificativa} onChangeText={t => setFormInscricao({...formInscricao, justificativa: t})} placeholder="Informe o motivo" />
@@ -643,7 +727,7 @@ const LogisticaScreen = () => {
               <TouchableOpacity style={styles.btnCancel} onPress={confirmCancelTerceiro}><Text style={styles.btnText}>Confirmar Cancelamento</Text></TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
     </SafeScreen>
@@ -671,10 +755,11 @@ const styles = StyleSheet.create({
   docButtonText: { color: '#003366', fontWeight: '600' },
   closedBadge: { backgroundColor: '#f8d7da', padding: 10, borderRadius: 8, marginTop: 15, alignItems: 'center' },
   closedText: { color: '#721c24', fontWeight: 'bold' },
-  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  actionsRow: { marginTop: 20 },
+  buttonGroupRow: { flexDirection: 'row', gap: 10, width: '100%' },
   btnPrimary: { backgroundColor: '#003366', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
-  btnEdit: { backgroundColor: '#27ae60', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  btnCancel: { backgroundColor: '#d32f2f', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  btnEdit: { backgroundColor: '#27ae60', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
+  btnCancel: { backgroundColor: '#d32f2f', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
   btnText: { color: '#fff', fontWeight: 'bold' },
   btnTextSmall: { color: '#fff', fontWeight: '600', fontSize: 13 },
   tableCard: { backgroundColor: '#fff', borderRadius: 12, padding: 15, elevation: 3 },
@@ -698,6 +783,10 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 14, backgroundColor: '#fafafa' },
   docSelect: { padding: 12, borderWidth: 1, borderColor: '#003366', borderStyle: 'dashed', borderRadius: 8, alignItems: 'center', marginTop: 5 },
   docSelectText: { color: '#003366', fontWeight: 'bold' },
+  linkedBadge: { backgroundColor: '#eef2f7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  linkedBadgeText: { fontSize: 10, color: '#003366', fontWeight: 'bold' },
+  pickerWrapper: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, backgroundColor: '#fafafa', marginTop: 5 },
+  picker: { height: 50, width: '100%' },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 25 },
   btnCancelModal: { backgroundColor: '#6c757d', padding: 12, borderRadius: 8, minWidth: 80, alignItems: 'center' },
   btnSaveModal: { backgroundColor: '#003366', padding: 12, borderRadius: 8, minWidth: 80, alignItems: 'center' },

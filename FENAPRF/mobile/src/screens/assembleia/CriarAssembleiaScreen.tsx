@@ -77,8 +77,29 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         edital_format: 'pdf'
       });
 
-      Alert.alert('Sucesso', 'Assembleia criada com sucesso!');
-      navigation.goBack();
+      Alert.alert(
+        'Sucesso',
+        'Assembleia cadastrada com sucesso! Deseja criar um evento logístico com estes dados?',
+        [
+            { text: 'Não', onPress: () => navigation.goBack() },
+            {
+                text: 'Sim, Criar Evento',
+                onPress: () => {
+                    navigation.navigate('Logistica', {
+                        prefill: {
+                            titulo: form.titulo,
+                            descricao: form.pauta,
+                            data_inicio: `${form.data_evento.split('-').reverse().join('/')} 08:00`,
+                            data_fim: `${form.data_evento.split('-').reverse().join('/')} 18:00`,
+                            assembleia_id: res.data.id,
+                            documento_id: form.edital_drive_file_id || '',
+                            documento_url: form.edital_url || ''
+                        }
+                    });
+                }
+            }
+        ]
+      );
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Falha ao criar assembleia.';
       Alert.alert('Erro', errorMsg);
