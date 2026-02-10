@@ -55,14 +55,14 @@ export default function NotificacoesPushScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [isShowingArchived, setIsShowingArchived] = useState(false);
+  const [isShowingAll, setIsShowingAll] = useState(false);
 
-  const fetchHistory = useCallback(async (isRefresh = false, showArchived = false) => {
+  const fetchHistory = useCallback(async (isRefresh = false, showAll = false) => {
     try {
-      logger.info('Push.FetchHistoryStart', { isRefresh, showArchived });
+      logger.info('Push.FetchHistoryStart', { isRefresh, showAll });
       if (!isRefresh) setLoading(true);
       else setRefreshing(true);
-      const url = showArchived ? '/api/push/campaigns?includeArchived=1' : '/api/push/campaigns';
+      const url = showAll ? '/api/push/campaigns?includeArchived=1' : '/api/push/campaigns';
       const response = await api.get(url);
       if (response.data.success) {
         setCampaigns(response.data.campaigns);
@@ -125,14 +125,18 @@ export default function NotificacoesPushScreen() {
       return;
     }
 
-    if (targetType === 'USER' && !targetValue) {
-        Alert.alert('Erro', 'Selecione um membro para o destino específico.');
+    if (targetType === 'USER' && (!targetValue || targetValue.length === 0)) {
+        Alert.alert('Erro', 'Selecione pelo menos um membro para o destino específico.');
         return;
     }
 
-    let targetLabel = targetType === 'USER' ? 'Membro' : targetType;
-    if (targetType === 'USER' && (targetValue?.name || targetValue?.nome)) {
-      targetLabel = `Membro — ${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})`;
+    let targetLabel = targetType === 'USER' ? 'Membros Individuais' : targetType;
+    if (targetType === 'USER' && Array.isArray(targetValue)) {
+      if (targetValue.length === 1) {
+          targetLabel = `Membro — ${targetValue[0].name || targetValue[0].nome} (${maskCPF(targetValue[0].cpf)})`;
+      } else {
+          targetLabel = `${targetValue.length} membros selecionados`;
+      }
     } else if (targetValue) {
       targetLabel = `${targetLabel} (${targetValue})`;
     }
@@ -188,7 +192,7 @@ export default function NotificacoesPushScreen() {
         );
         setTitle('');
         setBody('');
-        fetchHistory(true, isShowingArchived);
+        fetchHistory(true, isShowingAll);
       } else {
         const errorMsg = response.data.message || response.data.error || 'Erro ao enviar notificação.';
         Alert.alert('Erro', errorMsg);
@@ -313,7 +317,11 @@ export default function NotificacoesPushScreen() {
                     <TouchableOpacity
                       style={styles.modalItem}
                       onPress={() => {
-                        setTargetValue({ id: item.id, name: item.name || item.nome, cpf: item.cpf });
+                        const newUser = { id: item.id, name: item.name || item.nome, cpf: item.cpf };
+                        setTargetValue((prev: any[]) => {
+                          if (prev.find(u => u.id === newUser.id)) return prev;
+                          return [...prev, newUser];
+                        });
                         setIsPickerVisible(false);
                         setSearchQuery('');
                         setUsersBusca([]);
@@ -361,14 +369,16 @@ export default function NotificacoesPushScreen() {
                 selectedValue={targetType}
                 onValueChange={(v) => {
                   setTargetType(v);
-                  setTargetValue(v === 'UF' ? UFS[0] : '');
+                  setTargetValue(v === 'UF' ? UFS[0] : (v === 'USER' ? [] : ''));
                 }}
                 style={styles.picker}
             >
                 <Picker.Item label="Todos com app" value="ALL" />
-                <Picker.Item label="Por UF" value="UF" />
+                {Canon.FILTROS_MEMBROS.map((f) => (
+                  <Picker.Item key={f.value} label={f.label} value={f.value} />
+                ))}
+                <Picker.Item label="Individual (Pesquisar)" value="USER" />
                 <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
-                <Picker.Item label="Especificar Membro" value="USER" />
             </Picker>
           </PickerWrapper>
 
@@ -393,13 +403,26 @@ export default function NotificacoesPushScreen() {
                   onPress={() => setIsPickerVisible(true)}
                 >
                   <Text style={styles.pickerButtonText} numberOfLines={1}>
-                    {(targetValue?.name || targetValue?.nome) ? `${targetValue.name || targetValue.nome} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar membro...'}
+                    {targetValue.length > 0 ? `${targetValue.length} selecionado(s). Clique para adicionar...` : 'Clique para buscar membros...'}
                   </Text>
                   <MaterialCommunityIcons name="magnify" size={20} color="#666" />
                 </TouchableOpacity>
 
-                {!targetValue?.id && (
-                  <Text style={styles.infoLabel}>Selecione um membro para o envio específico.</Text>
+                {targetValue.length > 0 && (
+                  <View style={styles.selectedUsersList}>
+                    {targetValue.map((u: any) => (
+                      <View key={u.id} style={styles.selectedUserChip}>
+                        <Text style={styles.selectedUserText} numberOfLines={1}>{u.name || u.nome}</Text>
+                        <TouchableOpacity onPress={() => setTargetValue(targetValue.filter((x: any) => x.id !== u.id))}>
+                          <MaterialCommunityIcons name="close-circle" size={18} color="#c53030" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {targetValue.length === 0 && (
+                  <Text style={styles.infoLabel}>Selecione um ou mais membros para o envio específico.</Text>
                 )}
              </View>
           )}
@@ -450,19 +473,19 @@ export default function NotificacoesPushScreen() {
             <>
               {campaigns.map((c) => <View key={c.id}>{renderCampaign({ item: c })}</View>)}
 
-              {!isShowingArchived && campaigns.length >= 5 && (
+              {!isShowingAll && campaigns.length >= 5 && (
                   <TouchableOpacity
                     style={styles.archivedButton}
-                    onPress={() => { setIsShowingArchived(true); fetchHistory(true, true); }}
+                    onPress={() => { setIsShowingAll(true); fetchHistory(true, true); }}
                   >
                     <Text style={styles.archivedButtonText}>Visualizar anteriores</Text>
                   </TouchableOpacity>
               )}
 
-              {isShowingArchived && (
+              {isShowingAll && (
                   <TouchableOpacity
                     style={styles.archivedButton}
-                    onPress={() => { setIsShowingArchived(false); fetchHistory(true, false); }}
+                    onPress={() => { setIsShowingAll(false); fetchHistory(true, false); }}
                   >
                     <Text style={styles.archivedButtonText}>Ver apenas recentes</Text>
                   </TouchableOpacity>
@@ -650,6 +673,28 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 5,
     fontStyle: 'italic',
+  },
+  selectedUsersList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  selectedUserChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2f7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#00336633',
+    gap: 5,
+  },
+  selectedUserText: {
+    fontSize: 12,
+    color: '#003366',
+    maxWidth: 120,
   },
   archivedButton: {
     marginTop: 8,

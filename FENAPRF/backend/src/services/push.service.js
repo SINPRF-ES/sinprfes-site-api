@@ -82,34 +82,79 @@ async function resolvePushTargets(targetType, targetValue) {
   let sql = "";
   let params = [];
 
+  const baseSql = `
+    SELECT pt.expo_push_token
+    FROM push_tokens pt
+    JOIN users f ON (pt.user_id_uuid = f.id)
+    WHERE pt.revoked_at IS NULL AND pt.expo_push_token IS NOT NULL
+  `;
+
   switch (targetType) {
     case 'UF':
-      sql = `
-        SELECT pt.expo_push_token
-        FROM push_tokens pt
-        JOIN users f ON (pt.user_id_uuid = f.id)
-        WHERE pt.revoked_at IS NULL AND f.uf = $1
-      `;
+      sql = `${baseSql} AND f.uf = $1`;
       params = [targetValue];
       break;
+    case 'DIRETORIA':
+      sql = `${baseSql} AND f.perfil_acesso = 'DIRETORIA'`;
+      break;
+    case 'PRESIDENTES':
+      sql = `${baseSql} AND f.cargo ILIKE 'Presidente%'`;
+      break;
+    case 'VICES':
+      sql = `${baseSql} AND f.cargo ILIKE 'Vice-Presidente%'`;
+      break;
+    case 'DR':
+      sql = `${baseSql} AND f.cargo = 'Delegado Representante'`;
+      break;
+    case 'DS':
+      sql = `${baseSql} AND f.cargo = 'Delegado Substituto'`;
+      break;
+    case 'ADMIN_COLAB':
+      sql = `${baseSql} AND f.perfil_acesso IN ('ADMIN', 'COLABORADOR')`;
+      break;
+    case 'PADRAO':
+      sql = `${baseSql} AND f.perfil_acesso IN ('DIRETORIA', 'CONSELHEIRO')`;
+      break;
     case 'JOGOS':
-      // Exemplo: inscritos em qualquer modalidade dos jogos
       sql = `
         SELECT DISTINCT pt.expo_push_token
         FROM push_tokens pt
         JOIN pre_inscricoes_jogos ij ON (pt.user_id_uuid = ij.user_id)
-        WHERE pt.revoked_at IS NULL
+        WHERE pt.revoked_at IS NULL AND pt.expo_push_token IS NOT NULL
       `;
       break;
     case 'USER': {
-      const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
-      const targetIsUuid = isUuid(targetId);
+      let targetIds = [];
+      if (Array.isArray(targetValue)) {
+        targetIds = targetValue.map(v => (typeof v === 'object' && v !== null) ? v.id : v);
+      } else {
+        const tid = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
+        if (tid) targetIds = [tid];
+      }
+
+      if (targetIds.length === 0) {
+          sql = "SELECT NULL LIMIT 0";
+          break;
+      }
+
+      const uuids = targetIds.filter(id => isUuid(id));
+      const ints = targetIds.filter(id => !isUuid(id)).map(id => parseInt(id, 10));
+
+      const conditions = [];
+      if (uuids.length > 0) {
+          conditions.push(`pt.user_id_uuid = ANY($${params.length + 1})`);
+          params.push(uuids);
+      }
+      if (ints.length > 0) {
+          conditions.push(`pt.user_id = ANY($${params.length + 1})`);
+          params.push(ints);
+      }
+
       sql = `
         SELECT pt.expo_push_token
         FROM push_tokens pt
-        WHERE pt.revoked_at IS NULL AND (${targetIsUuid ? 'pt.user_id_uuid' : 'pt.user_id'} = $1)
+        WHERE pt.revoked_at IS NULL AND pt.expo_push_token IS NOT NULL AND (${conditions.join(' OR ')})
       `;
-      params = [targetId];
       break;
     }
     case 'ALL':
@@ -140,10 +185,43 @@ async function countNoTokenTargets(targetType, targetValue) {
       usersSql = "SELECT id FROM users WHERE uf = $1";
       params = [targetValue];
       break;
+    case 'DIRETORIA':
+      usersSql = "SELECT id FROM users WHERE perfil_acesso = 'DIRETORIA'";
+      break;
+    case 'PRESIDENTES':
+      usersSql = "SELECT id FROM users WHERE cargo ILIKE 'Presidente%'";
+      break;
+    case 'VICES':
+      usersSql = "SELECT id FROM users WHERE cargo ILIKE 'Vice-Presidente%'";
+      break;
+    case 'DR':
+      usersSql = "SELECT id FROM users WHERE cargo = 'Delegado Representante'";
+      break;
+    case 'DS':
+      usersSql = "SELECT id FROM users WHERE cargo = 'Delegado Substituto'";
+      break;
+    case 'ADMIN_COLAB':
+      usersSql = "SELECT id FROM users WHERE perfil_acesso IN ('ADMIN', 'COLABORADOR')";
+      break;
+    case 'PADRAO':
+      usersSql = "SELECT id FROM users WHERE perfil_acesso IN ('DIRETORIA', 'CONSELHEIRO')";
+      break;
     case 'USER': {
-      const targetIdCount = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
-      usersSql = "SELECT id FROM users WHERE id = $1";
-      params = [targetIdCount];
+      let targetIds = [];
+      if (Array.isArray(targetValue)) {
+        targetIds = targetValue.map(v => (typeof v === 'object' && v !== null) ? v.id : v);
+      } else {
+        const tid = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
+        if (tid) targetIds = [tid];
+      }
+
+      if (targetIds.length === 0) {
+          usersSql = "SELECT id FROM users WHERE id IS NULL";
+          break;
+      }
+
+      usersSql = "SELECT id FROM users WHERE id = ANY($1)";
+      params = [targetIds];
       break;
     }
     case 'ALL':

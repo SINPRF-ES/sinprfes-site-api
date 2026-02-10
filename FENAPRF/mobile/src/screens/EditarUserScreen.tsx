@@ -263,17 +263,6 @@ export default function EditarUserScreen({ route, navigation }: any) {
               <Text style={styles.archiveBadgeMotivo}>Motivo: {user.arquivado_motivo}</Text>
             </View>
           </View>
-        ) : user.desarquivado_em ? (
-          <View style={[styles.archiveBadge, { backgroundColor: '#f0fff4', borderColor: '#9ae6b4' }]}>
-            <MaterialCommunityIcons name="check-circle" size={24} color="#2f855a" />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.archiveBadgeTitle, { color: '#2f855a' }]}>Cadastro Reativado</Text>
-              <Text style={[styles.archiveBadgeInfo, { color: '#276749' }]}>
-                Por: {user.desarquivado_por_nome || '(usuário não encontrado)'} em {new Date(user.desarquivado_em).toLocaleDateString('pt-BR')}
-              </Text>
-              <Text style={[styles.archiveBadgeMotivo, { color: '#276749' }]}>Motivo: {user.desarquivado_motivo}</Text>
-            </View>
-          </View>
         ) : null}
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>👤 Informações Pessoais</Text></View>

@@ -24,6 +24,8 @@ import {
   getEventosLogistica,
   criarEventoLogistica,
   atualizarEventoLogistica,
+  encerrarEventoLogistica,
+  cancelarEventoLogistica,
   getInscricoesLogistica,
   registrarMinhaInscricaoLogistica,
   cancelarMinhaInscricaoLogistica,
@@ -45,6 +47,7 @@ const LogisticaScreen = ({ route }: any) => {
   const navigation = useNavigation<any>();
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>(STATUS_EVENTO.ATIVO);
   const [eventos, setEventos] = useState<any[]>([]);
   const [assembleias, setAssembleias] = useState<any[]>([]);
   const [eventoSelecionado, setEventoSelecionado] = useState<any>(null);
@@ -54,6 +57,9 @@ const LogisticaScreen = ({ route }: any) => {
   const [modalEventoVisible, setModalEventoVisible] = useState(false);
   const [modalInscricaoVisible, setModalInscricaoVisible] = useState(false);
   const [modalJustificativaVisible, setModalJustificativaVisible] = useState(false);
+  const [modalEventoActionVisible, setModalEventoActionVisible] = useState(false);
+  const [eventoActionType, setEventoActionType] = useState<'ENCERRAR' | 'CANCELAR'>('ENCERRAR');
+  const [eventoActionJustificativa, setEventoActionJustificativa] = useState('');
 
   const [formEvento, setFormEvento] = useState({
     id: '',
@@ -86,7 +92,7 @@ const LogisticaScreen = ({ route }: any) => {
     try {
       setLoading(true);
       const [evs, ass] = await Promise.all([
-        getEventosLogistica(),
+        getEventosLogistica(statusFilter),
         api.get('/api/assembleias').then(res => res.data).catch(() => [])
       ]);
       setEventos(evs);
@@ -127,7 +133,7 @@ const LogisticaScreen = ({ route }: any) => {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, statusFilter]);
 
   useEffect(() => {
     fetchInscricoes();
@@ -279,27 +285,38 @@ const LogisticaScreen = ({ route }: any) => {
     setModalEventoVisible(true);
   };
 
+  const handleEncerrarEvento = () => {
+    setEventoActionType('ENCERRAR');
+    setEventoActionJustificativa('');
+    setModalEventoActionVisible(true);
+  };
+
   const handleCancelEvento = () => {
-    Alert.alert(
-      'Cancelar Evento',
-      'Deseja realmente encerrar este evento?',
-      [
-        { text: 'Não', style: 'cancel' },
-        {
-          text: 'Sim',
-          onPress: () => {
-            setFormEvento({
-              ...eventoSelecionado,
-              data_inicio: formatISOToBRDateTime(eventoSelecionado.data_inicio),
-              data_fim: formatISOToBRDateTime(eventoSelecionado.data_fim),
-              status: STATUS_EVENTO.ENCERRADO,
-              justificativa: ''
-            });
-            setModalEventoVisible(true); // Reusa o modal para pedir justificativa
-          }
-        }
-      ]
-    );
+    setEventoActionType('CANCELAR');
+    setEventoActionJustificativa('');
+    setModalEventoActionVisible(true);
+  };
+
+  const confirmEventoAction = async () => {
+    if (!eventoActionJustificativa.trim()) {
+      Alert.alert('Aviso', 'Justificativa é obrigatória.');
+      return;
+    }
+
+    try {
+      if (eventoActionType === 'ENCERRAR') {
+        await encerrarEventoLogistica(eventoSelecionado.id, eventoActionJustificativa);
+        Alert.alert('Sucesso', 'Evento encerrado com sucesso!');
+      } else {
+        await cancelarEventoLogistica(eventoSelecionado.id, eventoActionJustificativa);
+        Alert.alert('Sucesso', 'Evento cancelado com sucesso!');
+      }
+      setModalEventoActionVisible(false);
+      fetchData();
+    } catch (err: any) {
+      logger.error('Logistica.confirmEventoAction', err as Error);
+      Alert.alert('Erro', 'Não foi possível processar a ação.');
+    }
   };
 
   const saveInscricao = async () => {
@@ -465,9 +482,13 @@ const LogisticaScreen = ({ route }: any) => {
         setModalEventoVisible(true);
         logger.info('Logistica.CreateEvent.ModalOpen');
       }});
-      if (eventoSelecionado) {
+      if (eventoSelecionado && eventoSelecionado.status === STATUS_EVENTO.ATIVO) {
         actions.push({ label: 'Alterar Evento', icon: 'pencil', onPress: handleEditEvento });
-        actions.push({ label: 'Encerrar Evento', icon: 'close-circle', onPress: handleCancelEvento });
+        actions.push({ label: 'Encerrar Evento', icon: 'close-circle', onPress: handleEncerrarEvento });
+        actions.push({ label: 'Cancelar Evento', icon: 'cancel', onPress: handleCancelEvento });
+        actions.push({ label: 'Exportar PDF', icon: 'file-pdf-box', onPress: () => exportData('pdf') });
+        actions.push({ label: 'Exportar XLS', icon: 'file-excel', onPress: () => exportData('xls') });
+      } else if (eventoSelecionado) {
         actions.push({ label: 'Exportar PDF', icon: 'file-pdf-box', onPress: () => exportData('pdf') });
         actions.push({ label: 'Exportar XLS', icon: 'file-excel', onPress: () => exportData('xls') });
       }
@@ -485,6 +506,21 @@ const LogisticaScreen = ({ route }: any) => {
 
   return (
     <SafeScreen style={styles.container}>
+      <View style={styles.filterBar}>
+        <Text style={styles.filterLabel}>Filtrar:</Text>
+        <PickerWrapper style={styles.filterPickerWrapper}>
+          <Picker
+            selectedValue={statusFilter}
+            onValueChange={(v) => setStatusFilter(v)}
+            style={styles.filterPicker}
+          >
+            <Picker.Item label="Ativos" value={STATUS_EVENTO.ATIVO} />
+            <Picker.Item label="Encerrados" value={STATUS_EVENTO.ENCERRADO} />
+            <Picker.Item label="Cancelados" value={STATUS_EVENTO.CANCELADO} />
+          </Picker>
+        </PickerWrapper>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {canManage && (
           <TouchableOpacity
@@ -558,9 +594,11 @@ const LogisticaScreen = ({ route }: any) => {
               </TouchableOpacity>
             )}
 
-            {eventoSelecionado.status === STATUS_EVENTO.ENCERRADO ? (
-              <View style={styles.closedBadge}>
-                <Text style={styles.closedText}>EVENTO ENCERRADO</Text>
+            {eventoSelecionado.status !== STATUS_EVENTO.ATIVO ? (
+              <View style={[styles.closedBadge, eventoSelecionado.status === STATUS_EVENTO.CANCELADO && styles.cancelledBadge]}>
+                <Text style={[styles.closedText, eventoSelecionado.status === STATUS_EVENTO.CANCELADO && styles.cancelledText]}>
+                  EVENTO {eventoSelecionado.status === STATUS_EVENTO.ENCERRADO ? 'ENCERRADO' : 'CANCELADO'}
+                </Text>
               </View>
             ) : (
               <View style={styles.actionsRow}>
@@ -746,7 +784,44 @@ const LogisticaScreen = ({ route }: any) => {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* MODAL JUSTIFICATIVA (CANCELAMENTO) */}
+      {/* MODAL AÇÃO EVENTO (ENCERRAR/CANCELAR) */}
+      <Modal visible={modalEventoActionVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {eventoActionType === 'ENCERRAR' ? 'Encerrar Evento' : 'Cancelar Evento'}
+            </Text>
+            <Text style={styles.label}>
+              {eventoActionType === 'ENCERRAR'
+                ? 'Explique que o evento ocorreu e as inscrições serão fechadas.'
+                : 'Explique o motivo do cancelamento do evento.'}
+            </Text>
+            <TextInput
+              style={[styles.input, { height: 100 }]}
+              multiline
+              value={eventoActionJustificativa}
+              onChangeText={setEventoActionJustificativa}
+              placeholder="Justificativa obrigatória"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.btnCancelModal} onPress={() => setModalEventoActionVisible(false)}>
+                <Text style={styles.btnText}>Voltar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnSaveModal, eventoActionType === 'CANCELAR' && { backgroundColor: '#d32f2f' }]}
+                onPress={confirmEventoAction}
+              >
+                <Text style={styles.btnText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* MODAL JUSTIFICATIVA (CANCELAMENTO INSCRIÇÃO) */}
       <Modal visible={modalJustificativaVisible} animationType="fade" transparent>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -769,6 +844,28 @@ const LogisticaScreen = ({ route }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
+  filterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 10,
+  },
+  filterPickerWrapper: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+  },
+  filterPicker: {
+    height: 40,
+  },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: 15 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
@@ -788,6 +885,8 @@ const styles = StyleSheet.create({
   docButtonText: { color: '#003366', fontWeight: '600' },
   closedBadge: { backgroundColor: '#f8d7da', padding: 10, borderRadius: 8, marginTop: 15, alignItems: 'center' },
   closedText: { color: '#721c24', fontWeight: 'bold' },
+  cancelledBadge: { backgroundColor: '#eee' },
+  cancelledText: { color: '#666' },
   actionsRow: { marginTop: 20 },
   buttonGroupRow: { flexDirection: 'row', gap: 10, width: '100%' },
   btnPrimary: { backgroundColor: '#003366', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },

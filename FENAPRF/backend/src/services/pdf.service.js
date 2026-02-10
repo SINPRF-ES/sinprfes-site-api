@@ -262,6 +262,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
   pages.forEach((page, idx) => {
     const { width, height } = page.getSize();
     const margin = 40;
+    const headerTopY = height - margin;
 
     // Marca d'água (brasão grande e translúcido) em TODAS as páginas
     if (logoImage) {
@@ -281,11 +282,9 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       });
     }
 
-    const headerTopY = height - margin;
-
-    // Logo pequeno + cabeçalho institucional apenas na primeira página
+    // Logo pequeno + cabeçalho institucional (Repetir em todas as páginas)
     let logoHeight = 0;
-    if (idx === 0 && logoImage) {
+    if (logoImage) {
       const logoWidth = 50;
       logoHeight = (logoImage.height / logoImage.width) * logoWidth;
       const logoY = headerTopY - logoHeight;
@@ -298,29 +297,27 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       });
     }
 
-    if (idx === 0) {
-      const title1 = "FEDERAÇÃO NACIONAL DOS POLICIAIS RODOVIÁRIOS FEDERAIS";
-      const title2 = "FENAPRF";
-      const cnpj = "CNPJ nº 03.658.044/0001-00";
+    const title1 = "FEDERAÇÃO NACIONAL DOS POLICIAIS RODOVIÁRIOS FEDERAIS";
+    const title2 = "FENAPRF";
+    const cnpj = "CNPJ nº 03.658.044/0001-00";
 
-      const baseY = height - margin - 20;
+    const baseY = height - margin - 20;
 
-      page.drawText(sanitizeForPdf(title1), {
-        x: margin + 60,
-        y: baseY,
-        size: 10,
-      });
-      page.drawText(sanitizeForPdf(title2), {
-        x: margin + 60,
-        y: baseY - 12,
-        size: 10,
-      });
-      page.drawText(sanitizeForPdf(cnpj), {
-        x: margin + 60,
-        y: baseY - 26,
-        size: 9,
-      });
-    }
+    page.drawText(sanitizeForPdf(title1), {
+      x: margin + 60,
+      y: baseY,
+      size: 10,
+    });
+    page.drawText(sanitizeForPdf(title2), {
+      x: margin + 60,
+      y: baseY - 12,
+      size: 10,
+    });
+    page.drawText(sanitizeForPdf(cnpj), {
+      x: margin + 60,
+      y: baseY - 26,
+      size: 9,
+    });
 
     // Rodapé com informações de contato
     const footerLines = [
@@ -353,9 +350,9 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       size: 8,
     });
 
-    // QR code e código de verificação apenas na primeira página
-    if (idx === 0 && qrImage) {
-      const qrSize = 70;
+    // QR code e código de verificação (Repetir em todas as páginas para facilitar auditoria física)
+    if (qrImage) {
+      const qrSize = 60; // Reduzido um pouco para dar mais espaço
       const qrX = width - margin - qrSize;
       const qrY = headerTopY - qrSize;
 
@@ -367,9 +364,8 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       });
 
       const label = tipoDocumento || "Documento";
-      const textX = qrX - 160;
-      const maxWidth = 150;
-      let textY = qrY - 14;
+      const textX = qrX - 185; // Afastado um pouco mais para a esquerda
+      let textY = qrY + qrSize - 10; // Alinhado pelo topo do QR code
 
       page.drawText("Verificacao:", {
         x: textX,
@@ -379,10 +375,11 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
 
       textY -= 12;
       const verifLine = sanitizeForPdf(`${label} - codigo: ${codigoVerificacao}`);
-      // Ajuste dinâmico de fonte para não truncar
+      // Ajuste dinâmico de fonte mais agressivo para evitar truncamento
       let verifSize = 8;
-      if (verifLine.length > 35) verifSize = 7;
-      if (verifLine.length > 45) verifSize = 6;
+      if (verifLine.length > 30) verifSize = 7;
+      if (verifLine.length > 40) verifSize = 6;
+      if (verifLine.length > 50) verifSize = 5;
 
       page.drawText(verifLine, {
         x: textX,
@@ -396,6 +393,7 @@ async function aplicarLayoutInstitucional(pdfBuffer, options = {}) {
       if (urlLine.length > 35) urlSize = 7;
       if (urlLine.length > 45) urlSize = 6;
       if (urlLine.length > 55) urlSize = 5;
+      if (urlLine.length > 65) urlSize = 4;
 
       page.drawText(urlLine, {
         x: textX,
@@ -724,7 +722,7 @@ async function gerarPdfInscricoesLogistica(evento, inscricoes, options = {}) {
     const doc = new PDFDocument({
       size: "A4",
       layout: "landscape",
-      margins: { top: 120, bottom: 60, left: 50, right: 50 },
+      margins: { top: 140, bottom: 60, left: 50, right: 50 },
     });
 
     const chunks = [];

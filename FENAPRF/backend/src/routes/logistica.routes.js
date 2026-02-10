@@ -11,6 +11,8 @@ router.use(authMiddleware);
 router.get("/eventos", logisticaController.listarEventos);
 router.post("/eventos", requirePermission("LOGISTICA_GERENCIAR"), logisticaController.criarEvento);
 router.put("/eventos/:id", requirePermission("LOGISTICA_GERENCIAR"), logisticaController.atualizarEvento);
+router.patch("/eventos/:id/encerrar", requirePermission("LOGISTICA_GERENCIAR"), logisticaController.encerrarEvento);
+router.patch("/eventos/:id/cancelar", requirePermission("LOGISTICA_GERENCIAR"), logisticaController.cancelarEvento);
 
 // --- INSCRIÇÕES ---
 router.get("/eventos/:eventoId/inscricoes", logisticaController.listarInscricoes);
