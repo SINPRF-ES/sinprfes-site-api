@@ -85,7 +85,7 @@ async function resolvePushTargets(targetType, targetValue) {
   const baseSql = `
     SELECT pt.expo_push_token
     FROM push_tokens pt
-    JOIN users f ON (pt.user_id_uuid = f.id)
+    JOIN users f ON (pt.user_id_uuid::text = f.id::text)
     WHERE pt.revoked_at IS NULL AND pt.expo_push_token IS NOT NULL
   `;
 
@@ -119,7 +119,7 @@ async function resolvePushTargets(targetType, targetValue) {
       sql = `
         SELECT DISTINCT pt.expo_push_token
         FROM push_tokens pt
-        JOIN pre_inscricoes_jogos ij ON (pt.user_id_uuid = ij.user_id)
+        JOIN pre_inscricoes_jogos ij ON (pt.user_id_uuid::text = ij.user_id::text)
         WHERE pt.revoked_at IS NULL AND pt.expo_push_token IS NOT NULL
       `;
       break;
@@ -231,8 +231,8 @@ async function countNoTokenTargets(targetType, targetValue) {
           break;
       }
 
-      usersSql = "SELECT id FROM users WHERE id = ANY($1)";
-      params = [targetIds];
+      usersSql = "SELECT id FROM users WHERE id::text = ANY($1)";
+      params = [targetIds.map(id => String(id))];
       break;
     }
     case 'ALL':
@@ -244,7 +244,7 @@ async function countNoTokenTargets(targetType, targetValue) {
   sql = `
     SELECT COUNT(*) as count
     FROM (${usersSql}) f
-    LEFT JOIN push_tokens pt ON (f.id = pt.user_id_uuid) AND pt.revoked_at IS NULL
+    LEFT JOIN push_tokens pt ON (f.id::text = pt.user_id_uuid::text) AND pt.revoked_at IS NULL
     WHERE pt.id IS NULL OR pt.permission_status = 'denied'
   `;
 

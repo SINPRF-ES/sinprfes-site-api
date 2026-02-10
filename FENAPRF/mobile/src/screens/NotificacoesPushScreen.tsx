@@ -94,18 +94,22 @@ export default function NotificacoesPushScreen() {
   const performSearch = async (q: string) => {
     try {
         setIsSearching(true);
-        const response = await api.get(`/api/users?q=${encodeURIComponent(q)}`);
-        const results = response.data.users || response.data.users || [];
+        // FENAPRF: Busca solta (accent-insensitive) exige trazer a lista e filtrar localmente
+        // conforme padrão usado em UsersScreen.tsx
+        const response = await api.get('/api/users');
+        const results = response.data.users || response.data || [];
 
         const normalizedQuery = normalizeText(q);
         const queryOnlyDigits = q.replace(/\D/g, '');
 
         const filtered = results.filter((f: any) => {
+          if (f.arquivado_em) return false; // Ignorar arquivados para push
+
           const nNome = normalizeText(f.name || f.nome || '');
           const nCpf = (f.cpf || '').replace(/\D/g, '');
 
           const matchNome = nNome.includes(normalizedQuery);
-          const matchCpf = nCpf.includes(normalizedQuery) || (queryOnlyDigits && nCpf.includes(queryOnlyDigits));
+          const matchCpf = (queryOnlyDigits !== '' && nCpf.includes(queryOnlyDigits));
 
           return matchNome || matchCpf;
         });
@@ -119,9 +123,35 @@ export default function NotificacoesPushScreen() {
     }
   };
 
+  const formatTargetLabelPT = (type: string, value: any) => {
+    switch (type) {
+      case 'ALL': return 'Todos';
+      case 'UF': return `UF: ${value}`;
+      case 'DIRETORIA': return 'Apenas Diretoria';
+      case 'PRESIDENTES': return 'Apenas Presidentes';
+      case 'VICES': return 'Apenas Vices';
+      case 'DR': return 'Delegados Representantes (DR)';
+      case 'DS': return 'Delegados Substitutos (DS)';
+      case 'USER':
+        if (Array.isArray(value)) {
+          return value.length === 1
+            ? `Membro — ${value[0].name || value[0].nome} (${maskCPF(value[0].cpf)})`
+            : `${value.length} membros selecionados`;
+        }
+        if (value && typeof value === 'object') {
+          return `Membro — ${value.name || value.nome} (${maskCPF(value.cpf)})`;
+        }
+        return 'Membros selecionados';
+      default: {
+        const filter = Canon.FILTROS_MEMBROS.find(f => f.value === type);
+        return filter ? filter.label : type;
+      }
+    }
+  };
+
   const handleSend = () => {
     if (!title.trim()) {
-      Alert.alert('Aviso', 'O título da notificação é obrigatório.');
+      Alert.alert('Aviso', 'O título é obrigatório.');
       return;
     }
 
@@ -134,29 +164,6 @@ export default function NotificacoesPushScreen() {
         Alert.alert('Aviso', 'Selecione pelo menos um membro para o destino específico.');
         return;
     }
-
-    const formatTargetLabelPT = (type: string, value: any) => {
-      switch (type) {
-        case 'ALL': return 'Todos';
-        case 'UF': return `UF: ${value}`;
-        case 'DIRETORIA': return 'Apenas Diretoria';
-        case 'PRESIDENTES': return 'Apenas Presidentes';
-        case 'VICES': return 'Apenas Vices';
-        case 'DR': return 'Delegados Representantes (DR)';
-        case 'DS': return 'Delegados Substitutos (DS)';
-        case 'USER':
-          if (Array.isArray(value)) {
-            return value.length === 1
-              ? `Membro — ${value[0].name || value[0].nome} (${maskCPF(value[0].cpf)})`
-              : `${value.length} membros selecionados`;
-          }
-          return 'Membros selecionados';
-        default: {
-          const filter = Canon.FILTROS_MEMBROS.find(f => f.value === type);
-          return filter ? filter.label : type;
-        }
-      }
-    };
 
     const targetLabel = formatTargetLabelPT(targetType, targetValue);
 
@@ -250,26 +257,15 @@ export default function NotificacoesPushScreen() {
     };
 
     let displayTargetValue: any = item.target_value;
-    if (item.target_type === 'USER' && item.target_value) {
-      let obj: any = null;
-      if (typeof item.target_value === 'object') {
-        obj = item.target_value;
-      } else {
-        try {
-          obj = JSON.parse(item.target_value);
-        } catch (e) {
-          obj = null;
-        }
-      }
-
-      if (obj && typeof obj === 'object') {
-        displayTargetValue = `${obj.name || obj.nome || ''} (${maskCPF(obj.cpf || '')})`.trim();
-        if (displayTargetValue === '()') displayTargetValue = obj.id || item.target_value;
+    if (item.target_value && typeof item.target_value === 'string') {
+      try {
+        displayTargetValue = JSON.parse(item.target_value);
+      } catch (e) {
+        displayTargetValue = item.target_value;
       }
     }
 
-    const typeLabel = item.target_type === 'USER' ? 'MEMBRO' : item.target_type;
-    const targetLabel = typeLabel + (displayTargetValue ? `: ${displayTargetValue}` : '');
+    const targetLabel = formatTargetLabelPT(item.target_type, displayTargetValue);
 
     return (
       <View style={styles.historyCard}>
@@ -374,7 +370,7 @@ export default function NotificacoesPushScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true, isShowingArchived)} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true, isShowingAll)} />}
       >
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📢 Nova Notificação</Text>
