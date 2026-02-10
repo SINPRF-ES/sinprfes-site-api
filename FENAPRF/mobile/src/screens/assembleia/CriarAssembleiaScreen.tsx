@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import CanonicalPicker from '../../components/CanonicalPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SafeScreen from '../../components/SafeScreen';
 import * as ImagePicker from 'expo-image-picker';
@@ -66,7 +66,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
         return;
       }
 
-      await criarAssembleia({
+      const res = await criarAssembleia({
         titulo,
         tipo,
         pauta,
@@ -87,13 +87,13 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
                 onPress: () => {
                     navigation.navigate('Logistica', {
                         prefill: {
-                            titulo: form.titulo,
-                            descricao: form.pauta,
-                            data_inicio: `${form.data_evento.split('-').reverse().join('/')} 08:00`,
-                            data_fim: `${form.data_evento.split('-').reverse().join('/')} 18:00`,
-                            assembleia_id: res.data.id,
-                            documento_id: form.edital_drive_file_id || '',
-                            documento_url: form.edital_url || ''
+                            titulo: titulo,
+                            descricao: pauta,
+                            data_inicio: `${data_evento.split('-').reverse().join('/')} 08:00`,
+                            data_fim: `${data_evento.split('-').reverse().join('/')} 18:00`,
+                            assembleia_id: (res as any)?.data?.id || (res as any)?.id,
+                            documento_id: editalFile?.id || '',
+                            documento_url: editalFile?.webViewLink || ''
                         }
                     });
                 }
@@ -132,18 +132,16 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>Tipo *</Text>
-          <View style={styles.pickerBox}>
-            <Picker
-              selectedValue={tipo}
-              onValueChange={(itemValue) => setTipo(itemValue as any)}
-              style={styles.picker}
-              dropdownIconColor="#003366"
-            >
-              <Picker.Item label="Selecione..." value="" />
-              <Picker.Item label="Assembleia Geral Extraordinária" value="AGE" />
-              <Picker.Item label="Assembleia Geral Ordinária" value="AGO" />
-            </Picker>
-          </View>
+          <CanonicalPicker
+            selectedValue={tipo}
+            onValueChange={(itemValue) => setTipo(itemValue as any)}
+            placeholder="Selecione..."
+            wrapperStyle={{ marginBottom: 20 }}
+            items={[
+              { label: 'Assembleia Geral Extraordinária', value: 'AGE' },
+              { label: 'Assembleia Geral Ordinária', value: 'AGO' }
+            ]}
+          />
         </View>
       </View>
 

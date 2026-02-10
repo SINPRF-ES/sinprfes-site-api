@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../hooks/useAuth';
-import api, { getUsers } from '../services/apiService';
+import { getUsers } from '../services/apiService';
 import MemberCard from '../components/MemberCard';
 import { User } from '../types/user';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,7 +15,7 @@ import * as Canon from '../utils/user';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
-import PickerWrapper from '../components/PickerWrapper';
+import CanonicalPicker from '../components/CanonicalPicker';
 import { Modal, ScrollView } from 'react-native';
 
 export default function UsersScreen({ navigation, route }: any) {
@@ -214,41 +213,27 @@ export default function UsersScreen({ navigation, route }: any) {
       <View style={styles.filterRow}>
           <View style={styles.filterGroup}>
             <Text style={styles.filterLabel}>Visualização:</Text>
-            <PickerWrapper>
-              <Picker
-                selectedValue={filtroVisualizacao}
-                onValueChange={(v) => {
-                    setFiltroVisualizacao(v);
-                    if (v !== 'UF') setFiltroUf('');
-                }}
-                style={styles.picker}
-                mode="dropdown"
-                dropdownIconColor="#003366"
-              >
-                {Canon.FILTROS_MEMBROS.map(f => (
-                  <Picker.Item key={f.value} label={f.label} value={f.value} />
-                ))}
-              </Picker>
-            </PickerWrapper>
+            <CanonicalPicker
+              selectedValue={filtroVisualizacao}
+              onValueChange={(v) => {
+                  setFiltroVisualizacao(v);
+                  if (v !== 'UF') setFiltroUf('');
+              }}
+              wrapperStyle={styles.pickerWrapper}
+              items={Canon.FILTROS_MEMBROS.map(f => ({ label: f.label, value: f.value }))}
+            />
           </View>
 
           {filtroVisualizacao === 'UF' && (
             <View style={styles.filterGroup}>
               <Text style={styles.filterLabel}>UF:</Text>
-              <PickerWrapper>
-                <Picker
-                  selectedValue={filtroUf}
-                  onValueChange={(v) => setFiltroUf(v)}
-                  style={styles.picker}
-                  mode="dropdown"
-                  dropdownIconColor="#003366"
-                >
-                  <Picker.Item label="Todas" value="" />
-                  {Canon.UFS_DETALHADAS.filter(u => u.sigla !== 'BR').map(u => (
-                    <Picker.Item key={u.sigla} label={u.sigla} value={u.sigla} />
-                  ))}
-                </Picker>
-              </PickerWrapper>
+              <CanonicalPicker
+                selectedValue={filtroUf}
+                onValueChange={(v) => setFiltroUf(v)}
+                wrapperStyle={styles.pickerWrapper}
+                placeholder="Todas"
+                items={Canon.UFS_DETALHADAS.filter(u => u.sigla !== 'BR').map(u => ({ label: u.sigla, value: u.sigla }))}
+              />
             </View>
           )}
       </View>

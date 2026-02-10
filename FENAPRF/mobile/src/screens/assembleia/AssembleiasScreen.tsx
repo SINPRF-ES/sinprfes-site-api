@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,6 +11,7 @@ import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/format';
 
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
+import CanonicalPicker from '../../components/CanonicalPicker';
 
 export default function AssembleiasScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -82,7 +82,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       }}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.badge, styles[`badge${item.estado}` as keyof typeof styles] || styles.badgeCRIADA]}>
+        <View style={[styles.badge, (styles[`badge${item.estado}` as keyof typeof styles] as any) || styles.badgeCRIADA]}>
           <Text style={styles.badgeText}>
             {getAssembleiaStatusLabel(item.estado)}
           </Text>
@@ -107,19 +107,16 @@ export default function AssembleiasScreen({ navigation }: any) {
     <View style={styles.container}>
       <View style={styles.filterContainer}>
         <Text style={styles.filterLabel}>Filtrar:</Text>
-        <View style={styles.pickerWrapper}>
-            <Picker
-                selectedValue={filter}
-                onValueChange={(itemValue) => setFilter(itemValue as any)}
-                style={styles.picker}
-                dropdownIconColor="#003366"
-                mode="dropdown"
-            >
-                <Picker.Item label="Ativas" value="ativas" />
-                <Picker.Item label="Encerradas" value="encerradas" />
-                <Picker.Item label="Todas" value="todas" />
-            </Picker>
-        </View>
+        <CanonicalPicker
+          selectedValue={filter}
+          onValueChange={(itemValue) => setFilter(itemValue as any)}
+          wrapperStyle={{ flex: 1 }}
+          items={[
+            { label: 'Ativas', value: 'ativas' },
+            { label: 'Encerradas', value: 'encerradas' },
+            { label: 'Todas', value: 'todas' }
+          ]}
+        />
       </View>
 
       {loading && !refreshing ? (
