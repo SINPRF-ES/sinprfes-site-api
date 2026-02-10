@@ -5,7 +5,7 @@ import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 import { logDebug } from '../utils/user';
-import { buildCacheDest, inferExtension } from '../utils/fileCache';
+import { buildCacheDest, inferExtension, ensureDownloadDir } from '../utils/fileCache';
 
 export interface DriveFile {
   id: string;
@@ -53,19 +53,24 @@ export const fetchPublicacoes = async (folderId: string | null = null): Promise<
  * @param fileId ID do arquivo no backend/Drive.
  * @param fileName Nome original do arquivo.
  * @param token Token JWT do membro.
+ * @param mimeType MimeType sugerido vindo da listagem.
  */
 export const downloadPublicacaoFile = async (
   fileId: string,
   fileName: string,
-  token: string
+  token: string,
+  mimeType?: string
 ): Promise<{ localUri: string; mimeType?: string }> => {
-  const extension = inferExtension(fileName);
+  const extension = inferExtension(fileName, mimeType);
   const localUri = buildCacheDest({ prefix: 'pub', id: fileId, ext: extension });
   const url = `${api.defaults.baseURL}/api/publicacoes/arquivo/${fileId}`;
 
   logDebug('Publicacoes.download.start', { fileId, fileName, localUri });
 
   try {
+    // Garantir que o diretório de download existe
+    await ensureDownloadDir();
+
     // Verificar se o arquivo já existe e tem conteúdo (cache sujo/vazio)
     const fileInfo = await FileSystemLegacy.getInfoAsync(localUri);
     if (fileInfo.exists && fileInfo.size === 0) {
@@ -122,7 +127,7 @@ export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
     const sessao = await carregarSessao();
     if (!sessao?.token) return false;
 
-    const { localUri } = await downloadPublicacaoFile(file.id, file.name, sessao.token);
+    const { localUri } = await downloadPublicacaoFile(file.id, file.name, sessao.token, file.mimeType || undefined);
 
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(localUri);
