@@ -14,6 +14,7 @@ import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { Modal, ScrollView } from 'react-native';
+import { toBrazilianDate } from '../utils/date';
 
 export default function ArquivadosScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
@@ -185,6 +186,36 @@ export default function ArquivadosScreen({ navigation, route }: any) {
                 </View>
               )}
 
+              {selectedMember && (
+                <View style={styles.historySection}>
+                  <Text style={styles.historyTitle}>📜 Histórico de Movimentações</Text>
+
+                  {selectedMember.arquivado_em && (
+                    <View style={styles.historyItem}>
+                      <MaterialCommunityIcons name="archive-arrow-down" size={20} color="#c53030" />
+                      <View style={styles.historyContent}>
+                        <Text style={styles.historyLabel}>Arquivado</Text>
+                        <Text style={styles.historyText}>Por: {selectedMember.arquivado_por_nome || '(usuário não encontrado)'}</Text>
+                        <Text style={styles.historyText}>Em: {toBrazilianDate(selectedMember.arquivado_em)}</Text>
+                        <Text style={styles.historyText}>Motivo: {selectedMember.arquivado_motivo || 'Não informado'}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {selectedMember.desarquivado_em && (
+                    <View style={styles.historyItem}>
+                      <MaterialCommunityIcons name="archive-arrow-up" size={20} color="#2f855a" />
+                      <View style={styles.historyContent}>
+                        <Text style={styles.historyLabel}>Desarquivado</Text>
+                        <Text style={styles.historyText}>Por: {selectedMember.desarquivado_por_nome || '(usuário não encontrado)'}</Text>
+                        <Text style={styles.historyText}>Em: {toBrazilianDate(selectedMember.desarquivado_em)}</Text>
+                        <Text style={styles.historyText}>Motivo: {selectedMember.desarquivado_motivo || 'Não informado'}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.editButton}
@@ -249,6 +280,37 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontWeight: 'bold',
+    color: '#666',
+  },
+  historySection: {
+    backgroundColor: '#fff',
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    borderRadius: 12,
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#003366',
+    marginBottom: 12,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 15,
+  },
+  historyContent: {
+    flex: 1,
+  },
+  historyLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  historyText: {
+    fontSize: 13,
     color: '#666',
   },
   modalActions: {

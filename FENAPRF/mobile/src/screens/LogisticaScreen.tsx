@@ -30,6 +30,7 @@ import {
   atualizarInscricaoTerceiroLogistica,
   cancelarInscricaoTerceiroLogistica
 } from '../services/logisticaService';
+import { downloadPublicacaoFile } from '../services/driveService';
 import { STATUS_EVENTO, verificarConflitosUF } from '../constants/logistica';
 import { isGestao, getCanonicalUserId, UF_NOME } from '../utils/user';
 import { formatDateTimeMask, parseBRDateTimeToISO, formatISOToBRDateTime } from '../utils/date';
@@ -146,14 +147,29 @@ const LogisticaScreen = ({ route }: any) => {
     return result;
   }, [inscricoes]);
 
-  const handleOpenDoc = () => {
+  const handleOpenDoc = async () => {
     if (eventoSelecionado?.documento_id) {
-      navigation.navigate('FileViewer', {
-        fileId: eventoSelecionado.documento_id,
-        title: 'Documento do Evento',
-        context: 'publicacoes',
-        type: 'pdf'
-      });
+      try {
+        setLoading(true);
+        const token = api.defaults.headers.common['Authorization']?.toString().split(' ')[1] || '';
+        const { localUri, mimeType } = await downloadPublicacaoFile(
+          eventoSelecionado.documento_id,
+          'Documento_Evento.pdf',
+          token
+        );
+
+        navigation.navigate('FileViewer', {
+          localUri,
+          title: 'Documento do Evento',
+          fileId: eventoSelecionado.documento_id,
+          type: 'pdf',
+          context: 'publicacoes'
+        });
+      } catch (err) {
+        Alert.alert('Erro', 'Não foi possível baixar o documento.');
+      } finally {
+        setLoading(false);
+      }
     } else if (eventoSelecionado?.documento_url) {
       Linking.openURL(eventoSelecionado.documento_url).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
     }
@@ -387,20 +403,15 @@ const LogisticaScreen = ({ route }: any) => {
   const exportData = async (type: 'pdf' | 'xls') => {
     if (!eventoSelecionado) return;
     try {
-        // Correção: Adicionado prefixo /api para alinhar com o backend FENAPRF
         const url = `/api/logistica/eventos/${eventoSelecionado.id}/exportar/${type}`;
+        logger.info('Logistica.exportData.Request', { type, eventoId: eventoSelecionado.id });
 
-        // No mobile, abrir o link no navegador costuma ser mais fácil para download
-        // Mas o ideal seria salvar o arquivo. Como é uma AGO, o gestor fará no PC via Web se possível.
-        // Se precisar no mobile, usamos o link autenticado.
-        const token = api.defaults.headers.common['Authorization']?.toString().split(' ')[1];
-        const downloadUrl = `${api.defaults.baseURL}${url}${token ? `?token=${token}` : ''}`;
-
-        logger.info('Logistica.exportData', { type, url: downloadUrl });
-        Linking.openURL(downloadUrl);
-    } catch (e) {
+        const response = await api.get(url);
+        Alert.alert('Exportação solicitada', response.data.message || 'Enviaremos o arquivo para seu e-mail.');
+    } catch (e: any) {
         logger.error('Logistica.exportError', e);
-        Alert.alert('Erro', 'Falha ao exportar.');
+        const msg = e.response?.data?.error || e.response?.data?.message || 'Falha ao solicitar exportação.';
+        Alert.alert('Erro', msg);
     }
   };
 
@@ -521,7 +532,7 @@ const LogisticaScreen = ({ route }: any) => {
             ) : (
               <View style={styles.actionsRow}>
                 {minhaInscricao ? (
-                  <>
+                  <View style={styles.buttonGroupRow}>
                     <TouchableOpacity style={styles.btnEdit} onPress={() => handleEditInscricao()}>
                       <MaterialCommunityIcons name="pencil" size={18} color="#fff" />
                       <Text style={styles.btnTextSmall}>Alterar Inscrição</Text>
@@ -530,7 +541,7 @@ const LogisticaScreen = ({ route }: any) => {
                       <MaterialCommunityIcons name="delete" size={18} color="#fff" />
                       <Text style={styles.btnTextSmall}>Cancelar</Text>
                     </TouchableOpacity>
-                  </>
+                  </View>
                 ) : (
                   canParticipate ? (
                     <TouchableOpacity style={styles.btnPrimary} onPress={() => handleEditInscricao()}>
@@ -744,10 +755,11 @@ const styles = StyleSheet.create({
   docButtonText: { color: '#003366', fontWeight: '600' },
   closedBadge: { backgroundColor: '#f8d7da', padding: 10, borderRadius: 8, marginTop: 15, alignItems: 'center' },
   closedText: { color: '#721c24', fontWeight: 'bold' },
-  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  actionsRow: { marginTop: 20 },
+  buttonGroupRow: { flexDirection: 'row', gap: 10, width: '100%' },
   btnPrimary: { backgroundColor: '#003366', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
-  btnEdit: { backgroundColor: '#27ae60', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  btnCancel: { backgroundColor: '#d32f2f', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  btnEdit: { backgroundColor: '#27ae60', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
+  btnCancel: { backgroundColor: '#d32f2f', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
   btnText: { color: '#fff', fontWeight: 'bold' },
   btnTextSmall: { color: '#fff', fontWeight: '600', fontSize: 13 },
   tableCard: { backgroundColor: '#fff', borderRadius: 12, padding: 15, elevation: 3 },

@@ -1,7 +1,8 @@
 const pool = require("../config/db");
 const log = require("../utils/log");
-const { enviarEmailConfirmacaoInscricaoLogistica, enviarEmailCancelamentoInscricaoLogistica } = require("../services/email.service");
+const { enviarEmailConfirmacaoInscricaoLogistica, enviarEmailCancelamentoInscricaoLogistica, enviarEmailRelatorio } = require("../services/email.service");
 const pdfService = require("../services/pdf.service");
+const usersService = require("../services/users.service");
 const { STATUS_EVENTO, ACOES_AUDITORIA, RECURSO_TIPO } = require("../../shared/logistica");
 
 /**
@@ -384,11 +385,20 @@ exports.cancelarInscricaoTerceiro = async (req, res) => {
 // --- RELATÓRIOS ---
 
 exports.exportarPdf = async (req, res) => {
+    const requestId = req.requestId;
+    const userId = getUserId(req);
+    const { eventoId } = req.params;
+
     try {
-        const { eventoId } = req.params;
-        const { rows: evRows } = await pool.query("SELECT * FROM logistica_eventos WHERE id = $1", [eventoId]);
-        if (evRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
-        const evento = evRows[0];
+        const [eventoRes, user] = await Promise.all([
+            pool.query("SELECT * FROM logistica_eventos WHERE id = $1", [eventoId]),
+            usersService.getMe(userId)
+        ]);
+
+        if (eventoRes.rows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
+        const evento = eventoRes.rows[0];
+
+        if (!user) return res.status(404).json({ error: "Usuário solicitante não encontrado." });
 
         const queryInscricoes = `
             SELECT i.*, u.name as nome, u.cargo, u.uf, u.cpf, u.telefone1, u.email
@@ -401,20 +411,37 @@ exports.exportarPdf = async (req, res) => {
 
         const pdfBuffer = await pdfService.gerarPdfInscricoesLogistica(evento, inscricoes, { podeVerCpf: true });
 
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `attachment; filename=inscricoes_logistica_${eventoId.slice(0,8)}.pdf`);
-        res.send(pdfBuffer);
+        log.info("Logistica.exportarPdf.Iniciado", { requestId, userId, eventoId });
+
+        await enviarEmailRelatorio(
+            user,
+            `Inscrições Logística: ${evento.titulo}`,
+            pdfBuffer,
+            `inscricoes_logistica_${eventoId.slice(0, 8)}.pdf`
+        );
+
+        res.json({ success: true, message: "Exportação enviada para seu e-mail." });
     } catch (err) {
-        log.error("Logistica.exportarPdf.Erro", err);
-        res.status(500).json({ error: "Erro ao gerar PDF." });
+        log.error("Logistica.exportarPdf.Erro", { requestId, userId, eventoId, error: err.message });
+        res.status(500).json({ error: "Erro ao processar exportação PDF." });
     }
 };
 
 exports.exportarXls = async (req, res) => {
+    const requestId = req.requestId;
+    const userId = getUserId(req);
+    const { eventoId } = req.params;
+
     try {
-        const { eventoId } = req.params;
-        const { rows: evRows } = await pool.query("SELECT titulo FROM logistica_eventos WHERE id = $1", [eventoId]);
-        const titulo = evRows[0]?.titulo || "Evento";
+        const [eventoRes, user] = await Promise.all([
+            pool.query("SELECT titulo FROM logistica_eventos WHERE id = $1", [eventoId]),
+            usersService.getMe(userId)
+        ]);
+
+        if (eventoRes.rows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
+        const evento = eventoRes.rows[0];
+
+        if (!user) return res.status(404).json({ error: "Usuário solicitante não encontrado." });
 
         const query = `
             SELECT
@@ -447,12 +474,20 @@ exports.exportarXls = async (req, res) => {
         });
 
         const csvContent = "\ufeff" + headers + "\n" + csvRows.join("\n");
+        const xlsBuffer = Buffer.from(csvContent, 'utf-8');
 
-        res.setHeader("Content-Type", "text/csv; charset=utf-8");
-        res.setHeader("Content-Disposition", `attachment; filename=inscricoes_${eventoId.slice(0,8)}.xls`);
-        res.send(Buffer.from(csvContent, 'utf-8'));
+        log.info("Logistica.exportarXls.Iniciado", { requestId, userId, eventoId });
+
+        await enviarEmailRelatorio(
+            user,
+            `Inscrições Logística (XLS): ${evento.titulo}`,
+            xlsBuffer,
+            `inscricoes_${eventoId.slice(0, 8)}.xls`
+        );
+
+        res.json({ success: true, message: "Exportação enviada para seu e-mail." });
     } catch (err) {
-        log.error("Logistica.exportarXls.Erro", err);
-        res.status(500).json({ error: "Erro ao exportar XLS." });
+        log.error("Logistica.exportarXls.Erro", { requestId, userId, eventoId, error: err.message });
+        res.status(500).json({ error: "Erro ao processar exportação XLS." });
     }
 };

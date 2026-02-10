@@ -165,7 +165,7 @@ async function listCampaigns(limit = 20, offset = 0) {
   const sql = `
     SELECT c.*, f.nome as autor_nome
     FROM push_campaigns c
-    LEFT JOIN users f ON c.created_by = f.id
+    LEFT JOIN users f ON c.created_by::text = f.id::text
     ORDER BY c.created_at DESC
     LIMIT $1 OFFSET $2;
   `;
