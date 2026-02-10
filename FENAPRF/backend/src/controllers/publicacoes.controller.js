@@ -49,10 +49,12 @@ exports.listar = async (req, res) => {
     return res.status(500).json({ message: "Erro ao sincronizar com o Drive." });
   }
 };
-// Adicione esta nova função:
+/**
+ * Faz o streaming de um arquivo do Google Drive para o cliente.
+ */
 exports.visualizar = async (req, res) => {
+  const fileId = req.params.id;
   try {
-    const fileId = req.params.id;
     const dados = await obterArquivoStream(fileId);
 
     // Configura o cabeçalho para o navegador entender que é um PDF/Imagem
@@ -63,7 +65,12 @@ exports.visualizar = async (req, res) => {
     dados.stream.pipe(res);
 
   } catch (err) {
-    log.error("ErroVisualizarArquivo", err);
-    res.status(404).send("Arquivo não encontrado ou erro ao carregar.");
+    log.error("ErroVisualizarArquivo", {
+      message: err.message,
+      fileId,
+      path: "/api/publicacoes/arquivo"
+    });
+
+    return res.status(404).json({ error: "Arquivo não encontrado" });
   }
 };

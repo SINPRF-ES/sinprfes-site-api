@@ -13,23 +13,37 @@ const SCOPES = [
 
 /**
  * Obtém a instância de autenticação do Google.
- * Prioriza a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON.
- * Fallback para o arquivo google.json (local/desenvolvimento).
+ * Prioriza a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON (produção/Render).
+ * Fallback para o arquivo google.json (local/desenvolvimento), se existir.
+ *
+ * Importante: se nenhuma credencial for encontrada, NÃO usa ADC (default credentials).
+ * Em vez disso, lança erro explícito (evita "Could not load the default credentials").
  */
 function getGoogleAuth() {
   const authOptions = { scopes: SCOPES };
 
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  const rawJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+  if (rawJson && rawJson.trim()) {
     try {
-      authOptions.credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+      // A env var deve conter o JSON completo do service account (string).
+      authOptions.credentials = JSON.parse(rawJson);
+      return new google.auth.GoogleAuth(authOptions);
     } catch (e) {
-      log.error("GoogleDriveAuthJsonError", { error: e.message });
+      log.error("GoogleDriveAuthJsonParseError", { error: e.message });
+      // Cai para fallback local abaixo (se existir); caso contrário, erro explícito.
     }
-  } else if (fs.existsSync(KEY_PATH)) {
-    authOptions.keyFile = KEY_PATH;
   }
 
-  return new google.auth.GoogleAuth(authOptions);
+  if (fs.existsSync(KEY_PATH)) {
+    authOptions.keyFile = KEY_PATH;
+    return new google.auth.GoogleAuth(authOptions);
+  }
+
+  // Não permitir ADC no Render (isso gera erros de ambiente).
+  throw new Error(
+    "Google credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS_JSON (recommended for Render) or provide a local google.json (gitignored)."
+  );
 }
 
 // 🟢 MUDANÇA: Aceita um ID opcional. Se não vier, usa o padrão do .env
@@ -61,22 +75,23 @@ async function listarArquivosPublicos(targetFolderId = null) {
     throw error;
   }
 }
-// Adicione isso no final do arquivo src/services/drive.service.js
-
+/**
+ * Obtém o stream do arquivo e seus metadados diretamente do Google Drive.
+ */
 async function obterArquivoStream(fileId) {
   const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
   try {
-    // 1. Pega os metadados para saber o tipo (PDF, Imagem, etc)
+    // 1) Metadados
     const meta = await drive.files.get({
-      fileId: fileId,
-      fields: "name, mimeType, size"
+      fileId,
+      fields: "name, mimeType, size",
     });
 
-    // 2. Pega o conteúdo (stream)
+    // 2) Conteúdo (stream)
     const res = await drive.files.get(
-      { fileId: fileId, alt: "media" },
+      { fileId, alt: "media" },
       { responseType: "stream" }
     );
 
@@ -84,11 +99,13 @@ async function obterArquivoStream(fileId) {
       stream: res.data,
       mimeType: meta.data.mimeType,
       name: meta.data.name,
-      size: meta.data.size
+      size: meta.data.size,
     };
-
   } catch (error) {
-    log.error("GoogleDriveDownloadErro", { error: error.message, fileId });
+    log.error("GoogleDriveDownloadErro", {
+      message: error.message,
+      fileId,
+    });
     throw error;
   }
 }
@@ -139,5 +156,9 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
   }
 }
 
-// Não esqueça de adicionar na exportação:
-module.exports = { listarArquivosPublicos, obterArquivoStream, obterArquivoTexto, uploadFile };
+module.exports = {
+  listarArquivosPublicos,
+  obterArquivoStream,
+  obterArquivoTexto,
+  uploadFile,
+};
