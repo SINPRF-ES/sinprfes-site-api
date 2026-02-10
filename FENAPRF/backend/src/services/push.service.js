@@ -127,9 +127,15 @@ async function resolvePushTargets(targetType, targetValue) {
       let targetIds = [];
       if (Array.isArray(targetValue)) {
         targetIds = targetValue.map(v => (typeof v === 'object' && v !== null) ? v.id : v);
-      } else {
-        const tid = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
-        if (tid) targetIds = [tid];
+      } else if (typeof targetValue === 'object' && targetValue !== null) {
+        // Handle potential object with numeric keys (malformed array) or single user object
+        if (targetValue.id) {
+          targetIds = [targetValue.id];
+        } else {
+          targetIds = Object.values(targetValue).map(v => (typeof v === 'object' && v !== null) ? v.id : v).filter(Boolean);
+        }
+      } else if (targetValue) {
+        targetIds = [targetValue];
       }
 
       if (targetIds.length === 0) {
@@ -210,9 +216,14 @@ async function countNoTokenTargets(targetType, targetValue) {
       let targetIds = [];
       if (Array.isArray(targetValue)) {
         targetIds = targetValue.map(v => (typeof v === 'object' && v !== null) ? v.id : v);
-      } else {
-        const tid = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
-        if (tid) targetIds = [tid];
+      } else if (typeof targetValue === 'object' && targetValue !== null) {
+        if (targetValue.id) {
+          targetIds = [targetValue.id];
+        } else {
+          targetIds = Object.values(targetValue).map(v => (typeof v === 'object' && v !== null) ? v.id : v).filter(Boolean);
+        }
+      } else if (targetValue) {
+        targetIds = [targetValue];
       }
 
       if (targetIds.length === 0) {

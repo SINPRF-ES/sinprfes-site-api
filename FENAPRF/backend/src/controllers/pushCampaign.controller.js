@@ -111,7 +111,12 @@ exports.sendCampaign = async (req, res) => {
       userId: createdBy,
       perfil,
       error: e.message,
-      stack: e.stack
+      stack: e.stack,
+      payload: {
+        ...req.body,
+        title: req.body?.title ? `[len:${req.body.title.length}]` : null,
+        body: req.body?.body ? `[len:${req.body.body.length}]` : null
+      }
     });
 
     const response = {

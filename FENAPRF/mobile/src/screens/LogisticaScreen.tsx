@@ -42,6 +42,7 @@ import SafeScreen from '../components/SafeScreen';
 import { EMOJIS } from '../utils/emoji';
 import { Picker } from '@react-native-picker/picker';
 import PickerWrapper from '../components/PickerWrapper';
+import Badge from '../components/Badge';
 
 const LogisticaScreen = ({ route }: any) => {
   const navigation = useNavigation<any>();
@@ -91,8 +92,9 @@ const LogisticaScreen = ({ route }: any) => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      const effectiveStatus = statusFilter === 'ALL' ? undefined : statusFilter;
       const [evs, ass] = await Promise.all([
-        getEventosLogistica(statusFilter),
+        getEventosLogistica(effectiveStatus),
         api.get('/api/assembleias').then(res => res.data).catch(() => [])
       ]);
       setEventos(evs);
@@ -517,6 +519,7 @@ const LogisticaScreen = ({ route }: any) => {
             <Picker.Item label="Ativos" value={STATUS_EVENTO.ATIVO} />
             <Picker.Item label="Encerrados" value={STATUS_EVENTO.ENCERRADO} />
             <Picker.Item label="Cancelados" value={STATUS_EVENTO.CANCELADO} />
+            <Picker.Item label="Todos" value="ALL" />
           </Picker>
         </PickerWrapper>
       </View>
@@ -549,19 +552,24 @@ const LogisticaScreen = ({ route }: any) => {
           </View>
         )}
 
-        {/* Seletor de Eventos se houver mais de um ativo */}
-        {eventos.filter(e => e.status === STATUS_EVENTO.ATIVO).length > 1 && (
+        {/* Seletor de Eventos */}
+        {eventos.length > 1 && (
             <View style={styles.selectorContainer}>
                 <Text style={styles.selectorLabel}>Selecionar Evento:</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {eventos.filter(e => e.status === STATUS_EVENTO.ATIVO).map(e => (
+                    {eventos.map(e => (
                         <TouchableOpacity
                             key={e.id}
-                            style={[styles.selectorChip, eventoSelecionado?.id === e.id && styles.selectorChipActive]}
+                            style={[
+                              styles.selectorChip,
+                              eventoSelecionado?.id === e.id && styles.selectorChipActive,
+                              statusFilter === 'ALL' && e.status === STATUS_EVENTO.ENCERRADO && { borderColor: '#FFC107', borderWidth: 1 },
+                              statusFilter === 'ALL' && e.status === STATUS_EVENTO.CANCELADO && { borderColor: '#D32F2F', borderWidth: 1 },
+                            ]}
                             onPress={() => setEventoSelecionado(e)}
                         >
                             <Text style={[styles.selectorChipText, eventoSelecionado?.id === e.id && styles.selectorChipTextActive]}>
-                                {e.titulo}
+                                {e.titulo} {statusFilter === 'ALL' && `(${e.status === STATUS_EVENTO.ATIVO ? 'Ativo' : (e.status === STATUS_EVENTO.ENCERRADO ? 'Encerrado' : 'Cancelado')})`}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -571,14 +579,22 @@ const LogisticaScreen = ({ route }: any) => {
 
         {eventoSelecionado && (
           <View style={styles.eventCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Text style={[styles.eventTitle, { flex: 1 }]}>{eventoSelecionado.titulo}</Text>
-                {eventoSelecionado.assembleia_id && (
-                    <View style={styles.linkedBadge}>
-                        <MaterialCommunityIcons name="link-variant" size={12} color="#003366" />
-                        <Text style={styles.linkedBadgeText}>Vinculado à Assembleia</Text>
-                    </View>
-                )}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                <View style={{ flex: 1, minWidth: '60%' }}>
+                  <Text style={styles.eventTitle}>{eventoSelecionado.titulo}</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                    <Badge
+                      label={eventoSelecionado.status === STATUS_EVENTO.ATIVO ? 'Ativo' : (eventoSelecionado.status === STATUS_EVENTO.ENCERRADO ? 'Encerrado' : 'Cancelado')}
+                      variant={eventoSelecionado.status === STATUS_EVENTO.ATIVO ? 'success' : (eventoSelecionado.status === STATUS_EVENTO.ENCERRADO ? 'warning' : 'error')}
+                    />
+                    {eventoSelecionado.assembleia_id && (
+                        <View style={styles.linkedBadge}>
+                            <MaterialCommunityIcons name="link-variant" size={12} color="#003366" />
+                            <Text style={styles.linkedBadgeText}>Vinculado à Assembleia</Text>
+                        </View>
+                    )}
+                  </View>
+                </View>
             </View>
             {eventoSelecionado.descricao ? <Text style={styles.eventDesc}>{eventoSelecionado.descricao}</Text> : null}
             <View style={styles.infoRow}>
@@ -863,7 +879,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterPicker: {
-    height: 40,
+    flex: 1,
   },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: 15 },

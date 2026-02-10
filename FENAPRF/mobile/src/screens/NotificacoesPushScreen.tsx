@@ -121,30 +121,44 @@ export default function NotificacoesPushScreen() {
 
   const handleSend = () => {
     if (!title.trim()) {
-      Alert.alert('Erro', 'O título da notificação é obrigatório.');
+      Alert.alert('Aviso', 'O título da notificação é obrigatório.');
       return;
     }
 
     if (!body.trim()) {
-      Alert.alert('Erro', 'O corpo da mensagem é obrigatório.');
+      Alert.alert('Aviso', 'O corpo da mensagem é obrigatório.');
       return;
     }
 
     if (targetType === 'USER' && (!targetValue || targetValue.length === 0)) {
-        Alert.alert('Erro', 'Selecione pelo menos um membro para o destino específico.');
+        Alert.alert('Aviso', 'Selecione pelo menos um membro para o destino específico.');
         return;
     }
 
-    let targetLabel = targetType === 'USER' ? 'Membros Individuais' : targetType;
-    if (targetType === 'USER' && Array.isArray(targetValue)) {
-      if (targetValue.length === 1) {
-          targetLabel = `Membro — ${targetValue[0].name || targetValue[0].nome} (${maskCPF(targetValue[0].cpf)})`;
-      } else {
-          targetLabel = `${targetValue.length} membros selecionados`;
+    const formatTargetLabelPT = (type: string, value: any) => {
+      switch (type) {
+        case 'ALL': return 'Todos';
+        case 'UF': return `UF: ${value}`;
+        case 'DIRETORIA': return 'Apenas Diretoria';
+        case 'PRESIDENTES': return 'Apenas Presidentes';
+        case 'VICES': return 'Apenas Vices';
+        case 'DR': return 'Delegados Representantes (DR)';
+        case 'DS': return 'Delegados Substitutos (DS)';
+        case 'USER':
+          if (Array.isArray(value)) {
+            return value.length === 1
+              ? `Membro — ${value[0].name || value[0].nome} (${maskCPF(value[0].cpf)})`
+              : `${value.length} membros selecionados`;
+          }
+          return 'Membros selecionados';
+        default: {
+          const filter = Canon.FILTROS_MEMBROS.find(f => f.value === type);
+          return filter ? filter.label : type;
+        }
       }
-    } else if (targetValue) {
-      targetLabel = `${targetLabel} (${targetValue})`;
-    }
+    };
+
+    const targetLabel = formatTargetLabelPT(targetType, targetValue);
 
     Alert.alert(
       'Confirmar Envio',
@@ -431,7 +445,7 @@ export default function NotificacoesPushScreen() {
              </View>
           )}
 
-          <Text style={[styles.label, { marginTop: 12 }]}>Título (opcional)</Text>
+          <Text style={[styles.label, { marginTop: 12 }]}>Título *</Text>
           <TextInput
             style={styles.input}
             value={title}
