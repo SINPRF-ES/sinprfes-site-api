@@ -54,7 +54,7 @@ exports.sendCampaign = async (req, res) => {
       }
     }
 
-    const allowedTargetTypes = ['ALL', 'UF', 'JOGOS', 'USER'];
+    const allowedTargetTypes = ['ALL', 'UF', 'JOGOS', 'USER', 'PADRAO', 'DIRETORIA', 'PRESIDENTES', 'VICES', 'DR', 'DS', 'ADMIN_COLAB'];
     if (targetType && !allowedTargetTypes.includes(targetType)) {
       errors.targetType = `Tipo de alvo inválido. Permitidos: ${allowedTargetTypes.join(', ')}`;
     }
@@ -111,7 +111,12 @@ exports.sendCampaign = async (req, res) => {
       userId: createdBy,
       perfil,
       error: e.message,
-      stack: e.stack
+      stack: e.stack,
+      payload: {
+        ...req.body,
+        title: req.body?.title ? `[len:${req.body.title.length}]` : null,
+        body: req.body?.body ? `[len:${req.body.body.length}]` : null
+      }
     });
 
     const response = {
@@ -173,7 +178,7 @@ exports.listCampaigns = async (req, res) => {
 
   try {
     const includeArchived = req.query?.includeArchived === '1';
-    const limit = includeArchived ? 50 : 5;
+    const limit = includeArchived ? 1000 : 5;
 
     const campaigns = await pushCampaignService.listCampaigns(limit);
     return res.json({ success: true, campaigns });

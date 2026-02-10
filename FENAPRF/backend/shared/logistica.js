@@ -15,7 +15,8 @@
 
   const STATUS_EVENTO = {
     ATIVO: 'ativo',
-    ENCERRADO: 'encerrado'
+    ENCERRADO: 'encerrado',
+    CANCELADO: 'cancelado'
   };
 
   const ACOES_AUDITORIA = {

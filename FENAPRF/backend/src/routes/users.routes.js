@@ -96,6 +96,12 @@ router.get("/",
   usersController.listarUsers
 );
 
+router.get("/arquivados/historico",
+  authMiddleware,
+  requirePermission("LIST_USERS"),
+  usersController.listarHistoricoArquivamento
+);
+
 router.post("/",
   authMiddleware,
   requirePermission("CREATE_USER"),
@@ -142,6 +148,13 @@ router.post(
   authMiddleware,
   requirePermission("EDIT_USER"),
   usersController.desarquivarUser
+);
+
+router.get(
+  "/:id/historico-arquivamento",
+  authMiddleware,
+  requirePermission("LIST_USERS"),
+  usersController.getHistoricoArquivamentoPorId
 );
 
 module.exports = router;
