@@ -1,13 +1,23 @@
 // src/services/email.service.js
-const { Resend } = require("resend");
+let resend = null;
 
-// 1. Inicializa o cliente Resend com a chave API
-const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_123");
+try {
+  const { Resend } = require("resend");
+  // 1. Inicializa o cliente Resend com a chave API
+  resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_123");
+} catch (e) {
+  console.warn("[EMAIL] Resend module not found or failed to initialize. Email services may be unavailable.");
+}
 
 /**
  * Função de envio base
  */
 async function enviarEmailBase(to, subject, text, cc = undefined) {
+  if (!resend) {
+    console.warn("⚠️ [EMAIL] Resend não disponível. Abortando envio.");
+    return null;
+  }
+
   const { MAIL_FROM } = process.env;
 
   if (!process.env.RESEND_API_KEY) {
@@ -352,7 +362,7 @@ FENAPRF
         text: corpo,
         attachments: [{ filename: `relatorio_assembleia_${assembleia.id.slice(0, 8)}.pdf`, content: pdfBuffer.toString("base64") }],
       };
-      const resUser = await resend.emails.send(payloadUser);
+      const resUser = resend ? await resend.emails.send(payloadUser) : { error: "Resend not available" };
       if (resUser.error) throw resUser.error;
       console.log("📧 [emailRelatorioUserOk]", resUser.data.id);
     } catch (err) {
@@ -390,8 +400,10 @@ FENAPRF
         </div>
       `,
     };
-    await resend.emails.send(payloadSindicato);
-    console.log("📧 [emailRelatorioNotifSindicatoOk]");
+    if (resend) {
+      await resend.emails.send(payloadSindicato);
+      console.log("📧 [emailRelatorioNotifSindicatoOk]");
+    }
   } catch (err) {
     console.error("💥 [emailRelatorioNotifSindicatoErro]", err.message);
     // Falha na notificação não derruba o fluxo principal
@@ -432,14 +444,14 @@ FENAPRF
         text: corpo,
         attachments
       };
-      const res = await resend.emails.send(payload);
+      const res = resend ? await resend.emails.send(payload) : { error: "Resend not available" };
       if (res.error) throw res.error;
       console.log("📧 [emailRelatorioOk] enviado para", emailDestino, "com BCC para", unionEmail);
     } catch (err) {
       console.error("💥 [emailRelatorioErro]", err);
       throw new Error(`Falha ao enviar e-mail do relatório: ${err.message}`);
     }
-  } else {
+  } else if (resend) {
     // Se o solicitante não tem e-mail, envia apenas para o sindicato
     try {
       await resend.emails.send({

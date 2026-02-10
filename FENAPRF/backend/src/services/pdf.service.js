@@ -425,7 +425,7 @@ async function gerarPdfRelatorioAssembleia(dados) {
 
     // Título e Cabeçalho do Relatório
     doc.moveDown(2);
-    doc.font("Helvetica-Bold").fontSize(16).text("Relatório de Assembleia", { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(16).text("ATA DE ASSEMBLEIA (Consolidado)", { align: "center" });
     doc.moveDown(0.5);
 
     // Carimbo de Geração
@@ -459,7 +459,9 @@ async function gerarPdfRelatorioAssembleia(dados) {
     doc.font("Helvetica").fontSize(10);
     if (dados.mesa) {
         doc.text(`Presidente: ${dados.mesa.presidente_nome || '-'}`);
-        doc.text(`Secretário: ${dados.mesa.secretario_nome || '-'}`);
+        doc.text(`Vice-Presidente: ${dados.mesa.vice_presidente_nome || '-'}`);
+        doc.text(`1º Secretário: ${dados.mesa.secretario_nome || '-'}`);
+        doc.text(`2º Secretário: ${dados.mesa.secretario_2_nome || '-'}`);
     } else {
         doc.text("Mesa não definida.");
     }
@@ -526,6 +528,35 @@ async function gerarPdfRelatorioAssembleia(dados) {
         });
     } else {
         doc.font("Helvetica").fontSize(10).text("Nenhum item votado.");
+    }
+    doc.moveDown(1);
+
+    linha(doc);
+
+    // Histórico e Intervenções
+    doc.font("Helvetica-Bold").fontSize(12).text("5. Histórico, Intervenções e Ocorrências");
+    doc.moveDown(0.5);
+    if (dados.auditoria && dados.auditoria.length > 0) {
+        const logsRelevantes = dados.auditoria.filter(a =>
+            ['ASSEMBLEIA_SUSPENSA', 'ASSEMBLEIA_RETOMADA', 'MESA_SUBSTITUIDA', 'PALAVRA_CONCEDIDA'].includes(a.evento)
+        );
+
+        if (logsRelevantes.length > 0) {
+            logsRelevantes.forEach(l => {
+                const time = new Date(l.criado_em).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                const actingAs = l.payload?._acting_as ? `[${l.payload._acting_as}] ` : '';
+                let desc = l.evento;
+                if (l.evento === 'ASSEMBLEIA_SUSPENSA') desc = `SUSPENSÃO: ${l.payload?.motivo}`;
+                if (l.evento === 'ASSEMBLEIA_RETOMADA') desc = `RETOMADA DOS TRABALHOS`;
+                if (l.evento === 'PALAVRA_CONCEDIDA') desc = `PALAVRA CONCEDIDA a ${l.user_nome || 'membro'}`;
+
+                doc.font("Helvetica").fontSize(9).text(`${time} - ${actingAs}${desc}`, { align: "left" });
+            });
+        } else {
+            doc.font("Helvetica").fontSize(10).text("Nenhuma ocorrência registrada.");
+        }
+    } else {
+        doc.font("Helvetica").fontSize(10).text("Sem registros de auditoria.");
     }
 
     doc.end();

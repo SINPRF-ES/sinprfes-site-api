@@ -254,7 +254,7 @@ async function abrir(req, res) {
   const start = Date.now();
   try {
     const atualizada = await service.abrir(req.params.id, req.user.id);
-    socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "ABERTA" });
+    socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "EM_CREDENCIAMENTO" });
 
     log.info("AssembleiaAbrirSucesso", { requestId: req.requestId, assembleiaId: req.params.id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json(atualizada);
@@ -270,7 +270,7 @@ async function iniciarExecucao(req, res) {
   const start = Date.now();
   try {
     const atualizada = await service.iniciarExecucao(req.params.id, req.user.id);
-    socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "EM_CURSO" });
+    socket.emitEvent(req.params.id, "assembleia:status_changed", { estado: "INICIADO" });
 
     log.info("AssembleiaIniciarExecucaoSucesso", { requestId: req.requestId, assembleiaId: req.params.id, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json(atualizada);
@@ -279,6 +279,39 @@ async function iniciarExecucao(req, res) {
     const isTransitionError = err.message.includes(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     const status = isTransitionError ? 409 : 422;
     res.status(status).json({ error: err.message });
+  }
+}
+
+async function suspender(req, res) {
+  const start = Date.now();
+  try {
+    const { id } = req.params;
+    const { motivo, data_hora_retorno } = req.body;
+    if (!motivo) return res.status(400).json({ error: "O motivo da suspensão é obrigatório." });
+
+    const atualizada = await service.suspender(id, req.user.id, motivo, data_hora_retorno);
+    socket.emitEvent(id, "assembleia:status_changed", { estado: "SUSPENSA", suspensao_motivo: motivo, data_hora_retorno });
+
+    log.info("AssembleiaSuspenderSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
+    res.json(atualizada);
+  } catch (err) {
+    log.error("AssembleiaSuspenderErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function retomar(req, res) {
+  const start = Date.now();
+  try {
+    const { id } = req.params;
+    const atualizada = await service.retomar(id, req.user.id);
+    socket.emitEvent(id, "assembleia:status_changed", { estado: "INICIADO" });
+
+    log.info("AssembleiaRetomarSucesso", { requestId: req.requestId, assembleiaId: id, userId: req.user.id, elapsedMs: Date.now() - start });
+    res.json(atualizada);
+  } catch (err) {
+    log.error("AssembleiaRetomarErro", { requestId: req.requestId, assembleiaId: req.params.id, error: err.message });
+    res.status(500).json({ error: err.message });
   }
 }
 
@@ -308,10 +341,16 @@ async function gerarTokenQuorum(req, res) {
   const start = Date.now();
   const { id } = req.params;
   try {
-    const { tipo_chamada, observacao } = req.body;
+    const { tipo_chamada, observacao, is_global } = req.body;
 
     // Validação de autoridade: Presidente ou Diretoria
-    const { autorizada } = await verificarAutoridadeMesa(id, req.user);
+    // O QR Global só pode ser gerado pela Diretoria (Secretaria)
+    const { autorizada, isDiretoria } = await verificarAutoridadeMesa(id, req.user);
+
+    if (is_global && !isDiretoria) {
+        return res.status(403).json({ error: "Apenas a Diretoria de Secretaria pode gerar o QR Code Global." });
+    }
+
     if (!autorizada) {
       return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
     }
@@ -323,7 +362,7 @@ async function gerarTokenQuorum(req, res) {
       return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
     }
 
-    const tiposValidos = ['PRIMEIRA', 'SEGUNDA', 'RECONTAGEM'];
+    const tiposValidos = ['PRIMEIRA', 'SEGUNDA', 'RECONTAGEM', 'GLOBAL'];
     const tipoFinal = (tipo_chamada || 'PRIMEIRA').toUpperCase();
 
     if (!tiposValidos.includes(tipoFinal)) {
@@ -337,7 +376,8 @@ async function gerarTokenQuorum(req, res) {
       token,
       gerado_por_user_id: req.user.id,
       tipo_chamada: tipoFinal,
-      observacao
+      observacao,
+      is_global: !!is_global || tipoFinal === 'GLOBAL'
     });
 
     // Buscar estado consolidado para retorno rico (evita double fetch no app)
@@ -499,20 +539,28 @@ async function definirMesa(req, res) {
   const start = Date.now();
   try {
     const { id } = req.params;
-    const { presidente_user_id, secretario_user_id } = req.body;
+    const {
+        presidente_user_id,
+        vice_presidente_user_id,
+        secretario_user_id,
+        secretario_2_user_id
+    } = req.body;
 
-    if (!presidente_user_id || !secretario_user_id) {
-      return res.status(400).json({ error: "Presidente e Secretário são obrigatórios" });
+    if (!presidente_user_id || !vice_presidente_user_id || !secretario_user_id || !secretario_2_user_id) {
+      return res.status(400).json({ error: "Todos os 4 membros da mesa são obrigatórios" });
     }
 
-    if (presidente_user_id === secretario_user_id) {
-      return res.status(400).json({ error: "Presidente e Secretário devem ser pessoas diferentes" });
+    const ids = [presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id];
+    if (new Set(ids).size !== 4) {
+      return res.status(400).json({ error: "Os membros da mesa devem ser pessoas diferentes" });
     }
 
     const mesa = await service.definirMesa({
       assembleia_id: id,
       presidente_user_id,
+      vice_presidente_user_id,
       secretario_user_id,
+      secretario_2_user_id,
       definida_por_user_id: req.user.id
     });
 
@@ -533,25 +581,34 @@ async function substituirMesa(req, res) {
   const start = Date.now();
   try {
     const { id } = req.params;
-    const { presidente_user_id, secretario_user_id, justificativa } = req.body;
+    const {
+        presidente_user_id,
+        vice_presidente_user_id,
+        secretario_user_id,
+        secretario_2_user_id,
+        justificativa
+    } = req.body;
 
     // Apenas DIRETORIA pode substituir a mesa. Presidente (se não for DIRETORIA) não pode.
     if (req.user.perfil_acesso !== 'DIRETORIA' && req.user.perfil_acesso !== 'ADMIN') {
         return res.status(403).json({ error: "Apenas a Diretoria pode destituir ou alterar a mesa." });
     }
 
-    if (!presidente_user_id || !secretario_user_id || !justificativa) {
-      return res.status(400).json({ error: "Presidente, Secretário e Justificativa são obrigatórios" });
+    if (!presidente_user_id || !vice_presidente_user_id || !secretario_user_id || !secretario_2_user_id || !justificativa) {
+      return res.status(400).json({ error: "Todos os membros e a Justificativa são obrigatórios" });
     }
 
-    if (presidente_user_id === secretario_user_id) {
-      return res.status(400).json({ error: "Presidente e Secretário devem ser pessoas diferentes" });
+    const ids = [presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id];
+    if (new Set(ids).size !== 4) {
+      return res.status(400).json({ error: "Os membros da mesa devem ser pessoas diferentes" });
     }
 
     const mesa = await service.substituirMesa({
       assembleia_id: id,
       presidente_user_id,
+      vice_presidente_user_id,
       secretario_user_id,
+      secretario_2_user_id,
       substituida_por_user_id: req.user.id,
       justificativa
     });
@@ -1112,6 +1169,8 @@ module.exports = {
   abrir,
   iniciarExecucao,
   encerrarAssembleia,
+  suspender,
+  retomar,
   gerarTokenQuorum,
   atualizarQuorum,
   checkin,
