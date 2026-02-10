@@ -2,7 +2,8 @@ import { CARGOS_CONSELHO } from '../utils/user';
 
 export const STATUS_EVENTO = {
   ATIVO: 'ativo',
-  ENCERRADO: 'encerrado'
+  ENCERRADO: 'encerrado',
+  CANCELADO: 'cancelado'
 } as const;
 
 export const ACOES_AUDITORIA = {

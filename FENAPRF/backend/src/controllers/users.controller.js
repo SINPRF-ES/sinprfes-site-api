@@ -454,6 +454,28 @@ exports.atualizarUser = async (req, res) => {
   }
 };
 
+exports.listarHistoricoArquivamento = async (req, res) => {
+  try {
+    const { q } = req.query;
+    const historico = await usersService.listarHistoricoMovimentacoes(null, q);
+    res.json(historico);
+  } catch (err) {
+    log.error("UsersHistoricoArquivamentoErro", err);
+    res.status(500).json({ message: "Erro ao listar histórico de arquivamento." });
+  }
+};
+
+exports.getHistoricoArquivamentoPorId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const historico = await usersService.listarHistoricoMovimentacoes(id);
+    res.json(historico);
+  } catch (err) {
+    log.error("UsersHistoricoArquivamentoPorIdErro", err);
+    res.status(500).json({ message: "Erro ao obter histórico do membro." });
+  }
+};
+
 /**
  * POST /api/users
  */

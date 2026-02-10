@@ -173,7 +173,7 @@ exports.listCampaigns = async (req, res) => {
 
   try {
     const includeArchived = req.query?.includeArchived === '1';
-    const limit = includeArchived ? 50 : 5;
+    const limit = includeArchived ? 1000 : 5;
 
     const campaigns = await pushCampaignService.listCampaigns(limit);
     return res.json({ success: true, campaigns });
