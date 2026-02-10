@@ -120,6 +120,11 @@ export default function NotificacoesPushScreen() {
   };
 
   const handleSend = () => {
+    if (!title.trim()) {
+      Alert.alert('Erro', 'O título da notificação é obrigatório.');
+      return;
+    }
+
     if (!body.trim()) {
       Alert.alert('Erro', 'O corpo da mensagem é obrigatório.');
       return;
@@ -153,11 +158,11 @@ export default function NotificacoesPushScreen() {
 
   const sendNotification = async () => {
     // Garantir que title/body sejam strings (evitar booleans acidentais)
-    const sanitizedTitle = title ? String(title).trim() : '';
-    const sanitizedBody = body ? String(body).trim() : '';
+    const sanitizedTitle = String(title || '').trim();
+    const sanitizedBody = String(body || '').trim();
 
     const payload = {
-      title: sanitizedTitle || null,
+      title: sanitizedTitle,
       body: sanitizedBody,
       targetType: targetType,
       targetValue: targetValue || null
@@ -167,10 +172,7 @@ export default function NotificacoesPushScreen() {
       endpoint: '/api/push/campaigns/send',
       titleLength: sanitizedTitle.length,
       bodyLength: sanitizedBody.length,
-      types: {
-        title: typeof payload.title,
-        body: typeof payload.body
-      }
+      targetType: payload.targetType
     });
 
     setLoading(true);
@@ -374,11 +376,13 @@ export default function NotificacoesPushScreen() {
                 style={styles.picker}
             >
                 <Picker.Item label="Todos com app" value="ALL" />
-                {Canon.FILTROS_MEMBROS.map((f) => (
-                  <Picker.Item key={f.value} label={f.label} value={f.value} />
-                ))}
+                {Canon.FILTROS_MEMBROS
+                  .filter(f => !['ADMIN_COLAB', 'ADMIN', 'COLABORADOR', 'JOGOS'].includes(f.value))
+                  .map((f) => (
+                    <Picker.Item key={f.value} label={f.label} value={f.value} />
+                  ))
+                }
                 <Picker.Item label="Individual (Pesquisar)" value="USER" />
-                <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
             </Picker>
           </PickerWrapper>
 

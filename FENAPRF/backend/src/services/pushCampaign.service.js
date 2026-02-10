@@ -163,7 +163,7 @@ async function saveCampaignRecord({ title, body, targetType, targetValue, data, 
 
 async function listCampaigns(limit = 20, offset = 0) {
   const sql = `
-    SELECT c.*, f.nome as autor_nome
+    SELECT c.*, f.name as autor_nome
     FROM push_campaigns c
     LEFT JOIN users f ON c.created_by::text = f.id::text
     ORDER BY c.created_at DESC

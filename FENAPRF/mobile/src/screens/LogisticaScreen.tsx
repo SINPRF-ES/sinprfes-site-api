@@ -115,7 +115,7 @@ const LogisticaScreen = ({ route }: any) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter]);
 
   const fetchInscricoes = useCallback(async () => {
     if (!eventoSelecionado) return;
@@ -860,7 +860,6 @@ const styles = StyleSheet.create({
   },
   filterPickerWrapper: {
     flex: 1,
-    height: 40,
     justifyContent: 'center',
   },
   filterPicker: {

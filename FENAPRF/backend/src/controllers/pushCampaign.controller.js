@@ -54,7 +54,7 @@ exports.sendCampaign = async (req, res) => {
       }
     }
 
-    const allowedTargetTypes = ['ALL', 'UF', 'JOGOS', 'USER'];
+    const allowedTargetTypes = ['ALL', 'UF', 'JOGOS', 'USER', 'PADRAO', 'DIRETORIA', 'PRESIDENTES', 'VICES', 'DR', 'DS', 'ADMIN_COLAB'];
     if (targetType && !allowedTargetTypes.includes(targetType)) {
       errors.targetType = `Tipo de alvo inválido. Permitidos: ${allowedTargetTypes.join(', ')}`;
     }
