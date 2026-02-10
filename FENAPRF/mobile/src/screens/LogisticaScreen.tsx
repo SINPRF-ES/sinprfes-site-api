@@ -515,6 +515,7 @@ const LogisticaScreen = ({ route }: any) => {
             selectedValue={statusFilter}
             onValueChange={(v) => setStatusFilter(v)}
             style={styles.filterPicker}
+            itemStyle={Platform.OS === 'android' ? { height: 52 } : undefined}
           >
             <Picker.Item label="Ativos" value={STATUS_EVENTO.ATIVO} />
             <Picker.Item label="Encerrados" value={STATUS_EVENTO.ENCERRADO} />
@@ -563,14 +564,20 @@ const LogisticaScreen = ({ route }: any) => {
                             style={[
                               styles.selectorChip,
                               eventoSelecionado?.id === e.id && styles.selectorChipActive,
-                              statusFilter === 'ALL' && e.status === STATUS_EVENTO.ENCERRADO && { borderColor: '#FFC107', borderWidth: 1 },
-                              statusFilter === 'ALL' && e.status === STATUS_EVENTO.CANCELADO && { borderColor: '#D32F2F', borderWidth: 1 },
                             ]}
                             onPress={() => setEventoSelecionado(e)}
                         >
-                            <Text style={[styles.selectorChipText, eventoSelecionado?.id === e.id && styles.selectorChipTextActive]}>
-                                {e.titulo} {statusFilter === 'ALL' && `(${e.status === STATUS_EVENTO.ATIVO ? 'Ativo' : (e.status === STATUS_EVENTO.ENCERRADO ? 'Encerrado' : 'Cancelado')})`}
-                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={[styles.selectorChipText, eventoSelecionado?.id === e.id && styles.selectorChipTextActive]}>
+                                  {e.titulo}
+                              </Text>
+                              <Badge
+                                label={e.status === STATUS_EVENTO.ATIVO ? 'Ativo' : (e.status === STATUS_EVENTO.ENCERRADO ? 'Encerrado' : 'Cancelado')}
+                                variant={e.status === STATUS_EVENTO.ATIVO ? 'success' : (e.status === STATUS_EVENTO.ENCERRADO ? 'warning' : 'error')}
+                                style={{ paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 }}
+                                textStyle={{ fontSize: 9 }}
+                              />
+                            </View>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
@@ -742,6 +749,7 @@ const LogisticaScreen = ({ route }: any) => {
                     selectedValue={formEvento.assembleia_id}
                     onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
                     style={styles.picker}
+                    itemStyle={Platform.OS === 'android' ? { height: 52 } : undefined}
                 >
                     <Picker.Item label="Nenhuma" value="" />
                     {assembleias.map(a => (

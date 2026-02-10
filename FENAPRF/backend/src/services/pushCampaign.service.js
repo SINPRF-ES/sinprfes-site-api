@@ -14,15 +14,27 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   const startTime = new Date();
   log.info("PushCampaign.Iniciado", { requestId, userId: createdBy, perfil, title, body, targetType, targetValue });
 
-  // 1. Buscar tokens
+  // 1. Buscar tokens e Normalizar TargetValue
   let tokens;
   let noTokenOrDenied = 0;
+  let normalizedTargetValue = targetValue;
+
   try {
-    tokens = await pushService.resolvePushTargets(targetType, targetValue);
-    noTokenOrDenied = await pushService.countNoTokenTargets(targetType, targetValue);
-    log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { count: tokens.length, noTokenOrDenied });
+    // Se for USER, vamos tentar normalizar para array se vier como objeto com chaves numéricas
+    if (targetType === 'USER' && targetValue && typeof targetValue === 'object' && !Array.isArray(targetValue)) {
+        if (targetValue.id) {
+            normalizedTargetValue = [targetValue];
+        } else {
+            normalizedTargetValue = Object.values(targetValue);
+        }
+        log.info('PushCampaign.NormalizedTargetValue', { requestId, before: typeof targetValue, after: Array.isArray(normalizedTargetValue) });
+    }
+
+    tokens = await pushService.resolvePushTargets(targetType, normalizedTargetValue);
+    noTokenOrDenied = await pushService.countNoTokenTargets(targetType, normalizedTargetValue);
+    log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { requestId, count: tokens.length, noTokenOrDenied });
   } catch (e) {
-    log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
+    log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message, stack: e.stack });
     throw e;
   }
 
@@ -123,7 +135,9 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   let campaignId;
   try {
     campaignId = await saveCampaignRecord({
-        title, body, targetType, targetValue, data, createdBy,
+        title, body, targetType,
+        targetValue: normalizedTargetValue,
+        data, createdBy,
         status: (errorCount === messages.length && messages.length > 0) ? 'FAILED' : 'SENT',
         sentAt: new Date(),
         result: resultData
