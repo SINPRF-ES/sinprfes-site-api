@@ -92,6 +92,9 @@ describe('Assembleias Service', () => {
       // Mock for registrarAuditoria mesa checks (if called via pool)
       pool.query.mockResolvedValue({ rows: [] });
 
+      // Mock for registrarAuditoria mesa checks (called within service)
+      pool.query.mockResolvedValue({ rows: [] });
+
       const result = await service.encerrar('1', 1);
       expect(result.estado).toBe('ENCERRADO');
       expect(mockClient.query).toHaveBeenCalledWith(expect.stringMatching(/BEGIN/));
