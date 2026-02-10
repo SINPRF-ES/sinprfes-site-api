@@ -75,20 +75,22 @@ describe('Assembleias Service', () => {
     });
 
     test('encerrar should transition to ENCERRADO and auto-close active votations', async () => {
-      // client.query calls
-      mockClient.query
-        .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'INICIADO' }] }) // SELECT FOR UPDATE
-        .mockResolvedValueOnce({ rows: [{ id: 'v1' }] }) // active votations
-        .mockResolvedValueOnce({ rowCount: 1 }) // abstenções
-        .mockResolvedValueOnce({ rows: [] }) // UPDATE status item
-        .mockResolvedValueOnce({ rows: [] }) // audit item (1st call in finalize)
-        .mockResolvedValueOnce({ rows: [] }) // audit item (2nd call in finalize)
-        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ENCERRADO' }] }) // UPDATE assembleia
-        .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum
-        .mockResolvedValueOnce({ rows: [] }) // audit ass 1
-        .mockResolvedValueOnce({ rows: [] }) // audit ass 2
-        .mockResolvedValueOnce({ rows: [] }); // COMMIT
+      // Functional mock to be resilient to call order
+      mockClient.query.mockImplementation((sql) => {
+        if (sql.includes('SELECT estado FROM assembleias')) {
+          return Promise.resolve({ rows: [{ id: '1', estado: 'INICIADO' }] });
+        }
+        if (sql.includes('UPDATE assembleias SET estado = \'ENCERRADO\'')) {
+          return Promise.resolve({ rows: [{ id: '1', estado: 'ENCERRADO' }] });
+        }
+        if (sql.includes('SELECT id FROM assembleia_votacoes')) {
+          return Promise.resolve({ rows: [{ id: 'v1' }] });
+        }
+        return Promise.resolve({ rows: [], rowCount: 1 });
+      });
+
+      // Mock for registrarAuditoria mesa checks (if called via pool)
+      pool.query.mockResolvedValue({ rows: [] });
 
       // Mock for registrarAuditoria mesa checks (called within service)
       pool.query.mockResolvedValue({ rows: [] });

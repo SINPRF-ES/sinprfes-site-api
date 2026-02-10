@@ -34,6 +34,10 @@ function normalizarAssembleia(assembleia) {
   return assembleia;
 }
 
+// Cache simples em memória para Mesa (Performance Audit)
+const mesaCache = new Map();
+const MESA_CACHE_TTL = 30000; // 30 segundos
+
 /**
  * Registra um evento de auditoria no sistema de assembleias.
  * Tabela assembleia_auditoria é APPEND-ONLY: updates e deletes são proibidos por política de dados.
@@ -42,13 +46,20 @@ async function registrarAuditoria(assembleiaId, userId, evento, payload, client 
   const db = client || pool;
   const env = process.env.ASSEMBLEIA_ENV || "dev";
   try {
-    const { rows: mesaRows } = await db.query(
-      "SELECT presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id FROM assembleia_mesa WHERE assembleia_id = $1",
-      [assembleiaId]
-    );
-    const mesa = mesaRows[0];
+    // Otimização: Busca Mesa com cache para reduzir carga no DB em logs frequentes
+    let mesa = mesaCache.get(assembleiaId);
+    if (!mesa || (Date.now() - mesa._cachedAt > MESA_CACHE_TTL)) {
+        const { rows } = await db.query(
+            "SELECT presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id FROM assembleia_mesa WHERE assembleia_id = $1",
+            [assembleiaId]
+        );
+        mesa = rows[0] || { _none: true };
+        mesa._cachedAt = Date.now();
+        mesaCache.set(assembleiaId, mesa);
+    }
+
     let actingAs = null;
-    if (mesa) {
+    if (mesa && !mesa._none) {
       if (mesa.presidente_user_id === userId) {
         actingAs = "Presidente";
       } else if (mesa.vice_presidente_user_id === userId) {
