@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
+import CanonicalPicker from '../components/CanonicalPicker';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 import { registrarInscricaoJogos, cancelarInscricaoJogos, getInscricoesJogos } from '../services/jogosService';
@@ -173,21 +173,18 @@ const JogosScreen = () => {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Minha Inscrição</Text>
-          <Text style={styles.label}>Sexo</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={form.sexo}
-              onValueChange={(v) => setForm({ ...form, sexo: v })}
-              style={styles.picker}
-              dropdownIconColor="#003366"
-            >
-              <Picker.Item label="Selecione..." value="" color="#999" />
-              <Picker.Item label="Masculino" value="MASCULINO" />
-              <Picker.Item label="Feminino" value="FEMININO" />
-            </Picker>
-          </View>
+          <Text style={styles.label}>Sexo *</Text>
+          <CanonicalPicker
+            selectedValue={form.sexo}
+            onValueChange={(v) => setForm({ ...form, sexo: v })}
+            placeholder="Selecione..."
+            items={[
+              { label: 'Masculino', value: 'MASCULINO' },
+              { label: 'Feminino', value: 'FEMININO' }
+            ]}
+          />
 
-          <Text style={[styles.label, { marginTop: 10 }]}>Modalidades</Text>
+          <Text style={[styles.label, { marginTop: 15 }]}>Modalidades</Text>
           {(() => {
             const agruparModalidades = (lista: any[]) => {
               return lista.reduce((acc, item) => {

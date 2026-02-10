@@ -15,7 +15,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import * as Canon from '../utils/user';
 import { normalizeText, maskCPF } from '../utils/format';
 import { useAuth } from '../hooks/useAuth';
@@ -24,7 +23,7 @@ import { logger } from '../infra/logger';
 import { UFS } from '../utils/user';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import PickerWrapper from '../components/PickerWrapper';
+import CanonicalPicker from '../components/CanonicalPicker';
 
 interface Campaign {
   id: string;
@@ -182,11 +181,25 @@ export default function NotificacoesPushScreen() {
     const sanitizedTitle = String(title || '').trim();
     const sanitizedBody = String(body || '').trim();
 
+    // Normalização defensiva do targetValue conforme o targetType
+    let normalizedTargetValue = targetValue;
+    if (targetType === 'USER') {
+      if (Array.isArray(targetValue)) {
+        normalizedTargetValue = targetValue.map((u: any) => u.id).filter(id => !!id);
+      } else if (targetValue && typeof targetValue === 'object') {
+        normalizedTargetValue = [targetValue.id];
+      } else {
+        normalizedTargetValue = [];
+      }
+    } else if (targetType === 'ALL') {
+      normalizedTargetValue = null;
+    }
+
     const payload = {
       title: sanitizedTitle,
       body: sanitizedBody,
       targetType: targetType,
-      targetValue: targetValue || null
+      targetValue: normalizedTargetValue
     };
 
     logger.info('Push.SendStart', {
@@ -376,38 +389,29 @@ export default function NotificacoesPushScreen() {
           <Text style={styles.cardTitle}>📢 Nova Notificação</Text>
 
           <Text style={styles.label}>Público de Destino</Text>
-          <PickerWrapper style={styles.pickerWrapper}>
-            <Picker
-                selectedValue={targetType}
-                onValueChange={(v) => {
-                  setTargetType(v);
-                  setTargetValue(v === 'UF' ? UFS[0] : (v === 'USER' ? [] : ''));
-                }}
-                style={styles.picker}
-            >
-                <Picker.Item label="Todos com app" value="ALL" />
-                {Canon.FILTROS_MEMBROS
-                  .filter(f => !['ADMIN_COLAB', 'ADMIN', 'COLABORADOR', 'JOGOS'].includes(f.value))
-                  .map((f) => (
-                    <Picker.Item key={f.value} label={f.label} value={f.value} />
-                  ))
-                }
-                <Picker.Item label="Individual (Pesquisar)" value="USER" />
-            </Picker>
-          </PickerWrapper>
+          <CanonicalPicker
+            selectedValue={targetType}
+            onValueChange={(v) => {
+              setTargetType(v);
+              setTargetValue(v === 'UF' ? UFS[0] : (v === 'USER' ? [] : ''));
+            }}
+            wrapperStyle={styles.pickerWrapper}
+            items={[
+              { label: 'Todos com app', value: 'ALL' },
+              ...Canon.FILTROS_MEMBROS
+                .filter(f => !['ADMIN_COLAB', 'ADMIN', 'COLABORADOR', 'JOGOS'].includes(f.value))
+                .map((f) => ({ label: f.label, value: f.value })),
+              { label: 'Individual (Pesquisar)', value: 'USER' }
+            ]}
+          />
 
           {targetType === 'UF' && (
-             <PickerWrapper style={styles.pickerWrapper}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    {UFS.map((opt) => (
-                      <Picker.Item key={opt} label={opt} value={opt} />
-                    ))}
-                </Picker>
-             </PickerWrapper>
+             <CanonicalPicker
+                selectedValue={targetValue}
+                onValueChange={setTargetValue}
+                wrapperStyle={styles.pickerWrapper}
+                items={UFS.map(opt => ({ label: opt, value: opt }))}
+             />
           )}
 
           {targetType === 'USER' && (
