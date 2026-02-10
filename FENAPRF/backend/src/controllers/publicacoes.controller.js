@@ -52,25 +52,49 @@ exports.listar = async (req, res) => {
 /**
  * Faz o streaming de um arquivo do Google Drive para o cliente.
  */
+/**
+ * Faz o streaming de um arquivo do Google Drive para o cliente.
+ */
 exports.visualizar = async (req, res) => {
   const fileId = req.params.id;
+
   try {
     const dados = await obterArquivoStream(fileId);
 
-    // Configura o cabeçalho para o navegador entender que é um PDF/Imagem
-    res.setHeader("Content-Type", dados.mimeType);
-    res.setHeader("Content-Disposition", `inline; filename="${dados.name}"`);
+    // Content-Type correto
+    res.setHeader("Content-Type", dados.mimeType || "application/octet-stream");
 
-    // Envia o arquivo como um fluxo de dados (pipe)
+    // ✅ Evita crash por caracteres inválidos no filename (acentos, unicode, CR/LF, etc.)
+    // Para o app mobile, não precisamos informar filename aqui.
+    res.setHeader("Content-Disposition", "inline");
+
+    // Pipe do stream
+    dados.stream.on("error", (e) => {
+      log.error("ErroStreamArquivoDrive", { message: e.message, fileId });
+      if (!res.headersSent) res.status(500);
+      res.end();
+    });
+
     dados.stream.pipe(res);
-
   } catch (err) {
+    // Diferenciar "não encontrado" de erro interno
+    const msg = err?.message || "";
+
     log.error("ErroVisualizarArquivo", {
-      message: err.message,
+      message: msg,
       fileId,
       path: "/api/publicacoes/arquivo"
     });
 
-    return res.status(404).json({ error: "Arquivo não encontrado" });
+    // Se você tiver um erro específico do Drive para 404, trate aqui.
+    // Sem isso, não masque erro interno como 404.
+    const isNotFound =
+      msg.includes("notFound") ||
+      msg.includes("File not found") ||
+      msg.includes("Requested entity was not found");
+
+    return res.status(isNotFound ? 404 : 500).json({
+      error: isNotFound ? "Arquivo não encontrado" : "Falha ao abrir o arquivo"
+    });
   }
 };
