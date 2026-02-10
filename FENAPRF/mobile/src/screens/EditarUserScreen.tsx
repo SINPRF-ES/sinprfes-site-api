@@ -30,6 +30,7 @@ const canEditorEditTargetCore = (editorPerfil: string, targetPerfil: string) => 
   const e = (editorPerfil || "").toUpperCase();
   const t = (targetPerfil || "").toUpperCase();
   if (e === 'ADMIN') return true;
+  if (e === 'COLABORADOR') return t !== 'ADMIN';
   return (PERFIL_RANK[e] || 0) > (PERFIL_RANK[t] || 0);
 };
 
@@ -106,6 +107,15 @@ export default function EditarUserScreen({ route, navigation }: any) {
     if (isCouncil && !user.cargo) {
       Alert.alert('Erro de Validação', 'O cargo é obrigatório para este perfil.');
       return;
+    }
+
+    if (user.cargo_mandato_inicio && user.cargo_mandato_fim) {
+        const d1 = new Date(user.cargo_mandato_inicio.includes('-') ? user.cargo_mandato_inicio : user.cargo_mandato_inicio.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
+        const d2 = new Date(user.cargo_mandato_fim.includes('-') ? user.cargo_mandato_fim : user.cargo_mandato_fim.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
+        if (d2 < d1) {
+            Alert.alert('Erro de Validação', 'A data de término do mandato não pode ser anterior à data de início. Verifique as datas.');
+            return;
+        }
     }
 
     try {

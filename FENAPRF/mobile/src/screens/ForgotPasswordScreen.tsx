@@ -21,8 +21,8 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
       const response = await solicitarResetSenha(cpfLimpo);
-      Alert.alert('E-mail Enviado', response.message || 'Verifique seu e-mail e clique no link para redefinir sua senha.', [
-        { text: 'OK', onPress: () => navigation.navigate('ResetPassword' as any) },
+      Alert.alert('E-mail Enviado', response.message || 'Enviamos um link para seu e-mail.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
       Alert.alert('Erro', error.response?.data?.error || 'Não foi possível processar sua solicitação.');
@@ -61,12 +61,6 @@ export default function ForgotPasswordScreen() {
           onPress={handleRequestReset}
           disabled={loading}
           color="#FFC300"
-        />
-        <Button
-          title="Já tenho um código"
-          onPress={() => navigation.navigate('ResetPassword' as any)}
-          disabled={loading}
-          color="#003366"
         />
         <View style={{ height: 10 }} />
         <Button
