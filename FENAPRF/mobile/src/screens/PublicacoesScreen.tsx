@@ -10,10 +10,11 @@ import api from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import * as Sharing from 'expo-sharing';
 import { useNavigation } from '@react-navigation/native';
+import { EMOJIS } from '../utils/emoji';
 
 const PublicacoesScreen: React.FC = ({ route }: any) => {
   const navigation = useNavigation<any>();
-  const { mode, onSelectFile } = route.params || {};
+  const { mode, onSelectFile, returnTo } = route.params || {};
   const isPicker = mode === 'picker';
 
   const { token } = useAuth();
@@ -24,7 +25,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
 
   React.useEffect(() => {
     navigation.setOptions({
-      title: currentFolder.name,
+      title: `${EMOJIS.PUBLICACOES} ${currentFolder.name}`,
     });
   }, [navigation, currentFolder.name]);
 
@@ -78,13 +79,18 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       return;
     }
 
-    if (isPicker && onSelectFile) {
+    if (isPicker) {
         if (!file.mimeType?.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
             Alert.alert('Aviso', 'Por favor, selecione apenas arquivos PDF.');
             return;
         }
-        onSelectFile(file);
-        navigation.goBack();
+        if (onSelectFile) onSelectFile(file);
+
+        if (returnTo) {
+            navigation.navigate(returnTo, { selectedFile: file });
+        } else {
+            navigation.goBack();
+        }
         return;
     }
 

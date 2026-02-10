@@ -99,10 +99,15 @@ export default function FileViewerScreen({ route, navigation }: any) {
       const uriToShare = currentLocalUri || remoteUrl;
       logger.info('[file.share.start]', { fileId, uriToShare });
 
+      if (!uriToShare && !title) {
+        Alert.alert('Erro', 'Não foi possível compartilhar: arquivo indisponível.');
+        return;
+      }
+
       await Share.share({
         url: Platform.OS === 'ios' ? uriToShare : undefined,
-        message: Platform.OS === 'android' ? uriToShare : title,
-        title: title,
+        message: uriToShare || title || 'Documento FENAPRF',
+        title: title || 'Documento FENAPRF',
       });
       logger.info('[file.share.success]');
     } catch (err: any) {

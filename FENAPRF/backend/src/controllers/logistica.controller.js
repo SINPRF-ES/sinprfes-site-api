@@ -54,7 +54,7 @@ exports.criarEvento = async (req, res) => {
     const client = await pool.connect();
     try {
         const gestorId = getUserId(req);
-        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id } = req.body;
+        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, assembleia_id } = req.body;
 
         if (!titulo || !data_inicio || !data_fim) {
             return res.status(400).json({ error: "Título e datas são obrigatórios." });
@@ -63,11 +63,11 @@ exports.criarEvento = async (req, res) => {
         await client.query("BEGIN");
 
         const query = `
-            INSERT INTO logistica_eventos (titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO logistica_eventos (titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, assembleia_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
         `;
-        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, STATUS_EVENTO.ATIVO]);
+        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, STATUS_EVENTO.ATIVO, assembleia_id || null]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
@@ -96,7 +96,7 @@ exports.atualizarEvento = async (req, res) => {
     try {
         const { id } = req.params;
         const gestorId = getUserId(req);
-        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, justificativa } = req.body;
+        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, justificativa, assembleia_id } = req.body;
 
         if (!justificativa) {
             return res.status(400).json({ error: "Justificativa é obrigatória para alterações de gestão." });
@@ -110,11 +110,11 @@ exports.atualizarEvento = async (req, res) => {
 
         const query = `
             UPDATE logistica_eventos
-            SET titulo = $1, descricao = $2, data_inicio = $3, data_fim = $4, documento_url = $5, documento_id = $6, status = $7, atualizado_em = NOW()
-            WHERE id = $8
+            SET titulo = $1, descricao = $2, data_inicio = $3, data_fim = $4, documento_url = $5, documento_id = $6, status = $7, assembleia_id = $8, atualizado_em = NOW()
+            WHERE id = $9
             RETURNING *
         `;
-        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, id]);
+        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, assembleia_id || null, id]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
@@ -170,6 +170,12 @@ exports.registrarMinhaInscricao = async (req, res) => {
     const client = await pool.connect();
     try {
         const userId = getUserId(req);
+        const perfil = (req.user?.perfil_acesso || "").toUpperCase();
+
+        if (perfil === "ADMIN" || perfil === "COLABORADOR") {
+            return res.status(403).json({ error: "Perfil de gestão não participa de eventos." });
+        }
+
         const { evento_id, data_chegada, data_saida, observacoes } = req.body;
 
         if (!evento_id || !data_chegada || !data_saida) {
