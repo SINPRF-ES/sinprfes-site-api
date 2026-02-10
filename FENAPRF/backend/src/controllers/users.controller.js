@@ -694,6 +694,11 @@ exports.uploadAvatarPorId = async (req, res) => {
     const antes = await usersService.getMe(idAlvo);
     if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
+    // Regra de Hierarquia FENAPRF
+    if (!canEditorEditTarget(perfilAtor, antes.perfil_acesso)) {
+      return res.status(403).json({ message: "Você não tem permissão para alterar o avatar deste perfil." });
+    }
+
     const publicId = `fenaprf/avatars/user_${idAlvo}`;
     if (antes?.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
@@ -728,8 +733,16 @@ exports.removerAvatarPorId = async (req, res) => {
   if (id === null) return;
 
   try {
+    const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
+    if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+
     const antes = await usersService.getMe(id);
     if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
+
+    // Regra de Hierarquia FENAPRF
+    if (!canEditorEditTarget(perfilAtor, antes.perfil_acesso)) {
+      return res.status(403).json({ message: "Você não tem permissão para remover o avatar deste perfil." });
+    }
 
     if (antes.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
