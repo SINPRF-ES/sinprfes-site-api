@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { getAssembleiaEstado, definirMesa, substituirMesa } from '../../services/assembleiaService';
+import { getAssembleiaEstado, definirMesa, substituirMesa, iniciarVotacao } from '../../services/assembleiaService';
 import CanonicalPicker from '../../components/CanonicalPicker';
 import SafeScreen from '../../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,7 +12,9 @@ export default function ComporMesaScreen({ route, navigation }: any) {
   const [submitting, setSubmitting] = useState(false);
   const [presentes, setPresentes] = useState<any[]>([]);
   const [presidenteId, setPresidenteId] = useState('');
+  const [vicePresidenteId, setVicePresidenteId] = useState('');
   const [secretarioId, setSecretarioId] = useState('');
+  const [secretario2Id, setSecretario2Id] = useState('');
   const [justificativa, setJustificativa] = useState('');
 
   useEffect(() => {
@@ -29,8 +31,10 @@ export default function ComporMesaScreen({ route, navigation }: any) {
       }
 
       if (data.mesa) {
-          setPresidenteId((data.mesa as any).presidente_user_id?.toString() || '');
-          setSecretarioId((data.mesa as any).secretario_user_id?.toString() || '');
+          setPresidenteId(data.mesa.presidente_user_id?.toString() || '');
+          setVicePresidenteId(data.mesa.vice_presidente_user_id?.toString() || '');
+          setSecretarioId(data.mesa.secretario_user_id?.toString() || '');
+          setSecretario2Id(data.mesa.secretario_2_user_id?.toString() || '');
       }
 
       setLoading(false);
@@ -40,14 +44,42 @@ export default function ComporMesaScreen({ route, navigation }: any) {
     }
   };
 
-  const handleSalvar = async () => {
-    if (!presidenteId || !secretarioId) {
-      Alert.alert('Aviso', 'Selecione o Presidente e o Secretário.');
+  const handleProporVotacao = async () => {
+    if (!presidenteId || !vicePresidenteId || !secretarioId || !secretario2Id) {
+      Alert.alert('Aviso', 'Selecione todos os 4 membros da mesa.');
       return;
     }
 
-    if (presidenteId === secretarioId) {
-      Alert.alert('Aviso', 'Presidente e Secretário devem ser pessoas diferentes.');
+    const pName = presentes.find(p => String(p.id) === presidenteId)?.nome;
+    const vpName = presentes.find(p => String(p.id) === vicePresidenteId)?.nome;
+    const s1Name = presentes.find(p => String(p.id) === secretarioId)?.nome;
+    const s2Name = presentes.find(p => String(p.id) === secretario2Id)?.nome;
+
+    try {
+      setSubmitting(true);
+      await iniciarVotacao(id, {
+        titulo: 'Indicação da Mesa Diretora',
+        descricao: `Proposta de composição:\nPresidente: ${pName}\nVice-Presidente: ${vpName}\n1º Secretário: ${s1Name}\n2º Secretário: ${s2Name}`,
+        duracao_segundos: 120
+      });
+      Alert.alert('Sucesso', 'Votação de indicação da mesa iniciada na sala!');
+      navigation.navigate('AssembleiaSala', { id });
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao iniciar votação.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSalvar = async () => {
+    if (!presidenteId || !vicePresidenteId || !secretarioId || !secretario2Id) {
+      Alert.alert('Aviso', 'Selecione todos os 4 membros da mesa.');
+      return;
+    }
+
+    const ids = [presidenteId, vicePresidenteId, secretarioId, secretario2Id];
+    if (new Set(ids).size !== 4) {
+      Alert.alert('Aviso', 'Os membros da mesa devem ser pessoas diferentes.');
       return;
     }
 
@@ -58,11 +90,18 @@ export default function ComporMesaScreen({ route, navigation }: any) {
 
     try {
       setSubmitting(true);
+      const payload = {
+        presidente_user_id: presidenteId,
+        vice_presidente_user_id: vicePresidenteId,
+        secretario_user_id: secretarioId,
+        secretario_2_user_id: secretario2Id,
+      };
+
       if (substituir) {
-        await substituirMesa(id, { presidente_user_id: presidenteId, secretario_user_id: secretarioId, justificativa });
+        await substituirMesa(id, { ...payload, justificativa });
         Alert.alert('Sucesso', 'Mesa substituída com sucesso!');
       } else {
-        await definirMesa(id, { presidente_user_id: presidenteId, secretario_user_id: secretarioId });
+        await definirMesa(id, payload);
         Alert.alert('Sucesso', 'Mesa definida com sucesso!');
       }
       navigation.goBack();
@@ -99,10 +138,28 @@ export default function ComporMesaScreen({ route, navigation }: any) {
         items={presentes.map(p => ({ label: p.nome, value: String(p.id) }))}
       />
 
-      <Text style={styles.label}>Secretário da Mesa</Text>
+      <Text style={styles.label}>Vice-Presidente</Text>
+      <CanonicalPicker
+        selectedValue={vicePresidenteId}
+        onValueChange={setVicePresidenteId}
+        placeholder="Selecione..."
+        wrapperStyle={{ marginBottom: 20 }}
+        items={presentes.map(p => ({ label: p.nome, value: String(p.id) }))}
+      />
+
+      <Text style={styles.label}>1º Secretário</Text>
       <CanonicalPicker
         selectedValue={secretarioId}
         onValueChange={setSecretarioId}
+        placeholder="Selecione..."
+        wrapperStyle={{ marginBottom: 20 }}
+        items={presentes.map(p => ({ label: p.nome, value: String(p.id) }))}
+      />
+
+      <Text style={styles.label}>2º Secretário</Text>
+      <CanonicalPicker
+        selectedValue={secretario2Id}
+        onValueChange={setSecretario2Id}
         placeholder="Selecione..."
         wrapperStyle={{ marginBottom: 20 }}
         items={presentes.map(p => ({ label: p.nome, value: String(p.id) }))}
@@ -122,8 +179,14 @@ export default function ComporMesaScreen({ route, navigation }: any) {
         </>
       )}
 
+      {!substituir && (
+        <TouchableOpacity style={[styles.btnSalvar, { backgroundColor: '#27ae60' }]} onPress={handleProporVotacao} disabled={submitting}>
+            {submitting ? <ActivityIndicator color="#fff" /> : <Text style={[styles.btnText, { color: '#fff' }]}>Propor para Votação</Text>}
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>{substituir ? 'Confirmar Substituição' : 'Confirmar Mesa'}</Text>}
+        {submitting ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>{substituir ? 'Confirmar Substituição' : 'Confirmar Mesa (Pós-Votação)'}</Text>}
       </TouchableOpacity>
       </KeyboardAwareScrollView>
     </SafeScreen>

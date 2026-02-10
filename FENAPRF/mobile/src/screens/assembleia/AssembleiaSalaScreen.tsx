@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList, AppState, AppStateStatus } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAssembleiaEstado, getAssembleiaEstadoMini, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
+import { getAssembleiaEstado, getAssembleiaEstadoMini, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia, suspenderAssembleia, retomarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
 import { formatTimeSP } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
@@ -23,7 +23,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
   const isElegivel = ['DIRETORIA', 'CONSELHEIRO', 'COLABORADOR'].includes(perfil);
   const temAutoridade = isPresidente || isDiretoria;
-  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
+  const canSeeToken = estado?.quorumVigente?.token && (temAutoridade || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
 
   const handlePedirPalavra = useCallback(async () => {
     try {
@@ -88,7 +88,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   };
 
   const handleEncerrarAssembleiaManual = useCallback(async () => {
-    Alert.alert('Confirmar Encerramento', 'Deseja encerrar definitivamente esta assembleia?', [
+    Alert.alert('Confirmar Encerramento', 'Deseja encerrar definitivamente esta assembleia? Esta ação gerará a ATA final.', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Sim, Encerrar', style: 'destructive', onPress: async () => {
         try {
@@ -100,6 +100,37 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     ]);
   }, [id]);
 
+  const handleSuspender = useCallback(() => {
+    Alert.prompt(
+      'Suspender Assembleia',
+      'Informe o motivo da suspensão e previsão de retorno:',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Suspender',
+          onPress: async (motivo) => {
+            if (!motivo) return Alert.alert('Erro', 'O motivo é obrigatório.');
+            try {
+              await suspenderAssembleia(id, { motivo });
+              Alert.alert('Sucesso', 'Assembleia suspensa.');
+            } catch (err: any) {
+              Alert.alert('Erro', err.response?.data?.error || 'Falha ao suspender.');
+            }
+          }
+        }
+      ]
+    );
+  }, [id]);
+
+  const handleRetomar = useCallback(async () => {
+    try {
+      await retomarAssembleia(id);
+      Alert.alert('Sucesso', 'Assembleia retomada.');
+    } catch (err: any) {
+      Alert.alert('Erro', err.response?.data?.error || 'Falha ao retomar.');
+    }
+  }, [id]);
+
   // Configura as ações do cabeçalho
   useEffect(() => {
     const actions: MenuAction[] = [
@@ -108,8 +139,14 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     ];
 
     if (temAutoridade) {
-      actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
-      actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: handleRecontagem });
+      if (estado?.assembleia.estado === 'INICIADO') {
+        actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
+        actions.push({ label: 'Solicitar Recontagem', icon: 'refresh', onPress: handleRecontagem });
+        actions.push({ label: 'Suspender Assembleia', icon: 'pause-circle-outline', onPress: handleSuspender });
+      } else if (estado?.assembleia.estado === 'SUSPENSA') {
+        actions.push({ label: 'Retomar Assembleia', icon: 'play-circle-outline', onPress: handleRetomar });
+      }
+
       if (isDiretoria && estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
         actions.push({ label: 'Encerrar Votação Item', icon: 'stop-circle-outline', onPress: handleEncerrarVotacaoManual });
       }
@@ -346,19 +383,38 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             </View>
         )}
 
+        {estado.assembleia.estado === 'SUSPENSA' && (
+            <View style={styles.suspensaCard}>
+                <MaterialCommunityIcons name="pause-circle" size={48} color="#7f8c8d" />
+                <Text style={styles.suspensaTitle}>Assembleia Suspensa</Text>
+                <Text style={styles.suspensaMotivo}>{estado.assembleia.suspensao_motivo}</Text>
+                {estado.assembleia.data_hora_retorno && (
+                    <Text style={styles.suspensaRetorno}>Previsão de retorno: {new Date(estado.assembleia.data_hora_retorno).toLocaleString()}</Text>
+                )}
+            </View>
+        )}
+
         {estado.mesa && (
             <View style={styles.mesaCard}>
                 <Text style={styles.mesaTitle}>🧑‍⚖️ Mesa Diretora</Text>
                 <View style={styles.mesaRow}>
                     <Text style={styles.mesaLabel}>Presidente:</Text>
-                    <Text style={styles.mesaValue}>{(estado.mesa as any).presidente_nome}</Text>
+                    <Text style={styles.mesaValue}>{estado.mesa.presidente_nome}</Text>
                 </View>
                 <View style={styles.mesaRow}>
-                    <Text style={styles.mesaLabel}>Secretário:</Text>
-                    <Text style={styles.mesaValue}>{(estado.mesa as any).secretario_nome}</Text>
+                    <Text style={styles.mesaLabel}>Vice-Presidente:</Text>
+                    <Text style={styles.mesaValue}>{estado.mesa.vice_presidente_nome || '-'}</Text>
+                </View>
+                <View style={styles.mesaRow}>
+                    <Text style={styles.mesaLabel}>1º Secretário:</Text>
+                    <Text style={styles.mesaValue}>{estado.mesa.secretario_nome}</Text>
+                </View>
+                <View style={styles.mesaRow}>
+                    <Text style={styles.mesaLabel}>2º Secretário:</Text>
+                    <Text style={styles.mesaValue}>{estado.mesa.secretario_2_nome || '-'}</Text>
                 </View>
 
-                {temAutoridade && (
+                {temAutoridade && estado.assembleia.estado === 'INICIADO' && (
                     <View style={styles.mesaAcoes}>
                         <Text style={styles.mesaAcoesTitle}>Ações de Comando</Text>
                         <View style={styles.mesaAcoesGrid}>
@@ -552,6 +608,10 @@ const styles = StyleSheet.create({
   tokenHint: { fontSize: 11, color: '#999', marginTop: 4 },
   btnComando: { backgroundColor: '#003366', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center' },
   btnComandoText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  suspensaCard: { backgroundColor: '#f8f9fa', borderRadius: 12, padding: 24, marginBottom: 20, alignItems: 'center', borderWidth: 1, borderColor: '#dee2e6' },
+  suspensaTitle: { fontSize: 20, fontWeight: 'bold', color: '#343a40', marginTop: 12, marginBottom: 8 },
+  suspensaMotivo: { fontSize: 16, color: '#6c757d', textAlign: 'center', fontStyle: 'italic' },
+  suspensaRetorno: { fontSize: 14, color: '#003366', fontWeight: 'bold', marginTop: 12 },
   scrollContent: { padding: 16 },
   votacaoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 3, marginBottom: 20 },
   votacaoHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
