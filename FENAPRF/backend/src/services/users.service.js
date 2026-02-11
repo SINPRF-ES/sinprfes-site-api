@@ -60,7 +60,13 @@ async function getMe(id) {
     LIMIT 1;
   `;
   const { rows } = await pool.query(query, [id]);
-  return anexarEstadoCadastro(rows[0]) || null;
+  const user = rows[0];
+  if (!user) return null;
+
+  // Compat Layer: Add empty vinculos for now
+  user.vinculos = [];
+
+  return anexarEstadoCadastro(user);
 }
 
 /**
@@ -157,7 +163,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   `;
 
   const { rows } = await pool.query(query, params);
-  return anexarEstadoCadastroLista(rows);
+
+  // Compat Layer: Add empty vinculos to list
+  const list = rows.map(r => ({ ...r, vinculos: [] }));
+
+  return anexarEstadoCadastroLista(list);
 }
 
 /**

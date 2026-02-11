@@ -41,6 +41,8 @@ export interface User {
   cargo2?: string | null;
   uf2?: string | null;
 
+  vinculos?: any[];
+
   // Campos de compatibilidade
   nome?: string;
   email1?: string;

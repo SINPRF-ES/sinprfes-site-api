@@ -35,52 +35,84 @@ DROP TABLE IF EXISTS votacoes CASCADE;
 DROP TABLE IF EXISTS push_campaigns CASCADE;
 DROP TABLE IF EXISTS push_tokens CASCADE;
 DROP TABLE IF EXISTS user_movimentacoes CASCADE;
+DROP TABLE IF EXISTS user_vinculos CASCADE;
 DROP TABLE IF EXISTS job_runs CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- 2. RECREATE tables
 
--- USERS
+-- USERS (Compatibility Version)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cpf VARCHAR(11) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255),
     password_hash VARCHAR(255),
-    perfil_acesso VARCHAR(20),
+    perfil_acesso VARCHAR(20), -- ADMIN, DIRETORIA, COLABORADOR, CONSELHEIRO
     situacao VARCHAR(20) DEFAULT 'ATIVO',
     bloqueado BOOLEAN DEFAULT FALSE,
     telefone1 VARCHAR(20),
     telefone2 VARCHAR(20),
+
+    -- Address (remains in users)
     cep VARCHAR(8),
     logradouro TEXT,
     numero VARCHAR(20),
     complemento TEXT,
     bairro VARCHAR(100),
     cidade VARCHAR(100),
-    uf VARCHAR(2),
+    uf VARCHAR(2), -- UF of functional link
     uf_endereco VARCHAR(2),
+
     data_nascimento DATE,
-    sexo CHAR(1),
+    sexo CHAR(1) CHECK (sexo IN ('M', 'F')),
     cargo VARCHAR(100),
+
     avatar_url TEXT,
     avatar_public_id TEXT,
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     ultimo_acesso TIMESTAMP WITH TIME ZONE,
+
+    -- Archiving
     arquivado_em TIMESTAMP WITH TIME ZONE,
     arquivado_motivo TEXT,
     arquivado_por UUID REFERENCES users(id) ON DELETE SET NULL,
     desarquivado_em TIMESTAMP WITH TIME ZONE,
     desarquivado_motivo TEXT,
     desarquivado_por UUID REFERENCES users(id) ON DELETE SET NULL,
+
+    -- Legacy fields for app compatibility ("Campos 2")
     perfil_acesso2 VARCHAR(20),
     cargo2 VARCHAR(100),
     uf2 VARCHAR(2),
     cargo_mandato_inicio DATE,
     cargo_mandato_fim DATE,
+
     token_acesso_temp TEXT,
-    token_expiracao TIMESTAMP WITH TIME ZONE
+    token_expiracao TIMESTAMP WITH TIME ZONE,
+
+    CONSTRAINT chk_mandato_dates CHECK (cargo_mandato_fim >= cargo_mandato_inicio),
+    CONSTRAINT chk_uf_endereco CHECK (uf_endereco ~ '^[A-Z]{2}$')
+);
+
+-- USER VINCULOS (New normalization table)
+CREATE TABLE user_vinculos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    scope VARCHAR(20) NOT NULL, -- FENAPRF, UF, NACIONAL
+    uf VARCHAR(2),
+    branch VARCHAR(20), -- DIRETORIA, DELEGACAO
+    role VARCHAR(50) NOT NULL,
+    mandato_inicio DATE,
+    mandato_fim DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'ATIVO',
+    is_substitute BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+    CONSTRAINT chk_vinculo_mandato CHECK (mandato_fim >= mandato_inicio)
 );
 
 -- USER MOVIMENTACOES
@@ -88,7 +120,7 @@ CREATE TABLE user_movimentacoes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     acao VARCHAR(50) NOT NULL,
-    por_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    por_id UUID REFERENCES users(id) ON DELETE SET NULL,
     motivo TEXT,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -130,7 +162,7 @@ CREATE TABLE votacoes (
     encerra_em TIMESTAMP WITH TIME ZONE,
     criado_por UUID REFERENCES users(id) ON DELETE SET NULL,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE votacao_opcoes (
@@ -240,7 +272,7 @@ CREATE TABLE logistica_eventos (
     cancelado_por UUID REFERENCES users(id) ON DELETE SET NULL,
     encerrado_por UUID REFERENCES users(id) ON DELETE SET NULL,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- LOGISTICA INSCRICOES
@@ -252,7 +284,7 @@ CREATE TABLE logistica_inscricoes (
     data_saida TIMESTAMP WITH TIME ZONE NOT NULL,
     observacoes TEXT,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(evento_id, user_id)
 );
 
@@ -488,3 +520,4 @@ CREATE INDEX idx_logistica_inscricoes_user ON logistica_inscricoes(user_id);
 CREATE INDEX idx_logistica_inscricoes_evento ON logistica_inscricoes(evento_id);
 CREATE INDEX idx_assembleia_checkins_quorum ON assembleia_checkins(assembleia_quorum_id);
 CREATE INDEX idx_assembleia_votos_votacao ON assembleia_votos(votacao_id);
+CREATE INDEX idx_user_vinculos_user ON user_vinculos(user_id);
