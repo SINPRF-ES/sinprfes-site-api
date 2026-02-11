@@ -3,33 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Página Inicial - FENAPRF</title>
+  <title>Portal do Membro - FENAPRF</title>
   <link rel="stylesheet" href="/css/style.css" />
   <script src="/js/main.js" defer></script>
 
   <!-- Scripts Utilitários (Ordem Crítica) -->
   <script src="/shared/canon.js"></script>
   <script src="/js/shared/format/formatters.js"></script>
-  <script src="/js/area-user/utils.js"></script>
-  <script src="/js/area-user/age-utils.js"></script>
-  <script src="/js/area-user/parentesco-utils.js"></script>
+  <script src="/portal/js/utils.js"></script>
+  <script src="/portal/js/age-utils.js"></script>
 
   <!-- Módulos de Seção -->
-  <script src="/js/area-user/navegacao.js"></script>
-  <script src="/js/area-user/seguranca.js"></script>
-  <script src="/js/area-user/meus-dados.js"></script>
-  <script src="/js/area-user/users-admin.js"></script>
-  <script src="/js/area-user/jogos.js"></script>
-  <script src="/js/area-user/publicacoes.js"></script>
-  <script src="/js/area-user/notificacoes.js"></script>
-  <script src="/js/area-user/assembleia-utils.js"></script>
-  <script src="/js/area-user/assembleias.js"></script>
-  <script src="/js/area-user/cms-admin.js"></script>
-  <script src="/js/area-user/relatorios.js"></script>
-  <script src="/js/area-user/logistica.js"></script>
+  <script src="/portal/js/navegacao.js"></script>
+  <script src="/portal/js/seguranca.js"></script>
+  <script src="/portal/js/meus-dados.js"></script>
+  <script src="/portal/js/users-admin.js"></script>
+  <script src="/portal/js/publicacoes.js"></script>
+  <script src="/portal/js/notificacoes.js"></script>
+  <script src="/portal/js/assembleia-utils.js"></script>
+  <script src="/portal/js/assembleias.js"></script>
+  <script src="/portal/js/cms-admin.js"></script>
+  <script src="/portal/js/relatorios.js"></script>
+  <script src="/portal/js/logistica.js"></script>
 
   <!-- Inicializador Principal -->
-  <script src="/js/area-user.js"></script>
+  <script src="/portal/js/portal-orchestrator.js"></script>
 </head>
 <body class="af-body">
   <div class="af-container">
@@ -37,7 +35,7 @@
       <!-- Sidebar / Nav -->
       <nav class="af-sidebar">
         <div class="af-sidebar-header">
-          <img src="/img/placeholder-fenaprf.png" alt="Logo FENAPRF" class="af-sidebar-logo">
+          <img src="/img/logo-fenaprf.png" alt="Logo FENAPRF" class="af-sidebar-logo">
           <span class="af-sidebar-title">FENAPRF</span>
         </div>
 
@@ -46,7 +44,6 @@
           <button class="af-nav-item" data-target="sec-users">👥 Membros</button>
           <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
           <button class="af-nav-item" data-target="sec-logistica">🚚 Logística</button>
-          <button class="af-nav-item" data-target="sec-jogos" style="display:none;">🏆 Jogos 2026</button>
           <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
           <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
           <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;">📊 Relatórios</button>
@@ -79,10 +76,6 @@
            <div class="section-card">
               <p>Carregando biblioteca...</p>
            </div>
-        </section>
-
-        <section id="sec-jogos" class="af-section" style="display:none;">
-          <!-- Conteúdo carregado via JS -->
         </section>
 
         <section id="sec-assembleias" class="af-section" style="display:none;">
@@ -198,7 +191,6 @@
                       <select id="push-target-type">
                           <option value="ALL">Todos os membros com app</option>
                           <option value="UF">Por UF</option>
-                          <option value="JOGOS">Inscritos nos Jogos</option>
                           <option value="MEMBRO">Especificar um Membro</option>
                       </select>
                   </div>
@@ -272,35 +264,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Templates -->
-  <template id="template-dependentes">
-    <div class="dependente-item section-box" style="margin-top:15px; background: #fafafa;">
-        <h4 style="margin-bottom:12px; font-size:0.9rem; color:#666;">Dependente <span class="dependente-numero">N</span></h4>
-        <div class="field-row">
-            <div class="field-group">
-                <label>Nome</label>
-                <input type="text" name="depN_nome" id="depN_nome" />
-            </div>
-            <div class="field-group">
-                <label>CPF</label>
-                <input type="text" name="depN_cpf" id="depN_cpf" />
-            </div>
-        </div>
-        <div class="field-row">
-            <div class="field-group">
-                <label>Nascimento</label>
-                <input type="date" name="depN_data_nascimento" id="depN_data_nascimento" />
-            </div>
-            <div class="field-group">
-                <label>Parentesco</label>
-                <select name="depN_parentesco_select" id="depN_parentesco_select"></select>
-                <input type="text" name="depN_parentesco_outro" id="depN_parentesco_outro" style="display:none; margin-top:5px;" placeholder="Qual parentesco?" />
-                <input type="hidden" name="depN_parentesco" id="depN_parentesco" />
-            </div>
-        </div>
-    </div>
-  </template>
 
 </body>
 </html>

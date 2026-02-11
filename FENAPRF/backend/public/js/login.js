@@ -4,48 +4,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
   const loginMsg = document.getElementById("login-mensagem");
 
-  const forgotForm = document.getElementById("forgot-form");
-  const forgotMsg = document.getElementById("forgot-mensagem");
-
-    // CPF só com números (login e esqueci a senha)
   const loginCpfInput = document.getElementById("login-cpf");
-  const forgotCpfInput = document.getElementById("forgot-cpf");
 
   function aplicarMascaraCpf(input) {
     if (!input) return;
-
-    const formatar = (val) => {
-      // Se Formatters estiver carregado, usa a função canônica
-      if (window.Formatters && window.Formatters.formatCpfLive) {
-        return window.Formatters.formatCpfLive(val);
-      }
-      let v = String(val).replace(/\D/g, "").slice(0, 11);
-      if (v.length <= 3) return v;
-      if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
-      if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
-      return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
-    };
-
     input.addEventListener("input", (e) => {
-      const el = e.target;
-      const start = el.selectionStart;
-      const oldLen = el.value.length;
-      el.value = formatar(el.value);
-      const newLen = el.value.length;
-
-      // Preserva cursor se estiver digitando no meio
-      if (start !== null && start < oldLen) {
-        el.setSelectionRange(start + (newLen - oldLen), start + (newLen - oldLen));
-      }
+      let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+      if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+      else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+      e.target.value = v;
     });
-
-    if (input.value) input.value = formatar(input.value);
   }
 
   aplicarMascaraCpf(loginCpfInput);
-  aplicarMascaraCpf(forgotCpfInput);
 
-  // Util: normaliza CPF
   function normalizarCpf(cpf) {
     return (cpf || "").replace(/\D/g, "");
   }
@@ -66,44 +39,32 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (resp.ok) {
-        // Token válido → pula o login e vai direto pra Página Inicial
-        window.location.href = "/area-user.html";
+        window.location.replace("/portal/");
       } else if (resp.status === 401 || resp.status === 403) {
-        // Token inválido/expirado → limpa e deixa o membro logar de novo
         localStorage.removeItem("token");
         localStorage.removeItem("perfil_acesso");
       }
     } catch (err) {
       console.error("Erro ao verificar sessão existente:", err);
-      // Em caso de erro de rede, apenas não redireciona; o membro vê o login normalmente
     }
   })();
 
   // ==========================
-  // LOGIN NORMAL + 2FA
+  // LOGIN
   // ==========================
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (loginMsg) {
-        loginMsg.textContent = "";
-      }
+      if (loginMsg) loginMsg.textContent = "";
 
-      const cpfInput = document.getElementById("login-cpf");
+      const cpf = normalizarCpf(loginCpfInput ? loginCpfInput.value : "");
       const senhaInput = document.getElementById("login-senha");
-
-      const cpf = normalizarCpf(cpfInput ? cpfInput.value : "");
       const senha = senhaInput ? senhaInput.value : "";
 
       if (!cpf || !senha) {
-        if (loginMsg) {
-          loginMsg.textContent = "Informe CPF e senha.";
-        }
+        if (loginMsg) loginMsg.textContent = "Informe CPF e senha.";
         return;
       }
-
-      // Monta payload básico
-      const payload = { cpf, senha };
 
       const btnSubmit = loginForm.querySelector('button[type="submit"]');
       const originalBtnText = btnSubmit.innerHTML;
@@ -114,113 +75,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const resp = await fetch("/api/auth/login", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cpf, senha }),
         });
 
         const data = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
-          if (loginMsg) {
-            loginMsg.textContent =
-              (data && data.error) ||
-              "Erro ao realizar login. Verifique seus dados e tente novamente.";
-          }
+          if (loginMsg) loginMsg.textContent = (data && data.error) || "Erro ao realizar login.";
           return;
         }
 
-        // Sucesso: salva token e perfil no localStorage
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-        }
-        if (data.perfil_acesso) {
-          localStorage.setItem("perfil_acesso", data.perfil_acesso);
-        }
+        if (data.token) localStorage.setItem("token", data.token);
+        if (data.perfil_acesso) localStorage.setItem("perfil_acesso", data.perfil_acesso);
 
-        if (loginMsg) {
-          loginMsg.textContent =
-            data.message || "Login realizado com sucesso. Redirecionando...";
-        }
-
-        // Redireciona para Página Inicial
-        window.location.href = "/area-user.html";
+        window.location.replace("/portal/");
       } catch (err) {
         console.error("Erro no login:", err);
-        if (loginMsg) {
-          loginMsg.textContent = "Erro de comunicação com o servidor.";
-        }
-      } finally {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = originalBtnText;
-      }
-    });
-  }
-
-  // ==========================
-  // ESQUECI MINHA SENHA / PRIMEIRO ACESSO
-  // ==========================
-  if (forgotForm) {
-    forgotForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (forgotMsg) {
-        forgotMsg.textContent = "";
-      }
-
-      const cpfInput = document.getElementById("forgot-cpf");
-      const cpf = normalizarCpf(cpfInput ? cpfInput.value : "");
-
-      if (!cpf) {
-        if (forgotMsg) {
-          forgotMsg.textContent = "Informe o CPF.";
-        }
-        return;
-      }
-
-      const btnSubmit = forgotForm.querySelector('button[type="submit"]');
-      const originalBtnText = btnSubmit.innerHTML;
-
-      try {
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = "Enviando...";
-
-        const resp = await fetch("/api/senha/recuperar", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ cpf }),
-        });
-
-        const data = await resp.json().catch(() => ({}));
-
-        if (!resp.ok) {
-          if (forgotMsg) {
-            forgotMsg.textContent =
-              (data && data.error) ||
-              "Erro ao solicitar redefinição de senha.";
-          }
-          return;
-        }
-
-        // Mensagem padrão
-        let msg =
-          (data && data.message) || "Solicitação registrada.";
-
-        // Se o backend devolver o e-mail de destino, inclui na mensagem
-        if (data && data.email_destino) {
-          msg += ` E-mail de destino: ${data.email_destino}.`;
-        }
-
-        if (forgotMsg) {
-          forgotMsg.textContent = msg;
-        }
-      } catch (err) {
-        console.error("Erro em esqueci minha senha:", err);
-        if (forgotMsg) {
-          forgotMsg.textContent = "Erro de comunicação com o servidor.";
-        }
+        if (loginMsg) loginMsg.textContent = "Erro de comunicação com o servidor.";
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalBtnText;

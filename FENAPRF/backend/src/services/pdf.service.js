@@ -9,7 +9,6 @@ const { PDFDocument: PDFLibDocument } = require("pdf-lib");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
 const { formatarCPF, formatarTelefone, formatarDataBR, formatarAgencia, formatarConta } = require("../utils/format");
-const { labelFromParentesco } = require("../../shared/dependentes/parentesco");
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
 const LOGO_PATH = path.join(__dirname, "../assets/logo-fenaprf.png");
@@ -187,18 +186,6 @@ function drawTableWithPagination(doc, options) {
     doc.font("Helvetica").fontSize(11);
 }
 
-/**
- * Humaniza o parentesco para o PDF.
- */
-function humanizeParentesco(val) {
-    if (!val) return "Dependente";
-    const label = labelFromParentesco(val);
-    if (label === 'Outro' && val !== 'OUTRO' && val !== 'Outro') {
-        // Fallback: SNAKE_CASE para Title Case
-        return val.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    }
-    return label;
-}
 
 // Carrega o logo como buffer (para pdf-lib)
 async function carregarLogoBuffer() {
@@ -625,21 +612,6 @@ async function gerarPdfDossieUser(user, options = {}) {
     doc.text(`Cidade: ${user.cidade || ""} - UF: ${user.uf || ""} | CEP: ${user.cep || ""}`);
     doc.moveDown(1);
     linha(doc);
-
-    // 4. Dependentes
-    doc.font("Helvetica-Bold").fontSize(12).text("4. Dependentes");
-    doc.moveDown(0.5);
-    doc.font("Helvetica").fontSize(11);
-    let temDependente = false;
-    for (let i = 1; i <= 5; i++) {
-        if (user[`dep${i}_nome`]) {
-            temDependente = true;
-            const parentescoLabel = humanizeParentesco(user[`dep${i}_parentesco`]);
-            doc.text(`${i}. ${user[`dep${i}_nome`]} (${parentescoLabel})`);
-            doc.text(`   CPF: ${podeVerCpf ? formatarCPF(user[`dep${i}_cpf`]) : "***.***.***-**"} | Nasc: ${formatDateSafe(user[`dep${i}_data_nascimento`])}`);
-        }
-    }
-    if (!temDependente) doc.text("Nenhum dependente cadastrado.");
 
     doc.end();
   });

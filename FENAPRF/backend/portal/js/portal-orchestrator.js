@@ -5,21 +5,21 @@
  */
 
 (function () {
-    console.log("Sistema Página Inicial: Orquestrando inicialização...");
+    // Verificação imediata de Token (Web flow)
+    const rawToken = localStorage.getItem("token");
+    const tokenClean = (rawToken || "").trim();
+    if (!tokenClean || tokenClean === "null" || tokenClean === "undefined") {
+        window.location.replace("/login.html");
+        return;
+    }
+
+    console.log("Sistema Portal: Orquestrando inicialização...");
 
     document.addEventListener("DOMContentLoaded", async () => {
-        // 1. Verificação de Token
-        const token = localStorage.getItem("token");
-        if (!token) {
-            window.location.href = "/login.html";
-            return;
-        }
-
-        const { obterUserInfo, exibirAlertaFlutuante } = window.Utils || {};
+        const { obterUserInfo } = window.Utils || {};
         const { configurarNavegacao } = window.Navegacao || {};
         const { carregarMeusDados } = window.MeusDados || {};
         const { inicializarUsers } = window.UsersAdmin || {};
-        const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
         const { inicializarRelatorios } = window.Relatorios || {};
@@ -32,13 +32,12 @@
 
         console.log("Perfil inicial (Cache):", perfil);
 
-        // 2. Configura Navegação Global
+        // 1. Configura Navegação Global
         if (configurarNavegacao) {
             configurarNavegacao((abaAlvo) => {
                 console.log("Navegando para:", abaAlvo);
                 if (abaAlvo === 'sec-meus-dados' && carregarMeusDados) carregarMeusDados();
                 else if (abaAlvo === 'sec-users' && inicializarUsers) inicializarUsers(perfil);
-                else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
                 else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
@@ -101,6 +100,5 @@
             if(btnAtivo) btnAtivo.click();
         }
 
-        if (exibirAlertaFlutuante) exibirAlertaFlutuante();
     });
 })();
