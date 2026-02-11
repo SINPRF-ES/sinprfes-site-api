@@ -187,12 +187,12 @@
                         <p style="margin:0; font-size:1rem;">Participe das decisões do seu sindicato</p>
 
                         ${isDiretoria ? `
-                            <button class="btn btn-success" style="margin-top:10px; font-weight:800; padding:12px 25px; border-radius:30px;" onclick="Assembleias.abrirCriacao()">➕ Criar Nova Assembleia</button>
+                            <button id="btn-abrir-criacao-ass" class="btn btn-success" style="margin-top:10px; font-weight:800; padding:12px 25px; border-radius:30px;">➕ Criar Nova Assembleia</button>
                         ` : ''}
 
                         <div style="width:100%; max-width:250px; margin-top:10px;">
                             <label style="font-size:0.85rem; color:#fff; display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase;">Filtrar por status:</label>
-                            <select id="filtro-assembleias" class="btn btn-outline" style="width:100%; color:#fff; background:transparent; border: 2px solid #fff; border-radius:8px; font-weight:600;" onchange="Assembleias.mudarFiltro(this.value)">
+                            <select id="filtro-assembleias" class="btn btn-outline" style="width:100%; color:#fff; background:transparent; border: 2px solid #fff; border-radius:8px; font-weight:600;">
                                 <option value="ATIVAS" style="color:#333;">Ativas</option>
                                 <option value="ENCERRADAS" style="color:#333;">Encerradas</option>
                                 <option value="TODAS" style="color:#333;">Todas</option>
@@ -217,6 +217,12 @@
                 <div id="area-assembleia-sala-conteudo"></div>
             </div>
         `;
+
+        const btnCriar = document.getElementById("btn-abrir-criacao-ass");
+        if (btnCriar) btnCriar.addEventListener("click", () => abrirCriacao());
+
+        const selectFiltro = document.getElementById("filtro-assembleias");
+        if (selectFiltro) selectFiltro.addEventListener("change", (e) => mudarFiltro(e.target.value));
     }
 
     async function mudarFiltro(novoFiltro) {
@@ -261,6 +267,14 @@
             return;
         }
 
+        if (!container._hasListener) {
+            container.addEventListener("click", (e) => {
+                const btn = e.target.closest(".btn-ass-detalhes");
+                if (btn) abrirDetalhes(btn.dataset.id);
+            });
+            container._hasListener = true;
+        }
+
         container.innerHTML = assembleias.map(a => {
             const label = window.AssembleiaUtils.getStatusLabel(a.estado);
             const emoji = window.AssembleiaUtils.getStatusEmoji(a.estado);
@@ -287,7 +301,7 @@
                         </div>
 
                         <div style="margin-top:15px;">
-                            <button class="btn btn-primary btn-lg" style="padding: 15px 40px; font-weight: 800; border-radius: 30px; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);" onclick="Assembleias.abrirDetalhes('${a.id}')">Ver Detalhes e Participar</button>
+                            <button class="btn btn-primary btn-lg btn-ass-detalhes" style="padding: 15px 40px; font-weight: 800; border-radius: 30px; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);" data-id="${a.id}">Ver Detalhes e Participar</button>
                         </div>
                     </div>
                 </div>
@@ -306,6 +320,38 @@
 
     async function carregarDetalhesAssembleia(id) {
         const container = document.getElementById("area-assembleia-detalhe-conteudo");
+
+        if (!container._hasListener) {
+            container.addEventListener("click", (e) => {
+                const btn = e.target.closest("[data-action]");
+                if (!btn) return;
+
+                const action = btn.dataset.action;
+                const aid = btn.dataset.aid || currentAssembleiaId;
+                const vid = btn.dataset.vid;
+                const prid = btn.dataset.prid;
+                const pid = btn.dataset.pid;
+                const val = btn.dataset.value;
+
+                if (action === "voltar-lista") voltarParaLista();
+                else if (action === "abrir-edital") abrirEditalSeguro(aid);
+                else if (action === "baixar-edital") baixarEditalSeguro(aid);
+                else if (action === "abrir-ass") abrirAssembleia(aid);
+                else if (action === "preparar-mesa") prepararMesa(aid);
+                else if (action === "gerar-token") gerarTokenToken(aid);
+                else if (action === "iniciar-execucao") iniciarExecucao(aid);
+                else if (action === "solicitar-recontagem") solicitarRecontagem(aid);
+                else if (action === "encerrar-ass") encerrarAssembleia(aid);
+                else if (action === "solicitar-relatorio") solicitarRelatorio(aid);
+                else if (action === "entrar-sala") entrarNaSala(aid);
+                else if (action === "realizar-checkin") realizarCheckin(aid);
+                else if (action === "votar-proposta") votarProposta(aid, prid);
+                else if (action === "preparar-votacao-item") prepararVotacaoItem(aid);
+                else if (action === "encerrar-votacao-manual") encerrarVotacaoManual(aid, vid);
+            });
+            container._hasListener = true;
+        }
+
         container.innerHTML = "<p class='text-center' style='padding:40px; color:#ccc;'>Carregando detalhes...</p>";
 
         try {
@@ -331,7 +377,7 @@
             container.innerHTML = `
                 <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; text-align: center;">
                     <div style="display:flex; justify-content:center; margin-bottom:25px;">
-                        <button class="btn btn-outline btn-sm" style="font-weight:700; color:#003366; border-color:#003366;" onclick="Assembleias.voltarParaLista()">← Voltar para Lista</button>
+                        <button class="btn btn-outline btn-sm" style="font-weight:700; color:#003366; border-color:#003366;" data-action="voltar-lista">← Voltar para Lista</button>
                     </div>
 
                     <div style="text-align:center; margin-bottom:35px; padding-bottom:25px; border-bottom: 2px solid #f0f0f0;">
@@ -366,8 +412,8 @@
                             <h4 style="color:#003366; margin-bottom:20px; display:flex; align-items:center; gap:10px; font-weight:800;">📄 Edital de Convocação</h4>
                             ${a.edital_url ? `
                                 <div style="font-size:3rem; margin-bottom:20px;">📄</div>
-                                <button class="btn btn-primary" style="width:100%; padding:15px; font-weight:800; border-radius:10px;" onclick="Assembleias.abrirEditalSeguro('${a.id}')">Visualizar Edital no Portal</button>
-                                <button class="btn btn-link" style="margin-top:12px; font-size:0.85rem; color:#666; font-weight:600; text-decoration:underline; border:none; background:none; cursor:pointer;" onclick="Assembleias.baixarEditalSeguro('${a.id}')">Abrir em nova aba / Download</button>
+                                <button class="btn btn-primary" style="width:100%; padding:15px; font-weight:800; border-radius:10px;" data-action="abrir-edital" data-aid="${a.id}">Visualizar Edital no Portal</button>
+                                <button class="btn btn-link" style="margin-top:12px; font-size:0.85rem; color:#666; font-weight:600; text-decoration:underline; border:none; background:none; cursor:pointer;" data-action="baixar-edital" data-aid="${a.id}">Abrir em nova aba / Download</button>
                             ` : '<div style="font-size:3rem; margin-bottom:15px; opacity:0.3;">🚫</div><p style="font-style:italic; color:#999; font-weight:600;">Sem edital anexado.</p>'}
                         </div>
 
@@ -414,17 +460,17 @@
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px; text-align: center;">
                             <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">🛠️ Ações de Gestão e Controle</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center;">
-                                ${isDiretoria && a.estado === 'CRIADA' ? `<button class="btn btn-primary btn-lg" onclick="Assembleias.abrirAssembleia('${id}')">Abrir Assembleia</button>` : ''}
+                                ${isDiretoria && a.estado === 'CRIADA' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
                                 ${isDiretoria && a.estado === 'ABERTA' ? `
-                                    <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.prepararMesa('${id}')">Compor Mesa</button>
-                                    <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.gerarTokenToken('${id}')">Gerar Token</button>
-                                    <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" onclick="Assembleias.iniciarExecucao('${id}')">Iniciar Execução (Pauta)</button>
+                                    <button class="btn btn-primary" style="font-weight:700;" data-action="preparar-mesa" data-aid="${id}">Compor Mesa</button>
+                                    <button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token" data-aid="${id}">Gerar Token</button>
+                                    <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" data-action="iniciar-execucao" data-aid="${id}">Iniciar Execução (Pauta)</button>
                                 ` : ''}
                                 ${(isDiretoria || isPresidente) && a.estado === 'EM_CURSO' ? `
-                                    <button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRecontagem('${id}')">🔄 Recontagem de Quórum</button>
+                                    <button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-recontagem" data-aid="${id}">🔄 Recontagem de Quórum</button>
                                 ` : ''}
-                                ${isDiretoria && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" onclick="Assembleias.encerrarAssembleia('${id}')">Encerrar Assembleia</button>` : ''}
-                                ${(currentUserPerfil !== 'COMUNICADOR' && (a.estado === 'ENCERRADA' || a.estado === 'EM_CURSO' || a.estado === 'ABERTA')) ? `<button class="btn btn-primary" style="font-weight:700;" onclick="Assembleias.solicitarRelatorio('${id}')">Solicitar Relatório PDF</button>` : ''}
+                                ${isDiretoria && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" data-action="encerrar-ass" data-aid="${id}">Encerrar Assembleia</button>` : ''}
+                                ${(currentUserPerfil !== 'COMUNICADOR' && (a.estado === 'ENCERRADA' || a.estado === 'EM_CURSO' || a.estado === 'ABERTA')) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-relatorio" data-aid="${id}">Solicitar Relatório PDF</button>` : ''}
                             </div>
                         </div>
                     ` : ''}
@@ -433,14 +479,14 @@
                     <div id="area-acoes-detalhe">
                         ${isParticipavel ? `
                             ${hasCheckedIn ? `
-                                <button class="btn btn-success btn-lg" style="width:100%; padding:25px; font-size:1.6rem; border-radius:20px; box-shadow:0 10px 25px rgba(39, 174, 96, 0.3); font-weight:900;" onclick="Assembleias.entrarNaSala('${id}')">🚪 Entrar na Sala de Votação Interativa</button>
+                                <button class="btn btn-success btn-lg" style="width:100%; padding:25px; font-size:1.6rem; border-radius:20px; box-shadow:0 10px 25px rgba(39, 174, 96, 0.3); font-weight:900;" data-action="entrar-sala" data-aid="${id}">🚪 Entrar na Sala de Votação Interativa</button>
                             ` : `
                                 <div class="section-box" style="border:3px solid #f1c40f; background:#fffdf0; padding:35px; text-align:center; border-radius:20px;">
                                     <h4 style="color:#856404; margin-bottom:15px; font-weight:900; font-size:1.3rem;">Check-in Necessário</h4>
                                     <p style="font-size:1.1rem; margin-bottom:25px; color:#555; font-weight:500;">Para participar e votar, informe o <strong>token de 6 dígitos</strong> fornecido pela mesa diretora.</p>
                                     <div style="display:flex; gap:15px; max-width:500px; margin:0 auto; flex-wrap:wrap; justify-content:center;">
                                         <input type="text" id="token-input" placeholder="000000" maxlength="6" style="flex:1; text-align:center; font-size:2.5rem; letter-spacing:10px; padding:15px; border:3px solid #f1c40f; border-radius:12px; font-weight:800; min-width:200px;" />
-                                        <button class="btn btn-primary btn-lg" style="padding:0 40px; font-weight:900; border-radius:12px;" onclick="Assembleias.realizarCheckin('${id}')">Confirmar Presença</button>
+                                        <button class="btn btn-primary btn-lg" style="padding:0 40px; font-weight:900; border-radius:12px;" data-action="realizar-checkin" data-aid="${id}">Confirmar Presença</button>
                                     </div>
                                 </div>
                             `}
@@ -452,7 +498,7 @@
                                 </h3>
                                 <p style="color:#777; font-weight:500;">${a.estado === 'CRIADA' ? 'O acesso à sala será liberado no horário previsto.' : 'Os resultados e a ata estarão disponíveis em breve.'}</p>
                                 ${isEncerrada && currentUserPerfil !== 'COMUNICADOR' ? `
-                                    <button class="btn btn-primary btn-lg" style="margin-top:20px; font-weight:800;" onclick="Assembleias.solicitarRelatorio('${id}')">📄 Baixar Relatório PDF (E-mail)</button>
+                                    <button class="btn btn-primary btn-lg" style="margin-top:20px; font-weight:800;" data-action="solicitar-relatorio" data-aid="${id}">📄 Baixar Relatório PDF (E-mail)</button>
                                 ` : ''}
                             </div>
                         `}
@@ -523,7 +569,7 @@
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header">
                         <h2 id="mesa-modal-titulo">Compor Mesa Diretora</h2>
-                        <button type="button" class="modal-close" onclick="document.getElementById('modal-compor-mesa').style.display='none'">×</button>
+                        <button type="button" class="modal-close" data-close="modal-compor-mesa">×</button>
                     </div>
                     <div class="modal-body">
                         <form id="form-compor-mesa">
@@ -714,6 +760,33 @@
 
     function renderizarSala(estado) {
         const container = document.getElementById("area-assembleia-sala-conteudo");
+
+        if (!container._hasListener) {
+            container.addEventListener("click", (e) => {
+                const btn = e.target.closest("[data-action]");
+                if (!btn) return;
+
+                const action = btn.dataset.action;
+                const aid = btn.dataset.aid || currentAssembleiaId;
+                const vid = btn.dataset.vid;
+                const prid = btn.dataset.prid;
+                const pid = btn.dataset.pid;
+                const val = btn.dataset.value;
+
+                if (action === "sair-sala") abrirDetalhes(aid);
+                else if (action === "votar") votar(aid, vid, val);
+                else if (action === "pedir-palavra") pedirPalavra(aid);
+                else if (action === "nova-proposta") novaProposta(aid);
+                else if (action === "conceder-palavra") concederPalavra(aid, pid);
+                else if (action === "votar-proposta") votarProposta(aid, prid);
+                else if (action === "preparar-votacao-item") prepararVotacaoItem(aid);
+                else if (action === "solicitar-recontagem") solicitarRecontagem(aid);
+                else if (action === "encerrar-votacao-manual") encerrarVotacaoManual(aid, vid);
+                else if (action === "encerrar-ass") encerrarAssembleia(aid);
+            });
+            container._hasListener = true;
+        }
+
         const { assembleia, quorumVigente, votacaoAtiva, mesa, pedidosPalavra, propostas } = estado;
 
         const isPresidente = mesa && mesa.presidente_user_id === currentUserId;
@@ -724,7 +797,7 @@
         container.innerHTML = `
             <div class="section-card" style="background:#fff; color:#333; padding:30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-radius: 20px; text-align: center;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px;">
-                    <button class="btn btn-outline btn-sm" style="font-weight:800; color:#003366; border-color:#003366;" onclick="Assembleias.abrirDetalhes('${assembleia.id}')">← Sair da Sala</button>
+                    <button class="btn btn-outline btn-sm" style="font-weight:800; color:#003366; border-color:#003366;" data-action="sair-sala" data-aid="${assembleia.id}">← Sair da Sala</button>
                     <h3 style="color:#003366; margin:0; text-align:center; flex:1; min-width:200px; font-weight:900; font-size:1.6rem;">🏛️ Sala de Votação Interativa</h3>
                     <div class="user-badge" style="background:#003366; color:#fff; font-weight:800; padding:10px 20px; font-size:1rem; border-radius:10px;">${quorumVigente?.total || 0} Presentes</div>
                 </div>
@@ -770,8 +843,8 @@
 
                             ${votacaoAtiva.status === 'ATIVA' && !votacaoAtiva.userVoted ? `
                                 <div style="display:flex; gap:20px; margin-top:30px; flex-wrap:wrap;">
-                                    <button class="btn btn-success btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'SIM')">Votar SIM</button>
-                                    <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'NAO')">Votar NÃO</button>
+                                    <button class="btn btn-success btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="SIM">Votar SIM</button>
+                                    <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="NAO">Votar NÃO</button>
                                 </div>
                             ` : `
                                 <div style="margin-top:30px; padding:25px; text-align:center; color:#27ae60; font-weight:900; background:#fff; border: 2px solid #27ae60; border-radius:15px; font-size:1.4rem;">
@@ -805,8 +878,8 @@
 
                 <!-- Ações de Interação -->
                 <div style="display:flex; gap:20px; margin-bottom:40px; flex-wrap:wrap;">
-                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" onclick="Assembleias.pedirPalavra('${assembleia.id}')">🎤 Pedir Palavra</button>
-                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" onclick="Assembleias.novaProposta('${assembleia.id}')">📝 Nova Proposta</button>
+                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="pedir-palavra" data-aid="${assembleia.id}">🎤 Pedir Palavra</button>
+                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="nova-proposta" data-aid="${assembleia.id}">📝 Nova Proposta</button>
                 </div>
 
                 <!-- Listas de Interação -->
@@ -822,7 +895,7 @@
                                         <span class="user-badge" style="font-size:0.7rem; margin-top:6px; font-weight:700;">${p.status}</span>
                                     </div>
                                     ${temAutoridade && p.status === 'PENDENTE' ? `
-                                        <button class="btn btn-primary btn-sm" style="font-weight:700;" onclick="Assembleias.concederPalavra('${assembleia.id}', '${p.id}')">Conceder Fala</button>
+                                        <button class="btn btn-primary btn-sm" style="font-weight:700;" data-action="conceder-palavra" data-aid="${assembleia.id}" data-pid="${p.id}">Conceder Fala</button>
                                     ` : ''}
                                 </div>
                             `).join("") : '<p style="padding:30px; color:#999; font-size:1rem; text-align:center; font-style:italic; font-weight:500;">A fila de oradores está vazia.</p>'}
@@ -843,7 +916,7 @@
                                         <span class="user-badge" style="font-size:0.7rem; font-weight:700;">${pr.status}</span>
                                     </div>
                                     ${temAutoridade && pr.status === 'ATIVA' ? `
-                                        <button class="btn btn-success btn-sm" style="margin-top:12px; width:100%; font-weight:800;" onclick="Assembleias.votarProposta('${assembleia.id}', '${pr.id}')">Lançar para Votação</button>
+                                        <button class="btn btn-success btn-sm" style="margin-top:12px; width:100%; font-weight:800;" data-action="votar-proposta" data-aid="${assembleia.id}" data-prid="${pr.id}">Lançar para Votação</button>
                                     ` : ''}
                                 </div>
                             `).join("") : '<p style="padding:30px; color:#999; font-size:1rem; text-align:center; font-style:italic; font-weight:500;">Nenhuma proposta apresentada ainda.</p>'}
@@ -856,14 +929,14 @@
                         <h4 style="color:#e74c3c; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:2px; font-weight:900; display:flex; align-items:center; gap:10px;">🛠️ Painel de Controle e Autoridade da Mesa</h4>
                         <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
                             ${isDiretoria ? `
-                                <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.prepararVotacaoItem('${assembleia.id}')">➕ Iniciar Votação</button>
+                                <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" data-action="preparar-votacao-item" data-aid="${assembleia.id}">➕ Iniciar Votação</button>
                             ` : ''}
-                            <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.solicitarRecontagem('${assembleia.id}')">🔄 Solicitar Recontagem</button>
+                            <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" data-action="solicitar-recontagem" data-aid="${assembleia.id}">🔄 Solicitar Recontagem</button>
                             ${isDiretoria && votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
-                                <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarVotacaoManual('${assembleia.id}', '${votacaoAtiva.id}')">⏹️ Encerrar Votacao Item</button>
+                                <button class="btn btn-danger btn-sm" style="font-weight:800;" data-action="encerrar-votacao-manual" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}">⏹️ Encerrar Votacao Item</button>
                             ` : ''}
                             ${isDiretoria ? `
-                                <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarAssembleia('${assembleia.id}')">🚫 Encerrar Assembleia</button>
+                                <button class="btn btn-danger btn-sm" style="font-weight:800;" data-action="encerrar-ass" data-aid="${assembleia.id}">🚫 Encerrar Assembleia</button>
                             ` : ''}
                         </div>
                     </div>
@@ -959,7 +1032,7 @@
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header">
                         <h2>Iniciar Nova Votação</h2>
-                        <button type="button" class="modal-close" onclick="document.getElementById('modal-criar-votacao').style.display='none'">×</button>
+                        <button type="button" class="modal-close" data-close="modal-criar-votacao">×</button>
                     </div>
                     <div class="modal-body">
                         <form id="form-criar-votacao">
@@ -1038,7 +1111,7 @@
         container.innerHTML = `
             <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; max-width: 800px; margin: 0 auto;">
                 <div style="display:flex; justify-content:flex-start; margin-bottom:25px;">
-                    <button class="btn btn-outline btn-sm" style="font-weight:700; color:#003366; border-color:#003366;" onclick="Assembleias.voltarParaLista()">← Cancelar e Voltar</button>
+                    <button class="btn btn-outline btn-sm" style="font-weight:700; color:#003366; border-color:#003366;" data-action="voltar-lista">← Cancelar e Voltar</button>
                 </div>
 
                 <div style="text-align:center; margin-bottom:30px;">
@@ -1114,7 +1187,7 @@
 
         selectedDriveFile = null;
 
-        document.getElementById("btn-selecionar-drive").onclick = () => {
+        document.getElementById("btn-selecionar-drive").addEventListener("click", () => {
             const container = document.getElementById("container-picker-drive");
             container.style.display = "block";
             window.Publicacoes.inicializarPublicacoes(null, {
@@ -1137,9 +1210,9 @@
             });
         };
 
-        document.getElementById("btn-fechar-picker").onclick = () => {
+        document.getElementById("btn-fechar-picker").addEventListener("click", () => {
             document.getElementById("container-picker-drive").style.display = "none";
-        };
+        });
 
         document.getElementById("form-criar-assembleia").onsubmit = (e) => {
             e.preventDefault();

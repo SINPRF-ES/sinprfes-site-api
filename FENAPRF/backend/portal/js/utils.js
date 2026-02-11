@@ -94,6 +94,14 @@
     return only.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   }
 
+  function formatarCEP(cep) {
+    if (global.Formatters) return global.Formatters.formatCep(cep);
+    if (!cep) return "";
+    const only = String(cep).replace(/\D/g, "");
+    if (only.length !== 8) return cep;
+    return only.replace(/(\d{5})(\d{3})/, "$1-$2");
+  }
+
   function normalizeText(str) {
     if (!str) return "";
     return String(str)
@@ -212,6 +220,7 @@
     aplicarMascaraConta,
     aplicarMascaraCPF,
     aplicarMascaraCEP,
+    formatarCEP,
     aplicarMascaraData,
     normalizeText,
     escapeHTML,

@@ -37,7 +37,7 @@
 
         const escapedNome = escapeHTML ? escapeHTML(safeNome) : safeNome;
 
-        return `<img class="avatar-mini" src="${src}" alt="Avatar ${escapedNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
+        return `<img class="avatar-mini" src="${src}" alt="Avatar ${escapedNome}">`;
     }
 
     function formatISOToBRDateTime(isoStr) {
@@ -88,13 +88,24 @@
         const canManageProfiles = ehGestao;
 
         if (!handlersConfigurados) {
+            const listEl = document.getElementById("lista-users");
+            if (listEl) {
+                listEl.addEventListener("click", (e) => {
+                    const btn = e.target.closest(".btn-editar-user");
+                    if (btn) {
+                        const id = btn.dataset.id;
+                        abrirModalEdicao(id);
+                    }
+                });
+            }
+
             const btnNovo = document.getElementById("btn-novo-user");
             const containerNovo = document.getElementById("novo-user-container");
 
             if (btnNovo) {
                 if (ehGestao) {
                     btnNovo.style.display = "inline-block";
-                    btnNovo.onclick = () => abrirNovoUser(containerNovo);
+                    btnNovo.addEventListener("click", () => abrirNovoUser(containerNovo));
                     renderizarFormularioNovoUser(containerNovo);
                 }
             }
@@ -202,7 +213,7 @@
                         <div style="text-align:right;">
                             <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
             ${!["CONSELHEIRO"].includes(perfilAtual) ?
-                                `<button class="btn btn-outline btn-sm" onclick="UsersAdmin.abrirModalEdicao(${f.id})" style="margin-top:8px;">✏️ Editar</button>` : ''}
+                                `<button class="btn btn-outline btn-sm btn-editar-user" data-id="${f.id}" style="margin-top:8px;">✏️ Editar</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -249,8 +260,8 @@
                 <span>Estado: <strong>${isArquivado ? "ARQUIVADO" : "ATIVO"}</strong></span>
                 <div>
                     ${isArquivado ?
-                        `<button type="button" class="btn btn-outline btn-sm" onclick="UsersAdmin.confirmarDesarquivar(${f.id})">📤 Desarquivar</button>` :
-                        `<button type="button" class="btn btn-outline btn-sm" onclick="UsersAdmin.confirmarArquivar(${f.id})">📥 Arquivar</button>`}
+                        `<button type="button" class="btn btn-outline btn-sm btn-desarquivar-user" data-id="${f.id}">📤 Desarquivar</button>` :
+                        `<button type="button" class="btn btn-outline btn-sm btn-arquivar-user" data-id="${f.id}">📥 Arquivar</button>`}
                 </div>
             </div>
 
@@ -285,7 +296,7 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>CPF</label>
-                            <input name="cpf" value="${safeEscape(f.cpf)}" ${ehGestao ? "" : "readonly"}>
+                            <input name="cpf" value="${safeEscape(formatarCPF(f.cpf))}" ${ehGestao ? "" : "readonly"}>
                         </div>
                         <div class="field-group"></div>
                     </div>
@@ -324,7 +335,7 @@
                         </div>
                         <div class="field-group">
                             <label>Telefone 1</label>
-                            <input name="telefone1" class="campo-telefone" value="${safeEscape(f.telefone1)}">
+                            <input name="telefone1" class="campo-telefone" value="${safeEscape(global.Utils.formatarTelefoneTexto(f.telefone1))}">
                         </div>
                     </div>
                     <div class="field-row">
@@ -334,7 +345,7 @@
                         </div>
                         <div class="field-group">
                             <label>Telefone 2</label>
-                            <input name="telefone2" class="campo-telefone" value="${safeEscape(f.telefone2)}">
+                            <input name="telefone2" class="campo-telefone" value="${safeEscape(global.Utils.formatarTelefoneTexto(f.telefone2))}">
                         </div>
                     </div>
                 </div>
@@ -346,7 +357,7 @@
                         <div class="edit-group cep-group">
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
-                                <input name="cep" id="edit-cep" value="${safeEscape(f.cep)}" class="campo-cep">
+                                <input name="cep" id="edit-cep" value="${safeEscape(global.Utils.formatarCEP(f.cep))}" class="campo-cep">
                                 <span class="cep-search-icon">🔍</span>
                             </div>
                         </div>
@@ -380,19 +391,19 @@
                 <div class="data-card">
                     <h3>🖼️ Avatar (Foto)</h3>
                     <div class="subcard flex-center" style="gap: 20px; flex-wrap: wrap;">
-                        <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" onerror="this.src='/img/avatar-placeholder.png'" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #ffc107;">
+                        <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #ffc107;">
                         <div class="avatar-actions" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:10px;">
                             <input type="file" id="modal-avatar-input" accept="image/*">
                             <div style="display:flex; gap:10px;">
-                                <button type="button" class="btn btn-primary btn-sm" onclick="UsersAdmin.uploadAvatar(${f.id})" style="flex:1;">Upload</button>
-                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="UsersAdmin.removerAvatar(${f.id})" style="flex:1;">Remover</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="btn-upload-avatar-modal" data-id="${f.id}" style="flex:1;">Upload</button>
+                                <button type="button" class="btn btn-danger-outline btn-sm" id="btn-remover-avatar-modal" data-id="${f.id}" style="flex:1;">Remover</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-outline btn-lg" onclick="document.getElementById('modal-editar-user').style.display='none'">Cancelar</button>
+                    <button type="button" class="btn btn-outline btn-lg" data-close="modal-editar-user">Cancelar</button>
                     <button type="submit" class="btn btn-primary btn-lg">Salvar Alterações</button>
                 </div>
             </form>
@@ -401,6 +412,27 @@
 
     function configurarFormEdicao(id) {
         const form = document.getElementById("form-edicao-modal");
+
+        // Handlers de Ação (CSP-friendly)
+        const btnArq = document.querySelector(".btn-arquivar-user");
+        if (btnArq) btnArq.addEventListener("click", () => confirmarArquivar(btnArq.dataset.id));
+
+        const btnDesarq = document.querySelector(".btn-desarquivar-user");
+        if (btnDesarq) btnDesarq.addEventListener("click", () => confirmarDesarquivar(btnDesarq.dataset.id));
+
+        const btnUpload = document.getElementById("btn-upload-avatar-modal");
+        if (btnUpload) btnUpload.addEventListener("click", () => uploadAvatar(btnUpload.dataset.id));
+
+        const btnRemover = document.getElementById("btn-remover-avatar-modal");
+        if (btnRemover) btnRemover.addEventListener("click", () => removerAvatar(btnRemover.dataset.id));
+
+        const btnClose = form.querySelector("[data-close]");
+        if (btnClose) {
+            btnClose.addEventListener("click", () => {
+                document.getElementById(btnClose.dataset.close).style.display = "none";
+            });
+        }
+
         const { aplicarMascaraTelefone, aplicarMascaraCPF } = global.Utils || {};
 
         if (aplicarMascaraCPF) {
@@ -432,15 +464,15 @@
             cepInput.addEventListener('blur', executarBuscaCep);
             // also trigger on search icon click
             const searchIcon = form.querySelector(".cep-search-icon");
-            if (searchIcon) searchIcon.onclick = executarBuscaCep;
+            if (searchIcon) searchIcon.addEventListener("click", executarBuscaCep);
         }
 
         const dataNascInput = document.getElementById("edit-data-nascimento");
         if (dataNascInput) {
-            dataNascInput.onchange = () => {
+            dataNascInput.addEventListener("change", () => {
                 const display = document.getElementById("edit-idade-display");
                 if (display) display.value = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascInput.value) : '—';
-            };
+            });
         }
 
         form.onsubmit = async (e) => {
@@ -499,7 +531,12 @@
                 const data = await r.json();
 
                 if (r.ok) {
-                    alert("Sucesso!");
+                    if (data.warnings && data.warnings.length > 0) {
+                        const warnMsgs = data.warnings.map(w => w.message).join("\n");
+                        alert("Salvo com avisos:\n" + warnMsgs);
+                    } else {
+                        alert("Sucesso!");
+                    }
                     document.getElementById("modal-editar-user").style.display = "none";
                     await carregarLista();
                 } else {
@@ -613,7 +650,7 @@
                         </div>
                         <div class="edit-group">
                             <label>Data Nascimento</label>
-                            <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
+                            <input type="date" name="data_nascimento" class="campo-data">
                         </div>
 
                         <div class="address-grid span-2">
@@ -647,7 +684,7 @@
                         </div>
                     </div>
                     <div style="text-align:right; margin-top:25px;">
-                        <button type="button" class="btn btn-outline" onclick="this.closest('.user-card').parentElement.style.display='none'">Cancelar</button>
+                        <button type="button" class="btn btn-outline" id="btn-cancelar-novo-user">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Criar Cadastro</button>
                     </div>
                 </form>
@@ -656,28 +693,38 @@
 
         const form = container.querySelector("#form-novo-user-admin");
 
+        const btnCancel = form.querySelector("#btn-cancelar-novo-user");
+        if (btnCancel) {
+            btnCancel.addEventListener("click", () => {
+                container.style.display = "none";
+            });
+        }
+
         // Aplicar Máscaras
         if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
         if (aplicarMascaraTelefone) aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
-        if (aplicarMascaraData) aplicarMascaraData(form.querySelector('input[name="data_nascimento"]'));
 
         const cepInp = form.querySelector("#new-cep");
+        const executarBuscaCepNovo = async () => {
+            const cep = (cepInp.value || "").replace(/\D/g, "");
+            if (cep.length === 8) {
+                try {
+                    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await res.json();
+                    if (!data.erro) {
+                        document.getElementById("new-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
+                        document.getElementById("new-cidade").value = data.localidade;
+                        document.getElementById("new-uf").value = data.uf;
+                    }
+                } catch (err) { console.error("Erro busca CEP", err); }
+            }
+        };
+
         if (cepInp) {
             if (aplicarMascaraCEP) aplicarMascaraCEP(cepInp);
-            cepInp.addEventListener('blur', async () => {
-                const cep = (cepInp.value || "").replace(/\D/g, "");
-                if (cep.length === 8) {
-                    try {
-                        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                        const data = await res.json();
-                        if (!data.erro) {
-                            document.getElementById("new-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
-                            document.getElementById("new-cidade").value = data.localidade;
-                            document.getElementById("new-uf").value = data.uf;
-                        }
-                    } catch (err) { console.error("Erro busca CEP", err); }
-                }
-            });
+            cepInp.addEventListener('blur', executarBuscaCepNovo);
+            const searchIcon = form.querySelector(".cep-search-icon");
+            if (searchIcon) searchIcon.addEventListener("click", executarBuscaCepNovo);
         }
 
         form.onsubmit = async (e) => {
@@ -704,25 +751,30 @@
             // Sanitização Telefone
             if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
 
-            // Conversão Data de Nascimento para ISO
-            if (payload.data_nascimento) {
+            // Conversão Data de Nascimento para ISO (if it still comes in BR format for some reason)
+            if (payload.data_nascimento && payload.data_nascimento.includes('/')) {
                 const iso = global.Formatters ? global.Formatters.parseBRToISO(payload.data_nascimento) : null;
-                if (payload.data_nascimento.includes('/') && !iso) {
+                if (!iso) {
                     alert("Data de nascimento inválida. Use o formato DD/MM/AAAA.");
                     return;
                 }
-                if (iso) payload.data_nascimento = iso;
+                payload.data_nascimento = iso;
             }
 
             try {
                 const r = await window.Api.apiFetch("/api/users", { method: "POST", body: payload });
+                const data = await r.json();
                 if (r.ok) {
-                    alert("Criado com sucesso!");
+                    if (data.warnings && data.warnings.length > 0) {
+                        const warnMsgs = data.warnings.map(w => w.message).join("\n");
+                        alert("Criado com avisos:\n" + warnMsgs);
+                    } else {
+                        alert("Criado com sucesso!");
+                    }
                     container.style.display = "none";
                     await carregarLista();
                 } else {
-                    const err = await r.json();
-                    alert(err.message || "Erro ao criar.");
+                    alert(data.message || "Erro ao criar.");
                 }
             } catch (err) { alert("Erro de conexão."); }
         };

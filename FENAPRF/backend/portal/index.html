@@ -22,7 +22,6 @@
   <script src="/portal/js/notificacoes.js"></script>
   <script src="/portal/js/assembleia-utils.js"></script>
   <script src="/portal/js/assembleias.js"></script>
-  <script src="/portal/js/cms-admin.js"></script>
   <script src="/portal/js/relatorios.js"></script>
   <script src="/portal/js/logistica.js"></script>
 
@@ -47,7 +46,6 @@
           <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
           <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
           <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;">📊 Relatórios</button>
-          <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
         </div>
 
         <div class="af-sidebar-footer">
@@ -91,29 +89,6 @@
 
           <div id="sec-assembleias-sala" style="display:none;">
              <div id="area-assembleia-sala-conteudo"></div>
-          </div>
-        </section>
-
-        <section id="sec-cms" class="af-section" style="display:none;">
-          <div class="section-card">
-              <div class="af-standard-header">
-                  <h2>Gerenciar Conteúdo do Site</h2>
-                  <p class="section-subtitle">Edite os blocos de informação da Home e Notícias.</p>
-              </div>
-
-              <div class="field-row" style="max-width: 300px; margin: 0 auto;">
-                  <div class="field-group">
-                      <label>Selecionar Página</label>
-                      <select id="cms-page-selector">
-                          <option value="home">Início (Home)</option>
-                          <option value="noticias">Notícias</option>
-                      </select>
-                  </div>
-              </div>
-
-              <div id="cms-blocks-admin" style="margin-top:20px; display: flex; flex-direction: column; gap: 20px;">
-                  <p>Carregando blocos...</p>
-              </div>
           </div>
         </section>
 
@@ -244,7 +219,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="modal-titulo">Editar Membro</h2>
-        <button type="button" class="modal-close" onclick="document.getElementById('modal-editar-user').style.display='none'">×</button>
+        <button type="button" class="modal-close" data-close="modal-editar-user">×</button>
       </div>
       <div class="modal-body" id="modal-corpo">
         <!-- Form carregado dinamicamente -->
@@ -257,7 +232,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="modal-generic-titulo">Título</h2>
-        <button type="button" class="modal-close" onclick="document.getElementById('modal-generic').style.display='none'">×</button>
+        <button type="button" class="modal-close" data-close="modal-generic">×</button>
       </div>
       <div class="modal-body" id="modal-generic-corpo">
         <!-- Conteúdo dinâmico -->

@@ -52,7 +52,7 @@
             `;
 
             if (isManager) {
-                document.getElementById("btn-novo-evento").onclick = () => abrirModalEvento();
+                document.getElementById("btn-novo-evento").addEventListener("click", () => abrirModalEvento());
             }
 
             carregarEventos();
@@ -69,8 +69,16 @@
                     return;
                 }
 
+                if (!container._hasListener) {
+                    container.addEventListener("click", (e) => {
+                        const item = e.target.closest(".log-event-item");
+                        if (item) verDetalhe(item.dataset.id);
+                    });
+                    container._hasListener = true;
+                }
+
                 container.innerHTML = eventos.map(e => `
-                    <div class="log-event-item" onclick="window.Logistica.verDetalhe('${e.id}')" style="cursor:pointer;">
+                    <div class="log-event-item" data-id="${e.id}" style="cursor:pointer;">
                         <div style="display:flex; justify-content:space-between;">
                             <span class="log-event-title">${e.titulo}</span>
                             <span class="log-badge log-badge-${e.status}">${e.status}</span>
@@ -99,8 +107,25 @@
                 const respI = await window.Api.apiFetch(`/api/logistica/eventos/${id}/inscricoes`);
                 const inscricoes = await respI.json();
 
+                if (!detalhe._hasListener) {
+                    detalhe.addEventListener("click", (e) => {
+                        const btn = e.target.closest("[data-action]");
+                        if (!btn) return;
+                        const action = btn.dataset.action;
+                        const eid = btn.dataset.eid;
+                        const iid = btn.dataset.iid;
+                        const type = btn.dataset.type;
+
+                        if (action === "voltar") voltarLista();
+                        else if (action === "editar-evento") abrirModalEvento(eid);
+                        else if (action === "exportar") exportar(eid, type);
+                        else if (action === "gerenciar-inscricao") abrirModalInscricao(iid);
+                    });
+                    detalhe._hasListener = true;
+                }
+
                 detalhe.innerHTML = `
-                    <button class="btn-log btn-log-outline" onclick="window.Logistica.voltarLista()" style="margin-bottom:20px;">← Voltar</button>
+                    <button class="btn-log btn-log-outline" data-action="voltar" style="margin-bottom:20px;">← Voltar</button>
                     <div class="log-card">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <div>
@@ -110,9 +135,9 @@
                             </div>
                             <div style="display:flex; gap:10px;">
                                 ${isManager ? `
-                                    <button class="btn-log btn-log-outline" onclick="window.Logistica.abrirModalEvento('${evento.id}')">Editar</button>
-                                    <button class="btn-log btn-log-danger" onclick="window.Logistica.exportar('${evento.id}', 'pdf')">PDF</button>
-                                    <button class="btn-log btn-log-primary" onclick="window.Logistica.exportar('${evento.id}', 'xls')" style="background:#27ae60;">XLS</button>
+                                    <button class="btn-log btn-log-outline" data-action="editar-evento" data-eid="${evento.id}">Editar</button>
+                                    <button class="btn-log btn-log-danger" data-action="exportar" data-eid="${evento.id}" data-type="pdf">PDF</button>
+                                    <button class="btn-log btn-log-primary" data-action="exportar" data-eid="${evento.id}" data-type="xls" style="background:#27ae60;">XLS</button>
                                 ` : ''}
                             </div>
                         </div>
@@ -147,7 +172,7 @@
                                                 <td>${new Date(i.data_saida).toLocaleString()}</td>
                                                 ${isManager ? `
                                                     <td>
-                                                        <button class="btn-log btn-log-outline" style="padding:4px 8px; font-size:0.7rem;" onclick="window.Logistica.abrirModalInscricao('${i.id}')">Gerenciar</button>
+                                                        <button class="btn-log btn-log-outline" style="padding:4px 8px; font-size:0.7rem;" data-action="gerenciar-inscricao" data-iid="${i.id}">Gerenciar</button>
                                                     </td>
                                                 ` : ''}
                                             </tr>
@@ -179,6 +204,10 @@
             return false;
         }
 
+        function abrirModalInscricao(id) {
+            alert("Gerenciamento de Inscrição: Use o App Mobile para controle total de entrada/saída.");
+        }
+
         function abrirModalEvento(id = null) {
             // Implementação simplificada de modal via alert/prompt ou injetando HTML
             // Para brevidade, usaremos window.Utils.abrirModalGenerico se existir
@@ -195,12 +224,6 @@
             document.getElementById("log-detalhe-evento").style.display = "none";
             carregarEventos();
         }
-
-        // Expondo funções para o onclick global
-        window.Logistica.verDetalhe = verDetalhe;
-        window.Logistica.voltarLista = voltarLista;
-        window.Logistica.abrirModalEvento = abrirModalEvento;
-        window.Logistica.exportar = exportar;
     }
 
     global.Logistica = {

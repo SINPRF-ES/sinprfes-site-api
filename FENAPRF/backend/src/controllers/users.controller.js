@@ -274,16 +274,29 @@ exports.atualizarMeusDados = async (req, res) => {
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
+      uf_endereco: body.uf_endereco,
     };
+
+    const duplicados = await verificarAvisosDuplicidade(payload, atorId);
 
     const atualizado = await usersService.atualizarDadosProprios(atorId, payload);
 
     log.info("UserAtualizouProprios", { userId: atorId, requestId: req.requestId });
 
-    return res.json({
+    const response = {
       message: Textos.SUCESSO.DADOS_ATUALIZADOS,
       user: atualizado,
-    });
+      ok: true
+    };
+
+    if (duplicados.length > 0) {
+      response.warnings = duplicados.map(nome => ({
+        code: "DATA_DUPLICATED_WARNING",
+        message: `O telefone/e-mail já é utilizado por: ${nome}.`
+      }));
+    }
+
+    return res.json(response);
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
     log.error("UsersUpdateMeErro", {
@@ -360,6 +373,7 @@ exports.atualizarUser = async (req, res) => {
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
+      uf_endereco: body.uf_endereco,
       cargo: body.cargo,
       uf: body.uf || body.uf_voto, // prioriza 'uf' canônico
       cargo_mandato_inicio: body.cargo_mandato_inicio !== undefined ? normalizeDateField(body.cargo_mandato_inicio) : undefined,
@@ -421,22 +435,27 @@ exports.atualizarUser = async (req, res) => {
     }
 
     // Verificação de Avisos de Duplicidade (Telefone/Email) - AVISO apenas
-    if (!body.ignoreWarnings) {
-      const duplicados = await verificarAvisosDuplicidade(payload, idAlvo);
-      if (duplicados.length > 0) {
-        return res.status(409).json({
-          code: "DATA_DUPLICATED_WARNING",
-          message: `O telefone/e-mail já é utilizado por: ${duplicados.join(", ")}.`,
-          details: { names: duplicados }
-        });
-      }
-    }
+    const duplicados = await verificarAvisosDuplicidade(payload, idAlvo);
 
     const atualizado = await usersService.atualizarUserPorId(idAlvo, payload);
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     log.info("UserEditadoPorGestao", { atorId, alvoId: idAlvo, requestId: req.requestId });
-    return res.json({ message: Textos.SUCESSO.DADOS_ATUALIZADOS, user: atualizado });
+
+    const response = {
+      message: Textos.SUCESSO.DADOS_ATUALIZADOS,
+      user: atualizado,
+      ok: true
+    };
+
+    if (duplicados.length > 0) {
+      response.warnings = duplicados.map(nome => ({
+        code: "DATA_DUPLICATED_WARNING",
+        message: `O telefone/e-mail já é utilizado por: ${nome}.`
+      }));
+    }
+
+    return res.json(response);
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
     if (err && (err.code === "23505" || (err.message && err.message.includes("duplicate")))) return res.status(409).json({ message: "CPF duplicado no sistema." });
@@ -551,16 +570,7 @@ exports.criarUser = async (req, res) => {
       telefone2: body.telefone2
     };
 
-    if (!body.ignoreWarnings) {
-      const duplicados = await verificarAvisosDuplicidade(tempPayloadParaAviso);
-      if (duplicados.length > 0) {
-        return res.status(409).json({
-          code: "DATA_DUPLICATED_WARNING",
-          message: `O telefone/e-mail já é utilizado por: ${duplicados.join(", ")}.`,
-          details: { names: duplicados }
-        });
-      }
-    }
+    const duplicados = await verificarAvisosDuplicidade(tempPayloadParaAviso);
 
     const dadosNovo = {
       nome: String(body.nome || body.name).trim(),
@@ -581,6 +591,7 @@ exports.criarUser = async (req, res) => {
       complemento: body.complemento || null,
       cidade: body.cidade || null,
       cep: body.cep || null,
+      uf_endereco: body.uf_endereco || null,
     };
 
     const novo = await usersService.criarUserInicial(dadosNovo, perfilCriador);
@@ -588,7 +599,21 @@ exports.criarUser = async (req, res) => {
     try { await enviarEmailBoasVindasUser(novo); } catch (emailErr) { log.error("UserEmailBoasVindasErro", { error: emailErr.message, requestId: req.requestId }); }
 
     log.info("UserCriado", { creatorId: atorId, newId: novo.id, requestId: req.requestId });
-    return res.status(201).json({ message: Textos.SUCESSO.CRIADO_SUCESSO, user: novo });
+
+    const response = {
+      message: Textos.SUCESSO.CRIADO_SUCESSO,
+      user: novo,
+      ok: true
+    };
+
+    if (duplicados.length > 0) {
+      response.warnings = duplicados.map(nome => ({
+        code: "DATA_DUPLICATED_WARNING",
+        message: `O telefone/e-mail já é utilizado por: ${nome}.`
+      }));
+    }
+
+    return res.status(201).json(response);
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
     log.error("UsersCriarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });

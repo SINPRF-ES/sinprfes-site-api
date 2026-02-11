@@ -1,9 +1,13 @@
 // src/utils/format.js
 const { v7: uuidv7 } = require("uuid");
 
+function somenteDigitos(val) {
+  if (!val) return null;
+  return val.toString().replace(/\D/g, "");
+}
+
 function normalizarCpf(cpf) {
-  if (!cpf) return null;
-  return cpf.toString().replace(/\D/g, "");
+  return somenteDigitos(cpf);
 }
 
 function normalizarCep(cep) {
@@ -136,6 +140,7 @@ function formatarConta(conta) {
 }
 
 module.exports = {
+  somenteDigitos,
   normalizarCpf,
   normalizarCep,
   formatarCPF,
