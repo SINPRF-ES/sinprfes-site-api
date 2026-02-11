@@ -98,7 +98,7 @@ Você já pode acessar a Área Restrita para atualizar seus dados, consultar inf
 
 Para o primeiro acesso:
 1. Acesse o app da FENAPRF.
-2. Utilize seu CPF e a senha provisória ou solicite a recuperação de senha ("Esqueci minha senha").
+2. Solicite a recuperação de senha ("Esqueci minha senha").
 
 Em caso de dúvidas, entre em contato conosco.
 
