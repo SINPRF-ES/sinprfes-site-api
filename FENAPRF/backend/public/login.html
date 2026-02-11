@@ -12,10 +12,10 @@
 <body>
   <div id="site-header"></div>
 
-  <main class="page container">
+  <main class="page container" style="max-width: 500px; margin-top: 40px;">
     <section class="card login-card">
-      <h1>Página Inicial</h1>
-      <p class="page-intro">
+      <h1 style="text-align: center; color: var(--amarelo);">Área Restrita</h1>
+      <p class="page-intro" style="text-align: center;">
         Acesse sua Página Inicial para consultar e atualizar seus dados cadastrais,
         além de acessar conteúdos exclusivos.
       </p>
@@ -46,57 +46,25 @@
           />
         </div>
 
-
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
+        <div class="form-actions" style="margin-top: 10px;">
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
             Entrar
           </button>
         </div>
 
-        <p id="login-mensagem" class="field-hint"></p>
+        <p id="login-mensagem" class="field-hint" style="text-align: center; font-weight: bold; margin-top: 10px;"></p>
       </form>
 
       <hr class="form-separator" />
 
-      <!-- ESQUECI MINHA SENHA / PRIMEIRO ACESSO -->
-      <section class="form-card">
-        <h2>Esqueci minha senha / Primeiro acesso</h2>
+      <div style="text-align: center;">
         <p class="field-hint">
-          Se for seu primeiro acesso, ou se você esqueceu sua senha,
-          utilize esta opção. Você receberá um link no e-mail cadastrado
-          para criar uma nova senha.
+          Esqueceu sua senha ou é seu primeiro acesso?
         </p>
-
-        <form id="forgot-form" class="form-grid">
-          <div class="form-group form-group-full">
-            <label for="forgot-cpf">CPF</label>
-            <input
-              type="text"
-              id="forgot-cpf"
-              name="cpf"
-              placeholder="000.000.000-00"
-              inputmode="numeric"
-              autocomplete="username"
-              required
-            />
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-outline">
-              Enviar link para criar nova senha
-            </button>
-          </div>
-        </form>
-
-        <p id="forgot-mensagem" class="field-hint"></p>
-
-        <p class="field-hint">
-          O sistema informará para qual e-mail o link foi enviado. Caso
-          o e-mail esteja incorreto ou você não tenha mais acesso a ele,
-          favor entrar em contato com a secretaria, pela página
-          <a href="/contato.html">Contato</a>.
-        </p>
-      </section>
+        <a href="/recuperar-senha.html" class="btn btn-outline" style="width: 100%; margin-top: 10px;">
+          Recuperar Senha / Primeiro Acesso
+        </a>
+      </div>
     </section>
   </main>
 

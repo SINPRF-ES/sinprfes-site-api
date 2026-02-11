@@ -4,14 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const headerEl = document.getElementById("site-header");
   const footerEl = document.getElementById("site-footer");
 
-  // Descobre qual página estamos (ex.: "index.html", "diretoria.html", etc.)
-  const currentPath = window.location.pathname.split("/").pop() || "index.html";
-
-  function isActive(page) {
-    if (currentPath === "" && page === "index.html") return "active";
-    return currentPath === page ? "active" : "";
-  }
-
   // Check for embed mode (app)
   const isEmbed = new URLSearchParams(window.location.search).get("embed") === "1" ||
                   new URLSearchParams(window.location.search).get("app") === "1";
@@ -29,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <header class="site-header">
         <div class="container header-content">
           <div class="logo-area">
-            <a href="/index.html" class="logo-link">
+            <a href="/login.html" class="logo-link">
               <img src="/img/logo-fenaprf.png" alt="FENAPRF" class="logo-img">
               <span class="logo-text">
                 FENAPRF
@@ -37,16 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
             </a>
           </div>
 
-          <nav class="main-nav">
-            <a href="/index.html" class="${isActive("index.html")}">Início</a>
-            <a href="/diretoria.html" class="${isActive("diretoria.html")}">Diretoria</a>
-            <a href="/estatuto.html" class="${isActive("estatuto.html")}">Estatuto</a>
-            <a href="/contato.html" class="${isActive("contato.html")}">Contato</a>
-          </nav>
-
           <div class="header-actions">
-            <!-- 🔽 aqui é a mudança: agora aponta direto para a Página Inicial -->
-            <a href="/area-user.html" class="btn btn-primary">Página Inicial</a>
+            <a href="/login.html" class="btn btn-primary">Área Restrita</a>
           </div>
         </div>
       </header>
@@ -61,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="container footer-content">
           <p>&copy; ${ano} FENAPRF.</p>
           <p class="footer-small">
-            Desenvolvido para uso institucional. Todos os direitos reservados.
+            Acesso exclusivo para membros.
           </p>
         </div>
       </footer>
