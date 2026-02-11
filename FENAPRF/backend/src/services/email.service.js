@@ -1,19 +1,44 @@
 // src/services/email.service.js
 let resend = null;
 
-try {
-  const { Resend } = require("resend");
-  // 1. Inicializa o cliente Resend com a chave API
-  resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_123");
-} catch (e) {
-  console.warn("[EMAIL] Resend module not found or failed to initialize. Email services may be unavailable.");
+/**
+ * Resend pode ser ESM-only em Node 20+.
+ * Evita ERR_REQUIRE_ESM usando import() dinâmico e lazy-init.
+ */
+async function getResendClient() {
+  if (resend) return resend;
+
+  const apiKey = process.env.RESEND_API_KEY;
+
+  // Se não tem chave, desabilita provider (mantém comportamento seguro)
+  if (!apiKey) {
+    return null;
+  }
+
+  try {
+    const mod = await import("resend");
+    const ResendCtor = mod?.Resend || mod?.default?.Resend;
+
+    if (!ResendCtor) {
+      console.warn("[EMAIL] Resend module loaded but constructor not found.");
+      return null;
+    }
+
+    resend = new ResendCtor(apiKey);
+    return resend;
+  } catch (e) {
+    // Loga o motivo real (ex: ERR_REQUIRE_ESM, module not found, etc.)
+    console.warn("[EMAIL] Resend init failed:", e?.code, e?.message);
+    return null;
+  }
 }
 
 /**
  * Função de envio base
  */
 async function enviarEmailBase(to, subject, text, cc = undefined) {
-  if (!resend) {
+  const client = await getResendClient();
+  if (!client) {
     console.warn("⚠️ [EMAIL] Resend não disponível. Abortando envio.");
     return null;
   }
@@ -30,7 +55,7 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
   const payload = { from: MAIL_FROM, to, subject, text };
   if (cc) payload.cc = cc;
 
-  const { data, error } = await resend.emails.send(payload);
+  const { data, error } = await client.emails.send(payload);
 
   if (error) {
     console.error("💥 Erro ao enviar e-mail com Resend:", error);
@@ -41,15 +66,15 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
   return data;
 }
 
-
-
 /**
  * E-mail de boas-vindas para novo user.
  */
 async function enviarEmailBoasVindasUser(dados) {
   const { MAIL_FROM } = process.env;
 
-  const emailDestino = dados.email || dados.email;
+  // ✅ corrige bug: antes era dados.email || dados.email
+  // ✅ mantém compatibilidade caso ainda exista algum fluxo com email1
+  const emailDestino = dados.email || dados.email1;
 
   if (!MAIL_FROM || !emailDestino) {
     console.log("⚠️ E-mail de boas-vindas não enviado por falta de MAIL_FROM ou e-mail do user.");
@@ -208,7 +233,7 @@ function extrairEmailDestino(obj = {}) {
     (obj.email_destino && String(obj.email_destino).trim()) ||
     (obj.email && String(obj.email).trim()) ||
     (obj.email2 && String(obj.email2).trim()) ||
-    (obj.email && String(obj.email).trim()) ||
+    (obj.email1 && String(obj.email1).trim()) ||
     ""
   );
 }
@@ -362,8 +387,11 @@ FENAPRF
         text: corpo,
         attachments: [{ filename: `relatorio_assembleia_${assembleia.id.slice(0, 8)}.pdf`, content: pdfBuffer.toString("base64") }],
       };
-      const resUser = resend ? await resend.emails.send(payloadUser) : { error: "Resend not available" };
+
+      const client = await getResendClient();
+      const resUser = client ? await client.emails.send(payloadUser) : { error: "Resend not available" };
       if (resUser.error) throw resUser.error;
+
       console.log("📧 [emailRelatorioUserOk]", resUser.data.id);
     } catch (err) {
       console.error("💥 [emailRelatorioUserErro]", err);
@@ -400,8 +428,10 @@ FENAPRF
         </div>
       `,
     };
-    if (resend) {
-      await resend.emails.send(payloadSindicato);
+
+    const client = await getResendClient();
+    if (client) {
+      await client.emails.send(payloadSindicato);
       console.log("📧 [emailRelatorioNotifSindicatoOk]");
     }
   } catch (err) {
@@ -434,6 +464,8 @@ FENAPRF
 
   const attachments = [{ filename, content: pdfBuffer.toString("base64") }];
 
+  const client = await getResendClient();
+
   if (emailDestino) {
     try {
       const payload = {
@@ -444,17 +476,19 @@ FENAPRF
         text: corpo,
         attachments
       };
-      const res = resend ? await resend.emails.send(payload) : { error: "Resend not available" };
+
+      const res = client ? await client.emails.send(payload) : { error: "Resend not available" };
       if (res.error) throw res.error;
+
       console.log("📧 [emailRelatorioOk] enviado para", emailDestino, "com BCC para", unionEmail);
     } catch (err) {
       console.error("💥 [emailRelatorioErro]", err);
       throw new Error(`Falha ao enviar e-mail do relatório: ${err.message}`);
     }
-  } else if (resend) {
+  } else if (client) {
     // Se o solicitante não tem e-mail, envia apenas para o sindicato
     try {
-      await resend.emails.send({
+      await client.emails.send({
         from: MAIL_FROM,
         to: unionEmail,
         subject: `[SOLICITANTE SEM EMAIL] ${subject}`,
