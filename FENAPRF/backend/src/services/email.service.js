@@ -49,7 +49,7 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
 async function enviarEmailBoasVindasUser(dados) {
   const { MAIL_FROM } = process.env;
 
-  const emailDestino = dados.email1 || dados.email;
+  const emailDestino = dados.email || dados.email;
 
   if (!MAIL_FROM || !emailDestino) {
     console.log("⚠️ E-mail de boas-vindas não enviado por falta de MAIL_FROM ou e-mail do user.");
@@ -206,7 +206,7 @@ function formatarModalidadesJogos(modalidades) {
 function extrairEmailDestino(obj = {}) {
   return (
     (obj.email_destino && String(obj.email_destino).trim()) ||
-    (obj.email1 && String(obj.email1).trim()) ||
+    (obj.email && String(obj.email).trim()) ||
     (obj.email2 && String(obj.email2).trim()) ||
     (obj.email && String(obj.email).trim()) ||
     ""
@@ -221,7 +221,7 @@ async function enviarEmailConfirmacaoInscricaoJogos(payload) {
 
   const emailDestino = extrairEmailDestino(user);
   if (!emailDestino) {
-    console.warn("⚠️ EmailJogosConfirmacao: user sem email1/email2.", JSON.stringify({ userId }));
+    console.warn("⚠️ EmailJogosConfirmacao: user sem email/email2.", JSON.stringify({ userId }));
     return;
   }
 
@@ -259,7 +259,7 @@ async function enviarEmailCancelamentoInscricaoJogos(payload) {
 
   const emailDestino = extrairEmailDestino(user);
   if (!emailDestino) {
-    console.warn("⚠️ EmailJogosCancelamento: user sem email1/email2.", JSON.stringify({ userId }));
+    console.warn("⚠️ EmailJogosCancelamento: user sem email/email2.", JSON.stringify({ userId }));
     return;
   }
 
