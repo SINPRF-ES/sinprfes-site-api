@@ -17,7 +17,7 @@ describe('Assembleias Controller', () => {
 
   beforeEach(() => {
     req = {
-      params: { id: '1' },
+      params: { id: '550e8400-e29b-41d4-a716-446655440000' },
       user: { id: 1, perfil_acesso: 'DIRETORIA' },
       body: {},
       requestId: 'test-id'
@@ -55,10 +55,11 @@ describe('Assembleias Controller', () => {
   });
 
   test('votar should auto-close votation if everyone has voted', async () => {
-    req.params = { id: 'ass1', vid: 'v1' };
+    const vid = '550e8400-e29b-41d4-a716-446655440001';
+    req.params = { id: '550e8400-e29b-41d4-a716-446655440000', vid };
     req.body = { voto: 'SIM' };
 
-    service.buscarVotacaoAtiva.mockResolvedValue({ id: 'v1', encerra_em: new Date(Date.now() + 10000).toISOString() });
+    service.buscarVotacaoAtiva.mockResolvedValue({ id: vid, encerra_em: new Date(Date.now() + 10000).toISOString() });
     service.verificarElegibilidade.mockResolvedValue(true);
     service.registrarVoto.mockResolvedValue({});
     service.contarVotos.mockResolvedValue({ total: 10, SIM: 6, NAO: 4 });
@@ -69,7 +70,7 @@ describe('Assembleias Controller', () => {
 
     await controller.votar(req, res);
 
-    expect(service.finalizarVotacao).toHaveBeenCalledWith('v1');
+    expect(service.finalizarVotacao).toHaveBeenCalledWith(vid);
     expect(res.json).toHaveBeenCalledWith({ success: true });
   });
 

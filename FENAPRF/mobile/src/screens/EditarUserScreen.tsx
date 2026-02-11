@@ -205,7 +205,12 @@ export default function EditarUserScreen({ route, navigation }: any) {
 
     // Bloqueia ações se estiver salvando (UX/Stability)
     const effectiveActions = saving
-      ? actions.map(a => ({ ...a, label: `${a.label} (Aguarde...)`, onPress: () => { logger.info('ACTION_BLOCKED_WHILE_SAVING'); } }))
+      ? actions.map(a => ({
+          ...a,
+          label: `${a.label} (Aguarde...)`,
+          disabled: true,
+          onPress: () => { logger.info('ACTION_BLOCKED_WHILE_SAVING'); }
+        }))
       : actions;
 
     navigation.setOptions({

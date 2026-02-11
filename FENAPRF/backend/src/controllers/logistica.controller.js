@@ -5,12 +5,22 @@ const pdfService = require("../services/pdf.service");
 const usersService = require("../services/users.service");
 const { parseUuid } = require("../utils/format");
 const { STATUS_EVENTO, ACOES_AUDITORIA, RECURSO_TIPO } = require("../../shared/logistica");
+const Textos = require("../utils/textos");
 
 /**
  * Helpers para compatibilidade com diferentes formatos de req.user
  */
 function getUserId(req) {
     return req?.user?.id || req?.user?.user_id || null;
+}
+
+/**
+ * Valida se uma string é uma data ISO válida.
+ */
+function isValidIsoDate(str) {
+    if (!str || typeof str !== 'string') return false;
+    const d = new Date(str);
+    return !isNaN(d.getTime());
 }
 
 /**
@@ -62,6 +72,15 @@ exports.criarEvento = async (req, res) => {
             return res.status(400).json({ error: "Título e datas são obrigatórios." });
         }
 
+        if (!isValidIsoDate(data_inicio) || !isValidIsoDate(data_fim)) {
+            return res.status(400).json({ error: "Datas de início ou fim inválidas." });
+        }
+
+        const validAssembleiaId = assembleia_id ? parseUuid(assembleia_id) : null;
+        if (assembleia_id && !validAssembleiaId) {
+            return res.status(400).json({ error: "assembleia_id inválido." });
+        }
+
         await client.query("BEGIN");
 
         const query = `
@@ -69,7 +88,7 @@ exports.criarEvento = async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
         `;
-        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, STATUS_EVENTO.ATIVO, assembleia_id || null]);
+        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, STATUS_EVENTO.ATIVO, validAssembleiaId]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
@@ -105,6 +124,15 @@ exports.atualizarEvento = async (req, res) => {
             return res.status(400).json({ error: "Justificativa é obrigatória para alterações de gestão." });
         }
 
+        if ((data_inicio && !isValidIsoDate(data_inicio)) || (data_fim && !isValidIsoDate(data_fim))) {
+            return res.status(400).json({ error: "Datas de início ou fim inválidas." });
+        }
+
+        const validAssembleiaId = assembleia_id ? parseUuid(assembleia_id) : null;
+        if (assembleia_id && !validAssembleiaId) {
+            return res.status(400).json({ error: "assembleia_id inválido." });
+        }
+
         await client.query("BEGIN");
 
         const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [id]);
@@ -117,7 +145,7 @@ exports.atualizarEvento = async (req, res) => {
             WHERE id = $9
             RETURNING *
         `;
-        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, assembleia_id || null, id]);
+        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, validAssembleiaId, id]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
@@ -284,6 +312,13 @@ exports.registrarMinhaInscricao = async (req, res) => {
             return res.status(400).json({ error: "Evento e datas são obrigatórios." });
         }
 
+        const validEventoId = parseUuid(evento_id);
+        if (!validEventoId) return res.status(400).json({ error: "evento_id inválido (UUID esperado)." });
+
+        if (!isValidIsoDate(data_chegada) || !isValidIsoDate(data_saida)) {
+            return res.status(400).json({ error: "Datas de chegada ou saída inválidas." });
+        }
+
         // Validar datas
         if (new Date(data_chegada) >= new Date(data_saida)) {
             return res.status(400).json({ error: "A data de chegada deve ser anterior à data de saída." });
@@ -310,7 +345,7 @@ exports.registrarMinhaInscricao = async (req, res) => {
                 atualizado_em = NOW()
             RETURNING *
         `;
-        const { rows } = await client.query(query, [evento_id, userId, data_chegada, data_saida, observacoes]);
+        const { rows } = await client.query(query, [validEventoId, userId, data_chegada, data_saida, observacoes]);
         const inscricao = rows[0];
 
         await client.query("COMMIT");
@@ -393,6 +428,10 @@ exports.atualizarInscricaoTerceiro = async (req, res) => {
         const { data_chegada, data_saida, observacoes, justificativa } = req.body;
 
         if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória." });
+
+        if ((data_chegada && !isValidIsoDate(data_chegada)) || (data_saida && !isValidIsoDate(data_saida))) {
+            return res.status(400).json({ error: "Datas de chegada ou saída inválidas." });
+        }
 
         // Validar datas
         if (data_chegada && data_saida && new Date(data_chegada) >= new Date(data_saida)) {
@@ -532,7 +571,7 @@ exports.exportarPdf = async (req, res) => {
 
         res.json({ success: true, message: "Exportação enviada para seu e-mail." });
     } catch (err) {
-        log.error("Logistica.exportarPdf.Erro", { requestId, userId, eventoId, error: err.message });
+        log.error("Logistica.exportarPdf.Erro", { requestId, userId, eventoId, error: err.message, stack: err.stack });
         res.status(500).json({ error: "Erro ao processar exportação PDF." });
     }
 };
@@ -598,7 +637,7 @@ exports.exportarXls = async (req, res) => {
 
         res.json({ success: true, message: "Exportação enviada para seu e-mail." });
     } catch (err) {
-        log.error("Logistica.exportarXls.Erro", { requestId, userId, eventoId, error: err.message });
+        log.error("Logistica.exportarXls.Erro", { requestId, userId, eventoId, error: err.message, stack: err.stack });
         res.status(500).json({ error: "Erro ao processar exportação XLS." });
     }
 };

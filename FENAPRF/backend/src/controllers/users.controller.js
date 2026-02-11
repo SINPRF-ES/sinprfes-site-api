@@ -475,7 +475,7 @@ exports.atualizarUser = async (req, res) => {
             mandato_fim: req.body?.cargo_mandato_fim
         }
     });
-    return res.status(500).json({ success: false, message: `Erro ao atualizar membro: ${err.message}` });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
 
@@ -485,8 +485,8 @@ exports.listarHistoricoArquivamento = async (req, res) => {
     const historico = await usersService.listarHistoricoMovimentacoes(null, q);
     res.json(historico);
   } catch (err) {
-    log.error("UsersHistoricoArquivamentoErro", err);
-    res.status(500).json({ message: "Erro ao listar histórico de arquivamento." });
+    log.error("UsersHistoricoArquivamentoErro", { error: err.message, requestId: req.requestId });
+    res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
   }
 };
 
@@ -498,8 +498,8 @@ exports.getHistoricoArquivamentoPorId = async (req, res) => {
     const historico = await usersService.listarHistoricoMovimentacoes(idAlvo);
     res.json(historico);
   } catch (err) {
-    log.error("UsersHistoricoArquivamentoPorIdErro", err);
-    res.status(500).json({ message: "Erro ao obter histórico do membro." });
+    log.error("UsersHistoricoArquivamentoPorIdErro", { error: err.message, targetId: idAlvo, requestId: req.requestId });
+    res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
   }
 };
 

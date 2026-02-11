@@ -163,6 +163,7 @@ const VinculoCard: React.FC<Props> = ({
             placeholder="DD/MM/AAAA"
             keyboardType="numeric"
             maxLength={10}
+            accessibilityLabel="Data de início do mandato"
           />
         </View>
         <View style={styles.col}>
@@ -176,6 +177,7 @@ const VinculoCard: React.FC<Props> = ({
             placeholder="DD/MM/AAAA"
             keyboardType="numeric"
             maxLength={10}
+            accessibilityLabel="Data de fim do mandato"
           />
         </View>
       </View>
