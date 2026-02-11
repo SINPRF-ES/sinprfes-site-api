@@ -2,6 +2,7 @@
 const express = require("express");
 const path = require("path");
 const app = express();
+const authMiddleware = require("./middlewares/auth");
 
 // Confia no proxy do Render para express-rate-limit
 app.set('trust proxy', 1);
@@ -50,11 +51,13 @@ app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/shared", express.static(path.join(process.cwd(), "shared")));
 
+// Portal do Membro (HTML/JS/CSS)
+app.use("/portal", express.static(path.join(process.cwd(), "portal")));
+
 // --- IMPORTAÇÃO DAS ROTAS ---
 const usersRoutes = require("./routes/users.routes");
 const senhaRoutes = require("./routes/senha.routes");
 const authRoutes = require("./routes/auth.routes");
-const jogosRoutes = require("./routes/jogos.routes");
 const instagramRoutes = require("./routes/instagram.routes");
 const pushRoutes = require("./routes/push.routes");
 const eventosRoutes = require("./routes/eventos.routes");
@@ -94,9 +97,6 @@ app.use("/api/users", usersRoutes);
 // Senha
 app.use("/api/senha", senhaRoutes);
 
-// Jogos
-app.use("/api/jogos", jogosRoutes);
-
 // Instagram (Feed)
 app.use("/api/instagram", instagramRoutes);
 
@@ -127,6 +127,11 @@ app.use("/api/eventos", eventoVotacoesRoutes); // vai usar subrotas /:id/votacoe
 
 // 🟧 NOVO: CMS-Lite para Blocos de Conteúdo
 app.use("/api/content-blocks", require("./routes/contentBlock.routes"));
+
+// Redirecionamento raiz para login
+app.get("/", (req, res) => {
+  res.redirect("/login.html");
+});
 
 // Health Check simples
 app.get("/health", (_, res) => {
