@@ -120,20 +120,6 @@
       .replace(/'/g, "&#039;");
   }
 
-  function exibirAlertaFlutuante() {
-    if (sessionStorage.getItem('fechouAlertaJogos')) return;
-    const div = document.createElement('div');
-    div.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: #e67e22; color: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.4); z-index: 9999; max-width: 300px; font-family: sans-serif; border: 2px solid #fff;";
-    div.innerHTML = `<button style="position: absolute; top: 5px; right: 8px; background: none; border: none; color: white; font-weight: bold; cursor: pointer;">✕</button><h3 style="margin: 0 0 10px 0; font-size: 1.2rem;">🏆 Jogos 2026</h3><p style="margin: 0 0 15px 0;">Não esqueça sua pré-inscrição!</p><button id="btn-ir-jogos" style="background: white; color: #d35400; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%;">Inscrever-se</button>`;
-    document.body.appendChild(div);
-    div.querySelector('button').addEventListener('click', () => { div.remove(); sessionStorage.setItem('fechouAlertaJogos', 'true'); });
-    div.querySelector('#btn-ir-jogos').addEventListener('click', () => {
-      const btn = document.querySelector('button[data-target="sec-jogos"]');
-      if (btn) btn.click();
-      div.remove();
-    });
-  }
-
   function aplicarMascaraAgencia(input) {
     if (!input) return;
     input.maxLength = 6;
@@ -214,57 +200,6 @@
     });
   }
 
-  function gerarCamposDependentes(container, prefixoId = '') {
-    const template = document.getElementById('template-dependentes');
-    if (!template || !container) return;
-    container.innerHTML = '';
-    for (let i = 1; i <= 5; i++) {
-      const clone = template.content.cloneNode(true);
-      clone.querySelector('.dependente-numero').textContent = i;
-      const nomePrefixo = prefixoId ? `${prefixoId}-` : '';
-      const campos = clone.querySelectorAll('input, label, select');
-      campos.forEach(campo => {
-        const nomeOriginal = campo.name || '';
-        const idOriginal = campo.id || '';
-        const forOriginal = campo.htmlFor || '';
-        if (nomeOriginal) campo.name = `${nomeOriginal.replace('depN_', `dep${i}_`)}`;
-        if (idOriginal) campo.id = `${nomePrefixo}${idOriginal.replace('depN_', `dep${i}_`)}`;
-        if (forOriginal) campo.htmlFor = `${nomePrefixo}${forOriginal.replace('depN_', `dep${i}_`)}`;
-      });
-      const selectParentesco = clone.querySelector(`select[name="dep${i}_parentesco_select"]`);
-      const options = global.ParentescoUtils ? global.ParentescoUtils.PARENTESCO_OPTIONS : [];
-      selectParentesco.innerHTML = '<option value="" selected disabled>Selecione...</option>';
-      options.forEach(opt => {
-        const o = document.createElement('option');
-        o.value = opt.value;
-        o.textContent = opt.label;
-        selectParentesco.appendChild(o);
-      });
-      const inputOutro = clone.querySelector(`input[name="dep${i}_parentesco_outro"]`);
-      const inputHiddenFinal = clone.querySelector(`input[name="dep${i}_parentesco"]`);
-      const atualizarParentesco = () => {
-        if (selectParentesco.value === 'OUTRO') {
-          inputOutro.style.display = 'block';
-          inputHiddenFinal.value = inputOutro.value.trim();
-        } else {
-          inputOutro.style.display = 'none';
-          inputOutro.value = '';
-          inputHiddenFinal.value = selectParentesco.value;
-        }
-      };
-      selectParentesco.addEventListener('change', atualizarParentesco);
-      inputOutro.addEventListener('input', atualizarParentesco);
-
-      // Listener para o campo manual atualizar o hidden
-      inputOutro.addEventListener('input', () => {
-        if (selectParentesco.value === 'OUTRO') {
-          inputHiddenFinal.value = inputOutro.value.trim();
-        }
-      });
-      container.appendChild(clone);
-    }
-  }
-
   global.Utils = {
     obterToken,
     obterUserInfo,
@@ -273,13 +208,11 @@
     formatarTelefoneTexto,
     formatarCPF,
     normalizarTextoBusca,
-    exibirAlertaFlutuante,
     aplicarMascaraAgencia,
     aplicarMascaraConta,
     aplicarMascaraCPF,
     aplicarMascaraCEP,
     aplicarMascaraData,
-    gerarCamposDependentes,
     normalizeText,
     escapeHTML,
     searchUsers,

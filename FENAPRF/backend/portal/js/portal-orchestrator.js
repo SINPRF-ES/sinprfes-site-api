@@ -5,18 +5,60 @@
  */
 
 (function () {
-    // Verificação imediata de Token (Web flow)
-    const rawToken = localStorage.getItem("token");
-    const tokenClean = (rawToken || "").trim();
-    if (!tokenClean || tokenClean === "null" || tokenClean === "undefined") {
-        window.location.replace("/login.html");
-        return;
+    async function syncSessionFromApi() {
+        const raw = localStorage.getItem("token");
+        const token = (raw || "").trim();
+
+        if (!token || token === "null" || token === "undefined") {
+            console.warn("Portal: Token ausente. Redirecionando para login...");
+            localStorage.clear();
+            window.location.replace("/login.html");
+            return null;
+        }
+
+        try {
+            const apiBase = (window.location.hostname === "localhost")
+                ? "http://localhost:3000"
+                : "https://fenaprf-sistema.onrender.com";
+
+            const resp = await fetch(apiBase + "/api/auth/me", {
+                headers: { Authorization: "Bearer " + token }
+            });
+
+            if (!resp.ok) {
+                console.error("Portal: Falha na validação da sessão (401/403). Limpando cache...");
+                localStorage.clear();
+                window.location.replace("/login.html");
+                return null;
+            }
+
+            const me = await resp.json();
+
+            // 🔥 Fonte da verdade absoluta
+            localStorage.setItem("perfil_acesso", (me.perfil_acesso || "").toUpperCase());
+            localStorage.setItem("userId", me.id || "");
+            localStorage.setItem("userName", me.name || "");
+            localStorage.setItem("userInfo", JSON.stringify(me));
+
+            return me;
+        } catch (err) {
+            console.error("Portal: Erro crítico ao sincronizar sessão:", err);
+            // Em caso de erro de rede, podemos deixar carregar com o cache se houver,
+            // mas o ideal para segurança web é forçar login se não conseguir validar.
+            return null;
+        }
     }
 
     console.log("Sistema Portal: Orquestrando inicialização...");
 
     document.addEventListener("DOMContentLoaded", async () => {
-        const { obterUserInfo } = window.Utils || {};
+        // 1. Sincronização Obrigatória (Fonte da Verdade)
+        const me = await syncSessionFromApi();
+        if (!me) return; // Redirecionamento já ocorreu no syncSession
+
+        const perfil = (me.perfil_acesso || "CONSELHEIRO").toUpperCase();
+        console.log("Perfil sincronizado (API):", perfil);
+
         const { configurarNavegacao } = window.Navegacao || {};
         const { carregarMeusDados } = window.MeusDados || {};
         const { inicializarUsers } = window.UsersAdmin || {};
@@ -27,12 +69,7 @@
         const { CMSAdmin } = window || {};
         const { Notificacoes } = window || {};
 
-        let userInfo = obterUserInfo ? obterUserInfo() : {};
-        let perfil = (userInfo.perfil_acesso || userInfo.perfil || "CONSELHEIRO").toUpperCase();
-
-        console.log("Perfil inicial (Cache):", perfil);
-
-        // 1. Configura Navegação Global
+        // 2. Configura Navegação Global
         if (configurarNavegacao) {
             configurarNavegacao((abaAlvo) => {
                 console.log("Navegando para:", abaAlvo);
@@ -53,31 +90,14 @@
             btnLogout.onclick = () => {
                 if(confirm("Deseja realmente sair?")) {
                     localStorage.clear();
-                    window.location.href = "/login.html";
+                    window.location.replace("/login.html");
                 }
             };
         }
 
-        // 4. Carga Inicial e Sincronização de Perfil
+        // 4. Configuração de Interface por Perfil
         try {
-            if (carregarMeusDados) {
-                const dadosFrescos = await carregarMeusDados();
-                if (dadosFrescos && dadosFrescos.perfil_acesso) {
-                    const perfilReal = dadosFrescos.perfil_acesso.toUpperCase();
-                    if (perfilReal !== perfil) {
-                        console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
-                        perfil = perfilReal;
-                        // Força re-render do menu/módulos se necessário
-                        if (inicializarUsers) inicializarUsers(perfil);
-                        if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
-                    }
-                }
-            }
-
-            // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
-            if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
-
-            // Exibe abas restritas conforme perfil (Regra de Ouro)
+            // Inicializa visibilidade de abas (Regra de Ouro)
             const perfisGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"];
 
             const navCms = document.getElementById("nav-cms");
@@ -89,8 +109,16 @@
             const navRelatorios = document.getElementById("nav-relatorios");
             if (navRelatorios) navRelatorios.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
+            // Carga inicial dos dados do membro
+            if (carregarMeusDados) await carregarMeusDados();
+
+            // Inicializa notificações se houver permissão
+            if (Notificacoes && Notificacoes.inicializarNotificacoes) {
+                Notificacoes.inicializarNotificacoes(perfil);
+            }
+
         } catch (err) {
-            console.error("Falha na sincronização inicial:", err);
+            console.error("Erro ao configurar interface do portal:", err);
         }
 
         // 5. Aciona a aba inicial se não for Meus Dados
@@ -99,6 +127,5 @@
             const btnAtivo = document.querySelector(`.af-nav-item[data-target="${abaAtiva.id}"]`);
             if(btnAtivo) btnAtivo.click();
         }
-
     });
 })();

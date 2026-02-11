@@ -18,37 +18,6 @@
         }
     }
 
-    function compactarDependentes(user) {
-        const dependentesValidos = [];
-        for (let i = 1; i <= 5; i++) {
-            if (user[`dep${i}_nome`]) {
-                dependentesValidos.push({
-                    nome: user[`dep${i}_nome`],
-                    cpf: user[`dep${i}_cpf`],
-                    data_nascimento: user[`dep${i}_data_nascimento`],
-                    parentesco: user[`dep${i}_parentesco`]
-                });
-            }
-        }
-
-        // Limpa todos os slots originais
-        for (let i = 1; i <= 5; i++) {
-            user[`dep${i}_nome`] = null;
-            user[`dep${i}_cpf`] = null;
-            user[`dep${i}_data_nascimento`] = null;
-            user[`dep${i}_parentesco`] = null;
-        }
-
-        // Preenche sequencialmente
-        dependentesValidos.forEach((dep, idx) => {
-            const i = idx + 1;
-            user[`dep${i}_nome`] = dep.nome;
-            user[`dep${i}_cpf`] = dep.cpf;
-            user[`dep${i}_data_nascimento`] = dep.data_nascimento;
-            user[`dep${i}_parentesco`] = dep.parentesco;
-        });
-    }
-
     async function carregarMeusDados() {
         if (!window.Api.apiFetch) return null;
 
@@ -61,42 +30,43 @@
 
         try {
             const resp = await window.Api.apiFetch("/api/users/me");
-            if (!resp.ok) throw new Error();
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.error || "Erro na API");
+            }
             const dados = await resp.json();
 
-            // Compactar dependentes antes de renderizar
-            compactarDependentes(dados);
+            renderizarFormularioMeusDados(dados, conteudo);
 
-            // Alerta de endereço
-            if ((!dados.cep || dados.cep === "") && alerta) {
-                alerta.textContent = " Por favor, atualize seu endereço.";
+            // Alerta de endereço (Aviso não-fatal)
+            if ((!dados.cep || dados.cep.trim() === "") && alerta) {
+                alerta.innerHTML = "<strong>Aviso:</strong> Seu endereço está incompleto. Por favor, atualize seu cadastro para regularizar sua situação.";
                 alerta.style.display = 'block';
+            } else if (alerta) {
+                alerta.style.display = 'none';
             }
 
-            renderizarFormularioMeusDados(dados, conteudo);
             if (global.Seguranca && global.Seguranca.renderizarSeguranca) {
                 global.Seguranca.renderizarSeguranca(dados, carregarMeusDados);
-            }
-            if (global.Ressarcimento && global.Ressarcimento.preencherFormularioRessarcimentoComDados) {
-                global.Ressarcimento.preencherFormularioRessarcimentoComDados(dados);
             }
 
             return dados;
         } catch (e) {
-            conteudo.innerHTML = "<p>Erro ao carregar dados.</p>";
+            console.error("MeusDados: Erro ao carregar/renderizar:", e);
+            conteudo.innerHTML = `<div class="alerta alerta-danger">Erro ao carregar dados: ${e.message}</div>`;
             return null;
         }
     }
 
     function renderizarFormularioMeusDados(dados, container) {
         const {
-            nome, cpf, perfil_acesso,
+            nome, cpf, perfil_acesso, situacao,
             telefone1, telefone2, email1, email2,
             logradouro_bairro, numero, complemento, cidade, uf, cep,
             avatar_url
         } = dados;
 
-        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF } = global.Utils || {};
+        const { aplicarMascaraTelefone, aplicarMascaraCEP, formatarCPF } = global.Utils || {};
 
 
         if (!document.getElementById('style-meus-dados')) {
@@ -287,11 +257,11 @@
             ? `<img src="${avatarFullUrl}" alt="Avatar" onerror="this.remove();">`
             : `<div class="avatar-fallback"></div>`;
 
-        // AgeUtils é carregado como global em area-user.html
+        // AgeUtils é carregado como global em portal/index.html
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
-        const situacaoLower = situacaoUpper.toLowerCase();
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((perfil_acesso || "").toUpperCase());
+        const situacaoDisplay = (situacao || "ATIVO").toUpperCase();
+        const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes((perfil_acesso || "").toUpperCase());
 
         container.innerHTML = `
             <div class="profile-header">
@@ -452,124 +422,6 @@
         const cepInput = document.getElementById("me-cep");
         if (aplicarMascaraCEP) aplicarMascaraCEP(cepInput);
 
-        // --- DEPENDENTES ---
-        const containerDependentes = document.getElementById("dependentes-container-meus-dados");
-        if (gerarCamposDependentes) gerarCamposDependentes(containerDependentes, 'me');
-
-        for (let i = 1; i <= 5; i++) {
-            const nome = document.getElementById(`me-dep${i}_nome`);
-            const cpfEl = document.getElementById(`me-dep${i}_cpf`);
-            const dataNascimento = document.getElementById(`me-dep${i}_data_nascimento`);
-
-            if (nome) nome.value = dados[`dep${i}_nome`] || '';
-            if (cpfEl) {
-                cpfEl.value = dados[`dep${i}_cpf`] || '';
-                if (aplicarMascaraCPF) aplicarMascaraCPF(cpfEl);
-            }
-            if (dataNascimento) {
-                dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
-                const depIdade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—';
-                const idadeLabel = document.createElement('div');
-                idadeLabel.style.fontSize = '0.75rem';
-                idadeLabel.style.color = '#666';
-                idadeLabel.style.marginTop = '2px';
-                idadeLabel.textContent = `Idade: ${depIdade}`;
-                dataNascimento.insertAdjacentElement('afterend', idadeLabel);
-                dataNascimento.onchange = () => {
-                    idadeLabel.textContent = `Idade: ${global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—'}`;
-                };
-            }
-
-            // Lógica para preencher o campo de parentesco (select + outro)
-            const parentescoValor = dados[`dep${i}_parentesco`] || '';
-            const selectParentesco = document.getElementById(`me-dep${i}_parentesco_select`);
-            const inputOutro = document.getElementById(`me-dep${i}_parentesco_outro`);
-            const inputHidden = document.getElementById(`me-dep${i}_parentesco`);
-
-            if (selectParentesco && inputOutro && inputHidden) {
-                inputHidden.value = parentescoValor;
-                const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
-
-                if (opcoesPadrao.includes(parentescoValor)) {
-                    selectParentesco.value = parentescoValor;
-                    inputOutro.style.display = 'none';
-                    inputOutro.value = '';
-                } else if (parentescoValor) {
-                    selectParentesco.value = 'Outro';
-                    inputOutro.style.display = 'block';
-                    inputOutro.value = parentescoValor;
-                } else {
-                    selectParentesco.value = '';
-                    inputOutro.style.display = 'none';
-                    inputOutro.value = '';
-                }
-            }
-        }
-
-        // --- LÓGICA DE EXCLUSÃO DE DEPENDENTES ---
-        const dependentesAtuais = [];
-        for (let i = 1; i <= 5; i++) {
-            if (dados[`dep${i}_nome`]) {
-                dependentesAtuais.push({
-                    nome: dados[`dep${i}_nome`],
-                    index: i - 1
-                });
-            }
-        }
-
-        const btnToggleExcluir = document.getElementById("btn-toggle-excluir-dependentes");
-        const painelExcluir = document.getElementById("painel-excluir-dependentes");
-        const containerCheckboxes = document.getElementById("checkboxes-excluir-dependentes");
-        const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-dependentes");
-
-        if (dependentesAtuais.length === 0) {
-            btnToggleExcluir.style.display = 'none';
-        }
-
-        btnToggleExcluir.onclick = () => {
-            painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
-        };
-
-        containerCheckboxes.innerHTML = '';
-        dependentesAtuais.forEach(dep => {
-            containerCheckboxes.innerHTML += `
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" name="excluir_dependente" value="${dep.index}" style="width: auto;">
-                    Dependente ${dep.index + 1}: ${dep.nome}
-                </label>
-            `;
-        });
-
-        btnConfirmarExclusao.onclick = async () => {
-            const checkboxesMarcados = containerCheckboxes.querySelectorAll('input:checked');
-            const indicesParaExcluir = Array.from(checkboxesMarcados).map(cb => parseInt(cb.value, 10));
-
-            if (indicesParaExcluir.length === 0) {
-                alert("Selecione pelo menos um dependente para excluir.");
-                return;
-            }
-
-            if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
-                try {
-                    const r = await window.Api.apiFetch(`/api/users/${dados.id}/dependentes`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ indices: indicesParaExcluir })
-                    });
-
-                    if (r.ok) {
-                        alert("Dependentes excluídos com sucesso.");
-                        await carregarMeusDados();
-                    } else {
-                        const err = await r.json();
-                        alert(err.message || "Erro ao excluir dependentes.");
-                    }
-                } catch (e) {
-                    alert("Erro de conexão ao tentar excluir os dependentes.");
-                }
-            }
-        };
-
         // --- CEP ---
         document.getElementById("btn-buscar-cep").onclick = buscarCep;
         cepInput.onblur = () => {
@@ -591,45 +443,12 @@
                 rawPayload[key] = value;
             }
 
-            // Compactar dependentes antes de enviar
-            const dependentesCompactados = [];
-            for (let i = 1; i <= 5; i++) {
-                const n = rawPayload[`dep${i}_nome`];
-                const c = rawPayload[`dep${i}_cpf`];
-                const d = rawPayload[`dep${i}_data_nascimento`];
-                const p = rawPayload[`dep${i}_parentesco`];
-                if (n || c || d || p) {
-                    dependentesCompactados.push({ n, c, d, p });
-                }
-            }
-
             const payload = { ...rawPayload };
 
             // Normalização de Nomes (Canônico)
             if (payload.nome && global.Canon?.normalizeNome) {
                 payload.nome = global.Canon.normalizeNome(payload.nome);
             }
-            for (let i = 1; i <= 5; i++) {
-                if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
-                    payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
-                }
-            }
-
-            // Limpa slots no payload
-            for (let i = 1; i <= 5; i++) {
-                payload[`dep${i}_nome`] = "";
-                payload[`dep${i}_cpf`] = "";
-                payload[`dep${i}_data_nascimento`] = "";
-                payload[`dep${i}_parentesco`] = "";
-            }
-            // Preenche sequencialmente
-            dependentesCompactados.forEach((dep, idx) => {
-                const i = idx + 1;
-                payload[`dep${i}_nome`] = dep.n;
-                payload[`dep${i}_cpf`] = dep.c;
-                payload[`dep${i}_data_nascimento`] = dep.d;
-                payload[`dep${i}_parentesco`] = dep.p;
-            });
 
             const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
 
@@ -646,14 +465,6 @@
             payload.cidade = document.getElementById("me-cidade").value;
             payload.uf = document.getElementById("me-uf").value;
             payload.cep = onlyDigitsFn(document.getElementById("me-cep").value);
-
-            // Sanitiza CPF dos dependentes
-            for (let i = 1; i <= 5; i++) {
-                const key = `dep${i}_cpf`;
-                if (payload[key]) {
-                    payload[key] = onlyDigitsFn(payload[key]);
-                }
-            }
 
             try {
                 const r = await window.Api.apiFetch("/api/users/me", { method: "PUT", body: payload });

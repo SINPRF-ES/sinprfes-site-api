@@ -377,23 +377,6 @@
                     </div>
                 </div>
 
-                <div class="data-card bg-alt">
-                    <div class="dependentes-header" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
-                        <h3 style="margin: 0;">👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
-                        <button type="button" id="btn-toggle-excluir-modal" class="btn btn-danger-outline btn-sm" style="position: absolute; right: 0;">Excluir</button>
-                    </div>
-
-                    <div id="painel-excluir-modal" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                        <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
-                        <div id="checkboxes-excluir-modal" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                        <div style="margin-top: 15px; text-align: right;">
-                            <button type="button" id="btn-confirmar-exclusao-modal" class="btn btn-danger">Confirmar Exclusão</button>
-                        </div>
-                    </div>
-
-                    <div id="modal-dependentes-container"></div>
-                </div>
-
                 <div class="data-card">
                     <h3>🖼️ Avatar (Foto)</h3>
                     <div class="subcard flex-center" style="gap: 20px; flex-wrap: wrap;">
@@ -418,128 +401,11 @@
 
     function configurarFormEdicao(id) {
         const form = document.getElementById("form-edicao-modal");
-        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF } = global.Utils || {};
+        const { aplicarMascaraTelefone, aplicarMascaraCPF } = global.Utils || {};
 
         if (aplicarMascaraCPF) {
             const cpfInput = form.querySelector('input[name="cpf"]');
             if (cpfInput) aplicarMascaraCPF(cpfInput);
-        }
-
-        const user = cacheLista.find(f => f.id == id);
-
-        if (gerarCamposDependentes) {
-            const container = document.getElementById("modal-dependentes-container");
-            gerarCamposDependentes(container, "mod");
-
-            const dependentesAtuais = [];
-
-            // Preencher dependentes
-            for (let i = 1; i <= 5; i++) {
-                if (user[`dep${i}_nome`]) {
-                    dependentesAtuais.push({ nome: user[`dep${i}_nome`], index: i });
-                }
-
-                const nome = document.getElementById(`mod-dep${i}_nome`);
-                const cpf = document.getElementById(`mod-dep${i}_cpf`);
-                const data = document.getElementById(`mod-dep${i}_data_nascimento`);
-                const select = document.getElementById(`mod-dep${i}_parentesco_select`);
-                const outro = document.getElementById(`mod-dep${i}_parentesco_outro`);
-                const hidden = document.getElementById(`mod-dep${i}_parentesco`);
-
-                if (nome) nome.value = user[`dep${i}_nome`] || "";
-                if (cpf) {
-                    cpf.value = user[`dep${i}_cpf`] || "";
-                    if (aplicarMascaraCPF) aplicarMascaraCPF(cpf);
-                }
-                if (data) {
-                    data.value = user[`dep${i}_data_nascimento`] ? user[`dep${i}_data_nascimento`].split('T')[0] : "";
-                    const depIdade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(data.value) : '—';
-                    const idadeLabel = document.createElement('div');
-                    idadeLabel.style.fontSize = '0.75rem';
-                    idadeLabel.style.color = '#666';
-                    idadeLabel.style.marginTop = '2px';
-                    idadeLabel.className = 'dep-idade-calc';
-                    idadeLabel.textContent = `Idade: ${depIdade}`;
-                    data.insertAdjacentElement('afterend', idadeLabel);
-
-                    data.onchange = () => {
-                        idadeLabel.textContent = `Idade: ${global.AgeUtils ? global.AgeUtils.formatAgeDetailed(data.value) : '—'}`;
-                    };
-                }
-
-                const pVal = user[`dep${i}_parentesco`] || "";
-                if (select && hidden) {
-                    hidden.value = pVal;
-                    const options = Array.from(select.options).map(o => o.value);
-                    // Se o valor estiver nas opções e NÃO for OUTRO, seleciona e esconde campo manual
-                    if (pVal && pVal !== "OUTRO" && options.includes(pVal)) {
-                        select.value = pVal;
-                        if (outro) { outro.style.display = "none"; outro.value = ""; }
-                    } else if (pVal) {
-                        // Se for OUTRO ou valor customizado
-                        select.value = "OUTRO";
-                        if (outro) {
-                            outro.value = (pVal === "OUTRO") ? "" : pVal;
-                            outro.style.display = "block";
-                        }
-                    } else {
-                        // Vazio
-                        select.value = "";
-                        if (outro) { outro.style.display = "none"; outro.value = ""; }
-                    }
-                }
-            }
-
-            // Lógica de Exclusão no Modal
-            const btnToggleExcluir = document.getElementById("btn-toggle-excluir-modal");
-            const painelExcluir = document.getElementById("painel-excluir-modal");
-            const containerCheckboxes = document.getElementById("checkboxes-excluir-modal");
-            const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao-modal");
-
-            if (dependentesAtuais.length === 0) {
-                btnToggleExcluir.style.display = 'none';
-            }
-
-            btnToggleExcluir.onclick = () => {
-                painelExcluir.style.display = painelExcluir.style.display === 'none' ? 'block' : 'none';
-            };
-
-            containerCheckboxes.innerHTML = '';
-            dependentesAtuais.forEach(dep => {
-                containerCheckboxes.innerHTML += `
-                    <label style="display: flex; align-items: center; gap: 8px; font-weight:normal; cursor:pointer;">
-                        <input type="checkbox" name="excluir_dep_index" value="${dep.index}" style="width: auto;">
-                        Dependente ${dep.index}: ${safeEscape(dep.nome)}
-                    </label>
-                `;
-            });
-
-            btnConfirmarExclusao.onclick = () => {
-                const marcados = Array.from(containerCheckboxes.querySelectorAll('input:checked')).map(cb => cb.value);
-                if (!marcados.length) return alert("Selecione um dependente.");
-
-                if (confirm(`Excluir ${marcados.length} dependente(s)?\n\nIsso limpará os campos e compactará a lista ao salvar.`)) {
-                    marcados.forEach(idx => {
-                        document.getElementById(`mod-dep${idx}_nome`).value = "";
-                        document.getElementById(`mod-dep${idx}_cpf`).value = "";
-                        document.getElementById(`mod-dep${idx}_data_nascimento`).value = "";
-                        const select = document.getElementById(`mod-dep${idx}_parentesco_select`);
-                        if (select) select.value = "";
-                        const hidden = document.getElementById(`mod-dep${idx}_parentesco`);
-                        if (hidden) hidden.value = "";
-                        const outro = document.getElementById(`mod-dep${idx}_parentesco_outro`);
-                        if (outro) { outro.value = ""; outro.style.display = "none"; }
-                    });
-                    painelExcluir.style.display = "none";
-                    // Trigger submit to save and let backend compact
-                    // Usamos requestSubmit se disponível para disparar a validação e o handler onsubmit
-                    if (typeof form.requestSubmit === "function") {
-                        form.requestSubmit();
-                    } else {
-                        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                    }
-                }
-            };
         }
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
@@ -713,7 +579,7 @@
 
     function renderizarFormularioNovoUser(container) {
         if (!container) return;
-        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, aplicarMascaraCEP, aplicarMascaraData } = global.Utils || {};
+        const { aplicarMascaraTelefone, aplicarMascaraCPF, aplicarMascaraCEP, aplicarMascaraData } = global.Utils || {};
 
         container.innerHTML = `
             <div class="user-card" style="border-left-color: var(--amarelo);">
@@ -780,7 +646,6 @@
                             </div>
                         </div>
                     </div>
-                    <div id="novo-dependentes-container" style="margin-top:15px;"></div>
                     <div style="text-align:right; margin-top:25px;">
                         <button type="button" class="btn btn-outline" onclick="this.closest('.user-card').parentElement.style.display='none'">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Criar Cadastro</button>
@@ -788,10 +653,6 @@
                 </form>
             </div>
         `;
-
-        if (gerarCamposDependentes) {
-            gerarCamposDependentes(container.querySelector("#novo-dependentes-container"), "new");
-        }
 
         const form = container.querySelector("#form-novo-user-admin");
 
@@ -828,11 +689,6 @@
             // Normalização de Nomes (Canônico)
             if (payload.nome && global.Canon?.normalizeNome) {
                 payload.nome = global.Canon.normalizeNome(payload.nome);
-            }
-            for (let i = 1; i <= 5; i++) {
-                if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
-                    payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
-                }
             }
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
@@ -872,23 +728,6 @@
         };
     }
 
-    function handleParentescoChange(selectEl, prefixo) {
-        const value = selectEl.value;
-        const index = selectEl.name.match(/\d+/)[0];
-        const inputOutro = document.getElementById(`${prefixo}-dep${index}_parentesco_outro`);
-        const inputHidden = document.getElementById(`${prefixo}-dep${index}_parentesco`);
-
-        if (value === "OUTRO") {
-            if (inputOutro) inputOutro.style.display = "block";
-        } else {
-            if (inputOutro) {
-                inputOutro.style.display = "none";
-                inputOutro.value = "";
-            }
-            if (inputHidden) inputHidden.value = value;
-        }
-    }
-
     // No local declarations of apiFetch here. Using window.Api.apiFetch everywhere.
 
     global.UsersAdmin = {
@@ -897,8 +736,7 @@
         confirmarArquivar,
         confirmarDesarquivar,
         uploadAvatar,
-        removerAvatar,
-        handleParentescoChange
+        removerAvatar
     };
 
 })(typeof window !== 'undefined' ? window : global);

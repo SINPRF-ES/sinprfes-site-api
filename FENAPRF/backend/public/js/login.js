@@ -97,8 +97,17 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        // Limpa cache antigo antes de setar novo
+        localStorage.removeItem("perfil_acesso");
+        localStorage.removeItem("userInfo");
+
         if (data.token) localStorage.setItem("token", data.token);
-        if (data.perfil_acesso) localStorage.setItem("perfil_acesso", data.perfil_acesso);
+
+        // Seta novo perfil vindo do login (fallback para perfil do user se existir)
+        const novoPerfil = data.perfil_acesso || (data.user && data.user.perfil_acesso);
+        if (novoPerfil) {
+          localStorage.setItem("perfil_acesso", novoPerfil.toUpperCase());
+        }
 
         window.location.replace("/portal/");
       } catch (err) {
