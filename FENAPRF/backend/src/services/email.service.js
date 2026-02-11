@@ -28,7 +28,11 @@ async function getResendClient() {
     return resend;
   } catch (e) {
     // Loga o motivo real (ex: ERR_REQUIRE_ESM, module not found, etc.)
-    console.warn("[EMAIL] Resend init failed:", e?.code, e?.message);
+    console.warn("[EMAIL] Resend init failed detail:", {
+      code: e?.code,
+      message: e?.message,
+      stack: e?.stack
+    });
     return null;
   }
 }
