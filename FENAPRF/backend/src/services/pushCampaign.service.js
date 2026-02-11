@@ -188,7 +188,89 @@ async function listCampaigns(limit = 20, offset = 0) {
     LIMIT $1 OFFSET $2;
   `;
   const { rows } = await pool.query(sql, [limit, offset]);
-  return rows;
+
+  // Enriquecimento do target_label para exibição no Histórico
+  // Regras: ALL -> Todos, UF -> UF: XX, USER(1) -> Nome, USER(N) -> N membros
+  const singleUserIds = new Set();
+  const campaignData = rows.map(row => {
+    let targetValue = row.target_value;
+    if (typeof targetValue === 'string') {
+        try { targetValue = JSON.parse(targetValue); } catch(e) {}
+    }
+
+    let isSingleUser = false;
+    let singleUserId = null;
+
+    if (row.target_type === 'USER') {
+      if (Array.isArray(targetValue)) {
+        if (targetValue.length === 1) {
+          isSingleUser = true;
+          const first = targetValue[0];
+          singleUserId = (typeof first === 'object' && first !== null) ? (first.id || first.user_id) : first;
+        }
+      } else if (targetValue && typeof targetValue === 'object' && targetValue.id) {
+          isSingleUser = true;
+          singleUserId = targetValue.id;
+      } else if (targetValue && typeof targetValue === 'string' && targetValue.length > 10) {
+          isSingleUser = true;
+          singleUserId = targetValue;
+      }
+    }
+
+    if (isSingleUser && singleUserId) {
+        singleUserIds.add(String(singleUserId));
+    }
+
+    return { ...row, _parsedValue: targetValue, _isSingle: isSingleUser, _singleId: singleUserId };
+  });
+
+  const nameMap = new Map();
+  if (singleUserIds.size > 0) {
+    try {
+        const { rows: userRows } = await pool.query(
+            "SELECT id::text, name FROM users WHERE id::text = ANY($1)",
+            [Array.from(singleUserIds)]
+        );
+        userRows.forEach(u => nameMap.set(String(u.id), u.name));
+    } catch (e) {
+        log.error("PushCampaign.listCampaigns.ErrorFetchingNames", e);
+    }
+  }
+
+  return campaignData.map(c => {
+    let label = "Destino não identificado";
+    const type = c.target_type;
+    const value = c._parsedValue;
+
+    if (type === 'ALL') {
+      label = "Todos";
+    } else if (type === 'UF') {
+      label = `UF: ${value}`;
+    } else if (type === 'USER') {
+      if (c._isSingle && c._singleId) {
+          label = nameMap.get(String(c._singleId)) || "Membro selecionado";
+      } else if (Array.isArray(value) && value.length > 1) {
+          label = `${value.length} membros selecionados`;
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+          label = value.name || "Membro selecionado";
+      }
+    } else {
+        const labels = {
+            'DIRETORIA': 'Apenas Diretoria',
+            'PRESIDENTES': 'Apenas Presidentes',
+            'VICES': 'Apenas Vices',
+            'DR': 'Delegados Representantes (DR)',
+            'DS': 'Delegados Substitutos (DS)',
+            'ADMIN_COLAB': 'Admin e Colaboradores',
+            'PADRAO': 'Diretoria e Conselheiros',
+            'JOGOS': 'Inscritos nos Jogos'
+        };
+        label = labels[type] || type || label;
+    }
+
+    const { _parsedValue, _isSingle, _singleId, ...rest } = c;
+    return { ...rest, target_label: label };
+  });
 }
 
 /**

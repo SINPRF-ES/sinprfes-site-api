@@ -82,7 +82,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       }}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.badge, (styles[`badge${item.estado}` as keyof typeof styles] as any) || styles.badgeCRIADA]}>
+        <View style={[styles.badge, (styles[`badge${item.estado}` as keyof typeof styles] as any) || styles.badgeCRIADO]}>
           <Text style={styles.badgeText}>
             {getAssembleiaStatusLabel(item.estado)}
           </Text>

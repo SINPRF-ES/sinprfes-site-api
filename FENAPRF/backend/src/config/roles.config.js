@@ -26,6 +26,7 @@ module.exports = {
     "VIEW_ALL",
     "VIEW_SELF",
     "EDIT_SELF",
+    "VOTACAO_GERENCIAR",
     "VOTACAO_VOTAR",
     "LOGISTICA_GERENCIAR",
     "PUSH_GERENCIAR",

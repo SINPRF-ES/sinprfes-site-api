@@ -172,7 +172,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
 
     const getPollingInterval = () => {
         if (!estado) return 5000;
-        if (estado.assembleia.estado === 'ENCERRADA') return 0;
+        if (estado.assembleia.estado === 'ENCERRADO') return 0;
         if (estado.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') return 2000;
         return 5000;
     };
@@ -197,7 +197,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                         votacaoAtiva: mini.votacaoAtiva
                     } as any;
                 });
-                if (mini.assembleia.estado === 'ENCERRADA') {
+                if (mini.assembleia.estado === 'ENCERRADO') {
                     navigation.navigate('AssembleiaDetalhe', { id });
                 }
             }
@@ -238,7 +238,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
 
       assembleiaSocket.onEvent('assembleia:status_changed', (data) => {
         setEstado(prev => prev ? { ...prev, assembleia: { ...prev.assembleia, estado: data.estado } } : null);
-        if (data.estado === 'ENCERRADA') {
+        if (data.estado === 'ENCERRADO') {
             navigation.goBack();
         }
       });
@@ -524,7 +524,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             <Text style={styles.sectionTitle}>👥 Votos Nominais (Ao vivo)</Text>
             {votosNominais.map((v, i) => (
               <View key={i} style={styles.votoNominalRow}>
-                <Text style={styles.nominalNome}>{v.name || v.nome}</Text>
+                <Text style={styles.nominalNome}>{v.nome || (v as any).name}</Text>
                 <Text style={[styles.nominalOpcao, styles[`opcao${v.voto}`]]}>{v.voto}</Text>
               </View>
             ))}

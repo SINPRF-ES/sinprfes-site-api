@@ -1,9 +1,9 @@
 export interface Assembleia {
   id: string;
-  tipo: 'AGE' | 'AGO';
+  tipo: 'AGE' | 'AGO' | 'REUNIAO_DELIBERATIVA' | 'REUNIAO_INFORMATIVA' | 'REUNIAO_TEMATICA';
   titulo: string;
   descricao?: string;
-  estado: 'CRIADA' | 'ABERTA' | 'ENCERRADA';
+  estado: 'CRIADO' | 'EM_CREDENCIAMENTO' | 'INICIADO' | 'SUSPENSA' | 'ENCERRADO' | 'CRIADA' | 'ABERTA' | 'ENCERRADA';
   criado_por: string;
   aberta_em?: string;
   encerrada_em?: string;
