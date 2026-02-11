@@ -51,8 +51,8 @@ app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/shared", express.static(path.join(process.cwd(), "shared")));
 
-// Portal do Membro (Protegido)
-app.use("/portal", authMiddleware, express.static(path.join(process.cwd(), "portal")));
+// Portal do Membro (HTML/JS/CSS)
+app.use("/portal", express.static(path.join(process.cwd(), "portal")));
 
 // --- IMPORTAÇÃO DAS ROTAS ---
 const usersRoutes = require("./routes/users.routes");

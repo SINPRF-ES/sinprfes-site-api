@@ -46,13 +46,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (resp.ok) {
-        // Já autenticado: manda pro portal
         window.location.replace("/portal/");
-        return;
-      }
-
-      // Token inválido/expirado → limpa e fica no login
-      if (resp.status === 401 || resp.status === 403) {
+      } else if (resp.status === 401 || resp.status === 403) {
         localStorage.removeItem("token");
         localStorage.removeItem("perfil_acesso");
         return;
@@ -62,8 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     } catch (err) {
       console.error("Erro ao verificar sessão existente:", err);
-      // Em erro de rede, NÃO redireciona (deixa usuário logar)
-      return;
     }
   })();
 
@@ -107,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.token) localStorage.setItem("token", data.token);
         if (data.perfil_acesso) localStorage.setItem("perfil_acesso", data.perfil_acesso);
 
-        window.location.href = "/portal/";
+        window.location.replace("/portal/");
       } catch (err) {
         console.error("Erro no login:", err);
         if (loginMsg) loginMsg.textContent = "Erro de comunicação com o servidor.";
