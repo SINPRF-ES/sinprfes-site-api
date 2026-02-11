@@ -132,7 +132,7 @@ describe('Assembleias V5 Integration Tests', () => {
     test('should succeed and be idempotent', async () => {
       mClient.query.mockImplementation((q) => {
         if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
-        if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'ABERTA' }] });
+        if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'EM_CREDENCIAMENTO' }] });
         if (q.includes('assembleia_quoruns') && q.includes('SELECT') && q.includes('encerrado_em IS NULL')) {
             return Promise.resolve({ rows: [] });
         }
@@ -159,7 +159,7 @@ describe('Assembleias V5 Integration Tests', () => {
       mClient.query.mockReset();
       mClient.query.mockImplementation((q) => {
         if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
-        if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'ABERTA' }] });
+        if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'EM_CREDENCIAMENTO' }] });
         if (q.includes('assembleia_quoruns') && q.includes('SELECT') && q.includes('encerrado_em IS NULL')) {
             return Promise.resolve({ rows: [{ id: 'q1', token: '111222' }] });
         }
@@ -191,7 +191,7 @@ describe('Assembleias V5 Integration Tests', () => {
     test('should return 409 for invalid assembly state', async () => {
       mClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ estado: 'CRIADA' }] }); // SELECT estado
+        .mockResolvedValueOnce({ rows: [{ estado: 'ENCERRADO' }] }); // SELECT estado
 
       const response = await request(app)
         .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')

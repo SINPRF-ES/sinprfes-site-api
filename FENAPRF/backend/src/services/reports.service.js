@@ -1,6 +1,7 @@
 // src/services/reports.service.js
 const pool = require("../config/db");
 const usersService = require("./users.service");
+const { generateUuid } = require("../utils/format");
 const { UFS } = require("../../shared/canon");
 
 /**
@@ -9,12 +10,13 @@ const { UFS } = require("../../shared/canon");
 async function registrarJob(report_type, params, requester) {
   // Garantir que requesterId seja uma string (UUID) ou null
   const requesterId = (requester?.id && typeof requester.id === 'string') ? requester.id : null;
+  const newId = generateUuid();
 
   const { rows } = await pool.query(
-    `INSERT INTO report_jobs (report_type, params, requester_id, requester_name)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO report_jobs (id, report_type, params, requester_id, requester_name)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [report_type, JSON.stringify(params), requesterId, requester.nome]
+    [newId, report_type, JSON.stringify(params), requesterId, requester.nome]
   );
   return rows[0];
 }

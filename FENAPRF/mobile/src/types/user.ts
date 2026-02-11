@@ -1,6 +1,6 @@
 export interface User {
   id: string; // uuid
-  cpf: string;
+  cpf?: string;
   name: string;
   email?: string | null;
   password_hash?: string | null;
@@ -8,9 +8,9 @@ export interface User {
   token_expiracao?: string | null;
   perfil_acesso: 'ADMIN' | 'DIRETORIA' | 'COLABORADOR' | 'CONSELHEIRO';
   situacao: string;
-  bloqueado: boolean;
-  created_at: string;
-  updated_at: string;
+  bloqueado?: boolean;
+  created_at?: string;
+  updated_at?: string;
   ultimo_acesso?: string | null;
   telefone1?: string | null;
   telefone2?: string | null;
@@ -32,12 +32,16 @@ export interface User {
   arquivado_em?: string | null;
   arquivado_motivo?: string | null;
   arquivado_por?: string | null;
+  arquivado_por_nome?: string | null;
   desarquivado_em?: string | null;
   desarquivado_motivo?: string | null;
   desarquivado_por?: string | null;
+  desarquivado_por_nome?: string | null;
   perfil_acesso2?: string | null;
   cargo2?: string | null;
   uf2?: string | null;
+
+  vinculos?: any[];
 
   // Campos de compatibilidade
   nome?: string;

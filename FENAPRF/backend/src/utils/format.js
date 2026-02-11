@@ -1,4 +1,5 @@
 // src/utils/format.js
+const { v7: uuidv7 } = require("uuid");
 
 function normalizarCpf(cpf) {
   if (!cpf) return null;
@@ -93,6 +94,22 @@ function isUuid(val) {
 }
 
 /**
+ * Valida e normaliza um UUID string. Retorna null se inválido.
+ */
+function parseUuid(val) {
+  const s = String(val || "").trim();
+  if (!isUuid(s)) return null;
+  return s;
+}
+
+/**
+ * Gera um UUIDv7 para persistência (FENAPRF Standard).
+ */
+function generateUuid() {
+  return uuidv7();
+}
+
+/**
  * Aplica máscara de Agência: 0000-0 ou 0000
  */
 function formatarAgencia(agencia) {
@@ -128,5 +145,7 @@ module.exports = {
   formatarConta,
   escapeHtml,
   isUuid,
+  parseUuid,
+  generateUuid,
   // normalizarDataEntrada e normalizarDataBanco removidas.
 };

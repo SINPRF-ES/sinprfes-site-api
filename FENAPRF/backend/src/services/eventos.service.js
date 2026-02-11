@@ -1,5 +1,6 @@
 // src/services/eventos.service.js
 const pool = require("../config/db");
+const { generateUuid } = require("../utils/format");
 
 const TIPOS_VALIDOS = new Set(["AGE", "AGO", "INFORMATIVA", "OUTROS"]);
 const STATUS_VALIDOS = new Set(["RASCUNHO", "AGENDADO", "ABERTO", "ENCERRADO", "CANCELADO"]);
@@ -47,8 +48,10 @@ exports.criarEvento = async ({
   if (duracaoPrevistaMin != null && durMin == null) throw new Error("Duração prevista deve ser um número.");
   if (durMin != null && durMin <= 0) throw new Error("Duração prevista deve ser maior que zero.");
 
+  const newId = generateUuid();
   const q = `
     INSERT INTO eventos (
+      id,
       tipo,
       titulo,
       pauta_resumida,
@@ -57,13 +60,15 @@ exports.criarEvento = async ({
       edital_pdf_url,
       status,
       quorum_versao_atual,
-      created_by
+      created_by,
+      quorum_epoch
     )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,1,$8)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1,$9,$10)
     RETURNING *
   `;
 
   const r = await pool.query(q, [
+    newId,
     tipoNorm,
     tituloNorm,
     normStr(pautaResumida),
@@ -72,6 +77,7 @@ exports.criarEvento = async ({
     normStr(editalPdfUrl),
     statusNorm,
     (createdBy && typeof createdBy === 'string') ? createdBy : null,
+    generateUuid()
   ]);
 
   return r.rows[0];
@@ -219,10 +225,10 @@ exports.entrarNoEvento = async ({ eventoId, userId, deviceId }) => {
     }
 
     const ins = await client.query(
-      `INSERT INTO evento_presencas (evento_id, user_id, entrou_em, ativa, quorum_versao, device_id)
-       VALUES ($1, $2, NOW(), true, $3, $4)
+      `INSERT INTO evento_presencas (id, evento_id, user_id, entrou_em, ativa, quorum_versao, device_id)
+       VALUES ($1, $2, $3, NOW(), true, $4, $5)
        RETURNING id, evento_id, user_id, entrou_em, saiu_em, ativa, quorum_versao, device_id`,
-      [eventoId, (userId && typeof userId === 'string') ? userId : null, quorumVersao, deviceId ? String(deviceId) : null]
+      [generateUuid(), eventoId, (userId && typeof userId === 'string') ? userId : null, quorumVersao, deviceId ? String(deviceId) : null]
     );
 
     await client.query("COMMIT");

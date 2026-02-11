@@ -1,10 +1,9 @@
 // src/controllers/eventos.controller.js
 const service = require("../services/eventos.service");
+const { parseUuid } = require("../utils/format");
 
 function parseId(req) {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id) || id <= 0) return null;
-  return id;
+  return parseUuid(req.params.id);
 }
 
 function badRequest(res, msg) {

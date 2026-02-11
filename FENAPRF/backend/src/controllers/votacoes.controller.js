@@ -1,10 +1,9 @@
 // src/controllers/votacoes.controller.js
 const service = require("../services/votacoes.service");
+const { parseUuid } = require("../utils/format");
 
 function parseId(req) {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id) || id <= 0) return null;
-  return id;
+  return parseUuid(req.params.id);
 }
 
 exports.listar = async (req, res) => {
@@ -98,24 +97,22 @@ exports.votar = async (req, res) => {
     const body = req.body || {};
 
     // Aceita snake_case (Thunder/legacy) e camelCase (app)
-    const rawOpcaoId =
+    const opcaoId =
       body.opcao_id ??
       body.opcaoId ??
       body.opcao ??
       body.opcaoID;
 
-    const opcaoId = Number(rawOpcaoId);
-
     const deviceId = body.device_id ?? body.deviceId ?? null;
     const biometriaConfirmada =
       body.biometria_confirmada ?? body.biometriaConfirmada ?? false;
 
-    if (!Number.isFinite(opcaoId) || opcaoId <= 0) {
+    if (!opcaoId || !parseUuid(opcaoId)) {
       return res.status(400).json({
-        error: "Opção inválida.",
+        error: "Opção inválida (UUID esperado).",
         debug: {
-          recebido: rawOpcaoId,
-          esperado: "opcao_id (number) ou opcaoId (number)",
+          recebido: opcaoId,
+          esperado: "opcao_id (uuid) ou opcaoId (uuid)",
         },
       });
     }

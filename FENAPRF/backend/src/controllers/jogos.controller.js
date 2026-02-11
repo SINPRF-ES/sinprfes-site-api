@@ -18,7 +18,6 @@ function getUserId(req) {
     req?.user?.id ??
     req?.user?.user_id ??
     req?.user?.userId ??
-    req?.user?.userId ??
     req?.user?.uid ??
     null
   );
@@ -56,11 +55,12 @@ exports.registrarInscricao = async (req, res) => {
     const familiaresLimpo = String(familiares || "").trim();
     const qtdFamiliaresInt = parseInt(qtd_familiares, 10) || 0;
     const sexoLimpo = String(sexo || "").trim();
+    const { generateUuid } = require("../utils/format");
 
     const query = `
       INSERT INTO pre_inscricoes_jogos (
-        user_id, nome_user, modalidades, observacoes, familiares, qtd_familiares, sexo, data_inscricao
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        id, user_id, nome_user, modalidades, observacoes, familiares, qtd_familiares, sexo, data_inscricao
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
       ON CONFLICT (user_id) DO UPDATE SET
         modalidades = EXCLUDED.modalidades,
         observacoes = EXCLUDED.observacoes,
@@ -72,6 +72,7 @@ exports.registrarInscricao = async (req, res) => {
     `;
 
     const { rows } = await pool.query(query, [
+      generateUuid(),
       userId,
       userNome,
       modalidadesTexto,
