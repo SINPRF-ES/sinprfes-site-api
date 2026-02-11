@@ -27,23 +27,23 @@
         const userSearchInput = document.getElementById('relatorio-user-search');
 
         if (btnGerar) {
-            btnGerar.onclick = handleGerar;
+            btnGerar.addEventListener("click", handleGerar);
         }
 
         if (btnPreview) {
-            btnPreview.onclick = handlePreview;
+            btnPreview.addEventListener("click", handlePreview);
         }
 
         if (tipoSelect) {
-            tipoSelect.onchange = handleTipoChange;
+            tipoSelect.addEventListener("change", handleTipoChange);
         }
 
         if (userSearchInput) {
             let debounceTimer;
-            userSearchInput.oninput = () => {
+            userSearchInput.addEventListener("input", () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => handleUserSearch(userSearchInput.value), 400);
-            };
+            });
         }
     }
 
@@ -197,7 +197,7 @@
                         ${data.baseCompetencia ? `<div>Base do efetivo: ${data.baseCompetencia}</div>` : ''}
                     </div>
                 </div>
-                <button onclick="document.getElementById('relatorio-preview-container').style.display='none'" style="background:none; border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius: 4px; padding: 4px 10px; cursor:pointer;">Fechar</button>
+                <button data-close="relatorio-preview-container" style="background:none; border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius: 4px; padding: 4px 10px; cursor:pointer;">Fechar</button>
             </div>
             <div style="padding: 25px; background: #fff; color: #333;">
                 ${data.sections.map(section => {
@@ -242,7 +242,7 @@
                 }).join('')}
 
                 <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <button class="btn btn-outline" style="color: var(--azul-fundo); border-color: var(--azul-fundo);" onclick="document.getElementById('relatorio-preview-container').style.display='none'">
+                    <button class="btn btn-outline" style="color: var(--azul-fundo); border-color: var(--azul-fundo);" data-close="relatorio-preview-container">
                         Ocultar Visualização
                     </button>
                 </div>
@@ -341,10 +341,10 @@
         container.innerHTML = html;
 
         const btnShow = document.getElementById('btn-show-full-history');
-        if (btnShow) btnShow.onclick = () => { showFullHistory = true; renderizarHistorico(container); };
+        if (btnShow) btnShow.addEventListener("click", () => { showFullHistory = true; renderizarHistorico(container); });
 
         const btnHide = document.getElementById('btn-hide-full-history');
-        if (btnHide) btnHide.onclick = () => { showFullHistory = false; renderizarHistorico(container); };
+        if (btnHide) btnHide.addEventListener("click", () => { showFullHistory = false; renderizarHistorico(container); });
     }
 
     global.Relatorios = {

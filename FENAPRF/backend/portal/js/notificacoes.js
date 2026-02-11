@@ -40,7 +40,7 @@
         const userSearchInput = document.getElementById('push-target-user-search');
 
         if (titleInput) {
-            titleInput.oninput = () => {
+            titleInput.addEventListener("input", () => {
                 const len = titleInput.value.length;
                 const counter = document.getElementById('push-title-count');
                 counter.textContent = len;
@@ -50,7 +50,7 @@
         }
 
         if (messageInput) {
-            messageInput.oninput = () => {
+            messageInput.addEventListener("input", () => {
                 const len = messageInput.value.length;
                 const counter = document.getElementById('push-message-count');
                 counter.textContent = len;
@@ -60,19 +60,19 @@
         }
 
         if (btnSend) {
-            btnSend.onclick = handleSend;
+            btnSend.addEventListener("click", handleSend);
         }
 
         if (targetTypeSelect) {
-            targetTypeSelect.onchange = handleTargetTypeChange;
+            targetTypeSelect.addEventListener("change", handleTargetTypeChange);
         }
 
         if (userSearchInput) {
             let debounceTimer;
-            userSearchInput.oninput = () => {
+            userSearchInput.addEventListener("input", () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => handleUserSearch(userSearchInput.value), 400);
-            };
+            });
         }
     }
 
@@ -303,10 +303,10 @@
 
         // Atribui handlers após renderizar
         const btnShow = document.getElementById('btn-show-archived');
-        if (btnShow) btnShow.onclick = () => { isShowingArchived = true; carregarHistorico(); };
+        if (btnShow) btnShow.addEventListener("click", () => { isShowingArchived = true; carregarHistorico(); });
 
         const btnHide = document.getElementById('btn-hide-archived');
-        if (btnHide) btnHide.onclick = () => { isShowingArchived = false; carregarHistorico(); };
+        if (btnHide) btnHide.addEventListener("click", () => { isShowingArchived = false; carregarHistorico(); });
     }
 
     function formatarData(isoStr) {

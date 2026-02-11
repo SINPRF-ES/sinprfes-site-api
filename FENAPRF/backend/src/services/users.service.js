@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { normalizarCpf, normalizarCep, generateUuid } = require("../utils/format");
+const { somenteDigitos, normalizarCpf, normalizarCep, generateUuid } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const {
   normalizeSexo,
@@ -194,8 +194,8 @@ async function atualizarDadosProprios(id, dados) {
   };
 
   addCampo("sexo", normalizeSexo(dados.sexo));
-  addCampo("telefone1", dados.telefone1);
-  addCampo("telefone2", dados.telefone2);
+  addCampo("telefone1", somenteDigitos(dados.telefone1));
+  addCampo("telefone2", somenteDigitos(dados.telefone2));
   addCampo("email", dados.email1 || dados.email);
 
   if (dados.logradouro_bairro) {
@@ -250,7 +250,7 @@ async function atualizarUserPorId(id, dados) {
 
   addCampo("name", dados.name);
   if (dados.sexo !== undefined) addCampo("sexo", normalizeSexo(dados.sexo));
-  addCampo("cpf", dados.cpf);
+  addCampo("cpf", somenteDigitos(dados.cpf));
 
   if (dados.data_nascimento !== undefined) {
     campos.push(`data_nascimento = NULLIF($${idx}, '')::date`);
@@ -258,8 +258,8 @@ async function atualizarUserPorId(id, dados) {
     idx += 1;
   }
 
-  addCampo("telefone1", dados.telefone1);
-  addCampo("telefone2", dados.telefone2);
+  addCampo("telefone1", somenteDigitos(dados.telefone1));
+  addCampo("telefone2", somenteDigitos(dados.telefone2));
   addCampo("email", dados.email1 || dados.email);
 
   if (dados.perfil_acesso !== undefined) addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
@@ -349,8 +349,8 @@ async function criarUserInicial(dados) {
         cpfNormalizado,
         normalizeSexo(dados.sexo),
         data_nascimento,
-        telefone1,
-        telefone2,
+        somenteDigitos(telefone1),
+        somenteDigitos(telefone2),
         emailFinal,
         normalizePerfil(perfilNovo),
         dados.cargo || null,

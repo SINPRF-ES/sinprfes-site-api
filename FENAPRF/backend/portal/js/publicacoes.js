@@ -99,10 +99,10 @@
                 }
             };
 
-            document.getElementById('btn-fechar-modal').onclick = fechar;
-            document.getElementById('modal-documento').onclick = (e) => {
+            document.getElementById('btn-fechar-modal').addEventListener("click", fechar);
+            document.getElementById('modal-documento').addEventListener("click", (e) => {
                 if(e.target.id === 'modal-documento') fechar();
-            };
+            });
         }
 
         async function abrirArquivoSeguro(idArquivo, titulo = "documento") {
@@ -215,15 +215,15 @@
             container.innerHTML = navHtml + `<div class="pub-grid">${cardsHtml}</div>`;
 
             container.querySelectorAll('.pub-card[data-folder-id]').forEach(card => {
-                card.onclick = () => {
+                card.addEventListener("click", () => {
                     const idDestino = card.dataset.folderId;
                     folderStack.push(folderId);
                     inicializarPublicacoes(idDestino, options);
-                };
+                });
             });
 
             container.querySelectorAll('.pub-card[data-file-id]').forEach(card => {
-                card.onclick = () => {
+                card.addEventListener("click", () => {
                     const idArquivo = card.dataset.fileId;
                     const titulo = card.querySelector('.pub-title')?.innerText || "documento";
                     const item = lista.find(i => i.id === idArquivo);
@@ -233,7 +233,7 @@
                     } else {
                         abrirArquivoSeguro(idArquivo, Utils.normalizeText(titulo).replace(/\s+/g, '_'));
                     }
-                };
+                });
             });
 
             configurarVoltar();
@@ -246,10 +246,10 @@
         function configurarVoltar() {
             const btn = document.getElementById("btn-pub-voltar");
             if (btn) {
-                btn.onclick = () => {
+                btn.addEventListener("click", () => {
                     const idAnterior = folderStack.pop();
                     inicializarPublicacoes(idAnterior, options);
-                };
+                });
             }
         }
     }

@@ -66,7 +66,6 @@
         const { inicializarAssembleias } = window.Assembleias || {};
         const { inicializarRelatorios } = window.Relatorios || {};
         const { inicializarLogistica } = window.Logistica || {};
-        const { CMSAdmin } = window || {};
         const { Notificacoes } = window || {};
 
         // 2. Configura Navegação Global
@@ -77,7 +76,6 @@
                 else if (abaAlvo === 'sec-users' && inicializarUsers) inicializarUsers(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
-                else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
                 else if (abaAlvo === 'sec-logistica' && inicializarLogistica) inicializarLogistica(perfil);
@@ -87,21 +85,18 @@
         // 3. Logout
         const btnLogout = document.getElementById("btn-logout");
         if (btnLogout) {
-            btnLogout.onclick = () => {
+            btnLogout.addEventListener("click", () => {
                 if(confirm("Deseja realmente sair?")) {
                     localStorage.clear();
                     window.location.replace("/login.html");
                 }
-            };
+            });
         }
 
         // 4. Configuração de Interface por Perfil
         try {
             // Inicializa visibilidade de abas (Regra de Ouro)
             const perfisGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"];
-
-            const navCms = document.getElementById("nav-cms");
-            if (navCms) navCms.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
             const navNotificacoes = document.getElementById("nav-notificacoes");
             if (navNotificacoes) navNotificacoes.style.display = perfisGestao.includes(perfil) ? "block" : "none";
@@ -121,7 +116,23 @@
             console.error("Erro ao configurar interface do portal:", err);
         }
 
-        // 5. Aciona a aba inicial se não for Meus Dados
+        // 5. Handlers de Modal (CSP compliance)
+        // Listener global para erros de carregamento de avatar (CSP-friendly)
+        document.addEventListener("error", (e) => {
+            if (e.target.tagName === "IMG" && (e.target.classList.contains("avatar-mini") || e.target.classList.contains("me-avatar-img") || e.target.classList.contains("avatar-preview"))) {
+                e.target.src = "/img/avatar-placeholder.png";
+            }
+        }, true);
+
+        document.querySelectorAll("[data-close]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const targetId = btn.dataset.close;
+                const modal = document.getElementById(targetId);
+                if (modal) modal.style.display = "none";
+            });
+        });
+
+        // 6. Aciona a aba inicial se não for Meus Dados
         const abaAtiva = document.querySelector(".af-section.active");
         if (abaAtiva && abaAtiva.id !== 'sec-meus-dados') {
             const btnAtivo = document.querySelector(`.af-nav-item[data-target="${abaAtiva.id}"]`);

@@ -58,7 +58,6 @@ app.use("/portal", express.static(path.join(process.cwd(), "portal")));
 const usersRoutes = require("./routes/users.routes");
 const senhaRoutes = require("./routes/senha.routes");
 const authRoutes = require("./routes/auth.routes");
-const instagramRoutes = require("./routes/instagram.routes");
 const pushRoutes = require("./routes/push.routes");
 const eventosRoutes = require("./routes/eventos.routes");
 const eventoVotacoesRoutes = require("./routes/eventoVotacoes.routes");
@@ -97,9 +96,6 @@ app.use("/api/users", usersRoutes);
 // Senha
 app.use("/api/senha", senhaRoutes);
 
-// Instagram (Feed)
-app.use("/api/instagram", instagramRoutes);
-
 // Publicações
 app.use("/api/publicacoes", publicacoesRoutes);
 
@@ -124,9 +120,6 @@ app.use("/api/logistica", logisticaRoutes);
 // Push de eventos
 app.use("/api/eventos", eventosRoutes);
 app.use("/api/eventos", eventoVotacoesRoutes); // vai usar subrotas /:id/votacoes
-
-// 🟧 NOVO: CMS-Lite para Blocos de Conteúdo
-app.use("/api/content-blocks", require("./routes/contentBlock.routes"));
 
 // Redirecionamento raiz para login
 app.get("/", (req, res) => {

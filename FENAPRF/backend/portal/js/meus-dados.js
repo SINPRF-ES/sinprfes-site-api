@@ -254,7 +254,7 @@
             : null;
 
         const avatarImg = avatarFullUrl
-            ? `<img src="${avatarFullUrl}" alt="Avatar" onerror="this.remove();">`
+            ? `<img src="${avatarFullUrl}" alt="Avatar" class="me-avatar-img">`
             : `<div class="avatar-fallback"></div>`;
 
         // AgeUtils é carregado como global em portal/index.html
@@ -326,11 +326,11 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>Telefone 1</label>
-                            <input type="text" id="me-telefone1" value="${telefone1 || ""}" />
+                            <input type="text" id="me-telefone1" value="${global.Utils.formatarTelefoneTexto(telefone1)}" />
                         </div>
                         <div class="field-group">
                             <label>Telefone 2</label>
-                            <input type="text" id="me-telefone2" value="${telefone2 || ""}" />
+                            <input type="text" id="me-telefone2" value="${global.Utils.formatarTelefoneTexto(telefone2)}" />
                         </div>
                     </div>
 
@@ -353,7 +353,7 @@
                         <div class="edit-group cep-group">
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
-                                <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000-000" class="campo-cep" />
+                                <input type="text" id="me-cep" value="${global.Utils.formatarCEP(cep)}" placeholder="00000-000" class="campo-cep" />
                                 <span class="cep-search-icon" id="btn-buscar-cep" style="cursor:pointer;">🔍</span>
                             </div>
                         </div>
@@ -423,14 +423,14 @@
         if (aplicarMascaraCEP) aplicarMascaraCEP(cepInput);
 
         // --- CEP ---
-        document.getElementById("btn-buscar-cep").onclick = buscarCep;
-        cepInput.onblur = () => {
+        document.getElementById("btn-buscar-cep").addEventListener("click", buscarCep);
+        cepInput.addEventListener("blur", () => {
             const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
             if (cepInput.value && onlyDigitsFn(cepInput.value).length === 8) buscarCep();
-        };
+        });
 
         // --- SUBMIT DADOS (PUT /me) ---
-        document.getElementById("form-meus-dados").onsubmit = async (e) => {
+        document.getElementById("form-meus-dados").addEventListener("submit", async (e) => {
             e.preventDefault();
             const status = document.getElementById("meus-dados-status");
             status.textContent = "Salvando...";
@@ -468,15 +468,18 @@
 
             try {
                 const r = await window.Api.apiFetch("/api/users/me", { method: "PUT", body: payload });
+                const d = await r.json().catch(() => ({}));
                 if (r.ok) {
                     await carregarMeusDados();
-                    alert("Dados salvos com sucesso!");
+                    if (d.warnings && d.warnings.length > 0) {
+                        const warnMsgs = d.warnings.map(w => w.message).join("\n");
+                        alert("Dados salvos com avisos:\n" + warnMsgs);
+                    } else {
+                        alert("Dados salvos com sucesso!");
+                    }
                 } else {
                     status.textContent = "Erro ao salvar.";
-                    try {
-                        const d = await r.json();
-                        if (d?.message) alert(d.message);
-                    } catch {}
+                    if (d?.message) alert(d.message);
                 }
             } catch (e) {
                 status.textContent = "Erro de conexão.";
@@ -489,16 +492,16 @@
         const btnSalvarFoto = document.getElementById("btn-salvar-foto");
         const btnRemoverFoto = document.getElementById("btn-remover-foto");
 
-        inputFile.onchange = () => {
+        inputFile.addEventListener("change", () => {
             const file = inputFile.files && inputFile.files[0];
             if (file) {
                 const urlLocal = URL.createObjectURL(file);
                 previewContainer.innerHTML = `<img src="${urlLocal}" style="width:100%; height:100%; object-fit:cover;" />`;
                 btnSalvarFoto.style.display = "inline-block";
             }
-        };
+        });
 
-        btnSalvarFoto.onclick = async () => {
+        btnSalvarFoto.addEventListener("click", async () => {
             const file = inputFile.files && inputFile.files[0];
             if (!file) return;
 
@@ -526,7 +529,7 @@
             }
         };
 
-        btnRemoverFoto.onclick = async () => {
+        btnRemoverFoto.addEventListener("click", async () => {
           if (!confirm("Remover a foto de perfil?")) return;
 
           btnRemoverFoto.disabled = true;
