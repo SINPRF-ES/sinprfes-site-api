@@ -15,10 +15,19 @@ function getUserId(req) {
 }
 
 /**
- * Valida se uma string é uma data ISO válida.
+ * Valida determinísticamente se uma string está nos formatos:
+ * - YYYY-MM-DD (Data simples)
+ * - YYYY-MM-DDTHH:mm:ssZ (ISO 8601 UTC)
+ * - YYYY-MM-DDTHH:mm:ss.sssZ (ISO 8601 UTC com milissegundos)
  */
-function isValidIsoDate(str) {
+function isValidDateString(str) {
     if (!str || typeof str !== 'string') return false;
+
+    const regexDate = /^\d{4}-\d{2}-\d{2}$/;
+    const regexIso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+
+    if (!regexDate.test(str) && !regexIso.test(str)) return false;
+
     const d = new Date(str);
     return !isNaN(d.getTime());
 }
@@ -57,8 +66,8 @@ exports.listarEventos = async (req, res) => {
         const { rows } = await pool.query(query, params);
         res.json(rows);
     } catch (err) {
-        log.error("Logistica.listarEventos.Erro", err);
-        res.status(500).json({ error: "Erro ao listar eventos logísticos." });
+        log.error("Logistica.listarEventos.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao listar eventos logísticos.", requestId: req.requestId });
     }
 };
 
@@ -72,8 +81,8 @@ exports.criarEvento = async (req, res) => {
             return res.status(400).json({ error: "Título e datas são obrigatórios." });
         }
 
-        if (!isValidIsoDate(data_inicio) || !isValidIsoDate(data_fim)) {
-            return res.status(400).json({ error: "Datas de início ou fim inválidas." });
+        if (!isValidDateString(data_inicio) || !isValidDateString(data_fim)) {
+            return res.status(400).json({ error: "Datas de início ou fim inválidas (formatos aceitos: YYYY-MM-DD ou ISO 8601 UTC)." });
         }
 
         const validAssembleiaId = assembleia_id ? parseUuid(assembleia_id) : null;
@@ -105,8 +114,8 @@ exports.criarEvento = async (req, res) => {
         res.status(201).json(evento);
     } catch (err) {
         await client.query("ROLLBACK");
-        log.error("Logistica.criarEvento.Erro", err);
-        res.status(500).json({ error: "Erro ao criar evento." });
+        log.error("Logistica.criarEvento.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao criar evento.", requestId: req.requestId });
     } finally {
         client.release();
     }
@@ -115,28 +124,28 @@ exports.criarEvento = async (req, res) => {
 exports.atualizarEvento = async (req, res) => {
     const client = await pool.connect();
     try {
-        const id = parseUuid(req.params.id);
-        if (!id) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+        const eventoId = parseUuid(req.params.id);
+        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
         const gestorId = getUserId(req);
         const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, justificativa, assembleia_id } = req.body;
 
         if (!justificativa) {
-            return res.status(400).json({ error: "Justificativa é obrigatória para alterações de gestão." });
+            return res.status(400).json({ error: "Justificativa é obrigatória para alterações de gestão.", requestId: req.requestId });
         }
 
-        if ((data_inicio && !isValidIsoDate(data_inicio)) || (data_fim && !isValidIsoDate(data_fim))) {
-            return res.status(400).json({ error: "Datas de início ou fim inválidas." });
+        if ((data_inicio && !isValidDateString(data_inicio)) || (data_fim && !isValidDateString(data_fim))) {
+            return res.status(400).json({ error: "Datas de início ou fim inválidas (formatos aceitos: YYYY-MM-DD ou ISO 8601 UTC).", requestId: req.requestId });
         }
 
         const validAssembleiaId = assembleia_id ? parseUuid(assembleia_id) : null;
         if (assembleia_id && !validAssembleiaId) {
-            return res.status(400).json({ error: "assembleia_id inválido." });
+            return res.status(400).json({ error: "assembleia_id inválido.", requestId: req.requestId });
         }
 
         await client.query("BEGIN");
 
-        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [id]);
-        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
+        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [eventoId]);
+        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado.", requestId: req.requestId });
         const oldData = oldRows[0];
 
         const query = `
@@ -145,62 +154,13 @@ exports.atualizarEvento = async (req, res) => {
             WHERE id = $9
             RETURNING *
         `;
-        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, validAssembleiaId, id]);
+        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, validAssembleiaId, eventoId]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
             resourceType: RECURSO_TIPO.EVENTO,
-            resourceId: id,
-            eventId: id,
-            gestorId,
-            action: ACOES_AUDITORIA.ALTERAR,
-            justification,
-            oldData,
-            newData: evento
-        });
-
-        await client.query("COMMIT");
-        res.json(evento);
-    } catch (err) {
-        await client.query("ROLLBACK");
-        log.error("Logistica.atualizarEvento.Erro", err);
-        res.status(500).json({ error: "Erro ao atualizar evento." });
-    } finally {
-        client.release();
-    }
-};
-
-exports.encerrarEvento = async (req, res) => {
-    const client = await pool.connect();
-    try {
-        const id = parseUuid(req.params.id);
-        if (!id) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
-        const gestorId = getUserId(req);
-        const { justificativa } = req.body;
-
-        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para encerrar evento." });
-
-        await client.query("BEGIN");
-
-        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [id]);
-        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
-        const oldData = oldRows[0];
-
-        if (oldData.status === STATUS_EVENTO.ENCERRADO) return res.status(400).json({ error: "Evento já está encerrado." });
-
-        const query = `
-            UPDATE logistica_eventos
-            SET status = $1, encerrado_em = NOW(), encerrado_por = $2, encerrado_motivo = $3, atualizado_em = NOW()
-            WHERE id = $4
-            RETURNING *
-        `;
-        const { rows } = await client.query(query, [STATUS_EVENTO.ENCERRADO, gestorId, justificativa, id]);
-        const evento = rows[0];
-
-        await registrarAuditoria(client, {
-            resourceType: RECURSO_TIPO.EVENTO,
-            resourceId: id,
-            eventId: id,
+            resourceId: eventoId,
+            eventId: eventoId,
             gestorId,
             action: ACOES_AUDITORIA.ALTERAR,
             justification: justificativa,
@@ -212,8 +172,57 @@ exports.encerrarEvento = async (req, res) => {
         res.json(evento);
     } catch (err) {
         await client.query("ROLLBACK");
-        log.error("Logistica.encerrarEvento.Erro", err);
-        res.status(500).json({ error: "Erro ao encerrar evento." });
+        log.error("Logistica.atualizarEvento.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao atualizar evento.", requestId: req.requestId });
+    } finally {
+        client.release();
+    }
+};
+
+exports.encerrarEvento = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const eventoId = parseUuid(req.params.id);
+        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+        const gestorId = getUserId(req);
+        const { justificativa } = req.body;
+
+        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para encerrar evento.", requestId: req.requestId });
+
+        await client.query("BEGIN");
+
+        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [eventoId]);
+        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado.", requestId: req.requestId });
+        const oldData = oldRows[0];
+
+        if (oldData.status === STATUS_EVENTO.ENCERRADO) return res.status(400).json({ error: "Evento já está encerrado.", requestId: req.requestId });
+
+        const query = `
+            UPDATE logistica_eventos
+            SET status = $1, encerrado_em = NOW(), encerrado_por = $2, encerrado_motivo = $3, atualizado_em = NOW()
+            WHERE id = $4
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [STATUS_EVENTO.ENCERRADO, gestorId, justificativa, eventoId]);
+        const evento = rows[0];
+
+        await registrarAuditoria(client, {
+            resourceType: RECURSO_TIPO.EVENTO,
+            resourceId: eventoId,
+            eventId: eventoId,
+            gestorId,
+            action: ACOES_AUDITORIA.ALTERAR,
+            justification: justificativa,
+            oldData,
+            newData: evento
+        });
+
+        await client.query("COMMIT");
+        res.json(evento);
+    } catch (err) {
+        await client.query("ROLLBACK");
+        log.error("Logistica.encerrarEvento.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao encerrar evento.", requestId: req.requestId });
     } finally {
         client.release();
     }
@@ -222,20 +231,20 @@ exports.encerrarEvento = async (req, res) => {
 exports.cancelarEvento = async (req, res) => {
     const client = await pool.connect();
     try {
-        const id = parseUuid(req.params.id);
-        if (!id) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+        const eventoId = parseUuid(req.params.id);
+        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
         const gestorId = getUserId(req);
         const { justificativa } = req.body;
 
-        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para cancelar evento." });
+        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para cancelar evento.", requestId: req.requestId });
 
         await client.query("BEGIN");
 
-        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [id]);
-        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
+        const { rows: oldRows } = await client.query("SELECT * FROM logistica_eventos WHERE id = $1", [eventoId]);
+        if (oldRows.length === 0) return res.status(404).json({ error: "Evento não encontrado.", requestId: req.requestId });
         const oldData = oldRows[0];
 
-        if (oldData.status === STATUS_EVENTO.CANCELADO) return res.status(400).json({ error: "Evento já está cancelado." });
+        if (oldData.status === STATUS_EVENTO.CANCELADO) return res.status(400).json({ error: "Evento já está cancelado.", requestId: req.requestId });
 
         const query = `
             UPDATE logistica_eventos
@@ -243,13 +252,13 @@ exports.cancelarEvento = async (req, res) => {
             WHERE id = $4
             RETURNING *
         `;
-        const { rows } = await client.query(query, [STATUS_EVENTO.CANCELADO, gestorId, justificativa, id]);
+        const { rows } = await client.query(query, [STATUS_EVENTO.CANCELADO, gestorId, justificativa, eventoId]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
             resourceType: RECURSO_TIPO.EVENTO,
-            resourceId: id,
-            eventId: id,
+            resourceId: eventoId,
+            eventId: eventoId,
             gestorId,
             action: ACOES_AUDITORIA.CANCELAR,
             justification: justificativa,
@@ -261,8 +270,8 @@ exports.cancelarEvento = async (req, res) => {
         res.json(evento);
     } catch (err) {
         await client.query("ROLLBACK");
-        log.error("Logistica.cancelarEvento.Erro", err);
-        res.status(500).json({ error: "Erro ao cancelar evento." });
+        log.error("Logistica.cancelarEvento.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao cancelar evento.", requestId: req.requestId });
     } finally {
         client.release();
     }
@@ -273,7 +282,7 @@ exports.cancelarEvento = async (req, res) => {
 exports.listarInscricoes = async (req, res) => {
     try {
         const eventoId = parseUuid(req.params.eventoId);
-        if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
+        if (!eventoId) return res.status(400).json({ error: "ID de evento inválido.", requestId: req.requestId });
         const query = `
             SELECT
                 i.*,
@@ -291,8 +300,8 @@ exports.listarInscricoes = async (req, res) => {
         const { rows } = await pool.query(query, [eventoId]);
         res.json(rows);
     } catch (err) {
-        log.error("Logistica.listarInscricoes.Erro", err);
-        res.status(500).json({ error: "Erro ao listar inscrições." });
+        log.error("Logistica.listarInscricoes.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao listar inscrições.", requestId: req.requestId });
     }
 };
 
@@ -315,8 +324,8 @@ exports.registrarMinhaInscricao = async (req, res) => {
         const validEventoId = parseUuid(evento_id);
         if (!validEventoId) return res.status(400).json({ error: "evento_id inválido (UUID esperado)." });
 
-        if (!isValidIsoDate(data_chegada) || !isValidIsoDate(data_saida)) {
-            return res.status(400).json({ error: "Datas de chegada ou saída inválidas." });
+        if (!isValidDateString(data_chegada) || !isValidDateString(data_saida)) {
+            return res.status(400).json({ error: "Datas de chegada ou saída inválidas (formatos aceitos: YYYY-MM-DD ou ISO 8601 UTC)." });
         }
 
         // Validar datas
@@ -325,12 +334,12 @@ exports.registrarMinhaInscricao = async (req, res) => {
         }
 
         // Verificar se evento está ativo
-        const { rows: evRows } = await client.query("SELECT status, titulo, data_inicio, data_fim FROM logistica_eventos WHERE id = $1", [evento_id]);
-        if (evRows.length === 0) return res.status(404).json({ error: "Evento não encontrado." });
+        const { rows: evRows } = await client.query("SELECT status, titulo, data_inicio, data_fim FROM logistica_eventos WHERE id = $1", [validEventoId]);
+        if (evRows.length === 0) return res.status(404).json({ error: "Evento não encontrado.", requestId: req.requestId });
 
         if (evRows[0].status !== STATUS_EVENTO.ATIVO) {
             const msg = evRows[0].status === STATUS_EVENTO.ENCERRADO ? "Evento encerrado." : "Evento cancelado.";
-            return res.status(400).json({ error: msg });
+            return res.status(400).json({ error: msg, requestId: req.requestId });
         }
 
         await client.query("BEGIN");
@@ -365,8 +374,8 @@ exports.registrarMinhaInscricao = async (req, res) => {
         res.json(inscricao);
     } catch (err) {
         await client.query("ROLLBACK");
-        log.error("Logistica.registrarMinhaInscricao.Erro", err);
-        res.status(500).json({ error: "Erro ao registrar inscrição." });
+        log.error("Logistica.registrarMinhaInscricao.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao registrar inscrição.", requestId: req.requestId });
     } finally {
         client.release();
     }
@@ -377,18 +386,18 @@ exports.cancelarMinhaInscricao = async (req, res) => {
     try {
         const userId = getUserId(req);
         const eventoId = parseUuid(req.params.eventoId);
-        if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
+        if (!eventoId) return res.status(400).json({ error: "ID de evento inválido.", requestId: req.requestId });
 
         await client.query("BEGIN");
 
         const { rows: evRows } = await client.query("SELECT status, titulo FROM logistica_eventos WHERE id = $1", [eventoId]);
         if (evRows.length > 0 && evRows[0].status !== STATUS_EVENTO.ATIVO) {
             const msg = evRows[0].status === STATUS_EVENTO.ENCERRADO ? "Evento encerrado." : "Evento cancelado.";
-            return res.status(400).json({ error: msg });
+            return res.status(400).json({ error: msg, requestId: req.requestId });
         }
 
         const { rows: iRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE evento_id = $1 AND user_id = $2", [eventoId, userId]);
-        if (iRows.length === 0) return res.status(404).json({ error: "Inscrição não encontrada." });
+        if (iRows.length === 0) return res.status(404).json({ error: "Inscrição não encontrada.", requestId: req.requestId });
         const snapshot = iRows[0];
 
         await client.query("DELETE FROM logistica_inscricoes WHERE evento_id = $1 AND user_id = $2", [eventoId, userId]);
@@ -410,8 +419,8 @@ exports.cancelarMinhaInscricao = async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         await client.query("ROLLBACK");
-        log.error("Logistica.cancelarMinhaInscricao.Erro", err);
-        res.status(500).json({ error: "Erro ao cancelar inscrição." });
+        log.error("Logistica.cancelarMinhaInscricao.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao cancelar inscrição.", requestId: req.requestId });
     } finally {
         client.release();
     }
@@ -423,25 +432,25 @@ exports.atualizarInscricaoTerceiro = async (req, res) => {
     const client = await pool.connect();
     try {
         const gestorId = getUserId(req);
-        const id = parseUuid(req.params.id); // ID da inscrição
-        if (!id) return res.status(400).json({ error: "ID de inscrição inválido." });
+        const inscricaoId = parseUuid(req.params.id); // ID da inscrição
+        if (!inscricaoId) return res.status(400).json({ error: "ID de inscrição inválido.", requestId: req.requestId });
         const { data_chegada, data_saida, observacoes, justificativa } = req.body;
 
-        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória." });
+        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória.", requestId: req.requestId });
 
-        if ((data_chegada && !isValidIsoDate(data_chegada)) || (data_saida && !isValidIsoDate(data_saida))) {
-            return res.status(400).json({ error: "Datas de chegada ou saída inválidas." });
+        if ((data_chegada && !isValidDateString(data_chegada)) || (data_saida && !isValidDateString(data_saida))) {
+            return res.status(400).json({ error: "Datas de chegada ou saída inválidas (formatos aceitos: YYYY-MM-DD ou ISO 8601 UTC).", requestId: req.requestId });
         }
 
         // Validar datas
         if (data_chegada && data_saida && new Date(data_chegada) >= new Date(data_saida)) {
-            return res.status(400).json({ error: "A data de chegada deve ser anterior à data de saída." });
+            return res.status(400).json({ error: "A data de chegada deve ser anterior à data de saída.", requestId: req.requestId });
         }
 
         await client.query("BEGIN");
 
-        const { rows: oldRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE id = $1", [id]);
-        if (oldRows.length === 0) return res.status(404).json({ error: "Inscrição não encontrada." });
+        const { rows: oldRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE id = $1", [inscricaoId]);
+        if (oldRows.length === 0) return res.status(404).json({ error: "Inscrição não encontrada.", requestId: req.requestId });
         const oldData = oldRows[0];
 
         const query = `
@@ -450,12 +459,12 @@ exports.atualizarInscricaoTerceiro = async (req, res) => {
             WHERE id = $4
             RETURNING *
         `;
-        const { rows } = await client.query(query, [data_chegada, data_saida, observacoes, id]);
+        const { rows } = await client.query(query, [data_chegada, data_saida, observacoes, inscricaoId]);
         const inscricao = rows[0];
 
         await registrarAuditoria(client, {
             resourceType: RECURSO_TIPO.INSCRICAO,
-            resourceId: id,
+            resourceId: inscricaoId,
             eventId: inscricao.evento_id,
             targetUserId: inscricao.user_id,
             gestorId,
@@ -469,8 +478,8 @@ exports.atualizarInscricaoTerceiro = async (req, res) => {
         res.json(inscricao);
     } catch (err) {
         await client.query("ROLLBACK");
-        log.error("Logistica.atualizarInscricaoTerceiro.Erro", err);
-        res.status(500).json({ error: "Erro ao atualizar inscrição de terceiro." });
+        log.error("Logistica.atualizarInscricaoTerceiro.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao atualizar inscrição de terceiro.", requestId: req.requestId });
     } finally {
         client.release();
     }
@@ -480,21 +489,21 @@ exports.cancelarInscricaoTerceiro = async (req, res) => {
     const client = await pool.connect();
     try {
         const gestorId = getUserId(req);
-        const id = parseUuid(req.params.id);
-        if (!id) return res.status(400).json({ error: "ID de inscrição inválido." });
+        const inscricaoId = parseUuid(req.params.id);
+        if (!inscricaoId) return res.status(400).json({ error: "ID de inscrição inválido.", requestId: req.requestId });
         const { justificativa } = req.body;
 
-        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória." });
+        if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória.", requestId: req.requestId });
 
         await client.query("BEGIN");
 
-        const { rows: iRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE id = $1", [id]);
-        if (iRows.length === 0) return res.status(404).json({ error: "Inscrição não encontrada." });
+        const { rows: iRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE id = $1", [inscricaoId]);
+        if (iRows.length === 0) return res.status(404).json({ error: "Inscrição não encontrada.", requestId: req.requestId });
         const snapshot = iRows[0];
 
         await registrarAuditoria(client, {
             resourceType: RECURSO_TIPO.INSCRICAO,
-            resourceId: id,
+            resourceId: inscricaoId,
             eventId: snapshot.evento_id,
             targetUserId: snapshot.user_id,
             gestorId,
@@ -503,7 +512,7 @@ exports.cancelarInscricaoTerceiro = async (req, res) => {
             oldData: snapshot
         });
 
-        await client.query("DELETE FROM logistica_inscricoes WHERE id = $1", [id]);
+        await client.query("DELETE FROM logistica_inscricoes WHERE id = $1", [inscricaoId]);
 
         await client.query("COMMIT");
 
@@ -523,8 +532,8 @@ exports.cancelarInscricaoTerceiro = async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         await client.query("ROLLBACK");
-        log.error("Logistica.cancelarInscricaoTerceiro.Erro", err);
-        res.status(500).json({ error: "Erro ao cancelar inscrição de terceiro." });
+        log.error("Logistica.cancelarInscricaoTerceiro.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
+        res.status(500).json({ error: "Erro ao cancelar inscrição de terceiro.", requestId: req.requestId });
     } finally {
         client.release();
     }

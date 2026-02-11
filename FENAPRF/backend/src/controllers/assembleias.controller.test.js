@@ -34,7 +34,7 @@ describe('Assembleias Controller', () => {
     await controller.abrir(req, res);
 
     expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith({ error: `${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (ABERTA -> ABERTA)` });
+    expect(res.json).toHaveBeenCalledWith({ error: `${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (ABERTA -> ABERTA)`, requestId: 'test-id' });
   });
 
   test('iniciarExecucao should return 422 on business rule failure (e.g. mesa missing)', async () => {

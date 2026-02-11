@@ -126,7 +126,7 @@ exports.sendCampaign = async (req, res) => {
       code: "INTERNAL_SERVER_ERROR"
     };
 
-    if ((process.env.ASSEMBLEIA_ENV || "dev") === "dev") {
+    if ((process.env.ASSEMBLEIA_ENV || "dev") === "dev" && e.message) {
       response.details = e.message;
     }
 
@@ -166,7 +166,8 @@ exports.pushHealth = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Erro ao verificar saúde do push.",
-      error: e.message
+      error: "Erro ao verificar saúde do push.",
+      requestId
     });
   }
 };
@@ -192,7 +193,8 @@ exports.listCampaigns = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Erro ao listar campanhas.",
-      details: e.message,
+      error: "Erro ao listar campanhas.",
+      requestId,
       code: "INTERNAL_SERVER_ERROR"
     });
   }
