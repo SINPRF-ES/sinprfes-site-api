@@ -90,9 +90,6 @@ importers:
       nodemon:
         specifier: ^3.1.0
         version: 3.1.11
-      resend:
-        specifier: ^6.9.1
-        version: 6.9.1
       socket.io-client:
         specifier: ^4.8.3
         version: 4.8.3

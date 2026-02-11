@@ -15,7 +15,7 @@ import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 export default function CriarAssembleiaScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [titulo, setTitulo] = useState('');
-  const [tipo, setTipo] = useState<'AGE' | 'AGO'>('AGE');
+  const [tipo, setTipo] = useState<'AGE' | 'AGO' | 'REUNIAO_DELIBERATIVA' | 'REUNIAO_INFORMATIVA' | 'REUNIAO_TEMATICA'>('AGE');
   const [pauta, setPauta] = useState('');
   const [data, setData] = useState('');
   const [hora1, setHora1] = useState('');
@@ -79,7 +79,7 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
 
       Alert.alert(
         'Sucesso',
-        'Assembleia cadastrada com sucesso! Deseja criar um evento logístico com estes dados?',
+        'Deseja criar um evento logístico associado a esta reunião?',
         [
             { text: 'Não', onPress: () => navigation.goBack() },
             {
@@ -139,7 +139,10 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
             wrapperStyle={{ marginBottom: 20 }}
             items={[
               { label: 'Assembleia Geral Extraordinária', value: 'AGE' },
-              { label: 'Assembleia Geral Ordinária', value: 'AGO' }
+              { label: 'Assembleia Geral Ordinária', value: 'AGO' },
+              { label: 'Reunião deliberativa', value: 'REUNIAO_DELIBERATIVA' },
+              { label: 'Reunião informativa', value: 'REUNIAO_INFORMATIVA' },
+              { label: 'Reunião temática', value: 'REUNIAO_TEMATICA' }
             ]}
           />
         </View>

@@ -33,6 +33,7 @@ interface Campaign {
   status: string;
   target_type: string;
   target_value: string | null;
+  target_label?: string;
   autor_nome: string | null;
   result: {
     sent: number;
@@ -280,7 +281,7 @@ export default function NotificacoesPushScreen() {
       }
     }
 
-    const targetLabel = formatTargetLabelPT(item.target_type, displayTargetValue);
+    const targetLabel = item.target_label || formatTargetLabelPT(item.target_type, displayTargetValue);
 
     return (
       <View style={styles.historyCard}>
