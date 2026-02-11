@@ -1,4 +1,4 @@
--- Migration: Fix missing columns in assembleias table (Postgres 42703)
+-- Migration: Fix missing columns in assembleias table (Postgres 42703) and UUID type alignment
 -- Date: 2026-02-14
 
 DO $$
@@ -44,7 +44,7 @@ BEGIN
         ALTER TABLE assembleias ADD COLUMN edital_drive_file_id TEXT;
     END IF;
 
-    -- 5. Ensure suspension fields exist (redundant with V27 but safe)
+    -- 5. Ensure suspension fields exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'assembleias' AND column_name = 'suspensao_motivo') THEN
         ALTER TABLE assembleias ADD COLUMN suspensao_motivo TEXT;
     END IF;
@@ -56,5 +56,27 @@ BEGIN
     -- 6. Update type constraint for new assembly types
     ALTER TABLE assembleias DROP CONSTRAINT IF EXISTS chk_tipo;
     ALTER TABLE assembleias ADD CONSTRAINT chk_tipo CHECK (tipo IN ('AGE', 'AGO', 'REUNIAO_DELIBERATIVA', 'REUNIAO_INFORMATIVA', 'REUNIAO_TEMATICA'));
+
+    -- 7. FORCE UUID TYPE ALIGNMENT (Fixing creation error reported by user)
+    -- This is crucial as some migrations might have used INTEGER by mistake (like V27)
+
+    -- assembleias.criado_por
+    ALTER TABLE assembleias ALTER COLUMN criado_por TYPE UUID USING criado_por::text::uuid;
+
+    -- assembleia_mesa
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'assembleia_mesa') THEN
+        ALTER TABLE assembleia_mesa ALTER COLUMN vice_presidente_user_id TYPE UUID USING vice_presidente_user_id::text::uuid;
+        ALTER TABLE assembleia_mesa ALTER COLUMN secretario_2_user_id TYPE UUID USING secretario_2_user_id::text::uuid;
+    END IF;
+
+    -- assembleia_mesa_rejeicoes
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'assembleia_mesa_rejeicoes') THEN
+        ALTER TABLE assembleia_mesa_rejeicoes ALTER COLUMN user_id TYPE UUID USING user_id::text::uuid;
+    END IF;
+
+    -- assembleia_checkins (Robust check)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'assembleia_checkins') THEN
+        ALTER TABLE assembleia_checkins ALTER COLUMN user_id TYPE UUID USING user_id::text::uuid;
+    END IF;
 
 END $$;
