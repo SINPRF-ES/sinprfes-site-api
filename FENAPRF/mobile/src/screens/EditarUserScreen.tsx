@@ -203,13 +203,18 @@ export default function EditarUserScreen({ route, navigation }: any) {
       }
     }
 
+    // Bloqueia ações se estiver salvando (UX/Stability)
+    const effectiveActions = saving
+      ? actions.map(a => ({ ...a, label: `${a.label} (Aguarde...)`, onPress: () => { logger.info('ACTION_BLOCKED_WHILE_SAVING'); } }))
+      : actions;
+
     navigation.setOptions({
-      headerRight: () => <HeaderMenu actions={actions} />,
+      headerRight: () => <HeaderMenu actions={effectiveActions} />,
       headerStyle: { backgroundColor: '#003366' },
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
     });
-  }, [navigation, user, user, handleUpdate, userId]);
+  }, [navigation, user, authUser, handleUpdate, userId, saving]);
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
