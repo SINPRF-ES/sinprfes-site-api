@@ -19,6 +19,7 @@ export interface User {
   numero?: string | null;
   complemento?: string | null;
   bairro?: string | null;
+  logradouro_bairro?: string | null;
   cidade?: string | null;
   uf?: string | null;
   uf_endereco?: string | null;

@@ -40,16 +40,15 @@ async function getMe(id) {
       f.id, f.cpf, f.name, f.name as nome, f.email, f.email as email1,
       f.perfil_acesso, f.situacao, f.bloqueado,
       f.telefone1, f.telefone2,
-      f.cep, f.logradouro, f.numero, f.complemento, f.bairro, f.cidade, f.uf,
+      f.cep, f.logradouro, f.numero, f.complemento, f.bairro, f.cidade, f.uf, f.uf_endereco, f.uf2,
       f.data_nascimento, f.cargo,
       f.avatar_url, f.avatar_public_id,
-      f.uf_endereco,
       f.created_at, f.updated_at, f.ultimo_acesso,
       f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
       u_arq.name as arquivado_por_nome,
       f.desarquivado_em, f.desarquivado_motivo, f.desarquivado_por,
       u_des.name as desarquivado_por_nome,
-      f.perfil_acesso2, f.cargo2, f.uf2,
+      f.perfil_acesso2, f.cargo2,
       f.cargo_mandato_inicio, f.cargo_mandato_fim,
       f.sexo,
       f.password_hash as senha_hash
@@ -147,14 +146,14 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
       f.id, f.name, f.name as nome, f.cpf, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email as email1,
       NULL as email2,
       f.situacao, f.perfil_acesso,
-      f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
+      f.logradouro, f.bairro, f.numero, f.complemento, f.cidade, f.uf, f.uf_endereco, f.uf2, f.cep,
       f.avatar_url,
       f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
       u_arq.name as arquivado_por_nome,
       f.desarquivado_em, f.desarquivado_motivo, f.desarquivado_por,
       u_des.name as desarquivado_por_nome,
       f.cargo, f.cargo_mandato_inicio, f.cargo_mandato_fim,
-      f.perfil_acesso2, f.cargo2, f.uf2
+      f.perfil_acesso2, f.cargo2
     FROM users f
     LEFT JOIN users u_arq ON f.arquivado_por = u_arq.id
     LEFT JOIN users u_des ON f.desarquivado_por = u_des.id
@@ -209,7 +208,7 @@ async function atualizarDadosProprios(id, dados) {
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
-  // addCampo("uf", dados.uf); // Removido para evitar duplicidade com o campo de vínculo funcional
+  addCampo("uf_endereco", dados.uf_endereco);
 
   if (dados.cep !== undefined) {
     addCampo("cep", normalizarCep(dados.cep));
@@ -288,6 +287,7 @@ async function atualizarUserPorId(id, dados) {
   addCampo("uf2", dados.uf2);
   addCampo("cargo", dados.cargo);
   addCampo("uf", dados.uf);
+  addCampo("uf_endereco", dados.uf_endereco);
 
   if (dados.cargo_mandato_inicio !== undefined) {
     campos.push(`cargo_mandato_inicio = NULLIF($${idx}, '')::date`);
@@ -335,12 +335,12 @@ async function criarUserInicial(dados) {
       `
       INSERT INTO users (
         id, name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
-        perfil_acesso, cargo, uf,
+        perfil_acesso, cargo, uf, uf_endereco,
         perfil_acesso2, cargo2, uf2,
         created_at, updated_at, bloqueado
       ) VALUES (
         $1, $2, $3, $4, NULLIF($5, '')::date, $6, $7, $8,
-        $9, $10, $11, $12, $13, $14, NOW(), NOW(), false
+        $9, $10, $11, $12, $13, $14, $15, NOW(), NOW(), false
       ) RETURNING id
       `,
       [
@@ -355,6 +355,7 @@ async function criarUserInicial(dados) {
         normalizePerfil(perfilNovo),
         dados.cargo || null,
         dados.uf || null,
+        dados.uf_endereco || null,
         dados.perfil_acesso2 || null,
         dados.cargo2 || null,
         dados.uf2 || null

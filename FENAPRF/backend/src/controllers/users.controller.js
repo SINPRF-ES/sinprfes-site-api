@@ -274,6 +274,7 @@ exports.atualizarMeusDados = async (req, res) => {
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
+      uf_endereco: body.uf_endereco,
     };
 
     const atualizado = await usersService.atualizarDadosProprios(atorId, payload);
@@ -360,6 +361,7 @@ exports.atualizarUser = async (req, res) => {
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
+      uf_endereco: body.uf_endereco,
       cargo: body.cargo,
       uf: body.uf || body.uf_voto, // prioriza 'uf' canônico
       cargo_mandato_inicio: body.cargo_mandato_inicio !== undefined ? normalizeDateField(body.cargo_mandato_inicio) : undefined,
@@ -581,6 +583,7 @@ exports.criarUser = async (req, res) => {
       complemento: body.complemento || null,
       cidade: body.cidade || null,
       cep: body.cep || null,
+      uf_endereco: body.uf_endereco || null,
     };
 
     const novo = await usersService.criarUserInicial(dadosNovo, perfilCriador);

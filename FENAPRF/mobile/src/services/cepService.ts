@@ -23,7 +23,7 @@ export const buscarCep = async (cep: string) => {
     return {
       logradouro_bairro: `${data.logradouro}, ${data.bairro}`,
       cidade: data.localidade,
-      uf: data.uf,
+      uf_endereco: data.uf,
     };
   } catch (error) {
     console.error("Erro ao buscar CEP:", error);

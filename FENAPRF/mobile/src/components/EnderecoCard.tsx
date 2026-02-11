@@ -115,7 +115,7 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
           <Text style={styles.label}>UF</Text>
           <TextInput
             style={styles.inputDisabled}
-            value={user?.uf || ''}
+            value={user?.uf_endereco || ''}
             placeholder="UF"
             maxLength={2}
             editable={false}
