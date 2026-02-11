@@ -15,7 +15,7 @@ const required = [
   "gerarTokenQuorum","atualizarQuorum","checkin","definirMesa","substituirMesa",
   "iniciarVotacao","votar","encerrarVotacao",
   "pedirPalavra","concederPalavra","criarProposta","iniciarVotacaoProposta",
-  "gerarRelatorio","diagnostico","limparLogsAuditoria"
+  "gerarRelatorio","diagnostico","limparLogsAuditoria","getGlobalTokenAtivo"
 ];
 const missing = required.filter(k => typeof controller?.[k] !== "function");
 if (missing.length) {
@@ -29,6 +29,7 @@ const upload = multer({
 
 // Todos autenticados podem listar e ver detalhes
 router.get("/", auth, controller.listar);
+router.get("/global-token-ativo", auth, controller.getGlobalTokenAtivo);
 router.get("/:id", auth, controller.detalhe);
 router.get("/:id/estado", auth, stateLimiter, controller.estadoCompleto);
 router.get("/:id/estado/mini", auth, stateLimiter, controller.estadoMini);

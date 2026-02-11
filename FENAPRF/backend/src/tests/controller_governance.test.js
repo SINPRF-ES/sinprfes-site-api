@@ -44,7 +44,7 @@ describe('Controller Governance Rules', () => {
       await controller.gerarTokenQuorum(req, res);
 
       expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+      expect(res.json).toHaveBeenCalledWith({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE, requestId: 'test-req' });
     });
 
     test('gerarTokenQuorum should allow President if mesa established', async () => {

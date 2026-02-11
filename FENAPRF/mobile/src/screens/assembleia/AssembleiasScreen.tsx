@@ -81,16 +81,16 @@ export default function AssembleiasScreen({ navigation }: any) {
         navigation.navigate('AssembleiaDetalhe', { id: item.id });
       }}
     >
-      <View style={styles.cardHeader}>
-        <View style={[styles.badge, (styles[`badge${item.estado}` as keyof typeof styles] as any) || styles.badgeCRIADO]}>
-          <Text style={styles.badgeText}>
+      <View style={styles.cardHeaderCenter}>
+        <View style={[styles.badgeLarge, (styles[`badge${item.estado}` as keyof typeof styles] as any) || styles.badgeCRIADO]}>
+          <Text style={styles.badgeTextLarge}>
             {getAssembleiaStatusLabel(item.estado)}
           </Text>
         </View>
       </View>
       <Text style={styles.tituloText}>{getAssembleiaStatusEmoji(item.estado)} {item.tipo} - {item.titulo}</Text>
 
-      <View style={styles.infoRow}>
+      <View style={styles.infoRowCenter}>
           <Text style={styles.dataText}>📅 Data: <Text style={styles.dataValue}>{dataBr}</Text></Text>
           <Text style={styles.dataText}>🕒 Horário: <Text style={styles.dataValue}>{item.hora_primeira_chamada || '--:--'}</Text></Text>
       </View>
@@ -138,7 +138,7 @@ export default function AssembleiasScreen({ navigation }: any) {
 
       {ehGestao && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: 20 + insets.bottom }]}
           onPress={() => navigation.navigate('CriarAssembleia')}
           accessibilityLabel="Criar Novo Evento de Assembleia"
           accessibilityRole="button"
@@ -195,17 +195,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 1.41,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  cardHeaderCenter: { flexDirection: 'row', justifyContent: 'center', marginBottom: 12 },
+  badgeLarge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, elevation: 1 },
   badgeCRIADO: { backgroundColor: '#cfe2ff' },
   badgeEM_CREDENCIAMENTO: { backgroundColor: '#d1e7dd' },
   badgeINICIADO: { backgroundColor: '#fff3cd' },
   badgeSUSPENSA: { backgroundColor: '#e2e3e5' },
   badgeENCERRADO: { backgroundColor: '#f8d7da' },
-  badgeText: { fontSize: 10, fontWeight: 'bold', color: '#333' },
+  badgeTextLarge: { fontSize: 11, fontWeight: 'bold', color: '#333', textTransform: 'uppercase' },
   tipoText: { fontWeight: 'bold', color: '#666' },
-  tituloText: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 4 },
-  infoRow: { flexDirection: 'row', gap: 20, marginBottom: 12, flexWrap: 'wrap' },
+  tituloText: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 8, textAlign: 'center' },
+  infoRowCenter: { flexDirection: 'row', gap: 20, marginBottom: 12, flexWrap: 'wrap', justifyContent: 'center' },
   dataText: { fontSize: 14, color: '#555', fontWeight: '500' },
   dataValue: { color: '#003366', fontWeight: 'bold' },
   cardFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12 },

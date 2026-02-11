@@ -372,17 +372,37 @@ async function gerarTokenQuorum(req, res) {
   const start = Date.now();
   try {
     const { tipo_chamada, observacao, is_global } = req.body;
+    const isGlobalCall = !!is_global || tipo_chamada === 'GLOBAL';
 
     // Validação de autoridade: Presidente ou Diretoria
-    // O QR Global só pode ser gerado pela Diretoria (Secretaria)
-    const { autorizada, isDiretoria } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
 
-    if (is_global && !isDiretoria) {
-        return res.status(403).json({ error: "Apenas a Diretoria de Secretaria pode gerar o QR Code Global." });
-    }
+    if (isGlobalCall) {
+       // Hard Code FENAPRF: Apenas os 4 cargos específicos podem gerar o QR Global
+       const fullUser = await usersService.buscarPorId(req.user.id);
+       const cargosAutorizados = [
+         "Presidente da FENAPRF",
+         "Vice-Presidente da FENAPRF",
+         "Diretor de Secretaria",
+         "Diretor de Secretaria Substituto"
+       ];
+       const cargoUser = fullUser?.cargo;
+       const cargo2User = fullUser?.cargo2;
 
-    if (!autorizada) {
-      return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE });
+       const temCargoAutorizado = cargosAutorizados.includes(cargoUser) || cargosAutorizados.includes(cargo2User);
+
+       if (!temCargoAutorizado) {
+          log.warn("AssembleiaGerarTokenGlobalNegado", { requestId: req.requestId, userId: req.user.id, cargo: cargoUser, cargo2: cargo2User });
+          return res.status(403).json({
+            error: "Apenas o Presidente, Vice-Presidente, Diretor de Secretaria ou seu Substituto podem gerar o QR Code Global.",
+            requestId: req.requestId
+          });
+       }
+    } else {
+       // Para tokens normais, mantemos a regra de Mesa/Diretoria
+       if (!autorizada) {
+         return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE, requestId: req.requestId });
+       }
     }
 
     const tiposValidos = ['PRIMEIRA', 'SEGUNDA', 'RECONTAGEM', 'GLOBAL'];
@@ -1119,6 +1139,23 @@ async function proxyEdital(req, res) {
   }
 }
 
+async function getGlobalTokenAtivo(req, res) {
+  const requestId = req.requestId;
+  try {
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    // Apenas perfis de gestão podem recuperar o token
+    if (!['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes(perfil)) {
+        return res.status(403).json({ error: "Permissão insuficiente para visualizar o token global.", requestId });
+    }
+
+    const data = await service.buscarGlobalAtivo();
+    res.json(data);
+  } catch (err) {
+    log.error("AssembleiaGetGlobalTokenAtivoErro", { requestId, error: err.message, stack: err.stack });
+    res.status(500).json({ error: "Erro ao buscar token global", requestId });
+  }
+}
+
 async function uploadEdital(req, res) {
   try {
     if (!req.file || !req.file.buffer) {
@@ -1238,5 +1275,6 @@ module.exports = {
   limparLogsAuditoria,
   gerarRelatorio,
   uploadEdital,
-  proxyEdital
+  proxyEdital,
+  getGlobalTokenAtivo
 };
