@@ -37,6 +37,7 @@ export type RootStackParamList = {
   CriarUser: undefined;
   EditarUser: { userId: string };
   Votacao: undefined;
+  VotacaoDetalhe: { id: string };
   Atualizacoes: undefined;
   PdfViewer: { localUri: string; title: string };
   FileViewer: {

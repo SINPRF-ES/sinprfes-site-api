@@ -9,7 +9,7 @@ import { logger } from '../infra/logger';
 
 import type { VotacaoDetalhe } from '../types/votacao';
 
-type RouteParams = { id: number };
+type RouteParams = { id: string };
 
 export default function VotacaoDetalheScreen() {
   const { token, biometriaHabilitada, desbloquearComBiometria } = useAuth();
@@ -19,7 +19,7 @@ export default function VotacaoDetalheScreen() {
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [votacao, setVotacao] = useState<VotacaoDetalhe | null>(null);
-  const [opcaoSelecionada, setOpcaoSelecionada] = useState<number | null>(null);
+  const [opcaoSelecionada, setOpcaoSelecionada] = useState<string | null>(null);
 
   async function carregar() {
     if (!token) return;

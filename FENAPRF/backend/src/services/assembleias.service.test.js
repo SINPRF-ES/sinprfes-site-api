@@ -29,59 +29,62 @@ describe('Assembleias Service', () => {
 
   describe('State Machine Transitions', () => {
     test('abrir should transition from CRIADO to EM_CREDENCIAMENTO', async () => {
+      const assId = '00000000-0000-4000-a000-000000000001';
       // Mock buscarPorId (uses pool.query)
       pool.query.mockResolvedValueOnce({
-        rows: [{ id: '1', estado: 'CRIADO' }]
+        rows: [{ id: assId, estado: 'CRIADO' }]
       });
       // Mock UPDATE (uses pool.query)
       pool.query.mockResolvedValueOnce({
-        rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }]
+        rows: [{ id: assId, estado: 'EM_CREDENCIAMENTO' }]
       });
       // Mock Audits
       pool.query.mockResolvedValue({ rows: [] });
 
-      const result = await service.abrir('1', 1);
+      const result = await service.abrir(assId, 'u1');
       expect(result.estado).toBe('EM_CREDENCIAMENTO');
-      expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE assembleias SET estado = 'EM_CREDENCIAMENTO'/), ['1']);
+      expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE assembleias SET estado = 'EM_CREDENCIAMENTO'/), [assId]);
     });
 
     test('abrir should throw error if not in CRIADO state', async () => {
       pool.query.mockResolvedValueOnce({
-        rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }]
+        rows: [{ id: 'ass-1', estado: 'EM_CREDENCIAMENTO' }]
       });
 
-      await expect(service.abrir('1', 1)).rejects.toThrow(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
+      await expect(service.abrir('ass-1', 'u1')).rejects.toThrow(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     });
 
     test('iniciarExecucao should transition from EM_CREDENCIAMENTO to INICIADO if mesa is defined', async () => {
+      const assId = '00000000-0000-4000-a000-000000000001';
       // 1. buscarPorId
-      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'EM_CREDENCIAMENTO' }] });
       // 2. buscarMesa
-      pool.query.mockResolvedValueOnce({ rows: [{ assembleia_id: '1', presidente_user_id: 10, secretario_user_id: 20 }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ assembleia_id: assId, presidente_user_id: 'u10', secretario_user_id: 'u20' }] });
       // 3. UPDATE
-      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'INICIADO' }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ id: assId, estado: 'INICIADO' }] });
       // 4. Audit
       pool.query.mockResolvedValue({ rows: [] });
 
-      const result = await service.iniciarExecucao('1', 1);
+      const result = await service.iniciarExecucao(assId, 'u1');
       expect(result.estado).toBe('INICIADO');
     });
 
     test('iniciarExecucao should fail if mesa is not defined', async () => {
-      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 'ass-1', estado: 'EM_CREDENCIAMENTO' }] });
       pool.query.mockResolvedValueOnce({ rows: [] }); // No mesa
 
-      await expect(service.iniciarExecucao('1', 1)).rejects.toThrow(Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA);
+      await expect(service.iniciarExecucao('ass-1', 'u1')).rejects.toThrow(Textos.ASSEMBLEIA.MESA_NAO_DEFINIDA);
     });
 
     test('encerrar should transition to ENCERRADO and auto-close active votations', async () => {
+      const assId = '00000000-0000-4000-a000-000000000001';
       // Functional mock to be resilient to call order
       mockClient.query.mockImplementation((sql) => {
         if (sql.includes('SELECT estado FROM assembleias')) {
-          return Promise.resolve({ rows: [{ id: '1', estado: 'INICIADO' }] });
+          return Promise.resolve({ rows: [{ id: assId, estado: 'INICIADO' }] });
         }
         if (sql.includes('UPDATE assembleias SET estado = \'ENCERRADO\'')) {
-          return Promise.resolve({ rows: [{ id: '1', estado: 'ENCERRADO' }] });
+          return Promise.resolve({ rows: [{ id: assId, estado: 'ENCERRADO' }] });
         }
         if (sql.includes('SELECT id FROM assembleia_votacoes')) {
           return Promise.resolve({ rows: [{ id: 'v1' }] });
@@ -92,7 +95,7 @@ describe('Assembleias Service', () => {
       // Mock for registrarAuditoria mesa checks (if called via pool)
       pool.query.mockResolvedValue({ rows: [] });
 
-      const result = await service.encerrar('1', 1);
+      const result = await service.encerrar(assId, 'u1');
       expect(result.estado).toBe('ENCERRADO');
       expect(mockClient.query).toHaveBeenCalledWith(expect.stringMatching(/BEGIN/));
       expect(mockClient.query).toHaveBeenCalledWith(expect.stringMatching(/COMMIT/));
@@ -119,9 +122,9 @@ describe('Assembleias Service', () => {
        pool.query.mockResolvedValue({ rows: [] });
 
        const result = await service.gerarQuorum({
-         assembleia_id: '1',
+         assembleia_id: 'ass-1',
          token: '123456',
-         gerado_por_user_id: 1,
+         gerado_por_user_id: 'u1',
          tipo_chamada: 'PRIMEIRA'
        });
 
@@ -137,7 +140,7 @@ describe('Assembleias Service', () => {
          .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CREDENCIAMENTO' }] }) // SELECT FOR UPDATE
          // NOT checking idempotency because RECONTAGEM should skip it
          .mockResolvedValueOnce({ rows: [{ total: '100' }] }) // actives count
-         .mockResolvedValueOnce({ rows: [{ presidente_user_id: 1 }] }) // check presidente
+         .mockResolvedValueOnce({ rows: [{ presidente_user_id: 'u1' }] }) // check presidente
          .mockResolvedValueOnce({ rows: [] }) // collision check
          .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum anterior
          .mockResolvedValueOnce({ rows: [{ id: 'q_rec', token: '999999' }] }) // INSERT quorum
@@ -151,9 +154,9 @@ describe('Assembleias Service', () => {
        pool.query.mockResolvedValue({ rows: [] });
 
        const result = await service.gerarQuorum({
-         assembleia_id: '1',
+         assembleia_id: 'ass-1',
          token: '999999',
-         gerado_por_user_id: 1,
+         gerado_por_user_id: 'u1',
          tipo_chamada: 'RECONTAGEM'
        });
 
@@ -165,13 +168,13 @@ describe('Assembleias Service', () => {
     test('realizarCheckin should block ADMIN or COMUNICADOR', async () => {
       pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'ADMIN' }] });
 
-      await expect(service.realizarCheckin({ user_id: 999 })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+      await expect(service.realizarCheckin({ user_id: 'u-admin' })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
     });
 
     test('criarVotacao should transition if authority is valid', async () => {
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'INICIADO' }] }) // FOR UPDATE ass
+        .mockResolvedValueOnce({ rows: [{ id: 'ass-1', estado: 'INICIADO' }] }) // FOR UPDATE ass
         .mockResolvedValueOnce({ rows: [] }) // No active votations
         .mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'Test' }] }) // INSERT votacao
         .mockResolvedValueOnce({ rows: [] }) // Audit
@@ -181,15 +184,15 @@ describe('Assembleias Service', () => {
       pool.query.mockResolvedValue({ rows: [] });
 
       const result = await service.criarVotacao({
-        assembleia_id: '1',
-        iniciada_por_user_id: 10
+        assembleia_id: 'ass-1',
+        iniciada_por_user_id: 'u10'
       });
       expect(result.id).toBe('v1');
     });
 
     test('iniciarVotacaoProposta should withdraw proposal if author is absent', async () => {
        mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
-       mockClient.query.mockResolvedValueOnce({ rows: [{ id: 'pr1', assembleia_id: '1', autor_id: 100, titulo: 'Prop 1' }] }); // SELECT FOR UPDATE
+       mockClient.query.mockResolvedValueOnce({ rows: [{ id: 'pr1', assembleia_id: 'ass-1', autor_id: 'u100', titulo: 'Prop 1' }] }); // SELECT FOR UPDATE
 
        pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1' }] }); // buscarUltimoQuorum (uses pool)
 
@@ -198,7 +201,7 @@ describe('Assembleias Service', () => {
        mockClient.query.mockResolvedValueOnce({ rows: [] }); // registrarAuditoria
        mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
-       const result = await service.iniciarVotacaoProposta('1', 'pr1', 1);
+       const result = await service.iniciarVotacaoProposta('ass-1', 'pr1', 'u1');
 
        expect(result.status).toBe('RETIRADA_AUTOR_AUSENTE');
 
