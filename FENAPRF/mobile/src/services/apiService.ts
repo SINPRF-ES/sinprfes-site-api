@@ -163,11 +163,10 @@ api.interceptors.response.use(
       axiosCode: error.code
     };
 
-    // Redução de ruído para erros best-effort (ex: Push Register 500, Jogos check 404)
+    // Redução de ruído para erros best-effort (ex: Push Register 500)
     const isPushRegister = url?.includes('/api/push/register');
-    const isJogosCheck = url?.includes('/api/jogos/inscricao') && method?.toLowerCase() === 'get';
 
-    if ((isPushRegister && status === 500) || (isJogosCheck && status === 404)) {
+    if (isPushRegister && status === 500) {
       logger.warn(`API Best-Effort/Expected Fail: ${method?.toUpperCase()} ${url} | Status: ${status} | Message: ${message}`, { requestId });
     } else {
       // Preservamos o stack trace original passando o objeto error completo para o logger
