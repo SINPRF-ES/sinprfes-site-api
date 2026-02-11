@@ -18,6 +18,9 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   if (formState.telefone1) payload.telefone1 = onlyDigits(formState.telefone1);
   if (formState.telefone2) payload.telefone2 = onlyDigits(formState.telefone2);
   if (formState.cep) payload.cep = onlyDigits(formState.cep);
+  if (formState.uf_endereco !== undefined) payload.uf_endereco = formState.uf_endereco;
+  if (formState.uf !== undefined) payload.uf = formState.uf;
+  if (formState.uf2 !== undefined) payload.uf2 = formState.uf2;
 
   // Alinhamento com Backend FENAPRF: usar 'nome' e 'email1'
   if (formState.email || (formState as any).email1) {
@@ -28,8 +31,9 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
 
   if (formState.name || (formState as any).nome) {
-    (payload as any).nome = normalizeNome((formState as any).nome || formState.name);
-    payload.name = normalizeNome((formState as any).nome || formState.name);
+    const nomeNormalizado = normalizeNome((formState as any).nome || formState.name) || undefined;
+    (payload as any).nome = nomeNormalizado;
+    payload.name = nomeNormalizado;
   }
 
   if (formState.sexo !== undefined) payload.sexo = (formState.sexo as any) || undefined;
