@@ -86,7 +86,7 @@ export default function LoginScreen() {
   async function finalizarLoginComToken(token: string) {
     logger.info('LOGIN_SUCCESS_PROCEEDING', { hasToken: !!token });
     const user = await buscarUserLogado(token);
-    logger.info('USER_ME_RESULT', { cpf: user.cpf, password_hash: user.password_hash });
+    logger.info('USER_ME_RESULT', { cpf: user.cpf });
 
     // No FENAPRF, se a senha estiver PENDENTE, redireciona para criar senha
     // Removida a verificação genérica de !user.password_hash pois o /me sanitiza o hash real

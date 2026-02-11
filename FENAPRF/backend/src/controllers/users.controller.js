@@ -1,7 +1,6 @@
 // src/controllers/users.controller.js
 const path = require("path");
 const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
 const { uploadAvatarBuffer, deleteAvatarByPublicId } = require("../services/cloudinary.service");
 
 const pool = require("../config/db");
@@ -11,7 +10,7 @@ const Textos = require("../utils/textos");
 const usersService = require("../services/users.service");
 
 const { enviarEmailBoasVindasUser } = require("../services/email.service");
-const { normalizarCpf } = require("../utils/format");
+const { normalizarCpf, parseUuid } = require("../utils/format");
 const {
   normalizeSexo,
   normalizePerfil
@@ -103,12 +102,12 @@ async function verificarAvisosDuplicidade(payload, userId = null) {
     idx++;
   }
   if (tel1 && tel1.length >= 8) {
-    conditions.push(`(REPLACE(REPLACE(REPLACE(REPLACE(telefone1, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx} OR REPLACE(REPLACE(REPLACE(REPLACE(telefone2, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx})`);
+    conditions.push(`(regexp_replace(telefone1, '[^0-9]', '', 'g') = $${idx} OR regexp_replace(telefone2, '[^0-9]', '', 'g') = $${idx})`);
     params.push(tel1);
     idx++;
   }
   if (tel2 && tel2.length >= 8) {
-    conditions.push(`(REPLACE(REPLACE(REPLACE(REPLACE(telefone1, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx} OR REPLACE(REPLACE(REPLACE(REPLACE(telefone2, ' ', ''), '(', ''), ')', ''), '-', '') = $${idx})`);
+    conditions.push(`(regexp_replace(telefone1, '[^0-9]', '', 'g') = $${idx} OR regexp_replace(telefone2, '[^0-9]', '', 'g') = $${idx})`);
     params.push(tel2);
     idx++;
   }
@@ -159,13 +158,12 @@ function normalizeDateField(value) {
  * Valida se um ID é um UUID válido (FENAPRF).
  */
 function parseUserId(req, res) {
-  const raw = String(req.params.id ?? "").trim();
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(raw)) {
+  const id = parseUuid(req.params.id);
+  if (!id) {
     res.status(400).json({ success: false, message: "ID inválido (UUID esperado)." });
     return null;
   }
-  return raw;
+  return id;
 }
 
 // Dependentes removidos conforme política FENAPRF
@@ -178,13 +176,14 @@ exports.getUserById = async (req, res) => {
   if (idAlvo === null) return;
 
   try {
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const user = await usersService.getMe(idAlvo);
 
     if (!user) {
       return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
     }
-
-    const atorId = req.user.id;
     const perfilAtor = (req.user.perfil_acesso || "CONSELHEIRO").toUpperCase();
     const ehGestor = perfilGestao(perfilAtor);
     const ehProprioUsuario = String(atorId) === String(idAlvo);
@@ -196,7 +195,7 @@ exports.getUserById = async (req, res) => {
     const { senha_hash, password_hash, ...dadosLimpos } = user;
     return res.json(dadosLimpos);
   } catch (err) {
-    log.error("UsersGetByIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id, targetId: idAlvo });
+    log.error("UsersGetByIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId, targetId: idAlvo });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
   }
 };
@@ -206,8 +205,10 @@ exports.getUserById = async (req, res) => {
  */
 exports.getMe = async (req, res) => {
   try {
-    const id = req.user.id;
-    const user = await usersService.getMe(id);
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
+    const user = await usersService.getMe(atorId);
 
     if (!user) {
       return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
@@ -217,7 +218,7 @@ exports.getMe = async (req, res) => {
 
     return res.json(dadosLimpos);
   } catch (err) {
-    log.error("UsersGetMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersGetMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
   }
 };
@@ -227,6 +228,9 @@ exports.getMe = async (req, res) => {
  */
 exports.listarUsers = async (req, res) => {
   try {
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const perfilAcesso = (req.user.perfil_acesso || "CONSELHEIRO").toUpperCase();
     const termoBusca = (req.query.q || "").toString();
     const incluirArquivados = String(req.query.incluirArquivados || "").trim() === "1";
@@ -247,7 +251,7 @@ exports.listarUsers = async (req, res) => {
       users: lista,
     });
   } catch (err) {
-    log.error("UsersListarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersListarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.LISTAR_USERS });
   }
 };
@@ -257,7 +261,9 @@ exports.listarUsers = async (req, res) => {
  */
 exports.atualizarMeusDados = async (req, res) => {
   try {
-    const id = req.user.id;
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const body = req.body || {};
 
     const payload = {
@@ -270,9 +276,9 @@ exports.atualizarMeusDados = async (req, res) => {
       cep: body.cep,
     };
 
-    const atualizado = await usersService.atualizarDadosProprios(id, payload);
+    const atualizado = await usersService.atualizarDadosProprios(atorId, payload);
 
-    log.info("UserAtualizouProprios", { userId: id, requestId: req.requestId });
+    log.info("UserAtualizouProprios", { userId: atorId, requestId: req.requestId });
 
     return res.json({
       message: Textos.SUCESSO.DADOS_ATUALIZADOS,
@@ -284,7 +290,7 @@ exports.atualizarMeusDados = async (req, res) => {
       message: err.message,
       stack: err.stack,
       requestId: req.requestId,
-      userId: req.user?.id,
+      userId: atorId,
       payloadKeys: Object.keys(req.body || {})
     });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
@@ -297,12 +303,12 @@ exports.atualizarMeusDados = async (req, res) => {
  * PUT /api/users/:id
  */
 exports.atualizarUser = async (req, res) => {
-  const loggedId = req.user?.id;
   const idAlvo = parseUserId(req, res);
   if (idAlvo === null) return;
 
   try {
-    const atorId = req.user.id;
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
@@ -318,7 +324,7 @@ exports.atualizarUser = async (req, res) => {
 
     log.info("UsersUpdateIniciado", {
       targetId: idAlvo,
-      loggedId,
+      atorId,
       perfilAtor,
       bodyKeys: Object.keys(body),
       requestId: req.requestId,
@@ -362,7 +368,7 @@ exports.atualizarUser = async (req, res) => {
 
     if (body.perfil_acesso) {
       const novoPerfil = normalizePerfil(body.perfil_acesso);
-      if (loggedId === idAlvo) return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
+      if (atorId === idAlvo) return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
 
       if (perfilAtor !== "ADMIN" && (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN")) {
         return res.status(403).json({ message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN." });
@@ -429,7 +435,7 @@ exports.atualizarUser = async (req, res) => {
     const atualizado = await usersService.atualizarUserPorId(idAlvo, payload);
     if (!atualizado) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
-    log.info("UserEditadoPorGestao", { atorId: loggedId, alvoId: idAlvo, requestId: req.requestId });
+    log.info("UserEditadoPorGestao", { atorId, alvoId: idAlvo, requestId: req.requestId });
     return res.json({ message: Textos.SUCESSO.DADOS_ATUALIZADOS, user: atualizado });
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
@@ -439,7 +445,7 @@ exports.atualizarUser = async (req, res) => {
         message: err.message,
         stack: err.stack,
         requestId: req.requestId,
-        loggedId,
+        atorId,
         targetId: idAlvo,
         payloadKeys: Object.keys(req.body || {}),
         payload_debug: {
@@ -466,9 +472,11 @@ exports.listarHistoricoArquivamento = async (req, res) => {
 };
 
 exports.getHistoricoArquivamentoPorId = async (req, res) => {
+  const idAlvo = parseUserId(req, res);
+  if (idAlvo === null) return;
+
   try {
-    const { id } = req.params;
-    const historico = await usersService.listarHistoricoMovimentacoes(id);
+    const historico = await usersService.listarHistoricoMovimentacoes(idAlvo);
     res.json(historico);
   } catch (err) {
     log.error("UsersHistoricoArquivamentoPorIdErro", err);
@@ -481,6 +489,9 @@ exports.getHistoricoArquivamentoPorId = async (req, res) => {
  */
 exports.criarUser = async (req, res) => {
   try {
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilCriador)) return res.status(403).json({ message: Textos.USERS.PERMISSAO_CRIAR });
 
@@ -576,11 +587,11 @@ exports.criarUser = async (req, res) => {
 
     try { await enviarEmailBoasVindasUser(novo); } catch (emailErr) { log.error("UserEmailBoasVindasErro", { error: emailErr.message, requestId: req.requestId }); }
 
-    log.info("UserCriado", { creatorId: req.user.id, newId: novo.id, requestId: req.requestId });
+    log.info("UserCriado", { creatorId: atorId, newId: novo.id, requestId: req.requestId });
     return res.status(201).json({ message: Textos.SUCESSO.CRIADO_SUCESSO, user: novo });
   } catch (err) {
     if (err.isValidationError) return res.status(400).json({ message: err.message });
-    log.error("UsersCriarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersCriarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_USER });
   }
 };
@@ -615,7 +626,7 @@ exports.arquivarUser = async (req, res) => {
     log.info("UserArquivado", { atorId, targetId: idAlvo, requestId: req.requestId });
     return res.json({ message: "Estado do cadastro alterado para: ARQUIVADO.", user: atualizado });
   } catch (err) {
-    log.error("UsersArquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersArquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
@@ -650,7 +661,7 @@ exports.desarquivarUser = async (req, res) => {
     log.info("UserDesarquivado", { atorId, targetId: idAlvo, requestId: req.requestId });
     return res.json({ message: "Estado do cadastro alterado para: CADASTRO ATIVO.", user: atualizado });
   } catch (err) {
-    log.error("UsersDesarquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersDesarquivarErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
@@ -660,20 +671,22 @@ exports.desarquivarUser = async (req, res) => {
  */
 exports.uploadAvatarMe = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado." });
 
-    const antes = await usersService.getMe(userId);
-    const publicId = `fenaprf/avatars/user_${userId}`;
+    const antes = await usersService.getMe(atorId);
+    const publicId = `fenaprf/avatars/user_${atorId}`;
 
     if (antes?.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
     const up = await uploadAvatarBuffer(req.file.buffer, publicId);
-    const atualizado = await usersService.atualizarUserPorId(userId, { avatar_url: up.avatar_url, avatar_public_id: up.avatar_public_id });
+    const atualizado = await usersService.atualizarUserPorId(atorId, { avatar_url: up.avatar_url, avatar_public_id: up.avatar_public_id });
 
     return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, user: atualizado });
   } catch (err) {
-    log.error("UsersUploadAvatarMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersUploadAvatarMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
@@ -686,6 +699,9 @@ exports.uploadAvatarPorId = async (req, res) => {
   if (idAlvo === null) return;
 
   try {
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
@@ -707,36 +723,41 @@ exports.uploadAvatarPorId = async (req, res) => {
 
     return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, user: atualizado });
   } catch (err) {
-    log.error("UsersUploadAvatarPorIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersUploadAvatarPorIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
 
 exports.removerAvatarMe = async (req, res) => {
   try {
-    const id = req.user.id;
-    const antes = await usersService.getMe(id);
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
+    const antes = await usersService.getMe(atorId);
     if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     if (antes.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
-    await usersService.atualizarUserPorId(id, { avatar_url: null, avatar_public_id: null });
+    await usersService.atualizarUserPorId(atorId, { avatar_url: null, avatar_public_id: null });
     return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
   } catch (err) {
-    log.error("UsersRemoverAvatarMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersRemoverAvatarMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };
 
 exports.removerAvatarPorId = async (req, res) => {
-  const id = parseUserId(req, res);
-  if (id === null) return;
+  const idAlvo = parseUserId(req, res);
+  if (idAlvo === null) return;
 
   try {
+    const atorId = req.user?.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
 
-    const antes = await usersService.getMe(id);
+    const antes = await usersService.getMe(idAlvo);
     if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
 
     // Regra de Hierarquia FENAPRF
@@ -746,10 +767,10 @@ exports.removerAvatarPorId = async (req, res) => {
 
     if (antes.avatar_public_id) { try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {} }
 
-    await usersService.atualizarUserPorId(id, { avatar_url: null, avatar_public_id: null });
+    await usersService.atualizarUserPorId(idAlvo, { avatar_url: null, avatar_public_id: null });
     return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
   } catch (err) {
-    log.error("UsersRemoverAvatarPorIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
+    log.error("UsersRemoverAvatarPorIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
   }
 };

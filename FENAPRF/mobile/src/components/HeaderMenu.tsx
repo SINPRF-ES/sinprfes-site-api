@@ -60,7 +60,12 @@ export default function HeaderMenu({ actions }: Props) {
 
   return (
     <View>
-      <TouchableOpacity onPress={openSheet} style={styles.anchor}>
+      <TouchableOpacity
+        onPress={openSheet}
+        style={styles.anchor}
+        accessibilityRole="button"
+        accessibilityLabel="Abrir menu de opções"
+      >
         <View style={styles.triggerWithLabel}>
           <MaterialCommunityIcons name="dots-vertical" size={24} color="#fff" />
           <Text style={styles.label}>Opções</Text>
@@ -101,6 +106,8 @@ export default function HeaderMenu({ actions }: Props) {
                         // Pequeno delay para garantir que o modal fechou antes de disparar a ação
                         setTimeout(item.onPress, 300);
                       }}
+                      accessibilityRole="button"
+                      accessibilityLabel={item.label}
                     >
                       {item.icon && (
                         <MaterialCommunityIcons
@@ -123,6 +130,8 @@ export default function HeaderMenu({ actions }: Props) {
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={closeSheet}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancelar e fechar menu"
                 >
                   <Text style={styles.cancelText}>Cancelar</Text>
                 </TouchableOpacity>
