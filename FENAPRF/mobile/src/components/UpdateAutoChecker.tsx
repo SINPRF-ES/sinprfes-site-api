@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated, DeviceEventEmitter } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated } from 'react-native';
 import { checkUpdates, applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult, reportUpdateAutoCheck } from '../services/updateService';
 import { carregarUltimoCheckUpdate, salvarUltimoCheckUpdate } from '../services/storageService';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -69,23 +68,12 @@ const UpdateAutoChecker: React.FC = () => {
             });
 
             if (result.hasUpdate) {
-                setUpdateResult(result);
-
-                // No LOGIN, sempre mostramos o modal amigável (mesmo se opcional).
-                // Em checks de background periódicos, usamos o banner persistente na Home para opcionais.
+                // No LOGIN ou se for Mandatório, mostramos o modal.
+                // Atualizações opcionais em background (não login) não mostram mais banner na Home.
                 if (result.isMandatory || isLoginTrigger) {
+                    setUpdateResult(result);
                     setShowModal(true);
-                    // Limpar banner se o modal for exibido
-                    await AsyncStorage.removeItem('@fenaprf/ota_update_available');
-                } else {
-                    // Salvar para o banner na Home
-                    await AsyncStorage.setItem('@fenaprf/ota_update_available', JSON.stringify(result));
-                    DeviceEventEmitter.emit('ota_update_detected', result);
                 }
-            } else {
-                // Se não há update, garantir que o banner não apareça (ex: update aplicado ou expirado)
-                await AsyncStorage.removeItem('@fenaprf/ota_update_available');
-                DeviceEventEmitter.emit('ota_update_detected', null);
             }
         }
 
@@ -131,8 +119,7 @@ const UpdateAutoChecker: React.FC = () => {
           });
           await downloadAndInstallApk(
               updateResult.apkFileId || '',
-              updateResult.apkFileName || '',
-              updateResult.apkUrl
+              updateResult.apkFileName || ''
           );
           logDebug('Update.Apk.Download.Success', {});
 

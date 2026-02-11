@@ -12,7 +12,6 @@ import SegurancaScreen from '../screens/SegurancaScreen';
 import CriarUserScreen from '../screens/CriarUserScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
 import LogisticaScreen from '../screens/LogisticaScreen';
-import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
@@ -21,7 +20,7 @@ import ArquivadosScreen from '../screens/ArquivadosScreen';
 import CustomDrawerContent from './CustomDrawerContent';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/user';
-import { ENABLE_JOGOS, ENABLE_PUSH } from '../config/features';
+import { ENABLE_PUSH } from '../config/features';
 import { logger } from '../infra/logger';
 import { useEffect } from 'react';
 import { EMOJIS } from '../utils/emoji';
@@ -90,13 +89,6 @@ const DrawerNavigator = () => {
           title: `${EMOJIS.LOGISTICA} Logística`,
         }}
       />
-      {ENABLE_JOGOS && (
-        <Drawer.Screen
-          name="Jogos2026"
-          component={JogosScreen}
-          options={{ title: `${EMOJIS.JOGOS} Jogos 2026` }}
-        />
-      )}
       <Drawer.Screen
         name="Votacao"
         component={AssembleiaStack}

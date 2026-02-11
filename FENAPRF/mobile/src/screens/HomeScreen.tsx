@@ -3,9 +3,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SafeScreen from '../components/SafeScreen';
-import JogosBanner from '../components/JogosBanner';
-import OtaUpdateBanner from '../components/OtaUpdateBanner';
-import { ENABLE_JOGOS } from '../config/features';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
@@ -71,9 +68,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <View style={styles.memberCardContainer}>
         <MemberCard member={user} variant="profile" />
       </View>
-
-      <OtaUpdateBanner />
-      {ENABLE_JOGOS && <JogosBanner />}
 
       <View style={styles.grid}>
         {displayedItems.map((item) => (

@@ -1,10 +1,33 @@
 // src/controllers/publicacoes.controller.js
-const { listarArquivosPublicos, obterArquivoStream } = require("../services/drive.service");
+const {
+  listarArquivosPublicos,
+  obterArquivoStream,
+  createFolder,
+  uploadFile,
+  renameItem,
+  moveItem,
+  deleteItem,
+  getAppFolderId,
+  ensureTrashFolder,
+  FOLDER_MIMETYPE,
+  getItem
+} = require("../services/drive.service");
 const log = require("../utils/log");
+const { normalizePerfil } = require("../../shared/canon");
+
+const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+/**
+ * Verifica se o perfil tem permissão de gestão.
+ */
+function isGestao(perfil) {
+  const p = normalizePerfil(perfil);
+  return ["ADMIN", "COLABORADOR", "DIRETORIA"].includes(p);
+}
 
 exports.listar = async (req, res) => {
   try {
-    const folderId = req.query.folderId;
+    const folderId = req.query.folderId || ROOT_FOLDER_ID;
 
     // Busca os arquivos (passando o ID se houver)
     const arquivos = await listarArquivosPublicos(folderId);
@@ -14,7 +37,7 @@ exports.listar = async (req, res) => {
       let tipo = "OUTROS";
 
       // 🟢 O SEGREDO ESTÁ AQUI: Identificar corretamente a pasta pelo MimeType
-      const isFolder = file.mimeType === "application/vnd.google-apps.folder";
+      const isFolder = file.mimeType === FOLDER_MIMETYPE;
 
       if (isFolder) {
           tipo = "PASTA";
@@ -25,12 +48,16 @@ exports.listar = async (req, res) => {
           else if (nomeUpper.includes("BALANÇO") || nomeUpper.includes("BALANCO")) tipo = "BALANCO";
       }
 
+      // 🛑 Ocultar pastas técnicas na raiz
+      const isHidden = (folderId === ROOT_FOLDER_ID) && (file.name === "App" || file.name === "Lixeira");
+
       return {
         id: file.id,
         titulo: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
         tipo: tipo,
         // Envia essa flag explicitamente
         isFolder: isFolder,
+        hidden: isHidden, // Flag para o app filtrar
         descricao: isFolder ? "Pasta de documentos" : "Documento oficial.",
         arquivo_url: file.webViewLink,
         data_publicacao: file.createdTime,
@@ -49,6 +76,261 @@ exports.listar = async (req, res) => {
     return res.status(500).json({ message: "Erro ao sincronizar com o Drive." });
   }
 };
+
+/**
+ * POST /api/publicacoes/folders
+ */
+exports.createFolder = async (req, res) => {
+  let { parentFolderId, name } = req.body;
+  if (parentFolderId === 'ROOT') parentFolderId = ROOT_FOLDER_ID;
+
+  const atorId = req.user?.id;
+  const perfilAtor = req.user?.perfil_acesso;
+
+  if (!isGestao(perfilAtor)) {
+    return res.status(403).json({ message: "Permissão insuficiente para criar pastas." });
+  }
+
+  if (!name || name.trim().length === 0) {
+    return res.status(400).json({ message: "Nome da pasta é obrigatório." });
+  }
+
+  const cleanName = name.trim().substring(0, 80);
+
+  // Bloquear nomes reservados na raiz
+  if ((!parentFolderId || parentFolderId === ROOT_FOLDER_ID) && ["App", "Lixeira"].includes(cleanName)) {
+    return res.status(400).json({ message: "Nome de pasta reservado." });
+  }
+
+  try {
+    const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
+
+    if (parentFolderId === trashId || parentFolderId === appId) {
+      return res.status(400).json({ message: "Não é permitido criar pastas aqui." });
+    }
+
+    const folder = await createFolder(cleanName, parentFolderId);
+
+    log.info("DriveCreateFolder", {
+      userId: atorId,
+      folderId: folder.id,
+      name: folder.name,
+      parentFolderId: parentFolderId || ROOT_FOLDER_ID,
+      requestId: req.requestId
+    });
+
+    return res.json({ success: true, folder });
+  } catch (error) {
+    log.error("ErroCreateFolder", { error: error.message, userId: atorId });
+    return res.status(500).json({ message: "Erro ao criar pasta no Drive." });
+  }
+};
+
+/**
+ * POST /api/publicacoes/upload
+ */
+exports.uploadFile = async (req, res) => {
+  let { parentFolderId, name } = req.body;
+  if (parentFolderId === 'ROOT') parentFolderId = ROOT_FOLDER_ID;
+
+  const file = req.file;
+  const atorId = req.user?.id;
+  const perfilAtor = req.user?.perfil_acesso;
+
+  if (!isGestao(perfilAtor)) {
+    return res.status(403).json({ message: "Permissão insuficiente para upload." });
+  }
+
+  if (!file) {
+    return res.status(400).json({ message: "Arquivo não enviado." });
+  }
+
+  // Validação de tipo: PDF e Imagens
+  const allowedMimes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+  if (!allowedMimes.includes(file.mimetype)) {
+    return res.status(400).json({ message: "Tipo de arquivo não permitido. Use PDF ou Imagens." });
+  }
+
+  const fileName = (name || file.originalname).trim();
+
+  try {
+    const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
+
+    if (parentFolderId === trashId || parentFolderId === appId) {
+      return res.status(400).json({ message: "Não é permitido upload nesta pasta." });
+    }
+
+    const fileId = await uploadFile(file.buffer, fileName, file.mimetype, parentFolderId);
+
+    log.info("DriveUploadFile", {
+      userId: atorId,
+      fileId,
+      name: fileName,
+      parentFolderId: parentFolderId || ROOT_FOLDER_ID,
+      requestId: req.requestId
+    });
+
+    return res.json({
+      success: true,
+      file: { id: fileId, name: fileName, mimeType: file.mimetype, createdTime: new Date().toISOString() }
+    });
+  } catch (error) {
+    log.error("ErroUploadFile", { error: error.message, userId: atorId });
+    return res.status(500).json({ message: "Erro ao realizar upload para o Drive." });
+  }
+};
+
+/**
+ * PATCH /api/publicacoes/items/:id/rename
+ */
+exports.renameItem = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  const atorId = req.user?.id;
+  const perfilAtor = req.user?.perfil_acesso;
+
+  if (!isGestao(perfilAtor)) {
+    return res.status(403).json({ message: "Permissão insuficiente para renomear itens." });
+  }
+
+  if (!name || name.trim().length === 0) {
+    return res.status(400).json({ message: "Novo nome é obrigatório." });
+  }
+
+  try {
+    const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
+    const itemData = await getItem(id);
+
+    if (id === trashId || id === appId) {
+      return res.status(400).json({ message: "Não é permitido renomear pastas do sistema." });
+    }
+
+    // Bloquear renome em itens dentro de App ou Lixeira
+    if (itemData.parents?.some(p => p === trashId || p === appId)) {
+      return res.status(400).json({ message: "Não é permitido renomear itens em pastas protegidas ou na lixeira." });
+    }
+
+    const item = await renameItem(id, name.trim());
+
+    log.info("DriveRenameItem", {
+      userId: atorId,
+      itemId: id,
+      newName: name,
+      requestId: req.requestId
+    });
+
+    return res.json({ success: true, item });
+  } catch (error) {
+    log.error("ErroRenameItem", { error: error.message, itemId: id });
+    return res.status(500).json({ message: "Erro ao renomear item no Drive." });
+  }
+};
+
+/**
+ * PATCH /api/publicacoes/items/:id/move
+ */
+exports.moveItem = async (req, res) => {
+  const { id } = req.params;
+  let { targetFolderId } = req.body;
+  if (targetFolderId === 'ROOT') targetFolderId = ROOT_FOLDER_ID;
+
+  const atorId = req.user?.id;
+  const perfilAtor = req.user?.perfil_acesso;
+
+  if (!isGestao(perfilAtor)) {
+    return res.status(403).json({ message: "Permissão insuficiente para mover itens." });
+  }
+
+  if (!targetFolderId) {
+    return res.status(400).json({ message: "Pasta de destino é obrigatória." });
+  }
+
+  try {
+    const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
+    const itemData = await getItem(id);
+
+    if (targetFolderId === trashId || targetFolderId === appId) {
+      return res.status(400).json({ message: "Não é permitido mover para esta pasta." });
+    }
+
+    if (id === trashId || id === appId) {
+      return res.status(400).json({ message: "Não é permitido mover pastas do sistema." });
+    }
+
+    // Bloquear mover itens que estão em App/Lixeira
+    if (itemData.parents?.some(p => p === trashId || p === appId)) {
+      return res.status(400).json({ message: "Não é permitido mover itens de pastas protegidas ou da lixeira." });
+    }
+
+    // Permitir mover apenas arquivos na fase 1
+    if (itemData.mimeType === FOLDER_MIMETYPE) {
+      return res.status(400).json({ message: "Mover pastas não é permitido nesta fase." });
+    }
+
+    const item = await moveItem(id, targetFolderId);
+
+    log.info("DriveMoveItem", {
+      userId: atorId,
+      itemId: id,
+      fromParentId: item.oldParentId,
+      toParentId: targetFolderId,
+      requestId: req.requestId
+    });
+
+    return res.json({ success: true, item });
+  } catch (error) {
+    log.error("ErroMoveItem", { error: error.message, itemId: id });
+    return res.status(500).json({ message: "Erro ao mover item no Drive." });
+  }
+};
+
+/**
+ * POST /api/publicacoes/items/:id/delete
+ */
+exports.deleteItem = async (req, res) => {
+  const { id } = req.params;
+  const atorId = req.user?.id;
+  const perfilAtor = req.user?.perfil_acesso;
+
+  if (!isGestao(perfilAtor)) {
+    return res.status(403).json({ message: "Permissão insuficiente para excluir itens." });
+  }
+
+  try {
+    const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
+    const itemData = await getItem(id);
+
+    if (id === trashId || id === appId) {
+      return res.status(400).json({ message: "Não é permitido excluir pastas do sistema." });
+    }
+
+    // Bloquear pastas (fase 1)
+    if (itemData.mimeType === FOLDER_MIMETYPE) {
+      return res.status(400).json({ message: "A exclusão de pastas não está permitida nesta fase." });
+    }
+
+    // Bloquear se item já está na lixeira
+    if (itemData.parents?.some(p => p === trashId)) {
+      return res.status(400).json({ message: "Este item já está na lixeira." });
+    }
+
+    const item = await deleteItem(id);
+
+    log.info("DriveDeleteItem", {
+      userId: atorId,
+      itemId: id,
+      fromParentId: item.oldParentId,
+      toParentId: trashId,
+      requestId: req.requestId
+    });
+
+    return res.json({ success: true, item });
+  } catch (error) {
+    log.error("ErroDeleteItem", { error: error.message, itemId: id });
+    return res.status(500).json({ message: "Erro ao excluir item no Drive." });
+  }
+};
+
 /**
  * Faz o streaming de um arquivo do Google Drive para o cliente.
  */

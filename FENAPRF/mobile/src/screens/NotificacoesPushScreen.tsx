@@ -402,7 +402,7 @@ export default function NotificacoesPushScreen() {
             items={[
               { label: 'Todos com app', value: 'ALL' },
               ...Canon.FILTROS_MEMBROS
-                .filter(f => !['ADMIN_COLAB', 'ADMIN', 'COLABORADOR', 'JOGOS'].includes(f.value))
+                .filter(f => !['ADMIN_COLAB', 'ADMIN', 'COLABORADOR'].includes(f.value))
                 .map((f) => ({ label: f.label, value: f.value })),
               { label: 'Individual (Pesquisar)', value: 'USER' }
             ]}
