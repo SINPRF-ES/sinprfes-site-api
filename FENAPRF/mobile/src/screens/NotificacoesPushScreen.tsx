@@ -184,10 +184,12 @@ export default function NotificacoesPushScreen() {
     // Normalização defensiva do targetValue conforme o targetType
     let normalizedTargetValue = targetValue;
     if (targetType === 'USER') {
+      // FENAPRF: Mantemos o objeto completo para que o histórico mostre o nome corretamente.
+      // O backend extrai o .id automaticamente via service.resolvePushTargets.
       if (Array.isArray(targetValue)) {
-        normalizedTargetValue = targetValue.map((u: any) => u.id).filter(id => !!id);
-      } else if (targetValue && typeof targetValue === 'object') {
-        normalizedTargetValue = [targetValue.id];
+        normalizedTargetValue = targetValue.filter((u: any) => !!u.id);
+      } else if (targetValue && typeof targetValue === 'object' && targetValue.id) {
+        normalizedTargetValue = [targetValue];
       } else {
         normalizedTargetValue = [];
       }

@@ -136,7 +136,10 @@ const DrawerNavigator = () => {
           <Drawer.Screen
             name="Arquivados"
             component={ArquivadosScreen}
-            options={{ title: `${EMOJIS.ARQUIVADOS} Arquivados` }}
+            options={{
+              title: `${EMOJIS.ARQUIVADOS} Arquivados`,
+              drawerItemStyle: { display: 'none' }
+            }}
           />
           {ENABLE_PUSH && (
             <Drawer.Screen

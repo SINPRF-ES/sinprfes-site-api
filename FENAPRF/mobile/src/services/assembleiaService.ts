@@ -59,7 +59,15 @@ export const encerrarAssembleia = async (id: string): Promise<void> => {
   await api.post(`/api/assembleias/${id}/encerrar`);
 };
 
-export const gerarTokenQuorum = async (id: string, dados: { tipo_chamada: string; observacao?: string }): Promise<{
+export const suspenderAssembleia = async (id: string, dados: { motivo: string; data_hora_retorno?: string }): Promise<void> => {
+  await api.post(`/api/assembleias/${id}/suspender`, dados);
+};
+
+export const retomarAssembleia = async (id: string): Promise<void> => {
+  await api.post(`/api/assembleias/${id}/retomar`);
+};
+
+export const gerarTokenQuorum = async (id: string, dados: { tipo_chamada: string; observacao?: string; is_global?: boolean }): Promise<{
   token: string;
   quorum_id: string;
   quorumVigente?: any;
@@ -138,10 +146,21 @@ export const uploadEdital = async (formData: FormData): Promise<{ url: string }>
   return response.data;
 };
 
-export const definirMesa = async (id: string, dados: { presidente_user_id: string; secretario_user_id: string }): Promise<void> => {
+export const definirMesa = async (id: string, dados: {
+  presidente_user_id: string;
+  vice_presidente_user_id: string;
+  secretario_user_id: string;
+  secretario_2_user_id: string;
+}): Promise<void> => {
   await api.post(`/api/assembleias/${id}/mesa`, dados);
 };
 
-export const substituirMesa = async (id: string, dados: { presidente_user_id: string; secretario_user_id: string; justificativa: string }): Promise<void> => {
+export const substituirMesa = async (id: string, dados: {
+  presidente_user_id: string;
+  vice_presidente_user_id: string;
+  secretario_user_id: string;
+  secretario_2_user_id: string;
+  justificativa: string;
+}): Promise<void> => {
   await api.post(`/api/assembleias/${id}/mesa/substituir`, dados);
 };
