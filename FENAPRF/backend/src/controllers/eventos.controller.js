@@ -1,22 +1,24 @@
 // src/controllers/eventos.controller.js
 const service = require("../services/eventos.service");
 const { parseUuid } = require("../utils/format");
+const log = require("../utils/log");
+const Textos = require("../utils/textos");
 
 function parseId(req) {
   return parseUuid(req.params.id);
 }
 
-function badRequest(res, msg) {
-  return res.status(400).json({ error: msg });
+function badRequest(res, msg, req) {
+  return res.status(400).json({ error: msg, requestId: req?.requestId });
 }
 
-function notFound(res, msg = "Recurso não encontrado.") {
-  return res.status(404).json({ error: msg });
+function notFound(res, req, msg = "Recurso não encontrado.") {
+  return res.status(404).json({ error: msg, requestId: req?.requestId });
 }
 
-function serverError(res, e, fallbackMsg) {
-  console.error(fallbackMsg, e);
-  return res.status(500).json({ error: e.message || fallbackMsg });
+function serverError(res, e, fallbackMsg, req) {
+  log.error(fallbackMsg.replace(/:$/, ""), { error: e.message, stack: e.stack, requestId: req?.requestId });
+  return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_PROCESSAR, requestId: req?.requestId });
 }
 
 function strOrNull(v) {
@@ -62,18 +64,18 @@ exports.criar = async (req, res) => {
     const tituloNorm = strOrNull(titulo);
 
     if (!tipoNorm) {
-      return badRequest(res, "tipo é obrigatório (AGE/AGO/INFORMATIVA/OUTROS).");
+      return badRequest(res, "tipo é obrigatório (AGE/AGO/INFORMATIVA/OUTROS).", req);
     }
     if (!tituloNorm) {
-      return badRequest(res, "titulo é obrigatório.");
+      return badRequest(res, "titulo é obrigatório.", req);
     }
 
     const durMin = numOrNull(duracao_prevista_min);
     if (duracao_prevista_min != null && durMin == null) {
-      return badRequest(res, "duracao_prevista_min deve ser número.");
+      return badRequest(res, "duracao_prevista_min deve ser número.", req);
     }
     if (durMin != null && durMin <= 0) {
-      return badRequest(res, "duracao_prevista_min deve ser maior que zero.");
+      return badRequest(res, "duracao_prevista_min deve ser maior que zero.", req);
     }
 
     const created = await service.criarEvento({
@@ -89,7 +91,7 @@ exports.criar = async (req, res) => {
 
     return res.status(201).json(created);
   } catch (e) {
-    return serverError(res, e, "EventoCriarErro:");
+    return serverError(res, e, "EventoCriarErro:", req);
   }
 };
 
@@ -99,25 +101,25 @@ exports.criar = async (req, res) => {
  */
 exports.agendar = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.agendarEvento({
-      eventoId: id,
+      eventoId,
       agendadoPor: req.user?.id ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
-        id,
+        eventoId,
         "Transição inválida: evento deve estar em RASCUNHO para ser AGENDADO."
       );
     }
 
     return res.json(updated);
   } catch (e) {
-    return serverError(res, e, "EventoAgendarErro:");
+    return serverError(res, e, "EventoAgendarErro:", req);
   }
 };
 
@@ -127,25 +129,25 @@ exports.agendar = async (req, res) => {
  */
 exports.cancelar = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.cancelarEvento({
-      eventoId: id,
+      eventoId,
       canceladoPor: req.user?.id ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
-        id,
+        eventoId,
         "Transição inválida: evento não pode ser cancelado no status atual."
       );
     }
 
     return res.json(updated);
   } catch (e) {
-    return serverError(res, e, "EventoCancelarErro:");
+    return serverError(res, e, "EventoCancelarErro:", req);
   }
 };
 
@@ -155,16 +157,16 @@ exports.cancelar = async (req, res) => {
  */
 exports.detalhe = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
-    const evento = await service.obterEvento({ eventoId: id });
-    if (!evento) return notFound(res, "Evento não encontrado.");
+    const evento = await service.obterEvento({ eventoId });
+    if (!evento) return notFound(res, req, "Evento não encontrado.");
 
     return res.json(evento);
   } catch (e) {
-    console.error("EventoDetalheErro:", e);
-    return res.status(500).json({ error: "Erro ao carregar evento." });
+    log.error("EventoDetalheErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId: req.requestId });
   }
 };
 
@@ -172,13 +174,13 @@ exports.detalhe = async (req, res) => {
  * GET /api/eventos/proximo
  * Próximo evento (para Home do app)
  */
-exports.proximo = async (_req, res) => {
+exports.proximo = async (req, res) => {
   try {
     const evento = await service.obterProximoEvento();
     return res.json({ evento: evento || null });
   } catch (e) {
-    console.error("EventoProximoErro:", e);
-    return res.status(500).json({ error: "Erro ao carregar próximo evento." });
+    log.error("EventoProximoErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId: req.requestId });
   }
 };
 
@@ -188,26 +190,26 @@ exports.proximo = async (_req, res) => {
  */
 exports.abrir = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.abrirEvento({
-      eventoId: id,
+      eventoId,
       abertoPor: req.user?.id ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
-        id,
+        eventoId,
         "Transição inválida: evento deve estar AGENDADO para ser ABERTO."
       );
     }
 
     return res.json(updated);
   } catch (e) {
-    console.error("EventoAbrirErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao abrir evento." });
+    log.error("EventoAbrirErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(400).json({ error: e.message || "Erro ao abrir evento.", requestId: req.requestId });
   }
 };
 
@@ -217,26 +219,26 @@ exports.abrir = async (req, res) => {
  */
 exports.encerrar = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.encerrarEvento({
-      eventoId: id,
+      eventoId,
       encerradoPor: req.user?.id ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
-        id,
+        eventoId,
         "Transição inválida: evento deve estar ABERTO para ser ENCERRADO."
       );
     }
 
     return res.json(updated);
   } catch (e) {
-    console.error("EventoEncerrarErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao encerrar evento." });
+    log.error("EventoEncerrarErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(400).json({ error: e.message || "Erro ao encerrar evento.", requestId: req.requestId });
   }
 };
 
@@ -247,20 +249,20 @@ exports.encerrar = async (req, res) => {
  */
 exports.entrar = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const { deviceId } = req.body || {};
     const presenca = await service.entrarNoEvento({
-      eventoId: id,
+      eventoId,
       userId: req.user?.id,
       deviceId: deviceId ? String(deviceId) : null,
     });
 
     return res.json(presenca);
   } catch (e) {
-    console.error("EventoEntrarErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao entrar no evento." });
+    log.error("EventoEntrarErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(400).json({ error: e.message || "Erro ao entrar no evento.", requestId: req.requestId });
   }
 };
 
@@ -270,18 +272,18 @@ exports.entrar = async (req, res) => {
  */
 exports.sair = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const ok = await service.sairDoEvento({
-      eventoId: id,
+      eventoId,
       userId: req.user?.id,
     });
 
     return res.json({ ok: !!ok });
   } catch (e) {
-    console.error("EventoSairErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao sair do evento." });
+    log.error("EventoSairErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(400).json({ error: e.message || "Erro ao sair do evento.", requestId: req.requestId });
   }
 };
 
@@ -291,14 +293,14 @@ exports.sair = async (req, res) => {
  */
 exports.presencas = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
-    const rows = await service.listarPresencas({ eventoId: id });
+    const rows = await service.listarPresencas({ eventoId });
     return res.json(rows);
   } catch (e) {
-    console.error("EventoPresencasErro:", e);
-    return res.status(500).json({ error: "Erro ao listar presenças." });
+    log.error("EventoPresencasErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId: req.requestId });
   }
 };
 
@@ -308,13 +310,13 @@ exports.presencas = async (req, res) => {
  */
 exports.recontarQuorum = async (req, res) => {
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const eventoId = parseId(req);
+    if (!eventoId) return badRequest(res, "ID inválido.", req);
 
-    const r = await service.recontarQuorum({ eventoId: id });
+    const r = await service.recontarQuorum({ eventoId });
     return res.json(r);
   } catch (e) {
-    console.error("EventoRecontarQuorumErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao recontar quórum." });
+    log.error("EventoRecontarQuorumErro", { error: e.message, stack: e.stack, requestId: req.requestId });
+    return res.status(400).json({ error: e.message || "Erro ao recontar quórum.", requestId: req.requestId });
   }
 };

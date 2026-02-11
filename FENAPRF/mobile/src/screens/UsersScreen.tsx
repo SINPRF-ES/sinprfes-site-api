@@ -200,11 +200,16 @@ export default function UsersScreen({ navigation, route }: any) {
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar membros..."
+          accessibilityLabel="Buscar membros por nome ou CPF"
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
         {searchTerm !== '' && (
-          <TouchableOpacity onPress={() => setSearchTerm('')}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Limpar busca"
+            onPress={() => setSearchTerm('')}
+          >
             <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
           </TouchableOpacity>
         )}
@@ -266,7 +271,11 @@ export default function UsersScreen({ navigation, route }: any) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Detalhes do Membro</Text>
-              <TouchableOpacity onPress={() => setSelectedMember(null)}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Fechar detalhes"
+                onPress={() => setSelectedMember(null)}
+              >
                 <MaterialCommunityIcons name="close" size={28} color="#003366" />
               </TouchableOpacity>
             </View>
@@ -302,6 +311,8 @@ export default function UsersScreen({ navigation, route }: any) {
                 <View style={styles.modalActions}>
                   <TouchableOpacity
                     style={styles.editButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Editar informações do membro"
                     onPress={() => {
                       const memberToEdit = selectedMember;
                       setSelectedMember(null);

@@ -35,6 +35,7 @@ async function limparLogs(req, res) {
     res.status(500).json({
       success: false,
       message: "Erro ao registrar auditoria de limpeza de logs",
+      error: "Erro ao registrar auditoria de limpeza de logs",
       code: "INTERNAL_SERVER_ERROR",
       requestId
     });
@@ -70,6 +71,7 @@ async function registrarLog(req, res) {
     res.status(500).json({
       success: false,
       message: "Erro ao registrar log de diagnóstico",
+      error: "Erro ao registrar log de diagnóstico",
       code: "INTERNAL_SERVER_ERROR",
       requestId
     });

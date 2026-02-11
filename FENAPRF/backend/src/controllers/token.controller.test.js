@@ -40,13 +40,13 @@ describe('Assembleias Controller - Token Generation', () => {
     }));
   });
 
-  test('Should return 404 for invalid UUID format', async () => {
+  test('Should return 400 for invalid UUID format', async () => {
     req.params.id = 'invalid-uuid-123';
 
     await controller.gerarTokenQuorum(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "ID inválido (UUID esperado)." });
   });
 
   test('Should return 409 when assembly is in invalid state', async () => {

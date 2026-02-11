@@ -147,7 +147,12 @@ export default function CriarUserScreen({ navigation }: any) {
 
   useEffect(() => {
     const actions: MenuAction[] = [
-      { label: 'Criar Membro', icon: 'account-plus', onPress: handleCreate }
+      {
+        label: loading ? 'Criando... (Aguarde)' : 'Criar Membro',
+        icon: 'account-plus',
+        onPress: handleCreate,
+        disabled: loading
+      }
     ];
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,

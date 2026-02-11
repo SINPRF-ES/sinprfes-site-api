@@ -47,6 +47,7 @@ const LogisticaScreen = ({ route }: any) => {
   const navigation = useNavigation<any>();
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>(STATUS_EVENTO.ATIVO);
   const [eventos, setEventos] = useState<any[]>([]);
   const [assembleias, setAssembleias] = useState<any[]>([]);
@@ -154,7 +155,7 @@ const LogisticaScreen = ({ route }: any) => {
     return result;
   }, [inscricoes]);
 
-  const handleOpenDoc = async () => {
+  const handleOpenDoc = useCallback(async () => {
     if (eventoSelecionado?.documento_id) {
       if (!token) {
         Alert.alert('Acesso Negado', 'Sua sessão expirou. Por favor, faça login novamente.');
@@ -206,14 +207,14 @@ const LogisticaScreen = ({ route }: any) => {
           Linking.openURL(url).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
       }
     }
-  };
+  }, [eventoSelecionado, token, navigation]);
 
-  const handleSelectDocument = () => {
+  const handleSelectDocument = useCallback(() => {
     navigation.navigate('Publicacoes', {
       mode: 'picker',
       returnTo: 'Logistica'
     });
-  };
+  }, [navigation]);
 
   useEffect(() => {
     if (route.params?.selectedFile) {
@@ -228,7 +229,7 @@ const LogisticaScreen = ({ route }: any) => {
     }
   }, [route.params?.selectedFile]);
 
-  const saveEvento = async () => {
+  const saveEvento = useCallback(async () => {
     if (!formEvento.titulo || !formEvento.data_inicio || !formEvento.data_fim) {
       Alert.alert('Aviso', 'Preencha os campos obrigatórios.');
       return;
@@ -243,9 +244,11 @@ const LogisticaScreen = ({ route }: any) => {
     }
 
     try {
+      setSaving(true);
       if (formEvento.id) {
         if (!formEvento.justificativa) {
           Alert.alert('Aviso', 'Justificativa é obrigatória.');
+          setSaving(false);
           return;
         }
         await atualizarEventoLogistica(formEvento.id, {
@@ -267,10 +270,13 @@ const LogisticaScreen = ({ route }: any) => {
     } catch (err: any) {
       logger.error('Logistica.CreateEvent.API_FAIL', err as Error);
       Alert.alert('Erro', 'Não foi possível salvar o evento.');
+    } finally {
+      setSaving(false);
     }
-  };
+  }, [formEvento, fetchData]);
 
-  const handleEditEvento = () => {
+  const handleEditEvento = useCallback(() => {
+    if (!eventoSelecionado) return;
     setFormEvento({
       id: eventoSelecionado.id,
       titulo: eventoSelecionado.titulo,
@@ -284,21 +290,22 @@ const LogisticaScreen = ({ route }: any) => {
       assembleia_id: eventoSelecionado.assembleia_id || ''
     });
     setModalEventoVisible(true);
-  };
+  }, [eventoSelecionado]);
 
-  const handleEncerrarEvento = () => {
+  const handleEncerrarEvento = useCallback(() => {
     setEventoActionType('ENCERRAR');
     setEventoActionJustificativa('');
     setModalEventoActionVisible(true);
-  };
+  }, []);
 
-  const handleCancelEvento = () => {
+  const handleCancelEvento = useCallback(() => {
     setEventoActionType('CANCELAR');
     setEventoActionJustificativa('');
     setModalEventoActionVisible(true);
-  };
+  }, []);
 
-  const confirmEventoAction = async () => {
+  const confirmEventoAction = useCallback(async () => {
+    if (!eventoSelecionado) return;
     if (!eventoActionJustificativa.trim()) {
       Alert.alert('Aviso', 'Justificativa é obrigatória.');
       return;
@@ -318,9 +325,10 @@ const LogisticaScreen = ({ route }: any) => {
       logger.error('Logistica.confirmEventoAction', err as Error);
       Alert.alert('Erro', 'Não foi possível processar a ação.');
     }
-  };
+  }, [eventoSelecionado, eventoActionType, eventoActionJustificativa, fetchData]);
 
-  const saveInscricao = async () => {
+  const saveInscricao = useCallback(async () => {
+    if (!eventoSelecionado) return;
     if (!formInscricao.data_chegada || !formInscricao.data_saida) {
       Alert.alert('Aviso', 'Datas são obrigatórias.');
       return;
@@ -340,9 +348,11 @@ const LogisticaScreen = ({ route }: any) => {
     }
 
     try {
+      setSaving(true);
       if (formInscricao.isTerceiro) {
         if (!formInscricao.justificativa) {
           Alert.alert('Aviso', 'Justificativa obrigatória.');
+          setSaving(false);
           return;
         }
         await atualizarInscricaoTerceiroLogistica(formInscricao.id, {
@@ -365,10 +375,12 @@ const LogisticaScreen = ({ route }: any) => {
     } catch (err: any) {
       logger.error('Logistica.saveInscricao', err as Error);
       Alert.alert('Erro', 'Não foi possível salvar a inscrição.');
+    } finally {
+      setSaving(false);
     }
-  };
+  }, [eventoSelecionado, formInscricao, fetchInscricoes]);
 
-  const handleEditInscricao = (item?: any) => {
+  const handleEditInscricao = useCallback((item?: any) => {
     if (item) {
       // Editar terceiro (Gestão)
       setFormInscricao({
@@ -380,7 +392,7 @@ const LogisticaScreen = ({ route }: any) => {
         isTerceiro: true,
         justificativa: ''
       });
-    } else {
+    } else if (eventoSelecionado) {
       // Editar própria
       setFormInscricao({
         id: minhaInscricao?.id || '',
@@ -393,9 +405,9 @@ const LogisticaScreen = ({ route }: any) => {
       });
     }
     setModalInscricaoVisible(true);
-  };
+  }, [eventoSelecionado, minhaInscricao]);
 
-  const handleCancelInscricao = (item?: any) => {
+  const handleCancelInscricao = useCallback((item?: any) => {
     const isSelf = !item;
     const target = isSelf ? minhaInscricao : item;
     if (!target) return;
@@ -421,6 +433,7 @@ const LogisticaScreen = ({ route }: any) => {
         {
           text: 'Sim',
           onPress: async () => {
+            if (!eventoSelecionado) return;
             try {
               await cancelarMinhaInscricaoLogistica(eventoSelecionado.id);
               fetchInscricoes();
@@ -433,9 +446,9 @@ const LogisticaScreen = ({ route }: any) => {
         }
       ]
     );
-  };
+  }, [eventoSelecionado, minhaInscricao, canManage, fetchInscricoes]);
 
-  const confirmCancelTerceiro = async () => {
+  const confirmCancelTerceiro = useCallback(async () => {
       if (!formInscricao.justificativa) {
           Alert.alert('Aviso', 'Justificativa obrigatória.');
           return;
@@ -449,9 +462,9 @@ const LogisticaScreen = ({ route }: any) => {
           logger.error('Logistica.cancelInscricaoTerceiro', err as Error);
           Alert.alert('Erro', 'Falha ao cancelar.');
       }
-  };
+  }, [formInscricao, fetchInscricoes]);
 
-  const exportData = async (type: 'pdf' | 'xls') => {
+  const exportData = useCallback(async (type: 'pdf' | 'xls') => {
     if (!eventoSelecionado) return;
     try {
         const url = `/api/logistica/eventos/${eventoSelecionado.id}/exportar/${type}`;
@@ -464,10 +477,10 @@ const LogisticaScreen = ({ route }: any) => {
         const msg = err.response?.data?.error || err.response?.data?.message || 'Falha ao solicitar exportação.';
         Alert.alert('Erro', msg);
     }
-  };
+  }, [eventoSelecionado]);
 
   useEffect(() => {
-    const actions: MenuAction[] = [];
+    let actions: MenuAction[] = [];
     if (canManage) {
       actions.push({ label: 'Novo Evento', icon: 'plus-circle', onPress: () => {
         logger.info('Logistica.CreateEvent.Click', { source: 'menu' });
@@ -493,6 +506,14 @@ const LogisticaScreen = ({ route }: any) => {
         actions.push({ label: 'Exportar PDF', icon: 'file-pdf-box', onPress: () => exportData('pdf') });
         actions.push({ label: 'Exportar XLS', icon: 'file-excel', onPress: () => exportData('xls') });
       }
+    }
+
+    if (saving) {
+      actions = actions.map(a => ({
+        ...a,
+        label: `${a.label} (Aguarde...)`,
+        disabled: true
+      }));
     }
 
     navigation.setOptions({
@@ -526,6 +547,8 @@ const LogisticaScreen = ({ route }: any) => {
         {canManage && (
           <TouchableOpacity
             style={[styles.btnPrimary, { marginBottom: 20 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Criar Novo Evento Logístico"
             onPress={() => {
               logger.info('Logistica.CreateEvent.Click', { source: 'body' });
               const initialForm: any = { id: '', titulo: '', descricao: '', data_inicio: '', data_fim: '', documento_url: '', documento_id: '', status: STATUS_EVENTO.ATIVO, justificativa: '', assembleia_id: '' };
@@ -562,6 +585,9 @@ const LogisticaScreen = ({ route }: any) => {
                               styles.selectorChip,
                               eventoSelecionado?.id === e.id && styles.selectorChipActive,
                             ]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Selecionar evento: ${e.titulo}`}
+                            accessibilityState={{ selected: eventoSelecionado?.id === e.id }}
                             onPress={() => setEventoSelecionado(e)}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -608,7 +634,12 @@ const LogisticaScreen = ({ route }: any) => {
               </Text>
             </View>
             {(eventoSelecionado.documento_url || eventoSelecionado.documento_id) && (
-              <TouchableOpacity style={styles.docButton} onPress={handleOpenDoc}>
+              <TouchableOpacity
+                style={styles.docButton}
+                accessibilityRole="link"
+                accessibilityLabel="Ver Documento Auxiliar do Evento"
+                onPress={handleOpenDoc}
+              >
                 <MaterialCommunityIcons name="file-document-outline" size={20} color="#003366" />
                 <Text style={styles.docButtonText}>Ver Documento Auxiliar</Text>
               </TouchableOpacity>
@@ -624,18 +655,33 @@ const LogisticaScreen = ({ route }: any) => {
               <View style={styles.actionsRow}>
                 {minhaInscricao ? (
                   <View style={styles.buttonGroupRow}>
-                    <TouchableOpacity style={styles.btnEdit} onPress={() => handleEditInscricao()}>
+                    <TouchableOpacity
+                      style={styles.btnEdit}
+                      accessibilityRole="button"
+                      accessibilityLabel="Alterar minha inscrição"
+                      onPress={() => handleEditInscricao()}
+                    >
                       <MaterialCommunityIcons name="pencil" size={18} color="#fff" />
                       <Text style={styles.btnTextSmall}>Alterar Inscrição</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.btnCancel} onPress={() => handleCancelInscricao()}>
+                    <TouchableOpacity
+                      style={styles.btnCancel}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancelar minha inscrição"
+                      onPress={() => handleCancelInscricao()}
+                    >
                       <MaterialCommunityIcons name="delete" size={18} color="#fff" />
                       <Text style={styles.btnTextSmall}>Cancelar</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   canParticipate ? (
-                    <TouchableOpacity style={styles.btnPrimary} onPress={() => handleEditInscricao()}>
+                    <TouchableOpacity
+                      style={styles.btnPrimary}
+                      accessibilityRole="button"
+                      accessibilityLabel="Quero me inscrever neste evento"
+                      onPress={() => handleEditInscricao()}
+                    >
                       <MaterialCommunityIcons name="check-circle-outline" size={20} color="#fff" />
                       <Text style={styles.btnText}>Quero me inscrever</Text>
                     </TouchableOpacity>
@@ -697,10 +743,18 @@ const LogisticaScreen = ({ route }: any) => {
                       <View style={[styles.cell, { width: 150 }]}><Text style={styles.cellText}>{item.observacoes || '—'}</Text></View>
                       {canManage && (
                         <View style={[styles.cell, { width: 100, flexDirection: 'row', gap: 10 }]}>
-                          <TouchableOpacity onPress={() => handleEditInscricao(item)}>
+                          <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={`Editar inscrição de ${item.nome || item.name}`}
+                            onPress={() => handleEditInscricao(item)}
+                          >
                             <MaterialCommunityIcons name="pencil" size={20} color="#003366" />
                           </TouchableOpacity>
-                          <TouchableOpacity onPress={() => handleCancelInscricao(item)}>
+                          <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={`Cancelar inscrição de ${item.nome || item.name}`}
+                            onPress={() => handleCancelInscricao(item)}
+                          >
                             <MaterialCommunityIcons name="delete" size={20} color="#d32f2f" />
                           </TouchableOpacity>
                         </View>
@@ -758,8 +812,20 @@ const LogisticaScreen = ({ route }: any) => {
             </KeyboardAwareScrollView>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.btnCancelModal} onPress={() => setModalEventoVisible(false)}><Text style={styles.btnText}>Cancelar</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.btnSaveModal} onPress={saveEvento}><Text style={styles.btnText}>Salvar</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={styles.btnCancelModal}
+                disabled={saving}
+                onPress={() => setModalEventoVisible(false)}
+              >
+                <Text style={styles.btnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnSaveModal, saving && styles.disabledButton]}
+                disabled={saving}
+                onPress={saveEvento}
+              >
+                <Text style={styles.btnText}>{saving ? 'Salvando...' : 'Salvar'}</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -792,8 +858,20 @@ const LogisticaScreen = ({ route }: any) => {
             </KeyboardAwareScrollView>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.btnCancelModal} onPress={() => setModalInscricaoVisible(false)}><Text style={styles.btnText}>Sair</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.btnSaveModal} onPress={saveInscricao}><Text style={styles.btnText}>Salvar</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={styles.btnCancelModal}
+                disabled={saving}
+                onPress={() => setModalInscricaoVisible(false)}
+              >
+                <Text style={styles.btnText}>Sair</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnSaveModal, saving && styles.disabledButton]}
+                disabled={saving}
+                onPress={saveInscricao}
+              >
+                <Text style={styles.btnText}>{saving ? 'Salvando...' : 'Salvar'}</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -906,6 +984,7 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: '#003366', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
   btnEdit: { backgroundColor: '#27ae60', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
   btnCancel: { backgroundColor: '#d32f2f', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
+  disabledButton: { opacity: 0.5 },
   btnText: { color: '#fff', fontWeight: 'bold' },
   btnTextSmall: { color: '#fff', fontWeight: '600', fontSize: 13 },
   tableCard: { backgroundColor: '#fff', borderRadius: 12, padding: 15, elevation: 3 },

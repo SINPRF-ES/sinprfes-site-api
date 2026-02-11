@@ -130,7 +130,7 @@ exports.generateReport = async (req, res) => {
 
   } catch (err) {
     log.error("ErroGerarRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId });
-    return res.status(500).json({ success: false, message: "Erro ao gerar relatório. Tente novamente mais tarde." });
+    return res.status(500).json({ success: false, message: "Erro ao gerar relatório. Tente novamente mais tarde.", error: "Erro ao gerar relatório.", requestId: req.requestId });
   }
 };
 
@@ -257,7 +257,7 @@ exports.previewReport = async (req, res) => {
 
   } catch (err) {
     log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId });
-    return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde." });
+    return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde.", error: "Erro ao gerar preview.", requestId: req.requestId });
   }
 };
 
@@ -292,7 +292,7 @@ exports.getHistory = async (req, res) => {
 
     return res.json(history);
   } catch (err) {
-    log.error("ErroListarHistoricoRelatorios", { error: err.message, requestId: req.requestId });
-    return res.status(500).json({ message: "Erro ao carregar histórico." });
+    log.error("ErroListarHistoricoRelatorios", { error: err.message, stack: err.stack, requestId: req.requestId });
+    return res.status(500).json({ message: "Erro ao carregar histórico.", error: "Erro ao carregar histórico.", requestId: req.requestId });
   }
 };
