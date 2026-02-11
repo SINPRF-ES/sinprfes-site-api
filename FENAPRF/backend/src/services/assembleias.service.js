@@ -328,7 +328,13 @@ async function gerarQuorum(dados) {
     await client.query('BEGIN');
 
     const { assembleia_id, gerado_por_user_id, tipo_chamada, observacao, forceNew, is_global } = dados;
+    const { randomBytes } = require("crypto");
     let { token } = dados;
+
+    // Garante token de 10 caracteres se não fornecido ou se for recontagem/novo
+    if (!token || token.length !== 10) {
+      token = randomBytes(5).toString("hex").toUpperCase();
+    }
 
     // Lock na assembleia para garantir consistência de estado e evitar corridas
     const { rows: assRows } = await client.query(`SELECT estado FROM assembleias WHERE id = $1 FOR UPDATE`, [assembleia_id]);
@@ -350,7 +356,7 @@ async function gerarQuorum(dados) {
       const { rows: existingRows } = await client.query(
         `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, is_global
          FROM assembleia_quoruns
-         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL ${is_global ? 'AND is_global = TRUE' : ''}`,
+         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL ${is_global ? 'AND is_global = TRUE' : 'AND is_global = FALSE'}`,
         [assembleia_id, tipo_chamada]
       );
 
@@ -375,15 +381,15 @@ async function gerarQuorum(dados) {
       }
     }
 
-    // Token collision check (evita colisões raras de tokens de 6 dígitos ativos)
+    // Token collision check (evita colisões raras de tokens de 10 caracteres ativos)
     let attempts = 0;
     while (attempts < 5) {
       const { rows: collisionRows } = await client.query(
-        `SELECT 1 FROM assembleia_quoruns WHERE assembleia_id = $1 AND token = $2 AND encerrado_em IS NULL`,
-        [assembleia_id, token]
+        `SELECT 1 FROM assembleia_quoruns WHERE token = $1 AND encerrado_em IS NULL`,
+        [token]
       );
       if (collisionRows.length === 0) break;
-      token = Math.floor(100000 + Math.random() * 900000).toString();
+      token = randomBytes(5).toString("hex").toUpperCase();
       attempts++;
     }
 
@@ -397,14 +403,15 @@ async function gerarQuorum(dados) {
         );
     }
 
-    const validoAte = is_global ? "NOW() + INTERVAL '10 years'" : "NOW() + INTERVAL '10 minutes'";
+    // Regra Institucional: QR Global não possui validade temporal (valido_ate IS NULL)
+    const validoAteValue = is_global ? null : new Date(Date.now() + 10 * 60000);
     const newQuorumId = generateUuid();
 
     const { rows: qRows } = await client.query(
       `INSERT INTO assembleia_quoruns (id, assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao, valido_ate, is_global)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, ${validoAte}, $9)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, tipo_chamada, is_global`,
-      [newQuorumId, assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao, !!is_global]
+      [newQuorumId, assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao, validoAteValue, !!is_global]
     );
     const quorum = { ...qRows[0], isNew: true };
 
@@ -437,7 +444,8 @@ async function atualizarQuorum(id, userId) {
   // Mantém o tipo_chamada do último snapshot se existir, ou assume PRIMEIRA.
   const ultimo = await buscarUltimoQuorum(id);
   const tipoChamada = ultimo?.tipo_chamada || 'PRIMEIRA';
-  const token = Math.floor(100000 + Math.random() * 900000).toString();
+  const { randomBytes } = require("crypto");
+  const token = randomBytes(5).toString("hex").toUpperCase();
 
   return await gerarQuorum({
     assembleia_id: id,
