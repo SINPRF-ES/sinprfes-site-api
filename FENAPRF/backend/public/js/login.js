@@ -23,12 +23,19 @@ document.addEventListener("DOMContentLoaded", () => {
     return (cpf || "").replace(/\D/g, "");
   }
 
-  // ==========================
+    // ==========================
   // AUTO-REDIRECT SE JÁ ESTIVER LOGADO
   // ==========================
   (async () => {
-    const tokenExistente = localStorage.getItem("token");
-    if (!tokenExistente) return;
+    const raw = localStorage.getItem("token");
+    const tokenExistente = (raw || "").trim();
+
+    // Evita falso-positivo ("null", "undefined", "")
+    if (!tokenExistente || tokenExistente === "null" || tokenExistente === "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("perfil_acesso");
+      return;
+    }
 
     try {
       const resp = await fetch("/api/auth/me", {
@@ -43,7 +50,11 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (resp.status === 401 || resp.status === 403) {
         localStorage.removeItem("token");
         localStorage.removeItem("perfil_acesso");
+        return;
       }
+
+      // Qualquer outro status: não redireciona
+      return;
     } catch (err) {
       console.error("Erro ao verificar sessão existente:", err);
     }

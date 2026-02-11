@@ -7,21 +7,54 @@ const assembleiaSocket = require("./src/websocket/assembleia.socket");
 logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 
 const server = http.createServer(app);
-assembleiaSocket.init(server);
+
+// Schedulers
 const { initBirthdayScheduler } = require("./src/jobs/birthdayScheduler");
-
-logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
-
-// Inicializa o scheduler de aniversariantes (cron + boot trigger)
-initBirthdayScheduler();
-
-// Inicializa o scheduler de limpeza de push (60 dias)
 const { initPushCleanupScheduler } = require("./src/jobs/pushCleanupScheduler");
-initPushCleanupScheduler();
-
-// Inicializa o scheduler de limpeza de relatórios (30 dias)
 const { initReportCleanupScheduler } = require("./src/jobs/reportCleanupScheduler");
-initReportCleanupScheduler();
 
+// Porta do Render (obrigatório usar process.env.PORT)
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`SINPRF-ES rodando na porta ${PORT}`));
+
+/**
+ * IMPORTANTE (Render):
+ * - Precisamos abrir a porta o mais cedo possível para não estourar o port scan timeout.
+ * - Depois do bind, inicializamos sockets e schedulers em background.
+ */
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`SINPRF-ES rodando na porta ${PORT}`);
+
+  setImmediate(() => {
+    // Socket.IO / WebSocket da assembleia
+    try {
+      assembleiaSocket.init(server);
+      console.log("[BOOT] assembleiaSocket inicializado");
+    } catch (e) {
+      console.error("[BOOT] assembleiaSocket init failed:", e?.message);
+    }
+
+    // Inicializa o scheduler de aniversariantes (cron + boot trigger)
+    try {
+      initBirthdayScheduler();
+      console.log("[BOOT] birthdayScheduler inicializado");
+    } catch (e) {
+      console.error("[BOOT] birthdayScheduler init failed:", e?.message);
+    }
+
+    // Inicializa o scheduler de limpeza de push (60 dias)
+    try {
+      initPushCleanupScheduler();
+      console.log("[BOOT] pushCleanupScheduler inicializado");
+    } catch (e) {
+      console.error("[BOOT] pushCleanupScheduler init failed:", e?.message);
+    }
+
+    // Inicializa o scheduler de limpeza de relatórios (30 dias)
+    try {
+      initReportCleanupScheduler();
+      console.log("[BOOT] reportCleanupScheduler inicializado");
+    } catch (e) {
+      console.error("[BOOT] reportCleanupScheduler init failed:", e?.message);
+    }
+  });
+});
