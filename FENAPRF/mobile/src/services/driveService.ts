@@ -14,6 +14,7 @@ export interface DriveFile {
   createdTime?: string | null;
   webViewLink?: string | null; // Manter para compatibilidade, mas não usar para downloads seguros
   isFolder: boolean;
+  hidden?: boolean;
   // Campos para compatibilidade com formato do backend antigo/site
   titulo?: string;
   arquivo_url?: string;
@@ -137,4 +138,69 @@ export const downloadPublicacao = async (file: DriveFile): Promise<boolean> => {
   } catch (error) {
     return false;
   }
+};
+
+/**
+ * Cria uma nova pasta no Drive.
+ */
+export const createFolder = async (name: string, parentFolderId: string | null = null): Promise<any> => {
+  const { data } = await api.post('/api/publicacoes/folders', { name, parentFolderId });
+  return data;
+};
+
+/**
+ * Realiza o upload de um arquivo para o Drive.
+ */
+export const uploadDriveFile = async (
+  fileUri: string,
+  fileName: string,
+  mimeType: string,
+  parentFolderId: string | null = null
+): Promise<any> => {
+  const formData = new FormData();
+
+  // No React Native, FormData.append para arquivos requer um objeto específico
+  formData.append('file', {
+    uri: fileUri,
+    name: fileName,
+    type: mimeType,
+  } as any);
+
+  if (parentFolderId) {
+    formData.append('parentFolderId', parentFolderId);
+  }
+
+  const { data } = await api.post('/api/publicacoes/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    // Importante para uploads grandes no axios/mobile
+    transformRequest: (data) => data,
+  });
+
+  return data;
+};
+
+/**
+ * Renomeia um item (arquivo ou pasta).
+ */
+export const renameItem = async (id: string, name: string): Promise<any> => {
+  const { data } = await api.patch(`/api/publicacoes/items/${id}/rename`, { name });
+  return data;
+};
+
+/**
+ * Move um item para uma nova pasta.
+ */
+export const moveItem = async (id: string, targetFolderId: string): Promise<any> => {
+  const { data } = await api.patch(`/api/publicacoes/items/${id}/move`, { targetFolderId });
+  return data;
+};
+
+/**
+ * Exclui um item (soft delete).
+ */
+export const deleteItem = async (id: string): Promise<any> => {
+  const { data } = await api.post(`/api/publicacoes/items/${id}/delete`);
+  return data;
 };
