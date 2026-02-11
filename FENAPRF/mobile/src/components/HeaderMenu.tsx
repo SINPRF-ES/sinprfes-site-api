@@ -20,6 +20,7 @@ export interface MenuAction {
   onPress: () => void;
   icon?: string;
   isDestructive?: boolean;
+  disabled?: boolean;
 }
 
 interface Props {
@@ -99,15 +100,18 @@ export default function HeaderMenu({ actions }: Props) {
                       key={item.label + index}
                       style={[
                         styles.menuItem,
-                        item.isDestructive && styles.destructiveItem
+                        item.isDestructive && styles.destructiveItem,
+                        item.disabled && styles.disabledItem
                       ]}
+                      disabled={item.disabled}
                       onPress={() => {
                         closeSheet();
                         // Pequeno delay para garantir que o modal fechou antes de disparar a ação
                         setTimeout(item.onPress, 300);
                       }}
                       accessibilityRole="button"
-                      accessibilityLabel={item.label}
+                      accessibilityLabel={item.disabled ? `${item.label} (Desativado)` : item.label}
+                      accessibilityState={{ disabled: item.disabled }}
                     >
                       {item.icon && (
                         <MaterialCommunityIcons
@@ -214,6 +218,9 @@ const styles = StyleSheet.create({
   },
   destructiveItem: {
     backgroundColor: '#e74c3c',
+  },
+  disabledItem: {
+    opacity: 0.5,
   },
   menuIcon: {
     marginRight: 15,

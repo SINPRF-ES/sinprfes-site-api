@@ -1462,6 +1462,21 @@ async function gerarDadosRelatorio(id) {
   };
 }
 
+async function buscarGlobalAtivo() {
+  const query = `
+    SELECT q.id, q.token, q.assembleia_id, a.titulo as assembleia_titulo
+    FROM assembleia_quoruns q
+    JOIN assembleias a ON q.assembleia_id = a.id
+    WHERE q.is_global = TRUE
+      AND q.encerrado_em IS NULL
+      AND a.estado != 'ENCERRADO'
+    ORDER BY q.criado_em DESC
+    LIMIT 1
+  `;
+  const { rows } = await pool.query(query);
+  return rows[0] || null;
+}
+
 module.exports = {
   listar,
   buscarPorId,
@@ -1501,5 +1516,6 @@ module.exports = {
   contarPresentesNoQuorum,
   buscarEstadoResumido,
   buscarDiagnostico,
-  normalizarAssembleia
+  normalizarAssembleia,
+  buscarGlobalAtivo
 };

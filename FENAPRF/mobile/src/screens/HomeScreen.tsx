@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SafeScreen from '../components/SafeScreen';
@@ -11,6 +11,7 @@ import type { RootStackParamList } from '../navigation';
 import { Image } from 'react-native';
 import MemberCard from '../components/MemberCard';
 import { EMOJIS } from '../utils/emoji';
+import { getGlobalTokenAtivo } from '../services/assembleiaService';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -43,6 +44,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
+  const [globalToken, setGlobalToken] = useState<any>(null);
+
+  useEffect(() => {
+    if (ehGestao) {
+      getGlobalTokenAtivo().then(setGlobalToken).catch(() => setGlobalToken(null));
+    }
+  }, [ehGestao]);
 
   const displayedItems = [...NAV_ITEMS];
   if (ehGestao) {
@@ -68,6 +76,28 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <View style={styles.memberCardContainer}>
         <MemberCard member={user} variant="profile" />
       </View>
+
+      {ehGestao && globalToken && (
+        <TouchableOpacity
+          style={styles.globalTokenCard}
+          onPress={() => {
+            logNavigation('AssembleiaDetalhe (via GlobalTokenAtivo)');
+            navigation.navigate('AssembleiaDetalhe', { id: globalToken.assembleia_id });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Visualizar QR Code de Check-in Ativo"
+        >
+          <View style={styles.globalTokenIcon}>
+            <MaterialCommunityIcons name="qrcode-scan" size={32} color="#003366" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.globalTokenTitle}>QR Code de Check-in Ativo</Text>
+            <Text style={styles.globalTokenSubtitle} numberOfLines={1}>{globalToken.assembleia_titulo}</Text>
+            <Text style={styles.globalTokenAction}>Clique aqui para visualizar</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#003366" />
+        </TouchableOpacity>
+      )}
 
       <View style={styles.grid}>
         {displayedItems.map((item) => (
@@ -171,5 +201,47 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
+  },
+  globalTokenCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderLeftWidth: 6,
+    borderLeftColor: '#f1c40f',
+  },
+  globalTokenIcon: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#fffdf0',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  globalTokenTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  globalTokenSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  globalTokenAction: {
+    fontSize: 11,
+    color: '#856404',
+    fontWeight: 'bold',
+    marginTop: 4,
+    textTransform: 'uppercase',
   },
 });

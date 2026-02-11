@@ -2,6 +2,15 @@ import api from './apiService';
 import { Assembleia, AssembleiaEstado, VotacaoItem, Proposta } from '../types/assembleia';
 import { logError } from '../infra/logger';
 
+export const getGlobalTokenAtivo = async (): Promise<{ id: string; token: string; assembleia_id: string; assembleia_titulo: string } | null> => {
+  try {
+    const response = await api.get('/api/assembleias/global-token-ativo');
+    return response.data;
+  } catch (err) {
+    return null;
+  }
+};
+
 export const getAssembleias = async (): Promise<Assembleia[]> => {
   try {
     const response = await api.get('/api/assembleias');

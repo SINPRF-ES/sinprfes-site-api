@@ -60,7 +60,7 @@ describe("Logística Controller", () => {
     mockClient.query.mockResolvedValueOnce({}); // AUDIT
     mockClient.query.mockResolvedValueOnce({}); // COMMIT
 
-    req.body = { titulo: 'Novo', data_inicio: '2026-01-01', data_fim: '2026-01-02' };
+    req.body = { titulo: 'Novo', data_inicio: '2026-01-01T10:00:00Z', data_fim: '2026-01-02T10:00:00Z' };
 
     await logisticaController.criarEvento(req, res);
 
@@ -73,9 +73,9 @@ describe("Logística Controller", () => {
   test("registrarMinhaInscricao deve falhar se data_chegada >= data_saida", async () => {
     req.user.perfil_acesso = 'CONSELHEIRO';
     req.body = {
-      evento_id: 'evento-id',
-      data_chegada: '2026-01-02',
-      data_saida: '2026-01-01'
+      evento_id: '550e8400-e29b-41d4-a716-446655440000',
+      data_chegada: '2026-01-02T10:00:00Z',
+      data_saida: '2026-01-01T10:00:00Z'
     };
 
     await logisticaController.registrarMinhaInscricao(req, res);

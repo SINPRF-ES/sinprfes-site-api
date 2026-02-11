@@ -72,9 +72,7 @@ exports.register = async (req, res) => {
 
     return res.json({ success: true, id: result?.id ?? null });
   } catch (e) {
-    const errorId = uuidv4();
     log.error("PushRegisterErro", {
-      errorId,
       requestId,
       userId,
       error: e.message,
@@ -82,13 +80,13 @@ exports.register = async (req, res) => {
     });
 
     if (e.message === "ExpoPushToken inválido.") {
-      return res.status(400).json({ success: false, error: e.message });
+      return res.status(400).json({ success: false, error: e.message, requestId });
     }
 
     return res.status(500).json({
       success: false,
       error: "Erro ao registrar push token.",
-      errorId
+      requestId
     });
   }
 };
@@ -128,15 +126,13 @@ exports.unregister = async (req, res) => {
 
     return res.json({ success: ok });
   } catch (e) {
-    const errorId = uuidv4();
     log.error("PushUnregisterErro", {
-      errorId,
       requestId,
       userId,
       error: e.message,
       stack: e.stack
     });
-    return res.status(500).json({ success: false, error: "Erro ao remover push token.", errorId });
+    return res.status(500).json({ success: false, error: "Erro ao remover push token.", requestId });
   }
 };
 
@@ -157,13 +153,11 @@ exports.broadcast = async (req, res) => {
 
     return res.json({ success: true, ...r });
   } catch (e) {
-    const errorId = uuidv4();
     log.error("PushBroadcastErro", {
-      errorId,
       requestId,
       error: e.message,
       stack: e.stack
     });
-    return res.status(500).json({ success: false, error: "Erro ao enviar broadcast.", errorId });
+    return res.status(500).json({ success: false, error: "Erro ao enviar broadcast.", requestId });
   }
 };

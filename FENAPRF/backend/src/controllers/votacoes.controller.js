@@ -1,46 +1,51 @@
 // src/controllers/votacoes.controller.js
 const service = require("../services/votacoes.service");
 const { parseUuid } = require("../utils/format");
+const log = require("../utils/log");
+const Textos = require("../utils/textos");
 
 function parseId(req) {
   return parseUuid(req.params.id);
 }
 
 exports.listar = async (req, res) => {
+  const requestId = req.requestId;
   try {
     const status = (req.query.status || "").toString().toUpperCase().trim(); // opcional
     const lista = await service.listarVotacoes({ userId: req.user.id, status });
     return res.json(lista);
   } catch (err) {
-    console.error("VotacoesListarErro:", err);
-    return res.status(500).json({ error: "Erro ao listar votações." });
+    log.error("VotacoesListarErro", { error: err.message, stack: err.stack, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId });
   }
 };
 
 exports.detalhe = async (req, res) => {
+  const requestId = req.requestId;
   try {
-    const id = parseId(req);
-    if (!id) return res.status(400).json({ error: "ID inválido." });
+    const votacaoId = parseId(req);
+    if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
-    const v = await service.obterVotacao({ votacaoId: id, userId: req.user.id });
-    if (!v) return res.status(404).json({ error: "Votação não encontrada." });
+    const v = await service.obterVotacao({ votacaoId, userId: req.user.id });
+    if (!v) return res.status(404).json({ error: "Votação não encontrada.", requestId });
 
     return res.json(v);
   } catch (err) {
-    console.error("VotacoesDetalheErro:", err);
-    return res.status(500).json({ error: "Erro ao carregar votação." });
+    log.error("VotacoesDetalheErro", { error: err.message, stack: err.stack, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId });
   }
 };
 
 exports.criar = async (req, res) => {
+  const requestId = req.requestId;
   try {
     const { titulo, descricao, abre_em, encerra_em, opcoes } = req.body || {};
 
     if (!titulo || typeof titulo !== "string") {
-      return res.status(400).json({ error: "Informe o título." });
+      return res.status(400).json({ error: "Informe o título.", requestId });
     }
     if (!Array.isArray(opcoes) || opcoes.length < 2) {
-      return res.status(400).json({ error: "Informe pelo menos 2 opções." });
+      return res.status(400).json({ error: "Informe pelo menos 2 opções.", requestId });
     }
 
     const result = await service.criarVotacao({
@@ -54,45 +59,48 @@ exports.criar = async (req, res) => {
 
     return res.status(201).json(result);
   } catch (err) {
-    console.error("VotacoesCriarErro:", err);
-    return res.status(500).json({ error: "Erro ao criar votação." });
+    log.error("VotacoesCriarErro", { error: err.message, stack: err.stack, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CRIAR, requestId });
   }
 };
 
 exports.abrir = async (req, res) => {
+  const requestId = req.requestId;
   try {
-    const id = parseId(req);
-    if (!id) return res.status(400).json({ error: "ID inválido." });
+    const votacaoId = parseId(req);
+    if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
-    const ok = await service.abrirVotacao({ votacaoId: id });
-    if (!ok) return res.status(404).json({ error: "Votação não encontrada." });
+    const ok = await service.abrirVotacao({ votacaoId });
+    if (!ok) return res.status(404).json({ error: "Votação não encontrada.", requestId });
 
     return res.json({ message: "Votação aberta." });
   } catch (err) {
-    console.error("VotacoesAbrirErro:", err);
-    return res.status(500).json({ error: "Erro ao abrir votação." });
+    log.error("VotacoesAbrirErro", { error: err.message, stack: err.stack, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_PROCESSAR, requestId });
   }
 };
 
 exports.encerrar = async (req, res) => {
+  const requestId = req.requestId;
   try {
-    const id = parseId(req);
-    if (!id) return res.status(400).json({ error: "ID inválido." });
+    const votacaoId = parseId(req);
+    if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
-    const ok = await service.encerrarVotacao({ votacaoId: id });
-    if (!ok) return res.status(404).json({ error: "Votação não encontrada." });
+    const ok = await service.encerrarVotacao({ votacaoId });
+    if (!ok) return res.status(404).json({ error: "Votação não encontrada.", requestId });
 
     return res.json({ message: "Votação encerrada." });
   } catch (err) {
-    console.error("VotacoesEncerrarErro:", err);
-    return res.status(500).json({ error: "Erro ao encerrar votação." });
+    log.error("VotacoesEncerrarErro", { error: err.message, stack: err.stack, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_PROCESSAR, requestId });
   }
 };
 
 exports.votar = async (req, res) => {
+  const requestId = req.requestId;
   try {
-    const id = parseId(req);
-    if (!id) return res.status(400).json({ error: "ID inválido." });
+    const votacaoId = parseId(req);
+    if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
     const body = req.body || {};
 
@@ -114,11 +122,12 @@ exports.votar = async (req, res) => {
           recebido: opcaoId,
           esperado: "opcao_id (uuid) ou opcaoId (uuid)",
         },
+        requestId
       });
     }
 
     const result = await service.registrarVoto({
-      votacaoId: id,
+      votacaoId: votacaoId,
       opcaoId,
       userId: req.user.id,
       deviceId: deviceId ? String(deviceId) : null,
@@ -129,31 +138,35 @@ exports.votar = async (req, res) => {
 
     return res.status(201).json(result);
   } catch (err) {
-    const msg = err?.message || "Erro ao registrar voto.";
-    const code =
+    const msg = err?.message || "";
+    const isBusinessError =
       msg.includes("já votou") ||
       msg.includes("encerrada") ||
       msg.includes("não está aberta") ||
-      msg.toLowerCase().includes("opção inválida")
-        ? 400
-        : 500;
+      msg.toLowerCase().includes("opção inválida");
 
-    console.error("VotacoesVotarErro:", err);
-    return res.status(code).json({ error: msg });
+    log.error("VotacoesVotarErro", { error: err.message, stack: err.stack, requestId });
+
+    if (isBusinessError) {
+        return res.status(400).json({ error: msg, requestId });
+    }
+
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_PROCESSAR, requestId });
   }
 };
 
 exports.resultado = async (req, res) => {
+  const requestId = req.requestId;
   try {
-    const id = parseId(req);
-    if (!id) return res.status(400).json({ error: "ID inválido." });
+    const votacaoId = parseId(req);
+    if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
-    const r = await service.obterResultado({ votacaoId: id });
-    if (!r) return res.status(404).json({ error: "Votação não encontrada." });
+    const r = await service.obterResultado({ votacaoId: votacaoId });
+    if (!r) return res.status(404).json({ error: "Votação não encontrada.", requestId });
 
     return res.json(r);
   } catch (err) {
-    console.error("VotacoesResultadoErro:", err);
-    return res.status(500).json({ error: "Erro ao carregar resultado." });
+    log.error("VotacoesResultadoErro", { error: err.message, stack: err.stack, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId });
   }
 };

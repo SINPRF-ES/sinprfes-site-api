@@ -72,8 +72,8 @@ exports.listar = async (req, res) => {
 
     return res.json(publicacoes);
   } catch (err) {
-    log.error("ErroListarDrive", err);
-    return res.status(500).json({ message: "Erro ao sincronizar com o Drive." });
+    log.error("ErroListarDrive", { error: err.message, stack: err.stack, requestId: req.requestId });
+    return res.status(500).json({ message: "Erro ao sincronizar com o Drive.", requestId: req.requestId });
   }
 };
 
@@ -121,8 +121,8 @@ exports.createFolder = async (req, res) => {
 
     return res.json({ success: true, folder });
   } catch (error) {
-    log.error("ErroCreateFolder", { error: error.message, userId: atorId });
-    return res.status(500).json({ message: "Erro ao criar pasta no Drive." });
+    log.error("ErroCreateFolder", { error: error.message, stack: error.stack, userId: atorId, requestId: req.requestId });
+    return res.status(500).json({ message: "Erro ao criar pasta no Drive.", requestId: req.requestId });
   }
 };
 
@@ -175,8 +175,8 @@ exports.uploadFile = async (req, res) => {
       file: { id: fileId, name: fileName, mimeType: file.mimetype, createdTime: new Date().toISOString() }
     });
   } catch (error) {
-    log.error("ErroUploadFile", { error: error.message, userId: atorId });
-    return res.status(500).json({ message: "Erro ao realizar upload para o Drive." });
+    log.error("ErroUploadFile", { error: error.message, stack: error.stack, userId: atorId, requestId: req.requestId });
+    return res.status(500).json({ message: "Erro ao realizar upload para o Drive.", requestId: req.requestId });
   }
 };
 
@@ -221,8 +221,8 @@ exports.renameItem = async (req, res) => {
 
     return res.json({ success: true, item });
   } catch (error) {
-    log.error("ErroRenameItem", { error: error.message, itemId: id });
-    return res.status(500).json({ message: "Erro ao renomear item no Drive." });
+    log.error("ErroRenameItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
+    return res.status(500).json({ message: "Erro ao renomear item no Drive.", requestId: req.requestId });
   }
 };
 
@@ -279,8 +279,8 @@ exports.moveItem = async (req, res) => {
 
     return res.json({ success: true, item });
   } catch (error) {
-    log.error("ErroMoveItem", { error: error.message, itemId: id });
-    return res.status(500).json({ message: "Erro ao mover item no Drive." });
+    log.error("ErroMoveItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
+    return res.status(500).json({ message: "Erro ao mover item no Drive.", requestId: req.requestId });
   }
 };
 
@@ -326,8 +326,8 @@ exports.deleteItem = async (req, res) => {
 
     return res.json({ success: true, item });
   } catch (error) {
-    log.error("ErroDeleteItem", { error: error.message, itemId: id });
-    return res.status(500).json({ message: "Erro ao excluir item no Drive." });
+    log.error("ErroDeleteItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
+    return res.status(500).json({ message: "Erro ao excluir item no Drive.", requestId: req.requestId });
   }
 };
 
@@ -376,7 +376,8 @@ exports.visualizar = async (req, res) => {
       msg.includes("Requested entity was not found");
 
     return res.status(isNotFound ? 404 : 500).json({
-      error: isNotFound ? "Arquivo não encontrado" : "Falha ao abrir o arquivo"
+      error: isNotFound ? "Arquivo não encontrado" : "Falha ao abrir o arquivo",
+      requestId: req.requestId
     });
   }
 };
