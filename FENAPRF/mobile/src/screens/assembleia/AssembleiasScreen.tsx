@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleias } from '../../services/assembleiaService';
 import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
-import { isDiretoria } from '../../utils/user';
+import { isGestao } from '../../utils/user';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/format';
 
@@ -21,7 +21,7 @@ export default function AssembleiasScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'ativas' | 'encerradas' | 'todas'>('ativas');
 
-  const ehDiretoria = isDiretoria(user?.perfil_acesso);
+  const ehGestao = isGestao(user?.perfil_acesso);
 
   const fetchData = async () => {
     try {
@@ -40,7 +40,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       navigation.setOptions({
         headerRight: () => {
           const actions: MenuAction[] = [];
-          if (ehDiretoria) {
+          if (ehGestao) {
             actions.push({
               label: 'Nova Assembleia',
               icon: 'plus',
@@ -51,7 +51,7 @@ export default function AssembleiasScreen({ navigation }: any) {
         }
       });
       fetchData();
-    }, [ehDiretoria])
+    }, [ehGestao])
   );
 
   const onRefresh = async () => {
@@ -63,8 +63,8 @@ export default function AssembleiasScreen({ navigation }: any) {
   // Otimização Bolt: Memoiza filtragem de assembleias
   const filteredAssembleias = useMemo(() => {
     return assembleias.filter(a => {
-      if (filter === 'ativas') return a.estado !== 'ENCERRADA';
-      if (filter === 'encerradas') return a.estado === 'ENCERRADA';
+      if (filter === 'ativas') return a.estado !== 'ENCERRADO';
+      if (filter === 'encerradas') return a.estado === 'ENCERRADO';
       return true;
     });
   }, [assembleias, filter]);
@@ -134,6 +134,17 @@ export default function AssembleiasScreen({ navigation }: any) {
             </View>
           }
         />
+      )}
+
+      {ehGestao && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('CriarAssembleia')}
+          accessibilityLabel="Criar Novo Evento de Assembleia"
+          accessibilityRole="button"
+        >
+          <MaterialCommunityIcons name="plus" size={32} color="#fff" />
+        </TouchableOpacity>
       )}
 
     </View>
