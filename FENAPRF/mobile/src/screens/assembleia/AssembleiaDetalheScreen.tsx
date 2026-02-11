@@ -78,9 +78,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
     const getPollingInterval = () => {
         if (!assembleia) return 8000;
-        if (assembleia.estado === 'ENCERRADA') return 0;
+        if (assembleia.estado === 'ENCERRADO') return 0;
         if (estado?.votacaoAtiva && (estado.votacaoAtiva as any).status === 'ATIVA') return 2000;
-        if (assembleia.estado === 'EM_CURSO') return 5000;
+        if (assembleia.estado === 'INICIADO') return 5000;
         return 8000;
     };
 

@@ -2,7 +2,7 @@ export type AssembleiaEstadoFiltro = 'CRIADO' | 'EM_CREDENCIAMENTO' | 'INICIADO'
 
 export interface Assembleia {
   id: string;
-  tipo: 'AGE' | 'AGO';
+  tipo: 'AGE' | 'AGO' | 'REUNIAO_DELIBERATIVA' | 'REUNIAO_INFORMATIVA' | 'REUNIAO_TEMATICA';
   titulo: string;
   pauta: string;
   estado: AssembleiaEstadoFiltro;

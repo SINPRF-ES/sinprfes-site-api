@@ -31,8 +31,13 @@ export default function ListaAssembleiasScreen() {
 
   const getStatusBadge = (estado: string) => {
     switch (estado) {
+      case 'EM_CREDENCIAMENTO':
+      case 'INICIADO':
       case 'ABERTA':
-        return { color: '#28a745', label: 'Aberta' };
+        return { color: '#28a745', label: 'Em Curso' };
+      case 'SUSPENSA':
+        return { color: '#6c757d', label: 'Suspensa' };
+      case 'ENCERRADO':
       case 'ENCERRADA':
         return { color: '#6c757d', label: 'Encerrada' };
       default:
