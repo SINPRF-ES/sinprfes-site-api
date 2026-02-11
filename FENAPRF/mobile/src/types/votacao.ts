@@ -1,5 +1,5 @@
 export interface VotacaoResumo {
-  id: number;
+  id: string;
   titulo: string;
   status: 'ABERTA' | 'ENCERRADA' | 'AGENDADA';
   abre_em?: string;
@@ -7,12 +7,12 @@ export interface VotacaoResumo {
 }
 
 export interface VotacaoOpcao {
-  id: number;
+  id: string;
   texto: string;
 }
 
 export interface VotacaoDetalhe {
-  id: number;
+  id: string;
   titulo: string;
   descricao: string;
   status: 'ABERTA' | 'ENCERRADA' | 'AGENDADA';

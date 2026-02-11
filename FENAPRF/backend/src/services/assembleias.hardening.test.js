@@ -28,7 +28,8 @@ describe('Assembleias Hardening and Concurrency', () => {
   test('gerarQuorum should retry on token collision', async () => {
      mockClient.query
        .mockResolvedValueOnce({ rows: [] }) // BEGIN
-       .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] }) // FOR UPDATE ass
+       .mockResolvedValueOnce({ rows: [{ id: 'ass-1', estado: 'EM_CREDENCIAMENTO' }] }) // FOR UPDATE ass
+       .mockResolvedValueOnce({ rows: [] }) // Idempotency check
        .mockResolvedValueOnce({ rows: [{ total: 10 }] }) // actives
        .mockResolvedValueOnce({ rows: [{ 1: 1 }] }) // COLLISION! (first check)
        .mockResolvedValueOnce({ rows: [] }) // NO COLLISION (second check)
@@ -39,7 +40,7 @@ describe('Assembleias Hardening and Concurrency', () => {
        .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // checkin
        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
-     await service.gerarQuorum({ assembleia_id: '1', token: '111111', gerado_por_user_id: 1 });
+     await service.gerarQuorum({ assembleia_id: 'ass-1', token: '111111', gerado_por_user_id: 'u1' });
 
      // Should have checked for collision twice
      const collisionChecks = mockClient.query.mock.calls.filter(c => c[0].includes('SELECT 1 FROM assembleia_quoruns'));
@@ -49,10 +50,10 @@ describe('Assembleias Hardening and Concurrency', () => {
   test('criarVotacao should block if another is active', async () => {
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'EM_CURSO' }] }) // FOR UPDATE ass
+        .mockResolvedValueOnce({ rows: [{ id: 'ass-1', estado: 'INICIADO' }] }) // FOR UPDATE ass
         .mockResolvedValueOnce({ rows: [{ id: 'v-active' }] }); // ANOTHER ACTIVE!
 
-      await expect(service.criarVotacao({ assembleia_id: '1' }))
+      await expect(service.criarVotacao({ assembleia_id: 'ass-1' }))
         .rejects.toThrow("Já existe uma votação ativa");
   });
 
@@ -64,7 +65,7 @@ describe('Assembleias Hardening and Concurrency', () => {
       // Need to mock buscarVotacaoPorId which is called at the end
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', status: 'ENCERRADA' }] });
 
-      const result = await service.finalizarVotacao('v1', 1);
+      const result = await service.finalizarVotacao('v1', 'u1');
       expect(result.status).toBe('ENCERRADA');
       // Should NOT have tried to insert abstentions
       const inserts = mockClient.query.mock.calls.filter(c => c[0].includes('INSERT INTO assembleia_votos'));

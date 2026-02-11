@@ -2,7 +2,7 @@
 const pool = require("../config/db");
 const Textos = require("../utils/textos");
 const log = require("../utils/log");
-const { escapeHtml } = require("../utils/format");
+const { escapeHtml, generateUuid } = require("../utils/format");
 
 const ASSEMBLEIA_STATES = {
   CRIADO: 'CRIADO',
@@ -78,8 +78,8 @@ async function registrarAuditoria(assembleiaId, userId, evento, payload, client 
       _acting_as: actingAs
     };
     await db.query(
-      "INSERT INTO assembleia_auditoria (assembleia_id, user_id, evento, payload) VALUES ($1, $2, $3, $4)",
-      [assembleiaId, userId, evento, JSON.stringify(fullPayload)]
+      "INSERT INTO assembleia_auditoria (id, assembleia_id, user_id, evento, payload) VALUES ($1, $2, $3, $4, $5)",
+      [generateUuid(), assembleiaId, userId, evento, JSON.stringify(fullPayload)]
     );
   } catch (err) {
     log.error("Erro ao registrar auditoria de assembleia", { assembleiaId, userId, evento, error: err.message });
@@ -120,21 +120,22 @@ async function criar(dados) {
   if (tipo === 'Assembleia Geral Ordinária') tipoNorm = 'AGO';
   if (tipo === 'Assembleia Geral Extraordinária') tipoNorm = 'AGE';
 
+  const newId = generateUuid();
   const { rows } = await pool.query(
     `INSERT INTO assembleias (
-        tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url,
+        id, tipo, titulo, pauta, criado_por, data_hora_inicio, edital_url,
         data_evento, hora_primeira_chamada, hora_segunda_chamada, estado,
         edital_public_id, edital_resource_type, edital_type, edital_format,
         edital_drive_file_id
      )
      VALUES (
-        $1, $2, $3, $4, NULLIF($5, '')::TIMESTAMP, NULLIF($6, ''),
-        NULLIF($7, '')::DATE, NULLIF($8, '')::TIME, NULLIF($9, '')::TIME, 'CRIADO',
-        $10, $11, $12, $13, $14
+        $1, $2, $3, $4, $5, NULLIF($6, '')::TIMESTAMP, NULLIF($7, ''),
+        NULLIF($8, '')::DATE, NULLIF($9, '')::TIME, NULLIF($10, '')::TIME, 'CRIADO',
+        $11, $12, $13, $14, $15
      )
      RETURNING ${ASSEMBLEIA_COLUMNS}`,
     [
-        tipoNorm, titulo, pauta, criado_por, data_hora_inicio, edital_url,
+        newId, tipoNorm, titulo, pauta, criado_por, data_hora_inicio, edital_url,
         data_evento, hora_primeira_chamada, hora_segunda_chamada,
       edital_public_id, edital_resource_type, edital_type, edital_format,
       edital_drive_file_id
@@ -187,10 +188,10 @@ async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
   if (perfil !== 'ADMIN' && perfil !== 'COMUNICADOR') {
     const origem = tipoChamada === 'RECONTAGEM' ? 'AUTO_PRESIDENTE' : 'AUTO_GERADOR';
     await client.query(
-      `INSERT INTO assembleia_checkins (assembleia_quorum_id, user_id, origem)
-       VALUES ($1, $2, $3)
+      `INSERT INTO assembleia_checkins (id, assembleia_quorum_id, user_id, origem)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (assembleia_quorum_id, user_id) DO UPDATE SET registrado_em = NOW()`,
-      [quorumId, userId, origem]
+      [generateUuid(), quorumId, userId, origem]
     );
     return true;
   }
@@ -327,7 +328,13 @@ async function gerarQuorum(dados) {
     await client.query('BEGIN');
 
     const { assembleia_id, gerado_por_user_id, tipo_chamada, observacao, forceNew, is_global } = dados;
+    const { randomBytes } = require("crypto");
     let { token } = dados;
+
+    // Garante token de 10 caracteres se não fornecido ou se for recontagem/novo
+    if (!token || token.length !== 10) {
+      token = randomBytes(5).toString("hex").toUpperCase();
+    }
 
     // Lock na assembleia para garantir consistência de estado e evitar corridas
     const { rows: assRows } = await client.query(`SELECT estado FROM assembleias WHERE id = $1 FOR UPDATE`, [assembleia_id]);
@@ -349,7 +356,7 @@ async function gerarQuorum(dados) {
       const { rows: existingRows } = await client.query(
         `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, is_global
          FROM assembleia_quoruns
-         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL ${is_global ? 'AND is_global = TRUE' : ''}`,
+         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL ${is_global ? 'AND is_global = TRUE' : 'AND is_global = FALSE'}`,
         [assembleia_id, tipo_chamada]
       );
 
@@ -374,15 +381,15 @@ async function gerarQuorum(dados) {
       }
     }
 
-    // Token collision check (evita colisões raras de tokens de 6 dígitos ativos)
+    // Token collision check (evita colisões raras de tokens de 10 caracteres ativos)
     let attempts = 0;
     while (attempts < 5) {
       const { rows: collisionRows } = await client.query(
-        `SELECT 1 FROM assembleia_quoruns WHERE assembleia_id = $1 AND token = $2 AND encerrado_em IS NULL`,
-        [assembleia_id, token]
+        `SELECT 1 FROM assembleia_quoruns WHERE token = $1 AND encerrado_em IS NULL`,
+        [token]
       );
       if (collisionRows.length === 0) break;
-      token = Math.floor(100000 + Math.random() * 900000).toString();
+      token = randomBytes(5).toString("hex").toUpperCase();
       attempts++;
     }
 
@@ -396,13 +403,15 @@ async function gerarQuorum(dados) {
         );
     }
 
-    const validoAte = is_global ? "NOW() + INTERVAL '10 years'" : "NOW() + INTERVAL '10 minutes'";
+    // Regra Institucional: QR Global não possui validade temporal (valido_ate IS NULL)
+    const validoAteValue = is_global ? null : new Date(Date.now() + 10 * 60000);
+    const newQuorumId = generateUuid();
 
     const { rows: qRows } = await client.query(
-      `INSERT INTO assembleia_quoruns (assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao, valido_ate, is_global)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, ${validoAte}, $8)
+      `INSERT INTO assembleia_quoruns (id, assembleia_id, token, gerado_por_user_id, tipo_chamada, quorum_total_ativos, quorum_necessario, observacao, valido_ate, is_global)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, tipo_chamada, is_global`,
-      [assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao, !!is_global]
+      [newQuorumId, assembleia_id, token, gerado_por_user_id, tipo_chamada, totalAtivos, quorumNecessario, observacao, validoAteValue, !!is_global]
     );
     const quorum = { ...qRows[0], isNew: true };
 
@@ -435,7 +444,8 @@ async function atualizarQuorum(id, userId) {
   // Mantém o tipo_chamada do último snapshot se existir, ou assume PRIMEIRA.
   const ultimo = await buscarUltimoQuorum(id);
   const tipoChamada = ultimo?.tipo_chamada || 'PRIMEIRA';
-  const token = Math.floor(100000 + Math.random() * 900000).toString();
+  const { randomBytes } = require("crypto");
+  const token = randomBytes(5).toString("hex").toUpperCase();
 
   return await gerarQuorum({
     assembleia_id: id,
@@ -482,11 +492,11 @@ async function realizarCheckin(dados) {
   );
 
   const { rows } = await pool.query(
-    `INSERT INTO assembleia_checkins (assembleia_quorum_id, user_id, origem)
-     VALUES ($1, $2, $3)
+    `INSERT INTO assembleia_checkins (id, assembleia_quorum_id, user_id, origem)
+     VALUES ($1, $2, $3, $4)
      ON CONFLICT (assembleia_quorum_id, user_id) DO UPDATE SET registrado_em = NOW()
      RETURNING id`,
-    [assembleia_quorum_id, user_id, origem]
+    [generateUuid(), assembleia_quorum_id, user_id, origem]
   );
   const res = rows[0];
 
@@ -536,10 +546,10 @@ async function criarVotacao(dados, externalClient = null) {
     // mas o controller já garante a lógica de negócio.
 
     const { rows: vRows } = await client.query(
-      `INSERT INTO assembleia_votacoes (assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, status, iniciada_por_user_id, aberta_em)
-       VALUES ($1, $2, $3, $4, $5, 'ATIVA', $6, NOW())
+      `INSERT INTO assembleia_votacoes (id, assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, status, iniciada_por_user_id, aberta_em)
+       VALUES ($1, $2, $3, $4, $5, $6, 'ATIVA', $7, NOW())
        RETURNING *, (aberta_em + interval '1 second' * duracao_segundos) as encerra_em`,
-      [assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, iniciada_por_user_id]
+      [generateUuid(), assembleia_id, quorum_snapshot_id, titulo, descricao, duracao_segundos, iniciada_por_user_id]
     );
     const votacao = vRows[0];
 
@@ -615,11 +625,11 @@ async function registrarVoto(votacaoId, userId, voto, assembleiaId) {
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO assembleia_votos (votacao_id, user_id, voto)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (votacao_id, user_id) DO UPDATE SET voto = $3, registrado_em = NOW()
+    `INSERT INTO assembleia_votos (id, votacao_id, user_id, voto)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (votacao_id, user_id) DO UPDATE SET voto = $4, registrado_em = NOW()
      RETURNING *`,
-    [votacaoId, userId, voto]
+    [generateUuid(), votacaoId, userId, voto]
   );
   const res = rows[0];
   if (assembleiaId) {
@@ -715,8 +725,8 @@ async function buscarVotacaoPorId(votacaoId) {
 async function registrarRejeicaoMesa(assembleiaId, userId, cargo, client = null) {
   const db = client || pool;
   await db.query(
-    "INSERT INTO assembleia_mesa_rejeicoes (assembleia_id, user_id, cargo) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
-    [assembleiaId, userId, cargo]
+    "INSERT INTO assembleia_mesa_rejeicoes (id, assembleia_id, user_id, cargo) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+    [generateUuid(), assembleiaId, userId, cargo]
   );
 }
 
@@ -798,18 +808,18 @@ async function definirMesa(dados) {
     }
 
     const { rows } = await client.query(
-      `INSERT INTO assembleia_mesa (assembleia_id, presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id, definida_por_user_id, definida_em, estabelecida_em)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      `INSERT INTO assembleia_mesa (id, assembleia_id, presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id, definida_por_user_id, definida_em, estabelecida_em)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
        ON CONFLICT (assembleia_id) DO UPDATE SET
-         presidente_user_id = $2,
-         vice_presidente_user_id = $3,
-         secretario_user_id = $4,
-         secretario_2_user_id = $5,
-         definida_por_user_id = $6,
+         presidente_user_id = $3,
+         vice_presidente_user_id = $4,
+         secretario_user_id = $5,
+         secretario_2_user_id = $6,
+         definida_por_user_id = $7,
          definida_em = NOW(),
          estabelecida_em = COALESCE(assembleia_mesa.estabelecida_em, NOW())
        RETURNING *`,
-      [assembleia_id, presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id, definida_por_user_id]
+      [generateUuid(), assembleia_id, presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id, definida_por_user_id]
     );
     const mesa = rows[0];
     await registrarAuditoria(assembleia_id, definida_por_user_id, 'MESA_DEFINIDA', { presidente_user_id, vice_presidente_user_id, secretario_user_id, secretario_2_user_id }, client);
@@ -954,11 +964,11 @@ async function pedirPalavra(assembleiaId, userId) {
   const novaOrdem = maxRows[0].max_ordem + 1;
 
   const { rows } = await pool.query(
-    `INSERT INTO assembleia_pedidos_palavra (assembleia_id, user_id, ordem, status)
-     VALUES ($1, $2, $3, 'PENDENTE')
+    `INSERT INTO assembleia_pedidos_palavra (id, assembleia_id, user_id, ordem, status)
+     VALUES ($1, $2, $3, $4, 'PENDENTE')
      ON CONFLICT DO NOTHING
      RETURNING *`,
-    [assembleiaId, userId, novaOrdem]
+    [generateUuid(), assembleiaId, userId, novaOrdem]
   );
   return rows[0];
 }
@@ -1027,10 +1037,10 @@ async function criarProposta(dados) {
     }
 
     const { rows } = await client.query(
-      `INSERT INTO assembleia_propostas (assembleia_id, autor_id, titulo, descricao, status)
-       VALUES ($1, $2, $3, $4, 'ATIVA')
+      `INSERT INTO assembleia_propostas (id, assembleia_id, autor_id, titulo, descricao, status)
+       VALUES ($1, $2, $3, $4, $5, 'ATIVA')
        RETURNING *`,
-      [assembleia_id, autor_id, titulo.trim(), pautaSanitizada.trim()]
+      [generateUuid(), assembleia_id, autor_id, titulo.trim(), pautaSanitizada.trim()]
     );
     const proposta = rows[0];
 

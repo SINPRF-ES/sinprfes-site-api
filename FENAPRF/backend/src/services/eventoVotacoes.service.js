@@ -1,5 +1,6 @@
 // src/services/eventoVotacoes.service.js
 const pool = require("../config/db");
+const { generateUuid } = require("../utils/format");
 
 function assertMin(min) {
   const m = Number(min);
@@ -9,6 +10,7 @@ function assertMin(min) {
 
 exports.criarVotacaoSimNao = async ({ eventoId, titulo, duracaoMin, criadoPor }) => {
   const m = assertMin(duracaoMin ?? 2);
+  const newId = generateUuid();
 
   const client = await pool.connect();
   try {
@@ -19,23 +21,23 @@ exports.criarVotacaoSimNao = async ({ eventoId, titulo, duracaoMin, criadoPor })
 
     const ins = await client.query(
       `
-      INSERT INTO evento_votacoes (evento_id, titulo, duracao_min, criado_por)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO evento_votacoes (id, evento_id, titulo, duracao_min, criado_por)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING id, evento_id, titulo, status, duracao_min, criado_em;
       `,
-      [eventoId, String(titulo || "").trim(), m, criadoPor]
+      [newId, eventoId, String(titulo || "").trim(), m, criadoPor]
     );
 
     const votacao = ins.rows[0];
 
     await client.query(
       `
-      INSERT INTO evento_votacao_opcoes (votacao_id, texto, ordem)
+      INSERT INTO evento_votacao_opcoes (id, votacao_id, texto, ordem)
       VALUES
-        ($1, 'Sim', 1),
-        ($1, 'Não', 2);
+        ($1, $3, 'Sim', 1),
+        ($2, $3, 'Não', 2);
       `,
-      [votacao.id]
+      [generateUuid(), generateUuid(), votacao.id]
     );
 
     await client.query("COMMIT");
@@ -213,11 +215,11 @@ exports.votar = async ({ eventoId, votacaoId, userId, opcaoId }) => {
 
     const ins = await client.query(
       `
-      INSERT INTO evento_votacao_votos (votacao_id, user_id, opcao_id)
-      VALUES ($1, $2, $3)
+      INSERT INTO evento_votacao_votos (id, votacao_id, user_id, opcao_id, recibo)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING recibo, votou_em;
       `,
-      [votacaoId, userId, opc]
+      [generateUuid(), votacaoId, userId, opc, generateUuid()]
     );
 
     await client.query("COMMIT");

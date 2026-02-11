@@ -159,13 +159,16 @@ async function saveCampaignRecord({ title, body, targetType, targetValue, data, 
   // Garantir que createdBy seja um UUID string ou null para evitar erros de sintaxe no Postgres
   // se o valor vier como objeto ou algo inesperado.
   const authorId = (createdBy && typeof createdBy === 'string') ? createdBy : null;
+  const { generateUuid } = require("../utils/format");
+  const newId = generateUuid();
 
   const sql = `
-    INSERT INTO push_campaigns (title, body, target_type, target_value, data, created_by, status, sent_at, result)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    INSERT INTO push_campaigns (id, title, body, target_type, target_value, data, created_by, status, sent_at, result)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING id;
   `;
   const r = await pool.query(sql, [
+    newId,
     title || null,
     body,
     targetType || 'ALL',
@@ -228,7 +231,7 @@ async function listCampaigns(limit = 20, offset = 0) {
   if (singleUserIds.size > 0) {
     try {
         const { rows: userRows } = await pool.query(
-            "SELECT id::text, name FROM users WHERE id::text = ANY($1)",
+            "SELECT id, name FROM users WHERE id = ANY($1)",
             [Array.from(singleUserIds)]
         );
         userRows.forEach(u => nameMap.set(String(u.id), u.name));

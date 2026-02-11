@@ -135,7 +135,7 @@ export const FILTROS_MEMBROS = [
 ];
 
 /**
- * Canoniza o ID do user para string numérica ou UUID.
+ * Canoniza o ID do user para UUID string.
  */
 export function getCanonicalUserId(obj: any): string {
   if (!obj) return '';

@@ -1,15 +1,11 @@
 // src/controllers/eventoVotacoes.controller.js
 const service = require("../services/eventoVotacoes.service");
-
-function num(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
+const { parseUuid } = require("../utils/format");
 
 exports.criarSimNao = async (req, res) => {
   try {
-    const eventoId = num(req.params.id);
-    if (!eventoId) return res.status(400).json({ error: "Evento inválido." });
+    const eventoId = parseUuid(req.params.id);
+    if (!eventoId) return res.status(400).json({ error: "Evento inválido (UUID esperado)." });
 
     const { titulo, duracao_min } = req.body || {};
     if (!titulo) return res.status(400).json({ error: "titulo é obrigatório." });
@@ -30,8 +26,8 @@ exports.criarSimNao = async (req, res) => {
 
 exports.listar = async (req, res) => {
   try {
-    const eventoId = num(req.params.id);
-    if (!eventoId) return res.status(400).json({ error: "Evento inválido." });
+    const eventoId = parseUuid(req.params.id);
+    if (!eventoId) return res.status(400).json({ error: "Evento inválido (UUID esperado)." });
 
     const rows = await service.listarVotacoesEvento({ eventoId, userId: req.user.id });
     return res.json(rows);
@@ -43,8 +39,8 @@ exports.listar = async (req, res) => {
 
 exports.detalhe = async (req, res) => {
   try {
-    const eventoId = num(req.params.id);
-    const votacaoId = num(req.params.votacaoId);
+    const eventoId = parseUuid(req.params.id);
+    const votacaoId = parseUuid(req.params.votacaoId);
     if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos." });
 
     const v = await service.detalheVotacao({ eventoId, votacaoId, userId: req.user.id });
@@ -59,8 +55,8 @@ exports.detalhe = async (req, res) => {
 
 exports.abrir = async (req, res) => {
   try {
-    const eventoId = num(req.params.id);
-    const votacaoId = num(req.params.votacaoId);
+    const eventoId = parseUuid(req.params.id);
+    const votacaoId = parseUuid(req.params.votacaoId);
     if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos." });
 
     const r = await service.abrirVotacao({ eventoId, votacaoId, abertoPor: req.user.id });
@@ -73,8 +69,8 @@ exports.abrir = async (req, res) => {
 
 exports.votar = async (req, res) => {
   try {
-    const eventoId = num(req.params.id);
-    const votacaoId = num(req.params.votacaoId);
+    const eventoId = parseUuid(req.params.id);
+    const votacaoId = parseUuid(req.params.votacaoId);
     if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos." });
 
     const { opcao_id, opcaoId } = req.body || {};
