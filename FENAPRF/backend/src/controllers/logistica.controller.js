@@ -3,6 +3,7 @@ const log = require("../utils/log");
 const { enviarEmailConfirmacaoInscricaoLogistica, enviarEmailCancelamentoInscricaoLogistica, enviarEmailRelatorio } = require("../services/email.service");
 const pdfService = require("../services/pdf.service");
 const usersService = require("../services/users.service");
+const { parseUuid } = require("../utils/format");
 const { STATUS_EVENTO, ACOES_AUDITORIA, RECURSO_TIPO } = require("../../shared/logistica");
 
 /**
@@ -95,7 +96,8 @@ exports.criarEvento = async (req, res) => {
 exports.atualizarEvento = async (req, res) => {
     const client = await pool.connect();
     try {
-        const { id } = req.params;
+        const id = parseUuid(req.params.id);
+        if (!id) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
         const gestorId = getUserId(req);
         const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, justificativa, assembleia_id } = req.body;
 
@@ -143,7 +145,8 @@ exports.atualizarEvento = async (req, res) => {
 exports.encerrarEvento = async (req, res) => {
     const client = await pool.connect();
     try {
-        const { id } = req.params;
+        const id = parseUuid(req.params.id);
+        if (!id) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
         const gestorId = getUserId(req);
         const { justificativa } = req.body;
 
@@ -191,7 +194,8 @@ exports.encerrarEvento = async (req, res) => {
 exports.cancelarEvento = async (req, res) => {
     const client = await pool.connect();
     try {
-        const { id } = req.params;
+        const id = parseUuid(req.params.id);
+        if (!id) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
         const gestorId = getUserId(req);
         const { justificativa } = req.body;
 
@@ -240,7 +244,8 @@ exports.cancelarEvento = async (req, res) => {
 
 exports.listarInscricoes = async (req, res) => {
     try {
-        const { eventoId } = req.params;
+        const eventoId = parseUuid(req.params.eventoId);
+        if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
         const query = `
             SELECT
                 i.*,
@@ -336,7 +341,8 @@ exports.cancelarMinhaInscricao = async (req, res) => {
     const client = await pool.connect();
     try {
         const userId = getUserId(req);
-        const { eventoId } = req.params;
+        const eventoId = parseUuid(req.params.eventoId);
+        if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
 
         await client.query("BEGIN");
 
@@ -382,7 +388,8 @@ exports.atualizarInscricaoTerceiro = async (req, res) => {
     const client = await pool.connect();
     try {
         const gestorId = getUserId(req);
-        const { id } = req.params; // ID da inscrição
+        const id = parseUuid(req.params.id); // ID da inscrição
+        if (!id) return res.status(400).json({ error: "ID de inscrição inválido." });
         const { data_chegada, data_saida, observacoes, justificativa } = req.body;
 
         if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória." });
@@ -434,7 +441,8 @@ exports.cancelarInscricaoTerceiro = async (req, res) => {
     const client = await pool.connect();
     try {
         const gestorId = getUserId(req);
-        const { id } = req.params;
+        const id = parseUuid(req.params.id);
+        if (!id) return res.status(400).json({ error: "ID de inscrição inválido." });
         const { justificativa } = req.body;
 
         if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória." });
@@ -488,7 +496,8 @@ exports.cancelarInscricaoTerceiro = async (req, res) => {
 exports.exportarPdf = async (req, res) => {
     const requestId = req.requestId;
     const userId = getUserId(req);
-    const { eventoId } = req.params;
+    const eventoId = parseUuid(req.params.eventoId);
+    if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
 
     try {
         const [eventoRes, user] = await Promise.all([
@@ -531,7 +540,8 @@ exports.exportarPdf = async (req, res) => {
 exports.exportarXls = async (req, res) => {
     const requestId = req.requestId;
     const userId = getUserId(req);
-    const { eventoId } = req.params;
+    const eventoId = parseUuid(req.params.eventoId);
+    if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
 
     try {
         const [eventoRes, user] = await Promise.all([

@@ -1,6 +1,7 @@
 // src/services/votacoes.service.js
 const pool = require("../config/db");
 const { randomUUID } = require("crypto");
+const { generateUuid } = require("../utils/format");
 
 function normalizeStatus(s) {
   const v = (s || "").toString().toUpperCase().trim();
@@ -52,7 +53,7 @@ exports.obterVotacao = async ({ votacaoId, userId }) => {
     SELECT id, texto, ordem
     FROM votacao_opcoes
     WHERE votacao_id = $1
-    ORDER BY ordem ASC, id ASC;
+    ORDER BY ordem ASC;
   `;
   const oRes = await pool.query(oSql, [votacaoId]);
 
@@ -61,12 +62,13 @@ exports.obterVotacao = async ({ votacaoId, userId }) => {
 
 exports.criarVotacao = async ({ criadoPor, titulo, descricao, abreEm, encerraEm, opcoes }) => {
   const client = await pool.connect();
+  const newId = generateUuid();
   try {
     await client.query("BEGIN");
 
     const insertV = `
-      INSERT INTO votacoes (titulo, descricao, status, abre_em, encerra_em, criado_por)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO votacoes (id, titulo, descricao, status, abre_em, encerra_em, criado_por)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id, titulo, status, abre_em, encerra_em;
     `;
 
@@ -74,6 +76,7 @@ exports.criarVotacao = async ({ criadoPor, titulo, descricao, abreEm, encerraEm,
     const status = "AGENDADA";
 
     const vRes = await client.query(insertV, [
+      newId,
       titulo,
       descricao || "",
       status,
@@ -202,13 +205,13 @@ exports.obterResultado = async ({ votacaoId }) => {
   if (!v) return null;
 
   const sql = `
-    SELECT o.id, o.texto, o.ordem, COUNT(vv.id)::int AS votos
+    SELECT o.id, o.texto, o.ordem, COUNT(vv.id) AS votos
     FROM votacao_opcoes o
     LEFT JOIN votacao_votos vv
       ON vv.opcao_id = o.id AND vv.votacao_id = o.votacao_id
     WHERE o.votacao_id = $1
     GROUP BY o.id, o.texto, o.ordem
-    ORDER BY o.ordem ASC, o.id ASC;
+    ORDER BY o.ordem ASC;
   `;
   const { rows } = await pool.query(sql, [votacaoId]);
 

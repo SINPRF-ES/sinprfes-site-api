@@ -25,7 +25,7 @@ export async function listarVotacoes(token: string): Promise<VotacaoResumo[]> {
   return Array.isArray(data) ? (data as VotacaoResumo[]) : (data?.votacoes ?? []);
 }
 
-export async function obterVotacao(token: string, id: number): Promise<VotacaoDetalhe> {
+export async function obterVotacao(token: string, id: string): Promise<VotacaoDetalhe> {
   const url = `${API_BASE_URL}/api/votacoes/${id}`;
 
   let resp: Response;
@@ -43,8 +43,8 @@ export async function obterVotacao(token: string, id: number): Promise<VotacaoDe
 
 export async function votar(
   token: string,
-  id: number,
-  payload: { opcao_id: number; device_id: string; biometria_confirmada: boolean }
+  id: string,
+  payload: { opcao_id: string; device_id: string; biometria_confirmada: boolean }
 ): Promise<{ message: string; recibo?: string }> {
   const url = `${API_BASE_URL}/api/votacoes/${id}/votar`;
 

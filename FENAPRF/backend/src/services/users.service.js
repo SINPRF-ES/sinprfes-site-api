@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { normalizarCpf, normalizarCep } = require("../utils/format");
+const { normalizarCpf, normalizarCep, generateUuid } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const {
   normalizeSexo,
@@ -319,20 +319,22 @@ async function criarUserInicial(dados) {
     } = dados;
 
     const emailFinal = email1 || email || null;
+    const newId = generateUuid();
 
     const { rows } = await pool.query(
       `
       INSERT INTO users (
-        name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
+        id, name, cpf, sexo, data_nascimento, telefone1, telefone2, email,
         perfil_acesso, cargo, uf,
         perfil_acesso2, cargo2, uf2,
         created_at, updated_at, bloqueado
       ) VALUES (
-        $1, $2, $3, NULLIF($4, '')::date, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, NOW(), NOW(), false
+        $1, $2, $3, $4, NULLIF($5, '')::date, $6, $7, $8,
+        $9, $10, $11, $12, $13, $14, NOW(), NOW(), false
       ) RETURNING id
       `,
       [
+        newId,
         normalizeNome(nome),
         cpfNormalizado,
         normalizeSexo(dados.sexo),
@@ -349,7 +351,7 @@ async function criarUserInicial(dados) {
       ]
     );
 
-    return await getMe(rows[0].id);
+    return await getMe(newId);
   } catch (err) {
     if (err && err.code === "23505") err.code = "CPF_DUPLICADO";
     throw err;
