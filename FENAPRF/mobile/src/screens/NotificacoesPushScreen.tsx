@@ -202,7 +202,11 @@ export default function NotificacoesPushScreen() {
       title: sanitizedTitle,
       body: sanitizedBody,
       targetType: targetType,
-      targetValue: normalizedTargetValue
+      targetValue: normalizedTargetValue,
+      data: {
+        screen: 'Notificacoes', // Default target screen
+        route: 'NotificacoesTab'
+      }
     };
 
     logger.info('Push.SendStart', {

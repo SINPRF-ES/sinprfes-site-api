@@ -43,20 +43,24 @@
             titleInput.addEventListener("input", () => {
                 const len = titleInput.value.length;
                 const counter = document.getElementById('push-title-count');
-                counter.textContent = len;
-                counter.style.color = len > 54 ? '#e74c3c' : ''; // Red if > 90% of 60
-                counter.style.fontWeight = len > 54 ? 'bold' : 'normal';
-            };
+                if (counter) {
+                    counter.textContent = len;
+                    counter.style.color = len > 54 ? '#e74c3c' : ''; // Red if > 90% of 60
+                    counter.style.fontWeight = len > 54 ? 'bold' : 'normal';
+                }
+            });
         }
 
         if (messageInput) {
             messageInput.addEventListener("input", () => {
                 const len = messageInput.value.length;
                 const counter = document.getElementById('push-message-count');
-                counter.textContent = len;
-                counter.style.color = len > 216 ? '#e74c3c' : ''; // Red if > 90% of 240
-                counter.style.fontWeight = len > 216 ? 'bold' : 'normal';
-            };
+                if (counter) {
+                    counter.textContent = len;
+                    counter.style.color = len > 216 ? '#e74c3c' : ''; // Red if > 90% of 240
+                    counter.style.fontWeight = len > 216 ? 'bold' : 'normal';
+                }
+            });
         }
 
         if (btnSend) {
@@ -153,7 +157,8 @@
 
         let targetLabel = targetType;
         if ((targetType === 'MEMBRO' || targetType === 'USER') && targetValue && typeof targetValue === 'object') {
-            targetLabel = `Membro — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
+            const cpfFmt = (window.Formatters && window.Formatters.formatCpf) ? window.Formatters.formatCpf(targetValue.cpf) : targetValue.cpf;
+            targetLabel = `Membro — ${targetValue.nome} (${cpfFmt})`;
         } else if (targetValue) {
             targetLabel = `${targetType} (${targetValue})`;
         }
@@ -172,7 +177,11 @@
                 title: title || null,
                 body: body,
                 targetType,
-                targetValue
+                targetValue,
+                data: {
+                    screen: 'Notificacoes',
+                    route: 'NotificacoesTab'
+                }
             };
 
             const r = await window.Api.apiFetch('/api/push/campaigns/send', {

@@ -271,7 +271,7 @@ exports.atualizarMeusDados = async (req, res) => {
       telefone2: body.telefone2,
       email: body.email || body.email1,
       // FENAPRF: Allow BuscaCEP fields persistence
-      logradouro: body.logradouro,
+      logradouro: body.logradouro || body.logradouro_bairro,
       bairro: body.bairro,
       cidade: body.cidade,
       numero: body.numero,
@@ -372,7 +372,7 @@ exports.atualizarUser = async (req, res) => {
       telefone2: body.telefone2,
       email: body.email || body.email1,
       // FENAPRF: Allow BuscaCEP fields persistence
-      logradouro: body.logradouro,
+      logradouro: body.logradouro || body.logradouro_bairro,
       bairro: body.bairro,
       cidade: body.cidade,
       numero: body.numero,

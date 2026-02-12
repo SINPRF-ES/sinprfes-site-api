@@ -19,14 +19,22 @@ Tabela central de membros. Mantém compatibilidade com campos administrativos le
 - `perfil_acesso` (VARCHAR(20)): ADMIN, DIRETORIA, COLABORADOR, CONSELHEIRO.
 - `situacao` (VARCHAR(20)): Default 'ATIVO'.
 - `bloqueado` (BOOLEAN): Default FALSE.
-- `uf` (VARCHAR(2)): UF de vínculo funcional.
+- `uf` (VARCHAR(2)): UF do cargo principal.
+- `uf2` (VARCHAR(2)): UF do cargo secundário.
+- `uf_endereco` (VARCHAR(2)): UF residencial (BuscaCEP).
+- `logradouro` (TEXT)
+- `bairro` (VARCHAR(100))
+- `numero` (VARCHAR(20))
+- `complemento` (TEXT)
+- `cidade` (VARCHAR(100))
+- `cep` (VARCHAR(8))
 - `cargo` (VARCHAR(100))
 - `avatar_url` (TEXT)
 - `created_at` (TIMESTAMP)
 - `updated_at` (TIMESTAMP)
 - `arquivado_por` (UUID, FK → users, ON DELETE SET NULL)
 - `desarquivado_por` (UUID, FK → users, ON DELETE SET NULL)
-- **Legado/Compatibilidade**: `perfil_acesso2`, `cargo2`, `uf2`, `cargo_mandato_inicio`, `cargo_mandato_fim`.
+- **Legado/Compatibilidade**: `perfil_acesso2`, `cargo2`, `cargo_mandato_inicio`, `cargo_mandato_fim`.
 
 ---
 
@@ -89,6 +97,55 @@ Registro de presença.
 - `assembleia_quorum_id` (UUID, FK → assembleia_quoruns, Not Null, ON DELETE CASCADE)
 - `user_id` (UUID, FK → users, Not Null, ON DELETE CASCADE)
 - `origem` (VARCHAR(50))
+
+---
+
+## assembleia_checkins_pendentes
+
+Suporte a substituição hierárquica (lock durante votação).
+
+### Campos
+- `id` (UUID, PK)
+- `assembleia_id` (UUID, FK → assembleias, Not Null, ON DELETE CASCADE)
+- `quorum_id` (UUID, FK → assembleia_quoruns, Not Null, ON DELETE CASCADE)
+- `user_id_superior` (UUID, FK → users, Not Null, ON DELETE CASCADE)
+- `user_id_subordinado` (UUID, FK → users, Not Null, ON DELETE CASCADE)
+- `branch` (VARCHAR(20))
+- `criado_em` (TIMESTAMP)
+
+---
+
+## push_campaigns
+
+Registro de envios de notificações.
+
+### Campos
+- `id` (UUID, PK)
+- `title` (TEXT)
+- `body` (TEXT, Not Null)
+- `target_type` (VARCHAR(50))
+- `target_value` (JSONB)
+- `data` (JSONB)
+- `created_by` (UUID, FK → users)
+- `status` (VARCHAR(20))
+- `sent_at` (TIMESTAMP)
+- `result` (JSONB)
+- `created_at` (TIMESTAMP)
+
+---
+
+## push_tickets
+
+Persistência de tickets do Expo para processamento de receipts.
+
+### Campos
+- `id` (UUID, PK)
+- `campaign_id` (UUID, FK → push_campaigns, ON DELETE CASCADE)
+- `ticket_id` (TEXT, Unique)
+- `expo_push_token` (TEXT)
+- `status` (VARCHAR(20))
+- `processed` (BOOLEAN)
+- `created_at` (TIMESTAMP)
 
 ---
 

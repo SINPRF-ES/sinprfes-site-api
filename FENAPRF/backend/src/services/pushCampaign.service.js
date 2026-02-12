@@ -120,36 +120,10 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     }
   }
 
-  // 4. Analisar tickets e Processar Receipts (Opcional/Async)
-  // Agendamos o processamento de receipts para 2 minutos depois (best effort)
-  if (tickets.length > 0) {
-      setTimeout(async () => {
-          try {
-              const ticketIds = tickets.filter(t => t.id).map(t => t.id);
-              if (ticketIds.length === 0) return;
-
-              const receiptChunks = expo.chunkPushNotificationReceiptIds(ticketIds);
-              for (const chunk of receiptChunks) {
-                  const receipts = await expo.getPushNotificationReceiptsAsync(chunk);
-                  for (let receiptId in receipts) {
-                      const { status, message, details } = receipts[receiptId];
-                      if (status === 'error') {
-                          log.error(`PushCampaign.ReceiptError`, { receiptId, message, details });
-                          if (details?.error === 'DeviceNotRegistered') {
-                              // Tenta encontrar o token correspondente nos tickets originais
-                              const originalTicket = tickets.find(t => t.id === receiptId);
-                              // Nota: Como não temos o mapeamento direto TicketID -> Token aqui de forma fácil,
-                              // sugerimos que o app sempre registre o token ao abrir.
-                              // Mas se soubermos o token, revogamos.
-                          }
-                      }
-                  }
-              }
-          } catch (e) {
-              log.error("PushCampaign.ReceiptProcessingError", { error: e.message });
-          }
-      }, 120000); // 2 minutos
-  }
+  // 4. Salvar Registro de Campanha e Tickets (Task B)
+  const authorId = (createdBy && typeof createdBy === 'string') ? createdBy : null;
+  const { generateUuid } = require("../utils/format");
+  const campaignId = generateUuid();
 
   const resultData = {
     sent: sentCount,
@@ -160,55 +134,116 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     durationMs: new Date() - startTime
   };
 
-  // 5. Salvar registro
-  let campaignId;
   try {
-    campaignId = await saveCampaignRecord({
-        title, body, targetType,
-        targetValue: normalizedTargetValue,
-        data, createdBy,
-        status: (errorCount === messages.length && messages.length > 0) ? 'FAILED' : 'SENT',
-        sentAt: new Date(),
-        result: resultData
+    await saveCampaignWithTickets({
+      id: campaignId,
+      title, body, targetType, targetValue: normalizedTargetValue, data, createdBy: authorId,
+      status: (errorCount === messages.length && messages.length > 0) ? 'FAILED' : 'SENT',
+      sentAt: new Date(),
+      result: resultData,
+      tickets: tickets.map((t, idx) => ({
+        ticket_id: t.id,
+        expo_push_token: tokens[idx],
+        status: t.status,
+        error_message: t.message,
+        error_code: t.details?.error
+      })).filter(t => !!t.ticket_id)
     });
     log.info("PushCampaign.RegistroSalvo", { requestId, campaignId });
   } catch (e) {
     log.error("PushCampaign.ErroSalvarRegistro", { requestId, error: e.message });
-    // Não vamos falhar o retorno se apenas o log no banco falhou,
-    // mas na v1 o registro é importante. Vamos deixar propagar para diagnosticar.
     throw e;
   }
+
+  // 5. Agendar Processamento de Receipts (Async)
+  setTimeout(() => {
+    processPendingReceipts().catch(err => log.error("PushCampaign.ReceiptProcessingError", { error: err.message }));
+  }, 120000); // 2 minutos
 
   log.info("PushCampaign.Finalizado", { requestId, userId: createdBy, campaignId, ...resultData });
 
   return { success: true, campaignId, ...resultData };
 }
 
-async function saveCampaignRecord({ title, body, targetType, targetValue, data, createdBy, status, sentAt, result }) {
-  // Garantir que createdBy seja um UUID string ou null para evitar erros de sintaxe no Postgres
-  // se o valor vier como objeto ou algo inesperado.
-  const authorId = (createdBy && typeof createdBy === 'string') ? createdBy : null;
-  const { generateUuid } = require("../utils/format");
-  const newId = generateUuid();
+async function saveCampaignWithTickets({ id, title, body, targetType, targetValue, data, createdBy, status, sentAt, result, tickets }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  const sql = `
-    INSERT INTO push_campaigns (id, title, body, target_type, target_value, data, created_by, status, sent_at, result)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    RETURNING id;
-  `;
-  const r = await pool.query(sql, [
-    newId,
-    title || null,
-    body,
-    targetType || 'ALL',
-    targetValue ? JSON.stringify(targetValue) : null,
-    data ? JSON.stringify(data) : null,
-    authorId,
-    status,
-    sentAt,
-    result ? JSON.stringify(result) : null
-  ]);
-  return r.rows[0]?.id;
+    const sqlCampaign = `
+      INSERT INTO push_campaigns (id, title, body, target_type, target_value, data, created_by, status, sent_at, result)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `;
+    await client.query(sqlCampaign, [
+      id, title || null, body, targetType || 'ALL',
+      targetValue ? JSON.stringify(targetValue) : null,
+      data ? JSON.stringify(data) : null,
+      createdBy, status, sentAt, result ? JSON.stringify(result) : null
+    ]);
+
+    if (tickets && tickets.length > 0) {
+      for (const t of tickets) {
+        const sqlTicket = `
+          INSERT INTO push_tickets (campaign_id, ticket_id, expo_push_token, status, error_message, error_code)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (ticket_id) DO NOTHING
+        `;
+        await client.query(sqlTicket, [id, t.ticket_id, t.expo_push_token, t.status, t.error_message, t.error_code]);
+      }
+    }
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Processa tickets pendentes para verificar receipts do Expo.
+ */
+async function processPendingReceipts() {
+  const { rows: pendingTickets } = await pool.query(
+    "SELECT id, ticket_id, expo_push_token FROM push_tickets WHERE processed = FALSE AND status = 'ok' LIMIT 1000"
+  );
+
+  if (pendingTickets.length === 0) return;
+
+  const ticketIds = pendingTickets.map(t => t.ticket_id);
+  const ticketMap = new Map(pendingTickets.map(t => [t.ticket_id, t]));
+
+  const chunks = expo.chunkPushNotificationReceiptIds(ticketIds);
+
+  for (const chunk of chunks) {
+    try {
+      const receipts = await expo.getPushNotificationReceiptsAsync(chunk);
+
+      for (let receiptId in receipts) {
+        const receipt = receipts[receiptId];
+        const localTicket = ticketMap.get(receiptId);
+
+        if (receipt.status === 'error') {
+          log.error(`PushCampaign.ReceiptError`, { receiptId, message: receipt.message, details: receipt.details });
+
+          if (receipt.details?.error === 'DeviceNotRegistered' && localTicket) {
+             log.info("PushCampaign.RevogandoTokenInvalidoViaReceipt", { token: localTicket.expo_push_token.substring(0, 15) + "..." });
+             await pushService.revokeSpecificToken(localTicket.expo_push_token);
+          }
+
+          await pool.query(
+            "UPDATE push_tickets SET processed = TRUE, status = 'error', error_message = $1, error_code = $2 WHERE ticket_id = $3",
+            [receipt.message, receipt.details?.error, receiptId]
+          );
+        } else {
+          await pool.query("UPDATE push_tickets SET processed = TRUE WHERE ticket_id = $1", [receiptId]);
+        }
+      }
+    } catch (e) {
+      log.error("PushCampaign.ChunkReceiptError", { error: e.message });
+    }
+  }
 }
 
 async function listCampaigns(limit = 20, offset = 0) {

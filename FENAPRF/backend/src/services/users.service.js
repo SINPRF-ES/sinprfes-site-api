@@ -198,13 +198,9 @@ async function atualizarDadosProprios(id, dados) {
   addCampo("telefone2", somenteDigitos(dados.telefone2));
   addCampo("email", dados.email1 || dados.email);
 
-  if (dados.logradouro_bairro) {
-      addCampo("logradouro", dados.logradouro_bairro);
-  } else {
-      addCampo("logradouro", dados.logradouro);
-      addCampo("bairro", dados.bairro);
-  }
-
+  // FENAPRF: Persistence of address fields
+  addCampo("logradouro", dados.logradouro);
+  addCampo("bairro", dados.bairro);
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
@@ -220,7 +216,11 @@ async function atualizarDadosProprios(id, dados) {
   if (campos.length === 1) return getMe(id);
 
   valores.push(id);
-  await pool.query(`UPDATE users SET ${campos.join(", ")} WHERE id = $${idx}`, valores);
+  const result = await pool.query(`UPDATE users SET ${campos.join(", ")} WHERE id = $${idx}`, valores);
+  if (result.rowCount === 0) {
+      const log = require("../utils/log");
+      log.warn("UserUpdatePropriosNoEffect", { userId: id });
+  }
 
   return await getMe(id);
 }
@@ -264,16 +264,13 @@ async function atualizarUserPorId(id, dados) {
 
   if (dados.perfil_acesso !== undefined) addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
 
-  if (dados.logradouro_bairro) {
-      addCampo("logradouro", dados.logradouro_bairro);
-  } else {
-      addCampo("logradouro", dados.logradouro);
-      addCampo("bairro", dados.bairro);
-  }
-
+  // FENAPRF: Persistence of address fields
+  addCampo("logradouro", dados.logradouro);
+  addCampo("bairro", dados.bairro);
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
   addCampo("cidade", dados.cidade);
+  addCampo("uf_endereco", dados.uf_endereco);
 
   if (dados.cep !== undefined) {
     addCampo("cep", normalizarCep(dados.cep));
@@ -287,7 +284,6 @@ async function atualizarUserPorId(id, dados) {
   addCampo("uf2", dados.uf2);
   addCampo("cargo", dados.cargo);
   addCampo("uf", dados.uf);
-  addCampo("uf_endereco", dados.uf_endereco);
 
   if (dados.cargo_mandato_inicio !== undefined) {
     campos.push(`cargo_mandato_inicio = NULLIF($${idx}, '')::date`);
@@ -305,7 +301,11 @@ async function atualizarUserPorId(id, dados) {
   if (campos.length === 1) return await getMe(id);
 
   valores.push(id);
-  await pool.query(`UPDATE users SET ${campos.join(", ")} WHERE id = $${idx}`, valores);
+  const result = await pool.query(`UPDATE users SET ${campos.join(", ")} WHERE id = $${idx}`, valores);
+  if (result.rowCount === 0) {
+      const log = require("../utils/log");
+      log.warn("UserUpdatePorIdNoEffect", { targetId: id });
+  }
 
   return await getMe(id);
 }
