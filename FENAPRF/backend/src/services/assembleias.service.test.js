@@ -166,7 +166,9 @@ describe('Assembleias Service', () => {
 
   describe('Blindage and Invariants', () => {
     test('realizarCheckin should block ADMIN or COMUNICADOR', async () => {
-      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'ADMIN' }] });
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'ADMIN', name: 'Admin' }] }); // SELECT user
 
       await expect(service.realizarCheckin({ user_id: 'u-admin' })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
     });
@@ -214,36 +216,46 @@ describe('Assembleias Service', () => {
 
   describe('Reporting', () => {
     test('gerarDadosRelatorio should fetch data without N+1', async () => {
-      // 1. buscarPorId
-      pool.query.mockResolvedValueOnce({ rows: [{ id: '1', titulo: 'Ass 1' }] });
-      // 2. Promise.all
-      // 2a. buscarMesa
-      pool.query.mockResolvedValueOnce({ rows: [{ assembleia_id: '1', presidente_nome: 'P1' }] });
-      // 2b. quoruns
-      pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1', token: '111' }, { id: 'q2', token: '222' }] });
-      // 2c. votacoes
-      pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1' }] });
-      // 2d. propostas
-      pool.query.mockResolvedValueOnce({ rows: [{ id: 'pr1', titulo: 'Proposta 1', autor_nome: 'Autor 1' }] });
-      // 2e. presentesGlobal
-      pool.query.mockResolvedValueOnce({ rows: [{ total: 3 }] });
-      // 2f. auditoria
-      pool.query.mockResolvedValueOnce({ rows: [] });
-      // 2g. pedidosPalavra
-      pool.query.mockResolvedValueOnce({ rows: [] });
-
-      // 3. allCheckins (Batch)
-      pool.query.mockResolvedValueOnce({ rows: [
-        { assembleia_quorum_id: 'q1', nome: 'User 1' },
-        { assembleia_quorum_id: 'q1', nome: 'User 2' },
-        { assembleia_quorum_id: 'q2', nome: 'User 3' }
-      ]});
-
-      // 4. allVotos (Batch)
-      pool.query.mockResolvedValueOnce({ rows: [
-        { votacao_id: 'v1', nome: 'User 1', voto: 'SIM' },
-        { votacao_id: 'v1', nome: 'User 2', voto: 'NAO' }
-      ]});
+      pool.query.mockImplementation((sql) => {
+        if (sql.includes('FROM assembleias WHERE id = $1')) {
+          return Promise.resolve({ rows: [{ id: '1', titulo: 'Ass 1' }] });
+        }
+        if (sql.includes('FROM assembleia_mesa')) {
+          return Promise.resolve({ rows: [{ assembleia_id: '1', presidente_nome: 'P1' }] });
+        }
+        if (sql.includes('FROM assembleia_quoruns')) {
+          return Promise.resolve({ rows: [{ id: 'q1', token: '111' }, { id: 'q2', token: '222' }] });
+        }
+        if (sql.includes('FROM assembleia_votacoes')) {
+          return Promise.resolve({ rows: [{ id: 'v1', titulo: 'V1' }] });
+        }
+        if (sql.includes('FROM assembleia_propostas')) {
+          return Promise.resolve({ rows: [{ id: 'pr1', titulo: 'Proposta 1', autor_nome: 'Autor 1' }] });
+        }
+        if (sql.includes('SELECT COUNT(DISTINCT c.user_id)')) {
+          return Promise.resolve({ rows: [{ total: 3 }] });
+        }
+        if (sql.includes('FROM assembleia_auditoria')) {
+          return Promise.resolve({ rows: [] });
+        }
+        if (sql.includes('FROM assembleia_pedidos_palavra')) {
+          return Promise.resolve({ rows: [] });
+        }
+        if (sql.includes('assembleia_quorum_id = ANY')) {
+          return Promise.resolve({ rows: [
+            { assembleia_quorum_id: 'q1', nome: 'User 1' },
+            { assembleia_quorum_id: 'q1', nome: 'User 2' },
+            { assembleia_quorum_id: 'q2', nome: 'User 3' }
+          ]});
+        }
+        if (sql.includes('votacao_id = ANY')) {
+          return Promise.resolve({ rows: [
+            { votacao_id: 'v1', nome: 'User 1', voto: 'SIM' },
+            { votacao_id: 'v1', nome: 'User 2', voto: 'NAO' }
+          ]});
+        }
+        return Promise.resolve({ rows: [] });
+      });
 
       const res = await service.gerarDadosRelatorio('1');
 
@@ -267,16 +279,24 @@ describe('Assembleias Service', () => {
 
   describe('Lightweight State Tracking', () => {
     test('buscarEstadoResumido should return essentials only', async () => {
-      // 1. pool.query for assembleia state
-      pool.query.mockResolvedValueOnce({ rows: [{ estado: 'INICIADO' }] });
-      // 2. buscarUltimoQuorum
-      pool.query.mockResolvedValueOnce({ rows: [{ id: 'q1', token: '123456', gerado_por_user_id: 'u1' }] });
-      // 3. buscarVotacaoAtiva
-      pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1', encerra_em: new Date(Date.now() + 60000) }] });
-      // 4. contarPresentesNoQuorum
-      pool.query.mockResolvedValueOnce({ rows: [{ total: 5 }] });
-      // 5. contarVotos
-      pool.query.mockResolvedValueOnce({ rows: [{ SIM: 2, NAO: 1, ABSTENCAO: 0 }] });
+      pool.query.mockImplementation((sql) => {
+        if (sql.includes('SELECT estado FROM assembleias')) {
+          return Promise.resolve({ rows: [{ estado: 'INICIADO' }] });
+        }
+        if (sql.includes('FROM assembleia_quoruns')) {
+          return Promise.resolve({ rows: [{ id: 'q1', token: '123456', gerado_por_user_id: 'u1' }] });
+        }
+        if (sql.includes('FROM assembleia_votacoes')) {
+          return Promise.resolve({ rows: [{ id: 'v1', titulo: 'V1', status: 'ATIVA', encerra_em: new Date(Date.now() + 60000) }] });
+        }
+        if (sql.includes('SELECT COUNT(*)::INTEGER as total FROM assembleia_checkins')) {
+          return Promise.resolve({ rows: [{ total: 5 }] });
+        }
+        if (sql.includes('COUNT(*) FILTER (WHERE voto = \'SIM\')')) {
+          return Promise.resolve({ rows: [{ SIM: 2, NAO: 1, ABSTENCAO: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
 
       const res = await service.buscarEstadoResumido('1');
       expect(res.assembleia.estado).toBe('INICIADO');

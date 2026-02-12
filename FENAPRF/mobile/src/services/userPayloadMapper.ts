@@ -18,6 +18,11 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   if (formState.telefone1) payload.telefone1 = onlyDigits(formState.telefone1);
   if (formState.telefone2) payload.telefone2 = onlyDigits(formState.telefone2);
   if (formState.cep) payload.cep = onlyDigits(formState.cep);
+  if (formState.logradouro) payload.logradouro = formState.logradouro;
+  if (formState.bairro) payload.bairro = formState.bairro;
+  if (formState.cidade) payload.cidade = formState.cidade;
+  if (formState.numero) payload.numero = formState.numero;
+  if (formState.complemento) payload.complemento = formState.complemento;
   if (formState.uf_endereco !== undefined) payload.uf_endereco = formState.uf_endereco;
   if (formState.uf !== undefined) payload.uf = formState.uf;
   if (formState.uf2 !== undefined) payload.uf2 = formState.uf2;
@@ -79,16 +84,12 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
     payload.uf2 = null as any;
   }
 
-  // Endereço: Apenas o CEP é enviado. Outros campos são preenchidos via buscaCEP no backend.
-  // Campos como logradouro, bairro, cidade, uf NÃO devem ser enviados.
+  // Endereço: Enviamos todos os campos para persistência (Buscacep logic)
 
   // Campos que NUNCA devem ser enviados no payload de atualização
   const forbiddenFields: (keyof User)[] = [
     'id',
     'avatar_url',
-    'logradouro',
-    'bairro',
-    'cidade',
     'created_at',
     'updated_at',
   ];

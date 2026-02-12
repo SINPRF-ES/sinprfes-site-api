@@ -139,6 +139,10 @@ export const iniciarVotacaoProposta = async (id: string, prid: string): Promise<
   return response.data;
 };
 
+export const confirmarBranchProposta = async (id: string, pid: string, acao: 'MANTER' | 'CANCELAR'): Promise<void> => {
+  await api.post(`/api/assembleias/${id}/propostas/${pid}/confirmar-branch`, { acao });
+};
+
 export const encerrarVotacao = async (assembleiaId: string, votacaoId: string): Promise<void> => {
   await api.post(`/api/assembleias/${assembleiaId}/votacoes/${votacaoId}/encerrar`);
 };

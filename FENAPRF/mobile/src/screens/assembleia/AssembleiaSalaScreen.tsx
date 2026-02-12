@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList, AppState, AppStateStatus } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAssembleiaEstado, getAssembleiaEstadoMini, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia, suspenderAssembleia, retomarAssembleia } from '../../services/assembleiaService';
+import { getAssembleiaEstado, getAssembleiaEstadoMini, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, confirmarBranchProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia, suspenderAssembleia, retomarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
 import { formatTimeSP } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
@@ -297,6 +297,15 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
       assembleiaSocket.onEvent('assembleia:encerrada', () => {
           navigation.navigate('AssembleiaDetalhe', { id });
       });
+
+      assembleiaSocket.onEvent('SUBSTITUICAO_BRANCH', (data) => {
+          if (data.subordinado_id === user?.id) {
+              Alert.alert('Substituição de Branch', data.message);
+              navigation.navigate('AssembleiaDetalhe', { id });
+          } else {
+              fetchData();
+          }
+      });
     }
 
     return () => {
@@ -347,11 +356,20 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     return () => clearInterval(interval);
   }, [estado?.votacaoAtiva, fetchData]);
 
+  const handleConfirmarBranch = async (pid: string, acao: 'MANTER' | 'CANCELAR') => {
+      try {
+          await confirmarBranchProposta(id, pid, acao);
+          fetchData();
+      } catch (err: any) {
+          Alert.alert('Erro', 'Não foi possível processar a proposta.');
+      }
+  };
+
   if (loading || !estado) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
   }
 
-  const { votacaoAtiva, quorumVigente } = estado;
+  const { votacaoAtiva, quorumVigente, proposta_pendente_branch } = estado as any;
   const votosNominais = votacaoAtiva?.votos || [];
 
   return (
@@ -380,6 +398,25 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                 <Text style={styles.tokenLabel}>🔑 Token de Presença Vigente</Text>
                 <Text style={styles.tokenValue}>{estado.quorumVigente?.token}</Text>
                 <Text style={styles.tokenHint}>Compartilhe com os presentes</Text>
+            </View>
+        )}
+
+        {proposta_pendente_branch && (
+            <View style={styles.branchProposalCard}>
+                <MaterialCommunityIcons name="alert-decagram" size={24} color="#003366" />
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.branchProposalTitle}>Proposta Pendente do seu Branch</Text>
+                    <Text style={styles.branchProposalText}>Seu vice/substituto ({proposta_pendente_branch.autor_nome}) fez a proposta: <Text style={{ fontWeight: 'bold' }}>{proposta_pendente_branch.titulo}</Text></Text>
+                    <Text style={styles.branchProposalQuestion}>Deseja manter o encaminhamento?</Text>
+                    <View style={styles.branchProposalActions}>
+                        <TouchableOpacity style={[styles.btnBranch, styles.btnBranchCancel]} onPress={() => handleConfirmarBranch(proposta_pendente_branch.id, 'CANCELAR')}>
+                            <Text style={styles.btnBranchText}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.btnBranch, styles.btnBranchKeep]} onPress={() => handleConfirmarBranch(proposta_pendente_branch.id, 'MANTER')}>
+                            <Text style={styles.btnBranchText}>Manter Proposta</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
         )}
 
@@ -656,4 +693,13 @@ const styles = StyleSheet.create({
   footer: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd', padding: 12, flexDirection: 'row', justifyContent: 'space-around' },
   btnFooter: { alignItems: 'center', gap: 4 },
   btnFooterText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },
+  branchProposalCard: { backgroundColor: '#eef2ff', borderRadius: 12, padding: 16, marginBottom: 16, borderLeftWidth: 5, borderLeftColor: '#003366', flexDirection: 'row', gap: 12 },
+  branchProposalTitle: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginBottom: 4 },
+  branchProposalText: { fontSize: 13, color: '#444', marginBottom: 8 },
+  branchProposalQuestion: { fontSize: 13, fontWeight: 'bold', color: '#333', marginBottom: 12 },
+  branchProposalActions: { flexDirection: 'row', gap: 10 },
+  btnBranch: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  btnBranchCancel: { backgroundColor: '#6c757d' },
+  btnBranchKeep: { backgroundColor: '#003366' },
+  btnBranchText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
 });

@@ -379,7 +379,7 @@
                         </div>
                         <div class="edit-group">
                             <label>UF</label>
-                            <input type="text" id="me-uf" value="${uf || ""}" readonly style="background:#f0f0f0;" />
+                            <input type="text" id="me-uf" value="${dados.uf_endereco || ""}" readonly style="background:#f0f0f0;" />
                         </div>
                     </div>
                 </div>
@@ -463,7 +463,7 @@
             payload.numero = document.getElementById("me-numero").value;
             payload.complemento = document.getElementById("me-complemento").value;
             payload.cidade = document.getElementById("me-cidade").value;
-            payload.uf = document.getElementById("me-uf").value;
+            payload.uf_endereco = document.getElementById("me-uf").value;
             payload.cep = onlyDigitsFn(document.getElementById("me-cep").value);
 
             try {

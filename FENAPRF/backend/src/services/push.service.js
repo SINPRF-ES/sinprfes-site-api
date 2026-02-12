@@ -77,7 +77,9 @@ async function resolvePushTargets(targetType, targetValue) {
     SELECT pt.expo_push_token
     FROM push_tokens pt
     JOIN users f ON pt.user_id = f.id
-    WHERE pt.revoked_at IS NULL AND pt.expo_push_token IS NOT NULL
+    WHERE pt.revoked_at IS NULL
+      AND pt.expo_push_token IS NOT NULL
+      AND f.arquivado_em IS NULL
   `;
 
   switch (targetType) {
@@ -208,7 +210,7 @@ async function countNoTokenTargets(targetType, targetValue) {
     }
     case 'ALL':
     default:
-      usersSql = "SELECT id FROM users";
+      usersSql = "SELECT id FROM users WHERE arquivado_em IS NULL";
       break;
   }
 

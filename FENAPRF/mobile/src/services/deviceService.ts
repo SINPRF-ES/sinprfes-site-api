@@ -79,8 +79,9 @@ export async function registrarDispositivoParaPush(): Promise<void> {
   const endpoint = '/api/push/register';
   try {
     const { token, platform, permission } = await obterExpoPushToken();
+    const deviceId = await getDeviceId();
 
-    if (!token) {
+    if (!token && permission !== 'denied') {
       logger.info('Push.RegisterDevice.Skip: token não disponível');
       return;
     }
@@ -88,11 +89,14 @@ export async function registrarDispositivoParaPush(): Promise<void> {
     const response = await api.post(endpoint, {
       expoPushToken: token,
       platform,
+      deviceId,
+      permissionStatus: permission
     });
 
     logger.info('Push.RegisterDevice.OK', {
         status: response.status,
-        success: response.data?.success
+        success: response.data?.success,
+        permission
     });
 
   } catch (e: any) {

@@ -270,7 +270,10 @@ exports.atualizarMeusDados = async (req, res) => {
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email: body.email || body.email1,
-      // ViaCEP fields blocked for all in /me
+      // FENAPRF: Allow BuscaCEP fields persistence
+      logradouro: body.logradouro,
+      bairro: body.bairro,
+      cidade: body.cidade,
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
@@ -368,8 +371,10 @@ exports.atualizarUser = async (req, res) => {
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email: body.email || body.email1,
-      // ViaCEP fields blocked for all in FENAPRF
-      // logradouro, bairro, cidade, uf (endereco) are read-only
+      // FENAPRF: Allow BuscaCEP fields persistence
+      logradouro: body.logradouro,
+      bairro: body.bairro,
+      cidade: body.cidade,
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
