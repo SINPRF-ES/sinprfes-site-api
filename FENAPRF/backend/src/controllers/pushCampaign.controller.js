@@ -49,12 +49,14 @@ exports.sendCampaign = async (req, res) => {
     if (title !== undefined && title !== null) {
       if (typeof title !== 'string') {
         errors.title = "O título (title) deve ser uma string.";
+      } else if (title.trim().length === 0) {
+        errors.title = "O título (title) não pode ser vazio.";
       } else if (title.length > 60) {
         errors.title = "O título não pode exceder 60 caracteres.";
       }
     }
 
-    const allowedTargetTypes = ['ALL', 'UF', 'JOGOS', 'USER', 'PADRAO', 'DIRETORIA', 'PRESIDENTES', 'VICES', 'DR', 'DS', 'ADMIN_COLAB'];
+    const allowedTargetTypes = ['ALL', 'UF', 'USER', 'PADRAO', 'DIRETORIA', 'PRESIDENTES', 'VICES', 'DR', 'DS', 'ADMIN_COLAB'];
     if (targetType && !allowedTargetTypes.includes(targetType)) {
       errors.targetType = `Tipo de alvo inválido. Permitidos: ${allowedTargetTypes.join(', ')}`;
     }
@@ -63,7 +65,7 @@ exports.sendCampaign = async (req, res) => {
       log.warn("PushCampaign.ValidacaoFalhou", { requestId, userId: createdBy, errors });
       return res.status(400).json({
         success: false,
-        message: "Payload inválido: title e body devem ser string não-vazia.",
+        message: "Dados inválidos para envio de push. Verifique os campos obrigatórios.",
         errors,
         code: "VALIDATION_ERROR"
       });

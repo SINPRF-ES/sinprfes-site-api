@@ -62,9 +62,11 @@
         const {
             nome, cpf, perfil_acesso, situacao,
             telefone1, telefone2, email1, email2,
-            logradouro_bairro, numero, complemento, cidade, uf, cep,
+            logradouro, bairro, numero, complemento, cidade, uf, cep,
             avatar_url
         } = dados;
+
+        const logradouro_bairro = logradouro ? `${logradouro}${bairro ? ', ' + bairro : ''}` : '';
 
         const { aplicarMascaraTelefone, aplicarMascaraCEP, formatarCPF } = global.Utils || {};
 
@@ -305,7 +307,7 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>CPF</label>
-                            <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
+                            <input type="text" value="${window.Formatters ? window.Formatters.formatCpf(cpf || "") : cpf}" readonly />
                         </div>
                         <div class="field-group"></div>
                     </div>
@@ -488,7 +490,7 @@
             } catch (e) {
                 status.textContent = "Erro de conexão.";
             }
-        };
+        });
 
         // --- UPLOAD DE AVATAR ---
         const inputFile = document.getElementById("me-avatar-file");
@@ -531,7 +533,7 @@
                 btnSalvarFoto.disabled = false;
                 btnSalvarFoto.innerText = originalText;
             }
-        };
+        });
 
         btnRemoverFoto.addEventListener("click", async () => {
           if (!confirm("Remover a foto de perfil?")) return;
@@ -556,7 +558,7 @@
             btnRemoverFoto.disabled = false;
             btnRemoverFoto.innerText = txt;
           }
-        };
+        });
     }
 
     async function buscarCep() {

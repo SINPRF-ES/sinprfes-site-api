@@ -108,15 +108,13 @@
         select.innerHTML = '<option>Buscando...</option>';
 
         try {
-            const r = await window.Api.apiFetch(`/api/users?q=${encodeURIComponent(query)}`);
-            if (r.ok) {
-                const data = await r.json();
-                const users = data.users || [];
-                if (users.length === 0) {
-                    select.innerHTML = '<option value="">Nenhum encontrado</option>';
-                } else {
-                    select.innerHTML = users.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
-                }
+            // FENAPRF: Paridade com users-admin.js (Busca acento-insensitive no frontend)
+            const results = await global.Utils.searchUsers(query);
+
+            if (results.length === 0) {
+                select.innerHTML = '<option value="">Nenhum encontrado</option>';
+            } else {
+                select.innerHTML = results.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
             }
         } catch (e) {
             console.error("Erro na busca de users", e);

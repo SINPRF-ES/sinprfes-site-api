@@ -329,8 +329,7 @@ async function listCampaigns(limit = 20, offset = 0) {
             'DR': 'Delegados Representantes (DR)',
             'DS': 'Delegados Substitutos (DS)',
             'ADMIN_COLAB': 'Admin e Colaboradores',
-            'PADRAO': 'Diretoria e Conselheiros',
-            'JOGOS': 'Inscritos nos Jogos'
+            'PADRAO': 'Diretoria e Conselheiros'
         };
         label = labels[type] || type || label;
     }

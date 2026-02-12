@@ -49,7 +49,7 @@ describe('Push Campaign Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
-        message: 'Payload inválido: title e body devem ser string não-vazia.',
+        message: 'Dados inválidos para envio de push. Verifique os campos obrigatórios.',
         errors: expect.objectContaining({ body: 'O corpo da mensagem (body) é obrigatório.' }),
         code: 'VALIDATION_ERROR'
       }));
@@ -63,7 +63,7 @@ describe('Push Campaign Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
-        message: 'Payload inválido: title e body devem ser string não-vazia.',
+        message: 'Dados inválidos para envio de push. Verifique os campos obrigatórios.',
         errors: expect.objectContaining({ body: 'O corpo da mensagem (body) deve ser uma string.' }),
         code: 'VALIDATION_ERROR'
       }));
@@ -77,7 +77,7 @@ describe('Push Campaign Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
-        message: 'Payload inválido: title e body devem ser string não-vazia.',
+        message: 'Dados inválidos para envio de push. Verifique os campos obrigatórios.',
         errors: expect.objectContaining({ title: 'O título (title) deve ser uma string.' }),
         code: 'VALIDATION_ERROR'
       }));

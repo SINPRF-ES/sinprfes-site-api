@@ -167,7 +167,7 @@
         const el = document.getElementById("lista-users");
         if (!el) return;
 
-        const { filterUsers, formatarCPF, formatarTelefoneTexto, normalizeText, escapeHTML } = global.Utils || {};
+        const { filterUsers, formatarTelefoneTexto, normalizeText, escapeHTML } = global.Utils || {};
         const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
 
         // Reutiliza a lógica unificada de busca (nome/CPF)
@@ -204,7 +204,7 @@
                             ${avatarHtml(f.avatar_url, f.nome)}
                             <div>
                                 <div class="user-nome">${safeEscape(f.nome)}</div>
-                                <div class="user-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.uf || '')}</div>
+                                <div class="user-meta">${f.cpf ? safeEscape(window.Formatters.formatCpf(f.cpf)) + ' • ' : ''}${safeEscape(f.uf || '')}</div>
                                 ${["CONSELHEIRO"].includes(perfilAtual) ? '' : `
                                 <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
@@ -245,6 +245,8 @@
         const isArquivado = !!f.arquivado_em;
         const nascimento = f.data_nascimento;
         const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
+
+        const logradouro_bairro = f.logradouro ? `${f.logradouro}${f.bairro ? ', ' + f.bairro : ''}` : (f.logradouro_bairro || '');
 
         const userInfo = window.Utils && window.Utils.obterUserInfo ? window.Utils.obterUserInfo() : null;
         const isSelf = userInfo && String(f.id) === String(userInfo.id);
@@ -296,7 +298,7 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>CPF</label>
-                            <input name="cpf" value="${safeEscape(formatarCPF(f.cpf))}" ${ehGestao ? "" : "readonly"}>
+                            <input name="cpf" value="${safeEscape(window.Formatters.formatCpf(f.cpf))}" ${ehGestao ? "" : "readonly"}>
                         </div>
                         <div class="field-group"></div>
                     </div>
@@ -330,22 +332,22 @@
                     <h3>📞 Contato</h3>
                     <div class="field-row">
                         <div class="field-group">
-                            <label>Email 1</label>
-                            <input name="email1" value="${safeEscape(f.email1)}">
+                            <label>Telefone 1</label>
+                            <input name="telefone1" class="campo-telefone" value="${safeEscape(global.Utils.formatarTelefoneTexto(f.telefone1))}" placeholder="(00) 00000-0000">
                         </div>
                         <div class="field-group">
-                            <label>Telefone 1</label>
-                            <input name="telefone1" class="campo-telefone" value="${safeEscape(global.Utils.formatarTelefoneTexto(f.telefone1))}">
+                            <label>Telefone 2</label>
+                            <input name="telefone2" class="campo-telefone" value="${safeEscape(global.Utils.formatarTelefoneTexto(f.telefone2))}" placeholder="Opcional">
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
-                            <label>Email 2</label>
-                            <input name="email2" value="${safeEscape(f.email2)}">
+                            <label>Email Principal</label>
+                            <input name="email1" value="${safeEscape(f.email1)}" placeholder="seu@email.com">
                         </div>
                         <div class="field-group">
-                            <label>Telefone 2</label>
-                            <input name="telefone2" class="campo-telefone" value="${safeEscape(global.Utils.formatarTelefoneTexto(f.telefone2))}">
+                            <label>Email Secundário</label>
+                            <input name="email2" value="${safeEscape(f.email2)}" placeholder="Opcional">
                         </div>
                     </div>
                 </div>
@@ -363,7 +365,7 @@
                         </div>
                         <div class="edit-group logradouro-group">
                             <label>Logradouro / Bairro</label>
-                            <input name="logradouro_bairro" id="edit-logradouro" value="${safeEscape(f.logradouro_bairro)}" readonly style="background:#f8f9fa;">
+                            <input name="logradouro_bairro" id="edit-logradouro" value="${safeEscape(logradouro_bairro)}" readonly style="background:#f8f9fa;">
                         </div>
 
                         <!-- Linha 2: Número + Complemento -->
@@ -635,8 +637,8 @@
                 <form id="form-novo-user-admin">
                     <div class="edit-grid">
                         <div class="edit-group">
-                            <label>Nome *</label>
-                            <input name="nome" required>
+                            <label>Nome Completo *</label>
+                            <input name="nome" required placeholder="Nome completo">
                         </div>
                         <div class="edit-group">
                             <label>Sexo</label>
@@ -650,18 +652,25 @@
                             <label>CPF *</label>
                             <input name="cpf" required placeholder="000.000.000-00">
                         </div>
-                        <div class="edit-group"></div>
                         <div class="edit-group">
-                            <label>Email *</label>
-                            <input type="email" name="email1" required>
+                            <label>Data Nascimento</label>
+                            <input type="date" name="data_nascimento" id="new-data-nascimento" class="campo-data">
+                        </div>
+                        <div class="edit-group">
+                            <label>Idade (Calculada)</label>
+                            <input type="text" id="new-idade-display" value="—" readonly style="background:#f8f9fa;">
                         </div>
                         <div class="edit-group">
                             <label>Telefone 1 *</label>
                             <input name="telefone1" class="campo-telefone" required placeholder="(00) 00000-0000">
                         </div>
                         <div class="edit-group">
-                            <label>Data Nascimento</label>
-                            <input type="date" name="data_nascimento" class="campo-data">
+                            <label>Telefone 2</label>
+                            <input name="telefone2" class="campo-telefone" placeholder="Opcional">
+                        </div>
+                        <div class="edit-group">
+                            <label>Email Principal *</label>
+                            <input type="email" name="email1" required placeholder="seu@email.com">
                         </div>
 
                         <div class="address-grid span-2">
@@ -740,6 +749,14 @@
             cepInp.addEventListener('blur', executarBuscaCepNovo);
             const searchIcon = form.querySelector(".cep-search-icon");
             if (searchIcon) searchIcon.addEventListener("click", executarBuscaCepNovo);
+        }
+
+        const dataNascNew = form.querySelector("#new-data-nascimento");
+        if (dataNascNew) {
+            dataNascNew.addEventListener("change", () => {
+                const display = document.getElementById("new-idade-display");
+                if (display) display.value = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascNew.value) : '—';
+            });
         }
 
         form.onsubmit = async (e) => {
