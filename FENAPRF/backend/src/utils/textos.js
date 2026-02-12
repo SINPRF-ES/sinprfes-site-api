@@ -65,7 +65,7 @@ module.exports = {
     DATA_EVENTO_MUITO_DISTANTE: "A data da assembleia não pode ser superior a 1 ano no futuro.",
     HORA_INVALIDA: "Formato de hora inválido (HH:mm).",
     HORA_ORDEM_INVALIDA: "A hora da segunda chamada não pode ser anterior à primeira chamada.",
-    PRESIDENTE_PRESENTE: "Seu presidente já está participando da sessão.",
-    DELEGADO_PRESENTE: "Seu delegado representante já está participando da sessão.",
+    PRESIDENTE_PRESENTE: "Seu presidente já está participando do quórum.",
+    DELEGADO_PRESENTE: "Seu delegado representante já está participando do quórum.",
   }
 };

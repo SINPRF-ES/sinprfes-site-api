@@ -70,7 +70,7 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
       <Text style={styles.label}>Logradouro e Bairro</Text>
       <TextInput
         style={styles.inputDisabled}
-        value={user?.logradouro_bairro || ''}
+        value={user?.logradouro ? `${user.logradouro}${user.bairro ? ', ' + user.bairro : ''}` : (user?.logradouro_bairro || '')}
         placeholder="Preenchido pela busca de CEP"
         editable={false}
         accessibilityLabel="Logradouro e Bairro"

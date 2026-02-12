@@ -21,7 +21,8 @@ export const buscarCep = async (cep: string) => {
       return null; // CEP não encontrado
     }
     return {
-      logradouro_bairro: `${data.logradouro}, ${data.bairro}`,
+      logradouro: data.logradouro,
+      bairro: data.bairro,
       cidade: data.localidade,
       uf_endereco: data.uf,
     };

@@ -451,7 +451,11 @@
                     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                     const data = await res.json();
                     if (!data.erro) {
-                        document.getElementById("edit-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
+                        const inputEnd = document.getElementById("edit-logradouro");
+                        inputEnd.value = `${data.logradouro}${data.bairro ? ', ' + data.bairro : ''}`;
+                        inputEnd.dataset.logradouro = data.logradouro || "";
+                        inputEnd.dataset.bairro = data.bairro || "";
+
                         document.getElementById("edit-cidade").value = data.localidade;
                         document.getElementById("edit-uf").value = data.uf;
                     }
@@ -484,6 +488,13 @@
                     rawPayload[k] = v;
                 }
             });
+
+            // FENAPRF: Ensure logradouro and bairro are separate
+            const inputEnd = document.getElementById("edit-logradouro");
+            if (inputEnd && inputEnd.dataset.logradouro) {
+                rawPayload.logradouro = inputEnd.dataset.logradouro;
+                rawPayload.bairro = inputEnd.dataset.bairro || "";
+            }
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
                 const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
@@ -712,7 +723,11 @@
                     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                     const data = await res.json();
                     if (!data.erro) {
-                        document.getElementById("new-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
+                        const inputEnd = document.getElementById("new-logradouro");
+                        inputEnd.value = `${data.logradouro}${data.bairro ? ', ' + data.bairro : ''}`;
+                        inputEnd.dataset.logradouro = data.logradouro || "";
+                        inputEnd.dataset.bairro = data.bairro || "";
+
                         document.getElementById("new-cidade").value = data.localidade;
                         document.getElementById("new-uf").value = data.uf;
                     }
@@ -732,6 +747,13 @@
             const fd = new FormData(form);
             const payload = {};
             fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
+
+            // FENAPRF: Ensure logradouro and bairro are separate
+            const inputEnd = document.getElementById("new-logradouro");
+            if (inputEnd && inputEnd.dataset.logradouro) {
+                payload.logradouro = inputEnd.dataset.logradouro;
+                payload.bairro = inputEnd.dataset.bairro || "";
+            }
 
             // Normalização de Nomes (Canônico)
             if (payload.nome && global.Canon?.normalizeNome) {

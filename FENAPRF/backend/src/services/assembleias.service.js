@@ -591,6 +591,18 @@ async function realizarCheckin(dados) {
                   [generateUuid(), assembleia_id, assembleia_quorum_id, user_id, bc.user_id, info.branch]
                 );
                 await registrarAuditoria(assembleia_id, user_id, 'SUBSTITUICAO_PENDENTE_VOTACAO', { superior_id: user_id, subordinado_id: bc.user_id, branch: info.branch, uf: info.uf }, client);
+
+                // WebSocket Emit for Pending Change
+                socket.emitEvent(assembleia_id, 'assembleia:quorum_branch_changed', {
+                  uf: info.uf,
+                  branch: info.branch,
+                  removedUserId: bc.user_id,
+                  addedUserId: user_id,
+                  reason: 'SUPERIOR_ENTERED',
+                  lockedUntilVoteEnd: true,
+                  message: `Seu ${info.role === 'PRESIDENTE' ? 'presidente' : 'delegado representante'} entrou; a troca ocorrerá ao final da votação em andamento.`
+                });
+
                 await client.query('COMMIT');
                 return { success: true, status: 'PENDING_VOTATION' };
               } else {
@@ -598,14 +610,14 @@ async function realizarCheckin(dados) {
                 await client.query("DELETE FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = $2", [assembleia_quorum_id, bc.user_id]);
                 await registrarAuditoria(assembleia_id, user_id, 'SUBSTITUICAO_BRANCH', { superior_id: user_id, subordinado_id: bc.user_id, branch: info.branch, uf: info.uf }, client);
 
-                // WebSocket Emit
-                socket.emitEvent(assembleia_id, 'SUBSTITUICAO_BRANCH', {
-                  superior_id: user_id,
-                  superior_nome: userObj.name,
-                  subordinado_id: bc.user_id,
-                  subordinado_nome: bc.name,
-                  branch: info.branch,
+                // WebSocket Emit for Immediate Change
+                socket.emitEvent(assembleia_id, 'assembleia:quorum_branch_changed', {
                   uf: info.uf,
+                  branch: info.branch,
+                  removedUserId: bc.user_id,
+                  addedUserId: user_id,
+                  reason: 'SUPERIOR_ENTERED',
+                  lockedUntilVoteEnd: false,
                   message: `Seu ${info.role === 'PRESIDENTE' ? 'presidente' : 'delegado representante'} entrou na sessão, então você foi retirado do quorum.`
                 });
               }
@@ -876,12 +888,13 @@ async function finalizarVotacao(votacaoId, userId = null) {
       const sup = names.find(n => n.id === p.user_id_superior);
       const sub = names.find(n => n.id === p.user_id_subordinado);
 
-      socket.emitEvent(votacao.assembleia_id, 'SUBSTITUICAO_BRANCH', {
-        superior_id: p.user_id_superior,
-        superior_nome: sup?.name,
-        subordinado_id: p.user_id_subordinado,
-        subordinado_nome: sub?.name,
+      socket.emitEvent(votacao.assembleia_id, 'assembleia:quorum_branch_changed', {
+        uf: sup?.uf || sub?.uf,
         branch: p.branch,
+        removedUserId: p.user_id_subordinado,
+        addedUserId: p.user_id_superior,
+        reason: 'VOTATION_ENDED_SUBSTITUTION',
+        lockedUntilVoteEnd: false,
         message: `Votação encerrada. Seu titular entrou na sessão, então você foi retirado do quorum.`
       });
 
@@ -1272,13 +1285,13 @@ async function confirmarBranchProposta(assembleiaId, propostaId, userId, acao) {
         "UPDATE assembleia_propostas SET autor_id = $1 WHERE id = $2",
         [userId, propostaId]
       );
-      await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_BRANCH_CONFIRMADA', { proposta_id: propostaId, acao: 'MANTER' }, client);
+      await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_MANTIDA_POR_SUBSTITUICAO_BRANCH', { proposta_id: propostaId, acao: 'MANTER' }, client);
     } else {
       await client.query(
         "UPDATE assembleia_propostas SET status = 'CANCELADA_BRANCH', retirada_em = NOW() WHERE id = $1",
         [propostaId]
       );
-      await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_BRANCH_CONFIRMADA', { proposta_id: propostaId, acao: 'CANCELAR' }, client);
+      await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_RETIRADA_POR_SUBSTITUICAO_BRANCH', { proposta_id: propostaId, acao: 'CANCELAR' }, client);
     }
 
     await client.query('COMMIT');

@@ -459,7 +459,11 @@
             payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
             payload.email1 = document.getElementById("me-email1").value;
             payload.email2 = document.getElementById("me-email2").value;
-            payload.logradouro_bairro = document.getElementById("me-endereco").value;
+
+            // FENAPRF: Use separate fields for logradouro and bairro
+            payload.logradouro = document.getElementById("me-endereco").dataset.logradouro || document.getElementById("me-endereco").value;
+            payload.bairro = document.getElementById("me-endereco").dataset.bairro || "";
+
             payload.numero = document.getElementById("me-numero").value;
             payload.complemento = document.getElementById("me-complemento").value;
             payload.cidade = document.getElementById("me-cidade").value;
@@ -571,7 +575,11 @@
                 return;
             }
 
-            document.getElementById("me-endereco").value = d.logradouro || "";
+            const inputEnd = document.getElementById("me-endereco");
+            inputEnd.value = `${d.logradouro || ""}${d.bairro ? ', ' + d.bairro : ''}`;
+            inputEnd.dataset.logradouro = d.logradouro || "";
+            inputEnd.dataset.bairro = d.bairro || "";
+
             document.getElementById("me-cidade").value = d.localidade || "";
             document.getElementById("me-uf").value = d.uf || "";
         } catch (e) {
