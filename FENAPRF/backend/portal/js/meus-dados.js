@@ -62,9 +62,11 @@
         const {
             nome, cpf, perfil_acesso, situacao,
             telefone1, telefone2, email1, email2,
-            logradouro_bairro, numero, complemento, cidade, uf, cep,
+            logradouro, bairro, numero, complemento, cidade, uf, cep,
             avatar_url
         } = dados;
+
+        const logradouro_bairro = logradouro ? `${logradouro}${bairro ? ', ' + bairro : ''}` : '';
 
         const { aplicarMascaraTelefone, aplicarMascaraCEP, formatarCPF } = global.Utils || {};
 
@@ -305,7 +307,7 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>CPF</label>
-                            <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
+                            <input type="text" value="${window.Formatters ? window.Formatters.formatCpf(cpf || "") : cpf}" readonly />
                         </div>
                         <div class="field-group"></div>
                     </div>
@@ -459,7 +461,11 @@
             payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
             payload.email1 = document.getElementById("me-email1").value;
             payload.email2 = document.getElementById("me-email2").value;
-            payload.logradouro_bairro = document.getElementById("me-endereco").value;
+
+            // FENAPRF: Use separate fields for logradouro and bairro
+            payload.logradouro = document.getElementById("me-endereco").dataset.logradouro || document.getElementById("me-endereco").value;
+            payload.bairro = document.getElementById("me-endereco").dataset.bairro || "";
+
             payload.numero = document.getElementById("me-numero").value;
             payload.complemento = document.getElementById("me-complemento").value;
             payload.cidade = document.getElementById("me-cidade").value;
@@ -484,7 +490,7 @@
             } catch (e) {
                 status.textContent = "Erro de conexão.";
             }
-        };
+        });
 
         // --- UPLOAD DE AVATAR ---
         const inputFile = document.getElementById("me-avatar-file");
@@ -527,7 +533,7 @@
                 btnSalvarFoto.disabled = false;
                 btnSalvarFoto.innerText = originalText;
             }
-        };
+        });
 
         btnRemoverFoto.addEventListener("click", async () => {
           if (!confirm("Remover a foto de perfil?")) return;
@@ -552,7 +558,7 @@
             btnRemoverFoto.disabled = false;
             btnRemoverFoto.innerText = txt;
           }
-        };
+        });
     }
 
     async function buscarCep() {
@@ -571,7 +577,11 @@
                 return;
             }
 
-            document.getElementById("me-endereco").value = d.logradouro || "";
+            const inputEnd = document.getElementById("me-endereco");
+            inputEnd.value = `${d.logradouro || ""}${d.bairro ? ', ' + d.bairro : ''}`;
+            inputEnd.dataset.logradouro = d.logradouro || "";
+            inputEnd.dataset.bairro = d.bairro || "";
+
             document.getElementById("me-cidade").value = d.localidade || "";
             document.getElementById("me-uf").value = d.uf || "";
         } catch (e) {

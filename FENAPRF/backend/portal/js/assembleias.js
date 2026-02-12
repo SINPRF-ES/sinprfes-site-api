@@ -1208,7 +1208,7 @@
                     document.getElementById("btn-selecionar-drive").innerText = "🔄 Trocar Edital";
                 }
             });
-        };
+        });
 
         document.getElementById("btn-fechar-picker").addEventListener("click", () => {
             document.getElementById("container-picker-drive").style.display = "none";

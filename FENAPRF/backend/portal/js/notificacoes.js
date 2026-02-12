@@ -43,20 +43,24 @@
             titleInput.addEventListener("input", () => {
                 const len = titleInput.value.length;
                 const counter = document.getElementById('push-title-count');
-                counter.textContent = len;
-                counter.style.color = len > 54 ? '#e74c3c' : ''; // Red if > 90% of 60
-                counter.style.fontWeight = len > 54 ? 'bold' : 'normal';
-            };
+                if (counter) {
+                    counter.textContent = len;
+                    counter.style.color = len > 54 ? '#e74c3c' : ''; // Red if > 90% of 60
+                    counter.style.fontWeight = len > 54 ? 'bold' : 'normal';
+                }
+            });
         }
 
         if (messageInput) {
             messageInput.addEventListener("input", () => {
                 const len = messageInput.value.length;
                 const counter = document.getElementById('push-message-count');
-                counter.textContent = len;
-                counter.style.color = len > 216 ? '#e74c3c' : ''; // Red if > 90% of 240
-                counter.style.fontWeight = len > 216 ? 'bold' : 'normal';
-            };
+                if (counter) {
+                    counter.textContent = len;
+                    counter.style.color = len > 216 ? '#e74c3c' : ''; // Red if > 90% of 240
+                    counter.style.fontWeight = len > 216 ? 'bold' : 'normal';
+                }
+            });
         }
 
         if (btnSend) {
@@ -104,15 +108,13 @@
         select.innerHTML = '<option>Buscando...</option>';
 
         try {
-            const r = await window.Api.apiFetch(`/api/users?q=${encodeURIComponent(query)}`);
-            if (r.ok) {
-                const data = await r.json();
-                const users = data.users || [];
-                if (users.length === 0) {
-                    select.innerHTML = '<option value="">Nenhum encontrado</option>';
-                } else {
-                    select.innerHTML = users.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
-                }
+            // FENAPRF: Paridade com users-admin.js (Busca acento-insensitive no frontend)
+            const results = await global.Utils.searchUsers(query);
+
+            if (results.length === 0) {
+                select.innerHTML = '<option value="">Nenhum encontrado</option>';
+            } else {
+                select.innerHTML = results.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
             }
         } catch (e) {
             console.error("Erro na busca de users", e);
@@ -153,7 +155,8 @@
 
         let targetLabel = targetType;
         if ((targetType === 'MEMBRO' || targetType === 'USER') && targetValue && typeof targetValue === 'object') {
-            targetLabel = `Membro — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
+            const cpfFmt = (window.Formatters && window.Formatters.formatCpf) ? window.Formatters.formatCpf(targetValue.cpf) : targetValue.cpf;
+            targetLabel = `Membro — ${targetValue.nome} (${cpfFmt})`;
         } else if (targetValue) {
             targetLabel = `${targetType} (${targetValue})`;
         }
@@ -172,7 +175,11 @@
                 title: title || null,
                 body: body,
                 targetType,
-                targetValue
+                targetValue,
+                data: {
+                    screen: 'Notificacoes',
+                    route: 'NotificacoesTab'
+                }
             };
 
             const r = await window.Api.apiFetch('/api/push/campaigns/send', {
