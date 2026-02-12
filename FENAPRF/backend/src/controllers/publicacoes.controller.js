@@ -11,7 +11,8 @@ const {
   getAppFolderId,
   ensureTrashFolder,
   FOLDER_MIMETYPE,
-  getItem
+  getItem,
+  isDescendant
 } = require("../services/drive.service");
 const log = require("../utils/log");
 const { normalizePerfil } = require("../../shared/canon");
@@ -264,7 +265,7 @@ exports.renameItem = async (req, res) => {
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
     const itemData = await getItem(id);
 
-    if (id === trashId || id === appId) {
+    if (id === trashId || id === appId || id === ROOT_FOLDER_ID) {
       return res.status(409).json({ message: "Não é permitido renomear pastas do sistema." });
     }
 
@@ -317,7 +318,8 @@ exports.moveItem = async (req, res) => {
       return res.status(409).json({ message: "Não é permitido mover para esta pasta." });
     }
 
-    if (id === trashId || id === appId) {
+    // Proteção de pastas de sistema e root
+    if (id === trashId || id === appId || id === ROOT_FOLDER_ID) {
       return res.status(409).json({ message: "Não é permitido mover pastas do sistema." });
     }
 
@@ -326,9 +328,12 @@ exports.moveItem = async (req, res) => {
       return res.status(409).json({ message: "Não é permitido mover itens de pastas protegidas ou da lixeira." });
     }
 
-    // Permitir mover apenas arquivos na fase 1
+    // Ciclo e descendência para pastas
     if (itemData.mimeType === FOLDER_MIMETYPE) {
-      return res.status(409).json({ message: "Mover pastas não é permitido nesta fase." });
+       const isRecursive = await isDescendant(targetFolderId, id);
+       if (isRecursive) {
+         return res.status(409).json({ message: "Não é permitido mover uma pasta para dentro dela mesma ou de suas subpastas." });
+       }
     }
 
     const item = await moveItem(id, targetFolderId);
@@ -336,14 +341,24 @@ exports.moveItem = async (req, res) => {
     log.info("DriveMoveItem", {
       userId: atorId,
       itemId: id,
+      itemMimeType: itemData.mimeType,
       fromParentId: item.oldParentId,
       toParentId: targetFolderId,
-      requestId: req.requestId
+      requestId: req.requestId,
+      outcome: "success"
     });
 
     return res.json({ success: true, item });
   } catch (error) {
-    log.error("ErroMoveItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
+    log.error("ErroMoveItem", {
+      error: error.message,
+      stack: error.stack,
+      itemId: id,
+      userId: atorId,
+      targetFolderId,
+      requestId: req.requestId,
+      outcome: "error"
+    });
     const { status, message } = mapGoogleDriveError(error, req.requestId);
     return res.status(status).json({ message, requestId: req.requestId });
   }
@@ -365,13 +380,9 @@ exports.deleteItem = async (req, res) => {
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
     const itemData = await getItem(id);
 
-    if (id === trashId || id === appId) {
+    // Proteção de pastas de sistema e root
+    if (id === trashId || id === appId || id === ROOT_FOLDER_ID) {
       return res.status(409).json({ message: "Não é permitido excluir pastas do sistema." });
-    }
-
-    // Bloquear pastas (fase 1)
-    if (itemData.mimeType === FOLDER_MIMETYPE) {
-      return res.status(409).json({ message: "A exclusão de pastas não está permitida nesta fase." });
     }
 
     // Bloquear se item já está na lixeira
@@ -384,14 +395,23 @@ exports.deleteItem = async (req, res) => {
     log.info("DriveDeleteItem", {
       userId: atorId,
       itemId: id,
+      itemMimeType: itemData.mimeType,
       fromParentId: item.oldParentId,
       toParentId: trashId,
-      requestId: req.requestId
+      requestId: req.requestId,
+      outcome: "success"
     });
 
     return res.json({ success: true, item });
   } catch (error) {
-    log.error("ErroDeleteItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
+    log.error("ErroDeleteItem", {
+      error: error.message,
+      stack: error.stack,
+      itemId: id,
+      userId: atorId,
+      requestId: req.requestId,
+      outcome: "error"
+    });
     const { status, message } = mapGoogleDriveError(error, req.requestId);
     return res.status(status).json({ message, requestId: req.requestId });
   }
