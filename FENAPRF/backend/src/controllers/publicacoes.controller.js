@@ -82,7 +82,11 @@ exports.listar = async (req, res) => {
  */
 exports.createFolder = async (req, res) => {
   let { parentFolderId, name } = req.body;
-  if (parentFolderId === 'ROOT') parentFolderId = ROOT_FOLDER_ID;
+
+  // Normalização: Se não vier ou for null, assume a raiz do módulo
+  if (!parentFolderId || parentFolderId === 'ROOT') {
+    parentFolderId = ROOT_FOLDER_ID;
+  }
 
   const atorId = req.user?.id;
   const perfilAtor = req.user?.perfil_acesso;
@@ -98,14 +102,16 @@ exports.createFolder = async (req, res) => {
   const cleanName = name.trim().substring(0, 80);
 
   // Bloquear nomes reservados na raiz
-  if ((!parentFolderId || parentFolderId === ROOT_FOLDER_ID) && ["App", "Lixeira"].includes(cleanName)) {
+  if (parentFolderId === ROOT_FOLDER_ID && ["App", "Lixeira"].includes(cleanName)) {
     return res.status(400).json({ message: "Nome de pasta reservado." });
   }
 
   try {
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
 
+    // Validação estrita contra pastas de sistema
     if (parentFolderId === trashId || parentFolderId === appId) {
+      log.warn("PublicacoesCreateFolderDenied", { parentFolderId, trashId, appId, requestId: req.requestId });
       return res.status(400).json({ message: "Não é permitido criar pastas aqui." });
     }
 
@@ -115,7 +121,7 @@ exports.createFolder = async (req, res) => {
       userId: atorId,
       folderId: folder.id,
       name: folder.name,
-      parentFolderId: parentFolderId || ROOT_FOLDER_ID,
+      parentFolderId: parentFolderId,
       requestId: req.requestId
     });
 
@@ -131,7 +137,11 @@ exports.createFolder = async (req, res) => {
  */
 exports.uploadFile = async (req, res) => {
   let { parentFolderId, name } = req.body;
-  if (parentFolderId === 'ROOT') parentFolderId = ROOT_FOLDER_ID;
+
+  // Normalização: Se não vier ou for null, assume a raiz do módulo
+  if (!parentFolderId || parentFolderId === 'ROOT') {
+    parentFolderId = ROOT_FOLDER_ID;
+  }
 
   const file = req.file;
   const atorId = req.user?.id;
@@ -142,12 +152,14 @@ exports.uploadFile = async (req, res) => {
   }
 
   if (!file) {
+    log.warn("PublicacoesUploadMissingFile", { requestId: req.requestId });
     return res.status(400).json({ message: "Arquivo não enviado." });
   }
 
   // Validação de tipo: PDF e Imagens
   const allowedMimes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
   if (!allowedMimes.includes(file.mimetype)) {
+    log.warn("PublicacoesUploadInvalidMime", { mimetype: file.mimetype, requestId: req.requestId });
     return res.status(400).json({ message: "Tipo de arquivo não permitido. Use PDF ou Imagens." });
   }
 
@@ -157,6 +169,7 @@ exports.uploadFile = async (req, res) => {
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
 
     if (parentFolderId === trashId || parentFolderId === appId) {
+      log.warn("PublicacoesUploadDenied", { parentFolderId, trashId, appId, requestId: req.requestId });
       return res.status(400).json({ message: "Não é permitido upload nesta pasta." });
     }
 
@@ -166,7 +179,7 @@ exports.uploadFile = async (req, res) => {
       userId: atorId,
       fileId,
       name: fileName,
-      parentFolderId: parentFolderId || ROOT_FOLDER_ID,
+      parentFolderId: parentFolderId,
       requestId: req.requestId
     });
 
@@ -175,7 +188,13 @@ exports.uploadFile = async (req, res) => {
       file: { id: fileId, name: fileName, mimeType: file.mimetype, createdTime: new Date().toISOString() }
     });
   } catch (error) {
-    log.error("ErroUploadFile", { error: error.message, stack: error.stack, userId: atorId, requestId: req.requestId });
+    log.error("ErroUploadFile", {
+      error: error.message,
+      stack: error.stack,
+      userId: atorId,
+      parentFolderId,
+      requestId: req.requestId
+    });
     return res.status(500).json({ message: "Erro ao realizar upload para o Drive.", requestId: req.requestId });
   }
 };
