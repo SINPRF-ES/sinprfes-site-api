@@ -383,7 +383,7 @@
                         </div>
                         <div class="edit-group">
                             <label>UF</label>
-                            <input name="uf" id="edit-uf" value="${safeEscape(f.uf)}" readonly style="background:#f8f9fa;">
+                            <input name="uf_endereco" id="edit-uf" value="${safeEscape(f.uf_endereco)}" readonly style="background:#f8f9fa;">
                         </div>
                     </div>
                 </div>
@@ -679,7 +679,7 @@
                             </div>
                             <div class="edit-group">
                                 <label>UF</label>
-                                <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+                                <input name="uf_endereco" id="new-uf" readonly style="background:#f0f0f0;">
                             </div>
                         </div>
                     </div>

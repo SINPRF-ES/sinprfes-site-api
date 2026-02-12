@@ -3,6 +3,7 @@ const pool = require("../config/db");
 const Textos = require("../utils/textos");
 const log = require("../utils/log");
 const { escapeHtml, generateUuid } = require("../utils/format");
+const socket = require("../websocket/assembleia.socket");
 
 const ASSEMBLEIA_STATES = {
   CRIADO: 'CRIADO',
@@ -475,35 +476,178 @@ async function contarPresentesNoQuorum(quorumId) {
   return parseInt(rows[0].total || 0);
 }
 
+/**
+ * Obtém informações de branch e hierarquia do membro.
+ */
+async function obterInfoBranchUser(userId, client = null) {
+  const db = client || pool;
+  // Prioriza tabela normalizada user_vinculos
+  const { rows } = await db.query(
+    `SELECT branch, role, uf FROM user_vinculos
+     WHERE user_id = $1 AND status = 'ATIVO'
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  let branch = null;
+  let role = null;
+  let uf = null;
+  let rank = 0;
+
+  if (rows.length > 0) {
+    for (const v of rows) {
+      const vRole = (v.role || "").toUpperCase();
+      const vBranch = (v.branch || "").toUpperCase();
+      const vUf = v.uf;
+
+      if (vBranch === 'DIRETORIA' || vBranch === 'CONSELHO' || vBranch === 'CONSELHEIRO') {
+        if (vRole.includes("PRESIDENTE") && !vRole.includes("VICE")) {
+          return { branch: 'CONSELHEIRO', role: 'PRESIDENTE', uf: vUf, rank: 1 };
+        }
+        if (vRole.includes("VICE-PRESIDENTE") || vRole.includes("VICE PRESIDENTE")) {
+          return { branch: 'CONSELHEIRO', role: 'VICE_PRESIDENTE', uf: vUf, rank: 2 };
+        }
+      }
+      if (vBranch === 'DELEGACAO') {
+        if (vRole.includes("REPRESENTANTE")) {
+          return { branch: 'DELEGACAO', role: 'DELEGADO_REPRESENTANTE', uf: vUf, rank: 1 };
+        }
+        if (vRole.includes("SUBSTITUTO") || vRole.includes("SUPLENTE")) {
+          return { branch: 'DELEGACAO', role: 'SUPLENTE', uf: vUf, rank: 2 };
+        }
+      }
+    }
+  }
+
+  // Fallback para campos legados em users
+  const { rows: uRows } = await db.query("SELECT cargo, uf FROM users WHERE id = $1", [userId]);
+  const u = uRows[0];
+  if (!u) return null;
+
+  const cargo = (u.cargo || "").toUpperCase();
+  const ufUser = u.uf;
+
+  if (cargo.includes("PRESIDENTE") && !cargo.includes("VICE")) {
+    return { branch: 'CONSELHEIRO', role: 'PRESIDENTE', uf: ufUser, rank: 1 };
+  }
+  if (cargo.includes("VICE-PRESIDENTE") || cargo.includes("VICE PRESIDENTE")) {
+    return { branch: 'CONSELHEIRO', role: 'VICE_PRESIDENTE', uf: ufUser, rank: 2 };
+  }
+  if (cargo.includes("DELEGADO REPRESENTANTE")) {
+    return { branch: 'DELEGACAO', role: 'DELEGADO_REPRESENTANTE', uf: ufUser, rank: 1 };
+  }
+  if (cargo.includes("DELEGADO SUBSTITUTO") || cargo.includes("SUPLENTE")) {
+    return { branch: 'DELEGACAO', role: 'SUPLENTE', uf: ufUser, rank: 2 };
+  }
+
+  return null;
+}
+
 async function realizarCheckin(dados) {
   const { assembleia_quorum_id, user_id, origem, assembleia_id } = dados;
+  const client = await pool.connect();
 
-  // Blindagem de perfil: ADMIN e COMUNICADOR não fazem check-in
-  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM users WHERE id = $1", [user_id]);
-  const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
-  if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
-    throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+  try {
+    await client.query('BEGIN');
+
+    // Blindagem de perfil: ADMIN e COMUNICADOR não fazem check-in
+    const { rows: userRows } = await client.query("SELECT perfil_acesso, name FROM users WHERE id = $1", [user_id]);
+    const userObj = userRows[0];
+    const perfil = (userObj?.perfil_acesso || "").toUpperCase();
+    if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
+      throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+    }
+
+    // Busca dados do Quorum
+    const { rows: qRows } = await client.query("SELECT is_global FROM assembleia_quoruns WHERE id = $1", [assembleia_quorum_id]);
+    const isGlobal = qRows[0]?.is_global;
+
+    // Regra Hierárquica por Branch (apenas para QUORUM, não GLOBAL)
+    if (!isGlobal) {
+      const info = await obterInfoBranchUser(user_id, client);
+      if (info) {
+        // Busca se já existe alguém do mesmo branch/UF no quorum
+        const { rows: branchCheckins } = await client.query(
+          `SELECT c.user_id, f.name, f.cargo, f.uf
+           FROM assembleia_checkins c
+           JOIN users f ON c.user_id = f.id
+           WHERE c.assembleia_quorum_id = $1`,
+          [assembleia_quorum_id]
+        );
+
+        for (const bc of branchCheckins) {
+          const bcInfo = await obterInfoBranchUser(bc.user_id, client);
+          if (bcInfo && bcInfo.branch === info.branch && bcInfo.uf === info.uf && bc.user_id !== user_id) {
+            // Conflito no mesmo branch da mesma UF
+            if (info.rank < bcInfo.rank) {
+              // Superior está entrando, subordinado está presente -> SUBSTITUIÇÃO
+              const votacaoAtiva = await buscarVotacaoAtiva(assembleia_id);
+              if (votacaoAtiva) {
+                // LOCK DURANTE VOTAÇÃO: Cria pendência
+                await client.query(
+                  `INSERT INTO assembleia_checkins_pendentes (id, assembleia_id, quorum_id, user_id_superior, user_id_subordinado, branch)
+                   VALUES ($1, $2, $3, $4, $5, $6)
+                   ON CONFLICT DO NOTHING`,
+                  [generateUuid(), assembleia_id, assembleia_quorum_id, user_id, bc.user_id, info.branch]
+                );
+                await registrarAuditoria(assembleia_id, user_id, 'SUBSTITUICAO_PENDENTE_VOTACAO', { superior_id: user_id, subordinado_id: bc.user_id, branch: info.branch, uf: info.uf }, client);
+                await client.query('COMMIT');
+                return { success: true, status: 'PENDING_VOTATION' };
+              } else {
+                // Substituição imediata
+                await client.query("DELETE FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = $2", [assembleia_quorum_id, bc.user_id]);
+                await registrarAuditoria(assembleia_id, user_id, 'SUBSTITUICAO_BRANCH', { superior_id: user_id, subordinado_id: bc.user_id, branch: info.branch, uf: info.uf }, client);
+
+                // WebSocket Emit
+                socket.emitEvent(assembleia_id, 'SUBSTITUICAO_BRANCH', {
+                  superior_id: user_id,
+                  superior_nome: userObj.name,
+                  subordinado_id: bc.user_id,
+                  subordinado_nome: bc.name,
+                  branch: info.branch,
+                  uf: info.uf,
+                  message: `Seu ${info.role === 'PRESIDENTE' ? 'presidente' : 'delegado representante'} entrou na sessão, então você foi retirado do quorum.`
+                });
+              }
+            } else if (info.rank > bcInfo.rank) {
+              // Subordinado tentando entrar enquanto superior está presente -> BLOQUEAR
+              const errorMsg = info.branch === 'CONSELHEIRO' ? Textos.ASSEMBLEIA.PRESIDENTE_PRESENTE : Textos.ASSEMBLEIA.DELEGADO_PRESENTE;
+              const err = new Error(errorMsg);
+              err.status = 409;
+              throw err;
+            }
+          }
+        }
+      }
+    }
+
+    // Realiza o Check-in
+    const { rows: existing } = await client.query(
+      `SELECT id FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = $2`,
+      [assembleia_quorum_id, user_id]
+    );
+
+    const { rows } = await client.query(
+      `INSERT INTO assembleia_checkins (id, assembleia_quorum_id, user_id, origem)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (assembleia_quorum_id, user_id) DO UPDATE SET registrado_em = NOW()
+       RETURNING id`,
+      [generateUuid(), assembleia_quorum_id, user_id, origem]
+    );
+    const res = rows[0];
+
+    if (assembleia_id && existing.length === 0) {
+      await registrarAuditoria(assembleia_id, user_id, 'CHECKIN_REALIZADO', { assembleia_quorum_id, origem }, client);
+    }
+
+    await client.query('COMMIT');
+    return res;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
   }
-
-  // Idempotência de auditoria
-  const { rows: existing } = await pool.query(
-    `SELECT id FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = $2`,
-    [assembleia_quorum_id, user_id]
-  );
-
-  const { rows } = await pool.query(
-    `INSERT INTO assembleia_checkins (id, assembleia_quorum_id, user_id, origem)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (assembleia_quorum_id, user_id) DO UPDATE SET registrado_em = NOW()
-     RETURNING id`,
-    [generateUuid(), assembleia_quorum_id, user_id, origem]
-  );
-  const res = rows[0];
-
-  if (assembleia_id && existing.length === 0) {
-    await registrarAuditoria(assembleia_id, user_id, 'CHECKIN_REALIZADO', { assembleia_quorum_id, origem });
-  }
-  return res;
 }
 
 async function buscarUltimoQuorum(assembleiaId) {
@@ -703,6 +847,49 @@ async function finalizarVotacao(votacaoId, userId = null) {
     if (abstençõesAplicadas > 0) {
       await registrarAuditoria(votacao.assembleia_id, userId, 'ABSTENCAO_AUTOMATICA_APLICADA', { votacao_id: votacaoId, contagem: abstençõesAplicadas }, client);
     }
+
+    // Processar substituições pendentes (Hierarquia Branch)
+    const { rows: pendentes } = await client.query(
+      "SELECT * FROM assembleia_checkins_pendentes WHERE assembleia_id = $1",
+      [votacao.assembleia_id]
+    );
+
+    for (const p of pendentes) {
+      // Remove subordinado
+      await client.query(
+        "DELETE FROM assembleia_checkins WHERE assembleia_quorum_id = $1 AND user_id = $2",
+        [p.quorum_id, p.user_id_subordinado]
+      );
+      // Garante que superior está dentro
+      await client.query(
+        `INSERT INTO assembleia_checkins (id, assembleia_quorum_id, user_id, origem)
+         VALUES ($1, $2, $3, 'AUTO_SUBSTITUICAO_POS_VOTO')
+         ON CONFLICT (assembleia_quorum_id, user_id) DO UPDATE SET registrado_em = NOW()`,
+        [generateUuid(), p.quorum_id, p.user_id_superior]
+      );
+
+      // Busca nomes para o WebSocket
+      const { rows: names } = await client.query(
+        "SELECT id, name FROM users WHERE id IN ($1, $2)",
+        [p.user_id_superior, p.user_id_subordinado]
+      );
+      const sup = names.find(n => n.id === p.user_id_superior);
+      const sub = names.find(n => n.id === p.user_id_subordinado);
+
+      socket.emitEvent(votacao.assembleia_id, 'SUBSTITUICAO_BRANCH', {
+        superior_id: p.user_id_superior,
+        superior_nome: sup?.name,
+        subordinado_id: p.user_id_subordinado,
+        subordinado_nome: sub?.name,
+        branch: p.branch,
+        message: `Votação encerrada. Seu titular entrou na sessão, então você foi retirado do quorum.`
+      });
+
+      await registrarAuditoria(votacao.assembleia_id, p.user_id_superior, 'SUBSTITUICAO_BRANCH_APLICADA', { superior_id: p.user_id_superior, subordinado_id: p.user_id_subordinado, branch: p.branch }, client);
+    }
+
+    // Limpa pendências
+    await client.query("DELETE FROM assembleia_checkins_pendentes WHERE assembleia_id = $1", [votacao.assembleia_id]);
 
     await client.query('COMMIT');
     return votacao;
@@ -1068,6 +1255,42 @@ async function listarPropostas(assembleiaId) {
   return rows;
 }
 
+async function confirmarBranchProposta(assembleiaId, propostaId, userId, acao) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: propRows } = await client.query(
+      `SELECT * FROM assembleia_propostas WHERE id = $1 AND assembleia_id = $2 FOR UPDATE`,
+      [propostaId, assembleiaId]
+    );
+    const proposta = propRows[0];
+    if (!proposta) throw new Error("Proposta não encontrada.");
+
+    if (acao === 'MANTER') {
+      await client.query(
+        "UPDATE assembleia_propostas SET autor_id = $1 WHERE id = $2",
+        [userId, propostaId]
+      );
+      await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_BRANCH_CONFIRMADA', { proposta_id: propostaId, acao: 'MANTER' }, client);
+    } else {
+      await client.query(
+        "UPDATE assembleia_propostas SET status = 'CANCELADA_BRANCH', retirada_em = NOW() WHERE id = $1",
+        [propostaId]
+      );
+      await registrarAuditoria(assembleiaId, userId, 'PROPOSTA_BRANCH_CONFIRMADA', { proposta_id: propostaId, acao: 'CANCELAR' }, client);
+    }
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
   const client = await pool.connect();
   try {
@@ -1132,8 +1355,6 @@ async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
 }
 
 async function buscarDiagnostico(assembleiaId) {
-  const socket = require("../websocket/assembleia.socket");
-
   // Otimização Bolt: Busca inicial paralela para reduzir latência de rede e DB
   const [assembleia, mesa, ultimoQuorum, votacaoAtiva] = await Promise.all([
     buscarPorId(assembleiaId),
@@ -1327,11 +1548,35 @@ async function buscarEstadoCompleto(assembleiaId, userId = null) {
       }
     }
 
+    // Verificação de Propostas Pendentes de Branch (A.2)
+    let propostaPendenteBranch = null;
+    if (userId && ultimoQuorum) {
+      const info = await obterInfoBranchUser(userId);
+      if (info && info.rank === 1) { // Titular
+        const propPendentes = (propostas || []).filter(p => p.status === 'ATIVA');
+        for (const p of propPendentes) {
+          const estaNoQuorum = presentesNominais.some(pres => pres.id === p.autor_id);
+          if (!estaNoQuorum) {
+            const pInfo = await obterInfoBranchUser(p.autor_id);
+            if (pInfo && pInfo.branch === info.branch && pInfo.uf === info.uf) {
+              propostaPendenteBranch = {
+                id: p.id,
+                titulo: p.titulo,
+                autor_nome: p.autor_nome
+              };
+              break;
+            }
+          }
+        }
+      }
+    }
+
     return {
       assembleia,
       mesa: mesa || null,
       pedidosPalavra: pedidosPalavra || [],
       propostas: propostas || [],
+      proposta_pendente_branch: propostaPendenteBranch,
       quorumVigente: ultimoQuorum ? {
         ...ultimoQuorum,
         total: totalPresentes,
@@ -1503,6 +1748,7 @@ module.exports = {
   concederPalavra,
   criarProposta,
   listarPropostas,
+  confirmarBranchProposta,
   iniciarVotacaoProposta,
   verificarElegibilidadePorQuorum,
   definirMesa,

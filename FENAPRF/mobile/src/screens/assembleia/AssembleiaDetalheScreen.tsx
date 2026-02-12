@@ -305,12 +305,24 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }
     try {
       setActionLoading(true);
-      await realizarCheckin(id, tokenInput);
+      const res = await realizarCheckin(id, tokenInput) as any;
+
+      if (res?.status === 'PENDING_VOTATION') {
+          Alert.alert('Substituição Pendente', 'Uma votação está em curso. Sua titularidade será aplicada automaticamente assim que o item atual for encerrado.');
+          setTokenInput('');
+          fetchData();
+          return;
+      }
+
       Alert.alert('Sucesso', 'Check-in realizado com sucesso!');
       setTokenInput('');
       fetchData();
     } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Token inválido ou expirado.');
+      if (err.response?.status === 409) {
+          Alert.alert('Conflito de Hierarquia', err.response?.data?.error || 'Seu titular já está participando da sessão.');
+      } else {
+          Alert.alert('Erro', err.response?.data?.error || err.response?.data?.message || 'Token inválido ou expirado.');
+      }
     } finally {
       setActionLoading(false);
     }

@@ -858,6 +858,29 @@ async function concederPalavra(req, res) {
   }
 }
 
+async function confirmarBranchProposta(req, res) {
+  const assembleiaId = parseUuid(req.params.id);
+  const propostaId = parseUuid(req.params.pid);
+  if (!assembleiaId || !propostaId) return res.status(400).json({ error: "ID ou PID inválido (UUID esperado)." });
+
+  try {
+    const { acao } = req.body;
+    if (!['MANTER', 'CANCELAR'].includes(acao)) {
+      return res.status(400).json({ error: "Ação inválida. Use MANTER ou CANCELAR." });
+    }
+
+    await service.confirmarBranchProposta(assembleiaId, propostaId, req.user.id, acao);
+
+    const propostas = await service.listarPropostas(assembleiaId);
+    socket.emitEvent(assembleiaId, "proposals_updated", propostas);
+
+    res.json({ success: true });
+  } catch (err) {
+    log.error("AssembleiaConfirmarBranchPropostaErro", { error: err.message, requestId: req.requestId });
+    res.status(500).json({ error: "Erro ao confirmar proposta de branch.", requestId: req.requestId });
+  }
+}
+
 async function iniciarVotacaoProposta(req, res) {
   const assembleiaId = parseUuid(req.params.id);
   const propostaId = parseUuid(req.params.prid);
@@ -1268,6 +1291,7 @@ module.exports = {
   encerrarVotacao,
   pedirPalavra,
   criarProposta,
+  confirmarBranchProposta,
   substituirMesa,
   concederPalavra,
   iniciarVotacaoProposta,

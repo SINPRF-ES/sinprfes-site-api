@@ -120,7 +120,36 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     }
   }
 
-  // 4. Analisar tickets (v1 simplificada: logs já feitos acima)
+  // 4. Analisar tickets e Processar Receipts (Opcional/Async)
+  // Agendamos o processamento de receipts para 2 minutos depois (best effort)
+  if (tickets.length > 0) {
+      setTimeout(async () => {
+          try {
+              const ticketIds = tickets.filter(t => t.id).map(t => t.id);
+              if (ticketIds.length === 0) return;
+
+              const receiptChunks = expo.chunkPushNotificationReceiptIds(ticketIds);
+              for (const chunk of receiptChunks) {
+                  const receipts = await expo.getPushNotificationReceiptsAsync(chunk);
+                  for (let receiptId in receipts) {
+                      const { status, message, details } = receipts[receiptId];
+                      if (status === 'error') {
+                          log.error(`PushCampaign.ReceiptError`, { receiptId, message, details });
+                          if (details?.error === 'DeviceNotRegistered') {
+                              // Tenta encontrar o token correspondente nos tickets originais
+                              const originalTicket = tickets.find(t => t.id === receiptId);
+                              // Nota: Como não temos o mapeamento direto TicketID -> Token aqui de forma fácil,
+                              // sugerimos que o app sempre registre o token ao abrir.
+                              // Mas se soubermos o token, revogamos.
+                          }
+                      }
+                  }
+              }
+          } catch (e) {
+              log.error("PushCampaign.ReceiptProcessingError", { error: e.message });
+          }
+      }, 120000); // 2 minutos
+  }
 
   const resultData = {
     sent: sentCount,

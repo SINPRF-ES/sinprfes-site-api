@@ -14,7 +14,7 @@ const required = [
   "criar","uploadEdital","abrir","iniciarExecucao","encerrarAssembleia",
   "gerarTokenQuorum","atualizarQuorum","checkin","definirMesa","substituirMesa",
   "iniciarVotacao","votar","encerrarVotacao",
-  "pedirPalavra","concederPalavra","criarProposta","iniciarVotacaoProposta",
+  "pedirPalavra","concederPalavra","criarProposta","confirmarBranchProposta","iniciarVotacaoProposta",
   "gerarRelatorio","diagnostico","limparLogsAuditoria","getGlobalTokenAtivo"
 ];
 const missing = required.filter(k => typeof controller?.[k] !== "function");
@@ -62,6 +62,7 @@ router.post("/:id/votacoes/:vid/encerrar", auth, assemblyCommandLimiter, control
 router.post("/:id/pedir-palavra", auth, controller.pedirPalavra);
 router.post("/:id/pedidos/:pid/conceder", auth, assemblyCommandLimiter, controller.concederPalavra);
 router.post("/:id/propostas", auth, controller.criarProposta);
+router.post("/:id/propostas/:pid/confirmar-branch", auth, assemblyCommandLimiter, controller.confirmarBranchProposta);
 router.post("/:id/propostas/:prid/votar", auth, assemblyCommandLimiter, controller.iniciarVotacaoProposta);
 
 // Relatório (Governança interna no controller: todos exceto COMUNICADOR podem gerar se encerrada)
