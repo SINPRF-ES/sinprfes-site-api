@@ -487,12 +487,15 @@ exports.atualizarUser = async (req, res) => {
 };
 
 exports.listarHistoricoArquivamento = async (req, res) => {
+  const atorId = req.user?.id;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const { q } = req.query;
     const historico = await usersService.listarHistoricoMovimentacoes(null, q);
     res.json(historico);
   } catch (err) {
-    log.error("UsersHistoricoArquivamentoErro", { error: err.message, stack: err.stack, requestId: req.requestId });
+    log.error("UsersHistoricoArquivamentoErro", { error: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId: req.requestId });
   }
 };
@@ -501,11 +504,14 @@ exports.getHistoricoArquivamentoPorId = async (req, res) => {
   const targetUserId = parseUserId(req, res);
   if (targetUserId === null) return;
 
+  const atorId = req.user?.id;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const historico = await usersService.listarHistoricoMovimentacoes(targetUserId);
     res.json(historico);
   } catch (err) {
-    log.error("UsersHistoricoArquivamentoPorIdErro", { error: err.message, stack: err.stack, targetId: targetUserId, requestId: req.requestId });
+    log.error("UsersHistoricoArquivamentoPorIdErro", { error: err.message, stack: err.stack, targetId: targetUserId, requestId: req.requestId, userId: atorId });
     res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId: req.requestId });
   }
 };

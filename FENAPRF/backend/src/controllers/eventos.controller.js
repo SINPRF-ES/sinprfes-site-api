@@ -16,8 +16,8 @@ function notFound(res, req, msg = "Recurso não encontrado.") {
   return res.status(404).json({ error: msg, requestId: req?.requestId });
 }
 
-function serverError(res, e, fallbackMsg, req) {
-  log.error(fallbackMsg.replace(/:$/, ""), { error: e.message, stack: e.stack, requestId: req?.requestId });
+function serverError(res, e, fallbackMsg, req, atorId) {
+  log.error(fallbackMsg.replace(/:$/, ""), { error: e.message, stack: e.stack, requestId: req?.requestId, userId: atorId });
   return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_PROCESSAR, requestId: req?.requestId });
 }
 
@@ -49,7 +49,10 @@ async function resolveNullTransition(res, eventoId, msgIfExists) {
  * Cria evento (RASCUNHO ou AGENDADO)
  */
 exports.criar = async (req, res) => {
+  const atorId = req.user?.id;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
     const {
       tipo,
       titulo,
@@ -91,7 +94,7 @@ exports.criar = async (req, res) => {
 
     return res.status(201).json(created);
   } catch (e) {
-    return serverError(res, e, "EventoCriarErro:", req);
+    return serverError(res, e, "EventoCriarErro:", req, atorId);
   }
 };
 

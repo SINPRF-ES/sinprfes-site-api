@@ -584,6 +584,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                     <TouchableOpacity
                       style={styles.btnManagement}
                       onPress={handleSolicitarRelatorio}
+                      accessibilityRole="button"
+                      accessibilityLabel="Solicitar Relatório PDF da Assembleia"
                     >
                         <Text style={styles.btnActionText}>Relatório PDF</Text>
                     </TouchableOpacity>
@@ -601,6 +603,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                 style={[styles.btnSala, { width: '100%', backgroundColor: '#27ae60' }]}
                 onPress={handleSolicitarRelatorio}
                 disabled={actionLoading}
+                accessibilityRole="button"
+                accessibilityLabel={actionLoading ? "Solicitando relatório..." : "Solicitar Relatório PDF Consolidado"}
             >
                 <MaterialCommunityIcons name="file-pdf-box" size={24} color="#fff" />
                 <Text style={styles.btnSalaText}>{actionLoading ? 'Solicitando...' : 'Solicitar Relatório PDF'}</Text>
