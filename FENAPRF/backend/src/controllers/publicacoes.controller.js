@@ -1,5 +1,6 @@
 // src/controllers/publicacoes.controller.js
 const {
+  getAuthMode,
   listarArquivosPublicos,
   obterArquivoStream,
   createFolder,
@@ -16,6 +17,33 @@ const log = require("../utils/log");
 const { normalizePerfil } = require("../../shared/canon");
 
 const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+/**
+ * Mapeia erros do Google Drive para respostas HTTP padronizadas.
+ */
+function mapGoogleDriveError(err, requestId) {
+  const googleStatus = err.response?.status || err.code;
+  const googleMsg = err.message || "";
+
+  let status = 500;
+  let message = "Erro interno ao processar arquivos.";
+
+  if (googleStatus === 401) {
+    status = 401;
+    message = "Acesso expirado ou inválido ao Drive.";
+  } else if (googleStatus === 403) {
+    status = 403;
+    message = googleMsg.includes("quota") ? "Quota de armazenamento do Drive excedida." : "Permissão negada no Drive.";
+  } else if (googleStatus === 404) {
+    status = 404;
+    message = "Arquivo ou pasta não encontrado no Drive.";
+  } else if (googleStatus === 400) {
+    status = 400;
+    message = "Parâmetros inválidos para o Google Drive.";
+  }
+
+  return { status, message, requestId };
+}
 
 /**
  * Verifica se o perfil tem permissão de gestão.
@@ -88,6 +116,11 @@ exports.createFolder = async (req, res) => {
     parentFolderId = ROOT_FOLDER_ID;
   }
 
+  if (!parentFolderId) {
+    log.error("ConfigErroDrive", { message: "Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.", requestId: req.requestId });
+    return res.status(500).json({ message: "Erro de configuração no servidor: Pasta raiz não definida.", requestId: req.requestId });
+  }
+
   const atorId = req.user?.id;
   const perfilAtor = req.user?.perfil_acesso;
 
@@ -112,23 +145,26 @@ exports.createFolder = async (req, res) => {
     // Validação estrita contra pastas de sistema
     if (parentFolderId === trashId || parentFolderId === appId) {
       log.warn("PublicacoesCreateFolderDenied", { parentFolderId, trashId, appId, requestId: req.requestId });
-      return res.status(400).json({ message: "Não é permitido criar pastas aqui." });
+      return res.status(409).json({ message: "Não é permitido criar pastas aqui." });
     }
 
     const folder = await createFolder(cleanName, parentFolderId);
 
     log.info("DriveCreateFolder", {
       userId: atorId,
+      atorId,
       folderId: folder.id,
-      name: folder.name,
+      folderName: folder.name,
       parentFolderId: parentFolderId,
-      requestId: req.requestId
+      requestId: req.requestId,
+      authMode: getAuthMode()
     });
 
     return res.json({ success: true, folder });
   } catch (error) {
     log.error("ErroCreateFolder", { error: error.message, stack: error.stack, userId: atorId, requestId: req.requestId });
-    return res.status(500).json({ message: "Erro ao criar pasta no Drive.", requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, req.requestId);
+    return res.status(status).json({ message, requestId: req.requestId });
   }
 };
 
@@ -141,6 +177,11 @@ exports.uploadFile = async (req, res) => {
   // Normalização: Se não vier ou for null, assume a raiz do módulo
   if (!parentFolderId || parentFolderId === 'ROOT') {
     parentFolderId = ROOT_FOLDER_ID;
+  }
+
+  if (!parentFolderId) {
+    log.error("ConfigErroDriveUpload", { message: "Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.", requestId: req.requestId });
+    return res.status(500).json({ message: "Erro de configuração no servidor: Pasta raiz não definida.", requestId: req.requestId });
   }
 
   const file = req.file;
@@ -170,17 +211,19 @@ exports.uploadFile = async (req, res) => {
 
     if (parentFolderId === trashId || parentFolderId === appId) {
       log.warn("PublicacoesUploadDenied", { parentFolderId, trashId, appId, requestId: req.requestId });
-      return res.status(400).json({ message: "Não é permitido upload nesta pasta." });
+      return res.status(409).json({ message: "Não é permitido upload nesta pasta." });
     }
 
     const fileId = await uploadFile(file.buffer, fileName, file.mimetype, parentFolderId);
 
     log.info("DriveUploadFile", {
       userId: atorId,
+      atorId,
       fileId,
-      name: fileName,
+      fileName: fileName,
       parentFolderId: parentFolderId,
-      requestId: req.requestId
+      requestId: req.requestId,
+      authMode: getAuthMode()
     });
 
     return res.json({
@@ -195,7 +238,8 @@ exports.uploadFile = async (req, res) => {
       parentFolderId,
       requestId: req.requestId
     });
-    return res.status(500).json({ message: "Erro ao realizar upload para o Drive.", requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, req.requestId);
+    return res.status(status).json({ message, requestId: req.requestId });
   }
 };
 
@@ -221,12 +265,12 @@ exports.renameItem = async (req, res) => {
     const itemData = await getItem(id);
 
     if (id === trashId || id === appId) {
-      return res.status(400).json({ message: "Não é permitido renomear pastas do sistema." });
+      return res.status(409).json({ message: "Não é permitido renomear pastas do sistema." });
     }
 
     // Bloquear renome em itens dentro de App ou Lixeira
     if (itemData.parents?.some(p => p === trashId || p === appId)) {
-      return res.status(400).json({ message: "Não é permitido renomear itens em pastas protegidas ou na lixeira." });
+      return res.status(409).json({ message: "Não é permitido renomear itens em pastas protegidas ou na lixeira." });
     }
 
     const item = await renameItem(id, name.trim());
@@ -241,7 +285,8 @@ exports.renameItem = async (req, res) => {
     return res.json({ success: true, item });
   } catch (error) {
     log.error("ErroRenameItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
-    return res.status(500).json({ message: "Erro ao renomear item no Drive.", requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, req.requestId);
+    return res.status(status).json({ message, requestId: req.requestId });
   }
 };
 
@@ -269,21 +314,21 @@ exports.moveItem = async (req, res) => {
     const itemData = await getItem(id);
 
     if (targetFolderId === trashId || targetFolderId === appId) {
-      return res.status(400).json({ message: "Não é permitido mover para esta pasta." });
+      return res.status(409).json({ message: "Não é permitido mover para esta pasta." });
     }
 
     if (id === trashId || id === appId) {
-      return res.status(400).json({ message: "Não é permitido mover pastas do sistema." });
+      return res.status(409).json({ message: "Não é permitido mover pastas do sistema." });
     }
 
     // Bloquear mover itens que estão em App/Lixeira
     if (itemData.parents?.some(p => p === trashId || p === appId)) {
-      return res.status(400).json({ message: "Não é permitido mover itens de pastas protegidas ou da lixeira." });
+      return res.status(409).json({ message: "Não é permitido mover itens de pastas protegidas ou da lixeira." });
     }
 
     // Permitir mover apenas arquivos na fase 1
     if (itemData.mimeType === FOLDER_MIMETYPE) {
-      return res.status(400).json({ message: "Mover pastas não é permitido nesta fase." });
+      return res.status(409).json({ message: "Mover pastas não é permitido nesta fase." });
     }
 
     const item = await moveItem(id, targetFolderId);
@@ -299,7 +344,8 @@ exports.moveItem = async (req, res) => {
     return res.json({ success: true, item });
   } catch (error) {
     log.error("ErroMoveItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
-    return res.status(500).json({ message: "Erro ao mover item no Drive.", requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, req.requestId);
+    return res.status(status).json({ message, requestId: req.requestId });
   }
 };
 
@@ -320,17 +366,17 @@ exports.deleteItem = async (req, res) => {
     const itemData = await getItem(id);
 
     if (id === trashId || id === appId) {
-      return res.status(400).json({ message: "Não é permitido excluir pastas do sistema." });
+      return res.status(409).json({ message: "Não é permitido excluir pastas do sistema." });
     }
 
     // Bloquear pastas (fase 1)
     if (itemData.mimeType === FOLDER_MIMETYPE) {
-      return res.status(400).json({ message: "A exclusão de pastas não está permitida nesta fase." });
+      return res.status(409).json({ message: "A exclusão de pastas não está permitida nesta fase." });
     }
 
     // Bloquear se item já está na lixeira
     if (itemData.parents?.some(p => p === trashId)) {
-      return res.status(400).json({ message: "Este item já está na lixeira." });
+      return res.status(409).json({ message: "Este item já está na lixeira." });
     }
 
     const item = await deleteItem(id);
@@ -346,7 +392,8 @@ exports.deleteItem = async (req, res) => {
     return res.json({ success: true, item });
   } catch (error) {
     log.error("ErroDeleteItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
-    return res.status(500).json({ message: "Erro ao excluir item no Drive.", requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, req.requestId);
+    return res.status(status).json({ message, requestId: req.requestId });
   }
 };
 
