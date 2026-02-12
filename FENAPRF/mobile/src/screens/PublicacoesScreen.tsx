@@ -198,15 +198,16 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             style={styles.menuButton}
             onPress={() => {
               setSelectedItem(item);
-              // Abrir menu de contexto (será implementado no próximo passo)
+              const isProtected = item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(item.name?.toLowerCase()));
+
               Alert.alert(
                 'Ações',
                 `O que deseja fazer com "${item.name}"?`,
                 [
                   { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Renomear', onPress: () => handleOpenRename(item) },
-                  ...(item.isFolder ? [] : [{ text: 'Mover', onPress: () => handleOpenMove(item) }]),
-                  { text: 'Excluir', onPress: () => handleConfirmDelete(item), style: 'destructive' },
+                  ...(isProtected ? [] : [{ text: 'Renomear', onPress: () => handleOpenRename(item) }]),
+                  ...(isProtected ? [] : [{ text: 'Mover', onPress: () => handleOpenMove(item) }]),
+                  ...(isProtected ? [] : [{ text: 'Excluir', onPress: () => handleConfirmDelete(item), style: 'destructive' }]),
                 ]
               );
             }}
@@ -424,6 +425,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <FolderSelector
+              movingItemId={selectedItem?.id}
               onSelect={(targetId) => handleMoveTo(targetId)}
               onCancel={() => setIsMoveModalVisible(false)}
             />
@@ -455,7 +457,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   );
 };
 
-const FolderSelector = ({ onSelect, onCancel }: { onSelect: (id: string) => void, onCancel: () => void }) => {
+const FolderSelector = ({ movingItemId, onSelect, onCancel }: { movingItemId?: string, onSelect: (id: string) => void, onCancel: () => void }) => {
   const [currentPath, setCurrentPath] = useState<{ id: string | null, name: string }[]>([{ id: null, name: 'Páginas/Raiz' }]);
   const activeFolder = currentPath[currentPath.length - 1];
 
@@ -463,7 +465,7 @@ const FolderSelector = ({ onSelect, onCancel }: { onSelect: (id: string) => void
     queryKey: ['folders', activeFolder.id],
     queryFn: async () => {
       const data = await fetchPublicacoes(activeFolder.id);
-      return data.filter(item => item.isFolder && !item.hidden);
+      return data.filter(item => item.isFolder && !item.hidden && item.id !== movingItemId);
     }
   });
 
@@ -508,7 +510,8 @@ const FolderSelector = ({ onSelect, onCancel }: { onSelect: (id: string) => void
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => onSelect(activeFolder.id || 'ROOT')}
-          style={styles.confirmButton}
+          disabled={activeFolder.id === movingItemId}
+          style={[styles.confirmButton, activeFolder.id === movingItemId && { opacity: 0.5 }]}
         >
           <Text style={styles.confirmButtonText}>Mover para aqui</Text>
         </TouchableOpacity>

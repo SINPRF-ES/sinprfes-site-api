@@ -357,6 +357,7 @@ module.exports = {
   deleteItem,
   getAppFolderId,
   getItem,
+  isDescendant,
   FOLDER_MIMETYPE
 };
 
@@ -401,4 +402,46 @@ async function getAppFolderId() {
   } catch (error) {
     return null;
   }
+}
+
+/**
+ * Verifica se o item (fileId) é descendente do ancestral (potentialAncestorId).
+ * Útil para evitar ciclos ao mover pastas.
+ */
+async function isDescendant(fileId, potentialAncestorId) {
+  if (!fileId || !potentialAncestorId) return false;
+  if (fileId === potentialAncestorId) return true;
+
+  const auth = getGoogleAuth();
+  const drive = google.drive({ version: "v3", auth });
+
+  try {
+    let currentId = fileId;
+    const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+    // Subir na hierarquia até encontrar o ancestral ou chegar na raiz
+    // Limitamos a 10 níveis para evitar loops infinitos
+    for (let i = 0; i < 10; i++) {
+      const res = await drive.files.get({
+        fileId: currentId,
+        fields: "parents",
+        supportsAllDrives: true
+      });
+
+      const parents = res.data.parents || [];
+      if (parents.length === 0) break;
+
+      if (parents.includes(potentialAncestorId)) return true;
+
+      // Se chegamos na raiz e não era o ancestral, paramos
+      if (parents.includes(rootId)) break;
+
+      // Continuamos subindo (assume o primeiro pai)
+      currentId = parents[0];
+    }
+  } catch (error) {
+    log.error("GoogleDriveIsDescendantErro", { error: error.message, fileId, potentialAncestorId });
+  }
+
+  return false;
 }
