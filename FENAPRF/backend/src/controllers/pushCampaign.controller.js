@@ -67,7 +67,8 @@ exports.sendCampaign = async (req, res) => {
         success: false,
         message: "Dados inválidos para envio de push. Verifique os campos obrigatórios.",
         errors,
-        code: "VALIDATION_ERROR"
+        code: "VALIDATION_ERROR",
+        requestId
       });
     }
 
@@ -104,7 +105,7 @@ exports.sendCampaign = async (req, res) => {
       });
     }
 
-    return res.json(result);
+    return res.json({ ...result, requestId });
   } catch (e) {
     const errorId = uuidv4();
     log.error("PushCampaign.ControllerErro", {
@@ -184,7 +185,7 @@ exports.listCampaigns = async (req, res) => {
     const limit = includeArchived ? 1000 : 5;
 
     const campaigns = await pushCampaignService.listCampaigns(limit);
-    return res.json({ success: true, campaigns });
+    return res.json({ success: true, campaigns, requestId });
   } catch (e) {
     log.error("PushCampaign.ListErro", {
         requestId,

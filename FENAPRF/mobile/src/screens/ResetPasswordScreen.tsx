@@ -104,12 +104,14 @@ export default function ResetPasswordScreen() {
           onPress={handleResetPassword}
           disabled={loading}
           color="#FFC300"
+          accessibilityLabel={loading ? 'Redefinindo sua senha (Aguarde...)' : 'Redefinir Senha. Confirma a alteração da sua senha.'}
         />
          <Button
           title="Voltar ao Login"
           onPress={() => navigation.navigate('Login')}
           disabled={loading}
           color="#666"
+          accessibilityLabel="Voltar para a tela de login"
         />
       </View>
     </KeyboardAwareScrollView>

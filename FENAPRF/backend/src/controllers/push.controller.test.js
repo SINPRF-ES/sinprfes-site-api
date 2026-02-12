@@ -11,7 +11,7 @@ describe('Push Controller', () => {
   beforeEach(() => {
     req = {
       body: {},
-      user: { id: 1 },
+      user: { id: '550e8400-e29b-41d4-a716-446655440000' },
       requestId: 'test-request-id',
       method: 'POST',
       originalUrl: '/api/push/register'

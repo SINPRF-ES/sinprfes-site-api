@@ -29,6 +29,7 @@ export default function MeusDadosScreen() {
   const { user: authUser, setSessao, token } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -58,10 +59,10 @@ export default function MeusDadosScreen() {
 
 
   const handleUpdate = useCallback(async () => {
-    if (!user) return;
+    if (!user || isSaving) return;
 
     try {
-      setLoading(true);
+      setIsSaving(true);
 
       const payload = { ...user };
 
@@ -92,9 +93,9 @@ export default function MeusDadosScreen() {
     } catch (err: any) {
       Alert.alert('Erro', err.response?.data?.message || 'Não foi possível atualizar os dados.');
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
-  }, [user, authUser, token, setSessao]);
+  }, [user, authUser, token, setSessao, isSaving]);
 
   const processAndUploadImage = async (uri: string) => {
     try {
@@ -213,12 +214,23 @@ export default function MeusDadosScreen() {
 
   useEffect(() => {
     const actions: MenuAction[] = [
-      { label: 'Salvar Alterações', icon: 'content-save', onPress: handleUpdate },
-      { label: 'Alterar Foto', icon: 'camera', onPress: handleAvatarUpload }
+      {
+        label: isSaving ? 'Salvando...' : 'Salvar Alterações',
+        icon: isSaving ? 'clock-outline' : 'content-save',
+        onPress: handleUpdate,
+        disabled: isSaving
+      },
+      { label: 'Alterar Foto', icon: 'camera', onPress: handleAvatarUpload, disabled: isSaving || isUploading }
     ];
 
     if (user?.avatar_url) {
-      actions.push({ label: 'Remover Foto', icon: 'camera-off', onPress: handleAvatarRemove, isDestructive: true });
+      actions.push({
+        label: 'Remover Foto',
+        icon: 'camera-off',
+        onPress: handleAvatarRemove,
+        isDestructive: true,
+        disabled: isSaving || isUploading
+      });
     }
 
     navigation.setOptions({
@@ -254,8 +266,8 @@ export default function MeusDadosScreen() {
         <ContatoCard
           user={user}
           setUser={setUser}
-          isEditing={true}
-          isManagement={['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((authUser?.perfil_acesso || '').toUpperCase())}
+          isEditing={!isSaving && !isUploading}
+          isManagement={!isSaving && !isUploading && ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((authUser?.perfil_acesso || '').toUpperCase())}
           hideTitle={true}
         />
       </ErrorBoundary>
@@ -264,7 +276,13 @@ export default function MeusDadosScreen() {
         <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}>
           <Text style={styles.sectionTitle}>🏠 Endereço</Text>
         </View>
-        <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
+        <EnderecoCard
+          user={user}
+          setUser={setUser}
+          hideTitle={true}
+          cardStyle={{ backgroundColor: '#f7f9fc', opacity: (isSaving || isUploading) ? 0.6 : 1 }}
+          disabled={isSaving || isUploading}
+        />
       </ErrorBoundary>
 
       {user?.perfil_acesso2 && (

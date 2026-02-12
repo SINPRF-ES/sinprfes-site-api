@@ -10,9 +10,10 @@ interface Props {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   hideTitle?: boolean;
   cardStyle?: any;
+  disabled?: boolean;
 }
 
-const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardStyle = {} }) => {
+const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardStyle = {}, disabled = false }) => {
   const [isBuscando, setIsBuscando] = useState(false);
 
   const handleCepChange = (value: string) => {
@@ -50,12 +51,13 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>CEP</Text>
           <TextInput
-            style={styles.input}
+            style={disabled ? styles.inputDisabled : styles.input}
             value={formatCep(user?.cep || '')}
             onChangeText={handleCepChange}
             placeholder="00000-000"
             keyboardType="numeric"
             maxLength={9} // 00000-000
+            editable={!disabled}
             accessibilityLabel="CEP"
             textContentType="postalCode"
             autoComplete="postal-code"
@@ -64,7 +66,7 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
         {isBuscando ? (
           <ActivityIndicator />
         ) : (
-          <Button title="Buscar" onPress={handleBuscarCep} />
+          <Button title="Buscar" onPress={handleBuscarCep} disabled={disabled} />
         )}
       </View>
       <Text style={styles.label}>Logradouro e Bairro</Text>
@@ -80,20 +82,22 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
         <View style={styles.col}>
           <Text style={styles.label}>Número</Text>
           <TextInput
-            style={styles.input}
+            style={disabled ? styles.inputDisabled : styles.input}
             value={user?.numero || ''}
             onChangeText={(text) => setUser(f => f ? { ...f, numero: text } : null)}
             placeholder="Nº"
+            editable={!disabled}
             accessibilityLabel="Número"
           />
         </View>
         <View style={styles.col}>
           <Text style={styles.label}>Complemento</Text>
           <TextInput
-            style={styles.input}
+            style={disabled ? styles.inputDisabled : styles.input}
             value={user?.complemento || ''}
             onChangeText={(text) => setUser(f => f ? { ...f, complemento: text } : null)}
             placeholder="Opcional"
+            editable={!disabled}
             accessibilityLabel="Complemento"
             textContentType="streetAddressLine2"
           />
