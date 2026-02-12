@@ -66,6 +66,54 @@
     "Diretor de Direitos Humanos e Políticas Sociais Substituto",
   ];
 
+  /**
+   * UFs Detalhadas
+   */
+  const UFS_DETALHADAS = [
+    { sigla: "BR", nome: "Brasil"},
+    { sigla: "AC", nome: "Acre" },
+    { sigla: "AL", nome: "Alagoas" },
+    { sigla: "AP", nome: "Amapá" },
+    { sigla: "AM", nome: "Amazonas" },
+    { sigla: "BA", nome: "Bahia" },
+    { sigla: "CE", nome: "Ceará" },
+    { sigla: "DF", nome: "Distrito Federal" },
+    { sigla: "ES", nome: "Espírito Santo" },
+    { sigla: "GO", nome: "Goiás" },
+    { sigla: "MA", nome: "Maranhão" },
+    { sigla: "MT", nome: "Mato Grosso" },
+    { sigla: "MS", nome: "Mato Grosso do Sul" },
+    { sigla: "MG", nome: "Minas Gerais" },
+    { sigla: "PA", nome: "Pará" },
+    { sigla: "PB", nome: "Paraíba" },
+    { sigla: "PR", nome: "Paraná" },
+    { sigla: "PE", nome: "Pernambuco" },
+    { sigla: "PI", nome: "Piauí" },
+    { sigla: "RJ", nome: "Rio de Janeiro" },
+    { sigla: "RN", nome: "Rio Grande do Norte" },
+    { sigla: "RS", nome: "Rio Grande do Sul" },
+    { sigla: "RO", nome: "Rondônia" },
+    { sigla: "RR", nome: "Roraima" },
+    { sigla: "SC", nome: "Santa Catarina" },
+    { sigla: "SP", nome: "São Paulo" },
+    { sigla: "SE", nome: "Sergipe" },
+    { sigla: "TO", nome: "Tocantins" },
+  ];
+
+  /**
+   * Filtros da página Membros
+   */
+  const FILTROS_MEMBROS = [
+    { value: "PADRAO", label: "Exibição padrão (Diretoria + Conselheiros por UF)" },
+    { value: "DIRETORIA", label: "Apenas Diretoria" },
+    { value: "PRESIDENTES", label: "Apenas Presidentes" },
+    { value: "VICES", label: "Apenas Vices" },
+    { value: "DR", label: "Delegados Representantes (DR)" },
+    { value: "DS", label: "Delegados Substitutos (DS)" },
+    { value: "UF", label: "Filtrar por UF" },
+    { value: "ADMIN_COLAB", label: "Admin/Colaborador" },
+  ];
+
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
   const LABELS = {
     [ESTADO_CADASTRO.CADASTRO_ATIVO]: 'Ativo',
@@ -142,6 +190,8 @@
     UFS,
     CARGOS_CONSELHO,
     CARGOS_DIRETORIA,
+    UFS_DETALHADAS,
+    FILTROS_MEMBROS,
     LABELS,
     normalizeSexo,
     normalizePerfil,
