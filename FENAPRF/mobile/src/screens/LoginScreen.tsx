@@ -237,14 +237,23 @@ export default function LoginScreen() {
           </View>
 
           <>
-            <Button title={loading ? 'Entrando...' : 'Entrar'} onPress={handleLoginCredenciais} disabled={loading} color="#FFC300" />
+            <Button
+              title={loading ? 'Entrando...' : 'Entrar'}
+              onPress={handleLoginCredenciais}
+              disabled={loading}
+              color="#FFC300"
+              accessibilityLabel={loading ? 'Entrando no sistema (Aguarde...)' : 'Entrar. Realiza o login com CPF e senha informados.'}
+            />
             <Pressable
               onPress={() => navigation.navigate('ForgotPassword' as any)}
               disabled={loading}
               accessibilityRole="link"
-              accessibilityLabel="Esqueci minha senha ou Primeiro acesso"
+              accessibilityLabel={loading ? "Recuperar senha ou primeiro acesso (Aguarde...)" : "Esqueci minha senha ou Primeiro acesso"}
+              accessibilityHint="Leva para a tela de recuperação de senha ou definição de primeiro acesso."
             >
-              <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
+              <Text style={styles.forgotPasswordText}>
+                {loading ? 'Aguarde...' : 'Esqueci minha senha / Primeiro acesso'}
+              </Text>
             </Pressable>
           </>
         </View>

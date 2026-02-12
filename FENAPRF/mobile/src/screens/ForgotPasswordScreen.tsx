@@ -61,6 +61,7 @@ export default function ForgotPasswordScreen() {
           onPress={handleRequestReset}
           disabled={loading}
           color="#FFC300"
+          accessibilityLabel={loading ? 'Enviando solicitação de recuperação de senha (Aguarde...)' : 'Enviar Solicitação de recuperação de senha. Envia um link de recuperação para o e-mail cadastrado.'}
         />
         <View style={{ height: 10 }} />
         <Button
@@ -68,6 +69,7 @@ export default function ForgotPasswordScreen() {
           onPress={() => navigation.goBack()}
           disabled={loading}
           color="#666"
+          accessibilityLabel="Voltar para a tela de login"
         />
       </View>
     </KeyboardAwareScrollView>

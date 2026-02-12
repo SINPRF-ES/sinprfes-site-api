@@ -2,12 +2,13 @@
 const pushService = require("../services/push.service");
 const log = require("../utils/log");
 const { v4: uuidv4 } = require("uuid");
-const { isUuid } = require("../utils/format");
+const { parseUuid } = require("../utils/format");
 
 function getUserId(req) {
-  // Seu middleware auth normalmente seta req.user
-  // Vamos blindar: aceitar req.user.id ou req.user.userId
-  return req?.user?.id ?? req?.user?.userId ?? null;
+  // FENAPRF: O ID do usuário logado é extraído do middleware de autenticação.
+  // Deve ser um UUIDv7 válido conforme os padrões do projeto.
+  const id = req?.user?.id ?? req?.user?.userId ?? null;
+  return parseUuid(id);
 }
 
 function maskToken(token) {
@@ -22,16 +23,12 @@ exports.register = async (req, res) => {
   const { expoPushToken, deviceId, platform, permissionStatus } = req.body || {};
   const bodyKeys = req.body ? Object.keys(req.body) : [];
 
-  const isInt = (val) => (typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val)));
-  const userIdType = isUuid(userId) ? 'uuid' : (isInt(userId) ? 'int' : 'invalid');
-
   try {
     log.info("PushRegisterIniciado", {
       requestId,
       method: req.method,
       route: req.originalUrl,
       userId,
-      userId_type: userIdType,
       platform,
       permissionStatus,
       expoPushTokenMasked: maskToken(expoPushToken),
@@ -39,11 +36,11 @@ exports.register = async (req, res) => {
     });
 
     if (!userId) {
-      return res.status(401).json({ success: false, error: "Membro não autenticado (req.user ausente)." });
-    }
-
-    if (userIdType === 'invalid') {
-        return res.status(400).json({ success: false, error: "ID de usuário inválido (deve ser UUID ou Inteiro)." });
+      return res.status(401).json({
+        success: false,
+        error: "Membro não identificado ou sessão inválida (UUID esperado).",
+        requestId
+      });
     }
 
     // Se negou, registramos mesmo sem token
@@ -96,23 +93,19 @@ exports.unregister = async (req, res) => {
   const userId = getUserId(req);
   const { expoPushToken } = req.body || {};
 
-  const isInt = (val) => (typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val)));
-  const userIdType = isUuid(userId) ? 'uuid' : (isInt(userId) ? 'int' : 'invalid');
-
   try {
     log.info("PushUnregisterIniciado", {
       requestId,
       userId,
-      userId_type: userIdType,
       expoPushTokenMasked: maskToken(expoPushToken)
     });
 
     if (!userId) {
-      return res.status(401).json({ success: false, error: "Membro não autenticado (req.user ausente)." });
-    }
-
-    if (userIdType === 'invalid') {
-        return res.status(400).json({ success: false, error: "ID de usuário inválido (deve ser UUID ou Inteiro)." });
+      return res.status(401).json({
+        success: false,
+        error: "Membro não identificado ou sessão inválida (UUID esperado).",
+        requestId
+      });
     }
 
     if (!expoPushToken) {
