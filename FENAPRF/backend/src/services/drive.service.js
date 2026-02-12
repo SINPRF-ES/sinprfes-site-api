@@ -11,47 +11,77 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive.file"
 ];
 
+let driveAuthMode = null;
+
 /**
  * Obtém a instância de autenticação do Google.
- * Prioriza a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON (produção/Render).
- * Fallback para o arquivo google.json (local/desenvolvimento), se existir.
- *
- * Importante: se nenhuma credencial for encontrada, NÃO usa ADC (default credentials).
- * Em vez disso, lança erro explícito (evita "Could not load the default credentials").
+ * Ordem de prioridade:
+ * 1. OAuth2 (Refresh Token) - Recomendado para contas comuns (@gmail) para evitar problemas de quota.
+ * 2. Service Account (JWT) via GOOGLE_APPLICATION_CREDENTIALS_JSON.
+ * 3. Fallback para arquivo google.json local.
  */
+function getAuthMode() {
+  return driveAuthMode;
+}
+
 function getGoogleAuth() {
   const authOptions = { scopes: SCOPES };
 
-  const rawJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  // 1. Tentar OAuth2 (User context)
+  const oauthClientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+  const oauthClientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  const oauthRefreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
 
+  if (oauthClientId && oauthClientSecret && oauthRefreshToken) {
+    if (!driveAuthMode) {
+      log.info("DriveServiceAuth", { mode: "oauth", rootId: process.env.GOOGLE_DRIVE_FOLDER_ID });
+      driveAuthMode = "oauth";
+    }
+    const oauth2Client = new google.auth.OAuth2(oauthClientId, oauthClientSecret);
+    oauth2Client.setCredentials({ refresh_token: oauthRefreshToken });
+    return oauth2Client;
+  }
+
+  // 2. Tentar Service Account (JSON string)
+  const rawJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
   if (rawJson && rawJson.trim()) {
     try {
-      // A env var deve conter o JSON completo do service account (string).
+      if (!driveAuthMode) {
+        log.info("DriveServiceAuth", { mode: "service_account", rootId: process.env.GOOGLE_DRIVE_FOLDER_ID });
+        driveAuthMode = "service_account";
+      }
       authOptions.credentials = JSON.parse(rawJson);
       return new google.auth.GoogleAuth(authOptions);
     } catch (e) {
       log.error("GoogleDriveAuthJsonParseError", { error: e.message });
-      // Cai para fallback local abaixo (se existir); caso contrário, erro explícito.
     }
   }
 
+  // 3. Tentar arquivo local
   if (fs.existsSync(KEY_PATH)) {
+    if (!driveAuthMode) {
+      log.info("DriveServiceAuth", { mode: "local_json", rootId: process.env.GOOGLE_DRIVE_FOLDER_ID });
+      driveAuthMode = "local_json";
+    }
     authOptions.keyFile = KEY_PATH;
     return new google.auth.GoogleAuth(authOptions);
   }
 
-  // Não permitir ADC no Render (isso gera erros de ambiente).
   throw new Error(
-    "Google credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS_JSON (recommended for Render) or provide a local google.json (gitignored)."
+    "Google credentials not configured. Provide GOOGLE_OAUTH_* env vars or GOOGLE_APPLICATION_CREDENTIALS_JSON."
   );
 }
 
-// 🟢 MUDANÇA: Aceita um ID opcional. Se não vier, usa o padrão do .env
+// Flags padrão para suporte a Shared Drives e compatibilidade estendida
+const DRIVE_OP_FLAGS = {
+  supportsAllDrives: true,
+  includeItemsFromAllDrives: true
+};
+
 async function listarArquivosPublicos(targetFolderId = null) {
-  // Usa o ID passado ou o da raiz configurado no .env
   const folderId = targetFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-  if (!folderId) {
+  if (!folderId || folderId === 'ROOT') {
       log.warn("GoogleDriveFolderIdMissing", { targetFolderId });
       return [];
   }
@@ -61,11 +91,10 @@ async function listarArquivosPublicos(targetFolderId = null) {
 
   try {
     const res = await drive.files.list({
-      // Busca arquivos que tenham este folderId como pai
+      ...DRIVE_OP_FLAGS,
       q: `'${folderId}' in parents and trashed = false`,
-      // Importante: mimeType é o que nos diz se é pasta ou arquivo
       fields: "files(id, name, webViewLink, webContentLink, createdTime, mimeType)",
-      orderBy: "folder, createdTime desc", // Pastas primeiro, depois arquivos recentes
+      orderBy: "folder, createdTime desc",
       pageSize: 100
     });
 
@@ -75,6 +104,7 @@ async function listarArquivosPublicos(targetFolderId = null) {
     throw error;
   }
 }
+
 /**
  * Obtém o stream do arquivo e seus metadados diretamente do Google Drive.
  */
@@ -83,15 +113,14 @@ async function obterArquivoStream(fileId) {
   const drive = google.drive({ version: "v3", auth });
 
   try {
-    // 1) Metadados
     const meta = await drive.files.get({
       fileId,
       fields: "name, mimeType, size",
+      supportsAllDrives: true
     });
 
-    // 2) Conteúdo (stream)
     const res = await drive.files.get(
-      { fileId, alt: "media" },
+      { fileId, alt: "media", supportsAllDrives: true },
       { responseType: "stream" }
     );
 
@@ -124,10 +153,11 @@ async function obterArquivoTexto(fileId) {
 }
 
 async function uploadFile(buffer, name, mimeType, folderId = null) {
-  const targetFolderId = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+  let targetFolderId = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (targetFolderId === 'ROOT') targetFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
   if (!targetFolderId) {
-    log.warn("GoogleDriveUploadFolderIdMissing");
+    throw new Error("Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.");
   }
 
   const auth = getGoogleAuth();
@@ -135,7 +165,7 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
 
   const fileMetadata = {
     name: name,
-    parents: targetFolderId ? [targetFolderId] : [],
+    parents: [targetFolderId],
   };
 
   const media = {
@@ -148,6 +178,7 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
       resource: fileMetadata,
       media: media,
       fields: "id",
+      supportsAllDrives: true
     });
     return file.data.id;
   } catch (error) {
@@ -208,20 +239,27 @@ async function ensureTrashFolder() {
  * Cria uma nova pasta no Drive.
  */
 async function createFolder(name, parentFolderId = null) {
-  const targetFolderId = parentFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+  let targetFolderId = parentFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (targetFolderId === 'ROOT') targetFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+  if (!targetFolderId) {
+    throw new Error("Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.");
+  }
+
   const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
   const folderMetadata = {
     name: name,
     mimeType: FOLDER_MIMETYPE,
-    parents: targetFolderId ? [targetFolderId] : []
+    parents: [targetFolderId]
   };
 
   try {
     const folder = await drive.files.create({
       resource: folderMetadata,
-      fields: "id, name, mimeType, createdTime"
+      fields: "id, name, mimeType, createdTime",
+      supportsAllDrives: true
     });
     return folder.data;
   } catch (error) {
@@ -241,7 +279,8 @@ async function renameItem(fileId, newName) {
     const res = await drive.files.update({
       fileId: fileId,
       requestBody: { name: newName },
-      fields: "id, name, mimeType, createdTime"
+      fields: "id, name, mimeType, createdTime",
+      supportsAllDrives: true
     });
     return res.data;
   } catch (error) {
@@ -261,7 +300,8 @@ async function moveItem(fileId, targetFolderId) {
     // 1. Pegar os pais atuais para remover
     const file = await drive.files.get({
       fileId: fileId,
-      fields: "parents"
+      fields: "parents",
+      supportsAllDrives: true
     });
     const previousParentsArr = file.data.parents || [];
     const previousParentsStr = previousParentsArr.join(",");
@@ -271,7 +311,8 @@ async function moveItem(fileId, targetFolderId) {
       fileId: fileId,
       addParents: targetFolderId,
       removeParents: previousParentsStr,
-      fields: "id, name, mimeType, createdTime, parents"
+      fields: "id, name, mimeType, createdTime, parents",
+      supportsAllDrives: true
     });
 
     return {
@@ -285,6 +326,13 @@ async function moveItem(fileId, targetFolderId) {
 }
 
 /**
+ * Move um arquivo para uma pasta específica de lixeira.
+ */
+async function moveToTrash(fileId, trashFolderId) {
+  return await moveItem(fileId, trashFolderId);
+}
+
+/**
  * "Exclui" um item movendo-o para a Lixeira oculta.
  */
 async function deleteItem(fileId) {
@@ -292,15 +340,17 @@ async function deleteItem(fileId) {
   if (!trashId) {
     throw new Error("Pasta de lixeira não configurada ou inacessível.");
   }
-  return await moveItem(fileId, trashId);
+  return await moveToTrash(fileId, trashId);
 }
 
 module.exports = {
+  getAuthMode,
   listarArquivosPublicos,
   obterArquivoStream,
   obterArquivoTexto,
   uploadFile,
   ensureTrashFolder,
+  moveToTrash,
   createFolder,
   renameItem,
   moveItem,
@@ -320,7 +370,8 @@ async function getItem(fileId) {
   try {
     const res = await drive.files.get({
       fileId: fileId,
-      fields: "id, name, mimeType, parents, createdTime"
+      fields: "id, name, mimeType, parents, createdTime",
+      supportsAllDrives: true
     });
     return res.data;
   } catch (error) {
