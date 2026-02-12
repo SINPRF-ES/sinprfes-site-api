@@ -18,6 +18,7 @@ interface CanonicalPickerProps {
   style?: any;
   wrapperStyle?: ViewStyle;
   mode?: 'dialog' | 'dropdown';
+  accessibilityLabel?: string;
 }
 
 /**
@@ -33,6 +34,7 @@ const CanonicalPicker: React.FC<CanonicalPickerProps> = ({
   style,
   wrapperStyle,
   mode = 'dropdown',
+  accessibilityLabel,
 }) => {
   return (
     <PickerWrapper style={wrapperStyle}>
@@ -42,6 +44,7 @@ const CanonicalPicker: React.FC<CanonicalPickerProps> = ({
         enabled={enabled}
         style={[styles.picker, style]}
         mode={mode}
+        accessibilityLabel={accessibilityLabel}
         // No Android, itemStyle ajuda a evitar cortes dependendo da versão
         // @ts-ignore - itemStyle existe no Picker de Android
         itemStyle={{ height: 52 }}

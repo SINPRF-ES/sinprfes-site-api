@@ -8,13 +8,6 @@ const { STATUS_EVENTO, ACOES_AUDITORIA, RECURSO_TIPO } = require("../../shared/l
 const Textos = require("../utils/textos");
 
 /**
- * Helpers para compatibilidade com diferentes formatos de req.user
- */
-function getUserId(req) {
-    return req?.user?.id || req?.user?.user_id || null;
-}
-
-/**
  * Valida determinísticamente se uma string está nos formatos:
  * - YYYY-MM-DD (Data simples)
  * - YYYY-MM-DDTHH:mm:ssZ (ISO 8601 UTC)
@@ -51,7 +44,10 @@ async function registrarAuditoria(client, { resourceType, resourceId, eventId, t
 // --- EVENTOS ---
 
 exports.listarEventos = async (req, res) => {
+    const atorId = req.user?.id;
     try {
+        if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
         const { status } = req.query;
         let query = "SELECT * FROM logistica_eventos";
         const params = [];
@@ -72,9 +68,11 @@ exports.listarEventos = async (req, res) => {
 };
 
 exports.criarEvento = async (req, res) => {
+    const atorId = req.user?.id;
     const client = await pool.connect();
     try {
-        const gestorId = getUserId(req);
+        if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
         const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, assembleia_id } = req.body;
 
         if (!titulo || !data_inicio || !data_fim) {
@@ -104,7 +102,7 @@ exports.criarEvento = async (req, res) => {
             resourceType: RECURSO_TIPO.EVENTO,
             resourceId: evento.id,
             eventId: evento.id,
-            gestorId,
+            gestorId: atorId,
             action: ACOES_AUDITORIA.CRIAR,
             justification: "Criação inicial do evento",
             newData: evento
@@ -122,11 +120,13 @@ exports.criarEvento = async (req, res) => {
 };
 
 exports.atualizarEvento = async (req, res) => {
+    const atorId = req.user?.id;
     const client = await pool.connect();
     try {
+        if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
         const eventoId = parseUuid(req.params.id);
-        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
-        const gestorId = getUserId(req);
+        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId: req.requestId });
         const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, justificativa, assembleia_id } = req.body;
 
         if (!justificativa) {
@@ -161,7 +161,7 @@ exports.atualizarEvento = async (req, res) => {
             resourceType: RECURSO_TIPO.EVENTO,
             resourceId: eventoId,
             eventId: eventoId,
-            gestorId,
+            gestorId: atorId,
             action: ACOES_AUDITORIA.ALTERAR,
             justification: justificativa,
             oldData,
@@ -180,11 +180,13 @@ exports.atualizarEvento = async (req, res) => {
 };
 
 exports.encerrarEvento = async (req, res) => {
+    const atorId = req.user?.id;
     const client = await pool.connect();
     try {
+        if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
         const eventoId = parseUuid(req.params.id);
-        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
-        const gestorId = getUserId(req);
+        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId: req.requestId });
         const { justificativa } = req.body;
 
         if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para encerrar evento.", requestId: req.requestId });
@@ -203,14 +205,14 @@ exports.encerrarEvento = async (req, res) => {
             WHERE id = $4
             RETURNING *
         `;
-        const { rows } = await client.query(query, [STATUS_EVENTO.ENCERRADO, gestorId, justificativa, eventoId]);
+        const { rows } = await client.query(query, [STATUS_EVENTO.ENCERRADO, atorId, justificativa, eventoId]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
             resourceType: RECURSO_TIPO.EVENTO,
             resourceId: eventoId,
             eventId: eventoId,
-            gestorId,
+            gestorId: atorId,
             action: ACOES_AUDITORIA.ALTERAR,
             justification: justificativa,
             oldData,
@@ -229,11 +231,13 @@ exports.encerrarEvento = async (req, res) => {
 };
 
 exports.cancelarEvento = async (req, res) => {
+    const atorId = req.user?.id;
     const client = await pool.connect();
     try {
+        if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
         const eventoId = parseUuid(req.params.id);
-        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
-        const gestorId = getUserId(req);
+        if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId: req.requestId });
         const { justificativa } = req.body;
 
         if (!justificativa) return res.status(400).json({ error: "Justificativa obrigatória para cancelar evento.", requestId: req.requestId });
@@ -252,14 +256,14 @@ exports.cancelarEvento = async (req, res) => {
             WHERE id = $4
             RETURNING *
         `;
-        const { rows } = await client.query(query, [STATUS_EVENTO.CANCELADO, gestorId, justificativa, eventoId]);
+        const { rows } = await client.query(query, [STATUS_EVENTO.CANCELADO, atorId, justificativa, eventoId]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
             resourceType: RECURSO_TIPO.EVENTO,
             resourceId: eventoId,
             eventId: eventoId,
-            gestorId,
+            gestorId: atorId,
             action: ACOES_AUDITORIA.CANCELAR,
             justification: justificativa,
             oldData,
@@ -306,9 +310,11 @@ exports.listarInscricoes = async (req, res) => {
 };
 
 exports.registrarMinhaInscricao = async (req, res) => {
+    const atorId = req.user?.id;
     const client = await pool.connect();
     try {
-        const userId = getUserId(req);
+        if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
         const perfil = (req.user?.perfil_acesso || "").toUpperCase();
 
         if (perfil === "ADMIN" || perfil === "COLABORADOR") {
@@ -354,14 +360,14 @@ exports.registrarMinhaInscricao = async (req, res) => {
                 atualizado_em = NOW()
             RETURNING *
         `;
-        const { rows } = await client.query(query, [validEventoId, userId, data_chegada, data_saida, observacoes]);
+        const { rows } = await client.query(query, [validEventoId, atorId, data_chegada, data_saida, observacoes]);
         const inscricao = rows[0];
 
         await client.query("COMMIT");
 
         // Enviar e-mail (best effort)
         try {
-            const { rows: uRows } = await pool.query("SELECT name as nome, email FROM users WHERE id = $1", [userId]);
+            const { rows: uRows } = await pool.query("SELECT name as nome, email FROM users WHERE id = $1", [atorId]);
             if (uRows.length > 0) {
                 await enviarEmailConfirmacaoInscricaoLogistica({
                     user: uRows[0],
@@ -382,9 +388,11 @@ exports.registrarMinhaInscricao = async (req, res) => {
 };
 
 exports.cancelarMinhaInscricao = async (req, res) => {
+    const atorId = req.user?.id;
     const client = await pool.connect();
     try {
-        const userId = getUserId(req);
+        if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
+
         const eventoId = parseUuid(req.params.eventoId);
         if (!eventoId) return res.status(400).json({ error: "ID de evento inválido.", requestId: req.requestId });
 
@@ -396,17 +404,17 @@ exports.cancelarMinhaInscricao = async (req, res) => {
             return res.status(400).json({ error: msg, requestId: req.requestId });
         }
 
-        const { rows: iRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE evento_id = $1 AND user_id = $2", [eventoId, userId]);
+        const { rows: iRows } = await client.query("SELECT * FROM logistica_inscricoes WHERE evento_id = $1 AND user_id = $2", [eventoId, atorId]);
         if (iRows.length === 0) return res.status(404).json({ error: "Inscrição não encontrada.", requestId: req.requestId });
         const snapshot = iRows[0];
 
-        await client.query("DELETE FROM logistica_inscricoes WHERE evento_id = $1 AND user_id = $2", [eventoId, userId]);
+        await client.query("DELETE FROM logistica_inscricoes WHERE evento_id = $1 AND user_id = $2", [eventoId, atorId]);
 
         await client.query("COMMIT");
 
         // Enviar e-mail
         try {
-            const { rows: uRows } = await pool.query("SELECT name as nome, email FROM users WHERE id = $1", [userId]);
+            const { rows: uRows } = await pool.query("SELECT name as nome, email FROM users WHERE id = $1", [atorId]);
             if (uRows.length > 0) {
                 await enviarEmailCancelamentoInscricaoLogistica({
                     user: uRows[0],

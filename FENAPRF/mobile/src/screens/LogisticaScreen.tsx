@@ -534,6 +534,7 @@ const LogisticaScreen = ({ route }: any) => {
           selectedValue={statusFilter}
           onValueChange={(v) => setStatusFilter(v)}
           wrapperStyle={styles.filterPickerWrapper}
+          accessibilityLabel="Filtrar eventos por status"
           items={[
             { label: 'Ativos', value: STATUS_EVENTO.ATIVO },
             { label: 'Encerrados', value: STATUS_EVENTO.ENCERRADO },
