@@ -166,9 +166,8 @@ export const uploadDriveFile = async (
     type: mimeType,
   } as any);
 
-  if (parentFolderId) {
-    formData.append('parentFolderId', parentFolderId);
-  }
+  // Garantir que parentFolderId seja enviado (mesmo que seja 'ROOT')
+  formData.append('parentFolderId', parentFolderId || 'ROOT');
 
   const { data } = await api.post('/api/publicacoes/upload', formData, {
     headers: {

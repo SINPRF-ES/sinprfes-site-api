@@ -277,14 +277,22 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
 
   const handleCreateFolder = async () => {
     if (!newItemName.trim()) return;
+
+    // Guard clause: evitar envio de null para o backend
+    const parentId = currentFolder?.id || 'ROOT';
+    if (!parentId) {
+       Alert.alert('Erro', 'Destino não identificado. Tente navegar novamente.');
+       return;
+    }
+
     setIsProcessing(true);
     try {
-      await createFolder(newItemName, currentFolder.id);
+      await createFolder(newItemName.trim(), parentId);
       setIsNewFolderModalVisible(false);
       queryClient.invalidateQueries({ queryKey: ['publicacoes', currentFolder.id] });
       Alert.alert('Sucesso', 'Pasta criada com sucesso.');
     } catch (err) {
-      Alert.alert('Erro', 'Não foi possível criar a pasta.');
+      Alert.alert('Erro', 'Não foi possível criar a pasta. Verifique se você tem permissão nesta pasta.');
     } finally {
       setIsProcessing(false);
     }
@@ -300,14 +308,21 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       if (result.canceled || !result.assets || result.assets.length === 0) return;
 
       const asset = result.assets[0];
-      setIsProcessing(true);
 
-      await uploadDriveFile(asset.uri, asset.name, asset.mimeType || 'application/octet-stream', currentFolder.id);
+      // Guard clause: evitar envio de null para o backend
+      const parentId = currentFolder?.id || 'ROOT';
+      if (!parentId) {
+         Alert.alert('Erro', 'Destino não identificado para o upload.');
+         return;
+      }
+
+      setIsProcessing(true);
+      await uploadDriveFile(asset.uri, asset.name, asset.mimeType || 'application/octet-stream', parentId);
 
       queryClient.invalidateQueries({ queryKey: ['publicacoes', currentFolder.id] });
       Alert.alert('Sucesso', 'Arquivo enviado com sucesso.');
     } catch (err) {
-      Alert.alert('Erro', 'Falha no upload do arquivo.');
+      Alert.alert('Erro', 'Falha no upload do arquivo. O arquivo pode ser muito grande ou de tipo não suportado.');
     } finally {
       setIsProcessing(false);
     }

@@ -568,7 +568,7 @@ async function realizarCheckin(dados) {
       if (info) {
         // Busca se já existe alguém do mesmo branch/UF no quorum
         const { rows: branchCheckins } = await client.query(
-          `SELECT c.user_id, f.name, f.cargo, f.uf
+          `SELECT c.user_id, f.name as nome, f.cargo, f.uf
            FROM assembleia_checkins c
            JOIN users f ON c.user_id = f.id
            WHERE c.assembleia_quorum_id = $1`,
@@ -814,7 +814,7 @@ async function contarVotos(votacaoId) {
 
 async function listarVotosNominais(votacaoId) {
   const { rows } = await pool.query(
-    `SELECT v.user_id, f.nome, v.voto, v.registrado_em
+    `SELECT v.user_id, f.name as nome, v.voto, v.registrado_em
      FROM assembleia_votos v
      JOIN users f ON v.user_id = f.id
      WHERE v.votacao_id = $1
@@ -1135,10 +1135,10 @@ async function substituirMesa(dados) {
 async function buscarMesa(assembleiaId) {
   const { rows } = await pool.query(
     `SELECT m.*,
-            fp.nome as presidente_nome,
-            fv.nome as vice_presidente_nome,
-            fs.nome as secretario_nome,
-            fs2.nome as secretario_2_nome
+            fp.name as presidente_nome,
+            fv.name as vice_presidente_nome,
+            fs.name as secretario_nome,
+            fs2.name as secretario_2_nome
      FROM assembleia_mesa m
      LEFT JOIN users fp ON m.presidente_user_id = fp.id
      LEFT JOIN users fv ON m.vice_presidente_user_id = fv.id
@@ -1175,7 +1175,7 @@ async function pedirPalavra(assembleiaId, userId) {
 
 async function listarPedidosPalavra(assembleiaId) {
   const { rows } = await pool.query(
-    `SELECT p.*, f.nome as user_nome, f.avatar_url
+    `SELECT p.*, f.name as user_nome, f.avatar_url
      FROM assembleia_pedidos_palavra p
      JOIN users f ON p.user_id = f.id
      WHERE p.assembleia_id = $1 AND p.status IN ('PENDENTE', 'CONCEDIDO', 'EM_FALA')
@@ -1258,7 +1258,7 @@ async function criarProposta(dados) {
 
 async function listarPropostas(assembleiaId) {
   const { rows } = await pool.query(
-    `SELECT p.*, f.nome as autor_nome, f.avatar_url
+    `SELECT p.*, f.name as autor_nome, f.avatar_url
      FROM assembleia_propostas p
      JOIN users f ON p.autor_id = f.id
      WHERE p.assembleia_id = $1
@@ -1516,11 +1516,11 @@ async function buscarEstadoCompleto(assembleiaId, userId = null) {
     if (ultimoQuorum && ultimoQuorum.id) {
       quorumTaskIdx = subTasks.length;
       subTasks.push(pool.query(
-        `SELECT f.id, f.nome, f.avatar_url, c.registrado_em
+        `SELECT f.id, f.name as nome, f.avatar_url, c.registrado_em
          FROM assembleia_checkins c
          JOIN users f ON c.user_id = f.id
          WHERE c.assembleia_quorum_id = $1
-         ORDER BY f.nome ASC`,
+         ORDER BY f.name ASC`,
         [ultimoQuorum.id]
       ).catch(() => ({ rows: [] })));
     }
@@ -1616,21 +1616,21 @@ async function gerarDadosRelatorio(id) {
   const [mesa, quoruns, votacoes, propostas, presentesGlobal, auditoria, pedidosPalavra] = await Promise.all([
     buscarMesa(id),
     pool.query(`
-      SELECT q.*, f.nome as gerado_por_nome
+      SELECT q.*, f.name as gerado_por_nome
       FROM assembleia_quoruns q
       LEFT JOIN users f ON q.gerado_por_user_id = f.id
       WHERE q.assembleia_id = $1
       ORDER BY q.criado_em ASC
     `, [id]).then(r => r.rows),
     pool.query(`
-      SELECT v.*, f.nome as iniciada_por_nome
+      SELECT v.*, f.name as iniciada_por_nome
       FROM assembleia_votacoes v
       LEFT JOIN users f ON v.iniciada_por_user_id = f.id
       WHERE v.assembleia_id = $1
       ORDER BY v.aberta_em ASC
     `, [id]).then(r => r.rows),
     pool.query(`
-      SELECT p.*, f.nome as autor_nome
+      SELECT p.*, f.name as autor_nome
       FROM assembleia_propostas p
       LEFT JOIN users f ON p.autor_id = f.id
       WHERE p.assembleia_id = $1
@@ -1643,14 +1643,14 @@ async function gerarDadosRelatorio(id) {
       WHERE q.assembleia_id = $1
     `, [id]).then(r => r.rows[0]),
     pool.query(`
-      SELECT a.*, f.nome as user_nome
+      SELECT a.*, f.name as user_nome
       FROM assembleia_auditoria a
       LEFT JOIN users f ON a.user_id = f.id
       WHERE a.assembleia_id = $1
       ORDER BY a.criado_em ASC
     `, [id]).then(r => r.rows),
     pool.query(`
-      SELECT p.*, f.nome as user_nome
+      SELECT p.*, f.name as user_nome
       FROM assembleia_pedidos_palavra p
       LEFT JOIN users f ON p.user_id = f.id
       WHERE p.assembleia_id = $1
@@ -1664,14 +1664,14 @@ async function gerarDadosRelatorio(id) {
 
   const [allCheckins, allVotos] = await Promise.all([
     quorumIds.length > 0 ? pool.query(`
-      SELECT c.assembleia_quorum_id, f.nome, c.registrado_em
+      SELECT c.assembleia_quorum_id, f.name as nome, c.registrado_em
       FROM assembleia_checkins c
       JOIN users f ON c.user_id = f.id
       WHERE c.assembleia_quorum_id = ANY($1)
-      ORDER BY f.nome ASC
+      ORDER BY f.name ASC
     `, [quorumIds]).then(r => r.rows) : Promise.resolve([]),
     votacaoIds.length > 0 ? pool.query(`
-      SELECT v.votacao_id, v.user_id, f.nome, v.voto, v.registrado_em
+      SELECT v.votacao_id, v.user_id, f.name as nome, v.voto, v.registrado_em
       FROM assembleia_votos v
       JOIN users f ON v.user_id = f.id
       WHERE v.votacao_id = ANY($1)
