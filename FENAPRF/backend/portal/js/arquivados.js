@@ -24,7 +24,7 @@
 
                 <div class="tabs-container" style="display:flex; border-bottom:1px solid #eee; margin-bottom:20px;">
                     <button class="tab-btn active" data-tab="LIST" style="flex:1; padding:15px; border:none; background:none; cursor:pointer; font-weight:bold; border-bottom:3px solid var(--azul-header); color:var(--azul-header);">Membros Arquivados</button>
-                    <button class="tab-btn" data-tab="HISTORY" style="flex:1; padding:15px; border:none; background:none; cursor:pointer; font-weight:bold; color:#666;">Histórico</button>
+                    <button class="tab-btn" data-tab="HISTORY" style="flex:1; padding:15px; border:none; background:none; cursor:pointer; font-weight:bold; color:#333;">Histórico</button>
                 </div>
 
                 <div id="arquivados-content">
@@ -113,21 +113,31 @@
         grid.innerHTML = filtered.map(u => {
             const cargoUf = global.UsersAdmin?.formatarCargoUf ? global.UsersAdmin.formatarCargoUf(u) : `${u.cargo || ''} - ${u.uf || ''}`;
             return `
-                <div class="user-card-v3" style="border-left: 5px solid #c53030; cursor:pointer;" onclick="window.Arquivados.verDetalhes('${u.id}')">
+                <div class="user-card-v3 arquivado-card" style="border-left: 5px solid #c53030; cursor:pointer;" data-id="${u.id}">
                     <div class="user-avatar-wrapper">
-                         <img src="/api/users/${u.id}/avatar" class="avatar-mini" onerror="this.src='/img/avatar-placeholder.png'">
+                         <img src="/api/users/${u.id}/avatar" class="avatar-mini arquivado-avatar" data-uid="${u.id}">
                     </div>
                     <div class="user-info">
                         <h3 class="user-name">${u.name || u.nome}</h3>
-                        <p class="user-meta">${cargoUf}</p>
-                        <p class="user-meta" style="color:#c53030; font-weight:bold;">Arquivado</p>
+                        <p class="user-meta" style="color: #444;">${cargoUf}</p>
+                        <p class="user-meta" style="color:#9b1c1c; font-weight:bold;">Arquivado</p>
                     </div>
                     <div class="user-action">
-                        <i class="fas fa-chevron-right"></i>
+                        <i class="fas fa-chevron-right" style="color: #333;"></i>
                     </div>
                 </div>
             `;
         }).join('');
+
+        // CSP-safe event delegation
+        grid.querySelectorAll('.arquivado-card').forEach(card => {
+            card.addEventListener('click', () => verDetalhes(card.dataset.id));
+        });
+        grid.querySelectorAll('.arquivado-avatar').forEach(img => {
+            img.addEventListener('error', () => {
+                img.src = '/img/avatar-placeholder.png';
+            });
+        });
     }
 
     async function carregarHistorico(container) {
@@ -177,19 +187,20 @@
         list.innerHTML = filtered.map(item => {
             const dataFmt = global.Formatters?.formatISOToBR(item.criado_em) || item.criado_em;
             const isArquivado = item.acao === 'ARQUIVADO';
-            const badgeColor = isArquivado ? '#fff5f5' : '#f0fff4';
-            const textColor = isArquivado ? '#c53030' : '#2f855a';
+            // Improved contrast for accessibility
+            const badgeColor = isArquivado ? '#fed7d7' : '#c6f6d5';
+            const textColor = isArquivado ? '#9b1c1c' : '#22543d';
 
             return `
-                <div class="history-card" style="padding:15px; background:#fff; border-radius:10px; border:1px solid #eee;">
+                <div class="history-card" style="padding:15px; background:#fff; border-radius:10px; border:1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-                        <div>
+                        <div style="flex: 1; padding-right: 10px;">
                             <strong style="color:var(--azul-header); font-size:1.1rem;">${item.user_nome}</strong>
-                            <div style="font-size:0.85rem; color:#888;">CPF: ${global.Formatters?.formatCpf(item.user_cpf) || item.user_cpf}</div>
+                            <div style="font-size:0.85rem; color:#444;">CPF: ${global.Formatters?.formatCpf(item.user_cpf) || item.user_cpf}</div>
                         </div>
-                        <span style="background:${badgeColor}; color:${textColor}; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold;">${item.acao}</span>
+                        <span style="background:${badgeColor}; color:${textColor}; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; text-transform: uppercase; white-space: nowrap;">${item.acao}</span>
                     </div>
-                    <div style="font-size:0.9rem; color:#555; border-top:1px solid #f9f9f9; pt:10px;">
+                    <div style="font-size:0.9rem; color:#333; border-top:1px solid #f3f4f6; padding-top:10px;">
                         <p><strong>Por:</strong> ${item.por_nome}</p>
                         <p><strong>Data:</strong> ${dataFmt}</p>
                         ${item.motivo ? `<p><strong>Motivo:</strong> ${item.motivo}</p>` : ''}
@@ -211,37 +222,49 @@
             <div style="display:flex; flex-direction:column; gap:20px;">
                 <div class="user-card-v3" style="border-left:5px solid #c53030;">
                     <div class="user-avatar-wrapper">
-                         <img src="/api/users/${user.id}/avatar" class="avatar-mini" onerror="this.src='/img/avatar-placeholder.png'">
+                         <img src="/api/users/${user.id}/avatar" class="avatar-mini detail-avatar">
                     </div>
                     <div class="user-info">
                         <h3 class="user-name">${user.name || user.nome}</h3>
-                        <p class="user-meta">${cargoUf}</p>
+                        <p class="user-meta" style="color: #444;">${cargoUf}</p>
                     </div>
                 </div>
 
-                <div style="background:#fff; padding:15px; border-radius:10px; border:1px solid #eee; display:flex; flex-direction:column; gap:8px;">
+                <div style="background:#fff; padding:15px; border-radius:10px; border:1px solid #eee; display:flex; flex-direction:column; gap:8px; color: #333;">
                     <p><strong>Email:</strong> ${user.email || user.email1 || '—'}</p>
                     <p><strong>Telefone:</strong> ${user.telefone1 ? (global.Formatters?.formatTelefone ? global.Formatters.formatTelefone(user.telefone1) : user.telefone1) : '—'}</p>
                     <p><strong>CPF:</strong> ${cpf}</p>
                 </div>
 
                 <div style="background:#fff5f5; padding:15px; border-radius:10px; border:1px solid #feb2b2;">
-                    <h4 style="color:#c53030; margin-bottom:10px;">📜 Dados do Arquivamento</h4>
-                    <p style="font-size:0.9rem;"><strong>Arquivado Por:</strong> ${user.arquivado_por_nome || '(usuário não encontrado)'}</p>
-                    <p style="font-size:0.9rem;"><strong>Em:</strong> ${dataArq}</p>
-                    <p style="font-size:0.9rem;"><strong>Motivo:</strong> ${user.arquivado_motivo || 'Não informado'}</p>
+                    <h4 style="color:#9b1c1c; margin-bottom:10px;">📜 Dados do Arquivamento</h4>
+                    <p style="font-size:0.9rem; color: #742a2a;"><strong>Arquivado Por:</strong> ${user.arquivado_por_nome || '(usuário não encontrado)'}</p>
+                    <p style="font-size:0.9rem; color: #742a2a;"><strong>Em:</strong> ${dataArq}</p>
+                    <p style="font-size:0.9rem; color: #742a2a;"><strong>Motivo:</strong> ${user.arquivado_motivo || 'Não informado'}</p>
                 </div>
 
                 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn btn-primary" style="flex:1;" onclick="window.Arquivados.irParaEdicao('${user.id}')">
+                    <button id="btn-arq-editar" class="btn btn-primary" style="flex:1;">
                         <i class="fas fa-pencil-alt"></i> Gerenciar Cadastro
                     </button>
-                    <button class="btn btn-outline" style="flex:1;" onclick="global.Utils.fecharModalGenerico()">Fechar</button>
+                    <button id="btn-arq-fechar" class="btn btn-outline" style="flex:1;">Fechar</button>
                 </div>
             </div>
         `;
 
         global.Utils?.abrirModalGenerico("Detalhes do Membro Arquivado", html);
+
+        // CSP-safe listeners for modal
+        const btnEdit = document.getElementById('btn-arq-editar');
+        if (btnEdit) btnEdit.addEventListener('click', () => irParaEdicao(user.id));
+
+        const btnClose = document.getElementById('btn-arq-fechar');
+        if (btnClose) btnClose.addEventListener('click', () => global.Utils.fecharModalGenerico());
+
+        const dAvatar = document.querySelector('.detail-avatar');
+        if (dAvatar) {
+            dAvatar.addEventListener('error', () => { dAvatar.src = '/img/avatar-placeholder.png'; });
+        }
     }
 
     function irParaEdicao(id) {

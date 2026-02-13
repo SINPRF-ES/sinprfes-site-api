@@ -51,7 +51,7 @@
                 .pub-card.tipo-PASTA { border-left: 6px solid #FFCA28; }
                 .pub-icon { font-size: 2.5rem; margin-bottom: 15px; text-shadow: 0 2px 5px rgba(0,0,0,0.1); }
                 .pub-title { font-size: 1.1rem; font-weight: bold; color: var(--azul-fundo); margin-bottom: 5px; line-height: 1.3; }
-                .pub-meta { font-size: 0.8rem; color: #888; margin-top: 5px; }
+                .pub-meta { font-size: 0.8rem; color: #555; margin-top: 5px; }
 
                 .btn-action {
                     margin-top: 15px; padding: 10px; border-radius: 8px; text-align: center;
@@ -82,8 +82,9 @@
                 .pub-menu-btn {
                     position: absolute; top: 10px; right: 10px; width: 32px; height: 32px;
                     display: flex; align-items: center; justify-content: center;
-                    border-radius: 50%; color: #999; font-size: 1.1rem; transition: all 0.2s;
-                    z-index: 5; background: rgba(255,255,255,0.5);
+                    border-radius: 50%; color: var(--azul-header); font-size: 1.1rem; transition: all 0.2s;
+                    z-index: 5; background: rgba(255,255,255,0.8);
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                 }
                 .pub-menu-btn:hover { background: rgba(0,0,0,0.05); color: var(--azul-header); }
 

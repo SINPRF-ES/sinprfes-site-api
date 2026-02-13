@@ -176,11 +176,17 @@
                 resultsDiv.innerHTML = '<div style="padding:10px; color:#999;">Nenhum membro encontrado.</div>';
             } else {
                 resultsDiv.innerHTML = results.slice(0, 10).map(u => `
-                    <div class="search-item" onclick="window.Notificacoes.selecionarUsuario('${u.id}', '${u.nome}', '${u.cpf}')">
+                    <div class="search-item notif-search-item" data-id="${u.id}" data-nome="${u.nome}" data-cpf="${u.cpf}">
                         <strong>${u.nome}</strong>
                         <small>CPF: ${global.Formatters?.formatCpf(u.cpf) || u.cpf}</small>
                     </div>
                 `).join('');
+
+                resultsDiv.querySelectorAll('.notif-search-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        selecionarUsuario(item.dataset.id, item.dataset.nome, item.dataset.cpf);
+                    });
+                });
             }
         } catch (e) {
             resultsDiv.innerHTML = '<div style="padding:10px; color:red;">Erro na busca.</div>';
@@ -208,9 +214,13 @@
         container.innerHTML = selectedUsers.map(u => `
             <div class="target-chip">
                 ${u.nome}
-                <i class="fas fa-times-circle" onclick="window.Notificacoes.removerUsuario('${u.id}')"></i>
+                <i class="fas fa-times-circle btn-remove-chip" data-id="${u.id}"></i>
             </div>
         `).join('');
+
+        container.querySelectorAll('.btn-remove-chip').forEach(btn => {
+            btn.addEventListener('click', () => removerUsuario(btn.dataset.id));
+        });
     }
 
     async function handleSend() {
@@ -335,11 +345,16 @@
             `;
         }).join('') + (historyCache.length >= 5 ? `
             <div style="text-align:center; margin-top:15px;">
-                <button class="btn btn-outline btn-sm" onclick="window.Notificacoes.toggleArquivados()">
+                <button id="btn-toggle-notif-arq" class="btn btn-outline btn-sm">
                     ${isShowingArchived ? 'Ver apenas recentes' : 'Visualizar anteriores'}
                 </button>
             </div>
         ` : '');
+
+        const btnToggle = document.getElementById('btn-toggle-notif-arq');
+        if (btnToggle) {
+            btnToggle.addEventListener('click', toggleArquivados);
+        }
     }
 
     function toggleArquivados() {

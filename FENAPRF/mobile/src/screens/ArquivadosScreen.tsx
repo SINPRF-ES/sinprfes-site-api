@@ -143,8 +143,8 @@ export default function ArquivadosScreen({ navigation, route }: any) {
   const renderHistoryItem = ({ item }: { item: any }) => (
     <View style={styles.historyCard}>
       <View style={styles.historyCardHeader}>
-        <View>
-          <Text style={styles.historyCardName}>{item.user_nome}</Text>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={styles.historyCardName} numberOfLines={2}>{item.user_nome}</Text>
           <Text style={styles.historyCardCpf}>{maskCPF(item.user_cpf)}</Text>
         </View>
         <View style={[styles.actionBadge, { backgroundColor: item.acao === 'ARQUIVADO' ? '#fff5f5' : '#f0fff4' }]}>
