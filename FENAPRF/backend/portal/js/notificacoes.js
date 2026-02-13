@@ -88,7 +88,7 @@
                             <div id="push-search-results" class="search-results-dropdown"></div>
 
                             <div id="selected-users-chips" class="target-chips-container"></div>
-                            <small class="info-label" style="display:block; margin-top:5px; color:#999; font-style:italic;">Selecione um ou mais membros para o envio específico.</small>
+                            <small class="info-label" style="display:block; margin-top:5px; color:rgba(255,255,255,0.5); font-style:italic;">Selecione um ou mais membros para o envio específico.</small>
                         </div>
 
                         <div class="field-group" style="margin-top:20px;">
@@ -109,9 +109,9 @@
                     </div>
 
                     <div class="history-container" style="margin-top:40px;">
-                        <h3 style="border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:20px; color:#333;">📜 Histórico de Envios</h3>
+                        <h3 style="border-bottom:2px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:20px; color:var(--amarelo);">📜 Histórico de Envios</h3>
                         <div id="push-history-list" class="history-list">
-                            <p style="text-align:center; padding:20px; color:#999;">Carregando histórico...</p>
+                            <p style="text-align:center; padding:20px; color:rgba(255,255,255,0.5);">Carregando histórico...</p>
                         </div>
                     </div>
                 </div>
@@ -326,17 +326,17 @@
             }
 
             return `
-                <div class="history-card" style="border-left:4px solid var(--azul-header); padding:15px; background:#fff; border-radius:10px; margin-bottom:12px; border:1px solid #eee;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#999; margin-bottom:5px;">
+                <div class="history-card" style="border-left:4px solid var(--amarelo); padding:15px; background:rgba(255,255,255,0.05); border-radius:10px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1); color: #fff;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:rgba(255,255,255,0.5); margin-bottom:5px;">
                         <span>${dataFmt}</span>
                         <span style="color:${statusColor}; font-weight:bold;">${c.status === 'SENT' ? 'ENVIADO' : 'FALHOU'}</span>
                     </div>
-                    <div style="font-size:0.85rem; color:#666; margin-bottom:8px;">
+                    <div style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-bottom:8px;">
                         Por: ${c.autor_nome || 'Sistema'} | Destino: ${targetLabel}
                     </div>
-                    <strong style="display:block; margin-bottom:5px; color:#333;">${c.title || '(Sem título)'}</strong>
-                    <div style="font-size:0.95rem; color:#444; white-space:pre-wrap; margin-bottom:10px;">${c.body}</div>
-                    <div style="display:flex; gap:15px; font-size:0.8rem; border-top:1px solid #f9f9f9; padding-top:8px;">
+                    <strong style="display:block; margin-bottom:5px; color:var(--amarelo);">${c.title || '(Sem título)'}</strong>
+                    <div style="font-size:0.95rem; color:rgba(255,255,255,0.9); white-space:pre-wrap; margin-bottom:10px;">${c.body}</div>
+                    <div style="display:flex; gap:15px; font-size:0.8rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
                         <span title="Sucesso">🚀 ${c.result?.sent || 0}</span>
                         <span title="Falhas">❌ ${c.result?.failed || 0}</span>
                         <span title="Sem Token/Negado">🚫 ${c.result?.noTokenOrDenied || 0}</span>

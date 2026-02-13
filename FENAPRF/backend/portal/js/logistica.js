@@ -43,9 +43,9 @@
 
         async function renderizarBase() {
             secLogistica.innerHTML = `
-                <div class="log-header">
-                    <h2>🚚 Módulo de Logística</h2>
-                    ${isManager ? '<button id="btn-novo-evento" class="btn-log btn-log-primary">+ Novo Evento</button>' : ''}
+                <div class="log-header" style="border-bottom: 2px solid var(--amarelo);">
+                    <h2 style="color:var(--amarelo);">🚚 Logística</h2>
+                    ${isManager ? '<button id="btn-novo-evento" class="btn btn-primary">+ Novo Evento</button>' : ''}
                 </div>
                 <div id="log-lista-eventos">Carregando eventos...</div>
                 <div id="log-detalhe-evento" style="display:none;"></div>
@@ -78,13 +78,13 @@
                 }
 
                 container.innerHTML = eventos.map(e => `
-                    <div class="log-event-item" data-id="${e.id}" style="cursor:pointer;">
+                    <div class="log-event-item" data-id="${e.id}" style="cursor:pointer; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
                         <div style="display:flex; justify-content:space-between;">
-                            <span class="log-event-title">${e.titulo}</span>
+                            <span class="log-event-title" style="color:var(--amarelo);">${e.titulo}</span>
                             <span class="log-badge log-badge-${e.status}">${e.status}</span>
                         </div>
-                        <p style="margin: 10px 0; color: #666;">${e.descricao || 'Sem descrição'}</p>
-                        <small>📅 ${new Date(e.data_inicio).toLocaleString()} até ${new Date(e.data_fim).toLocaleString()}</small>
+                        <p style="margin: 10px 0; color: rgba(255,255,255,0.9);">${e.descricao || 'Sem descrição'}</p>
+                        <small style="color:rgba(255,255,255,0.6);">📅 ${new Date(e.data_inicio).toLocaleString()} até ${new Date(e.data_fim).toLocaleString()}</small>
                     </div>
                 `).join("");
             } catch (err) {

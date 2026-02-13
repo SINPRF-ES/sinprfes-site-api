@@ -22,9 +22,9 @@
                     <p>Gestão de membros inativos e histórico de movimentações.</p>
                 </div>
 
-                <div class="tabs-container" style="display:flex; border-bottom:1px solid #eee; margin-bottom:20px;">
-                    <button class="tab-btn active" data-tab="LIST" style="flex:1; padding:15px; border:none; background:none; cursor:pointer; font-weight:bold; border-bottom:3px solid var(--azul-header); color:var(--azul-header);">Membros Arquivados</button>
-                    <button class="tab-btn" data-tab="HISTORY" style="flex:1; padding:15px; border:none; background:none; cursor:pointer; font-weight:bold; color:#333;">Histórico</button>
+                <div class="tabs-container" style="display:flex; border-bottom:1px solid rgba(255,255,255,0.1); margin-bottom:20px;">
+                    <button class="tab-btn active" data-tab="LIST" style="flex:1; padding:15px; border:none; background:none; cursor:pointer; font-weight:bold; border-bottom:3px solid var(--amarelo); color:var(--amarelo);">Membros Arquivados</button>
+                    <button class="tab-btn" data-tab="HISTORY" style="flex:1; padding:15px; border:none; background:none; cursor:pointer; font-weight:bold; color:rgba(255,255,255,0.6);">Histórico</button>
                 </div>
 
                 <div id="arquivados-content">
@@ -39,8 +39,8 @@
                 activeTab = btn.dataset.tab;
                 tabs.forEach(t => {
                     t.classList.toggle('active', t === btn);
-                    t.style.borderBottom = (t === btn) ? '3px solid var(--azul-header)' : 'none';
-                    t.style.color = (t === btn) ? 'var(--azul-header)' : '#666';
+                    t.style.borderBottom = (t === btn) ? '3px solid var(--amarelo)' : 'none';
+                    t.style.color = (t === btn) ? 'var(--amarelo)' : 'rgba(255,255,255,0.6)';
                 });
                 renderizarAba();
             });
@@ -192,15 +192,15 @@
             const textColor = isArquivado ? '#9b1c1c' : '#22543d';
 
             return `
-                <div class="history-card" style="padding:15px; background:#fff; border-radius:10px; border:1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div class="history-card" style="padding:15px; background:rgba(255,255,255,0.05); border-radius:10px; border:1px solid rgba(255,255,255,0.1); box-shadow: 0 2px 4px rgba(0,0,0,0.2); color: #fff;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
                         <div style="flex: 1; padding-right: 10px;">
-                            <strong style="color:var(--azul-header); font-size:1.1rem;">${item.user_nome}</strong>
-                            <div style="font-size:0.85rem; color:#444;">CPF: ${global.Formatters?.formatCpf(item.user_cpf) || item.user_cpf}</div>
+                            <strong style="color:var(--amarelo); font-size:1.1rem;">${item.user_nome}</strong>
+                            <div style="font-size:0.85rem; color:rgba(255,255,255,0.7);">CPF: ${global.Formatters?.formatCpf(item.user_cpf) || item.user_cpf}</div>
                         </div>
                         <span style="background:${badgeColor}; color:${textColor}; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; text-transform: uppercase; white-space: nowrap;">${item.acao}</span>
                     </div>
-                    <div style="font-size:0.9rem; color:#333; border-top:1px solid #f3f4f6; padding-top:10px;">
+                    <div style="font-size:0.9rem; color:rgba(255,255,255,0.9); border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
                         <p><strong>Por:</strong> ${item.por_nome}</p>
                         <p><strong>Data:</strong> ${dataFmt}</p>
                         ${item.motivo ? `<p><strong>Motivo:</strong> ${item.motivo}</p>` : ''}

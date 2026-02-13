@@ -1,6 +1,8 @@
 // App.tsx
 import React, { useEffect } from "react";
 import Constants from "expo-constants";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import ReanimatedPackage from "react-native-reanimated/package.json";
 import { AuthProvider } from "./src/hooks/useAuth";
 import RootNavigation from "./src/navigation";
@@ -27,12 +29,16 @@ export default function App() {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RootNavigation />
-        </AuthProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <BottomSheetModalProvider>
+              <RootNavigation />
+            </BottomSheetModalProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

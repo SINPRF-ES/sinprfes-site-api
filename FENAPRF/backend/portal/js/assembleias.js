@@ -184,7 +184,7 @@
                 <div class="section-card">
                     <div class="af-standard-header" style="display:flex; flex-direction:column; align-items:center; gap:15px; text-align:center;">
                         <h2 style="margin:0; font-size:1.8rem; font-weight: 800;">🗳️ Assembleias e Votações</h2>
-                        <p style="margin:0; font-size:1rem;">Participe das decisões do seu sindicato</p>
+                        <p style="margin:0; font-size:1rem;">Participe das decisões institucionais</p>
 
                         ${isDiretoria ? `
                             <button id="btn-abrir-criacao-ass" class="btn btn-success" style="margin-top:10px; font-weight:800; padding:12px 25px; border-radius:30px;">➕ Criar Nova Assembleia</button>
