@@ -46,6 +46,8 @@
       }
 
       const finalUrl = (url && url.startsWith('/')) ? (API_BASE + url) : url;
+
+      // FENAPRF: Ensure cache is handled correctly if needed, but fetch usually does it.
       const response = await fetch(finalUrl, { ...options, headers });
 
       if (response.status === 401) {
@@ -241,9 +243,8 @@
     const termo = normalizeText(query);
     const apenasDigitos = query.replace(/\D/g, "");
 
-    // Regra de segurança: Perfis básicos não buscam por CPF
-    const perfil = (options.perfil || "").toUpperCase();
-    const canSearchCpf = !perfil || !["CONSELHEIRO"].includes(perfil);
+    // FENAPRF: CPF search allowed for everyone per latest requirement
+    const canSearchCpf = true;
 
     return (lista || []).filter(f => {
       // Busca por nome (normalizado) - Accent-insensitive / Case-insensitive (Wide Search)
@@ -270,11 +271,13 @@
   async function searchUsers(query, options = {}) {
     if (!_usersCache || options.forceRefresh) {
       const r = await global.Utils.apiFetch('/api/users');
-      if (r.ok) {
-        const d = await r.json();
-        _usersCache = d.users || d || [];
+      if (r.ok || r.status === 304) {
+        if (r.status !== 304) {
+            const d = await r.json();
+            _usersCache = d.users || d || [];
+        }
       } else {
-        console.error("Erro ao carregar cache de membros");
+        console.error("Erro ao carregar cache de membros", r.status);
         return [];
       }
     }

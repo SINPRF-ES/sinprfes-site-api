@@ -62,6 +62,7 @@
         const { configurarNavegacao } = window.Navegacao || {};
         const { carregarMeusDados } = window.MeusDados || {};
         const { inicializarUsers } = window.UsersAdmin || {};
+        const { inicializarArquivados } = window.Arquivados || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
         const { inicializarAssembleias } = window.Assembleias || {};
         const { inicializarRelatorios } = window.Relatorios || {};
@@ -74,6 +75,7 @@
                 console.log("Navegando para:", abaAlvo);
                 if (abaAlvo === 'sec-meus-dados' && carregarMeusDados) carregarMeusDados();
                 else if (abaAlvo === 'sec-users' && inicializarUsers) inicializarUsers(perfil);
+                else if (abaAlvo === 'sec-arquivados' && inicializarArquivados) inicializarArquivados(perfil);
                 else if (abaAlvo === 'sec-publicacoes' && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
                 else if (abaAlvo === 'sec-assembleias' && inicializarAssembleias) inicializarAssembleias(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
@@ -100,6 +102,9 @@
 
             const navNotificacoes = document.getElementById("nav-notificacoes");
             if (navNotificacoes) navNotificacoes.style.display = perfisGestao.includes(perfil) ? "block" : "none";
+
+            const navArquivados = document.getElementById("nav-arquivados");
+            if (navArquivados) navArquivados.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
             const navRelatorios = document.getElementById("nav-relatorios");
             if (navRelatorios) navRelatorios.style.display = perfisGestao.includes(perfil) ? "block" : "none";

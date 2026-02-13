@@ -40,7 +40,7 @@ app.use((req, res, next) => {
   res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   // CSP Básico para API e Assets Estáticos
-  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com https://flagcdn.com https://atlasescolar.ibge.gov.br; connect-src 'self' https://viacep.com.br; font-src 'self' data:;");
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://res.cloudinary.com https://flagcdn.com https://atlasescolar.ibge.gov.br; connect-src 'self' https://viacep.com.br; font-src 'self' data:; frame-src 'self' blob:;");
   next();
 });
 
