@@ -338,13 +338,10 @@
 
                     <div class="field-row">
                         <div class="field-group">
-                            <label>Email 1</label>
-                            <input type="email" id="me-email1" value="${email1 || ""}" />
+                            <label>Email</label>
+                            <input type="email" id="me-email" value="${dados.email || email1 || ""}" />
                         </div>
-                        <div class="field-group">
-                            <label>Email 2</label>
-                            <input type="email" id="me-email2" value="${email2 || ""}" />
-                        </div>
+                        <div class="field-group"></div>
                     </div>
                 </div>
 
@@ -361,7 +358,9 @@
                         </div>
                         <div class="edit-group logradouro-group">
                             <label>Logradouro / Bairro</label>
-                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly style="background:#f0f0f0;" />
+                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}"
+                                   data-logradouro="${logradouro || ""}" data-bairro="${bairro || ""}"
+                                   readonly style="background:#f0f0f0;" />
                         </div>
 
                         <!-- Linha 2: Número + Complemento -->
@@ -386,26 +385,7 @@
                     </div>
                 </div>
 
-                <div class="data-card bg-alt">
-                    <div class="dependentes-header" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
-                        <h3 style="margin: 0;">👶 Dependentes (até 5)</h3>
-                        <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm" style="position: absolute; right: 0;">Excluir</button>
-                    </div>
-
-                    <div id="painel-excluir-dependentes" style="display: none; background: #fff8f8; border: 1px solid #e57373; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                        <p style="margin-top:0; font-weight:bold;">Selecione os dependentes para remover:</p>
-                        <div id="checkboxes-excluir-dependentes" style="display: flex; flex-direction: column; gap: 8px;">
-                            <!-- Checkboxes serão inseridos aqui -->
-                        </div>
-                        <div style="margin-top: 15px; text-align: right;">
-                            <button type="button" id="btn-confirmar-exclusao-dependentes" class="btn btn-danger">Confirmar Exclusão</button>
-                        </div>
-                    </div>
-
-                    <div id="dependentes-container-meus-dados">
-                        <!-- Campos dos dependentes serão inseridos aqui -->
-                    </div>
-                </div>
+                <!-- Dependentes removidos conforme política FENAPRF -->
 
                 <div class="form-actions">
                     <span id="meus-dados-status" class="field-hint" style="display: block; margin-bottom: 10px; font-weight:bold;"></span>
@@ -459,12 +439,16 @@
 
             payload.telefone1 = onlyDigitsFn(document.getElementById("me-telefone1").value);
             payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
-            payload.email1 = document.getElementById("me-email1").value;
-            payload.email2 = document.getElementById("me-email2").value;
+            payload.email = document.getElementById("me-email").value;
 
             // FENAPRF: Use separate fields for logradouro and bairro
-            payload.logradouro = document.getElementById("me-endereco").dataset.logradouro || document.getElementById("me-endereco").value;
-            payload.bairro = document.getElementById("me-endereco").dataset.bairro || "";
+            const inputEnd = document.getElementById("me-endereco");
+            payload.logradouro = inputEnd.dataset.logradouro || "";
+            payload.bairro = inputEnd.dataset.bairro || "";
+
+            if (!payload.logradouro && inputEnd.value) {
+                payload.logradouro = inputEnd.value;
+            }
 
             payload.numero = document.getElementById("me-numero").value;
             payload.complemento = document.getElementById("me-complemento").value;
@@ -585,7 +569,8 @@
             document.getElementById("me-cidade").value = d.localidade || "";
             document.getElementById("me-uf").value = d.uf || "";
         } catch (e) {
-            alert("Erro ao buscar CEP.");
+            console.error("Erro busca CEP", e);
+            alert("Erro ao buscar CEP. Verifique sua conexão.");
         }
     }
 
