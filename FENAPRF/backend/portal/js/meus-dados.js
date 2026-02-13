@@ -256,14 +256,17 @@
             : null;
 
         const avatarImg = avatarFullUrl
-            ? `<img src="${avatarFullUrl}" alt="Avatar" class="me-avatar-img">`
-            : `<div class="avatar-fallback"></div>`;
+            ? `<img src="${avatarFullUrl}" alt="Avatar" class="me-avatar-img" id="me-avatar-img-el">`
+            : `<div class="avatar-fallback"><i class="fas fa-user"></i></div>`;
 
         // AgeUtils é carregado como global em portal/index.html
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
         const situacaoDisplay = (situacao || "ATIVO").toUpperCase();
         const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes((perfil_acesso || "").toUpperCase());
+
+        const cpfFmt = window.Formatters ? window.Formatters.formatCpf(cpf || "") : cpf;
+        const emailExibir = dados.email || email1 || "";
 
         container.innerHTML = `
             <div class="profile-header">
@@ -283,6 +286,11 @@
                         <h2 class="profile-name-title">${nome || ""}</h2>
                         <div class="profile-badges">
                             <span class="badge badge-perfil">${(perfil_acesso || "").toUpperCase()}</span>
+                            <span class="badge" style="background: rgba(255,255,255,0.2); color: #fff;">CPF: ${cpfFmt}</span>
+                        </div>
+                        <div class="header-details-row" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px; color: rgba(255,255,255,0.8); font-size: 0.95rem;">
+                            <span><i class="fas fa-envelope" style="width: 20px;"></i> ${emailExibir}</span>
+                            <span><i class="fas fa-map-marker-alt" style="width: 20px;"></i> ${dados.uf || "—"}</span>
                         </div>
                     </div>
                 </div>
@@ -394,6 +402,17 @@
             </form>
 
         `;
+
+        // --- AVATAR FALLBACK (CSP SAFE) ---
+        const imgEl = document.getElementById("me-avatar-img-el");
+        if (imgEl) {
+            imgEl.addEventListener("error", () => {
+                const parent = imgEl.parentElement;
+                if (parent) {
+                    parent.innerHTML = `<div class="avatar-fallback"><i class="fas fa-user"></i></div>`;
+                }
+            });
+        }
 
         // --- MÁSCARAS ---
         if (aplicarMascaraTelefone) {

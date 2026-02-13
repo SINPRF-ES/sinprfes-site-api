@@ -46,6 +46,8 @@
       }
 
       const finalUrl = (url && url.startsWith('/')) ? (API_BASE + url) : url;
+
+      // FENAPRF: Ensure cache is handled correctly if needed, but fetch usually does it.
       const response = await fetch(finalUrl, { ...options, headers });
 
       if (response.status === 401) {
@@ -226,8 +228,58 @@
     normalizeText,
     escapeHTML,
     searchUsers,
-    filterUsers
+    filterUsers,
+    abrirModalGenerico,
+    fecharModalGenerico
   };
+
+  function abrirModalGenerico(titulo, html) {
+    const modal = document.getElementById("modal-generic");
+    const titEl = document.getElementById("modal-generic-titulo");
+    const corpoEl = document.getElementById("modal-generic-corpo");
+
+    if (!modal || !titEl || !corpoEl) return;
+
+    titEl.innerText = titulo;
+    corpoEl.innerHTML = html;
+    modal.classList.add("active");
+    modal.style.display = "flex";
+
+    // Setup close listeners for this instance
+    const closeBtn = modal.querySelector(".modal-close");
+    if (closeBtn) {
+        closeBtn.onclick = fecharModalGenerico;
+    }
+  }
+
+  function fecharModalGenerico() {
+    const modal = document.getElementById("modal-generic");
+    if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+    }
+  }
+
+  // Global close listener for [data-close]
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('.modal-close') || e.target.closest('.modal-close')) {
+      const modalId = (e.target.dataset.close || e.target.closest('.modal-close').dataset.close);
+      if (modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+          modal.classList.remove("active");
+          modal.style.display = "none";
+        }
+      }
+    }
+  });
+
+  // Global avatar fallback handler
+  document.addEventListener('error', (e) => {
+    if (e.target.tagName === 'IMG' && (e.target.classList.contains('avatar-mini') || e.target.classList.contains('me-avatar-img'))) {
+        e.target.src = '/img/avatar-placeholder.png';
+    }
+  }, true);
 
   let _usersCache = null;
 
@@ -241,9 +293,8 @@
     const termo = normalizeText(query);
     const apenasDigitos = query.replace(/\D/g, "");
 
-    // Regra de segurança: Perfis básicos não buscam por CPF
-    const perfil = (options.perfil || "").toUpperCase();
-    const canSearchCpf = !perfil || !["CONSELHEIRO"].includes(perfil);
+    // FENAPRF: CPF search allowed for everyone per latest requirement
+    const canSearchCpf = true;
 
     return (lista || []).filter(f => {
       // Busca por nome (normalizado) - Accent-insensitive / Case-insensitive (Wide Search)
@@ -270,11 +321,13 @@
   async function searchUsers(query, options = {}) {
     if (!_usersCache || options.forceRefresh) {
       const r = await global.Utils.apiFetch('/api/users');
-      if (r.ok) {
-        const d = await r.json();
-        _usersCache = d.users || d || [];
+      if (r.ok || r.status === 304) {
+        if (r.status !== 304) {
+            const d = await r.json();
+            _usersCache = d.users || d || [];
+        }
       } else {
-        console.error("Erro ao carregar cache de membros");
+        console.error("Erro ao carregar cache de membros", r.status);
         return [];
       }
     }

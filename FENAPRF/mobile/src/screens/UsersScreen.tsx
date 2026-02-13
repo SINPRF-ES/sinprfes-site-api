@@ -53,6 +53,9 @@ export default function UsersScreen({ navigation, route }: any) {
             id: f.id,
             name: f.name,
             nome: f.nome,
+            cpf: f.cpf,
+            email: f.email,
+            email1: f.email1,
             telefone1: f.telefone1,
             avatar_url: f.avatar_url,
             situacao: f.situacao,
@@ -70,7 +73,7 @@ export default function UsersScreen({ navigation, route }: any) {
           return {
             ...item,
             _normalizedNome: normalizeText(f.name || f.nome || ''),
-            _onlyDigitsCpf: ehGestao ? onlyDigits(f.cpf || '') : ''
+            _onlyDigitsCpf: onlyDigits(f.cpf || '') // FENAPRF: Allow all to search by CPF
           };
         });
 
@@ -123,9 +126,9 @@ export default function UsersScreen({ navigation, route }: any) {
       // 0. Sempre oculta arquivados na listagem principal (Requisito 5)
       if (f.arquivado_em) return false;
 
-      // 1. Filtro por Nome/CPF
+      // 1. Filtro por Nome/CPF (FENAPRF: CPF search allowed for all)
       const nomeMatch = f._normalizedNome?.includes(term);
-      const cpfMatch = ehGestao && digits !== '' && f._onlyDigitsCpf?.includes(digits);
+      const cpfMatch = digits !== '' && f._onlyDigitsCpf?.includes(digits);
       if (!nomeMatch && !cpfMatch) return false;
 
       // 2. Filtro de Visualização Avançado
@@ -287,11 +290,7 @@ export default function UsersScreen({ navigation, route }: any) {
                 <View style={styles.memberDetails}>
                   <Text style={styles.detailText}><Text style={styles.detailLabel}>Email:</Text> {selectedMember.email || selectedMember.email1 || '—'}</Text>
                   <Text style={styles.detailText}><Text style={styles.detailLabel}>Telefone:</Text> {maskPhone(selectedMember.telefone1) || '—'}</Text>
-                  {ehGestao && (
-                    <>
-                      <Text style={styles.detailText}><Text style={styles.detailLabel}>CPF:</Text> {maskCPF(selectedMember.cpf) || '—'}</Text>
-                    </>
-                  )}
+                  <Text style={styles.detailText}><Text style={styles.detailLabel}>CPF:</Text> {maskCPF(selectedMember.cpf) || '—'}</Text>
                   {selectedMember.perfil_acesso2 && (
                     <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#eee' }}>
                         <Text style={[styles.detailLabel, { marginBottom: 4 }]}>Segundo Vínculo:</Text>

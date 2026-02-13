@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal do Membro - FENAPRF</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <script src="/js/main.js" defer></script>
 
   <!-- Scripts Utilitários (Ordem Crítica) -->
@@ -18,6 +19,7 @@
   <script src="/portal/js/seguranca.js"></script>
   <script src="/portal/js/meus-dados.js"></script>
   <script src="/portal/js/users-admin.js"></script>
+  <script src="/portal/js/arquivados.js"></script>
   <script src="/portal/js/publicacoes.js"></script>
   <script src="/portal/js/notificacoes.js"></script>
   <script src="/portal/js/assembleia-utils.js"></script>
@@ -41,6 +43,7 @@
         <div class="af-sidebar-nav">
           <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
           <button class="af-nav-item" data-target="sec-users">👥 Membros</button>
+          <button class="af-nav-item" data-target="sec-arquivados" id="nav-arquivados" style="display:none;">📁 Arquivados</button>
           <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
           <button class="af-nav-item" data-target="sec-logistica">🚚 Logística</button>
           <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
@@ -63,6 +66,10 @@
         </section>
 
         <section id="sec-users" class="af-section" style="display:none;">
+          <!-- Conteúdo carregado via JS -->
+        </section>
+
+        <section id="sec-arquivados" class="af-section" style="display:none;">
           <!-- Conteúdo carregado via JS -->
         </section>
 

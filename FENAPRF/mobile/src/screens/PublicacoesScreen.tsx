@@ -1,6 +1,7 @@
 // mobile/src/screens/PublicacoesScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import {
@@ -13,7 +14,7 @@ import {
   moveItem,
   deleteItem
 } from '../services/driveService';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Linking } from 'react-native';
 import { logDebug } from '../utils/user';
 import { logger } from '../infra/logger';
@@ -25,12 +26,13 @@ import { EMOJIS } from '../utils/emoji';
 
 const PublicacoesScreen: React.FC = ({ route }: any) => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { mode, onSelectFile, returnTo } = route.params || {};
   const isPicker = mode === 'picker';
 
   const queryClient = useQueryClient();
   const { token, user } = useAuth();
-  const isGestao = ['ADMIN', 'COLABORADOR', 'DIRETORIA'].includes(user?.perfil_acesso || '');
+  const isGestao = ['ADMIN', 'COLABORADOR', 'DIRETORIA'].includes((user?.perfil_acesso || '').toUpperCase());
 
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -45,11 +47,35 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
 
   const currentFolder = folderStack[folderStack.length - 1];
 
-  React.useEffect(() => {
+  useLayoutEffect(() => {
     navigation.setOptions({
       title: `${EMOJIS.PUBLICACOES} ${currentFolder.name}`,
+      headerRight: () => (
+        isGestao && !isPicker ? (
+          <TouchableOpacity
+            onPress={handleOpenOptions}
+            style={{ marginRight: 15 }}
+            accessibilityRole="button"
+            accessibilityLabel="Opções da pasta"
+          >
+            <FontAwesome name="ellipsis-v" size={24} color="#003366" />
+          </TouchableOpacity>
+        ) : null
+      )
     });
-  }, [navigation, currentFolder.name]);
+  }, [navigation, currentFolder.name, isGestao, isPicker]);
+
+  const handleOpenOptions = () => {
+    Alert.alert(
+      'Opções da Pasta',
+      'O que deseja fazer nesta pasta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Nova Pasta', onPress: () => handleOpenNewFolder() },
+        { text: 'Enviar Arquivo', onPress: () => handleUpload() }
+      ]
+    );
+  };
 
   const { data: publicacoes, isLoading, error } = useQuery({
     queryKey: ['publicacoes', currentFolder.id],
@@ -210,7 +236,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             accessibilityLabel={`Opções para ${item.name}`}
             onPress={() => {
               setSelectedItem(item);
-              const isProtected = item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(item.name?.toLowerCase()));
+              const nameLower = (item.name || '').toLowerCase();
+              const isProtected = item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(nameLower));
 
               Alert.alert(
                 'Ações',
@@ -224,7 +251,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
               );
             }}
           >
-            <FontAwesome name="ellipsis-v" size={20} color="#666" />
+            <MaterialCommunityIcons name="dots-vertical" size={26} color="#003366" />
           </TouchableOpacity>
         )}
       </View>
@@ -384,7 +411,10 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
           data={publicacoes || []}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: Math.max(insets.bottom + 20, 80) }
+          ]}
           ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
         />
       )}
@@ -452,7 +482,10 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
 
       {isGestao && !isPicker && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[
+            styles.fab,
+            { bottom: Math.max(insets.bottom, 20) }
+          ]}
           onPress={() => {
             Alert.alert(
               'Nova Publicação',
@@ -544,7 +577,6 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 10,
-    paddingBottom: 80, // Espaço para o FAB
   },
   centered: {
     flex: 1,
@@ -582,8 +614,11 @@ const styles = StyleSheet.create({
     shadowRadius: 1.41,
   },
   menuButton: {
-    padding: 15,
+    padding: 10,
     marginLeft: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 44,
   },
   fab: {
     position: 'absolute',
