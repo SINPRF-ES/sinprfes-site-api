@@ -262,6 +262,15 @@
                                 ${["CONSELHEIRO"].includes(perfilAtual) ? '' : `
                                 <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
+                                ${f.cargo ? `<div class="user-meta" style="font-size:0.85rem; color:var(--amarelo); font-weight:bold; margin-top:4px;">💼 ${safeEscape(f.cargo)}</div>` : ''}
+                                ${f.cargo_mandato_inicio || f.cargo_mandato_fim ? `
+                                <div class="user-meta" style="font-size:0.75rem; margin-top:4px; opacity:0.9; line-height:1.4;">
+                                    🗓️ Mandato: ${global.Formatters.formatISOToBR(f.cargo_mandato_inicio) || '—'} a ${global.Formatters.formatISOToBR(f.cargo_mandato_fim) || '—'}
+                                    <br>
+                                    <span style="color:#2ecc71;">⏱️ Decorrido: ${global.AgeUtils?.formatAgeDetailed(f.cargo_mandato_inicio) || '—'}</span> |
+                                    <span style="color:#f1c40f;">⏳ Restante: ${global.AgeUtils?.formatRemainingTime(f.cargo_mandato_fim) || '—'}</span>
+                                </div>
+                                ` : ''}
                             </div>
                         </div>
                         <div style="text-align:right;">
@@ -374,7 +383,7 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>Data Nascimento</label>
-                            <input type="date" name="data_nascimento" id="edit-data-nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
+                            <input type="text" name="data_nascimento" id="edit-data-nascimento" class="campo-data" value="${global.Formatters?.formatISOToBR(f.data_nascimento) || ""}" placeholder="DD/MM/AAAA">
                         </div>
                         <div class="field-group">
                             <label>Idade (Calculada)</label>
@@ -421,8 +430,8 @@
                         <div class="field-group">
                             <label>Mandato (Início / Fim)</label>
                             <div style="display:flex; gap:5px;">
-                                <input type="date" name="cargo_mandato_inicio" value="${toDateInputValue ? toDateInputValue(f.cargo_mandato_inicio) : ""}" style="flex:1;">
-                                <input type="date" name="cargo_mandato_fim" value="${toDateInputValue ? toDateInputValue(f.cargo_mandato_fim) : ""}" style="flex:1;">
+                                <input type="text" name="cargo_mandato_inicio" class="campo-data" value="${global.Formatters?.formatISOToBR(f.cargo_mandato_inicio) || ""}" placeholder="Início" style="flex:1;">
+                                <input type="text" name="cargo_mandato_fim" class="campo-data" value="${global.Formatters?.formatISOToBR(f.cargo_mandato_fim) || ""}" placeholder="Fim" style="flex:1;">
                             </div>
                         </div>
                     </div>
@@ -620,6 +629,7 @@
         }
 
         form.querySelectorAll(".campo-telefone").forEach(inp => aplicarMascaraTelefone?.(inp));
+        form.querySelectorAll(".campo-data").forEach(inp => global.Utils?.aplicarMascaraData?.(inp));
         const cepInput = form.querySelector(".campo-cep");
         const btnBuscarCep = document.getElementById("btn-buscar-cep"); // Note: it's a span now with 🔍
 
@@ -839,7 +849,7 @@
                         </div>
                         <div class="edit-group">
                             <label>Data Nascimento</label>
-                            <input type="date" name="data_nascimento" id="new-data-nascimento" class="campo-data">
+                            <input type="text" name="data_nascimento" id="new-data-nascimento" class="campo-data" placeholder="DD/MM/AAAA">
                         </div>
                         <div class="edit-group">
                             <label>Idade (Calculada)</label>
@@ -956,6 +966,7 @@
         // Aplicar Máscaras
         if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
         if (aplicarMascaraTelefone) aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
+        form.querySelectorAll(".campo-data").forEach(inp => global.Utils?.aplicarMascaraData?.(inp));
 
         const cepInp = form.querySelector("#new-cep");
         const executarBuscaCepNovo = async () => {
