@@ -40,7 +40,7 @@ app.use((req, res, next) => {
   res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   // CSP Básico para API e Assets Estáticos
-  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com;");
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; connect-src 'self' https://viacep.com.br;");
   next();
 });
 
