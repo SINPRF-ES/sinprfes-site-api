@@ -220,7 +220,7 @@
             if (f.arquivado_em) return false;
 
             const perfil = (f.perfil_acesso || "").toUpperCase();
-            const cargo = (f.cargo || "").trim();
+            const cargo = global.Canon?.normalizeCargo(f.cargo);
             const uf = (f.uf || "").toUpperCase();
             const isInternal = perfil === "ADMIN" || perfil === "COLABORADOR";
 
@@ -253,6 +253,11 @@
             }
             return true;
         });
+
+        // Aplica a ordenação canônica da FENAPRF
+        if (global.Canon && global.Canon.ordenarMembrosTodos) {
+            res = global.Canon.ordenarMembrosTodos(res);
+        }
 
         const countEl = document.getElementById("users-count-v2");
         if (countEl) countEl.textContent = `Total: ${res.length}`;

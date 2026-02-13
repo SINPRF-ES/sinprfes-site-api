@@ -54,8 +54,8 @@
     "Diretor de Secretaria Substituto",
     "Diretor de Finanças",
     "Diretor de Finanças Substituto",
-    "Diretor de Relações de Trabalho e e Formação Sindical",
-    "Diretor de Relações de Trabalho e e Formação Sindical Substituto",
+    "Diretor de Relações de Trabalho e Formação Sindical",
+    "Diretor de Relações de Trabalho e Formação Sindical Substituto",
     "Diretor Jurídico",
     "Diretor Jurídico Substituto",
     "Diretor de Assuntos Institucionais",
@@ -163,6 +163,73 @@
     return ESTADO_CADASTRO.CADASTRO_ATIVO;
   }
 
+  function normalizeCargo(raw) {
+    const s = (raw || "").toString().trim();
+    if (!s) return "";
+    const lower = s.toLowerCase();
+    const map = new Map([
+      ["presidente", "Presidente"],
+      ["vice-presidente", "Vice-Presidente"],
+      ["delegado representante", "Delegado Representante"],
+      ["delegado substituto", "Delegado Substituto"],
+    ]);
+    return map.get(lower) || s;
+  }
+
+  function cargoRankDiretoria(cargo) {
+    const c = normalizeCargo(cargo);
+    const idx = CARGOS_DIRETORIA.findIndex(x => x.toLowerCase() === String(c || "").toLowerCase());
+    return idx === -1 ? 999 : idx;
+  }
+
+  function cargoRankConselho(cargo) {
+    const c = normalizeCargo(cargo);
+    const idx = CARGOS_CONSELHO.findIndex(x => x.toLowerCase() === String(c || "").toLowerCase());
+    return idx === -1 ? 999 : idx;
+  }
+
+  function byName(a, b) {
+    const nameA = a?.name || a?.nome || "";
+    const nameB = b?.name || b?.nome || "";
+    return String(nameA).localeCompare(String(nameB), "pt-BR", { sensitivity: "base" });
+  }
+
+  function ordenarMembrosTodos(membros) {
+    if (!Array.isArray(membros)) return [];
+    const list = membros.filter(m => !!m);
+
+    const diretoria = list
+      .filter(m => String(m?.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.DIRETORIA)
+      .sort((a, b) => {
+        const ra = cargoRankDiretoria(a?.cargo);
+        const rb = cargoRankDiretoria(b?.cargo);
+        if (ra !== rb) return ra - rb;
+        return byName(a, b);
+      });
+
+    const conselheiros = list
+      .filter(m => String(m?.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.CONSELHEIRO)
+      .sort((a, b) => {
+        const ufa = String(a?.uf || "").toUpperCase();
+        const ufb = String(b?.uf || "").toUpperCase();
+        if (ufa !== ufb) return ufa.localeCompare(ufb, "pt-BR");
+        const ra = cargoRankConselho(a?.cargo);
+        const rb = cargoRankConselho(b?.cargo);
+        if (ra !== rb) return ra - rb;
+        return byName(a, b);
+      });
+
+    const adminColab = list
+      .filter(m => ["ADMIN", "COLABORADOR"].includes(String(m?.perfil_acesso || "").toUpperCase()))
+      .sort(byName);
+
+    const outros = list
+      .filter(m => ![PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO, PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.COLABORADOR].includes(String(m?.perfil_acesso || "").toUpperCase()))
+      .sort(byName);
+
+    return [...diretoria, ...conselheiros, ...adminColab, ...outros];
+  }
+
   /**
    * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
    * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
@@ -197,6 +264,10 @@
     normalizePerfil,
     normalizeEstadoCadastro,
     normalizeNome,
-    slugify
+    slugify,
+    normalizeCargo,
+    cargoRankDiretoria,
+    cargoRankConselho,
+    ordenarMembrosTodos
   };
 }));
