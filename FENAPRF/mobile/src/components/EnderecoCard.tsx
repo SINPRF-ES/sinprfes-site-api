@@ -19,6 +19,9 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
   const handleCepChange = (value: string) => {
     const digits = onlyDigits(value);
     setUser(f => (f ? { ...f, cep: digits } : null));
+    if (digits.length === 8) {
+      handleBuscarCep();
+    }
   };
 
   const handleBuscarCep = async () => {
@@ -61,10 +64,12 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
             accessibilityLabel="CEP"
             textContentType="postalCode"
             autoComplete="postal-code"
+            returnKeyType="search"
+            onSubmitEditing={handleBuscarCep}
           />
         </View>
         {isBuscando ? (
-          <ActivityIndicator />
+          <ActivityIndicator accessibilityLabel="Buscando endereço..." />
         ) : (
           <Button title="Buscar" onPress={handleBuscarCep} disabled={disabled} />
         )}
@@ -88,6 +93,7 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
             placeholder="Nº"
             editable={!disabled}
             accessibilityLabel="Número"
+            returnKeyType="next"
           />
         </View>
         <View style={styles.col}>
@@ -100,6 +106,7 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
             editable={!disabled}
             accessibilityLabel="Complemento"
             textContentType="streetAddressLine2"
+            returnKeyType="done"
           />
         </View>
       </View>

@@ -42,6 +42,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.7}
+      accessible={true}
       accessibilityRole={onPress ? 'button' : 'none'}
       accessibilityLabel={a11yLabel}
       accessibilityHint={onPress ? 'Toque para ver detalhes do membro.' : ''}
@@ -49,17 +50,16 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
       {/* PARTE SUPERIOR (DIVIDIDA HORIZONTALMENTE) */}
       <View style={styles.topSection}>
         {/* ESQUERDA: AVATAR CIRCULAR */}
-        <View style={styles.avatarContainer}>
+        <View style={styles.avatarContainer} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden={true}>
           <Image
             source={member.avatar_url ? { uri: member.avatar_url } : require('../../assets/logo.png')}
             style={styles.avatar}
             resizeMode="cover"
-            accessibilityLabel={`Foto de ${member.name || 'membro'}`}
           />
         </View>
 
         {/* CENTRO: NOME E CARGO (PROTEÇÃO CONTRA TRUNCAMENTO) */}
-        <View style={styles.centerInfo}>
+        <View style={styles.centerInfo} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden={true}>
           <Text
             style={[styles.name, isDrawer && styles.textWhite]}
             numberOfLines={2}
@@ -87,15 +87,14 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
         </View>
 
         {/* DIREITA: UF E BANDEIRA (CONTRASTE OBRIGATÓRIO) */}
-        <View style={styles.rightStack}>
-          <Text style={[styles.ufText, isDrawer && styles.textWhite]} accessibilityLabel={`Estado: ${displayUf}`}>{displayUf}</Text>
+        <View style={styles.rightStack} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden={true}>
+          <Text style={[styles.ufText, isDrawer && styles.textWhite]}>{displayUf}</Text>
           {flagUrl ? (
             <View style={styles.flagContainer}>
               <Image
                 source={{ uri: flagUrl }}
                 style={styles.flag}
                 resizeMode="contain"
-                accessibilityLabel={`Bandeira de ${displayUf}`}
               />
             </View>
           ) : (
@@ -103,14 +102,13 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
               name="flag-variant"
               size={24}
               color={isDrawer ? "#fff" : "#ccc"}
-              accessibilityLabel="Ícone de bandeira"
             />
           )}
         </View>
       </View>
 
       {/* PARTE INFERIOR (MANDATOS OU METADADOS DE ARQUIVAMENTO) */}
-      <View style={[styles.bottomSection, isDrawer && styles.bottomSectionDrawer]}>
+      <View style={[styles.bottomSection, isDrawer && styles.bottomSectionDrawer]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden={true}>
         {member.arquivado_em ? (
           <View style={styles.archiveInfo}>
             <Text style={styles.archiveLabel}>📁 Membro Arquivado</Text>

@@ -1,0 +1,38 @@
+Starting project at /app/FENAPRF/mobile
+Starting Metro Bundler
+The following packages should be updated for best compatibility with the installed expo version:
+  react@19.2.4 - expected version: 19.1.0
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web ./index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web ./index.ts ▓▓▓▓▓▓▓▓▓░░░░░░░ 58.5% (174/407)
+Web ./index.ts ▓▓▓▓▓▓▓▓▓░░░░░░░ 58.5% (421/741)
+Web ./index.ts ▓▓▓▓▓▓▓▓▓░░░░░░░ 58.5% ( 833/1144)
+Web ./index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.2% (1309/1424)
+Web Bundling failed 15584ms index.ts (1665 modules)
+ ERROR  Importing native-only module "react-native/Libraries/Utilities/codegenNativeComponent" on web from: node_modules/react-native-pdf/fabric/RNPDFPdfNativeComponent.js
+
+Import stack:
+
+ node_modules/react-native-pdf/fabric/RNPDFPdfNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeComponent"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules/react-native-pdf/index.js
+ | import "./fabric/RNPDFPdfNativeComponent"
+
+ src/screens/PdfViewerScreen.tsx
+ | import "react-native-pdf"
+
+ src/navigation/index.tsx
+ | import "../screens/PdfViewerScreen"
+
+ App.tsx
+ | import "./src/navigation"
+
+ index.ts
+ | import "./App"
+
+
+ | import "./index.ts"

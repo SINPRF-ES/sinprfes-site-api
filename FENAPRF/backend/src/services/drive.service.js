@@ -205,6 +205,7 @@ async function ensureTrashFolder() {
   try {
     // Buscar se já existe
     const res = await drive.files.list({
+      ...DRIVE_OP_FLAGS,
       q: `'${rootId}' in parents and name = 'Lixeira' and mimeType = '${FOLDER_MIMETYPE}' and trashed = false`,
       fields: "files(id)",
       pageSize: 1
@@ -224,7 +225,8 @@ async function ensureTrashFolder() {
 
     const folder = await drive.files.create({
       resource: folderMetadata,
-      fields: "id"
+      fields: "id",
+      supportsAllDrives: true
     });
 
     TRASH_FOLDER_ID = folder.data.id;
@@ -393,6 +395,7 @@ async function getAppFolderId() {
 
   try {
     const res = await drive.files.list({
+      ...DRIVE_OP_FLAGS,
       q: `'${rootId}' in parents and name = 'App' and mimeType = '${FOLDER_MIMETYPE}' and trashed = false`,
       fields: "files(id)",
       pageSize: 1
