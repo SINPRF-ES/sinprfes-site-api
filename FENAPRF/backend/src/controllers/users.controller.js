@@ -136,22 +136,35 @@ async function verificarAvisosDuplicidade(payload, userId = null) {
 
 /**
  * Normaliza campos de data para o padrão YYYY-MM-DD.
+ * Suporta formatos: YYYY-MM-DD, DD/MM/YYYY e DDMMYYYY.
  */
 function normalizeDateField(value) {
   if (!value) return null;
-  const str = String(value).trim();
+  let str = String(value).trim();
   if (!str) return null;
 
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    return str.substring(0, 10);
-  }
-
+  // DD/MM/YYYY -> YYYY-MM-DD
   if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
     const [d, m, y] = str.split("/");
-    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    str = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // DDMMYYYY -> YYYY-MM-DD
+  else if (/^\d{8}$/.test(str)) {
+    const d = str.substring(0, 2);
+    const m = str.substring(2, 4);
+    const y = str.substring(4, 8);
+    str = `${y}-${m}-${d}`;
   }
 
-  return str;
+  // Validação final do formato ISO
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const iso = str.substring(0, 10);
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return iso;
+  }
+
+  // Se chegou aqui e não é ISO válido, dispara erro de validação (400)
+  throw { isValidationError: true, message: "Data inválida. Use o formato DD/MM/AAAA." };
 }
 
 /**

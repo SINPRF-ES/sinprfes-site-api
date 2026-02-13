@@ -80,14 +80,32 @@ async function setResetToken(id, token, expiracao) {
 
 /**
  * Atualiza senha e limpa tokens de reset.
+ * Também revoga todas as sessões ativas do usuário.
  */
 async function setPassword(id, passwordHash) {
-  await pool.query(
-    `UPDATE users
-     SET password_hash = $1, token_acesso_temp = NULL, token_expiracao = NULL, updated_at = NOW()
-     WHERE id = $2`,
-    [passwordHash, id]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `UPDATE users
+       SET password_hash = $1, token_acesso_temp = NULL, token_expiracao = NULL, updated_at = NOW()
+       WHERE id = $2`,
+      [passwordHash, id]
+    );
+
+    // Revogar todas as sessões ativas
+    await client.query(
+      "UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL",
+      [id]
+    );
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /**

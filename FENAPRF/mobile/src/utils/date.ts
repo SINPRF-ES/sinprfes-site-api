@@ -134,14 +134,28 @@ export const toBrazilianDate = (isoDate: string | null | undefined): string => {
 };
 
 /**
- * Converte data brasileira (DD/MM/YYYY) para ISO (YYYY-MM-DD).
+ * Converte data brasileira (DD/MM/YYYY ou DDMMYYYY) para ISO (YYYY-MM-DD).
  */
 export const parseBRToISO = (brDate: string | null | undefined): string | null => {
   if (!brDate) return null;
-  const parts = brDate.split('/');
-  if (parts.length !== 3) return null;
-  const [day, month, year] = parts;
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+  // DD/MM/YYYY
+  if (brDate.includes('/')) {
+    const parts = brDate.split('/');
+    if (parts.length !== 3) return null;
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  // DDMMYYYY
+  if (/^\d{8}$/.test(brDate)) {
+    const day = brDate.substring(0, 2);
+    const month = brDate.substring(2, 4);
+    const year = brDate.substring(4, 8);
+    return `${year}-${month}-${day}`;
+  }
+
+  return null;
 };
 
 /**
@@ -255,6 +269,14 @@ export function toIsoDateYYYYMMDD(input: string | Date | null | undefined): stri
   if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
     const [d, m, y] = dateStr.split('/');
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // Caso 3: Formato sem separadores (DDMMYYYY)
+  if (/^\d{8}$/.test(dateStr)) {
+    const d = dateStr.substring(0, 2);
+    const m = dateStr.substring(2, 4);
+    const y = dateStr.substring(4, 8);
+    return `${y}-${m}-${d}`;
   }
 
   // Fallback: Tenta dar parse no que sobrar
