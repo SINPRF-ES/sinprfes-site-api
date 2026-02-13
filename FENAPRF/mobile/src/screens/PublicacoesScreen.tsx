@@ -68,7 +68,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   const handleOpenOptions = () => {
     const isRoot = currentFolder.id === null;
     const nameLower = (currentFolder.name || '').toLowerCase();
-    const isProtected = isRoot || ['app', 'lixeira', 'noticias'].includes(nameLower);
+    // FENAPRF: Ajustado para refletir a regra do site (noticias não é protegida)
+    const isProtected = isRoot || ['app', 'lixeira'].includes(nameLower);
 
     Alert.alert(
       'Opções da Pasta',
@@ -246,7 +247,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             onPress={() => {
               setSelectedItem(item);
               const nameLower = (item.name || '').toLowerCase();
-              const isProtected = item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(nameLower));
+              // FENAPRF: Garantir consistência na verificação de itens protegidos
+              const isProtected = !!item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(nameLower));
 
               Alert.alert(
                 'Ações',
@@ -255,7 +257,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
                   { text: 'Cancelar', style: 'cancel' },
                   ...(isProtected ? [] : [{ text: 'Renomear', onPress: () => handleOpenRename(item) }]),
                   ...(isProtected ? [] : [{ text: 'Mover', onPress: () => handleOpenMove(item) }]),
-                  ...(isProtected ? [] : [{ text: 'Excluir', onPress: () => handleConfirmDelete(item), style: 'destructive' }]),
+                  ...(isProtected ? [] : [{ text: 'Excluir (Lixeira)', onPress: () => handleConfirmDelete(item), style: 'destructive' }]),
                 ],
                 { cancelable: true }
               );

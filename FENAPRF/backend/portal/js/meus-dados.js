@@ -257,7 +257,7 @@
 
         const avatarImg = avatarFullUrl
             ? `<img src="${avatarFullUrl}" alt="Avatar" class="me-avatar-img" id="me-avatar-img-el">`
-            : `<div class="avatar-fallback"><i class="fas fa-user"></i></div>`;
+            : `<div class="avatar-fallback">${global.Utils?.getIcon('user', { size: 32, color: '#6c757d' })}</div>`;
 
         // AgeUtils é carregado como global em portal/index.html
         const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
@@ -289,8 +289,8 @@
                             <span class="badge" style="background: rgba(255,255,255,0.2); color: #fff;">CPF: ${cpfFmt}</span>
                         </div>
                         <div class="header-details-row" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px; color: rgba(255,255,255,0.8); font-size: 0.95rem;">
-                            <span><i class="fas fa-envelope" style="width: 20px;"></i> ${emailExibir}</span>
-                            <span><i class="fas fa-map-marker-alt" style="width: 20px;"></i> ${dados.uf || "—"}</span>
+                            <span style="display:flex; align-items:center; gap:8px;">${global.Utils?.getIcon('envelope', { size: 16 })} ${emailExibir}</span>
+                            <span style="display:flex; align-items:center; gap:8px;">${global.Utils?.getIcon('map-marker-alt', { size: 16 })} ${dados.uf || "—"}</span>
                         </div>
                     </div>
                 </div>
@@ -409,7 +409,7 @@
             imgEl.addEventListener("error", () => {
                 const parent = imgEl.parentElement;
                 if (parent) {
-                    parent.innerHTML = `<div class="avatar-fallback"><i class="fas fa-user"></i></div>`;
+                    parent.innerHTML = `<div class="avatar-fallback">${global.Utils?.getIcon('user', { size: 32, color: '#6c757d' })}</div>`;
                 }
             });
         }

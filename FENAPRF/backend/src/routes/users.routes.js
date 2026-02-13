@@ -113,6 +113,9 @@ router.post("/",
 // =============================================================================
 router.get("/:id", authMiddleware, usersController.getUserById);
 
+// Endpoint de avatar público (com redirect)
+router.get("/:id/avatar", usersController.getUserAvatar);
+
 router.put(
   "/:id",
   authMiddleware,

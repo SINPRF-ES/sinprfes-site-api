@@ -33,7 +33,7 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
     payload.email = (formState as any).email1 || formState.email; // mantém ambos por segurança
   }
 
-  if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
+  if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || null as any;
 
   if (formState.name || (formState as any).nome) {
     const nomeNormalizado = normalizeNome((formState as any).nome || formState.name) || undefined;
@@ -51,7 +51,7 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   const isCouncil = perfil === 'CONSELHEIRO' || perfil === 'DIRETORIA';
   const isAdminOrColab = perfil === 'ADMIN' || perfil === 'COLABORADOR';
 
-  payload.uf = (perfil === 'CONSELHEIRO') ? (formState.uf || '') : (isAdminOrColab || perfil === 'DIRETORIA' ? 'BR' : '');
+  payload.uf = (perfil === 'CONSELHEIRO') ? (formState.uf || '') : (isAdminOrColab || perfil === 'DIRETORIA' ? 'BR' : null as any);
 
   if (isCouncil) {
     payload.cargo = formState.cargo || '';
@@ -64,8 +64,8 @@ export const buildUpdateUserPayload = (formState: Partial<User>): Partial<User> 
   }
 
   if (isCouncil) {
-    if (formState.cargo_mandato_inicio) payload.cargo_mandato_inicio = toIsoDateYYYYMMDD(formState.cargo_mandato_inicio) || formState.cargo_mandato_inicio;
-    if (formState.cargo_mandato_fim) payload.cargo_mandato_fim = toIsoDateYYYYMMDD(formState.cargo_mandato_fim) || formState.cargo_mandato_fim;
+    if (formState.cargo_mandato_inicio) payload.cargo_mandato_inicio = toIsoDateYYYYMMDD(formState.cargo_mandato_inicio) || null as any;
+    if (formState.cargo_mandato_fim) payload.cargo_mandato_fim = toIsoDateYYYYMMDD(formState.cargo_mandato_fim) || null as any;
     if (formState.perfil_acesso2) {
       payload.perfil_acesso2 = formState.perfil_acesso2;
       payload.cargo2 = formState.cargo2 || '';

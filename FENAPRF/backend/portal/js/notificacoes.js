@@ -37,8 +37,8 @@
                     padding: 5px 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;
                     color: var(--azul-header);
                 }
-                .target-chip i { cursor: pointer; color: #c53030; }
-                .target-chip i:hover { color: #e53e3e; }
+                .target-chip .btn-remove-chip { cursor: pointer; color: #c53030; display: flex; align-items: center; }
+                .target-chip .btn-remove-chip:hover { color: #e53e3e; }
 
                 .search-results-dropdown {
                     position: absolute; z-index: 100; background: #fff; border: 1px solid #ddd;
@@ -103,8 +103,8 @@
                             <small class="char-counter"><span id="push-message-count">0</span>/240</small>
                         </div>
 
-                        <button id="btn-send-push" class="btn btn-primary" style="margin-top:25px; width:100%; height:50px; font-size:1.1rem;">
-                            <i class="fas fa-paper-plane"></i> Enviar Agora
+                        <button id="btn-send-push" class="btn btn-primary" style="margin-top:25px; width:100%; height:50px; font-size:1.1rem; gap: 10px;">
+                            ${global.Utils?.getIcon('paper-plane', { size: 18 })} Enviar Agora
                         </button>
                     </div>
 
@@ -214,7 +214,7 @@
         container.innerHTML = selectedUsers.map(u => `
             <div class="target-chip">
                 ${u.nome}
-                <i class="fas fa-times-circle btn-remove-chip" data-id="${u.id}"></i>
+                <span class="btn-remove-chip" data-id="${u.id}">${global.Utils?.getIcon('times-circle', { size: 16 })}</span>
             </div>
         `).join('');
 
@@ -247,7 +247,7 @@
 
         try {
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            btn.innerHTML = `${global.Utils?.getIcon('spinner', { size: 18, class: 'af-spin' })} Enviando...`;
 
             const payload = {
                 title,

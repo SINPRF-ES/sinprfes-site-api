@@ -445,6 +445,7 @@
                             <label>Perfil de Acesso</label>
                             ${canChangeProfile ? `
                                 <select name="perfil_acesso" id="edit-perfil-acesso">
+                                    <option value="" ${!f.perfil_acesso ? "selected" : ""}>Sem perfil</option>
                                     <option value="CONSELHEIRO" ${f.perfil_acesso === "CONSELHEIRO" ? "selected" : ""}>CONSELHEIRO</option>
                                     <option value="COLABORADOR" ${f.perfil_acesso === "COLABORADOR" ? "selected" : ""}>COLABORADOR</option>
                                     <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
@@ -917,6 +918,7 @@
                         <div class="edit-group">
                             <label>Perfil de Acesso</label>
                             <select name="perfil_acesso" id="new-perfil-acesso">
+                                <option value="">Sem perfil</option>
                                 <option value="CONSELHEIRO" selected>CONSELHEIRO</option>
                                 <option value="COLABORADOR">COLABORADOR</option>
                                 <option value="DIRETORIA">DIRETORIA</option>

@@ -64,11 +64,11 @@ const VinculoCard: React.FC<Props> = ({
       <Text style={styles.label}>Perfil de Acesso</Text>
       <CanonicalPicker
         enabled={!isSelf && (canChangeAdmin || !targetIsAdmin)}
-        selectedValue={user?.perfil_acesso || ''}
+        selectedValue={user?.perfil_acesso ?? null}
         onValueChange={(val) => {
             setUser(f => {
                 if (!f) return null;
-                const newProfile = val as any;
+                const newProfile = val === '' ? null : val;
                 const newState = { ...f, perfil_acesso: newProfile };
 
                 // Limpeza e regras automáticas de UF por perfil
@@ -87,9 +87,9 @@ const VinculoCard: React.FC<Props> = ({
                     newState.cargo2 = '';
                     newState.uf2 = '';
                 } else if (newProfile === ROLES.CONSELHEIRO || newProfile === ROLES.DIRETORIA) {
-                    newState.cargo = '';
+                    newState.cargo = f.cargo || '';
                 } else {
-                    // Sem Perfil
+                    // Sem Perfil (NULL)
                     newState.cargo = '';
                     newState.cargo_mandato_inicio = '';
                     newState.cargo_mandato_fim = '';
@@ -104,7 +104,7 @@ const VinculoCard: React.FC<Props> = ({
         }}
         wrapperStyle={styles.pickerWrapper}
         items={[
-          { label: 'Sem acesso', value: '' },
+          { label: 'Sem perfil', value: null },
           { label: 'Conselheiro', value: ROLES.CONSELHEIRO },
           { label: 'Colaborador', value: ROLES.COLABORADOR },
           { label: 'Diretoria', value: ROLES.DIRETORIA },

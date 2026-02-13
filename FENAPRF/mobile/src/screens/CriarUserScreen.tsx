@@ -105,20 +105,20 @@ export default function CriarUserScreen({ navigation }: any) {
           numero: user.numero,
           complemento: user.complemento,
           cidade: user.cidade,
-          uf: (perfil === ROLES.CONSELHEIRO) ? user.uf : 'BR',
-          perfil_acesso: perfil,
-          cargo: isCouncil ? user.cargo : (perfil === ROLES.ADMIN ? 'Administrador' : 'Colaborador'),
+          uf: (perfil === ROLES.CONSELHEIRO) ? user.uf : (perfil ? 'BR' : null),
+          perfil_acesso: perfil || null,
+          cargo: isCouncil ? user.cargo : (perfil === ROLES.ADMIN ? 'Administrador' : (perfil === ROLES.COLABORADOR ? 'Colaborador' : null)),
           ignoreWarnings
       };
 
       if (user.data_nascimento) {
-        payload.data_nascimento = toISODate(user.data_nascimento) || (user.data_nascimento as any);
+        payload.data_nascimento = toISODate(user.data_nascimento) || null;
       }
 
       // Regras de negócio FENAPRF: Enviar campos de mandato/2º vínculo apenas para o conselho
       if (isCouncil) {
-          payload.cargo_mandato_inicio = user.cargo_mandato_inicio ? toISODate(user.cargo_mandato_inicio) || user.cargo_mandato_inicio : null;
-          payload.cargo_mandato_fim = user.cargo_mandato_fim ? toISODate(user.cargo_mandato_fim) || user.cargo_mandato_fim : null;
+          payload.cargo_mandato_inicio = user.cargo_mandato_inicio ? toISODate(user.cargo_mandato_inicio) || null : null;
+          payload.cargo_mandato_fim = user.cargo_mandato_fim ? toISODate(user.cargo_mandato_fim) || null : null;
           payload.perfil_acesso2 = user.perfil_acesso2 || null;
           payload.cargo2 = user.cargo2 || null;
           payload.uf2 = user.uf2 || null;

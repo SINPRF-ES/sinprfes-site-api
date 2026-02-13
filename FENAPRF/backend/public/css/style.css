@@ -2556,6 +2556,15 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
     font-weight: 800;
 }
 
+.af-spin {
+    animation: af-spin 2s infinite linear;
+}
+
+@keyframes af-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(359deg); }
+}
+
 /* Responsividade do Card */
 @media (max-width: 1100px) {
     .card-v3-grid {

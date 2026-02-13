@@ -12,9 +12,11 @@ const api = axios.create({
   },
 });
 
-// Controle de Refresh Token
+// Controle de Refresh Token (Mutex)
 let isRefreshing = false;
 let failedQueue: any[] = [];
+let lastRefreshAttempt = 0;
+const REFRESH_THROTTLE = 5000; // 5 segundos entre tentativas de refresh se falhar
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(prom => {
@@ -101,7 +103,9 @@ api.interceptors.response.use(
 
     // 🔴 TRATAMENTO DE 401: Silent Refresh
     if (status === 401 && !isRefreshRoute && !originalRequest._retry) {
+      // Se já estiver atualizando, entra na fila
       if (isRefreshing) {
+        logger.info('[Auth.Refresh] Já em andamento, enfileirando requisição.');
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         }).then(token => {
@@ -110,8 +114,17 @@ api.interceptors.response.use(
         }).catch(err => Promise.reject(err));
       }
 
+      // Throttle defensivo: evitar loops frenéticos em caso de falhas consecutivas
+      const now = Date.now();
+      if (now - lastRefreshAttempt < REFRESH_THROTTLE) {
+          logger.warn('[Auth.Refresh] Tentativa muito próxima da anterior. Abortando para evitar loop.');
+          await limparSessao();
+          return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
       isRefreshing = true;
+      lastRefreshAttempt = now;
 
       try {
         logger.info('[Auth.Refresh] Iniciando renovação silenciosa...');
@@ -119,44 +132,54 @@ api.interceptors.response.use(
         const deviceId = await getStableDeviceId();
 
         if (!refreshToken) {
+          logger.warn('[Auth.Refresh] Refresh token ausente no storage.');
           throw new Error('Refresh token não disponível.');
         }
 
-        // Chamada direta para não cair no interceptor recursivo
+        // Chamada direta via axios puro para evitar interceptores
         const refreshResponse = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
           refreshToken,
           deviceId
-        });
+        }, { timeout: 10000 });
 
         const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-        // Atualiza o storage com os novos tokens (preservando o usuário)
+        // Atualiza o storage com os novos tokens
         const sessaoAtual = await carregarSessao();
-        if (sessaoAtual?.user) {
-            await salvarSessao({
-                token: newToken,
-                refreshToken: newRefreshToken,
-                user: sessaoAtual.user
-            });
-        }
+        await salvarSessao({
+            token: newToken,
+            refreshToken: newRefreshToken,
+            user: sessaoAtual?.user || { id: 'unknown' } as any
+        });
 
         logger.info('[Auth.Refresh] Sucesso na renovação.');
-        processQueue(null, newToken);
+
         isRefreshing = false;
+        processQueue(null, newToken);
 
         // Re-executa a request original
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
 
-      } catch (refreshErr) {
-        logger.error('[Auth.Refresh] Falha na renovação. Forçando logout.', refreshErr);
-        processQueue(refreshErr, null);
-        isRefreshing = false;
-        await limparSessao();
+      } catch (refreshErr: any) {
+        const isNetworkError = !refreshErr.response;
+        const refreshStatus = refreshErr.response?.status;
 
-        if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
-          (window as any).onSessionExpired();
+        logger.error('[Auth.Refresh] Falha crítica na renovação.', {
+            status: refreshStatus,
+            message: refreshErr.message,
+            isNetworkError
+        });
+
+        isRefreshing = false;
+        processQueue(refreshErr, null);
+
+        // Se for erro de credenciais (401, 403) ou token inválido, limpa tudo
+        if (refreshStatus === 401 || refreshStatus === 403 || refreshStatus === 400 || !isNetworkError) {
+            logger.warn('[Auth.Refresh] Token inválido ou expirado. Limpando sessão.');
+            await limparSessao();
         }
+
         return Promise.reject(refreshErr);
       }
     }

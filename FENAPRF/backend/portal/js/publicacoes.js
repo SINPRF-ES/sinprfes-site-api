@@ -293,7 +293,7 @@
                     <div class="pub-card tipo-${item.tipo || (isFolder ? 'PASTA' : 'DOC')}" ${dataAttr} data-name="${global.Utils?.escapeHTML(titulo)}">
                         ${ehGestao && !isPicker ? `
                             <div class="pub-menu-btn" data-id="${item.id}" data-is-protected="${isProtected}" title="Opções">
-                                <i class="fas fa-ellipsis-v"></i>
+                                ${global.Utils?.getIcon('ellipsis-v', { size: 18 })}
                             </div>
                         ` : ''}
                         <div class="pub-icon">${icon}</div>
