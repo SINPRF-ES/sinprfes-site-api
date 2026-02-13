@@ -5,28 +5,38 @@ import type { Sessao } from '../types/auth';
 import { logger } from '../infra/logger';
 
 const TOKEN_KEY = 'fenaprf_secure_token';
+const REFRESH_TOKEN_KEY = 'fenaprf_refresh_token';
 const USER_KEY = '@fenaprf/user';
-const BIOMETRIA_KEY = '@fenaprf/biometria_habilitada'; // Legacy AsyncStorage
-const BIOMETRIA_SECURE_KEY = 'fenaprf_biometria_enabled'; // Novo SecureStore
-const BIOMETRIC_CREDENTIAL_KEY = 'fenaprf_biometric_token';
+const BIOMETRIA_KEY = '@fenaprf/biometria_habilitada';
+const BIOMETRIA_SECURE_KEY = 'fenaprf_biometria_enabled';
 const LAST_UPDATE_CHECK_KEY = '@fenaprf/last_update_check';
 
+/**
+ * Salva a sessão no armazenamento seguro.
+ * Se a biometria estiver habilitada, o Refresh Token é salvo com exigência de autenticação.
+ */
 export async function salvarSessao(sessao: Sessao): Promise<void> {
   try {
     await SecureStore.setItemAsync(TOKEN_KEY, sessao.token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(sessao.user));
 
-    // Se a biometria estiver habilitada, salvamos também o token persistente
     const bioEnabled = await carregarBiometriaHabilitada();
-    if (bioEnabled) {
-      await SecureStore.setItemAsync(BIOMETRIC_CREDENTIAL_KEY, sessao.token);
-    }
+
+    // Refresh Token: Se biometria ativa, exige FaceID/Digital para ler
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, sessao.refreshToken, {
+      requireAuthentication: bioEnabled
+    });
+
   } catch (e) {
     logger.error('[Storage.salvarSessao]', e);
   }
 }
 
-export async function carregarSessao(): Promise<Sessao | null> {
+/**
+ * Carrega a sessão básica (AccessToken + User).
+ * O Refresh Token é carregado sob demanda para evitar prompts desnecessários.
+ */
+export async function carregarSessao(): Promise<Partial<Sessao> | null> {
   try {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const userJson = await AsyncStorage.getItem(USER_KEY);
@@ -41,13 +51,27 @@ export async function carregarSessao(): Promise<Sessao | null> {
   }
 }
 
+/**
+ * Tenta carregar o Refresh Token. Se biometria estiver ativa para este item,
+ * o sistema operacional mostrará o prompt de autenticação.
+ */
+export async function carregarRefreshToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+  } catch (e) {
+    // Pode falhar se o usuário cancelar a biometria
+    logger.warn('[Storage.carregarRefreshToken] Falha ao ler refresh token (possível cancelamento bio)');
+    return null;
+  }
+}
+
 export async function limparSessao(manterBiometria = true): Promise<void> {
   try {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
 
     if (!manterBiometria) {
-      await SecureStore.deleteItemAsync(BIOMETRIC_CREDENTIAL_KEY);
       await SecureStore.deleteItemAsync(BIOMETRIA_SECURE_KEY);
       await AsyncStorage.removeItem(BIOMETRIA_KEY);
     }
@@ -56,23 +80,17 @@ export async function limparSessao(manterBiometria = true): Promise<void> {
   }
 }
 
-export async function carregarTokenBiometrico(): Promise<string | null> {
-  return await SecureStore.getItemAsync(BIOMETRIC_CREDENTIAL_KEY);
-}
-
 export async function definirBiometriaHabilitada(valor: boolean): Promise<void> {
   const strValor = valor ? 'true' : 'false';
   await AsyncStorage.setItem(BIOMETRIA_KEY, strValor);
   await SecureStore.setItemAsync(BIOMETRIA_SECURE_KEY, strValor);
 
-  if (!valor) {
-    await SecureStore.deleteItemAsync(BIOMETRIC_CREDENTIAL_KEY);
-  } else {
-    // Se habilitou, tenta pegar o token atual e salvar como persistente
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (token) {
-      await SecureStore.setItemAsync(BIOMETRIC_CREDENTIAL_KEY, token);
-    }
+  // Re-salva o refresh token com a nova política de segurança
+  const rt = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+  if (rt) {
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, rt, {
+      requireAuthentication: valor
+    });
   }
 }
 

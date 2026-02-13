@@ -1,14 +1,13 @@
 // src/services/authService.ts
 import api from './apiService';
 import type { User } from '../types/user';
+import type { Sessao } from '../types/auth';
+import { getStableDeviceId } from '../utils/deviceId';
 
 interface LoginPayload {
   cpf: string;
   senha?: string;
-}
-
-interface LoginResponse {
-  token: string;
+  deviceId?: string;
 }
 
 /**
@@ -16,24 +15,23 @@ interface LoginResponse {
  */
 export async function loginSindicato(
   payload: Pick<LoginPayload, 'cpf' | 'senha'>
-): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('/api/auth/login', payload);
+): Promise<Sessao> {
+  const deviceId = await getStableDeviceId();
+  const { data } = await api.post<Sessao>('/api/auth/login', { ...payload, deviceId });
   return data;
 }
-
 
 /**
  * Busca os dados do membro logado.
  */
 export async function buscarUserLogado(token?: string): Promise<User> {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  // No FENAPRF, usamos /api/users/me
   const { data } = await api.get<User>('/api/users/me', { headers });
   return data;
 }
 
 /**
- * Solicita o envio do e-mail de redefinição de senha para o CPF informado.
+ * Solicita o envio do e-mail de redefinição de senha.
  */
 export async function solicitarResetSenha(cpf: string): Promise<{ message: string; email_destino: string | null }> {
   const { data } = await api.post('/api/senha/recuperar', { cpf });
@@ -41,7 +39,7 @@ export async function solicitarResetSenha(cpf: string): Promise<{ message: strin
 }
 
 /**
- * Redefine a senha do membro utilizando o token enviado por e-mail.
+ * Redefine a senha do membro.
  */
 export async function resetarSenha(token: string, novaSenha: string): Promise<{ message: string }> {
   const { data } = await api.post('/api/senha/resetar', { token, novaSenha });

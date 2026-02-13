@@ -8,6 +8,12 @@ const { loginLimiter } = require("../middlewares/securityRateLimit");
 // Login
 router.post("/login", loginLimiter, controller.login);
 
+// Refresh Token
+router.post("/refresh", controller.refresh);
+
+// Logout
+router.post("/logout", controller.logout);
+router.post("/logout-all", authMiddleware, controller.logoutAll);
 
 // Dados do próprio membro
 router.get("/me", authMiddleware, controller.me);

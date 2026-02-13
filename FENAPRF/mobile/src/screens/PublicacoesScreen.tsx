@@ -247,7 +247,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
                   ...(isProtected ? [] : [{ text: 'Renomear', onPress: () => handleOpenRename(item) }]),
                   ...(isProtected ? [] : [{ text: 'Mover', onPress: () => handleOpenMove(item) }]),
                   ...(isProtected ? [] : [{ text: 'Excluir', onPress: () => handleConfirmDelete(item), style: 'destructive' }]),
-                ]
+                ],
+                { cancelable: true }
               );
             }}
           >
@@ -371,10 +372,12 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   const handleDelete = async (item: DriveFile) => {
       setIsProcessing(true);
       try {
+        logDebug('Publicacoes.delete.start', { id: item.id, name: item.name });
         await deleteItem(item.id);
         queryClient.invalidateQueries({ queryKey: ['publicacoes', currentFolder.id] });
-        Alert.alert('Sucesso', 'Item movido para a lixeira.');
+        Alert.alert('Sucesso', `"${item.name}" foi movido para a lixeira.`);
       } catch (err) {
+        logger.error('Publicacoes.delete.fail', err as Error);
         Alert.alert('Erro', 'Não foi possível excluir o item.');
       } finally {
         setIsProcessing(false);
