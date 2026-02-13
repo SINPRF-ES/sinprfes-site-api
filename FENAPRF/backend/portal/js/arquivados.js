@@ -123,7 +123,7 @@
                         <p class="user-meta" style="color:#9b1c1c; font-weight:bold;">Arquivado</p>
                     </div>
                     <div class="user-action">
-                        <i class="fas fa-chevron-right" style="color: #333;"></i>
+                        ${global.Utils?.getIcon('chevron-right', { size: 18, color: '#333' })}
                     </div>
                 </div>
             `;
@@ -244,8 +244,8 @@
                 </div>
 
                 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="btn-arq-editar" class="btn btn-primary" style="flex:1;">
-                        <i class="fas fa-pencil-alt"></i> Gerenciar Cadastro
+                    <button id="btn-arq-editar" class="btn btn-primary" style="flex:1; gap: 8px;">
+                        ${global.Utils?.getIcon('pencil-alt', { size: 16 })} Gerenciar Cadastro
                     </button>
                     <button id="btn-arq-fechar" class="btn btn-outline" style="flex:1;">Fechar</button>
                 </div>

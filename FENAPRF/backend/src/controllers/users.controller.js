@@ -143,27 +143,32 @@ function normalizeDateField(value) {
   let str = String(value).trim();
   if (!str) return null;
 
-  // DD/MM/YYYY -> YYYY-MM-DD
-  if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
-    const [d, m, y] = str.split("/");
-    str = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  }
-  // DDMMYYYY -> YYYY-MM-DD
-  else if (/^\d{8}$/.test(str)) {
-    const d = str.substring(0, 2);
-    const m = str.substring(2, 4);
-    const y = str.substring(4, 8);
-    str = `${y}-${m}-${d}`;
-  }
-
-  // Validação final do formato ISO
+  // Se já for formato ISO YYYY-MM-DD...
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
     const iso = str.substring(0, 10);
     const d = new Date(iso);
     if (!isNaN(d.getTime())) return iso;
   }
 
-  // Se chegou aqui e não é ISO válido, dispara erro de validação (400)
+  // DD/MM/YYYY -> YYYY-MM-DD
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
+    const [d, m, y] = str.split("/");
+    const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    const dObj = new Date(iso);
+    if (!isNaN(dObj.getTime())) return iso;
+  }
+
+  // DDMMYYYY -> YYYY-MM-DD (Comum no mobile)
+  if (/^\d{8}$/.test(str)) {
+    const d = str.substring(0, 2);
+    const m = str.substring(2, 4);
+    const y = str.substring(4, 8);
+    const iso = `${y}-${m}-${d}`;
+    const dObj = new Date(iso);
+    if (!isNaN(dObj.getTime())) return iso;
+  }
+
+  // Se chegou aqui e não é nada reconhecido, dispara erro de validação (400)
   throw { isValidationError: true, message: "Data inválida. Use o formato DD/MM/AAAA." };
 }
 
@@ -180,6 +185,26 @@ function parseUserId(req, res) {
 }
 
 // Dependentes removidos conforme política FENAPRF
+
+/**
+ * GET /api/users/:id/avatar
+ * Redireciona para o avatar real ou placeholder.
+ */
+exports.getUserAvatar = async (req, res) => {
+  const idAlvo = parseUserId(req, res);
+  if (idAlvo === null) return;
+
+  try {
+    const user = await usersService.buscarPorId(idAlvo);
+    if (user?.avatar_url) {
+      return res.redirect(user.avatar_url);
+    }
+    return res.redirect("/img/avatar-placeholder.png");
+  } catch (err) {
+    log.error("GetUserAvatarErro", { message: err.message, requestId: req.requestId, targetId: idAlvo });
+    return res.redirect("/img/avatar-placeholder.png");
+  }
+};
 
 /**
  * GET /api/users/:id
@@ -398,17 +423,21 @@ exports.atualizarUser = async (req, res) => {
       cargo_mandato_fim: body.cargo_mandato_fim !== undefined ? normalizeDateField(body.cargo_mandato_fim) : undefined,
     };
 
-    if (body.perfil_acesso) {
+    if (body.perfil_acesso !== undefined) {
       const novoPerfil = normalizePerfil(body.perfil_acesso);
       if (atorId === targetUserId) return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso.", requestId: req.requestId });
 
-      if (perfilAtor !== "ADMIN" && (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN")) {
-        return res.status(403).json({ message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN.", requestId: req.requestId });
+      if (novoPerfil === "ADMIN") {
+         if (perfilAtor !== "ADMIN") return res.status(403).json({ message: "Apenas ADMIN pode conceder o perfil ADMIN.", requestId: req.requestId });
+      }
+
+      if (alvo.perfil_acesso === "ADMIN" && perfilAtor !== "ADMIN") {
+        return res.status(403).json({ message: "Apenas ADMIN pode retirar o perfil ADMIN.", requestId: req.requestId });
       }
 
       // Garante que o editor pode atribuir o novo perfil (não pode promover alguém acima de si)
       // Exceção: COLABORADOR pode atribuir qualquer perfil exceto ADMIN (já validado acima)
-      if (perfilAtor !== "ADMIN" && perfilAtor !== "COLABORADOR" && PERFIL_RANK[novoPerfil] >= PERFIL_RANK[perfilAtor]) {
+      if (novoPerfil && perfilAtor !== "ADMIN" && perfilAtor !== "COLABORADOR" && PERFIL_RANK[novoPerfil] >= PERFIL_RANK[perfilAtor]) {
          return res.status(403).json({ message: "Você não pode atribuir um perfil igual ou superior ao seu.", requestId: req.requestId });
       }
 
@@ -557,7 +586,10 @@ exports.criarUser = async (req, res) => {
     const checkCpf = await pool.query("SELECT name FROM users WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
     if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já pertence ao membro: ${checkCpf.rows[0].name}.`, requestId: req.requestId });
 
-    const perfil_acesso = normalizePerfil(body.perfil_acesso || "CONSELHEIRO");
+    // Se perfil_acesso vier explicitamente null ou vazio, assume sem acesso (NULL)
+    const perfil_acesso = (body.perfil_acesso === null || body.perfil_acesso === "")
+        ? null
+        : normalizePerfil(body.perfil_acesso || "CONSELHEIRO");
     const cargo = body.cargo || null;
     const uf = body.uf || null;
 
@@ -621,6 +653,9 @@ exports.criarUser = async (req, res) => {
       cidade: body.cidade || null,
       cep: body.cep || null,
       uf_endereco: body.uf_endereco || null,
+      // FENAPRF: Incluindo campos de mandato na criação
+      cargo_mandato_inicio: body.cargo_mandato_inicio ? normalizeDateField(body.cargo_mandato_inicio) : null,
+      cargo_mandato_fim: body.cargo_mandato_fim ? normalizeDateField(body.cargo_mandato_fim) : null,
     };
 
     const novo = await usersService.criarUserInicial(dadosNovo, perfilCriador);
