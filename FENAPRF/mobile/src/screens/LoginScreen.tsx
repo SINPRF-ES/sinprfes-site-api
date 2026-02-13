@@ -8,11 +8,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
 import { loginSindicato, buscarUserLogado } from '../services/authService';
-import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../utils/format';
-import { carregarSessao } from '../services/storageService';
+import { carregarSessao, carregarRefreshToken } from '../services/storageService';
 import { logger } from '../infra/logger';
-import { ENABLE_PUSH } from '../config/features';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -24,55 +22,39 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState<boolean>(false);
   const [temCredencial, setTemCredencial] = useState<boolean>(false);
 
-  // ✅ Corrige o crash do cold start: a variável "etapa" era usada sem existir.
-  // Se no futuro você tiver etapas reais (ex.: "cpf" -> "senha"), troque para um union type.
-  const etapa = 'credenciais';
-
   useEffect(() => {
     (async () => {
-      const token = await require('../services/storageService').carregarTokenBiometrico();
-      setTemCredencial(!!token);
+      const rt = await carregarRefreshToken();
+      setTemCredencial(!!rt);
     })();
   }, []);
 
-  // Tenta autenticar com biometria ao carregar a tela
   useEffect(() => {
-    (async () => {
-      if (biometriaHabilitada) {
-        // Um pequeno delay para dar tempo da UI renderizar e o membro ver o prompt
-        setTimeout(handleBiometricLogin, 500);
-      }
-    })();
+    if (biometriaHabilitada) {
+      setTimeout(handleBiometricLogin, 500);
+    }
   }, [biometriaHabilitada]);
 
   async function handleBiometricLogin() {
     try {
-      console.log('[Biometria.tap]');
-      // Tenta carregar a sessão normal ou a credencial biométrica persistente
+      const rt = await carregarRefreshToken();
       const sessaoSalva = await carregarSessao();
-      const tokenBiometrico = await require('../services/storageService').carregarTokenBiometrico();
-      const tokenParaUsar = sessaoSalva?.token || tokenBiometrico;
 
-      if (!tokenParaUsar) {
-        console.warn('[Biometria.session.fail] Sem credencial disponível');
+      if (!rt || !sessaoSalva?.token) {
         return;
       }
 
       setLoading(true);
       const sucesso = await desbloquearComBiometria();
       if (sucesso) {
-        console.log('[Biometria.session.restore.start]');
         try {
-          // Tenta validar o token
-          const user = await buscarUserLogado(tokenParaUsar);
-          await setSessao(tokenParaUsar, user);
-          console.log('[Biometria.session.restore.ok]');
+          const user = await buscarUserLogado(sessaoSalva.token);
+          await setSessao(sessaoSalva.token, rt, user);
         } catch (restoreError: any) {
-          console.error('[Biometria.session.restore.fail]', restoreError);
           if (restoreError?.response?.status === 401) {
             Alert.alert('Sessão Expirada', 'Sua credencial expirou. Por favor, entre com sua senha.');
           } else {
-            Alert.alert('Erro', 'Não foi possível validar sua biometria agora. Tente com sua senha.');
+            Alert.alert('Erro', 'Não foi possível validar sua biometria agora.');
           }
         }
       }
@@ -80,39 +62,6 @@ export default function LoginScreen() {
       console.error('[Biometria.error]', e);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function finalizarLoginComToken(token: string) {
-    logger.info('LOGIN_SUCCESS_PROCEEDING', { hasToken: !!token });
-    const user = await buscarUserLogado(token);
-    logger.info('USER_ME_RESULT', { cpf: user.cpf });
-
-    // No FENAPRF, se a senha estiver PENDENTE, redireciona para criar senha
-    // Removida a verificação genérica de !user.password_hash pois o /me sanitiza o hash real
-    if (user.password_hash === 'PENDENTE') {
-      logger.info('NAVIGATING_TO_RESET_PENDENTE');
-      navigation.navigate(
-        'ResetPassword' as never,
-        {
-          isFirstAccess: true,
-          cpf: user.cpf,
-        } as never
-      );
-      return;
-    }
-
-    await setSessao(token, user);
-
-    if (!biometriaHabilitada) {
-      Alert.alert(
-        'Login com biometria',
-        'Deseja ativar o acesso com biometria neste aparelho?',
-        [
-          { text: 'Não agora', style: 'cancel', onPress: () => ativarBiometriaNesteAparelho(false) },
-          { text: 'Sim, ativar', onPress: () => ativarBiometriaNesteAparelho(true) },
-        ]
-      );
     }
   }
 
@@ -124,17 +73,31 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      const resultado = await loginSindicato({ cpf, senha });
+      const sessao = await loginSindicato({ cpf, senha });
 
-      if (!resultado.token) throw new Error('Token não retornado pelo servidor.');
-      await finalizarLoginComToken(resultado.token);
+      if (sessao.user.password_hash === 'PENDENTE') {
+          navigation.navigate('ResetPassword' as any, { isFirstAccess: true, cpf: sessao.user.cpf } as any);
+          return;
+      }
+
+      await setSessao(sessao.token, sessao.refreshToken, sessao.user);
+
+      if (!biometriaHabilitada) {
+        Alert.alert(
+          'Login com biometria',
+          'Deseja ativar o acesso com biometria neste aparelho?',
+          [
+            { text: 'Não agora', style: 'cancel', onPress: () => ativarBiometriaNesteAparelho(false) },
+            { text: 'Sim, ativar', onPress: () => ativarBiometriaNesteAparelho(true) },
+          ]
+        );
+      }
     } catch (e: any) {
       const status = e?.response?.status;
       const errorMsg = e?.response?.data?.error || e?.message || 'Falha ao autenticar.';
-
       logger.error('LOGIN_FAIL', { status, message: errorMsg });
 
-      if (status === 403 && errorMsg.includes('pendente')) {
+      if (status === 403 && errorMsg.toLowerCase().includes('senha')) {
         Alert.alert('Primeiro Acesso', errorMsg, [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Definir Senha', onPress: () => navigation.navigate('ForgotPassword' as any) },
@@ -146,23 +109,6 @@ export default function LoginScreen() {
       setLoading(false);
     }
   }
-
-  const isEtapaCredenciais = true;
-  const cpfPlaceholder = '000.000.000-00';
-
-  useEffect(() => {
-    logger.info('LOGIN_SCREEN_MOUNT', {
-      etapa,
-      hasInitialCpf: !!cpf,
-      cpfPlaceholder,
-      isBiometriaEnabled: biometriaHabilitada,
-    });
-
-    if (cpfPlaceholder.includes('_') || (cpfPlaceholder.includes('-') && !cpfPlaceholder.includes('.'))) {
-      logger.warn('CPF_PLACEHOLDER_RESIDUE_DETECTED', { placeholder: cpfPlaceholder });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <SafeScreen style={{ backgroundColor: '#001A33' }}>
@@ -180,7 +126,7 @@ export default function LoginScreen() {
           <Text style={styles.title}>FENAPRF</Text>
           <Text style={styles.subtitle}>Conselho de Representantes</Text>
 
-          {biometriaHabilitada && temCredencial && isEtapaCredenciais && (
+          {biometriaHabilitada && temCredencial && (
             <Pressable
               style={styles.biometricButton}
               onPress={handleBiometricLogin}
@@ -206,7 +152,6 @@ export default function LoginScreen() {
             }}
             keyboardType="numeric"
             maxLength={14}
-            editable={isEtapaCredenciais}
             textContentType="username"
             autoComplete="username"
             returnKeyType="next"
@@ -219,7 +164,6 @@ export default function LoginScreen() {
               value={senha}
               onChangeText={setSenha}
               secureTextEntry={!showPassword}
-              editable={isEtapaCredenciais}
               accessibilityLabel="Senha"
               textContentType="password"
               autoComplete="password"
@@ -236,26 +180,21 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <>
-            <Button
-              title={loading ? 'Entrando...' : 'Entrar'}
-              onPress={handleLoginCredenciais}
-              disabled={loading}
-              color="#FFC300"
-              accessibilityLabel={loading ? 'Entrando no sistema (Aguarde...)' : 'Entrar. Realiza o login com CPF e senha informados.'}
-            />
-            <Pressable
-              onPress={() => navigation.navigate('ForgotPassword' as any)}
-              disabled={loading}
-              accessibilityRole="link"
-              accessibilityLabel={loading ? "Recuperar senha ou primeiro acesso (Aguarde...)" : "Esqueci minha senha ou Primeiro acesso"}
-              accessibilityHint="Leva para a tela de recuperação de senha ou definição de primeiro acesso."
-            >
-              <Text style={styles.forgotPasswordText}>
-                {loading ? 'Aguarde...' : 'Esqueci minha senha / Primeiro acesso'}
-              </Text>
-            </Pressable>
-          </>
+          <Button
+            title={loading ? 'Entrando...' : 'Entrar'}
+            onPress={handleLoginCredenciais}
+            disabled={loading}
+            color="#FFC300"
+          />
+          <Pressable
+            onPress={() => navigation.navigate('ForgotPassword' as any)}
+            disabled={loading}
+            accessibilityRole="link"
+          >
+            <Text style={styles.forgotPasswordText}>
+              {loading ? 'Aguarde...' : 'Esqueci minha senha / Primeiro acesso'}
+            </Text>
+          </Pressable>
         </View>
       </KeyboardAwareScrollView>
     </SafeScreen>
@@ -278,38 +217,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 16,
   },
-  biometricButtonText: {
-    color: '#FFF',
-    marginLeft: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  biometricButtonText: { color: '#FFF', marginLeft: 10, fontSize: 16, fontWeight: 'bold' },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 16, backgroundColor: '#fff' },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    marginBottom: 16,
-    backgroundColor: '#fff',
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
-  },
-  showPasswordButton: {
-    padding: 10,
-  },
-  forgotPasswordText: {
-    textAlign: 'center',
-    color: '#003366',
-    marginTop: 16,
-    padding: 8,
-    fontSize: 14,
-  },
-  info2fa: { textAlign: 'center', marginBottom: 12, fontSize: 14 },
-  buttonRow: { flexDirection: 'row', gap: 8 },
-  buttonCol: { flex: 1 },
+  passwordContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 10, marginBottom: 16, backgroundColor: '#fff' },
+  passwordInput: { flex: 1, padding: 12, fontSize: 16 },
+  showPasswordButton: { padding: 10 },
+  forgotPasswordText: { textAlign: 'center', color: '#003366', marginTop: 16, padding: 8, fontSize: 14 },
 });

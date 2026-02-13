@@ -6,7 +6,7 @@ import api from '../services/apiService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { ENABLE_PUSH } from '../config/features';
 
-import type { AuthContextData } from '../types/auth';
+import type { AuthContextData, Sessao } from '../types/auth';
 import type { User } from '../types/user';
 
 import {
@@ -15,6 +15,7 @@ import {
   limparSessao,
   carregarBiometriaHabilitada,
   definirBiometriaHabilitada,
+  carregarRefreshToken,
 } from '../services/storageService';
 
 const AuthContext = createContext<AuthContextData | null>(null);
@@ -36,15 +37,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         appState.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        // App volve para o primeiro plano
         if (backgroundTimestamp.current && Date.now() - backgroundTimestamp.current > 60000) {
-          if (token) {
+          if (token && biometriaHabilitada) {
             setBloqueadoPorBiometria(true);
           }
         }
         backgroundTimestamp.current = null;
       } else if (nextAppState.match(/inactive|background/)) {
-        // App vai para segundo plano
         backgroundTimestamp.current = Date.now();
       }
       appState.current = nextAppState;
@@ -53,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.remove();
     };
-  }, [token]);
+  }, [token, biometriaHabilitada]);
 
   useEffect(() => {
     async function loadSession() {
@@ -61,32 +60,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
 
-        console.log('[Biometria.init]', { enabled: bio, hasToken: !!sessao?.token });
         setBiometriaHabilitada(bio);
 
         if (sessao?.token) {
-          // Define o token para que o interceptor do axios possa usá-lo
           setToken(sessao.token);
 
           try {
-            // Valida o token e busca os dados do membro atualizados (FENAPRF)
+            // O interceptor de resposta cuidará do refresh se o token estiver expirado.
+            // Se a biometria estiver ativa, o refresh disparará o prompt biométrico.
             const { data: userAtualizado } = await api.get('/api/users/me');
             setUser(userAtualizado);
 
-            // Atualiza o membro no storage
-            await salvarSessao({ token: sessao.token, user: userAtualizado });
+            const rt = await carregarRefreshToken();
+            await salvarSessao({
+                token: sessao.token,
+                refreshToken: rt || '',
+                user: userAtualizado
+            });
 
             if (ENABLE_PUSH) {
-              registrarDispositivoParaPush().catch(e => console.warn('Push registration failed', e));
+              registrarDispositivoParaPush().catch(() => {});
             }
 
+            // No boot, se biometria ativa, bloqueamos a tela para garantir privacidade
             if (bio) {
               setBloqueadoPorBiometria(true);
             }
           } catch (error: any) {
             console.error('[Auth.loadSession.error]', error.message);
-            // Se o token for inválido (401), o interceptor de resposta já limpou o storage.
-            // Aqui limpamos o estado local para forçar redirecionamento para Login.
+            // Se falhou mesmo após tentativa de refresh (ou se refresh falhou), desloga
             setToken(null);
             setUser(null);
           }
@@ -99,14 +101,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadSession();
   }, []);
 
-  async function setSessao(novoToken: string, novoUser: User) {
+  async function setSessao(novoToken: string, novoRefreshToken: string, novoUser: User) {
     setToken(novoToken);
     setUser(novoUser);
     setBloqueadoPorBiometria(false);
-    await salvarSessao({ token: novoToken, user: novoUser });
+    await salvarSessao({ token: novoToken, refreshToken: novoRefreshToken, user: novoUser });
 
     if (ENABLE_PUSH) {
-      registrarDispositivoParaPush().catch(e => console.warn('Push registration failed', e));
+      registrarDispositivoParaPush().catch(() => {});
     }
   }
 
@@ -121,54 +123,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setBloqueadoPorBiometria(false);
 
-    // Limpeza adicional de caches específicos de telas
     try {
       const allKeys = await AsyncStorage.getAllKeys();
       const keysToRemove = allKeys.filter(key => key.startsWith('users_cache_'));
       if (keysToRemove.length > 0) {
         await AsyncStorage.multiRemove(keysToRemove);
       }
-    } catch (e) {
-      // erro, mas não deve bloquear o logout
-    }
+    } catch (e) {}
   }
 
   async function ativarBiometriaNesteAparelho(ativar: boolean) {
     await definirBiometriaHabilitada(ativar);
     setBiometriaHabilitada(ativar);
-
-    // Se já tem sessão e acabou de ativar, pode bloquear imediatamente:
     if (ativar && token) setBloqueadoPorBiometria(true);
   }
 
   async function desbloquearComBiometria(): Promise<boolean> {
     try {
-      console.log('[Biometria.auth.start]');
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!hasHardware || !enrolled) {
-        console.warn('[Biometria.auth.skip] Hardware ou Digital não disponíveis');
         setBloqueadoPorBiometria(false);
         return true;
       }
 
       const res = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Autenticação biométrica FENAPRF',
-        cancelLabel: 'Usar senha',
-        fallbackLabel: 'Usar senha',
+        cancelLabel: 'Cancelar',
         disableDeviceFallback: false,
       });
 
       if (res.success) {
-        console.log('[Biometria.auth.ok]');
         setBloqueadoPorBiometria(false);
         return true;
       }
-      console.log('[Biometria.auth.fail]', res.error);
       return false;
     } catch (e) {
-      console.error('[Biometria.auth.error]', e);
       return false;
     }
   }
