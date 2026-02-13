@@ -193,24 +193,24 @@ async function atualizarDadosProprios(id, dados) {
     }
   };
 
-  addCampo("sexo", normalizeSexo(dados.sexo));
-  addCampo("telefone1", somenteDigitos(dados.telefone1));
-  addCampo("telefone2", somenteDigitos(dados.telefone2));
-  addCampo("email", dados.email1 || dados.email);
+  if (dados.sexo !== undefined) addCampo("sexo", normalizeSexo(dados.sexo));
+  if (dados.telefone1 !== undefined) addCampo("telefone1", somenteDigitos(dados.telefone1));
+  if (dados.telefone2 !== undefined) addCampo("telefone2", somenteDigitos(dados.telefone2));
+  if (dados.email !== undefined || dados.email1 !== undefined) addCampo("email", dados.email1 || dados.email);
 
   // FENAPRF: Persistence of address fields
-  addCampo("logradouro", dados.logradouro);
-  addCampo("bairro", dados.bairro);
-  addCampo("numero", dados.numero);
-  addCampo("complemento", dados.complemento);
-  addCampo("cidade", dados.cidade);
-  addCampo("uf_endereco", dados.uf_endereco);
+  if (dados.logradouro !== undefined) addCampo("logradouro", dados.logradouro);
+  if (dados.bairro !== undefined) addCampo("bairro", dados.bairro);
+  if (dados.numero !== undefined) addCampo("numero", dados.numero);
+  if (dados.complemento !== undefined) addCampo("complemento", dados.complemento);
+  if (dados.cidade !== undefined) addCampo("cidade", dados.cidade);
+  if (dados.uf_endereco !== undefined) addCampo("uf_endereco", dados.uf_endereco);
 
   if (dados.cep !== undefined) {
     addCampo("cep", normalizarCep(dados.cep));
   }
 
-  addCampo("avatar_url", dados.avatar_url);
+  if (dados.avatar_url !== undefined) addCampo("avatar_url", dados.avatar_url);
   addCampo("updated_at", "NOW()", true);
 
   if (campos.length === 1) return getMe(id);
@@ -248,9 +248,9 @@ async function atualizarUserPorId(id, dados) {
     }
   }
 
-  addCampo("name", dados.name);
+  if (dados.name !== undefined) addCampo("name", dados.name);
   if (dados.sexo !== undefined) addCampo("sexo", normalizeSexo(dados.sexo));
-  addCampo("cpf", somenteDigitos(dados.cpf));
+  if (dados.cpf !== undefined) addCampo("cpf", somenteDigitos(dados.cpf));
 
   if (dados.data_nascimento !== undefined) {
     campos.push(`data_nascimento = NULLIF($${idx}, '')::date`);
@@ -258,32 +258,32 @@ async function atualizarUserPorId(id, dados) {
     idx += 1;
   }
 
-  addCampo("telefone1", somenteDigitos(dados.telefone1));
-  addCampo("telefone2", somenteDigitos(dados.telefone2));
-  addCampo("email", dados.email1 || dados.email);
+  if (dados.telefone1 !== undefined) addCampo("telefone1", somenteDigitos(dados.telefone1));
+  if (dados.telefone2 !== undefined) addCampo("telefone2", somenteDigitos(dados.telefone2));
+  if (dados.email !== undefined || dados.email1 !== undefined) addCampo("email", dados.email1 || dados.email);
 
   if (dados.perfil_acesso !== undefined) addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
 
   // FENAPRF: Persistence of address fields
-  addCampo("logradouro", dados.logradouro);
-  addCampo("bairro", dados.bairro);
-  addCampo("numero", dados.numero);
-  addCampo("complemento", dados.complemento);
-  addCampo("cidade", dados.cidade);
-  addCampo("uf_endereco", dados.uf_endereco);
+  if (dados.logradouro !== undefined) addCampo("logradouro", dados.logradouro);
+  if (dados.bairro !== undefined) addCampo("bairro", dados.bairro);
+  if (dados.numero !== undefined) addCampo("numero", dados.numero);
+  if (dados.complemento !== undefined) addCampo("complemento", dados.complemento);
+  if (dados.cidade !== undefined) addCampo("cidade", dados.cidade);
+  if (dados.uf_endereco !== undefined) addCampo("uf_endereco", dados.uf_endereco);
 
   if (dados.cep !== undefined) {
     addCampo("cep", normalizarCep(dados.cep));
   }
 
-  addCampo("avatar_url", dados.avatar_url);
-  addCampo("avatar_public_id", dados.avatar_public_id);
+  if (dados.avatar_url !== undefined) addCampo("avatar_url", dados.avatar_url);
+  if (dados.avatar_public_id !== undefined) addCampo("avatar_public_id", dados.avatar_public_id);
 
-  addCampo("perfil_acesso2", dados.perfil_acesso2);
-  addCampo("cargo2", dados.cargo2);
-  addCampo("uf2", dados.uf2);
-  addCampo("cargo", dados.cargo);
-  addCampo("uf", dados.uf);
+  if (dados.perfil_acesso2 !== undefined) addCampo("perfil_acesso2", dados.perfil_acesso2);
+  if (dados.cargo2 !== undefined) addCampo("cargo2", dados.cargo2);
+  if (dados.uf2 !== undefined) addCampo("uf2", dados.uf2);
+  if (dados.cargo !== undefined) addCampo("cargo", dados.cargo);
+  if (dados.uf !== undefined) addCampo("uf", dados.uf);
 
   if (dados.cargo_mandato_inicio !== undefined) {
     campos.push(`cargo_mandato_inicio = NULLIF($${idx}, '')::date`);

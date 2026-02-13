@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { User } from '../types/user';
 import { getBandeiraUF, tituloCargoUf } from '../utils/user';
 import { calculateMandateTime, toBrazilianDate } from '../utils/date';
+import { formatCpf } from '../utils/format';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface MemberCardProps {
@@ -54,13 +55,22 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
         <View style={styles.centerInfo}>
           <Text
             style={[styles.name, isDrawer && styles.textWhite]}
+            numberOfLines={2}
           >
             {member.name || member.nome || 'Membro'}
           </Text>
+          <Text style={[styles.metaText, isDrawer && styles.textLight]}>
+            🆔 {formatCpf(member.cpf) || '—'}
+          </Text>
+          {member.data_nascimento && (
+            <Text style={[styles.metaText, isDrawer && styles.textLight]}>
+              🎂 {toBrazilianDate(member.data_nascimento)}
+            </Text>
+          )}
           <Text
             style={[styles.cargo, isDrawer && styles.textLight]}
           >
-            {tituloCargoUf(member)}
+            💼 {tituloCargoUf(member)}
           </Text>
         </View>
 
@@ -81,7 +91,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
       <View style={[styles.bottomSection, isDrawer && styles.bottomSectionDrawer]}>
         {member.arquivado_em ? (
           <View style={styles.archiveInfo}>
-            <Text style={styles.archiveLabel}>Membro Arquivado</Text>
+            <Text style={styles.archiveLabel}>📁 Membro Arquivado</Text>
             <Text style={styles.archiveText}>
               Arquivado por <Text style={styles.archiveBold}>{member.arquivado_por_nome || '(usuário não encontrado)'}</Text>
             </Text>
@@ -96,22 +106,22 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
           <>
             <View style={styles.mandateRow}>
               <View style={styles.mandateCol}>
-                <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Início do mandato</Text>
+                <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>🗓️ Início</Text>
                 <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateStart}</Text>
               </View>
               <View style={styles.mandateCol}>
-                <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>Fim do mandato</Text>
+                <Text style={[styles.mandateLabel, isDrawer && styles.textLight]}>🗓️ Fim</Text>
                 <Text style={[styles.mandateValue, isDrawer && styles.textWhite]}>{mandateEnd}</Text>
               </View>
             </View>
 
             <View style={styles.auxInfo}>
               <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
-                <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo decorrido: </Text>
+                <Text style={[styles.auxLabel, isDrawer && styles.textLight, { color: isDrawer ? 'rgba(255,255,255,0.7)' : '#27ae60' }]}>⏱️ Decorrido: </Text>
                 {elapsed}
               </Text>
               <Text style={[styles.auxText, isDrawer && styles.textWhite]}>
-                <Text style={[styles.auxLabel, isDrawer && styles.textLight]}>Tempo restante: </Text>
+                <Text style={[styles.auxLabel, isDrawer && styles.textLight, { color: isDrawer ? 'rgba(255,255,255,0.7)' : '#f1c40f' }]}>⏳ Restante: </Text>
                 {remaining}
               </Text>
             </View>
@@ -175,11 +185,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   name: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#003366',
-    flex: 1,
-    flexWrap: 'wrap',
+    marginBottom: 2,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#777',
+    marginBottom: 1,
   },
   textWhite: {
     color: '#fff',
@@ -189,10 +203,9 @@ const styles = StyleSheet.create({
   },
   cargo: {
     fontSize: 13,
-    color: '#666',
-    marginTop: 2,
-    flex: 1,
-    flexWrap: 'wrap',
+    fontWeight: 'bold',
+    color: '#e67e22',
+    marginTop: 4,
   },
   rightStack: {
     alignItems: 'center',
