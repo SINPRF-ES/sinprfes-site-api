@@ -78,25 +78,27 @@
             if (secUsers) {
                 const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
                 secUsers.innerHTML = `
-                    <div class="search-box-container af-standard-header header-gestao-membros">
-                        <div class="header-membros-top">
-                            <img src="/img/logo-fenaprf.png" class="logo-header-membros">
-                            <h2>👥 Membros</h2>
+                    <div class="header-gestao-membros-v2">
+                        <div class="header-membros-left">
+                            <div class="header-membros-row1">
+                                <img src="/img/logo-fenaprf.png" class="logo-membros-v2">
+                                <h2>👥 Membros</h2>
+                            </div>
+                            <div class="header-membros-row2">
+                                <button id="btn-novo-user" class="btn btn-primary btn-lg" style="display:none;">+ Novo Membro</button>
+                                <div id="users-count-v2">Total: 0</div>
+                            </div>
                         </div>
 
-                        <div class="header-membros-controls">
-                            <div class="control-group search-group">
-                                <label>🔍 Buscar Membro</label>
-                                <input type="text" id="busca-users" placeholder="${placeholder}">
-                            </div>
-
-                            <div class="control-group actions-group">
-                                <button id="btn-novo-user" class="btn btn-primary btn-lg" style="display:none;">+ Novo Membro</button>
-                                <div id="users-count">Total: 0</div>
-                            </div>
-
-                            <div id="container-filtro-header" class="control-group filter-group-header">
-                                <!-- Filtros inseridos via JS -->
+                        <div class="header-membros-right">
+                            <div class="header-control-stack">
+                                <div class="control-item">
+                                    <label>🔍 Buscar Membro</label>
+                                    <input type="text" id="busca-users" placeholder="${placeholder}">
+                                </div>
+                                <div id="container-filtro-header-v2" class="control-item">
+                                    <!-- Filtros inseridos via JS -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -132,7 +134,7 @@
             }
 
             const campoBusca = document.getElementById("busca-users");
-            const containerFiltro = document.getElementById("container-filtro-header");
+            const containerFiltro = document.getElementById("container-filtro-header-v2");
 
             if (campoBusca) {
                 campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
@@ -143,12 +145,12 @@
                     containerFiltro.innerHTML = `
                         ${ehGestao ? `
                         <label>📂 Visualização</label>
-                        <div style="display:flex; gap:10px; width:100%;">
-                            <select id="filtro-visualizacao-membros" class="select-lg-portal" style="flex:1;">
+                        <div class="filter-controls-v2">
+                            <select id="filtro-visualizacao-membros" class="select-lg-v2">
                                 ${global.Canon.FILTROS_MEMBROS.map(f => `<option value="${f.value}">${f.label}</option>`).join('')}
                             </select>
-                            <select id="filtro-uf-membros" class="select-lg-portal" style="display:none; width:100px;">
-                                <option value="">Todas</option>
+                            <select id="filtro-uf-membros" class="select-lg-v2" style="display:none; width:120px;">
+                                <option value="">Todas UF</option>
                                 ${global.Canon.UFS.map(uf => `<option value="${uf}">${uf}</option>`).join('')}
                             </select>
                         </div>
@@ -252,11 +254,11 @@
             return true;
         });
 
-        const countEl = document.getElementById("users-count");
+        const countEl = document.getElementById("users-count-v2");
         if (countEl) countEl.textContent = `Total: ${res.length}`;
 
         if (!res.length) {
-            el.innerHTML = `<div class="user-card" style="text-align:center;">Nenhum registro.</div>`;
+            el.innerHTML = `<div class="user-card-v3" style="text-align:center; padding: 40px; color: #fff;">Nenhum registro encontrado.</div>`;
             return;
         }
 
@@ -270,56 +272,54 @@
 
             const tels = [f.telefone1, f.telefone2].filter(Boolean).map(t => formatarTelefoneTexto ? formatarTelefoneTexto(t) : t).join(" / ");
 
+            const p2 = f.perfil_acesso2;
+            const hasP2 = !!p2;
+
             return `
-                <div class="user-card-v2 ${classeStatus}">
-                    <div class="card-v2-main">
-                        <div class="card-v2-avatar-col">
-                            ${avatarHtml(f.avatar_url, f.nome)}
-                        </div>
-
-                        <div class="card-v2-info-col">
-                            <div class="card-v2-nome">${safeEscape(f.nome)}</div>
-                            <div class="card-v2-meta">
-                                <span>🆔 ${f.cpf ? safeEscape(window.Formatters.formatCpf(f.cpf)) : '—'}</span>
-                                ${["CONSELHEIRO"].includes(perfilAtual) ? '' : `
-                                <span>🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</span>
-                                `}
-                                ${f.cargo ? `<div class="user-meta" style="font-size:0.85rem; color:var(--amarelo); font-weight:bold; margin-top:4px;">💼 ${safeEscape(f.cargo)}</div>` : ''}
-                                ${f.cargo_mandato_inicio || f.cargo_mandato_fim ? `
-                                <div class="user-meta" style="font-size:0.75rem; margin-top:4px; opacity:0.9; line-height:1.4;">
-                                    🗓️ Mandato: ${global.Formatters.formatISOToBR(f.cargo_mandato_inicio) || '—'} a ${global.Formatters.formatISOToBR(f.cargo_mandato_fim) || '—'}
-                                    <br>
-                                    <span style="color:#2ecc71;">⏱️ Decorrido: ${global.AgeUtils?.formatAgeDetailed(f.cargo_mandato_inicio) || '—'}</span> |
-                                    <span style="color:#f1c40f;">⏳ Restante: ${global.AgeUtils?.formatRemainingTime(f.cargo_mandato_fim) || '—'}</span>
+                <div class="user-card-v3 ${classeStatus}">
+                    <div class="card-v3-grid">
+                        <!-- COLUNA 1: IDENTIFICAÇÃO -->
+                        <div class="card-v3-col col-identificacao">
+                            <div class="ident-header">
+                                ${avatarHtml(f.avatar_url, f.nome)}
+                                <div class="ident-titles">
+                                    <div class="card-v3-nome">${safeEscape(f.nome)}</div>
+                                    <div class="card-v3-cpf">🆔 ${f.cpf ? safeEscape(window.Formatters.formatCpf(f.cpf)) : '—'}</div>
                                 </div>
-                                ` : ''}
                             </div>
-                            ${f.cargo ? `<div class="card-v2-cargo">💼 ${safeEscape(f.cargo)}</div>` : ''}
+                            <div class="card-v3-nascimento">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
+                            <div class="card-v3-cargo-principal">💼 ${safeEscape(f.cargo || 'Membro')}</div>
+                            ${hasP2 ? `<div class="card-v3-cargo-sec">🔗 ${safeEscape(f.cargo2 || p2)} (${f.uf2 || 'BR'})</div>` : ''}
                         </div>
 
-                        <div class="card-v2-mandato-col">
+                        <!-- COLUNA 2: MANDATO -->
+                        <div class="card-v3-col col-mandato">
                             ${f.cargo_mandato_inicio || f.cargo_mandato_fim ? `
-                                <div class="mandato-label">🗓️ Mandato</div>
-                                <div class="mandato-periodo">${global.Formatters.formatISOToBR(f.cargo_mandato_inicio) || '—'} a ${global.Formatters.formatISOToBR(f.cargo_mandato_fim) || '—'}</div>
-                                <div class="mandato-stats">
-                                    <div class="stat-item decorrido">⏱️ ${global.AgeUtils?.formatAgeDetailed(f.cargo_mandato_inicio) || '—'}</div>
-                                    <div class="stat-item restante">⏳ ${global.AgeUtils?.formatRemainingTime(f.cargo_mandato_fim) || '—'}</div>
+                                <div class="v3-mandato-box">
+                                    <div class="v3-mandato-title">🗓️ MANDATO</div>
+                                    <div class="v3-mandato-periodo">${global.Formatters.formatISOToBR(f.cargo_mandato_inicio) || '—'} a ${global.Formatters.formatISOToBR(f.cargo_mandato_fim) || '—'}</div>
+                                    <div class="v3-mandato-stat">⏱️ Decorrido: <span>${global.AgeUtils?.formatAgeDetailed(f.cargo_mandato_inicio) || '—'}</span></div>
+                                    <div class="v3-mandato-stat">⏳ Restante: <span>${global.AgeUtils?.formatRemainingTime(f.cargo_mandato_fim) || '—'}</span></div>
                                 </div>
-                            ` : '<div style="color:#ccc; font-style:italic;">Sem dados de mandato</div>'}
+                            ` : '<div class="v3-no-mandato">Sem dados de mandato</div>'}
                         </div>
 
-                        <div class="card-v2-uf-col">
-                            <div class="uf-badge">
-                                <span class="uf-sigla">${displayUf}</span>
-                                ${flagUrl ? `<img src="${flagUrl}" class="uf-flag-img">` : '🏳️'}
+                        <!-- COLUNA 3: CONTATO + UF -->
+                        <div class="card-v3-col col-contato-uf">
+                            <div class="v3-uf-section">
+                                <div class="v3-uf-info">
+                                    <span class="v3-uf-sigla">${displayUf}</span>
+                                    ${flagUrl ? `<img src="${flagUrl}" class="v3-flag-img">` : '🏳️'}
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="card-v2-actions-col">
-                            <div class="card-v2-contato">${safeEscape(tels) || '-'}</div>
-                            <div class="card-v2-email">${safeEscape(f.email || f.email1) || '-'}</div>
-                            ${!["CONSELHEIRO"].includes(perfilAtual) ?
-                                `<button class="btn btn-primary btn-sm btn-editar-user" data-id="${f.id}">✏️ Editar</button>` : ''}
+                            <div class="v3-contato-info">
+                                <div class="v3-tel">📞 ${safeEscape(tels) || '-'}</div>
+                                <div class="v3-email">📧 ${safeEscape(f.email || f.email1) || '-'}</div>
+                            </div>
+                            <div class="v3-actions">
+                                ${!["CONSELHEIRO"].includes(perfilAtual) ?
+                                    `<button class="btn btn-primary btn-sm btn-editar-user" data-id="${f.id}">✏️ Editar Membro</button>` : ''}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -2208,3 +2208,339 @@ details[open] summary.btn-editar-toggle .seta { transform: rotate(180deg); }
         justify-content: center;
     }
 }
+
+/* =========================================================
+   HEADER GESTÃO DE MEMBROS V2
+   ========================================================= */
+.header-gestao-membros-v2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    background: linear-gradient(135deg, #003366 0%, #00152b 100%);
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 25px;
+    border-bottom: 6px solid var(--amarelo);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    align-items: center;
+}
+
+.header-membros-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.header-membros-row1 {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo-membros-v2 {
+    height: 60px;
+    background: #fff;
+    padding: 8px;
+    border-radius: 12px;
+}
+
+.header-membros-row1 h2 {
+    margin: 0 !important;
+    font-size: 2.2rem !important;
+    color: var(--amarelo) !important;
+    font-weight: 800;
+}
+
+.header-membros-row2 {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+#users-count-v2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    padding: 5px 15px;
+    border-radius: 10px;
+}
+
+.header-membros-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.header-control-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.control-item label {
+    color: rgba(255,255,255,0.8);
+    font-weight: bold;
+    font-size: 0.85rem;
+    padding-left: 5px;
+}
+
+.header-control-stack input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 10px;
+    border: none;
+    font-size: 1rem;
+}
+
+.filter-controls-v2 {
+    display: flex;
+    gap: 10px;
+}
+
+.select-lg-v2 {
+    padding: 12px 10px !important;
+    font-size: 0.95rem !important;
+    border-radius: 10px !important;
+    border: none !important;
+    background: #fff !important;
+    color: #333 !important;
+    flex: 1;
+}
+
+@media (max-width: 900px) {
+    .header-gestao-membros-v2 {
+        grid-template-columns: 1fr;
+        padding: 20px;
+        text-align: center;
+    }
+    .header-membros-row1, .header-membros-row2 {
+        justify-content: center;
+    }
+    .header-membros-right {
+        justify-content: center;
+    }
+    .header-control-stack {
+        max-width: 100%;
+    }
+}
+
+/* =========================================================
+   USER CARD V3 - REDESIGNED
+   ========================================================= */
+.user-card-v3 {
+    background: #fff;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-left: 6px solid var(--amarelo);
+    overflow: hidden;
+    color: #333;
+}
+
+.card-v3-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1.2fr;
+    gap: 0;
+}
+
+.card-v3-col {
+    padding: 20px;
+}
+
+/* Coluna 1: Identificação */
+.col-identificacao {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-right: 1px solid #eee;
+}
+
+.ident-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 5px;
+}
+
+.ident-header .avatar-mini {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    border: 2px solid var(--azul-fundo) !important;
+}
+
+.card-v3-nome {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #003366;
+    line-height: 1.2;
+}
+
+.card-v3-cpf {
+    font-size: 0.85rem;
+    color: #777;
+    font-weight: 600;
+}
+
+.card-v3-nascimento {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.card-v3-cargo-principal {
+    font-weight: 800;
+    color: #e67e22;
+    font-size: 1rem;
+    margin-top: 5px;
+}
+
+.card-v3-cargo-sec {
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+}
+
+/* Coluna 2: Mandato */
+.col-mandato {
+    background: #fcfcfc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #eee;
+}
+
+.v3-mandato-box {
+    text-align: center;
+}
+
+.v3-mandato-title {
+    font-size: 0.7rem;
+    font-weight: 900;
+    color: #999;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.v3-mandato-periodo {
+    font-weight: 800;
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.v3-mandato-stat {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.v3-mandato-stat span {
+    color: #27ae60;
+}
+
+.v3-no-mandato {
+    color: #ccc;
+    font-style: italic;
+}
+
+/* Coluna 3: Contato + UF */
+.col-contato-uf {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.v3-uf-section {
+    margin-bottom: 10px;
+}
+
+.v3-uf-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.v3-uf-sigla {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #003366;
+}
+
+.v3-flag-img {
+    height: 30px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.v3-contato-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 15px;
+}
+
+.v3-tel {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.v3-email {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.v3-actions {
+    width: 100%;
+}
+
+.v3-actions .btn {
+    width: 100%;
+    padding: 10px;
+    font-weight: 800;
+}
+
+/* Responsividade do Card */
+@media (max-width: 1100px) {
+    .card-v3-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .col-contato-uf {
+        grid-column: span 2;
+        border-top: 1px solid #eee;
+        flex-direction: row;
+        align-items: center;
+        text-align: left;
+    }
+    .v3-uf-section { margin: 0; }
+    .v3-actions { width: auto; }
+}
+
+@media (max-width: 900px) {
+    .card-v3-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .card-v3-col {
+        border-right: none !important;
+        border-bottom: 1px solid #eee;
+        align-items: center !important;
+        text-align: center !important;
+    }
+    .ident-header {
+        flex-direction: column;
+    }
+    .col-contato-uf {
+        flex-direction: column !important;
+        gap: 15px;
+    }
+    .v3-actions { width: 100% !important; }
+}
