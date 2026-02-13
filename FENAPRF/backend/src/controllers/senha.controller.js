@@ -127,7 +127,7 @@ exports.solicitarResetSenha = async (req, res, next) => {
 
     // Link aponta para o sistema FENAPRF
     const baseUrl = process.env.APP_BASE_URL || "https://fenaprf-sistema.onrender.com";
-    const linkRedefinicao = `${baseUrl.replace(/\/$/, "")}/redefinir-senha.html?token=${encodeURIComponent(
+    const linkRedefinicao = `${baseUrl.replace(/\/$/, "")}/recuperar-senha.html?token=${encodeURIComponent(
       token
     )}`;
 
