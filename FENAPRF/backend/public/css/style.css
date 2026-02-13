@@ -999,6 +999,16 @@ footer {
     flex: 1 1 calc(50% - 6px);
     text-align: center;
     font-size: 0.85rem;
+    padding: 12px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+  }
+
+  .af-sidebar-footer {
+    margin-top: 10px;
+    padding: 10px;
   }
 
   .dashboard-main {
@@ -1196,9 +1206,15 @@ footer {
 
 /* Responsivo */
 @media (max-width: 900px) {
+  .af-body {
+    overflow: auto !important;
+    height: auto !important;
+  }
+
   .af-main-layout {
     flex-direction: column;
     height: auto;
+    width: 100%;
     overflow: visible;
   }
 
@@ -1235,6 +1251,11 @@ footer {
     flex: 1 1 calc(50% - 6px);
     text-align: center;
     font-size: 0.85rem;
+    padding: 12px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
   }
 
   .af-user-linha {
