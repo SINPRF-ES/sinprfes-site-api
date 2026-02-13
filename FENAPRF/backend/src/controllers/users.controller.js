@@ -394,7 +394,8 @@ exports.atualizarUser = async (req, res) => {
       }
 
       // Garante que o editor pode atribuir o novo perfil (não pode promover alguém acima de si)
-      if (perfilAtor !== "ADMIN" && PERFIL_RANK[novoPerfil] >= PERFIL_RANK[perfilAtor]) {
+      // Exceção: COLABORADOR pode atribuir qualquer perfil exceto ADMIN (já validado acima)
+      if (perfilAtor !== "ADMIN" && perfilAtor !== "COLABORADOR" && PERFIL_RANK[novoPerfil] >= PERFIL_RANK[perfilAtor]) {
          return res.status(403).json({ message: "Você não pode atribuir um perfil igual ou superior ao seu.", requestId: req.requestId });
       }
 

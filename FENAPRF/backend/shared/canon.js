@@ -54,8 +54,8 @@
     "Diretor de Secretaria Substituto",
     "Diretor de Finanças",
     "Diretor de Finanças Substituto",
-    "Diretor de Relações de Trabalho e e Formação Sindical",
-    "Diretor de Relações de Trabalho e e Formação Sindical Substituto",
+    "Diretor de Relações de Trabalho e Formação Sindical",
+    "Diretor de Relações de Trabalho e Formação Sindical Substituto",
     "Diretor Jurídico",
     "Diretor Jurídico Substituto",
     "Diretor de Assuntos Institucionais",
@@ -64,6 +64,54 @@
     "Diretor de Comunicação e Divulgação Substituto",
     "Diretor de Direitos Humanos e Políticas Sociais",
     "Diretor de Direitos Humanos e Políticas Sociais Substituto",
+  ];
+
+  /**
+   * UFs Detalhadas
+   */
+  const UFS_DETALHADAS = [
+    { sigla: "BR", nome: "Brasil"},
+    { sigla: "AC", nome: "Acre" },
+    { sigla: "AL", nome: "Alagoas" },
+    { sigla: "AP", nome: "Amapá" },
+    { sigla: "AM", nome: "Amazonas" },
+    { sigla: "BA", nome: "Bahia" },
+    { sigla: "CE", nome: "Ceará" },
+    { sigla: "DF", nome: "Distrito Federal" },
+    { sigla: "ES", nome: "Espírito Santo" },
+    { sigla: "GO", nome: "Goiás" },
+    { sigla: "MA", nome: "Maranhão" },
+    { sigla: "MT", nome: "Mato Grosso" },
+    { sigla: "MS", nome: "Mato Grosso do Sul" },
+    { sigla: "MG", nome: "Minas Gerais" },
+    { sigla: "PA", nome: "Pará" },
+    { sigla: "PB", nome: "Paraíba" },
+    { sigla: "PR", nome: "Paraná" },
+    { sigla: "PE", nome: "Pernambuco" },
+    { sigla: "PI", nome: "Piauí" },
+    { sigla: "RJ", nome: "Rio de Janeiro" },
+    { sigla: "RN", nome: "Rio Grande do Norte" },
+    { sigla: "RS", nome: "Rio Grande do Sul" },
+    { sigla: "RO", nome: "Rondônia" },
+    { sigla: "RR", nome: "Roraima" },
+    { sigla: "SC", nome: "Santa Catarina" },
+    { sigla: "SP", nome: "São Paulo" },
+    { sigla: "SE", nome: "Sergipe" },
+    { sigla: "TO", nome: "Tocantins" },
+  ];
+
+  /**
+   * Filtros da página Membros
+   */
+  const FILTROS_MEMBROS = [
+    { value: "PADRAO", label: "Exibição padrão (Diretoria + Conselheiros por UF)" },
+    { value: "DIRETORIA", label: "Apenas Diretoria" },
+    { value: "PRESIDENTES", label: "Apenas Presidentes" },
+    { value: "VICES", label: "Apenas Vices" },
+    { value: "DR", label: "Delegados Representantes (DR)" },
+    { value: "DS", label: "Delegados Substitutos (DS)" },
+    { value: "UF", label: "Filtrar por UF" },
+    { value: "ADMIN_COLAB", label: "Admin/Colaborador" },
   ];
 
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
@@ -115,6 +163,73 @@
     return ESTADO_CADASTRO.CADASTRO_ATIVO;
   }
 
+  function normalizeCargo(raw) {
+    const s = (raw || "").toString().trim();
+    if (!s) return "";
+    const lower = s.toLowerCase();
+    const map = new Map([
+      ["presidente", "Presidente"],
+      ["vice-presidente", "Vice-Presidente"],
+      ["delegado representante", "Delegado Representante"],
+      ["delegado substituto", "Delegado Substituto"],
+    ]);
+    return map.get(lower) || s;
+  }
+
+  function cargoRankDiretoria(cargo) {
+    const c = normalizeCargo(cargo);
+    const idx = CARGOS_DIRETORIA.findIndex(x => x.toLowerCase() === String(c || "").toLowerCase());
+    return idx === -1 ? 999 : idx;
+  }
+
+  function cargoRankConselho(cargo) {
+    const c = normalizeCargo(cargo);
+    const idx = CARGOS_CONSELHO.findIndex(x => x.toLowerCase() === String(c || "").toLowerCase());
+    return idx === -1 ? 999 : idx;
+  }
+
+  function byName(a, b) {
+    const nameA = a?.name || a?.nome || "";
+    const nameB = b?.name || b?.nome || "";
+    return String(nameA).localeCompare(String(nameB), "pt-BR", { sensitivity: "base" });
+  }
+
+  function ordenarMembrosTodos(membros) {
+    if (!Array.isArray(membros)) return [];
+    const list = membros.filter(m => !!m);
+
+    const diretoria = list
+      .filter(m => String(m?.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.DIRETORIA)
+      .sort((a, b) => {
+        const ra = cargoRankDiretoria(a?.cargo);
+        const rb = cargoRankDiretoria(b?.cargo);
+        if (ra !== rb) return ra - rb;
+        return byName(a, b);
+      });
+
+    const conselheiros = list
+      .filter(m => String(m?.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.CONSELHEIRO)
+      .sort((a, b) => {
+        const ufa = String(a?.uf || "").toUpperCase();
+        const ufb = String(b?.uf || "").toUpperCase();
+        if (ufa !== ufb) return ufa.localeCompare(ufb, "pt-BR");
+        const ra = cargoRankConselho(a?.cargo);
+        const rb = cargoRankConselho(b?.cargo);
+        if (ra !== rb) return ra - rb;
+        return byName(a, b);
+      });
+
+    const adminColab = list
+      .filter(m => ["ADMIN", "COLABORADOR"].includes(String(m?.perfil_acesso || "").toUpperCase()))
+      .sort(byName);
+
+    const outros = list
+      .filter(m => ![PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO, PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.COLABORADOR].includes(String(m?.perfil_acesso || "").toUpperCase()))
+      .sort(byName);
+
+    return [...diretoria, ...conselheiros, ...adminColab, ...outros];
+  }
+
   /**
    * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
    * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
@@ -142,11 +257,17 @@
     UFS,
     CARGOS_CONSELHO,
     CARGOS_DIRETORIA,
+    UFS_DETALHADAS,
+    FILTROS_MEMBROS,
     LABELS,
     normalizeSexo,
     normalizePerfil,
     normalizeEstadoCadastro,
     normalizeNome,
-    slugify
+    slugify,
+    normalizeCargo,
+    cargoRankDiretoria,
+    cargoRankConselho,
+    ordenarMembrosTodos
   };
 }));
