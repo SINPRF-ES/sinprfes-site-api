@@ -14,7 +14,7 @@ import {
   moveItem,
   deleteItem
 } from '../services/driveService';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Linking } from 'react-native';
 import { logDebug } from '../utils/user';
 import { logger } from '../infra/logger';
@@ -32,7 +32,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
 
   const queryClient = useQueryClient();
   const { token, user } = useAuth();
-  const isGestao = ['ADMIN', 'COLABORADOR', 'DIRETORIA'].includes(user?.perfil_acesso || '');
+  const isGestao = ['ADMIN', 'COLABORADOR', 'DIRETORIA'].includes((user?.perfil_acesso || '').toUpperCase());
 
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Publicações' }]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -236,7 +236,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             accessibilityLabel={`Opções para ${item.name}`}
             onPress={() => {
               setSelectedItem(item);
-              const isProtected = item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(item.name?.toLowerCase()));
+              const nameLower = (item.name || '').toLowerCase();
+              const isProtected = item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(nameLower));
 
               Alert.alert(
                 'Ações',
@@ -250,7 +251,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
               );
             }}
           >
-            <FontAwesome name="ellipsis-v" size={20} color="#666" />
+            <MaterialCommunityIcons name="dots-vertical" size={26} color="#003366" />
           </TouchableOpacity>
         )}
       </View>
@@ -410,7 +411,10 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
           data={publicacoes || []}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: Math.max(insets.bottom + 20, 80) }
+          ]}
           ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
         />
       )}
@@ -573,7 +577,6 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 10,
-    paddingBottom: 80, // Espaço para o FAB
   },
   centered: {
     flex: 1,
@@ -611,8 +614,11 @@ const styles = StyleSheet.create({
     shadowRadius: 1.41,
   },
   menuButton: {
-    padding: 15,
+    padding: 10,
     marginLeft: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 44,
   },
   fab: {
     position: 'absolute',

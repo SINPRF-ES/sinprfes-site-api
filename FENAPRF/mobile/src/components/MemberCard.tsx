@@ -29,7 +29,8 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
   const mandateStart = toBrazilianDate(member.cargo_mandato_inicio) || 'não informado';
   const mandateEnd = toBrazilianDate(member.cargo_mandato_fim) || 'não informado';
 
-  const a11yLabel = `Membro: ${member.name || member.nome || 'Não informado'}. CPF: ${formatCpf(member.cpf) || 'Não informado'}. Cargo: ${tituloCargoUf(member)}. UF: ${displayUf}.`;
+  const emailDisplay = member.email || member.email1 || 'Não informado';
+  const a11yLabel = `Membro: ${member.name || member.nome || 'Não informado'}. CPF: ${formatCpf(member.cpf) || 'Não informado'}. Email: ${emailDisplay}. Cargo: ${tituloCargoUf(member)}. UF: ${displayUf}.`;
 
   return (
     <TouchableOpacity
@@ -68,6 +69,11 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
           <Text style={[styles.metaText, isDrawer && styles.textLight]}>
             🆔 {formatCpf(member.cpf) || '—'}
           </Text>
+          {(member.email || member.email1) && (
+            <Text style={[styles.metaText, isDrawer && styles.textLight]} numberOfLines={1}>
+              📧 {member.email || member.email1}
+            </Text>
+          )}
           {member.data_nascimento && (
             <Text style={[styles.metaText, isDrawer && styles.textLight]}>
               🎂 {toBrazilianDate(member.data_nascimento)}

@@ -143,7 +143,6 @@
 
                 if (containerFiltro) {
                     containerFiltro.innerHTML = `
-                        ${ehGestao ? `
                         <label>📂 Visualização</label>
                         <div class="filter-controls-v2">
                             <select id="filtro-visualizacao-membros" class="select-lg-v2">
@@ -154,11 +153,10 @@
                                 ${global.Canon.UFS.map(uf => `<option value="${uf}">${uf}</option>`).join('')}
                             </select>
                         </div>
-                        ` : '<input type="hidden" id="filtro-visualizacao-membros" value="PADRAO">'}
                     `;
                 }
 
-                if (ehGestao) {
+                if (true) { // FENAPRF: Always enable filter logic
                     const selVis = document.getElementById("filtro-visualizacao-membros");
                     const selUf = document.getElementById("filtro-uf-membros");
 
@@ -319,7 +317,7 @@
                             </div>
                             <div class="v3-contato-info">
                                 <div class="v3-tel">📞 ${safeEscape(tels) || '-'}</div>
-                                <div class="v3-email">📧 ${safeEscape(f.email || f.email1) || '-'}</div>
+                            <div class="v3-email" style="font-size:0.85rem; word-break:break-all;">📧 ${safeEscape(f.email || f.email1) || '-'}</div>
                             </div>
                             <div class="v3-actions">
                                 ${!["CONSELHEIRO"].includes(perfilAtual) ?

@@ -63,12 +63,19 @@
     async function carregarLista(container) {
         try {
             const r = await window.Api.apiFetch('/api/users?apenasArquivados=1');
-            if (!r.ok) throw new Error("Erro API");
-            usersCache = await r.json();
 
-            // Ordenação (conforme app)
-            if (global.UsersAdmin?.ordenarMembros) {
-                usersCache = global.UsersAdmin.ordenarMembros(usersCache);
+            if (r.ok || r.status === 304) {
+                if (r.status !== 304) {
+                    const json = await r.json();
+                    usersCache = json.users || json || [];
+                }
+            } else {
+                throw new Error(`API Error: ${r.status}`);
+            }
+
+            // Ordenação Canônica FENAPRF
+            if (global.Canon?.ordenarMembrosTodos) {
+                usersCache = global.Canon.ordenarMembrosTodos(usersCache);
             }
 
             container.innerHTML = `
@@ -126,8 +133,14 @@
     async function carregarHistorico(container) {
         try {
             const r = await window.Api.apiFetch('/api/users/arquivados/historico');
-            if (!r.ok) throw new Error("Erro API");
-            historyCache = await r.json();
+
+            if (r.ok || r.status === 304) {
+                if (r.status !== 304) {
+                    historyCache = await r.json();
+                }
+            } else {
+                throw new Error(`API Error: ${r.status}`);
+            }
 
             container.innerHTML = `
                 <div class="search-box" style="margin-bottom:20px;">

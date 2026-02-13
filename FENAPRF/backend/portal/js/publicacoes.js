@@ -82,8 +82,8 @@
                 .pub-menu-btn {
                     position: absolute; top: 10px; right: 10px; width: 32px; height: 32px;
                     display: flex; align-items: center; justify-content: center;
-                    border-radius: 50%; color: #999; font-size: 1.2rem; transition: all 0.2s;
-                    z-index: 5;
+                    border-radius: 50%; color: #999; font-size: 1.1rem; transition: all 0.2s;
+                    z-index: 5; background: rgba(255,255,255,0.5);
                 }
                 .pub-menu-btn:hover { background: rgba(0,0,0,0.05); color: var(--azul-header); }
 
@@ -292,7 +292,7 @@
                     <div class="pub-card tipo-${item.tipo || (isFolder ? 'PASTA' : 'DOC')}" ${dataAttr} data-name="${global.Utils?.escapeHTML(titulo)}">
                         ${ehGestao && !isPicker ? `
                             <div class="pub-menu-btn" data-id="${item.id}" data-is-protected="${isProtected}" title="Opções">
-                                ⋮
+                                <i class="fas fa-ellipsis-v"></i>
                             </div>
                         ` : ''}
                         <div class="pub-icon">${icon}</div>
@@ -495,9 +495,12 @@
                 inicializarPublicacoes(currentFolderId, currentOptions);
             } else {
                 const data = await r.json();
-                alert(data.message || "Erro ao excluir.");
+                alert(data.message || "Erro ao excluir (Mover para Lixeira).");
             }
-        } catch (e) { alert("Erro de conexão."); }
+        } catch (e) {
+            console.error("ExcluirErro", e);
+            alert("Erro de conexão ao excluir.");
+        }
     }
 
     async function handleMover(id, name) {
