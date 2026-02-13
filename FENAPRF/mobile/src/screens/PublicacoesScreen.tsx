@@ -1,7 +1,8 @@
 // mobile/src/screens/PublicacoesScreen.tsx
-import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import React, { useState, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import {
@@ -38,6 +39,11 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DriveFile | null>(null);
+  const [sheetMode, setSheetMode] = useState<'ITEM' | 'FOLDER'>('ITEM');
+
+  // Refs para Bottom Sheet
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['40%'], []);
 
   // Estados para Modais
   const [isNewFolderModalVisible, setIsNewFolderModalVisible] = useState(false);
@@ -66,25 +72,9 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   }, [navigation, currentFolder.name, isGestao, isPicker]);
 
   const handleOpenOptions = () => {
-    const isRoot = currentFolder.id === null;
-    const nameLower = (currentFolder.name || '').toLowerCase();
-    // FENAPRF: Ajustado para refletir a regra do site (noticias não é protegida)
-    const isProtected = isRoot || ['app', 'lixeira'].includes(nameLower);
-
-    Alert.alert(
-      'Opções da Pasta',
-      `O que deseja fazer em "${currentFolder.name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Nova Pasta', onPress: () => handleOpenNewFolder() },
-        { text: 'Enviar Arquivo', onPress: () => handleUpload() },
-        ...(!isProtected ? [{
-          text: 'Excluir esta Pasta',
-          onPress: () => handleConfirmDelete({ id: currentFolder.id, name: currentFolder.name } as DriveFile),
-          style: 'destructive'
-        }] : [])
-      ]
-    );
+    setSheetMode('FOLDER');
+    setSelectedItem({ id: currentFolder.id, name: currentFolder.name, isFolder: true } as DriveFile);
+    bottomSheetRef.current?.present();
   };
 
   const { data: publicacoes, isLoading, error } = useQuery({
@@ -246,21 +236,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             accessibilityLabel={`Opções para ${item.name}`}
             onPress={() => {
               setSelectedItem(item);
-              const nameLower = (item.name || '').toLowerCase();
-              // FENAPRF: Garantir consistência na verificação de itens protegidos
-              const isProtected = !!item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(nameLower));
-
-              Alert.alert(
-                'Ações',
-                `O que deseja fazer com "${item.name}"?`,
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  ...(isProtected ? [] : [{ text: 'Renomear', onPress: () => handleOpenRename(item) }]),
-                  ...(isProtected ? [] : [{ text: 'Mover', onPress: () => handleOpenMove(item) }]),
-                  ...(isProtected ? [] : [{ text: 'Excluir (Lixeira)', onPress: () => handleConfirmDelete(item), style: 'destructive' }]),
-                ],
-                { cancelable: true }
-              );
+              setSheetMode('ITEM');
+              bottomSheetRef.current?.present();
             }}
           >
             <MaterialCommunityIcons name="dots-vertical" size={26} color="#003366" />
@@ -378,6 +355,24 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+      />
+    ),
+    []
+  );
+
+  const handleSheetAction = (action: () => void) => {
+    bottomSheetRef.current?.dismiss();
+    // Pequeno delay para garantir que o sheet fechou antes de abrir modais/alerts
+    setTimeout(action, 300);
   };
 
   const handleDelete = async (item: DriveFile) => {
@@ -517,15 +512,9 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             { bottom: Math.max(insets.bottom, 20) }
           ]}
           onPress={() => {
-            Alert.alert(
-              'Nova Publicação',
-              'Escolha uma ação:',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                { text: 'Nova Pasta', onPress: () => handleOpenNewFolder() },
-                { text: 'Enviar Arquivo', onPress: () => handleUpload() }
-              ]
-            );
+            setSheetMode('FOLDER');
+            setSelectedItem({ id: currentFolder.id, name: currentFolder.name, isFolder: true } as DriveFile);
+            bottomSheetRef.current?.present();
           }}
           accessibilityRole="button"
           accessibilityLabel="Nova Publicação: Adicionar pasta ou enviar arquivo"
@@ -533,6 +522,105 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
           <FontAwesome name="plus" size={24} color="#fff" />
         </TouchableOpacity>
       )}
+    <BottomSheetModal
+        ref={bottomSheetRef}
+        index={0}
+        snapPoints={snapPoints}
+        backdropComponent={renderBackdrop}
+        enablePanDownToClose
+      >
+        <BottomSheetView style={[styles.sheetContent, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={styles.sheetIndicator} />
+          <Text style={styles.sheetTitle}>
+            {sheetMode === 'FOLDER' ? 'Opções da Pasta' : 'Ações'}
+          </Text>
+          <Text style={styles.sheetSubtitle}>
+            {sheetMode === 'FOLDER' ? `O que deseja fazer em "${currentFolder.name}"?` : `O que deseja fazer com "${selectedItem?.name}"?`}
+          </Text>
+
+          <View style={styles.sheetActionsContainer}>
+            {sheetMode === 'FOLDER' ? (
+              <>
+                <TouchableOpacity
+                  style={styles.sheetItem}
+                  onPress={() => handleSheetAction(handleOpenNewFolder)}
+                >
+                  <MaterialCommunityIcons name="folder-plus" size={24} color="#003366" />
+                  <Text style={styles.sheetItemText}>Nova Pasta</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.sheetItem}
+                  onPress={() => handleSheetAction(handleUpload)}
+                >
+                  <MaterialCommunityIcons name="upload" size={24} color="#003366" />
+                  <Text style={styles.sheetItemText}>Enviar Arquivo</Text>
+                </TouchableOpacity>
+
+                {(() => {
+                  const isRoot = currentFolder.id === null;
+                  const nameLower = (currentFolder.name || '').toLowerCase();
+                  const isProtected = isRoot || ['app', 'lixeira'].includes(nameLower);
+
+                  return !isProtected ? (
+                    <TouchableOpacity
+                      style={[styles.sheetItem, styles.destructiveSheetItem]}
+                      onPress={() => handleSheetAction(() => handleConfirmDelete({ id: currentFolder.id, name: currentFolder.name } as DriveFile))}
+                    >
+                      <MaterialCommunityIcons name="trash-can" size={24} color="#fff" />
+                      <Text style={[styles.sheetItemText, styles.destructiveSheetText]}>Excluir esta Pasta</Text>
+                    </TouchableOpacity>
+                  ) : null;
+                })()}
+              </>
+            ) : (
+              <>
+                {(() => {
+                  const nameLower = (selectedItem?.name || '').toLowerCase();
+                  const isProtected = !!selectedItem?.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(nameLower));
+
+                  return !isProtected ? (
+                    <>
+                      <TouchableOpacity
+                        style={styles.sheetItem}
+                        onPress={() => handleSheetAction(() => handleOpenRename(selectedItem!))}
+                      >
+                        <MaterialCommunityIcons name="pencil" size={24} color="#003366" />
+                        <Text style={styles.sheetItemText}>Renomear</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.sheetItem}
+                        onPress={() => handleSheetAction(() => handleOpenMove(selectedItem!))}
+                      >
+                        <MaterialCommunityIcons name="file-move" size={24} color="#003366" />
+                        <Text style={styles.sheetItemText}>Mover</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.sheetItem, styles.destructiveSheetItem]}
+                        onPress={() => handleSheetAction(() => handleConfirmDelete(selectedItem!))}
+                      >
+                        <MaterialCommunityIcons name="trash-can" size={24} color="#fff" />
+                        <Text style={[styles.sheetItemText, styles.destructiveSheetText]}>Excluir (Lixeira)</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <Text style={styles.protectedText}>Este item é protegido pelo sistema.</Text>
+                  );
+                })()}
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.sheetCancelButton}
+              onPress={() => bottomSheetRef.current?.dismiss()}
+            >
+              <Text style={styles.sheetCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </BottomSheetView>
+      </BottomSheetModal>
     </View>
   );
 };
@@ -798,6 +886,80 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#999',
     fontSize: 13,
+  },
+  sheetContent: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  sheetIndicator: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#ccc',
+    borderRadius: 2.5,
+    alignSelf: 'center',
+    marginBottom: 15,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  sheetSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  sheetActionsContainer: {
+    gap: 12,
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  destructiveSheetItem: {
+    backgroundColor: '#e74c3c',
+  },
+  sheetItemText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 15,
+  },
+  destructiveSheetText: {
+    color: '#fff',
+  },
+  sheetCancelButton: {
+    marginTop: 10,
+    padding: 16,
+    alignItems: 'center',
+  },
+  sheetCancelText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  protectedText: {
+    textAlign: 'center',
+    color: '#999',
+    fontStyle: 'italic',
+    marginVertical: 10,
   },
 });
 
