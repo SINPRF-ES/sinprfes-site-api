@@ -123,43 +123,43 @@
                 .badge-perfil { background: #3498db; color: #fff; }
                 .data-card {
                     background: #fff;
-                    color: #333;
-                    padding: 25px;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    margin-bottom: 20px;
-                    border: 1px solid #e0e0e0;
-                    transition: background-color 0.3s ease;
+                    color: var(--texto-escuro);
+                    padding: 30px;
+                    border-radius: 16px;
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+                    margin-bottom: 25px;
+                    border: 1px solid #edf2f7;
                 }
-                .data-card.bg-alt { background-color: #f7f9fc; }
+                .data-card.bg-alt { background-color: #f8fafc; }
                 .data-card h3 {
-                    color: #003366;
-                    font-size: 1.2rem;
-                    padding-bottom: 10px;
-                    margin-bottom: 20px;
-                    font-weight: bold;
+                    color: var(--azul-header);
+                    font-size: 1.3rem;
+                    padding-bottom: 12px;
+                    margin-bottom: 25px;
+                    font-weight: 800;
                     text-align: center;
+                    border-bottom: 2px solid var(--cinza-claro);
                 }
                 .data-card input, .data-card select {
                     width: 100%;
-                    padding: 10px;
-                    border: 1px solid #ccc;
-                    border-radius: 6px;
-                    color: #333;
+                    padding: 12px 16px;
+                    border: 1.5px solid var(--cinza-medio);
+                    border-radius: 10px;
+                    color: var(--texto-escuro);
                     background-color: #fff;
                     font-size: 1rem;
-                    box-sizing: border-box;
+                    transition: all 0.2s ease;
                 }
                 .data-card input:focus, .data-card select:focus {
-                    border-color: #003366;
+                    border-color: var(--azul-header);
+                    box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
                     outline: none;
-                    background-color: #f9fbff;
                 }
                 .data-card label {
-                    font-weight: 600;
+                    font-weight: 700;
                     font-size: 0.9rem;
-                    color: #555;
-                    margin-bottom: 5px;
+                    color: var(--azul-header);
+                    margin-bottom: 8px;
                     display: block;
                 }
                 input[readonly] {
@@ -298,7 +298,7 @@
                         </div>
                         <div class="field-group">
                             <label>Sexo</label>
-                            <div style="padding: 10px; border: 1px solid #eee; border-radius: 6px; background-color: #f8f9fa; color: #666; font-size: 1rem; cursor: not-allowed;">
+                            <div style="padding: 12px 16px; border: 1.5px solid #eee; border-radius: 10px; background-color: var(--cinza-claro); color: var(--cinza-escuro); font-size: 1rem; cursor: not-allowed;">
                                 ${dados.sexo === 'M' ? '♂️ Masculino' : (dados.sexo === 'F' ? '♀️ Feminino' : '—')}
                                 <input type="hidden" id="me-sexo" value="${dados.sexo || ''}" />
                             </div>

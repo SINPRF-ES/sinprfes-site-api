@@ -189,27 +189,27 @@
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         let html = `
-            <div style="background: var(--azul-fundo); color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="background: var(--azul-header); color: #fff; padding: 25px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid var(--amarelo);">
                 <div>
-                    <h2 style="margin:0; color:var(--amarelo); font-size: 1.4rem;">👁️ Visualização do Relatório</h2>
-                    <div style="font-size:0.8rem; margin-top:8px; opacity:0.8;">
+                    <h2 style="margin:0; color:var(--amarelo); font-size: 1.6rem; font-weight: 800;">👁️ Visualização do Relatório</h2>
+                    <div style="font-size:0.85rem; margin-top:10px; opacity:0.9;">
                         <div>Consulta gerada em: ${new Date(data.generatedAt).toLocaleString('pt-BR')}</div>
                         ${data.baseCompetencia ? `<div>Base do efetivo: ${data.baseCompetencia}</div>` : ''}
                     </div>
                 </div>
-                <button data-close="relatorio-preview-container" style="background:none; border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius: 4px; padding: 4px 10px; cursor:pointer;">Fechar</button>
+                <button data-close="relatorio-preview-container" class="btn btn-sm btn-outline" style="color:#fff; border-color:#fff;">Fechar</button>
             </div>
-            <div style="padding: 25px; background: #fff; color: #333;">
+            <div style="padding: 30px; background: #fff; color: var(--texto-escuro);">
                 ${data.sections.map(section => {
                     if (section.kind === 'kv') {
                         return `
-                            <div style="margin-bottom:30px;">
-                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${section.title}</h4>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:20px;">
+                            <div style="margin-bottom:40px;">
+                                <h4 style="border-bottom:3px solid var(--amarelo); padding-bottom:8px; color:var(--azul-header); margin-bottom: 20px; font-weight: 800; text-transform: uppercase; font-size: 1.1rem;">${section.title}</h4>
+                                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:25px;">
                                     ${section.items.map(item => `
                                         <div>
-                                            <span style="display:block; font-size:0.75rem; color:#777; text-transform: uppercase; font-weight: bold;">${item.label}</span>
-                                            <span style="font-size: 1rem; color: #333;">${item.value}</span>
+                                            <span style="display:block; font-size:0.75rem; color:var(--cinza-escuro); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">${item.label}</span>
+                                            <span style="font-size: 1.1rem; color: var(--texto-escuro); font-weight: 500;">${item.value}</span>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -217,13 +217,13 @@
                         `;
                     } else if (section.kind === 'table') {
                         return `
-                            <div style="margin-bottom:30px;">
-                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${section.title}</h4>
-                                <div style="overflow-x:auto;">
-                                    <table class="repasse-tabela" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
+                            <div style="margin-bottom:40px;">
+                                <h4 style="border-bottom:3px solid var(--amarelo); padding-bottom:8px; color:var(--azul-header); margin-bottom: 20px; font-weight: 800; text-transform: uppercase; font-size: 1.1rem;">${section.title}</h4>
+                                <div style="overflow-x:auto; border-radius: 12px; border: 1.5px solid var(--cinza-claro);">
+                                    <table class="repasse-tabela" style="width:100%; border-collapse:collapse; font-size:0.95rem;">
                                         <thead>
-                                            <tr style="background:#f8f9fa;">
-                                                ${section.columns.map(col => `<th style="border:1px solid #ddd; padding:12px 10px; text-align:left; color: var(--azul-fundo);">${col}</th>`).join('')}
+                                            <tr style="background:var(--cinza-claro);">
+                                                ${section.columns.map(col => `<th style="padding:15px 12px; text-align:left; color: var(--azul-header); font-weight: 800;">${col}</th>`).join('')}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -307,15 +307,15 @@
                     const valor = params.userNome || params.paramDisplay || params.value || params.userId || "-";
 
                     return `
-                        <div class="history-card">
-                            <div class="history-header">
-                                <strong style="color:var(--azul-card);">${tipoLabels[h.report_type] || h.report_type}</strong>
-                                <span class="history-date">${data}</span>
+                            <div class="history-card" style="border-left: 6px solid var(--amarelo); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; background: #fff;">
+                                <div class="history-header" style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--cinza-claro); padding-bottom: 10px; margin-bottom: 10px;">
+                                    <strong style="color:var(--azul-header); font-size: 1rem;">${tipoLabels[h.report_type] || h.report_type}</strong>
+                                    <span class="history-date" style="font-size: 0.85rem; color: var(--cinza-escuro); font-weight: 600;">${data}</span>
                             </div>
-                            <div style="font-size:0.85rem; color:#555; margin-top:8px;">
-                                ${labelParam}: <span style="color:var(--azul-fundo); font-weight:600;">${valor}</span>
+                                <div style="font-size:0.9rem; color:var(--texto-escuro); margin-top:8px;">
+                                    ${labelParam}: <span style="color:var(--azul-header); font-weight:700;">${valor}</span>
                             </div>
-                            <div style="font-size:0.85rem; color:#777; margin-top:4px;">
+                                <div style="font-size:0.85rem; color:var(--cinza-escuro); margin-top:6px; font-style: italic;">
                                 Solicitante: ${h.requester_name}
                             </div>
                         </div>
@@ -327,13 +327,13 @@
         if (!showFullHistory && historyCache.length > 5) {
             html += `
                 <div style="text-align: center; margin-top: 15px;">
-                    <button id="btn-show-full-history" class="btn btn-outline btn-sm" style="color:var(--azul-fundo); border-color:var(--azul-fundo);">Exibir anteriores</button>
+                    <button id="btn-show-full-history" class="btn btn-outline btn-sm" style="color:var(--azul-header); border-color:var(--azul-header);">Exibir anteriores</button>
                 </div>
             `;
         } else if (showFullHistory) {
             html += `
                 <div style="text-align: center; margin-top: 15px;">
-                    <button id="btn-hide-full-history" class="btn btn-outline btn-sm" style="color:var(--azul-fundo); border-color:var(--azul-fundo);">Ver apenas recentes</button>
+                    <button id="btn-hide-full-history" class="btn btn-outline btn-sm" style="color:var(--azul-header); border-color:var(--azul-header);">Ver apenas recentes</button>
                 </div>
             `;
         }
