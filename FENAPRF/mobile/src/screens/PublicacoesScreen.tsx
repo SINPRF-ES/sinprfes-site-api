@@ -410,7 +410,11 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
     <View style={styles.fullScreen}>
       {(isDownloading || isProcessing) && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#fff" />
+          <ActivityIndicator
+            size="large"
+            color="#fff"
+            accessibilityLabel={isDownloading ? "Baixando arquivo..." : "Processando..."}
+          />
           <Text style={styles.loadingText}>{isDownloading ? 'Baixando arquivo...' : 'Processando...'}</Text>
         </View>
       )}
@@ -428,7 +432,9 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       )}
 
       {isLoading ? (
-        <View style={styles.centered}><ActivityIndicator size="large" /></View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" accessibilityLabel="Carregando lista de documentos..." />
+        </View>
       ) : error ? (
         <View style={styles.centered}><Text style={styles.errorText}>Não foi possível carregar as publicações.</Text></View>
       ) : (
@@ -509,13 +515,15 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
         <TouchableOpacity
           style={[
             styles.fab,
-            { bottom: Math.max(insets.bottom, 20) }
+            { bottom: Math.max(insets.bottom, 20) },
+            (isProcessing || isDownloading) && { opacity: 0.6 }
           ]}
           onPress={() => {
             setSheetMode('FOLDER');
             setSelectedItem({ id: currentFolder.id, name: currentFolder.name, isFolder: true } as DriveFile);
             bottomSheetRef.current?.present();
           }}
+          disabled={isProcessing || isDownloading}
           accessibilityRole="button"
           accessibilityLabel="Nova Publicação: Adicionar pasta ou enviar arquivo"
         >
@@ -651,7 +659,7 @@ const FolderSelector = ({ movingItemId, onSelect, onCancel }: { movingItemId?: s
         )}
 
         {isLoading ? (
-          <ActivityIndicator style={{ marginVertical: 20 }} />
+          <ActivityIndicator style={{ marginVertical: 20 }} accessibilityLabel="Carregando pastas..." />
         ) : (
           <FlatList
             data={folders || []}
@@ -661,6 +669,8 @@ const FolderSelector = ({ movingItemId, onSelect, onCancel }: { movingItemId?: s
               <TouchableOpacity
                 style={styles.selectorItem}
                 onPress={() => setCurrentPath(p => [...p, { id: item.id, name: item.name }])}
+                accessibilityRole="button"
+                accessibilityLabel={`Pasta: ${item.name}. Toque para abrir.`}
               >
                 <FontAwesome name="folder" size={20} color="#FFCA28" />
                 <Text style={styles.selectorItemText}>{item.name}</Text>

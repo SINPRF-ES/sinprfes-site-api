@@ -8,3 +8,5 @@
 - **Section Headers**: Use `accessibilityRole="header"` and descriptive labels (e.g., "Seção: [Nome]") for screen section dividers.
 - **Async State Accessibility**: Always provide an `accessibilityLabel` to `ActivityIndicator` during data fetching or processing states.
 - **List Item Clarity**: Identify list items by type (e.g., "Pasta:", "Arquivo:") and action (e.g., "Toque para abrir") in their `accessibilityLabel`.
+- **Consolidated Card Accessibility**: Large interactive cards (like `MemberCard`) should summarize all data in a single `accessibilityLabel` on the container. Internal elements should be hidden from screen readers using `importantForAccessibility="no-hide-descendants"` (Android) and `accessibilityElementsHidden={true}` (iOS) to avoid redundant announcements.
+- **Form Navigation Flow**: Improve UX by using `returnKeyType` ("next", "search", "done") and `onSubmitEditing` in `TextInput` components to guide users through multi-field forms.

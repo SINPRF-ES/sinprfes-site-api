@@ -55,6 +55,7 @@ function isGestao(perfil) {
 }
 
 exports.listar = async (req, res) => {
+  const atorId = req.user?.id;
   try {
     const folderId = req.query.folderId || ROOT_FOLDER_ID;
 
@@ -101,7 +102,7 @@ exports.listar = async (req, res) => {
 
     return res.json(publicacoes);
   } catch (err) {
-    log.error("ErroListarDrive", { error: err.message, stack: err.stack, requestId: req.requestId });
+    log.error("ErroListarDrive", { error: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: "Erro ao sincronizar com o Drive.", requestId: req.requestId });
   }
 };
@@ -425,6 +426,7 @@ exports.deleteItem = async (req, res) => {
  */
 exports.visualizar = async (req, res) => {
   const fileId = req.params.id;
+  const atorId = req.user?.id;
 
   try {
     const dados = await obterArquivoStream(fileId);
@@ -438,7 +440,7 @@ exports.visualizar = async (req, res) => {
 
     // Pipe do stream
     dados.stream.on("error", (e) => {
-      log.error("ErroStreamArquivoDrive", { message: e.message, fileId });
+      log.error("ErroStreamArquivoDrive", { message: e.message, fileId, userId: atorId });
       if (!res.headersSent) res.status(500);
       res.end();
     });
@@ -451,6 +453,7 @@ exports.visualizar = async (req, res) => {
     log.error("ErroVisualizarArquivo", {
       message: msg,
       fileId,
+      userId: atorId,
       path: "/api/publicacoes/arquivo"
     });
 

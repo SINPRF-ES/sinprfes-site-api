@@ -124,6 +124,7 @@ exports.login = async (req, res, next) => {
 exports.refresh = async (req, res, next) => {
   const { refreshToken, deviceId } = req.body || {};
   const requestId = req.requestId;
+  const atorId = req.user?.id;
 
   if (!refreshToken) {
     return res.status(400).json({ error: "Refresh token não informado." });
@@ -146,13 +147,14 @@ exports.refresh = async (req, res, next) => {
     const sessao = rows[0];
 
     if (!sessao) {
-      log.warn("AuthRefreshFalha", { reason: "TokenInvalidoOuExpirado", requestId });
+      log.warn("AuthRefreshFalha", { reason: "TokenInvalidoOuExpirado", requestId, userId: atorId });
       return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
     }
 
     if (sessao.device_id && deviceId && sessao.device_id !== deviceId) {
        log.error("AuthRefreshDeviceIdMismatch", {
            userId: sessao.user_id,
+           atorId,
            expected: sessao.device_id,
            received: deviceId,
            requestId
@@ -193,7 +195,7 @@ exports.refresh = async (req, res, next) => {
       perfil_acesso: sessao.perfil_acesso
     });
 
-    log.info("AuthRefreshSucesso", { userId: sessao.user_id, requestId });
+    log.info("AuthRefreshSucesso", { userId: sessao.user_id, atorId, requestId });
 
     return res.json({
       token: accessToken,
@@ -201,7 +203,7 @@ exports.refresh = async (req, res, next) => {
     });
   } catch (err) {
     if (client) await client.query("ROLLBACK");
-    log.error("AuthRefreshErro", { error: err.message, requestId });
+    log.error("AuthRefreshErro", { error: err.message, requestId, userId: atorId });
     next(err);
   } finally {
     client.release();
@@ -214,6 +216,7 @@ exports.refresh = async (req, res, next) => {
 exports.logout = async (req, res, next) => {
   const { refreshToken } = req.body || {};
   const requestId = req.requestId;
+  const atorId = req.user?.id;
 
   try {
     if (refreshToken) {
@@ -224,7 +227,7 @@ exports.logout = async (req, res, next) => {
     }
     return res.json({ success: true });
   } catch (err) {
-    log.error("AuthLogoutErro", { error: err.message, requestId });
+    log.error("AuthLogoutErro", { error: err.message, requestId, userId: atorId });
     next(err);
   }
 };
@@ -234,18 +237,18 @@ exports.logout = async (req, res, next) => {
  */
 exports.logoutAll = async (req, res, next) => {
   const requestId = req.requestId;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
 
   try {
-    if (userId) {
-      await pool.query(
-        "UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = $1",
-        [userId]
-      );
-    }
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
+    await pool.query(
+      "UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = $1",
+      [atorId]
+    );
     return res.json({ success: true });
   } catch (err) {
-    log.error("AuthLogoutAllErro", { error: err.message, requestId });
+    log.error("AuthLogoutAllErro", { error: err.message, requestId, userId: atorId });
     next(err);
   }
 };
@@ -255,9 +258,11 @@ exports.logoutAll = async (req, res, next) => {
  */
 exports.me = async (req, res, next) => {
   const requestId = req.requestId;
+  const atorId = req.user?.id;
   try {
-    const userId = req.user.id;
-    const user = await usersService.buscarPorId(userId);
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
+    const user = await usersService.buscarPorId(atorId);
 
     if (!user) {
       return res.status(404).json({ error: Textos.USERS.USER_NAO_ENCONTRADO });
@@ -268,10 +273,10 @@ exports.me = async (req, res, next) => {
         limpo.password_hash = 'PENDENTE';
     }
 
-    log.info("AuthMeSucesso", { userId: user.id, requestId });
+    log.info("AuthMeSucesso", { userId: user.id, requestId, atorId });
     return res.json(limpo);
   } catch (err) {
-    log.error("AuthMeErro", { error: err.message, requestId });
+    log.error("AuthMeErro", { error: err.message, requestId, userId: atorId });
     next(err);
   }
 };
@@ -281,7 +286,10 @@ exports.me = async (req, res, next) => {
  */
 exports.listarUsers = async (req, res, next) => {
   const requestId = req.requestId;
+  const atorId = req.user?.id;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
     const perfil = req.user.perfil_acesso || "CONSELHEIRO";
     const lista = await usersService.listarParaPerfil(perfil);
 
@@ -291,7 +299,7 @@ exports.listarUsers = async (req, res, next) => {
       users: lista,
     });
   } catch (err) {
-    log.error("AuthListarUsersErro", { error: err.message, requestId });
+    log.error("AuthListarUsersErro", { error: err.message, requestId, userId: atorId });
     next(err);
   }
 };
