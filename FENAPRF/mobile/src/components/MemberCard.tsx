@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { User } from '../types/user';
 import { getBandeiraUF, tituloCargoUf } from '../utils/user';
 import { calculateMandateTime, toBrazilianDate } from '../utils/date';
+import { formatCpf } from '../utils/format';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface MemberCardProps {
@@ -59,7 +60,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
             {member.name || member.nome || 'Membro'}
           </Text>
           <Text style={[styles.metaText, isDrawer && styles.textLight]}>
-            🆔 {member.cpf || '—'}
+            🆔 {formatCpf(member.cpf) || '—'}
           </Text>
           {member.data_nascimento && (
             <Text style={[styles.metaText, isDrawer && styles.textLight]}>
