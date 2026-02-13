@@ -66,13 +66,22 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   }, [navigation, currentFolder.name, isGestao, isPicker]);
 
   const handleOpenOptions = () => {
+    const isRoot = currentFolder.id === null;
+    const nameLower = (currentFolder.name || '').toLowerCase();
+    const isProtected = isRoot || ['app', 'lixeira', 'noticias'].includes(nameLower);
+
     Alert.alert(
       'Opções da Pasta',
-      'O que deseja fazer nesta pasta?',
+      `O que deseja fazer em "${currentFolder.name}"?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Nova Pasta', onPress: () => handleOpenNewFolder() },
-        { text: 'Enviar Arquivo', onPress: () => handleUpload() }
+        { text: 'Enviar Arquivo', onPress: () => handleUpload() },
+        ...(!isProtected ? [{
+          text: 'Excluir esta Pasta',
+          onPress: () => handleConfirmDelete({ id: currentFolder.id, name: currentFolder.name } as DriveFile),
+          style: 'destructive'
+        }] : [])
       ]
     );
   };
@@ -374,7 +383,23 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       try {
         logDebug('Publicacoes.delete.start', { id: item.id, name: item.name });
         await deleteItem(item.id);
+
+        // Se deletou a pasta que estava aberta, volta um nível
+        const isDeletingCurrentFolder = item.id === currentFolder.id;
+
+        if (isDeletingCurrentFolder) {
+            handleGoBack();
+        }
+
+        // Invalida a query da pasta atual
         queryClient.invalidateQueries({ queryKey: ['publicacoes', currentFolder.id] });
+
+        // Se deletou a pasta atual, precisamos invalidar também o pai para quando voltar a lista estar atualizada
+        if (isDeletingCurrentFolder && folderStack.length > 1) {
+            const parentId = folderStack[folderStack.length - 2].id;
+            queryClient.invalidateQueries({ queryKey: ['publicacoes', parentId] });
+        }
+
         Alert.alert('Sucesso', `"${item.name}" foi movido para a lixeira.`);
       } catch (err) {
         logger.error('Publicacoes.delete.fail', err as Error);
