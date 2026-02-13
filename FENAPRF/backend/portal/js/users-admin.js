@@ -122,18 +122,37 @@
                 filtros.innerHTML = `
                     ${ehGestao ? `
                     <label>
-                        Estado:
-                        <select id="filtro-estado-cadastro">
-                            <option value="CADASTRO_ATIVO" selected>Ativos</option>
-                            <option value="ARQUIVADOS">Arquivados</option>
-                            <option value="TODOS">Todos</option>
+                        Visualização:
+                        <select id="filtro-visualizacao-membros">
+                            ${global.Canon.FILTROS_MEMBROS.map(f => `<option value="${f.value}">${f.label}</option>`).join('')}
                         </select>
-                    </label>` : '<input type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
+                    </label>
+                    <label id="label-filtro-uf" style="display:none;">
+                        UF:
+                        <select id="filtro-uf-membros">
+                            <option value="">Todas</option>
+                            ${global.Canon.UFS.map(uf => `<option value="${uf}">${uf}</option>`).join('')}
+                        </select>
+                    </label>
+                    ` : '<input type="hidden" id="filtro-visualizacao-membros" value="PADRAO">'}
                 `;
                 campoBusca.insertAdjacentElement("afterend", filtros);
 
                 if (ehGestao) {
-                    document.getElementById("filtro-estado-cadastro").addEventListener("change", carregarLista);
+                    const selVis = document.getElementById("filtro-visualizacao-membros");
+                    const selUf = document.getElementById("filtro-uf-membros");
+                    const lblUf = document.getElementById("label-filtro-uf");
+
+                    selVis.addEventListener("change", () => {
+                        if (selVis.value === "UF") {
+                            lblUf.style.display = "inline-block";
+                        } else {
+                            lblUf.style.display = "none";
+                            selUf.value = "";
+                        }
+                        filtrarLista(campoBusca.value);
+                    });
+                    selUf.addEventListener("change", () => filtrarLista(campoBusca.value));
                 }
             }
             handlersConfigurados = true;
@@ -148,9 +167,8 @@
 
         try {
             listaEl.innerHTML = `<p style="text-align:center; color:#fff;">Carregando...</p>`;
-            const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
-            let url = "/api/users";
-            if (estado !== "CADASTRO_ATIVO") url += "?incluirArquivados=1";
+            // Sempre busca com incluirArquivados=1 para paridade com o app que filtra localmente por padrão
+            let url = "/api/users?incluirArquivados=1";
 
             const r = await window.Api.apiFetch(url);
             if (r.ok) {
@@ -173,13 +191,49 @@
         // Reutiliza a lógica unificada de busca (nome/CPF)
         let res = filterUsers ? filterUsers(cacheLista, termo, { perfil: perfilAtual }) : cacheLista;
 
+        const fVisualizacao = document.getElementById("filtro-visualizacao-membros")?.value || "PADRAO";
+        const fUf = document.getElementById("filtro-uf-membros")?.value || "";
 
-        const fEstado = document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO";
-        if (fEstado === "ARQUIVADOS") {
-            res = res.filter(f => f.arquivado_em);
-        } else if (fEstado === "CADASTRO_ATIVO") {
-            res = res.filter(f => !f.arquivado_em);
-        }
+        res = res.filter(f => {
+            if (!f) return false;
+
+            // 0. Ocultar arquivados por padrão (exceto se houvesse um filtro específico, mas seguimos paridade app)
+            if (f.arquivado_em) return false;
+
+            const perfil = (f.perfil_acesso || "").toUpperCase();
+            const cargo = (f.cargo || "").trim();
+            const uf = (f.uf || "").toUpperCase();
+            const isInternal = perfil === "ADMIN" || perfil === "COLABORADOR";
+
+            switch (fVisualizacao) {
+                case "PADRAO":
+                    if (isInternal) return false;
+                    break;
+                case "DIRETORIA":
+                    if (perfil !== "DIRETORIA") return false;
+                    break;
+                case "PRESIDENTES":
+                    if (cargo !== "Presidente") return false;
+                    break;
+                case "VICES":
+                    if (cargo !== "Vice-Presidente") return false;
+                    break;
+                case "DR":
+                    if (cargo !== "Delegado Representante") return false;
+                    break;
+                case "DS":
+                    if (cargo !== "Delegado Substituto") return false;
+                    break;
+                case "UF":
+                    if (fUf && uf !== fUf) return false;
+                    if (perfil !== "CONSELHEIRO") return false;
+                    break;
+                case "ADMIN_COLAB":
+                    if (!isInternal) return false;
+                    break;
+            }
+            return true;
+        });
 
         const countEl = document.getElementById("users-count");
         if (countEl) countEl.textContent = `Total: ${res.length}`;
@@ -232,6 +286,16 @@
         corpo.innerHTML = gerarHtmlForm(user);
         modal.style.display = "flex";
 
+        const p1 = document.getElementById("edit-perfil-acesso");
+        const c1 = document.getElementById("edit-cargo");
+        const v1 = document.getElementById("val-edit-cargo")?.value;
+        if (p1 && c1) atualizarOpcoesCargo(c1, p1.value, v1);
+
+        const p2 = document.getElementById("edit-perfil-acesso2");
+        const c2 = document.getElementById("edit-cargo2");
+        const v2 = document.getElementById("val-edit-cargo2")?.value;
+        if (p2 && c2) atualizarOpcoesCargo(c2, p2.value, v2);
+
         configurarFormEdicao(id);
     }
 
@@ -253,6 +317,11 @@
         const canChangeProfile = (ehAdmin || (["DIRETORIA", "COLABORADOR"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN")) && !isSelf;
 
         const responsavel = safeEscape(f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—"));
+
+        const perfil = (f.perfil_acesso || "").toUpperCase();
+        const isConselheiro = perfil === "CONSELHEIRO";
+        const isDiretoria = perfil === "DIRETORIA";
+        const showMandato = isConselheiro || isDiretoria;
 
         return `
             <div id="alertas-modal"></div>
@@ -312,20 +381,84 @@
                             <input type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f8f9fa;">
                         </div>
                     </div>
-                    ${canChangeProfile ? `
-                        <div class="field-row">
-                            <div class="field-group">
-                                <label>Perfil de Acesso</label>
-                                <select name="perfil_acesso">
+                </div>
+
+                <div class="data-card bg-alt">
+                    <h3>⛓️ Vínculo e Mandato</h3>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Perfil de Acesso</label>
+                            ${canChangeProfile ? `
+                                <select name="perfil_acesso" id="edit-perfil-acesso">
                                     <option value="CONSELHEIRO" ${f.perfil_acesso === "CONSELHEIRO" ? "selected" : ""}>CONSELHEIRO</option>
                                     <option value="COLABORADOR" ${f.perfil_acesso === "COLABORADOR" ? "selected" : ""}>COLABORADOR</option>
                                     <option value="DIRETORIA" ${f.perfil_acesso === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
                                     ${ehAdmin ? `<option value="ADMIN" ${f.perfil_acesso === "ADMIN" ? "selected" : ""}>ADMIN</option>` : ""}
                                 </select>
+                            ` : `
+                                <input type="text" value="${perfil}" readonly style="background:#f8f9fa;">
+                                <input type="hidden" name="perfil_acesso" id="edit-perfil-acesso" value="${f.perfil_acesso}">
+                            `}
+                        </div>
+                        <div class="field-group" id="group-edit-cargo" style="display: ${isConselheiro || isDiretoria ? 'flex' : 'none'};">
+                            <label>Cargo</label>
+                            <select name="cargo" id="edit-cargo">
+                                <option value="">Sem cargo</option>
+                                <!-- Preenchido via JS -->
+                            </select>
+                            <input type="hidden" id="val-edit-cargo" value="${safeEscape(f.cargo)}">
+                        </div>
+                    </div>
+
+                    <div class="field-row" id="row-edit-uf-mandato" style="display: ${showMandato ? 'grid' : 'none'};">
+                        <div class="field-group" id="group-edit-uf">
+                            <label>UF de Atuação</label>
+                            <select name="uf" id="edit-uf-atuacao">
+                                <option value="BR">Brasil (Nacional)</option>
+                                ${global.Canon.UFS.map(uf => `<option value="${uf}" ${f.uf === uf ? 'selected' : ''}>${uf}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Mandato (Início / Fim)</label>
+                            <div style="display:flex; gap:5px;">
+                                <input type="date" name="cargo_mandato_inicio" value="${toDateInputValue ? toDateInputValue(f.cargo_mandato_inicio) : ""}" style="flex:1;">
+                                <input type="date" name="cargo_mandato_fim" value="${toDateInputValue ? toDateInputValue(f.cargo_mandato_fim) : ""}" style="flex:1;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Segundo Vínculo -->
+                    <div id="section-segundo-vinculo" style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; display: ${isConselheiro || isDiretoria ? 'block' : 'none'};">
+                        <h4 style="margin-bottom:15px; color: var(--azul-fundo);">⛓️ Segundo Vínculo (Opcional)</h4>
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>Perfil de Acesso (2º)</label>
+                                <select name="perfil_acesso2" id="edit-perfil-acesso2">
+                                    <option value="">Nenhum</option>
+                                    <option value="CONSELHEIRO" ${f.perfil_acesso2 === "CONSELHEIRO" ? "selected" : ""}>CONSELHEIRO</option>
+                                    <option value="DIRETORIA" ${f.perfil_acesso2 === "DIRETORIA" ? "selected" : ""}>DIRETORIA</option>
+                                </select>
+                            </div>
+                            <div class="field-group" id="group-edit-cargo2" style="display: ${f.perfil_acesso2 ? 'flex' : 'none'};">
+                                <label>Cargo (2º)</label>
+                                <select name="cargo2" id="edit-cargo2">
+                                    <option value="">Sem cargo</option>
+                                    <!-- Preenchido via JS -->
+                                </select>
+                                <input type="hidden" id="val-edit-cargo2" value="${safeEscape(f.cargo2)}">
+                            </div>
+                        </div>
+                        <div class="field-row" id="row-edit-uf2" style="display: ${f.perfil_acesso2 ? 'grid' : 'none'};">
+                            <div class="field-group">
+                                <label>UF (2º)</label>
+                                <select name="uf2" id="edit-uf2">
+                                    <option value="BR">Brasil (Nacional)</option>
+                                    ${global.Canon.UFS.map(uf => `<option value="${uf}" ${f.uf2 === uf ? 'selected' : ''}>${uf}</option>`).join('')}
+                                </select>
                             </div>
                             <div class="field-group"></div>
                         </div>
-                    ` : `<input type="hidden" name="perfil_acesso" value="${f.perfil_acesso}">`}
+                    </div>
                 </div>
 
                 <div class="data-card bg-alt">
@@ -342,13 +475,10 @@
                     </div>
                     <div class="field-row">
                         <div class="field-group">
-                            <label>Email Principal</label>
-                            <input name="email1" value="${safeEscape(f.email1)}" placeholder="seu@email.com">
+                            <label>Email</label>
+                            <input name="email" value="${safeEscape(f.email || f.email1)}" placeholder="seu@email.com">
                         </div>
-                        <div class="field-group">
-                            <label>Email Secundário</label>
-                            <input name="email2" value="${safeEscape(f.email2)}" placeholder="Opcional">
-                        </div>
+                        <div class="field-group"></div>
                     </div>
                 </div>
 
@@ -365,7 +495,9 @@
                         </div>
                         <div class="edit-group logradouro-group">
                             <label>Logradouro / Bairro</label>
-                            <input name="logradouro_bairro" id="edit-logradouro" value="${safeEscape(logradouro_bairro)}" readonly style="background:#f8f9fa;">
+                            <input name="logradouro_bairro" id="edit-logradouro" value="${safeEscape(logradouro_bairro)}"
+                                   data-logradouro="${safeEscape(f.logradouro)}" data-bairro="${safeEscape(f.bairro)}"
+                                   readonly style="background:#f8f9fa;">
                         </div>
 
                         <!-- Linha 2: Número + Complemento -->
@@ -412,8 +544,53 @@
         `;
     }
 
+    function atualizarOpcoesCargo(selectEl, perfil, valorAtual = "") {
+        if (!selectEl) return;
+        const cargos = (perfil === "CONSELHEIRO") ? global.Canon.CARGOS_CONSELHO :
+                      (perfil === "DIRETORIA") ? global.Canon.CARGOS_DIRETORIA : [];
+
+        selectEl.innerHTML = '<option value="">Sem cargo</option>' +
+            cargos.map(c => `<option value="${c}" ${c === valorAtual ? 'selected' : ''}>${c}</option>`).join('');
+    }
+
     function configurarFormEdicao(id) {
         const form = document.getElementById("form-edicao-modal");
+
+        // Dynamic UI logic
+        const p1 = document.getElementById("edit-perfil-acesso");
+        const p2 = document.getElementById("edit-perfil-acesso2");
+        const gCargo1 = document.getElementById("group-edit-cargo");
+        const gCargo2 = document.getElementById("group-edit-cargo2");
+        const rUF1 = document.getElementById("row-edit-uf-mandato");
+        const rUF2 = document.getElementById("row-edit-uf2");
+        const sSec2 = document.getElementById("section-segundo-vinculo");
+
+        const onChangeP1 = () => {
+            const val = p1.value;
+            const isCouncil = val === "CONSELHEIRO" || val === "DIRETORIA";
+            gCargo1.style.display = isCouncil ? "flex" : "none";
+            rUF1.style.display = isCouncil ? "grid" : "none";
+            sSec2.style.display = isCouncil ? "block" : "none";
+            atualizarOpcoesCargo(document.getElementById("edit-cargo"), val);
+
+            const gUf = document.getElementById("group-edit-uf");
+            if (val === "DIRETORIA" || val === "ADMIN" || val === "COLABORADOR") {
+                document.getElementById("edit-uf-atuacao").value = "BR";
+                if (gUf && val !== "CONSELHEIRO") gUf.style.visibility = "hidden";
+            } else {
+                if (gUf) gUf.style.visibility = "visible";
+            }
+        };
+
+        const onChangeP2 = () => {
+            const val = p2.value;
+            gCargo2.style.display = val ? "flex" : "none";
+            rUF2.style.display = val ? "grid" : "none";
+            atualizarOpcoesCargo(document.getElementById("edit-cargo2"), val);
+        };
+
+        if (p1) p1.addEventListener("change", onChangeP1);
+        if (p2) p2.addEventListener("change", onChangeP2);
 
         // Handlers de Ação (CSP-friendly)
         const btnArq = document.querySelector(".btn-arquivar-user");
@@ -452,16 +629,21 @@
                 try {
                     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                     const data = await res.json();
-                    if (!data.erro) {
-                        const inputEnd = document.getElementById("edit-logradouro");
-                        inputEnd.value = `${data.logradouro}${data.bairro ? ', ' + data.bairro : ''}`;
-                        inputEnd.dataset.logradouro = data.logradouro || "";
-                        inputEnd.dataset.bairro = data.bairro || "";
-
-                        document.getElementById("edit-cidade").value = data.localidade;
-                        document.getElementById("edit-uf").value = data.uf;
+                    if (data.erro) {
+                        alert("CEP não encontrado.");
+                        return;
                     }
-                } catch (e) { console.error("Erro CEP", e); }
+                    const inputEnd = document.getElementById("edit-logradouro");
+                    inputEnd.value = `${data.logradouro}${data.bairro ? ', ' + data.bairro : ''}`;
+                    inputEnd.dataset.logradouro = data.logradouro || "";
+                    inputEnd.dataset.bairro = data.bairro || "";
+
+                    document.getElementById("edit-cidade").value = data.localidade;
+                    document.getElementById("edit-uf").value = data.uf;
+                } catch (e) {
+                    console.error("Erro CEP", e);
+                    alert("Erro ao buscar CEP. Verifique sua conexão.");
+                }
             }
         };
 
@@ -493,13 +675,16 @@
 
             // FENAPRF: Ensure logradouro and bairro are separate
             const inputEnd = document.getElementById("edit-logradouro");
-            if (inputEnd && inputEnd.dataset.logradouro) {
-                rawPayload.logradouro = inputEnd.dataset.logradouro;
-                rawPayload.bairro = inputEnd.dataset.bairro || "";
+            rawPayload.logradouro = inputEnd.dataset.logradouro || "";
+            rawPayload.bairro = inputEnd.dataset.bairro || "";
+
+            // If dataset is missing but value exists (legacy), we try to use the value as logradouro
+            if (!rawPayload.logradouro && inputEnd.value) {
+                rawPayload.logradouro = inputEnd.value;
             }
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-                const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
+            const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
             // Sanitização e Limpeza Obrigatória (B2)
             const payload = {};
@@ -669,8 +854,32 @@
                             <input name="telefone2" class="campo-telefone" placeholder="Opcional">
                         </div>
                         <div class="edit-group">
-                            <label>Email Principal *</label>
-                            <input type="email" name="email1" required placeholder="seu@email.com">
+                            <label>Email *</label>
+                            <input type="email" name="email" required placeholder="seu@email.com">
+                        </div>
+
+                        <div class="edit-group">
+                            <label>Perfil de Acesso</label>
+                            <select name="perfil_acesso" id="new-perfil-acesso">
+                                <option value="CONSELHEIRO" selected>CONSELHEIRO</option>
+                                <option value="COLABORADOR">COLABORADOR</option>
+                                <option value="DIRETORIA">DIRETORIA</option>
+                                ${perfilAtual === 'ADMIN' ? `<option value="ADMIN">ADMIN</option>` : ""}
+                            </select>
+                        </div>
+                        <div class="edit-group" id="group-new-cargo">
+                            <label>Cargo</label>
+                            <select name="cargo" id="new-cargo">
+                                <option value="">Sem cargo</option>
+                                <!-- Preenchido via JS -->
+                            </select>
+                        </div>
+                        <div class="edit-group" id="group-new-uf">
+                            <label>UF de Atuação</label>
+                            <select name="uf" id="new-uf-atuacao">
+                                <option value="BR">Brasil (Nacional)</option>
+                                ${global.Canon.UFS.map(uf => `<option value="${uf}">${uf}</option>`).join('')}
+                            </select>
                         </div>
 
                         <div class="address-grid span-2">
@@ -720,6 +929,30 @@
             });
         }
 
+        const np = document.getElementById("new-perfil-acesso");
+        const nc = document.getElementById("new-cargo");
+        const gnc = document.getElementById("group-new-cargo");
+        const gnu = document.getElementById("group-new-uf");
+
+        const onChangeNp = () => {
+            const val = np.value;
+            const isCouncil = val === "CONSELHEIRO" || val === "DIRETORIA";
+            gnc.style.display = isCouncil ? "flex" : "none";
+            gnu.style.display = isCouncil ? "flex" : "none";
+            atualizarOpcoesCargo(nc, val);
+
+            if (val === "DIRETORIA" || val === "ADMIN" || val === "COLABORADOR") {
+                document.getElementById("new-uf-atuacao").value = "BR";
+                if (gnu && val !== "CONSELHEIRO") gnu.style.visibility = "hidden";
+            } else {
+                if (gnu) gnu.style.visibility = "visible";
+            }
+        };
+        if (np) {
+            np.addEventListener("change", onChangeNp);
+            onChangeNp();
+        }
+
         // Aplicar Máscaras
         if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
         if (aplicarMascaraTelefone) aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
@@ -731,16 +964,21 @@
                 try {
                     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                     const data = await res.json();
-                    if (!data.erro) {
-                        const inputEnd = document.getElementById("new-logradouro");
-                        inputEnd.value = `${data.logradouro}${data.bairro ? ', ' + data.bairro : ''}`;
-                        inputEnd.dataset.logradouro = data.logradouro || "";
-                        inputEnd.dataset.bairro = data.bairro || "";
-
-                        document.getElementById("new-cidade").value = data.localidade;
-                        document.getElementById("new-uf").value = data.uf;
+                    if (data.erro) {
+                        alert("CEP não encontrado.");
+                        return;
                     }
-                } catch (err) { console.error("Erro busca CEP", err); }
+                    const inputEnd = document.getElementById("new-logradouro");
+                    inputEnd.value = `${data.logradouro}${data.bairro ? ', ' + data.bairro : ''}`;
+                    inputEnd.dataset.logradouro = data.logradouro || "";
+                    inputEnd.dataset.bairro = data.bairro || "";
+
+                    document.getElementById("new-cidade").value = data.localidade;
+                    document.getElementById("new-uf").value = data.uf;
+                } catch (err) {
+                    console.error("Erro busca CEP", err);
+                    alert("Erro ao buscar CEP.");
+                }
             }
         };
 
@@ -767,10 +1005,8 @@
 
             // FENAPRF: Ensure logradouro and bairro are separate
             const inputEnd = document.getElementById("new-logradouro");
-            if (inputEnd && inputEnd.dataset.logradouro) {
-                payload.logradouro = inputEnd.dataset.logradouro;
-                payload.bairro = inputEnd.dataset.bairro || "";
-            }
+            payload.logradouro = inputEnd.dataset.logradouro || "";
+            payload.bairro = inputEnd.dataset.bairro || "";
 
             // Normalização de Nomes (Canônico)
             if (payload.nome && global.Canon?.normalizeNome) {

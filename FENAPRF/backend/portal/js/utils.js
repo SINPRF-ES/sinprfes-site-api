@@ -245,8 +245,9 @@
     const canSearchCpf = !perfil || !["CONSELHEIRO"].includes(perfil);
 
     return (lista || []).filter(f => {
-      // Busca por nome (normalizado)
-      const nomeNorm = normalizeText(f.nome);
+      // Busca por nome (normalizado) - Accent-insensitive / Case-insensitive (Wide Search)
+      const nomeParaBusca = f.name || f.nome || "";
+      const nomeNorm = normalizeText(nomeParaBusca);
       const matchesNome = nomeNorm.includes(termo);
 
       // Busca por CPF (apenas dígitos)
