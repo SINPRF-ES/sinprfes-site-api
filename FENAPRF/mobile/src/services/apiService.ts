@@ -26,6 +26,22 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+/**
+ * Helper para decodificar JWT sem dependências externas (JWT Payload é Base64Url)
+ */
+function getTokenExpiration(token: string): number | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = JSON.parse(atob(base64));
+    return decoded.exp ? decoded.exp * 1000 : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function maskSensitiveData(obj: any): any {
   try {
     if (!obj || typeof obj !== 'object') return obj;
@@ -54,8 +70,24 @@ function maskSensitiveData(obj: any): any {
 api.interceptors.request.use(
   async (config: any) => {
     const sessao = await carregarSessao();
-    if (sessao?.token) {
-      config.headers.Authorization = `Bearer ${sessao.token}`;
+    let token = sessao?.token;
+
+    // 🕒 PROACTIVE REFRESH: Verifica expiração do token antes de enviar
+    if (token && !config.url.includes('/api/auth/refresh')) {
+        const exp = getTokenExpiration(token);
+        if (exp && (exp - Date.now() < 60000)) { // Margem de 60 segundos
+            logger.info('[Auth.Proactive] Token prestes a expirar, iniciando refresh preventivo.');
+            try {
+                // Dispara o refresh e aguarda o novo token
+                token = await executeSilentRefresh();
+            } catch (e) {
+                logger.warn('[Auth.Proactive] Falha no refresh preventivo, seguindo com token original.');
+            }
+        }
+    }
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     if (config.params) {
@@ -69,7 +101,7 @@ api.interceptors.request.use(
       });
     }
 
-    const { method, url, params, data } = config;
+    const { method, url, params } = config;
     logger.info(`API_REQ: ${method?.toUpperCase()} ${url}`, {
       params: maskSensitiveData(params),
       profile: sessao?.user?.perfil_acesso
@@ -83,7 +115,7 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para tratar respostas e erros (incluindo Silent Refresh)
+// Interceptor para tratar respostas e erros (incluindo Silent Refresh reativo)
 api.interceptors.response.use(
   (response: any) => {
     const { config, status } = response;
@@ -101,90 +133,25 @@ api.interceptors.response.use(
     // Evitar loop infinito no próprio endpoint de refresh
     const isRefreshRoute = url.includes('/api/auth/refresh');
 
-    // 🔴 TRATAMENTO DE 401: Silent Refresh
+    // 🔴 TRATAMENTO DE 401: Silent Refresh Reativo
     if (status === 401 && !isRefreshRoute && !originalRequest._retry) {
-      // Se já estiver atualizando, entra na fila
-      if (isRefreshing) {
-        logger.info('[Auth.Refresh] Já em andamento, enfileirando requisição.');
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        }).catch(err => Promise.reject(err));
-      }
-
-      // Throttle defensivo: evitar loops frenéticos em caso de falhas consecutivas
-      const now = Date.now();
-      if (now - lastRefreshAttempt < REFRESH_THROTTLE) {
-          logger.warn('[Auth.Refresh] Tentativa muito próxima da anterior. Abortando para evitar loop.');
-          await limparSessao();
+      // Se não houver token na request original nem na sessão, nem tentamos refresh pois já estamos deslogados
+      const sessaoCheck = await carregarSessao();
+      if (!originalRequest.headers.Authorization && !sessaoCheck?.token) {
           return Promise.reject(error);
       }
 
-      originalRequest._retry = true;
-      isRefreshing = true;
-      lastRefreshAttempt = now;
-
       try {
-        logger.info('[Auth.Refresh] Iniciando renovação silenciosa...');
-        const refreshToken = await carregarRefreshToken();
-        const deviceId = await getStableDeviceId();
-
-        if (!refreshToken) {
-          logger.warn('[Auth.Refresh] Refresh token ausente no storage.');
-          throw new Error('Refresh token não disponível.');
-        }
-
-        // Chamada direta via axios puro para evitar interceptores
-        const refreshResponse = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-          refreshToken,
-          deviceId
-        }, { timeout: 10000 });
-
-        const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
-
-        // Atualiza o storage com os novos tokens
-        const sessaoAtual = await carregarSessao();
-        await salvarSessao({
-            token: newToken,
-            refreshToken: newRefreshToken,
-            user: sessaoAtual?.user || { id: 'unknown' } as any
-        });
-
-        logger.info('[Auth.Refresh] Sucesso na renovação.');
-
-        isRefreshing = false;
-        processQueue(null, newToken);
-
-        // Re-executa a request original
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest);
-
-      } catch (refreshErr: any) {
-        const isNetworkError = !refreshErr.response;
-        const refreshStatus = refreshErr.response?.status;
-
-        logger.error('[Auth.Refresh] Falha crítica na renovação.', {
-            status: refreshStatus,
-            message: refreshErr.message,
-            isNetworkError
-        });
-
-        isRefreshing = false;
-        processQueue(refreshErr, null);
-
-        // Se for erro de credenciais (401, 403) ou token inválido, limpa tudo
-        if (refreshStatus === 401 || refreshStatus === 403 || refreshStatus === 400 || !isNetworkError) {
-            logger.warn('[Auth.Refresh] Token inválido ou expirado. Limpando sessão.');
-            await limparSessao();
-        }
-
-        return Promise.reject(refreshErr);
+          const newToken = await executeSilentRefresh();
+          originalRequest._retry = true;
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+      } catch (refreshErr) {
+          return Promise.reject(refreshErr);
       }
     }
 
-    // Erros 409: Device Mismatch
+    // Erros 409: Device Mismatch (comum em refresh com deviceId diferente)
     if (status === 409 && isRefreshRoute) {
         logger.error('[Auth.Refresh] Device Mismatch detectado.');
         await limparSessao();
@@ -197,6 +164,109 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Lógica centralizada de Silent Refresh com Mutex, Retry e Tratamento de Erro
+ */
+async function executeSilentRefresh(): Promise<string> {
+    if (isRefreshing) {
+        logger.info('[Auth.Refresh] Já em andamento, aguardando...');
+        return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+        });
+    }
+
+    isRefreshing = true;
+    const now = Date.now();
+
+    // Throttle defensivo
+    if (now - lastRefreshAttempt < REFRESH_THROTTLE) {
+        logger.warn('[Auth.Refresh] Tentativa muito próxima da anterior. Abortando para evitar loop.');
+        isRefreshing = false;
+        // Não limpamos sessão aqui se houver um token válido (pode ser concorrência residual)
+        // mas se chegamos aqui é porque o refresh falhou repetidamente.
+        const sessao = await carregarSessao();
+        if (!sessao?.token) {
+            await limparSessao();
+        }
+        throw new Error('Refresh throttled');
+    }
+
+    lastRefreshAttempt = now;
+
+    try {
+        logger.info('[Auth.Refresh] Iniciando renovação silenciosa...');
+        const refreshToken = await carregarRefreshToken(); // Pode disparar Biometria
+        const deviceId = await getStableDeviceId();
+
+        if (!refreshToken) {
+            logger.warn('[Auth.Refresh] Refresh token ausente ou cancelado pelo usuário.');
+            throw new Error('SESSION_EXPIRED');
+        }
+
+        // Retry Loop para falhas de rede (sem re-disparar biometria)
+        let refreshResponse: any;
+        let lastError: any;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                refreshResponse = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+                    refreshToken,
+                    deviceId
+                }, { timeout: 15000 });
+                break; // Sucesso
+            } catch (err: any) {
+                lastError = err;
+                const isNetworkError = !err.response && !!err.request;
+                const is4xx = err.response && err.response.status >= 400 && err.response.status < 500;
+
+                if (is4xx || !isNetworkError || attempt === 3) {
+                    throw err; // Falha crítica ou última tentativa
+                }
+
+                const delayMs = attempt * 2000;
+                logger.warn(`[Auth.Refresh] Falha de rede na tentativa ${attempt}. Retrying em ${delayMs}ms...`);
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+
+        const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
+
+        // Atualiza o storage com os novos tokens
+        const sessaoAtual = await carregarSessao();
+        await salvarSessao({
+            token: newToken,
+            refreshToken: newRefreshToken,
+            user: sessaoAtual?.user || { id: 'unknown' } as any
+        });
+
+        logger.info('[Auth.Refresh] Sucesso na renovação.');
+        isRefreshing = false;
+        processQueue(null, newToken);
+        return newToken;
+
+    } catch (err: any) {
+        const refreshStatus = err.response?.status;
+        const isNetworkError = !err.response && !!err.request;
+        const isCritical = refreshStatus === 401 || refreshStatus === 403 || refreshStatus === 400 || err.message === 'SESSION_EXPIRED' || !isNetworkError;
+
+        logger.error('[Auth.Refresh] Falha na renovação.', {
+            status: refreshStatus,
+            message: err.message,
+            isCritical
+        });
+
+        isRefreshing = false;
+        processQueue(err, null);
+
+        if (isCritical) {
+            logger.warn('[Auth.Refresh] Falha crítica. Limpando sessão.');
+            await limparSessao();
+        }
+
+        throw err;
+    }
+}
 
 export const getUsers = async (params?: any) => {
   const response = await api.get('/api/users', { params });
