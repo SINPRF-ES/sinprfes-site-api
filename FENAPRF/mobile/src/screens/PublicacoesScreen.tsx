@@ -1,6 +1,7 @@
 // mobile/src/screens/PublicacoesScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import {
@@ -25,6 +26,7 @@ import { EMOJIS } from '../utils/emoji';
 
 const PublicacoesScreen: React.FC = ({ route }: any) => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { mode, onSelectFile, returnTo } = route.params || {};
   const isPicker = mode === 'picker';
 
@@ -45,11 +47,35 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
 
   const currentFolder = folderStack[folderStack.length - 1];
 
-  React.useEffect(() => {
+  useLayoutEffect(() => {
     navigation.setOptions({
       title: `${EMOJIS.PUBLICACOES} ${currentFolder.name}`,
+      headerRight: () => (
+        isGestao && !isPicker ? (
+          <TouchableOpacity
+            onPress={handleOpenOptions}
+            style={{ marginRight: 15 }}
+            accessibilityRole="button"
+            accessibilityLabel="Opções da pasta"
+          >
+            <FontAwesome name="ellipsis-v" size={24} color="#003366" />
+          </TouchableOpacity>
+        ) : null
+      )
     });
-  }, [navigation, currentFolder.name]);
+  }, [navigation, currentFolder.name, isGestao, isPicker]);
+
+  const handleOpenOptions = () => {
+    Alert.alert(
+      'Opções da Pasta',
+      'O que deseja fazer nesta pasta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Nova Pasta', onPress: () => handleOpenNewFolder() },
+        { text: 'Enviar Arquivo', onPress: () => handleUpload() }
+      ]
+    );
+  };
 
   const { data: publicacoes, isLoading, error } = useQuery({
     queryKey: ['publicacoes', currentFolder.id],
@@ -452,7 +478,10 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
 
       {isGestao && !isPicker && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[
+            styles.fab,
+            { bottom: Math.max(insets.bottom, 20) }
+          ]}
           onPress={() => {
             Alert.alert(
               'Nova Publicação',
