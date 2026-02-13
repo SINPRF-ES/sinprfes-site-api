@@ -29,6 +29,8 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
   const mandateStart = toBrazilianDate(member.cargo_mandato_inicio) || 'não informado';
   const mandateEnd = toBrazilianDate(member.cargo_mandato_fim) || 'não informado';
 
+  const a11yLabel = `Membro: ${member.name || member.nome || 'Não informado'}. CPF: ${formatCpf(member.cpf) || 'Não informado'}. Cargo: ${tituloCargoUf(member)}. UF: ${displayUf}.`;
+
   return (
     <TouchableOpacity
       style={[
@@ -39,6 +41,9 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.7}
+      accessibilityRole={onPress ? 'button' : 'none'}
+      accessibilityLabel={a11yLabel}
+      accessibilityHint={onPress ? 'Toque para ver detalhes do membro.' : ''}
     >
       {/* PARTE SUPERIOR (DIVIDIDA HORIZONTALMENTE) */}
       <View style={styles.topSection}>
@@ -48,6 +53,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
             source={member.avatar_url ? { uri: member.avatar_url } : require('../../assets/logo.png')}
             style={styles.avatar}
             resizeMode="cover"
+            accessibilityLabel={`Foto de ${member.name || 'membro'}`}
           />
         </View>
 
@@ -76,13 +82,23 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, onPress, variant = 'lis
 
         {/* DIREITA: UF E BANDEIRA (CONTRASTE OBRIGATÓRIO) */}
         <View style={styles.rightStack}>
-          <Text style={[styles.ufText, isDrawer && styles.textWhite]}>{displayUf}</Text>
+          <Text style={[styles.ufText, isDrawer && styles.textWhite]} accessibilityLabel={`Estado: ${displayUf}`}>{displayUf}</Text>
           {flagUrl ? (
             <View style={styles.flagContainer}>
-              <Image source={{ uri: flagUrl }} style={styles.flag} resizeMode="contain" />
+              <Image
+                source={{ uri: flagUrl }}
+                style={styles.flag}
+                resizeMode="contain"
+                accessibilityLabel={`Bandeira de ${displayUf}`}
+              />
             </View>
           ) : (
-             <MaterialCommunityIcons name="flag-variant" size={24} color={isDrawer ? "#fff" : "#ccc"} />
+             <MaterialCommunityIcons
+              name="flag-variant"
+              size={24}
+              color={isDrawer ? "#fff" : "#ccc"}
+              accessibilityLabel="Ícone de bandeira"
+            />
           )}
         </View>
       </View>

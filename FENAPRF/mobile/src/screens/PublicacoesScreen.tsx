@@ -177,9 +177,19 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   };
 
   const renderItem = ({ item }: { item: DriveFile }) => {
+    const isActuallyFolder = item.isFolder || item.mimeType === 'application/vnd.google-apps.folder';
+    const a11yLabel = `${isActuallyFolder ? 'Pasta' : 'Arquivo'}: ${item.name}. ${item.isFolder ? 'Toque para abrir.' : 'Toque para visualizar.'}`;
+
     return (
       <View style={styles.itemWrapper}>
-        <TouchableOpacity style={styles.itemContainer} onPress={() => handlePress(item)} disabled={isDownloading}>
+        <TouchableOpacity
+          style={styles.itemContainer}
+          onPress={() => handlePress(item)}
+          disabled={isDownloading}
+          accessibilityRole="button"
+          accessibilityLabel={a11yLabel}
+          accessibilityState={{ disabled: isDownloading }}
+        >
           <View style={styles.iconContainer}>
             {renderIcon(item.mimeType)}
           </View>
@@ -196,6 +206,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
         {isGestao && !isPicker && (
           <TouchableOpacity
             style={styles.menuButton}
+            accessibilityRole="button"
+            accessibilityLabel={`Opções para ${item.name}`}
             onPress={() => {
               setSelectedItem(item);
               const isProtected = item.hidden || (currentFolder.id === null && ['app', 'lixeira'].includes(item.name?.toLowerCase()));
@@ -352,7 +364,12 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
       )}
 
       {folderStack.length > 1 && (
-        <TouchableOpacity onPress={handleGoBack} style={styles.backFolderButton}>
+        <TouchableOpacity
+          onPress={handleGoBack}
+          style={styles.backFolderButton}
+          accessibilityRole="button"
+          accessibilityLabel="Voltar para a pasta anterior"
+        >
           <FontAwesome name="arrow-left" size={16} color="#003366" />
           <Text style={styles.backFolderText}>Voltar para anterior</Text>
         </TouchableOpacity>
@@ -448,7 +465,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             );
           }}
           accessibilityRole="button"
-          accessibilityLabel="Adicionar nova pasta ou arquivo"
+          accessibilityLabel="Nova Publicação: Adicionar pasta ou enviar arquivo"
         >
           <FontAwesome name="plus" size={24} color="#fff" />
         </TouchableOpacity>

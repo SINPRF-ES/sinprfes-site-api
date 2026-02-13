@@ -242,7 +242,11 @@ export default function MeusDadosScreen() {
   }, [navigation, user, handleUpdate, handleAvatarUpload, handleAvatarRemove]);
 
   if (loading && !user) {
-    return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" accessibilityLabel="Carregando seus dados..." />
+      </View>
+    );
   }
 
   if (error) {
@@ -260,7 +264,7 @@ export default function MeusDadosScreen() {
       <MemberCard member={user} variant="profile" />
 
       <ErrorBoundary>
-        <View style={styles.sectionHeader}>
+        <View style={styles.sectionHeader} accessibilityRole="header" accessibilityLabel="Seção: Informações Pessoais">
           <Text style={styles.sectionTitle}>👤 Informações Pessoais</Text>
         </View>
         <ContatoCard
@@ -273,7 +277,7 @@ export default function MeusDadosScreen() {
       </ErrorBoundary>
 
       <ErrorBoundary>
-        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}>
+        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]} accessibilityRole="header" accessibilityLabel="Seção: Endereço">
           <Text style={styles.sectionTitle}>🏠 Endereço</Text>
         </View>
         <EnderecoCard
@@ -287,7 +291,7 @@ export default function MeusDadosScreen() {
 
       {user?.perfil_acesso2 && (
         <ErrorBoundary>
-          <View style={[styles.sectionHeader, { backgroundColor: '#fff' }]}>
+          <View style={[styles.sectionHeader, { backgroundColor: '#fff' }]} accessibilityRole="header" accessibilityLabel="Seção: Segundo Vínculo">
             <Text style={styles.sectionTitle}>🔗 Segundo Vínculo</Text>
           </View>
           <View style={styles.secondVinculoContainer}>

@@ -486,7 +486,7 @@
 
                     <!-- Segundo Vínculo -->
                     <div id="section-segundo-vinculo" style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; display: ${isConselheiro || isDiretoria ? 'block' : 'none'};">
-                        <h4 style="margin-bottom:15px; color: var(--azul-fundo);">⛓️ Segundo Vínculo (Opcional)</h4>
+                        <h4 style="margin-bottom:15px; color: var(--azul-header);">⛓️ Segundo Vínculo (Opcional)</h4>
                         <div class="field-row">
                             <div class="field-group">
                                 <label>Perfil de Acesso (2º)</label>
