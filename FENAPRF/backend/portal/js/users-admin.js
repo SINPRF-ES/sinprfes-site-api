@@ -284,6 +284,15 @@
                                 ${["CONSELHEIRO"].includes(perfilAtual) ? '' : `
                                 <span>🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</span>
                                 `}
+                                ${f.cargo ? `<div class="user-meta" style="font-size:0.85rem; color:var(--amarelo); font-weight:bold; margin-top:4px;">💼 ${safeEscape(f.cargo)}</div>` : ''}
+                                ${f.cargo_mandato_inicio || f.cargo_mandato_fim ? `
+                                <div class="user-meta" style="font-size:0.75rem; margin-top:4px; opacity:0.9; line-height:1.4;">
+                                    🗓️ Mandato: ${global.Formatters.formatISOToBR(f.cargo_mandato_inicio) || '—'} a ${global.Formatters.formatISOToBR(f.cargo_mandato_fim) || '—'}
+                                    <br>
+                                    <span style="color:#2ecc71;">⏱️ Decorrido: ${global.AgeUtils?.formatAgeDetailed(f.cargo_mandato_inicio) || '—'}</span> |
+                                    <span style="color:#f1c40f;">⏳ Restante: ${global.AgeUtils?.formatRemainingTime(f.cargo_mandato_fim) || '—'}</span>
+                                </div>
+                                ` : ''}
                             </div>
                             ${f.cargo ? `<div class="card-v2-cargo">💼 ${safeEscape(f.cargo)}</div>` : ''}
                         </div>
