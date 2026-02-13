@@ -24,6 +24,15 @@
         return "";
     }
 
+    function getFlagUrl(uf, perfil) {
+        const p = (perfil || "").toUpperCase();
+        let sigla = (uf || "").trim().toLowerCase();
+        if (["ADMIN", "DIRETORIA", "COLABORADOR"].includes(p)) sigla = "br";
+        if (!sigla) return "";
+        if (sigla === "br") return "https://flagcdn.com/w160/br.png";
+        return `https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/${sigla}.png`;
+    }
+
     function avatarHtml(avatarUrl, nome) {
         const { escapeHTML } = global.Utils || {};
         const safeNome = (nome || "").toString();
@@ -69,14 +78,26 @@
             if (secUsers) {
                 const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
                 secUsers.innerHTML = `
-                    <div class="search-box-container af-standard-header">
-                        <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px;">
-                            <h2 style="margin:0;">👥 Membros</h2>
+                    <div class="search-box-container af-standard-header header-gestao-membros">
+                        <div class="header-membros-top">
+                            <img src="/img/logo-fenaprf.png" class="logo-header-membros">
+                            <h2>👥 Membros</h2>
                         </div>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-                            <button id="btn-novo-user" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo Membro</button>
-                            <div id="users-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
-                            <input type="text" id="busca-users" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
+
+                        <div class="header-membros-controls">
+                            <div class="control-group search-group">
+                                <label>🔍 Buscar Membro</label>
+                                <input type="text" id="busca-users" placeholder="${placeholder}">
+                            </div>
+
+                            <div class="control-group actions-group">
+                                <button id="btn-novo-user" class="btn btn-primary btn-lg" style="display:none;">+ Novo Membro</button>
+                                <div id="users-count">Total: 0</div>
+                            </div>
+
+                            <div id="container-filtro-header" class="control-group filter-group-header">
+                                <!-- Filtros inseridos via JS -->
+                            </div>
                         </div>
                     </div>
                     <div id="novo-user-container" style="display:none; margin-bottom:20px;"></div>
@@ -111,43 +132,39 @@
             }
 
             const campoBusca = document.getElementById("busca-users");
+            const containerFiltro = document.getElementById("container-filtro-header");
+
             if (campoBusca) {
                 campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
 
-                const filtros = document.createElement("div");
-                filtros.className = "row-filtros";
-
                 const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
-                filtros.innerHTML = `
-                    ${ehGestao ? `
-                    <label>
-                        Visualização:
-                        <select id="filtro-visualizacao-membros">
-                            ${global.Canon.FILTROS_MEMBROS.map(f => `<option value="${f.value}">${f.label}</option>`).join('')}
-                        </select>
-                    </label>
-                    <label id="label-filtro-uf" style="display:none;">
-                        UF:
-                        <select id="filtro-uf-membros">
-                            <option value="">Todas</option>
-                            ${global.Canon.UFS.map(uf => `<option value="${uf}">${uf}</option>`).join('')}
-                        </select>
-                    </label>
-                    ` : '<input type="hidden" id="filtro-visualizacao-membros" value="PADRAO">'}
-                `;
-                campoBusca.insertAdjacentElement("afterend", filtros);
+                if (containerFiltro) {
+                    containerFiltro.innerHTML = `
+                        ${ehGestao ? `
+                        <label>📂 Visualização</label>
+                        <div style="display:flex; gap:10px; width:100%;">
+                            <select id="filtro-visualizacao-membros" class="select-lg-portal" style="flex:1;">
+                                ${global.Canon.FILTROS_MEMBROS.map(f => `<option value="${f.value}">${f.label}</option>`).join('')}
+                            </select>
+                            <select id="filtro-uf-membros" class="select-lg-portal" style="display:none; width:100px;">
+                                <option value="">Todas</option>
+                                ${global.Canon.UFS.map(uf => `<option value="${uf}">${uf}</option>`).join('')}
+                            </select>
+                        </div>
+                        ` : '<input type="hidden" id="filtro-visualizacao-membros" value="PADRAO">'}
+                    `;
+                }
 
                 if (ehGestao) {
                     const selVis = document.getElementById("filtro-visualizacao-membros");
                     const selUf = document.getElementById("filtro-uf-membros");
-                    const lblUf = document.getElementById("label-filtro-uf");
 
                     selVis.addEventListener("change", () => {
                         if (selVis.value === "UF") {
-                            lblUf.style.display = "inline-block";
+                            selUf.style.display = "block";
                         } else {
-                            lblUf.style.display = "none";
+                            selUf.style.display = "none";
                             selUf.value = "";
                         }
                         filtrarLista(campoBusca.value);
@@ -244,23 +261,28 @@
         }
 
         el.innerHTML = res.map(f => {
-            const situacaoLower = 'ativo';
             const classeStatus = `status-ativo`;
             const nascimento = f.data_nascimento;
             const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
+            const flagUrl = getFlagUrl(f.uf, f.perfil_acesso);
+            const isNacional = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes((f.perfil_acesso || "").toUpperCase());
+            const displayUf = isNacional ? "BR" : (f.uf || "—");
 
             const tels = [f.telefone1, f.telefone2].filter(Boolean).map(t => formatarTelefoneTexto ? formatarTelefoneTexto(t) : t).join(" / ");
 
             return `
-                <div class="user-card ${classeStatus}">
-                    <div class="user-header">
-                        <div class="user-left">
+                <div class="user-card-v2 ${classeStatus}">
+                    <div class="card-v2-main">
+                        <div class="card-v2-avatar-col">
                             ${avatarHtml(f.avatar_url, f.nome)}
-                            <div>
-                                <div class="user-nome">${safeEscape(f.nome)}</div>
-                                <div class="user-meta">${f.cpf ? safeEscape(window.Formatters.formatCpf(f.cpf)) + ' • ' : ''}${safeEscape(f.uf || '')}</div>
+                        </div>
+
+                        <div class="card-v2-info-col">
+                            <div class="card-v2-nome">${safeEscape(f.nome)}</div>
+                            <div class="card-v2-meta">
+                                <span>🆔 ${f.cpf ? safeEscape(window.Formatters.formatCpf(f.cpf)) : '—'}</span>
                                 ${["CONSELHEIRO"].includes(perfilAtual) ? '' : `
-                                <div class="user-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
+                                <span>🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</span>
                                 `}
                                 ${f.cargo ? `<div class="user-meta" style="font-size:0.85rem; color:var(--amarelo); font-weight:bold; margin-top:4px;">💼 ${safeEscape(f.cargo)}</div>` : ''}
                                 ${f.cargo_mandato_inicio || f.cargo_mandato_fim ? `
@@ -272,11 +294,32 @@
                                 </div>
                                 ` : ''}
                             </div>
+                            ${f.cargo ? `<div class="card-v2-cargo">💼 ${safeEscape(f.cargo)}</div>` : ''}
                         </div>
-                        <div style="text-align:right;">
-                            <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
-            ${!["CONSELHEIRO"].includes(perfilAtual) ?
-                                `<button class="btn btn-outline btn-sm btn-editar-user" data-id="${f.id}" style="margin-top:8px;">✏️ Editar</button>` : ''}
+
+                        <div class="card-v2-mandato-col">
+                            ${f.cargo_mandato_inicio || f.cargo_mandato_fim ? `
+                                <div class="mandato-label">🗓️ Mandato</div>
+                                <div class="mandato-periodo">${global.Formatters.formatISOToBR(f.cargo_mandato_inicio) || '—'} a ${global.Formatters.formatISOToBR(f.cargo_mandato_fim) || '—'}</div>
+                                <div class="mandato-stats">
+                                    <div class="stat-item decorrido">⏱️ ${global.AgeUtils?.formatAgeDetailed(f.cargo_mandato_inicio) || '—'}</div>
+                                    <div class="stat-item restante">⏳ ${global.AgeUtils?.formatRemainingTime(f.cargo_mandato_fim) || '—'}</div>
+                                </div>
+                            ` : '<div style="color:#ccc; font-style:italic;">Sem dados de mandato</div>'}
+                        </div>
+
+                        <div class="card-v2-uf-col">
+                            <div class="uf-badge">
+                                <span class="uf-sigla">${displayUf}</span>
+                                ${flagUrl ? `<img src="${flagUrl}" class="uf-flag-img">` : '🏳️'}
+                            </div>
+                        </div>
+
+                        <div class="card-v2-actions-col">
+                            <div class="card-v2-contato">${safeEscape(tels) || '-'}</div>
+                            <div class="card-v2-email">${safeEscape(f.email || f.email1) || '-'}</div>
+                            ${!["CONSELHEIRO"].includes(perfilAtual) ?
+                                `<button class="btn btn-primary btn-sm btn-editar-user" data-id="${f.id}">✏️ Editar</button>` : ''}
                         </div>
                     </div>
                 </div>
