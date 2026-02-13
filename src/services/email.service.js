@@ -107,7 +107,7 @@ Prezado(a) ${dados.nome || "filiado(a)"},
 Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma do SINPRF/ES.
 
 Resumo do pedido:
-- Período da atividade: ${dados.data_inicio || "-"} a ${dados.data_fim || "-"}
+- Período da atividade: ${formatarDataBR(dados.data_inicio)} a ${formatarDataBR(dados.data_fim)}`)
 - Local / destino: ${dados.local || "-"}
 - Valor total solicitado: R$ ${(dados.valor_total || 0).toFixed ? dados.valor_total.toFixed(2) : Number(dados.valor_total || 0).toFixed(2)}
 
