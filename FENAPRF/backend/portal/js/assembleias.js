@@ -246,12 +246,12 @@
             }
 
             if (currentFiltro === 'ATIVAS') {
-                assembleias = assembleias.filter(a => ['CRIADA', 'ABERTA', 'EM_CURSO'].includes(a.estado));
+                assembleias = assembleias.filter(a => ['CRIADO', 'EM_CREDENCIAMENTO', 'INICIADO', 'SUSPENSA'].includes(a.estado));
             } else if (currentFiltro === 'ENCERRADAS') {
-                assembleias = assembleias.filter(a => a.estado === 'ENCERRADA');
+                assembleias = assembleias.filter(a => a.estado === 'ENCERRADO');
             }
 
-            const ordem = { 'EM_CURSO': 0, 'ABERTA': 1, 'CRIADA': 2, 'ENCERRADA': 3 };
+            const ordem = { 'INICIADO': 0, 'EM_CREDENCIAMENTO': 1, 'SUSPENSA': 2, 'CRIADO': 3, 'ENCERRADO': 4 };
             assembleias.sort((a, b) => (ordem[a.estado] ?? 99) - (ordem[b.estado] ?? 99));
 
             renderizarLista(assembleias, container);
@@ -282,9 +282,10 @@
 
             // Cores baseadas no status para melhor contraste
             let badgeStyle = "background:#eef2f7; color:#003366;";
-            if (a.estado === 'EM_CURSO') badgeStyle = "background:#fff3cd; color:#856404; border: 1px solid #ffeeba;";
-            if (a.estado === 'ABERTA') badgeStyle = "background:#d1e7dd; color:#0f5132; border: 1px solid #badbcc;";
-            if (a.estado === 'ENCERRADA') badgeStyle = "background:#f8d7da; color:#842029; border: 1px solid #f5c2c7;";
+            if (a.estado === 'INICIADO') badgeStyle = "background:#fff3cd; color:#856404; border: 1px solid #ffeeba;";
+            if (a.estado === 'EM_CREDENCIAMENTO') badgeStyle = "background:#d1e7dd; color:#0f5132; border: 1px solid #badbcc;";
+            if (a.estado === 'ENCERRADO') badgeStyle = "background:#f8d7da; color:#842029; border: 1px solid #f5c2c7;";
+            if (a.estado === 'SUSPENSA') badgeStyle = "background:#e2e3e5; color:#333; border: 1px solid #d6d8db;";
 
             return `
                 <div class="section-card user-card" style="margin-bottom:25px; background:#fff; border-top:5px solid #003366; transition:all 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; color:#333; border-radius:15px; text-align:center;">
@@ -367,12 +368,13 @@
             const label = window.AssembleiaUtils.getStatusLabel(a.estado);
             const dataBr = window.Formatters.formatISOToBR(a.data_evento);
             const hasCheckedIn = estado.quorumVigente?.userHasCheckedIn || false;
-            const isParticipavel = a.estado === 'ABERTA' || a.estado === 'EM_CURSO';
-            const isEncerrada = a.estado === 'ENCERRADA';
+            const isParticipavel = ['EM_CREDENCIAMENTO', 'INICIADO', 'SUSPENSA'].includes(a.estado);
+            const isEncerrada = a.estado === 'ENCERRADO';
 
             const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
             const isPresidente = estado.mesa && estado.mesa.presidente_user_id === currentUserId;
             const canSeeToken = estado.quorumVigente?.token && (isPresidente || isDiretoria || currentUserId === estado.quorumVigente.gerado_por_user_id);
+            const isCredenciamento = a.estado === 'EM_CREDENCIAMENTO';
 
             container.innerHTML = `
                 <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; text-align: center;">
@@ -460,13 +462,13 @@
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px; text-align: center;">
                             <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">🛠️ Ações de Gestão e Controle</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center;">
-                                ${isDiretoria && a.estado === 'CRIADA' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
-                                ${isDiretoria && a.estado === 'ABERTA' ? `
+                                ${isDiretoria && a.estado === 'CRIADO' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
+                                ${isDiretoria && a.estado === 'EM_CREDENCIAMENTO' ? `
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="preparar-mesa" data-aid="${id}">Compor Mesa</button>
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token" data-aid="${id}">Gerar Token</button>
                                     <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" data-action="iniciar-execucao" data-aid="${id}">Iniciar Execução (Pauta)</button>
                                 ` : ''}
-                                ${(isDiretoria || isPresidente) && a.estado === 'EM_CURSO' ? `
+                                ${(isDiretoria || isPresidente) && a.estado === 'INICIADO' ? `
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-recontagem" data-aid="${id}">🔄 Recontagem de Quórum</button>
                                 ` : ''}
                                 ${isDiretoria && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" data-action="encerrar-ass" data-aid="${id}">Encerrar Assembleia</button>` : ''}
@@ -483,20 +485,22 @@
                             ` : `
                                 <div class="section-box" style="border:3px solid #f1c40f; background:#fffdf0; padding:35px; text-align:center; border-radius:20px;">
                                     <h4 style="color:#856404; margin-bottom:15px; font-weight:900; font-size:1.3rem;">Check-in Necessário</h4>
-                                    <p style="font-size:1.1rem; margin-bottom:25px; color:#555; font-weight:500;">Para participar e votar, informe o <strong>token de 6 dígitos</strong> fornecido pela mesa diretora.</p>
+                                    <p style="font-size:1.1rem; margin-bottom:25px; color:#555; font-weight:500;">
+                                        Para participar e votar, informe o <strong>token de ${isCredenciamento ? '10 caracteres' : '6 dígitos'}</strong> fornecido pela organização.
+                                    </p>
                                     <div style="display:flex; gap:15px; max-width:500px; margin:0 auto; flex-wrap:wrap; justify-content:center;">
-                                        <input type="text" id="token-input" placeholder="000000" maxlength="6" style="flex:1; text-align:center; font-size:2.5rem; letter-spacing:10px; padding:15px; border:3px solid #f1c40f; border-radius:12px; font-weight:800; min-width:200px;" />
+                                        <input type="text" id="token-input" placeholder="${isCredenciamento ? 'A1B2C3D4E5' : '000000'}" maxlength="${isCredenciamento ? 10 : 6}" style="flex:1; text-align:center; font-size:2.2rem; letter-spacing:${isCredenciamento ? '5px' : '10px'}; padding:15px; border:3px solid #f1c40f; border-radius:12px; font-weight:800; min-width:250px; text-transform:uppercase;" />
                                         <button class="btn btn-primary btn-lg" style="padding:0 40px; font-weight:900; border-radius:12px;" data-action="realizar-checkin" data-aid="${id}">Confirmar Presença</button>
                                     </div>
                                 </div>
                             `}
                         ` : `
                             <div class="section-block section-block-alt" style="text-align:center; padding:60px; border-radius:20px; background:#f9f9f9; border: 1px dashed #ccc;">
-                                <div style="font-size:4rem; margin-bottom:20px;">${a.estado === 'CRIADA' ? '⏳' : '🏁'}</div>
+                                <div style="font-size:4rem; margin-bottom:20px;">${a.estado === 'CRIADO' ? '⏳' : '🏁'}</div>
                                 <h3 style="color:#444; font-weight:800; font-size:1.5rem;">
-                                    ${a.estado === 'CRIADA' ? 'Assembleia agendada. Aguarde a abertura oficial.' : 'Esta assembleia já foi encerrada.'}
+                                    ${a.estado === 'CRIADO' ? 'Assembleia agendada. Aguarde a abertura oficial.' : 'Esta assembleia já foi encerrada.'}
                                 </h3>
-                                <p style="color:#777; font-weight:500;">${a.estado === 'CRIADA' ? 'O acesso à sala será liberado no horário previsto.' : 'Os resultados e a ata estarão disponíveis em breve.'}</p>
+                                <p style="color:#777; font-weight:500;">${a.estado === 'CRIADO' ? 'O acesso à sala será liberado no horário previsto.' : 'Os resultados e a ata estarão disponíveis em breve.'}</p>
                                 ${isEncerrada && currentUserPerfil !== 'COMUNICADOR' ? `
                                     <button class="btn btn-primary btn-lg" style="margin-top:20px; font-weight:800;" data-action="solicitar-relatorio" data-aid="${id}">📄 Baixar Relatório PDF (E-mail)</button>
                                 ` : ''}
@@ -661,7 +665,8 @@
     async function realizarCheckin(id) {
         const input = document.getElementById("token-input");
         const token = input.value.trim();
-        if (token.length !== 6) { alert("O token deve ter 6 dígitos."); return; }
+        const expectedLen = input.maxLength;
+        if (token.length !== expectedLen) { alert(`O token deve ter ${expectedLen} caracteres.`); return; }
 
         try {
             const r = await window.Api.apiFetch(`/api/assembleias/${id}/checkin`, {

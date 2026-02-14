@@ -382,12 +382,24 @@ async function encerrarAssembleia(req, res) {
   }
 }
 
-// Helper para validar se o membro é o Presidente da Mesa ou Diretoria
+// Helper para validar se o membro pertence à Mesa Diretora ou é da Diretoria FENAPRF
 async function verificarAutoridadeMesa(assembleiaId, user) {
   const mesa = await service.buscarMesa(assembleiaId);
   const isDiretoria = user.perfil_acesso === 'DIRETORIA' || user.perfil_acesso === 'ADMIN';
-  const isPresidente = mesa && mesa.presidente_user_id === user.id;
-  return { mesa, autorizada: isDiretoria || isPresidente, isPresidente, isDiretoria };
+  const isMesa = mesa && [
+    mesa.presidente_user_id,
+    mesa.vice_presidente_user_id,
+    mesa.secretario_user_id,
+    mesa.secretario_2_user_id
+  ].includes(user.id);
+
+  return {
+    mesa,
+    autorizada: isDiretoria || isMesa,
+    isMesa,
+    isPresidente: mesa && mesa.presidente_user_id === user.id,
+    isDiretoria
+  };
 }
 
 async function gerarTokenQuorum(req, res) {
@@ -403,25 +415,30 @@ async function gerarTokenQuorum(req, res) {
     const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
 
     if (isGlobalCall) {
-       // Hard Code FENAPRF: Apenas os 4 cargos específicos podem gerar o QR Global
-       const fullUser = await usersService.buscarPorId(req.user.id);
-       const cargosAutorizados = [
-         "Presidente da FENAPRF",
-         "Vice-Presidente da FENAPRF",
-         "Diretor de Secretaria",
-         "Diretor de Secretaria Substituto"
-       ];
-       const cargoUser = fullUser?.cargo;
-       const cargo2User = fullUser?.cargo2;
+       // Se o token já existe, permitimos que qualquer perfil de gestão o recupere (Idempotência)
+       const existingToken = await service.buscarGlobalPorAssembleia(assembleiaId);
 
-       const temCargoAutorizado = cargosAutorizados.includes(cargoUser) || cargosAutorizados.includes(cargo2User);
+       if (!existingToken) {
+          // Apenas os 4 cargos específicos podem realizar a PRIMEIRA geração
+          const fullUser = await usersService.buscarPorId(req.user.id);
+          const cargosAutorizados = [
+            "Presidente da FENAPRF",
+            "Vice-Presidente da FENAPRF",
+            "Diretor de Secretaria",
+            "Diretor de Secretaria Substituto"
+          ];
+          const cargoUser = fullUser?.cargo;
+          const cargo2User = fullUser?.cargo2;
 
-       if (!temCargoAutorizado) {
-          log.warn("AssembleiaGerarTokenGlobalNegado", { requestId: req.requestId, userId: req.user.id, cargo: cargoUser, cargo2: cargo2User });
-          return res.status(403).json({
-            error: "Apenas o Presidente, Vice-Presidente, Diretor de Secretaria ou seu Substituto podem gerar o QR Code Global.",
-            requestId: req.requestId
-          });
+          const temCargoAutorizado = cargosAutorizados.includes(cargoUser) || cargosAutorizados.includes(cargo2User);
+
+          if (!temCargoAutorizado) {
+              log.warn("AssembleiaGerarTokenGlobalNegado", { requestId: req.requestId, userId: req.user.id, cargo: cargoUser, cargo2: cargo2User });
+              return res.status(403).json({
+                error: "Apenas o Presidente, Vice-Presidente, Diretor de Secretaria ou seu Substituto podem gerar o QR Code Global.",
+                requestId: req.requestId
+              });
+          }
        }
     } else {
        // Para tokens normais, mantemos a regra de Mesa/Diretoria
@@ -437,7 +454,10 @@ async function gerarTokenQuorum(req, res) {
       return res.status(422).json({ error: "Tipo de chamada inválido. Use PRIMEIRA, SEGUNDA ou RECONTAGEM." });
     }
 
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    // Canonização: Global = 10 chars alfanumérico; Quórum = 6 dígitos numéricos
+    const token = isGlobalCall
+      ? Math.random().toString(36).substring(2, 12).toUpperCase()
+      : Math.floor(100000 + Math.random() * 900000).toString();
 
     const quorum = await service.gerarQuorum({
       assembleia_id: assembleiaId,
@@ -445,7 +465,7 @@ async function gerarTokenQuorum(req, res) {
       gerado_por_user_id: req.user.id,
       tipo_chamada: tipoFinal,
       observacao,
-      is_global: !!is_global || tipoFinal === 'GLOBAL'
+      is_global: isGlobalCall
     });
 
     // Buscar estado consolidado para retorno rico (evita double fetch no app)
@@ -613,6 +633,14 @@ async function definirMesa(req, res) {
 
   const start = Date.now();
   try {
+    // RBAC Canônico FENAPRF: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
+    const fullUser = await usersService.buscarPorId(req.user.id);
+    const podeDefinir = fullUser?.cargo === 'Presidente da FENAPRF' || fullUser?.cargo === 'Vice-Presidente da FENAPRF' || req.user.perfil_acesso === 'ADMIN';
+
+    if (!podeDefinir) {
+        return res.status(403).json({ error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem compor a mesa.", requestId: req.requestId });
+    }
+
     const {
         presidente_user_id,
         vice_presidente_user_id,
@@ -657,6 +685,14 @@ async function substituirMesa(req, res) {
 
   const start = Date.now();
   try {
+    // RBAC Canônico FENAPRF: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
+    const fullUser = await usersService.buscarPorId(req.user.id);
+    const podeSubstituir = fullUser?.cargo === 'Presidente da FENAPRF' || fullUser?.cargo === 'Vice-Presidente da FENAPRF' || req.user.perfil_acesso === 'ADMIN';
+
+    if (!podeSubstituir) {
+        return res.status(403).json({ error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem alterar a mesa.", requestId: req.requestId });
+    }
+
     const {
         presidente_user_id,
         vice_presidente_user_id,
@@ -664,11 +700,6 @@ async function substituirMesa(req, res) {
         secretario_2_user_id,
         justificativa
     } = req.body;
-
-    // Apenas DIRETORIA pode substituir a mesa. Presidente (se não for DIRETORIA) não pode.
-    if (req.user.perfil_acesso !== 'DIRETORIA' && req.user.perfil_acesso !== 'ADMIN') {
-        return res.status(403).json({ error: "Apenas a Diretoria pode destituir ou alterar a mesa.", requestId: req.requestId });
-    }
 
     if (!presidente_user_id || !vice_presidente_user_id || !secretario_user_id || !secretario_2_user_id || !justificativa) {
       return res.status(400).json({ error: "Todos os membros e a Justificativa são obrigatórios", requestId: req.requestId });

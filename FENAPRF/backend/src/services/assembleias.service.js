@@ -332,9 +332,13 @@ async function gerarQuorum(dados) {
     const { randomBytes } = require("crypto");
     let { token } = dados;
 
-    // Garante token de 10 caracteres se não fornecido ou se for recontagem/novo
-    if (!token || token.length !== 10) {
-      token = randomBytes(5).toString("hex").toUpperCase();
+    // Canonização de Token: 10 chars alfanumérico para Global, 6 dígitos numéricos para Quórum
+    if (!token) {
+      if (is_global) {
+        token = randomBytes(5).toString("hex").toUpperCase();
+      } else {
+        token = Math.floor(100000 + Math.random() * 900000).toString();
+      }
     }
 
     // Lock na assembleia para garantir consistência de estado e evitar corridas
@@ -351,22 +355,36 @@ async function gerarQuorum(dados) {
       await client.query("UPDATE assembleias SET estado = 'EM_CREDENCIAMENTO', aberta_em = NOW() WHERE id = $1", [assembleia_id]);
     }
 
-    // Idempotência: Se NÃO for forceNew e já existe token ativo para este MESMO tipo_chamada, retorna ele
-    // RECONTAGEM sempre força um novo token para invalidar o snapshot anterior
-    if (!forceNew && tipo_chamada !== 'RECONTAGEM') {
-      const { rows: existingRows } = await client.query(
+    // Idempotência e Regras de Unicidade
+    // Regra Global: Apenas 1 por assembleia, para sempre.
+    if (is_global) {
+      const { rows: existingGlobal } = await client.query(
         `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, is_global
          FROM assembleia_quoruns
-         WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL ${is_global ? 'AND is_global = TRUE' : 'AND is_global = FALSE'}`,
-        [assembleia_id, tipo_chamada]
+         WHERE assembleia_id = $1 AND is_global = TRUE`,
+        [assembleia_id]
       );
-
-      if (existingRows.length > 0) {
-        const existing = existingRows[0];
-        // Reforça check-in automático do emissor mesmo em retorno de token existente
+      if (existingGlobal.length > 0) {
+        const existing = existingGlobal[0];
         await realizarAutoCheckin(client, existing.id, gerado_por_user_id, tipo_chamada);
         await client.query('COMMIT');
         return { ...existing, isNew: false };
+      }
+    } else {
+      // Regra Quórum: Se NÃO for forceNew e não for RECONTAGEM, pode retornar o ativo do mesmo tipo
+      if (!forceNew && tipo_chamada !== 'RECONTAGEM') {
+        const { rows: existingQuorum } = await client.query(
+          `SELECT id, token, criado_em, valido_ate, quorum_total_ativos, quorum_necessario, is_global
+           FROM assembleia_quoruns
+           WHERE assembleia_id = $1 AND tipo_chamada = $2 AND encerrado_em IS NULL AND is_global = FALSE`,
+          [assembleia_id, tipo_chamada]
+        );
+        if (existingQuorum.length > 0) {
+          const existing = existingQuorum[0];
+          await realizarAutoCheckin(client, existing.id, gerado_por_user_id, tipo_chamada);
+          await client.query('COMMIT');
+          return { ...existing, isNew: false };
+        }
       }
     }
 
@@ -445,8 +463,7 @@ async function atualizarQuorum(id, userId) {
   // Mantém o tipo_chamada do último snapshot se existir, ou assume PRIMEIRA.
   const ultimo = await buscarUltimoQuorum(id);
   const tipoChamada = ultimo?.tipo_chamada || 'PRIMEIRA';
-  const { randomBytes } = require("crypto");
-  const token = randomBytes(5).toString("hex").toUpperCase();
+  const token = Math.floor(100000 + Math.random() * 900000).toString();
 
   return await gerarQuorum({
     assembleia_id: id,
@@ -562,6 +579,20 @@ async function realizarCheckin(dados) {
     const { rows: qRows } = await client.query("SELECT is_global FROM assembleia_quoruns WHERE id = $1", [assembleia_quorum_id]);
     const isGlobal = qRows[0]?.is_global;
 
+    if (isGlobal) {
+      // Regra: Credenciamento único por evento
+      const { rows: existingGlobalCheckin } = await client.query(
+        `SELECT c.id
+         FROM assembleia_checkins c
+         JOIN assembleia_quoruns q ON c.assembleia_quorum_id = q.id
+         WHERE q.assembleia_id = $1 AND q.is_global = TRUE AND c.user_id = $2`,
+        [assembleia_id, user_id]
+      );
+      if (existingGlobalCheckin.length > 0) {
+        throw new Error("Você já efetuou seu credenciamento para este evento.");
+      }
+    }
+
     // Regra Hierárquica por Branch (apenas para QUORUM, não GLOBAL)
     if (!isGlobal) {
       const info = await obterInfoBranchUser(user_id, client);
@@ -593,15 +624,19 @@ async function realizarCheckin(dados) {
                 await registrarAuditoria(assembleia_id, user_id, 'SUBSTITUICAO_PENDENTE_VOTACAO', { superior_id: user_id, subordinado_id: bc.user_id, branch: info.branch, uf: info.uf }, client);
 
                 // WebSocket Emit for Pending Change
-                socket.emitEvent(assembleia_id, 'assembleia:quorum_branch_changed', {
+                const msgPending = `Seu ${info.role === 'PRESIDENTE' ? 'presidente' : 'delegado representante'} entrou; a troca ocorrerá ao final da votação em andamento.`;
+                const payloadPending = {
                   uf: info.uf,
                   branch: info.branch,
                   removedUserId: bc.user_id,
+                  subordinado_id: bc.user_id, // Compatibilidade mobile
                   addedUserId: user_id,
                   reason: 'SUPERIOR_ENTERED',
                   lockedUntilVoteEnd: true,
-                  message: `Seu ${info.role === 'PRESIDENTE' ? 'presidente' : 'delegado representante'} entrou; a troca ocorrerá ao final da votação em andamento.`
-                });
+                  message: msgPending
+                };
+                socket.emitEvent(assembleia_id, 'assembleia:quorum_branch_changed', payloadPending);
+                socket.emitEvent(assembleia_id, 'SUBSTITUICAO_BRANCH', payloadPending);
 
                 await client.query('COMMIT');
                 return { success: true, status: 'PENDING_VOTATION' };
@@ -611,15 +646,19 @@ async function realizarCheckin(dados) {
                 await registrarAuditoria(assembleia_id, user_id, 'SUBSTITUICAO_BRANCH', { superior_id: user_id, subordinado_id: bc.user_id, branch: info.branch, uf: info.uf }, client);
 
                 // WebSocket Emit for Immediate Change
-                socket.emitEvent(assembleia_id, 'assembleia:quorum_branch_changed', {
+                const msg = `Seu ${info.role === 'PRESIDENTE' ? 'presidente' : 'delegado representante'} entrou na sessão, então você foi retirado do quorum.`;
+                const payload = {
                   uf: info.uf,
                   branch: info.branch,
                   removedUserId: bc.user_id,
+                  subordinado_id: bc.user_id, // Compatibilidade mobile
                   addedUserId: user_id,
                   reason: 'SUPERIOR_ENTERED',
                   lockedUntilVoteEnd: false,
-                  message: `Seu ${info.role === 'PRESIDENTE' ? 'presidente' : 'delegado representante'} entrou na sessão, então você foi retirado do quorum.`
-                });
+                  message: msg
+                };
+                socket.emitEvent(assembleia_id, 'assembleia:quorum_branch_changed', payload);
+                socket.emitEvent(assembleia_id, 'SUBSTITUICAO_BRANCH', payload);
               }
             } else if (info.rank > bcInfo.rank) {
               // Subordinado tentando entrar enquanto superior está presente -> BLOQUEAR
@@ -888,15 +927,20 @@ async function finalizarVotacao(votacaoId, userId = null) {
       const sup = names.find(n => n.id === p.user_id_superior);
       const sub = names.find(n => n.id === p.user_id_subordinado);
 
-      socket.emitEvent(votacao.assembleia_id, 'assembleia:quorum_branch_changed', {
+      const msg = `Votação encerrada. Seu titular entrou na sessão, então você foi retirado do quorum.`;
+      const payload = {
         uf: sup?.uf || sub?.uf,
         branch: p.branch,
         removedUserId: p.user_id_subordinado,
+        subordinado_id: p.user_id_subordinado, // Compatibilidade mobile
         addedUserId: p.user_id_superior,
         reason: 'VOTATION_ENDED_SUBSTITUTION',
         lockedUntilVoteEnd: false,
-        message: `Votação encerrada. Seu titular entrou na sessão, então você foi retirado do quorum.`
-      });
+        message: msg
+      };
+
+      socket.emitEvent(votacao.assembleia_id, 'assembleia:quorum_branch_changed', payload);
+      socket.emitEvent(votacao.assembleia_id, 'SUBSTITUICAO_BRANCH', payload);
 
       await registrarAuditoria(votacao.assembleia_id, p.user_id_superior, 'SUBSTITUICAO_BRANCH_APLICADA', { superior_id: p.user_id_superior, subordinado_id: p.user_id_subordinado, branch: p.branch }, client);
     }
@@ -1735,6 +1779,17 @@ async function buscarGlobalAtivo() {
   return rows[0] || null;
 }
 
+async function buscarGlobalPorAssembleia(assembleiaId) {
+  const query = `
+    SELECT id, token, criado_em, is_global
+    FROM assembleia_quoruns
+    WHERE assembleia_id = $1 AND is_global = TRUE
+    LIMIT 1
+  `;
+  const { rows } = await pool.query(query, [assembleiaId]);
+  return rows[0] || null;
+}
+
 module.exports = {
   listar,
   buscarPorId,
@@ -1776,5 +1831,6 @@ module.exports = {
   buscarEstadoResumido,
   buscarDiagnostico,
   normalizarAssembleia,
-  buscarGlobalAtivo
+  buscarGlobalAtivo,
+  buscarGlobalPorAssembleia
 };

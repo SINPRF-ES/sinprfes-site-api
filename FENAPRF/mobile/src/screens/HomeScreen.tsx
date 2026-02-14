@@ -81,8 +81,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         <TouchableOpacity
           style={styles.globalTokenCard}
           onPress={() => {
-            logNavigation('AssembleiaDetalhe (via GlobalTokenAtivo)');
-            navigation.navigate('AssembleiaDetalhe', { id: globalToken.assembleia_id });
+            logNavigation('VisualizarToken (via HomeBanner)');
+            navigation.navigate('Votacao', {
+                screen: 'VisualizarToken',
+                params: {
+                    assembleiaId: globalToken.assembleia_id,
+                    token: globalToken.token,
+                    assembleiaTitulo: globalToken.assembleia_titulo,
+                    type: 'GLOBAL'
+                }
+            } as any);
           }}
           accessibilityRole="button"
           accessibilityLabel="Visualizar QR Code de Check-in Ativo"

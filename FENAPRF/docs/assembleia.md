@@ -2,10 +2,49 @@
 
 Este documento descreve as regras de negócio obrigatórias para o funcionamento das assembleias no ecossistema FENAPRF.
 
-## 1. Check-in e Quórum
-- **Check-in Global:** O sistema deve suportar um Check-in Global persistente por evento (via QR Code ou Token Global), permitindo que os membros registrem sua presença antecipadamente.
-- **Contagem de Quórum:** O quórum é calculado em tempo real com base nos check-ins ativos.
-- **Exibição em Tempo Real:** O estado do quórum deve ser visível para todos os participantes na sala de votação.
+## 1. Check-in, Credenciamento e Quórum
+
+### 1.1. Credenciamento (Check-in Global de Presença)
+O credenciamento é o registro inicial e obrigatório de presença para o evento como um todo.
+- **Finalidade:** Validar a presença do conselheiro no evento (assembleia) e habilitar sua participação nas sessões.
+- **Token e QR Code:** O token de credenciamento é **único por assembleia** (evento). Ele deve ser gerado uma única vez e persistido.
+- **Geração:** Somente os seguintes 4 perfis (cargos específicos) estão autorizados a realizar a primeira geração do token:
+    - Presidente da FENAPRF
+    - Vice-Presidente da FENAPRF
+    - Diretor de Secretaria
+    - Diretor de Secretaria Substituto
+- **Visualização:** Após a geração, qualquer perfil de gestão (ADMIN, DIRETORIA, COLABORADOR) pode resgatar e visualizar o token/QR Code para auxiliar no credenciamento dos conselheiros.
+- **Persistência:** O registro de credenciamento do conselheiro é **único por evento**. Se o usuário já se credenciou, qualquer nova tentativa (mesmo em dias diferentes de um evento multi-dia) deve retornar a mensagem: *"Você já efetuou seu credenciamento para este evento."*
+- **Perfis Permitidos para Credenciamento por UF (4 papéis):**
+    - Presidente do Sindicato
+    - Vice-Presidente do Sindicato
+    - Delegado Representante
+    - Suplente do Delegado
+
+### 1.2. Check-in de Quórum (Dinâmico)
+O quórum é a verificação de presença ativa para momentos específicos de votação durante a assembleia.
+- **Finalidade:** Definir o snapshot de membros aptos a votar em um determinado item de pauta ou proposta.
+- **Token e QR Code:** O token de quórum deve ser composto por **apenas 6 números** (para facilitar a digitação manual no portal web).
+- **Geração:** Apenas os **4 componentes da mesa diretora** (Presidente, Vice-Presidente, 1º Secretário e 2º Secretário) podem gerar o token de quórum.
+- **Rotatividade e Reset:** O token de quórum pode ser gerado quantas vezes forem necessárias. Ao gerar um **novo token**, o sistema deve:
+    - Resetar todo o quórum vigente (remover a presença de todos os participantes).
+    - Manter apenas a presença de quem gerou o token.
+    - Inclusive os demais membros da mesa precisam realizar um novo check-in para este quórum.
+- **Filtragem Hierárquica por UF (Substituição Automática):**
+    - Se o **Presidente da UF** realizar o check-in, o **Vice-Presidente da UF** não pode permanecer no quórum (é removido automaticamente se já estiver).
+    - Se o Vice realizar o check-in primeiro e posteriormente o Presidente entrar, o Vice é removido e recebe uma mensagem explicativa.
+    - A mesma regra se aplica para a relação entre **Delegado Representante** vs **Suplente do Delegado**.
+
+### 1.3. Diferenças entre Credenciamento e Quórum
+| Característica | Credenciamento (Global) | Quórum (Dinâmico) |
+| :--- | :--- | :--- |
+| **Objetivo** | Presença geral no evento | Aptidão para votação imediata |
+| **Persistência** | Permanente para o evento | Temporário (até novo snapshot) |
+| **Reset** | Não reseta | Reseta a cada nova geração de token |
+| **Tamanho Token** | 10 caracteres (Alfanumérico) | 6 dígitos (Numérico) |
+| **Permissão Geração** | 4 cargos FENAPRF específicos | 4 membros da mesa diretora |
+| **Frequência** | Gerado 1 única vez | Gerado múltiplas vezes |
+
 
 ## 2. Direitos de Voto e Hierarquia
 - **Votos por UF:** Cada Unidade Federativa (UF) possui o direito a 2 votos deliberativos.

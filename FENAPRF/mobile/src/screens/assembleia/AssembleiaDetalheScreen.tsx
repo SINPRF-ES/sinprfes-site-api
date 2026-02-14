@@ -30,6 +30,10 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
   const isElegivel = ['DIRETORIA', 'CONSELHEIRO', 'COLABORADOR'].includes(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
+
+  // RBAC FENAPRF: Apenas Presidência/Vice pode compor a mesa
+  const podeComporMesa = (user?.cargo === 'Presidente da FENAPRF' || user?.cargo === 'Vice-Presidente da FENAPRF' || perfil === 'ADMIN');
+
   const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
   const canGenerateReport = (assembleia?.estado === 'ENCERRADO' || assembleia?.estado === 'INICIADO' || assembleia?.estado === 'EM_CREDENCIAMENTO' || assembleia?.estado === 'SUSPENSA');
 
@@ -262,18 +266,55 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     const isCredenciamento = assembleia?.estado === 'EM_CREDENCIAMENTO';
     const actions: MenuAction[] = [];
     if ((isDiretoria || isPresidente) && assembleia) {
+      const hasGlobalToken = !!estado?.quorumVigente?.is_global || (assembleia.estado !== 'CRIADO' && assembleia.estado !== 'ENCERRADO');
+
       if (isDiretoria && assembleia.estado === 'CRIADO') {
-        actions.push({ label: 'Gerar QR Global', icon: 'qrcode', onPress: () => handleGerarToken(true) });
+        actions.push({
+            label: 'Gerar QR Global',
+            icon: 'qrcode',
+            onPress: () => handleGerarToken(true)
+        });
+      } else if (isDiretoria && hasGlobalToken && estado?.quorumVigente?.is_global) {
+        actions.push({
+            label: 'Visualizar QR Global',
+            icon: 'qrcode-scan',
+            onPress: () => navigation.navigate('VisualizarToken', {
+                assembleiaId: id,
+                token: estado.quorumVigente?.token,
+                assembleiaTitulo: assembleia.titulo,
+                type: 'GLOBAL'
+            })
+        });
       }
+
       if (isCredenciamento && isDiretoria) {
         const isMesaEstabelecida = !!(estado?.mesa as any)?.estabelecida_em;
-        actions.push({
-            label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
-            icon: isMesaEstabelecida ? 'account-convert-outline' : 'account-group-outline',
-            onPress: () => navigation.navigate('ComporMesa', { id, substituir: isMesaEstabelecida })
-        });
+
+        if (podeComporMesa) {
+            actions.push({
+                label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
+                icon: isMesaEstabelecida ? 'account-convert-outline' : 'account-group-outline',
+                onPress: () => navigation.navigate('ComporMesa', { id, substituir: isMesaEstabelecida })
+            });
+        }
+
         actions.push({ label: 'Iniciar Execução', icon: 'play-box-multiple-outline', onPress: handleIniciarExecucao });
+
+        // Se já existe token de quórum (não global), mostra visualizar, senão gerar
+        if (estado?.quorumVigente && !estado.quorumVigente.is_global) {
+            actions.push({
+                label: 'Visualizar QR Quórum',
+                icon: 'qrcode-scan',
+                onPress: () => navigation.navigate('VisualizarToken', {
+                    assembleiaId: id,
+                    token: estado.quorumVigente?.token,
+                    assembleiaTitulo: assembleia.titulo,
+                    type: 'QUORUM'
+                })
+            });
+        }
         actions.push({ label: 'Novo Token Quórum', icon: 'key-variant', onPress: () => handleGerarToken(false) });
+
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
       if (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') {
@@ -299,8 +340,11 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }, [navigation, assembleia, isDiretoria, handleAbrir, handleGerarToken, handleEncerrar, handleIniciarExecucao, handleSolicitarRelatorio]);
 
   const handleCheckin = async () => {
-    if (tokenInput.length !== 6) {
-      Alert.alert('Aviso', 'O token deve ter 6 dígitos.');
+    const isCred = assembleia?.estado === 'EM_CREDENCIAMENTO';
+    const expectedLen = isCred ? 10 : 6;
+
+    if (tokenInput.length !== expectedLen) {
+      Alert.alert('Aviso', `O token de ${isCred ? 'credenciamento' : 'quórum'} deve ter ${expectedLen} caracteres.`);
       return;
     }
     try {
@@ -634,12 +678,14 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
           ) : (
             <View style={styles.checkinCard}>
               <Text style={styles.checkinTitle}>Check-in necessário</Text>
-              <Text style={styles.checkinSubtitle}>Informe o token de 6 dígitos para registrar sua presença.</Text>
+              <Text style={styles.checkinSubtitle}>
+                  Informe o token de {assembleia.estado === 'EM_CREDENCIAMENTO' ? '10 caracteres' : '6 dígitos'} para registrar sua presença.
+              </Text>
               <TextInput
                 style={styles.tokenInput}
-                placeholder="000000"
-                keyboardType="numeric"
-                maxLength={6}
+                placeholder={assembleia.estado === 'EM_CREDENCIAMENTO' ? "A1B2C3D4E5" : "000000"}
+                autoCapitalize="characters"
+                maxLength={assembleia.estado === 'EM_CREDENCIAMENTO' ? 10 : 6}
                 value={tokenInput}
                 onChangeText={setTokenInput}
               />
