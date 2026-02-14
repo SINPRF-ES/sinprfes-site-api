@@ -427,8 +427,18 @@ exports.deleteItem = async (req, res) => {
 exports.visualizar = async (req, res) => {
   const fileId = req.params.id;
   const atorId = req.user?.id;
+  const requestId = req.requestId;
 
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
+    // FENAPRF: Segurança Hardened - Valida se o item pertence à árvore permitida
+    const isPublic = await isDescendant(fileId, ROOT_FOLDER_ID);
+    if (!isPublic) {
+      log.warn("PublicacoesVisualizarNegado", { userId: atorId, fileId, requestId });
+      return res.status(403).json({ message: "Acesso negado a este arquivo.", requestId });
+    }
+
     const dados = await obterArquivoStream(fileId);
 
     // Content-Type correto
@@ -454,6 +464,7 @@ exports.visualizar = async (req, res) => {
       message: msg,
       fileId,
       userId: atorId,
+      requestId,
       path: "/api/publicacoes/arquivo"
     });
 

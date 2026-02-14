@@ -461,6 +461,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
               value={newItemName}
               onChangeText={setNewItemName}
               autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleCreateFolder}
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setIsNewFolderModalVisible(false)} style={styles.cancelButton}>
@@ -485,6 +487,8 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
               value={newItemName}
               onChangeText={setNewItemName}
               autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleRename}
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setIsRenameModalVisible(false)} style={styles.cancelButton}>
