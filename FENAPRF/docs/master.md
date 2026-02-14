@@ -72,7 +72,34 @@ O sistema possui três módulos distintos para votação e presença:
 
 ---
 
-## 7. Confirmação de Auditoria e Escopo
+## 7. Cânone Oficial de Roles e Autoridades
+
+Este cânone define as regras de negócio absolutas para acesso e autoridade no ecossistema FENAPRF, centralizadas no arquivo `shared/canon.js`.
+
+### 7.1. Grupos de Gestão
+- **Gestão (Geral)**: Composto pelos perfis `ADMIN`, `DIRETORIA` e `COLABORADOR`.
+- **Poder Administrativo**: Apenas o perfil `ADMIN` pode criar, editar ou gerenciar outros perfis `ADMIN`.
+
+### 7.2. Autoridade Institucional (Cargos)
+Certas operações críticas são restritas a cargos específicos, independentemente do perfil de acesso:
+
+| Operação | Autoridade Permitida |
+| :--- | :--- |
+| **Geração de QR Global** | Presidente/Vice FENAPRF, Diretores de Secretaria (Titular/Subst.) |
+| **Composição de Mesa** | Presidente/Vice FENAPRF ou ADMIN |
+| **Gestão de Quórum** | Exclusiva da Mesa Diretora (após composta) ou ADMIN |
+| **Registro em Eventos** | Restrito a DIRETORIA e CONSELHEIRO (ADMIN/COLABORADOR não se registram) |
+| **Garantia Hospedagem** | Eventos AGE/AGO: Garantida para 2 conselheiros por UF. Alerta no 3º registro. |
+
+### 7.3. O "Poder da Mesa" (Princípio da Soberania)
+Durante uma Assembleia ativa, uma vez que a **Mesa Diretora** (4 membros) é definida e salva:
+- A autoridade de gestão da sala (abrir/fechar quórum, iniciar/parar votação) **transfere-se integralmente** para os membros da Mesa.
+- O perfil de acesso regular (ex: Conselheiro que virou Secretário da Mesa) é elevado para autoridade de gestão dentro do contexto daquele evento.
+- O ADMIN retém autoridade de supervisão (Safety Net).
+
+---
+
+## 8. Confirmação de Auditoria e Escopo
 
 ✅ **Auditoria Concluída**: Todos os artefatos foram analisados conforme a hierarquia de fonte da verdade (Backend > App > Site > CSV).
 ✅ **Restrição de Diretório**: Nenhum arquivo fora da pasta `FENAPRF/` foi alterado ou criado nesta entrega.

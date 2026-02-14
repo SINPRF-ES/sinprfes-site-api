@@ -72,7 +72,8 @@ const LogisticaScreen = ({ route }: any) => {
     documento_id: '',
     status: STATUS_EVENTO.ATIVO,
     justificativa: '',
-    assembleia_id: ''
+    assembleia_id: '',
+    tipo: ''
   });
 
   const [formInscricao, setFormInscricao] = useState({
@@ -287,7 +288,8 @@ const LogisticaScreen = ({ route }: any) => {
       documento_id: eventoSelecionado.documento_id || '',
       status: eventoSelecionado.status,
       justificativa: '',
-      assembleia_id: eventoSelecionado.assembleia_id || ''
+      assembleia_id: eventoSelecionado.assembleia_id || '',
+      tipo: eventoSelecionado.tipo || ''
     });
     setModalEventoVisible(true);
   }, [eventoSelecionado]);
@@ -524,7 +526,7 @@ const LogisticaScreen = ({ route }: any) => {
     });
   }, [navigation, canManage, eventoSelecionado]);
 
-  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando dados logísticos..." /></View>;
 
   return (
     <SafeScreen style={styles.container}>
@@ -722,10 +724,16 @@ const LogisticaScreen = ({ route }: any) => {
                     <View key={item.id} style={[
                       styles.tableRow,
                       idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd,
-                      hasConflict && styles.tableRowConflict
+                      item.excede_limite_hospedagem ? styles.tableRowHostingLimit : (hasConflict && styles.tableRowConflict)
                     ]}>
                       <View style={[styles.cell, { width: 180 }]}>
                         <Text style={styles.cellText}>{item.nome || item.name}</Text>
+                        {item.excede_limite_hospedagem && (
+                            <View style={[styles.conflictBadge, { backgroundColor: '#d32f2f' }]}>
+                                <MaterialCommunityIcons name="home-alert" size={12} color="#fff" />
+                                <Text style={styles.conflictBadgeText}>Limite Hospedagem</Text>
+                            </View>
+                        )}
                         {hasConflict && (
                             <TouchableOpacity
                                 style={styles.conflictBadge}
@@ -795,14 +803,32 @@ const LogisticaScreen = ({ route }: any) => {
                 <Text style={styles.docSelectText}>{formEvento.documento_id ? '✓ Documento Selecionado' : 'Selecionar nas Publicações'}</Text>
               </TouchableOpacity>
 
-              <Text style={styles.label}>Assembleia Vinculada (Opcional)</Text>
-              <CanonicalPicker
-                selectedValue={formEvento.assembleia_id}
-                onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
-                wrapperStyle={styles.pickerWrapper}
-                placeholder="Nenhuma"
-                items={assembleias.map(a => ({ label: `${a.tipo} - ${a.titulo}`, value: a.id }))}
-              />
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Tipo de Evento</Text>
+                  <CanonicalPicker
+                    selectedValue={formEvento.tipo}
+                    onValueChange={(val) => setFormEvento({ ...formEvento, tipo: val })}
+                    wrapperStyle={styles.pickerWrapper}
+                    placeholder="Selecione"
+                    items={[
+                      { label: 'AGE (Garantia Hospedagem)', value: 'AGE' },
+                      { label: 'AGO (Garantia Hospedagem)', value: 'AGO' },
+                      { label: 'Outro', value: 'OUTRO' }
+                    ]}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Assembleia Vinculada</Text>
+                  <CanonicalPicker
+                    selectedValue={formEvento.assembleia_id}
+                    onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
+                    wrapperStyle={styles.pickerWrapper}
+                    placeholder="Nenhuma"
+                    items={assembleias.map(a => ({ label: `${a.tipo} - ${a.titulo}`, value: a.id }))}
+                  />
+                </View>
+              </View>
 
               {formEvento.id && (
                 <>
@@ -997,6 +1023,7 @@ const styles = StyleSheet.create({
   tableRowEven: { backgroundColor: '#fff' },
   tableRowOdd: { backgroundColor: '#f8f9fa' },
   tableRowConflict: { backgroundColor: '#fff3cd' }, // Amarelo para conflito
+  tableRowHostingLimit: { backgroundColor: '#f8d7da' }, // Fundo vermelho para excesso de hospedagem
   cell: { padding: 10, borderRightWidth: 1, borderColor: '#dee2e6', justifyContent: 'center' },
   cellText: { fontSize: 12, color: '#333' },
   conflictBadge: { backgroundColor: '#d32f2f', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 2 },

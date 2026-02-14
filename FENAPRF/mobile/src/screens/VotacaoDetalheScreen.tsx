@@ -82,7 +82,7 @@ export default function VotacaoDetalheScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator accessibilityLabel="Carregando detalhes da votação..." />
         <Text style={styles.muted}>Carregando…</Text>
       </View>
     );

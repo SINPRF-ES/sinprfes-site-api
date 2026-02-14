@@ -10,6 +10,12 @@ import SafeScreen from '../../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
+import {
+  isGestao,
+  canComposeMesa,
+  canCreateCredenciamentoToken,
+  canCheckInEvent
+} from '../../utils/user';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel } from '../../utils/format';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
@@ -30,14 +36,19 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [editalLoading, setEditalLoading] = useState(false);
 
   const perfil = (user?.perfil_acesso || '').trim().toUpperCase();
-  const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
-  const isElegivel = ['DIRETORIA', 'CONSELHEIRO'].includes(perfil);
+  const ehGestao = isGestao(perfil);
+  const isElegivel = canCheckInEvent(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
 
-  // RBAC FENAPRF: Apenas Presidência/Vice pode compor a mesa
-  const podeComporMesa = (user?.cargo === 'Presidente da FENAPRF' || user?.cargo === 'Vice-Presidente da FENAPRF' || perfil === 'ADMIN');
+  // CANON: Apenas cargos autorizados podem compor a mesa
+  const podeComporMesaLocal = canComposeMesa(user);
 
-  const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
+  // CANON: Quem pode ver o token? Mesa, Gestão (se não houver mesa) ou o próprio criador
+  const canSeeToken = estado?.quorumVigente?.token && (
+    isPresidente ||
+    (ehGestao && (!estado.mesa || (estado.mesa as any).presidente_user_id)) ||
+    user?.id === (estado.quorumVigente as any).gerado_por_user_id
+  );
 
   const [estadoLoading, setEstadoLoading] = useState(false);
 
@@ -267,16 +278,16 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   useEffect(() => {
     const isCredenciamento = assembleia?.estado === 'EM_CREDENCIAMENTO';
     const actions: MenuAction[] = [];
-    if ((isDiretoria || isPresidente) && assembleia) {
+    if ((ehGestao || isPresidente) && assembleia) {
       const hasGlobalToken = !!estado?.quorumVigente?.is_global || (assembleia.estado !== 'CRIADO' && assembleia.estado !== 'ENCERRADO');
 
-      if (isDiretoria && assembleia.estado === 'CRIADO') {
+      if (canCreateCredenciamentoToken(user) && assembleia.estado === 'CRIADO') {
         actions.push({
             label: 'Gerar QR Global',
             icon: 'qrcode',
             onPress: () => handleGerarToken(true)
         });
-      } else if (isDiretoria && hasGlobalToken && estado?.quorumVigente?.is_global) {
+      } else if (ehGestao && hasGlobalToken && estado?.quorumVigente?.is_global) {
         actions.push({
             label: 'Visualizar QR Global',
             icon: 'qrcode-scan',
@@ -289,10 +300,10 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         });
       }
 
-      if (isCredenciamento && isDiretoria) {
+      if (isCredenciamento && ehGestao) {
         const isMesaEstabelecida = !!(estado?.mesa as any)?.estabelecida_em;
 
-        if (podeComporMesa) {
+        if (podeComporMesaLocal) {
             actions.push({
                 label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
                 icon: isMesaEstabelecida ? 'account-convert-outline' : 'account-group-outline',
@@ -323,7 +334,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         actions.push({ label: 'Ir para Sala', icon: 'door-open', onPress: () => {
             navigation.navigate('AssembleiaSala', { id });
         }});
-        if (isDiretoria || isPresidente) {
+        if (ehGestao || isPresidente) {
           actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
         }
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
@@ -441,7 +452,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   };
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando detalhes da assembleia..." /></View>;
   }
 
   if (!assembleia) {
@@ -550,7 +561,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             accessibilityRole="button"
           >
             {editalLoading ? (
-              <ActivityIndicator size="small" color="#003366" />
+              <ActivityIndicator size="small" color="#003366" accessibilityLabel="Sincronizando..." />
             ) : (
               <MaterialCommunityIcons
                 name={assembleia.edital_url.toLowerCase().endsWith('.pdf') ? 'file-pdf-box' : 'image'}
@@ -574,7 +585,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>👥 Quórum Atual</Text>
         {estadoLoading ? (
-            <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
+            <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} accessibilityLabel="Processando ação..." />
         ) : !estado ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Text style={[styles.infoValue, { color: '#999' }]}>Indisponível</Text>
@@ -627,7 +638,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       </View>
       )}
 
-      {(isDiretoria || canGenerateReport) && assembleia && !isEncerrada && (
+      {(ehGestao || canGenerateReport) && assembleia && !isEncerrada && (
         <View style={[styles.infoCard, styles.diretoriaSection]}>
             <Text style={styles.infoTitle}>⚡ Ações e Gestão</Text>
             <View style={styles.diretoriaButtons}>
@@ -646,7 +657,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                         <Text style={styles.btnActionText}>Credenciamento (QR)</Text>
                     </TouchableOpacity>
                 )}
-                {isDiretoria && assembleia.estado === 'CRIADO' && (
+                {canCreateCredenciamentoToken(user) && assembleia.estado === 'CRIADO' && (
                     <TouchableOpacity
                       style={styles.btnManagement}
                       onPress={() => handleGerarToken(true)}
@@ -654,14 +665,16 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                         <Text style={styles.btnActionText}>Gerar QR Global</Text>
                     </TouchableOpacity>
                 )}
-                {isDiretoria && assembleia.estado === 'EM_CREDENCIAMENTO' && (
+                {ehGestao && assembleia.estado === 'EM_CREDENCIAMENTO' && (
                     <>
-                        <TouchableOpacity
-                          style={styles.btnManagement}
-                          onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}
-                        >
-                            <Text style={styles.btnActionText}>{(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}</Text>
-                        </TouchableOpacity>
+                        {podeComporMesaLocal && (
+                          <TouchableOpacity
+                            style={styles.btnManagement}
+                            onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}
+                          >
+                              <Text style={styles.btnActionText}>{(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}</Text>
+                          </TouchableOpacity>
+                        )}
                         <TouchableOpacity
                           style={styles.btnManagement}
                           onPress={() => handleGerarToken(false)}
@@ -670,14 +683,16 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                         </TouchableOpacity>
                     </>
                 )}
-                {isDiretoria && (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') && (
+                {ehGestao && (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') && (
                     <>
-                        <TouchableOpacity
-                          style={styles.btnManagement}
-                          onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}
-                        >
-                            <Text style={styles.btnActionText}>Trocar Mesa</Text>
-                        </TouchableOpacity>
+                        {podeComporMesaLocal && (
+                          <TouchableOpacity
+                            style={styles.btnManagement}
+                            onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}
+                          >
+                              <Text style={styles.btnActionText}>Trocar Mesa</Text>
+                          </TouchableOpacity>
+                        )}
                         <TouchableOpacity
                           style={[styles.btnManagement, styles.btnDanger]}
                           onPress={handleEncerrar}

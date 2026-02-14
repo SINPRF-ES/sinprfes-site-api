@@ -253,8 +253,61 @@
     filterUsers,
     getIcon,
     abrirModalGenerico,
-    fecharModalGenerico
+    fecharModalGenerico,
+    isGestao,
+    canManageAdmins,
+    canComposeMesa,
+    canCreateCredenciamentoToken,
+    canRegisterForEvent,
+    canCheckInEvent
   };
+
+  const PERFIL_ACESSO = {
+    ADMIN: 'ADMIN',
+    DIRETORIA: 'DIRETORIA',
+    COLABORADOR: 'COLABORADOR',
+    CONSELHEIRO: 'CONSELHEIRO'
+  };
+
+  /**
+   * CANON RBAC Helpers
+   */
+  function isGestao(perfil) {
+    const p = (perfil || "").toUpperCase();
+    return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.COLABORADOR, PERFIL_ACESSO.DIRETORIA].includes(p);
+  }
+
+  function canManageAdmins(perfil) {
+    return (perfil || "").toUpperCase() === PERFIL_ACESSO.ADMIN;
+  }
+
+  function canComposeMesa(user) {
+    if (!user) return false;
+    if ((user.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.ADMIN) return true;
+    const cargosAutorizados = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
+    return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
+  }
+
+  function canCreateCredenciamentoToken(user) {
+    if (!user) return false;
+    const cargosAutorizados = [
+      "Presidente da FENAPRF",
+      "Vice-Presidente da FENAPRF",
+      "Diretor de Secretaria",
+      "Diretor de Secretaria Substituto"
+    ];
+    return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
+  }
+
+  function canRegisterForEvent(perfil) {
+    const p = (perfil || "").toUpperCase();
+    return p === PERFIL_ACESSO.DIRETORIA || p === PERFIL_ACESSO.CONSELHEIRO;
+  }
+
+  function canCheckInEvent(perfil) {
+    const p = (perfil || "").toUpperCase();
+    return p === PERFIL_ACESSO.DIRETORIA || p === PERFIL_ACESSO.CONSELHEIRO;
+  }
 
   function abrirModalGenerico(titulo, html) {
     const modal = document.getElementById("modal-generic");

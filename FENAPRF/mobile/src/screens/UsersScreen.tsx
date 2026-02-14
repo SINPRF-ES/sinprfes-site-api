@@ -190,7 +190,7 @@ export default function UsersScreen({ navigation, route }: any) {
   ), []);
 
   if (loading && users.length === 0) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando lista de membros..." /></View>;
   }
 
   return (

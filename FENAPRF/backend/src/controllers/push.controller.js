@@ -131,11 +131,20 @@ exports.unregister = async (req, res) => {
 
 // (Opcional) broadcast manual para diretoria/admin
 exports.broadcast = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ success: false, error: "Sessão inválida.", requestId });
+
+    const perfil = (req.user.perfil_acesso || "").toUpperCase();
+    if (perfil !== 'ADMIN' && perfil !== 'DIRETORIA' && perfil !== 'COLABORADOR') {
+        log.warn("PushBroadcastNegado", { requestId, userId: atorId, perfil });
+        return res.status(403).json({ success: false, error: "Permissão insuficiente para enviar broadcast.", requestId });
+    }
+
     const { title, body, data } = req.body || {};
     if (!title || !body) {
-      return res.status(400).json({ success: false, error: "title e body são obrigatórios." });
+      return res.status(400).json({ success: false, error: "title e body são obrigatórios.", requestId });
     }
 
     const r = await pushService.sendBroadcast({
@@ -144,10 +153,12 @@ exports.broadcast = async (req, res) => {
       data: data || {},
     });
 
-    return res.json({ success: true, ...r });
+    log.info("PushBroadcastSucesso", { requestId, userId: atorId, title });
+    return res.json({ success: true, ...r, requestId });
   } catch (e) {
     log.error("PushBroadcastErro", {
       requestId,
+      userId: atorId,
       error: e.message,
       stack: e.stack
     });

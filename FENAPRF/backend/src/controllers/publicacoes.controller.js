@@ -15,7 +15,7 @@ const {
   isDescendant
 } = require("../services/drive.service");
 const log = require("../utils/log");
-const { normalizePerfil } = require("../../shared/canon");
+const { normalizePerfil, isGestao } = require("../../shared/canon");
 
 const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
@@ -46,17 +46,13 @@ function mapGoogleDriveError(err, requestId) {
   return { status, message, requestId };
 }
 
-/**
- * Verifica se o perfil tem permissão de gestão.
- */
-function isGestao(perfil) {
-  const p = normalizePerfil(perfil);
-  return ["ADMIN", "COLABORADOR", "DIRETORIA"].includes(p);
-}
 
 exports.listar = async (req, res) => {
   const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
+
     const folderId = req.query.folderId || ROOT_FOLDER_ID;
 
     // Busca os arquivos (passando o ID se houver)
@@ -102,8 +98,8 @@ exports.listar = async (req, res) => {
 
     return res.json(publicacoes);
   } catch (err) {
-    log.error("ErroListarDrive", { error: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
-    return res.status(500).json({ message: "Erro ao sincronizar com o Drive.", requestId: req.requestId });
+    log.error("ErroListarDrive", { error: err.message, stack: err.stack, requestId, userId: atorId });
+    return res.status(500).json({ message: "Erro ao sincronizar com o Drive.", requestId });
   }
 };
 
@@ -111,43 +107,46 @@ exports.listar = async (req, res) => {
  * POST /api/publicacoes/folders
  */
 exports.createFolder = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   let { parentFolderId, name } = req.body;
 
-  // Normalização: Se não vier ou for null, assume a raiz do módulo
-  if (!parentFolderId || parentFolderId === 'ROOT') {
-    parentFolderId = ROOT_FOLDER_ID;
-  }
-
-  if (!parentFolderId) {
-    log.error("ConfigErroDrive", { message: "Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.", requestId: req.requestId });
-    return res.status(500).json({ message: "Erro de configuração no servidor: Pasta raiz não definida.", requestId: req.requestId });
-  }
-
-  const atorId = req.user?.id;
-  const perfilAtor = req.user?.perfil_acesso;
-
-  if (!isGestao(perfilAtor)) {
-    return res.status(403).json({ message: "Permissão insuficiente para criar pastas." });
-  }
-
-  if (!name || name.trim().length === 0) {
-    return res.status(400).json({ message: "Nome da pasta é obrigatório." });
-  }
-
-  const cleanName = name.trim().substring(0, 80);
-
-  // Bloquear nomes reservados na raiz
-  if (parentFolderId === ROOT_FOLDER_ID && ["App", "Lixeira"].includes(cleanName)) {
-    return res.status(400).json({ message: "Nome de pasta reservado." });
-  }
-
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
+
+    // Normalização: Se não vier ou for null, assume a raiz do módulo
+    if (!parentFolderId || parentFolderId === 'ROOT') {
+      parentFolderId = ROOT_FOLDER_ID;
+    }
+
+    if (!parentFolderId) {
+      log.error("ConfigErroDrive", { message: "Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.", requestId });
+      return res.status(500).json({ message: "Erro de configuração no servidor: Pasta raiz não definida.", requestId });
+    }
+
+    const perfilAtor = req.user?.perfil_acesso;
+
+    if (!isGestao(perfilAtor)) {
+      return res.status(403).json({ message: "Permissão insuficiente para criar pastas.", requestId });
+    }
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ message: "Nome da pasta é obrigatório.", requestId });
+    }
+
+    const cleanName = name.trim().substring(0, 80);
+
+    // Bloquear nomes reservados na raiz
+    if (parentFolderId === ROOT_FOLDER_ID && ["App", "Lixeira"].includes(cleanName)) {
+      return res.status(400).json({ message: "Nome de pasta reservado.", requestId });
+    }
+
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
 
     // Validação estrita contra pastas de sistema
     if (parentFolderId === trashId || parentFolderId === appId) {
-      log.warn("PublicacoesCreateFolderDenied", { parentFolderId, trashId, appId, requestId: req.requestId });
-      return res.status(409).json({ message: "Não é permitido criar pastas aqui." });
+      log.warn("PublicacoesCreateFolderDenied", { parentFolderId, trashId, appId, requestId });
+      return res.status(409).json({ message: "Não é permitido criar pastas aqui.", requestId });
     }
 
     const folder = await createFolder(cleanName, parentFolderId);
@@ -158,15 +157,15 @@ exports.createFolder = async (req, res) => {
       folderId: folder.id,
       folderName: folder.name,
       parentFolderId: parentFolderId,
-      requestId: req.requestId,
+      requestId,
       authMode: getAuthMode()
     });
 
     return res.json({ success: true, folder });
   } catch (error) {
-    log.error("ErroCreateFolder", { error: error.message, stack: error.stack, userId: atorId, requestId: req.requestId });
-    const { status, message } = mapGoogleDriveError(error, req.requestId);
-    return res.status(status).json({ message, requestId: req.requestId });
+    log.error("ErroCreateFolder", { error: error.message, stack: error.stack, userId: atorId, requestId });
+    const { status, message } = mapGoogleDriveError(error, requestId);
+    return res.status(status).json({ message, requestId });
   }
 };
 
@@ -174,46 +173,49 @@ exports.createFolder = async (req, res) => {
  * POST /api/publicacoes/upload
  */
 exports.uploadFile = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   let { parentFolderId, name } = req.body;
 
-  // Normalização: Se não vier ou for null, assume a raiz do módulo
-  if (!parentFolderId || parentFolderId === 'ROOT') {
-    parentFolderId = ROOT_FOLDER_ID;
-  }
-
-  if (!parentFolderId) {
-    log.error("ConfigErroDriveUpload", { message: "Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.", requestId: req.requestId });
-    return res.status(500).json({ message: "Erro de configuração no servidor: Pasta raiz não definida.", requestId: req.requestId });
-  }
-
-  const file = req.file;
-  const atorId = req.user?.id;
-  const perfilAtor = req.user?.perfil_acesso;
-
-  if (!isGestao(perfilAtor)) {
-    return res.status(403).json({ message: "Permissão insuficiente para upload." });
-  }
-
-  if (!file) {
-    log.warn("PublicacoesUploadMissingFile", { requestId: req.requestId });
-    return res.status(400).json({ message: "Arquivo não enviado." });
-  }
-
-  // Validação de tipo: PDF e Imagens
-  const allowedMimes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-  if (!allowedMimes.includes(file.mimetype)) {
-    log.warn("PublicacoesUploadInvalidMime", { mimetype: file.mimetype, requestId: req.requestId });
-    return res.status(400).json({ message: "Tipo de arquivo não permitido. Use PDF ou Imagens." });
-  }
-
-  const fileName = (name || file.originalname).trim();
-
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
+
+    // Normalização: Se não vier ou for null, assume a raiz do módulo
+    if (!parentFolderId || parentFolderId === 'ROOT') {
+      parentFolderId = ROOT_FOLDER_ID;
+    }
+
+    if (!parentFolderId) {
+      log.error("ConfigErroDriveUpload", { message: "Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.", requestId });
+      return res.status(500).json({ message: "Erro de configuração no servidor: Pasta raiz não definida.", requestId });
+    }
+
+    const file = req.file;
+    const perfilAtor = req.user?.perfil_acesso;
+
+    if (!isGestao(perfilAtor)) {
+      return res.status(403).json({ message: "Permissão insuficiente para upload.", requestId });
+    }
+
+    if (!file) {
+      log.warn("PublicacoesUploadMissingFile", { requestId });
+      return res.status(400).json({ message: "Arquivo não enviado.", requestId });
+    }
+
+    // Validação de tipo: PDF e Imagens
+    const allowedMimes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    if (!allowedMimes.includes(file.mimetype)) {
+      log.warn("PublicacoesUploadInvalidMime", { mimetype: file.mimetype, requestId });
+      return res.status(400).json({ message: "Tipo de arquivo não permitido. Use PDF ou Imagens.", requestId });
+    }
+
+    const fileName = (name || file.originalname).trim();
+
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
 
     if (parentFolderId === trashId || parentFolderId === appId) {
-      log.warn("PublicacoesUploadDenied", { parentFolderId, trashId, appId, requestId: req.requestId });
-      return res.status(409).json({ message: "Não é permitido upload nesta pasta." });
+      log.warn("PublicacoesUploadDenied", { parentFolderId, trashId, appId, requestId });
+      return res.status(409).json({ message: "Não é permitido upload nesta pasta.", requestId });
     }
 
     const fileId = await uploadFile(file.buffer, fileName, file.mimetype, parentFolderId);
@@ -224,7 +226,7 @@ exports.uploadFile = async (req, res) => {
       fileId,
       fileName: fileName,
       parentFolderId: parentFolderId,
-      requestId: req.requestId,
+      requestId,
       authMode: getAuthMode()
     });
 
@@ -238,10 +240,10 @@ exports.uploadFile = async (req, res) => {
       stack: error.stack,
       userId: atorId,
       parentFolderId,
-      requestId: req.requestId
+      requestId
     });
-    const { status, message } = mapGoogleDriveError(error, req.requestId);
-    return res.status(status).json({ message, requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, requestId);
+    return res.status(status).json({ message, requestId });
   }
 };
 
@@ -249,30 +251,34 @@ exports.uploadFile = async (req, res) => {
  * PATCH /api/publicacoes/items/:id/rename
  */
 exports.renameItem = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   const { id } = req.params;
   const { name } = req.body;
-  const atorId = req.user?.id;
-  const perfilAtor = req.user?.perfil_acesso;
-
-  if (!isGestao(perfilAtor)) {
-    return res.status(403).json({ message: "Permissão insuficiente para renomear itens." });
-  }
-
-  if (!name || name.trim().length === 0) {
-    return res.status(400).json({ message: "Novo nome é obrigatório." });
-  }
 
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
+
+    const perfilAtor = req.user?.perfil_acesso;
+
+    if (!isGestao(perfilAtor)) {
+      return res.status(403).json({ message: "Permissão insuficiente para renomear itens.", requestId });
+    }
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ message: "Novo nome é obrigatório.", requestId });
+    }
+
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
     const itemData = await getItem(id);
 
     if (id === trashId || id === appId || id === ROOT_FOLDER_ID) {
-      return res.status(409).json({ message: "Não é permitido renomear pastas do sistema." });
+      return res.status(409).json({ message: "Não é permitido renomear pastas do sistema.", requestId });
     }
 
     // Bloquear renome em itens dentro de App ou Lixeira
     if (itemData.parents?.some(p => p === trashId || p === appId)) {
-      return res.status(409).json({ message: "Não é permitido renomear itens em pastas protegidas ou na lixeira." });
+      return res.status(409).json({ message: "Não é permitido renomear itens em pastas protegidas ou na lixeira.", requestId });
     }
 
     const item = await renameItem(id, name.trim());
@@ -281,14 +287,14 @@ exports.renameItem = async (req, res) => {
       userId: atorId,
       itemId: id,
       newName: name,
-      requestId: req.requestId
+      requestId
     });
 
     return res.json({ success: true, item });
   } catch (error) {
-    log.error("ErroRenameItem", { error: error.message, stack: error.stack, itemId: id, requestId: req.requestId });
-    const { status, message } = mapGoogleDriveError(error, req.requestId);
-    return res.status(status).json({ message, requestId: req.requestId });
+    log.error("ErroRenameItem", { error: error.message, stack: error.stack, itemId: id, requestId });
+    const { status, message } = mapGoogleDriveError(error, requestId);
+    return res.status(status).json({ message, requestId });
   }
 };
 
@@ -296,44 +302,47 @@ exports.renameItem = async (req, res) => {
  * PATCH /api/publicacoes/items/:id/move
  */
 exports.moveItem = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   const { id } = req.params;
   let { targetFolderId } = req.body;
   if (targetFolderId === 'ROOT') targetFolderId = ROOT_FOLDER_ID;
 
-  const atorId = req.user?.id;
-  const perfilAtor = req.user?.perfil_acesso;
-
-  if (!isGestao(perfilAtor)) {
-    return res.status(403).json({ message: "Permissão insuficiente para mover itens." });
-  }
-
-  if (!targetFolderId) {
-    return res.status(400).json({ message: "Pasta de destino é obrigatória." });
-  }
-
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
+
+    const perfilAtor = req.user?.perfil_acesso;
+
+    if (!isGestao(perfilAtor)) {
+      return res.status(403).json({ message: "Permissão insuficiente para mover itens.", requestId });
+    }
+
+    if (!targetFolderId) {
+      return res.status(400).json({ message: "Pasta de destino é obrigatória.", requestId });
+    }
+
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
     const itemData = await getItem(id);
 
     if (targetFolderId === trashId || targetFolderId === appId) {
-      return res.status(409).json({ message: "Não é permitido mover para esta pasta." });
+      return res.status(409).json({ message: "Não é permitido mover para esta pasta.", requestId });
     }
 
     // Proteção de pastas de sistema e root
     if (id === trashId || id === appId || id === ROOT_FOLDER_ID) {
-      return res.status(409).json({ message: "Não é permitido mover pastas do sistema." });
+      return res.status(409).json({ message: "Não é permitido mover pastas do sistema.", requestId });
     }
 
     // Bloquear mover itens que estão em App/Lixeira
     if (itemData.parents?.some(p => p === trashId || p === appId)) {
-      return res.status(409).json({ message: "Não é permitido mover itens de pastas protegidas ou da lixeira." });
+      return res.status(409).json({ message: "Não é permitido mover itens de pastas protegidas ou da lixeira.", requestId });
     }
 
     // Ciclo e descendência para pastas
     if (itemData.mimeType === FOLDER_MIMETYPE) {
        const isRecursive = await isDescendant(targetFolderId, id);
        if (isRecursive) {
-         return res.status(409).json({ message: "Não é permitido mover uma pasta para dentro dela mesma ou de suas subpastas." });
+         return res.status(409).json({ message: "Não é permitido mover uma pasta para dentro dela mesma ou de suas subpastas.", requestId });
        }
     }
 
@@ -345,7 +354,7 @@ exports.moveItem = async (req, res) => {
       itemMimeType: itemData.mimeType,
       fromParentId: item.oldParentId,
       toParentId: targetFolderId,
-      requestId: req.requestId,
+      requestId,
       outcome: "success"
     });
 
@@ -357,11 +366,11 @@ exports.moveItem = async (req, res) => {
       itemId: id,
       userId: atorId,
       targetFolderId,
-      requestId: req.requestId,
+      requestId,
       outcome: "error"
     });
-    const { status, message } = mapGoogleDriveError(error, req.requestId);
-    return res.status(status).json({ message, requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, requestId);
+    return res.status(status).json({ message, requestId });
   }
 };
 
@@ -369,26 +378,30 @@ exports.moveItem = async (req, res) => {
  * POST /api/publicacoes/items/:id/delete
  */
 exports.deleteItem = async (req, res) => {
-  const { id } = req.params;
   const atorId = req.user?.id;
-  const perfilAtor = req.user?.perfil_acesso;
-
-  if (!isGestao(perfilAtor)) {
-    return res.status(403).json({ message: "Permissão insuficiente para excluir itens." });
-  }
+  const requestId = req.requestId;
+  const { id } = req.params;
 
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
+
+    const perfilAtor = req.user?.perfil_acesso;
+
+    if (!isGestao(perfilAtor)) {
+      return res.status(403).json({ message: "Permissão insuficiente para excluir itens.", requestId });
+    }
+
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
     const itemData = await getItem(id);
 
     // Proteção de pastas de sistema e root
     if (id === trashId || id === appId || id === ROOT_FOLDER_ID) {
-      return res.status(409).json({ message: "Não é permitido excluir pastas do sistema." });
+      return res.status(409).json({ message: "Não é permitido excluir pastas do sistema.", requestId });
     }
 
     // Bloquear se item já está na lixeira
     if (itemData.parents?.some(p => p === trashId)) {
-      return res.status(409).json({ message: "Este item já está na lixeira." });
+      return res.status(409).json({ message: "Este item já está na lixeira.", requestId });
     }
 
     const item = await deleteItem(id);
@@ -399,7 +412,7 @@ exports.deleteItem = async (req, res) => {
       itemMimeType: itemData.mimeType,
       fromParentId: item.oldParentId,
       toParentId: trashId,
-      requestId: req.requestId,
+      requestId,
       outcome: "success"
     });
 
@@ -410,17 +423,14 @@ exports.deleteItem = async (req, res) => {
       stack: error.stack,
       itemId: id,
       userId: atorId,
-      requestId: req.requestId,
+      requestId,
       outcome: "error"
     });
-    const { status, message } = mapGoogleDriveError(error, req.requestId);
-    return res.status(status).json({ message, requestId: req.requestId });
+    const { status, message } = mapGoogleDriveError(error, requestId);
+    return res.status(status).json({ message, requestId });
   }
 };
 
-/**
- * Faz o streaming de um arquivo do Google Drive para o cliente.
- */
 /**
  * Faz o streaming de um arquivo do Google Drive para o cliente.
  */
@@ -430,7 +440,7 @@ exports.visualizar = async (req, res) => {
   const requestId = req.requestId;
 
   try {
-    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
 
     // FENAPRF: Segurança Hardened - Valida se o item pertence à árvore permitida
     const isPublic = await isDescendant(fileId, ROOT_FOLDER_ID);

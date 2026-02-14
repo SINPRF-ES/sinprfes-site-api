@@ -177,7 +177,7 @@
 
     function renderizarEstruturaBase() {
         const section = document.getElementById("sec-assembleias");
-        const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
+        const ehGestao = window.Utils.isGestao(currentUserPerfil);
 
         section.innerHTML = `
             <div id="sec-assembleias-lista">
@@ -186,7 +186,7 @@
                         <h2 style="margin:0; font-size:1.8rem; font-weight: 800;">🗳️ Assembleias e Votações</h2>
                         <p style="margin:0; font-size:1rem;">Participe das decisões institucionais</p>
 
-                        ${isDiretoria ? `
+                        ${ehGestao ? `
                             <button id="btn-abrir-criacao-ass" class="btn btn-success" style="margin-top:10px; font-weight:800; padding:12px 25px; border-radius:30px;">➕ Criar Nova Assembleia</button>
                         ` : ''}
 
@@ -371,9 +371,23 @@
             const isParticipavel = ['EM_CREDENCIAMENTO', 'INICIADO', 'SUSPENSA'].includes(a.estado);
             const isEncerrada = a.estado === 'ENCERRADO';
 
-            const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
+            const userInfo = window.Utils.obterUserInfo();
+            const ehGestao = window.Utils.isGestao(currentUserPerfil);
             const isPresidente = estado.mesa && estado.mesa.presidente_user_id === currentUserId;
-            const canSeeToken = estado.quorumVigente?.token && (isPresidente || isDiretoria || currentUserId === estado.quorumVigente.gerado_por_user_id);
+            const isMesa = estado.mesa && [
+                estado.mesa.presidente_user_id,
+                estado.mesa.vice_presidente_user_id,
+                estado.mesa.secretario_user_id,
+                estado.mesa.secretario_2_user_id
+            ].includes(currentUserId);
+
+            // CANON: Poder de Mesa - se houver mesa, apenas membros da mesa mandam.
+            const temAutoridade = isMesa || (!estado.mesa && ehGestao);
+
+            const canSeeToken = estado.quorumVigente?.token && (
+                temAutoridade ||
+                currentUserId === estado.quorumVigente.gerado_por_user_id
+            );
             const isCredenciamento = a.estado === 'EM_CREDENCIAMENTO';
 
             container.innerHTML = `
@@ -458,20 +472,20 @@
                     ` : ''}
 
                     <!-- Gestão (Diretoria / Presidente) -->
-                    ${((isDiretoria || isPresidente) && !isEncerrada) ? `
+                    ${((ehGestao || isPresidente) && !isEncerrada) ? `
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px; text-align: center;">
                             <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">🛠️ Ações de Gestão e Controle</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center;">
-                                ${isDiretoria && a.estado === 'CRIADO' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
-                                ${isDiretoria && a.estado === 'EM_CREDENCIAMENTO' ? `
-                                    <button class="btn btn-primary" style="font-weight:700;" data-action="preparar-mesa" data-aid="${id}">Compor Mesa</button>
-                                    <button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token" data-aid="${id}">Gerar Token</button>
+                                ${ehGestao && a.estado === 'CRIADO' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
+                                ${ehGestao && a.estado === 'EM_CREDENCIAMENTO' ? `
+                                    ${window.Utils.canComposeMesa(userInfo) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="preparar-mesa" data-aid="${id}">Compor Mesa</button>` : ''}
+                                    ${window.Utils.canCreateCredenciamentoToken(userInfo) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token" data-aid="${id}">Gerar Token</button>` : ''}
                                     <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" data-action="iniciar-execucao" data-aid="${id}">Iniciar Execução (Pauta)</button>
                                 ` : ''}
-                                ${(isDiretoria || isPresidente) && a.estado === 'INICIADO' ? `
+                                ${(ehGestao || isPresidente) && a.estado === 'INICIADO' ? `
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-recontagem" data-aid="${id}">🔄 Recontagem de Quórum</button>
                                 ` : ''}
-                                ${isDiretoria && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" data-action="encerrar-ass" data-aid="${id}">Encerrar Assembleia</button>` : ''}
+                                ${ehGestao && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" data-action="encerrar-ass" data-aid="${id}">Encerrar Assembleia</button>` : ''}
                                 ${(currentUserPerfil !== 'COMUNICADOR' && (a.estado === 'ENCERRADA' || a.estado === 'EM_CURSO' || a.estado === 'ABERTA')) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-relatorio" data-aid="${id}">Solicitar Relatório PDF</button>` : ''}
                             </div>
                         </div>
@@ -794,10 +808,21 @@
 
         const { assembleia, quorumVigente, votacaoAtiva, mesa, pedidosPalavra, propostas } = estado;
 
-        const isPresidente = mesa && mesa.presidente_user_id === currentUserId;
-        const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(currentUserPerfil);
-        const temAutoridade = isPresidente || isDiretoria;
-        const canSeeToken = quorumVigente?.token && (isPresidente || isDiretoria || currentUserId === quorumVigente.gerado_por_user_id);
+        const ehGestao = window.Utils.isGestao(currentUserPerfil);
+        const isMesa = mesa && [
+            mesa.presidente_user_id,
+            mesa.vice_presidente_user_id,
+            mesa.secretario_user_id,
+            mesa.secretario_2_user_id
+        ].includes(currentUserId);
+
+        // CANON: Poder de Mesa
+        const temAutoridade = isMesa || (!mesa && ehGestao);
+
+        const canSeeToken = quorumVigente?.token && (
+            temAutoridade ||
+            currentUserId === quorumVigente.gerado_por_user_id
+        );
 
         container.innerHTML = `
             <div class="section-card" style="background:#fff; color:#333; padding:30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-radius: 20px; text-align: center;">
@@ -933,14 +958,12 @@
                     <div class="section-block" style="margin-top:50px; border:3px solid #e74c3c; background:#fff8f8; border-radius:20px; padding:30px;">
                         <h4 style="color:#e74c3c; margin-bottom:20px; font-size:1rem; text-transform:uppercase; letter-spacing:2px; font-weight:900; display:flex; align-items:center; gap:10px;">🛠️ Painel de Controle e Autoridade da Mesa</h4>
                         <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
-                            ${isDiretoria ? `
-                                <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" data-action="preparar-votacao-item" data-aid="${assembleia.id}">➕ Iniciar Votação</button>
-                            ` : ''}
+                            <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" data-action="preparar-votacao-item" data-aid="${assembleia.id}">➕ Iniciar Votação</button>
                             <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" data-action="solicitar-recontagem" data-aid="${assembleia.id}">🔄 Solicitar Recontagem</button>
-                            ${isDiretoria && votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
+                            ${temAutoridade && votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
                                 <button class="btn btn-danger btn-sm" style="font-weight:800;" data-action="encerrar-votacao-manual" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}">⏹️ Encerrar Votacao Item</button>
                             ` : ''}
-                            ${isDiretoria ? `
+                            ${temAutoridade ? `
                                 <button class="btn btn-danger btn-sm" style="font-weight:800;" data-action="encerrar-ass" data-aid="${assembleia.id}">🚫 Encerrar Assembleia</button>
                             ` : ''}
                         </div>

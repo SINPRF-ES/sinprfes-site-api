@@ -137,7 +137,7 @@ export default function ArquivadosScreen({ navigation, route }: any) {
   }
 
   if (loading && users.length === 0) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando lista de membros arquivados..." /></View>;
   }
 
   const renderHistoryItem = ({ item }: { item: any }) => (
@@ -215,7 +215,11 @@ export default function ArquivadosScreen({ navigation, route }: any) {
             contentContainerStyle={{ paddingBottom: 20 }}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Text>{searchTerm ? 'Nenhum membro arquivado encontrado.' : 'Nenhum membro arquivado no momento.'}</Text>
+                <Text style={styles.emptyText}>
+                  {searchTerm
+                    ? `Nenhum membro arquivado encontrado para "${searchTerm}".`
+                    : 'Não há membros arquivados registrados no sistema.'}
+                </Text>
               </View>
             }
           />
@@ -246,7 +250,11 @@ export default function ArquivadosScreen({ navigation, route }: any) {
             contentContainerStyle={{ paddingBottom: 20, paddingHorizontal: 16 }}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Text>{historySearchTerm ? 'Nenhuma movimentação encontrada.' : 'Nenhuma movimentação registrada.'}</Text>
+                <Text style={styles.emptyText}>
+                  {historySearchTerm
+                    ? `Nenhuma movimentação encontrada para "${historySearchTerm}".`
+                    : 'Nenhuma movimentação de arquivamento registrada até o momento.'}
+                </Text>
               </View>
             }
           />

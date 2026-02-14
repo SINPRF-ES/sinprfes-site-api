@@ -10,6 +10,12 @@ const log = require("../utils/log");
 const Textos = require("../utils/textos");
 const axios = require("axios");
 const { parseUuid } = require("../utils/format");
+const {
+    canComposeMesa,
+    canCreateCredenciamentoToken,
+    canCheckInEvent,
+    isGestao
+} = require("../../shared/canon");
 
 // Anti brute-force simples em memória para tokens
 const failedCheckinAttempts = new Map();
@@ -96,7 +102,7 @@ async function estadoMini(req, res) {
 
     const mesa = await service.buscarMesa(assembleiaId);
     const isPresidente = mesa && mesa.presidente_user_id === atorId;
-    const isDiretoria = req.user.perfil_acesso === 'DIRETORIA' || req.user.perfil_acesso === 'ADMIN';
+    const isDiretoria = isGestao(req.user.perfil_acesso);
 
     const canSeeToken = estado.quorumVigente?.token && (isPresidente || isDiretoria || atorId === estado.quorumVigente.gerado_por_user_id);
 
@@ -289,13 +295,17 @@ async function criar(req, res) {
 
 async function abrir(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId: req.requestId });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId: req.requestId });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   try {
+    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    if (!autorizada) return res.status(403).json({ error: "Permissão insuficiente para abrir a assembleia.", requestId });
+
     const atualizada = await service.abrir(assembleiaId, atorId);
     socket.emitEvent(assembleiaId, "assembleia:status_changed", { estado: "EM_CREDENCIAMENTO" });
 
@@ -311,13 +321,17 @@ async function abrir(req, res) {
 
 async function iniciarExecucao(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   try {
+    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    if (!autorizada) return res.status(403).json({ error: "Permissão insuficiente para iniciar a assembleia.", requestId });
+
     const atualizada = await service.iniciarExecucao(assembleiaId, atorId);
     socket.emitEvent(assembleiaId, "assembleia:status_changed", { estado: "INICIADO" });
 
@@ -333,13 +347,17 @@ async function iniciarExecucao(req, res) {
 
 async function suspender(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   try {
+    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    if (!autorizada) return res.status(403).json({ error: "Permissão insuficiente para suspender a assembleia.", requestId });
+
     const { motivo, data_hora_retorno } = req.body;
     if (!motivo) return res.status(400).json({ error: "O motivo da suspensão é obrigatório." });
 
@@ -356,13 +374,17 @@ async function suspender(req, res) {
 
 async function retomar(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   try {
+    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    if (!autorizada) return res.status(403).json({ error: "Permissão insuficiente para retomar a assembleia.", requestId });
+
     const atualizada = await service.retomar(assembleiaId, atorId);
     socket.emitEvent(assembleiaId, "assembleia:status_changed", { estado: "INICIADO" });
 
@@ -376,13 +398,17 @@ async function retomar(req, res) {
 
 async function encerrarAssembleia(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   try {
+    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    if (!autorizada) return res.status(403).json({ error: "Permissão insuficiente para encerrar a assembleia.", requestId });
+
     const atualizada = await service.encerrar(assembleiaId, atorId);
     socket.emitEvent(assembleiaId, "assembleia:status_changed", { estado: "ENCERRADA" });
 
@@ -394,10 +420,13 @@ async function encerrarAssembleia(req, res) {
   }
 }
 
-// Helper para validar se o membro pertence à Mesa Diretora ou é da Diretoria FENAPRF
+/**
+ * Helper para validar autoridade em uma assembleia.
+ * CANON: Se a mesa estiver composta, apenas os membros da mesa têm poder.
+ * Se não houver mesa, perfis de gestão (ADMIN/DIRETORIA) podem gerenciar.
+ */
 async function verificarAutoridadeMesa(assembleiaId, user) {
   const mesa = await service.buscarMesa(assembleiaId);
-  const isDiretoria = user.perfil_acesso === 'DIRETORIA' || user.perfil_acesso === 'ADMIN';
   const isMesa = mesa && [
     mesa.presidente_user_id,
     mesa.vice_presidente_user_id,
@@ -405,12 +434,17 @@ async function verificarAutoridadeMesa(assembleiaId, user) {
     mesa.secretario_2_user_id
   ].includes(user.id);
 
+  const ehGestao = isGestao(user.perfil_acesso);
+
+  // Regra 6: Uma vez composta a mesa, ela assume poderes plenos e gestão não interfere (exceto se for membro da mesa)
+  const autorizada = isMesa || (!mesa && ehGestao);
+
   return {
     mesa,
-    autorizada: isDiretoria || isMesa,
+    autorizada,
     isMesa,
     isPresidente: mesa && mesa.presidente_user_id === user.id,
-    isDiretoria
+    isDiretoria: ehGestao
   };
 }
 
@@ -434,21 +468,11 @@ async function gerarTokenQuorum(req, res) {
        const existingToken = await service.buscarGlobalPorAssembleia(assembleiaId);
 
        if (!existingToken) {
-          // Apenas os 4 cargos específicos podem realizar a PRIMEIRA geração
+          // CANON: Apenas cargos específicos podem realizar a PRIMEIRA geração
           const fullUser = await usersService.buscarPorId(atorId);
-          const cargosAutorizados = [
-            "Presidente da FENAPRF",
-            "Vice-Presidente da FENAPRF",
-            "Diretor de Secretaria",
-            "Diretor de Secretaria Substituto"
-          ];
-          const cargoUser = fullUser?.cargo;
-          const cargo2User = fullUser?.cargo2;
 
-          const temCargoAutorizado = cargosAutorizados.includes(cargoUser) || cargosAutorizados.includes(cargo2User);
-
-          if (!temCargoAutorizado) {
-              log.warn("AssembleiaGerarTokenGlobalNegado", { requestId: req.requestId, userId: atorId, cargo: cargoUser, cargo2: cargo2User });
+          if (!canCreateCredenciamentoToken(fullUser)) {
+              log.warn("AssembleiaGerarTokenGlobalNegado", { requestId: req.requestId, userId: atorId });
               return res.status(403).json({
                 error: "Apenas o Presidente, Vice-Presidente, Diretor de Secretaria ou seu Substituto podem gerar o QR Code Global."
               });
@@ -578,10 +602,11 @@ async function atualizarQuorum(req, res) {
 
 async function checkin(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   const userId = atorId;
@@ -592,16 +617,18 @@ async function checkin(req, res) {
     // Verificar cooldown
     const failureData = failedCheckinAttempts.get(userId);
     if (failureData && failureData.count >= MAX_FAILED_ATTEMPTS && Date.now() - failureData.lastAttempt < COOLDOWN_TIME) {
-        log.warn("AssembleiaCheckinBloqueado", { requestId: req.requestId, userId, assembleiaId });
-        return res.status(429).json({ error: "Muitas tentativas inválidas. Tente novamente em alguns minutos." });
+        log.warn("AssembleiaCheckinBloqueado", { requestId, userId, assembleiaId });
+        return res.status(429).json({ error: "Muitas tentativas inválidas. Tente novamente em alguns minutos.", requestId });
     }
 
-    if (!token) return res.status(400).json({ error: "Token é obrigatório" });
+    if (!token) return res.status(400).json({ error: "Token é obrigatório", requestId });
 
-    // Bloqueia perfis que não votam nem contam quórum (ADMIN/COLABORADOR)
-    const perfil = (req.user.perfil_acesso || "").toUpperCase();
-    if (perfil === 'ADMIN' || perfil === 'COLABORADOR') {
-       return res.status(403).json({ error: "Seu perfil não possui permissão para realizar check-in em assembleias" });
+    // CANON: Bloqueia perfis que não votam nem contam quórum (ADMIN/COLABORADOR)
+    if (!canCheckInEvent(req.user.perfil_acesso)) {
+       return res.status(403).json({
+           error: "Seu perfil não possui permissão para realizar check-in em assembleias",
+           requestId
+       });
     }
 
     const quorum = await service.buscarQuorumPorToken(assembleiaId, token);
@@ -649,19 +676,22 @@ async function checkin(req, res) {
 
 async function definirMesa(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   try {
-    // RBAC Canônico FENAPRF: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
+    // CANON: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
     const fullUser = await usersService.buscarPorId(atorId);
-    const podeDefinir = fullUser?.cargo === 'Presidente da FENAPRF' || fullUser?.cargo === 'Vice-Presidente da FENAPRF' || req.user.perfil_acesso === 'ADMIN';
 
-    if (!podeDefinir) {
-        return res.status(403).json({ error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem compor a mesa.", requestId: req.requestId });
+    if (!canComposeMesa(fullUser)) {
+        return res.status(403).json({
+            error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem compor a mesa.",
+            requestId
+        });
     }
 
     const {
@@ -704,19 +734,22 @@ async function definirMesa(req, res) {
 
 async function substituirMesa(req, res) {
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
+  const requestId = req.requestId;
+  if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
 
   const assembleiaId = parseUuid(req.params.id);
-  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
+  if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId });
 
   const start = Date.now();
   try {
-    // RBAC Canônico FENAPRF: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
+    // CANON: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
     const fullUser = await usersService.buscarPorId(atorId);
-    const podeSubstituir = fullUser?.cargo === 'Presidente da FENAPRF' || fullUser?.cargo === 'Vice-Presidente da FENAPRF' || req.user.perfil_acesso === 'ADMIN';
 
-    if (!podeSubstituir) {
-        return res.status(403).json({ error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem alterar a mesa.", requestId: req.requestId });
+    if (!canComposeMesa(fullUser)) {
+        return res.status(403).json({
+            error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem alterar a mesa.",
+            requestId
+        });
     }
 
     const {
@@ -1289,9 +1322,8 @@ async function getGlobalTokenAtivo(req, res) {
   try {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
 
-    const perfil = (req.user.perfil_acesso || "").toUpperCase();
     // Apenas perfis de gestão podem recuperar o token
-    if (!['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes(perfil)) {
+    if (!isGestao(req.user.perfil_acesso)) {
         return res.status(403).json({ error: "Permissão insuficiente para visualizar o token global.", requestId });
     }
 

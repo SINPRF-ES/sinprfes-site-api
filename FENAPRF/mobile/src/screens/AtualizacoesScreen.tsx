@@ -155,7 +155,7 @@ const AtualizacoesScreen = () => {
                     disabled={isChecking || isApplying}
                 >
                     {isChecking ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color="#fff" accessibilityLabel="Verificando atualizações..." />
                     ) : (
                         <View style={styles.checkButtonInner}>
                             <FontAwesome name="refresh" size={18} color="#fff" style={{ marginRight: 8 }} />
@@ -214,7 +214,7 @@ const AtualizacoesScreen = () => {
                         >
                             {isApplying ? (
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <ActivityIndicator color="#fff" style={{ marginRight: 10 }} />
+                                    <ActivityIndicator color="#fff" style={{ marginRight: 10 }} accessibilityLabel="Aplicando atualização..." />
                                     <Text style={styles.actionButtonText}>
                                         {updateResult.type === 'OTA' ? 'Aplicando...' : 'Baixando APK...'}
                                     </Text>

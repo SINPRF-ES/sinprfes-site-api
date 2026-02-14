@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleias, getGlobalTokenAtivo } from '../../services/assembleiaService';
 import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
-import { isGestao } from '../../utils/user';
+import { isGestao, canCreateCredenciamentoToken } from '../../utils/user';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/format';
 
@@ -41,8 +41,10 @@ export default function AssembleiasScreen({ navigation }: any) {
         headerRight: () => {
           const actions: MenuAction[] = [];
           if (ehGestao) {
+            const podeGerarToken = canCreateCredenciamentoToken(user);
+
             actions.push({
-              label: 'Credenciamento (QR)',
+              label: podeGerarToken ? 'Credenciamento (QR)' : 'Ver Credenciamento',
               icon: 'qrcode-scan',
               onPress: async () => {
                   const gt = await getGlobalTokenAtivo();
@@ -137,7 +139,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       </View>
 
       {loading && !refreshing ? (
-        <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>
+        <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando lista de assembleias..." /></View>
       ) : (
         <FlatList
           data={filteredAssembleias}
