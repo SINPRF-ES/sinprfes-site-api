@@ -422,8 +422,9 @@ async function gerarQuorum(dados) {
         );
     }
 
-    // Regra Institucional: QR Global não possui validade temporal (valido_ate IS NULL)
-    const validoAteValue = is_global ? null : new Date(Date.now() + 10 * 60000);
+    // Regra Institucional: QR Global e Quórum Dinâmico não possuem validade temporal estrita (valido_ate IS NULL).
+    // O Quórum Dinâmico permanece válido até o próximo ser gerado ou a assembleia encerrar.
+    const validoAteValue = null;
     const newQuorumId = generateUuid();
 
     const { rows: qRows } = await client.query(
@@ -796,6 +797,17 @@ async function verificarElegibilidade(votacaoId, userId) {
     [votacaoId, userId]
   );
   return rows.length > 0;
+}
+
+async function contarElegiveisNaVotacao(votacaoId) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::INTEGER as total
+     FROM assembleia_checkins c
+     JOIN assembleia_votacoes v ON c.assembleia_quorum_id = v.quorum_snapshot_id
+     WHERE v.id = $1`,
+    [votacaoId]
+  );
+  return parseInt(rows[0].total || 0);
 }
 
 async function verificarElegibilidadePorQuorum(quorumId, userId, client = null) {
@@ -1389,7 +1401,7 @@ async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
       quorum_snapshot_id: quorum.id,
       titulo: `Votação: ${proposta.titulo}`,
       descricao: proposta.descricao,
-      duracao_segundos: 300, // Canonização: 5 minutos padrão
+      duracao_segundos: 120, // Canonização: 120 segundos padrão
       iniciada_por_user_id: userId
     }, client);
 
@@ -1809,6 +1821,7 @@ module.exports = {
   verificarElegibilidade,
   registrarVoto,
   contarVotos,
+  contarElegiveisNaVotacao,
   listarVotosNominais,
   finalizarVotacao,
   pedirPalavra,

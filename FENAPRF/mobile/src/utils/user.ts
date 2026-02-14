@@ -225,10 +225,10 @@ export const canManageAdmins = (perfil?: string | null) => {
 
 /**
  * CANON: Verifica se o usuário pode indicar membros para a Mesa Diretora.
+ * Regra: Exclusiva do Presidente/Vice da FENAPRF (Princípio da Soberania Institucional).
  */
 export const canComposeMesa = (user: any) => {
     if (!user) return false;
-    if (user.perfil_acesso === ROLES.ADMIN) return true;
     const cargosAutorizados = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
     return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
 };
