@@ -1,6 +1,7 @@
 // src/controllers/eventos.controller.js
 const service = require("../services/eventos.service");
 const { parseUuid } = require("../utils/format");
+const { canCheckInEvent } = require("../../shared/canon");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
 
@@ -107,6 +108,11 @@ exports.agendar = async (req, res) => {
   const requestId = req.requestId;
   try {
     if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
+    // CANON: Apenas Diretoria e Conselheiro podem fazer check-in
+    if (!canCheckInEvent(req.user.perfil_acesso)) {
+        return res.status(403).json({ error: "Seu perfil não possui permissão para realizar check-in.", requestId });
+    }
 
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);

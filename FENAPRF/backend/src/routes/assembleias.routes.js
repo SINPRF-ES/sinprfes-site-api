@@ -68,15 +68,17 @@ router.post("/:id/propostas/:prid/votar", auth, assemblyCommandLimiter, controll
 // Relatório (Governança interna no controller: todos exceto COMUNICADOR podem gerar se encerrada)
 router.post("/:id/relatorio", auth, controller.gerarRelatorio);
 
-// Diagnóstico (Admin e Diretoria)
+// Diagnóstico (Grupo Gestão: ADMIN, DIRETORIA, COLABORADOR)
 router.get("/:id/diagnostico", auth, (req, res, next) => {
-    if (req.user.perfil_acesso === 'ADMIN' || req.user.perfil_acesso === 'DIRETORIA') return next();
-    res.status(403).json({ error: "Acesso restrito a administradores ou diretoria" });
+    const p = (req.user.perfil_acesso || "").toUpperCase();
+    if (p === 'ADMIN' || p === 'DIRETORIA' || p === 'COLABORADOR') return next();
+    res.status(403).json({ error: "Acesso restrito à gestão" });
 }, controller.diagnostico);
 
 router.post("/:id/diagnostico/limpar-logs", auth, (req, res, next) => {
-    if (req.user.perfil_acesso === 'ADMIN' || req.user.perfil_acesso === 'DIRETORIA') return next();
-    res.status(403).json({ error: "Acesso restrito a administradores ou diretoria" });
+    const p = (req.user.perfil_acesso || "").toUpperCase();
+    if (p === 'ADMIN' || p === 'DIRETORIA' || p === 'COLABORADOR') return next();
+    res.status(403).json({ error: "Acesso restrito à gestão" });
 }, diagnosticLimiter, controller.limparLogsAuditoria);
 
 module.exports = router;

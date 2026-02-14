@@ -10,7 +10,7 @@
         const secLogistica = document.getElementById("sec-logistica");
         if (!secLogistica) return;
 
-        const isManager = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes((perfil || "").toUpperCase());
+        const isManager = window.Utils.isGestao(perfil);
 
         if (!document.getElementById('style-logistica')) {
             const s = document.createElement('style');

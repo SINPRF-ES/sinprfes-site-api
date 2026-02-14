@@ -15,7 +15,7 @@ const {
   isDescendant
 } = require("../services/drive.service");
 const log = require("../utils/log");
-const { normalizePerfil } = require("../../shared/canon");
+const { normalizePerfil, isGestao } = require("../../shared/canon");
 
 const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
@@ -46,13 +46,6 @@ function mapGoogleDriveError(err, requestId) {
   return { status, message, requestId };
 }
 
-/**
- * Verifica se o perfil tem permissão de gestão.
- */
-function isGestao(perfil) {
-  const p = normalizePerfil(perfil);
-  return ["ADMIN", "COLABORADOR", "DIRETORIA"].includes(p);
-}
 
 exports.listar = async (req, res) => {
   const atorId = req.user?.id;

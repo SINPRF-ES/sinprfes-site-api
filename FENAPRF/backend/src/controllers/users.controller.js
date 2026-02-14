@@ -13,7 +13,9 @@ const { enviarEmailBoasVindasUser } = require("../services/email.service");
 const { normalizarCpf, parseUuid } = require("../utils/format");
 const {
   normalizeSexo,
-  normalizePerfil
+  normalizePerfil,
+  isGestao,
+  canManageAdmins
 } = require("../../shared/canon");
 
 const PERFIL_RANK = {
@@ -23,17 +25,17 @@ const PERFIL_RANK = {
   CONSELHEIRO: 10
 };
 
-function perfilGestao(perfil) {
-  const p = normalizePerfil(perfil);
-  return ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(p);
-}
 
 function canEditorEditTarget(editorPerfil, targetPerfil) {
   const e = (editorPerfil || "").toUpperCase();
   const t = (targetPerfil || "").toUpperCase();
 
   if (e === "ADMIN") return true;
-  if (e === "COLABORADOR") return t !== "ADMIN";
+
+  // Colaborador e Diretoria não podem editar ADMIN (Regra de Hierarquia Protegida)
+  if (t === "ADMIN") return false;
+
+  if (e === "COLABORADOR") return true;
 
   const eRank = PERFIL_RANK[e] || 0;
   const tRank = PERFIL_RANK[t] || 0;
@@ -224,7 +226,7 @@ exports.getUserById = async (req, res) => {
       return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO });
     }
     const perfilAtor = (req.user.perfil_acesso || "CONSELHEIRO").toUpperCase();
-    const ehGestor = perfilGestao(perfilAtor);
+    const ehGestor = isGestao(perfilAtor);
     const ehProprioUsuario = String(atorId) === String(idAlvo);
 
     if (!ehGestor && !ehProprioUsuario) {
@@ -275,8 +277,8 @@ exports.listarUsers = async (req, res) => {
     const incluirArquivados = String(req.query.incluirArquivados || "").trim() === "1";
     const apenasArquivados = String(req.query.apenasArquivados || "").trim() === "1";
 
-    const incluirArquivadosEfetivo = incluirArquivados && perfilGestao(perfilAcesso);
-    const apenasArquivadosEfetivo = apenasArquivados && perfilGestao(perfilAcesso);
+    const incluirArquivadosEfetivo = incluirArquivados && isGestao(perfilAcesso);
+    const apenasArquivadosEfetivo = apenasArquivados && isGestao(perfilAcesso);
 
     const lista = await usersService.listarParaPerfil(
       perfilAcesso,
@@ -365,7 +367,7 @@ exports.atualizarUser = async (req, res) => {
   try {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
+    if (!isGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
 
     const alvo = await usersService.getMe(targetUserId);
     if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO, requestId: req.requestId });
@@ -428,12 +430,14 @@ exports.atualizarUser = async (req, res) => {
       const novoPerfil = normalizePerfil(body.perfil_acesso);
       if (atorId === targetUserId) return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso.", requestId: req.requestId });
 
-      if (novoPerfil === "ADMIN") {
-         if (perfilAtor !== "ADMIN") return res.status(403).json({ message: "Apenas ADMIN pode conceder o perfil ADMIN.", requestId: req.requestId });
-      }
-
-      if (alvo.perfil_acesso === "ADMIN" && perfilAtor !== "ADMIN") {
-        return res.status(403).json({ message: "Apenas ADMIN pode retirar o perfil ADMIN.", requestId: req.requestId });
+      // CANON: Apenas ADMIN pode conceder ou retirar perfil ADMIN
+      if (novoPerfil === "ADMIN" || alvo.perfil_acesso === "ADMIN") {
+         if (!canManageAdmins(perfilAtor)) {
+             return res.status(403).json({
+                 message: "Apenas administradores podem gerenciar o perfil ADMIN.",
+                 requestId: req.requestId
+             });
+         }
       }
 
       // Garante que o editor pode atribuir o novo perfil (não pode promover alguém acima de si)
@@ -569,7 +573,7 @@ exports.criarUser = async (req, res) => {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
 
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilCriador)) return res.status(403).json({ message: Textos.USERS.PERMISSAO_CRIAR, requestId: req.requestId });
+    if (!isGestao(perfilCriador)) return res.status(403).json({ message: Textos.USERS.PERMISSAO_CRIAR, requestId: req.requestId });
 
     const body = req.body || {};
 
@@ -588,9 +592,15 @@ exports.criarUser = async (req, res) => {
     if (checkCpf.rows.length > 0) return res.status(409).json({ message: `CPF já pertence ao membro: ${checkCpf.rows[0].name}.`, requestId: req.requestId });
 
     // Se perfil_acesso vier explicitamente null ou vazio, assume sem acesso (NULL)
-    const perfil_acesso = (body.perfil_acesso === null || body.perfil_acesso === "")
+    let perfil_acesso = (body.perfil_acesso === null || body.perfil_acesso === "")
         ? null
         : normalizePerfil(body.perfil_acesso || "CONSELHEIRO");
+
+    // CANON: Apenas ADMIN pode cadastrar novos ADMINs
+    if (perfil_acesso === "ADMIN" && !canManageAdmins(perfilCriador)) {
+        log.warn("TentativaIndevidaCriarAdmin", { creatorId: atorId, requestId: req.requestId });
+        perfil_acesso = "CONSELHEIRO"; // Fallback seguro
+    }
     const cargo = body.cargo || null;
     const uf = body.uf || null;
 
@@ -698,7 +708,7 @@ exports.arquivarUser = async (req, res) => {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
 
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
+    if (!isGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
 
     const alvo = await usersService.getMe(targetUserId);
     if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO, requestId: req.requestId });
@@ -733,7 +743,7 @@ exports.desarquivarUser = async (req, res) => {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
 
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
+    if (!isGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
 
     const alvo = await usersService.getMe(targetUserId);
     if (!alvo) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO, requestId: req.requestId });
@@ -793,7 +803,7 @@ exports.uploadAvatarPorId = async (req, res) => {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
 
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
+    if (!isGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
 
     if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado.", requestId: req.requestId });
 
@@ -845,7 +855,7 @@ exports.removerAvatarPorId = async (req, res) => {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
 
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
+    if (!isGestao(perfilAtor)) return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId: req.requestId });
 
     const antes = await usersService.getMe(targetUserId);
     if (!antes) return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO, requestId: req.requestId });

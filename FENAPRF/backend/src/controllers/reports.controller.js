@@ -5,7 +5,7 @@ const emailService = require("../services/email.service");
 const usersService = require("../services/users.service");
 const log = require("../utils/log");
 const { formatarCPF, parseUuid } = require("../utils/format");
-const { slugify } = require("../../shared/canon");
+const { slugify, isGestao } = require("../../shared/canon");
 
 /**
  * Gera um slug amigável para nome de arquivo.
@@ -89,7 +89,7 @@ exports.generateReport = async (req, res) => {
       filename = slug ? `dossie_${slug}.pdf` : `dossie_user_${dados.id}.pdf`;
 
       // Regra de permissão para CPF no PDF (FENAPRF Canon)
-      const podeVerCpf = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes((requesterSession.perfil_acesso || "").toUpperCase());
+      const podeVerCpf = isGestao(requesterSession.perfil_acesso);
       pdfBuffer = await pdfService.gerarPdfDossieUser(dados, { podeVerCpf });
 
     } else if (["UF", "SITUACAO"].includes(type)) {
@@ -181,7 +181,7 @@ exports.previewReport = async (req, res) => {
         title: "Dados Pessoais",
         items: [
           { label: "Nome", value: data.nome },
-          { label: "CPF", value: data.cpf ? (["ADMIN", "DIRETORIA", "COLABORADOR"].includes((requesterSession.perfil_acesso || "").toUpperCase()) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
+          { label: "CPF", value: data.cpf ? (isGestao(requesterSession.perfil_acesso) ? formatarCPF(data.cpf) : formatarCPF(data.cpf).replace(/\d/g, (match, offset) => (offset > 3 && offset < 11 ? "*" : match))) : "-" },
           { label: "Sexo", value: data.sexo === 'M' ? '♂️ Masculino' : (data.sexo === 'F' ? '♀️ Feminino' : '-') },
           { label: "UF", value: data.uf || "-" },
           { label: "Situação", value: data.situacao || "-" }

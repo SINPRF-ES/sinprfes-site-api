@@ -11,8 +11,8 @@
 
     function inicializarNotificacoes(perfil) {
         // Regra de acesso já tratada pelo orchestrator, mas garantimos aqui
-        const perfisAutorizados = ["ADMIN", "DIRETORIA", "COLABORADOR"];
-        if (!perfisAutorizados.includes(perfil)) return;
+        const ehGestao = global.Canon?.isGestao ? global.Canon.isGestao(perfil) : ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfil);
+        if (!ehGestao) return;
 
         setupInterface();
         setupHandlers();

@@ -2,12 +2,13 @@
 const pushCampaignService = require("../services/pushCampaign.service");
 const pushService = require("../services/push.service");
 const log = require("../utils/log");
+const { isGestao } = require("../../shared/canon");
 const { v4: uuidv4 } = require("uuid");
 
 exports.sendCampaign = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;
-  const perfil = req.user?.perfil_acesso || req.user?.perfil || "USER";
+  const perfil = (req.user?.perfil_acesso || "").toUpperCase();
 
   const payloadForLog = req.body ? {
     ...req.body,
@@ -32,6 +33,11 @@ exports.sendCampaign = async (req, res) => {
   });
 
   try {
+    if (!isGestao(perfil)) {
+        log.warn("PushCampaign.Negado", { requestId, userId: createdBy, perfil });
+        return res.status(403).json({ success: false, error: "Permissão insuficiente para enviar push.", requestId });
+    }
+
     const { title, body, targetType, targetValue, data } = req.body || {};
     const errors = {};
 
