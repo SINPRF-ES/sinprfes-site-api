@@ -89,6 +89,7 @@ Certas operações críticas são restritas a cargos específicos, independentem
 | **Composição de Mesa** | Presidente/Vice FENAPRF ou ADMIN |
 | **Gestão de Quórum** | Exclusiva da Mesa Diretora (após composta) ou ADMIN |
 | **Registro em Eventos** | Restrito a DIRETORIA e CONSELHEIRO (ADMIN/COLABORADOR não se registram) |
+| **Garantia Hospedagem** | Eventos AGE/AGO: Garantida para 2 conselheiros por UF. Alerta no 3º registro. |
 
 ### 7.3. O "Poder da Mesa" (Princípio da Soberania)
 Durante uma Assembleia ativa, uma vez que a **Mesa Diretora** (4 membros) é definida e salva:

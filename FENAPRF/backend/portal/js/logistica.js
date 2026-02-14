@@ -31,6 +31,7 @@
                 .log-table th, .log-table td { border: 1px solid #eee; padding: 10px; text-align: left; }
                 .log-table th { background: #f8f9fa; color: #003366; }
                 .log-row-conflict { background: #fff3cd !important; }
+                .log-row-hosting-limit { background: #f8d7da !important; color: #721c24 !important; }
                 .btn-log { padding: 10px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
                 .btn-log-primary { background: #003366; color: #fff; }
                 .btn-log-outline { background: transparent; border: 1px solid #003366; color: #003366; }
@@ -163,9 +164,13 @@
                                     ${inscricoes.map(i => {
                                         // Simulação simples de conflito no frontend web
                                         const conflitos = verificarConflitosSimples(i, inscricoes);
+                                        const classeRow = i.excede_limite_hospedagem ? 'log-row-hosting-limit' : (conflitos ? 'log-row-conflict' : '');
                                         return `
-                                            <tr class="${conflitos ? 'log-row-conflict' : ''}">
-                                                <td><strong>${i.nome}</strong></td>
+                                            <tr class="${classeRow}">
+                                                <td>
+                                                    <strong>${i.nome}</strong>
+                                                    ${i.excede_limite_hospedagem ? '<br><small style="color:#d32f2f; font-weight:bold;">⚠️ Limite Hospedagem Excedido</small>' : ''}
+                                                </td>
                                                 <td>${i.cargo || '-'}</td>
                                                 <td>${i.uf || '-'}</td>
                                                 <td>${new Date(i.data_chegada).toLocaleString()}</td>

@@ -74,7 +74,7 @@ exports.criarEvento = async (req, res) => {
     try {
         if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
 
-        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, assembleia_id } = req.body;
+        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, assembleia_id, tipo } = req.body;
 
         if (!titulo || !data_inicio || !data_fim) {
             return res.status(400).json({ error: "Título e datas são obrigatórios." });
@@ -92,11 +92,11 @@ exports.criarEvento = async (req, res) => {
         await client.query("BEGIN");
 
         const query = `
-            INSERT INTO logistica_eventos (titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, assembleia_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO logistica_eventos (titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, assembleia_id, tipo)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
         `;
-        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, STATUS_EVENTO.ATIVO, validAssembleiaId]);
+        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, STATUS_EVENTO.ATIVO, validAssembleiaId, tipo]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
@@ -128,7 +128,7 @@ exports.atualizarEvento = async (req, res) => {
 
         const eventoId = parseUuid(req.params.id);
         if (!eventoId) return res.status(400).json({ error: "ID inválido (UUID esperado).", requestId: req.requestId });
-        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, justificativa, assembleia_id } = req.body;
+        const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, justificativa, assembleia_id, tipo } = req.body;
 
         if (!justificativa) {
             return res.status(400).json({ error: "Justificativa é obrigatória para alterações de gestão.", requestId: req.requestId });
@@ -151,11 +151,11 @@ exports.atualizarEvento = async (req, res) => {
 
         const query = `
             UPDATE logistica_eventos
-            SET titulo = $1, descricao = $2, data_inicio = $3, data_fim = $4, documento_url = $5, documento_id = $6, status = $7, assembleia_id = $8, atualizado_em = NOW()
-            WHERE id = $9
+            SET titulo = $1, descricao = $2, data_inicio = $3, data_fim = $4, documento_url = $5, documento_id = $6, status = $7, assembleia_id = $8, tipo = $9, atualizado_em = NOW()
+            WHERE id = $10
             RETURNING *
         `;
-        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, validAssembleiaId, eventoId]);
+        const { rows } = await client.query(query, [titulo, descricao, data_inicio, data_fim, documento_url, documento_id, status, validAssembleiaId, tipo, eventoId]);
         const evento = rows[0];
 
         await registrarAuditoria(client, {
@@ -296,9 +296,16 @@ exports.listarInscricoes = async (req, res) => {
                 u.uf,
                 u.cpf,
                 u.telefone1 as telefone,
-                u.email
+                u.email,
+                CASE
+                    WHEN (le.tipo IN ('AGE', 'AGO') OR (le.tipo IS NULL AND a.tipo IN ('AGE', 'AGO')))
+                    THEN (COUNT(*) OVER (PARTITION BY u.uf)) > 2
+                    ELSE FALSE
+                END as excede_limite_hospedagem
             FROM logistica_inscricoes i
             JOIN users u ON i.user_id = u.id
+            JOIN logistica_eventos le ON i.evento_id = le.id
+            LEFT JOIN assembleias a ON le.assembleia_id = a.id
             WHERE i.evento_id = $1
             ORDER BY u.name ASC
         `;
@@ -340,15 +347,43 @@ exports.registrarMinhaInscricao = async (req, res) => {
         }
 
         // Verificar se evento está ativo
-        const { rows: evRows } = await client.query("SELECT status, titulo, data_inicio, data_fim FROM logistica_eventos WHERE id = $1", [validEventoId]);
+        const { rows: evRows } = await client.query(`
+            SELECT le.status, le.titulo, le.data_inicio, le.data_fim, le.tipo, le.assembleia_id, a.tipo as assembleia_tipo
+            FROM logistica_eventos le
+            LEFT JOIN assembleias a ON le.assembleia_id = a.id
+            WHERE le.id = $1
+        `, [validEventoId]);
+
         if (evRows.length === 0) return res.status(404).json({ error: "Evento não encontrado.", requestId: req.requestId });
 
-        if (evRows[0].status !== STATUS_EVENTO.ATIVO) {
+        const evento = evRows[0];
+        const tipoEvento = evento.tipo || evento.assembleia_tipo;
+
+        if (evento.status !== STATUS_EVENTO.ATIVO) {
             const msg = evRows[0].status === STATUS_EVENTO.ENCERRADO ? "Evento encerrado." : "Evento cancelado.";
             return res.status(400).json({ error: msg, requestId: req.requestId });
         }
 
         await client.query("BEGIN");
+
+        // FENAPRF: Canonização de Hospedagem (AGE/AGO)
+        const { rows: ufRows } = await client.query("SELECT uf FROM users WHERE id = $1", [atorId]);
+        const userUF = ufRows[0]?.uf;
+        let warning = null;
+
+        if (userUF && ['AGE', 'AGO'].includes(tipoEvento)) {
+            const { rows: countRows } = await client.query(`
+                SELECT count(*) as total
+                FROM logistica_inscricoes i
+                JOIN users u ON i.user_id = u.id
+                WHERE i.evento_id = $1 AND u.uf = $2 AND i.user_id != $3
+            `, [validEventoId, userUF, atorId]);
+
+            const totalUF = parseInt(countRows[0].total);
+            if (totalUF >= 2) {
+                warning = `A UF ${userUF} já possui ${totalUF} inscritos. Em eventos ${tipoEvento}, a hospedagem é garantida para apenas 2 conselheiros por UF.`;
+            }
+        }
 
         const query = `
             INSERT INTO logistica_inscricoes (evento_id, user_id, data_chegada, data_saida, observacoes)
@@ -377,7 +412,7 @@ exports.registrarMinhaInscricao = async (req, res) => {
             }
         } catch (e) { log.error("Logistica.EmailConfirmacao.Erro", e); }
 
-        res.json(inscricao);
+        res.json({ ...inscricao, warning });
     } catch (err) {
         await client.query("ROLLBACK");
         log.error("Logistica.registrarMinhaInscricao.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });

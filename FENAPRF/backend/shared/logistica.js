@@ -93,6 +93,8 @@
     ACOES_AUDITORIA,
     RECURSO_TIPO,
     GRUPOS_CONFLITO,
-    verificarConflitosUF
+    verificarConflitosUF,
+    LIMIT_HOSPEDAGEM_UF: 2,
+    EVENTO_TIPOS_HOSPEDAGEM_GARANTIDA: ['AGE', 'AGO']
   };
 }));
