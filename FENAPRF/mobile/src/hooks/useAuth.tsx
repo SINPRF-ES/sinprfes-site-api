@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (sessao?.token) {
           setToken(sessao.token);
+          if (sessao.user) {
+              setUser(sessao.user);
+          }
 
           try {
             // O interceptor de resposta cuidará do refresh se o token estiver expirado.
@@ -88,9 +91,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } catch (error: any) {
             console.error('[Auth.loadSession.error]', error.message);
-            // Se falhou mesmo após tentativa de refresh (ou se refresh falhou), desloga
-            setToken(null);
-            setUser(null);
+
+            // Se for erro de rede, não deslogamos para evitar quedas acidentais
+            const isNetworkError = !error.response && !!error.request;
+            const isCriticalError = error.response?.status === 401 || error.response?.status === 403;
+
+            if (isCriticalError && !isNetworkError) {
+                logger.warn('[Auth.loadSession] Erro crítico na sessão inicial. Limpando.');
+                setToken(null);
+                setUser(null);
+                await limparSessao();
+            } else {
+                logger.info('[Auth.loadSession] Erro não crítico ou de rede. Mantendo sessão local.');
+            }
           }
         }
       } finally {

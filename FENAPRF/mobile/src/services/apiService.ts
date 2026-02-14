@@ -35,7 +35,17 @@ function getTokenExpiration(token: string): number | null {
     if (parts.length !== 3) return null;
     const payload = parts[1];
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = JSON.parse(atob(base64));
+
+    // Robustez para ambientes React Native onde atob pode estar ausente
+    let decodedStr;
+    if (typeof atob === 'function') {
+        decodedStr = atob(base64);
+    } else {
+        // Fallback básico para Base64 se atob falhar (best effort)
+        decodedStr = Buffer.from(base64, 'base64').toString();
+    }
+
+    const decoded = JSON.parse(decodedStr);
     return decoded.exp ? decoded.exp * 1000 : null;
   } catch (e) {
     return null;
@@ -232,12 +242,14 @@ async function executeSilentRefresh(): Promise<string> {
 
         const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-        // Atualiza o storage com os novos tokens
+        // Atualiza o storage com os novos tokens preservando o usuário atual
         const sessaoAtual = await carregarSessao();
+        const userExistente = sessaoAtual?.user;
+
         await salvarSessao({
             token: newToken,
             refreshToken: newRefreshToken,
-            user: sessaoAtual?.user || { id: 'unknown' } as any
+            user: (userExistente && userExistente.id !== 'unknown') ? userExistente : (userExistente || { id: 'unknown' } as any)
         });
 
         logger.info('[Auth.Refresh] Sucesso na renovação.');

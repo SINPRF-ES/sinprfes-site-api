@@ -394,11 +394,19 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         {canSeeToken && (
-            <View style={styles.tokenCard}>
+            <TouchableOpacity
+                style={styles.tokenCard}
+                onPress={() => navigation.navigate('VisualizarToken', {
+                    assembleiaId: id,
+                    token: estado.quorumVigente?.token,
+                    assembleiaTitulo: estado.assembleia.titulo,
+                    type: estado.quorumVigente?.is_global ? 'GLOBAL' : 'QUORUM'
+                })}
+            >
                 <Text style={styles.tokenLabel}>🔑 Token de Presença Vigente</Text>
                 <Text style={styles.tokenValue}>{estado.quorumVigente?.token}</Text>
-                <Text style={styles.tokenHint}>Compartilhe com os presentes</Text>
-            </View>
+                <Text style={styles.tokenHint}>Toque para ampliar ou ver QR Code</Text>
+            </TouchableOpacity>
         )}
 
         {proposta_pendente_branch && (

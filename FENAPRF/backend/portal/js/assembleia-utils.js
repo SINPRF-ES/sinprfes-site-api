@@ -7,14 +7,16 @@
   const AssembleiaUtils = {
     getStatusLabel: function (status) {
       switch (status) {
-        case 'CRIADA':
-          return 'AGENDADA';
-        case 'ABERTA':
-          return 'ABERTA';
-        case 'EM_CURSO':
-          return 'EM ANDAMENTO';
-        case 'ENCERRADA':
-          return 'ENCERRADA';
+        case 'CRIADO':
+          return 'Agendada';
+        case 'EM_CREDENCIAMENTO':
+          return 'Em credenciamento';
+        case 'INICIADO':
+          return 'Em andamento';
+        case 'SUSPENSA':
+          return 'Suspensa';
+        case 'ENCERRADO':
+          return 'Encerrada';
         default:
           return status || 'STATUS DESCONHECIDO';
       }
@@ -22,13 +24,15 @@
 
     getStatusBadgeClass: function (status) {
       switch (status) {
-        case 'ABERTA':
+        case 'EM_CREDENCIAMENTO':
           return 'badge-success';
-        case 'EM_CURSO':
+        case 'INICIADO':
           return 'badge-warning';
-        case 'ENCERRADA':
+        case 'SUSPENSA':
+          return 'badge-secondary';
+        case 'ENCERRADO':
           return 'badge-danger';
-        case 'CRIADA':
+        case 'CRIADO':
           return 'badge-info';
         default:
           return 'badge-secondary';
@@ -37,13 +41,15 @@
 
     getStatusEmoji: function (status) {
       switch (status) {
-        case 'ABERTA':
+        case 'EM_CREDENCIAMENTO':
           return '🟢 ';
-        case 'EM_CURSO':
+        case 'INICIADO':
           return '🟡 ';
-        case 'ENCERRADA':
+        case 'SUSPENSA':
+          return '⏸️ ';
+        case 'ENCERRADO':
           return '🔴 ';
-        case 'CRIADA':
+        case 'CRIADO':
           return '🔵 ';
         default:
           return '⚪ ';
