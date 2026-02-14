@@ -59,8 +59,11 @@ O sistema possui três módulos distintos para votação e presença:
 *Seção atualizada em: 2025-05-22*
 
 ### 6.1. Status da Implementação
-- **Back vs Docs**: O código backend reflete fielmente as regras documentadas em `assembleia.md` e `schema.md`.
+- **Back vs Docs**: O código backend reflete a maior parte das regras, mas foram identificadas divergências pontuais com as regras canônicas institucionais.
 - **Divergências Sanadas**: A divergência documental sobre o voto por omissão (anteriormente citado como SIM) foi corrigida para **ABSTENCAO**, alinhando a documentação com a realidade já implementada no código backend.
+- **Divergências de Negócio Identificadas**:
+    - **Duração de Votação**: O código utiliza 5 minutos (300s), enquanto a regra institucional determina 2 minutos (120s).
+    - **Geração de Snapshot**: O código permite perfis ADMIN/DIRETORIA, enquanto a regra restringe exclusivamente à Mesa Diretora do evento.
 - **Campos Legados**: Identificados `content_blocks` e `pre_inscricoes_jogos` como tabelas sem referência no código atual.
 
 ### 6.2. Pendências Identificadas

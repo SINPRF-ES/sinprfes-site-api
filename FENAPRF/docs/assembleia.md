@@ -22,7 +22,7 @@ Este documento descreve as regras de negócio e fluxos implementados para o func
 ### 2.2. Quórum Dinâmico (Snapshots)
 - **Finalidade**: Definir o conjunto de membros aptos a votar em um item específico.
 - **Token**: 6 dígitos numéricos.
-- **Geração**: Membros da Mesa Diretora (Presidente, Vice, Secretários) ou perfis ADMIN/DIRETORIA.
+- **Geração**: Restrita aos membros da Mesa Diretora (Presidente, Vice, Secretários).
 - **Reset**: A geração de um novo token de quórum encerra o snapshot anterior e exige novo check-in de todos os participantes (incluindo a mesa).
 - **Auto Check-in**: O emissor do token tem seu check-in realizado automaticamente se for elegível (CONSELHEIRO ou DIRETORIA).
 
@@ -43,6 +43,7 @@ O sistema garante que cada branch de uma UF tenha apenas um voto ativo por vez.
 ## 4. Mesa Diretora
 
 - **Composição**: 4 membros (Presidente, Vice, 1º Secretário e 2º Secretário).
+- **Autoridade Funcional**: Durante a realização do evento, a autoridade deliberativa e de gestão pertence exclusivamente à Mesa Diretora, independentemente do perfil de acesso regular do usuário no sistema.
 - **Autoridade para Definição**: Apenas Presidente da FENAPRF, Vice-Presidente da FENAPRF ou ADMIN.
 - **Requisito**: Todos os indicados devem ter realizado o **Check-in Global**.
 - **Rejeições**: Membros rejeitados para um cargo específico em votação de mesa não podem ser indicados novamente para o mesmo cargo no mesmo evento.
@@ -55,7 +56,7 @@ O sistema garante que cada branch de uma UF tenha apenas um voto ativo por vez.
 - **Branch Confirmation**: Se um titular (rank 1) entrar e encontrar uma proposta ativa enviada por seu subordinado enquanto o titular estava ausente, ele deve confirmar (MANTER) ou CANCELAR a proposta.
 
 ### 5.2. Itens de Votação
-- **Duração Padrão**: 5 minutos (300 segundos).
+- **Duração Padrão**: 2 minutos (120 segundos).
 - **Auto-Encerramento**: Se 100% dos membros presentes no quórum votarem antes do tempo, a votação encerra imediatamente.
 - **Omissão**: Membros que não votarem até o encerramento têm seu voto computado automaticamente como **ABSTENCAO**.
 
