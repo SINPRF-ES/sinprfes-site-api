@@ -20,12 +20,13 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
     const digits = onlyDigits(value);
     setUser(f => (f ? { ...f, cep: digits } : null));
     if (digits.length === 8) {
-      handleBuscarCep();
+      // FENAPRF: Passamos o CEP diretamente para evitar race condition com estado assíncrono
+      handleBuscarCep(digits);
     }
   };
 
-  const handleBuscarCep = async () => {
-    const cep = user?.cep;
+  const handleBuscarCep = async (cepOverride?: string) => {
+    const cep = cepOverride || user?.cep;
     if (!cep || cep.length !== 8) {
       Alert.alert('CEP Inválido', 'Por favor, insira um CEP com 8 dígitos.');
       return;
@@ -65,13 +66,13 @@ const EnderecoCard: React.FC<Props> = ({ user, setUser, hideTitle = false, cardS
             textContentType="postalCode"
             autoComplete="postal-code"
             returnKeyType="search"
-            onSubmitEditing={handleBuscarCep}
+            onSubmitEditing={() => handleBuscarCep()}
           />
         </View>
         {isBuscando ? (
           <ActivityIndicator accessibilityLabel="Buscando endereço..." />
         ) : (
-          <Button title="Buscar" onPress={handleBuscarCep} disabled={disabled} />
+          <Button title="Buscar" onPress={() => handleBuscarCep()} disabled={disabled} />
         )}
       </View>
       <Text style={styles.label}>Logradouro e Bairro</Text>
