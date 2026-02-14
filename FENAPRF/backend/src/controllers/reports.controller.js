@@ -84,8 +84,8 @@ exports.generateReport = async (req, res) => {
       const slug = gerarSlugNome(dados.nome);
       filename = slug ? `dossie_${slug}.pdf` : `dossie_user_${dados.id}.pdf`;
 
-      // Regra de permissão para CPF no PDF
-      const podeVerCpf = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((requesterSession.perfil_acesso || "").toUpperCase());
+      // Regra de permissão para CPF no PDF (FENAPRF Canon)
+      const podeVerCpf = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes((requesterSession.perfil_acesso || "").toUpperCase());
       pdfBuffer = await pdfService.gerarPdfDossieUser(dados, { podeVerCpf });
 
     } else if (["UF", "SITUACAO"].includes(type)) {
@@ -121,7 +121,7 @@ exports.generateReport = async (req, res) => {
     // Enviar por E-mail (passando objeto com nome e email correto)
     await emailService.enviarEmailRelatorio(requester, reportTitle, pdfBuffer, filename);
 
-    log.info("RelatorioGerado", { type, requesterId: requesterSession.id, requestId: req.requestId });
+    log.info("RelatorioGerado", { type, userId: requesterSession.id, requestId: req.requestId });
 
     return res.json({
       success: true,
@@ -129,7 +129,7 @@ exports.generateReport = async (req, res) => {
     });
 
   } catch (err) {
-    log.error("ErroGerarRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId });
+    log.error("ErroGerarRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId, userId: requesterSession?.id });
     return res.status(500).json({ success: false, message: "Erro ao gerar relatório. Tente novamente mais tarde.", error: "Erro ao gerar relatório.", requestId: req.requestId });
   }
 };
@@ -227,23 +227,25 @@ exports.previewReport = async (req, res) => {
         kind: "kv",
         title: "Resumo Geral",
         items: [
-          { label: "Ativos", value: data.ativo.total },
-          { label: "Veteranos", value: data.veterano.total },
-          { label: "Pensionistas", value: data.pensionista.total },
-          { label: "Total Geral", value: data.ativo.total + data.veterano.total + data.pensionista.total }
+          { label: "Total Geral de Membros", value: data.membros.total },
+          { label: "Masculino", value: data.membros.masc },
+          { label: "Feminino", value: data.membros.fem }
         ]
       });
 
-      sections.push({
-        kind: "table",
-        title: "Distribuição por Sexo",
-        columns: ["Categoria", "Masculino", "Feminino"],
-        rows: [
-          ["Ativos", data.ativo.masc, data.ativo.fem],
-          ["Veteranos", data.veterano.masc, data.veterano.fem],
-          ["Pensionistas", data.pensionista.masc, data.pensionista.fem]
-        ]
-      });
+      if (data.porSituacao && data.porSituacao.length > 0) {
+        sections.push({
+          kind: "table",
+          title: "Distribuição por Situação Funcional",
+          columns: ["Situação", "Total", "Masc.", "Fem."],
+          rows: data.porSituacao.map(s => [
+            s.situacao || "Não informada",
+            s.total,
+            s.masc,
+            s.fem
+          ])
+        });
+      }
     }
 
     return res.json({
@@ -251,12 +253,12 @@ exports.previewReport = async (req, res) => {
       type,
       generatedAt: new Date().toISOString(),
       baseCompetencia,
-      summary: type === "INDIVIDUAL" ? { nome: data.nome, cpf: data.cpf, situacao: data.situacao } : { total: data.total || (data.ativo ? data.ativo.total + data.veterano.total + data.pensionista.total : 0) },
+      summary: type === "INDIVIDUAL" ? { nome: data.nome, cpf: data.cpf, situacao: data.situacao } : { total: data.total || (data.membros ? data.membros.total : 0) },
       sections
     });
 
   } catch (err) {
-    log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId });
+    log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId, userId: requesterSession?.id });
     return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde.", error: "Erro ao gerar preview.", requestId: req.requestId });
   }
 };
@@ -272,27 +274,20 @@ exports.getHistory = async (req, res) => {
     // ADMIN vê tudo, outros vêem apenas o próprio histórico por padrão (ajustável conforme UX)
     const history = await reportsService.listarHistorico(perfil === "ADMIN" ? null : requesterId);
 
-    // Resolver nomes para relatórios individuais (A1 - Retrocompatibilidade e Robustez)
+    // FENAPRF: Nomes já resolvidos via SQL JOIN no service. Mantemos compatibilidade de contrato.
     for (const item of history) {
       if (item.report_type === 'INDIVIDUAL') {
         const p = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
-        if (!p.userNome && p.userId) {
-          try {
-            const user = await usersService.buscarPorId(p.userId);
-            if (user) {
-              p.userNome = user.nome;
-              item.params = p; // Atualiza o objeto para a resposta
-            }
-          } catch (e) {
-            log.error("ErroAoResolverNomeNoHistorico", { id: p.userId });
-          }
+        if (!p.userNome && item.target_user_name) {
+          p.userNome = item.target_user_name;
+          item.params = p;
         }
       }
     }
 
     return res.json(history);
   } catch (err) {
-    log.error("ErroListarHistoricoRelatorios", { error: err.message, stack: err.stack, requestId: req.requestId });
+    log.error("ErroListarHistoricoRelatorios", { error: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ message: "Erro ao carregar histórico.", error: "Erro ao carregar histórico.", requestId: req.requestId });
   }
 };

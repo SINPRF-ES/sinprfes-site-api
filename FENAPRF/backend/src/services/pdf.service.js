@@ -704,6 +704,26 @@ async function gerarPdfRelatorioGlobal(dados) {
 
     drawDistribuicoes(doc, a);
 
+    if (dados.porSituacao && dados.porSituacao.length > 0) {
+      ensureSpace(doc, 100);
+      doc.font("Helvetica-Bold").fontSize(14).fillColor("#003366").text("2. POR SITUAÇÃO FUNCIONAL");
+      doc.fillColor("#000").moveDown(0.5);
+
+      const headers = ["Situação", "Total", "Masculino", "Feminino"];
+      const rows = dados.porSituacao.map(s => [
+        s.situacao || "N/I",
+        String(s.total),
+        String(s.masc),
+        String(s.fem)
+      ]);
+
+      drawTableWithPagination(doc, {
+        headers,
+        rows,
+        colWidths: [200, 85, 85, 85]
+      });
+    }
+
     doc.addPage();
     doc.moveDown(2);
 
