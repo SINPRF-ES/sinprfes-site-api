@@ -244,7 +244,7 @@ export default function RelatoriosScreen() {
             />
 
             {isSearching ? (
-              <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} />
+              <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} accessibilityLabel="Buscando membros..." />
             ) : (
               <View style={{ maxHeight: 300 }}>
                 <FlatList
@@ -336,7 +336,7 @@ export default function RelatoriosScreen() {
             accessibilityRole="button"
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#fff" accessibilityLabel="Gerando relatório..." />
             ) : (
               <Text style={styles.buttonText}>📄 Gerar e Enviar por E-mail</Text>
             )}
@@ -350,7 +350,7 @@ export default function RelatoriosScreen() {
             accessibilityRole="button"
           >
             {loadingPreview ? (
-              <ActivityIndicator color="#003366" />
+              <ActivityIndicator color="#003366" accessibilityLabel="Carregando visualização..." />
             ) : (
               <Text style={styles.buttonSecondaryText}>👁️ Visualizar na Tela</Text>
             )}

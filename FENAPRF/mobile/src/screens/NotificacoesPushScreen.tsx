@@ -340,7 +340,7 @@ export default function NotificacoesPushScreen() {
               />
 
               {isSearching ? (
-                <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} />
+                <ActivityIndicator size="large" color="#003366" style={{ marginTop: 20 }} accessibilityLabel="Buscando membros..." />
               ) : (
                 <FlatList
                   data={usersBusca}
@@ -478,9 +478,10 @@ export default function NotificacoesPushScreen() {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSend}
             disabled={loading}
+            accessibilityLabel={loading ? "Enviando notificação, aguarde..." : "Enviar notificação agora"}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#fff" accessibilityLabel="Enviando..." />
             ) : (
               <>
                 <MaterialCommunityIcons name="send" size={20} color="#fff" />

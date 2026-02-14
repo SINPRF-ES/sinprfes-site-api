@@ -250,6 +250,68 @@
     return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
   }
 
+  /**
+   * RBAC - Role Based Access Control
+   */
+  const isGestao = (perfil) => {
+    const p = normalizePerfil(perfil);
+    return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.COLABORADOR, PERFIL_ACESSO.DIRETORIA].includes(p);
+  };
+
+  const canManageAdmins = (perfil) => {
+    return normalizePerfil(perfil) === PERFIL_ACESSO.ADMIN;
+  };
+
+  /**
+   * Verifica se o usuário pode indicar membros para a Mesa Diretora da Assembleia.
+   * Regra: Apenas Presidente/Vice da FENAPRF ou ADMIN.
+   */
+  const canComposeMesa = (user) => {
+    if (!user) return false;
+    const p = normalizePerfil(user.perfil_acesso);
+    if (p === PERFIL_ACESSO.ADMIN) return true;
+
+    const cargo = (user.cargo || "").trim();
+    const cargo2 = (user.cargo2 || "").trim();
+    const cargosAutorizados = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
+    return cargosAutorizados.includes(cargo) || cargosAutorizados.includes(cargo2);
+  };
+
+  /**
+   * Verifica se o usuário pode gerar o Token de Credenciamento Global.
+   * Regra: Apenas Presidente, Vice, Diretor de Secretaria ou seu Substituto.
+   */
+  const canCreateCredenciamentoToken = (user) => {
+    if (!user) return false;
+    const cargo = (user.cargo || "").trim();
+    const cargo2 = (user.cargo2 || "").trim();
+    const cargosAutorizados = [
+      "Presidente da FENAPRF",
+      "Vice-Presidente da FENAPRF",
+      "Diretor de Secretaria",
+      "Diretor de Secretaria Substituto"
+    ];
+    return cargosAutorizados.includes(cargo) || cargosAutorizados.includes(cargo2);
+  };
+
+  /**
+   * Verifica se o perfil pode se inscrever em eventos.
+   * Regra: Apenas Diretoria e Conselheiro. ADMIN e COLABORADOR não participam.
+   */
+  const canRegisterForEvent = (perfil) => {
+    const p = normalizePerfil(perfil);
+    return [PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO].includes(p);
+  };
+
+  /**
+   * Verifica se o perfil pode realizar check-in/votar em assembleias.
+   * Regra: Apenas Diretoria e Conselheiro.
+   */
+  const canCheckInEvent = (perfil) => {
+    const p = normalizePerfil(perfil);
+    return [PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO].includes(p);
+  };
+
   return {
     SEXO,
     ESTADO_CADASTRO,
@@ -268,6 +330,12 @@
     normalizeCargo,
     cargoRankDiretoria,
     cargoRankConselho,
-    ordenarMembrosTodos
+    ordenarMembrosTodos,
+    isGestao,
+    canManageAdmins,
+    canComposeMesa,
+    canCreateCredenciamentoToken,
+    canRegisterForEvent,
+    canCheckInEvent
   };
 }));

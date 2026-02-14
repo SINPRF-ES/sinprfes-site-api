@@ -8,6 +8,7 @@ import { formatTimeSP } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
+import { isGestao, canCheckInEvent } from '../../utils/user';
 
 export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -19,11 +20,25 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const perfil = (user?.perfil_acesso || '').toUpperCase();
-  const isDiretoria = perfil === 'DIRETORIA' || perfil === 'ADMIN';
+  const ehGestao = isGestao(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
-  const isElegivel = ['DIRETORIA', 'CONSELHEIRO'].includes(perfil);
-  const temAutoridade = isPresidente || isDiretoria;
-  const canSeeToken = estado?.quorumVigente?.token && (temAutoridade || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
+  const isMesa = estado?.mesa && [
+    (estado.mesa as any).presidente_user_id,
+    (estado.mesa as any).vice_presidente_user_id,
+    (estado.mesa as any).secretario_user_id,
+    (estado.mesa as any).secretario_2_user_id
+  ].includes(user?.id);
+
+  const isElegivel = canCheckInEvent(perfil);
+
+  // CANON: Poder de Mesa - se houver mesa, apenas membros da mesa mandam.
+  // Se não houver mesa, Gestão manda.
+  const temAutoridade = isMesa || (!estado?.mesa && ehGestao);
+
+  const canSeeToken = estado?.quorumVigente?.token && (
+    temAutoridade ||
+    user?.id === (estado.quorumVigente as any).gerado_por_user_id
+  );
 
   const handlePedirPalavra = useCallback(async () => {
     try {
@@ -147,10 +162,10 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         actions.push({ label: 'Retomar Assembleia', icon: 'play-circle-outline', onPress: handleRetomar });
       }
 
-      if (isDiretoria && estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
+      if (temAutoridade && estado?.votacaoAtiva && estado.votacaoAtiva.status === 'ATIVA') {
         actions.push({ label: 'Encerrar Votação Item', icon: 'stop-circle-outline', onPress: handleEncerrarVotacaoManual });
       }
-      if (isDiretoria) {
+      if (temAutoridade) {
         actions.push({ label: 'Encerrar Assembleia', icon: 'close-circle-outline', onPress: handleEncerrarAssembleiaManual, isDestructive: true });
       }
     }
@@ -366,7 +381,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   };
 
   if (loading || !estado) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando sala de votação..." /></View>;
   }
 
   const { votacaoAtiva, quorumVigente, proposta_pendente_branch } = estado as any;
@@ -463,19 +478,18 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                     <View style={styles.mesaAcoes}>
                         <Text style={styles.mesaAcoesTitle}>Ações de Comando</Text>
                         <View style={styles.mesaAcoesGrid}>
-                            {isDiretoria && (
-                                <TouchableOpacity
-                                    style={styles.btnComando}
-                                    onPress={() => navigation.navigate('CriarItemVotacao', { id })}
-                                    accessibilityLabel="Novo Item de Votação"
-                                    accessibilityRole="button"
-                                >
-                                    <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
-                                    <Text style={styles.btnComandoText}>Novo Item</Text>
-                                </TouchableOpacity>
-                            )}
                             <TouchableOpacity
-                                style={[styles.btnComando, !isDiretoria && { flex: 0, paddingHorizontal: 30 }]}
+                                style={styles.btnComando}
+                                onPress={() => navigation.navigate('CriarItemVotacao', { id })}
+                                accessibilityLabel="Novo Item de Votação"
+                                accessibilityRole="button"
+                            >
+                                <MaterialCommunityIcons name="plus-circle" size={20} color="#fff" />
+                                <Text style={styles.btnComandoText}>Novo Item</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.btnComando]}
                                 onPress={handleRecontagem}
                                 accessibilityLabel="Solicitar Recontagem de Quórum"
                                 accessibilityRole="button"
@@ -488,6 +502,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                 )}
             </View>
         )}
+
         {votacaoAtiva ? (
           <View style={styles.votacaoCard}>
             <Text style={styles.sectionTitle}>🗳️ Votação Ativa</Text>
@@ -559,7 +574,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
           </View>
         ) : (
           <View style={styles.waitingCard}>
-            <ActivityIndicator size="small" color="#666" />
+            <ActivityIndicator size="small" color="#666" accessibilityLabel="Aguardando votação..." />
             <Text style={styles.waitingText}>Aguardando próximo item de pauta...</Text>
           </View>
         )}

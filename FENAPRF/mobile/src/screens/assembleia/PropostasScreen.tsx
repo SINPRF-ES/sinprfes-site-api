@@ -45,8 +45,13 @@ export default function PropostasScreen({ route }: any) {
           placeholder="Descrição detalhada..."
           multiline
         />
-        <TouchableOpacity style={styles.btnSubmeter} onPress={handleSubmeter} disabled={loading}>
-          {loading ? <ActivityIndicator color="#003366" /> : <Text style={styles.btnText}>Enviar Proposta</Text>}
+        <TouchableOpacity
+          style={styles.btnSubmeter}
+          onPress={handleSubmeter}
+          disabled={loading}
+          accessibilityLabel={loading ? "Enviando proposta, aguarde..." : "Enviar Proposta"}
+        >
+          {loading ? <ActivityIndicator color="#003366" accessibilityLabel="Enviando..." /> : <Text style={styles.btnText}>Enviar Proposta</Text>}
         </TouchableOpacity>
       </View>
     </ScrollView>

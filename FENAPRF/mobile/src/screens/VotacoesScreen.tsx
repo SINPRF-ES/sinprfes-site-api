@@ -38,7 +38,7 @@ export default function VotacoesScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator />
+          <ActivityIndicator accessibilityLabel="Carregando lista de votações..." />
           <Text style={styles.muted}>Carregando…</Text>
         </View>
       ) : (

@@ -1,6 +1,7 @@
 // src/controllers/eventos.controller.js
 const service = require("../services/eventos.service");
 const { parseUuid } = require("../utils/format");
+const { canCheckInEvent } = require("../../shared/canon");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
 
@@ -103,13 +104,22 @@ exports.criar = async (req, res) => {
  * Transiciona RASCUNHO -> AGENDADO
  */
 exports.agendar = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
+    // CANON: Apenas Diretoria e Conselheiro podem fazer check-in
+    if (!canCheckInEvent(req.user.perfil_acesso)) {
+        return res.status(403).json({ error: "Seu perfil não possui permissão para realizar check-in.", requestId });
+    }
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.agendarEvento({
       eventoId,
-      agendadoPor: req.user?.id ?? null,
+      agendadoPor: atorId,
     });
 
     if (!updated) {
@@ -122,7 +132,7 @@ exports.agendar = async (req, res) => {
 
     return res.json(updated);
   } catch (e) {
-    return serverError(res, e, "EventoAgendarErro:", req);
+    return serverError(res, e, "EventoAgendarErro:", req, atorId);
   }
 };
 
@@ -131,13 +141,17 @@ exports.agendar = async (req, res) => {
  * Cancela o evento (ex.: AGENDADO/ABERTO -> CANCELADO)
  */
 exports.cancelar = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.cancelarEvento({
       eventoId,
-      canceladoPor: req.user?.id ?? null,
+      canceladoPor: atorId,
     });
 
     if (!updated) {
@@ -150,7 +164,7 @@ exports.cancelar = async (req, res) => {
 
     return res.json(updated);
   } catch (e) {
-    return serverError(res, e, "EventoCancelarErro:", req);
+    return serverError(res, e, "EventoCancelarErro:", req, atorId);
   }
 };
 
@@ -159,17 +173,22 @@ exports.cancelar = async (req, res) => {
  * Detalhe do evento
  */
 exports.detalhe = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const evento = await service.obterEvento({ eventoId });
     if (!evento) return notFound(res, req, "Evento não encontrado.");
 
+    log.info("EventoDetalheSucesso", { requestId, userId: atorId, eventoId });
     return res.json(evento);
   } catch (e) {
-    log.error("EventoDetalheErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId: req.requestId });
+    log.error("EventoDetalheErro", { error: e.message, stack: e.stack, requestId, userId: atorId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId });
   }
 };
 
@@ -178,12 +197,16 @@ exports.detalhe = async (req, res) => {
  * Próximo evento (para Home do app)
  */
 exports.proximo = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const evento = await service.obterProximoEvento();
     return res.json({ evento: evento || null });
   } catch (e) {
-    log.error("EventoProximoErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId: req.requestId });
+    log.error("EventoProximoErro", { error: e.message, stack: e.stack, requestId, userId: atorId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId });
   }
 };
 
@@ -192,13 +215,17 @@ exports.proximo = async (req, res) => {
  * Transiciona AGENDADO -> ABERTO
  */
 exports.abrir = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.abrirEvento({
       eventoId,
-      abertoPor: req.user?.id ?? null,
+      abertoPor: atorId,
     });
 
     if (!updated) {
@@ -211,8 +238,8 @@ exports.abrir = async (req, res) => {
 
     return res.json(updated);
   } catch (e) {
-    log.error("EventoAbrirErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(400).json({ error: e.message || "Erro ao abrir evento.", requestId: req.requestId });
+    log.error("EventoAbrirErro", { error: e.message, stack: e.stack, requestId: requestId, userId: atorId });
+    return res.status(400).json({ error: e.message || "Erro ao abrir evento.", requestId: requestId });
   }
 };
 
@@ -221,13 +248,17 @@ exports.abrir = async (req, res) => {
  * Transiciona ABERTO -> ENCERRADO
  */
 exports.encerrar = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const updated = await service.encerrarEvento({
       eventoId,
-      encerradoPor: req.user?.id ?? null,
+      encerradoPor: atorId,
     });
 
     if (!updated) {
@@ -240,8 +271,8 @@ exports.encerrar = async (req, res) => {
 
     return res.json(updated);
   } catch (e) {
-    log.error("EventoEncerrarErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(400).json({ error: e.message || "Erro ao encerrar evento.", requestId: req.requestId });
+    log.error("EventoEncerrarErro", { error: e.message, stack: e.stack, requestId: requestId, userId: atorId });
+    return res.status(400).json({ error: e.message || "Erro ao encerrar evento.", requestId: requestId });
   }
 };
 
@@ -251,21 +282,26 @@ exports.encerrar = async (req, res) => {
  * body: { deviceId?: string }
  */
 exports.entrar = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const { deviceId } = req.body || {};
     const presenca = await service.entrarNoEvento({
       eventoId,
-      userId: req.user?.id,
+      userId: atorId,
       deviceId: deviceId ? String(deviceId) : null,
     });
 
+    log.info("EventoEntrarSucesso", { requestId, userId: atorId, eventoId });
     return res.json(presenca);
   } catch (e) {
-    log.error("EventoEntrarErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(400).json({ error: e.message || "Erro ao entrar no evento.", requestId: req.requestId });
+    log.error("EventoEntrarErro", { error: e.message, stack: e.stack, requestId, userId: atorId });
+    return res.status(400).json({ error: e.message || "Erro ao entrar no evento.", requestId });
   }
 };
 
@@ -274,19 +310,24 @@ exports.entrar = async (req, res) => {
  * Sai da presença ativa
  */
 exports.sair = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const ok = await service.sairDoEvento({
       eventoId,
-      userId: req.user?.id,
+      userId: atorId,
     });
 
+    log.info("EventoSairSucesso", { requestId, userId: atorId, eventoId });
     return res.json({ ok: !!ok });
   } catch (e) {
-    log.error("EventoSairErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(400).json({ error: e.message || "Erro ao sair do evento.", requestId: req.requestId });
+    log.error("EventoSairErro", { error: e.message, stack: e.stack, requestId, userId: atorId });
+    return res.status(400).json({ error: e.message || "Erro ao sair do evento.", requestId });
   }
 };
 
@@ -295,15 +336,19 @@ exports.sair = async (req, res) => {
  * Lista presenças (apenas diretoria/admin)
  */
 exports.presencas = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const rows = await service.listarPresencas({ eventoId });
     return res.json(rows);
   } catch (e) {
-    log.error("EventoPresencasErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId: req.requestId });
+    log.error("EventoPresencasErro", { error: e.message, stack: e.stack, requestId, userId: atorId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.FALHA_AO_CARREGAR, requestId });
   }
 };
 
@@ -312,14 +357,19 @@ exports.presencas = async (req, res) => {
  * Derruba todos os presentes e incrementa o epoch do quórum
  */
 exports.recontarQuorum = async (req, res) => {
+  const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId });
+
     const eventoId = parseId(req);
     if (!eventoId) return badRequest(res, "ID inválido.", req);
 
     const r = await service.recontarQuorum({ eventoId });
+    log.info("EventoRecontarQuorumSucesso", { requestId, userId: atorId, eventoId });
     return res.json(r);
   } catch (e) {
-    log.error("EventoRecontarQuorumErro", { error: e.message, stack: e.stack, requestId: req.requestId });
-    return res.status(400).json({ error: e.message || "Erro ao recontar quórum.", requestId: req.requestId });
+    log.error("EventoRecontarQuorumErro", { error: e.message, stack: e.stack, requestId, userId: atorId });
+    return res.status(400).json({ error: e.message || "Erro ao recontar quórum.", requestId });
   }
 };

@@ -524,7 +524,7 @@ const LogisticaScreen = ({ route }: any) => {
     });
   }, [navigation, canManage, eventoSelecionado]);
 
-  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando dados logísticos..." /></View>;
 
   return (
     <SafeScreen style={styles.container}>

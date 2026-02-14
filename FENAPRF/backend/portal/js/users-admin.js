@@ -70,8 +70,8 @@
     async function inicializarUsers(perfil) {
         const listaEl = document.getElementById("lista-users");
         perfilAtual = (perfil || "").toUpperCase();
-        const isReadOnlyProfile = ["CONSELHEIRO"].includes(perfilAtual);
-        const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
+        const isReadOnlyProfile = perfilAtual === "CONSELHEIRO";
+        const ehGestao = global.Canon?.isGestao ? global.Canon.isGestao(perfilAtual) : ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
         if (!listaEl) {
             const secUsers = document.getElementById("sec-users");
@@ -138,8 +138,6 @@
 
             if (campoBusca) {
                 campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
-
-                const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
                 if (containerFiltro) {
                     containerFiltro.innerHTML = `
@@ -360,7 +358,7 @@
         const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
 
         const ehAdmin = perfilAtual === "ADMIN";
-        const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
+        const ehGestao = global.Canon?.isGestao ? global.Canon.isGestao(perfilAtual) : ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
         const isArquivado = !!f.arquivado_em;
         const nascimento = f.data_nascimento;
         const idade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(nascimento) : '—';
@@ -369,7 +367,10 @@
 
         const userInfo = window.Utils && window.Utils.obterUserInfo ? window.Utils.obterUserInfo() : null;
         const isSelf = userInfo && String(f.id) === String(userInfo.id);
-        const canChangeProfile = (ehAdmin || (["DIRETORIA", "COLABORADOR"].includes(perfilAtual) && f.perfil_acesso !== "ADMIN")) && !isSelf;
+
+        const canManageTargetAdmin = global.Canon?.canManageAdmins ? global.Canon.canManageAdmins(perfilAtual) : ehAdmin;
+        const targetIsAdmin = (f.perfil_acesso || "").toUpperCase() === "ADMIN";
+        const canChangeProfile = (canManageTargetAdmin || (ehGestao && !targetIsAdmin)) && !isSelf;
 
         const responsavel = safeEscape(f.arquivado_por_nome || (f.arquivado_por ? `ID ${f.arquivado_por}` : "—"));
 
@@ -741,7 +742,7 @@
             }
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
-            const ehGestao = ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
+            const ehGestao = global.Canon?.isGestao ? global.Canon.isGestao(perfilAtual) : ["ADMIN", "DIRETORIA", "COLABORADOR"].includes(perfilAtual);
 
             // Sanitização e Limpeza Obrigatória (B2)
             const payload = {};

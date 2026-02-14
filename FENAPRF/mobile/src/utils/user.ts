@@ -217,6 +217,53 @@ export const isDiretoria = (perfil?: string | null) => {
 };
 
 /**
+ * CANON: Verifica se o usuário pode gerenciar admins.
+ */
+export const canManageAdmins = (perfil?: string | null) => {
+    return (perfil || "").toUpperCase() === ROLES.ADMIN;
+};
+
+/**
+ * CANON: Verifica se o usuário pode indicar membros para a Mesa Diretora.
+ */
+export const canComposeMesa = (user: any) => {
+    if (!user) return false;
+    if (user.perfil_acesso === ROLES.ADMIN) return true;
+    const cargosAutorizados = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
+    return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
+};
+
+/**
+ * CANON: Verifica se o usuário pode gerar Token de Credenciamento Global.
+ */
+export const canCreateCredenciamentoToken = (user: any) => {
+    if (!user) return false;
+    const cargosAutorizados = [
+        "Presidente da FENAPRF",
+        "Vice-Presidente da FENAPRF",
+        "Diretor de Secretaria",
+        "Diretor de Secretaria Substituto"
+    ];
+    return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
+};
+
+/**
+ * CANON: Verifica se o perfil pode se inscrever em eventos.
+ */
+export const canRegisterForEvent = (perfil?: string | null) => {
+    const p = (perfil || "").toUpperCase();
+    return p === ROLES.DIRETORIA || p === ROLES.CONSELHEIRO;
+};
+
+/**
+ * CANON: Verifica se o perfil pode fazer check-in/votar.
+ */
+export const canCheckInEvent = (perfil?: string | null) => {
+    const p = (perfil || "").toUpperCase();
+    return p === ROLES.DIRETORIA || p === ROLES.CONSELHEIRO;
+};
+
+/**
  * Retorna o título formatado do cargo e UF do membro.
  */
 export function tituloCargoUf(m: { perfil_acesso?: string | null, cargo?: string | null, uf?: string | null }): string {

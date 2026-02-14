@@ -5,6 +5,7 @@ const pdfService = require("../services/pdf.service");
 const usersService = require("../services/users.service");
 const { parseUuid } = require("../utils/format");
 const { STATUS_EVENTO, ACOES_AUDITORIA, RECURSO_TIPO } = require("../../shared/logistica");
+const { isGestao, canRegisterForEvent } = require("../../shared/canon");
 const Textos = require("../utils/textos");
 
 /**
@@ -315,10 +316,9 @@ exports.registrarMinhaInscricao = async (req, res) => {
     try {
         if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
 
-        const perfil = (req.user?.perfil_acesso || "").toUpperCase();
-
-        if (perfil === "ADMIN" || perfil === "COLABORADOR") {
-            return res.status(403).json({ error: "Perfil de gestão não participa de eventos." });
+        // CANON: Apenas Diretoria e Conselheiro podem se inscrever
+        if (!canRegisterForEvent(req.user.perfil_acesso)) {
+            return res.status(403).json({ error: "Seu perfil não possui permissão para se inscrever em eventos." });
         }
 
         const { evento_id, data_chegada, data_saida, observacoes } = req.body;
@@ -437,9 +437,10 @@ exports.cancelarMinhaInscricao = async (req, res) => {
 // --- GESTÃO DE INSCRIÇÕES ---
 
 exports.atualizarInscricaoTerceiro = async (req, res) => {
+    const atorId = req.user?.id;
     const client = await pool.connect();
     try {
-        const gestorId = getUserId(req);
+        const gestorId = atorId;
         const inscricaoId = parseUuid(req.params.id); // ID da inscrição
         if (!inscricaoId) return res.status(400).json({ error: "ID de inscrição inválido.", requestId: req.requestId });
         const { data_chegada, data_saida, observacoes, justificativa } = req.body;
