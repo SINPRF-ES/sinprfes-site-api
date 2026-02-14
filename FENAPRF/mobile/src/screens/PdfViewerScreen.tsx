@@ -75,7 +75,7 @@ export default function PdfViewerScreen({ route }: any) {
         </TouchableOpacity>
       </View>
 
-      {loading && <ActivityIndicator size="large" color="#003366" style={styles.loader} />}
+      {loading && <ActivityIndicator size="large" color="#003366" style={styles.loader} accessibilityLabel="Carregando documento..." />}
 
       <Pdf
         trustAllCerts={false}

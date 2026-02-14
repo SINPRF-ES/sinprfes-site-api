@@ -174,7 +174,7 @@ export default function FileViewerScreen({ route, navigation }: any) {
       </View>
 
       <View style={styles.content}>
-        {loading && <ActivityIndicator size="large" color="#003366" style={styles.loader} />}
+        {loading && <ActivityIndicator size="large" color="#003366" style={styles.loader} accessibilityLabel="Carregando arquivo..." />}
 
         {isPdf && currentLocalUri && (
           <Pdf

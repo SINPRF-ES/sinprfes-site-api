@@ -194,7 +194,7 @@ const UpdateAutoChecker: React.FC = () => {
           <View style={styles.footer}>
             {isUpdating ? (
               <View style={styles.updatingContainer}>
-                <ActivityIndicator size="large" color="#003366" />
+                <ActivityIndicator size="large" color="#003366" accessibilityLabel="Baixando e aplicando atualização..." />
                 <Text style={styles.updatingText}>Baixando e aplicando atualização...</Text>
               </View>
             ) : (

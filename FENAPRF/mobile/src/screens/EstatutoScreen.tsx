@@ -126,7 +126,7 @@ export default function EstatutoScreen({ navigation }: any) {
         />
       ) : (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#003366" />
+          <ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando estatuto..." />
           <Text style={styles.loadingText}>Carregando Estatuto...</Text>
         </View>
       )}

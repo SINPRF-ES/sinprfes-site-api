@@ -137,7 +137,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       </View>
 
       {loading && !refreshing ? (
-        <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>
+        <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando lista de assembleias..." /></View>
       ) : (
         <FlatList
           data={filteredAssembleias}

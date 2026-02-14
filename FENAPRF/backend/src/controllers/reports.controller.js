@@ -52,17 +52,18 @@ async function getRequesterData(user) {
  */
 exports.generateReport = async (req, res) => {
   const atorId = req.user?.id;
+  const requestId = req.requestId;
   const { type, params } = req.body;
   const requesterSession = req.user;
 
-  if (!atorId) return res.status(401).json({ success: false, message: "Sessão inválida ou ator não identificado." });
-
-  // Validação do contrato da API
-  if (!type || typeof params !== 'object' || params === null) {
-    return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios." });
-  }
-
   try {
+    if (!atorId) return res.status(401).json({ success: false, message: "Sessão inválida ou ator não identificado.", requestId });
+
+    // Validação do contrato da API
+    if (!type || typeof params !== 'object' || params === null) {
+      return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios.", requestId });
+    }
+
     let pdfBuffer;
     let filename;
     let reportTitle;
@@ -73,10 +74,10 @@ exports.generateReport = async (req, res) => {
     if (type === "INDIVIDUAL") {
       // Contrato: INDIVIDUAL => { userId }
       const userId = parseUuid(params?.userId);
-      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório (UUID esperado) para relatório individual." });
+      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório (UUID esperado) para relatório individual.", requestId });
 
       const dados = await reportsService.buscarDadosDossie(userId);
-      if (!dados) return res.status(404).json({ success: false, message: "User não encontrado." });
+      if (!dados) return res.status(404).json({ success: false, message: "User não encontrado.", requestId });
 
       // Resolver nome para exibição no histórico (A1)
       params.userNome = dados.nome;
@@ -94,7 +95,7 @@ exports.generateReport = async (req, res) => {
     } else if (["UF", "SITUACAO"].includes(type)) {
       // Contrato: UF/SITUACAO => { value }
       const { value } = params;
-      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório." });
+      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório.", requestId });
 
       const dados = await reportsService.buscarDadosAgregados(type, value);
 
@@ -115,7 +116,7 @@ exports.generateReport = async (req, res) => {
       pdfBuffer = await pdfService.gerarPdfRelatorioGlobal(dados);
 
     } else {
-      return res.status(400).json({ message: "Tipo de relatório inválido." });
+      return res.status(400).json({ success: false, message: "Tipo de relatório inválido.", requestId });
     }
 
     // Registrar Job/Auditoria
@@ -124,16 +125,17 @@ exports.generateReport = async (req, res) => {
     // Enviar por E-mail (passando objeto com nome e email correto)
     await emailService.enviarEmailRelatorio(requester, reportTitle, pdfBuffer, filename);
 
-    log.info("RelatorioGerado", { type, userId: requesterSession.id, requestId: req.requestId });
+    log.info("RelatorioGerado", { type, userId: atorId, requestId });
 
     return res.json({
       success: true,
-      message: `O relatório "${reportTitle}" foi gerado e enviado para seu e-mail (${requester.email || "não cadastrado"}).`
+      message: `O relatório "${reportTitle}" foi gerado e enviado para seu e-mail (${requester.email || "não cadastrado"}).`,
+      requestId
     });
 
   } catch (err) {
-    log.error("ErroGerarRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId, userId: requesterSession?.id });
-    return res.status(500).json({ success: false, message: "Erro ao gerar relatório. Tente novamente mais tarde.", error: "Erro ao gerar relatório.", requestId: req.requestId });
+    log.error("ErroGerarRelatorio", { error: err.message, stack: err.stack, requestId, userId: atorId });
+    return res.status(500).json({ success: false, message: "Erro ao gerar relatório. Tente novamente mais tarde.", requestId });
   }
 };
 
@@ -142,16 +144,17 @@ exports.generateReport = async (req, res) => {
  */
 exports.previewReport = async (req, res) => {
   const atorId = req.user?.id;
+  const requestId = req.requestId;
   const { type, params } = req.body;
   const requesterSession = req.user;
 
-  if (!atorId) return res.status(401).json({ success: false, message: "Sessão inválida ou ator não identificado." });
-
-  if (!type || typeof params !== 'object' || params === null) {
-    return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios." });
-  }
-
   try {
+    if (!atorId) return res.status(401).json({ success: false, message: "Sessão inválida ou ator não identificado.", requestId });
+
+    if (!type || typeof params !== 'object' || params === null) {
+      return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios.", requestId });
+    }
+
     let data;
     let baseCompetencia = null;
 
@@ -254,18 +257,21 @@ exports.previewReport = async (req, res) => {
       }
     }
 
+    log.info("RelatorioPreviewSucesso", { type, userId: atorId, requestId });
+
     return res.json({
       success: true,
       type,
       generatedAt: new Date().toISOString(),
       baseCompetencia,
       summary: type === "INDIVIDUAL" ? { nome: data.nome, cpf: data.cpf, situacao: data.situacao } : { total: data.total || (data.membros ? data.membros.total : 0) },
-      sections
+      sections,
+      requestId
     });
 
   } catch (err) {
-    log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId, userId: requesterSession?.id });
-    return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde.", error: "Erro ao gerar preview.", requestId: req.requestId });
+    log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId, userId: atorId });
+    return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde.", requestId });
   }
 };
 
@@ -274,8 +280,11 @@ exports.previewReport = async (req, res) => {
  */
 exports.getHistory = async (req, res) => {
   const atorId = req.user?.id;
+  const requestId = req.requestId;
   try {
-    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
+
+    log.info("RelatorioListarHistoricoIniciado", { userId: atorId, requestId });
 
     const requesterId = atorId;
     const perfil = (req.user.perfil_acesso || "").toUpperCase();
@@ -294,9 +303,10 @@ exports.getHistory = async (req, res) => {
       }
     }
 
+    log.info("RelatorioListarHistoricoSucesso", { userId: atorId, requestId, count: history.length });
     return res.json(history);
   } catch (err) {
-    log.error("ErroListarHistoricoRelatorios", { error: err.message, stack: err.stack, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: "Erro ao carregar histórico.", error: "Erro ao carregar histórico.", requestId: req.requestId });
+    log.error("ErroListarHistoricoRelatorios", { error: err.message, stack: err.stack, requestId, userId: atorId });
+    return res.status(500).json({ message: "Erro ao carregar histórico.", requestId });
   }
 };
