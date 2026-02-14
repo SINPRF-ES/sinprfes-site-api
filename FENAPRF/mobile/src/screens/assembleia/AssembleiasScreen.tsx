@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAssembleias } from '../../services/assembleiaService';
+import { getAssembleias, getGlobalTokenAtivo } from '../../services/assembleiaService';
 import { Assembleia } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import { isGestao } from '../../utils/user';
@@ -42,6 +42,23 @@ export default function AssembleiasScreen({ navigation }: any) {
           const actions: MenuAction[] = [];
           if (ehGestao) {
             actions.push({
+              label: 'Credenciamento (QR)',
+              icon: 'qrcode-scan',
+              onPress: async () => {
+                  const gt = await getGlobalTokenAtivo();
+                  if (gt) {
+                      navigation.navigate('VisualizarToken', {
+                          assembleiaId: gt.assembleia_id,
+                          token: gt.token,
+                          assembleiaTitulo: gt.assembleia_titulo,
+                          type: 'GLOBAL'
+                      });
+                  } else {
+                      alert('Não há nenhum token de credenciamento ativo no momento.');
+                  }
+              }
+            });
+            actions.push({
               label: 'Nova Assembleia',
               icon: 'plus',
               onPress: () => navigation.navigate('CriarAssembleia')
@@ -51,7 +68,7 @@ export default function AssembleiasScreen({ navigation }: any) {
         }
       });
       fetchData();
-    }, [ehGestao])
+    }, [ehGestao, navigation])
   );
 
   const onRefresh = async () => {

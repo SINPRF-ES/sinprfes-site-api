@@ -598,9 +598,9 @@ async function checkin(req, res) {
 
     if (!token) return res.status(400).json({ error: "Token é obrigatório" });
 
-    // Bloqueia perfis que não votam nem contam quórum (ADMIN)
+    // Bloqueia perfis que não votam nem contam quórum (ADMIN/COLABORADOR)
     const perfil = (req.user.perfil_acesso || "").toUpperCase();
-    if (perfil === 'ADMIN') {
+    if (perfil === 'ADMIN' || perfil === 'COLABORADOR') {
        return res.status(403).json({ error: "Seu perfil não possui permissão para realizar check-in em assembleias" });
     }
 
@@ -1115,6 +1115,15 @@ async function gerarRelatorio(req, res) {
   try {
     const assembleia = await service.buscarPorId(assembleiaId);
     if (!assembleia) return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
+
+    // FENAPRF: Relatórios só podem ser gerados para assembleias encerradas
+    if (assembleia.estado !== 'ENCERRADO') {
+        log.warn("REPORT_PDF_FORBIDDEN_STATE", { requestId: req.requestId, assembleiaId, estado: assembleia.estado });
+        return res.status(403).json({
+            success: false,
+            error: "O relatório consolidado só fica disponível após o encerramento da assembleia."
+        });
+    }
 
     const perfil = (req.user.perfil_acesso || "").toUpperCase();
     if (perfil === 'COMUNICADOR') {

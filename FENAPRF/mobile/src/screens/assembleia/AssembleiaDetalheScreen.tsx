@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image, AppState, AppStateStatus } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image, AppState, AppStateStatus, RefreshControl, Share } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,18 +25,19 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [tokenInput, setTokenInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [isScanning, setIsScanning] = useState(false);
   const [editalLoading, setEditalLoading] = useState(false);
 
   const perfil = (user?.perfil_acesso || '').toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
-  const isElegivel = ['DIRETORIA', 'CONSELHEIRO', 'COLABORADOR'].includes(perfil);
+  const isElegivel = ['DIRETORIA', 'CONSELHEIRO'].includes(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
 
   // RBAC FENAPRF: Apenas Presidência/Vice pode compor a mesa
   const podeComporMesa = (user?.cargo === 'Presidente da FENAPRF' || user?.cargo === 'Vice-Presidente da FENAPRF' || perfil === 'ADMIN');
 
   const canSeeToken = estado?.quorumVigente?.token && (isPresidente || isDiretoria || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
-  const canGenerateReport = (assembleia?.estado === 'ENCERRADO' || assembleia?.estado === 'INICIADO' || assembleia?.estado === 'EM_CREDENCIAMENTO' || assembleia?.estado === 'SUSPENSA');
 
   const [estadoLoading, setEstadoLoading] = useState(false);
 
@@ -339,17 +341,59 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     });
   }, [navigation, assembleia, isDiretoria, handleAbrir, handleGerarToken, handleEncerrar, handleIniciarExecucao, handleSolicitarRelatorio]);
 
-  const handleCheckin = async () => {
+  const handleScanPress = async () => {
+    if (!cameraPermission?.granted) {
+      const res = await requestCameraPermission();
+      if (!res.granted) {
+        Alert.alert('Câmera necessária', 'Precisamos de acesso à câmera para escanear o QR Code.');
+        return;
+      }
+    }
+    setIsScanning(true);
+  };
+
+  const onBarCodeScanned = ({ data }: { data: string }) => {
+    setIsScanning(false);
+    try {
+      const payload = JSON.parse(data);
+      const expectedType = assembleia.estado === 'EM_CREDENCIAMENTO' ? 'GLOBAL' : 'QUORUM';
+
+      if (payload.assembleiaId !== id) {
+        Alert.alert('QR Code Inválido', 'Este QR Code pertence a outra assembleia.');
+        return;
+      }
+
+      if (payload.type !== expectedType && !(payload.type === 'CREDENCIAMENTO' && expectedType === 'GLOBAL')) {
+          Alert.alert('QR Code Inválido', `Este QR Code é do tipo ${payload.type}, mas a assembleia aguarda ${expectedType}.`);
+          return;
+      }
+
+      setTokenInput(payload.token);
+      // Auto-submit after scan
+      setTimeout(() => handleCheckin(payload.token), 500);
+
+    } catch (e) {
+      // Se não for JSON, pode ser o token puro (fallback)
+      if (data && data.length <= 10) {
+          setTokenInput(data);
+      } else {
+          Alert.alert('Erro na leitura', 'O QR Code lido não é válido para este sistema.');
+      }
+    }
+  };
+
+  const handleCheckin = async (scannedToken?: string) => {
+    const tokenToUse = scannedToken || tokenInput;
     const isCred = assembleia?.estado === 'EM_CREDENCIAMENTO';
     const expectedLen = isCred ? 10 : 6;
 
-    if (tokenInput.length !== expectedLen) {
+    if (tokenToUse.length !== expectedLen) {
       Alert.alert('Aviso', `O token de ${isCred ? 'credenciamento' : 'quórum'} deve ter ${expectedLen} caracteres.`);
       return;
     }
     try {
       setActionLoading(true);
-      const res = await realizarCheckin(id, tokenInput) as any;
+      const res = await realizarCheckin(id, tokenToUse) as any;
 
       if (res?.status === 'PENDING_VOTATION') {
           Alert.alert('Substituição Pendente', 'Uma votação está em curso. Sua titularidade será aplicada automaticamente assim que o item atual for encerrado.');
@@ -412,7 +456,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
   const isParticipavel = assembleia.estado === 'EM_CREDENCIAMENTO' || assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
   const isEncerrada = assembleia.estado === 'ENCERRADO';
-  const isIniciado = assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
+  const canGenerateReport = isEncerrada;
 
   return (
     <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
@@ -423,6 +467,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         enableOnAndroid
         extraScrollHeight={80}
         keyboardOpeningTime={0}
+        refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={fetchData} />
+        }
     >
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.btnVoltar}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#003366" />
@@ -681,6 +728,20 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
               <Text style={styles.checkinSubtitle}>
                   Informe o token de {assembleia.estado === 'EM_CREDENCIAMENTO' ? '10 caracteres' : '6 dígitos'} para registrar sua presença.
               </Text>
+
+              {/* FENAPRF: QR Scan para Conselheiros e Diretores (exceto Admin/Colab) */}
+              {(perfil === 'CONSELHEIRO' || perfil === 'DIRETORIA') && (
+                <TouchableOpacity
+                    style={styles.btnScan}
+                    onPress={handleScanPress}
+                    accessibilityLabel="Escanear QR Code de Presença"
+                    accessibilityRole="button"
+                >
+                    <MaterialCommunityIcons name="qrcode-scan" size={24} color="#003366" />
+                    <Text style={styles.btnScanText}>Escanear QR Code</Text>
+                </TouchableOpacity>
+              )}
+
               <TextInput
                 style={styles.tokenInput}
                 placeholder={assembleia.estado === 'EM_CREDENCIAMENTO' ? "A1B2C3D4E5" : "000000"}
@@ -705,6 +766,37 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
     </KeyboardAwareScrollView>
 
+
+      {/* Modal do Scanner QR */}
+      <Modal
+        visible={isScanning}
+        animationType="slide"
+        onRequestClose={() => setIsScanning(false)}
+      >
+        <SafeScreen style={{ backgroundColor: '#000' }}>
+            <View style={styles.scannerHeader}>
+                <TouchableOpacity onPress={() => setIsScanning(false)} style={styles.btnScannerClose}>
+                    <MaterialCommunityIcons name="close" size={32} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.scannerTitle}>Escanear QR Code</Text>
+            </View>
+
+            <View style={styles.scannerContainer}>
+                <CameraView
+                    style={StyleSheet.absoluteFillObject}
+                    facing="back"
+                    onBarcodeScanned={isScanning ? onBarCodeScanned : undefined}
+                    barcodeScannerSettings={{
+                        barcodeTypes: ['qr'],
+                    }}
+                />
+                <View style={styles.scannerOverlay}>
+                    <View style={styles.scannerFrame} />
+                    <Text style={styles.scannerHint}>Posicione o QR Code da Assembleia dentro do quadro</Text>
+                </View>
+            </View>
+        </SafeScreen>
+      </Modal>
 
     </SafeScreen>
   );
@@ -807,4 +899,13 @@ const styles = StyleSheet.create({
   tokenLabelVigente: { fontSize: 13, fontWeight: 'bold', color: '#856404', marginBottom: 8, textTransform: 'uppercase' },
   tokenValueVigente: { fontSize: 40, fontWeight: '900', color: '#003366', letterSpacing: 10 },
   tokenHintVigente: { fontSize: 12, color: '#666', marginTop: 8, fontWeight: '500' },
+  scannerHeader: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: '#003366' },
+  btnScannerClose: { padding: 8 },
+  scannerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginLeft: 15 },
+  scannerContainer: { flex: 1, backgroundColor: '#000' },
+  scannerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  scannerFrame: { width: 250, height: 250, borderWidth: 2, borderColor: '#f1c40f', borderRadius: 20, backgroundColor: 'transparent' },
+  scannerHint: { color: '#fff', textAlign: 'center', marginTop: 30, paddingHorizontal: 40, fontWeight: 'bold' },
+  btnScan: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 10, marginBottom: 10 },
+  btnScanText: { color: '#003366', fontWeight: 'bold', fontSize: 14, textTransform: 'uppercase' },
 });

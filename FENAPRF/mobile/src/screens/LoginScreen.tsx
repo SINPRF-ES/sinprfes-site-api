@@ -14,7 +14,7 @@ import { logger } from '../infra/logger';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
-  const { setSessao, ativarBiometriaNesteAparelho, biometriaHabilitada, desbloquearComBiometria } = useAuth();
+  const { setSessao, refreshUser, ativarBiometriaNesteAparelho, biometriaHabilitada, desbloquearComBiometria } = useAuth();
 
   const [cpf, setCpf] = useState<string>('');
   const [senha, setSenha] = useState<string>('');
@@ -81,6 +81,10 @@ export default function LoginScreen() {
       }
 
       await setSessao(sessao.token, sessao.refreshToken, sessao.user);
+
+      // FENAPRF: Garantir que o usuário esteja totalmente hidratado no boot do login
+      // (Embora o backend agora retorne mais campos, o refreshUser garante a paridade total com o /me)
+      await refreshUser();
 
       if (!biometriaHabilitada) {
         Alert.alert(

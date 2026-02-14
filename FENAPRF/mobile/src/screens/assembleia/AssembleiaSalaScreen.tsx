@@ -21,7 +21,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const perfil = (user?.perfil_acesso || '').toUpperCase();
   const isDiretoria = perfil === 'DIRETORIA' || perfil === 'ADMIN';
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
-  const isElegivel = ['DIRETORIA', 'CONSELHEIRO', 'COLABORADOR'].includes(perfil);
+  const isElegivel = ['DIRETORIA', 'CONSELHEIRO'].includes(perfil);
   const temAutoridade = isPresidente || isDiretoria;
   const canSeeToken = estado?.quorumVigente?.token && (temAutoridade || user?.id === (estado.quorumVigente as any).gerado_por_user_id);
 

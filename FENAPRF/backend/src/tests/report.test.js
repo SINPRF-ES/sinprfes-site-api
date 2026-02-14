@@ -40,8 +40,17 @@ describe('Assembleia Report API', () => {
     usersService.buscarPorId.mockResolvedValue({ id: 'user-1', nome: 'Test User', email1: 'test@test.com' });
   });
 
-  test('should allow DIRETORIA to generate report during EM_CURSO', async () => {
+  test('should block DIRETORIA from generating report if NOT ENCERRADO', async () => {
     pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'EM_CURSO', titulo: 'Ass 1' }] });
+
+    const response = await request(app).post(`/api/assembleias/${validId}/relatorio`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toContain('disponível após o encerramento');
+  });
+
+  test('should allow DIRETORIA to generate report when ENCERRADO', async () => {
+    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'ENCERRADO', titulo: 'Ass 1' }] });
 
     const response = await request(app).post(`/api/assembleias/${validId}/relatorio`);
 
@@ -50,9 +59,9 @@ describe('Assembleia Report API', () => {
     expect(emailService.enviarEmailRelatorioAssembleia).toHaveBeenCalled();
   });
 
-  test('should allow USER to generate report during EM_CURSO', async () => {
+  test('should allow USER to generate report when ENCERRADO', async () => {
     mockUser = { id: 'user-2', perfil_acesso: 'USER' };
-    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'EM_CURSO', titulo: 'Ass 1' }] });
+    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'ENCERRADO', titulo: 'Ass 1' }] });
 
     const response = await request(app).post(`/api/assembleias/${validId}/relatorio`);
 
@@ -60,19 +69,9 @@ describe('Assembleia Report API', () => {
     expect(response.body.success).toBe(true);
   });
 
-  test('should allow USER to generate report when ENCERRADA', async () => {
-    mockUser = { id: 'user-2', perfil_acesso: 'USER' };
-    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'ENCERRADA', titulo: 'Ass 1' }] });
-
-    const response = await request(app).post(`/api/assembleias/${validId}/relatorio`);
-
-    expect(response.status).toBe(200);
-    expect(response.body.success).toBe(true);
-  });
-
-  test('should block COMUNICADOR from generating report even when ENCERRADA', async () => {
+  test('should block COMUNICADOR from generating report even when ENCERRADO', async () => {
     mockUser = { id: 'user-3', perfil_acesso: 'COMUNICADOR' };
-    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'ENCERRADA', titulo: 'Ass 1' }] });
+    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'ENCERRADO', titulo: 'Ass 1' }] });
 
     const response = await request(app).post(`/api/assembleias/${validId}/relatorio`);
 
@@ -81,7 +80,7 @@ describe('Assembleia Report API', () => {
   });
 
   test('should return 500 if primary delivery fails', async () => {
-    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'ENCERRADA', titulo: 'Ass 1' }] });
+    pool.query.mockResolvedValue({ rows: [{ id: validId, estado: 'ENCERRADO', titulo: 'Ass 1' }] });
     emailService.enviarEmailRelatorioAssembleia.mockRejectedValue(new Error('SMTP Error'));
 
     const response = await request(app).post(`/api/assembleias/${validId}/relatorio`);

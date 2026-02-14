@@ -125,6 +125,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function refreshUser() {
+    try {
+        const { data: userAtualizado } = await api.get('/api/users/me');
+        setUser(userAtualizado);
+
+        const sessao = await carregarSessao();
+        if (sessao) {
+            await salvarSessao({
+                ...sessao,
+                user: userAtualizado
+            });
+        }
+    } catch (error: any) {
+        console.error('[Auth.refreshUser.error]', error.message);
+    }
+  }
+
   async function logout(removerBiometria = false) {
     await limparSessao(!removerBiometria);
     setToken(null);
@@ -185,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     biometriaHabilitada,
     bloqueadoPorBiometria,
     setSessao,
+    refreshUser,
     logout,
     ativarBiometriaNesteAparelho,
     desbloquearComBiometria,

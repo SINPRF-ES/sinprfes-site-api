@@ -100,16 +100,33 @@ exports.login = async (req, res, next) => {
 
     log.info("AuthLoginSucesso", { userId: user.id, deviceId, requestId });
 
+    // FENAPRF: Retornar objeto completo (sem campos sensíveis) para evitar cards em branco no mobile
+    const userResponse = {
+      id: user.id,
+      cpf: user.cpf,
+      name: user.name,
+      nome: user.nome || user.name,
+      email: user.email,
+      email1: user.email1 || user.email,
+      perfil_acesso: user.perfil_acesso,
+      uf: user.uf,
+      cargo: user.cargo,
+      cargo_mandato_inicio: user.cargo_mandato_inicio,
+      cargo_mandato_fim: user.cargo_mandato_fim,
+      avatar_url: user.avatar_url,
+      data_nascimento: user.data_nascimento,
+      sexo: user.sexo,
+      perfil_acesso2: user.perfil_acesso2,
+      cargo2: user.cargo2,
+      uf2: user.uf2
+    };
+
     return res.json({
       message: Textos.SUCESSO.LOGIN_REALIZADO,
       token: accessToken,
       refreshToken: refreshToken,
       perfil_acesso: user.perfil_acesso || "CONSELHEIRO",
-      user: {
-          id: user.id,
-          name: user.name,
-          perfil_acesso: user.perfil_acesso
-      }
+      user: userResponse
     });
   } catch (err) {
     log.error("AuthLoginErroInterno", { error: err.message, requestId });
@@ -136,7 +153,9 @@ exports.refresh = async (req, res, next) => {
 
     // Busca a sessão ativa
     const { rows } = await client.query(
-      `SELECT s.*, u.id as user_id, u.cpf, u.name, u.perfil_acesso, u.bloqueado, u.arquivado_em
+      `SELECT s.*, u.id as user_id, u.cpf, u.name, u.perfil_acesso, u.bloqueado, u.arquivado_em,
+              u.email, u.uf, u.cargo, u.cargo_mandato_inicio, u.cargo_mandato_fim, u.avatar_url,
+              u.data_nascimento, u.sexo, u.perfil_acesso2, u.cargo2, u.uf2
        FROM auth_sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
@@ -197,9 +216,31 @@ exports.refresh = async (req, res, next) => {
 
     log.info("AuthRefreshSucesso", { userId: sessao.user_id, atorId, requestId });
 
+    // FENAPRF: Retornar também o usuário atualizado no refresh para reidratação
+    const userResponse = {
+        id: sessao.user_id,
+        cpf: sessao.cpf,
+        name: sessao.name,
+        nome: sessao.nome || sessao.name,
+        email: sessao.email,
+        email1: sessao.email1 || sessao.email,
+        perfil_acesso: sessao.perfil_acesso,
+        uf: sessao.uf,
+        cargo: sessao.cargo,
+        cargo_mandato_inicio: sessao.cargo_mandato_inicio,
+        cargo_mandato_fim: sessao.cargo_mandato_fim,
+        avatar_url: sessao.avatar_url,
+        data_nascimento: sessao.data_nascimento,
+        sexo: sessao.sexo,
+        perfil_acesso2: sessao.perfil_acesso2,
+        cargo2: sessao.cargo2,
+        uf2: sessao.uf2
+    };
+
     return res.json({
       token: accessToken,
-      refreshToken: newRefreshToken
+      refreshToken: newRefreshToken,
+      user: userResponse
     });
   } catch (err) {
     if (client) await client.query("ROLLBACK");
