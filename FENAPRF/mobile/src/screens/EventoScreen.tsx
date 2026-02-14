@@ -314,7 +314,7 @@ export default function EventoScreen() {
   if (carregando) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator accessibilityLabel="Carregando dados do evento..." />
         <Text style={styles.muted}>Carregando evento…</Text>
       </View>
     );

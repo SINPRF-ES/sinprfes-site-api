@@ -222,7 +222,7 @@ export default function EditarUserScreen({ route, navigation }: any) {
   }, [navigation, user, authUser, handleUpdate, userId, saving]);
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando dados do membro..." /></View>;
   }
 
 
@@ -275,7 +275,9 @@ export default function EditarUserScreen({ route, navigation }: any) {
           </View>
         ) : null}
 
-        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>👤 Informações Pessoais</Text></View>
+        <View style={styles.sectionHeader} accessibilityRole="header" accessibilityLabel="Seção: Informações Pessoais">
+          <Text style={styles.sectionTitle}>👤 Informações Pessoais</Text>
+        </View>
         <ContatoCard
           user={user}
           setUser={setUser}
@@ -284,12 +286,16 @@ export default function EditarUserScreen({ route, navigation }: any) {
           hideTitle={true}
         />
 
-        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]}><Text style={styles.sectionTitle}>🏠 Endereço</Text></View>
+        <View style={[styles.sectionHeader, { backgroundColor: '#f7f9fc' }]} accessibilityRole="header" accessibilityLabel="Seção: Endereço">
+          <Text style={styles.sectionTitle}>🏠 Endereço</Text>
+        </View>
         <EnderecoCard user={user} setUser={setUser} hideTitle={true} cardStyle={{ backgroundColor: '#f7f9fc' }} />
 
         {checkIsGestao(authUser?.perfil_acesso) && (
           <>
-            <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>⛓️ Vínculo e Mandato</Text></View>
+            <View style={styles.sectionHeader} accessibilityRole="header" accessibilityLabel="Seção: Vínculo e Mandato">
+              <Text style={styles.sectionTitle}>⛓️ Vínculo e Mandato</Text>
+            </View>
             <VinculoCard
               user={user}
               setUser={setUser}

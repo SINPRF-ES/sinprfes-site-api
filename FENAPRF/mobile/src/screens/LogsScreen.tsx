@@ -200,7 +200,7 @@ const LogsScreen = () => {
   );
 
   if (loading) {
-    return <ActivityIndicator style={styles.centered} size="large" />;
+    return <ActivityIndicator style={styles.centered} size="large" accessibilityLabel="Carregando logs do sistema..." />;
   }
 
   return (

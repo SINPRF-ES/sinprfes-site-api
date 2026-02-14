@@ -366,7 +366,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   };
 
   if (loading || !estado) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando sala de votação..." /></View>;
   }
 
   const { votacaoAtiva, quorumVigente, proposta_pendente_branch } = estado as any;
@@ -488,6 +488,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
                 )}
             </View>
         )}
+
         {votacaoAtiva ? (
           <View style={styles.votacaoCard}>
             <Text style={styles.sectionTitle}>🗳️ Votação Ativa</Text>
@@ -559,7 +560,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
           </View>
         ) : (
           <View style={styles.waitingCard}>
-            <ActivityIndicator size="small" color="#666" />
+            <ActivityIndicator size="small" color="#666" accessibilityLabel="Aguardando votação..." />
             <Text style={styles.waitingText}>Aguardando próximo item de pauta...</Text>
           </View>
         )}

@@ -44,7 +44,7 @@ export default function BiometricLockScreen() {
       </Text>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#FFC300" />
+        <ActivityIndicator size="large" color="#FFC300" accessibilityLabel="Processando biometria..." />
       ) : (
         <View style={styles.buttonContainer}>
           <Button

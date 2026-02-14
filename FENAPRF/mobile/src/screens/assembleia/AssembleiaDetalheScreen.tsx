@@ -441,7 +441,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   };
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando detalhes da assembleia..." /></View>;
   }
 
   if (!assembleia) {
@@ -550,7 +550,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             accessibilityRole="button"
           >
             {editalLoading ? (
-              <ActivityIndicator size="small" color="#003366" />
+              <ActivityIndicator size="small" color="#003366" accessibilityLabel="Sincronizando..." />
             ) : (
               <MaterialCommunityIcons
                 name={assembleia.edital_url.toLowerCase().endsWith('.pdf') ? 'file-pdf-box' : 'image'}
@@ -574,7 +574,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>👥 Quórum Atual</Text>
         {estadoLoading ? (
-            <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
+            <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} accessibilityLabel="Processando ação..." />
         ) : !estado ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Text style={[styles.infoValue, { color: '#999' }]}>Indisponível</Text>

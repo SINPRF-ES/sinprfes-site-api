@@ -446,7 +446,15 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
             styles.container,
             { paddingBottom: Math.max(insets.bottom + 20, 80) }
           ]}
-          ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
+          ListEmptyComponent={
+            <View style={styles.centered}>
+              <Text style={styles.emptyText}>
+                {currentFolder.id === null
+                  ? 'Nenhum documento ou pasta disponível na raiz.'
+                  : 'Esta pasta está vazia.'}
+              </Text>
+            </View>
+          }
         />
       )}
 
@@ -681,7 +689,7 @@ const FolderSelector = ({ movingItemId, onSelect, onCancel }: { movingItemId?: s
                 <FontAwesome name="chevron-right" size={12} color="#ccc" />
               </TouchableOpacity>
             )}
-            ListEmptyComponent={<Text style={styles.emptyText}>Nenhuma subpasta aqui.</Text>}
+            ListEmptyComponent={<Text style={styles.emptyText}>Não há outras subpastas neste local.</Text>}
           />
         )}
       </View>
