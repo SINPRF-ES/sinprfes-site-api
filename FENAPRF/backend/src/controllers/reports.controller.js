@@ -4,7 +4,7 @@ const pdfService = require("../services/pdf.service");
 const emailService = require("../services/email.service");
 const usersService = require("../services/users.service");
 const log = require("../utils/log");
-const { formatarCPF } = require("../utils/format");
+const { formatarCPF, parseUuid } = require("../utils/format");
 const { slugify } = require("../../shared/canon");
 
 /**
@@ -51,8 +51,11 @@ async function getRequesterData(user) {
  * POST /api/reports/generate
  */
 exports.generateReport = async (req, res) => {
+  const atorId = req.user?.id;
   const { type, params } = req.body;
   const requesterSession = req.user;
+
+  if (!atorId) return res.status(401).json({ success: false, message: "Sessão inválida ou ator não identificado." });
 
   // Validação do contrato da API
   if (!type || typeof params !== 'object' || params === null) {
@@ -69,8 +72,8 @@ exports.generateReport = async (req, res) => {
 
     if (type === "INDIVIDUAL") {
       // Contrato: INDIVIDUAL => { userId }
-      const { userId } = params;
-      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório para relatório individual." });
+      const userId = parseUuid(params?.userId);
+      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório (UUID esperado) para relatório individual." });
 
       const dados = await reportsService.buscarDadosDossie(userId);
       if (!dados) return res.status(404).json({ success: false, message: "User não encontrado." });
@@ -138,8 +141,11 @@ exports.generateReport = async (req, res) => {
  * POST /api/reports/preview
  */
 exports.previewReport = async (req, res) => {
+  const atorId = req.user?.id;
   const { type, params } = req.body;
   const requesterSession = req.user;
+
+  if (!atorId) return res.status(401).json({ success: false, message: "Sessão inválida ou ator não identificado." });
 
   if (!type || typeof params !== 'object' || params === null) {
     return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios." });
@@ -150,8 +156,8 @@ exports.previewReport = async (req, res) => {
     let baseCompetencia = null;
 
     if (type === "INDIVIDUAL") {
-      const { userId } = params;
-      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório." });
+      const userId = parseUuid(params?.userId);
+      if (!userId) return res.status(400).json({ success: false, message: "ID do user é obrigatório (UUID esperado)." });
       data = await reportsService.buscarDadosDossie(userId);
       if (!data) return res.status(404).json({ success: false, message: "User não encontrado." });
     } else if (["UF", "SITUACAO"].includes(type)) {
@@ -267,8 +273,11 @@ exports.previewReport = async (req, res) => {
  * GET /api/reports/history
  */
 exports.getHistory = async (req, res) => {
+  const atorId = req.user?.id;
   try {
-    const requesterId = req.user.id;
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado." });
+
+    const requesterId = atorId;
     const perfil = (req.user.perfil_acesso || "").toUpperCase();
 
     // ADMIN vê tudo, outros vêem apenas o próprio histórico por padrão (ajustável conforme UX)

@@ -5,8 +5,11 @@ const log = require("../utils/log");
 const Textos = require("../utils/textos");
 
 exports.criarSimNao = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
+
     const eventoId = parseUuid(req.params.id);
     if (!eventoId) return res.status(400).json({ error: "Evento inválido (UUID esperado).", requestId });
 
@@ -17,7 +20,7 @@ exports.criarSimNao = async (req, res) => {
       eventoId,
       titulo,
       duracaoMin: duracao_min ?? 2,
-      criadoPor: req.user.id,
+      criadoPor: atorId,
     });
 
     return res.status(201).json(v);
@@ -28,12 +31,15 @@ exports.criarSimNao = async (req, res) => {
 };
 
 exports.listar = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
+
     const eventoId = parseUuid(req.params.id);
     if (!eventoId) return res.status(400).json({ error: "Evento inválido (UUID esperado).", requestId });
 
-    const rows = await service.listarVotacoesEvento({ eventoId, userId: req.user.id });
+    const rows = await service.listarVotacoesEvento({ eventoId, userId: atorId });
     return res.json(rows);
   } catch (e) {
     log.error("EventoVotacaoListarErro", { error: e.message, stack: e.stack, requestId });
@@ -42,13 +48,16 @@ exports.listar = async (req, res) => {
 };
 
 exports.detalhe = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
+
     const eventoId = parseUuid(req.params.id);
     const votacaoId = parseUuid(req.params.votacaoId);
     if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos.", requestId });
 
-    const v = await service.detalheVotacao({ eventoId, votacaoId, userId: req.user.id });
+    const v = await service.detalheVotacao({ eventoId, votacaoId, userId: atorId });
     if (!v) return res.status(404).json({ error: "Votação não encontrada.", requestId });
 
     return res.json(v);
@@ -59,13 +68,16 @@ exports.detalhe = async (req, res) => {
 };
 
 exports.abrir = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
+
     const eventoId = parseUuid(req.params.id);
     const votacaoId = parseUuid(req.params.votacaoId);
     if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos.", requestId });
 
-    const r = await service.abrirVotacao({ eventoId, votacaoId, abertoPor: req.user.id });
+    const r = await service.abrirVotacao({ eventoId, votacaoId, abertoPor: atorId });
     return res.json(r);
   } catch (e) {
     log.error("EventoVotacaoAbrirErro", { error: e.message, stack: e.stack, requestId });
@@ -74,8 +86,11 @@ exports.abrir = async (req, res) => {
 };
 
 exports.votar = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
+
     const eventoId = parseUuid(req.params.id);
     const votacaoId = parseUuid(req.params.votacaoId);
     if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos.", requestId });
@@ -86,7 +101,7 @@ exports.votar = async (req, res) => {
     const r = await service.votar({
       eventoId,
       votacaoId,
-      userId: req.user.id,
+      userId: atorId,
       opcaoId: opcao,
     });
 

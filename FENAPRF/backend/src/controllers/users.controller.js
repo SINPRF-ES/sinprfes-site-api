@@ -88,9 +88,12 @@ async function verificarConflitoCargo(perfil, cargo, uf, userId = null) {
  */
 async function verificarAvisosDuplicidade(payload, userId = null) {
   const names = new Set();
-  const email = payload.email || payload.email1;
-  const tel1 = payload.telefone1 ? String(payload.telefone1).replace(/\D/g, "") : null;
-  const tel2 = payload.telefone2 ? String(payload.telefone2).replace(/\D/g, "") : null;
+  const email = (payload.email || payload.email1 || "").trim();
+
+  // Otimização BOLT ⚡: Pre-calcula e remove duplicatas no JS para reduzir carga no SQL
+  const telefonesLimpos = new Set();
+  if (payload.telefone1) telefonesLimpos.add(String(payload.telefone1).replace(/\D/g, ""));
+  if (payload.telefone2) telefonesLimpos.add(String(payload.telefone2).replace(/\D/g, ""));
 
   const conditions = [];
   const params = [];
@@ -101,15 +104,13 @@ async function verificarAvisosDuplicidade(payload, userId = null) {
     params.push(email);
     idx++;
   }
-  if (tel1 && tel1.length >= 8) {
-    conditions.push(`(regexp_replace(telefone1, '[^0-9]', '', 'g') = $${idx} OR regexp_replace(telefone2, '[^0-9]', '', 'g') = $${idx})`);
-    params.push(tel1);
-    idx++;
-  }
-  if (tel2 && tel2.length >= 8) {
-    conditions.push(`(regexp_replace(telefone1, '[^0-9]', '', 'g') = $${idx} OR regexp_replace(telefone2, '[^0-9]', '', 'g') = $${idx})`);
-    params.push(tel2);
-    idx++;
+
+  for (const tel of telefonesLimpos) {
+    if (tel && tel.length >= 8) {
+      conditions.push(`(regexp_replace(telefone1, '[^0-9]', '', 'g') = $${idx} OR regexp_replace(telefone2, '[^0-9]', '', 'g') = $${idx})`);
+      params.push(tel);
+      idx++;
+    }
   }
 
   if (conditions.length === 0) return [];

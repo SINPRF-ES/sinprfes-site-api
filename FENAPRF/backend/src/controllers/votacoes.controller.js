@@ -9,10 +9,13 @@ function parseId(req) {
 }
 
 exports.listar = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
+
     const status = (req.query.status || "").toString().toUpperCase().trim(); // opcional
-    const lista = await service.listarVotacoes({ userId: req.user.id, status });
+    const lista = await service.listarVotacoes({ userId: atorId, status });
     return res.json(lista);
   } catch (err) {
     log.error("VotacoesListarErro", { error: err.message, stack: err.stack, requestId });
@@ -21,12 +24,15 @@ exports.listar = async (req, res) => {
 };
 
 exports.detalhe = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
+
     const votacaoId = parseId(req);
     if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
-    const v = await service.obterVotacao({ votacaoId, userId: req.user.id });
+    const v = await service.obterVotacao({ votacaoId, userId: atorId });
     if (!v) return res.status(404).json({ error: "Votação não encontrada.", requestId });
 
     return res.json(v);
@@ -37,8 +43,10 @@ exports.detalhe = async (req, res) => {
 };
 
 exports.criar = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
     const { titulo, descricao, abre_em, encerra_em, opcoes } = req.body || {};
 
     if (!titulo || typeof titulo !== "string") {
@@ -49,7 +57,7 @@ exports.criar = async (req, res) => {
     }
 
     const result = await service.criarVotacao({
-      criadoPor: req.user.id,
+      criadoPor: atorId,
       titulo: titulo.trim(),
       descricao: (descricao || "").toString(),
       abreEm: abre_em || null,
@@ -65,8 +73,10 @@ exports.criar = async (req, res) => {
 };
 
 exports.abrir = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
     const votacaoId = parseId(req);
     if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
@@ -81,8 +91,10 @@ exports.abrir = async (req, res) => {
 };
 
 exports.encerrar = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
     const votacaoId = parseId(req);
     if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
@@ -97,8 +109,10 @@ exports.encerrar = async (req, res) => {
 };
 
 exports.votar = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
     const votacaoId = parseId(req);
     if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
@@ -129,7 +143,7 @@ exports.votar = async (req, res) => {
     const result = await service.registrarVoto({
       votacaoId: votacaoId,
       opcaoId,
-      userId: req.user.id,
+      userId: atorId,
       deviceId: deviceId ? String(deviceId) : null,
       biometriaConfirmada: Boolean(biometriaConfirmada),
       ip: req.ip,
@@ -156,8 +170,10 @@ exports.votar = async (req, res) => {
 };
 
 exports.resultado = async (req, res) => {
+  const atorId = req.user?.id;
   const requestId = req.requestId;
   try {
+    if (!atorId) return res.status(401).json({ message: "Sessão inválida.", requestId });
     const votacaoId = parseId(req);
     if (!votacaoId) return res.status(400).json({ error: "ID inválido.", requestId });
 
