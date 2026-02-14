@@ -25,13 +25,24 @@ async function registrarJob(report_type, params, requester) {
  * Retorna o histórico de relatórios gerados.
  */
 async function listarHistorico(requester_id = null) {
-  let query = `SELECT * FROM report_jobs`;
+  // FENAPRF: SQL JOIN para evitar N+1 ao resolver nomes de alvos de relatórios individuais
+  let query = `
+    SELECT
+      j.*,
+      u.name as target_user_name
+    FROM report_jobs j
+    LEFT JOIN users u ON (
+      j.report_type = 'INDIVIDUAL' AND
+      (j.params->>'userId')::text ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' AND
+      (j.params->>'userId')::uuid = u.id
+    )
+  `;
   const params = [];
   if (requester_id) {
-    query += ` WHERE requester_id = $1`;
+    query += ` WHERE j.requester_id = $1`;
     params.push(requester_id);
   }
-  query += ` ORDER BY created_at DESC LIMIT 50`;
+  query += ` ORDER BY j.created_at DESC LIMIT 50`;
   const { rows } = await pool.query(query, params);
   return rows;
 }
@@ -53,6 +64,9 @@ async function buscarDadosAgregados(tipo, valor) {
 
   if (tipo === "UF") {
     whereClause += " AND uf = $1";
+    params.push(valor);
+  } else if (tipo === "SITUACAO") {
+    whereClause += " AND situacao = $1";
     params.push(valor);
   }
 
@@ -90,11 +104,33 @@ async function cleanupOldReports() {
 }
 
 async function buscarDadosGlobal() {
-  const membros = await buscarDadosAgregados("GLOBAL", null);
+  // FENAPRF: Relatório Global consolidado por situação funcional
+  const totalGeral = await buscarDadosAgregados("GLOBAL", null);
 
-  return {
-    membros
+  // Busca detalhamento por situação funcional
+  const { rows: situacoes } = await pool.query(`
+    SELECT
+      situacao,
+      COUNT(*)::INTEGER as total,
+      COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
+      COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem
+    FROM users
+    WHERE arquivado_em IS NULL
+    GROUP BY situacao
+    ORDER BY total DESC
+  `);
+
+  // Monta estrutura compatível com o PDF e Controller
+  const result = {
+    membros: totalGeral,
+    porSituacao: situacoes,
+    // Fallbacks para compatibilidade com campos esperados no controller
+    ativo: situacoes.find(s => s.situacao === 'ATIVO') || { total: 0, masc: 0, fem: 0 },
+    veterano: situacoes.find(s => s.situacao === 'VETERANO') || { total: 0, masc: 0, fem: 0 },
+    pensionista: situacoes.find(s => s.situacao === 'PENSIONISTA') || { total: 0, masc: 0, fem: 0 }
   };
+
+  return result;
 }
 
 module.exports = {
