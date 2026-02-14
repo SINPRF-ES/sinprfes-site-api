@@ -17,6 +17,7 @@ export interface AuthContextData {
   bloqueadoPorBiometria: boolean;
 
   setSessao: (token: string, refreshToken: string, user: User) => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: (removerBiometria?: boolean) => Promise<void>;
 
   ativarBiometriaNesteAparelho: (ativar: boolean) => Promise<void>;

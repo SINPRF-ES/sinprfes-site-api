@@ -77,7 +77,7 @@ describe('Assembleias Controller', () => {
   describe('gerarRelatorio', () => {
     test('should return 403 for COMUNICADOR profile', async () => {
       req.user.perfil_acesso = 'COMUNICADOR';
-      service.buscarPorId.mockResolvedValue({ id: '1' });
+      service.buscarPorId.mockResolvedValue({ id: '1', estado: 'ENCERRADO' });
 
       await controller.gerarRelatorio(req, res);
 
@@ -89,7 +89,7 @@ describe('Assembleias Controller', () => {
 
     test('should allow USER profile and return success', async () => {
       req.user.perfil_acesso = 'USER';
-      service.buscarPorId.mockResolvedValue({ id: '1' });
+      service.buscarPorId.mockResolvedValue({ id: '1', estado: 'ENCERRADO' });
       service.gerarDadosRelatorio.mockResolvedValue({ assembleia: { id: '1' } });
       usersService.buscarPorId.mockResolvedValue({ id: 1, nome: 'Test', email1: 'test@example.com' });
       pdfService.gerarPdfRelatorioAssembleia.mockResolvedValue(Buffer.from('pdf'));

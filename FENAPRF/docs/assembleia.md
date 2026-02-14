@@ -7,7 +7,7 @@ Este documento descreve as regras de negócio obrigatórias para o funcionamento
 ### 1.1. Credenciamento (Check-in Global de Presença)
 O credenciamento é o registro inicial e obrigatório de presença para o evento como um todo.
 - **Finalidade:** Validar a presença do conselheiro no evento (assembleia) e habilitar sua participação nas sessões.
-- **Token e QR Code:** O token de credenciamento é **único por assembleia** (evento). Ele deve ser gerado uma única vez e persistido.
+- **Token e QR Code:** O token de credenciamento é **único por assembleia** (evento). Ele deve ser gerado uma única vez e persistido. O app mobile permite a leitura deste QR Code para check-in automático.
 - **Geração:** Somente os seguintes 4 perfis (cargos específicos) estão autorizados a realizar a primeira geração do token:
     - Presidente da FENAPRF
     - Vice-Presidente da FENAPRF
@@ -24,7 +24,7 @@ O credenciamento é o registro inicial e obrigatório de presença para o evento
 ### 1.2. Check-in de Quórum (Dinâmico)
 O quórum é a verificação de presença ativa para momentos específicos de votação durante a assembleia.
 - **Finalidade:** Definir o snapshot de membros aptos a votar em um determinado item de pauta ou proposta.
-- **Token e QR Code:** O token de quórum deve ser composto por **apenas 6 números** (para facilitar a digitação manual no portal web).
+- **Token e QR Code:** O token de quórum deve ser composto por **apenas 6 números**. O app mobile permite a leitura rápida via scanner QR.
 - **Geração:** Apenas os **4 componentes da mesa diretora** (Presidente, Vice-Presidente, 1º Secretário e 2º Secretário) podem gerar o token de quórum.
 - **Rotatividade e Reset:** O token de quórum pode ser gerado quantas vezes forem necessárias. Ao gerar um **novo token**, o sistema deve:
     - Resetar todo o quórum vigente (remover a presença de todos os participantes).
@@ -67,5 +67,14 @@ O quórum é a verificação de presença ativa para momentos específicos de vo
 - **Encerramento Antecipado:** Se todos os membros aptos (conforme o quórum) realizarem o voto antes do tempo expirar, a votação é encerrada automaticamente.
 - **Regra de Omissão (Não Votar = SIM):** Caso um membro presente no quórum não registre seu voto manualmente até o encerramento da votação, o sistema deve computar seu voto automaticamente como **SIM**.
 
-## 5. Auditoria
+## 5. Relatórios
+- **Disponibilidade:** O relatório consolidado (PDF) só fica disponível para solicitação após o estado da assembleia ser alterado para **ENCERRADO**.
+- **Restrição:** Tentativas de gerar relatórios em outros estados (EM_CREDENCIAMENTO, INICIADO, SUSPENSA) serão bloqueadas pelo backend (403 Forbidden).
+
+## 6. Scanner QR
+- **Uso:** Conselheiros e Diretores podem utilizar o scanner integrado no app mobile para realizar o check-in de credenciamento ou quórum.
+- **Payload:** O QR Code deve conter um JSON com `type` (GLOBAL ou QUORUM), `assembleiaId` e `token`.
+- **Restrição de Perfil:** Perfis ADMIN e COLABORADOR não possuem acesso à funcionalidade de check-in via token/QR.
+
+## 7. Auditoria
 - Todas as ações (check-ins, votos, mudanças de estado, composições de mesa) devem ser registradas em logs imutáveis de auditoria.

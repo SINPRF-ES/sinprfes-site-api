@@ -26,7 +26,7 @@ import { tituloCargoUf } from '../utils/user';
 
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
-  const { user: authUser, setSessao, token } = useAuth();
+  const { user: authUser, refreshUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -37,6 +37,9 @@ export default function MeusDadosScreen() {
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
+      // FENAPRF: Sincronizar com o contexto global no carregamento
+      await refreshUser();
+
       // O `apiService` já injeta o token
       const { data } = await api.get<User>('/api/users/me');
 
@@ -79,15 +82,12 @@ export default function MeusDadosScreen() {
 
       await api.put<User>('/api/users/me', payload);
 
-      // Re-fetch dos dados completos para re-hidratar o estado
+      // FENAPRF: Re-fetch global para atualizar Home/Drawer
+      await refreshUser();
+
+      // Re-fetch dos dados completos para re-hidratar o estado local
       const { data: refreshedData } = await api.get<User>('/api/users/me');
       setUser(refreshedData);
-
-      // Atualiza o membro no contexto de autenticação, se necessário
-      if (authUser) {
-        const authUserAtualizado = { ...authUser, name: refreshedData.name, email: refreshedData.email, avatar_url: refreshedData.avatar_url };
-        await setSessao(token!, authUserAtualizado);
-      }
 
       Alert.alert('Sucesso', 'Seus dados foram atualizados.');
     } catch (err: any) {
@@ -95,7 +95,7 @@ export default function MeusDadosScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [user, authUser, token, setSessao, isSaving]);
+  }, [user, authUser, refreshUser, isSaving]);
 
   const processAndUploadImage = async (uri: string) => {
     try {
@@ -103,10 +103,8 @@ export default function MeusDadosScreen() {
       const dataAtualizada = await uploadAvatar(uri);
       setUser(dataAtualizada);
 
-      if (authUser) {
-        const authUserAtualizado = { ...authUser, avatar_url: dataAtualizada.avatar_url };
-        await setSessao(token!, authUserAtualizado);
-      }
+      // FENAPRF: Sincroniza avatar com contexto
+      await refreshUser();
 
       Alert.alert('Sucesso', 'Sua foto de perfil foi atualizada.');
     } catch (err: any) {
@@ -194,10 +192,8 @@ export default function MeusDadosScreen() {
               const dataRemovida = await removerAvatar();
               setUser(dataRemovida);
 
-              if (authUser) {
-                const authUserLimpo = { ...authUser, avatar_url: null };
-                await setSessao(token!, authUserLimpo);
-              }
+              // FENAPRF: Sincroniza contexto após remoção
+              await refreshUser();
 
               Alert.alert('Sucesso', 'Sua foto foi removida.');
             } catch (err: any) {
@@ -210,7 +206,7 @@ export default function MeusDadosScreen() {
         }
       ]
     );
-  }, [user, authUser, token, setSessao]);
+  }, [user, authUser, refreshUser]);
 
   useEffect(() => {
     const actions: MenuAction[] = [
