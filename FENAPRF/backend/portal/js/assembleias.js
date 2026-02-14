@@ -396,12 +396,12 @@
                     <div class="field-row" style="margin-bottom:35px; display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:25px;">
                         <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd; text-align: center;">
                             <label style="font-weight:800; color:#003366; font-size:0.9rem; text-transform:uppercase; margin-bottom:8px; display:block;">📅 Data do Evento</label>
-                            <div style="font-size:1.3rem; font-weight:700; color:#333;">${dataBr}</div>
+                            <div style="font-size:1.3rem; font-weight:700; color:#333;">${dataBr || '--/--/----'}</div>
                         </div>
                         ${!isEncerrada ? `
                         <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd; text-align: center;">
                             <label style="font-weight:800; color:#003366; font-size:0.9rem; text-transform:uppercase; margin-bottom:8px; display:block;">🕒 Chamadas (1ª / 2ª)</label>
-                            <div style="font-size:1.3rem; font-weight:700; color:#333;">${a.hora_primeira_chamada} / ${a.hora_segunda_chamada}</div>
+                            <div style="font-size:1.3rem; font-weight:700; color:#333;">${a.hora_primeira_chamada || '--:--'} / ${a.hora_segunda_chamada || '--:--'}</div>
                         </div>
                         ` : ''}
                     </div>
@@ -1048,9 +1048,9 @@
                                 <label style="font-weight:700; color:#003366;">Duração</label>
                                 <select id="votacao-duracao" class="btn btn-outline" style="width:100%; color:#333; border: 1px solid #ccc;">
                                     <option value="60">1 Minuto</option>
-                                    <option value="120">2 Minutos</option>
+                                    <option value="120" selected>2 Minutos (Padrão)</option>
                                     <option value="180">3 Minutos</option>
-                                    <option value="300" selected>5 Minutos (Padrão)</option>
+                                    <option value="300">5 Minutos</option>
                                 </select>
                             </div>
                             <div style="text-align:right; margin-top:20px;">
