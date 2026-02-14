@@ -339,7 +339,8 @@
                 else if (action === "baixar-edital") baixarEditalSeguro(aid);
                 else if (action === "abrir-ass") abrirAssembleia(aid);
                 else if (action === "preparar-mesa") prepararMesa(aid);
-                else if (action === "gerar-token") gerarTokenToken(aid);
+                else if (action === "gerar-token-global") gerarTokenGlobal(aid);
+                else if (action === "gerar-token-quorum") gerarTokenQuorum(aid);
                 else if (action === "iniciar-execucao") iniciarExecucao(aid);
                 else if (action === "solicitar-recontagem") solicitarRecontagem(aid);
                 else if (action === "encerrar-ass") encerrarAssembleia(aid);
@@ -479,10 +480,12 @@
                                 ${ehGestao && a.estado === 'CRIADO' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
                                 ${ehGestao && a.estado === 'EM_CREDENCIAMENTO' ? `
                                     ${window.Utils.canComposeMesa(userInfo) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="preparar-mesa" data-aid="${id}">Compor Mesa</button>` : ''}
-                                    ${window.Utils.canCreateCredenciamentoToken(userInfo) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token" data-aid="${id}">Gerar Token</button>` : ''}
+                                    ${(window.Utils.canCreateCredenciamentoToken(userInfo) && !estado.quorumVigente?.is_global) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-global" data-aid="${id}">Gerar Token Global</button>` : ''}
+                                    ${isMesa ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-quorum" data-aid="${id}">Novo Token Quórum</button>` : ''}
                                     <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" data-action="iniciar-execucao" data-aid="${id}">Iniciar Execução (Pauta)</button>
                                 ` : ''}
-                                ${(ehGestao || isPresidente) && a.estado === 'INICIADO' ? `
+                                ${isMesa && a.estado === 'INICIADO' ? `
+                                    <button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-quorum" data-aid="${id}">Novo Token Quórum</button>
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-recontagem" data-aid="${id}">🔄 Recontagem de Quórum</button>
                                 ` : ''}
                                 ${ehGestao && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" data-action="encerrar-ass" data-aid="${id}">Encerrar Assembleia</button>` : ''}
@@ -561,16 +564,36 @@
         } catch (err) { alert("Erro ao encerrar."); }
     }
 
-    async function gerarTokenToken(id) {
+    async function gerarTokenGlobal(id) {
         try {
             const r = await window.Api.apiFetch(`/api/assembleias/${id}/token`, {
                 method: "POST",
-                body: { tipo_chamada: 'PRIMEIRA' }
+                body: { tipo_chamada: 'GLOBAL', is_global: true }
             });
+            if (!r.ok) {
+                const err = await r.json();
+                throw new Error(err.error || "Erro ao gerar token global.");
+            }
             const data = await r.json();
-            alert(`Token Gerado: ${data.token}\nSeu check-in foi automático.`);
+            alert(`Token Global Gerado: ${data.token}\nO credenciamento está aberto.`);
             await carregarDetalhesAssembleia(id);
-        } catch (err) { alert("Erro ao gerar token."); }
+        } catch (err) { alert(err.message); }
+    }
+
+    async function gerarTokenQuorum(id) {
+        try {
+            const r = await window.Api.apiFetch(`/api/assembleias/${id}/token`, {
+                method: "POST",
+                body: { tipo_chamada: 'PRIMEIRA', is_global: false }
+            });
+            if (!r.ok) {
+                const err = await r.json();
+                throw new Error(err.error || "Erro ao gerar token de quórum.");
+            }
+            const data = await r.json();
+            alert(`Novo Token de Quórum Gerado: ${data.token}.\nSeu check-in foi automático.`);
+            await carregarDetalhesAssembleia(id);
+        } catch (err) { alert(err.message); }
     }
 
     async function solicitarRelatorio(id) {
@@ -808,7 +831,10 @@
 
         const { assembleia, quorumVigente, votacaoAtiva, mesa, pedidosPalavra, propostas } = estado;
 
+        const userInfo = window.Utils.obterUserInfo();
         const ehGestao = window.Utils.isGestao(currentUserPerfil);
+        const isMembroConselho = window.Utils.isCouncilMember(userInfo);
+
         const isMesa = mesa && [
             mesa.presidente_user_id,
             mesa.vice_presidente_user_id,
@@ -871,14 +897,14 @@
                             <h4 style="margin:0 0 15px 0; color:#003366; font-size:1.8rem; font-weight:800;">${votacaoAtiva.titulo}</h4>
                             <p style="font-size:1.1rem; color:#333; line-height:1.6; font-weight:500;">${votacaoAtiva.descricao}</p>
 
-                            ${votacaoAtiva.status === 'ATIVA' && !votacaoAtiva.userVoted ? `
+                            ${votacaoAtiva.status === 'ATIVA' && isMembroConselho && !votacaoAtiva.userVoted ? `
                                 <div style="display:flex; gap:20px; margin-top:30px; flex-wrap:wrap;">
                                     <button class="btn btn-success btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="SIM">Votar SIM</button>
                                     <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="NAO">Votar NÃO</button>
                                 </div>
                             ` : `
                                 <div style="margin-top:30px; padding:25px; text-align:center; color:#27ae60; font-weight:900; background:#fff; border: 2px solid #27ae60; border-radius:15px; font-size:1.4rem;">
-                                    ${votacaoAtiva.userVoted ? '✅ SEU VOTO FOI COMPUTADO COM SUCESSO' : 'AGUARDANDO ENCERRAMENTO...'}
+                                    ${votacaoAtiva.userVoted ? '✅ SEU VOTO FOI COMPUTADO COM SUCESSO' : (isMembroConselho ? 'AGUARDANDO ENCERRAMENTO...' : 'VOTO RESTRITO AO CONSELHO')}
                                 </div>
                             `}
 
@@ -909,7 +935,9 @@
                 <!-- Ações de Interação -->
                 <div style="display:flex; gap:20px; margin-bottom:40px; flex-wrap:wrap;">
                     <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="pedir-palavra" data-aid="${assembleia.id}">🎤 Pedir Palavra</button>
-                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="nova-proposta" data-aid="${assembleia.id}">📝 Nova Proposta</button>
+                    ${isMembroConselho ? `
+                        <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="nova-proposta" data-aid="${assembleia.id}">📝 Nova Proposta</button>
+                    ` : ''}
                 </div>
 
                 <!-- Listas de Interação -->
@@ -1098,7 +1126,7 @@
         const form = document.getElementById('form-criar-votacao');
 
         form.reset();
-        document.getElementById('votacao-duracao').value = "300";
+        document.getElementById('votacao-duracao').value = "120";
         modal.style.display = 'flex';
 
         form.onsubmit = async (e) => {

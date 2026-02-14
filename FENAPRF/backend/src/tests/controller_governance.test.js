@@ -27,36 +27,46 @@ describe('Controller Governance Rules', () => {
   });
 
   describe('President Authority on Tokens', () => {
-    test('gerarTokenQuorum should allow DIRETORIA if no mesa established', async () => {
+    test('gerarTokenQuorum (Quorum) should BLOCK everyone if no mesa established', async () => {
       service.buscarMesa.mockResolvedValue(null);
-      service.gerarQuorum.mockResolvedValue({ id: 'q1', token: '123456', isNew: true });
-      service.buscarEstadoCompleto.mockResolvedValue({});
-
-      req.body = { tipo_chamada: 'PRIMEIRA' };
+      req.body = { tipo_chamada: 'PRIMEIRA', is_global: false };
       await controller.gerarTokenQuorum(req, res);
 
-      expect(res.json).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE }));
     });
 
-    test('gerarTokenQuorum should block non-President if mesa established', async () => {
-      service.buscarMesa.mockResolvedValue({ presidente_user_id: 10, estabelecida_em: new Date() });
+    test('gerarTokenQuorum should block non-Mesa members if mesa established', async () => {
+      service.buscarMesa.mockResolvedValue({
+        presidente_user_id: 10,
+        vice_presidente_user_id: 11,
+        secretario_user_id: 12,
+        secretario_2_user_id: 13,
+        estabelecida_em: new Date()
+      });
 
-      req.user.id = 1; // Not the president (10)
-      req.user.perfil_acesso = 'USER'; // Not Diretoria
-      req.body = { tipo_chamada: 'PRIMEIRA' };
+      req.user.id = 1; // Not in mesa
+      req.user.perfil_acesso = 'DIRETORIA';
+      req.body = { tipo_chamada: 'PRIMEIRA', is_global: false };
       await controller.gerarTokenQuorum(req, res);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE, requestId: 'test-req' });
     });
 
-    test('gerarTokenQuorum should allow President if mesa established', async () => {
-      service.buscarMesa.mockResolvedValue({ presidente_user_id: 1, estabelecida_em: new Date() });
+    test('gerarTokenQuorum should allow Mesa members (e.g. Presidente)', async () => {
+      service.buscarMesa.mockResolvedValue({
+        presidente_user_id: 1, // Current user
+        vice_presidente_user_id: 11,
+        secretario_user_id: 12,
+        secretario_2_user_id: 13,
+        estabelecida_em: new Date()
+      });
       service.gerarQuorum.mockResolvedValue({ id: 'q1', token: '123456', isNew: true });
       service.buscarEstadoCompleto.mockResolvedValue({});
 
-      req.user.id = 1; // Is the president
-      req.body = { tipo_chamada: 'PRIMEIRA' };
+      req.user.id = 1;
+      req.body = { tipo_chamada: 'PRIMEIRA', is_global: false };
       await controller.gerarTokenQuorum(req, res);
 
       expect(res.json).toHaveBeenCalled();

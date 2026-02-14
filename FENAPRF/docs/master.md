@@ -61,19 +61,20 @@ O sistema possui três módulos distintos:
 
 Regras de acesso e autoridade são definidas pelo backend (e documentação canônica associada).
 
-### 6.1 Grupos de acesso
+### 6.1 Grupos de acesso e Deliberação
 - **Gestão (Geral)**: `ADMIN`, `DIRETORIA`, `COLABORADOR`.
-- **Conselheiro**: participa de credenciamento, quórum e votações conforme regras.
+- **Membro do Conselho de Representantes**: É o perfil deliberativo. Composto por todos os `CONSELHEIRO` ativos e pelo Presidente e Vice-Presidente da `DIRETORIA` da FENAPRF.
+- **Participantes**: `CONSELHEIRO` e `DIRETORIA` participam do credenciamento global. Apenas Membros do Conselho participam de Quórum, Votação e Propostas.
 
 ### 6.2 Autoridade institucional
-Operações críticas podem depender de cargo/função, além do perfil:
+Operações críticas dependem estritamente do cargo institucional (Soberania do Canon):
 
 | Operação | Autoridade Permitida |
 | :--- | :--- |
 | Geração do QR/token global (credenciamento) | Presidente/Vice FENAPRF, Diretor de Secretaria (Titular/Subst.) |
-| Composição de Mesa | Exclusiva do Presidente/Vice FENAPRF (rito institucional) |
-| Geração de token de quórum | Exclusiva da Mesa Diretora definida |
-| Check-in por QR | Perfis que fazem check-in (ex.: CONSELHEIRO e membros elegíveis), excluindo ADMIN/COLABORADOR |
+| Composição de Mesa | Exclusiva do Presidente/Vice FENAPRF |
+| Geração de token de quórum (Snapshot) | Exclusiva da Mesa Diretora (4 componentes) |
+| Check-in de Quórum / Voto / Proposta | Exclusiva para Membros do Conselho de Representantes |
 | Relatório | Apenas com assembleia em `ENCERRADO` |
 
 ### 6.3 Princípio da Soberania da Mesa

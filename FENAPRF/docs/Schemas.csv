@@ -327,3 +327,10 @@
 "votacoes",7,"criado_por","uuid","YES",NULL,"FK","users","id"
 "votacoes",8,"criado_em","timestamp with time zone","YES","now()","",NULL,NULL
 "votacoes",9,"updated_at","timestamp with time zone","YES","now()","",NULL,NULL
+"assembleia_checkins_pendentes",1,"id","uuid","NO","gen_random_uuid()","PK","assembleia_checkins_pendentes","id"
+"assembleia_checkins_pendentes",2,"assembleia_id","uuid","NO",NULL,"FK","assembleias","id"
+"assembleia_checkins_pendentes",3,"quorum_id","uuid","NO",NULL,"FK","assembleia_quoruns","id"
+"assembleia_checkins_pendentes",4,"user_id_superior","uuid","NO",NULL,"FK","users","id"
+"assembleia_checkins_pendentes",5,"user_id_subordinado","uuid","NO",NULL,"FK","users","id"
+"assembleia_checkins_pendentes",6,"branch","character varying","NO",NULL,"",NULL,NULL
+"assembleia_checkins_pendentes",7,"criado_em","timestamp with time zone","YES","now()","",NULL,NULL

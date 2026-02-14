@@ -28,16 +28,23 @@ describe('Governance and Proposals Integration', () => {
 
   describe('Proposals Governance', () => {
     test('criarProposta should fail if titulo is too short', async () => {
-      await expect(service.criarProposta({ titulo: 'abc', pauta: 'Valid description with enough length' }))
+      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'CONSELHEIRO' }] });
+
+      await expect(service.criarProposta({ titulo: 'abc', pauta: 'Valid description with enough length', autor_id: 'u1' }))
         .rejects.toThrow("O título da proposta deve ter pelo menos 5 caracteres.");
     });
 
     test('criarProposta should fail if pauta is too short', async () => {
-      await expect(service.criarProposta({ titulo: 'Valid Title', pauta: 'short' }))
+      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'CONSELHEIRO' }] });
+
+      await expect(service.criarProposta({ titulo: 'Valid Title', pauta: 'short', autor_id: 'u1' }))
         .rejects.toThrow("A descrição (pauta) da proposta deve ter pelo menos 10 caracteres.");
     });
 
     test('criarProposta should succeed in INICIADO state', async () => {
+      // User check
+      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'CONSELHEIRO' }] });
+
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 'ass-1', estado: 'INICIADO' }] }) // FOR UPDATE
@@ -56,6 +63,8 @@ describe('Governance and Proposals Integration', () => {
     });
 
     test('criarProposta should fail in ENCERRADO state', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'CONSELHEIRO' }] });
+
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 'ass-1', estado: 'ENCERRADO' }] }) // FOR UPDATE
@@ -77,7 +86,7 @@ describe('Governance and Proposals Integration', () => {
         const u3 = '00000000-0000-4000-a000-000000000003';
         const u4 = '00000000-0000-4000-a000-000000000004';
 
-        // Mock verificarRejeicaoMesa (4 times)
+        // Mock for verificarRejeicaoMesa
         pool.query.mockResolvedValue({ rows: [] });
 
         mockClient.query
@@ -103,17 +112,17 @@ describe('Governance and Proposals Integration', () => {
         const u4 = '00000000-0000-4000-a000-000000000004';
         const u5 = '00000000-0000-4000-a000-000000000005';
 
-        // mock for buscarMesa (uses pool.query)
+        // mock for buscarMesa and verificarRejeicaoMesa
         pool.query.mockResolvedValue({ rows: [{ id: 'old-mesa' }] });
 
-        mockClient.query
-            .mockResolvedValueOnce({ rows: [] }) // 1. BEGIN
-            .mockResolvedValueOnce({ rows: [{ id: 'ass-1', estado: 'INICIADO' }] }) // 2. SELECT estado
-            .mockResolvedValueOnce({ rows: [{ id: 'global-q' }] }) // 3. is_global check
-            .mockResolvedValueOnce({ rows: [{ user_id: u2 }, { user_id: u3 }, { user_id: u4 }, { user_id: u5 }] }) // 4. checkins check
-            .mockResolvedValueOnce({ rows: [{ id: 'mesa-1' }] }) // 5. UPDATE mesa
-            .mockResolvedValueOnce({ rows: [] }) // 6. audit
-            .mockResolvedValueOnce({ rows: [] }); // 7. COMMIT
+        mockClient.query.mockImplementation((q) => {
+            if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
+            if (q.includes('SELECT') && q.includes('FROM assembleias')) return Promise.resolve({ rows: [{ id: 'ass-1', estado: 'INICIADO' }] });
+            if (q.includes('is_global = TRUE')) return Promise.resolve({ rows: [{ id: 'global-q' }] });
+            if (q.includes('SELECT user_id FROM assembleia_checkins')) return Promise.resolve({ rows: [{ user_id: u2 }, { user_id: u3 }, { user_id: u4 }, { user_id: u5 }] });
+            if (q.includes('UPDATE assembleia_mesa')) return Promise.resolve({ rows: [{ id: 'mesa-1' }] });
+            return Promise.resolve({ rows: [] });
+        });
 
         const res = await service.substituirMesa({
             assembleia_id: 'ass-1',

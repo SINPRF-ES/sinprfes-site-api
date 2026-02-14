@@ -125,6 +125,16 @@ Normalização para vínculos múltiplos (em evolução):
 - `origem` (varchar)
 - `registrado_em` (timestamptz, default now())
 
+### assembleia_checkins_pendentes
+Tabela de suporte para substituição hierárquica bloqueada durante votação.
+- `id` (uuid, PK)
+- `assembleia_id` (uuid, FK assembleias)
+- `quorum_id` (uuid, FK assembleia_quoruns)
+- `user_id_superior` (uuid, FK users)
+- `user_id_subordinado` (uuid, FK users)
+- `branch` (varchar)
+- `criado_em` (timestamptz, default now())
+
 ### assembleia_pedidos_palavra
 - `id` (uuid, PK)
 - `assembleia_id` (uuid, FK assembleias)
@@ -151,7 +161,7 @@ Normalização para vínculos múltiplos (em evolução):
 - `titulo` (varchar, NOT NULL)
 - `descricao` (text)
 - `status` (varchar, default 'ATIVA')
-- `duracao_segundos` (int, default 60)
+- `duracao_segundos` (int, default 120)
 - `iniciada_por_user_id` (uuid, FK users)
 - `aberta_em`, `finalizada_em` (timestamptz)
 - `criado_em` (timestamptz, default now())

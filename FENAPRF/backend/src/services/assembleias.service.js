@@ -4,6 +4,7 @@ const Textos = require("../utils/textos");
 const log = require("../utils/log");
 const { escapeHtml, generateUuid } = require("../utils/format");
 const socket = require("../websocket/assembleia.socket");
+const { isCouncilMember } = require("../../shared/canon");
 
 const ASSEMBLEIA_STATES = {
   CRIADO: 'CRIADO',
@@ -166,11 +167,21 @@ async function abrir(id, userId) {
 
 async function contarUsersAtivosParaQuorum(client = null) {
   const db = client || pool;
+  // CANON: Apenas Membros do Conselho (CONSELHEIRO ou Presidente/Vice FENAPRF)
   const { rows } = await db.query(
     `SELECT COUNT(*)::INTEGER as total
      FROM users
      WHERE arquivado_em IS NULL
-       AND perfil_acesso IN ('DIRETORIA', 'CONSELHEIRO', 'COLABORADOR')`
+       AND (
+         perfil_acesso = 'CONSELHEIRO'
+         OR (
+           perfil_acesso = 'DIRETORIA'
+           AND (
+             cargo = 'Presidente da FENAPRF' OR cargo = 'Vice-Presidente da FENAPRF' OR
+             cargo2 = 'Presidente da FENAPRF' OR cargo2 = 'Vice-Presidente da FENAPRF'
+           )
+         )
+       )`
   );
   return parseInt(rows?.[0]?.total || 0);
 }
@@ -181,12 +192,23 @@ async function contarUsersAtivosParaQuorum(client = null) {
 async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
   if (!userId) return;
 
-  const { rows: userRows } = await client.query("SELECT perfil_acesso FROM users WHERE id = $1", [userId]);
-  const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
+  const { rows: userRows } = await client.query(
+    "SELECT perfil_acesso, cargo, cargo2 FROM users WHERE id = $1",
+    [userId]
+  );
+  const user = userRows[0];
+  if (!user) return false;
 
-  // ADMIN e COMUNICADOR não contam quórum nem votam, logo não fazem check-in
-  // Nota: COMUNICADOR foi removido dos perfis canônicos, mas mantido aqui por segurança de tipos
-  if (perfil !== 'ADMIN' && perfil !== 'COMUNICADOR') {
+  const { rows: qRows } = await client.query("SELECT is_global FROM assembleia_quoruns WHERE id = $1", [quorumId]);
+  const isGlobal = qRows[0]?.is_global;
+
+  // CANON: Check-in Global para toda Gestão e Conselheiros.
+  // Check-in de Quórum restrito ao Conselho de Representantes.
+  const eligible = isGlobal
+    ? (['DIRETORIA', 'CONSELHEIRO'].includes((user.perfil_acesso || "").toUpperCase()))
+    : isCouncilMember(user);
+
+  if (eligible) {
     const origem = tipoChamada === 'RECONTAGEM' ? 'AUTO_PRESIDENTE' : 'AUTO_GERADOR';
     await client.query(
       `INSERT INTO assembleia_checkins (id, assembleia_quorum_id, user_id, origem)
@@ -422,8 +444,9 @@ async function gerarQuorum(dados) {
         );
     }
 
-    // Regra Institucional: QR Global não possui validade temporal (valido_ate IS NULL)
-    const validoAteValue = is_global ? null : new Date(Date.now() + 10 * 60000);
+    // Regra Institucional: QR Global e Quórum Dinâmico não possuem validade temporal estrita (valido_ate IS NULL).
+    // O Quórum Dinâmico permanece válido até o próximo ser gerado ou a assembleia encerrar.
+    const validoAteValue = null;
     const newQuorumId = generateUuid();
 
     const { rows: qRows } = await client.query(
@@ -477,7 +500,7 @@ async function atualizarQuorum(id, userId) {
 
 async function buscarQuorumPorToken(assembleiaId, token) {
   const { rows } = await pool.query(
-    `SELECT id FROM assembleia_quoruns
+    `SELECT id, is_global, tipo_chamada FROM assembleia_quoruns
      WHERE assembleia_id = $1 AND token = $2 AND encerrado_em IS NULL
      ORDER BY criado_em DESC LIMIT 1`,
     [assembleiaId, token]
@@ -517,6 +540,13 @@ async function obterInfoBranchUser(userId, client = null) {
       const vBranch = (v.branch || "").toUpperCase();
       const vUf = v.uf;
 
+      if (vRole.includes("PRESIDENTE DA FENAPRF")) {
+          return { branch: 'FENAPRF', role: 'PRESIDENTE', uf: 'BR', rank: 1 };
+      }
+      if (vRole.includes("VICE-PRESIDENTE DA FENAPRF") || vRole.includes("VICE PRESIDENTE DA FENAPRF")) {
+          return { branch: 'FENAPRF', role: 'VICE_PRESIDENTE', uf: 'BR', rank: 2 };
+      }
+
       if (vBranch === 'DIRETORIA' || vBranch === 'CONSELHO' || vBranch === 'CONSELHEIRO') {
         if (vRole.includes("PRESIDENTE") && !vRole.includes("VICE")) {
           return { branch: 'CONSELHEIRO', role: 'PRESIDENTE', uf: vUf, rank: 1 };
@@ -537,27 +567,23 @@ async function obterInfoBranchUser(userId, client = null) {
   }
 
   // Fallback para campos legados em users
-  const { rows: uRows } = await db.query("SELECT cargo, uf FROM users WHERE id = $1", [userId]);
+  const { rows: uRows } = await db.query("SELECT cargo, uf, cargo2, uf2 FROM users WHERE id = $1", [userId]);
   const u = uRows[0];
   if (!u) return null;
 
-  const cargo = (u.cargo || "").toUpperCase();
-  const ufUser = u.uf;
+  const getInfo = (cargo, uf) => {
+    const c = (cargo || "").toUpperCase();
+    if (c === "PRESIDENTE DA FENAPRF") return { branch: 'FENAPRF', role: 'PRESIDENTE', uf: 'BR', rank: 1 };
+    if (c === "VICE-PRESIDENTE DA FENAPRF") return { branch: 'FENAPRF', role: 'VICE_PRESIDENTE', uf: 'BR', rank: 2 };
 
-  if (cargo.includes("PRESIDENTE") && !cargo.includes("VICE")) {
-    return { branch: 'CONSELHEIRO', role: 'PRESIDENTE', uf: ufUser, rank: 1 };
-  }
-  if (cargo.includes("VICE-PRESIDENTE") || cargo.includes("VICE PRESIDENTE")) {
-    return { branch: 'CONSELHEIRO', role: 'VICE_PRESIDENTE', uf: ufUser, rank: 2 };
-  }
-  if (cargo.includes("DELEGADO REPRESENTANTE")) {
-    return { branch: 'DELEGACAO', role: 'DELEGADO_REPRESENTANTE', uf: ufUser, rank: 1 };
-  }
-  if (cargo.includes("DELEGADO SUBSTITUTO") || cargo.includes("SUPLENTE")) {
-    return { branch: 'DELEGACAO', role: 'SUPLENTE', uf: ufUser, rank: 2 };
-  }
+    if (c.includes("PRESIDENTE") && !c.includes("VICE")) return { branch: 'CONSELHEIRO', role: 'PRESIDENTE', uf: uf, rank: 1 };
+    if (c.includes("VICE-PRESIDENTE") || c.includes("VICE PRESIDENTE")) return { branch: 'CONSELHEIRO', role: 'VICE_PRESIDENTE', uf: uf, rank: 2 };
+    if (c.includes("DELEGADO REPRESENTANTE")) return { branch: 'DELEGACAO', role: 'DELEGADO_REPRESENTANTE', uf: uf, rank: 1 };
+    if (c.includes("DELEGADO SUBSTITUTO") || c.includes("SUPLENTE")) return { branch: 'DELEGACAO', role: 'SUPLENTE', uf: uf, rank: 2 };
+    return null;
+  };
 
-  return null;
+  return getInfo(u.cargo, u.uf) || getInfo(u.cargo2, u.uf2) || null;
 }
 
 async function realizarCheckin(dados) {
@@ -567,19 +593,19 @@ async function realizarCheckin(dados) {
   try {
     await client.query('BEGIN');
 
-    // Blindagem de perfil: ADMIN e COMUNICADOR não fazem check-in
-    const { rows: userRows } = await client.query("SELECT perfil_acesso, name FROM users WHERE id = $1", [user_id]);
+    const { rows: userRows } = await client.query("SELECT * FROM users WHERE id = $1", [user_id]);
     const userObj = userRows[0];
-    const perfil = (userObj?.perfil_acesso || "").toUpperCase();
-    if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
-      throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
-    }
+    if (!userObj) throw new Error(Textos.USERS.USER_NAO_ENCONTRADO);
 
     // Busca dados do Quorum
     const { rows: qRows } = await client.query("SELECT is_global FROM assembleia_quoruns WHERE id = $1", [assembleia_quorum_id]);
     const isGlobal = qRows[0]?.is_global;
 
     if (isGlobal) {
+        const perfil = (userObj.perfil_acesso || "").toUpperCase();
+        if (perfil !== 'DIRETORIA' && perfil !== 'CONSELHEIRO') {
+            throw new Error("Perfil sem permissão para credenciamento.");
+        }
       // Regra: Credenciamento único por evento
       const { rows: existingGlobalCheckin } = await client.query(
         `SELECT c.id
@@ -595,6 +621,11 @@ async function realizarCheckin(dados) {
 
     // Regra Hierárquica por Branch (apenas para QUORUM, não GLOBAL)
     if (!isGlobal) {
+      // CANON: Quórum Dinâmico/Snapshot restrito ao Conselho de Representantes.
+      if (!isCouncilMember(userObj)) {
+          throw new Error("Apenas membros do Conselho de Representantes (Conselheiros e Presidente/Vice FENAPRF) participam deste quórum.");
+      }
+
       const info = await obterInfoBranchUser(user_id, client);
       if (info) {
         // Busca se já existe alguém do mesmo branch/UF no quorum
@@ -798,6 +829,17 @@ async function verificarElegibilidade(votacaoId, userId) {
   return rows.length > 0;
 }
 
+async function contarElegiveisNaVotacao(votacaoId) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::INTEGER as total
+     FROM assembleia_checkins c
+     JOIN assembleia_votacoes v ON c.assembleia_quorum_id = v.quorum_snapshot_id
+     WHERE v.id = $1`,
+    [votacaoId]
+  );
+  return parseInt(rows[0].total || 0);
+}
+
 async function verificarElegibilidadePorQuorum(quorumId, userId, client = null) {
   const db = client || pool;
   const { rows } = await db.query(
@@ -812,11 +854,11 @@ async function registrarVoto(votacaoId, userId, voto, assembleiaId) {
     throw new Error("Apenas votos SIM ou NAO são permitidos manualmente.");
   }
 
-  // Blindagem de perfil: ADMIN e COMUNICADOR não votam
-  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM users WHERE id = $1", [userId]);
-  const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
-  if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
-    throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+  const { rows: userRows } = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
+  const user = userRows[0];
+
+  if (!isCouncilMember(user)) {
+    throw new Error("Voto restrito aos membros do Conselho de Representantes.");
   }
 
   const { rows } = await pool.query(
@@ -1247,6 +1289,11 @@ async function criarProposta(dados) {
   const { assembleia_id, autor_id, pauta } = dados;
   let { titulo } = dados;
 
+  const { rows: uRows } = await pool.query("SELECT * FROM users WHERE id = $1", [autor_id]);
+  if (!isCouncilMember(uRows[0])) {
+      throw new Error("Propostas são restritas aos membros do Conselho de Representantes.");
+  }
+
   if (!titulo || titulo.trim().length < 5) {
     throw new Error("O título da proposta deve ter pelo menos 5 caracteres.");
   }
@@ -1389,7 +1436,7 @@ async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
       quorum_snapshot_id: quorum.id,
       titulo: `Votação: ${proposta.titulo}`,
       descricao: proposta.descricao,
-      duracao_segundos: 300, // Canonização: 5 minutos padrão
+      duracao_segundos: 120, // Canonização: 120 segundos padrão
       iniciada_por_user_id: userId
     }, client);
 
@@ -1809,6 +1856,7 @@ module.exports = {
   verificarElegibilidade,
   registrarVoto,
   contarVotos,
+  contarElegiveisNaVotacao,
   listarVotosNominais,
   finalizarVotacao,
   pedirPalavra,

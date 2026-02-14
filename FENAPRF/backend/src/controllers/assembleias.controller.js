@@ -13,7 +13,10 @@ const { parseUuid } = require("../utils/format");
 const {
     canComposeMesa,
     canCreateCredenciamentoToken,
-    canCheckInEvent,
+    isCouncilMember,
+    canCheckInGlobal,
+    canCheckInQuorum,
+    canProposeAssembleia,
     isGestao
 } = require("../../shared/canon");
 
@@ -460,8 +463,7 @@ async function gerarTokenQuorum(req, res) {
     const { tipo_chamada, observacao, is_global } = req.body;
     const isGlobalCall = !!is_global || tipo_chamada === 'GLOBAL';
 
-    // Validação de autoridade: Presidente ou Diretoria
-    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    const { isMesa, isDiretoria } = await verificarAutoridadeMesa(assembleiaId, req.user);
 
     if (isGlobalCall) {
        // Se o token já existe, permitimos que qualquer perfil de gestão o recupere (Idempotência)
@@ -477,11 +479,19 @@ async function gerarTokenQuorum(req, res) {
                 error: "Apenas o Presidente, Vice-Presidente, Diretor de Secretaria ou seu Substituto podem gerar o QR Code Global."
               });
           }
+       } else {
+          // Se já existe, qualquer um da gestão pode resgatar.
+          if (!isDiretoria) {
+              return res.status(403).json({ error: "Permissão insuficiente para resgatar o token global." });
+          }
        }
     } else {
-       // Para tokens normais, mantemos a regra de Mesa/Diretoria
-       if (!autorizada) {
-         return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE, requestId: req.requestId });
+       // CANON: Token de quórum (snapshot) é criado APENAS pela mesa eleita (os 4 componentes).
+       if (!isMesa) {
+         return res.status(403).json({
+            error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE,
+            requestId: req.requestId
+         });
        }
     }
 
@@ -623,15 +633,8 @@ async function checkin(req, res) {
 
     if (!token) return res.status(400).json({ error: "Token é obrigatório", requestId });
 
-    // CANON: Bloqueia perfis que não votam nem contam quórum (ADMIN/COLABORADOR)
-    if (!canCheckInEvent(req.user.perfil_acesso)) {
-       return res.status(403).json({
-           error: "Seu perfil não possui permissão para realizar check-in em assembleias",
-           requestId
-       });
-    }
-
     const quorum = await service.buscarQuorumPorToken(assembleiaId, token);
+
     if (!quorum) {
         // Registrar falha
         const currentFailures = failureData ? failureData.count : 0;
@@ -640,6 +643,18 @@ async function checkin(req, res) {
         await service.registrarAuditoria(assembleiaId, userId, 'CHECKIN_FALHA_TOKEN', { token, requestId: req.requestId });
         log.warn("AssembleiaCheckinFalhou", { requestId: req.requestId, userId, assembleiaId, token_tentado: token, motivo: "Token Inválido" });
         return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
+    }
+
+    // CANON: Check-in Authority
+    if (quorum.is_global) {
+        if (!canCheckInGlobal(req.user.perfil_acesso)) {
+            return res.status(403).json({ error: "Perfil sem permissão para credenciamento global.", requestId });
+        }
+    } else {
+        const fullUser = await usersService.buscarPorId(atorId);
+        if (!canCheckInQuorum(fullUser)) {
+             return res.status(403).json({ error: "Check-in de quórum restrito aos membros do Conselho.", requestId });
+        }
     }
 
     // Sucesso: limpar falhas
@@ -817,7 +832,7 @@ async function iniciarVotacao(req, res) {
       quorum_snapshot_id: quorum.id,
       titulo,
       descricao,
-      duracao_segundos: duracao_segundos || 300,
+      duracao_segundos: duracao_segundos || 120, // Canon: 120 segundos padrão
       iniciada_por_user_id: atorId
     });
 
@@ -865,17 +880,19 @@ async function votar(req, res) {
       service.listarVotosNominais(votacaoId)
     ]);
 
-    // Auto-encerramento se todos os presentes votaram
-    const quorumVigente = await service.buscarUltimoQuorum(assembleiaId);
-    if (quorumVigente) {
-        const totalPresentes = await service.contarPresentesNoQuorum(quorumVigente.id);
-        if (contagem.total >= totalPresentes && totalPresentes > 0) {
-            log.info("AssembleiaVotacaoAutoEncerramento", { requestId: req.requestId, assembleiaId, votacaoId, votos: contagem.total, presentes: totalPresentes });
-            const finalizada = await service.finalizarVotacao(votacaoId);
-            socket.emitEvent(assembleiaId, "votacao:encerrada", { ...finalizada, contagem, votos });
-        } else {
-            socket.emitEvent(assembleiaId, "voto:updated", { contagem, votos });
-        }
+    // Auto-encerramento se 100% dos elegíveis votaram (Soberania do Quórum Snapshot)
+    const totalElegiveis = await service.contarElegiveisNaVotacao(votacaoId);
+
+    if (totalElegiveis > 0 && contagem.total >= totalElegiveis) {
+        log.info("AssembleiaVotacaoAutoEncerramento", {
+            requestId: req.requestId,
+            assembleiaId,
+            votacaoId,
+            votos: contagem.total,
+            elegiveis: totalElegiveis
+        });
+        const finalizada = await service.finalizarVotacao(votacaoId);
+        socket.emitEvent(assembleiaId, "votacao:encerrada", { ...finalizada, contagem, votos });
     } else {
         socket.emitEvent(assembleiaId, "voto:updated", { contagem, votos });
     }
@@ -1089,6 +1106,14 @@ async function criarProposta(req, res) {
       hasTitulo: !!titulo,
       hasPauta: !!pauta
     });
+
+    const fullUser = await usersService.buscarPorId(atorId);
+    if (!canProposeAssembleia(fullUser)) {
+        return res.status(403).json({
+            error: "Apenas membros do Conselho de Representantes podem criar propostas.",
+            requestId: req.requestId
+        });
+    }
 
     const proposta = await service.criarProposta({
       assembleia_id: assembleiaId,

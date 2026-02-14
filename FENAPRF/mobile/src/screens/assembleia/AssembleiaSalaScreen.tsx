@@ -8,7 +8,7 @@ import { formatTimeSP } from '../../utils/date';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { AssembleiaEstado, VotacaoItem, VotoNominal } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
-import { isGestao, canCheckInEvent } from '../../utils/user';
+import { isGestao, isCouncilMember } from '../../utils/user';
 
 export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -29,7 +29,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
     (estado.mesa as any).secretario_2_user_id
   ].includes(user?.id);
 
-  const isElegivel = canCheckInEvent(perfil);
+  const isMembroConselho = isCouncilMember(user);
 
   // CANON: Poder de Mesa - se houver mesa, apenas membros da mesa mandam.
   // Se não houver mesa, Gestão manda.
@@ -149,9 +149,12 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   // Configura as ações do cabeçalho
   useEffect(() => {
     const actions: MenuAction[] = [
-      { label: 'Pedir Palavra', icon: 'microphone', onPress: handlePedirPalavra },
-      { label: 'Nova Proposta', icon: 'file-document-edit-outline', onPress: () => navigation.navigate('Propostas', { id }) }
+      { label: 'Pedir Palavra', icon: 'microphone', onPress: handlePedirPalavra }
     ];
+
+    if (isMembroConselho) {
+        actions.push({ label: 'Nova Proposta', icon: 'file-document-edit-outline', onPress: () => navigation.navigate('Propostas', { id }) });
+    }
 
     if (temAutoridade) {
       if (estado?.assembleia.estado === 'INICIADO') {
@@ -518,7 +521,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
             <Text style={styles.votacaoTitulo}>{votacaoAtiva.titulo}</Text>
             <Text style={styles.votacaoDesc}>{votacaoAtiva.descricao}</Text>
 
-            {votacaoAtiva.status === 'ATIVA' && isElegivel && votacaoAtiva.user_eligibility?.elegivel !== false ? (
+            {votacaoAtiva.status === 'ATIVA' && isMembroConselho && votacaoAtiva.user_eligibility?.elegivel !== false ? (
               votacaoAtiva.user_eligibility?.jaVotou ? (
                 <View style={styles.votedNotice}>
                   <MaterialCommunityIcons name="check-circle" size={30} color="#27ae60" />

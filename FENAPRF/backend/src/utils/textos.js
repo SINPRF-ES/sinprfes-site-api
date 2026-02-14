@@ -59,7 +59,7 @@ module.exports = {
     NAO_ELEGIVEL: "Você não possui check-in no quórum deste item e não pode votar.",
     TEMPO_EXPIRADO: "O tempo para votação expirou.",
     VOTACAO_ENCERRADA: "Votação não está ativa ou já foi encerrada.",
-    APENAS_PRESIDENTE: "Apenas o Presidente da Mesa pode realizar esta ação.",
+    APENAS_PRESIDENTE: "Apenas os membros da Mesa Diretora podem realizar esta ação.",
     DATA_EVENTO_INVALIDA: "Data da assembleia inválida.",
     DATA_EVENTO_PASSADA: "A data da assembleia não pode ser no passado.",
     DATA_EVENTO_MUITO_DISTANTE: "A data da assembleia não pode ser superior a 1 ano no futuro.",

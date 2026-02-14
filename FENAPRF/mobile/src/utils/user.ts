@@ -225,10 +225,10 @@ export const canManageAdmins = (perfil?: string | null) => {
 
 /**
  * CANON: Verifica se o usuário pode indicar membros para a Mesa Diretora.
+ * Regra: Exclusiva do Presidente/Vice da FENAPRF (Princípio da Soberania Institucional).
  */
 export const canComposeMesa = (user: any) => {
     if (!user) return false;
-    if (user.perfil_acesso === ROLES.ADMIN) return true;
     const cargosAutorizados = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
     return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
 };
@@ -248,19 +248,54 @@ export const canCreateCredenciamentoToken = (user: any) => {
 };
 
 /**
- * CANON: Verifica se o perfil pode se inscrever em eventos.
+ * CANON: Verifica se o usuário é membro do Conselho de Representantes.
+ * Regra: Conselheiros + Presidente/Vice da FENAPRF.
  */
-export const canRegisterForEvent = (perfil?: string | null) => {
+export const isCouncilMember = (user: any) => {
+    if (!user) return false;
+    const p = (user.perfil_acesso || "").toUpperCase();
+
+    if (p === ROLES.CONSELHEIRO) return true;
+
+    if (p === ROLES.DIRETORIA) {
+        const cargo = (user.cargo || "").trim();
+        const cargo2 = (user.cargo2 || "").trim();
+        const cargosVoto = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
+        return cargosVoto.includes(cargo) || cargosVoto.includes(cargo2);
+    }
+
+    return false;
+};
+
+/**
+ * CANON: Verifica se o usuário pode realizar Check-in Global (presença no evento).
+ * Regra: Diretoria e Conselheiro.
+ */
+export const canCheckInGlobal = (perfil?: string | null) => {
     const p = (perfil || "").toUpperCase();
     return p === ROLES.DIRETORIA || p === ROLES.CONSELHEIRO;
 };
 
 /**
- * CANON: Verifica se o perfil pode fazer check-in/votar.
+ * CANON: Verifica se o perfil pode realizar check-in de Quórum/Snapshot.
+ * Regra: Apenas Membros do Conselho.
  */
-export const canCheckInEvent = (perfil?: string | null) => {
-    const p = (perfil || "").toUpperCase();
-    return p === ROLES.DIRETORIA || p === ROLES.CONSELHEIRO;
+export const canCheckInQuorum = (user: any) => {
+    return isCouncilMember(user);
+};
+
+/**
+ * CANON: Verifica se o perfil pode votar em assembleias.
+ */
+export const canVoteAssembleia = (user: any) => {
+    return isCouncilMember(user);
+};
+
+/**
+ * CANON: Verifica se o perfil pode criar propostas (encaminhamentos).
+ */
+export const canProposeAssembleia = (user: any) => {
+    return isCouncilMember(user);
 };
 
 /**

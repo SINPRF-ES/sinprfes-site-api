@@ -7,7 +7,9 @@ jest.mock('../utils/log');
 
 describe('Security - XSS Sanitization', () => {
   test('criar and criarProposta should escape HTML', async () => {
-    pool.query.mockResolvedValue({ rows: [{ id: 'ass-1' }] });
+    // Mock user for isCouncilMember check in criarProposta
+    pool.query.mockResolvedValue({ rows: [{ id: 'ass-1', perfil_acesso: 'CONSELHEIRO' }] });
+
     await service.criar({ tipo: 'AGE', titulo: '<script>', pauta: '<img>', criado_por: 'u1', edital_drive_file_id: 'drive-1' });
     const call = pool.query.mock.calls.find(c => c[0].includes('INSERT INTO assembleias'));
     // Indexes changed because id is now the first parameter: [id, tipo, titulo, pauta, ...]
