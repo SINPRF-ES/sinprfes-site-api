@@ -1,9 +1,11 @@
 // src/tests/controller_governance.test.js
 const controller = require('../controllers/assembleias.controller');
 const service = require('../services/assembleias.service');
+const usersService = require('../services/users.service');
 const Textos = require('../utils/textos');
 
 jest.mock('../services/assembleias.service');
+jest.mock('../services/users.service');
 jest.mock('../websocket/assembleia.socket');
 jest.mock('../utils/log');
 
@@ -11,6 +13,7 @@ describe('Controller Governance Rules', () => {
   let req, res;
 
   beforeEach(() => {
+    usersService.buscarPorId.mockResolvedValue({ id: 1, cargo: 'Presidente da FENAPRF' });
     req = {
       params: { id: 'a9bbd71b-5c5d-47cf-b35e-fc781e368b41' },
       user: { id: 1, perfil_acesso: 'DIRETORIA' },

@@ -258,7 +258,9 @@ export default function UsersScreen({ navigation, route }: any) {
         onRefresh={() => fetchData(true)}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text>{searchTerm ? 'Nenhum membro encontrado.' : 'Carregando lista...'}</Text>
+            <Text style={styles.emptyText}>
+              {searchTerm ? 'Nenhum membro encontrado para sua busca.' : 'Não há membros cadastrados ou ativos no momento.'}
+            </Text>
           </View>
         }
       />
@@ -343,6 +345,7 @@ const styles = StyleSheet.create({
   pickerWrapper: { backgroundColor: '#fff', borderRadius: 8, height: 50, justifyContent: 'center', elevation: 1 },
   picker: { height: 50, color: '#333' },
   empty: { padding: 40, alignItems: 'center' },
+  emptyText: { color: '#666', fontSize: 15, textAlign: 'center' },
   fab: { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#003366', justifyContent: 'center', alignItems: 'center', elevation: 4 },
   modalOverlay: {
     flex: 1,

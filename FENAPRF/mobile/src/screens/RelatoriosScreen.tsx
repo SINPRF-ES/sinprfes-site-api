@@ -196,14 +196,20 @@ export default function RelatoriosScreen() {
     const labelParam = item.report_type === 'INDIVIDUAL' ? 'User' : 'Parâmetro';
     const value = params.userNome || params.paramDisplay || params.value || params.userId || "-";
 
+    const a11yLabel = `Relatório: ${typeLabels[item.report_type] || item.report_type}. Data: ${date}. ${labelParam}: ${value}. Solicitante: ${item.requester_name}.`;
+
     return (
-      <View style={styles.historyCard}>
-        <View style={styles.historyHeader}>
+      <View
+        style={styles.historyCard}
+        accessible={true}
+        accessibilityLabel={a11yLabel}
+      >
+        <View style={styles.historyHeader} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden={true}>
           <Text style={styles.historyType}>{typeLabels[item.report_type] || item.report_type}</Text>
           <Text style={styles.historyDate}>{date}</Text>
         </View>
-        <Text style={styles.historyInfo}>{labelParam}: {value}</Text>
-        <Text style={styles.historyInfo}>Solicitante: {item.requester_name}</Text>
+        <Text style={styles.historyInfo} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden={true}>{labelParam}: {value}</Text>
+        <Text style={styles.historyInfo} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden={true}>Solicitante: {item.requester_name}</Text>
       </View>
     );
   };
@@ -302,6 +308,8 @@ export default function RelatoriosScreen() {
              <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setIsPickerVisible(true)}
+                accessibilityLabel={targetValue?.name ? `User selecionado: ${targetValue.name}. Toque para alterar.` : 'Toque para selecionar um user para o relatório individual.'}
+                accessibilityRole="button"
              >
                 <Text style={styles.pickerButtonText}>
                   {targetValue?.name ? `${targetValue.name} (${maskCPF(targetValue.cpf)})` : 'Clique para buscar user...'}
@@ -324,6 +332,8 @@ export default function RelatoriosScreen() {
             style={[styles.button, (loading || loadingPreview) && styles.buttonDisabled]}
             onPress={handleGenerate}
             disabled={loading || loadingPreview}
+            accessibilityLabel={loading ? "Gerando relatório, por favor aguarde..." : "Gerar e enviar relatório por e-mail"}
+            accessibilityRole="button"
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -336,6 +346,8 @@ export default function RelatoriosScreen() {
             style={[styles.buttonSecondary, (loading || loadingPreview) && styles.buttonDisabled]}
             onPress={handlePreview}
             disabled={loading || loadingPreview}
+            accessibilityLabel={loadingPreview ? "Carregando visualização, por favor aguarde..." : "Visualizar relatório na tela"}
+            accessibilityRole="button"
           >
             {loadingPreview ? (
               <ActivityIndicator color="#003366" />
@@ -493,7 +505,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 4,
   },
-  buttonDisabled: { backgroundColor: '#cccccc' },
+  buttonDisabled: { backgroundColor: '#a0a0a0' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   buttonSecondary: {
     backgroundColor: '#fff',
