@@ -339,7 +339,8 @@
                 else if (action === "baixar-edital") baixarEditalSeguro(aid);
                 else if (action === "abrir-ass") abrirAssembleia(aid);
                 else if (action === "preparar-mesa") prepararMesa(aid);
-                else if (action === "gerar-token") gerarTokenToken(aid);
+                else if (action === "gerar-token-global") gerarTokenGlobal(aid);
+                else if (action === "gerar-token-quorum") gerarTokenQuorum(aid);
                 else if (action === "iniciar-execucao") iniciarExecucao(aid);
                 else if (action === "solicitar-recontagem") solicitarRecontagem(aid);
                 else if (action === "encerrar-ass") encerrarAssembleia(aid);
@@ -479,10 +480,12 @@
                                 ${ehGestao && a.estado === 'CRIADO' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
                                 ${ehGestao && a.estado === 'EM_CREDENCIAMENTO' ? `
                                     ${window.Utils.canComposeMesa(userInfo) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="preparar-mesa" data-aid="${id}">Compor Mesa</button>` : ''}
-                                    ${window.Utils.canCreateCredenciamentoToken(userInfo) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token" data-aid="${id}">Gerar Token</button>` : ''}
+                                    ${(window.Utils.canCreateCredenciamentoToken(userInfo) && !estado.quorumVigente?.is_global) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-global" data-aid="${id}">Gerar Token Global</button>` : ''}
+                                    ${isMesa ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-quorum" data-aid="${id}">Novo Token Quórum</button>` : ''}
                                     <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" data-action="iniciar-execucao" data-aid="${id}">Iniciar Execução (Pauta)</button>
                                 ` : ''}
-                                ${(ehGestao || isPresidente) && a.estado === 'INICIADO' ? `
+                                ${isMesa && a.estado === 'INICIADO' ? `
+                                    <button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-quorum" data-aid="${id}">Novo Token Quórum</button>
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-recontagem" data-aid="${id}">🔄 Recontagem de Quórum</button>
                                 ` : ''}
                                 ${ehGestao && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" data-action="encerrar-ass" data-aid="${id}">Encerrar Assembleia</button>` : ''}
@@ -561,16 +564,36 @@
         } catch (err) { alert("Erro ao encerrar."); }
     }
 
-    async function gerarTokenToken(id) {
+    async function gerarTokenGlobal(id) {
         try {
             const r = await window.Api.apiFetch(`/api/assembleias/${id}/token`, {
                 method: "POST",
-                body: { tipo_chamada: 'PRIMEIRA' }
+                body: { tipo_chamada: 'GLOBAL', is_global: true }
             });
+            if (!r.ok) {
+                const err = await r.json();
+                throw new Error(err.error || "Erro ao gerar token global.");
+            }
             const data = await r.json();
-            alert(`Token Gerado: ${data.token}\nSeu check-in foi automático.`);
+            alert(`Token Global Gerado: ${data.token}\nO credenciamento está aberto.`);
             await carregarDetalhesAssembleia(id);
-        } catch (err) { alert("Erro ao gerar token."); }
+        } catch (err) { alert(err.message); }
+    }
+
+    async function gerarTokenQuorum(id) {
+        try {
+            const r = await window.Api.apiFetch(`/api/assembleias/${id}/token`, {
+                method: "POST",
+                body: { tipo_chamada: 'PRIMEIRA', is_global: false }
+            });
+            if (!r.ok) {
+                const err = await r.json();
+                throw new Error(err.error || "Erro ao gerar token de quórum.");
+            }
+            const data = await r.json();
+            alert(`Novo Token de Quórum Gerado: ${data.token}.\nSeu check-in foi automático.`);
+            await carregarDetalhesAssembleia(id);
+        } catch (err) { alert(err.message); }
     }
 
     async function solicitarRelatorio(id) {

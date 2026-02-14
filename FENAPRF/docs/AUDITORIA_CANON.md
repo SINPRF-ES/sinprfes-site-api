@@ -12,13 +12,15 @@ Este documento consolida os resultados da auditoria realizada no ecossistema FEN
 
 ### Autoridades por Operação
 - **Composição de Mesa**: Exclusiva do Presidente/Vice da FENAPRF.
-- **Geração de Token Global**: Presidente, Vice ou Diretor de Secretaria (Titular/Subst.).
-- **Geração de Token de Quórum**: Restrita à Mesa Diretora definida.
+- **Geração de Token Global**: Exclusiva: Presidente, Vice, Diretor de Secretaria ou Substituto. (Resgate permitido para toda a Gestão).
+- **Geração de Token de Quórum**: Exclusiva da Mesa Diretora (4 componentes).
 - **Check-in/Voto**: Apenas Diretoria e Conselheiro. ADMIN e COLABORADOR não participam.
 
 ### Regras do Rito
-- **Token Global**: 10 chars alfanuméricos, único e persistente por assembleia.
-- **Token de Quórum**: 6 dígitos numéricos, versionado (Snapshot). Duração padrão: 120 segundos.
+- **Token Global**: 10 chars alfanuméricos + QR. Único e persistente. Dura toda a assembleia (expira apenas no encerramento).
+- **Token de Quórum**: 6 dígitos numéricos + QR. Versionado (Snapshot). Válido até o próximo ser gerado ou o fim do evento.
+- **Votação (Timer)**: Duração padrão de 120 segundos.
+- **Auto-Encerramento**: Votação encerra imediatamente ao atingir 100% dos votos do snapshot.
 - **Hierarquia de Branch**: Presidente > Vice; Delegado > Suplente.
 - **Substituição**: Superior entrando remove subordinado. Durante votação, a substituição fica pendente até o encerramento do item.
 - **Votos**: Omissão computada como ABSTENCAO para membros presentes no snapshot.

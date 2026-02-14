@@ -281,13 +281,15 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     if ((ehGestao || isPresidente) && assembleia) {
       const hasGlobalToken = !!estado?.quorumVigente?.is_global || (assembleia.estado !== 'CRIADO' && assembleia.estado !== 'ENCERRADO');
 
-      if (canCreateCredenciamentoToken(user) && assembleia.estado === 'CRIADO') {
+      if (canCreateCredenciamentoToken(user) && !estado?.quorumVigente?.is_global) {
         actions.push({
             label: 'Gerar QR Global',
             icon: 'qrcode',
             onPress: () => handleGerarToken(true)
         });
-      } else if (ehGestao && hasGlobalToken && estado?.quorumVigente?.is_global) {
+      }
+
+      if (ehGestao && hasGlobalToken && estado?.quorumVigente?.is_global) {
         actions.push({
             label: 'Visualizar QR Global',
             icon: 'qrcode-scan',
@@ -313,7 +315,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
         actions.push({ label: 'Iniciar Execução', icon: 'play-box-multiple-outline', onPress: handleIniciarExecucao });
 
-        // Se já existe token de quórum (não global), mostra visualizar, senão gerar
+        // Se já existe token de quórum (não global), mostra visualizar
         if (estado?.quorumVigente && !estado.quorumVigente.is_global) {
             actions.push({
                 label: 'Visualizar QR Quórum',
@@ -326,7 +328,11 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                 })
             });
         }
-        actions.push({ label: 'Novo Token Quórum', icon: 'key-variant', onPress: () => handleGerarToken(false) });
+
+        // CANON: Novo Token de Quórum apenas pela Mesa
+        if (isMesa) {
+            actions.push({ label: 'Novo Token Quórum', icon: 'key-variant', onPress: () => handleGerarToken(false) });
+        }
 
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
@@ -657,7 +663,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                         <Text style={styles.btnActionText}>Credenciamento (QR)</Text>
                     </TouchableOpacity>
                 )}
-                {canCreateCredenciamentoToken(user) && assembleia.estado === 'CRIADO' && (
+                {canCreateCredenciamentoToken(user) && !estado?.quorumVigente?.is_global && (
                     <TouchableOpacity
                       style={styles.btnManagement}
                       onPress={() => handleGerarToken(true)}
@@ -675,12 +681,14 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
                               <Text style={styles.btnActionText}>{(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}</Text>
                           </TouchableOpacity>
                         )}
-                        <TouchableOpacity
-                          style={styles.btnManagement}
-                          onPress={() => handleGerarToken(false)}
-                        >
-                            <Text style={styles.btnActionText}>Novo Token</Text>
-                        </TouchableOpacity>
+                        {isMesa && (
+                          <TouchableOpacity
+                            style={styles.btnManagement}
+                            onPress={() => handleGerarToken(false)}
+                          >
+                              <Text style={styles.btnActionText}>Novo Token</Text>
+                          </TouchableOpacity>
+                        )}
                     </>
                 )}
                 {ehGestao && (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') && (

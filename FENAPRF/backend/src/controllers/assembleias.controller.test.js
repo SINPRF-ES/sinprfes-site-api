@@ -64,8 +64,7 @@ describe('Assembleias Controller', () => {
     service.registrarVoto.mockResolvedValue({});
     service.contarVotos.mockResolvedValue({ total: 10, SIM: 6, NAO: 4 });
     service.listarVotosNominais.mockResolvedValue([]);
-    service.buscarUltimoQuorum.mockResolvedValue({ id: 'q1' });
-    service.contarPresentesNoQuorum.mockResolvedValue(10); // Matches contagem.total
+    service.contarElegiveisNaVotacao.mockResolvedValue(10); // Matches contagem.total
     service.finalizarVotacao.mockResolvedValue({ id: 'v1', status: 'ENCERRADA' });
 
     await controller.votar(req, res);

@@ -127,12 +127,18 @@ describe('Assembleias V5 Integration Tests', () => {
         release: jest.fn(),
       };
       pool.connect.mockResolvedValue(mClient);
+      // Mock mesa for all token tests to bypass authority check unless specifically testing it
+      pool.query.mockImplementation((q) => {
+          if (q.includes('assembleia_mesa')) return Promise.resolve({ rows: [{ presidente_user_id: 1, vice_presidente_user_id: 2, secretario_user_id: 3, secretario_2_user_id: 4 }] });
+          return Promise.resolve({ rows: [] });
+      });
     });
 
     test('should succeed and be idempotent', async () => {
       mClient.query.mockImplementation((q) => {
         if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
         if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'EM_CREDENCIAMENTO' }] });
+        if (q.includes('assembleia_mesa')) return Promise.resolve({ rows: [{ presidente_user_id: 1, vice_presidente_user_id: 2, secretario_user_id: 3, secretario_2_user_id: 4 }] });
         if (q.includes('assembleia_quoruns') && q.includes('SELECT') && q.includes('encerrado_em IS NULL')) {
             return Promise.resolve({ rows: [] });
         }
@@ -142,8 +148,11 @@ describe('Assembleias V5 Integration Tests', () => {
         return Promise.resolve({ rows: [] });
       });
 
-      // Mock for buscarEstadoCompleto queries on pool.query
-      pool.query.mockResolvedValue({ rows: [] });
+      // Ensure pool.query returns mesa for authority check
+      pool.query.mockImplementation((q) => {
+          if (q.includes('assembleia_mesa')) return Promise.resolve({ rows: [{ presidente_user_id: 1, vice_presidente_user_id: 2, secretario_user_id: 3, secretario_2_user_id: 4 }] });
+          return Promise.resolve({ rows: [] });
+      });
 
       const res1 = await request(app)
         .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
@@ -160,6 +169,7 @@ describe('Assembleias V5 Integration Tests', () => {
       mClient.query.mockImplementation((q) => {
         if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
         if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'EM_CREDENCIAMENTO' }] });
+        if (q.includes('assembleia_mesa')) return Promise.resolve({ rows: [{ presidente_user_id: 1, vice_presidente_user_id: 2, secretario_user_id: 3, secretario_2_user_id: 4 }] });
         if (q.includes('assembleia_quoruns') && q.includes('SELECT') && q.includes('encerrado_em IS NULL')) {
             return Promise.resolve({ rows: [{ id: 'q1', token: '111222' }] });
         }
@@ -177,9 +187,12 @@ describe('Assembleias V5 Integration Tests', () => {
     });
 
     test('should return 404 for non-existent assembly', async () => {
-      mClient.query
-        .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [] }); // SELECT estado (not found)
+      mClient.query.mockImplementation((q) => {
+          if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
+          if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [] }); // not found
+          if (q.includes('assembleia_mesa')) return Promise.resolve({ rows: [{ presidente_user_id: 1, vice_presidente_user_id: 2, secretario_user_id: 3, secretario_2_user_id: 4 }] });
+          return Promise.resolve({ rows: [] });
+      });
 
       const response = await request(app)
         .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
@@ -189,9 +202,12 @@ describe('Assembleias V5 Integration Tests', () => {
     });
 
     test('should return 409 for invalid assembly state', async () => {
-      mClient.query
-        .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ estado: 'ENCERRADO' }] }); // SELECT estado
+      mClient.query.mockImplementation((q) => {
+          if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
+          if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'ENCERRADO' }] });
+          if (q.includes('assembleia_mesa')) return Promise.resolve({ rows: [{ presidente_user_id: 1, vice_presidente_user_id: 2, secretario_user_id: 3, secretario_2_user_id: 4 }] });
+          return Promise.resolve({ rows: [] });
+      });
 
       const response = await request(app)
         .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
@@ -201,6 +217,13 @@ describe('Assembleias V5 Integration Tests', () => {
     });
 
     test('should return 422 for invalid tipo_chamada', async () => {
+      mClient.query.mockImplementation((q) => {
+          if (q.includes('BEGIN')) return Promise.resolve({ rows: [] });
+          if (q.includes('SELECT estado FROM assembleias')) return Promise.resolve({ rows: [{ estado: 'EM_CREDENCIAMENTO' }] });
+          if (q.includes('assembleia_mesa')) return Promise.resolve({ rows: [{ presidente_user_id: 1, vice_presidente_user_id: 2, secretario_user_id: 3, secretario_2_user_id: 4 }] });
+          return Promise.resolve({ rows: [] });
+      });
+
       const response = await request(app)
         .post('/api/assembleias/bf923c6a-4959-4674-9844-0c201630983d/token')
         .send({ tipo_chamada: 'INVALID' });

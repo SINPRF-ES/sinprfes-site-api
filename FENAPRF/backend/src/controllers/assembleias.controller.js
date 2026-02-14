@@ -460,8 +460,7 @@ async function gerarTokenQuorum(req, res) {
     const { tipo_chamada, observacao, is_global } = req.body;
     const isGlobalCall = !!is_global || tipo_chamada === 'GLOBAL';
 
-    // Validação de autoridade: Presidente ou Diretoria
-    const { autorizada } = await verificarAutoridadeMesa(assembleiaId, req.user);
+    const { isMesa, isDiretoria } = await verificarAutoridadeMesa(assembleiaId, req.user);
 
     if (isGlobalCall) {
        // Se o token já existe, permitimos que qualquer perfil de gestão o recupere (Idempotência)
@@ -477,11 +476,19 @@ async function gerarTokenQuorum(req, res) {
                 error: "Apenas o Presidente, Vice-Presidente, Diretor de Secretaria ou seu Substituto podem gerar o QR Code Global."
               });
           }
+       } else {
+          // Se já existe, qualquer um da gestão pode resgatar.
+          if (!isDiretoria) {
+              return res.status(403).json({ error: "Permissão insuficiente para resgatar o token global." });
+          }
        }
     } else {
-       // Para tokens normais, mantemos a regra de Mesa/Diretoria
-       if (!autorizada) {
-         return res.status(403).json({ error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE, requestId: req.requestId });
+       // CANON: Token de quórum (snapshot) é criado APENAS pela mesa eleita (os 4 componentes).
+       if (!isMesa) {
+         return res.status(403).json({
+            error: Textos.ASSEMBLEIA.APENAS_PRESIDENTE,
+            requestId: req.requestId
+         });
        }
     }
 
@@ -865,17 +872,19 @@ async function votar(req, res) {
       service.listarVotosNominais(votacaoId)
     ]);
 
-    // Auto-encerramento se todos os presentes votaram
-    const quorumVigente = await service.buscarUltimoQuorum(assembleiaId);
-    if (quorumVigente) {
-        const totalPresentes = await service.contarPresentesNoQuorum(quorumVigente.id);
-        if (contagem.total >= totalPresentes && totalPresentes > 0) {
-            log.info("AssembleiaVotacaoAutoEncerramento", { requestId: req.requestId, assembleiaId, votacaoId, votos: contagem.total, presentes: totalPresentes });
-            const finalizada = await service.finalizarVotacao(votacaoId);
-            socket.emitEvent(assembleiaId, "votacao:encerrada", { ...finalizada, contagem, votos });
-        } else {
-            socket.emitEvent(assembleiaId, "voto:updated", { contagem, votos });
-        }
+    // Auto-encerramento se 100% dos elegíveis votaram (Soberania do Quórum Snapshot)
+    const totalElegiveis = await service.contarElegiveisNaVotacao(votacaoId);
+
+    if (totalElegiveis > 0 && contagem.total >= totalElegiveis) {
+        log.info("AssembleiaVotacaoAutoEncerramento", {
+            requestId: req.requestId,
+            assembleiaId,
+            votacaoId,
+            votos: contagem.total,
+            elegiveis: totalElegiveis
+        });
+        const finalizada = await service.finalizarVotacao(votacaoId);
+        socket.emitEvent(assembleiaId, "votacao:encerrada", { ...finalizada, contagem, votos });
     } else {
         socket.emitEvent(assembleiaId, "voto:updated", { contagem, votos });
     }

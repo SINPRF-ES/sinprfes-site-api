@@ -22,6 +22,13 @@ describe('Assembleias Controller - Token Generation', () => {
       json: jest.fn(),
       status: jest.fn().mockReturnThis()
     };
+    // Mock user being in the Mesa
+    service.buscarMesa.mockResolvedValue({
+      presidente_user_id: 1,
+      vice_presidente_user_id: 2,
+      secretario_user_id: 3,
+      secretario_2_user_id: 4
+    });
     jest.clearAllMocks();
   });
 
