@@ -422,8 +422,9 @@ async function gerarQuorum(dados) {
         );
     }
 
-    // Regra Institucional: QR Global não possui validade temporal (valido_ate IS NULL)
-    const validoAteValue = is_global ? null : new Date(Date.now() + 10 * 60000);
+    // Regra Institucional: QR Global não possui validade temporal (valido_ate IS NULL).
+    // Quórum Dinâmico possui validade padrão de 120 segundos (Canon).
+    const validoAteValue = is_global ? null : new Date(Date.now() + 120000);
     const newQuorumId = generateUuid();
 
     const { rows: qRows } = await client.query(
@@ -1389,7 +1390,7 @@ async function iniciarVotacaoProposta(assembleiaId, propostaId, userId) {
       quorum_snapshot_id: quorum.id,
       titulo: `Votação: ${proposta.titulo}`,
       descricao: proposta.descricao,
-      duracao_segundos: 300, // Canonização: 5 minutos padrão
+      duracao_segundos: 120, // Canonização: 120 segundos padrão
       iniciada_por_user_id: userId
     }, client);
 

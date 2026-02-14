@@ -1098,7 +1098,7 @@
         const form = document.getElementById('form-criar-votacao');
 
         form.reset();
-        document.getElementById('votacao-duracao').value = "300";
+        document.getElementById('votacao-duracao').value = "120";
         modal.style.display = 'flex';
 
         form.onsubmit = async (e) => {

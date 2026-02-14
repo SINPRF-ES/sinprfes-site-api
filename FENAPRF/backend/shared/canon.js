@@ -264,12 +264,10 @@
 
   /**
    * Verifica se o usuário pode indicar membros para a Mesa Diretora da Assembleia.
-   * Regra: Apenas Presidente/Vice da FENAPRF ou ADMIN.
+   * Regra: Exclusiva do Presidente/Vice da FENAPRF (Princípio da Soberania Institucional).
    */
   const canComposeMesa = (user) => {
     if (!user) return false;
-    const p = normalizePerfil(user.perfil_acesso);
-    if (p === PERFIL_ACESSO.ADMIN) return true;
 
     const cargo = (user.cargo || "").trim();
     const cargo2 = (user.cargo2 || "").trim();

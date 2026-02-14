@@ -817,7 +817,7 @@ async function iniciarVotacao(req, res) {
       quorum_snapshot_id: quorum.id,
       titulo,
       descricao,
-      duracao_segundos: duracao_segundos || 300,
+      duracao_segundos: duracao_segundos || 120, // Canon: 120 segundos padrão
       iniciada_por_user_id: atorId
     });
 
