@@ -11,7 +11,6 @@ import type { RootStackParamList } from '../navigation';
 import { Image } from 'react-native';
 import MemberCard from '../components/MemberCard';
 import { EMOJIS } from '../utils/emoji';
-import { getGlobalTokenAtivo } from '../services/assembleiaService';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -44,13 +43,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
-  const [globalToken, setGlobalToken] = useState<any>(null);
-
-  useEffect(() => {
-    if (ehGestao) {
-      getGlobalTokenAtivo().then(setGlobalToken).catch(() => setGlobalToken(null));
-    }
-  }, [ehGestao]);
 
   const displayedItems = [...NAV_ITEMS];
   if (ehGestao) {
@@ -77,35 +69,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         <MemberCard member={user} variant="profile" />
       </View>
 
-      {ehGestao && globalToken && (
-        <TouchableOpacity
-          style={styles.globalTokenCard}
-          onPress={() => {
-            logNavigation('VisualizarToken (via HomeBanner)');
-            navigation.navigate('Votacao', {
-                screen: 'VisualizarToken',
-                params: {
-                    assembleiaId: globalToken.assembleia_id,
-                    token: globalToken.token,
-                    assembleiaTitulo: globalToken.assembleia_titulo,
-                    type: 'GLOBAL'
-                }
-            } as any);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Visualizar QR Code de Check-in Ativo"
-        >
-          <View style={styles.globalTokenIcon}>
-            <MaterialCommunityIcons name="qrcode-scan" size={32} color="#003366" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.globalTokenTitle}>QR Code de Check-in Ativo</Text>
-            <Text style={styles.globalTokenSubtitle} numberOfLines={1}>{globalToken.assembleia_titulo}</Text>
-            <Text style={styles.globalTokenAction}>Clique aqui para visualizar</Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#003366" />
-        </TouchableOpacity>
-      )}
 
       <View style={styles.grid}>
         {displayedItems.map((item) => (

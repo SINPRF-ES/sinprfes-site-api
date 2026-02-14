@@ -17,13 +17,17 @@ const LAST_UPDATE_CHECK_KEY = '@fenaprf/last_update_check';
  */
 export async function salvarSessao(sessao: Sessao): Promise<void> {
   try {
-    await SecureStore.setItemAsync(TOKEN_KEY, sessao.token);
+    // FENAPRF: Garantir que tudo que vai para SecureStore é string robusta
+    const tokenStr = sessao.token ? String(sessao.token) : '';
+    const refreshStr = sessao.refreshToken ? String(sessao.refreshToken) : '';
+
+    await SecureStore.setItemAsync(TOKEN_KEY, tokenStr);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(sessao.user));
 
     const bioEnabled = await carregarBiometriaHabilitada();
 
     // Refresh Token: Se biometria ativa, exige FaceID/Digital para ler
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, sessao.refreshToken, {
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshStr, {
       requireAuthentication: bioEnabled
     });
 
@@ -43,8 +47,13 @@ export async function carregarSessao(): Promise<Partial<Sessao> | null> {
 
     if (!token || !userJson) return null;
 
-    const user = JSON.parse(userJson) as User;
-    return { token, user };
+    try {
+      const user = JSON.parse(userJson) as User;
+      return { token: String(token), user };
+    } catch (parseErr) {
+      logger.error('[Storage.carregarSessao] JSON parse error', parseErr);
+      return null;
+    }
   } catch (e) {
     logger.error('[Storage.carregarSessao]', e);
     return null;
@@ -83,12 +92,12 @@ export async function limparSessao(manterBiometria = true): Promise<void> {
 export async function definirBiometriaHabilitada(valor: boolean): Promise<void> {
   const strValor = valor ? 'true' : 'false';
   await AsyncStorage.setItem(BIOMETRIA_KEY, strValor);
-  await SecureStore.setItemAsync(BIOMETRIA_SECURE_KEY, strValor);
+  await SecureStore.setItemAsync(BIOMETRIA_SECURE_KEY, String(strValor));
 
   // Re-salva o refresh token com a nova política de segurança
   const rt = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
   if (rt) {
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, rt, {
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, String(rt), {
       requireAuthentication: valor
     });
   }
