@@ -29,7 +29,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [isScanning, setIsScanning] = useState(false);
   const [editalLoading, setEditalLoading] = useState(false);
 
-  const perfil = (user?.perfil_acesso || '').toUpperCase();
+  const perfil = (user?.perfil_acesso || '').trim().toUpperCase();
   const isDiretoria = ['ADMIN', 'DIRETORIA'].includes(perfil);
   const isElegivel = ['DIRETORIA', 'CONSELHEIRO'].includes(perfil);
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
@@ -355,29 +355,35 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const onBarCodeScanned = ({ data }: { data: string }) => {
     setIsScanning(false);
     try {
+      // FENAPRF: Tenta parsear como JSON para extrair metadados do QR
       const payload = JSON.parse(data);
       const expectedType = assembleia.estado === 'EM_CREDENCIAMENTO' ? 'GLOBAL' : 'QUORUM';
 
-      if (payload.assembleiaId !== id) {
+      if (payload.assembleiaId && payload.assembleiaId !== id) {
         Alert.alert('QR Code Inválido', 'Este QR Code pertence a outra assembleia.');
         return;
       }
 
-      if (payload.type !== expectedType && !(payload.type === 'CREDENCIAMENTO' && expectedType === 'GLOBAL')) {
-          Alert.alert('QR Code Inválido', `Este QR Code é do tipo ${payload.type}, mas a assembleia aguarda ${expectedType}.`);
+      const pType = payload.type || payload.tipo;
+      const isMatch = !pType || pType === expectedType || (pType === 'CREDENCIAMENTO' && expectedType === 'GLOBAL');
+
+      if (!isMatch) {
+          Alert.alert('QR Code Inválido', `Este QR Code é do tipo ${pType}, mas a assembleia aguarda ${expectedType}.`);
           return;
       }
 
-      setTokenInput(payload.token);
+      const finalToken = payload.token || payload.codigo || data;
+      setTokenInput(finalToken);
       // Auto-submit after scan
-      setTimeout(() => handleCheckin(payload.token), 500);
+      setTimeout(() => handleCheckin(finalToken), 500);
 
     } catch (e) {
-      // Se não for JSON, pode ser o token puro (fallback)
-      if (data && data.length <= 10) {
+      // Se não for JSON, tenta tratar como token puro se tiver tamanho compatível
+      if (data && (data.length === 6 || data.length === 10)) {
           setTokenInput(data);
+          setTimeout(() => handleCheckin(data), 500);
       } else {
-          Alert.alert('Erro na leitura', 'O QR Code lido não é válido para este sistema.');
+          Alert.alert('Erro na leitura', 'O QR Code lido não contém um token compatível.');
       }
     }
   };
@@ -456,6 +462,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
   const isParticipavel = assembleia.estado === 'EM_CREDENCIAMENTO' || assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
   const isEncerrada = assembleia.estado === 'ENCERRADO';
+  const isIniciado = assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
   const canGenerateReport = isEncerrada;
 
   return (
@@ -505,13 +512,6 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
           )}
       </View>
 
-      {canSeeToken && (
-        <View style={styles.tokenCardVigente}>
-            <Text style={styles.tokenLabelVigente}>🔑 Token de Presença Vigente</Text>
-            <Text style={styles.tokenValueVigente}>{estado?.quorumVigente?.token}</Text>
-            <Text style={styles.tokenHintVigente}>Compartilhe este código com os users presentes</Text>
-        </View>
-      )}
 
       {isIniciado && estado?.mesa && (
         <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366' }]}>
@@ -631,6 +631,21 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         <View style={[styles.infoCard, styles.diretoriaSection]}>
             <Text style={styles.infoTitle}>⚡ Ações e Gestão</Text>
             <View style={styles.diretoriaButtons}>
+                {canSeeToken && (
+                    <TouchableOpacity
+                      style={styles.btnManagement}
+                      onPress={() => navigation.navigate('VisualizarToken', {
+                          assembleiaId: id,
+                          token: estado?.quorumVigente?.token,
+                          assembleiaTitulo: assembleia.titulo,
+                          type: estado?.quorumVigente?.is_global ? 'GLOBAL' : 'QUORUM'
+                      })}
+                      accessibilityRole="button"
+                      accessibilityLabel="Ver QR Code de Credenciamento"
+                    >
+                        <Text style={styles.btnActionText}>Credenciamento (QR)</Text>
+                    </TouchableOpacity>
+                )}
                 {isDiretoria && assembleia.estado === 'CRIADO' && (
                     <TouchableOpacity
                       style={styles.btnManagement}
@@ -732,15 +747,21 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
               {/* FENAPRF: QR Scan para Conselheiros e Diretores (exceto Admin/Colab) */}
               {(perfil === 'CONSELHEIRO' || perfil === 'DIRETORIA') && (
                 <TouchableOpacity
-                    style={styles.btnScan}
+                    style={[styles.btnSala, { marginBottom: 15, backgroundColor: '#f1c40f' }]}
                     onPress={handleScanPress}
                     accessibilityLabel="Escanear QR Code de Presença"
                     accessibilityRole="button"
                 >
                     <MaterialCommunityIcons name="qrcode-scan" size={24} color="#003366" />
-                    <Text style={styles.btnScanText}>Escanear QR Code</Text>
+                    <Text style={[styles.btnSalaText, { color: '#003366', fontSize: 16 }]}>Escanear QR Code</Text>
                 </TouchableOpacity>
               )}
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#eee' }} />
+                  <Text style={{ fontSize: 12, color: '#999', fontWeight: 'bold' }}>OU DIGITE O CÓDIGO</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#eee' }} />
+              </View>
 
               <TextInput
                 style={styles.tokenInput}

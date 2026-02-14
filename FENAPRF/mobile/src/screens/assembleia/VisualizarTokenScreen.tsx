@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Share, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Share, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SafeScreen from '../../components/SafeScreen';
@@ -7,6 +7,9 @@ import SafeScreen from '../../components/SafeScreen';
 export default function VisualizarTokenScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { assembleiaId, token, assembleiaTitulo, type } = route.params;
+  const [loadingQr, setLoadingQr] = useState(true);
+  const [qrError, setQrError] = useState(false);
+  const [qrKey, setQrKey] = useState(Date.now());
 
   const qrPayload = JSON.stringify({
     type: type || 'CREDENCIAMENTO',
@@ -14,7 +17,8 @@ export default function VisualizarTokenScreen({ route, navigation }: any) {
     token
   });
 
-  const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=500x500&chl=${encodeURIComponent(qrPayload)}`;
+  // FENAPRF: Usando API mais robusta e garantindo fundo branco
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrPayload)}&ecc=M&bgcolor=ffffff`;
 
   const handleShare = async () => {
     try {
@@ -41,11 +45,29 @@ export default function VisualizarTokenScreen({ route, navigation }: any) {
         <Text style={styles.typeLabel}>{type === 'GLOBAL' ? 'CREDENCIAMENTO GLOBAL' : 'CHAMADA DE QUÓRUM'}</Text>
 
         <View style={styles.qrContainer}>
-          <Image
-            source={{ uri: qrUrl }}
-            style={styles.qrImage}
-            resizeMode="contain"
-          />
+          {loadingQr && (
+            <ActivityIndicator size="large" color="#003366" style={{ position: 'absolute', zIndex: 1 }} />
+          )}
+
+          {qrError ? (
+            <TouchableOpacity onPress={() => { setQrError(false); setLoadingQr(true); setQrKey(Date.now()); }} style={styles.retryBox}>
+                <MaterialCommunityIcons name="refresh" size={40} color="#003366" />
+                <Text style={styles.retryText}>Falha ao carregar. Toque para tentar novamente.</Text>
+            </TouchableOpacity>
+          ) : (
+            <Image
+              key={qrKey}
+              source={{ uri: `${qrUrl}&t=${qrKey}` }}
+              style={[styles.qrImage, { backgroundColor: '#fff' }]}
+              resizeMode="contain"
+              onLoadStart={() => setLoadingQr(true)}
+              onLoadEnd={() => { setLoadingQr(false); setQrError(false); }}
+              onError={() => {
+                  setLoadingQr(false);
+                  setQrError(true);
+              }}
+            />
+          )}
         </View>
 
         <View style={styles.tokenContainer}>
@@ -127,6 +149,19 @@ const styles = StyleSheet.create({
   qrImage: {
     width: '100%',
     height: '100%',
+    backgroundColor: '#fff',
+  },
+  retryBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  retryText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: '#003366',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   tokenContainer: {
     marginTop: 40,
