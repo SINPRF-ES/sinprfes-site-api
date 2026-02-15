@@ -245,13 +245,21 @@
                 return;
             }
 
+            const States = global.Canon ? global.Canon.ASSEMBLEIA_ESTADOS : {
+                CRIADO: 'CRIADO',
+                EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
+                INICIADO: 'INICIADO',
+                SUSPENSA: 'SUSPENSA',
+                ENCERRADO: 'ENCERRADO'
+            };
+
             if (currentFiltro === 'ATIVAS') {
-                assembleias = assembleias.filter(a => ['CRIADO', 'EM_CREDENCIAMENTO', 'INICIADO', 'SUSPENSA'].includes(a.estado));
+                assembleias = assembleias.filter(a => [States.CRIADO, States.EM_CREDENCIAMENTO, States.INICIADO, States.SUSPENSA].includes(a.estado));
             } else if (currentFiltro === 'ENCERRADAS') {
-                assembleias = assembleias.filter(a => a.estado === 'ENCERRADO');
+                assembleias = assembleias.filter(a => a.estado === States.ENCERRADO);
             }
 
-            const ordem = { 'INICIADO': 0, 'EM_CREDENCIAMENTO': 1, 'SUSPENSA': 2, 'CRIADO': 3, 'ENCERRADO': 4 };
+            const ordem = { [States.INICIADO]: 0, [States.EM_CREDENCIAMENTO]: 1, [States.SUSPENSA]: 2, [States.CRIADO]: 3, [States.ENCERRADO]: 4 };
             assembleias.sort((a, b) => (ordem[a.estado] ?? 99) - (ordem[b.estado] ?? 99));
 
             renderizarLista(assembleias, container);
@@ -368,9 +376,17 @@
 
             const label = window.AssembleiaUtils.getStatusLabel(a.estado);
             const dataBr = window.Formatters.formatISOToBR(a.data_evento);
+            const States = global.Canon ? global.Canon.ASSEMBLEIA_ESTADOS : {
+                CRIADO: 'CRIADO',
+                EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
+                INICIADO: 'INICIADO',
+                SUSPENSA: 'SUSPENSA',
+                ENCERRADO: 'ENCERRADO'
+            };
+
             const hasCheckedIn = estado.quorumVigente?.userHasCheckedIn || false;
-            const isParticipavel = ['EM_CREDENCIAMENTO', 'INICIADO', 'SUSPENSA'].includes(a.estado);
-            const isEncerrada = a.estado === 'ENCERRADO';
+            const isParticipavel = [States.EM_CREDENCIAMENTO, States.INICIADO, States.SUSPENSA].includes(a.estado);
+            const isEncerrada = a.estado === States.ENCERRADO;
 
             const userInfo = window.Utils.obterUserInfo();
             const ehGestao = window.Utils.isGestao(currentUserPerfil);
@@ -387,9 +403,10 @@
 
             const canSeeToken = estado.quorumVigente?.token && (
                 temAutoridade ||
+                (global.Canon && global.Canon.canViewCredenciamentoToken(userInfo)) ||
                 currentUserId === estado.quorumVigente.gerado_por_user_id
             );
-            const isCredenciamento = a.estado === 'EM_CREDENCIAMENTO';
+            const isCredenciamento = a.estado === States.EM_CREDENCIAMENTO;
 
             container.innerHTML = `
                 <div class="section-card" style="background:#fff; color:#333; padding:35px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; text-align: center;">
@@ -477,19 +494,19 @@
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #003366; background:#f0f7ff; border-radius:15px; padding:30px; text-align: center;">
                             <h4 style="color:#003366; margin-bottom:20px; text-transform:uppercase; font-size:1rem; letter-spacing:1.5px; font-weight:900; display:flex; align-items:center; gap:10px; justify-content:center;">🛠️ Ações de Gestão e Controle</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center;">
-                                ${ehGestao && a.estado === 'CRIADO' ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
-                                ${ehGestao && a.estado === 'EM_CREDENCIAMENTO' ? `
+                                ${ehGestao && a.estado === States.CRIADO ? `<button class="btn btn-primary btn-lg" data-action="abrir-ass" data-aid="${id}">Abrir Assembleia</button>` : ''}
+                                ${ehGestao && a.estado === States.EM_CREDENCIAMENTO ? `
                                     ${window.Utils.canComposeMesa(userInfo) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="preparar-mesa" data-aid="${id}">Compor Mesa</button>` : ''}
                                     ${(window.Utils.canCreateCredenciamentoToken(userInfo) && !estado.quorumVigente?.is_global) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-global" data-aid="${id}">Gerar Token Global</button>` : ''}
                                     ${isMesa ? `<button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-quorum" data-aid="${id}">Novo Token Quórum</button>` : ''}
                                     <button class="btn btn-success" style="font-weight:700; padding: 10px 25px;" data-action="iniciar-execucao" data-aid="${id}">Iniciar Execução (Pauta)</button>
                                 ` : ''}
-                                ${isMesa && a.estado === 'INICIADO' ? `
+                                ${isMesa && a.estado === States.INICIADO ? `
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="gerar-token-quorum" data-aid="${id}">Novo Token Quórum</button>
                                     <button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-recontagem" data-aid="${id}">🔄 Recontagem de Quórum</button>
                                 ` : ''}
                                 ${ehGestao && isParticipavel ? `<button class="btn btn-danger" style="font-weight:700;" data-action="encerrar-ass" data-aid="${id}">Encerrar Assembleia</button>` : ''}
-                                ${(currentUserPerfil !== 'COMUNICADOR' && (a.estado === 'ENCERRADA' || a.estado === 'EM_CURSO' || a.estado === 'ABERTA')) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-relatorio" data-aid="${id}">Solicitar Relatório PDF</button>` : ''}
+                                ${(currentUserPerfil !== 'COMUNICADOR' && (a.estado === States.ENCERRADO || a.estado === 'EM_CURSO' || a.estado === 'ABERTA')) ? `<button class="btn btn-primary" style="font-weight:700;" data-action="solicitar-relatorio" data-aid="${id}">Solicitar Relatório PDF</button>` : ''}
                             </div>
                         </div>
                     ` : ''}
@@ -513,11 +530,11 @@
                             `}
                         ` : `
                             <div class="section-block section-block-alt" style="text-align:center; padding:60px; border-radius:20px; background:#f9f9f9; border: 1px dashed #ccc;">
-                                <div style="font-size:4rem; margin-bottom:20px;">${a.estado === 'CRIADO' ? '⏳' : '🏁'}</div>
+                                <div style="font-size:4rem; margin-bottom:20px;">${a.estado === States.CRIADO ? '⏳' : '🏁'}</div>
                                 <h3 style="color:#444; font-weight:800; font-size:1.5rem;">
-                                    ${a.estado === 'CRIADO' ? 'Assembleia agendada. Aguarde a abertura oficial.' : 'Esta assembleia já foi encerrada.'}
+                                    ${a.estado === States.CRIADO ? 'Assembleia agendada. Aguarde a abertura oficial.' : 'Esta assembleia já foi encerrada.'}
                                 </h3>
-                                <p style="color:#777; font-weight:500;">${a.estado === 'CRIADO' ? 'O acesso à sala será liberado no horário previsto.' : 'Os resultados e a ata estarão disponíveis em breve.'}</p>
+                                <p style="color:#777; font-weight:500;">${a.estado === States.CRIADO ? 'O acesso à sala será liberado no horário previsto.' : 'Os resultados e a ata estarão disponíveis em breve.'}</p>
                                 ${isEncerrada && currentUserPerfil !== 'COMUNICADOR' ? `
                                     <button class="btn btn-primary btn-lg" style="margin-top:20px; font-weight:800;" data-action="solicitar-relatorio" data-aid="${id}">📄 Baixar Relatório PDF (E-mail)</button>
                                 ` : ''}
@@ -780,7 +797,8 @@
                 const estadoAtualizado = { ...estadoInicial, ...mini };
                 renderizarSala(estadoAtualizado);
 
-                if (mini.assembleia.estado === 'ENCERRADA') {
+                const States = global.Canon ? global.Canon.ASSEMBLEIA_ESTADOS : { ENCERRADO: 'ENCERRADO' };
+                if (mini.assembleia.estado === States.ENCERRADO || mini.assembleia.estado === 'ENCERRADA') {
                     alert("Esta assembleia foi encerrada.");
                     voltarParaLista();
                     return;
@@ -847,6 +865,7 @@
 
         const canSeeToken = quorumVigente?.token && (
             temAutoridade ||
+            (global.Canon && global.Canon.canViewCredenciamentoToken(userInfo)) ||
             currentUserId === quorumVigente.gerado_por_user_id
         );
 
@@ -897,7 +916,7 @@
                             <h4 style="margin:0 0 15px 0; color:#003366; font-size:1.8rem; font-weight:800;">${votacaoAtiva.titulo}</h4>
                             <p style="font-size:1.1rem; color:#333; line-height:1.6; font-weight:500;">${votacaoAtiva.descricao}</p>
 
-                            ${votacaoAtiva.status === 'ATIVA' && isMembroConselho && !votacaoAtiva.userVoted ? `
+                            ${(votacaoAtiva.status === 'ATIVA' || (global.Canon && votacaoAtiva.status === global.Canon.ASSEMBLEIA_VOTACAO_STATUS.ATIVA)) && isMembroConselho && !votacaoAtiva.userVoted ? `
                                 <div style="display:flex; gap:20px; margin-top:30px; flex-wrap:wrap;">
                                     <button class="btn btn-success btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="SIM">Votar SIM</button>
                                     <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="NAO">Votar NÃO</button>
@@ -934,7 +953,9 @@
 
                 <!-- Ações de Interação -->
                 <div style="display:flex; gap:20px; margin-bottom:40px; flex-wrap:wrap;">
-                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="pedir-palavra" data-aid="${assembleia.id}">🎤 Pedir Palavra</button>
+                    ${(global.Canon && global.Canon.canRequestPalavra(userInfo)) ? `
+                        <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="pedir-palavra" data-aid="${assembleia.id}">🎤 Pedir Palavra</button>
+                    ` : ''}
                     ${isMembroConselho ? `
                         <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="nova-proposta" data-aid="${assembleia.id}">📝 Nova Proposta</button>
                     ` : ''}

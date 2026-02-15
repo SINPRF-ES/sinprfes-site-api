@@ -69,13 +69,15 @@ Regras de acesso e autoridade são definidas pelo backend (e documentação can�
 ### 6.2 Autoridade institucional
 Operações críticas dependem estritamente do cargo institucional (Soberania do Canon):
 
-| Operação | Autoridade Permitida |
-| :--- | :--- |
-| Geração do QR/token global (credenciamento) | Presidente/Vice FENAPRF, Diretor de Secretaria (Titular/Subst.) |
-| Composição de Mesa | Exclusiva do Presidente/Vice FENAPRF |
-| Geração de token de quórum (Snapshot) | Exclusiva da Mesa Diretora (4 componentes) |
-| Check-in de Quórum / Voto / Proposta | Exclusiva para Membros do Conselho de Representantes |
-| Relatório | Apenas com assembleia em `ENCERRADO` |
+| Operação | Autoridade Permitida | Canon Function |
+| :--- | :--- | :--- |
+| Criar token global | Presidente/Vice FENAPRF, Diretor de Secretaria (Tit./Subst.) | `canCreateCredenciamentoToken` |
+| Resgatar token global | Toda a Gestão (`ADMIN`, `DIRETORIA`, `COLABORADOR`) | `canViewCredenciamentoToken` |
+| Compor Mesa | Exclusiva do Presidente/Vice FENAPRF | `canComposeMesa` |
+| Gerar token quórum | Exclusiva da Mesa Diretora (4 componentes) | Regra de Mesa |
+| Voto / Proposta | Membros do Conselho de Representantes | `canVote` / `canPropose` |
+| Pedido de Palavra | Diretoria e Conselheiros | `canRequestPalavra` |
+| Relatório | Apenas com assembleia em `ENCERRADO` | Guard de Estado |
 
 ### 6.3 Princípio da Soberania da Mesa
 Uma vez definida a Mesa Diretora:

@@ -4,15 +4,7 @@ const Textos = require("../utils/textos");
 const log = require("../utils/log");
 const { escapeHtml, generateUuid } = require("../utils/format");
 const socket = require("../websocket/assembleia.socket");
-const { isCouncilMember } = require("../../shared/canon");
-
-const ASSEMBLEIA_STATES = {
-  CRIADO: 'CRIADO',
-  EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
-  INICIADO: 'INICIADO',
-  SUSPENSA: 'SUSPENSA',
-  ENCERRADO: 'ENCERRADO'
-};
+const Canon = require("../../shared/canon");
 
 const ASSEMBLEIA_COLUMNS = `
   id, tipo, titulo, pauta, estado, criado_por as criada_por_user_id, aberta_em, encerrada_em, criado_em,
@@ -151,7 +143,7 @@ async function criar(dados) {
 async function abrir(id, userId) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-  if (assembleia.estado !== ASSEMBLEIA_STATES.CRIADO) {
+  if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.CRIADO) {
     throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> EM_CREDENCIAMENTO)`);
   }
 
@@ -168,6 +160,7 @@ async function abrir(id, userId) {
 async function contarUsersAtivosParaQuorum(client = null) {
   const db = client || pool;
   // CANON: Apenas Membros do Conselho (CONSELHEIRO ou Presidente/Vice FENAPRF)
+  // Sincronizado com Canon.isCouncilMember
   const { rows } = await db.query(
     `SELECT COUNT(*)::INTEGER as total
      FROM users
@@ -205,8 +198,8 @@ async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
   // CANON: Check-in Global para toda Gestão e Conselheiros.
   // Check-in de Quórum restrito ao Conselho de Representantes.
   const eligible = isGlobal
-    ? (['DIRETORIA', 'CONSELHEIRO'].includes((user.perfil_acesso || "").toUpperCase()))
-    : isCouncilMember(user);
+    ? Canon.canCheckInGlobal(user.perfil_acesso)
+    : Canon.isCouncilMember(user);
 
   if (eligible) {
     const origem = tipoChamada === 'RECONTAGEM' ? 'AUTO_PRESIDENTE' : 'AUTO_GERADOR';
@@ -225,11 +218,11 @@ async function iniciarExecucao(id, userId) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-  if (assembleia.estado === ASSEMBLEIA_STATES.INICIADO) {
+  if (assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.INICIADO) {
     return assembleia;
   }
 
-  if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO) {
+  if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO) {
     throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> INICIADO)`);
   }
 
@@ -252,7 +245,7 @@ async function suspender(id, userId, motivo, dataHoraRetorno) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-  if (assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
+  if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.INICIADO) {
     throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> SUSPENSA)`);
   }
 
@@ -269,7 +262,7 @@ async function retomar(id, userId) {
   const assembleia = await buscarPorId(id);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-  if (assembleia.estado !== ASSEMBLEIA_STATES.SUSPENSA) {
+  if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.SUSPENSA) {
     throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> INICIADO)`);
   }
 
@@ -291,12 +284,12 @@ async function encerrar(id, userId) {
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
+    if (assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.ENCERRADO) {
       await client.query('COMMIT');
       return await buscarPorId(id);
     }
 
-    if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO && assembleia.estado !== ASSEMBLEIA_STATES.SUSPENSA) {
+    if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO && assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.INICIADO && assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.SUSPENSA) {
       throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (${assembleia.estado} -> ENCERRADO)`);
     }
 
@@ -368,12 +361,12 @@ async function gerarQuorum(dados) {
     const assembleia = assRows[0];
 
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
+    if (assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.ENCERRADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
     // Se for Global, o estado muda para EM_CREDENCIAMENTO
-    if (is_global && assembleia.estado === ASSEMBLEIA_STATES.CRIADO) {
+    if (is_global && assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.CRIADO) {
       await client.query("UPDATE assembleias SET estado = 'EM_CREDENCIAMENTO', aberta_em = NOW() WHERE id = $1", [assembleia_id]);
     }
 
@@ -517,73 +510,24 @@ async function contarPresentesNoQuorum(quorumId) {
 }
 
 /**
- * Obtém informações de branch e hierarquia do membro.
+ * Obtém informações de branch e hierarquia do membro delegando ao Canon.
  */
 async function obterInfoBranchUser(userId, client = null) {
   const db = client || pool;
   // Prioriza tabela normalizada user_vinculos
-  const { rows } = await db.query(
+  const { rows: vinculos } = await db.query(
     `SELECT branch, role, uf FROM user_vinculos
      WHERE user_id = $1 AND status = 'ATIVO'
      ORDER BY created_at DESC`,
     [userId]
   );
 
-  let branch = null;
-  let role = null;
-  let uf = null;
-  let rank = 0;
-
-  if (rows.length > 0) {
-    for (const v of rows) {
-      const vRole = (v.role || "").toUpperCase();
-      const vBranch = (v.branch || "").toUpperCase();
-      const vUf = v.uf;
-
-      if (vRole.includes("PRESIDENTE DA FENAPRF")) {
-          return { branch: 'FENAPRF', role: 'PRESIDENTE', uf: 'BR', rank: 1 };
-      }
-      if (vRole.includes("VICE-PRESIDENTE DA FENAPRF") || vRole.includes("VICE PRESIDENTE DA FENAPRF")) {
-          return { branch: 'FENAPRF', role: 'VICE_PRESIDENTE', uf: 'BR', rank: 2 };
-      }
-
-      if (vBranch === 'DIRETORIA' || vBranch === 'CONSELHO' || vBranch === 'CONSELHEIRO') {
-        if (vRole.includes("PRESIDENTE") && !vRole.includes("VICE")) {
-          return { branch: 'CONSELHEIRO', role: 'PRESIDENTE', uf: vUf, rank: 1 };
-        }
-        if (vRole.includes("VICE-PRESIDENTE") || vRole.includes("VICE PRESIDENTE")) {
-          return { branch: 'CONSELHEIRO', role: 'VICE_PRESIDENTE', uf: vUf, rank: 2 };
-        }
-      }
-      if (vBranch === 'DELEGACAO') {
-        if (vRole.includes("REPRESENTANTE")) {
-          return { branch: 'DELEGACAO', role: 'DELEGADO_REPRESENTANTE', uf: vUf, rank: 1 };
-        }
-        if (vRole.includes("SUBSTITUTO") || vRole.includes("SUPLENTE")) {
-          return { branch: 'DELEGACAO', role: 'SUPLENTE', uf: vUf, rank: 2 };
-        }
-      }
-    }
-  }
-
   // Fallback para campos legados em users
-  const { rows: uRows } = await db.query("SELECT cargo, uf, cargo2, uf2 FROM users WHERE id = $1", [userId]);
-  const u = uRows[0];
-  if (!u) return null;
+  const { rows: uRows } = await db.query("SELECT cargo, uf, cargo2, uf2, perfil_acesso FROM users WHERE id = $1", [userId]);
+  const user = uRows[0];
+  if (!user) return null;
 
-  const getInfo = (cargo, uf) => {
-    const c = (cargo || "").toUpperCase();
-    if (c === "PRESIDENTE DA FENAPRF") return { branch: 'FENAPRF', role: 'PRESIDENTE', uf: 'BR', rank: 1 };
-    if (c === "VICE-PRESIDENTE DA FENAPRF") return { branch: 'FENAPRF', role: 'VICE_PRESIDENTE', uf: 'BR', rank: 2 };
-
-    if (c.includes("PRESIDENTE") && !c.includes("VICE")) return { branch: 'CONSELHEIRO', role: 'PRESIDENTE', uf: uf, rank: 1 };
-    if (c.includes("VICE-PRESIDENTE") || c.includes("VICE PRESIDENTE")) return { branch: 'CONSELHEIRO', role: 'VICE_PRESIDENTE', uf: uf, rank: 2 };
-    if (c.includes("DELEGADO REPRESENTANTE")) return { branch: 'DELEGACAO', role: 'DELEGADO_REPRESENTANTE', uf: uf, rank: 1 };
-    if (c.includes("DELEGADO SUBSTITUTO") || c.includes("SUPLENTE")) return { branch: 'DELEGACAO', role: 'SUPLENTE', uf: uf, rank: 2 };
-    return null;
-  };
-
-  return getInfo(u.cargo, u.uf) || getInfo(u.cargo2, u.uf2) || null;
+  return Canon.obterInfoBranchUser({ ...user, vinculos });
 }
 
 async function realizarCheckin(dados) {
@@ -622,7 +566,7 @@ async function realizarCheckin(dados) {
     // Regra Hierárquica por Branch (apenas para QUORUM, não GLOBAL)
     if (!isGlobal) {
       // CANON: Quórum Dinâmico/Snapshot restrito ao Conselho de Representantes.
-      if (!isCouncilMember(userObj)) {
+      if (!Canon.isCouncilMember(userObj)) {
           throw new Error("Apenas membros do Conselho de Representantes (Conselheiros e Presidente/Vice FENAPRF) participam deste quórum.");
       }
 
@@ -754,7 +698,7 @@ async function criarVotacao(dados, externalClient = null) {
     const { rows: assRows } = await client.query(`SELECT estado FROM assembleias WHERE id = $1 FOR UPDATE`, [assembleia_id]);
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-    if (assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
+    if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.INICIADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
@@ -857,7 +801,7 @@ async function registrarVoto(votacaoId, userId, voto, assembleiaId) {
   const { rows: userRows } = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
   const user = userRows[0];
 
-  if (!isCouncilMember(user)) {
+  if (!Canon.isCouncilMember(user)) {
     throw new Error("Voto restrito aos membros do Conselho de Representantes.");
   }
 
@@ -1060,12 +1004,12 @@ async function definirMesa(dados) {
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-    if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
+    if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO && assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.INICIADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
     const { rows: mesaExistente } = await client.query(`SELECT estabelecida_em FROM assembleia_mesa WHERE assembleia_id = $1`, [assembleia_id]);
-    if (mesaExistente[0]?.estabelecida_em && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO) {
+    if (mesaExistente[0]?.estabelecida_em && assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.INICIADO) {
        // Se já está estabelecida, só permite re-definição se for via substituição ou se for a transição inicial
       throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (Mesa já estabelecida.)`);
     }
@@ -1159,7 +1103,7 @@ async function substituirMesa(dados) {
     const assembleia = assRows[0];
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
-    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
+    if (assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.ENCERRADO) {
       throw new Error(Textos.ASSEMBLEIA.TRANSICAO_INVALIDA);
     }
 
@@ -1239,7 +1183,7 @@ async function buscarMesa(assembleiaId) {
 async function pedirPalavra(assembleiaId, userId) {
   const assembleia = await buscarPorId(assembleiaId);
   if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
-  if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
+  if (assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.ENCERRADO) {
     throw new Error("Assembleia encerrada");
   }
 
@@ -1290,7 +1234,7 @@ async function criarProposta(dados) {
   let { titulo } = dados;
 
   const { rows: uRows } = await pool.query("SELECT * FROM users WHERE id = $1", [autor_id]);
-  if (!isCouncilMember(uRows[0])) {
+  if (!Canon.isCouncilMember(uRows[0])) {
       throw new Error("Propostas são restritas aos membros do Conselho de Representantes.");
   }
 
@@ -1319,11 +1263,11 @@ async function criarProposta(dados) {
     if (!assembleia) throw new Error(Textos.ASSEMBLEIA.NAO_ENCONTRADA);
 
     // Permitir propostas conforme novo fluxo
-    if (assembleia.estado === ASSEMBLEIA_STATES.ENCERRADO) {
+    if (assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.ENCERRADO) {
       throw new Error("Assembleia encerrada");
     }
 
-    if (assembleia.estado !== ASSEMBLEIA_STATES.EM_CREDENCIAMENTO && assembleia.estado !== ASSEMBLEIA_STATES.INICIADO && assembleia.estado !== ASSEMBLEIA_STATES.SUSPENSA) {
+    if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO && assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.INICIADO && assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.SUSPENSA) {
       throw new Error(`${Textos.ASSEMBLEIA.TRANSICAO_INVALIDA} (Estado: ${assembleia.estado})`);
     }
 
@@ -1476,7 +1420,7 @@ async function buscarDiagnostico(assembleiaId) {
   }
 
   const inconsistencias = [];
-  if (assembleia.estado === ASSEMBLEIA_STATES.INICIADO) {
+  if (assembleia.estado === Canon.ASSEMBLEIA_ESTADOS.INICIADO) {
     if (!mesa) inconsistencias.push("Mesa não definida em assembleia iniciada.");
     if (ultimoQuorum && totalCheckins < (ultimoQuorum.quorum_necessario || 0)) {
        inconsistencias.push("Quórum abaixo do necessário para o tipo de chamada.");
