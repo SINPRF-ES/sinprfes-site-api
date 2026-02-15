@@ -198,7 +198,7 @@ export const parseBRDateTimeToISO = (brDateTime: string): string | null => {
   const year = digits.slice(4, 8);
   const hour = digits.slice(8, 10);
   const minute = digits.slice(10, 12);
-  return `${year}-${month}-${day}T${hour}:${minute}:00`;
+  return `${year}-${month}-${day}T${hour}:${minute}:00Z`;
 };
 
 /**

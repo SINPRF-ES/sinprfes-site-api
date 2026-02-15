@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
@@ -45,6 +46,7 @@ import Badge from '../components/Badge';
 
 const LogisticaScreen = ({ route }: any) => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -246,23 +248,23 @@ const LogisticaScreen = ({ route }: any) => {
 
     try {
       setSaving(true);
+
+      const payload = {
+        ...formEvento,
+        data_inicio: isoInicio,
+        data_fim: isoFim,
+        assembleia_id: formEvento.assembleia_id || null
+      };
+
       if (formEvento.id) {
         if (!formEvento.justificativa) {
           Alert.alert('Aviso', 'Justificativa é obrigatória.');
           setSaving(false);
           return;
         }
-        await atualizarEventoLogistica(formEvento.id, {
-          ...formEvento,
-          data_inicio: isoInicio,
-          data_fim: isoFim
-        });
+        await atualizarEventoLogistica(formEvento.id, payload);
       } else {
-        await criarEventoLogistica({
-          ...formEvento,
-          data_inicio: isoInicio,
-          data_fim: isoFim
-        });
+        await criarEventoLogistica(payload);
       }
       logger.info('Logistica.CreateEvent.API_OK');
       setModalEventoVisible(false);
@@ -785,7 +787,11 @@ const LogisticaScreen = ({ route }: any) => {
         >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{formEvento.id ? 'Alterar Evento' : 'Novo Evento'}</Text>
-            <KeyboardAwareScrollView enableOnAndroid extraScrollHeight={100}>
+            <KeyboardAwareScrollView
+              enableOnAndroid
+              extraScrollHeight={100}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+            >
               <Text style={styles.label}>Título *</Text>
               <TextInput style={styles.input} value={formEvento.titulo} onChangeText={t => setFormEvento({...formEvento, titulo: t})} placeholder="Ex: AGO 2026" />
 
@@ -866,7 +872,11 @@ const LogisticaScreen = ({ route }: any) => {
         >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{formInscricao.isTerceiro ? 'Gerenciar Inscrição' : 'Minha Inscrição'}</Text>
-            <KeyboardAwareScrollView enableOnAndroid extraScrollHeight={100}>
+            <KeyboardAwareScrollView
+              enableOnAndroid
+              extraScrollHeight={100}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+            >
               <Text style={styles.label}>Data/Hora Chegada *</Text>
               <TextInput style={styles.input} value={formInscricao.data_chegada} onChangeText={t => setFormInscricao({...formInscricao, data_chegada: formatDateTimeMask(t)})} placeholder="00/00/0000 00:00" keyboardType="numeric" />
 
@@ -1038,7 +1048,7 @@ const styles = StyleSheet.create({
   docSelectText: { color: '#003366', fontWeight: 'bold' },
   linkedBadge: { backgroundColor: '#eef2f7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
   linkedBadgeText: { fontSize: 10, color: '#003366', fontWeight: 'bold' },
-  pickerWrapper: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, backgroundColor: '#fafafa', marginTop: 5 },
+  pickerWrapper: { flex: 1, marginTop: 5, minHeight: 52, backgroundColor: '#fafafa' },
   picker: { height: 50, width: '100%' },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 25 },
   btnCancelModal: { backgroundColor: '#6c757d', padding: 12, borderRadius: 8, minWidth: 80, alignItems: 'center' },

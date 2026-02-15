@@ -70,14 +70,24 @@ exports.listarEventos = async (req, res) => {
 
 exports.criarEvento = async (req, res) => {
     const atorId = req.user?.id;
+    const requestId = req.requestId;
     const client = await pool.connect();
     try {
         if (!atorId) return res.status(401).json({ error: "Sessão inválida.", requestId: req.requestId });
 
+        log.warn("Logistica.CreateEvent.PayloadRecebido", {
+            requestId,
+            userId: atorId,
+            payloadKeys: Object.keys(req.body),
+            assembleia_id: req.body.assembleia_id,
+            data_inicio: req.body.data_inicio,
+            data_fim: req.body.data_fim
+        });
+
         const { titulo, descricao, data_inicio, data_fim, documento_url, documento_id, assembleia_id, tipo } = req.body;
 
         if (!titulo || !data_inicio || !data_fim) {
-            return res.status(400).json({ error: "Título e datas são obrigatórios." });
+            return res.status(400).json({ error: "Campos obrigatórios: titulo, data_inicio, data_fim" });
         }
 
         if (!isValidDateString(data_inicio) || !isValidDateString(data_fim)) {
