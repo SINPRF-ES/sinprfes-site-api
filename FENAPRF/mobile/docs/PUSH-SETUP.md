@@ -13,7 +13,7 @@ O Expo agora utiliza o FCM V1 por padrão. Para configurá-lo:
 4. Clique em **Gerar nova chave privada** e salve o arquivo JSON.
 
 ### B) Cadastrar no Expo/EAS
-1. Instale o EAS CLI se ainda não tiver: `npm install -g eas-cli`.
+1. Instale o EAS CLI se ainda não tiver: `pnpm install -g eas-cli`.
 2. No diretório `mobile`, execute:
    ```bash
    eas credentials

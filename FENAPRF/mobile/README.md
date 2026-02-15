@@ -37,8 +37,8 @@ O aplicativo utiliza formatadores centralizados em `mobile/src/shared/formatters
 
 ### Como rodar
 1. `cd mobile`
-2. `npm install`
-3. `npx expo start`
+2. `pnpm install`
+3. `pnpm exec expo start`
 
 ### Variáveis de Ambiente
 Utilize o prefixo `EXPO_PUBLIC_` para variáveis acessíveis no código (ex: `EXPO_PUBLIC_API_URL`).
