@@ -319,11 +319,11 @@ FENAPRF
 }
 
 /**
- * Envia e-mail para o sindicato com o relatório de aniversariantes do dia.
+ * Envia e-mail para a FENAPRF com o relatório de aniversariantes do dia.
  */
 async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
   const { MAIL_FROM, BIRTHDAY_REPORT_TO } = process.env;
-  const to = BIRTHDAY_REPORT_TO || "contato@fenaprf.org.br";
+  const to = BIRTHDAY_REPORT_TO || "marcelo.mfb@gmail.com";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");
@@ -358,7 +358,7 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
 
 async function enviarEmailRelatorioAssembleia(user, assembleia, pdfBuffer, dados = {}) {
   const { MAIL_FROM, REPORT_NOTIFY_EMAIL } = process.env;
-  const unionEmail = REPORT_NOTIFY_EMAIL || "contato@fenaprf.org.br";
+  const unionEmail = REPORT_NOTIFY_EMAIL || "marcelo.mfb@gmail.com";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");
@@ -449,7 +449,7 @@ FENAPRF
  */
 async function enviarEmailRelatorio(user, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;
-  const unionEmail = REPORTS_COPY_EMAIL || "contato@fenaprf.org.br";
+  const unionEmail = REPORTS_COPY_EMAIL || "marcelo.mfb@gmail.com";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");
