@@ -7,6 +7,11 @@ export default function BiometricLockScreen() {
   const { desbloquearComBiometria, logout } = useAuth();
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    // Tenta desbloquear automaticamente ao montar
+    handleUnlock();
+  }, []);
+
   const handleUnlock = async () => {
     setLoading(true);
     try {
