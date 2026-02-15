@@ -1,11 +1,32 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, TextInput, Modal, Image, AppState, AppStateStatus, RefreshControl, Share } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  Modal,
+  AppState,
+  AppStateStatus,
+  RefreshControl,
+} from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
-import { MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
-import { getAssembleiaDetalhe, getAssembleiaEstado, getAssembleiaEstadoMini, abrirAssembleia, encerrarAssembleia, gerarTokenQuorum, realizarCheckin, iniciarExecucao, solicitarRelatorio } from '../../services/assembleiaService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  getAssembleiaDetalhe,
+  getAssembleiaEstado,
+  getAssembleiaEstadoMini,
+  abrirAssembleia,
+  encerrarAssembleia,
+  gerarTokenQuorum,
+  realizarCheckin,
+  iniciarExecucao,
+  solicitarRelatorio
+} from '../../services/assembleiaService';
 import SafeScreen from '../../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
 import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
@@ -17,19 +38,17 @@ import {
   canCreateCredenciamentoToken,
   canViewCredenciamentoToken,
   canCheckInGlobal,
-  canCheckInQuorum,
   ASSEMBLEIA_ESTADOS
 } from '../../utils/user';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel } from '../../utils/format';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
-import * as FileSystemLegacy from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 
 export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { id } = route.params;
   const { user, token } = useAuth();
+
   const [assembleia, setAssembleia] = useState<Assembleia | null>(null);
   const [estado, setEstado] = useState<AssembleiaEstado | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,49 +57,104 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [isScanning, setIsScanning] = useState(false);
   const [editalLoading, setEditalLoading] = useState(false);
-
-  const perfil = (user?.perfil_acesso || '').trim().toUpperCase();
-  const ehGestao = isGestao(perfil);
-  const isElegivel = estado?.quorumVigente?.is_global
-    ? canCheckInGlobal(perfil)
-    : isCouncilMember(user);
-
-  const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
-
-  // CANON: Apenas cargos autorizados podem compor a mesa
-  const podeComporMesaLocal = canComposeMesa(user);
-
-  // CANON: Autoridade de visualização de Token
-  const canSeeToken = estado?.quorumVigente?.token && (
-    estado.quorumVigente.is_global
-        ? canViewCredenciamentoToken(user) // Global: Toda gestão resgata
-        : (isMesa || (!estado.mesa && ehGestao)) // Quórum: Mesa ou Gestão (suporte se sem mesa)
-  );
-
   const [estadoLoading, setEstadoLoading] = useState(false);
 
-  const fetchEstado = async () => {
+  // -----------------------------
+  // PERFIL / PERMISSÕES (CANON)
+  // -----------------------------
+  const perfil = useMemo(() => (user?.perfil_acesso || '').trim().toUpperCase(), [user?.perfil_acesso]);
+  const ehGestao = useMemo(() => isGestao(perfil), [perfil]);
+
+  // Mesa/presidência (evitar ReferenceError e padronizar checks)
+  const isPresidente = useMemo(() => {
+    const presidenteId = (estado?.mesa as any)?.presidente_user_id;
+    return !!presidenteId && presidenteId === user?.id;
+  }, [estado?.mesa, user?.id]);
+
+  const isMesa = useMemo(() => {
+    const mesa: any = estado?.mesa;
+    if (!mesa || !user?.id) return false;
+
+    const ids = [
+      mesa.presidente_user_id,
+      mesa.vice_presidente_user_id,
+      mesa.secretario_user_id,
+      mesa.secretario_2_user_id
+    ].filter(Boolean);
+
+    return ids.includes(user.id);
+  }, [estado?.mesa, user?.id]);
+
+  // CANON: Apenas cargos autorizados podem compor a mesa
+  const podeComporMesaLocal = useMemo(() => canComposeMesa(user), [user]);
+
+  // Elegibilidade de check-in
+  const isElegivel = useMemo(() => {
+    if (estado?.quorumVigente?.is_global) {
+      return canCheckInGlobal(perfil);
+    }
+    return isCouncilMember(user);
+  }, [estado?.quorumVigente?.is_global, perfil, user]);
+
+  // Flags derivadas do estado da assembleia
+  const isEncerrada = useMemo(() => assembleia?.estado === ASSEMBLEIA_ESTADOS.ENCERRADO, [assembleia?.estado]);
+  const isIniciado = useMemo(
+    () => assembleia?.estado === ASSEMBLEIA_ESTADOS.INICIADO || assembleia?.estado === ASSEMBLEIA_ESTADOS.SUSPENSA,
+    [assembleia?.estado]
+  );
+  const isParticipavel = useMemo(
+    () =>
+      assembleia?.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ||
+      assembleia?.estado === ASSEMBLEIA_ESTADOS.INICIADO ||
+      assembleia?.estado === ASSEMBLEIA_ESTADOS.SUSPENSA,
+    [assembleia?.estado]
+  );
+
+  // Relatório só faz sentido quando encerrada
+  const canGenerateReport = useMemo(() => !!isEncerrada, [isEncerrada]);
+
+  // CANON: Autoridade de visualização de Token
+  const canSeeToken = useMemo(() => {
+    const tokenVigente = estado?.quorumVigente?.token;
+    if (!tokenVigente) return false;
+
+    // Global: gestão pode ver
+    if (estado?.quorumVigente?.is_global) {
+      return canViewCredenciamentoToken(user);
+    }
+
+    // Quórum: Mesa (ou gestão de suporte se ainda não há mesa)
+    return isMesa || (!estado?.mesa && ehGestao);
+  }, [estado?.quorumVigente?.token, estado?.quorumVigente?.is_global, estado?.mesa, user, isMesa, ehGestao]);
+
+  // -----------------------------
+  // FETCHERS (memoizados)
+  // -----------------------------
+  const fetchEstado = useCallback(async () => {
     try {
       setEstadoLoading(true);
       const estadoData = await getAssembleiaEstado(id);
       setEstado(estadoData);
     } catch (err: any) {
-      logger.error('ASSEMBLEIA_ESTADO_FETCH_ERROR', err instanceof Error ? err : new Error(String(err)), { id });
+      logger.error(
+        'ASSEMBLEIA_ESTADO_FETCH_ERROR',
+        err instanceof Error ? err : new Error(String(err)),
+        { id }
+      );
     } finally {
       setEstadoLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       logger.info('ASSEMBLEIA_DETALHE_FETCH_START', { id, profile: user?.perfil_acesso });
 
-      // Detalhe básico é obrigatório
       const data = await getAssembleiaDetalhe(id);
       setAssembleia(data);
 
-      // Estado pode falhar ou ser carregado em paralelo de forma resiliente
+      // Estado em paralelo/resiliente
       fetchEstado();
 
       logger.info('ASSEMBLEIA_DETALHE_FETCH_SUCCESS', {
@@ -89,79 +163,88 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         estadoName: data?.estado
       });
     } catch (err: any) {
-      logger.error('ASSEMBLEIA_DETALHE_FETCH_ERROR', err instanceof Error ? err : new Error(String(err)), { id });
+      logger.error(
+        'ASSEMBLEIA_DETALHE_FETCH_ERROR',
+        err instanceof Error ? err : new Error(String(err)),
+        { id }
+      );
       console.error('[Assembleia.fetch]', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, user?.perfil_acesso, fetchEstado]);
 
+  // -----------------------------
+  // POLLING (inalterado, só mais robusto)
+  // -----------------------------
   useEffect(() => {
     let interval: any;
     let isActive = true;
 
     const getPollingInterval = () => {
-        if (!assembleia) return 8000;
-        if (assembleia.estado === ASSEMBLEIA_ESTADOS.ENCERRADO) return 0;
-        if (estado?.votacaoAtiva && (estado.votacaoAtiva as any).status === 'ATIVA') return 2000;
-        if (assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO) return 5000;
-        return 8000;
+      if (!assembleia) return 8000;
+      if (assembleia.estado === ASSEMBLEIA_ESTADOS.ENCERRADO) return 0;
+      if (estado?.votacaoAtiva && (estado.votacaoAtiva as any).status === 'ATIVA') return 2000;
+      if (assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO) return 5000;
+      return 8000;
     };
 
     const runPolling = async () => {
-        if (!isActive || AppState.currentState !== 'active') return;
-        const currentInterval = getPollingInterval();
-        if (currentInterval === 0) return;
+      if (!isActive || AppState.currentState !== 'active') return;
+      const currentInterval = getPollingInterval();
+      if (currentInterval === 0) return;
 
-        try {
-            const mini = await getAssembleiaEstadoMini(id);
-            if (mini && isActive) {
-                setEstado(prev => {
-                    if (!prev) return null;
-                    return {
-                        ...prev,
-                        assembleia: { ...prev.assembleia, estado: mini.assembleia.estado },
-                        quorumVigente: mini.quorumVigente ? {
-                            ...prev.quorumVigente,
-                            ...mini.quorumVigente
-                        } : prev.quorumVigente,
-                        votacaoAtiva: mini.votacaoAtiva
-                    } as any;
-                });
+      try {
+        const mini = await getAssembleiaEstadoMini(id);
+        if (mini && isActive) {
+          setEstado(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              assembleia: { ...prev.assembleia, estado: mini.assembleia.estado },
+              quorumVigente: mini.quorumVigente
+                ? { ...prev.quorumVigente, ...mini.quorumVigente }
+                : prev.quorumVigente,
+              votacaoAtiva: mini.votacaoAtiva
+            } as any;
+          });
 
-                if (mini.assembleia.estado !== assembleia?.estado) {
-                    setAssembleia(prev => prev ? { ...prev, estado: mini.assembleia.estado } : null);
-                }
-            }
-        } catch (err) {
-            console.warn('[Polling.Detalhe.Error]', err);
+          if (mini.assembleia.estado !== assembleia?.estado) {
+            setAssembleia(prev => (prev ? { ...prev, estado: mini.assembleia.estado } : null));
+          }
         }
+      } catch (err) {
+        console.warn('[Polling.Detalhe.Error]', err);
+      }
 
-        if (isActive) {
-            const nextInterval = getPollingInterval();
-            if (nextInterval > 0) {
-                interval = setTimeout(runPolling, nextInterval);
-            }
+      if (isActive) {
+        const nextInterval = getPollingInterval();
+        if (nextInterval > 0) {
+          interval = setTimeout(runPolling, nextInterval);
         }
+      }
     };
 
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-        if (nextAppState === 'active') {
-            runPolling();
-        } else {
-            if (interval) clearTimeout(interval);
-        }
+      if (nextAppState === 'active') {
+        runPolling();
+      } else {
+        if (interval) clearTimeout(interval);
+      }
     });
 
     runPolling();
 
     return () => {
-        isActive = false;
-        if (interval) clearTimeout(interval);
-        subscription.remove();
+      isActive = false;
+      if (interval) clearTimeout(interval);
+      subscription.remove();
     };
-  }, [id, assembleia?.estado, !!estado?.votacaoAtiva]);
+  }, [id, assembleia?.estado, !!estado?.votacaoAtiva]); // mantido
 
+  // -----------------------------
+  // SOCKETS
+  // -----------------------------
   useEffect(() => {
     fetchData();
 
@@ -170,14 +253,22 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       assembleiaSocket.joinRoom(id);
 
       assembleiaSocket.onEvent('assembleia:status_changed', (data) => {
-        setAssembleia(prev => prev ? { ...prev, estado: data.estado } : null);
+        setAssembleia(prev => (prev ? { ...prev, estado: data.estado } : null));
       });
 
       assembleiaSocket.onEvent('assembleia:checkin_updated', (data) => {
-        setEstado(prev => prev && prev.quorumVigente ? {
-          ...prev,
-          quorumVigente: { ...prev.quorumVigente, total: data.total, quorum_necessario: data.quorum_necessario }
-        } : prev);
+        setEstado(prev =>
+          prev && prev.quorumVigente
+            ? {
+                ...prev,
+                quorumVigente: {
+                  ...prev.quorumVigente,
+                  total: data.total,
+                  quorum_necessario: data.quorum_necessario
+                }
+              }
+            : prev
+        );
       });
 
       assembleiaSocket.onEvent('assembleia:token_gerado', () => {
@@ -196,40 +287,49 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       assembleiaSocket.offEvent('assembleia:token_gerado');
       assembleiaSocket.offEvent('assembleia:recontagem');
     };
-  }, [id, token]);
+  }, [id, token, fetchData]);
 
-
+  // -----------------------------
+  // ACTIONS
+  // -----------------------------
   const handleAbrir = useCallback(async () => {
     Alert.alert('Confirmar', 'Deseja abrir esta assembleia para participação?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sim, Abrir', onPress: async () => {
-        try {
-          setActionLoading(true);
-          await abrirAssembleia(id);
-          fetchData();
-        } catch (err: any) {
-          Alert.alert('Erro', err.response?.data?.message || 'Falha ao abrir.');
-        } finally {
-          setActionLoading(false);
+      {
+        text: 'Sim, Abrir',
+        onPress: async () => {
+          try {
+            setActionLoading(true);
+            await abrirAssembleia(id);
+            fetchData();
+          } catch (err: any) {
+            Alert.alert('Erro', err.response?.data?.message || 'Falha ao abrir.');
+          } finally {
+            setActionLoading(false);
+          }
         }
-      }}
+      }
     ]);
   }, [id, fetchData]);
 
   const handleEncerrar = useCallback(async () => {
     Alert.alert('Confirmar', 'Deseja encerrar definitivamente esta assembleia?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sim, Encerrar', style: 'destructive', onPress: async () => {
-        try {
-          setActionLoading(true);
-          await encerrarAssembleia(id);
-          fetchData();
-        } catch (err: any) {
-          Alert.alert('Erro', err.response?.data?.message || 'Falha ao encerrar.');
-        } finally {
-          setActionLoading(false);
+      {
+        text: 'Sim, Encerrar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setActionLoading(true);
+            await encerrarAssembleia(id);
+            fetchData();
+          } catch (err: any) {
+            Alert.alert('Erro', err.response?.data?.message || 'Falha ao encerrar.');
+          } finally {
+            setActionLoading(false);
+          }
         }
-      }}
+      }
     ]);
   }, [id, fetchData]);
 
@@ -258,53 +358,71 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }
   }, [id]);
 
-  const handleGerarToken = useCallback(async (isGlobal = false) => {
-    try {
-      setActionLoading(true);
-      const tipoChamada = isGlobal ? 'GLOBAL' : 'PRIMEIRA';
-      const res = await gerarTokenQuorum(id, { tipo_chamada: tipoChamada, is_global: isGlobal });
-      logger.info('TOKEN_GENERATED_AUTO_CHECKIN_START', { assembleiaId: id, token: res.token, isGlobal });
-
+  const handleGerarToken = useCallback(
+    async (isGlobal = false) => {
       try {
-        await realizarCheckin(id, res.token);
-        logger.info('TOKEN_GENERATED_AUTO_CHECKIN_SUCCESS', { assembleiaId: id });
-        Alert.alert('Sucesso', `Token gerado: ${res.token}.\n\nSeu check-in foi realizado automaticamente.`);
-      } catch (checkinErr: any) {
-        logger.error('TOKEN_GENERATED_AUTO_CHECKIN_FAIL', checkinErr instanceof Error ? checkinErr : new Error(String(checkinErr)), { assembleiaId: id, token: res.token });
-        Alert.alert('Atenção', `Token gerado: ${res.token}, mas não conseguimos realizar seu auto-checkin. Por favor, insira o token manualmente.`);
+        setActionLoading(true);
+        const tipoChamada = isGlobal ? 'GLOBAL' : 'PRIMEIRA';
+        const res = await gerarTokenQuorum(id, { tipo_chamada: tipoChamada, is_global: isGlobal });
+        logger.info('TOKEN_GENERATED_AUTO_CHECKIN_START', { assembleiaId: id, token: res.token, isGlobal });
+
+        try {
+          await realizarCheckin(id, res.token);
+          logger.info('TOKEN_GENERATED_AUTO_CHECKIN_SUCCESS', { assembleiaId: id });
+          Alert.alert('Sucesso', `Token gerado: ${res.token}.\n\nSeu check-in foi realizado automaticamente.`);
+        } catch (checkinErr: any) {
+          logger.error(
+            'TOKEN_GENERATED_AUTO_CHECKIN_FAIL',
+            checkinErr instanceof Error ? checkinErr : new Error(String(checkinErr)),
+            { assembleiaId: id, token: res.token }
+          );
+          Alert.alert(
+            'Atenção',
+            `Token gerado: ${res.token}, mas não conseguimos realizar seu auto-checkin. Por favor, insira o token manualmente.`
+          );
+        }
+
+        fetchData();
+      } catch (err: any) {
+        Alert.alert('Erro', err.response?.data?.message || 'Falha ao gerar token.');
+      } finally {
+        setActionLoading(false);
       }
+    },
+    [id, fetchData]
+  );
 
-      fetchData();
-    } catch (err: any) {
-      Alert.alert('Erro', err.response?.data?.message || 'Falha ao gerar token.');
-    } finally {
-      setActionLoading(false);
-    }
-  }, [id, fetchData]);
-
+  // -----------------------------
+  // MENU (corrigido: sem isDiretoria, sem TDZ)
+  // -----------------------------
   useEffect(() => {
     const isCredenciamento = assembleia?.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO;
     const actions: MenuAction[] = [];
+
+    // Gestão/presidência (mantido)
     if ((ehGestao || isPresidente) && assembleia) {
-      const hasGlobalToken = !!estado?.quorumVigente?.is_global || (assembleia.estado !== ASSEMBLEIA_ESTADOS.CRIADO && assembleia.estado !== ASSEMBLEIA_ESTADOS.ENCERRADO);
+      const hasGlobalToken =
+        !!estado?.quorumVigente?.is_global ||
+        (assembleia.estado !== ASSEMBLEIA_ESTADOS.CRIADO && assembleia.estado !== ASSEMBLEIA_ESTADOS.ENCERRADO);
 
       if (canCreateCredenciamentoToken(user) && !estado?.quorumVigente?.is_global) {
         actions.push({
-            label: 'Gerar QR Global',
-            icon: 'qrcode',
-            onPress: () => handleGerarToken(true)
+          label: 'Gerar QR Global',
+          icon: 'qrcode',
+          onPress: () => handleGerarToken(true)
         });
       }
 
       if (ehGestao && hasGlobalToken && estado?.quorumVigente?.is_global) {
         actions.push({
-            label: 'Visualizar QR Global',
-            icon: 'qrcode-scan',
-            onPress: () => navigation.navigate('VisualizarToken', {
-                assembleiaId: id,
-                token: estado.quorumVigente?.token,
-                assembleiaTitulo: assembleia.titulo,
-                type: 'GLOBAL'
+          label: 'Visualizar QR Global',
+          icon: 'qrcode-scan',
+          onPress: () =>
+            navigation.navigate('VisualizarToken', {
+              assembleiaId: id,
+              token: estado.quorumVigente?.token,
+              assembleiaTitulo: assembleia.titulo,
+              type: 'GLOBAL'
             })
         });
       }
@@ -313,57 +431,79 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         const isMesaEstabelecida = !!(estado?.mesa as any)?.estabelecida_em;
 
         if (podeComporMesaLocal) {
-            actions.push({
-                label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
-                icon: isMesaEstabelecida ? 'account-convert-outline' : 'account-group-outline',
-                onPress: () => navigation.navigate('ComporMesa', { id, substituir: isMesaEstabelecida })
-            });
+          actions.push({
+            label: isMesaEstabelecida ? 'Substituir Mesa' : 'Compor Mesa',
+            icon: isMesaEstabelecida ? 'account-convert-outline' : 'account-group-outline',
+            onPress: () => navigation.navigate('ComporMesa', { id, substituir: isMesaEstabelecida })
+          });
         }
 
         actions.push({ label: 'Iniciar Execução', icon: 'play-box-multiple-outline', onPress: handleIniciarExecucao });
 
-        // Se já existe token de quórum (não global), mostra visualizar
         if (estado?.quorumVigente && !estado.quorumVigente.is_global) {
-            actions.push({
-                label: 'Visualizar QR Quórum',
-                icon: 'qrcode-scan',
-                onPress: () => navigation.navigate('VisualizarToken', {
-                    assembleiaId: id,
-                    token: estado.quorumVigente?.token,
-                    assembleiaTitulo: assembleia.titulo,
-                    type: 'QUORUM'
-                })
-            });
+          actions.push({
+            label: 'Visualizar QR Quórum',
+            icon: 'qrcode-scan',
+            onPress: () =>
+              navigation.navigate('VisualizarToken', {
+                assembleiaId: id,
+                token: estado.quorumVigente?.token,
+                assembleiaTitulo: assembleia.titulo,
+                type: 'QUORUM'
+              })
+          });
         }
 
         // CANON: Novo Token de Quórum apenas pela Mesa
         if (isMesa) {
-            actions.push({ label: 'Novo Token Quórum', icon: 'key-variant', onPress: () => handleGerarToken(false) });
+          actions.push({ label: 'Novo Token Quórum', icon: 'key-variant', onPress: () => handleGerarToken(false) });
         }
 
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
+
       if (assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO || assembleia.estado === ASSEMBLEIA_ESTADOS.SUSPENSA) {
-        actions.push({ label: 'Ir para Sala', icon: 'door-open', onPress: () => {
-            navigation.navigate('AssembleiaSala', { id });
-        }});
+        actions.push({
+          label: 'Ir para Sala',
+          icon: 'door-open',
+          onPress: () => navigation.navigate('AssembleiaSala', { id })
+        });
+
         if (ehGestao || isPresidente) {
           actions.push({ label: 'Iniciar Votação', icon: 'plus-circle-outline', onPress: () => navigation.navigate('CriarItemVotacao', { id }) });
         }
+
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
+
       if (canGenerateReport) {
         actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
       }
     } else if (assembleia && canGenerateReport) {
-      // Caso não seja diretoria nem presidente (ex: CONSELHEIRO), mas pode gerar relatório
       actions.push({ label: 'Relatório PDF', icon: 'file-pdf-box', onPress: handleSolicitarRelatorio });
     }
+
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,
       title: 'Detalhes'
     });
-  }, [navigation, assembleia, isDiretoria, handleAbrir, handleGerarToken, handleEncerrar, handleIniciarExecucao, handleSolicitarRelatorio]);
+  }, [
+    navigation,
+    assembleia,
+    estado?.quorumVigente,
+    estado?.mesa,
+    ehGestao,
+    isPresidente,
+    isMesa,
+    podeComporMesaLocal,
+    canGenerateReport,
+    handleGerarToken,
+    handleEncerrar,
+    handleIniciarExecucao,
+    handleSolicitarRelatorio,
+    id,
+    user
+  ]);
 
   const handleScanPress = async () => {
     if (!cameraPermission?.granted) {
@@ -379,9 +519,8 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   const onBarCodeScanned = ({ data }: { data: string }) => {
     setIsScanning(false);
     try {
-      // FENAPRF: Tenta parsear como JSON para extrair metadados do QR
       const payload = JSON.parse(data);
-      const expectedType = assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? 'GLOBAL' : 'QUORUM';
+      const expectedType = assembleia?.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? 'GLOBAL' : 'QUORUM';
 
       if (payload.assembleiaId && payload.assembleiaId !== id) {
         Alert.alert('QR Code Inválido', 'Este QR Code pertence a outra assembleia.');
@@ -392,22 +531,19 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       const isMatch = !pType || pType === expectedType || (pType === 'CREDENCIAMENTO' && expectedType === 'GLOBAL');
 
       if (!isMatch) {
-          Alert.alert('QR Code Inválido', `Este QR Code é do tipo ${pType}, mas a assembleia aguarda ${expectedType}.`);
-          return;
+        Alert.alert('QR Code Inválido', `Este QR Code é do tipo ${pType}, mas a assembleia aguarda ${expectedType}.`);
+        return;
       }
 
       const finalToken = payload.token || payload.codigo || data;
       setTokenInput(finalToken);
-      // Auto-submit after scan
       setTimeout(() => handleCheckin(finalToken), 500);
-
     } catch (e) {
-      // Se não for JSON, tenta tratar como token puro se tiver tamanho compatível
       if (data && (data.length === 6 || data.length === 10)) {
-          setTokenInput(data);
-          setTimeout(() => handleCheckin(data), 500);
+        setTokenInput(data);
+        setTimeout(() => handleCheckin(data), 500);
       } else {
-          Alert.alert('Erro na leitura', 'O QR Code lido não contém um token compatível.');
+        Alert.alert('Erro na leitura', 'O QR Code lido não contém um token compatível.');
       }
     }
   };
@@ -423,13 +559,16 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     }
     try {
       setActionLoading(true);
-      const res = await realizarCheckin(id, tokenToUse) as any;
+      const res = (await realizarCheckin(id, tokenToUse)) as any;
 
       if (res?.status === 'PENDING_VOTATION') {
-          Alert.alert('Substituição Pendente', 'Uma votação está em curso. Sua titularidade será aplicada automaticamente assim que o item atual for encerrado.');
-          setTokenInput('');
-          fetchData();
-          return;
+        Alert.alert(
+          'Substituição Pendente',
+          'Uma votação está em curso. Sua titularidade será aplicada automaticamente assim que o item atual for encerrado.'
+        );
+        setTokenInput('');
+        fetchData();
+        return;
       }
 
       Alert.alert('Sucesso', 'Check-in realizado com sucesso!');
@@ -437,9 +576,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
       fetchData();
     } catch (err: any) {
       if (err.response?.status === 409) {
-          Alert.alert('Conflito de Hierarquia', err.response?.data?.error || 'Seu titular já está participando da sessão.');
+        Alert.alert('Conflito de Hierarquia', err.response?.data?.error || 'Seu titular já está participando da sessão.');
       } else {
-          Alert.alert('Erro', err.response?.data?.error || err.response?.data?.message || 'Token inválido ou expirado.');
+        Alert.alert('Erro', err.response?.data?.error || err.response?.data?.message || 'Token inválido ou expirado.');
       }
     } finally {
       setActionLoading(false);
@@ -454,22 +593,30 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     const extension = cleanUrl.split('.').pop()?.toLowerCase();
 
     navigation.navigate('FileViewer', {
-        remoteUrl: url,
-        title: `Edital - ${assembleia.titulo}`,
-        fileId: id,
-        type: (extension === 'pdf' || assembleia.edital_format === 'pdf') ? 'pdf' : (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '') ? 'image' : 'other'),
-        context: 'assembleia-edital',
-        format: assembleia.edital_format,
-        resourceType: assembleia.edital_resource_type
+      remoteUrl: url,
+      title: `Edital - ${assembleia.titulo}`,
+      fileId: id,
+      type:
+        extension === 'pdf' || assembleia.edital_format === 'pdf'
+          ? 'pdf'
+          : ['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')
+          ? 'image'
+          : 'other',
+      context: 'assembleia-edital',
+      format: assembleia.edital_format,
+      resourceType: assembleia.edital_resource_type
     });
   };
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando detalhes da assembleia..." /></View>;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#003366" accessibilityLabel="Carregando detalhes da assembleia..." />
+      </View>
+    );
   }
 
   if (!assembleia) {
-    // Screen-level guard log
     logger.warn('ASSEMBLEIA_DETALHE_GUARD_TRIGGERED', { id, loading });
 
     return (
@@ -484,371 +631,350 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }
 
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
-  const isParticipavel = assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO || assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO || assembleia.estado === ASSEMBLEIA_ESTADOS.SUSPENSA;
-  const isEncerrada = assembleia.estado === ASSEMBLEIA_ESTADOS.ENCERRADO;
-  const isIniciado = assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO || assembleia.estado === ASSEMBLEIA_ESTADOS.SUSPENSA;
-  const canGenerateReport = isEncerrada;
 
   return (
     <SafeScreen style={{ backgroundColor: '#f2f4f8' }}>
-    <KeyboardAwareScrollView
+      <KeyboardAwareScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
         enableOnAndroid
         extraScrollHeight={80}
         keyboardOpeningTime={0}
-        refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={fetchData} />
-        }
-    >
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.btnVoltar}>
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
+      >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.btnVoltar}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#003366" />
           <Text style={styles.btnVoltarText}>Voltar para Lista</Text>
-      </TouchableOpacity>
+        </TouchableOpacity>
 
-      <View style={styles.header}>
-        <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
-          <Text style={styles.badgeText}>{getAssembleiaStatusLabel(assembleia.estado)}</Text>
+        <View style={styles.header}>
+          <View style={[styles.badge, styles[`badge${assembleia.estado}`]]}>
+            <Text style={styles.badgeText}>{getAssembleiaStatusLabel(assembleia.estado)}</Text>
+          </View>
+          <Text style={styles.tipoText}>{assembleia.tipo}</Text>
         </View>
-        <Text style={styles.tipoText}>{assembleia.tipo}</Text>
-      </View>
 
-      <Text style={styles.tituloText}>{assembleia.titulo}</Text>
+        <Text style={styles.tituloText}>{assembleia.titulo}</Text>
 
-      <View style={styles.pautaCard}>
+        <View style={styles.pautaCard}>
           <Text style={styles.pautaTitle}>📌 Pauta da Assembleia</Text>
           <Text style={styles.pautaText}>{assembleia.pauta}</Text>
-      </View>
+        </View>
 
-      <View style={styles.fieldRow}>
+        <View style={styles.fieldRow}>
           <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>📅 Data do Evento</Text>
-              <Text style={styles.fieldValue}>
-                  {assembleia.data_evento ? new Date(assembleia.data_evento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--/--/----'}
-              </Text>
+            <Text style={styles.fieldLabel}>📅 Data do Evento</Text>
+            <Text style={styles.fieldValue}>
+              {assembleia.data_evento
+                ? new Date(assembleia.data_evento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                : '--/--/----'}
+            </Text>
           </View>
           {!isEncerrada && (
-          <View style={styles.fieldGroup}>
+            <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>🕒 Chamadas (1ª / 2ª)</Text>
-              <Text style={styles.fieldValue}>{assembleia.hora_primeira_chamada} / {assembleia.hora_segunda_chamada}</Text>
-          </View>
+              <Text style={styles.fieldValue}>
+                {assembleia.hora_primeira_chamada} / {assembleia.hora_segunda_chamada}
+              </Text>
+            </View>
           )}
-      </View>
+        </View>
 
-
-      {isIniciado && estado?.mesa && (
-        <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366' }]}>
+        {isIniciado && estado?.mesa && (
+          <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366' }]}>
             <Text style={styles.infoTitle}>🧑‍⚖️ Mesa Diretora</Text>
             <View style={styles.mesaRow}>
-                <MaterialCommunityIcons name="account-tie" size={20} color="#003366" />
-                <Text style={styles.mesaLabel}>Presidente:</Text>
-                <Text style={styles.mesaValue}>{estado.mesa.presidente_nome}</Text>
+              <MaterialCommunityIcons name="account-tie" size={20} color="#003366" />
+              <Text style={styles.mesaLabel}>Presidente:</Text>
+              <Text style={styles.mesaValue}>{estado.mesa.presidente_nome}</Text>
             </View>
             <View style={styles.mesaRow}>
-                <MaterialCommunityIcons name="account-tie-outline" size={20} color="#003366" />
-                <Text style={styles.mesaLabel}>Vice-Pres:</Text>
-                <Text style={styles.mesaValue}>{estado.mesa.vice_presidente_nome || '-'}</Text>
+              <MaterialCommunityIcons name="account-tie-outline" size={20} color="#003366" />
+              <Text style={styles.mesaLabel}>Vice-Pres:</Text>
+              <Text style={styles.mesaValue}>{estado.mesa.vice_presidente_nome || '-'}</Text>
             </View>
             <View style={styles.mesaRow}>
-                <MaterialCommunityIcons name="account-edit" size={20} color="#003366" />
-                <Text style={styles.mesaLabel}>1º Sec:</Text>
-                <Text style={styles.mesaValue}>{estado.mesa.secretario_nome}</Text>
+              <MaterialCommunityIcons name="account-edit" size={20} color="#003366" />
+              <Text style={styles.mesaLabel}>1º Sec:</Text>
+              <Text style={styles.mesaValue}>{estado.mesa.secretario_nome}</Text>
             </View>
             <View style={styles.mesaRow}>
-                <MaterialCommunityIcons name="account-edit-outline" size={20} color="#003366" />
-                <Text style={styles.mesaLabel}>2º Sec:</Text>
-                <Text style={styles.mesaValue}>{estado.mesa.secretario_2_nome || '-'}</Text>
+              <MaterialCommunityIcons name="account-edit-outline" size={20} color="#003366" />
+              <Text style={styles.mesaLabel}>2º Sec:</Text>
+              <Text style={styles.mesaValue}>{estado.mesa.secretario_2_nome || '-'}</Text>
             </View>
-        </View>
-      )}
-
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>📄 Edital de Convocação</Text>
-        {assembleia.edital_url ? (
-          <TouchableOpacity
-            style={styles.btnEdital}
-            onPress={handleVerEdital}
-            disabled={editalLoading}
-            accessibilityLabel="Ver Edital de Convocação"
-            accessibilityRole="button"
-          >
-            {editalLoading ? (
-              <ActivityIndicator size="small" color="#003366" accessibilityLabel="Sincronizando..." />
-            ) : (
-              <MaterialCommunityIcons
-                name={assembleia.edital_url.toLowerCase().endsWith('.pdf') ? 'file-pdf-box' : 'image'}
-                size={24}
-                color="#003366"
-              />
-            )}
-            <Text style={styles.btnEditalText}>
-              {editalLoading ? 'Carregando...' : 'Ver Edital'}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.noEditalBox}>
-            <MaterialCommunityIcons name="file-cancel-outline" size={20} color="#999" />
-            <Text style={styles.noEditalText}>Sem edital anexado</Text>
           </View>
         )}
-      </View>
 
-      {!isEncerrada && (
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>👥 Quórum Atual</Text>
-        {estadoLoading ? (
-            <ActivityIndicator size="small" color="#003366" style={{ alignSelf: 'flex-start', marginVertical: 8 }} accessibilityLabel="Processando ação..." />
-        ) : !estado ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>📄 Edital de Convocação</Text>
+          {assembleia.edital_url ? (
+            <TouchableOpacity
+              style={styles.btnEdital}
+              onPress={handleVerEdital}
+              disabled={editalLoading}
+              accessibilityLabel="Ver Edital de Convocação"
+              accessibilityRole="button"
+            >
+              {editalLoading ? (
+                <ActivityIndicator size="small" color="#003366" accessibilityLabel="Sincronizando..." />
+              ) : (
+                <MaterialCommunityIcons
+                  name={assembleia.edital_url.toLowerCase().endsWith('.pdf') ? 'file-pdf-box' : 'image'}
+                  size={24}
+                  color="#003366"
+                />
+              )}
+              <Text style={styles.btnEditalText}>{editalLoading ? 'Carregando...' : 'Ver Edital'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.noEditalBox}>
+              <MaterialCommunityIcons name="file-cancel-outline" size={20} color="#999" />
+              <Text style={styles.noEditalText}>Sem edital anexado</Text>
+            </View>
+          )}
+        </View>
+
+        {!isEncerrada && (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>👥 Quórum Atual</Text>
+            {estadoLoading ? (
+              <ActivityIndicator
+                size="small"
+                color="#003366"
+                style={{ alignSelf: 'flex-start', marginVertical: 8 }}
+                accessibilityLabel="Processando ação..."
+              />
+            ) : !estado ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Text style={[styles.infoValue, { color: '#999' }]}>Indisponível</Text>
                 <TouchableOpacity onPress={fetchEstado} style={styles.btnRetrySmall}>
-                    <MaterialCommunityIcons name="refresh" size={16} color="#003366" />
-                    <Text style={styles.btnRetrySmallText}>Tentar</Text>
+                  <MaterialCommunityIcons name="refresh" size={16} color="#003366" />
+                  <Text style={styles.btnRetrySmallText}>Tentar</Text>
                 </TouchableOpacity>
-            </View>
-        ) : (
-            <>
+              </View>
+            ) : (
+              <>
                 <Text style={styles.infoValue}>{estado?.quorumVigente?.total || 0} presentes</Text>
                 {estado?.quorumVigente && (
-                <View style={styles.quorumDetails}>
+                  <View style={styles.quorumDetails}>
                     {!isIniciado && (
-                        <>
-                            <Text style={styles.quorumStatus}>
-                                {estado.quorumVigente.tipo_chamada === 'PRIMEIRA' ? '1ª Chamada (Qualificado)' : '2ª Chamada (Real)'}
-                            </Text>
-                            <Text style={styles.quorumStatus}>
-                                Total de Users Aptos: {estado.quorumVigente.quorum_total_ativos || 0}
-                            </Text>
-                            <Text style={styles.quorumStatus}>
-                                Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
-                            </Text>
-                        </>
+                      <>
+                        <Text style={styles.quorumStatus}>
+                          {estado.quorumVigente.tipo_chamada === 'PRIMEIRA'
+                            ? '1ª Chamada (Qualificado)'
+                            : '2ª Chamada (Real)'}
+                        </Text>
+                        <Text style={styles.quorumStatus}>
+                          Total de Users Aptos: {estado.quorumVigente.quorum_total_ativos || 0}
+                        </Text>
+                        <Text style={styles.quorumStatus}>
+                          Mínimo necessário: {estado.quorumVigente.quorum_necessario || 'Qualquer número'}
+                        </Text>
+                      </>
                     )}
                     {isIniciado && (
-                         <Text style={styles.quorumStatus}>
-                            Quórum vigente (na abertura): {estado.quorumVigente.total} presentes
-                         </Text>
+                      <Text style={styles.quorumStatus}>Quórum vigente (na abertura): {estado.quorumVigente.total} presentes</Text>
                     )}
-                </View>
+                  </View>
                 )}
 
                 <View style={{ marginTop: 15, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10 }}>
-                    <Text style={[styles.infoTitle, { fontSize: 12, textAlign: 'left', marginBottom: 5 }]}>Lista Nominal</Text>
-                    {estado.quorumVigente?.presentes && estado.quorumVigente.presentes.length > 0 ? (
-                        estado.quorumVigente.presentes.map((p: any) => (
-                        <View key={p.id} style={styles.presenteRow}>
-                            <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
-                            <Text style={styles.presenteNome}>{p.nome}</Text>
-                        </View>
-                        ))
-                    ) : (
-                        <Text style={styles.emptyTextSmall}>Nenhum presente registrado.</Text>
-                    )}
+                  <Text style={[styles.infoTitle, { fontSize: 12, textAlign: 'left', marginBottom: 5 }]}>Lista Nominal</Text>
+                  {estado.quorumVigente?.presentes && estado.quorumVigente.presentes.length > 0 ? (
+                    estado.quorumVigente.presentes.map((p: any) => (
+                      <View key={p.id} style={styles.presenteRow}>
+                        <MaterialCommunityIcons name="account-check" size={16} color="#27ae60" />
+                        <Text style={styles.presenteNome}>{p.nome}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyTextSmall}>Nenhum presente registrado.</Text>
+                  )}
                 </View>
-            </>
+              </>
+            )}
+          </View>
         )}
-      </View>
-      )}
 
-      {(ehGestao || canGenerateReport) && assembleia && !isEncerrada && (
-        <View style={[styles.infoCard, styles.diretoriaSection]}>
+        {(ehGestao || isPresidente || isMesa) && assembleia && !isEncerrada && (
+          <View style={[styles.infoCard, styles.diretoriaSection]}>
             <Text style={styles.infoTitle}>⚡ Ações e Gestão</Text>
             <View style={styles.diretoriaButtons}>
-                {canSeeToken && (
+              {canSeeToken && (
+                <TouchableOpacity
+                  style={styles.btnManagement}
+                  onPress={() =>
+                    navigation.navigate('VisualizarToken', {
+                      assembleiaId: id,
+                      token: estado?.quorumVigente?.token,
+                      assembleiaTitulo: assembleia.titulo,
+                      type: estado?.quorumVigente?.is_global ? 'GLOBAL' : 'QUORUM'
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="Ver QR Code de Credenciamento"
+                >
+                  <Text style={styles.btnActionText}>Credenciamento (QR)</Text>
+                </TouchableOpacity>
+              )}
+
+              {canCreateCredenciamentoToken(user) && !estado?.quorumVigente?.is_global && (
+                <TouchableOpacity style={styles.btnManagement} onPress={() => handleGerarToken(true)}>
+                  <Text style={styles.btnActionText}>Gerar QR Global</Text>
+                </TouchableOpacity>
+              )}
+
+              {ehGestao && assembleia.estado === 'EM_CREDENCIAMENTO' && (
+                <>
+                  {podeComporMesaLocal && (
                     <TouchableOpacity
                       style={styles.btnManagement}
-                      onPress={() => navigation.navigate('VisualizarToken', {
-                          assembleiaId: id,
-                          token: estado?.quorumVigente?.token,
-                          assembleiaTitulo: assembleia.titulo,
-                          type: estado?.quorumVigente?.is_global ? 'GLOBAL' : 'QUORUM'
-                      })}
-                      accessibilityRole="button"
-                      accessibilityLabel="Ver QR Code de Credenciamento"
+                      onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}
                     >
-                        <Text style={styles.btnActionText}>Credenciamento (QR)</Text>
+                      <Text style={styles.btnActionText}>
+                        {(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}
+                      </Text>
                     </TouchableOpacity>
-                )}
-                {canCreateCredenciamentoToken(user) && !estado?.quorumVigente?.is_global && (
-                    <TouchableOpacity
-                      style={styles.btnManagement}
-                      onPress={() => handleGerarToken(true)}
-                    >
-                        <Text style={styles.btnActionText}>Gerar QR Global</Text>
+                  )}
+
+                  {isMesa && (
+                    <TouchableOpacity style={styles.btnManagement} onPress={() => handleGerarToken(false)}>
+                      <Text style={styles.btnActionText}>Novo Token</Text>
                     </TouchableOpacity>
-                )}
-                {ehGestao && assembleia.estado === 'EM_CREDENCIAMENTO' && (
-                    <>
-                        {podeComporMesaLocal && (
-                          <TouchableOpacity
-                            style={styles.btnManagement}
-                            onPress={() => navigation.navigate('ComporMesa', { id, substituir: !!(estado?.mesa as any)?.estabelecida_em })}
-                          >
-                              <Text style={styles.btnActionText}>{(estado?.mesa as any)?.estabelecida_em ? 'Trocar Mesa' : 'Compor Mesa'}</Text>
-                          </TouchableOpacity>
-                        )}
-                        {isMesa && (
-                          <TouchableOpacity
-                            style={styles.btnManagement}
-                            onPress={() => handleGerarToken(false)}
-                          >
-                              <Text style={styles.btnActionText}>Novo Token</Text>
-                          </TouchableOpacity>
-                        )}
-                    </>
-                )}
-                {ehGestao && (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') && (
-                    <>
-                        {podeComporMesaLocal && (
-                          <TouchableOpacity
-                            style={styles.btnManagement}
-                            onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}
-                          >
-                              <Text style={styles.btnActionText}>Trocar Mesa</Text>
-                          </TouchableOpacity>
-                        )}
-                        <TouchableOpacity
-                          style={[styles.btnManagement, styles.btnDanger]}
-                          onPress={handleEncerrar}
-                        >
-                            <Text style={[styles.btnActionText, { color: '#fff' }]}>Encerrar</Text>
-                        </TouchableOpacity>
-                    </>
-                )}
-                {canGenerateReport && (
-                    <TouchableOpacity
-                      style={styles.btnManagement}
-                      onPress={handleSolicitarRelatorio}
-                      accessibilityRole="button"
-                      accessibilityLabel="Solicitar Relatório PDF da Assembleia"
-                    >
-                        <Text style={styles.btnActionText}>Relatório PDF</Text>
+                  )}
+                </>
+              )}
+
+              {ehGestao && (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') && (
+                <>
+                  {podeComporMesaLocal && (
+                    <TouchableOpacity style={styles.btnManagement} onPress={() => navigation.navigate('ComporMesa', { id, substituir: true })}>
+                      <Text style={styles.btnActionText}>Trocar Mesa</Text>
                     </TouchableOpacity>
-                )}
+                  )}
+                  <TouchableOpacity style={[styles.btnManagement, styles.btnDanger]} onPress={handleEncerrar}>
+                    <Text style={[styles.btnActionText, { color: '#fff' }]}>Encerrar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
-        </View>
-      )}
+          </View>
+        )}
 
-      {isEncerrada && (
-        <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366', alignItems: 'center' }]}>
+        {isEncerrada && (
+          <View style={[styles.infoCard, { borderLeftWidth: 5, borderLeftColor: '#003366', alignItems: 'center' }]}>
             <MaterialCommunityIcons name="file-check" size={48} color="#003366" />
-            <Text style={[styles.tituloText, { fontSize: 18, marginTop: 10, textAlign: 'center' }]}>Assembleia Encerrada</Text>
-            <Text style={{ color: '#666', textAlign: 'center', marginBottom: 20 }}>Os itens desta assembleia foram deliberados. O relatório consolidado está disponível para solicitação.</Text>
+            <Text style={[styles.tituloText, { fontSize: 18, marginTop: 10, textAlign: 'center' }]}>
+              Assembleia Encerrada
+            </Text>
+            <Text style={{ color: '#666', textAlign: 'center', marginBottom: 20 }}>
+              Os itens desta assembleia foram deliberados. O relatório consolidado está disponível para solicitação.
+            </Text>
             <TouchableOpacity
-                style={[styles.btnSala, { width: '100%', backgroundColor: '#27ae60' }]}
-                onPress={handleSolicitarRelatorio}
-                disabled={actionLoading}
-                accessibilityRole="button"
-                accessibilityLabel={actionLoading ? "Solicitando relatório..." : "Solicitar Relatório PDF Consolidado"}
+              style={[styles.btnSala, { width: '100%', backgroundColor: '#27ae60' }]}
+              onPress={handleSolicitarRelatorio}
+              disabled={actionLoading}
+              accessibilityRole="button"
+              accessibilityLabel={actionLoading ? 'Solicitando relatório...' : 'Solicitar Relatório PDF Consolidado'}
             >
-                <MaterialCommunityIcons name="file-pdf-box" size={24} color="#fff" />
-                <Text style={styles.btnSalaText}>{actionLoading ? 'Solicitando...' : 'Solicitar Relatório PDF'}</Text>
+              <MaterialCommunityIcons name="file-pdf-box" size={24} color="#fff" />
+              <Text style={styles.btnSalaText}>{actionLoading ? 'Solicitando...' : 'Solicitar Relatório PDF'}</Text>
             </TouchableOpacity>
-        </View>
-      )}
+          </View>
+        )}
 
-      {isParticipavel && (
-        <View style={styles.interactionSection}>
-          {!isElegivel ? (
-             <View style={styles.notEligibleBox}>
+        {isParticipavel && (
+          <View style={styles.interactionSection}>
+            {!isElegivel ? (
+              <View style={styles.notEligibleBox}>
                 <MaterialCommunityIcons name="lock" size={24} color="#856404" />
                 <Text style={styles.notEligibleText}>Seu perfil ({perfil}) não possui permissão para realizar check-in.</Text>
-             </View>
-          ) : hasCheckedIn ? (
-            <View style={styles.salaBox}>
+              </View>
+            ) : hasCheckedIn ? (
+              <View style={styles.salaBox}>
                 <TouchableOpacity
-                    style={styles.btnSala}
-                    onPress={() => navigation.navigate('AssembleiaSala', { id })}
-                    accessibilityLabel="Ir para a Sala de Votação"
-                    accessibilityRole="button"
+                  style={styles.btnSala}
+                  onPress={() => navigation.navigate('AssembleiaSala', { id })}
+                  accessibilityLabel="Ir para a Sala de Votação"
+                  accessibilityRole="button"
                 >
-                    <MaterialCommunityIcons name="door-open" size={24} color="#fff" />
-                    <Text style={styles.btnSalaText}>Ir para a Sala de Votação</Text>
+                  <MaterialCommunityIcons name="door-open" size={24} color="#fff" />
+                  <Text style={styles.btnSalaText}>Ir para a Sala de Votação</Text>
                 </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.checkinCard}>
-              <Text style={styles.checkinTitle}>Check-in necessário</Text>
-              <Text style={styles.checkinSubtitle}>
+              </View>
+            ) : (
+              <View style={styles.checkinCard}>
+                <Text style={styles.checkinTitle}>Check-in necessário</Text>
+                <Text style={styles.checkinSubtitle}>
                   Informe o token de {assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? '10 caracteres' : '6 dígitos'} para registrar sua presença.
-              </Text>
+                </Text>
 
-              {/* FENAPRF: QR Scan para Conselheiros e Diretores (exceto Admin/Colab) */}
-              {(perfil === 'CONSELHEIRO' || perfil === 'DIRETORIA') && (
-                <TouchableOpacity
+                {(perfil === 'CONSELHEIRO' || perfil === 'DIRETORIA') && (
+                  <TouchableOpacity
                     style={[styles.btnSala, { marginBottom: 15, backgroundColor: '#f1c40f' }]}
                     onPress={handleScanPress}
                     accessibilityLabel="Escanear QR Code de Presença"
                     accessibilityRole="button"
-                >
+                  >
                     <MaterialCommunityIcons name="qrcode-scan" size={24} color="#003366" />
                     <Text style={[styles.btnSalaText, { color: '#003366', fontSize: 16 }]}>Escanear QR Code</Text>
-                </TouchableOpacity>
-              )}
+                  </TouchableOpacity>
+                )}
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                   <View style={{ flex: 1, height: 1, backgroundColor: '#eee' }} />
                   <Text style={{ fontSize: 12, color: '#999', fontWeight: 'bold' }}>OU DIGITE O CÓDIGO</Text>
                   <View style={{ flex: 1, height: 1, backgroundColor: '#eee' }} />
-              </View>
-
-              <TextInput
-                style={styles.tokenInput}
-                placeholder={assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? "A1B2C3D4E5" : "000000"}
-                autoCapitalize="characters"
-                maxLength={assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? 10 : 6}
-                value={tokenInput}
-                onChangeText={setTokenInput}
-              />
-              <TouchableOpacity
-                style={styles.btnCheckin}
-                onPress={handleCheckin}
-                disabled={actionLoading}
-                accessibilityLabel="Confirmar Presença com Token"
-                accessibilityRole="button"
-              >
-                <Text style={styles.btnText}>{actionLoading ? 'Confirmando...' : 'Confirmar Presença'}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      )}
-
-    </KeyboardAwareScrollView>
-
-
-      {/* Modal do Scanner QR */}
-      <Modal
-        visible={isScanning}
-        animationType="slide"
-        onRequestClose={() => setIsScanning(false)}
-      >
-        <SafeScreen style={{ backgroundColor: '#000' }}>
-            <View style={styles.scannerHeader}>
-                <TouchableOpacity onPress={() => setIsScanning(false)} style={styles.btnScannerClose}>
-                    <MaterialCommunityIcons name="close" size={32} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.scannerTitle}>Escanear QR Code</Text>
-            </View>
-
-            <View style={styles.scannerContainer}>
-                <CameraView
-                    style={StyleSheet.absoluteFillObject}
-                    facing="back"
-                    onBarcodeScanned={isScanning ? onBarCodeScanned : undefined}
-                    barcodeScannerSettings={{
-                        barcodeTypes: ['qr'],
-                    }}
-                />
-                <View style={styles.scannerOverlay}>
-                    <View style={styles.scannerFrame} />
-                    <Text style={styles.scannerHint}>Posicione o QR Code da Assembleia dentro do quadro</Text>
                 </View>
+
+                <TextInput
+                  style={styles.tokenInput}
+                  placeholder={assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? 'A1B2C3D4E5' : '000000'}
+                  autoCapitalize="characters"
+                  maxLength={assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? 10 : 6}
+                  value={tokenInput}
+                  onChangeText={setTokenInput}
+                />
+                <TouchableOpacity
+                  style={styles.btnCheckin}
+                  onPress={() => handleCheckin()}
+                  disabled={actionLoading}
+                  accessibilityLabel="Confirmar Presença com Token"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.btnText}>{actionLoading ? 'Confirmando...' : 'Confirmar Presença'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </KeyboardAwareScrollView>
+
+      <Modal visible={isScanning} animationType="slide" onRequestClose={() => setIsScanning(false)}>
+        <SafeScreen style={{ backgroundColor: '#000' }}>
+          <View style={styles.scannerHeader}>
+            <TouchableOpacity onPress={() => setIsScanning(false)} style={styles.btnScannerClose}>
+              <MaterialCommunityIcons name="close" size={32} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.scannerTitle}>Escanear QR Code</Text>
+          </View>
+
+          <View style={styles.scannerContainer}>
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              facing="back"
+              onBarcodeScanned={isScanning ? onBarCodeScanned : undefined}
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+            />
+            <View style={styles.scannerOverlay}>
+              <View style={styles.scannerFrame} />
+              <Text style={styles.scannerHint}>Posicione o QR Code da Assembleia dentro do quadro</Text>
             </View>
+          </View>
         </SafeScreen>
       </Modal>
-
     </SafeScreen>
   );
 }
@@ -856,44 +982,10 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   btnRetrySmall: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 6, backgroundColor: '#eee' },
   btnRetrySmallText: { fontSize: 12, color: '#003366', fontWeight: 'bold' },
-  btnEdital: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#003366',
-    padding: 12,
-    borderRadius: 8,
-  },
+  btnEdital: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: '#003366', padding: 12, borderRadius: 8 },
   btnEditalText: { color: '#003366', fontWeight: 'bold', fontSize: 16 },
   noEditalBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 4 },
   noEditalText: { color: '#999', fontSize: 14, fontStyle: 'italic' },
-  modalContainer: { flex: 1, backgroundColor: '#fff' },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: { fontSize: 16, fontWeight: 'bold', flex: 1, marginRight: 15 },
-  closeButton: { padding: 5 },
-  viewerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
-  fullImage: { width: '100%', height: '100%' },
-  modalFooter: { padding: 20, borderTopWidth: 1, borderTopColor: '#eee' },
-  shareBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#003366',
-    padding: 15,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shareBtnText: { color: '#fff', fontWeight: 'bold', marginLeft: 10 },
   container: { flex: 1, backgroundColor: '#f2f4f8', paddingHorizontal: 16, paddingTop: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10 },
@@ -907,7 +999,6 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: 'bold', color: '#333' },
   tipoText: { fontWeight: 'bold', color: '#666', fontSize: 16 },
   tituloText: { fontSize: 24, fontWeight: 'bold', color: '#003366', marginBottom: 8 },
-  descricaoText: { fontSize: 16, color: '#555', marginBottom: 20 },
   infoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, elevation: 2 },
   infoTitle: { fontSize: 14, color: '#666', marginBottom: 12, textAlign: 'center', fontWeight: 'bold', textTransform: 'uppercase' },
   infoValue: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 12 },
@@ -946,10 +1037,6 @@ const styles = StyleSheet.create({
   diretoriaButtons: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   btnManagement: { minWidth: '30%', flex: 1, backgroundColor: '#f1c40f', padding: 12, borderRadius: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
   btnDanger: { backgroundColor: '#e74c3c' },
-  tokenCardVigente: { backgroundColor: '#fffdf0', borderRadius: 12, padding: 20, marginBottom: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: '#f1c40f', alignItems: 'center', elevation: 2 },
-  tokenLabelVigente: { fontSize: 13, fontWeight: 'bold', color: '#856404', marginBottom: 8, textTransform: 'uppercase' },
-  tokenValueVigente: { fontSize: 40, fontWeight: '900', color: '#003366', letterSpacing: 10 },
-  tokenHintVigente: { fontSize: 12, color: '#666', marginTop: 8, fontWeight: '500' },
   scannerHeader: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: '#003366' },
   btnScannerClose: { padding: 8 },
   scannerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginLeft: 15 },
@@ -957,6 +1044,4 @@ const styles = StyleSheet.create({
   scannerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   scannerFrame: { width: 250, height: 250, borderWidth: 2, borderColor: '#f1c40f', borderRadius: 20, backgroundColor: 'transparent' },
   scannerHint: { color: '#fff', textAlign: 'center', marginTop: 30, paddingHorizontal: 40, fontWeight: 'bold' },
-  btnScan: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 10, marginBottom: 10 },
-  btnScanText: { color: '#003366', fontWeight: 'bold', fontSize: 14, textTransform: 'uppercase' },
 });
