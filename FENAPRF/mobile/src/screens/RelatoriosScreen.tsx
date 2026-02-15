@@ -286,7 +286,12 @@ export default function RelatoriosScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} />}
       >
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
+          <Text
+            style={styles.cardTitle}
+            accessibilityRole="header"
+          >
+            📊 Gerar Novo Relatório
+          </Text>
 
           <Text style={styles.label}>Tipo de Relatório</Text>
           <CanonicalPicker
@@ -297,6 +302,7 @@ export default function RelatoriosScreen() {
               else setTargetValue(null);
             }}
             wrapperStyle={styles.pickerWrapper}
+            accessibilityLabel="Selecione o tipo de relatório"
             items={[
               { label: '👤 Dossiê do User (Individual)', value: 'INDIVIDUAL' },
               { label: '📍 Por UF', value: 'UF' },
@@ -323,6 +329,7 @@ export default function RelatoriosScreen() {
                 selectedValue={targetValue}
                 onValueChange={setTargetValue}
                 wrapperStyle={styles.pickerWrapper}
+                accessibilityLabel="Selecione a UF para o relatório"
                 items={UFS.map(opt => ({ label: opt, value: opt }))}
              />
           )}
@@ -423,7 +430,12 @@ export default function RelatoriosScreen() {
         )}
 
         <View style={styles.historySection}>
-          <Text style={styles.sectionTitle}>📜 Histórico de Solicitações</Text>
+          <Text
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+          >
+            📜 Histórico de Solicitações
+          </Text>
           {history.length === 0 && !loading ? (
             <Text style={styles.emptyText}>Nenhuma solicitação realizada ainda.</Text>
           ) : (

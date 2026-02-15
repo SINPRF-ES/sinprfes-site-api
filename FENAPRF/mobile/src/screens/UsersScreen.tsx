@@ -275,7 +275,12 @@ export default function UsersScreen({ navigation, route }: any) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Detalhes do Membro</Text>
+              <Text
+                style={styles.modalTitle}
+                accessibilityRole="header"
+              >
+                Detalhes do Membro
+              </Text>
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel="Fechar detalhes"
