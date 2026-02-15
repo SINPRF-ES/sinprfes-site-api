@@ -809,31 +809,28 @@ const LogisticaScreen = ({ route }: any) => {
                 <Text style={styles.docSelectText}>{formEvento.documento_id ? '✓ Documento Selecionado' : 'Selecionar nas Publicações'}</Text>
               </TouchableOpacity>
 
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Tipo de Evento</Text>
-                  <CanonicalPicker
-                    selectedValue={formEvento.tipo}
-                    onValueChange={(val) => setFormEvento({ ...formEvento, tipo: val })}
-                    wrapperStyle={styles.pickerWrapper}
-                    placeholder="Selecione"
-                    items={[
-                      { label: 'AGE (Garantia Hospedagem)', value: 'AGE' },
-                      { label: 'AGO (Garantia Hospedagem)', value: 'AGO' },
-                      { label: 'Outro', value: 'OUTRO' }
-                    ]}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Assembleia Vinculada</Text>
-                  <CanonicalPicker
-                    selectedValue={formEvento.assembleia_id}
-                    onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
-                    wrapperStyle={styles.pickerWrapper}
-                    placeholder="Nenhuma"
-                    items={assembleias.map(a => ({ label: `${a.tipo} - ${a.titulo}`, value: a.id }))}
-                  />
-                </View>
+              <View>
+                <Text style={styles.label}>Tipo de Evento</Text>
+                <CanonicalPicker
+                  selectedValue={formEvento.tipo}
+                  onValueChange={(val) => setFormEvento({ ...formEvento, tipo: val })}
+                  wrapperStyle={styles.pickerWrapper}
+                  placeholder="Selecione o tipo"
+                  items={[
+                    { label: 'AGE (Garantia Hospedagem)', value: 'AGE' },
+                    { label: 'AGO (Garantia Hospedagem)', value: 'AGO' },
+                    { label: 'Outro', value: 'OUTRO' }
+                  ]}
+                />
+
+                <Text style={styles.label}>Assembleia Vinculada</Text>
+                <CanonicalPicker
+                  selectedValue={formEvento.assembleia_id}
+                  onValueChange={(val) => setFormEvento({ ...formEvento, assembleia_id: val })}
+                  wrapperStyle={styles.pickerWrapper}
+                  placeholder="Nenhuma assembleia vinculada"
+                  items={assembleias.map(a => ({ label: `${a.tipo} - ${a.titulo}`, value: a.id }))}
+                />
               </View>
 
               {formEvento.id && (

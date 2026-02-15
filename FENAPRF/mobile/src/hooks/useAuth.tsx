@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [biometriaHabilitada, setBiometriaHabilitada] = useState(false);
   const [bloqueadoPorBiometria, setBloqueadoPorBiometria] = useState(false);
+  const [biometriaValidadaNestaSessao, setBiometriaValidadaNestaSessao] = useState(false);
 
   const appState = useRef(AppState.currentState);
   const backgroundTimestamp = useRef<number | null>(null);
@@ -60,6 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
 
+        logger.info('[Auth.loadSession] Iniciando...', {
+            hasAccessToken: !!sessao?.token,
+            hasUser: !!sessao?.user,
+            biometriaHabilitada: bio
+        });
+
         setBiometriaHabilitada(bio);
 
         if (sessao?.token) {
@@ -68,26 +75,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(sessao.user);
           }
 
+          // FENAPRF: Se biometria habilitada, bloqueamos primeiro e não fazemos requests ainda
+          if (bio) {
+            logger.info('[Auth.loadSession] Sessão encontrada, mas biometria ativa. Bloqueando UI.');
+            setBloqueadoPorBiometria(true);
+            setCarregando(false);
+            return; // Interrompe para aguardar desbloqueio
+          }
+
           try {
+            logger.info('[Auth.loadSession] Validando sessão no backend...');
             // O interceptor de resposta cuidará do refresh se o token estiver expirado.
-            // Se a biometria estiver ativa, o refresh disparará o prompt biométrico.
             const { data: userAtualizado } = await api.get('/api/users/me');
             setUser(userAtualizado);
 
-            const rt = await carregarRefreshToken();
-            await salvarSessao({
-                token: sessao.token,
-                refreshToken: rt || '',
-                user: userAtualizado
-            });
-
             if (ENABLE_PUSH) {
               registrarDispositivoParaPush().catch(() => {});
-            }
-
-            // No boot, se biometria ativa, bloqueamos a tela para garantir privacidade
-            if (bio) {
-              setBloqueadoPorBiometria(true);
             }
           } catch (error: any) {
             console.error('[Auth.loadSession.error]', error.message);
@@ -146,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await limparSessao(!removerBiometria);
     setToken(null);
     setUser(null);
+    setBiometriaValidadaNestaSessao(false);
 
     if (removerBiometria) {
       setBiometriaHabilitada(false);
@@ -175,17 +179,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!hasHardware || !enrolled) {
         setBloqueadoPorBiometria(false);
+        setBiometriaValidadaNestaSessao(true);
         return true;
       }
 
-      const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Autenticação biométrica FENAPRF',
-        cancelLabel: 'Cancelar',
-        disableDeviceFallback: false,
-      });
+      // FENAPRF: Ao tentar carregar o Refresh Token, o SO pedirá a biometria se habilitado
+      const rt = await carregarRefreshToken();
 
-      if (res.success) {
+      if (rt) {
         setBloqueadoPorBiometria(false);
+        setBiometriaValidadaNestaSessao(true);
+
+        // Agora que está validado, podemos atualizar o user em background
+        refreshUser().catch(() => {});
+        if (ENABLE_PUSH) {
+            registrarDispositivoParaPush().catch(() => {});
+        }
+
         return true;
       }
       return false;
