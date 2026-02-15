@@ -5,6 +5,8 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { ENABLE_PUSH } from '../config/features';
+import { refreshSessao, buscarUserLogado } from '../services/authService';
+import { logger } from '../infra/logger';
 
 import type { AuthContextData, Sessao } from '../types/auth';
 import type { User } from '../types/user';
@@ -32,6 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const appState = useRef(AppState.currentState);
   const backgroundTimestamp = useRef<number | null>(null);
 
+  const unlockInFlightRef = useRef(false);
+  const lastUnlockAtRef = useRef<number>(0);
+  const LAST_UNLOCK_COOLDOWN_MS = 1500;
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function loadSession() {
+      setCarregando(true);
       try {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
@@ -69,46 +76,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setBiometriaHabilitada(bio);
 
-        if (sessao?.token) {
-          setToken(sessao.token);
-          if (sessao.user) {
-              setUser(sessao.user);
-          }
-
-          // FENAPRF: Se biometria habilitada, bloqueamos primeiro e não fazemos requests ainda
-          if (bio) {
-            logger.info('[Auth.loadSession] Sessão encontrada, mas biometria ativa. Bloqueando UI.');
-            setBloqueadoPorBiometria(true);
-            setCarregando(false);
-            return; // Interrompe para aguardar desbloqueio
-          }
-
-          try {
-            logger.info('[Auth.loadSession] Validando sessão no backend...');
-            // O interceptor de resposta cuidará do refresh se o token estiver expirado.
-            const { data: userAtualizado } = await api.get('/api/users/me');
-            setUser(userAtualizado);
-
-            if (ENABLE_PUSH) {
-              registrarDispositivoParaPush().catch(() => {});
-            }
-          } catch (error: any) {
-            console.error('[Auth.loadSession.error]', error.message);
-
-            // Se for erro de rede, não deslogamos para evitar quedas acidentais
-            const isNetworkError = !error.response && !!error.request;
-            const isCriticalError = error.response?.status === 401 || error.response?.status === 403;
-
-            if (isCriticalError && !isNetworkError) {
-                logger.warn('[Auth.loadSession] Erro crítico na sessão inicial. Limpando.');
-                setToken(null);
-                setUser(null);
-                await limparSessao();
-            } else {
-                logger.info('[Auth.loadSession] Erro não crítico ou de rede. Mantendo sessão local.');
-            }
-          }
+        // Se não há nada salvo, encerra
+        if (!sessao?.token) {
+          await logout();
+          return;
         }
+
+        setToken(sessao.token);
+        if (sessao.user) setUser(sessao.user);
+
+        // Se biometria habilitada: manter bloqueado e esperar destravar (não chama /me com token velho!)
+        if (bio) {
+          logger.info('[Auth.loadSession] Sessão encontrada, mas biometria ativa. Bloqueando UI.');
+          setBloqueadoPorBiometria(true);
+          return;
+        }
+
+        // Sem biometria: refresh silencioso na largada
+        const rt = await carregarRefreshToken();
+        if (!rt) {
+          await logout();
+          return;
+        }
+
+        try {
+          logger.info('[Auth.loadSession] Fazendo refresh silencioso...');
+          const { token: newAT, refreshToken: newRT } = await refreshSessao(rt);
+          api.defaults.headers.common.Authorization = `Bearer ${newAT}`;
+
+          const userAtualizado = await buscarUserLogado(newAT);
+          await setSessao(newAT, newRT, userAtualizado);
+        } catch (refreshErr) {
+          logger.error('[Auth.loadSession] Erro no refresh inicial. Limpando sessão.');
+          await logout();
+        }
+      } catch (e) {
+        logger.error('[Auth.loadSession] Erro fatal no boot.', e);
+        await logout();
       } finally {
         setCarregando(false);
       }
@@ -173,6 +177,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function desbloquearComBiometria(): Promise<boolean> {
+    // Anti-loop rápido (cooldown)
+    const now = Date.now();
+    if (now - lastUnlockAtRef.current < LAST_UNLOCK_COOLDOWN_MS) {
+      return true;
+    }
+
+    // Mutex (anti concorrência)
+    if (unlockInFlightRef.current) {
+      return false;
+    }
+
+    unlockInFlightRef.current = true;
     try {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
@@ -186,21 +202,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // FENAPRF: Ao tentar carregar o Refresh Token, o SO pedirá a biometria se habilitado
       const rt = await carregarRefreshToken();
 
-      if (rt) {
-        setBloqueadoPorBiometria(false);
-        setBiometriaValidadaNestaSessao(true);
-
-        // Agora que está validado, podemos atualizar o user em background
-        refreshUser().catch(() => {});
-        if (ENABLE_PUSH) {
-            registrarDispositivoParaPush().catch(() => {});
-        }
-
-        return true;
+      if (!rt) {
+        return false;
       }
-      return false;
+
+      // REFRESH: pega token NOVO + refreshToken NOVO (rotacionado)
+      const { token: newAT, refreshToken: newRT } = await refreshSessao(rt);
+
+      // Persistir sessão imediatamente (importantíssimo por causa da rotação)
+      api.defaults.headers.common.Authorization = `Bearer ${newAT}`;
+      const userData = await buscarUserLogado(newAT);
+      await setSessao(newAT, newRT, userData);
+
+      // Desbloquear UI
+      setBloqueadoPorBiometria(false);
+      setBiometriaValidadaNestaSessao(true);
+      lastUnlockAtRef.current = Date.now();
+
+      if (ENABLE_PUSH) {
+        registrarDispositivoParaPush().catch(() => {});
+      }
+
+      return true;
     } catch (e) {
+      logger.error('[Auth.desbloquearComBiometria] Erro ao desbloquear/refresh', e);
       return false;
+    } finally {
+      unlockInFlightRef.current = false;
     }
   }
 
