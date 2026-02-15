@@ -14,10 +14,10 @@ const SCOPES = [
 let driveAuthMode = null;
 
 /**
- * Corrige "mojibake" típico (UTF-8 interpretado como latin1) em nomes de arquivo.
+ * Corrige "mojibake" típico (UTF-8 interpretado como latin1) em nomes de arquivo/pasta.
  * Ex.: "Ofício nº" -> "OfÃ­cio nÂº"
  *
- * Esse problema é comum no multipart/form-data em Node/multer.
+ * Isso é comum no multipart/form-data em Node/multer e também pode ocorrer via body.
  */
 function fixUtf8Filename(name) {
   if (!name) return name;
@@ -34,10 +34,12 @@ function fixUtf8Filename(name) {
 
 /**
  * Sanitização leve para evitar caracteres problemáticos.
+ * - Corrige mojibake
+ * - Remove NULL byte
+ * - Trim
  */
 function sanitizeFilename(name) {
-  const fixed = fixUtf8Filename(name);
-  return (fixed || "").replace(/\0/g, "").trim();
+  return (fixUtf8Filename(name) || "").replace(/\0/g, "").trim();
 }
 
 /**
@@ -108,9 +110,9 @@ const DRIVE_OP_FLAGS = {
 async function listarArquivosPublicos(targetFolderId = null) {
   const folderId = targetFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-  if (!folderId || folderId === 'ROOT') {
-      log.warn("GoogleDriveFolderIdMissing", { targetFolderId });
-      return [];
+  if (!folderId || folderId === "ROOT") {
+    log.warn("GoogleDriveFolderIdMissing", { targetFolderId });
+    return [];
   }
 
   const auth = getGoogleAuth();
@@ -155,12 +157,12 @@ async function obterArquivoStream(fileId) {
       stream: res.data,
       mimeType: meta.data.mimeType,
       name: meta.data.name,
-      size: meta.data.size,
+      size: meta.data.size
     };
   } catch (error) {
     log.error("GoogleDriveDownloadErro", {
       message: error.message,
-      fileId,
+      fileId
     });
     throw error;
   }
@@ -181,7 +183,7 @@ async function obterArquivoTexto(fileId) {
 
 async function uploadFile(buffer, name, mimeType, folderId = null) {
   let targetFolderId = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
-  if (targetFolderId === 'ROOT') targetFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (targetFolderId === "ROOT") targetFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
   if (!targetFolderId) {
     throw new Error("Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.");
@@ -195,12 +197,12 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
 
   const fileMetadata = {
     name: safeName,
-    parents: [targetFolderId],
+    parents: [targetFolderId]
   };
 
   const media = {
     mimeType: mimeType,
-    body: streamifier.createReadStream(buffer),
+    body: streamifier.createReadStream(buffer)
   };
 
   try {
@@ -233,10 +235,12 @@ async function ensureTrashFolder() {
   const drive = google.drive({ version: "v3", auth });
 
   try {
+    const trashName = sanitizeFilename("Lixeira");
+
     // Buscar se já existe
     const res = await drive.files.list({
       ...DRIVE_OP_FLAGS,
-      q: `'${rootId}' in parents and name = 'Lixeira' and mimeType = '${FOLDER_MIMETYPE}' and trashed = false`,
+      q: `'${rootId}' in parents and name = '${trashName}' and mimeType = '${FOLDER_MIMETYPE}' and trashed = false`,
       fields: "files(id)",
       pageSize: 1
     });
@@ -248,7 +252,7 @@ async function ensureTrashFolder() {
 
     // Criar se não existir
     const folderMetadata = {
-      name: "Lixeira",
+      name: trashName,
       mimeType: FOLDER_MIMETYPE,
       parents: [rootId]
     };
@@ -272,7 +276,7 @@ async function ensureTrashFolder() {
  */
 async function createFolder(name, parentFolderId = null) {
   let targetFolderId = parentFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
-  if (targetFolderId === 'ROOT') targetFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (targetFolderId === "ROOT") targetFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
   if (!targetFolderId) {
     throw new Error("Configuração inválida: GOOGLE_DRIVE_FOLDER_ID ausente.");
@@ -281,8 +285,11 @@ async function createFolder(name, parentFolderId = null) {
   const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
+  // ✅ Corrigir e sanitizar nome antes de criar a pasta
+  const safeName = sanitizeFilename(name);
+
   const folderMetadata = {
-    name: name,
+    name: safeName,
     mimeType: FOLDER_MIMETYPE,
     parents: [targetFolderId]
   };
@@ -295,7 +302,7 @@ async function createFolder(name, parentFolderId = null) {
     });
     return folder.data;
   } catch (error) {
-    log.error("GoogleDriveCreateFolderErro", { error: error.message, name });
+    log.error("GoogleDriveCreateFolderErro", { error: error.message, name: safeName });
     throw error;
   }
 }
@@ -307,16 +314,19 @@ async function renameItem(fileId, newName) {
   const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
+  // ✅ Corrigir e sanitizar nome antes de renomear
+  const safeName = sanitizeFilename(newName);
+
   try {
     const res = await drive.files.update({
       fileId: fileId,
-      requestBody: { name: newName },
+      requestBody: { name: safeName },
       fields: "id, name, mimeType, createdTime",
       supportsAllDrives: true
     });
     return res.data;
   } catch (error) {
-    log.error("GoogleDriveRenameErro", { error: error.message, fileId });
+    log.error("GoogleDriveRenameErro", { error: error.message, fileId, newName: safeName });
     throw error;
   }
 }
