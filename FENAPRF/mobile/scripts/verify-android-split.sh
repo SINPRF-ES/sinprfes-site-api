@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 
 # 1. Rodar prebuild para gerar os arquivos nativos
 echo "📦 Executando expo prebuild..."
-npx expo prebuild --platform android --clean --no-install
+pnpm exec expo prebuild --platform android --clean --no-install
 
 # 2. Caminho do arquivo gerado
 GRADLE_FILE="android/app/build.gradle"

@@ -66,6 +66,6 @@
 ---
 
 ## Validação Realizada
-- [x] `npx expo prebuild`: Sucesso.
-- [x] `npx expo export`: Sucesso (Bundle Hermes gerado: ~5.19 MB).
+- [x] `pnpm exec expo prebuild`: Sucesso.
+- [x] `pnpm exec expo export`: Sucesso (Bundle Hermes gerado: ~5.19 MB).
 - [x] Verificação estática de fluxos críticos (Login, OTA, Assembleias, Jogos): OK.

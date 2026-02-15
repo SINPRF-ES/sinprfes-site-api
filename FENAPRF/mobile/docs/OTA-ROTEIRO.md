@@ -21,17 +21,17 @@ pnpm install
 
 # Na pasta mobile/
 cd mobile
-npm install
-npx expo install expo-system-ui
-npx expo install --check
-npx expo-doctor
+pnpm install
+pnpm exec expo install expo-system-ui
+pnpm exec expo install --check
+pnpm exec expo-doctor
 ```
 
 ## C) Build local (preview)
 Gere os APKs localmente usando o perfil de preview.
 
 ```bash
-npx eas build -p android --profile preview --local
+pnpm exec eas build -p android --profile preview --local
 ```
 
 ## D) Publicar OTA (Android)
