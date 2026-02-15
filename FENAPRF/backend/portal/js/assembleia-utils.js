@@ -6,16 +6,24 @@
 (function (global) {
   const AssembleiaUtils = {
     getStatusLabel: function (status) {
+      const States = global.Canon ? global.Canon.ASSEMBLEIA_ESTADOS : {
+        CRIADO: 'CRIADO',
+        EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
+        INICIADO: 'INICIADO',
+        SUSPENSA: 'SUSPENSA',
+        ENCERRADO: 'ENCERRADO'
+      };
+
       switch (status) {
-        case 'CRIADO':
+        case States.CRIADO:
           return 'Agendada';
-        case 'EM_CREDENCIAMENTO':
+        case States.EM_CREDENCIAMENTO:
           return 'Em credenciamento';
-        case 'INICIADO':
+        case States.INICIADO:
           return 'Em andamento';
-        case 'SUSPENSA':
+        case States.SUSPENSA:
           return 'Suspensa';
-        case 'ENCERRADO':
+        case States.ENCERRADO:
           return 'Encerrada';
         default:
           return status || 'STATUS DESCONHECIDO';
@@ -23,16 +31,24 @@
     },
 
     getStatusBadgeClass: function (status) {
+      const States = global.Canon ? global.Canon.ASSEMBLEIA_ESTADOS : {
+        CRIADO: 'CRIADO',
+        EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
+        INICIADO: 'INICIADO',
+        SUSPENSA: 'SUSPENSA',
+        ENCERRADO: 'ENCERRADO'
+      };
+
       switch (status) {
-        case 'EM_CREDENCIAMENTO':
+        case States.EM_CREDENCIAMENTO:
           return 'badge-success';
-        case 'INICIADO':
+        case States.INICIADO:
           return 'badge-warning';
-        case 'SUSPENSA':
+        case States.SUSPENSA:
           return 'badge-secondary';
-        case 'ENCERRADO':
+        case States.ENCERRADO:
           return 'badge-danger';
-        case 'CRIADO':
+        case States.CRIADO:
           return 'badge-info';
         default:
           return 'badge-secondary';
@@ -40,16 +56,24 @@
     },
 
     getStatusEmoji: function (status) {
+      const States = global.Canon ? global.Canon.ASSEMBLEIA_ESTADOS : {
+        CRIADO: 'CRIADO',
+        EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
+        INICIADO: 'INICIADO',
+        SUSPENSA: 'SUSPENSA',
+        ENCERRADO: 'ENCERRADO'
+      };
+
       switch (status) {
-        case 'EM_CREDENCIAMENTO':
+        case States.EM_CREDENCIAMENTO:
           return '🟢 ';
-        case 'INICIADO':
+        case States.INICIADO:
           return '🟡 ';
-        case 'SUSPENSA':
+        case States.SUSPENSA:
           return '⏸️ ';
-        case 'ENCERRADO':
+        case States.ENCERRADO:
           return '🔴 ';
-        case 'CRIADO':
+        case States.CRIADO:
           return '🔵 ';
         default:
           return '⚪ ';

@@ -25,11 +25,11 @@ Os estados são armazenados em `assembleias.estado` e refletem o fluxo do rito d
 - **Idempotência**:
   - o token global é único e persistente enquanto a assembleia não estiver encerrada;
   - tentativas de regeneração devem retornar o token existente (não criar novo).
-- **Uso**: qualquer perfil de gestão pode resgatar/visualizar o token/QR para credenciar conselheiros.
+- **Uso**: qualquer perfil de gestão institucional pode resgatar/visualizar o token/QR (RBAC: `canViewCredenciamentoToken`).
 - **Regras de duplicidade**: se o membro já credenciou, nova tentativa retorna mensagem:  
   **"Você já efetuou seu credenciamento para este evento."**
 
-> Nota técnica: no schema atual, `assembleia_checkins` está vinculado a `assembleia_quoruns`. Se o credenciamento global for implementado como um “quorum global” (`assembleia_quoruns.is_global = true`), isso deve estar explícito no backend. Caso o backend use estratégia diferente (ex.: tabela/registro próprio), este documento deve refletir a implementação real.
+> Nota técnica: O credenciamento global é implementado como um “quorum global” (`assembleia_quoruns.is_global = true`). Os check-ins são registrados em `assembleia_checkins` vinculados a este ID de quórum global.
 
 ### 2.2 Quórum Dinâmico (Snapshots)
 - **Finalidade**: definir o conjunto elegível para votar em um item.
@@ -53,8 +53,8 @@ Objetivo: garantir que cada “ramo” (ex.: Presidente/Vice, Delegado/Suplente)
 
 ### 3.1 Regras de Hierarquia (Branches)
 - **Branch FENAPRF (BR)**: Presidente da FENAPRF > Vice-Presidente da FENAPRF.
-- **Branch Conselheiros (UF)**: Presidente do Sindicato > Vice-Presidente do Sindicato.
-- **Branch Delegação (UF)**: Delegado Representante > Delegado Substituto.
+- **Branch Conselheiros (UF)**: Presidente do Sindicato > Vice-Presidente do Sindicato. (No Canon: Branch `CONSELHO`).
+- **Branch Delegação (UF)**: Delegado Representante > Delegado Substituto. (No Canon: Branch `DELEGACAO`).
 
 ### 3.2 Regra operacional e Idempotência
 - **Substituição Imediata**: Se um **Superior** realizar check-in e houver um **Subordinado** do mesmo ramo/UF presente, o subordinado é removido imediatamente.

@@ -16,6 +16,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // 1. Gênero/Sexo
   const SEXO = {
     M: 'M',
     F: 'F'
@@ -33,6 +34,28 @@
     DIRETORIA: 'DIRETORIA',
     COLABORADOR: 'COLABORADOR',
     CONSELHEIRO: 'CONSELHEIRO'
+  };
+
+  // 4. Estados da Assembleia
+  const ASSEMBLEIA_ESTADOS = {
+    CRIADO: 'CRIADO',
+    EM_CREDENCIAMENTO: 'EM_CREDENCIAMENTO',
+    INICIADO: 'INICIADO',
+    SUSPENSA: 'SUSPENSA',
+    ENCERRADO: 'ENCERRADO'
+  };
+
+  // 5. Status de Votação
+  const ASSEMBLEIA_VOTACAO_STATUS = {
+    ATIVA: 'ATIVA',
+    ENCERRADA: 'ENCERRADA'
+  };
+
+  // 6. Status de Pedido de Palavra
+  const ASSEMBLEIA_PEDIDO_PALAVRA_STATUS = {
+    PENDENTE: 'PENDENTE',
+    CONCEDIDO: 'CONCEDIDO',
+    EM_FALA: 'EM_FALA'
   };
 
   const UFS = [
@@ -293,6 +316,15 @@
   };
 
   /**
+   * Verifica se o usuário pode resgatar/visualizar o Token de Credenciamento Global.
+   * Regra: Toda a gestão institucional.
+   */
+  const canViewCredenciamentoToken = (user) => {
+    if (!user) return false;
+    return isGestao(user.perfil_acesso);
+  };
+
+  /**
    * Verifica se o usuário é membro do Conselho de Representantes.
    * Regra: Conselheiros + Presidente/Vice da FENAPRF.
    */
@@ -346,6 +378,15 @@
   };
 
   /**
+   * Verifica se o usuário pode pedir a palavra na assembleia.
+   * Regra: Toda a Diretoria e Conselheiros.
+   */
+  const canRequestPalavra = (user) => {
+    if (!user) return false;
+    return canCheckInGlobal(user.perfil_acesso);
+  };
+
+  /**
    * Verifica se o perfil pode se inscrever em eventos de logística.
    * Regra: Diretoria e Conselheiros.
    */
@@ -354,10 +395,89 @@
     return [PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO].includes(p);
   };
 
+  /**
+   * Determina informações de branch e hierarquia do usuário.
+   */
+  function obterInfoBranchUser(user) {
+    if (!user) return null;
+
+    const getInfoFromRaw = (cargo, uf) => {
+        const c = (cargo || "").toUpperCase();
+        const u = (uf || "").toUpperCase();
+
+        if (c.includes("PRESIDENTE DA FENAPRF")) {
+            return { scope: 'BR', branch: 'FENAPRF', role: 'PRESIDENTE', uf: 'BR', rank: 1, branchKey: 'FENAPRF:BR' };
+        }
+        if (c.includes("VICE-PRESIDENTE DA FENAPRF") || c.includes("VICE PRESIDENTE DA FENAPRF")) {
+            return { scope: 'BR', branch: 'FENAPRF', role: 'VICE_PRESIDENTE', uf: 'BR', rank: 2, branchKey: 'FENAPRF:BR' };
+        }
+
+        if (c.includes("PRESIDENTE") && !c.includes("VICE")) {
+            return { scope: 'UF', branch: 'CONSELHO', role: 'PRESIDENTE', uf: u, rank: 1, branchKey: `CONSELHO:${u}` };
+        }
+        if (c.includes("VICE-PRESIDENTE") || c.includes("VICE PRESIDENTE")) {
+            return { scope: 'UF', branch: 'CONSELHO', role: 'VICE_PRESIDENTE', uf: u, rank: 2, branchKey: `CONSELHO:${u}` };
+        }
+
+        if (c.includes("DELEGADO REPRESENTANTE")) {
+            return { scope: 'UF', branch: 'DELEGACAO', role: 'DELEGADO_REPRESENTANTE', uf: u, rank: 1, branchKey: `DELEGACAO:${u}` };
+        }
+        if (c.includes("DELEGADO SUBSTITUTO") || c.includes("SUPLENTE")) {
+            return { scope: 'UF', branch: 'DELEGACAO', role: 'SUPLENTE', uf: u, rank: 2, branchKey: `DELEGACAO:${u}` };
+        }
+
+        return null;
+    };
+
+    // 1. Tentar vínculos estruturados (se fornecidos)
+    if (Array.isArray(user.vinculos) && user.vinculos.length > 0) {
+        for (const v of user.vinculos) {
+            const info = getInfoFromRaw(v.role, v.uf);
+            if (info) return info;
+        }
+    }
+
+    // 2. Tentar campos diretos do usuário
+    return getInfoFromRaw(user.cargo, user.uf) || getInfoFromRaw(user.cargo2, user.uf2) || null;
+  }
+
+  /**
+   * Retorna a chave única do ramo (branch:uf).
+   */
+  function getBranchKey(user) {
+    const info = obterInfoBranchUser(user);
+    return info ? info.branchKey : null;
+  }
+
+  /**
+   * Compara o rank de dois usuários no mesmo ramo.
+   * @returns {number} Negativo se userA for superior, positivo se userB for superior, 0 se iguais.
+   */
+  function compareBranchRank(userA, userB) {
+    const infoA = obterInfoBranchUser(userA);
+    const infoB = obterInfoBranchUser(userB);
+
+    if (!infoA || !infoB) return 0;
+    if (infoA.branchKey !== infoB.branchKey) return 0;
+
+    return infoA.rank - infoB.rank;
+  }
+
+  /**
+   * Verifica se userA é superior hierárquico de userB no mesmo ramo.
+   */
+  function isSuperiorBranch(userA, userB) {
+    const diff = compareBranchRank(userA, userB);
+    return diff < 0;
+  }
+
   return {
     SEXO,
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
+    ASSEMBLEIA_ESTADOS,
+    ASSEMBLEIA_VOTACAO_STATUS,
+    ASSEMBLEIA_PEDIDO_PALAVRA_STATUS,
     UFS,
     CARGOS_CONSELHO,
     CARGOS_DIRETORIA,
@@ -377,11 +497,17 @@
     canManageAdmins,
     canComposeMesa,
     canCreateCredenciamentoToken,
+    canViewCredenciamentoToken,
     isCouncilMember,
     canCheckInGlobal,
     canCheckInQuorum,
     canVoteAssembleia,
     canProposeAssembleia,
-    canRegisterForEvent
+    canRequestPalavra,
+    canRegisterForEvent,
+    obterInfoBranchUser,
+    getBranchKey,
+    compareBranchRank,
+    isSuperiorBranch
   };
 }));

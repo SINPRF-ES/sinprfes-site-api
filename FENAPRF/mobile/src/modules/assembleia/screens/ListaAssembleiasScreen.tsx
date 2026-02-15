@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import assembleiaService from '../services/assembleiaService';
 import { Assembleia } from '../types';
 import { formatISOToBRDateTime } from '../../../utils/date';
+import { ASSEMBLEIA_ESTADOS } from '../../../utils/user';
 
 export default function ListaAssembleiasScreen() {
   const [assembleias, setAssembleias] = useState<Assembleia[]>([]);
@@ -31,13 +32,13 @@ export default function ListaAssembleiasScreen() {
 
   const getStatusBadge = (estado: string) => {
     switch (estado) {
-      case 'EM_CREDENCIAMENTO':
-      case 'INICIADO':
-      case 'ABERTA':
+      case ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO:
+      case ASSEMBLEIA_ESTADOS.INICIADO:
+      case 'ABERTA': // Fallback para estados legados se existirem
         return { color: '#28a745', label: 'Em Curso' };
-      case 'SUSPENSA':
+      case ASSEMBLEIA_ESTADOS.SUSPENSA:
         return { color: '#6c757d', label: 'Suspensa' };
-      case 'ENCERRADO':
+      case ASSEMBLEIA_ESTADOS.ENCERRADO:
       case 'ENCERRADA':
         return { color: '#6c757d', label: 'Encerrada' };
       default:

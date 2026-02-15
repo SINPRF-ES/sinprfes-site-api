@@ -15,8 +15,10 @@ import {
   isCouncilMember,
   canComposeMesa,
   canCreateCredenciamentoToken,
+  canViewCredenciamentoToken,
   canCheckInGlobal,
-  canCheckInQuorum
+  canCheckInQuorum,
+  ASSEMBLEIA_ESTADOS
 } from '../../utils/user';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel } from '../../utils/format';
@@ -51,7 +53,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   // CANON: Autoridade de visualização de Token
   const canSeeToken = estado?.quorumVigente?.token && (
     estado.quorumVigente.is_global
-        ? ehGestao // Global: Toda gestão resgata
+        ? canViewCredenciamentoToken(user) // Global: Toda gestão resgata
         : (isMesa || (!estado.mesa && ehGestao)) // Quórum: Mesa ou Gestão (suporte se sem mesa)
   );
 
@@ -100,9 +102,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
     const getPollingInterval = () => {
         if (!assembleia) return 8000;
-        if (assembleia.estado === 'ENCERRADO') return 0;
+        if (assembleia.estado === ASSEMBLEIA_ESTADOS.ENCERRADO) return 0;
         if (estado?.votacaoAtiva && (estado.votacaoAtiva as any).status === 'ATIVA') return 2000;
-        if (assembleia.estado === 'INICIADO') return 5000;
+        if (assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO) return 5000;
         return 8000;
     };
 
@@ -281,10 +283,10 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }, [id, fetchData]);
 
   useEffect(() => {
-    const isCredenciamento = assembleia?.estado === 'EM_CREDENCIAMENTO';
+    const isCredenciamento = assembleia?.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO;
     const actions: MenuAction[] = [];
     if ((ehGestao || isPresidente) && assembleia) {
-      const hasGlobalToken = !!estado?.quorumVigente?.is_global || (assembleia.estado !== 'CRIADO' && assembleia.estado !== 'ENCERRADO');
+      const hasGlobalToken = !!estado?.quorumVigente?.is_global || (assembleia.estado !== ASSEMBLEIA_ESTADOS.CRIADO && assembleia.estado !== ASSEMBLEIA_ESTADOS.ENCERRADO);
 
       if (canCreateCredenciamentoToken(user) && !estado?.quorumVigente?.is_global) {
         actions.push({
@@ -307,7 +309,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
         });
       }
 
-      if (isCredenciamento && ehGestao) {
+      if (isCredenciamento && (ehGestao || isPresidente)) {
         const isMesaEstabelecida = !!(estado?.mesa as any)?.estabelecida_em;
 
         if (podeComporMesaLocal) {
@@ -341,7 +343,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
         actions.push({ label: 'Encerrar Assembleia', icon: 'stop-circle-outline', onPress: handleEncerrar, isDestructive: true });
       }
-      if (assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA') {
+      if (assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO || assembleia.estado === ASSEMBLEIA_ESTADOS.SUSPENSA) {
         actions.push({ label: 'Ir para Sala', icon: 'door-open', onPress: () => {
             navigation.navigate('AssembleiaSala', { id });
         }});
@@ -379,7 +381,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     try {
       // FENAPRF: Tenta parsear como JSON para extrair metadados do QR
       const payload = JSON.parse(data);
-      const expectedType = assembleia.estado === 'EM_CREDENCIAMENTO' ? 'GLOBAL' : 'QUORUM';
+      const expectedType = assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? 'GLOBAL' : 'QUORUM';
 
       if (payload.assembleiaId && payload.assembleiaId !== id) {
         Alert.alert('QR Code Inválido', 'Este QR Code pertence a outra assembleia.');
@@ -412,7 +414,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
   const handleCheckin = async (scannedToken?: string) => {
     const tokenToUse = scannedToken || tokenInput;
-    const isCred = assembleia?.estado === 'EM_CREDENCIAMENTO';
+    const isCred = assembleia?.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO;
     const expectedLen = isCred ? 10 : 6;
 
     if (tokenToUse.length !== expectedLen) {
@@ -482,9 +484,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }
 
   const hasCheckedIn = estado?.quorumVigente?.userHasCheckedIn || false;
-  const isParticipavel = assembleia.estado === 'EM_CREDENCIAMENTO' || assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
-  const isEncerrada = assembleia.estado === 'ENCERRADO';
-  const isIniciado = assembleia.estado === 'INICIADO' || assembleia.estado === 'SUSPENSA';
+  const isParticipavel = assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO || assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO || assembleia.estado === ASSEMBLEIA_ESTADOS.SUSPENSA;
+  const isEncerrada = assembleia.estado === ASSEMBLEIA_ESTADOS.ENCERRADO;
+  const isIniciado = assembleia.estado === ASSEMBLEIA_ESTADOS.INICIADO || assembleia.estado === ASSEMBLEIA_ESTADOS.SUSPENSA;
   const canGenerateReport = isEncerrada;
 
   return (
@@ -769,7 +771,7 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
             <View style={styles.checkinCard}>
               <Text style={styles.checkinTitle}>Check-in necessário</Text>
               <Text style={styles.checkinSubtitle}>
-                  Informe o token de {assembleia.estado === 'EM_CREDENCIAMENTO' ? '10 caracteres' : '6 dígitos'} para registrar sua presença.
+                  Informe o token de {assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? '10 caracteres' : '6 dígitos'} para registrar sua presença.
               </Text>
 
               {/* FENAPRF: QR Scan para Conselheiros e Diretores (exceto Admin/Colab) */}
@@ -793,9 +795,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
               <TextInput
                 style={styles.tokenInput}
-                placeholder={assembleia.estado === 'EM_CREDENCIAMENTO' ? "A1B2C3D4E5" : "000000"}
+                placeholder={assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? "A1B2C3D4E5" : "000000"}
                 autoCapitalize="characters"
-                maxLength={assembleia.estado === 'EM_CREDENCIAMENTO' ? 10 : 6}
+                maxLength={assembleia.estado === ASSEMBLEIA_ESTADOS.EM_CREDENCIAMENTO ? 10 : 6}
                 value={tokenInput}
                 onChangeText={setTokenInput}
               />

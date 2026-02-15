@@ -10,15 +10,7 @@ const log = require("../utils/log");
 const Textos = require("../utils/textos");
 const axios = require("axios");
 const { parseUuid } = require("../utils/format");
-const {
-    canComposeMesa,
-    canCreateCredenciamentoToken,
-    isCouncilMember,
-    canCheckInGlobal,
-    canCheckInQuorum,
-    canProposeAssembleia,
-    isGestao
-} = require("../../shared/canon");
+const Canon = require("../../shared/canon");
 
 // Anti brute-force simples em memória para tokens
 const failedCheckinAttempts = new Map();
@@ -105,9 +97,8 @@ async function estadoMini(req, res) {
 
     const mesa = await service.buscarMesa(assembleiaId);
     const isPresidente = mesa && mesa.presidente_user_id === atorId;
-    const isDiretoria = isGestao(req.user.perfil_acesso);
-
-    const canSeeToken = estado.quorumVigente?.token && (isPresidente || isDiretoria || atorId === estado.quorumVigente.gerado_por_user_id);
+    const fullUser = await usersService.buscarPorId(atorId);
+    const canSeeToken = estado.quorumVigente?.token && (isPresidente || Canon.canViewCredenciamentoToken(fullUser) || atorId === estado.quorumVigente.gerado_por_user_id);
 
     if (!canSeeToken && estado.quorumVigente) {
         delete estado.quorumVigente.token;
@@ -413,7 +404,7 @@ async function encerrarAssembleia(req, res) {
     if (!autorizada) return res.status(403).json({ error: "Permissão insuficiente para encerrar a assembleia.", requestId });
 
     const atualizada = await service.encerrar(assembleiaId, atorId);
-    socket.emitEvent(assembleiaId, "assembleia:status_changed", { estado: "ENCERRADA" });
+    socket.emitEvent(assembleiaId, "assembleia:status_changed", { estado: Canon.ASSEMBLEIA_ESTADOS.ENCERRADO });
 
     log.info("AssembleiaEncerrarSucesso", { requestId: req.requestId, assembleiaId, userId: req.user.id, elapsedMs: Date.now() - start });
     res.json(atualizada);
@@ -437,7 +428,7 @@ async function verificarAutoridadeMesa(assembleiaId, user) {
     mesa.secretario_2_user_id
   ].includes(user.id);
 
-  const ehGestao = isGestao(user.perfil_acesso);
+  const ehGestao = Canon.isGestao(user.perfil_acesso);
 
   // Regra 6: Uma vez composta a mesa, ela assume poderes plenos e gestão não interfere (exceto se for membro da mesa)
   const autorizada = isMesa || (!mesa && ehGestao);
@@ -480,8 +471,9 @@ async function gerarTokenQuorum(req, res) {
               });
           }
        } else {
-          // Se já existe, qualquer um da gestão pode resgatar.
-          if (!isDiretoria) {
+          // Se já existe, qualquer um da gestão pode resgatar (conforme Canon).
+          const fullUser = await usersService.buscarPorId(atorId);
+          if (!Canon.canViewCredenciamentoToken(fullUser)) {
               return res.status(403).json({ error: "Permissão insuficiente para resgatar o token global." });
           }
        }
@@ -647,12 +639,12 @@ async function checkin(req, res) {
 
     // CANON: Check-in Authority
     if (quorum.is_global) {
-        if (!canCheckInGlobal(req.user.perfil_acesso)) {
+        if (!Canon.canCheckInGlobal(req.user.perfil_acesso)) {
             return res.status(403).json({ error: "Perfil sem permissão para credenciamento global.", requestId });
         }
     } else {
         const fullUser = await usersService.buscarPorId(atorId);
-        if (!canCheckInQuorum(fullUser)) {
+        if (!Canon.canCheckInQuorum(fullUser)) {
              return res.status(403).json({ error: "Check-in de quórum restrito aos membros do Conselho.", requestId });
         }
     }
@@ -699,10 +691,10 @@ async function definirMesa(req, res) {
 
   const start = Date.now();
   try {
-    // CANON: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
+    // CANON: Somente Presidente ou Vice-Presidente da FENAPRF
     const fullUser = await usersService.buscarPorId(atorId);
 
-    if (!canComposeMesa(fullUser)) {
+    if (!Canon.canComposeMesa(fullUser)) {
         return res.status(403).json({
             error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem compor a mesa.",
             requestId
@@ -757,10 +749,10 @@ async function substituirMesa(req, res) {
 
   const start = Date.now();
   try {
-    // CANON: Somente Presidente ou Vice-Presidente da FENAPRF (ou ADMIN)
+    // CANON: Somente Presidente ou Vice-Presidente da FENAPRF
     const fullUser = await usersService.buscarPorId(atorId);
 
-    if (!canComposeMesa(fullUser)) {
+    if (!Canon.canComposeMesa(fullUser)) {
         return res.status(403).json({
             error: "Apenas o Presidente ou Vice-Presidente da FENAPRF podem alterar a mesa.",
             requestId
@@ -945,6 +937,11 @@ async function pedirPalavra(req, res) {
   if (!assembleiaId) return res.status(400).json({ error: "ID inválido (UUID esperado)." });
 
   try {
+    const fullUser = await usersService.buscarPorId(atorId);
+    if (!Canon.canRequestPalavra(fullUser)) {
+        return res.status(403).json({ error: "Permissão insuficiente para pedir a palavra.", requestId: req.requestId });
+    }
+
     await service.pedirPalavra(assembleiaId, atorId);
 
     const fila = await service.listarPedidosPalavra(assembleiaId);
@@ -1108,7 +1105,7 @@ async function criarProposta(req, res) {
     });
 
     const fullUser = await usersService.buscarPorId(atorId);
-    if (!canProposeAssembleia(fullUser)) {
+    if (!Canon.canProposeAssembleia(fullUser)) {
         return res.status(403).json({
             error: "Apenas membros do Conselho de Representantes podem criar propostas.",
             requestId: req.requestId
@@ -1175,7 +1172,7 @@ async function gerarRelatorio(req, res) {
     if (!assembleia) return res.status(404).json({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
 
     // FENAPRF: Relatórios só podem ser gerados para assembleias encerradas
-    if (assembleia.estado !== 'ENCERRADO') {
+    if (assembleia.estado !== Canon.ASSEMBLEIA_ESTADOS.ENCERRADO) {
         log.warn("REPORT_PDF_FORBIDDEN_STATE", { requestId: req.requestId, assembleiaId, estado: assembleia.estado });
         return res.status(403).json({
             success: false,
@@ -1347,8 +1344,9 @@ async function getGlobalTokenAtivo(req, res) {
   try {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida." });
 
-    // Apenas perfis de gestão podem recuperar o token
-    if (!isGestao(req.user.perfil_acesso)) {
+    // CANON: Toda gestão pode visualizar o token global
+    const fullUser = await usersService.buscarPorId(atorId);
+    if (!Canon.canViewCredenciamentoToken(fullUser)) {
         return res.status(403).json({ error: "Permissão insuficiente para visualizar o token global.", requestId });
     }
 

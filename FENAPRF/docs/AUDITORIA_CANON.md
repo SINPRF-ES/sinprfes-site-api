@@ -17,10 +17,10 @@ Este documento consolida os resultados da auditoria realizada no ecossistema FEN
 - **Conselho de Representantes**: Composto pelos Conselheiros e pelo Presidente/Vice da FENAPRF.
 - **Check-in de Quórum / Voto / Proposta**: Restrito aos Membros do Conselho de Representantes.
 - **Check-in Global**: Permitido para toda a Diretoria e Conselheiros.
-- **Pedido de Palavra**: Permitido para toda a Diretoria e Conselheiros (para registro em ata).
+- **Pedido de Palavra**: Permitido para toda a Diretoria e Conselheiros (para registro em ata). (RBAC: `canRequestPalavra`).
 
 ### Regras do Rito
-- **Token Global**: 10 chars alfanuméricos + QR. Único e persistente. Dura toda a assembleia (expira apenas no encerramento).
+- **Token Global**: 10 chars alfanuméricos + QR. Único e persistente. Dura toda a assembleia (expira apenas no encerramento). (Resgate: `canViewCredenciamentoToken`).
 - **Token de Quórum**: 6 dígitos numéricos + QR. Versionado (Snapshot). Válido até o próximo ser gerado ou o fim do evento.
 - **Votação (Timer)**: Duração padrão de 120 segundos.
 - **Auto-Encerramento**: Votação encerra imediatamente ao atingir 100% dos votos do snapshot.
@@ -35,24 +35,28 @@ Este documento consolida os resultados da auditoria realizada no ecossistema FEN
 | Regra do Canon | Status | Observação |
 | :--- | :---: | :--- |
 | Token Global Único/Persistente | ✅ | Implementado em `gerarQuorum` com busca prévia. |
+| Resgate de Token Global (Gestão) | ✅ | RBAC `canViewCredenciamentoToken` implementado. |
 | Quórum Versionado (Snapshot) | ✅ | Cada votação vincula a um `quorum_snapshot_id`. |
 | Reset de Quórum | ✅ | Novo token encerra snapshots anteriores (exceto Global). |
 | Snapshot em Votações | ✅ | Integridade preservada via vínculo no banco. |
-| Hierarquia UF/Branch | ✅ | Lógica em `obterInfoBranchUser`. |
+| Hierarquia UF/Branch | ✅ | Lógica unificada no Canon (`obterInfoBranchUser`). |
+| Substituição Hierárquica | ✅ | Comparação via `isSuperiorBranch` do Canon. |
 | Substituição Automática | ✅ | Remoção de subordinado em `realizarCheckin`. |
 | Bloqueio de Subordinado | ✅ | Erro 409 disparado se superior estiver presente. |
 | Idempotência na Geração | ✅ | Garantida para Token Global. |
+| Pedido de Palavra (RBAC) | ✅ | RBAC `canRequestPalavra` implementado. |
 | Voto por Omissão (Abstenção) | ✅ | Aplicado automaticamente em `finalizarVotacao`. |
 | Restrições de ADMIN no Rito | ✅ | Sovereignty da mesa respeitada via `verificarAutoridadeMesa`. |
 | Relatórios (Estado Encerrado) | ✅ | Guard de estado implementado no controller. |
+| Enums Canônicos | ✅ | Estados e status centralizados em `canon.js`. |
 
 ---
 
 ## 3. Divergências Encontradas e Ajustadas
 
 ### Divergências Críticas (Canon violado)
-- **Duração do Token de Quórum**: O código utilizava 10 minutos (600s) ou 5 minutos (300s), enquanto o Canon (MD) define 120 segundos como padrão.
-  - **Ajuste**: Backend e Portal atualizados para 120s.
+- **Duração de Votação**: O código utilizava 10 minutos (600s) ou 5 minutos (300s), enquanto o Canon (MD) define 120 segundos como padrão.
+  - **Ajuste**: Backend, Mobile e Portal atualizados para 120s como padrão.
 - **Soberania na Composição de Mesa**: O arquivo `shared/canon.js` permitia que `ADMIN` compusesse a mesa, contrariando o rito institucional descrito no MD.
   - **Ajuste**: Removido privilégio de ADMIN na função `canComposeMesa`.
 
