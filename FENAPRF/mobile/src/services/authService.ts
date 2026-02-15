@@ -29,6 +29,15 @@ export async function refreshSessao(refreshToken: string): Promise<any> {
 }
 
 /**
+ * Renova a sessão do membro usando o refresh token.
+ */
+export async function refreshSessao(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
+  const deviceId = await getStableDeviceId();
+  const { data } = await api.post('/api/auth/refresh', { refreshToken, deviceId });
+  return data as { token: string; refreshToken: string };
+}
+
+/**
  * Busca os dados do membro logado.
  */
 export async function buscarUserLogado(token?: string): Promise<User> {
