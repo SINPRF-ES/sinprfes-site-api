@@ -1,6 +1,7 @@
 // src/services/authService.ts
-import api from './apiService';
-import type { Usuario } from '../types/usuario';
+import api from "./apiService";
+import type { Usuario } from "../types/usuario";
+import { getStableDeviceId } from "../utils/deviceId"; // ajuste o path se necessário
 
 interface LoginPayload {
   cpf: string;
@@ -8,55 +9,70 @@ interface LoginPayload {
   codigo?: string;
 }
 
-interface LoginResponse {
+export interface AuthResponse {
   token: string;
   refreshToken?: string;
   requer2fa?: boolean;
+  // Se o seu backend já retornar user no login/refresh, descomente:
+  // user?: Usuario;
 }
 
 /**
  * Autentica o usuário com CPF e senha.
  */
-export async function loginSindicato(
-  payload: Pick<LoginPayload, 'cpf' | 'senha'>
-): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('/api/auth/login', payload);
+export async function login(payload: Pick<LoginPayload, "cpf" | "senha">): Promise<AuthResponse> {
+  const deviceId = await getStableDeviceId();
+  const { data } = await api.post<AuthResponse>("/api/auth/login", { ...payload, deviceId });
   return data;
 }
 
 /**
+ * LEGADO (remover depois): alias para evitar quebrar imports antigos.
+ */
+export const loginSindicato = login;
+
+/**
  * Valida o código de autenticação de dois fatores (2FA).
  */
-export async function loginCom2FA(payload: Required<LoginPayload>): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('/api/auth/login/2fa', {
+export async function loginCom2FA(payload: Required<LoginPayload>): Promise<AuthResponse> {
+  const deviceId = await getStableDeviceId();
+  const { data } = await api.post<AuthResponse>("/api/auth/login/2fa", {
     cpf: payload.cpf,
     senha: payload.senha,
     code: payload.codigo,
+    deviceId,
   });
   return data;
 }
 
 /**
  * Renova o access token usando um refresh token.
+ * IMPORTANTE: backend pode exigir deviceId para validar sessão do dispositivo.
  */
-export async function refreshSessao(refreshToken: string): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('/api/auth/refresh', { refreshToken });
+export async function refreshSessao(refreshToken: string): Promise<AuthResponse> {
+  const deviceId = await getStableDeviceId();
+  const { data } = await api.post<AuthResponse>("/api/auth/refresh", { refreshToken, deviceId });
   return data;
 }
 
 /**
  * Busca os dados do usuário logado.
+ * PADRONIZE este endpoint com o backend real:
+ * - se backend expõe /api/users/me, troque aqui.
+ * - se expõe /api/auth/me, mantenha.
  */
 export async function buscarUsuarioLogado(token?: string): Promise<Usuario> {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  const { data } = await api.get<Usuario>('/api/auth/me', { headers });
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const { data } = await api.get<Usuario>("/api/auth/me", { headers });
   return data;
 }
 
 /**
  * Solicita o envio do e-mail de redefinição de senha para o CPF informado.
  */
-export async function solicitarResetSenha(cpf: string): Promise<{ message: string; email_destino: string | null }> {
-  const { data } = await api.post('/api/senha/recuperar', { cpf });
+export async function solicitarResetSenha(
+  cpf: string
+): Promise<{ message: string; email_destino: string | null }> {
+  const { data } = await api.post("/api/senha/recuperar", { cpf });
   return data;
 }
