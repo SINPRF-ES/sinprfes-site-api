@@ -1,67 +1,64 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import type { User } from '../types/user';
-import type { Sessao } from '../types/auth';
 import { logger } from '../infra/logger';
 
-const TOKEN_KEY = 'fenaprf_secure_token';
-const REFRESH_TOKEN_KEY = 'fenaprf_refresh_token';
-const USER_KEY = '@fenaprf/user';
+const SESSION_KEY = "fenaprf_session";
 const BIOMETRIA_KEY = '@fenaprf/biometria_habilitada';
 const BIOMETRIA_SECURE_KEY = 'fenaprf_biometria_enabled';
 const LAST_UPDATE_CHECK_KEY = '@fenaprf/last_update_check';
 
-// Cache em memória para o Refresh Token (evita prompts repetidos no mesmo ciclo)
-let refreshTokenCache: string | null = null;
+function assertString(name: string, value: unknown): asserts value is string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`[Storage] ${name} inválido: ${String(value)}`);
+  }
+}
 
-export function setRefreshTokenCache(token: string | null) {
-  refreshTokenCache = token;
+function safeJson(value: unknown): string {
+  return JSON.stringify(value ?? null);
 }
 
 /**
  * Salva a sessão no armazenamento seguro.
- * Se a biometria estiver habilitada, o Refresh Token é salvo com exigência de autenticação.
+ * FENAPRF: Usa JSON.stringify para garantir que apenas strings sejam enviadas ao SecureStore.
  */
-export async function salvarSessao(sessao: Sessao): Promise<void> {
+export async function salvarSessao(
+  token: string,
+  refreshToken: string,
+  user: any
+): Promise<void> {
   try {
-    // FENAPRF: Garantir que tudo que vai para SecureStore é string robusta
-    const tokenStr = sessao.token ? String(sessao.token) : '';
-    const refreshStr = sessao.refreshToken ? String(sessao.refreshToken) : '';
+    assertString("token", token);
+    assertString("refreshToken", refreshToken);
 
-    await SecureStore.setItemAsync(TOKEN_KEY, tokenStr);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(sessao.user));
+    const payload = {
+      token,
+      refreshToken,
+      user: user ?? null,
+      savedAt: Date.now()
+    };
 
-    const bioEnabled = await carregarBiometriaHabilitada();
-
-    // Refresh Token: Se biometria ativa, exige FaceID/Digital para ler
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshStr, {
-      requireAuthentication: bioEnabled
-    });
-
-    // Atualiza cache em memória
-    refreshTokenCache = refreshStr;
-
+    await SecureStore.setItemAsync(
+      SESSION_KEY,
+      safeJson(payload)
+    );
   } catch (e) {
     logger.error('[Storage.salvarSessao]', e);
+    throw e;
   }
 }
 
 /**
- * Carrega a sessão básica (AccessToken + User).
- * O Refresh Token é carregado sob demanda para evitar prompts desnecessários.
+ * Carrega a sessão completa.
  */
-export async function carregarSessao(): Promise<Partial<Sessao> | null> {
+export async function carregarSessao(): Promise<any> {
   try {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const userJson = await AsyncStorage.getItem(USER_KEY);
-
-    if (!token || !userJson) return null;
+    const raw = await SecureStore.getItemAsync(SESSION_KEY);
+    if (!raw) return null;
 
     try {
-      const user = JSON.parse(userJson) as User;
-      return { token: String(token), user };
-    } catch (parseErr) {
-      logger.error('[Storage.carregarSessao] JSON parse error', parseErr);
+      return JSON.parse(raw);
+    } catch {
+      await SecureStore.deleteItemAsync(SESSION_KEY);
       return null;
     }
   } catch (e) {
@@ -71,37 +68,24 @@ export async function carregarSessao(): Promise<Partial<Sessao> | null> {
 }
 
 /**
- * Tenta carregar o Refresh Token. Se biometria estiver ativa para este item,
- * o sistema operacional mostrará o prompt de autenticação.
+ * Limpa a sessão.
  */
-export async function carregarRefreshToken(): Promise<string | null> {
-  if (refreshTokenCache) return refreshTokenCache;
-
+export async function clearSession(): Promise<void> {
   try {
-    const rt = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-    refreshTokenCache = rt;
-    return rt;
+    await SecureStore.deleteItemAsync(SESSION_KEY);
   } catch (e) {
-    // Pode falhar se o usuário cancelar a biometria
-    logger.warn('[Storage.carregarRefreshToken] Falha ao ler refresh token (possível cancelamento bio)');
-    return null;
+    logger.error('[Storage.clearSession]', e);
   }
 }
 
+/**
+ * Legado/Compatibilidade: Limpar sessão com opção de manter biometria.
+ */
 export async function limparSessao(manterBiometria = true): Promise<void> {
-  try {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_KEY);
-
-    refreshTokenCache = null;
-
-    if (!manterBiometria) {
-      await SecureStore.deleteItemAsync(BIOMETRIA_SECURE_KEY);
-      await AsyncStorage.removeItem(BIOMETRIA_KEY);
-    }
-  } catch (e) {
-    logger.error('[Storage.limparSessao]', e);
+  await clearSession();
+  if (!manterBiometria) {
+    await SecureStore.deleteItemAsync(BIOMETRIA_SECURE_KEY);
+    await AsyncStorage.removeItem(BIOMETRIA_KEY);
   }
 }
 
@@ -109,14 +93,6 @@ export async function definirBiometriaHabilitada(valor: boolean): Promise<void> 
   const strValor = valor ? 'true' : 'false';
   await AsyncStorage.setItem(BIOMETRIA_KEY, strValor);
   await SecureStore.setItemAsync(BIOMETRIA_SECURE_KEY, String(strValor));
-
-  // Re-salva o refresh token com a nova política de segurança
-  const rt = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-  if (rt) {
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, String(rt), {
-      requireAuthentication: valor
-    });
-  }
 }
 
 export async function carregarBiometriaHabilitada(): Promise<boolean> {
@@ -134,4 +110,10 @@ export async function salvarUltimoCheckUpdate(): Promise<void> {
 export async function carregarUltimoCheckUpdate(): Promise<number> {
   const v = await AsyncStorage.getItem(LAST_UPDATE_CHECK_KEY);
   return v ? parseInt(v, 10) : 0;
+}
+
+// Mantendo para compatibilidade se necessário, mas useAuth deve migrar para carregarSessao
+export async function carregarRefreshToken(): Promise<string | null> {
+  const sessao = await carregarSessao();
+  return sessao?.refreshToken || null;
 }

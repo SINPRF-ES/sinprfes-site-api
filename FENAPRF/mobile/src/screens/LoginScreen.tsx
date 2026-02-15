@@ -52,7 +52,7 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      const sessao = await login({ cpf, senha });
+      const sessao = await login(cpf, senha);
 
       if (sessao.user.password_hash === 'PENDENTE') {
           navigation.navigate('ResetPassword' as any, { isFirstAccess: true, cpf: sessao.user.cpf } as any);
@@ -60,10 +60,6 @@ export default function LoginScreen() {
       }
 
       await setSessao(sessao.token, sessao.refreshToken, sessao.user);
-
-      // FENAPRF: Garantir que o usuário esteja totalmente hidratado no boot do login
-      // (Embora o backend agora retorne mais campos, o refreshUser garante a paridade total com o /me)
-      await refreshUser();
 
       if (!biometriaHabilitada) {
         Alert.alert(
