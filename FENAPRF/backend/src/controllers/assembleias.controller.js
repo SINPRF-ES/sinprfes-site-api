@@ -13,7 +13,10 @@ const { parseUuid } = require("../utils/format");
 const {
     canComposeMesa,
     canCreateCredenciamentoToken,
-    canCheckInEvent,
+    isCouncilMember,
+    canCheckInGlobal,
+    canCheckInQuorum,
+    canProposeAssembleia,
     isGestao
 } = require("../../shared/canon");
 
@@ -630,15 +633,8 @@ async function checkin(req, res) {
 
     if (!token) return res.status(400).json({ error: "Token é obrigatório", requestId });
 
-    // CANON: Bloqueia perfis que não votam nem contam quórum (ADMIN/COLABORADOR)
-    if (!canCheckInEvent(req.user.perfil_acesso)) {
-       return res.status(403).json({
-           error: "Seu perfil não possui permissão para realizar check-in em assembleias",
-           requestId
-       });
-    }
-
     const quorum = await service.buscarQuorumPorToken(assembleiaId, token);
+
     if (!quorum) {
         // Registrar falha
         const currentFailures = failureData ? failureData.count : 0;
@@ -647,6 +643,18 @@ async function checkin(req, res) {
         await service.registrarAuditoria(assembleiaId, userId, 'CHECKIN_FALHA_TOKEN', { token, requestId: req.requestId });
         log.warn("AssembleiaCheckinFalhou", { requestId: req.requestId, userId, assembleiaId, token_tentado: token, motivo: "Token Inválido" });
         return res.status(400).json({ error: Textos.ASSEMBLEIA.TOKEN_INVALIDO });
+    }
+
+    // CANON: Check-in Authority
+    if (quorum.is_global) {
+        if (!canCheckInGlobal(req.user.perfil_acesso)) {
+            return res.status(403).json({ error: "Perfil sem permissão para credenciamento global.", requestId });
+        }
+    } else {
+        const fullUser = await usersService.buscarPorId(atorId);
+        if (!canCheckInQuorum(fullUser)) {
+             return res.status(403).json({ error: "Check-in de quórum restrito aos membros do Conselho.", requestId });
+        }
     }
 
     // Sucesso: limpar falhas
@@ -1098,6 +1106,14 @@ async function criarProposta(req, res) {
       hasTitulo: !!titulo,
       hasPauta: !!pauta
     });
+
+    const fullUser = await usersService.buscarPorId(atorId);
+    if (!canProposeAssembleia(fullUser)) {
+        return res.status(403).json({
+            error: "Apenas membros do Conselho de Representantes podem criar propostas.",
+            requestId: req.requestId
+        });
+    }
 
     const proposta = await service.criarProposta({
       assembleia_id: assembleiaId,

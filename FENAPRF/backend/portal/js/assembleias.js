@@ -831,7 +831,10 @@
 
         const { assembleia, quorumVigente, votacaoAtiva, mesa, pedidosPalavra, propostas } = estado;
 
+        const userInfo = window.Utils.obterUserInfo();
         const ehGestao = window.Utils.isGestao(currentUserPerfil);
+        const isMembroConselho = window.Utils.isCouncilMember(userInfo);
+
         const isMesa = mesa && [
             mesa.presidente_user_id,
             mesa.vice_presidente_user_id,
@@ -894,14 +897,14 @@
                             <h4 style="margin:0 0 15px 0; color:#003366; font-size:1.8rem; font-weight:800;">${votacaoAtiva.titulo}</h4>
                             <p style="font-size:1.1rem; color:#333; line-height:1.6; font-weight:500;">${votacaoAtiva.descricao}</p>
 
-                            ${votacaoAtiva.status === 'ATIVA' && !votacaoAtiva.userVoted ? `
+                            ${votacaoAtiva.status === 'ATIVA' && isMembroConselho && !votacaoAtiva.userVoted ? `
                                 <div style="display:flex; gap:20px; margin-top:30px; flex-wrap:wrap;">
                                     <button class="btn btn-success btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="SIM">Votar SIM</button>
                                     <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);" data-action="votar" data-aid="${assembleia.id}" data-vid="${votacaoAtiva.id}" data-value="NAO">Votar NÃO</button>
                                 </div>
                             ` : `
                                 <div style="margin-top:30px; padding:25px; text-align:center; color:#27ae60; font-weight:900; background:#fff; border: 2px solid #27ae60; border-radius:15px; font-size:1.4rem;">
-                                    ${votacaoAtiva.userVoted ? '✅ SEU VOTO FOI COMPUTADO COM SUCESSO' : 'AGUARDANDO ENCERRAMENTO...'}
+                                    ${votacaoAtiva.userVoted ? '✅ SEU VOTO FOI COMPUTADO COM SUCESSO' : (isMembroConselho ? 'AGUARDANDO ENCERRAMENTO...' : 'VOTO RESTRITO AO CONSELHO')}
                                 </div>
                             `}
 
@@ -932,7 +935,9 @@
                 <!-- Ações de Interação -->
                 <div style="display:flex; gap:20px; margin-bottom:40px; flex-wrap:wrap;">
                     <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="pedir-palavra" data-aid="${assembleia.id}">🎤 Pedir Palavra</button>
-                    <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="nova-proposta" data-aid="${assembleia.id}">📝 Nova Proposta</button>
+                    ${isMembroConselho ? `
+                        <button class="btn btn-outline btn-lg" style="flex:1; padding:20px; font-weight:800; border-radius:12px; border:2px solid #003366; color:#003366;" data-action="nova-proposta" data-aid="${assembleia.id}">📝 Nova Proposta</button>
+                    ` : ''}
                 </div>
 
                 <!-- Listas de Interação -->

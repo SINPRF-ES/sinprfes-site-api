@@ -114,7 +114,8 @@ describe('Assembleias Service', () => {
          .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum anterior
          .mockResolvedValueOnce({ rows: [{ id: 'q1', token: '123456' }] }) // INSERT quorum
          .mockResolvedValueOnce({ rows: [] }) // Audit
-         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // SELECT user perfil
+         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'CONSELHEIRO' }] }) // SELECT user perfil for auto-checkin
+         .mockResolvedValueOnce({ rows: [{ is_global: false }] }) // SELECT is_global for auto-checkin
          .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // INSERT checkin
          .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
@@ -145,7 +146,8 @@ describe('Assembleias Service', () => {
          .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum anterior
          .mockResolvedValueOnce({ rows: [{ id: 'q_rec', token: '999999' }] }) // INSERT quorum
          .mockResolvedValueOnce({ rows: [] }) // Audit recontagem
-         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // SELECT user perfil
+         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'CONSELHEIRO' }] }) // SELECT user perfil for auto-checkin
+         .mockResolvedValueOnce({ rows: [{ is_global: false }] }) // SELECT is_global for auto-checkin
          .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // INSERT checkin
          .mockResolvedValueOnce({ rows: [] }) // Audit checkin
          .mockResolvedValueOnce({ rows: [] }); // COMMIT
@@ -165,12 +167,14 @@ describe('Assembleias Service', () => {
   });
 
   describe('Blindage and Invariants', () => {
-    test('realizarCheckin should block ADMIN or COMUNICADOR', async () => {
+    test('realizarCheckin should block non-eligible profiles for Quorum', async () => {
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'ADMIN', name: 'Admin' }] }); // SELECT user
+        .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA', cargo: 'Outro', name: 'Diretor' }] }) // SELECT user
+        .mockResolvedValueOnce({ rows: [{ is_global: false }] }); // SELECT is_global
 
-      await expect(service.realizarCheckin({ user_id: 'u-admin' })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+      await expect(service.realizarCheckin({ user_id: 'u-dir', assembleia_quorum_id: 'q1' }))
+        .rejects.toThrow(/Apenas membros do Conselho/);
     });
 
     test('criarVotacao should transition if authority is valid', async () => {

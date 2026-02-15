@@ -293,19 +293,63 @@
   };
 
   /**
-   * Verifica se o perfil pode se inscrever em eventos.
-   * Regra: Apenas Diretoria e Conselheiro. ADMIN e COLABORADOR não participam.
+   * Verifica se o usuário é membro do Conselho de Representantes.
+   * Regra: Conselheiros + Presidente/Vice da FENAPRF.
    */
-  const canRegisterForEvent = (perfil) => {
+  const isCouncilMember = (user) => {
+    if (!user) return false;
+    const p = normalizePerfil(user.perfil_acesso);
+
+    if (p === PERFIL_ACESSO.CONSELHEIRO) return true;
+
+    if (p === PERFIL_ACESSO.DIRETORIA) {
+        const cargo = (user.cargo || "").trim();
+        const cargo2 = (user.cargo2 || "").trim();
+        const cargosVoto = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
+        return cargosVoto.includes(cargo) || cargosVoto.includes(cargo2);
+    }
+
+    return false;
+  };
+
+  /**
+   * Verifica se o usuário pode realizar Check-in Global (presença no evento).
+   * Regra: Diretoria e Conselheiro.
+   */
+  const canCheckInGlobal = (perfil) => {
     const p = normalizePerfil(perfil);
     return [PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO].includes(p);
   };
 
   /**
-   * Verifica se o perfil pode realizar check-in/votar em assembleias.
-   * Regra: Apenas Diretoria e Conselheiro.
+   * Verifica se o perfil pode realizar check-in de Quórum/Snapshot.
+   * Regra: Apenas Membros do Conselho.
    */
-  const canCheckInEvent = (perfil) => {
+  const canCheckInQuorum = (user) => {
+    return isCouncilMember(user);
+  };
+
+  /**
+   * Verifica se o perfil pode votar em assembleias.
+   * Regra: Apenas Membros do Conselho.
+   */
+  const canVoteAssembleia = (user) => {
+    return isCouncilMember(user);
+  };
+
+  /**
+   * Verifica se o perfil pode criar propostas (encaminhamentos).
+   * Regra: Apenas Membros do Conselho.
+   */
+  const canProposeAssembleia = (user) => {
+    return isCouncilMember(user);
+  };
+
+  /**
+   * Verifica se o perfil pode se inscrever em eventos de logística.
+   * Regra: Diretoria e Conselheiros.
+   */
+  const canRegisterForEvent = (perfil) => {
     const p = normalizePerfil(perfil);
     return [PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.CONSELHEIRO].includes(p);
   };
@@ -333,7 +377,11 @@
     canManageAdmins,
     canComposeMesa,
     canCreateCredenciamentoToken,
-    canRegisterForEvent,
-    canCheckInEvent
+    isCouncilMember,
+    canCheckInGlobal,
+    canCheckInQuorum,
+    canVoteAssembleia,
+    canProposeAssembleia,
+    canRegisterForEvent
   };
 }));

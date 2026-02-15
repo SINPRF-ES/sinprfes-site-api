@@ -34,7 +34,8 @@ Os estados são armazenados em `assembleias.estado` e refletem o fluxo do rito d
 ### 2.2 Quórum Dinâmico (Snapshots)
 - **Finalidade**: definir o conjunto elegível para votar em um item.
 - **Token**: 6 dígitos numéricos (e QR Code), para permitir digitação no portal web.
-- **Geração**: restrita aos membros da Mesa Diretora (4 cargos).
+- **Geração**: restrita exclusivamente aos 4 membros eleitos da Mesa Diretora.
+- **Elegibilidade**: Restrita aos **Membros do Conselho de Representantes** (Conselheiros ativos + Presidente/Vice FENAPRF).
 - **Reset**:
   - ao gerar novo token de quórum, encerra-se o snapshot anterior e inicia-se novo ciclo;
   - o quórum passa a exigir novo check-in de todos (inclusive membros da mesa), mantendo apenas o gerador como “presente” se aplicável (conforme regra do backend).
@@ -50,16 +51,15 @@ Os estados são armazenados em `assembleias.estado` e refletem o fluxo do rito d
 
 Objetivo: garantir que cada “ramo” (ex.: Presidente/Vice, Delegado/Suplente) tenha apenas um representante ativo.
 
-### 3.1 Regras de Hierarquia
-- **Branch Conselheiros**: Presidente > Vice-presidente.
-- **Branch Delegação**: Delegado Representante > Suplente.
+### 3.1 Regras de Hierarquia (Branches)
+- **Branch FENAPRF (BR)**: Presidente da FENAPRF > Vice-Presidente da FENAPRF.
+- **Branch Conselheiros (UF)**: Presidente do Sindicato > Vice-Presidente do Sindicato.
+- **Branch Delegação (UF)**: Delegado Representante > Delegado Substituto.
 
-### 3.2 Regra operacional
-- Se um **Superior** entrar no quórum e houver um **Subordinado** ativo, ocorre substituição:
-  - **Imediata**, removendo o subordinado e informando o motivo (padrão recomendado).
-- Se um **Subordinado** tentar entrar com o superior já presente, o acesso é **bloqueado** com mensagem clara.
-
-> Importante: não existe tabela de “pendências” no schema atual. Qualquer bloqueio/substituição deve ser aplicado pelo backend de forma determinística e auditável.
+### 3.2 Regra operacional e Idempotência
+- **Substituição Imediata**: Se um **Superior** realizar check-in e houver um **Subordinado** do mesmo ramo/UF presente, o subordinado é removido imediatamente.
+- **Bloqueio de Votação**: Se houver uma **votação ativa**, a substituição fica **PENDENTE** (armazenada em `assembleia_checkins_pendentes`) e é processada apenas após o encerramento do item, preservando a integridade do snapshot.
+- **Bloqueio de Entrada**: Se um **Subordinado** tentar entrar com o superior já presente, o acesso é bloqueado (Status 409).
 
 ---
 
@@ -82,10 +82,11 @@ Objetivo: garantir que cada “ramo” (ex.: Presidente/Vice, Delegado/Suplente)
 - Regras como “autor ausente” e “confirmação por titular” devem refletir a implementação do backend (se existirem hoje).
 
 ### 5.2 Itens de Votação
-- Votações são registradas em `assembleia_votacoes`.
-- **Duração padrão**: deve refletir o backend (`duracao_segundos` tem default no banco; regra institucional pode definir o padrão).
-- **Auto-encerramento**: se 100% dos elegíveis votarem antes do tempo, pode encerrar (se implementado).
-- **Omissão**: voto computado como **ABSTENCAO** para ausentes/no-vote (se implementado).
+- Votações são registradas em `assembleia_votacoes` e vinculadas ao snapshot do quórum ativo no momento da abertura.
+- **Duração padrão**: 120 segundos.
+- **Auto-encerramento**: A votação encerra imediatamente ao atingir 100% dos votos dos membros presentes no snapshot.
+- **Omissão**: Ao encerrar, membros presentes no snapshot que não votaram são computados como **ABSTENCAO**.
+- **Soberania do Voto**: É permitido alterar o voto enquanto a votação estiver aberta.
 
 ---
 

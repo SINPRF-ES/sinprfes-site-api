@@ -258,8 +258,11 @@
     canManageAdmins,
     canComposeMesa,
     canCreateCredenciamentoToken,
-    canRegisterForEvent,
-    canCheckInEvent
+    isCouncilMember,
+    canCheckInGlobal,
+    canCheckInQuorum,
+    canVoteAssembleia,
+    canProposeAssembleia
   };
 
   const PERFIL_ACESSO = {
@@ -281,9 +284,19 @@
     return (perfil || "").toUpperCase() === PERFIL_ACESSO.ADMIN;
   }
 
+  function isCouncilMember(user) {
+    if (!user) return false;
+    const p = (user.perfil_acesso || "").toUpperCase();
+    if (p === PERFIL_ACESSO.CONSELHEIRO) return true;
+    if (p === PERFIL_ACESSO.DIRETORIA) {
+        const cargosVoto = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
+        return cargosVoto.includes(user.cargo || "") || cargosVoto.includes(user.cargo2 || "");
+    }
+    return false;
+  }
+
   function canComposeMesa(user) {
     if (!user) return false;
-    if ((user.perfil_acesso || "").toUpperCase() === PERFIL_ACESSO.ADMIN) return true;
     const cargosAutorizados = ["Presidente da FENAPRF", "Vice-Presidente da FENAPRF"];
     return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
   }
@@ -299,14 +312,21 @@
     return cargosAutorizados.includes(user.cargo || "") || cargosAutorizados.includes(user.cargo2 || "");
   }
 
-  function canRegisterForEvent(perfil) {
+  function canCheckInGlobal(perfil) {
     const p = (perfil || "").toUpperCase();
     return p === PERFIL_ACESSO.DIRETORIA || p === PERFIL_ACESSO.CONSELHEIRO;
   }
 
-  function canCheckInEvent(perfil) {
-    const p = (perfil || "").toUpperCase();
-    return p === PERFIL_ACESSO.DIRETORIA || p === PERFIL_ACESSO.CONSELHEIRO;
+  function canCheckInQuorum(user) {
+    return isCouncilMember(user);
+  }
+
+  function canVoteAssembleia(user) {
+    return isCouncilMember(user);
+  }
+
+  function canProposeAssembleia(user) {
+    return isCouncilMember(user);
   }
 
   function abrirModalGenerico(titulo, html) {

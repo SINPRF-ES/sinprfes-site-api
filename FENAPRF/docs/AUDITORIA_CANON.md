@@ -8,13 +8,16 @@ Este documento consolida os resultados da auditoria realizada no ecossistema FEN
 - **ADMIN**: Suporte técnico e auditoria. Não interfere no rito institucional (Soberania da Mesa).
 - **DIRETORIA**: Perfil de gestão institucional.
 - **COLABORADOR**: Perfil de gestão de suporte.
-- **CONSELHEIRO**: Participante ativo (presença, quórum e voto).
+- **CONSELHEIRO**: Participante ativo (presença, quórum e voto). Membro nato do Conselho de Representantes.
 
 ### Autoridades por Operação
 - **Composição de Mesa**: Exclusiva do Presidente/Vice da FENAPRF.
 - **Geração de Token Global**: Exclusiva: Presidente, Vice, Diretor de Secretaria ou Substituto. (Resgate permitido para toda a Gestão).
 - **Geração de Token de Quórum**: Exclusiva da Mesa Diretora (4 componentes).
-- **Check-in/Voto**: Apenas Diretoria e Conselheiro. ADMIN e COLABORADOR não participam.
+- **Conselho de Representantes**: Composto pelos Conselheiros e pelo Presidente/Vice da FENAPRF.
+- **Check-in de Quórum / Voto / Proposta**: Restrito aos Membros do Conselho de Representantes.
+- **Check-in Global**: Permitido para toda a Diretoria e Conselheiros.
+- **Pedido de Palavra**: Permitido para toda a Diretoria e Conselheiros (para registro em ata).
 
 ### Regras do Rito
 - **Token Global**: 10 chars alfanuméricos + QR. Único e persistente. Dura toda a assembleia (expira apenas no encerramento).

@@ -12,9 +12,11 @@ import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import {
   isGestao,
+  isCouncilMember,
   canComposeMesa,
   canCreateCredenciamentoToken,
-  canCheckInEvent
+  canCheckInGlobal,
+  canCheckInQuorum
 } from '../../utils/user';
 import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel } from '../../utils/format';
@@ -37,17 +39,20 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
 
   const perfil = (user?.perfil_acesso || '').trim().toUpperCase();
   const ehGestao = isGestao(perfil);
-  const isElegivel = canCheckInEvent(perfil);
+  const isElegivel = estado?.quorumVigente?.is_global
+    ? canCheckInGlobal(perfil)
+    : isCouncilMember(user);
+
   const isPresidente = estado?.mesa && (estado.mesa as any).presidente_user_id === user?.id;
 
   // CANON: Apenas cargos autorizados podem compor a mesa
   const podeComporMesaLocal = canComposeMesa(user);
 
-  // CANON: Quem pode ver o token? Mesa, Gestão (se não houver mesa) ou o próprio criador
+  // CANON: Autoridade de visualização de Token
   const canSeeToken = estado?.quorumVigente?.token && (
-    isPresidente ||
-    (ehGestao && (!estado.mesa || (estado.mesa as any).presidente_user_id)) ||
-    user?.id === (estado.quorumVigente as any).gerado_por_user_id
+    estado.quorumVigente.is_global
+        ? ehGestao // Global: Toda gestão resgata
+        : (isMesa || (!estado.mesa && ehGestao)) // Quórum: Mesa ou Gestão (suporte se sem mesa)
   );
 
   const [estadoLoading, setEstadoLoading] = useState(false);
