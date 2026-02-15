@@ -33,6 +33,7 @@ import { Assembleia, AssembleiaEstado } from '../../types/assembleia';
 import { useAuth } from '../../hooks/useAuth';
 import {
   isGestao,
+  isDiretoria,
   isCouncilMember,
   canComposeMesa,
   canCreateCredenciamentoToken,
@@ -64,6 +65,9 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   // -----------------------------
   const perfil = useMemo(() => (user?.perfil_acesso || '').trim().toUpperCase(), [user?.perfil_acesso]);
   const ehGestao = useMemo(() => isGestao(perfil), [perfil]);
+  const ehDiretoria = isDiretoria(perfil);
+
+  const canGenerateReport = assembleia?.estado === ASSEMBLEIA_ESTADOS.ENCERRADO;
 
   // Mesa/presidência (evitar ReferenceError e padronizar checks)
   const isPresidente = useMemo(() => {
@@ -71,19 +75,28 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     return !!presidenteId && presidenteId === user?.id;
   }, [estado?.mesa, user?.id]);
 
-  const isMesa = useMemo(() => {
+  const isMesa = (() => {
     const mesa: any = estado?.mesa;
     if (!mesa || !user?.id) return false;
 
-    const ids = [
+    const uid = String(user.id);
+
+    // Campos típicos (podem variar; use fallback seguro)
+    const mesaIds = [
       mesa.presidente_user_id,
       mesa.vice_presidente_user_id,
       mesa.secretario_user_id,
-      mesa.secretario_2_user_id
-    ].filter(Boolean);
+      mesa.secretario_2_user_id,
+      mesa.presidenteId,
+      mesa.vicePresidenteId,
+      mesa.secretarioId,
+      mesa.secretario2Id
+    ]
+      .filter(Boolean)
+      .map((x: any) => String(x));
 
-    return ids.includes(user.id);
-  }, [estado?.mesa, user?.id]);
+    return mesaIds.includes(uid);
+  })();
 
   // CANON: Apenas cargos autorizados podem compor a mesa
   const podeComporMesaLocal = useMemo(() => canComposeMesa(user), [user]);
@@ -110,22 +123,13 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
     [assembleia?.estado]
   );
 
-  // Relatório só faz sentido quando encerrada
-  const canGenerateReport = useMemo(() => !!isEncerrada, [isEncerrada]);
-
   // CANON: Autoridade de visualização de Token
-  const canSeeToken = useMemo(() => {
-    const tokenVigente = estado?.quorumVigente?.token;
-    if (!tokenVigente) return false;
-
-    // Global: gestão pode ver
-    if (estado?.quorumVigente?.is_global) {
-      return canViewCredenciamentoToken(user);
-    }
-
-    // Quórum: Mesa (ou gestão de suporte se ainda não há mesa)
-    return isMesa || (!estado?.mesa && ehGestao);
-  }, [estado?.quorumVigente?.token, estado?.quorumVigente?.is_global, estado?.mesa, user, isMesa, ehGestao]);
+  const canSeeToken =
+    !!estado?.quorumVigente?.token &&
+    (estado.quorumVigente.is_global
+      ? canViewCredenciamentoToken(user) // Global: gestão visualiza
+      : (isMesa || (!estado.mesa && ehGestao)) // Quórum: Mesa ou Gestão (fallback se sem mesa)
+    );
 
   // -----------------------------
   // FETCHERS (memoizados)
@@ -490,19 +494,19 @@ export default function AssembleiaDetalheScreen({ route, navigation }: any) {
   }, [
     navigation,
     assembleia,
-    estado?.quorumVigente,
-    estado?.mesa,
+    estado,
     ehGestao,
+    ehDiretoria,
     isPresidente,
     isMesa,
     podeComporMesaLocal,
+    canSeeToken,
     canGenerateReport,
+    id,
     handleGerarToken,
     handleEncerrar,
     handleIniciarExecucao,
-    handleSolicitarRelatorio,
-    id,
-    user
+    handleSolicitarRelatorio
   ]);
 
   const handleScanPress = async () => {
