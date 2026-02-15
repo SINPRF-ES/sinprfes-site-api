@@ -22,15 +22,6 @@ export async function login(cpf: string, senha: string): Promise<Sessao> {
 /**
  * Renova a sessão do membro usando o refresh token.
  */
-export async function refreshSessao(refreshToken: string): Promise<any> {
-  const deviceId = await getStableDeviceId();
-  const { data } = await api.post('/api/auth/refresh', { refreshToken, deviceId });
-  return data;
-}
-
-/**
- * Renova a sessão do membro usando o refresh token.
- */
 export async function refreshSessao(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
   const deviceId = await getStableDeviceId();
   const { data } = await api.post('/api/auth/refresh', { refreshToken, deviceId });
