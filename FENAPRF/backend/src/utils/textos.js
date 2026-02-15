@@ -7,17 +7,16 @@ module.exports = {
     LOGIN_REALIZADO: "Login realizado com sucesso.",
     SENHA_REDEFINIDA: "Senha redefinida com sucesso. Você já pode fazer login com a nova senha.",
     CRIADO_SUCESSO: "Cadastro realizado com sucesso.",
-    INSCRICAO_JOGOS_SUCESSO: "Pré-inscrição enviada com sucesso! Aguarde o contato da secretaria.",
   },
 
   // Mensagens de ERRO e VALIDAÇÃO no fluxo de AUTENTICAÇÃO
   AUTH: {
     INFORME_CREDENCIAIS: "Informe CPF e senha para entrar.",
     CREDENCIAIS_INVALIDAS: "CPF ou senha inválidos.",
-    CADASTRO_INATIVO: "Seu cadastro encontra-se inativo junto ao sindicato. Favor entrar em contato com a secretaria.",
+    CADASTRO_INATIVO: "Seu cadastro encontra-se inativo junto à FENAPRF. Favor entrar em contato com a secretaria.",
     TOKEN_NAO_INFORMADO: "Token de acesso não informado.",
     TOKEN_INVALIDO: "Sessão inválida ou expirada. Por favor, entre novamente.",
-    ACESSO_BLOQUEADO: "Acesso bloqueado. Contate o sindicato.",
+    ACESSO_BLOQUEADO: "Acesso bloqueado. Contate a FENAPRF.",
     PERMISSAO_INSUFICIENTE: "Você não tem permissão para realizar esta ação.",
   },
 
@@ -25,7 +24,7 @@ module.exports = {
   SENHA: {
     INFORME_CPF: "Informe o CPF.",
     MENSAGEM_RESET_PADRAO: "Se houver um cadastro para este CPF, um e-mail com link de redefinição de senha foi enviado.",
-    EMAIL_NAO_CADASTRADO: "CPF localizado, mas não há e-mail válido cadastrado. Por favor, entre em contato com a secretaria do sindicato pela página de contato.",
+    EMAIL_NAO_CADASTRADO: "CPF localizado, mas não há e-mail válido cadastrado. Por favor, entre em contato com a secretaria da FENAPRF pela página de contato.",
     TOKEN_SENHA_EXPIRADO: "Link de redefinição inválido ou expirado. Solicite novamente.",
     SENHA_MUITO_CURTA: "A nova senha deve ter pelo menos 6 caracteres.",
     TOKEN_E_SENHA_OBRIGATORIOS: "Token e nova senha são obrigatórios.",

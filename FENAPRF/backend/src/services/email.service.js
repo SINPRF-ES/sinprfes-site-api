@@ -172,67 +172,8 @@ FENAPRF
   await enviarEmailBase(emailDestino, subject, corpo);
 }
 
-// --------------------------
-// Jogos (confirmação / cancelamento)
-// --------------------------
-
-const MAPPING_MODALIDADES_JOGOS_2026 = {
-  atletismo_100m_masc: '100m Masculino',
-  atletismo_100m_fem: '100m Feminino',
-  atletismo_400m_masc: '400m Masculino',
-  atletismo_400m_fem: '400m Feminino',
-  atletismo_1500m_masc: '1500m Masculino',
-  atletismo_1500m_fem: '1500m Feminino',
-  atletismo_5000m_masc: '5000m Masculino',
-  atletismo_5000m_fem: '5000m Feminino',
-  beach_tenis_dupla_livre: 'Beach Tênis - Dupla Livre',
-  beach_tenis_dupla_mista: 'Beach Tênis - Dupla Mista',
-  canastra: 'Canastra',
-  domino: 'Dominó',
-  truco_duplas: 'Truco (Duplas)',
-  xadrez: 'Xadrez',
-  futebol_society_livre: 'Futebol Society (Livre)',
-  futebol_society_master: 'Futebol Society (Master - Acima de 55 anos)',
-  futsal_livre: 'Futsal (Livre)',
-  futevolei: 'Futevôlei',
-  voleibol_livre: 'Voleibol (Livre)',
-  voleibol_praia_dupla_masc: 'Vôlei de Praia - Dupla Masculina',
-  voleibol_praia_dupla_mista: 'Vôlei de Praia - Dupla Mista',
-  jiu_jitsu: 'Jiu-Jitsu',
-  natacao_50m_livre_masc: '50m Nado Livre (Masculino)',
-  natacao_50m_livre_fem: '50m Nado Livre (Feminino)',
-  natacao_50m_costas_masc: '50m Nado Costas (Masculino)',
-  natacao_50m_costas_fem: '50m Nado Costas (Feminino)',
-  natacao_50m_peito_masc: '50m Nado Peito (Masculino)',
-  natacao_50m_peito_fem: '50m Nado Peito (Feminino)',
-  natacao_50m_borboleta_masc: '50m Nado Borboleta (Masculino)',
-  natacao_50m_borboleta_fem: '50m Nado Borboleta (Feminino)',
-  natacao_revezamento_4x50m_livre: 'Revezamento 4x50m Livre',
-  natacao_revezamento_2x50m_misto: 'Revezamento 2x50 Misto',
-  sinuca_individual: 'Sinuca Individual',
-  sinuca_duplas: 'Sinuca Duplas',
-  tenis_quadra_individual_masc: 'Tênis de Quadra - Individual (Masculino)',
-  tenis_quadra_duplas_livre: 'Tênis de Quadra - Duplas (Livre)',
-  tenis_mesa_masc: 'Tênis de Mesa (Masculino)',
-  tenis_mesa_fem: 'Tênis de Mesa (Feminino)',
-  tenis_mesa_duplas: 'Tênis de Mesa (Duplas)',
-  tiro_nra_masc: 'Tiro NRA (Masculino)',
-  tiro_nra_fem: 'Tiro NRA (Feminino)',
-  tiro_ispc_masc: 'Tiro ISPC (Masculino)',
-  tiro_ispc_fem: 'Tiro ISPC (Feminino)',
-  peteca: 'Peteca',
-  damas: 'Damas',
-  bocha: 'Bocha',
-};
-
-function formatarModalidadesJogos(modalidades) {
-  if (!Array.isArray(modalidades)) return modalidades || "-";
-  return modalidades
-    .map((id) => MAPPING_MODALIDADES_JOGOS_2026[id] || id)
-    .join(", ");
-}
-
 function extrairEmailDestino(obj = {}) {
+  // BOLT/Sentinel: Garantindo cast explícito para String em todos os campos para evitar erros de tipo no provider
   return (
     (obj.email_destino && String(obj.email_destino).trim()) ||
     (obj.email && String(obj.email).trim()) ||
@@ -240,82 +181,6 @@ function extrairEmailDestino(obj = {}) {
     (obj.email1 && String(obj.email1).trim()) ||
     ""
   );
-}
-
-async function enviarEmailConfirmacaoInscricaoJogos(payload) {
-  const user = payload?.user || payload || {};
-  const inscricao = payload?.inscricao || payload || {};
-
-  const userId = user.id || user.user_id || user.id_user || payload?.id || payload?.user_id || payload?.id_user;
-
-  const emailDestino = extrairEmailDestino(user);
-  if (!emailDestino) {
-    console.warn("⚠️ EmailJogosConfirmacao: user sem email/email2.", JSON.stringify({ userId }));
-    return;
-  }
-
-  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
-  const subject = `Confirmação de Pré-inscrição - Jogos`;
-
-  const modalidadesTexto = formatarModalidadesJogos(inscricao.modalidades);
-
-  const corpo = `
-Olá, ${primeiroNome}!
-
-Sua pré-inscrição para os Jogos foi registrada com sucesso.
-
-Resumo:
-- Modalidades: ${modalidadesTexto}
-- Observações: ${inscricao.observacoes || "-"}
-- Familiares: ${inscricao.familiares || "-"}
-- Qtd. familiares: ${Number.isFinite(Number(inscricao.qtd_familiares)) ? Number(inscricao.qtd_familiares) : 0}
-- Sexo: ${inscricao.sexo || "-"}
-
-Este e-mail foi gerado automaticamente.
-
-Atenciosamente,
-FENAPRF
-`;
-
-  await enviarEmailBase(emailDestino, subject, corpo);
-}
-
-async function enviarEmailCancelamentoInscricaoJogos(payload) {
-  const user = payload?.user || payload || {};
-  const inscricao = payload?.inscricao || payload || {};
-
-  const userId = user.id || user.user_id || user.id_user || payload?.id || payload?.user_id || payload?.id_user;
-
-  const emailDestino = extrairEmailDestino(user);
-  if (!emailDestino) {
-    console.warn("⚠️ EmailJogosCancelamento: user sem email/email2.", JSON.stringify({ userId }));
-    return;
-  }
-
-  const primeiroNome = (user.nome || "").split(" ")[0] || "Colega";
-  const subject = `Cancelamento de Pré-inscrição - Jogos`;
-
-  const modalidadesTexto = formatarModalidadesJogos(inscricao.modalidades);
-
-  const corpo = `
-Olá, ${primeiroNome}!
-
-Sua pré-inscrição para os Jogos foi cancelada com sucesso.
-
-(Referência da inscrição anterior)
-- Modalidades: ${modalidadesTexto}
-- Observações: ${inscricao.observacoes || "-"}
-- Familiares: ${inscricao.familiares || "-"}
-- Qtd. familiares: ${Number.isFinite(Number(inscricao.qtd_familiares)) ? Number(inscricao.qtd_familiares) : 0}
-- Sexo: ${inscricao.sexo || "-"}
-
-Este e-mail foi gerado automaticamente.
-
-Atenciosamente,
-FENAPRF
-`;
-
-  await enviarEmailBase(emailDestino, subject, corpo);
 }
 
 /**
@@ -358,7 +223,7 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
 
 async function enviarEmailRelatorioAssembleia(user, assembleia, pdfBuffer, dados = {}) {
   const { MAIL_FROM, REPORT_NOTIFY_EMAIL } = process.env;
-  const unionEmail = REPORT_NOTIFY_EMAIL || "marcelo.mfb@gmail.com";
+  const notificacaoEmail = REPORT_NOTIFY_EMAIL || "marcelo.mfb@gmail.com";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");
@@ -403,7 +268,7 @@ FENAPRF
     }
   }
 
-  // 2. Notificação ao Sindicato
+  // 2. Notificação à FENAPRF
   try {
     const agora = dados.solicitante?.data_geracao || new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     const maskedCpf = user.cpf ? user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4") : "CPF não informado";
@@ -414,9 +279,9 @@ FENAPRF
         `Tipo: ${ultimoQuorum.tipo_chamada} | Presentes: ${ultimoQuorum.presentes?.length || 0} | Mínimo: ${ultimoQuorum.quorum_necessario || '0'}` :
         'Nenhum quórum registrado';
 
-    const payloadSindicato = {
+    const payloadNotificacao = {
       from: MAIL_FROM,
-      to: unionEmail,
+      to: notificacaoEmail,
       subject: `[Notificação] Relatório de Assembleia Gerado - ${assembleia.titulo}`,
       html: `
         <div style="font-family: sans-serif; color: #333;">
@@ -435,11 +300,11 @@ FENAPRF
 
     const client = await getResendClient();
     if (client) {
-      await client.emails.send(payloadSindicato);
-      console.log("📧 [emailRelatorioNotifSindicatoOk]");
+      await client.emails.send(payloadNotificacao);
+      console.log("📧 [emailRelatorioNotificacaoOk]");
     }
   } catch (err) {
-    console.error("💥 [emailRelatorioNotifSindicatoErro]", err.message);
+    console.error("💥 [emailRelatorioNotificacaoErro]", err.message);
     // Falha na notificação não derruba o fluxo principal
   }
 }
@@ -449,7 +314,7 @@ FENAPRF
  */
 async function enviarEmailRelatorio(user, reportTitle, pdfBuffer, filename) {
   const { MAIL_FROM, REPORTS_COPY_EMAIL } = process.env;
-  const unionEmail = REPORTS_COPY_EMAIL || "marcelo.mfb@gmail.com";
+  const notificacaoEmail = REPORTS_COPY_EMAIL || "marcelo.mfb@gmail.com";
 
   if (!MAIL_FROM) {
     throw new Error("❌ MAIL_FROM não configurado.");
@@ -475,7 +340,7 @@ FENAPRF
       const payload = {
         from: MAIL_FROM,
         to: emailDestino,
-        bcc: unionEmail,
+        bcc: notificacaoEmail,
         subject,
         text: corpo,
         attachments
@@ -484,24 +349,24 @@ FENAPRF
       const res = client ? await client.emails.send(payload) : { error: "Resend not available" };
       if (res.error) throw res.error;
 
-      console.log("📧 [emailRelatorioOk] enviado para", emailDestino, "com BCC para", unionEmail);
+      console.log("📧 [emailRelatorioOk] enviado para", emailDestino, "com BCC para", notificacaoEmail);
     } catch (err) {
       console.error("💥 [emailRelatorioErro]", err);
       throw new Error(`Falha ao enviar e-mail do relatório: ${err.message}`);
     }
   } else if (client) {
-    // Se o solicitante não tem e-mail, envia apenas para o sindicato
+    // Se o solicitante não tem e-mail, envia apenas para a notificação da entidade
     try {
       await client.emails.send({
         from: MAIL_FROM,
-        to: unionEmail,
+        to: notificacaoEmail,
         subject: `[SOLICITANTE SEM EMAIL] ${subject}`,
         text: `O membro ${user.nome} solicitou o relatório em anexo, mas não possui e-mail cadastrado.\n\n${corpo}`,
         attachments
       });
-      console.log("📧 [emailRelatorioUnionOnlyOk] enviado para", unionEmail);
+      console.log("📧 [emailRelatorioNotificacaoOnlyOk] enviado para", notificacaoEmail);
     } catch (err) {
-      console.error("💥 [emailRelatorioErroSindicatoOnly]", err);
+      console.error("💥 [emailRelatorioErroNotificacaoOnly]", err);
     }
   }
 }
@@ -509,8 +374,6 @@ FENAPRF
 module.exports = {
   enviarEmailBase,
   enviarEmailBoasVindasUser,
-  enviarEmailConfirmacaoInscricaoJogos,
-  enviarEmailCancelamentoInscricaoJogos,
   enviarEmailConfirmacaoInscricaoLogistica,
   enviarEmailCancelamentoInscricaoLogistica,
   enviarRelatorioAniversariantes,

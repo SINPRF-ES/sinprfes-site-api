@@ -1206,7 +1206,7 @@ async function gerarRelatorio(req, res) {
     const pdfBuffer = await pdfService.gerarPdfRelatorioAssembleia(dados);
     log.info("REPORT_PDF_GENERATED", { requestId: req.requestId, assembleiaId, size: pdfBuffer.length });
 
-    // Enviar PDF para o solicitante (O serviço também notifica o sindicato internamente)
+    // Enviar PDF para o solicitante (O serviço também notifica a FENAPRF internamente)
     await emailService.enviarEmailRelatorioAssembleia(user, dados.assembleia, pdfBuffer, dados);
     log.info("REPORT_EMAIL_USER_SENT", { requestId: req.requestId, assembleiaId, userId: req.user.id });
 

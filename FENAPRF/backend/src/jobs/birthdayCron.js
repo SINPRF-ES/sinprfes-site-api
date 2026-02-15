@@ -52,7 +52,7 @@ async function runBirthdayScan() {
     const count = aniversariantes.length;
     console.log(`✅ [Job] BUSCA aniversariantes OK (count: ${count})`);
 
-    // Sempre envia o relatório para o sindicato (mesmo se vazio, conforme requisito)
+    // Sempre envia o relatório para a FENAPRF (mesmo se vazio, conforme requisito)
     console.log(`[Job] Iniciando envio de e-mail de aniversariantes...`);
     await emailService.enviarRelatorioAniversariantes({
       dateStr: todayStr,
