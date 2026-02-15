@@ -11,6 +11,13 @@ const BIOMETRIA_KEY = '@fenaprf/biometria_habilitada';
 const BIOMETRIA_SECURE_KEY = 'fenaprf_biometria_enabled';
 const LAST_UPDATE_CHECK_KEY = '@fenaprf/last_update_check';
 
+// Cache em memória para o Refresh Token (evita prompts repetidos no mesmo ciclo)
+let refreshTokenCache: string | null = null;
+
+export function setRefreshTokenCache(token: string | null) {
+  refreshTokenCache = token;
+}
+
 /**
  * Salva a sessão no armazenamento seguro.
  * Se a biometria estiver habilitada, o Refresh Token é salvo com exigência de autenticação.
@@ -30,6 +37,9 @@ export async function salvarSessao(sessao: Sessao): Promise<void> {
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshStr, {
       requireAuthentication: bioEnabled
     });
+
+    // Atualiza cache em memória
+    refreshTokenCache = refreshStr;
 
   } catch (e) {
     logger.error('[Storage.salvarSessao]', e);
@@ -65,8 +75,12 @@ export async function carregarSessao(): Promise<Partial<Sessao> | null> {
  * o sistema operacional mostrará o prompt de autenticação.
  */
 export async function carregarRefreshToken(): Promise<string | null> {
+  if (refreshTokenCache) return refreshTokenCache;
+
   try {
-    return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+    const rt = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+    refreshTokenCache = rt;
+    return rt;
   } catch (e) {
     // Pode falhar se o usuário cancelar a biometria
     logger.warn('[Storage.carregarRefreshToken] Falha ao ler refresh token (possível cancelamento bio)');
@@ -79,6 +93,8 @@ export async function limparSessao(manterBiometria = true): Promise<void> {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
+
+    refreshTokenCache = null;
 
     if (!manterBiometria) {
       await SecureStore.deleteItemAsync(BIOMETRIA_SECURE_KEY);

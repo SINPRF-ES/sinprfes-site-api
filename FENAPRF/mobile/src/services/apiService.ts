@@ -205,9 +205,13 @@ async function executeSilentRefresh(): Promise<string> {
     lastRefreshAttempt = now;
 
     try {
-        logger.info('[Auth.Refresh] Iniciando renovação silenciosa...');
         const refreshToken = await carregarRefreshToken(); // Pode disparar Biometria
         const deviceId = await getStableDeviceId();
+
+        logger.info('[Auth.Refresh] Iniciando renovação silenciosa...', {
+            hasRefreshToken: !!refreshToken,
+            deviceId: deviceId?.substring(0, 8) + '...'
+        });
 
         if (!refreshToken) {
             logger.warn('[Auth.Refresh] Refresh token ausente ou cancelado pelo usuário.');

@@ -124,7 +124,15 @@ exports.criarEvento = async (req, res) => {
     } catch (err) {
         await client.query("ROLLBACK");
         log.error("Logistica.criarEvento.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
-        res.status(500).json({ error: "Erro ao criar evento.", requestId: req.requestId });
+
+        // FENAPRF: Retornar 400 se for erro de schema/contrato (ex: coluna inexistente ou violação de constraint)
+        const isConstraintError = err.code && (err.code.startsWith('23') || err.code === '42703');
+        const status = isConstraintError ? 400 : 500;
+
+        res.status(status).json({
+            error: isConstraintError ? `Erro de contrato: ${err.message}` : "Erro ao criar evento.",
+            requestId: req.requestId
+        });
     } finally {
         client.release();
     }
@@ -184,7 +192,14 @@ exports.atualizarEvento = async (req, res) => {
     } catch (err) {
         await client.query("ROLLBACK");
         log.error("Logistica.atualizarEvento.Erro", { error: err.message, stack: err.stack, requestId: req.requestId });
-        res.status(500).json({ error: "Erro ao atualizar evento.", requestId: req.requestId });
+
+        const isConstraintError = err.code && (err.code.startsWith('23') || err.code === '42703');
+        const status = isConstraintError ? 400 : 500;
+
+        res.status(status).json({
+            error: isConstraintError ? `Erro de contrato: ${err.message}` : "Erro ao atualizar evento.",
+            requestId: req.requestId
+        });
     } finally {
         client.release();
     }
@@ -542,7 +557,7 @@ exports.atualizarInscricaoTerceiro = async (req, res) => {
 exports.cancelarInscricaoTerceiro = async (req, res) => {
     const client = await pool.connect();
     try {
-        const gestorId = getUserId(req);
+        const gestorId = req.user?.id;
         const inscricaoId = parseUuid(req.params.id);
         if (!inscricaoId) return res.status(400).json({ error: "ID de inscrição inválido.", requestId: req.requestId });
         const { justificativa } = req.body;
@@ -597,7 +612,7 @@ exports.cancelarInscricaoTerceiro = async (req, res) => {
 
 exports.exportarPdf = async (req, res) => {
     const requestId = req.requestId;
-    const userId = getUserId(req);
+    const userId = req.user?.id;
     const eventoId = parseUuid(req.params.eventoId);
     if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
 
@@ -641,7 +656,7 @@ exports.exportarPdf = async (req, res) => {
 
 exports.exportarXls = async (req, res) => {
     const requestId = req.requestId;
-    const userId = getUserId(req);
+    const userId = req.user?.id;
     const eventoId = parseUuid(req.params.eventoId);
     if (!eventoId) return res.status(400).json({ error: "ID de evento inválido." });
 
