@@ -20,6 +20,35 @@ const { normalizePerfil, isGestao } = require("../../shared/canon");
 const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
 /**
+ * Corrige "mojibake" típico (UTF-8 interpretado como latin1) em nomes de arquivo/pasta.
+ * Ex.: "Ofício nº" -> "OfÃ­cio nÂº"
+ *
+ * Isso é comum no multipart/form-data em Node/multer e também pode ocorrer via body.
+ */
+function fixUtf8Filename(name) {
+  if (!name) return name;
+
+  // Heurística: padrões típicos de mojibake PT-BR
+  if (!/[ÃÂ]/.test(name)) return name;
+
+  try {
+    return Buffer.from(name, "latin1").toString("utf8");
+  } catch {
+    return name;
+  }
+}
+
+/**
+ * Sanitização leve para evitar caracteres problemáticos.
+ * - Corrige mojibake
+ * - Remove NULL byte
+ * - Trim
+ */
+function sanitizeFilename(name) {
+  return (fixUtf8Filename(name) || "").replace(/\0/g, "").trim();
+}
+
+/**
  * Mapeia erros do Google Drive para respostas HTTP padronizadas.
  */
 function mapGoogleDriveError(err, requestId) {
@@ -46,7 +75,6 @@ function mapGoogleDriveError(err, requestId) {
   return { status, message, requestId };
 }
 
-
 exports.listar = async (req, res) => {
   const atorId = req.user?.id;
   const requestId = req.requestId;
@@ -66,12 +94,12 @@ exports.listar = async (req, res) => {
       const isFolder = file.mimeType === FOLDER_MIMETYPE;
 
       if (isFolder) {
-          tipo = "PASTA";
+        tipo = "PASTA";
       } else {
-          // Lógica de cores para arquivos
-          if (nomeUpper.includes("ATA")) tipo = "ATA";
-          else if (nomeUpper.includes("NOTA") || nomeUpper.includes("COMUNICADO")) tipo = "NOTA";
-          else if (nomeUpper.includes("BALANÇO") || nomeUpper.includes("BALANCO")) tipo = "BALANCO";
+        // Lógica de cores para arquivos
+        if (nomeUpper.includes("ATA")) tipo = "ATA";
+        else if (nomeUpper.includes("NOTA") || nomeUpper.includes("COMUNICADO")) tipo = "NOTA";
+        else if (nomeUpper.includes("BALANÇO") || nomeUpper.includes("BALANCO")) tipo = "BALANCO";
       }
 
       // 🛑 Ocultar pastas técnicas na raiz
@@ -115,7 +143,7 @@ exports.createFolder = async (req, res) => {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
 
     // Normalização: Se não vier ou for null, assume a raiz do módulo
-    if (!parentFolderId || parentFolderId === 'ROOT') {
+    if (!parentFolderId || parentFolderId === "ROOT") {
       parentFolderId = ROOT_FOLDER_ID;
     }
 
@@ -130,11 +158,15 @@ exports.createFolder = async (req, res) => {
       return res.status(403).json({ message: "Permissão insuficiente para criar pastas.", requestId });
     }
 
-    if (!name || name.trim().length === 0) {
+    // ✅ Sanitiza (corrige mojibake + remove \0 + trim)
+    const sanitizedName = sanitizeFilename(name);
+
+    if (!sanitizedName || sanitizedName.length === 0) {
       return res.status(400).json({ message: "Nome da pasta é obrigatório.", requestId });
     }
 
-    const cleanName = name.trim().substring(0, 80);
+    // Limite de tamanho (mantém sua regra original)
+    const cleanName = sanitizedName.substring(0, 80);
 
     // Bloquear nomes reservados na raiz
     if (parentFolderId === ROOT_FOLDER_ID && ["App", "Lixeira"].includes(cleanName)) {
@@ -181,7 +213,7 @@ exports.uploadFile = async (req, res) => {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
 
     // Normalização: Se não vier ou for null, assume a raiz do módulo
-    if (!parentFolderId || parentFolderId === 'ROOT') {
+    if (!parentFolderId || parentFolderId === "ROOT") {
       parentFolderId = ROOT_FOLDER_ID;
     }
 
@@ -209,7 +241,8 @@ exports.uploadFile = async (req, res) => {
       return res.status(400).json({ message: "Tipo de arquivo não permitido. Use PDF ou Imagens.", requestId });
     }
 
-    const fileName = (name || file.originalname).trim();
+    // ✅ Nome final canon: corrige mojibake e sanitiza (body name ou originalname)
+    const fileName = sanitizeFilename(name || file.originalname);
 
     const [trashId, appId] = await Promise.all([ensureTrashFolder(), getAppFolderId()]);
 
@@ -265,7 +298,10 @@ exports.renameItem = async (req, res) => {
       return res.status(403).json({ message: "Permissão insuficiente para renomear itens.", requestId });
     }
 
-    if (!name || name.trim().length === 0) {
+    // ✅ Sanitiza (corrige mojibake + remove \0 + trim)
+    const sanitizedName = sanitizeFilename(name);
+
+    if (!sanitizedName || sanitizedName.length === 0) {
       return res.status(400).json({ message: "Novo nome é obrigatório.", requestId });
     }
 
@@ -281,12 +317,12 @@ exports.renameItem = async (req, res) => {
       return res.status(409).json({ message: "Não é permitido renomear itens em pastas protegidas ou na lixeira.", requestId });
     }
 
-    const item = await renameItem(id, name.trim());
+    const item = await renameItem(id, sanitizedName);
 
     log.info("DriveRenameItem", {
       userId: atorId,
       itemId: id,
-      newName: name,
+      newName: sanitizedName,
       requestId
     });
 
@@ -306,7 +342,7 @@ exports.moveItem = async (req, res) => {
   const requestId = req.requestId;
   const { id } = req.params;
   let { targetFolderId } = req.body;
-  if (targetFolderId === 'ROOT') targetFolderId = ROOT_FOLDER_ID;
+  if (targetFolderId === "ROOT") targetFolderId = ROOT_FOLDER_ID;
 
   try {
     if (!atorId) return res.status(401).json({ message: "Sessão inválida ou ator não identificado.", requestId });
@@ -340,10 +376,10 @@ exports.moveItem = async (req, res) => {
 
     // Ciclo e descendência para pastas
     if (itemData.mimeType === FOLDER_MIMETYPE) {
-       const isRecursive = await isDescendant(targetFolderId, id);
-       if (isRecursive) {
-         return res.status(409).json({ message: "Não é permitido mover uma pasta para dentro dela mesma ou de suas subpastas.", requestId });
-       }
+      const isRecursive = await isDescendant(targetFolderId, id);
+      if (isRecursive) {
+        return res.status(409).json({ message: "Não é permitido mover uma pasta para dentro dela mesma ou de suas subpastas.", requestId });
+      }
     }
 
     const item = await moveItem(id, targetFolderId);
