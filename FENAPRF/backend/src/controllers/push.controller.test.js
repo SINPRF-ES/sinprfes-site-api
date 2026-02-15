@@ -29,7 +29,7 @@ describe('Push Controller', () => {
 
       await controller.register(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ success: true, id: 100 });
+      expect(res.json).toHaveBeenCalledWith({ success: true, id: 100, requestId: 'test-request-id' });
     });
 
     test('should return 401 if user is not authenticated', async () => {
@@ -83,7 +83,7 @@ describe('Push Controller', () => {
 
       await controller.unregister(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ success: true });
+      expect(res.json).toHaveBeenCalledWith({ success: true, requestId: 'test-request-id' });
     });
   });
 });

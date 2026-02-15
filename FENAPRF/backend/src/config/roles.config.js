@@ -8,7 +8,6 @@ module.exports = {
     "VIEW_ALL",
     "VIEW_SELF",
     "EDIT_SELF",
-    "JOGOS_GERENCIAR",
     "LOGISTICA_GERENCIAR",
     "VOTACAO_GERENCIAR",
     "VOTACAO_VOTAR",

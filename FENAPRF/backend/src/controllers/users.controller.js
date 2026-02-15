@@ -541,7 +541,7 @@ exports.listarHistoricoArquivamento = async (req, res) => {
 
     const { q } = req.query;
     const historico = await usersService.listarHistoricoMovimentacoes(null, q);
-    res.json(historico);
+    res.json({ success: true, historico, requestId: req.requestId });
   } catch (err) {
     log.error("UsersHistoricoArquivamentoErro", { error: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId: req.requestId });
