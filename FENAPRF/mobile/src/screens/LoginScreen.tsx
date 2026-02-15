@@ -7,9 +7,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
-import { loginSindicato, buscarUserLogado } from '../services/authService';
+import { login } from '../services/authService';
 import { formatCpf, onlyDigits } from '../utils/format';
-import { carregarSessao, carregarRefreshToken } from '../services/storageService';
 import { logger } from '../infra/logger';
 
 export default function LoginScreen() {
@@ -20,46 +19,26 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [temCredencial, setTemCredencial] = useState<boolean>(false);
 
   useEffect(() => {
-    (async () => {
-      const rt = await carregarRefreshToken();
-      setTemCredencial(!!rt);
-    })();
-  }, []);
-
-  useEffect(() => {
+    // FENAPRF: Tenta biometria automática se habilitada ao abrir a tela de login
+    // (Útil se o usuário caiu aqui por timeout ou erro de token mas manteve a RT)
     if (biometriaHabilitada) {
       setTimeout(handleBiometricLogin, 500);
     }
   }, [biometriaHabilitada]);
 
   async function handleBiometricLogin() {
+    if (loading) return;
+    setLoading(true);
     try {
-      const rt = await carregarRefreshToken();
-      const sessaoSalva = await carregarSessao();
-
-      if (!rt || !sessaoSalva?.token) {
-        return;
-      }
-
-      setLoading(true);
+      // Delegar toda a lógica de biometria + refresh + session para o useAuth
       const sucesso = await desbloquearComBiometria();
-      if (sucesso) {
-        try {
-          const user = await buscarUserLogado(sessaoSalva.token);
-          await setSessao(sessaoSalva.token, rt, user);
-        } catch (restoreError: any) {
-          if (restoreError?.response?.status === 401) {
-            Alert.alert('Sessão Expirada', 'Sua credencial expirou. Por favor, entre com sua senha.');
-          } else {
-            Alert.alert('Erro', 'Não foi possível validar sua biometria agora.');
-          }
-        }
+      if (!sucesso) {
+        logger.info('[LoginScreen] Biometria não concluída ou cancelada.');
       }
     } catch (e: any) {
-      console.error('[Biometria.error]', e);
+      logger.error('[LoginScreen.handleBiometricLogin]', e);
     } finally {
       setLoading(false);
     }
@@ -73,7 +52,7 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      const sessao = await loginSindicato({ cpf, senha });
+      const sessao = await login(cpf, senha);
 
       if (sessao.user.password_hash === 'PENDENTE') {
           navigation.navigate('ResetPassword' as any, { isFirstAccess: true, cpf: sessao.user.cpf } as any);
@@ -81,10 +60,6 @@ export default function LoginScreen() {
       }
 
       await setSessao(sessao.token, sessao.refreshToken, sessao.user);
-
-      // FENAPRF: Garantir que o usuário esteja totalmente hidratado no boot do login
-      // (Embora o backend agora retorne mais campos, o refreshUser garante a paridade total com o /me)
-      await refreshUser();
 
       if (!biometriaHabilitada) {
         Alert.alert(
@@ -130,7 +105,7 @@ export default function LoginScreen() {
           <Text style={styles.title}>FENAPRF</Text>
           <Text style={styles.subtitle}>Conselho de Representantes</Text>
 
-          {biometriaHabilitada && temCredencial && (
+          {biometriaHabilitada && (
             <Pressable
               style={styles.biometricButton}
               onPress={handleBiometricLogin}

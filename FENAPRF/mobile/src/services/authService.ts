@@ -13,11 +13,18 @@ interface LoginPayload {
 /**
  * Autentica o membro com CPF e senha.
  */
-export async function loginSindicato(
-  payload: Pick<LoginPayload, 'cpf' | 'senha'>
-): Promise<Sessao> {
+export async function login(cpf: string, senha: string): Promise<Sessao> {
   const deviceId = await getStableDeviceId();
-  const { data } = await api.post<Sessao>('/api/auth/login', { ...payload, deviceId });
+  const { data } = await api.post<Sessao>('/api/auth/login', { cpf, senha, deviceId });
+  return data;
+}
+
+/**
+ * Renova a sessão do membro usando o refresh token.
+ */
+export async function refreshSessao(refreshToken: string): Promise<any> {
+  const deviceId = await getStableDeviceId();
+  const { data } = await api.post('/api/auth/refresh', { refreshToken, deviceId });
   return data;
 }
 

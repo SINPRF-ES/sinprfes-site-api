@@ -5,6 +5,8 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { ENABLE_PUSH } from '../config/features';
+import { refreshSessao, buscarUserLogado } from '../services/authService';
+import { logger } from '../infra/logger';
 
 import type { AuthContextData, Sessao } from '../types/auth';
 import type { User } from '../types/user';
@@ -12,10 +14,9 @@ import type { User } from '../types/user';
 import {
   carregarSessao,
   salvarSessao,
-  limparSessao,
+  clearSession,
   carregarBiometriaHabilitada,
   definirBiometriaHabilitada,
-  carregarRefreshToken,
 } from '../services/storageService';
 
 const AuthContext = createContext<AuthContextData | null>(null);
@@ -31,6 +32,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const appState = useRef(AppState.currentState);
   const backgroundTimestamp = useRef<number | null>(null);
+
+  const unlockInFlightRef = useRef(false);
+  const lastUnlockAtRef = useRef(0);
+  const UNLOCK_COOLDOWN = 1500;
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -57,58 +62,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function loadSession() {
+      setCarregando(true);
       try {
-        const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
-
-        logger.info('[Auth.loadSession] Iniciando...', {
-            hasAccessToken: !!sessao?.token,
-            hasUser: !!sessao?.user,
-            biometriaHabilitada: bio
-        });
-
         setBiometriaHabilitada(bio);
 
-        if (sessao?.token) {
-          setToken(sessao.token);
-          if (sessao.user) {
-              setUser(sessao.user);
-          }
+        const sessao = await carregarSessao();
+        if (!sessao) return;
 
-          // FENAPRF: Se biometria habilitada, bloqueamos primeiro e não fazemos requests ainda
-          if (bio) {
-            logger.info('[Auth.loadSession] Sessão encontrada, mas biometria ativa. Bloqueando UI.');
-            setBloqueadoPorBiometria(true);
-            setCarregando(false);
-            return; // Interrompe para aguardar desbloqueio
-          }
+        // FENAPRF: Define o estado inicial para o navigator saber que existe uma sessão
+        setToken(sessao.token);
+        setUser(sessao.user);
 
-          try {
-            logger.info('[Auth.loadSession] Validando sessão no backend...');
-            // O interceptor de resposta cuidará do refresh se o token estiver expirado.
-            const { data: userAtualizado } = await api.get('/api/users/me');
-            setUser(userAtualizado);
-
-            if (ENABLE_PUSH) {
-              registrarDispositivoParaPush().catch(() => {});
-            }
-          } catch (error: any) {
-            console.error('[Auth.loadSession.error]', error.message);
-
-            // Se for erro de rede, não deslogamos para evitar quedas acidentais
-            const isNetworkError = !error.response && !!error.request;
-            const isCriticalError = error.response?.status === 401 || error.response?.status === 403;
-
-            if (isCriticalError && !isNetworkError) {
-                logger.warn('[Auth.loadSession] Erro crítico na sessão inicial. Limpando.');
-                setToken(null);
-                setUser(null);
-                await limparSessao();
-            } else {
-                logger.info('[Auth.loadSession] Erro não crítico ou de rede. Mantendo sessão local.');
-            }
-          }
+        if (bio) {
+          setBloqueadoPorBiometria(true);
+          return;
         }
+
+        // Se não tem biometria, faz refresh silencioso logo no boot
+        const result = await refreshSessao(sessao.refreshToken);
+        await salvarSessao(result.token, result.refreshToken, result.user);
+
+        api.defaults.headers.common.Authorization = `Bearer ${result.token}`;
+        setToken(result.token);
+        setUser(result.user);
+      } catch (e) {
+        await clearSession();
+        setToken(null);
+        setUser(null);
       } finally {
         setCarregando(false);
       }
@@ -121,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(novoToken);
     setUser(novoUser);
     setBloqueadoPorBiometria(false);
-    await salvarSessao({ token: novoToken, refreshToken: novoRefreshToken, user: novoUser });
+    await salvarSessao(novoToken, novoRefreshToken, novoUser);
 
     if (ENABLE_PUSH) {
       registrarDispositivoParaPush().catch(() => {});
@@ -135,10 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const sessao = await carregarSessao();
         if (sessao) {
-            await salvarSessao({
-                ...sessao,
-                user: userAtualizado
-            });
+            await salvarSessao(
+                sessao.token,
+                sessao.refreshToken,
+                userAtualizado
+            );
         }
     } catch (error: any) {
         console.error('[Auth.refreshUser.error]', error.message);
@@ -173,34 +155,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function desbloquearComBiometria(): Promise<boolean> {
+    const now = Date.now();
+    if (now - lastUnlockAtRef.current < UNLOCK_COOLDOWN) {
+      return true;
+    }
+
+    if (unlockInFlightRef.current) {
+      return false;
+    }
+
+    unlockInFlightRef.current = true;
+
     try {
+      // FENAPRF: Biometria segura - exige autenticação local antes do refresh
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
-      if (!hasHardware || !enrolled) {
-        setBloqueadoPorBiometria(false);
-        setBiometriaValidadaNestaSessao(true);
-        return true;
-      }
+      if (hasHardware && enrolled) {
+        const bioResult = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Confirme sua identidade para continuar',
+          fallbackLabel: 'Usar senha',
+        });
 
-      // FENAPRF: Ao tentar carregar o Refresh Token, o SO pedirá a biometria se habilitado
-      const rt = await carregarRefreshToken();
-
-      if (rt) {
-        setBloqueadoPorBiometria(false);
-        setBiometriaValidadaNestaSessao(true);
-
-        // Agora que está validado, podemos atualizar o user em background
-        refreshUser().catch(() => {});
-        if (ENABLE_PUSH) {
-            registrarDispositivoParaPush().catch(() => {});
+        if (!bioResult.success) {
+          return false;
         }
-
-        return true;
       }
-      return false;
+
+      const sessao = await carregarSessao();
+      if (!sessao?.refreshToken) {
+        return false;
+      }
+
+      const result = await refreshSessao(sessao.refreshToken);
+
+      await salvarSessao(
+        result.token,
+        result.refreshToken,
+        result.user
+      );
+
+      api.defaults.headers.common.Authorization = `Bearer ${result.token}`;
+
+      setToken(result.token);
+      setUser(result.user);
+      setBloqueadoPorBiometria(false);
+      setBiometriaValidadaNestaSessao(true);
+
+      lastUnlockAtRef.current = Date.now();
+
+      if (ENABLE_PUSH) {
+        registrarDispositivoParaPush().catch(() => {});
+      }
+
+      return true;
     } catch (e) {
+      await clearSession();
+      setToken(null);
+      setUser(null);
       return false;
+    } finally {
+      unlockInFlightRef.current = false;
     }
   }
 

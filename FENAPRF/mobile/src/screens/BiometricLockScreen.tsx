@@ -7,19 +7,14 @@ export default function BiometricLockScreen() {
   const { desbloquearComBiometria, logout } = useAuth();
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    desbloquearComBiometria();
+  }, []);
+
   const handleUnlock = async () => {
     setLoading(true);
     try {
-      const success = await desbloquearComBiometria();
-      if (!success) {
-        // O membro cancelou ou a biometria falhou.
-        // O estado `bloqueadoPorBiometria` permanece `true`.
-        Alert.alert('Falha', 'A autenticação biométrica falhou. Por favor, tente novamente.');
-      }
-      // Se for sucesso, o `useAuth` hook já vai atualizar o estado e a navegação cuidará do resto.
-    } catch (error) {
-      console.error('[BiometricLockScreen] Erro ao desbloquear:', error);
-      Alert.alert('Erro', 'Ocorreu um erro inesperado durante a autenticação biométrica.');
+      await desbloquearComBiometria();
     } finally {
       setLoading(false);
     }

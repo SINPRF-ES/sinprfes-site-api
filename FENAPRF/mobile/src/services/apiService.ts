@@ -250,11 +250,11 @@ async function executeSilentRefresh(): Promise<string> {
         const sessaoAtual = await carregarSessao();
         const userExistente = sessaoAtual?.user;
 
-        await salvarSessao({
-            token: newToken,
-            refreshToken: newRefreshToken,
-            user: (userExistente && userExistente.id !== 'unknown') ? userExistente : (userExistente || { id: 'unknown' } as any)
-        });
+        await salvarSessao(
+            newToken,
+            newRefreshToken,
+            (userExistente && userExistente.id !== 'unknown') ? userExistente : (userExistente || { id: 'unknown' } as any)
+        );
 
         logger.info('[Auth.Refresh] Sucesso na renovação.');
         isRefreshing = false;
