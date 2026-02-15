@@ -14,6 +14,33 @@ const SCOPES = [
 let driveAuthMode = null;
 
 /**
+ * Corrige "mojibake" típico (UTF-8 interpretado como latin1) em nomes de arquivo.
+ * Ex.: "Ofício nº" -> "OfÃ­cio nÂº"
+ *
+ * Esse problema é comum no multipart/form-data em Node/multer.
+ */
+function fixUtf8Filename(name) {
+  if (!name) return name;
+
+  // Heurística: padrões típicos de mojibake PT-BR
+  if (!/[ÃÂ]/.test(name)) return name;
+
+  try {
+    return Buffer.from(name, "latin1").toString("utf8");
+  } catch {
+    return name;
+  }
+}
+
+/**
+ * Sanitização leve para evitar caracteres problemáticos.
+ */
+function sanitizeFilename(name) {
+  const fixed = fixUtf8Filename(name);
+  return (fixed || "").replace(/\0/g, "").trim();
+}
+
+/**
  * Obtém a instância de autenticação do Google.
  * Ordem de prioridade:
  * 1. OAuth2 (Refresh Token) - Recomendado para contas comuns (@gmail) para evitar problemas de quota.
@@ -163,8 +190,11 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
   const auth = getGoogleAuth();
   const drive = google.drive({ version: "v3", auth });
 
+  // ✅ Corrigir e sanitizar nome antes de enviar ao Drive
+  const safeName = sanitizeFilename(name);
+
   const fileMetadata = {
-    name: name,
+    name: safeName,
     parents: [targetFolderId],
   };
 
@@ -182,7 +212,7 @@ async function uploadFile(buffer, name, mimeType, folderId = null) {
     });
     return file.data.id;
   } catch (error) {
-    log.error("GoogleDriveUploadErro", { error: error.message, filename: name });
+    log.error("GoogleDriveUploadErro", { error: error.message, filename: safeName });
     throw error;
   }
 }
