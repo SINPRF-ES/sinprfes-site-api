@@ -109,7 +109,8 @@ async function verificarAvisosDuplicidade(payload, userId = null) {
 
   for (const tel of telefonesLimpos) {
     if (tel && tel.length >= 8) {
-      conditions.push(`(regexp_replace(telefone1, '[^0-9]', '', 'g') = $${idx} OR regexp_replace(telefone2, '[^0-9]', '', 'g') = $${idx})`);
+      // Otimização BOLT ⚡: Tenta match exato (índice) ou limpeza via regex
+      conditions.push(`(telefone1 = $${idx} OR telefone2 = $${idx} OR regexp_replace(telefone1, '[^0-9]', '', 'g') = $${idx} OR regexp_replace(telefone2, '[^0-9]', '', 'g') = $${idx})`);
       params.push(tel);
       idx++;
     }
@@ -233,8 +234,8 @@ exports.getUserById = async (req, res) => {
       return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
     }
 
-    const { senha_hash, password_hash, ...dadosLimpos } = user;
-    return res.json(dadosLimpos);
+    // FENAPRF: Dupla checagem de segurança (Service + Controller)
+    return res.json(usersService.formatUserResponse(user));
   } catch (err) {
     log.error("UsersGetByIdErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId, targetId: idAlvo });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
@@ -255,9 +256,8 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: Textos.USERS.USER_NAO_ENCONTRADO, requestId: req.requestId });
     }
 
-    const { senha_hash, password_hash, ...dadosLimpos } = user;
-
-    return res.json(dadosLimpos);
+    // FENAPRF: Dupla checagem de segurança (Service + Controller)
+    return res.json(usersService.formatUserResponse(user));
   } catch (err) {
     log.error("UsersGetMeErro", { message: err.message, stack: err.stack, requestId: req.requestId, userId: atorId });
     return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId: req.requestId });

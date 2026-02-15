@@ -8,12 +8,39 @@ const {
 } = require("../../shared/canon");
 
 /**
+ * FENAPRF: Projeção segura de colunas para evitar vazamento de hashes/tokens.
+ */
+const USER_COLUMNS = `
+  id, cpf, name, name as nome, email, email as email1, perfil_acesso, situacao, bloqueado,
+  telefone1, telefone2, cep, logradouro, numero, complemento, bairro, cidade, uf, uf_endereco, uf2,
+  data_nascimento, cargo, avatar_url, avatar_public_id, created_at, updated_at, ultimo_acesso,
+  arquivado_em, arquivado_motivo, arquivado_por, perfil_acesso2, cargo2,
+  cargo_mandato_inicio, cargo_mandato_fim, sexo
+`;
+
+/**
+ * FENAPRF: Helper para garantir que o objeto de usuário não contenha campos sensíveis.
+ */
+function formatUserResponse(user) {
+  if (!user) return null;
+  const { password_hash, senha_hash, token_acesso_temp, token_expiracao, ...safeUser } = user;
+
+  // Caso especial: sinalizar que a senha é PENDENTE sem expor o hash real (mesmo que seja o literal 'PENDENTE')
+  if (password_hash === 'PENDENTE' || senha_hash === 'PENDENTE') {
+    safeUser.password_hash = 'PENDENTE';
+  }
+
+  return safeUser;
+}
+
+/**
  * Busca membro pelo CPF (normalizado).
+ * Inclui hashes para fins de autenticação interna.
  */
 async function buscarUserPorCpf(cpfRaw) {
   const cpf = normalizarCpf(cpfRaw);
   const { rows } = await pool.query(
-    "SELECT *, name as nome, password_hash as senha_hash FROM users WHERE cpf = $1 LIMIT 1",
+    `SELECT ${USER_COLUMNS}, password_hash as senha_hash FROM users WHERE cpf = $1 LIMIT 1`,
     [cpf]
   );
   return anexarEstadoCadastro(rows[0]) || null;
@@ -21,10 +48,11 @@ async function buscarUserPorCpf(cpfRaw) {
 
 /**
  * Busca membro pelo ID (UUID).
+ * Inclui hashes para fins de processos internos.
  */
 async function buscarUserPorId(id) {
   const { rows } = await pool.query(
-    "SELECT *, name as nome, password_hash as senha_hash FROM users WHERE id = $1 LIMIT 1",
+    `SELECT ${USER_COLUMNS}, password_hash as senha_hash FROM users WHERE id = $1 LIMIT 1`,
     [id]
   );
   return anexarEstadoCadastro(rows[0]) || null;
@@ -65,7 +93,7 @@ async function getMe(id) {
   // Compat Layer: Add empty vinculos for now
   user.vinculos = [];
 
-  return anexarEstadoCadastro(user);
+  return formatUserResponse(anexarEstadoCadastro(user));
 }
 
 /**
@@ -143,13 +171,20 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     const searchConds = [];
 
     if (termoLimpo) {
+      // Otimização Bolt ⚡: ILIKE é case-insensitive nativo do PostgreSQL
       params.push(`%${termoLimpo}%`);
-      searchConds.push(`LOWER(f.name) LIKE $${params.length}`);
+      searchConds.push(`f.name ILIKE $${params.length}`);
     }
 
     if (apenasDigitos) {
-      params.push(`%${apenasDigitos}%`);
-      searchConds.push(`f.cpf LIKE $${params.length}`);
+      // Otimização Bolt ⚡: Se tiver 11 dígitos, busca exata (mais rápido que LIKE)
+      if (apenasDigitos.length === 11) {
+        params.push(apenasDigitos);
+        searchConds.push(`f.cpf = $${params.length}`);
+      } else {
+        params.push(`%${apenasDigitos}%`);
+        searchConds.push(`f.cpf LIKE $${params.length}`);
+      }
     }
 
     if (searchConds.length > 0) {
@@ -181,8 +216,8 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 
   const { rows } = await pool.query(query, params);
 
-  // Compat Layer: Add empty vinculos to list
-  const list = rows.map(r => ({ ...r, vinculos: [] }));
+  // Compat Layer: Add empty vinculos to list + Projeção Segura
+  const list = rows.map(r => formatUserResponse({ ...r, vinculos: [] }));
 
   return anexarEstadoCadastroLista(list);
 }
@@ -522,6 +557,7 @@ async function buscarAniversariantesDoDia() {
 }
 
 module.exports = {
+  formatUserResponse,
   buscarUserPorCpf,
   buscarPorCpf: buscarUserPorCpf,
   buscarUserPorId,

@@ -100,26 +100,8 @@ exports.login = async (req, res, next) => {
 
     log.info("AuthLoginSucesso", { userId: user.id, deviceId, requestId });
 
-    // FENAPRF: Retornar objeto completo (sem campos sensíveis) para evitar cards em branco no mobile
-    const userResponse = {
-      id: user.id,
-      cpf: user.cpf,
-      name: user.name,
-      nome: user.nome || user.name,
-      email: user.email,
-      email1: user.email1 || user.email,
-      perfil_acesso: user.perfil_acesso,
-      uf: user.uf,
-      cargo: user.cargo,
-      cargo_mandato_inicio: user.cargo_mandato_inicio,
-      cargo_mandato_fim: user.cargo_mandato_fim,
-      avatar_url: user.avatar_url,
-      data_nascimento: user.data_nascimento,
-      sexo: user.sexo,
-      perfil_acesso2: user.perfil_acesso2,
-      cargo2: user.cargo2,
-      uf2: user.uf2
-    };
+    // FENAPRF: Usar helper centralizado para projeção segura
+    const userResponse = usersService.formatUserResponse(user);
 
     return res.json({
       message: Textos.SUCESSO.LOGIN_REALIZADO,
@@ -217,25 +199,7 @@ exports.refresh = async (req, res, next) => {
     log.info("AuthRefreshSucesso", { userId: sessao.user_id, atorId, requestId });
 
     // FENAPRF: Retornar também o usuário atualizado no refresh para reidratação
-    const userResponse = {
-        id: sessao.user_id,
-        cpf: sessao.cpf,
-        name: sessao.name,
-        nome: sessao.nome || sessao.name,
-        email: sessao.email,
-        email1: sessao.email1 || sessao.email,
-        perfil_acesso: sessao.perfil_acesso,
-        uf: sessao.uf,
-        cargo: sessao.cargo,
-        cargo_mandato_inicio: sessao.cargo_mandato_inicio,
-        cargo_mandato_fim: sessao.cargo_mandato_fim,
-        avatar_url: sessao.avatar_url,
-        data_nascimento: sessao.data_nascimento,
-        sexo: sessao.sexo,
-        perfil_acesso2: sessao.perfil_acesso2,
-        cargo2: sessao.cargo2,
-        uf2: sessao.uf2
-    };
+    const userResponse = usersService.formatUserResponse(sessao);
 
     return res.json({
       token: accessToken,
@@ -309,13 +273,10 @@ exports.me = async (req, res, next) => {
       return res.status(404).json({ error: Textos.USERS.USER_NAO_ENCONTRADO });
     }
 
-    const { senha_hash, password_hash, ...limpo } = user;
-    if (password_hash === 'PENDENTE' || senha_hash === 'PENDENTE') {
-        limpo.password_hash = 'PENDENTE';
-    }
+    const safeUser = usersService.formatUserResponse(user);
 
     log.info("AuthMeSucesso", { userId: user.id, requestId, atorId });
-    return res.json(limpo);
+    return res.json(safeUser);
   } catch (err) {
     log.error("AuthMeErro", { error: err.message, requestId, userId: atorId });
     next(err);
