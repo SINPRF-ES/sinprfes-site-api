@@ -58,7 +58,7 @@ async function converterAvatarParaWebp(req, res, next) {
       });
     }
 
-    // Não persiste em disco (filesystem do Render é efêmero). Mantém em memória para upload no storage.
+    // Não persiste em disco (filesystem em nuvem costuma ser efêmero). Mantém em memória para upload no storage.
     req.file.buffer = buffer;
     req.file.filename = filename;
     req.file.mimetype = "image/webp";

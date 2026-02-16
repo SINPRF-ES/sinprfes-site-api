@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/env';
 
 class AssembleiaSocket {
   private socket: Socket | null = null;

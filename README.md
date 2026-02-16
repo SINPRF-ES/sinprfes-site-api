@@ -21,7 +21,7 @@ Este documento consolida **regras críticas de arquitetura** e **regras explíci
 ### Backend (`/backend`)
 
 - É a **fonte única da verdade** (regras de negócio, permissões, validações).
-- É o **único projeto buildado e executado no Render**.
+- É o **único projeto buildado e executado no ambiente de nuvem**.
 - **NÃO pode conter dependências de UI ou mobile**.
 
 ### Site (`/site`)
@@ -290,14 +290,14 @@ Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adot
 
 ---
 
-## 🚀 Deploy no Render (Backend)
+## 🚀 Deploy em Nuvem (Railway/Outros)
 
 - Build Command: `cd backend && pnpm install`
 - Start Command: `cd backend && pnpm start`
-- Node Version: definida em `backend/.node-version`
+- Node Version: 20.x (definida em `backend/package.json`)
 - Root Directory: `/` (nunca usar `/mobile`)
 
-O Render nao deve instalar nem considerar dependencias do diretorio `/mobile`.
+O ambiente de deploy não deve instalar nem considerar dependências do diretório `/mobile`.
 
 ---
 

@@ -61,7 +61,11 @@ exports.solicitarResetSenha = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    const baseUrl = process.env.APP_BASE_URL || "https://sinprfes.org.br";
+    const baseUrl = process.env.APP_BASE_URL;
+    if (!baseUrl) {
+      log.error("SenhaController.AppBaseUrlMissing", { requestId });
+      return res.status(500).json({ error: "Configuração de servidor incompleta (APP_BASE_URL)." });
+    }
     const linkRedefinicao = `${baseUrl.replace(/\/$/, "")}/redefinir-senha.html?token=${encodeURIComponent(
       token
     )}`;

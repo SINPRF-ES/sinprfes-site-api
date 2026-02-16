@@ -1,7 +1,7 @@
 {
   "name": "sinprfes-site-api",
   "version": "1.0.0",
-  "description": "Site institucional e API base do SINPRF-ES para deploy no Render",
+  "description": "Site institucional e API base do SINPRF-ES",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,8 +12,7 @@
   "keywords": [
     "sinprf-es",
     "node",
-    "express",
-    "render"
+    "express"
   ],
   "author": "SINPRF-ES",
   "license": "MIT",

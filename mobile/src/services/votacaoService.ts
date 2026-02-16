@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/env';
 import type { VotacaoDetalhe, VotacaoResumo } from '../types/votacao';
 
 async function parseJsonSafe(resp: Response): Promise<any> {

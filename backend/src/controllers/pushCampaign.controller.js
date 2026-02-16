@@ -144,7 +144,7 @@ exports.pushHealth = async (req, res) => {
       expoConfigOk: "Unknown (Requires dry-run with real credentials)",
       notes: [
         "FCM V1 requires a Service Account Key (.json) configured in EAS/Expo Credentials.",
-        "Check Render logs for 'InvalidCredentials' if sent=0.",
+        "Check server logs for 'InvalidCredentials' if sent=0.",
         "Use /api/push/campaigns/send for a real test."
       ]
     };

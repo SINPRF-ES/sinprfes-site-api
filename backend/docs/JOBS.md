@@ -12,7 +12,7 @@ Responsável por identificar filiados e dependentes que fazem aniversário no di
 - **Timezone:** O job utiliza explicitamente o fuso horário de Brasília para determinar o dia e a hora da execução, independentemente do horário do servidor (UTC).
 
 ### 1.2. Mecanismo de Lock (Execução Única)
-Para garantir que o job rode exatamente uma vez por dia, mesmo em ambientes com múltiplos containers ou reinicializações frequentes (ex: Render/Heroku), utilizamos a tabela `job_runs` no PostgreSQL.
+Para garantir que o job rode exatamente uma vez por dia, mesmo em ambientes com múltiplos containers ou reinicializações frequentes (ex: ambientes de nuvem), utilizamos a tabela `job_runs` no PostgreSQL.
 
 - **Fluxo:**
   1. O job inicia uma transação.
