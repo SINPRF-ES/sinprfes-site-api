@@ -1,0 +1,8 @@
+{
+  "name": "sinprfes-site",
+  "version": "1.0.0",
+  "description": "SINPRF-ES Institutional Site",
+  "scripts": {
+    "build": "echo 'No build step required for static site'"
+  }
+}

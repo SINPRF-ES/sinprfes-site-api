@@ -5,5 +5,3 @@ npm-debug.log*
 frontend
 tmp
 google.json
-mobile/*.apk
-mobile/build-*.apk

@@ -1,5 +1,0 @@
-192.168.0.1 - - [05/Feb/2026 20:46:54] "GET / HTTP/1.0" 200 -
-127.0.0.1 - - [05/Feb/2026 20:47:10] "GET /public/scroll_test.html HTTP/1.1" 200 -
-127.0.0.1 - - [05/Feb/2026 20:47:10] "GET /public/css/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [05/Feb/2026 20:47:29] "GET /public/scroll_test.html HTTP/1.1" 200 -
-127.0.0.1 - - [05/Feb/2026 20:47:29] "GET /public/css/style.css HTTP/1.1" 200 -
