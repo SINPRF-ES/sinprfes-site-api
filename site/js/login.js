@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!tokenExistente) return;
 
     try {
-      const resp = await fetch("/api/auth/me", {
+      const resp = await fetch(window.API_BASE_URL + "/api/auth/me", {
         headers: {
           Authorization: "Bearer " + tokenExistente,
           "Content-Type": "application/json",
@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = "Entrando...";
 
-        const resp = await fetch("/api/auth/login", {
+        const resp = await fetch(window.API_BASE_URL + "/api/auth/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -216,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = "Enviando...";
 
-        const resp = await fetch("/api/senha/recuperar", {
+        const resp = await fetch(window.API_BASE_URL + "/api/senha/recuperar", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

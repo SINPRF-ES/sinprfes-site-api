@@ -3,7 +3,7 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-// Confia no proxy do Render para express-rate-limit
+// Confia no proxy reverso (Render/Railway) para express-rate-limit
 app.set('trust proxy', 1);
 
 const cors = require("cors");
@@ -43,6 +43,14 @@ app.use((req, res, next) => {
 // Limite de tamanho do corpo JSON (Proteção contra DoS)
 app.use(express.json({ limit: "100kb" }));
 
+
+app.get("/config.js", (req, res) => {
+  const config = {
+    API_URL: process.env.API_URL || ""
+  };
+  res.setHeader("Content-Type", "application/javascript");
+  res.send(`window.ENV_CONFIG = ${JSON.stringify(config)};`);
+});
 
 app.use(express.static(path.join(process.cwd(), "../site")));
 app.use("/shared", express.static(path.join(process.cwd(), "../shared")));

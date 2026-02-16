@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch("/api/noticias", { headers });
+    const response = await fetch(window.API_BASE_URL + "/api/noticias", { headers });
 
     if (response.status === 401) {
       loadingEl.innerHTML = `Para ver as notícias, acesse a <a href="/area-filiado.html">Página Inicial</a>.`;

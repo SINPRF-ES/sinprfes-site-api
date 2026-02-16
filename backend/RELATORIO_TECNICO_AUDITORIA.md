@@ -59,7 +59,7 @@ O sistema SINPRF/ES encontra-se em um estado funcional estável (Produção 2.0)
 ### 4.2. Job Diário de Aniversariantes
 - **Implementação:** `src/jobs/birthdayCron.js`.
 - **Divergência:** A documentação em `docs/JOBS.md` descreve um mecanismo de lock via banco de dados (`job_runs`) que **não existe no código**.
-- **Execução:** Atualmente disparado no boot em `server.js`. Em ambientes Render, onde restarts são comuns, isso gerará spam de e-mails.
+- **Execução:** Atualmente disparado no boot em `server.js`. Em ambientes servidor, onde restarts são comuns, isso gerará spam de e-mails.
 
 ### 4.3. Admin Rebaixar Outro Admin
 - **Fluxo:** Backend valida que apenas ADMIN mexe em ADMIN.

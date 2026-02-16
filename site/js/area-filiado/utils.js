@@ -6,11 +6,13 @@
 (function (global) {
   if (global.Utils) return;
 
-  const API_BASE = (window.location.hostname === "localhost")
+  const API_BASE = window.API_BASE_URL || window.ENV_CONFIG?.API_URL ||
+    ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:3000"
-    : "https://api.sinprfes.org.br";
+    : window.location.origin);
 
   window.Api = window.Api || {};
+  window.Api.BASE_URL = API_BASE;
 
   function obterToken() {
     return localStorage.getItem("token");

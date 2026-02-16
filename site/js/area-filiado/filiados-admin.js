@@ -35,9 +35,7 @@
     function avatarHtml(avatarUrl, nome) {
         const { escapeHTML } = global.Utils || {};
         const safeNome = (nome || "").toString();
-        const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-            ? "http://localhost:3000"
-            : "https://api.sinprfes.org.br";
+        const apiBase = window.Api?.BASE_URL || window.location.origin;
 
         const src = avatarUrl
             ? (avatarUrl.startsWith('http') ? avatarUrl : apiBase + avatarUrl)
@@ -747,9 +745,7 @@
             const r = await window.Api.apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
             if (r.ok) {
                 const d = await r.json();
-                const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-                    ? "http://localhost:3000"
-                    : "https://api.sinprfes.org.br";
+                const apiBase = window.Api?.BASE_URL || window.location.origin;
 
                 const finalUrl = d.avatar_url.startsWith('http') ? d.avatar_url : apiBase + d.avatar_url;
                 document.getElementById("modal-avatar-preview").src = finalUrl;

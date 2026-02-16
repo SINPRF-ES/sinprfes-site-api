@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = "Salvando...";
 
-        const resp = await fetch("/api/senha/resetar", {
+        const resp = await fetch(window.API_BASE_URL + "/api/senha/resetar", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

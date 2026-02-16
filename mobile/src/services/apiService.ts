@@ -166,7 +166,7 @@ api.interceptors.response.use(
       message = `${message} (Cód: ${errorId})`;
     }
 
-    // Se a API retornar HTML (ex: 502 Proxy, Erro do Render, etc), extraímos um preview para o log
+    // Se a API retornar HTML (ex: 502 Proxy, Erro do Servidor, etc), extraímos um preview para o log
     if (contentType.includes('text/html')) {
       const htmlPreview = typeof response.data === 'string'
         ? response.data.replace(/<[^>]*>?/gm, '').substring(0, 200).trim()

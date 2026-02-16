@@ -1,5 +1,5 @@
 // src/services/eventosService.ts
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL } from "../config/env";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 

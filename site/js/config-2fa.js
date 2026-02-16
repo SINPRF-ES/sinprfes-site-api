@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     msg.textContent = "";
 
     try {
-      const resp = await fetch("/api/auth/2fa/ativar", {
+      const resp = await fetch(window.API_BASE_URL + "/api/auth/2fa/ativar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
