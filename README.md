@@ -16,13 +16,17 @@ Este documento consolida **regras críticas de arquitetura** e **regras explíci
 
 ## 🧱 Regra fundamental do monorepo
 
-> **O backend (raiz do projeto) e o mobile (`/mobile`) são projetos independentes que apenas compartilham o mesmo repositório.**
+> **O backend (`/backend`), o site (`/site`) e o mobile (`/mobile`) são projetos independentes que compartilham o mesmo repositório.**
 
-### Backend (raiz do projeto)
+### Backend (`/backend`)
 
 - É a **fonte única da verdade** (regras de negócio, permissões, validações).
 - É o **único projeto buildado e executado no Render**.
 - **NÃO pode conter dependências de UI ou mobile**.
+
+### Site (`/site`)
+
+- Frontend institucional servido de forma estática pelo backend.
 
 ### Mobile (`/mobile`)
 
@@ -35,7 +39,7 @@ Este documento consolida **regras críticas de arquitetura** e **regras explíci
 
 ## 🚫 Proibição explícita (regra crítica)
 
-É **estritamente proibido** adicionar ao `package.json` da **raiz (backend)** qualquer dependência relacionada a UI/mobile, incluindo (mas não limitado a):
+É **estritamente proibido** adicionar ao `package.json` do **backend** qualquer dependência relacionada a UI/mobile, incluindo (mas não limitado a):
 
 - `react`, `react-dom`, `react-native`, `expo`
 - `@react-navigation/*`
@@ -51,7 +55,7 @@ Todas essas dependências devem existir somente em `/mobile/package.json`.
 
 Para evitar regressões, o projeto possui um **guardrail automático**:
 
-- Arquivo: `scripts/check-root-deps.js`
+- Arquivo: `backend/scripts/check-root-deps.js`
 - Executado em `preinstall`
 - **Bloqueia o build** se dependências de mobile/UI forem adicionadas ao backend
 
@@ -288,9 +292,9 @@ Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adot
 
 ## 🚀 Deploy no Render (Backend)
 
-- Build Command: `npm ci`
-- Start Command: `npm start`
-- Node Version: definida em `.node-version`
+- Build Command: `cd backend && pnpm install`
+- Start Command: `cd backend && pnpm start`
+- Node Version: definida em `backend/.node-version`
 - Root Directory: `/` (nunca usar `/mobile`)
 
 O Render nao deve instalar nem considerar dependencias do diretorio `/mobile`.
@@ -313,7 +317,7 @@ Qualquer implementação que:
 O projeto possui um ambiente de desenvolvimento paralelo para testes de novas interfaces e funcionalidades sem impactar a produção.
 
 ### Acesso e Roteamento
-- **Produção (Estável):** `https://sinprfes.org.br/` (serve de `public/`)
+- **Produção (Estável):** `https://sinprfes.org.br/` (serve de `site/`)
 
 - **CMS Interno:** As atualizações de conteúdo via CMS na "Área do Filiado" refletem imediatamente no ambiente Dev V2.
 

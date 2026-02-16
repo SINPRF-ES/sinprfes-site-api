@@ -7,10 +7,16 @@
 
   <link rel="stylesheet" href="/css/style.css">
 
-  <style id="embed-style">
-    /* Esconde por padrão para evitar flicker no app */
-    #site-header, #site-footer { display: none !important; }
-  </style>
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1' || params.get('app') === '1') {
+        var style = document.createElement('style');
+        style.innerHTML = '#site-header, #site-footer, .estatuto-nav { display: none !important; } body { padding-top: 0 !important; }';
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
 
   <style>
     html {
@@ -20,11 +26,11 @@
     body {
       background-color: #0b1724;
     }
-
+    
     /* 1. SOBRESCRITA DA LARGURA DO CONTEÚDO PRINCIPAL (page-content) */
     /* Remove a limitação de 960px do style.css para esta página */
     .estatuto-page .page-content {
-        max-width: 100%;
+        max-width: 100%; 
     }
 
 
@@ -72,7 +78,7 @@
       color: #555;
       margin-bottom: 0;
     }
-
+    
     /* Regra para desktop */
     @media (min-width: 992px) {
       .estatuto-nav {
@@ -146,7 +152,7 @@
       opacity: 1;
       transform: translateY(-1px);
     }
-
+    
     /* Documento em si */
     .estatuto-documento {
       margin-top: 1.5rem;
@@ -268,7 +274,7 @@
       .estatuto-card {
         padding: 1.7rem 1.1rem 2.2rem;
         width: 95%; /* Prioriza largura total no mobile */
-        max-width: 95%;
+        max-width: 95%; 
       }
 
       .estatuto-nav {
@@ -278,11 +284,11 @@
         flex-wrap: nowrap; /* MANTIDO: Para não quebrar os botões */
         width: 95%; /* Prioriza largura total no mobile */
         max-width: 95%;
-
+        
         /* 🟢 CORREÇÃO CRÍTICA: Permite rolagem horizontal */
-        overflow-x: auto;
+        overflow-x: auto; 
         justify-content: flex-start; /* Alinha os itens à esquerda para iniciar a rolagem */
-
+        
       }
 
       .estatuto-nav a {
