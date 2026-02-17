@@ -36,7 +36,7 @@ const NAV_ITEMS = [
 const GESTAO_ITEMS: any[] = [];
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-  const { user } = useAuth();
+  const { usuario: user } = useAuth();
   const insets = useSafeAreaInsets();
 
   const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
