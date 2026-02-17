@@ -3,7 +3,7 @@ const { withAppBuildGradle, withAndroidManifest } = require('@expo/config-plugin
 /**
  * Adiciona configuração de Split APK por ABI e permissão de instalação.
  */
-const withAndroidSplit = (config) => {
+function withAndroidSplit(config) {
   // 1. Configuração de Split APK
   config = withAppBuildGradle(config, (config) => {
     if (config.modResults.language === 'groovy') {
@@ -12,9 +12,7 @@ const withAndroidSplit = (config) => {
     return config;
   });
 
-  // 2. Adição da permissão REQUEST_INSTALL_PACKAGES (Nível 2)
-  // Fazemos via plugin para evitar sobrescrever android.permissions no app.json,
-  // o que pode causar regressões em builds otimizados.
+  // 2. Adição da permissão REQUEST_INSTALL_PACKAGES
   config = withAndroidManifest(config, (config) => {
     const mainManifest = config.modResults.manifest;
     if (!mainManifest['uses-permission']) {
@@ -32,7 +30,7 @@ const withAndroidSplit = (config) => {
   });
 
   return config;
-};
+}
 
 function addSplitConfig(contents) {
   // Se já existir um bloco splits, não duplica

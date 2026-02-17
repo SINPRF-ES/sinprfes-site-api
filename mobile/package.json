@@ -10,6 +10,7 @@
     "verify:android-split": "./scripts/verify-android-split.sh"
   },
   "dependencies": {
+    "@expo/config-plugins": "~54.0.4",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/netinfo": "11.4.1",
@@ -17,12 +18,13 @@
     "@react-navigation/drawer": "^7.7.11",
     "@react-navigation/native": "^7.1.27",
     "@react-navigation/native-stack": "^7.8.6",
-    "@sinprfes/shared-format": "file:../shared/format",
+    "@sinprfes/shared-format": "workspace:*",
     "@tanstack/react-query": "^5.90.17",
     "axios": "^1.13.2",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.31",
     "expo-application": "^7.0.8",
+    "expo-asset": "~12.0.12",
     "expo-build-properties": "^1.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
