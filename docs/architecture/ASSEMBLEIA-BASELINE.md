@@ -14,9 +14,9 @@ O sistema opera sob as diretrizes estabelecidas nos seguintes documentos:
 
 - [GOVERNANÇA](ASSEMBLEIA-GOVERNANCA.md): Regras de decisão e responsabilidades.
 - [CANON](ASSEMBLEIA-VOTACAO-CANON.md): Especificação normativa de regras de negócio.
-- [DIA DO EVENTO](ASSEMBLEIA-DIA-DO-EVENTO.md): Checklist e procedimentos operacionais.
-- [ROLLBACK](ASSEMBLEIA-ROLLBACK.md): Protocolos de resposta a incidentes.
-- [GO-LIVE](ASSEMBLEIA-GO-LIVE.md): Critérios de prontidão para entrada em produção.
+- [DIA DO EVENTO](../runbooks/ASSEMBLEIA-DIA-DO-EVENTO.md): Checklist e procedimentos operacionais.
+- [ROLLBACK](../ops/ASSEMBLEIA-ROLLBACK.md): Protocolos de resposta a incidentes.
+- [GO-LIVE](../ops/ASSEMBLEIA-GO-LIVE.md): Critérios de prontidão para entrada em produção.
 
 ## 3. Histórico de Evolução
-A partir deste ponto, todas as alterações no sistema devem seguir o [Critério de Mudança](ASSEMBLEIA-OCORRENCIAS.md) definido para evitar regressões no CANON.
+A partir deste ponto, todas as alterações no sistema devem seguir o [Critério de Mudança](../ops/ASSEMBLEIA-OCORRENCIAS.md) definido para evitar regressões no CANON.

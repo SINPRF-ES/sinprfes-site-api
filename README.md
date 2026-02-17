@@ -11,10 +11,9 @@ A documentação completa do projeto foi organizada e centralizada no diretório
 ### Estrutura de Documentação:
 - [**Arquitetura**](./docs/architecture/): Princípios, diagramas e regras canônicas.
 - [**Mobile**](./docs/mobile/): Guia do desenvolvedor mobile, configuração Expo e arquitetura do app.
-- [**Backend**](./docs/backend/): Documentação da API, contratos, segurança e jobs.
-- [**OTA & Updates**](./docs/ota/): Fluxos de atualização Over-the-Air e roteiros de publicação.
-- [**Build & Deploy**](./docs/build/): Instruções para geração de APK/AAB e processos de deploy.
-- [**Guias**](./docs/guides/): Tutoriais de uso do sistema para administradores e comunicadores.
+- [**Operações (Ops)**](./docs/ops/): Guias operacionais (deploy, Railway, Cloudflare, DNS, etc.).
+- [**Runbooks**](./docs/runbooks/): Passo-a-passo executável (OTA, homologação, etc.).
+- [**OTA Runbook Oficial**](./docs/runbooks/ota-update.md): Único guia oficial para atualizações Over-the-Air.
 
 ---
 

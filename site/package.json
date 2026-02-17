@@ -1,5 +1,5 @@
 {
-  "name": "sinprfes-site",
+  "name": "@sinprfes/site",
   "version": "1.0.0",
   "description": "SINPRF-ES Institutional Site",
   "scripts": {
