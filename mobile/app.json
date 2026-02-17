@@ -54,7 +54,7 @@
       ]
     ],
     "extra": {
-      "API_BASE_URL": "https://sinprfes.org.br",
+      "API_BASE_URL": "https://api.sinprfes.org.br",
       "eas": {
         "projectId": "c589a042-895e-497e-a61f-a76216580a35"
       }
