@@ -6,6 +6,7 @@ const filiadosService = require("../services/filiados.service");
 const log = require("../utils/log");
 const { formatarCPF } = require("../utils/format");
 const { slugify } = require('../shared/canon');
+const { v4: uuidv4 } = require("uuid");
 
 /**
  * Gera um slug amigável para nome de arquivo.
@@ -51,12 +52,19 @@ async function getRequesterData(user) {
  * POST /api/reports/generate
  */
 exports.generateReport = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
+  if (!atorId) {
+    return res.status(401).json({ success: false, message: "Usuário não autenticado.", requestId });
+  }
+
   const { type, params } = req.body;
   const requesterSession = req.user;
 
   // Validação do contrato da API
   if (!type || typeof params !== 'object' || params === null) {
-    return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios." });
+    return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios.", requestId });
   }
 
   try {
@@ -70,10 +78,10 @@ exports.generateReport = async (req, res) => {
     if (type === "INDIVIDUAL") {
       // Contrato: INDIVIDUAL => { filiadoId }
       const { filiadoId } = params;
-      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório para relatório individual." });
+      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório para relatório individual.", requestId });
 
       const dados = await reportsService.buscarDadosDossie(filiadoId);
-      if (!dados) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
+      if (!dados) return res.status(404).json({ success: false, message: "Filiado não encontrado.", requestId });
 
       // Resolver nome para exibição no histórico (A1)
       params.filiadoNome = dados.nome;
@@ -91,7 +99,7 @@ exports.generateReport = async (req, res) => {
     } else if (["LOTACAO", "SITUACAO"].includes(type)) {
       // Contrato: LOTACAO/SITUACAO => { value }
       const { value } = params;
-      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório." });
+      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório para este tipo de relatório.", requestId });
 
       const dados = await reportsService.buscarDadosAgregados(type, value);
 
@@ -112,7 +120,7 @@ exports.generateReport = async (req, res) => {
       pdfBuffer = await pdfService.gerarPdfRelatorioGlobal(dados);
 
     } else {
-      return res.status(400).json({ message: "Tipo de relatório inválido." });
+      return res.status(400).json({ success: false, message: "Tipo de relatório inválido.", requestId });
     }
 
     // Registrar Job/Auditoria
@@ -121,16 +129,17 @@ exports.generateReport = async (req, res) => {
     // Enviar por E-mail (passando objeto com nome e email correto)
     await emailService.enviarEmailRelatorio(requester, reportTitle, pdfBuffer, filename);
 
-    log.info("RelatorioGerado", { type, requesterId: requesterSession.id, requestId: req.requestId });
+    log.info("RelatorioGerado", { type, atorId, requestId });
 
     return res.json({
       success: true,
-      message: `O relatório "${reportTitle}" foi gerado e enviado para seu e-mail (${requester.email || "não cadastrado"}).`
+      message: `O relatório "${reportTitle}" foi gerado e enviado para seu e-mail (${requester.email || "não cadastrado"}).`,
+      requestId
     });
 
   } catch (err) {
-    log.error("ErroGerarRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId });
-    return res.status(500).json({ success: false, message: "Erro ao gerar relatório. Tente novamente mais tarde." });
+    log.error("ErroGerarRelatorio", { error: err.message, stack: err.stack, requestId, atorId });
+    return res.status(500).json({ success: false, message: "Erro ao gerar relatório. Tente novamente mais tarde.", requestId });
   }
 };
 
@@ -138,11 +147,18 @@ exports.generateReport = async (req, res) => {
  * POST /api/reports/preview
  */
 exports.previewReport = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
+  if (!atorId) {
+    return res.status(401).json({ success: false, message: "Usuário não autenticado.", requestId });
+  }
+
   const { type, params } = req.body;
   const requesterSession = req.user;
 
   if (!type || typeof params !== 'object' || params === null) {
-    return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios." });
+    return res.status(400).json({ success: false, message: "Tipo e parâmetros são obrigatórios.", requestId });
   }
 
   try {
@@ -151,12 +167,12 @@ exports.previewReport = async (req, res) => {
 
     if (type === "INDIVIDUAL") {
       const { filiadoId } = params;
-      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório." });
+      if (!filiadoId) return res.status(400).json({ success: false, message: "ID do filiado é obrigatório.", requestId });
       data = await reportsService.buscarDadosDossie(filiadoId);
-      if (!data) return res.status(404).json({ success: false, message: "Filiado não encontrado." });
+      if (!data) return res.status(404).json({ success: false, message: "Filiado não encontrado.", requestId });
     } else if (["LOTACAO", "SITUACAO"].includes(type)) {
       const { value } = params;
-      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório." });
+      if (!value) return res.status(400).json({ success: false, message: "Valor do filtro é obrigatório.", requestId });
       data = await reportsService.buscarDadosAgregados(type, value);
       if (data.repasse && data.repasse.competencia) {
         baseCompetencia = `${String(data.repasse.competencia.month).padStart(2, '0')}/${data.repasse.competencia.year}`;
@@ -167,7 +183,7 @@ exports.previewReport = async (req, res) => {
         baseCompetencia = `${String(data.ativo.repasse.competencia.month).padStart(2, '0')}/${data.ativo.repasse.competencia.year}`;
       }
     } else {
-      return res.status(400).json({ success: false, message: "Tipo de relatório inválido." });
+      return res.status(400).json({ success: false, message: "Tipo de relatório inválido.", requestId });
     }
 
     const sections = [];
@@ -284,12 +300,13 @@ exports.previewReport = async (req, res) => {
       generatedAt: new Date().toISOString(),
       baseCompetencia,
       summary: type === "INDIVIDUAL" ? { nome: data.nome, cpf: data.cpf, situacao: data.situacao } : { total: data.total || (data.ativo ? data.ativo.total + data.veterano.total + data.pensionista.total : 0) },
-      sections
+      sections,
+      requestId
     });
 
   } catch (err) {
-    log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId: req.requestId });
-    return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde." });
+    log.error("ErroPreviewRelatorio", { error: err.message, stack: err.stack, requestId, atorId });
+    return res.status(500).json({ success: false, message: "Erro ao gerar preview. Tente novamente mais tarde.", requestId });
   }
 };
 
@@ -297,6 +314,13 @@ exports.previewReport = async (req, res) => {
  * GET /api/reports/history
  */
 exports.getHistory = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
+  if (!atorId) {
+    return res.status(401).json({ success: false, message: "Usuário não autenticado.", requestId });
+  }
+
   try {
     const requesterId = req.user.id;
     const perfil = (req.user.perfil_acesso || "").toUpperCase();
@@ -316,7 +340,7 @@ exports.getHistory = async (req, res) => {
               item.params = p; // Atualiza o objeto para a resposta
             }
           } catch (e) {
-            log.error("ErroAoResolverNomeNoHistorico", { id: p.filiadoId });
+            log.error("ErroAoResolverNomeNoHistorico", { id: p.filiadoId, requestId, atorId });
           }
         }
       }
@@ -324,7 +348,7 @@ exports.getHistory = async (req, res) => {
 
     return res.json(history);
   } catch (err) {
-    log.error("ErroListarHistoricoRelatorios", { error: err.message, requestId: req.requestId });
-    return res.status(500).json({ message: "Erro ao carregar histórico." });
+    log.error("ErroListarHistoricoRelatorios", { error: err.message, requestId, atorId });
+    return res.status(500).json({ message: "Erro ao carregar histórico.", requestId });
   }
 };

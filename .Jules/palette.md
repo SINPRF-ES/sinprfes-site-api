@@ -17,3 +17,7 @@
 ## 2026-02-04 - [Clipboard Feedback UX Pattern]
 **Learning:** For clipboard operations (e.g., 2FA secret copy), buttons should provide transient visual feedback by updating `textContent` to '✅ Copiado!' for 2000ms. Use `textContent` instead of `innerHTML` to avoid XSS risks and maintain a clean interaction loop.
 **Action:** Always provide a "Copy" utility for long, sensitive, or complex alphanumeric strings (tokens, keys, IDs) that users might need to transfer to other apps, ensuring transient text feedback is used.
+
+## 2026-02-17 - [Traceable Error Responses]
+**Learning:** Including a `requestId` in API error responses empowers users to provide specific references when seeking support. This drastically reduces the time needed for developers to locate relevant logs in cloud environments (Railway/Render).
+**Action:** Standardized all backend controllers to include `requestId` in both success and error JSON payloads.
