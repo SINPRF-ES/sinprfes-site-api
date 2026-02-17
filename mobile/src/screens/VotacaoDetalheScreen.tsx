@@ -4,7 +4,7 @@ import { useRoute } from '@react-navigation/native';
 
 import { useAuth } from '../hooks/useAuth';
 import { obterVotacao, votar } from '../services/votacaoService';
-import { getDeviceId } from '../services/deviceService';
+import { getStableDeviceId } from '../utils/deviceId';
 import { logger } from '../infra/logger';
 
 import type { VotacaoDetalhe } from '../types/votacao';
@@ -60,7 +60,7 @@ export default function VotacaoDetalheScreen() {
         biometriaConfirmada = true;
       }
 
-      const deviceId = await getDeviceId();
+      const deviceId = await getStableDeviceId();
 
       const res = await votar(token, votacao.id, {
         opcao_id: opcaoSelecionada,

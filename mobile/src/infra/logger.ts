@@ -9,7 +9,7 @@ const MAX_LOGS = 200;
 // Correlation ID por sessão
 const SESSION_ID = Math.random().toString(36).substring(2, 10).toUpperCase();
 
-export type LogLevel = 'INFO' | 'WARN' | 'ERROR';
+export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
 export interface LogEntry {
   timestamp: string;
@@ -77,6 +77,7 @@ export const logger = {
   info: (message: string, meta?: Record<string, unknown>) => log('INFO', message, meta),
   warn: (message: string, meta?: Record<string, unknown>) => log('WARN', message, meta),
   error: (message: string, error?: Error, meta?: Record<string, unknown>) => log('ERROR', message, meta, error),
+  debug: (message: string, meta?: Record<string, unknown>) => log('DEBUG', message, meta),
 };
 
 /**

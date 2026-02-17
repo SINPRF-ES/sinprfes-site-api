@@ -76,3 +76,14 @@ export async function solicitarResetSenha(
   const { data } = await api.post("/api/senha/recuperar", { cpf });
   return data;
 }
+
+/**
+ * Redefine a senha do usuário usando o token recebido por e-mail.
+ */
+export async function resetarSenha(
+  token: string,
+  novaSenha: string
+): Promise<{ message: string }> {
+  const { data } = await api.post("/api/senha/resetar", { token, novaSenha });
+  return data;
+}

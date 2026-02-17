@@ -119,7 +119,7 @@ const DrawerNavigator = () => {
         <Drawer.Screen
           name="Logs"
           component={LogsScreen}
-          options={{ title: '🧪 Diagnóstico' }}
+          options={{ title: 'Diagnóstico do Sistema' }}
         />
       )}
       {ehGestao && (
