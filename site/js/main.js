@@ -1,10 +1,15 @@
 // public/js/main.js
 
 // Configuração global de API baseada no ambiente
+/**
+ * CANONICAL RULE:
+ * Always use api.sinprfes.org.br for API calls.
+ * Never use sinprfes.org.br (frontend only).
+ */
 window.API_BASE_URL = window.ENV_CONFIG?.API_URL ||
   ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   ? "http://localhost:3000"
-  : window.location.origin);
+  : "https://api.sinprfes.org.br");
 
 document.addEventListener("DOMContentLoaded", () => {
   const headerEl = document.getElementById("site-header");

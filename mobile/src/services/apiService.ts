@@ -1,4 +1,11 @@
-// src/services/apiService.ts
+/**
+ * CANONICAL RULE
+ *
+ * api.sinprfes.org.br is API only.
+ * sinprfes.org.br is frontend only.
+ *
+ * This service must exclusively use API_BASE_URL which resolves to api.sinprfes.org.br in production.
+ */
 import axios from 'axios';
 import { API_BASE_URL } from '../config/env';
 import { carregarSessao, limparSessao, carregarRefreshToken, salvarSessao, temRefreshTokenGravado } from './storageService';
