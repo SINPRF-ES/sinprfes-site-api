@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
+import { API_BASE_URL } from './src/config/env';
 import ReanimatedPackage from 'react-native-reanimated/package.json';
 import { AuthProvider } from './src/hooks/useAuth';
 import RootNavigation from './src/navigation';
@@ -12,10 +14,13 @@ import { logger } from './src/infra/logger';
 // Inicializa o sistema de captura de erros globalmente
 setupGlobalErrorHandling();
 
-// Log de inicialização com versões importantes
+// Log de inicialização com versões importantes e diagnóstico de rede
 logger.info('App Initializing', {
   expoSdkVersion: Constants.expoVersion,
   reanimatedVersion: ReanimatedPackage.version,
+  apiBaseUrl: API_BASE_URL,
+  updateChannel: Updates.channel,
+  runtimeVersion: Updates.runtimeVersion,
 });
 
 const queryClient = new QueryClient();
