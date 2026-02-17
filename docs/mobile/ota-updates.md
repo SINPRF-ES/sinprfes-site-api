@@ -1,4 +1,4 @@
-# OTA Updates (Over-the-Air)
+# OTA Updates (Over-the-Air) - SINPRF-ES
 
 OTA updates allow you to update the application's JavaScript code and assets without requiring users to download a new APK, provided the `runtimeVersion` remains compatible.
 
@@ -8,10 +8,15 @@ OTA updates allow you to update the application's JavaScript code and assets wit
 - Content updates.
 - New screens that do NOT require new native modules or permissions.
 
+### Examples:
+- Fixing a typo or a color.
+- Correcting logic in a `useEffect` or `useQuery`.
+- Adding a new feature that uses existing native components.
+
 ## Prerequisites
 - EAS CLI installed and authenticated.
 - Correct `runtimeVersion` in `app.json` (currently `54.0.1`).
-- Compatible `eas.json` configuration.
+- Consistent project state (run `pnpm install` in root and `mobile/` before).
 
 ## Publishing Workflow
 
@@ -24,14 +29,26 @@ OTA updates allow you to update the application's JavaScript code and assets wit
    ```
 4. **Validation**: Open the app and verify the update is detected and applied correctly.
 
+## Decision Matrix
+
+| Change | Update Type | Requires New APK? |
+| :--- | :--- | :--- |
+| Fix typo | OTA | No |
+| Change button color | OTA | No |
+| New form field | OTA | No |
+| Add Native Module (e.g. Firebase) | APK | **Yes** |
+| Change App Icon | APK | **Yes** |
+| New Permission (e.g. GPS) | APK | **Yes** |
+| Update Expo SDK | APK | **Yes** |
+
 ## Rollback Strategy
-If an update causes issues, you can roll back to a previous version using the EAS dashboard or CLI:
+If an update causes issues, you can roll back to a previous version using the EAS CLI:
 ```bash
 eas update:rollback --branch preview
 ```
 
-## Monitoring
-Check the logs in the app under `Menu -> Atualizações -> Ver Logs` to ensure the update process is succeeding.
+## Monitoring and Logs
+Check the logs in the app under `Menu -> Atualizações -> Ver Logs`.
 Look for:
 - `Update.Modal.Detected`
 - `Update.Download.Success`
