@@ -19,7 +19,7 @@ The SINPRF-ES mobile application is built using **Expo SDK 54**. It follows a mo
 - `mobile/metro.config.js`: Simplified Metro bundler configuration.
 
 ## Build and Update Strategy
-- **OTA Updates**: Handled via EAS Update for JS/Asset changes. See [ota-updates.md](./ota-updates.md).
+- **OTA Updates**: Handled via EAS Update for JS/Asset changes. See [OTA Runbook](../runbooks/ota-update.md).
 - **Native Builds**: Handled via EAS Build for changes requiring native code modification or SDK updates. See [apk-build.md](./apk-build.md).
 - **Distribution**: APKs are distributed via a custom update mechanism integrated with Google Drive and the backend.
 

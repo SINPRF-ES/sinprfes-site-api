@@ -2,8 +2,9 @@
   "name": "sinprfes-monorepo",
   "private": true,
   "scripts": {
-    "install:all": "pnpm install -r",
-    "build:backend": "pnpm --filter backend run build",
-    "build:site": "pnpm --filter site run build"
+    "preinstall": "node scripts/check-lockfiles.js",
+    "install:all": "pnpm install",
+    "build:backend": "pnpm --filter @sinprfes/backend run build",
+    "build:site": "pnpm --filter @sinprfes/site run build"
   }
 }

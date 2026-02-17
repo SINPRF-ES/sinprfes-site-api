@@ -1,5 +1,5 @@
 {
-  "name": "sinprfes-site-api",
+  "name": "@sinprfes/backend",
   "version": "1.0.0",
   "description": "Site institucional e API base do SINPRF-ES",
   "main": "server.js",
