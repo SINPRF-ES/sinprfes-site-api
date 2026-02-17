@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, Image, Pressable } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, Image, Pressable, Platform } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 
 import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
+import { API_BASE_URL } from '../config/env';
+import api from '../services/apiService';
 import { loginSindicato, loginCom2FA, buscarUsuarioLogado, refreshSessao } from '../services/authService';
 import { registrarDispositivoParaPush } from '../services/deviceService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
@@ -128,7 +131,21 @@ export default function LoginScreen() {
       if (!resultado.token) throw new Error('Token não retornado pelo servidor.');
       await finalizarLoginComToken(resultado.token, resultado.refreshToken);
     } catch (e: any) {
-      Alert.alert('Erro no login', e?.message || 'Falha ao autenticar.');
+      const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Falha ao autenticar.';
+      const errorCode = e?.code || 'UNKNOWN';
+      const status = e?.response?.status;
+      const baseURL = api.defaults.baseURL || '';
+
+      if (!__DEV__ && (baseURL.includes('10.0.2.2') || baseURL.includes('localhost'))) {
+        Alert.alert('Configuração Inválida', 'O aplicativo está usando uma URL de desenvolvimento em produção. Verifique o rodapé de debug.');
+      } else if (errorCode === 'ECONNABORTED') {
+        Alert.alert('Erro de Conexão', 'Tempo esgotado (Timeout). Verifique sua internet.');
+      } else if (errorCode === 'ERR_NETWORK') {
+        Alert.alert('Erro de Rede', `Não foi possível conectar ao servidor.\nURL: ${baseURL}\n\nVerifique sua conexão.`);
+      } else {
+        Alert.alert('Erro no login', `${errorMsg}\n\n[Status: ${status || 'N/A'}] [Code: ${errorCode}]`);
+      }
+      logger.error('LOGIN_FAIL', e);
     } finally {
       setLoading(false);
     }
@@ -145,10 +162,18 @@ export default function LoginScreen() {
       const resultado = await loginCom2FA({ cpf, senha, codigo: codigo2FA });
       await finalizarLoginComToken(resultado.token, resultado.refreshToken);
     } catch (e: any) {
-      Alert.alert('Erro no 2FA', e?.message || 'Código inválido.');
+      const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Código inválido.';
+      const errorCode = e?.code || 'UNKNOWN';
+      Alert.alert('Erro no 2FA', `${errorMsg}\n\n[Code: ${errorCode}]`);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function copyDebugInfo() {
+    const info = `API_BASE_URL: ${API_BASE_URL}\nAxios baseURL: ${api.defaults.baseURL}\nPlatform: ${Platform.OS}\n__DEV__: ${__DEV__}`;
+    await Clipboard.setStringAsync(info);
+    Alert.alert('Copiado', 'Informações de diagnóstico copiadas.');
   }
 
   const isEtapaCredenciais = etapa === 'credenciais';
@@ -277,6 +302,14 @@ export default function LoginScreen() {
             </View>
           </>
         )}
+
+        <View style={styles.debugFooter}>
+          <Text style={styles.debugText}>API: {API_BASE_URL}</Text>
+          <Text style={styles.debugText}>Axios: {api.defaults.baseURL}</Text>
+          <Pressable onPress={copyDebugInfo} style={styles.copyButton}>
+            <Text style={styles.copyButtonText}>Copiar Debug</Text>
+          </Pressable>
+        </View>
       </View>
     </KeyboardAwareScrollView>
     </SafeScreen>
@@ -333,4 +366,27 @@ const styles = StyleSheet.create({
   info2fa: { textAlign: 'center', marginBottom: 12, fontSize: 14 },
   buttonRow: { flexDirection: 'row', gap: 8 },
   buttonCol: { flex: 1 },
+  debugFooter: {
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    alignItems: 'center',
+  },
+  debugText: {
+    fontSize: 10,
+    color: '#999',
+    marginBottom: 4,
+  },
+  copyButton: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+  },
+  copyButtonText: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: 'bold',
+  },
 });
