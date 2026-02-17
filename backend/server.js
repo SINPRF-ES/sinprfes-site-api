@@ -13,11 +13,11 @@ const { initBirthdayScheduler } = require("./src/jobs/birthdayScheduler");
 const { initPushCleanupScheduler } = require("./src/jobs/pushCleanupScheduler");
 const { initReportCleanupScheduler } = require("./src/jobs/reportCleanupScheduler");
 
-// Porta do Render (obrigatório usar process.env.PORT)
+// Porta (obrigatório usar process.env.PORT em ambientes cloud)
 const PORT = process.env.PORT || 3000;
 
 /**
- * IMPORTANTE (Render):
+ * IMPORTANTE (Cloud Deployment):
  * - Precisamos abrir a porta o mais cedo possível para não estourar o port scan timeout.
  * - Depois do bind, inicializamos sockets e schedulers em background.
  */

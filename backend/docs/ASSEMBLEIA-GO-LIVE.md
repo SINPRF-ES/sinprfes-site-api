@@ -3,7 +3,7 @@
 Instruções para a equipe técnica e diretoria antes da primeira assembleia real em produção.
 
 ## 1. Infraestrutura (PROD)
-- [ ] Deploy realizado com sucesso no Render.
+- [ ] Deploy realizado com sucesso no ambiente de nuvem.
 - [ ] Variável `ASSEMBLEIA_ENV=prod` configurada.
 - [ ] `JWT_SECRET` e `RESEND_API_KEY` validadas.
 - [ ] Banco de dados com migrações atualizadas (v4).

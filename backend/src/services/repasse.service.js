@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { LOTACOES_REPASSE, normalizeLotacao } = require('../../../shared/canon');
+const { LOTACOES_REPASSE, normalizeLotacao } = require('../shared/canon');
 
 // Keywords para busca robusta se necessário, mas agora usamos a normalização canônica
 const LOTACAO_KEYWORDS = {

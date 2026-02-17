@@ -33,7 +33,7 @@ Para validar se a configuração está correta:
 3. Envie uma mensagem de teste para "TODOS".
 4. Verifique o resultado:
    - **Sucesso**: `sent > 0`.
-   - **Erro de Credenciais**: Se o log no Render mostrar `InvalidCredentials` e a mensagem no site for *"FCM credentials missing/invalid in Expo project"*, revise o upload do JSON no EAS.
+   - **Erro de Credenciais**: Se o log no servidor mostrar `InvalidCredentials` e a mensagem no site for *"FCM credentials missing/invalid in Expo project"*, revise o upload do JSON no EAS.
 
 ## 3. Quando é necessário um Rebuild?
 

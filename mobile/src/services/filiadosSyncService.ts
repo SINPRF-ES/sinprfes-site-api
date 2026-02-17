@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/env';
 import type { Filiado } from '../types/filiado';
 import { salvarFiliadosOffline, initDb } from '../database/db';
 import { setLastSyncFiliados } from './syncMetaService';

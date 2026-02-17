@@ -5,7 +5,7 @@ const emailService = require("../services/email.service");
 const filiadosService = require("../services/filiados.service");
 const log = require("../utils/log");
 const { formatarCPF } = require("../utils/format");
-const { slugify } = require('../../../shared/canon');
+const { slugify } = require('../shared/canon');
 
 /**
  * Gera um slug amigável para nome de arquivo.

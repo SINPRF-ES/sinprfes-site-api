@@ -14,7 +14,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useAuth } from "../hooks/useAuth";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL } from "../config/env";
 
 type EventoStatus = "RASCUNHO" | "AGENDADO" | "ABERTO" | "ENCERRADO" | "CANCELADO";
 type EventoTipo = "AGE" | "AGO" | "INFORMATIVA" | "OUTROS";

@@ -1,6 +1,6 @@
 // src/services/filiadosService.ts
 import api from './apiService';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/env';
 import type { Filiado } from '../types/filiado';
 import { salvarFiliadosOffline, listarFiliadosOffline } from '../database/db';
 import { logError } from '../infra/logger';

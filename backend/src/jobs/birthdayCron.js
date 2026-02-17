@@ -81,7 +81,7 @@ async function runBirthdayScan() {
   }
 }
 
-// Se executado diretamente via node (ex: cron do sistema ou Render Cron)
+// Se executado diretamente via node (ex: cron do sistema ou Cloud Cron)
 if (require.main === module) {
   runBirthdayScan()
     .then(() => {

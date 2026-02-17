@@ -2,7 +2,7 @@
 const pool = require("../config/db");
 const filiadosService = require("./filiados.service");
 const repasseService = require("./repasse.service");
-const { SITUACAO_FUNCIONAL, LOTACOES, LOTACOES_REPASSE } = require('../../../shared/canon');
+const { SITUACAO_FUNCIONAL, LOTACOES, LOTACOES_REPASSE } = require('../shared/canon');
 
 /**
  * Registra um novo job de relatório para auditoria.

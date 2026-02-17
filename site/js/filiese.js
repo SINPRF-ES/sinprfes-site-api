@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if(payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
 
             try {
-                const res = await fetch("/api/filiese", {
+                const res = await fetch(window.API_BASE_URL + "/api/filiese", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)

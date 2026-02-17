@@ -31,7 +31,7 @@ function safeGoogleErrorDetails(error) {
 
 /**
  * Obtém a instância de autenticação do Google.
- * Prioriza a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON (produção/Render).
+ * Prioriza a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON (produção/Cloud).
  * Fallback para o arquivo google.json (local/desenvolvimento), se existir.
  *
  * Importante: se nenhuma credencial for encontrada, NÃO usa ADC (default credentials).
@@ -59,9 +59,9 @@ function getGoogleAuth() {
     return new google.auth.GoogleAuth(authOptions);
   }
 
-  // Não permitir ADC no Render (isso gera exatamente o erro que você viu).
+  // Não permitir ADC em ambientes Cloud (isso gera erros de permissão).
   throw new Error(
-    "Google credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS_JSON (recommended for Render) or provide a local google.json (gitignored)."
+    "Google credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS_JSON (recommended for Cloud) or provide a local google.json (gitignored)."
   );
 }
 

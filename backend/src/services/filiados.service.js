@@ -3,14 +3,14 @@ const pool = require("../config/db");
 const log = require("../utils/log");
 const { normalizarCpf, normalizarCep } = require("../utils/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
-const { normalizeParentesco } = require('../../../shared/dependentes/parentesco');
+const { normalizeParentesco } = require('../shared/dependentes/parentesco');
 const {
   normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil,
   normalizeLotacao,
   normalizeNome
-} = require('../../../shared/canon');
+} = require('../shared/canon');
 
 /**
  * Garante que os dependentes sejam salvos de forma compacta (da esquerda para a direita).
