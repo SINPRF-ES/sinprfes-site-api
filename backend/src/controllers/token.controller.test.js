@@ -36,17 +36,18 @@ describe('Assembleias Controller - Token Generation', () => {
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       token: '123456',
-      quorum_id: 'quorum-1'
+      quorum_id: 'quorum-1',
+      requestId: 'test-token-id'
     }));
   });
 
-  test('Should return 404 for invalid UUID format', async () => {
+  test('Should return 400 for invalid UUID format', async () => {
     req.params.id = 'invalid-uuid-123';
 
     await controller.gerarTokenQuorum(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ error: Textos.ASSEMBLEIA.NAO_ENCONTRADA });
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "ID inválido", requestId: 'test-token-id' });
   });
 
   test('Should return 409 when assembly is in invalid state', async () => {
@@ -56,7 +57,8 @@ describe('Assembleias Controller - Token Generation', () => {
 
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        error: expect.stringContaining("Não é possível gerar token")
+        error: expect.stringContaining("Não é possível gerar token"),
+        requestId: 'test-token-id'
     }));
   });
 
@@ -71,7 +73,8 @@ describe('Assembleias Controller - Token Generation', () => {
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       token: '654321',
-      isNew: false
+      isNew: false,
+      requestId: 'test-token-id'
     }));
   });
 });

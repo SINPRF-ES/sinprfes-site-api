@@ -29,7 +29,7 @@ describe('Push Controller', () => {
 
       await controller.register(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ success: true, id: 100 });
+      expect(res.json).toHaveBeenCalledWith({ success: true, id: 100, requestId: 'test-request-id' });
     });
 
     test('should return 401 if user is not authenticated', async () => {
@@ -39,7 +39,7 @@ describe('Push Controller', () => {
       await controller.register(req, res);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, requestId: 'test-request-id' }));
     });
 
     test('should return 400 if expoPushToken is missing', async () => {
@@ -48,7 +48,7 @@ describe('Push Controller', () => {
       await controller.register(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, requestId: 'test-request-id' }));
     });
 
     test('should return 400 if service throws "ExpoPushToken inválido."', async () => {
@@ -58,7 +58,7 @@ describe('Push Controller', () => {
       await controller.register(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ success: false, error: 'ExpoPushToken inválido.' });
+      expect(res.json).toHaveBeenCalledWith({ success: false, error: 'ExpoPushToken inválido.', requestId: 'test-request-id' });
     });
 
     test('should return 500 on unexpected errors', async () => {
@@ -71,7 +71,8 @@ describe('Push Controller', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: false,
         error: 'Erro ao registrar push token.',
-        errorId: expect.any(String)
+        errorId: expect.any(String),
+        requestId: 'test-request-id'
       }));
     });
   });
@@ -83,7 +84,7 @@ describe('Push Controller', () => {
 
       await controller.unregister(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ success: true });
+      expect(res.json).toHaveBeenCalledWith({ success: true, requestId: 'test-request-id' });
     });
   });
 });

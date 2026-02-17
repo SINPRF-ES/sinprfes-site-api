@@ -31,10 +31,10 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
 
   const r = await pool.query(sql, [
     userId,
-    expoPushToken,
-    deviceId || null,
-    platform || null,
-    permissionStatus || 'granted'
+    expoPushToken ? String(expoPushToken) : null,
+    deviceId ? String(deviceId) : null,
+    platform ? String(platform) : null,
+    permissionStatus ? String(permissionStatus) : 'granted'
   ]);
 
   return r.rows[0] || null;

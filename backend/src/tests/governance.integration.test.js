@@ -66,7 +66,7 @@ describe('Governance and Proposals Integration', () => {
         autor_id: 1,
         titulo: 'Título Válido',
         pauta: 'Descrição longa o suficiente'
-      })).rejects.toThrow(/Transição de estado inválida/);
+      })).rejects.toThrow(/Assembleia encerrada/);
     });
   });
 

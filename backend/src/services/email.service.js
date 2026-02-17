@@ -18,8 +18,13 @@ async function enviarEmailBase(to, subject, text, cc = undefined) {
     throw new Error("❌ MAIL_FROM não configurado.");
   }
 
-  const payload = { from: MAIL_FROM, to, subject, text };
-  if (cc) payload.cc = cc;
+  const payload = {
+    from: String(MAIL_FROM),
+    to: String(to),
+    subject: String(subject),
+    text: String(text)
+  };
+  if (cc) payload.cc = String(cc);
 
   const { data, error } = await resend.emails.send(payload);
 

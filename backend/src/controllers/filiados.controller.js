@@ -35,20 +35,16 @@ function perfilGestao(perfil) {
 
 /**
  * Normaliza campos de data para o padrão YYYY-MM-DD.
- * Aceita strings ISO completas (YYYY-MM-DDTHH:mm:ss...) e as trunca.
- * Se o valor for vazio ou inválido, retorna null.
  */
 function normalizeDateField(value) {
   if (!value) return null;
   const str = String(value).trim();
   if (!str) return null;
 
-  // Se for YYYY-MM-DD ou ISO completo (YYYY-MM-DDTHH:mm...), trunca para os 10 primeiros caracteres
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
     return str.substring(0, 10);
   }
 
-  // Suporte legado ou fallback para formato brasileiro DD/MM/YYYY
   if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
     const [d, m, y] = str.split("/");
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
@@ -58,29 +54,42 @@ function normalizeDateField(value) {
 }
 
 /**
- * Valida se um ID é numérico e seguro (INTEGER PK).
- * @returns {number|null} O ID convertido ou null se inválido.
+ * Valida se um ID é numérico e seguro.
  */
-function parseFiliadoId(req, res) {
+function parseFiliadoId(req, res, requestId) {
   const raw = String(req.params.id ?? "").trim();
 
-  // IDs em produção são numéricos (SERIAL/INTEGER)
   if (!/^\d+$/.test(raw)) {
-    res.status(400).json({ success: false, message: "ID inválido." });
+    res.status(400).json({ success: false, message: "ID inválido.", requestId });
     return null;
   }
 
   const id = Number(raw);
   if (!Number.isSafeInteger(id) || id <= 0) {
-    res.status(400).json({ success: false, message: "ID inválido." });
+    res.status(400).json({ success: false, message: "ID inválido.", requestId });
     return null;
   }
 
   return id;
 }
 
+function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de dados") {
+    // Padrão de erro de Schema ou Constraint Violations (23... ou 42703)
+    if (err && (String(err.code).startsWith('23') || err.code === '42703')) {
+        return res.status(400).json({
+            success: false,
+            message: err.detail || err.message || defaultMessage,
+            code: err.code,
+            requestId
+        });
+    }
+
+    log.error("FiliadosDbErro", { error: err.message, code: err.code, requestId });
+    return res.status(500).json({ success: false, message: defaultMessage, requestId });
+}
+
 /**
- * Valida, sanitiza e normaliza os dados dos dependentes a partir do corpo da requisição.
+ * Valida, sanitiza e normaliza os dados dos dependentes.
  */
 function validarESanitizarDependentes(body) {
   const dependentesValidos = [];
@@ -132,32 +141,34 @@ function validarESanitizarDependentes(body) {
  * GET /api/filiados/:id
  */
 exports.getFiliadoById = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
 
   try {
     const filiado = await buscarPorId(idAlvo);
 
     if (!filiado) {
-      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+      return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
     }
 
-    // Apenas gestores podem ver detalhes de outros filiados
-    const atorId = req.user.id;
     const perfilAtor = (req.user.perfil_acesso || "FILIADO").toUpperCase();
     const ehGestor = perfilGestao(perfilAtor);
     const ehProprioUsuario = String(atorId) === String(idAlvo);
 
     if (!ehGestor && !ehProprioUsuario) {
-      return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+      return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
     const { senha_hash, twofa_secret, ...dadosFiliado } = filiado;
 
-    return res.json(dadosFiliado);
+    return res.json({ ...dadosFiliado, requestId });
   } catch (err) {
-    log.error("FiliadosGetByIdErro", { error: err, requestId: req.requestId, userId: req.user?.id, targetId: idAlvo });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
+    log.error("FiliadosGetByIdErro", { error: err, requestId, atorId, targetId: idAlvo });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId });
   }
 };
 
@@ -165,12 +176,15 @@ exports.getFiliadoById = async (req, res) => {
  * GET /api/filiados/me
  */
 exports.getMe = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   try {
-    const id = req.user.id;
-    const filiado = await buscarPorId(id);
+    const filiado = await buscarPorId(atorId);
 
     if (!filiado) {
-      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+      return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
     }
 
     const { senha_hash, twofa_secret, ...dadosFiliado } = filiado;
@@ -178,10 +192,11 @@ exports.getMe = async (req, res) => {
     return res.json({
       ...dadosFiliado,
       twofa_ativo: !!twofa_secret,
+      requestId
     });
   } catch (err) {
-    log.error("FiliadosGetMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CARREGAR_DADOS });
+    log.error("FiliadosGetMeErro", { error: err, requestId, atorId });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId });
   }
 };
 
@@ -189,6 +204,10 @@ exports.getMe = async (req, res) => {
  * GET /api/filiados
  */
 exports.listarFiliados = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   try {
     const perfilAcesso = (req.user.perfil_acesso || "FILIADO").toUpperCase();
     const termoBusca = (req.query.q || "").toString();
@@ -201,10 +220,11 @@ exports.listarFiliados = async (req, res) => {
     return res.json({
       total: lista.length,
       filiados: lista,
+      requestId
     });
   } catch (err) {
-    log.error("FiliadosListarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS });
+    log.error("FiliadosListarErro", { error: err, requestId, atorId });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS, requestId });
   }
 };
 
@@ -212,8 +232,11 @@ exports.listarFiliados = async (req, res) => {
  * PUT /api/filiados/me
  */
 exports.atualizarMeusDados = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   try {
-    const id = req.user.id;
     const body = req.body || {};
 
     const dependentesArray = validarESanitizarDependentes(body);
@@ -241,20 +264,21 @@ exports.atualizarMeusDados = async (req, res) => {
       ...dadosDependentes,
     };
 
-    const atualizado = await atualizarDadosProprios(id, payload);
+    const atualizado = await atualizarDadosProprios(atorId, payload);
 
-    log.info("FiliadoAtualizouProprios", { userId: id, requestId: req.requestId });
+    log.info("FiliadoAtualizouProprios", { atorId, requestId });
 
     return res.json({
+      success: true,
       message: Textos.SUCESSO.DADOS_ATUALIZADOS,
       filiado: atualizado,
+      requestId
     });
   } catch (err) {
     if (err.isValidationError) {
-      return res.status(400).json({ message: err.message });
+      return res.status(400).json({ success: false, message: err.message, requestId });
     }
-    log.error("FiliadosUpdateMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -262,25 +286,29 @@ exports.atualizarMeusDados = async (req, res) => {
  * DELETE /api/filiados/:id/dependentes
  */
 exports.excluirDependentes = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   try {
-    const idAlvo = parseFiliadoId(req, res);
+    const idAlvo = parseFiliadoId(req, res, requestId);
     if (idAlvo === null) return;
 
     const { indices } = req.body;
     if (!Array.isArray(indices)) {
-      return res.status(400).json({ message: "Indices inválidos." });
+      return res.status(400).json({ success: false, message: "Indices inválidos.", requestId });
     }
 
     const ehGestor = perfilGestao(req.user.perfil_acesso);
-    const ehProprioUsuario = String(req.user.id) === String(idAlvo);
+    const ehProprioUsuario = String(atorId) === String(idAlvo);
 
     if (!ehGestor && !ehProprioUsuario) {
-      return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+      return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
     const filiado = await buscarPorId(idAlvo);
     if (!filiado) {
-      return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+      return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
     }
 
     const dependentesAtuais = [];
@@ -308,15 +336,16 @@ exports.excluirDependentes = async (req, res) => {
 
     const atualizado = await atualizarFiliadoPorId(idAlvo, dadosDependentes);
 
-    log.info("DependentesExcluidos", { atorId: req.user.id, alvoId: idAlvo, requestId: req.requestId });
+    log.info("DependentesExcluidos", { atorId, alvoId: idAlvo, requestId });
 
     return res.json({
+      success: true,
       message: "Dependentes excluídos com sucesso.",
       filiado: atualizado,
+      requestId
     });
   } catch (err) {
-    log.error("DependentesExcluirErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -324,58 +353,57 @@ exports.excluirDependentes = async (req, res) => {
  * PUT /api/filiados/:id
  */
 exports.atualizarFiliado = async (req, res) => {
-  const loggedId = Number(req.user?.id);
-  const idAlvo = parseFiliadoId(req, res);
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
 
     if (!perfilGestao(perfilAtor)) {
-      return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+      return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
     const body = req.body || {};
 
-    // Instrumentação de logs (B2)
     log.info("FiliadosUpdateIniciado", {
         targetId: idAlvo,
-        loggedId,
+        atorId,
         perfilAtor,
-        bodyKeys: Object.keys(body),
-        sexo_type: typeof body.sexo,
-        nascimento_presente: !!body.data_nascimento,
-        cpf_len: body.cpf ? String(body.cpf).length : 0,
-        tel1_len: body.telefone1 ? String(body.telefone1).length : 0
+        requestId,
+        bodyKeys: Object.keys(body)
     });
 
     if (body.siape) {
       const siapeLimpo = String(body.siape).replace(/\D/g, "");
       if (siapeLimpo && (siapeLimpo.length < 6 || siapeLimpo.length > 7)) {
-        return res.status(400).json({ message: "Matrícula (SIAPE) deve ter 6 ou 7 dígitos." });
+        return res.status(400).json({ success: false, message: "Matrícula (SIAPE) deve ter 6 ou 7 dígitos.", requestId });
       }
     }
 
     if (body.sexo) {
       const sexoNorm = normalizeSexo(body.sexo);
-      if (body.sexo && !sexoNorm) {
-        return res.status(400).json({ message: "Sexo inválido. Use M ou F." });
+      if (!sexoNorm) {
+        return res.status(400).json({ success: false, message: "Sexo inválido. Use M ou F.", requestId });
       }
     }
 
     if (body.cpf) {
       const cpfLimpo = normalizarCpf(body.cpf);
       if (cpfLimpo.length !== 11) {
-        return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
+        return res.status(400).json({ success: false, message: "CPF inválido (deve ter 11 dígitos).", requestId });
       }
 
       const checkCpf = await pool.query(
-        "SELECT nome FROM filiados WHERE cpf = $1 AND CAST(id AS TEXT) != CAST($2 AS TEXT) LIMIT 1",
+        "SELECT nome FROM filiados WHERE cpf = $1 AND id != $2 LIMIT 1",
         [cpfLimpo, idAlvo]
       );
 
       if (checkCpf.rows.length > 0) {
-        return res.status(409).json({ message: `CPF já cadastrado para: ${checkCpf.rows[0].nome}.` });
+        return res.status(409).json({ success: false, message: `CPF já cadastrado para: ${checkCpf.rows[0].nome}.`, requestId });
       }
     }
 
@@ -413,69 +441,42 @@ exports.atualizarFiliado = async (req, res) => {
     if (body.perfil_acesso) {
       const novoPerfil = normalizePerfil(body.perfil_acesso);
 
-      // Trava de auto-alteração de perfil
-      if (loggedId === idAlvo) {
-        return res.status(403).json({ message: "Não é permitido alterar o próprio nível de acesso." });
+      if (atorId === idAlvo) {
+        return res.status(403).json({ success: false, message: "Não é permitido alterar o próprio nível de acesso.", requestId });
       }
 
       const alvo = await buscarPorId(idAlvo);
       if (!alvo) {
-        return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+        return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
       }
 
       if (perfilAtor === "ADMIN") {
-        // ADMIN pode mudar qualquer perfil (exceto o próprio)
         payload.perfil_acesso = novoPerfil;
       } else {
         if (alvo.perfil_acesso === "ADMIN" || novoPerfil === "ADMIN") {
-          return res.status(403).json({ message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN." });
+          return res.status(403).json({ success: false, message: "Apenas ADMIN pode conceder ou retirar o perfil ADMIN.", requestId });
         }
         payload.perfil_acesso = novoPerfil;
       }
     }
 
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
-    if (!atualizado) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!atualizado) return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
 
     log.info("FiliadoEditadoPorGestao", {
-        atorId: loggedId,
+        atorId,
         alvoId: idAlvo,
-        requestId: req.requestId,
+        requestId,
         perfilAtor,
         bodyKeys: Object.keys(body)
     });
 
-    return res.json({ message: Textos.SUCESSO.DADOS_ATUALIZADOS, filiado: atualizado });
+    return res.json({ success: true, message: Textos.SUCESSO.DADOS_ATUALIZADOS, filiado: atualizado, requestId });
   } catch (err) {
     if (err.isValidationError) {
-      return res.status(400).json({ message: err.message });
+      return res.status(400).json({ success: false, message: err.message, requestId });
     }
-
-    // fallback (race-condition): constraint única no CPF
-    if (
-      err &&
-      (err.code === "23505" ||
-        err.code === "ER_DUP_ENTRY" ||
-        (err.message && err.message.includes("duplicate")))
-    ) {
-      return res.status(409).json({ message: "CPF duplicado no sistema." });
-    }
-
-    const errorId = uuidv4().split('-')[0];
-    log.error("FiliadosUpdateGestaoErro", {
-        errorId,
-        error: err.message,
-        stack: err.stack,
-        requestId: req.requestId,
-        loggedId,
-        targetId: idAlvo,
-        bodyKeys: Object.keys(req.body || {})
-    });
-    return res.status(500).json({
-        success: false,
-        message: "Erro ao atualizar filiado",
-        errorId
-    });
+    return handleDbError(err, res, requestId, "Erro ao atualizar filiado");
   }
 };
 
@@ -483,41 +484,45 @@ exports.atualizarFiliado = async (req, res) => {
  * POST /api/filiados
  */
 exports.criarFiliado = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   try {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
 
     if (!perfilGestao(perfilCriador)) {
-      return res.status(403).json({ message: Textos.FILIADOS.PERMISSAO_CRIAR });
+      return res.status(403).json({ success: false, message: Textos.FILIADOS.PERMISSAO_CRIAR, requestId });
     }
 
     const body = req.body || {};
     if (!body.nome || !body.cpf || !body.email1) {
-      return res.status(400).json({ message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS });
+      return res.status(400).json({ success: false, message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS, requestId });
     }
 
     if (body.siape) {
       const siapeLimpo = String(body.siape).replace(/\D/g, "");
       if (siapeLimpo && (siapeLimpo.length < 6 || siapeLimpo.length > 7)) {
-        return res.status(400).json({ message: "Matrícula (SIAPE) deve ter 6 ou 7 dígitos." });
+        return res.status(400).json({ success: false, message: "Matrícula (SIAPE) deve ter 6 ou 7 dígitos.", requestId });
       }
     }
 
     if (body.sexo) {
       const sexoNorm = normalizeSexo(body.sexo);
-      if (body.sexo && !sexoNorm) {
-        return res.status(400).json({ message: "Sexo inválido. Use M ou F." });
+      if (!sexoNorm) {
+        return res.status(400).json({ success: false, message: "Sexo inválido. Use M ou F.", requestId });
       }
     }
 
     const cpfLimpo = normalizarCpf(body.cpf);
     if (cpfLimpo.length !== 11) {
-      return res.status(400).json({ message: "CPF inválido (deve ter 11 dígitos)." });
+      return res.status(400).json({ success: false, message: "CPF inválido (deve ter 11 dígitos).", requestId });
     }
 
     const checkCpf = await pool.query("SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
 
     if (checkCpf.rows.length > 0) {
-      return res.status(409).json({ message: `CPF já pertence ao filiado: ${checkCpf.rows[0].nome}.` });
+      return res.status(409).json({ success: false, message: `CPF já pertence ao filiado: ${checkCpf.rows[0].nome}.`, requestId });
     }
 
     const dependentesArray = validarESanitizarDependentes(body);
@@ -557,18 +562,17 @@ exports.criarFiliado = async (req, res) => {
     try {
       await enviarEmailBoasVindasFiliado(novo);
     } catch (emailErr) {
-      log.error("FiliadoEmailBoasVindasErro", { error: emailErr, requestId: req.requestId });
+      log.error("FiliadoEmailBoasVindasErro", { error: emailErr, requestId });
     }
 
-    log.info("FiliadoCriado", { creatorId: req.user.id, newId: novo.id, requestId: req.requestId });
+    log.info("FiliadoCriado", { atorId, newId: novo.id, requestId });
 
-    return res.status(201).json({ message: Textos.SUCESSO.CRIADO_SUCESSO, filiado: novo });
+    return res.status(201).json({ success: true, message: Textos.SUCESSO.CRIADO_SUCESSO, filiado: novo, requestId });
   } catch (err) {
     if (err.isValidationError) {
-      return res.status(400).json({ message: err.message });
+      return res.status(400).json({ success: false, message: err.message, requestId });
     }
-    log.error("FiliadosCriarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.CRIAR_FILIADO });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.CRIAR_FILIADO);
   }
 };
 
@@ -576,30 +580,33 @@ exports.criarFiliado = async (req, res) => {
  * POST /api/filiados/:id/arquivar
  */
 exports.arquivarFiliado = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) {
-      return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+      return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
     const motivo = String(req.body?.motivo || "").trim();
-    if (!motivo) return res.status(400).json({ message: "Motivo é obrigatório." });
+    if (!motivo) return res.status(400).json({ success: false, message: "Motivo é obrigatório.", requestId });
 
     const atualizado = await arquivarFiliadoPorId(idAlvo, {
-      atorId: req.user.id,
+      atorId,
       atorPerfil: perfilAtor,
       motivo,
     });
 
-    if (!atualizado) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!atualizado) return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
 
-    return res.json({ message: "Estado do cadastro alterado para: ARQUIVADO.", filiado: atualizado });
+    return res.json({ success: true, message: "Estado do cadastro alterado para: ARQUIVADO.", filiado: atualizado, requestId });
   } catch (err) {
-    log.error("FiliadosArquivarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -607,28 +614,31 @@ exports.arquivarFiliado = async (req, res) => {
  * POST /api/filiados/:id/desarquivar
  */
 exports.desarquivarFiliado = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) {
-      return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+      return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
     const motivo = String(req.body?.motivo || "").trim();
     const atualizado = await desarquivarFiliadoPorId(idAlvo, {
-      atorId: req.user.id,
+      atorId,
       atorPerfil: perfilAtor,
       motivo,
     });
 
-    if (!atualizado) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!atualizado) return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
 
-    return res.json({ message: "Estado do cadastro alterado para: CADASTRO ATIVO.", filiado: atualizado });
+    return res.json({ success: true, message: "Estado do cadastro alterado para: CADASTRO ATIVO.", filiado: atualizado, requestId });
   } catch (err) {
-    log.error("FiliadosDesarquivarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -636,27 +646,30 @@ exports.desarquivarFiliado = async (req, res) => {
  * POST /api/filiados/me/avatar
  */
 exports.uploadAvatarMe = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado." });
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
-    const antes = await buscarPorId(userId);
-    const publicId = `sinprfes/avatars/filiado_${userId}`;
+  try {
+    if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: "Arquivo não enviado.", requestId });
+
+    const antes = await buscarPorId(atorId);
+    const publicId = `sinprfes/avatars/filiado_${atorId}`;
 
     if (antes?.avatar_public_id && antes.avatar_public_id !== publicId) {
       try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {}
     }
 
     const up = await uploadAvatarBuffer(req.file.buffer, publicId);
-    const atualizado = await atualizarFiliadoPorId(userId, {
+    const atualizado = await atualizarFiliadoPorId(atorId, {
       avatar_url: up.avatar_url,
       avatar_public_id: up.avatar_public_id,
     });
 
-    return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado });
+    return res.json({ success: true, message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado, requestId });
   } catch (err) {
-    log.error("FiliadosUploadAvatarMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    log.error("FiliadosUploadAvatarMeErro", { error: err, requestId, atorId });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
   }
 };
 
@@ -664,19 +677,23 @@ exports.uploadAvatarMe = async (req, res) => {
  * POST /api/filiados/:id/avatar
  */
 exports.uploadAvatarPorId = async (req, res) => {
-  const idAlvo = parseFiliadoId(req, res);
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
     if (!perfilGestao(perfilAtor)) {
-      return res.status(403).json({ message: Textos.AUTH.PERMISSAO_INSUFICIENTE });
+      return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
-    if (!req.file || !req.file.buffer) return res.status(400).json({ message: "Arquivo não enviado." });
+    if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: "Arquivo não enviado.", requestId });
 
     const antes = await buscarPorId(idAlvo);
-    if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!antes) return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
 
     const publicId = `sinprfes/avatars/filiado_${idAlvo}`;
     if (antes?.avatar_public_id && antes.avatar_public_id !== publicId) {
@@ -689,10 +706,10 @@ exports.uploadAvatarPorId = async (req, res) => {
       avatar_public_id: up.avatar_public_id,
     });
 
-    return res.json({ message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado });
+    return res.json({ success: true, message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado, requestId });
   } catch (err) {
-    log.error("FiliadosUploadAvatarPorIdErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    log.error("FiliadosUploadAvatarPorIdErro", { error: err, requestId, atorId, targetId: idAlvo });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
   }
 };
 
@@ -700,53 +717,63 @@ exports.uploadAvatarPorId = async (req, res) => {
  * POST /api/filiados/2fa/desativar
  */
 exports.desativar2fa = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const atualizado = await salvarTwoFaSecret(userId, null);
-    if (!atualizado) return res.status(400).json({ message: "Não foi possível desativar o 2FA." });
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
-    log.info("Filiado2FADesativado", { userId, requestId: req.requestId });
-    return res.json({ message: "2FA desativado com sucesso.", twofa_ativo: false });
+  try {
+    const atualizado = await salvarTwoFaSecret(atorId, null);
+    if (!atualizado) return res.status(400).json({ success: false, message: "Não foi possível desativar o 2FA.", requestId });
+
+    log.info("Filiado2FADesativado", { atorId, requestId });
+    return res.json({ success: true, message: "2FA desativado com sucesso.", twofa_ativo: false, requestId });
   } catch (err) {
-    log.error("Filiado2FADesativarErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    log.error("Filiado2FADesativarErro", { error: err, requestId, atorId });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
   }
 };
 
 exports.removerAvatarMe = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   try {
-    const id = req.user.id;
-    const antes = await buscarPorId(id);
-    if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    const antes = await buscarPorId(atorId);
+    if (!antes) return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
 
     if (antes.avatar_public_id) {
       try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {}
     }
 
-    await atualizarFiliadoPorId(id, { avatar_url: null, avatar_public_id: null });
-    return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
+    await atualizarFiliadoPorId(atorId, { avatar_url: null, avatar_public_id: null });
+    return res.json({ success: true, message: "Foto removida com sucesso.", avatar_url: null, requestId });
   } catch (err) {
-    log.error("RemoverAvatarMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    log.error("RemoverAvatarMeErro", { error: err, requestId, atorId });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
   }
 };
 
 exports.removerAvatarPorId = async (req, res) => {
-  const id = parseFiliadoId(req, res);
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  const id = parseFiliadoId(req, res, requestId);
   if (id === null) return;
 
   try {
     const antes = await buscarPorId(id);
-    if (!antes) return res.status(404).json({ message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO });
+    if (!antes) return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
 
     if (antes.avatar_public_id) {
       try { await deleteAvatarByPublicId(antes.avatar_public_id); } catch {}
     }
 
     await atualizarFiliadoPorId(id, { avatar_url: null, avatar_public_id: null });
-    return res.json({ message: "Foto removida com sucesso.", avatar_url: null });
+    return res.json({ success: true, message: "Foto removida com sucesso.", avatar_url: null, requestId });
   } catch (err) {
-    log.error("RemoverAvatarPorIdErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS });
+    log.error("RemoverAvatarPorIdErro", { error: err, requestId, atorId, targetId: id });
+    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
   }
 };
