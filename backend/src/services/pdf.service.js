@@ -9,7 +9,7 @@ const { PDFDocument: PDFLibDocument } = require("pdf-lib");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
 const { formatarCPF, formatarTelefone, formatarDataBR, formatarAgencia, formatarConta } = require("../utils/format");
-const { labelFromParentesco } = require('../../../shared/dependentes/parentesco');
+const { labelFromParentesco } = require('../shared/dependentes/parentesco');
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
 const LOGO_PATH = path.join(__dirname, "../assets/Logo_ES_semfundo.png");

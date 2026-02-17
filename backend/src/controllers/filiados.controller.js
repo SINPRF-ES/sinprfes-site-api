@@ -26,7 +26,7 @@ const {
   normalizeSexo,
   normalizePerfil,
   normalizeLotacao
-} = require('../../../shared/canon');
+} = require('../shared/canon');
 
 function perfilGestao(perfil) {
   const p = normalizePerfil(perfil);

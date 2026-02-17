@@ -52,8 +52,8 @@ app.get("/config.js", (req, res) => {
   res.send(`window.ENV_CONFIG = ${JSON.stringify(config)};`);
 });
 
-app.use(express.static(path.join(process.cwd(), "../site")));
-app.use("/shared", express.static(path.join(process.cwd(), "../shared")));
+app.use(express.static(path.join(__dirname, "../public")));
+app.use("/shared", express.static(path.join(__dirname, "shared")));
 
 // --- IMPORTAÇÃO DAS ROTAS ---
 const filieseRoutes = require("./routes/filiese.routes");
