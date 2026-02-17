@@ -31,5 +31,5 @@ eas build --platform android --profile production
 
 ## Troubleshooting
 - **Dependency Issues**: Run `npx expo doctor` to check for version mismatches.
-- **Plugin Errors**: Ensure `@expo/config-plugins` is installed in `mobile/package.json`.
-- **Metro Resolution**: Check `mobile/metro.config.js` if modules are not being found.
+- **Plugin Errors**: Expo SDK 54+ handles config plugins internally; do NOT install `@expo/config-plugins` as a direct dependency.
+- **Metro Resolution**: Check `mobile/metro.config.js`. It should be kept simple using `getDefaultConfig(__dirname)`.
