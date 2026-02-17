@@ -12,7 +12,11 @@
     "preview": {
       "autoIncrement": true,
       "channel": "preview",
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "applicationArchivePath": "android/app/build/outputs/apk/**/*.apk"
+      }
     },
     "production": {
       "autoIncrement": true,
