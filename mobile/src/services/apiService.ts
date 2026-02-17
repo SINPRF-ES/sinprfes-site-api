@@ -242,6 +242,11 @@ api.interceptors.response.use(
     
     // Trata erro 401 (Não autorizado / Sessão expirada)
     if (status === 401 && !config._retry) {
+      // Guard-rail: Se o próprio refresh falhou com 401, não tenta refresh novamente (evita loop)
+      if (config.url?.includes('/api/auth/refresh')) {
+        return Promise.reject(error);
+      }
+
       const errorData = response?.data;
       const errorMsg = errorData?.error || errorData?.message || '';
       const isMissingToken = errorMsg.includes('Token de acesso não informado');
@@ -298,8 +303,8 @@ api.interceptors.response.use(
 
         logger.info('API_401_REFRESH_START', { url });
 
-        // Chamada direta ao axios para evitar interceptor infinito
-        const refreshResponse = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+        // Unificado para usar a instância 'api' (garante baseURL correta via env.ts)
+        const refreshResponse = await api.post("/api/auth/refresh", {
           refreshToken,
         });
 

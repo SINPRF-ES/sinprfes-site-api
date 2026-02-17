@@ -1,22 +1,39 @@
-// src/config/env.ts
-import { API_BASE_URL as ENV_API_URL } from '@env';
-import { Platform } from 'react-native';
+// mobile/src/config/env.ts
+import { API_BASE_URL as ENV_API_URL } from "@env";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
-// Define a URL base da API para desenvolvimento local como um fallback
-const LOCALHOST_FALLBACK = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+const LOCALHOST_FALLBACK =
+  Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
-let resolvedApiUrl: string;
+// URL OFICIAL do backend (https)
+const PROD_FALLBACK = "https://sinprfes.org.br";
+
+function normalize(url?: string): string | undefined {
+  if (!url) return undefined;
+  const u = String(url).trim().replace(/\/+$/, "");
+  if (!u) return undefined;
+  // Força https em produção
+  return __DEV__ ? u : u.replace(/^http:\/\//, "https://");
+}
+
+const extra = (Constants.expoConfig as any)?.extra || {};
+
+const fromExtra =
+  extra.API_BASE_URL || extra.API_URL || extra.apiUrl;
+
+let resolvedApiUrl: string | undefined;
 
 if (__DEV__) {
-  // Em desenvolvimento, prioriza a URL do .env. Se não houver, usa o localhost.
-  resolvedApiUrl = ENV_API_URL || LOCALHOST_FALLBACK;
+  resolvedApiUrl = normalize(ENV_API_URL) || normalize(fromExtra) || normalize(LOCALHOST_FALLBACK);
 } else {
-  // Em produção, usa a URL do .env. Se não houver, lança erro em produção
-  // para garantir que a infraestrutura está configurada via ambiente.
-  resolvedApiUrl = ENV_API_URL;
-  if (!resolvedApiUrl) {
-    console.error('CRITICAL: EXPO_PUBLIC_API_URL is not defined in production environment.');
-  }
+  resolvedApiUrl = normalize(fromExtra) || normalize(ENV_API_URL) || normalize(PROD_FALLBACK);
+}
+
+if (!resolvedApiUrl) {
+  // Guard-rail: nunca deixar undefined (evita “Network Error” cego)
+  console.error("[CRITICAL] API_BASE_URL is undefined. Check app extra/env.");
+  resolvedApiUrl = normalize(PROD_FALLBACK)!;
 }
 
 export const API_BASE_URL = resolvedApiUrl;
