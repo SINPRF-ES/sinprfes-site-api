@@ -1,5 +1,6 @@
 import api from './apiService';
 import { logDebug } from '../utils/filiadoUtils';
+import { carregarSessao } from './storageService';
 
 export interface LogPayload {
   source: string;
@@ -12,6 +13,12 @@ export interface LogPayload {
  */
 export const enviarLogDiagnostico = async (payload: LogPayload): Promise<void> => {
   try {
+    const sessao = await carregarSessao();
+    if (!sessao?.token) {
+      logDebug('DiagnosticoService.skip', { event: payload.event, reason: 'no_token' });
+      return;
+    }
+
     await api.post('/api/diagnostico/log', payload);
     logDebug('DiagnosticoService.success', { event: payload.event });
   } catch (error: any) {

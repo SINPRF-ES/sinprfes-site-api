@@ -231,11 +231,12 @@ api.interceptors.response.use(
       axiosCode: error.code
     };
 
-    // Redução de ruído para erros best-effort (ex: Push Register 500, Jogos check 404)
+    // Redução de ruído para erros best-effort (ex: Push Register 500, Jogos check 404, Diagnóstico 401)
     const isPushRegister = url?.includes('/api/push/register');
     const isJogosCheck = url?.includes('/api/jogos/inscricao') && method?.toLowerCase() === 'get';
+    const isDiagnosticoLog = url?.includes('/api/diagnostico/log');
 
-    if ((isPushRegister && status === 500) || (isJogosCheck && status === 404)) {
+    if ((isPushRegister && status === 500) || (isJogosCheck && status === 404) || (isDiagnosticoLog && status === 401)) {
       logger.warn(`API Best-Effort/Expected Fail: ${method?.toUpperCase()} ${url} | Status: ${status} | Message: ${message}`, { requestId });
     } else {
       // Preservamos o stack trace original passando o objeto error completo para o logger
@@ -257,7 +258,8 @@ api.interceptors.response.use(
     // Trata erro 401 (Não autorizado / Sessão expirada)
     if (status === 401 && !config._retry) {
       // Guard-rail: Se o próprio refresh falhou com 401, não tenta refresh novamente (evita loop)
-      if (config.url?.includes('/api/auth/refresh')) {
+      // Também não tentamos refresh/retry para logs de diagnóstico para evitar ruído e loops
+      if (config.url?.includes('/api/auth/refresh') || config.url?.includes('/api/diagnostico/log')) {
         return Promise.reject(error);
       }
 
