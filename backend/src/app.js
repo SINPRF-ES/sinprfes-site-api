@@ -10,9 +10,6 @@ const cors = require("cors");
 
 const allowedOrigins = [
   "https://sinprfes.org.br",
-  "https://www.sinprfes.org.br",
-  "http://localhost:3000",
-  "http://localhost:5173",
 ];
 
 const corsOptions = {
@@ -44,41 +41,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "100kb" }));
 
 
-app.get("/config.js", (req, res) => {
-  const config = {
-    API_URL: process.env.API_URL || ""
-  };
-  res.setHeader("Content-Type", "application/javascript");
-  res.send(`window.ENV_CONFIG = ${JSON.stringify(config)};`);
-});
-
-// --- CACHE & PWA HEADERS ---
-app.use((req, res, next) => {
-  const url = req.url;
-
-  // HTML e Manifest -> No Cache
-  if (url.endsWith(".html") || url.endsWith(".webmanifest") || url === "/" || url.endsWith("service-worker.js")) {
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-  }
-
-  // MIME type correto para manifest
-  if (url.endsWith(".webmanifest")) {
-    res.setHeader("Content-Type", "application/manifest+json");
-  }
-
-  // Assets estáticos -> Cache longo (Best effort: Idealmente usaria hashes no nome do arquivo)
-  if (url.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$/) && !url.includes("service-worker.js")) {
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  }
-
-  next();
-});
-
-app.use(express.static(path.join(__dirname, "../public")));
-app.use("/assembleia-app", express.static(path.join(__dirname, "../../assembleia-app/dist")));
-app.use("/shared", express.static(path.join(__dirname, "shared")));
 
 // --- IMPORTAÇÃO DAS ROTAS ---
 const filieseRoutes = require("./routes/filiese.routes");
@@ -166,9 +128,13 @@ app.use("/api/eventos", eventoVotacoesRoutes); // vai usar subrotas /:id/votacoe
 // 🟧 NOVO: CMS-Lite para Blocos de Conteúdo
 app.use("/api/content-blocks", require("./routes/contentBlock.routes"));
 
-// Health Check simples
-app.get("/health", (_, res) => {
- res.json({ status: "ok" });
+// Health Check para o Service A (API)
+app.get("/api/health", (_, res) => {
+  res.json({
+    status: "ok",
+    service: "api",
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Middleware Global de Erro

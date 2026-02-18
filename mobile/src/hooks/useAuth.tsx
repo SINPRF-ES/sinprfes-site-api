@@ -29,6 +29,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const appState = useRef(AppState.currentState);
   const backgroundTimestamp = useRef<number | null>(null);
+  const lastBiometricRequestAt = useRef<number>(0);
+  const isBiometricRequestPending = useRef<boolean>(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -158,6 +160,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function desbloquearComBiometria(): Promise<boolean> {
+    if (isBiometricRequestPending.current) {
+      console.log('[Biometria.guard] Ignorando pedido: já existe uma solicitação pendente');
+      return false;
+    }
+
+    const now = Date.now();
+    if (now - lastBiometricRequestAt.current < 5000) {
+      console.log('[Biometria.guard] Ignorando pedido: intervalo muito curto (< 5s)');
+      return false;
+    }
+
+    isBiometricRequestPending.current = true;
     try {
       console.log('[Biometria.auth.start]');
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -176,6 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         disableDeviceFallback: false,
       });
 
+      lastBiometricRequestAt.current = Date.now();
+
       if (res.success) {
         console.log('[Biometria.auth.ok]');
         setBloqueadoPorBiometria(false);
@@ -186,6 +202,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error('[Biometria.auth.error]', e);
       return false;
+    } finally {
+      isBiometricRequestPending.current = false;
     }
   }
 

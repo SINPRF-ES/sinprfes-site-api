@@ -2,7 +2,13 @@
   "name": "@sinprfes/site",
   "version": "1.0.0",
   "description": "SINPRF-ES Institutional Site",
+  "main": "server.js",
   "scripts": {
-    "build": "echo 'No build step required for static site'"
+    "build": "echo 'No build step required for static site'",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "http-proxy-middleware": "^3.0.3"
   }
 }

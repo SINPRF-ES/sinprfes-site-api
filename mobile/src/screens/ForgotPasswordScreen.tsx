@@ -20,10 +20,12 @@ export default function ForgotPasswordScreen() {
     }
     try {
       setLoading(true);
-      const response = await solicitarResetSenha(cpfLimpo);
-      Alert.alert('Solicitação Enviada', response.message || 'Verifique seu e-mail para as instruções.', [
-        { text: 'OK', onPress: () => navigation.navigate('ResetPassword' as any) },
-      ]);
+      await solicitarResetSenha(cpfLimpo);
+      Alert.alert(
+        'Solicitação Enviada',
+        'Se o CPF estiver cadastrado, você receberá um e-mail com instruções.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login' as any) }]
+      );
     } catch (error: any) {
       Alert.alert('Erro', error.response?.data?.error || 'Não foi possível processar sua solicitação.');
     } finally {
@@ -36,7 +38,7 @@ export default function ForgotPasswordScreen() {
     <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid>
       <View style={styles.card}>
         <Text style={styles.instructions}>
-          Digite seu CPF abaixo. Enviaremos um link e um código de redefinição para o e-mail cadastrado.
+          Digite seu CPF abaixo. Se o CPF estiver cadastrado, você receberá um e-mail com as instruções para redefinir sua senha.
         </Text>
         <TextInput
           style={styles.input}
@@ -57,21 +59,15 @@ export default function ForgotPasswordScreen() {
           onSubmitEditing={handleRequestReset}
         />
         <Button
-          title={loading ? 'Enviando...' : 'Enviar Solicitação'}
+          title={loading ? 'Enviando...' : 'Enviar'}
           onPress={handleRequestReset}
           disabled={loading}
           color="#FFC300"
         />
+        <View style={{ height: 16 }} />
         <Button
-          title="Já tenho um código"
-          onPress={() => navigation.navigate('ResetPassword' as any)}
-          disabled={loading}
-          color="#003366"
-        />
-        <View style={{ height: 10 }} />
-        <Button
-          title="Voltar ao Login"
-          onPress={() => navigation.goBack()}
+          title="Voltar para login"
+          onPress={() => navigation.navigate('Login' as any)}
           disabled={loading}
           color="#666"
         />
