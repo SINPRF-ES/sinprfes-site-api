@@ -347,11 +347,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pickersRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
   },
   pickerWrapper: {
-    flex: 0.48,
+    width: '100%',
+    marginBottom: 12,
   },
   pickerLabel: {
     fontSize: 12,
