@@ -137,13 +137,13 @@ export default function LoginScreen() {
       const baseURL = api.defaults.baseURL || '';
 
       if (!__DEV__ && (baseURL.includes('10.0.2.2') || baseURL.includes('localhost'))) {
-        Alert.alert('Configuração Inválida', 'O aplicativo está usando uma URL de desenvolvimento em produção. Verifique o rodapé de debug.');
+        Alert.alert('Configuração Inválida', `O aplicativo está usando uma URL de desenvolvimento em produção.\nURL: ${baseURL}\nConfig: ${API_BASE_URL}`);
       } else if (errorCode === 'ECONNABORTED') {
-        Alert.alert('Erro de Conexão', 'Tempo esgotado (Timeout). Verifique sua internet.');
+        Alert.alert('Erro de Conexão', `Tempo esgotado (Timeout). Verifique sua internet.\nURL: ${baseURL}`);
       } else if (errorCode === 'ERR_NETWORK') {
-        Alert.alert('Erro de Rede', `Não foi possível conectar ao servidor.\nURL: ${baseURL}\n\nVerifique sua conexão.`);
+        Alert.alert('Erro de Rede', `Não foi possível conectar ao servidor.\nURL Efetiva: ${baseURL}\nConfig: ${API_BASE_URL}\n\nVerifique sua conexão.`);
       } else {
-        Alert.alert('Erro no login', `${errorMsg}\n\n[Status: ${status || 'N/A'}] [Code: ${errorCode}]`);
+        Alert.alert('Erro no login', `${errorMsg}\n\n[Status: ${status || 'N/A'}] [Code: ${errorCode}]\nURL: ${baseURL}`);
       }
       logger.error('LOGIN_FAIL', e);
     } finally {
