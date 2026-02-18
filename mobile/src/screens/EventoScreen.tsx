@@ -574,12 +574,13 @@ const styles = StyleSheet.create({
   rowBtn: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
   link: { color: "#0b63ce", fontWeight: "700" },
 
-  actionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 },
+  actionsRow: { flexDirection: "column", alignItems: "stretch", gap: 10, marginTop: 10 },
 
   btnBase: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
+    alignItems: "center",
   },
   btnPrimary: { backgroundColor: "#FFC300" },
   btnDanger: { backgroundColor: "#e74c3c" },
