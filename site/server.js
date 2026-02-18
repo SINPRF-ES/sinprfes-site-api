@@ -10,12 +10,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'site' });
 });
 
-// Proxy interno para a API
-// Evita problemas de CORS no navegador e centraliza as chamadas
+// Proxy do site -> API preservando /api no upstream
 app.use('/api', createProxyMiddleware({
-  target: ''https://ovo8920a.up.railway.app'',
+  target: 'https://api.sinprfes.org.br',
   changeOrigin: true,
-  logLevel: 'debug'
+  logLevel: 'debug',
+  pathRewrite: (path) => `/api${path}`, // <-- CRÍTICO
 }));
 
 // Servir arquivos estáticos do diretório atual
