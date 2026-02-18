@@ -93,7 +93,7 @@ function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de d
             return res.status(409).json({ success: false, message: safeMessage, code: err.code, requestId });
         }
 
-        return res.status(400).json({
+        return res.status(422).json({
             success: false,
             message: safeMessage,
             code: err.code,
@@ -256,30 +256,64 @@ exports.atualizarMeusDados = async (req, res) => {
   try {
     const body = req.body || {};
 
-    const dependentesArray = validarESanitizarDependentes(body);
-    const dadosDependentes = {};
-    for (let i = 0; i < 5; i++) {
-      const dep = dependentesArray[i];
-      dadosDependentes[`dep${i + 1}_nome`] = dep ? dep.nome : null;
-      dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
-      dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
-      dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+    // 1. Bloquear campos proibidos
+    const camposProibidos = ['perfil_acesso', 'situacao', 'cpf', 'siape', 'nome', 'id', 'senha_hash', 'bloqueado', 'arquivado_em'];
+    for (const campo of camposProibidos) {
+      if (body[campo] !== undefined) {
+        return res.status(403).json({
+          success: false,
+          message: `O campo '${campo}' não pode ser alterado por esta via.`,
+          requestId
+        });
+      }
     }
 
-    const payload = {
-      telefone1: body.telefone1 ? String(body.telefone1).replace(/\D/g, "") || null : null,
-      telefone2: body.telefone2 ? String(body.telefone2).replace(/\D/g, "") || null : null,
-      email1: body.email1 ? String(body.email1).trim().toLowerCase() || null : null,
-      email2: body.email2 ? String(body.email2).trim().toLowerCase() || null : null,
-      lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
-      logradouro_bairro: body.logradouro_bairro ? String(body.logradouro_bairro).trim() || null : null,
-      numero: body.numero ? String(body.numero).trim() || null : null,
-      complemento: body.complemento ? String(body.complemento).trim() || null : null,
-      cidade: body.cidade ? String(body.cidade).trim() || null : null,
-      uf: body.uf ? String(body.uf).trim().toUpperCase() || null : null,
-      cep: body.cep ? String(body.cep).replace(/\D/g, "") || null : null,
-      ...dadosDependentes,
-    };
+    // 2. Validar campos obrigatórios se presentes
+    if (body.email1 !== undefined && !String(body.email1).trim()) {
+      return res.status(422).json({ success: false, message: "E-mail principal não pode ser vazio.", requestId });
+    }
+
+    const payload = {};
+
+    // 3. Normalização e Coleta Seletiva (Partial Update)
+    const camposMapeados = [
+      'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
+      'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf', 'cep'
+    ];
+
+    camposMapeados.forEach(f => {
+      if (body[f] !== undefined) {
+        const val = body[f];
+        if (f === 'telefone1' || f === 'telefone2' || f === 'cep') {
+          payload[f] = val ? String(val).replace(/\D/g, "") || null : null;
+        } else if (f === 'email1' || f === 'email2') {
+          payload[f] = val ? String(val).trim().toLowerCase() || null : null;
+        } else if (f === 'uf') {
+          payload[f] = val ? String(val).trim().toUpperCase() || null : null;
+        } else if (f === 'lotacao') {
+          payload[f] = val ? normalizeLotacao(val) : 'SEDE';
+        } else {
+          payload[f] = val ? String(val).trim() || null : null;
+        }
+      }
+    });
+
+    // 4. Dependentes (sempre processa o conjunto se algum campo de dependente vier)
+    const temCamposDependentes = Object.keys(body).some(k => k.startsWith('dep'));
+    if (temCamposDependentes) {
+      const dependentesArray = validarESanitizarDependentes(body);
+      for (let i = 0; i < 5; i++) {
+        const dep = dependentesArray[i];
+        payload[`dep${i + 1}_nome`] = dep ? dep.nome : null;
+        payload[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
+        payload[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
+        payload[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+      }
+    }
+
+    if (Object.keys(payload).length === 0) {
+      return res.status(422).json({ success: false, message: "Nenhum dado informado para atualização.", requestId });
+    }
 
     const atualizado = await atualizarDadosProprios(atorId, payload);
 
@@ -293,7 +327,7 @@ exports.atualizarMeusDados = async (req, res) => {
     });
   } catch (err) {
     if (err.isValidationError) {
-      return res.status(400).json({ success: false, message: err.message, requestId });
+      return res.status(422).json({ success: false, message: err.message, requestId });
     }
     return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }

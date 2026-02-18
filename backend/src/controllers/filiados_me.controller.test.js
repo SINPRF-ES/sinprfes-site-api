@@ -21,22 +21,69 @@ describe('Filiados Controller - atualizarMeusDados', () => {
     jest.clearAllMocks();
   });
 
-  test('deve normalizar telefone e CEP removendo não-dígitos', async () => {
+  test('deve realizar update parcial (apenas campos enviados no body)', async () => {
     req.body = {
-      telefone1: '(27) 99999-1234',
-      cep: '29.100-000'
+      telefone1: '(27) 99999-1234'
     };
     service.atualizarDadosProprios.mockResolvedValue({ id: 10 });
 
     await controller.atualizarMeusDados(req, res);
 
-    expect(service.atualizarDadosProprios).toHaveBeenCalledWith(10, expect.objectContaining({
-      telefone1: '27999991234',
-      cep: '29100000'
+    // Deve conter apenas telefone1 e NADA MAIS (exceto talvez campos dependentes se processados, mas aqui não foram)
+    const payloadSent = service.atualizarDadosProprios.mock.calls[0][1];
+    expect(payloadSent).toEqual({
+      telefone1: '27999991234'
+    });
+    expect(payloadSent.cep).toBeUndefined();
+    expect(payloadSent.email1).toBeUndefined();
+  });
+
+  test('deve bloquear campos proibidos com 403', async () => {
+    req.body = {
+      perfil_acesso: 'ADMIN',
+      telefone1: '123'
+    };
+
+    await controller.atualizarMeusDados(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      message: expect.stringContaining("perfil_acesso")
+    }));
+    expect(service.atualizarDadosProprios).not.toHaveBeenCalled();
+  });
+
+  test('deve retornar 422 para e-mail principal vazio', async () => {
+    req.body = {
+      email1: '   '
+    };
+
+    await controller.atualizarMeusDados(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      message: "E-mail principal não pode ser vazio."
     }));
   });
 
-  test('deve converter strings vazias em null e fazer trim', async () => {
+  test('não deve vazar erro detalhado do banco (err.detail) e retornar 422/409', async () => {
+    const dbError = new Error('Database error');
+    dbError.code = '23505';
+    dbError.detail = 'Failing row contains (sensitive data)';
+
+    req.body = { telefone1: '123' };
+    service.atualizarDadosProprios.mockRejectedValue(dbError);
+
+    await controller.atualizarMeusDados(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    const responseBody = res.json.mock.calls[0][0];
+    expect(responseBody.message).not.toContain('Failing row contains');
+    expect(responseBody.message).toContain('já constam em nosso sistema');
+  });
+
+  test('deve converter strings vazias em null e fazer trim em campos enviados', async () => {
     req.body = {
       email2: '  ',
       complemento: '  Apt 101  '
@@ -49,33 +96,5 @@ describe('Filiados Controller - atualizarMeusDados', () => {
       email2: null,
       complemento: 'Apt 101'
     }));
-  });
-
-  test('não deve vazar erro detalhado do banco (err.detail)', async () => {
-    const dbError = new Error('Database error');
-    dbError.code = '23505';
-    dbError.detail = 'Failing row contains (sensitive data)';
-
-    service.atualizarDadosProprios.mockRejectedValue(dbError);
-
-    await controller.atualizarMeusDados(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(409);
-    const responseBody = res.json.mock.calls[0][0];
-    expect(responseBody.message).not.toContain('Failing row contains');
-    expect(responseBody.message).toContain('já constam em nosso sistema');
-  });
-
-  test('não deve permitir atualização de perfil_acesso via rota /me', async () => {
-    req.body = {
-      perfil_acesso: 'ADMIN',
-      telefone1: '123'
-    };
-    service.atualizarDadosProprios.mockResolvedValue({ id: 10 });
-
-    await controller.atualizarMeusDados(req, res);
-
-    const payloadSentToService = service.atualizarDadosProprios.mock.calls[0][1];
-    expect(payloadSentToService.perfil_acesso).toBeUndefined();
   });
 });
