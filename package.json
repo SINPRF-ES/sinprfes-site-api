@@ -5,6 +5,7 @@
     "preinstall": "node scripts/check-lockfiles.js",
     "install:all": "pnpm install",
     "build:backend": "pnpm --filter @sinprfes/backend run build",
-    "build:site": "pnpm --filter @sinprfes/site run build"
+    "build:site": "pnpm --filter @sinprfes/site run build",
+    "build:assembleia": "pnpm --filter @sinprfes/assembleia-app run build"
   }
 }

@@ -14,6 +14,7 @@ O sistema opera sob as diretrizes estabelecidas nos seguintes documentos:
 
 - [GOVERNANÇA](ASSEMBLEIA-GOVERNANCA.md): Regras de decisão e responsabilidades.
 - [CANON](ASSEMBLEIA-VOTACAO-CANON.md): Especificação normativa de regras de negócio.
+- [WEBAPP-CANON](ASSEMBLEIA-WEBAPP-CANON.md): Especificação da interface primária para iOS.
 - [DIA DO EVENTO](../runbooks/ASSEMBLEIA-DIA-DO-EVENTO.md): Checklist e procedimentos operacionais.
 - [ROLLBACK](../ops/ASSEMBLEIA-ROLLBACK.md): Protocolos de resposta a incidentes.
 - [GO-LIVE](../ops/ASSEMBLEIA-GO-LIVE.md): Critérios de prontidão para entrada em produção.
