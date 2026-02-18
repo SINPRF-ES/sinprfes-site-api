@@ -218,6 +218,8 @@ describe('Assembleias Service', () => {
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1' }] });
       // 2d. propostas
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'pr1', titulo: 'Proposta 1', autor_nome: 'Autor 1' }] });
+      // 2e. presentesGlobal
+      pool.query.mockResolvedValueOnce({ rows: [{ total: 3 }] });
 
       // 3. allCheckins (Batch)
       pool.query.mockResolvedValueOnce({ rows: [
@@ -243,8 +245,8 @@ describe('Assembleias Service', () => {
       expect(res.votacoes[0].contagem.total).toBe(2);
 
       // Verify that pool.query was NOT called for each quorum/votacao separately after batch fetch
-      // Total calls expected: 1 (buscarPorId) + 4 (mesa, quoruns, votacoes, propostas) + 1 (allCheckins) + 1 (allVotos) = 7
-      expect(pool.query).toHaveBeenCalledTimes(7);
+      // Total calls expected: 1 (buscarPorId) + 5 (mesa, quoruns, votacoes, propostas, presentesGlobal) + 1 (allCheckins) + 1 (allVotos) = 8
+      expect(pool.query).toHaveBeenCalledTimes(8);
 
       // Verify batch queries use ANY
       expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/assembleia_quorum_id = ANY/), expect.anything());

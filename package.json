@@ -1,6 +1,7 @@
 {
   "name": "sinprfes-monorepo",
   "private": true,
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "preinstall": "node scripts/check-lockfiles.js",
     "install:all": "pnpm install",

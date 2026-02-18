@@ -29,6 +29,7 @@ describe('Assembleias Hardening and Concurrency', () => {
      mockClient.query
        .mockResolvedValueOnce({ rows: [] }) // BEGIN
        .mockResolvedValueOnce({ rows: [{ id: '1', estado: 'ABERTA' }] }) // FOR UPDATE ass
+       .mockResolvedValueOnce({ rows: [] }) // Idempotency check (not found)
        .mockResolvedValueOnce({ rows: [{ total: 10 }] }) // actives
        .mockResolvedValueOnce({ rows: [{ 1: 1 }] }) // COLLISION! (first check)
        .mockResolvedValueOnce({ rows: [] }) // NO COLLISION (second check)
