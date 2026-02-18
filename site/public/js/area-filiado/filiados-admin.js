@@ -33,7 +33,7 @@
     }
 
     function avatarHtml(avatarUrl, nome) {
-        const { escapeHTML } = global.Utils || {};
+        const { escapeHTML } = window.Utils || {};
         const safeNome = (nome || "").toString();
         const apiBase = window.Api?.BASE_URL || window.location.origin;
 
@@ -178,7 +178,7 @@
         const el = document.getElementById("lista-filiados");
         if (!el) return;
 
-        const { filterFiliados, formatarCPF, formatarTelefoneTexto, normalizeText, escapeHTML } = global.Utils || {};
+        const { filterFiliados, formatarCPF, formatarTelefoneTexto, normalizeText, escapeHTML } = window.Utils || {};
         const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
 
         // Reutiliza a lógica unificada de busca (nome/CPF)
@@ -267,13 +267,14 @@
 
         corpo.innerHTML = gerarHtmlForm(filiado);
         modal.style.display = "flex";
+        if (window.Utils?.lockScroll) window.Utils.lockScroll();
 
         configurarFormEdicao(id);
     }
 
     function gerarHtmlForm(f) {
         const { toDateInputValue } = global.Formatters || {};
-        const { escapeHTML } = global.Utils || {};
+        const { escapeHTML } = window.Utils || {};
         const safeEscape = (v) => escapeHTML ? escapeHTML(v) : (v || "");
 
         const ehAdmin = perfilAtual === "ADMIN";
@@ -476,7 +477,7 @@
                 </div>
 
                 <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-outline btn-lg" onclick="document.getElementById('modal-editar-filiado').style.display='none'">Cancelar</button>
+                    <button type="button" class="btn btn-outline btn-lg" onclick="Utils.fecharModal('modal-editar-filiado')">Cancelar</button>
                     <button type="submit" class="btn btn-primary btn-lg">Salvar Alterações</button>
                 </div>
             </form>
@@ -485,7 +486,7 @@
 
     function configurarFormEdicao(id) {
         const form = document.getElementById("form-edicao-modal");
-        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF } = global.Utils || {};
+        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF } = window.Utils || {};
 
         if (aplicarMascaraCPF) {
             const cpfInput = form.querySelector('input[name="cpf"]');
@@ -629,7 +630,7 @@
         };
 
         if (cepInput) {
-            global.Utils?.aplicarMascaraCEP?.(cepInput);
+            window.Utils?.aplicarMascaraCEP?.(cepInput);
             cepInput.addEventListener('blur', executarBuscaCep);
             // also trigger on search icon click
             const searchIcon = form.querySelector(".cep-search-icon");
@@ -701,7 +702,8 @@
 
                 if (r.ok) {
                     alert("Sucesso!");
-                    document.getElementById("modal-editar-filiado").style.display = "none";
+                    if (window.Utils?.fecharModal) window.Utils.fecharModal("modal-editar-filiado");
+                    else document.getElementById("modal-editar-filiado").style.display = "none";
                     await carregarLista();
                 } else {
                     const msg = data.message || "Erro ao salvar.";
@@ -718,7 +720,8 @@
         const r = await window.Api.apiFetch(`/api/filiados/${id}/arquivar`, { method: "POST", body: { motivo } });
         if (r.ok) {
             alert("Arquivado.");
-            document.getElementById("modal-editar-filiado").style.display = "none";
+            if (window.Utils?.fecharModal) window.Utils.fecharModal("modal-editar-filiado");
+            else document.getElementById("modal-editar-filiado").style.display = "none";
             await carregarLista();
         }
     }
@@ -728,7 +731,8 @@
         const r = await window.Api.apiFetch(`/api/filiados/${id}/desarquivar`, { method: "POST", body: { motivo } });
         if (r.ok) {
             alert("Desarquivado.");
-            document.getElementById("modal-editar-filiado").style.display = "none";
+            if (window.Utils?.fecharModal) window.Utils.fecharModal("modal-editar-filiado");
+            else document.getElementById("modal-editar-filiado").style.display = "none";
             await carregarLista();
         }
     }
@@ -778,7 +782,7 @@
 
     function renderizarFormularioNovoFiliado(container) {
         if (!container) return;
-        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, aplicarMascaraCEP, aplicarMascaraData } = global.Utils || {};
+        const { gerarCamposDependentes, aplicarMascaraTelefone, aplicarMascaraCPF, aplicarMascaraCEP, aplicarMascaraData } = window.Utils || {};
 
         container.innerHTML = `
             <div class="filiado-card" style="border-left-color: var(--amarelo);">
@@ -969,4 +973,4 @@
         handleParentescoChange
     };
 
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));

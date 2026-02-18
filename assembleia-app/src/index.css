@@ -2,6 +2,7 @@
   --primary: #f1c40f;
   --primary-dark: #e0a800;
   --bg: #00152b;
+  --header-h: 70px;
   --card-bg: rgba(255, 255, 255, 0.05);
   --text: #f8f9fa;
   --text-dim: #aeb5c3;
@@ -19,12 +20,15 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   background-color: var(--bg);
   color: var(--text);
+  min-height: 100vh;
   min-height: 100dvh;
+  overflow-y: auto;
 }
 
 #root {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   min-height: 100dvh;
 }
 
@@ -95,8 +99,16 @@ header {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  padding-bottom: 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--bg);
+
+  /* Safe Area for iOS */
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
 }
 
 .assembleia-grid {
@@ -136,8 +148,9 @@ header {
 
 .room-container header {
   padding: 20px;
-  background: rgba(0, 0, 0, 0.2);
   margin-bottom: 0;
+  background-color: var(--bg);
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
 }
 
 main {
@@ -146,7 +159,7 @@ main {
   flex-direction: column;
   gap: 20px;
   flex: 1;
-  overflow-y: auto;
+  /* Natural scroll on root */
 }
 
 .info-card, .checkin-card, .votacao-card {
@@ -263,4 +276,9 @@ main {
   border-radius: 8px;
   color: var(--primary);
   font-size: 0.9rem;
+}
+
+/* Âncoras: compensar altura do header sticky */
+[id]:target {
+  scroll-margin-top: calc(var(--header-h) + 20px);
 }

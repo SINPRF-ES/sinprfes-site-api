@@ -92,6 +92,7 @@
                 const modal = document.getElementById('modal-documento');
                 const iframe = document.getElementById('iframe-documento');
                 modal.classList.remove('open');
+                if (window.Utils?.unlockScroll) window.Utils.unlockScroll();
                 iframe.src = "";
                 if (currentBlobUrl) {
                     URL.revokeObjectURL(currentBlobUrl);
@@ -112,6 +113,7 @@
             const btnBaixar = document.getElementById('btn-baixar-modal');
 
             modal.classList.add('open');
+            if (window.Utils?.lockScroll) window.Utils.lockScroll();
             loader.style.display = 'flex';
             iframe.style.display = 'none';
             iframe.src = "";
@@ -258,4 +260,4 @@
         inicializarPublicacoes
     };
 
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));

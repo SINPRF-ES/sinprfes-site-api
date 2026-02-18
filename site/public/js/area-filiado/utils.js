@@ -285,8 +285,40 @@
     normalizeText,
     escapeHTML,
     searchFiliados,
-    filterFiliados
+    filterFiliados,
+    lockScroll,
+    unlockScroll,
+    fecharModal
   };
+
+  function fecharModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.style.display = 'none';
+    unlockScroll();
+  }
+
+  let scrollPosition = 0;
+  function lockScroll() {
+    // Only lock if not already locked
+    if (document.body.style.position === 'fixed') return;
+
+    scrollPosition = window.pageYOffset;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollPosition}px`;
+    document.body.style.width = '100%';
+  }
+
+  function unlockScroll() {
+    // Only unlock if it was locked
+    if (document.body.style.position !== 'fixed') return;
+
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('position');
+    document.body.style.removeProperty('top');
+    document.body.style.removeProperty('width');
+    window.scrollTo(0, scrollPosition);
+  }
 
   let _filiadosCache = null;
 
@@ -339,4 +371,4 @@
 
     return filterFiliados(_filiadosCache, query);
   }
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));

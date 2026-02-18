@@ -83,6 +83,7 @@
             const iframe = document.getElementById('iframe-documento');
             const btnBaixar = document.getElementById('btn-baixar-modal');
             modal.classList.remove('open');
+            if (window.Utils?.unlockScroll) window.Utils.unlockScroll();
             iframe.src = "";
             if (btnBaixar) btnBaixar.href = "#";
             if (currentBlobUrl) {
@@ -142,6 +143,7 @@
         }
 
         modal.classList.add('open');
+        if (window.Utils?.lockScroll) window.Utils.lockScroll();
         loader.style.display = 'flex';
         iframe.style.display = 'none';
         iframe.src = "";
@@ -523,7 +525,7 @@
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header">
                         <h2 id="mesa-modal-titulo">Compor Mesa Diretora</h2>
-                        <button type="button" class="modal-close" onclick="document.getElementById('modal-compor-mesa').style.display='none'">×</button>
+                        <button type="button" class="modal-close" onclick="Utils.fecharModal('modal-compor-mesa')">×</button>
                     </div>
                     <div class="modal-body">
                         <form id="form-compor-mesa">
@@ -572,6 +574,7 @@
         document.getElementById('mesa-modal-titulo').innerText = substituir ? 'Substituir Mesa' : 'Compor Mesa';
 
         modal.style.display = 'flex';
+        if (window.Utils?.lockScroll) window.Utils.lockScroll();
 
         form.onsubmit = async (e) => {
             e.preventDefault();
@@ -603,7 +606,8 @@
                 });
                 if (r.ok) {
                     alert("Mesa atualizada!");
-                    modal.style.display = 'none';
+                    if (window.Utils?.fecharModal) window.Utils.fecharModal('modal-compor-mesa');
+                    else modal.style.display = 'none';
                     await carregarDetalhesAssembleia(id);
                 }
                 else { const d = await r.json(); alert(d.message || d.error || "Erro."); }
@@ -959,7 +963,7 @@
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header">
                         <h2>Iniciar Nova Votação</h2>
-                        <button type="button" class="modal-close" onclick="document.getElementById('modal-criar-votacao').style.display='none'">×</button>
+                        <button type="button" class="modal-close" onclick="Utils.fecharModal('modal-criar-votacao')">×</button>
                     </div>
                     <div class="modal-body">
                         <form id="form-criar-votacao">
@@ -999,6 +1003,7 @@
         form.reset();
         document.getElementById('votacao-duracao').value = "300";
         modal.style.display = 'flex';
+        if (window.Utils?.lockScroll) window.Utils.lockScroll();
 
         form.onsubmit = async (e) => {
             e.preventDefault();
@@ -1012,7 +1017,8 @@
                     body: { titulo, descricao, duracao_segundos: parseInt(duracao) }
                 });
                 if (r.ok) {
-                    modal.style.display = 'none';
+                    if (window.Utils?.fecharModal) window.Utils.fecharModal('modal-criar-votacao');
+                    else modal.style.display = 'none';
                     sincronizarEstado(aid);
                 } else {
                     const d = await r.json();
@@ -1226,4 +1232,4 @@
         encerrarVotacaoManual
     };
 
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));

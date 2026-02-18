@@ -108,6 +108,8 @@
 
         tituloEl.textContent = id ? "Editar Notícia" : "Nova Notícia";
 
+        if (window.Utils?.lockScroll) window.Utils.lockScroll();
+
         corpoEl.innerHTML = `
             <form id="form-noticia-admin">
                 <div class="field-group">
@@ -147,7 +149,7 @@
                 <div style="margin-top:25px; display:flex; justify-content:space-between; align-items:center;">
                     ${id ? `<button type="button" class="btn btn-danger-outline btn-sm" onclick="NoticiasAdmin.deletarNoticia('${id}')">🗑️ Excluir</button>` : '<div></div>'}
                     <div style="display:flex; gap:10px;">
-                        <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-generic').style.display='none'">Cancelar</button>
+                        <button type="button" class="btn btn-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
                         <button type="submit" id="btn-salvar-noticia" class="btn btn-primary">Salvar Notícia</button>
                     </div>
                 </div>
@@ -194,7 +196,8 @@
                         // Se era nova, agora temos um ID, reabre para permitir uploads
                         abrirModalNoticia(saved.id);
                     } else {
-                        modal.style.display = "none";
+                        if (window.Utils?.fecharModal) window.Utils.fecharModal("modal-generic");
+                        else modal.style.display = "none";
                     }
                     await carregarNoticias();
                 } else {
@@ -273,7 +276,8 @@
         try {
             const r = await window.Api.apiFetch(`/api/noticias/${id}`, { method: "DELETE" });
             if (r.ok) {
-                document.getElementById("modal-generic").style.display = "none";
+                if (window.Utils?.fecharModal) window.Utils.fecharModal("modal-generic");
+                else document.getElementById("modal-generic").style.display = "none";
                 await carregarNoticias();
             } else {
                 alert("Erro ao excluir.");
@@ -289,4 +293,4 @@
         removerMidia
     };
 
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));
