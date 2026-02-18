@@ -132,20 +132,6 @@ async function registrarUltimoAcesso(id) {
 async function atualizarDadosProprios(id, dados) {
   compactarDependentes(dados);
 
-  if (dados.nome) {
-    const original = dados.nome;
-    dados.nome = normalizeNome(dados.nome);
-    if (original !== dados.nome) {
-      log.info("NomeNormalizado", {
-        context: "atualizarDadosProprios",
-        id,
-        nomeNormalized: true,
-        lenBefore: original.length,
-        lenAfter: dados.nome.length
-      });
-    }
-  }
-
   const campos = [];
   const valores = [];
   let idx = 1;
@@ -157,25 +143,37 @@ async function atualizarDadosProprios(id, dados) {
         campos.push(`${campoSql} = ${valor}`);
       } else {
         campos.push(`${campoSql} = $${idx}`);
-        valores.push(valor);
+        // Normalização genérica: string vazia vira null, trim em strings
+        let finalVal = valor;
+        if (typeof valor === 'string') {
+          finalVal = valor.trim() || null;
+        }
+        valores.push(finalVal);
         idx += 1;
       }
     }
   };
   
-  // Campos existentes
-  addCampo("sexo", normalizeSexo(dados.sexo));
+  // Campos permitidos (Se passarem do controller)
+  if (dados.nome !== undefined) {
+    addCampo("nome", normalizeNome(dados.nome));
+  }
+  if (dados.sexo !== undefined) {
+    addCampo("sexo", normalizeSexo(dados.sexo));
+  }
   if (dados.siape !== undefined) {
-    addCampo("siape", (dados.siape || "").replace(/\D/g, "").slice(0, 7) || null);
+    addCampo("siape", (dados.siape || "").toString().replace(/\D/g, "").slice(0, 7) || null);
   }
 
   addCampo("telefone1", dados.telefone1);
   addCampo("telefone2", dados.telefone2);
   addCampo("email1", dados.email1);
   addCampo("email2", dados.email2);
+
   if (dados.lotacao !== undefined) {
     addCampo("lotacao", normalizeLotacao(dados.lotacao));
   }
+
   addCampo("logradouro_bairro", dados.logradouro_bairro);
   addCampo("numero", dados.numero);
   addCampo("complemento", dados.complemento);
@@ -196,15 +194,18 @@ async function atualizarDadosProprios(id, dados) {
 
   // Campos dos dependentes
   for (let i = 1; i <= 5; i++) {
-    if (dados[`dep${i}_nome`]) {
-      dados[`dep${i}_nome`] = normalizeNome(dados[`dep${i}_nome`]);
+    if (dados[`dep${i}_nome`] !== undefined) {
+      addCampo(`dep${i}_nome`, dados[`dep${i}_nome`] ? normalizeNome(dados[`dep${i}_nome`]) : null);
     }
-    addCampo(`dep${i}_nome`, dados[`dep${i}_nome`]);
-    addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`]);
+    if (dados[`dep${i}_cpf`] !== undefined) {
+      addCampo(`dep${i}_cpf`, dados[`dep${i}_cpf`] ? String(dados[`dep${i}_cpf`]).replace(/\D/g, "") : null);
+    }
 
     if (dados[`dep${i}_data_nascimento`] !== undefined) {
+      // Garante cast explícito para DATE no SQL
       campos.push(`dep${i}_data_nascimento = NULLIF($${idx}, '')::date`);
-      valores.push(dados[`dep${i}_data_nascimento`]);
+      let dt = dados[`dep${i}_data_nascimento`];
+      valores.push(dt && typeof dt === 'string' && dt.trim() ? dt.trim() : null);
       idx += 1;
     }
 

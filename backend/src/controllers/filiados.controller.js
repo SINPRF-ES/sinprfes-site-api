@@ -76,9 +76,26 @@ function parseFiliadoId(req, res, requestId) {
 function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de dados") {
     // Padrão de erro de Schema ou Constraint Violations (23... ou 42703)
     if (err && (String(err.code).startsWith('23') || err.code === '42703')) {
+        // Log detalhado no servidor (seguro)
+        log.error("FiliadosConstraintErro", {
+            message: err.message,
+            detail: err.detail,
+            code: err.code,
+            constraint: err.constraint,
+            requestId
+        });
+
+        // Resposta genérica segura para o cliente (NUNCA vazar err.detail que contém dados da linha)
+        let safeMessage = "Não foi possível processar sua solicitação devido a um erro nos dados enviados.";
+
+        if (err.code === '23505') {
+            safeMessage = "Os dados informados já constam em nosso sistema (conflito de CPF ou E-mail).";
+            return res.status(409).json({ success: false, message: safeMessage, code: err.code, requestId });
+        }
+
         return res.status(400).json({
             success: false,
-            message: err.detail || err.message || defaultMessage,
+            message: safeMessage,
             code: err.code,
             requestId
         });
@@ -250,17 +267,17 @@ exports.atualizarMeusDados = async (req, res) => {
     }
 
     const payload = {
-      telefone1: body.telefone1,
-      telefone2: body.telefone2,
-      email1: body.email1,
-      email2: body.email2,
+      telefone1: body.telefone1 ? String(body.telefone1).replace(/\D/g, "") || null : null,
+      telefone2: body.telefone2 ? String(body.telefone2).replace(/\D/g, "") || null : null,
+      email1: body.email1 ? String(body.email1).trim().toLowerCase() || null : null,
+      email2: body.email2 ? String(body.email2).trim().toLowerCase() || null : null,
       lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
-      logradouro_bairro: body.logradouro_bairro,
-      numero: body.numero,
-      complemento: body.complemento,
-      cidade: body.cidade,
-      uf: body.uf,
-      cep: body.cep,
+      logradouro_bairro: body.logradouro_bairro ? String(body.logradouro_bairro).trim() || null : null,
+      numero: body.numero ? String(body.numero).trim() || null : null,
+      complemento: body.complemento ? String(body.complemento).trim() || null : null,
+      cidade: body.cidade ? String(body.cidade).trim() || null : null,
+      uf: body.uf ? String(body.uf).trim().toUpperCase() || null : null,
+      cep: body.cep ? String(body.cep).replace(/\D/g, "") || null : null,
       ...dadosDependentes,
     };
 

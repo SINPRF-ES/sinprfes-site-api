@@ -22,19 +22,48 @@ app.use('/api', createProxyMiddleware({
   },
 }));
 
-// Servir arquivos estáticos do diretório 'public'
-// Isso protege arquivos sensíveis como server.js e railway.toml
-app.use(express.static(path.join(__dirname, 'public')));
+// Servir arquivos estáticos do diretório 'public' com headers customizados
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    const fileName = path.basename(filePath);
+
+    // Headers críticos para PWA e Configurações
+    if (fileName === 'manifest.webmanifest') {
+      res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+    } else if (fileName === 'service-worker.js' || fileName === 'config.js') {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else if (fileName === 'index.html') {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // Fallback para arquivos em /shared (suporte para monorepo local)
 app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
 
-// Fallback para index.html apenas para rotas que não sejam /api
+// Fallback inteligente para index.html (SPA/PWA)
 app.get('*', (req, res) => {
+  const ext = path.extname(req.path).toLowerCase();
+  const staticExtensions = ['.js', '.css', '.webmanifest', '.json', '.png', '.ico', '.svg', '.jpg', '.jpeg', '.webp'];
+
+  // 1. Proteger rotas de API
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'API route not found' });
   }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+
+  // 2. Não servir HTML para requisições de arquivos estáticos inexistentes
+  if (ext && staticExtensions.includes(ext)) {
+    return res.status(404).send('Not Found');
+  }
+
+  // 3. Fallback apenas se aceitar HTML (navegação do browser)
+  if (req.accepts('html')) {
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+
+  res.status(404).send('Not Found');
 });
 
 app.listen(port, () => {
