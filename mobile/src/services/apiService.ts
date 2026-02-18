@@ -26,6 +26,13 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+/**
+ * CANONICAL AXIOS INSTANCE
+ *
+ * Rules:
+ * 1. Must use API_BASE_URL from ../config/env.
+ * 2. Do not override api.defaults.baseURL elsewhere in the code.
+ */
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
