@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../../components/PickerSafe';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SafeScreen from '../../components/SafeScreen';
@@ -109,21 +109,17 @@ export default function CriarAssembleiaScreen({ navigation }: any) {
       />
 
       <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Tipo *</Text>
-          <View style={styles.pickerBox}>
-            <Picker
-              selectedValue={tipo}
-              onValueChange={(itemValue) => setTipo(itemValue as any)}
-              style={styles.picker}
-              dropdownIconColor="#003366"
-            >
-              <Picker.Item label="Selecione..." value="" />
-              <Picker.Item label="Assembleia Geral Extraordinária" value="AGE" />
-              <Picker.Item label="Assembleia Geral Ordinária" value="AGO" />
-            </Picker>
-          </View>
-        </View>
+        <PickerSafe
+          label="Tipo *"
+          selectedValue={tipo}
+          onValueChange={(itemValue) => setTipo(itemValue as any)}
+          dropdownIconColor="#003366"
+          items={[
+            { label: "Selecione...", value: "" },
+            { label: "Assembleia Geral Extraordinária", value: "AGE" },
+            { label: "Assembleia Geral Ordinária", value: "AGO" },
+          ]}
+        />
       </View>
 
       <View style={styles.row}>

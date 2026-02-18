@@ -13,7 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../components/PickerSafe';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { formatAgencia, formatConta, onlyDigits, formatCpf, formatTelefone } from '../shared/format/formatters';
@@ -431,19 +431,16 @@ const RessarcimentoScreen = () => {
 
         <View style={[styles.card, { backgroundColor: '#f7f9fc' }]}>
           <Text style={styles.cardTitle}>🏦 Dados Bancários</Text>
-          <Text style={styles.label}>Banco</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={form.banco_select}
-              onValueChange={(v) => handleInputChange('banco_select', v)}
-            >
-              <Picker.Item label="Selecione um banco..." value="" />
-              {BANCOS_LISTA.map(b => (
-                <Picker.Item key={b.code} label={`${b.code} - ${b.name}`} value={`${b.code} - ${b.name}`} />
-              ))}
-              <Picker.Item label="Outro (Informar manual)" value="OUTRO" />
-            </Picker>
-          </View>
+          <PickerSafe
+            label="Banco"
+            selectedValue={form.banco_select}
+            onValueChange={(v) => handleInputChange('banco_select', v as string)}
+            items={[
+              { label: "Selecione um banco...", value: "" },
+              ...BANCOS_LISTA.map(b => ({ label: `${b.code} - ${b.name}`, value: `${b.code} - ${b.name}` })),
+              { label: "Outro (Informar manual)", value: "OUTRO" },
+            ]}
+          />
 
           {form.banco_select === 'OUTRO' && (
             <TextInput

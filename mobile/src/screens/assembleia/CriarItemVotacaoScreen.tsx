@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../../components/PickerSafe';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { iniciarVotacao } from '../../services/assembleiaService';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
@@ -58,22 +58,20 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
         multiline
       />
 
-      <Text style={styles.label}>Duração (minutos) *</Text>
-      <View style={styles.pickerBox}>
-        <Picker
-          selectedValue={duracao}
-          onValueChange={(v) => setDuracao(v)}
-          style={styles.picker}
-          dropdownIconColor="#003366"
-        >
-          <Picker.Item label="Selecione..." value="" />
-          <Picker.Item label="1 minuto" value="1" />
-          <Picker.Item label="2 minutos" value="2" />
-          <Picker.Item label="3 minutos" value="3" />
-          <Picker.Item label="4 minutos" value="4" />
-          <Picker.Item label="5 minutos" value="5" />
-        </Picker>
-      </View>
+      <PickerSafe
+        label="Duração (minutos) *"
+        selectedValue={duracao}
+        onValueChange={(v) => setDuracao(v as string)}
+        dropdownIconColor="#003366"
+        items={[
+          { label: "Selecione...", value: "" },
+          { label: "1 minuto", value: "1" },
+          { label: "2 minutos", value: "2" },
+          { label: "3 minutos", value: "3" },
+          { label: "4 minutos", value: "4" },
+          { label: "5 minutos", value: "5" },
+        ]}
+      />
 
     </KeyboardAwareScrollView>
   );

@@ -3,8 +3,9 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
-import { Ionicons } from '@expo/vector-icons';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
+import { EMOJI } from '../constants/emojis';
+import DrawerItemLabel from '../components/DrawerItemLabel';
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
@@ -47,24 +48,27 @@ const CustomDrawerContent = (props) => {
         <>
           <View style={styles.separator} />
           <DrawerItem
-            label="🛠️ Gestão"
-            labelStyle={styles.sectionHeader}
+            label={(props) => (
+              <DrawerItemLabel
+                emoji={EMOJI.GESTAO}
+                label="Gestão"
+                {...props}
+                color={styles.sectionHeader.color}
+              />
+            )}
             onPress={() => {}} // Não faz nada, é apenas um título
           />
           <DrawerItem
-            label="📢 Notificações"
-            icon={({ color, size }) => <Ionicons name="notifications-outline" color={color} size={size} />}
+            label={(props) => <DrawerItemLabel emoji={EMOJI.NOTIFICACOES} label="Notificações" {...props} />}
             onPress={() => props.navigation.navigate('NotificacoesPush')}
           />
           <DrawerItem
-            label="👤 Novo Filiado"
-            icon={({ color, size }) => <Ionicons name="add-circle-outline" color={color} size={size} />}
+            label={(props) => <DrawerItemLabel emoji={EMOJI.NOVO_FILIADO} label="Novo Filiado" {...props} />}
             onPress={() => props.navigation.navigate('CriarFiliado')}
           />
           {ehDiretoria && (
             <DrawerItem
-              label="Diagnóstico"
-              icon={({ color, size }) => <Ionicons name="bug-outline" color={color} size={size} />}
+              label={(props) => <DrawerItemLabel emoji={EMOJI.DIAGNOSTICO} label="Diagnóstico" {...props} />}
               onPress={() => props.navigation.navigate('Logs')}
             />
           )}
@@ -78,17 +82,14 @@ const CustomDrawerContent = (props) => {
           style={styles.closeAppButton}
           onPress={() => setBloqueadoPorBiometria(true)}
         >
-          <Ionicons name="lock-closed-outline" size={20} color="#fff" />
-          <Text style={styles.closeAppButtonText}>🔒 Fechar App</Text>
+          <Text style={styles.closeAppButtonText}>{EMOJI.FECHAR_APP} Fechar App</Text>
         </TouchableOpacity>
       </View>
 
       <DrawerItem
-        label="🚪 Sair da conta"
-        icon={({ color, size }) => <Ionicons name="log-out-outline" color={color} size={size} />}
+        label={(props) => <DrawerItemLabel emoji={EMOJI.SAIR} label="Sair da conta" {...props} />}
         onPress={handleLogoutPress}
         inactiveTintColor="#666"
-        labelStyle={{ fontSize: 12 }}
       />
     </DrawerContentScrollView>
   );

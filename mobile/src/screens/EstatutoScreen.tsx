@@ -46,7 +46,8 @@ export default function EstatutoScreen({ navigation }: any) {
   useEffect(() => {
     async function loadAsset() {
       try {
-        const asset = Asset.fromModule(require('../../assets/html/estatuto.html'));
+        // Agora usando o arquivo exclusivo para mobile, sem dependência do HTML do site
+        const asset = Asset.fromModule(require('../content/estatuto.mobile.html'));
         await asset.downloadAsync();
         const uri = asset.localUri || asset.uri || '';
 
@@ -54,13 +55,13 @@ export default function EstatutoScreen({ navigation }: any) {
         const updateId = Updates.updateId || 'none';
         const cb = `${runtimeVersion}-${updateId}`;
 
-        // Sempre adiciona cb e embed=1, mesmo se for file:// (ajudando no cacheBust se o asset mudar em OTA)
+        // Cache busting para OTA updates
         const finalUri = uri.includes('?')
-          ? `${uri}&embed=1&cb=${cb}`
-          : `${uri}?embed=1&cb=${cb}`;
+          ? `${uri}&cb=${cb}`
+          : `${uri}?cb=${cb}`;
 
         setHtmlUri(finalUri);
-        console.log('[Estatuto] URL carregada:', finalUri);
+        console.log('[Estatuto] Arquivo carregado:', finalUri);
       } catch (err) {
         console.error('Erro ao carregar asset do estatuto:', err);
       }
@@ -80,26 +81,6 @@ export default function EstatutoScreen({ navigation }: any) {
     setModalVisible(false);
   };
 
-  const injectedCSS = `
-    #site-header, #site-footer, .estatuto-nav { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
-    body {
-      padding: 10px !important;
-      background-color: #fff !important;
-      color: #333 !important;
-      font-size: 16px !important;
-      font-family: sans-serif !important;
-    }
-    .estatuto-card {
-      width: 100% !important;
-      max-width: 100% !important;
-      box-shadow: none !important;
-      padding: 10px !important;
-      margin: 0 !important;
-    }
-    .estatuto-documento { padding-top: 0 !important; }
-    .estatuto-documento h2, .estatuto-documento h3 { scroll-margin-top: 20px !important; }
-  `;
-
   return (
     <SafeScreen style={styles.container}>
       {htmlUri ? (
@@ -117,40 +98,18 @@ export default function EstatutoScreen({ navigation }: any) {
           onMessage={(event) => {
             console.log('[Estatuto] onMessage:', event.nativeEvent.data);
           }}
-          injectedJavaScriptBeforeContentLoaded={
-            "(function() {" +
-              "console.log('[Estatuto][inject] start');" +
-              "document.documentElement.classList.add('is-embed');" +
-              "var cssText = " + JSON.stringify(injectedCSS) + ";" +
-              "var style = document.createElement('style');" +
-              "style.id = 'app-injected-style';" +
-              "style.appendChild(document.createTextNode(cssText));" +
-              "document.documentElement.appendChild(style);" +
-              "console.log('[Estatuto][inject] css_applied');" +
-              "var kill = function() {" +
-                "var selectors = ['#site-header', '#site-footer', '.estatuto-nav', '.estatuto-nav-title', '.barra-azul', 'header', 'nav', '.navbar', '.site-header', '#header', '#nav'];" +
-                "var removedCount = 0;" +
-                "selectors.forEach(function(s) {" +
-                  "var elements = document.querySelectorAll(s);" +
-                  "for (var i = 0; i < elements.length; i++) {" +
-                    "elements[i].parentNode.removeChild(elements[i]);" +
-                    "removedCount++;" +
-                  "}" +
-                "});" +
-                "if (removedCount > 0) log('[Estatuto][inject] removed_nav count: ' + removedCount);" +
-              "};" +
-              "kill();" +
-              "var obs = new MutationObserver(kill);" +
-              "obs.observe(document.documentElement, { childList: true, subtree: true });" +
-              "log('[Estatuto][inject] observer_active');" +
-              "document.addEventListener('DOMContentLoaded', kill);" +
-              "setTimeout(kill, 300);" +
-              "setTimeout(kill, 1000);" +
-              "setTimeout(kill, 3000);" +
-            "})();"
-          }
           originWhitelist={['*']}
           allowFileAccess={true}
+          // Impede navegação externa dentro do WebView
+          onShouldStartLoadWithRequest={(request) => {
+            // Permite carregar o arquivo local inicial
+            if (request.url.startsWith('file://') || request.url.startsWith('content://') || request.url === htmlUri) {
+              return true;
+            }
+            // Bloqueia qualquer outra navegação (links externos)
+            return false;
+          }}
+          setSupportMultipleWindows={false}
         />
       ) : (
         <View style={styles.centered}>

@@ -7,7 +7,7 @@ import { normalizeSituacaoFuncional, getCanonicalFiliadoId, ROLES, isGestao as c
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
 
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from './PickerSafe';
 import { TextInput } from 'react-native';
 
 interface Props {
@@ -53,43 +53,35 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
     <View style={styles.card}>
       {!hideTitle && <Text style={styles.cardTitle}>Lotação, Situação e Perfil</Text>}
 
-      <Text style={styles.label}>Unidade de Lotação</Text>
-      <View style={(isEditing || isSelf) ? styles.pickerContainer : styles.pickerContainerDisabled}>
-        <LotacaoPicker
-          selectedValue={filiado?.lotacao || 'SEDE'}
-          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, lotacao: itemValue } : null)}
-          enabled={isEditing || isSelf}
-        />
-      </View>
+      <LotacaoPicker
+        label="Unidade de Lotação"
+        selectedValue={filiado?.lotacao || 'SEDE'}
+        onValueChange={(itemValue) => setFiliado(f => f ? { ...f, lotacao: itemValue } : null)}
+        enabled={isEditing || isSelf}
+      />
 
-      <Text style={styles.label}>Situação Funcional</Text>
-      <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
-        <Picker
-          selectedValue={normalizeSituacaoFuncional(filiado?.situacao_funcional || filiado?.situacao)}
-          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao_funcional: itemValue } : null)}
-          enabled={isEditing}
-          style={!isEditing ? { color: '#999' } : undefined}
-        >
-          <Picker.Item label="Ativo" value="ATIVO" />
-          <Picker.Item label="Veterano" value="VETERANO" />
-          <Picker.Item label="Pensionista" value="PENSIONISTA" />
-        </Picker>
-      </View>
+      <PickerSafe
+        label="Situação Funcional"
+        selectedValue={normalizeSituacaoFuncional(filiado?.situacao_funcional || filiado?.situacao)}
+        onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao_funcional: itemValue as any } : null)}
+        enabled={isEditing}
+        items={[
+          { label: "Ativo", value: "ATIVO" },
+          { label: "Veterano", value: "VETERANO" },
+          { label: "Pensionista", value: "PENSIONISTA" },
+        ]}
+        pickerBoxStyle={!isEditing ? { backgroundColor: '#f0f0f0' } : undefined}
+      />
 
-      <Text style={styles.label}>Perfil de Acesso</Text>
       {isGestao || perfilUsuario === ROLES.ORGANIZADOR ? (
-        <View style={canChangeProfile ? styles.pickerContainer : styles.pickerContainerDisabled}>
-          <Picker
-            selectedValue={filiado?.perfil_acesso}
-            onValueChange={(val) => setFiliado(f => f ? { ...f, perfil_acesso: val } : null)}
-            enabled={canChangeProfile}
-            style={!canChangeProfile ? { color: '#999' } : undefined}
-          >
-            {profileOptions.map(opt => (
-              <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-            ))}
-          </Picker>
-        </View>
+        <PickerSafe
+          label="Perfil de Acesso"
+          selectedValue={filiado?.perfil_acesso}
+          onValueChange={(val) => setFiliado(f => f ? { ...f, perfil_acesso: val as any } : null)}
+          enabled={canChangeProfile}
+          items={profileOptions}
+          pickerBoxStyle={!canChangeProfile ? { backgroundColor: '#f0f0f0' } : undefined}
+        />
       ) : (
         <TextInput
           style={styles.inputDisabled}

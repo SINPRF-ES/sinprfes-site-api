@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../components/PickerSafe';
 import { useAuth } from '../hooks/useAuth';
 import api, { getFiliados } from '../services/apiService';
 import FiliadoCard from '../components/FiliadoCard';
@@ -174,44 +174,36 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
       <View style={styles.filterRow}>
         {ehGestao && (
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Cadastro:</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={filtroCadastro}
-                onValueChange={(v) => v && setFiltroCadastro(v)}
-                style={styles.picker}
-                mode="dropdown"
-                dropdownIconColor="#003366"
-              >
-                <Picker.Item label="Selecione..." value="" color="#999" />
-                <Picker.Item label="Ativos" value={Canon.ESTADO_CADASTRO.CADASTRO_ATIVO} />
-                <Picker.Item label="Arquivados" value={Canon.ESTADO_CADASTRO.ARQUIVADO} />
-                <Picker.Item label="Todos" value="TODOS" />
-              </Picker>
-            </View>
-          </View>
+          <PickerSafe
+            containerStyle={styles.filterGroup}
+            label="Cadastro:"
+            labelStyle={styles.filterLabel}
+            selectedValue={filtroCadastro}
+            onValueChange={(v) => v && setFiltroCadastro(v as string)}
+            mode="dropdown"
+            dropdownIconColor="#003366"
+            items={[
+              { label: "Selecione...", value: "" },
+              { label: "Ativos", value: Canon.ESTADO_CADASTRO.CADASTRO_ATIVO },
+              { label: "Arquivados", value: Canon.ESTADO_CADASTRO.ARQUIVADO },
+              { label: "Todos", value: "TODOS" },
+            ]}
+          />
         )}
-        <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Situação:</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={filtroFuncional}
-              onValueChange={(v) => v && setFiltroFuncional(v)}
-              style={styles.picker}
-              mode="dropdown"
-              dropdownIconColor="#003366"
-            >
-              <Picker.Item label="Todos" value="TODOS" />
-              {Object.values(Canon.SITUACAO_FUNCIONAL).map(s => (
-                <Picker.Item key={s} label={Canon.LABELS[s]} value={s} />
-              ))}
-              {Canon.LOTACOES.map(l => (
-                <Picker.Item key={l} label={l} value={l} />
-              ))}
-            </Picker>
-          </View>
-        </View>
+        <PickerSafe
+          containerStyle={styles.filterGroup}
+          label="Situação:"
+          labelStyle={styles.filterLabel}
+          selectedValue={filtroFuncional}
+          onValueChange={(v) => v && setFiltroFuncional(v as string)}
+          mode="dropdown"
+          dropdownIconColor="#003366"
+          items={[
+            { label: "Todos", value: "TODOS" },
+            ...Object.values(Canon.SITUACAO_FUNCIONAL).map(s => ({ label: Canon.LABELS[s], value: s })),
+            ...Canon.LOTACOES.map(l => ({ label: l, value: l })),
+          ]}
+        />
       </View>
 
       <FlatList

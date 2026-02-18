@@ -15,7 +15,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../components/PickerSafe';
 import * as Canon from '../utils/canon';
 import { normalizeText, maskCPF } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
@@ -282,25 +282,23 @@ export default function RelatoriosScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
 
-          <Text style={styles.label}>Tipo de Relatório</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-                selectedValue={reportType}
-                onValueChange={(v) => {
-                  setReportType(v);
-                  if (v === 'LOTACAO') setTargetValue(Canon.LOTACOES[0]);
-                  else if (v === 'SITUACAO') setTargetValue('ATIVO');
-                  else setTargetValue(null);
-                }}
-                style={styles.picker}
-                mode="dropdown"
-            >
-                <Picker.Item label="👤 Dossiê do Filiado (Individual)" value="INDIVIDUAL" />
-                <Picker.Item label="📍 Por Lotação" value="LOTACAO" />
-                <Picker.Item label="📑 Por Situação Funcional" value="SITUACAO" />
-                <Picker.Item label="🌏 Global (Completo)" value="GLOBAL" />
-            </Picker>
-          </View>
+          <PickerSafe
+            label="Tipo de Relatório"
+            selectedValue={reportType}
+            onValueChange={(v) => {
+              setReportType(v as string);
+              if (v === 'LOTACAO') setTargetValue(Canon.LOTACOES[0]);
+              else if (v === 'SITUACAO') setTargetValue('ATIVO');
+              else setTargetValue(null);
+            }}
+            mode="dropdown"
+            items={[
+              { label: "👤 Dossiê do Filiado (Individual)", value: "INDIVIDUAL" },
+              { label: "📍 Por Lotação", value: "LOTACAO" },
+              { label: "📑 Por Situação Funcional", value: "SITUACAO" },
+              { label: "🌏 Global (Completo)", value: "GLOBAL" },
+            ]}
+          />
 
           {reportType === 'INDIVIDUAL' && (
              <TouchableOpacity
@@ -315,31 +313,25 @@ export default function RelatoriosScreen() {
           )}
 
           {reportType === 'LOTACAO' && (
-             <View style={styles.pickerContainer}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    {Canon.LOTACOES.map((opt) => (
-                      <Picker.Item key={opt} label={opt} value={opt} />
-                    ))}
-                </Picker>
-             </View>
+            <PickerSafe
+              label="Lotação"
+              selectedValue={targetValue}
+              onValueChange={setTargetValue}
+              items={Canon.LOTACOES.map((opt) => ({ label: opt, value: opt }))}
+            />
           )}
 
           {reportType === 'SITUACAO' && (
-             <View style={styles.pickerContainer}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    <Picker.Item label="ATIVO" value="ATIVO" />
-                    <Picker.Item label="VETERANO" value="VETERANO" />
-                    <Picker.Item label="PENSIONISTA" value="PENSIONISTA" />
-                </Picker>
-             </View>
+            <PickerSafe
+              label="Situação Funcional"
+              selectedValue={targetValue}
+              onValueChange={setTargetValue}
+              items={[
+                { label: "ATIVO", value: "ATIVO" },
+                { label: "VETERANO", value: "VETERANO" },
+                { label: "PENSIONISTA", value: "PENSIONISTA" },
+              ]}
+            />
           )}
 
           <TouchableOpacity

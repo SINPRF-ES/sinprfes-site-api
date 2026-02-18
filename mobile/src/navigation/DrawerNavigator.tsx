@@ -24,6 +24,8 @@ import { useAuth } from '../hooks/useAuth';
 import { isGestao, isDiretoria } from '../utils/filiadoUtils';
 import { logger } from '../infra/logger';
 import { useEffect } from 'react';
+import { EMOJI } from '../constants/emojis';
+import DrawerItemLabel from '../components/DrawerItemLabel';
 
 const Drawer = createDrawerNavigator();
 
@@ -62,57 +64,91 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="Início"
         component={HomeScreen}
-        options={{ title: '🏠 Página Inicial' }}
+        options={{
+          title: 'Página Inicial',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.HOME} label="Página Inicial" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Noticias"
         component={NoticiasScreen}
-        options={{ title: '📰 Notícias' }}
+        options={{
+          title: 'Notícias',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.NOTICIAS} label="Notícias" {...props} />
+        }}
       />
       <Drawer.Screen
         name="MeusDados"
         component={MeusDadosScreen}
-        options={{ title: '👤 Meus Dados' }}
+        options={{
+          title: 'Meus Dados',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.MEUS_DADOS} label="Meus Dados" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Filiados"
         component={FiliadosScreen}
-        options={{ title: '👥 Filiados' }}
+        options={{
+          title: 'Filiados',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.FILIADOS} label="Filiados" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Publicacoes"
         component={PublicacoesScreen}
-        options={{ title: '📚 Publicações' }}
+        options={{
+          title: 'Publicações',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.PUBLICACOES} label="Publicações" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Ressarcimento"
         component={RessarcimentoScreen}
-        options={{ title: '💸 Ressarcimento' }}
+        options={{
+          title: 'Ressarcimento',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.RESSARCIMENTO} label="Ressarcimento" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Jogos2026"
         component={JogosScreen}
-        options={{ title: '🏆 Jogos 2026' }}
+        options={{
+          title: 'Jogos 2026',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.JOGOS} label="Jogos 2026" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Votacao"
         component={AssembleiaStack}
-        options={{ title: '🗳️ Assembleias e Votações', headerShown: false }}
+        options={{
+          title: 'Assembleias e Votações',
+          headerShown: false,
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ASSEMBLEIA} label="Assembleias e Votações" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Estatuto"
         component={EstatutoScreen}
-        options={{ title: '⚖️ Estatuto' }}
+        options={{
+          title: 'Estatuto',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ESTATUTO} label="Estatuto" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Seguranca"
         component={SegurancaScreen}
-        options={{ title: '🛡️ Segurança' }}
+        options={{
+          title: 'Segurança',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.SEGURANCA} label="Segurança" {...props} />
+        }}
       />
       <Drawer.Screen
         name="Atualizacoes"
         component={AtualizacoesScreen}
-        options={{ title: '🔄 Atualizações' }}
+        options={{
+          title: 'Atualizações',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ATUALIZACOES} label="Atualizações" {...props} />
+        }}
       />
       {/* Tela de Diagnóstico/Logs - Para ADMIN e DIRETORIA */}
       {ehDiretoria && (
@@ -130,18 +166,24 @@ const DrawerNavigator = () => {
           <Drawer.Screen
             name="Repasse"
             component={RepasseScreen}
-            options={{ title: '💰 Repasse' }}
+            options={{
+              title: 'Repasse',
+              drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.REPASSE} label="Repasse" {...props} />
+            }}
           />
           <Drawer.Screen
             name="Relatorios"
             component={RelatoriosScreen}
-            options={{ title: '📊 Relatórios' }}
+            options={{
+              title: 'Relatórios',
+              drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.RELATORIOS} label="Relatórios" {...props} />
+            }}
           />
           <Drawer.Screen
             name="NotificacoesPush"
             component={NotificacoesPushScreen}
             options={{
-              title: '📢 Notificações',
+              title: 'Notificações',
               drawerItemStyle: { display: 'none' }
             }}
           />
@@ -149,7 +191,7 @@ const DrawerNavigator = () => {
             name="CriarFiliado"
             component={CriarFiliadoScreen}
             options={{
-              title: '👤 Novo Filiado',
+              title: 'Novo Filiado',
               drawerItemStyle: { display: 'none' } // Oculta o item da lista padrão
             }}
           />

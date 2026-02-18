@@ -12,7 +12,7 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../components/PickerSafe';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SafeScreen from '../components/SafeScreen';
 import repasseService, { MesRepasse, Responsavel } from '../services/repasseService';
@@ -442,20 +442,16 @@ export default function RepasseScreen() {
           </View>
 
           <View style={styles.yearSelectionRow}>
-            <Text style={styles.yearLabel}>Ano:</Text>
-            <View style={styles.yearPickerWrapper}>
-              <Picker
-                selectedValue={year}
-                onValueChange={(v) => setYear(v)}
-                style={styles.yearPicker}
-                mode="dropdown"
-                dropdownIconColor="#003366"
-              >
-                {years.map(y => (
-                  <Picker.Item key={y} label={String(y)} value={y} />
-                ))}
-              </Picker>
-            </View>
+            <PickerSafe
+              label="Ano:"
+              labelStyle={styles.yearLabel}
+              containerStyle={{ flex: 1 }}
+              selectedValue={year}
+              onValueChange={(v) => setYear(v as number)}
+              mode="dropdown"
+              dropdownIconColor="#003366"
+              items={years.map(y => ({ label: String(y), value: y }))}
+            />
           </View>
 
           <View style={styles.statsCard}>
@@ -541,48 +537,43 @@ export default function RepasseScreen() {
 
                               {ehGestao && (
                                 <View style={[styles.tableCell, { width: 200 }]}>
-                                  <View style={styles.pickerWrapperCell}>
-                                    <Picker
-                                      selectedValue={loc.responsavelId}
-                                      onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
-                                      style={styles.pickerCell}
-                                      mode="dropdown"
-                                      dropdownIconColor="#003366"
-                                    >
-                                      <Picker.Item label="Selecione..." value={null} />
-                                      {(() => {
-                                        const kw = LOTACAO_KEYWORDS[loc.lotacao];
-                                        const respList = (responsaveis || []);
+                                  <PickerSafe
+                                    containerStyle={{ marginBottom: 0 }}
+                                    pickerBoxStyle={{ height: 52 }}
+                                    selectedValue={loc.responsavelId}
+                                    onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
+                                    mode="dropdown"
+                                    dropdownIconColor="#003366"
+                                    items={(() => {
+                                      const kw = LOTACAO_KEYWORDS[loc.lotacao];
+                                      const respList = (responsaveis || []);
 
-                                        // Filtro estrito por localidade (obrigatório)
-                                        // Remove o fallback de "vazar" usuários sem lotação ou ORGANIZADORES globais
-                                        const filtered = respList.filter(r => {
-                                          if (!kw) return true;
-                                          if (!r.lotacao) return false;
-                                          return normalizeLocalidade(r.lotacao).includes(kw);
-                                        });
+                                      const filtered = respList.filter(r => {
+                                        if (!kw) return true;
+                                        if (!r.lotacao) return false;
+                                        return normalizeLocalidade(r.lotacao).includes(kw);
+                                      });
 
-                                        // Mobile logs (obrigatório)
-                                        console.info("[REPASSE_UI] picker options", {
+                                      console.info("[REPASSE_UI] picker options", {
+                                        lotacao: loc.lotacao,
+                                        key: kw,
+                                        optionsCount: filtered.length,
+                                        optionIds: filtered.map(o => o.id).slice(0, 10)
+                                      });
+
+                                      if (filtered.length === 0 && loc.filiadosAtivos > 0) {
+                                        console.warn("[REPASSE_UI] lotacao sem responsaveis", {
                                           lotacao: loc.lotacao,
-                                          key: kw,
-                                          optionsCount: filtered.length,
-                                          optionIds: filtered.map(o => o.id).slice(0, 10)
+                                          filiadosAtivos: loc.filiadosAtivos
                                         });
+                                      }
 
-                                        if (filtered.length === 0 && loc.filiadosAtivos > 0) {
-                                          console.warn("[REPASSE_UI] lotacao sem responsaveis", {
-                                            lotacao: loc.lotacao,
-                                            filiadosAtivos: loc.filiadosAtivos
-                                          });
-                                        }
-
-                                        return filtered.map(r => (
-                                          <Picker.Item key={r.id} label={r.nome} value={r.id} />
-                                        ));
-                                      })()}
-                                    </Picker>
-                                  </View>
+                                      return [
+                                        { label: "Selecione...", value: null },
+                                        ...filtered.map(r => ({ label: r.nome, value: r.id }))
+                                      ];
+                                    })()}
+                                  />
                                 </View>
                               )}
 

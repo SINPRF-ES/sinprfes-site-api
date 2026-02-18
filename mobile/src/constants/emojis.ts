@@ -1,0 +1,25 @@
+// mobile/src/constants/emojis.ts
+
+export const EMOJI = {
+  HOME: "🏠",
+  GESTAO: "🛠️",
+  DIAGNOSTICO: "🧾",
+  PUBLICACOES: "📚",
+  NOTICIAS: "📰",
+  LOGISTICA: "🚚",
+  ASSEMBLEIA: "🗳️",
+  REPASSE: "💰",
+  FILIADOS: "👥",
+  CONFIG: "⚙️",
+  ESTATUTO: "📜",
+  MEUS_DADOS: "👤",
+  RESSARCIMENTO: "💸",
+  JOGOS: "🏆",
+  SEGURANCA: "🛡️",
+  ATUALIZACOES: "🔄",
+  RELATORIOS: "📊",
+  NOTIFICACOES: "📢",
+  NOVO_FILIADO: "👤",
+  FECHAR_APP: "🔒",
+  SAIR: "🚪",
+};
