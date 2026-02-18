@@ -13,7 +13,7 @@ app.get('/health', (req, res) => {
 // Proxy interno para a API
 // Evita problemas de CORS no navegador e centraliza as chamadas
 app.use('/api', createProxyMiddleware({
-  target: 'https://api.sinprfes.org.br',
+  target: ''https://ovo8920a.up.railway.app'',
   changeOrigin: true,
   logLevel: 'debug'
 }));
