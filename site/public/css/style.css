@@ -14,6 +14,9 @@
   --cinza: #ced4da;
   --texto-claro: #f8f9fa;
   --texto-fraco: #aeb5c3;
+
+  /* Layout Base */
+  --header-h: 90px;
 }
 
 /* Reset básico */
@@ -23,26 +26,38 @@
   padding: 0;
 }
 
+/* Scroll native and smooth */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: radial-gradient(circle at top, #004b8d 0, #00152b 55%, #000814 100%);
   color: var(--texto-claro);
+
+  /* iOS safe height */
+  min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: hidden;
+
+  overflow-y: auto; /* Garante scroll nativo no body */
 
   /* Acessibilidade: tipografia fluida */
   font-size: clamp(16px, 2vw, 18px);
   line-height: 1.65;
 
-  /* Espaço para o header fixo + Safe Areas iOS */
-  padding-top: calc(90px + env(safe-area-inset-top, 0px));
+  /* Espaçamento base para Safe Areas iOS */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
-  scroll-behavior: smooth;
+}
+
+/* Âncoras: compensar altura do header sticky */
+[id]:target {
+  scroll-margin-top: calc(var(--header-h) + 20px);
 }
 
 a {
@@ -66,20 +81,22 @@ img {
 }
 
 /* =========================================================
-   HEADER FIXO NO TOPO
+   HEADER STICKY NO TOPO
    ========================================================= */
+
+#site-header {
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+  background: #003366; /* Garante fundo sólido contra overlap */
+}
 
 .site-header {
   background: #003366;
   color: #fff;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) 0 10px;
 
-  /* Header sempre visível no topo */
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2000;
+  /* Safe area top no padding do header */
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 0 10px;
 
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -712,7 +729,7 @@ footer {
 @media (max-width: 600px) {
   body {
     font-size: 16px;
-    padding-top: 80px; /* header um pouco menor no mobile */
+    padding-top: 0; /* Sticky header não requer padding manual */
   }
 
   .container {
@@ -1038,7 +1055,11 @@ footer {
 
 .af-body {
   padding-top: 0 !important;
-  overflow: hidden;
+  /* Permitir scroll nativo no mobile */
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .af-container {
@@ -1049,7 +1070,9 @@ footer {
 
 .af-main-layout {
   display: flex;
+  /* Desktop: trancado. Mobile: natural. */
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
@@ -1058,6 +1081,7 @@ footer {
 .af-sidebar {
   width: 280px;
   height: 100vh;
+  height: 100dvh;
   background: #00152b;
   display: flex;
   flex-direction: column;
@@ -1133,9 +1157,11 @@ footer {
 .af-content {
   flex: 1;
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   padding: 30px;
   background: transparent;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Título/subtítulo dentro do sidebar já usam .section-title/.section-subtitle */
