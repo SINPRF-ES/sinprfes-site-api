@@ -18,6 +18,7 @@ import * as Device from 'expo-device';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
 import { PickerSafe } from '../components/PickerSafe';
+import SafeScreen from '../components/SafeScreen';
 import { Ionicons } from '@expo/vector-icons';
 
 import { LogEntry, getLogs, clearLogs, getLogsAsText, LogLevel } from '../infra/logger';
@@ -220,7 +221,7 @@ const LogsScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       {/* Filtros */}
       <View style={styles.filterContainer}>
         <View style={styles.searchBar}>
@@ -294,7 +295,7 @@ const LogsScreen = () => {
           </View>
         }
       />
-    </View>
+    </SafeScreen>
   );
 };
 

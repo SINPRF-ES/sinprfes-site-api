@@ -157,6 +157,7 @@ const DrawerNavigator = () => {
           component={LogsScreen}
           options={{
             title: 'Diagnóstico do Sistema',
+            headerTitleStyle: { fontSize: 16 },
             drawerItemStyle: { display: 'none' }
           }}
         />
