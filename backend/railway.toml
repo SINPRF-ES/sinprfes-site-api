@@ -1,0 +1,9 @@
+# Railway configuration for API service
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install"
+
+[deploy]
+startCommand = "node server.js"
+healthcheckPath = "/health"
+restartPolicyType = "on_failure"

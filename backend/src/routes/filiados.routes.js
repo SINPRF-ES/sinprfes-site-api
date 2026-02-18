@@ -15,9 +15,6 @@ const sharp = require("sharp");
 // =============================================================================
 // Upload (avatar)
 // =============================================================================
-const avatarsDir = path.join(process.cwd(), "public", "uploads", "avatars");
-fs.mkdirSync(avatarsDir, { recursive: true });
-
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // aceita original maior
@@ -33,7 +30,6 @@ async function converterAvatarParaWebp(req, res, next) {
 
     const who = req.params.id ? `id${req.params.id}` : `me${req.user?.id || "0"}`;
     const filename = `${who}-${Date.now()}.webp`;
-    const outPath = path.join(avatarsDir, filename); // mantido por compatibilidade, mas não será usado
 
     let quality = 82;
     let buffer = await sharp(req.file.buffer)

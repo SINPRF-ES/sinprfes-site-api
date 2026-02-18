@@ -128,12 +128,37 @@ app.use("/api/eventos", eventoVotacoesRoutes); // vai usar subrotas /:id/votacoe
 // 🟧 NOVO: CMS-Lite para Blocos de Conteúdo
 app.use("/api/content-blocks", require("./routes/contentBlock.routes"));
 
-// Health Check para o Service A (API)
+// Health Check e Root para o Service A (API)
+app.get("/", (req, res) => {
+  res.json({
+    status: "ok",
+    service: "api",
+    message: "SINPRF-ES API"
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    service: "api",
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get("/api/health", (_, res) => {
   res.json({
     status: "ok",
     service: "api",
     timestamp: new Date().toISOString()
+  });
+});
+
+// Catch-all 404 para API (Sempre JSON)
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Rota não encontrada: ${req.method} ${req.originalUrl}`,
+    code: "ROUTE_NOT_FOUND"
   });
 });
 
