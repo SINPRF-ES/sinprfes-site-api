@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../components/PickerSafe';
 import * as Canon from '../utils/canon';
 import { normalizeText, maskCPF } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
@@ -352,37 +352,30 @@ export default function NotificacoesPushScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📢 Nova Notificação</Text>
 
-          <Text style={styles.label}>Público de Destino</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-                selectedValue={targetType}
-                onValueChange={(v) => {
-                  setTargetType(v);
-                  setTargetValue(v === 'LOTACAO' ? Canon.LOTACOES[0] : '');
-                }}
-                style={styles.picker}
-            >
-                <Picker.Item label="Todos com app" value="ALL" />
-                <Picker.Item label="Apenas ATIVOS" value="ATIVOS" />
-                <Picker.Item label="Veteranos / Pensionistas" value="VETERANOS" />
-                <Picker.Item label="Por Lotação" value="LOTACAO" />
-                <Picker.Item label="Inscritos nos Jogos" value="JOGOS" />
-                <Picker.Item label="Especificar Filiado" value="FILIADO" />
-            </Picker>
-          </View>
+          <PickerSafe
+            label="Público de Destino"
+            selectedValue={targetType}
+            onValueChange={(v) => {
+              setTargetType(v as string);
+              setTargetValue(v === 'LOTACAO' ? Canon.LOTACOES[0] : '');
+            }}
+            items={[
+              { label: "Todos com app", value: "ALL" },
+              { label: "Apenas ATIVOS", value: "ATIVOS" },
+              { label: "Veteranos / Pensionistas", value: "VETERANOS" },
+              { label: "Por Lotação", value: "LOTACAO" },
+              { label: "Inscritos nos Jogos", value: "JOGOS" },
+              { label: "Especificar Filiado", value: "FILIADO" },
+            ]}
+          />
 
           {targetType === 'LOTACAO' && (
-             <View style={styles.pickerContainer}>
-                <Picker
-                    selectedValue={targetValue}
-                    onValueChange={setTargetValue}
-                    style={styles.picker}
-                >
-                    {Canon.LOTACOES.map((opt) => (
-                      <Picker.Item key={opt} label={opt} value={opt} />
-                    ))}
-                </Picker>
-             </View>
+            <PickerSafe
+              label="Lotação"
+              selectedValue={targetValue}
+              onValueChange={setTargetValue}
+              items={Canon.LOTACOES.map((opt) => ({ label: opt, value: opt }))}
+            />
           )}
 
           {targetType === 'FILIADO' && (

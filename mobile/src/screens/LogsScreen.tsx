@@ -17,7 +17,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Device from 'expo-device';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../components/PickerSafe';
 import { Ionicons } from '@expo/vector-icons';
 
 import { LogEntry, getLogs, clearLogs, getLogsAsText, LogLevel } from '../infra/logger';
@@ -239,31 +239,19 @@ const LogsScreen = () => {
         </View>
 
         <View style={styles.pickersRow}>
-          <View style={styles.pickerWrapper}>
-            <Text style={styles.pickerLabel}>Nível</Text>
-            <View style={styles.pickerBorder}>
-              <Picker
-                selectedValue={selectedLevel}
-                onValueChange={(val) => setSelectedLevel(val)}
-                style={styles.picker}
-              >
-                {LEVELS.map(l => <Picker.Item key={l} label={l} value={l} />)}
-              </Picker>
-            </View>
-          </View>
+          <PickerSafe
+            label="Nível"
+            selectedValue={selectedLevel}
+            onValueChange={(val) => setSelectedLevel(val as any)}
+            items={LEVELS.map(l => ({ label: l, value: l }))}
+          />
 
-          <View style={styles.pickerWrapper}>
-            <Text style={styles.pickerLabel}>Período</Text>
-            <View style={styles.pickerBorder}>
-              <Picker
-                selectedValue={selectedPeriod}
-                onValueChange={(val) => setSelectedPeriod(val)}
-                style={styles.picker}
-              >
-                {PERIODS.map(p => <Picker.Item key={p.value} label={p.label} value={p.value} />)}
-              </Picker>
-            </View>
-          </View>
+          <PickerSafe
+            label="Período"
+            selectedValue={selectedPeriod}
+            onValueChange={(val) => setSelectedPeriod(val as string)}
+            items={PERIODS}
+          />
         </View>
       </View>
 
@@ -348,25 +336,6 @@ const styles = StyleSheet.create({
   },
   pickersRow: {
     flexDirection: 'column',
-  },
-  pickerWrapper: {
-    width: '100%',
-    marginBottom: 12,
-  },
-  pickerLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  pickerBorder: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#fcfcfc',
-  },
-  picker: {
-    height: 40,
   },
   actionsBar: {
     flexDirection: 'row',

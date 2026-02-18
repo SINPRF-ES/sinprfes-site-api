@@ -1,7 +1,7 @@
 // src/components/ContatoCard.tsx
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from './PickerSafe';
 import { Filiado } from '../types/filiado';
 import { formatTelefone, onlyDigits, formatCpf } from '../shared/format/formatters';
 import { toBrazilianDate, formatDateToDdMmYyyy, toISODate, calculateAgeBreakdown } from '../utils/date';
@@ -42,19 +42,17 @@ const ContatoCard: React.FC<Props> = ({
         autoComplete="name"
       />
 
-      <Text style={styles.label}>Sexo</Text>
       {isManagement ? (
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={filiado?.sexo || ''}
-            onValueChange={(val) => setFiliado(f => f ? { ...f, sexo: val as any } : null)}
-            style={styles.picker}
-          >
-            <Picker.Item label="-" value="" />
-            <Picker.Item label="♂️ Masculino" value="M" />
-            <Picker.Item label="♀️ Feminino" value="F" />
-          </Picker>
-        </View>
+        <PickerSafe
+          label="Sexo"
+          selectedValue={filiado?.sexo || ''}
+          onValueChange={(val) => setFiliado(f => f ? { ...f, sexo: val as any } : null)}
+          items={[
+            { label: "-", value: "" },
+            { label: "♂️ Masculino", value: "M" },
+            { label: "♀️ Feminino", value: "F" },
+          ]}
+        />
       ) : (
         <Text style={styles.inputDisabled}>
           {filiado?.sexo === 'M' ? '♂️ Masculino' : (filiado?.sexo === 'F' ? '♀️ Feminino' : '—')}

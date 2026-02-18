@@ -1,7 +1,7 @@
 // src/components/DependentesCard.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from './PickerSafe';
 import { Filiado } from '../types/filiado';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
 import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate, calculateAgeBreakdown } from '../utils/date';
@@ -96,18 +96,14 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
         accessibilityLabel={`Idade do Dependente ${index}`}
       />
 
-      <Text style={styles.label}>Parentesco</Text>
-      <View style={isEditing ? styles.pickerContainer : styles.pickerContainerDisabled}>
-        <Picker
-          selectedValue={parentescoMode}
-          onValueChange={handleParentescoChange}
-          enabled={isEditing}
-        >
-          {parentescoOptions.map(opt => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Picker>
-      </View>
+      <PickerSafe
+        label="Parentesco"
+        selectedValue={parentescoMode}
+        onValueChange={handleParentescoChange}
+        enabled={isEditing}
+        items={parentescoOptions}
+        pickerBoxStyle={!isEditing ? { backgroundColor: '#f0f0f0' } : undefined}
+      />
 
       {parentescoMode === 'OUTRO' && (
         <>

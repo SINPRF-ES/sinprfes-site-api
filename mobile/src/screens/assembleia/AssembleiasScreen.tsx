@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { PickerSafe } from '../../components/PickerSafe';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -106,20 +106,21 @@ export default function AssembleiasScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Filtrar:</Text>
-        <View style={styles.pickerWrapper}>
-            <Picker
-                selectedValue={filter}
-                onValueChange={(itemValue) => setFilter(itemValue as any)}
-                style={styles.picker}
-                dropdownIconColor="#003366"
-                mode="dropdown"
-            >
-                <Picker.Item label="Ativas" value="ativas" />
-                <Picker.Item label="Encerradas" value="encerradas" />
-                <Picker.Item label="Todas" value="todas" />
-            </Picker>
-        </View>
+        <PickerSafe
+          label="Filtrar:"
+          labelStyle={styles.filterLabel}
+          containerStyle={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginBottom: 0 }}
+          pickerBoxStyle={{ flex: 1, height: 52 }}
+          selectedValue={filter}
+          onValueChange={(itemValue) => setFilter(itemValue as any)}
+          dropdownIconColor="#003366"
+          mode="dropdown"
+          items={[
+            { label: "Ativas", value: "ativas" },
+            { label: "Encerradas", value: "encerradas" },
+            { label: "Todas", value: "todas" },
+          ]}
+        />
       </View>
 
       {loading && !refreshing ? (
@@ -156,24 +157,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   filterLabel: { fontSize: 14, fontWeight: 'bold', color: '#003366', marginRight: 10 },
-  pickerWrapper: {
-    flex: 1,
-    minWidth: 0,
-    height: 52,
-    justifyContent: 'center',
-    backgroundColor: '#f2f4f8',
-    borderRadius: 8,
-    overflow: 'hidden'
-  },
-  picker: {
-    height: 52,
-    width: '100%',
-    ...Platform.select({
-      android: {
-        marginLeft: -4,
-      }
-    })
-  },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 16 },
   card: {
