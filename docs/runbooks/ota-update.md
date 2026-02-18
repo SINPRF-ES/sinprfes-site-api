@@ -6,7 +6,7 @@ Este é o runbook oficial e canônico para realizar atualizações Over-the-Air 
 
 1.  Acesso ao repositório `sinprfes-site-api`.
 2.  `pnpm` instalado globalmente.
-3.  EAS CLI instalado (`npm install -g eas-cli`).
+3.  EAS CLI instalado (`pnpm add -g eas-cli`).
 4.  Login realizado no EAS (`eas login`).
 
 ## Fluxo de Atualização (Passo-a-passo)

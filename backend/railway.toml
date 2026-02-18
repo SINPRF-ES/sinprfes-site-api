@@ -1,7 +1,7 @@
 # Railway configuration for API service
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install"
+buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build"
 
 [deploy]
 startCommand = "node server.js"

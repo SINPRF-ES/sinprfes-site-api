@@ -114,7 +114,7 @@ Sempre renomear os arquivos antes de subir para o Drive para facilitar a identif
 ### Guardrail de Build:
 Antes de qualquer release de base nativa, é **obrigatório** rodar o script de verificação:
 ```bash
-npm run verify:android-split
+pnpm run verify:android-split
 ```
 Este script garante que as configurações de split e `universalApk false` permanecem no `build.gradle` após o prebuild.
 

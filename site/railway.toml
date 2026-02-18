@@ -3,7 +3,7 @@
 builder = "nixpacks"
 # Instalamos dependências e copiamos os arquivos do monorepo /shared para dentro de public/shared
 # Isso garante que o site seja auto-contido para o runtime do Railway.
-buildCommand = "pnpm install && mkdir -p public/shared && cp -R ../shared/* public/shared/"
+buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @sinprfes/site run build && mkdir -p public/shared && cp -R ../shared/* public/shared/"
 
 [deploy]
 startCommand = "node server.js"

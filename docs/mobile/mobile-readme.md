@@ -37,7 +37,7 @@ O aplicativo utiliza formatadores centralizados em `mobile/src/shared/formatters
 
 ### Como rodar
 1. `cd mobile`
-2. `npm install`
+2. `pnpm install`
 3. `npx expo start`
 
 ### Variáveis de Ambiente
