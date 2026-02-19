@@ -4,7 +4,7 @@
   "description": "SINPRF-ES Institutional Site",
   "main": "server.js",
   "scripts": {
-    "build": "echo 'No build step required for static site'",
+    "build": "mkdir -p public/shared && cp -R ../shared/* public/shared/ || true",
     "start": "node server.js"
   },
   "dependencies": {
