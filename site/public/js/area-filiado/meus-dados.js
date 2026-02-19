@@ -275,6 +275,18 @@
 
                 .form-actions { margin-top: 35px; text-align: center; }
 
+                .invalid-field {
+                    border-color: #e74c3c !important;
+                    background-color: #fdf2f2 !important;
+                }
+                .field-error-msg {
+                    color: #e74c3c;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    margin-top: 4px;
+                    display: block;
+                }
+
                 /* Zebra striping for dependents */
                 .dependente-card:nth-child(even) { background-color: #ffffff; }
                 .dependente-card:nth-child(odd) { background-color: #f7f9fc; }
@@ -696,6 +708,13 @@
                 }
             }
 
+            function limparErros() {
+                form.querySelectorAll('.invalid-field').forEach(el => el.classList.remove('invalid-field'));
+                form.querySelectorAll('.field-error-msg').forEach(el => el.remove());
+            }
+
+            limparErros();
+
             try {
                 const r = await window.Api.apiFetch("/api/filiados/me", { method: "PUT", body: payload });
                 if (r.ok) {
@@ -705,8 +724,28 @@
                     status.textContent = "Erro ao salvar.";
                     try {
                         const d = await r.json();
-                        if (d?.message) alert(d.message);
-                    } catch {}
+                        if (d?.fields) {
+                            Object.keys(d.fields).forEach(key => {
+                                let fieldId = `me-${key.replace(/_/g, '-')}`;
+                                if (key === 'logradouro_bairro') fieldId = 'me-endereco';
+
+                                const el = document.getElementById(fieldId);
+                                if (el) {
+                                    el.classList.add('invalid-field');
+                                    const span = document.createElement('span');
+                                    span.className = 'field-error-msg';
+                                    span.textContent = d.fields[key];
+                                    el.insertAdjacentElement('afterend', span);
+                                }
+                            });
+                            const first = form.querySelector('.invalid-field');
+                            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        } else if (d?.message) {
+                            alert(d.message);
+                        }
+                    } catch (errJson) {
+                        console.error("Erro ao processar resposta de erro:", errJson);
+                    }
                 }
             } catch (e) {
                 status.textContent = "Erro de conexão.";

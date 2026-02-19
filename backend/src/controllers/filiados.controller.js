@@ -2,6 +2,7 @@
 const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
+const { z } = require("zod");
 const { uploadAvatarBuffer, deleteAvatarByPublicId } = require("../services/cloudinary.service");
 
 const pool = require("../config/db");
@@ -89,11 +90,16 @@ function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de d
         log.error("FiliadosConstraintErro", errorInfo);
 
         // Resposta genérica segura para o cliente (NUNCA vazar err.detail que contém dados da linha)
-        let safeMessage = "Não foi possível processar sua solicitação devido a um erro nos dados enviados.";
+        let safeMessage = "Não foi possível processar seus dados. Verifique se os campos obrigatórios estão preenchidos.";
 
         if (err.code === '23505') {
             safeMessage = "Os dados informados já constam em nosso sistema (conflito de CPF ou E-mail).";
             return res.status(409).json({ success: false, message: safeMessage, code: err.code, requestId });
+        }
+
+        // 23502: not_null_violation, 23514: check_violation
+        if (err.code === '23502' || err.code === '23514') {
+          safeMessage = "Existem campos obrigatórios não preenchidos ou com formato inválido.";
         }
 
         return res.status(422).json({
@@ -107,8 +113,14 @@ function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de d
     // Para qualquer outro erro de banco (500)
     log.error("FiliadosDbErro", errorInfo);
 
-    // Garantir que NUNCA enviamos a mensagem do erro se ela contiver palavras suspeitas de vazamento
-    const hasLeakRisk = err?.message && (err.message.includes("Failing row") || err.message.includes("violates"));
+    // Garantir que NUNCA enviamos a mensagem do erro se ela contiver palavras suspeitas de vazamento ou detalhes técnicos
+    const hasLeakRisk = err?.message && (
+      err.message.includes("Failing row") ||
+      err.message.includes("violates") ||
+      err.message.includes("SQLSTATE") ||
+      err.message.includes("duplicate key") ||
+      err.message.includes("check constraint")
+    );
     const finalMessage = hasLeakRisk ? defaultMessage : (defaultMessage || "Erro interno no servidor");
 
     return res.status(500).json({
@@ -269,49 +281,77 @@ exports.atualizarMeusDados = async (req, res) => {
   try {
     const body = req.body || {};
 
-    // 1. Bloquear campos proibidos
-    const camposProibidos = ['perfil_acesso', 'situacao', 'cpf', 'siape', 'nome', 'id', 'senha_hash', 'bloqueado', 'arquivado_em'];
-    for (const campo of camposProibidos) {
-      if (body[campo] !== undefined) {
-        return res.status(403).json({
-          success: false,
-          message: `O campo '${campo}' não pode ser alterado por esta via.`,
-          requestId
-        });
-      }
-    }
-
-    // 2. Validar campos obrigatórios se presentes
-    if (body.email1 !== undefined && !String(body.email1).trim()) {
-      return res.status(422).json({ success: false, message: "E-mail principal não pode ser vazio.", requestId });
-    }
-
-    const payload = {};
-
-    // 3. Normalização e Coleta Seletiva (Partial Update)
-    const camposMapeados = [
+    // 1. Whitelist estrita (FILIADO)
+    const editableFields = [
       'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
       'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf', 'cep'
     ];
+    // Incluir campos de dependentes no whitelist
+    for (let i = 1; i <= 5; i++) {
+      editableFields.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
+    }
 
-    camposMapeados.forEach(f => {
-      if (body[f] !== undefined) {
-        const val = body[f];
-        if (f === 'telefone1' || f === 'telefone2' || f === 'cep') {
-          payload[f] = val ? String(val).replace(/\D/g, "") || null : null;
-        } else if (f === 'email1' || f === 'email2') {
-          payload[f] = val ? String(val).trim().toLowerCase() || null : null;
-        } else if (f === 'uf') {
-          payload[f] = val ? String(val).trim().toUpperCase() || null : null;
-        } else if (f === 'lotacao') {
-          payload[f] = val ? normalizeLotacao(val) : 'SEDE';
-        } else {
-          payload[f] = val ? String(val).trim() || null : null;
-        }
-      }
-    });
+    const receivedFields = Object.keys(body);
+    const forbiddenFields = receivedFields.filter(f => !editableFields.includes(f));
 
-    // 4. Dependentes (sempre processa o conjunto se algum campo de dependente vier)
+    if (forbiddenFields.length > 0) {
+      return res.status(403).json({
+        success: false,
+        error: "FORBIDDEN_FIELD",
+        message: `Os campos seguintes não podem ser alterados pelo usuário: ${forbiddenFields.join(', ')}`,
+        requestId
+      });
+    }
+
+    // 2. Validação e Normalização com Zod
+    const schema = z.object({
+      telefone1: z.string().nullable().optional(),
+      telefone2: z.string().nullable().optional(),
+      email1: z.string().trim().min(1, "Obrigatório").email("E-mail inválido").toLowerCase(),
+      email2: z.string().trim().toLowerCase().nullable().optional()
+        .refine(v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "E-mail inválido"),
+      lotacao: z.string().optional(),
+      logradouro_bairro: z.string().trim().min(1, "Obrigatório"),
+      numero: z.string().trim().min(1, "Obrigatório"),
+      complemento: z.string().trim().nullable().optional(),
+      cidade: z.string().trim().min(1, "Obrigatório"),
+      uf: z.string().trim().toUpperCase().length(2, "Deve ter 2 letras"),
+      cep: z.string().transform(v => String(v).replace(/\D/g, "")).refine(v => v.length === 8, "Deve ter 8 dígitos"),
+    }).partial();
+
+    const result = schema.safeParse(body);
+
+    if (!result.success) {
+      const fieldErrors = {};
+      result.error.issues.forEach(issue => {
+        fieldErrors[issue.path[0]] = issue.message;
+      });
+      return res.status(422).json({
+        success: false,
+        error: "VALIDATION_ERROR",
+        message: "Existem erros nos campos informados.",
+        fields: fieldErrors,
+        requestId
+      });
+    }
+
+    const payload = {};
+    const validatedData = result.data;
+
+    // Normalização manual para garantir que só campos enviados sejam incluídos e campos vazios virem null
+    if (validatedData.telefone1 !== undefined) payload.telefone1 = (validatedData.telefone1 && String(validatedData.telefone1).replace(/\D/g, "")) || null;
+    if (validatedData.telefone2 !== undefined) payload.telefone2 = (validatedData.telefone2 && String(validatedData.telefone2).replace(/\D/g, "")) || null;
+    if (validatedData.email1 !== undefined) payload.email1 = validatedData.email1;
+    if (validatedData.email2 !== undefined) payload.email2 = (validatedData.email2 && validatedData.email2.trim()) || null;
+    if (validatedData.lotacao !== undefined) payload.lotacao = normalizeLotacao(validatedData.lotacao);
+    if (validatedData.logradouro_bairro !== undefined) payload.logradouro_bairro = validatedData.logradouro_bairro;
+    if (validatedData.numero !== undefined) payload.numero = validatedData.numero;
+    if (validatedData.complemento !== undefined) payload.complemento = (validatedData.complemento && validatedData.complemento.trim()) || null;
+    if (validatedData.cidade !== undefined) payload.cidade = validatedData.cidade;
+    if (validatedData.uf !== undefined) payload.uf = validatedData.uf;
+    if (validatedData.cep !== undefined) payload.cep = validatedData.cep;
+
+    // 3. Dependentes (sempre processa o conjunto se algum campo de dependente vier)
     const temCamposDependentes = Object.keys(body).some(k => k.startsWith('dep'));
     if (temCamposDependentes) {
       const dependentesArray = validarESanitizarDependentes(body);
