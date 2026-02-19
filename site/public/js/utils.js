@@ -12,9 +12,9 @@
       window.ENV_CONFIG?.API_URL ||
       ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
         ? "http://localhost:3000"
-        : "https://api.sinprfes.org.br");
+        : ""); // Default to empty (relative) on production for site proxy
 
-    return String(base).replace(/\/+$/, "");
+    return String(base || "").replace(/\/+$/, "");
   }
 
   window.Api = window.Api || {};

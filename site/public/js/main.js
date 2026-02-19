@@ -6,11 +6,11 @@
  * Always use api.sinprfes.org.br for API calls.
  * Never use sinprfes.org.br (frontend only).
  */
-if (!window.API_BASE_URL) {
+if (typeof window.API_BASE_URL === "undefined") {
   window.API_BASE_URL = window.ENV_CONFIG?.API_URL ||
     ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:3000"
-    : "https://api.sinprfes.org.br");
+    : ""); // Default to empty (relative) on production for site proxy
 }
 
 document.addEventListener("DOMContentLoaded", () => {

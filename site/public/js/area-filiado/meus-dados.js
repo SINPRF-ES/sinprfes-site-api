@@ -317,7 +317,9 @@
 
         const avatarUrlSafe = (avatar_url || "").toString().trim();
         const { resolveApiBase } = global.Utils || {};
-        const apiBase = resolveApiBase ? resolveApiBase() : (window.API_BASE_URL || "");
+        const apiBase = resolveApiBase
+            ? resolveApiBase()
+            : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || "").replace(/\/+$/, "");
 
         const avatarFullUrl = avatarUrlSafe
             ? (avatarUrlSafe.startsWith('http') ? avatarUrlSafe : apiBase + avatarUrlSafe)

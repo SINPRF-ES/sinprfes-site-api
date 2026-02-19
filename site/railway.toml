@@ -1,9 +1,9 @@
 # Railway configuration for SITE service
 [build]
 builder = "nixpacks"
-# Instalamos dependências e copiamos os arquivos do monorepo /shared para dentro de public/shared
-# Isso garante que o site seja auto-contido para o runtime do Railway.
-buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @sinprfes/site run build && mkdir -p public/shared && cp -R ../shared/* public/shared/"
+# Instalamos dependências e copiamos os arquivos do monorepo /shared para dentro de public/shared.
+# Também garantimos que o config.js esteja no local correto e adicionamos diagnósticos.
+buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @sinprfes/site run build && mkdir -p public/shared && cp -R ../shared/* public/shared/ && (cp -f ./public/config.js ./public/config.js 2>/dev/null || true) && (cp -f ./config.js ./public/config.js 2>/dev/null || true) && ls -la public/config.js && head -n 5 public/config.js"
 
 [deploy]
 startCommand = "node server.js"
