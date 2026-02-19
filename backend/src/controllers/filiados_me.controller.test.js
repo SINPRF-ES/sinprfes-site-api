@@ -38,7 +38,7 @@ describe('Filiados Controller - atualizarMeusDados', () => {
     expect(payloadSent.email1).toBeUndefined();
   });
 
-  test('deve bloquear campos proibidos com 403', async () => {
+  test('deve bloquear campos proibidos com 400', async () => {
     req.body = {
       perfil_acesso: 'ADMIN',
       telefone1: '123',
@@ -52,7 +52,7 @@ describe('Filiados Controller - atualizarMeusDados', () => {
 
     await controller.atualizarMeusDados(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       success: false,
       error: "FORBIDDEN_FIELD"
