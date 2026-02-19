@@ -317,7 +317,9 @@
 
         const avatarUrlSafe = (avatar_url || "").toString().trim();
         const { resolveApiBase } = global.Utils || {};
-        const apiBase = resolveApiBase ? resolveApiBase() : (window.API_BASE_URL || "");
+        const apiBase = resolveApiBase
+            ? resolveApiBase()
+            : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || "").replace(/\/+$/, "");
 
         const avatarFullUrl = avatarUrlSafe
             ? (avatarUrlSafe.startsWith('http') ? avatarUrlSafe : apiBase + avatarUrlSafe)
@@ -686,15 +688,14 @@
 
             const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
 
-            // Adiciona campos que não estão no form ou precisam de normalização
-            payload.sexo = document.getElementById("me-sexo").value;
-            payload.siape = document.getElementById("me-siape").value;
+            // Adiciona campos que não estão no form ou precisam de normalização.
+            // NOTA: 'sexo' e 'siape' NÃO devem ser enviados para /api/filiados/me (são forbidden na whitelist do backend).
             payload.telefone1 = onlyDigitsFn(document.getElementById("me-telefone1").value);
             payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
             payload.email1 = document.getElementById("me-email1").value;
             payload.email2 = document.getElementById("me-email2").value;
             payload.logradouro_bairro = document.getElementById("me-endereco").value;
-            payload.numero = document.getElementById("me-numero").value;
+            payload.numero = document.getElementById("me-numero").value || null;
             payload.complemento = document.getElementById("me-complemento").value;
             payload.cidade = document.getElementById("me-cidade").value;
             payload.uf = document.getElementById("me-uf").value;
