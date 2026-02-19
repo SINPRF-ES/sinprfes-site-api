@@ -27,7 +27,9 @@ const {
   normalizeSexo,
   normalizePerfil,
   normalizeLotacao,
-  normalizeNome
+  normalizeNome,
+  ME_EDITABLE_FIELDS_FILIADO,
+  ME_EDITABLE_FIELDS_GESTAO
 } = require('../shared/canon');
 
 const {
@@ -273,20 +275,7 @@ exports.atualizarMeusDados = async (req, res) => {
 
     // 1. Whitelist Baseada em Perfil
     const ehGestor = perfilGestao(perfilAtor);
-
-    const editableFields = ehGestor ? [
-      'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao',
-      'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
-      'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf', 'cep'
-    ] : [
-      'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
-      'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf', 'cep'
-    ];
-
-    // Incluir campos de dependentes no whitelist
-    for (let i = 1; i <= 5; i++) {
-      editableFields.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
-    }
+    const editableFields = ehGestor ? ME_EDITABLE_FIELDS_GESTAO : ME_EDITABLE_FIELDS_FILIADO;
 
     const receivedFields = Object.keys(body);
     const forbiddenFields = receivedFields.filter(f => !editableFields.includes(f));

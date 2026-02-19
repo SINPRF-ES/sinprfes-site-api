@@ -60,6 +60,21 @@ describe('Filiados Controller - atualizarMeusDados', () => {
     expect(service.atualizarDadosProprios).not.toHaveBeenCalled();
   });
 
+  test('deve bloquear dep1_parentesco_outro com 400', async () => {
+    req.body = {
+      dep1_parentesco_outro: 'Tio'
+    };
+
+    await controller.atualizarMeusDados(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      error: "FORBIDDEN_FIELD"
+    }));
+    expect(res.json.mock.calls[0][0].message).toContain('dep1_parentesco_outro');
+  });
+
   test('deve retornar 422 para campos inválidos com objeto fields', async () => {
     req.body = {
       email1: 'e-mail-invalido',

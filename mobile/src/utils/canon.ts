@@ -55,6 +55,21 @@ export const LOTACOES = [
 
 export type Lotacao = typeof LOTACOES[number];
 
+// Whitelist de campos editáveis para o perfil /me
+export const ME_EDITABLE_FIELDS_FILIADO = [
+  'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
+  'cep', 'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf'
+];
+
+for (let i = 1; i <= 5; i++) {
+  ME_EDITABLE_FIELDS_FILIADO.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
+}
+
+export const ME_EDITABLE_FIELDS_GESTAO = [
+  ...ME_EDITABLE_FIELDS_FILIADO,
+  'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao'
+];
+
 // Mapeamento para labels de exibição
 export const LABELS: Record<string, string> = {
   [SITUACAO_FUNCIONAL.ATIVO]: 'Ativo',
@@ -89,15 +104,15 @@ export function slugify(str: string | null | undefined): string {
 /**
  * Normaliza a Situação Funcional.
  */
-export function normalizeSituacaoFuncional(val: string | null | undefined): SituacaoFuncional {
+export function normalizeSituacaoFuncional(val: string | null | undefined): SituacaoFuncional | null {
   const s = slugify(val);
-  if (!s) return SITUACAO_FUNCIONAL.ATIVO;
+  if (!s) return null;
 
   if (s === 'ATIVO' || s === 'ATIVOS') return SITUACAO_FUNCIONAL.ATIVO;
   if (s === 'VETERANO' || s === 'VETERANOS' || s === 'APOSENTADO' || s === 'APOSENTADOS') return SITUACAO_FUNCIONAL.VETERANO;
   if (s === 'PENSIONISTA' || s === 'PENSIONISTAS') return SITUACAO_FUNCIONAL.PENSIONISTA;
 
-  return SITUACAO_FUNCIONAL.ATIVO;
+  return null;
 }
 
 /**

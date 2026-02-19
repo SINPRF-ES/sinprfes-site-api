@@ -2,17 +2,25 @@
 import { onlyDigits } from '../shared/format/formatters';
 import { toIsoDateYYYYMMDD } from '../utils/dateNormalize';
 import type { Filiado } from '../types/filiado';
-import { normalizeNome } from '../utils/canon';
+import { normalizeNome, ME_EDITABLE_FIELDS_FILIADO, ME_EDITABLE_FIELDS_GESTAO } from '../utils/canon';
 
 /**
  * Constrói o payload para a atualização de um filiado, garantindo que os dados
  * estejam limpos, normalizados e contenham apenas os campos permitidos para edição.
  *
  * @param formState O estado atual do formulário de edição.
+ * @param perfilAtor O perfil de quem está editando (opcional, defaults a FILIADO).
  * @returns Um objeto contendo apenas os dados permitidos para a atualização.
  */
-export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<Filiado> => {
+export const buildUpdateFiliadoPayload = (
+  formState: Partial<Filiado>,
+  perfilAtor: string = 'FILIADO'
+): Partial<Filiado> => {
   const payload: Partial<Filiado> = {};
+
+  // Whitelist baseada no perfil
+  const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfilAtor.toUpperCase());
+  const whitelist = isGestao ? ME_EDITABLE_FIELDS_GESTAO : ME_EDITABLE_FIELDS_FILIADO;
 
   // Campos permitidos e sua normalização
   if (formState.telefone1) payload.telefone1 = onlyDigits(formState.telefone1);
@@ -29,8 +37,12 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
   if (formState.situacao_funcional) payload.situacao = formState.situacao_funcional;
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
 
-  // Endereço: Apenas o CEP é enviado. Outros campos são preenchidos via buscaCEP no backend.
-  // Campos como logradouro, bairro, cidade, uf NÃO devem ser enviados.
+  // Endereço (somente se permitido na whitelist e enviado)
+  if (formState.logradouro_bairro) payload.logradouro_bairro = formState.logradouro_bairro;
+  if (formState.numero) payload.numero = formState.numero;
+  if (formState.complemento) payload.complemento = formState.complemento;
+  if (formState.cidade) payload.cidade = formState.cidade;
+  if (formState.uf) payload.uf = formState.uf;
 
   // Dependentes: Normaliza o CPF de cada dependente
   for (let i = 1; i <= 5; i++) {
@@ -49,29 +61,23 @@ export const buildUpdateFiliadoPayload = (formState: Partial<Filiado>): Partial<
     }
   }
 
-  // Campos que NUNCA devem ser enviados no payload de atualização
-  const forbiddenFields: (keyof Filiado)[] = [
-    'id',
-    'matricula_sinprf',
-    'estado_cadastro',
-    'avatar_url',
-    'logradouro',
-    'bairro',
-    'cidade',
-    'uf',
-    'criado_em',
-    'atualizado_em',
-  ];
+  // Aplica o Pick baseado na whitelist
+  const finalPayload: Partial<Filiado> = {};
+  Object.keys(payload).forEach(key => {
+    if (whitelist.includes(key)) {
+      (finalPayload as any)[key] = (payload as any)[key];
+    }
+  });
 
-  for (const field of forbiddenFields) {
-    delete (payload as any)[field];
-  }
+  // Garante que campos proibidos extras sejam removidos (segurança adicional)
+  const forbiddenGlobal: string[] = ['id', 'matricula_sinprf', 'estado_cadastro', 'avatar_url', 'criado_em', 'atualizado_em'];
+  forbiddenGlobal.forEach(key => delete (finalPayload as any)[key]);
 
   if (__DEV__) {
-    console.log('--- [DEV] Payload Mapeado e Normalizado ---');
-    console.log(JSON.stringify(payload, null, 2));
+    console.log('--- [DEV] Payload Mapeado (Perfil: ' + perfilAtor + ') ---');
+    console.log(JSON.stringify(finalPayload, null, 2));
     console.log('-------------------------------------------');
   }
 
-  return payload;
+  return finalPayload;
 };

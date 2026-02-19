@@ -5,7 +5,7 @@ Para garantir o deploy correto dos serviços no Railway, siga as instruções ab
 ## 1. Serviço: API (Backend)
 
 *   **Root Directory**: `backend`
-*   **Build Command**: `pnpm install --frozen-lockfile`
+*   **Build Command**: `npm install -g pnpm@9.15.9 && pnpm install --frozen-lockfile`
 *   **Start Command**: `pnpm run start`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080` (ou conforme desejado)
@@ -18,7 +18,7 @@ Para garantir o deploy correto dos serviços no Railway, siga as instruções ab
 ## 2. Serviço: SITE (Frontend + Proxy)
 
 *   **Root Directory**: `site`
-*   **Build Command**: `pnpm install --frozen-lockfile && pnpm run build`
+*   **Build Command**: `npm install -g pnpm@9.15.9 && pnpm install --frozen-lockfile && pnpm run build`
 *   **Start Command**: `pnpm run start`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080`

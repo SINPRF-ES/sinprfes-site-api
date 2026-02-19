@@ -58,6 +58,21 @@
     "NENHUMA"
   ];
 
+  // Whitelist de campos editáveis para o perfil /me
+  const ME_EDITABLE_FIELDS_FILIADO = [
+    'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
+    'cep', 'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf'
+  ];
+
+  for (let i = 1; i <= 5; i++) {
+    ME_EDITABLE_FIELDS_FILIADO.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
+  }
+
+  const ME_EDITABLE_FIELDS_GESTAO = [
+    ...ME_EDITABLE_FIELDS_FILIADO,
+    'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao'
+  ];
+
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
   const LABELS = {
     [SITUACAO_FUNCIONAL.ATIVO]: 'Ativo',
@@ -95,13 +110,13 @@
    */
   function normalizeSituacaoFuncional(val) {
     const s = slugify(val);
-    if (!s) return SITUACAO_FUNCIONAL.ATIVO; // Default seguro
+    if (!s) return null; // Sem default "ATIVO" (Canon: suportar "NÃO INFORMADO")
 
     if (s === 'ATIVO' || s === 'ATIVOS') return SITUACAO_FUNCIONAL.ATIVO;
     if (s === 'VETERANO' || s === 'VETERANOS' || s === 'APOSENTADO' || s === 'APOSENTADOS') return SITUACAO_FUNCIONAL.VETERANO;
     if (s === 'PENSIONISTA' || s === 'PENSIONISTAS') return SITUACAO_FUNCIONAL.PENSIONISTA;
 
-    return SITUACAO_FUNCIONAL.ATIVO;
+    return null;
   }
 
   /**
@@ -179,6 +194,8 @@
     normalizeEstadoCadastro,
     normalizeLotacao,
     normalizeNome,
-    slugify
+    slugify,
+    ME_EDITABLE_FIELDS_FILIADO,
+    ME_EDITABLE_FIELDS_GESTAO
   };
 }));
