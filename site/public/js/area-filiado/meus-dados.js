@@ -644,14 +644,30 @@
     limparErros();
 
     const status = document.getElementById("meus-dados-status");
-    status.textContent = "Salvando...";
 
     // Funções utilitárias locais para garantir limpeza dos dados
     const onlyDigits = (v) => (v || "").toString().replace(/\D/g, "");
     const val = (id) => (document.getElementById(id)?.value ?? "").trim();
     const nul = (s) => (s === "" || s === undefined) ? null : s;
 
+    // ✅ VALIDAÇÃO OBRIGATÓRIA (UX Local)
+    const t1 = val("me-telefone1");
+    const e1 = val("me-email1");
+    if (!t1) {
+      alert("Telefone 1 é obrigatório.");
+      document.getElementById("me-telefone1").focus();
+      return;
+    }
+    if (!e1) {
+      alert("E-mail 1 é obrigatório.");
+      document.getElementById("me-email1").focus();
+      return;
+    }
+
+    status.textContent = "Salvando...";
+
     // ✅ WHITELIST MANUAL (Garante que sexo, siape, etc não sejam enviados)
+    // Ref: shared/canon.js -> ME_EDITABLE_FIELDS_FILIADO
     const payload = {
       telefone1: nul(onlyDigits(val("me-telefone1"))),
       telefone2: nul(onlyDigits(val("me-telefone2"))),
@@ -665,6 +681,10 @@
       uf: nul(val("me-uf")),
       lotacao: nul(val("me-lotacao")),
     };
+
+    // Garantia extra: remove campos explicitamente proibidos para FILIADO
+    const forbidden = ["sexo", "siape", "cpf", "nome", "situacao", "data_nascimento"];
+    forbidden.forEach(f => delete payload[f]);
 
     // ✅ DEPENDENTES - COMPACTAÇÃO E DERIVAÇÃO DE PARENTESCO
     const dependentesCompactados = [];
@@ -698,6 +718,9 @@
       payload[`dep${i}_cpf`] = dep ? dep.cpf : null;
       payload[`dep${i}_data_nascimento`] = dep ? dep.data_nascimento : null;
       payload[`dep${i}_parentesco`] = dep ? dep.parentesco : null;
+
+      // Garantir que parentesco_outro NUNCA seja enviado (causa 400 no backend)
+      delete payload[`dep${i}_parentesco_outro`];
     }
 
     // 🔎 DEBUG TEMPORÁRIO

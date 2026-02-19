@@ -23,7 +23,7 @@ import { logger } from '../infra/logger';
 import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 import { useNavigation } from '@react-navigation/native';
-import { normalizeNome } from '../utils/canon';
+import { buildUpdateFiliadoPayload } from '../services/filiadoPayloadMapper';
 
 export default function MeusDadosScreen() {
   const navigation = useNavigation<any>();
@@ -204,6 +204,16 @@ export default function MeusDadosScreen() {
   const handleUpdate = useCallback(async () => {
     if (!filiado) return;
 
+    // ✅ VALIDAÇÃO OBRIGATÓRIA (UX Local)
+    if (!filiado.telefone1) {
+      Alert.alert('Erro de Validação', 'Telefone 1 é obrigatório.');
+      return;
+    }
+    if (!filiado.email1) {
+      Alert.alert('Erro de Validação', 'E-mail 1 é obrigatório.');
+      return;
+    }
+
     // Validação de Dependentes
     for (let i = 1; i <= 5; i++) {
       const nome = filiado[`dep${i}_nome`];
@@ -226,31 +236,8 @@ export default function MeusDadosScreen() {
     try {
       setLoading(true);
 
-      const payload = { ...filiado };
-
-      // Normalização de campos antes de enviar ao backend
-      if (payload.nome) payload.nome = normalizeNome(payload.nome);
-      payload.cpf = onlyDigits(payload.cpf);
-      payload.telefone1 = onlyDigits(payload.telefone1);
-      payload.telefone2 = onlyDigits(payload.telefone2);
-      payload.cep = onlyDigits(payload.cep);
-
-      if (payload.data_nascimento) {
-          payload.data_nascimento = toISODate(payload.data_nascimento) || payload.data_nascimento;
-      }
-
-      for (let i = 1; i <= 5; i++) {
-        const depNome = `dep${i}_nome`;
-        if (payload[depNome]) payload[depNome] = normalizeNome(payload[depNome] as string);
-
-        const depCpf = `dep${i}_cpf`;
-        if (payload[depCpf]) payload[depCpf] = onlyDigits(payload[depCpf]);
-
-        const fieldName = `dep${i}_data_nascimento`;
-        if (payload[fieldName]) {
-          payload[fieldName] = toISODate(payload[fieldName]) || payload[fieldName];
-        }
-      }
+      // ✅ PATCH: Usar o mapper canônico com whitelist baseado no perfil
+      const payload = buildUpdateFiliadoPayload(filiado, usuario?.perfil_acesso || 'FILIADO');
 
       await api.put<Filiado>('/api/filiados/me', payload);
 
