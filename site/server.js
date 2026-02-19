@@ -10,6 +10,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'site' });
 });
 
+// Rota explícita para config.js para evitar que caia no fallback HTML
+// e garantir headers de Content-Type e Cache corretos.
+app.get('/config.js', (req, res) => {
+  res.type('application/javascript');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  return res.sendFile(path.join(__dirname, 'public', 'config.js'));
+});
+
 // Proxy do site -> API
 const API_BASE_URL = process.env.API_BASE_URL || 'https://api.sinprfes.org.br';
 
@@ -17,9 +25,9 @@ app.use('/api', createProxyMiddleware({
   target: API_BASE_URL,
   changeOrigin: true,
   logLevel: 'warn',
-  pathRewrite: {
-    '^/': '/api/', // Prepend /api back for the backend
-  },
+  onProxyReq: (proxyReq, req) => {
+    console.log(`[proxy] ${req.method} ${req.originalUrl} -> ${API_BASE_URL}${req.originalUrl}`);
+  }
 }));
 
 // Servir arquivos estáticos do diretório 'public' com headers customizados
@@ -32,7 +40,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
       res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
     } else if (fileName === 'service-worker.js' || fileName === 'config.js') {
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     } else if (fileName === 'index.html') {
       res.setHeader('Cache-Control', 'no-cache');
     }

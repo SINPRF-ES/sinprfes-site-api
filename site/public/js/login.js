@@ -3,13 +3,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const API_BASE = (window.Utils && window.Utils.resolveApiBase)
     ? window.Utils.resolveApiBase()
-    : (window.API_BASE_URL || "").replace(/\/+$/, "");
-
-  if (!API_BASE) {
-    console.error("API_BASE não definido. Verifique config.js e utils.js");
-    alert("Erro de configuração do sistema. Tente novamente mais tarde.");
-    return;
-  }
+    : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || "").replace(/\/+$/, "");
 
   const loginForm = document.getElementById("login-form");
   const loginMsg = document.getElementById("login-mensagem");

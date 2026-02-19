@@ -35,7 +35,9 @@
     function avatarHtml(avatarUrl, nome) {
         const { escapeHTML, resolveApiBase } = window.Utils || {};
         const safeNome = (nome || "").toString();
-        const apiBase = resolveApiBase ? resolveApiBase() : (window.API_BASE_URL || "");
+        const apiBase = resolveApiBase
+            ? resolveApiBase()
+            : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || "").replace(/\/+$/, "");
 
         const src = avatarUrl
             ? (avatarUrl.startsWith('http') ? avatarUrl : apiBase + avatarUrl)
@@ -750,7 +752,9 @@
             if (r.ok) {
                 const d = await r.json();
                 const { resolveApiBase } = window.Utils || {};
-                const apiBase = resolveApiBase ? resolveApiBase() : (window.API_BASE_URL || "");
+                const apiBase = resolveApiBase
+                    ? resolveApiBase()
+                    : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || "").replace(/\/+$/, "");
 
                 const finalUrl = d.avatar_url.startsWith('http') ? d.avatar_url : apiBase + d.avatar_url;
                 document.getElementById("modal-avatar-preview").src = finalUrl;
