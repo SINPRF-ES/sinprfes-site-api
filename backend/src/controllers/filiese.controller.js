@@ -27,7 +27,6 @@ exports.enviarFichaFiliacao = async (req, res) => {
       "email_pessoal",
       "cep",
       "logradouro",
-      "numero",
       "bairro",
       "cidade",
       "uf",
