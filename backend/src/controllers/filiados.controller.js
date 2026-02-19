@@ -311,12 +311,15 @@ exports.atualizarMeusDados = async (req, res) => {
       email2: z.string().trim().toLowerCase().nullable().optional()
         .refine(v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "E-mail inválido"),
       lotacao: z.string().optional(),
-      logradouro_bairro: z.string().trim().min(1, "Obrigatório"),
-      numero: z.string().trim().min(1, "Obrigatório"),
+      logradouro_bairro: z.string().trim().nullable().optional(),
+      numero: z.string().trim().nullable().optional(),
       complemento: z.string().trim().nullable().optional(),
-      cidade: z.string().trim().min(1, "Obrigatório"),
-      uf: z.string().trim().toUpperCase().length(2, "Deve ter 2 letras"),
-      cep: z.string().transform(v => String(v).replace(/\D/g, "")).refine(v => v.length === 8, "Deve ter 8 dígitos"),
+      cidade: z.string().trim().nullable().optional(),
+      uf: z.string().trim().toUpperCase().nullable().optional()
+        .refine(v => !v || v.length === 2, "Deve ter 2 letras"),
+      cep: z.string().nullable().optional()
+        .transform(v => v ? String(v).replace(/\D/g, "") : v)
+        .refine(v => !v || v.length === 8, "Deve ter 8 dígitos"),
     }).partial();
 
     const result = schema.safeParse(body);

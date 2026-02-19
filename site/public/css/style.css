@@ -19,6 +19,12 @@
   --header-h: 90px;
 }
 
+@media (max-width: 768px) {
+  :root {
+    --header-h: 60px; /* Ajuste para mobile */
+  }
+}
+
 /* Reset básico */
 * {
   box-sizing: border-box;
@@ -29,6 +35,7 @@
 /* Scroll native and smooth */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: var(--header-h);
 }
 
 body {
@@ -251,7 +258,8 @@ img {
 
 /* MODO EMBED (App) */
 .is-embed #site-header,
-.is-embed #site-footer {
+.is-embed #site-footer,
+.is-embed .af-sidebar {
   display: none !important;
 }
 
@@ -1260,8 +1268,9 @@ footer {
   .af-sidebar {
     width: 100%;
     height: auto;
-    position: relative;
+    position: sticky;
     top: 0;
+    z-index: 2000;
     order: 0;
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
