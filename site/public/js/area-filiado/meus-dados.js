@@ -727,7 +727,33 @@
             limparErros();
 
             try {
-                const r = await window.Api.apiFetch("/api/filiados/me", { method: "PUT", body: payload });
+                const safe = { ...payload };
+
+// remove *de novo* (belt and suspenders)
+delete safe.sexo;
+delete safe.siape;
+delete safe.cpf;
+delete safe.nome;
+delete safe.data_nascimento;
+delete safe.situacao;
+delete safe.perfil_acesso;
+
+for (let i = 1; i <= 5; i++) {
+  delete safe[`dep${i}_parentesco_outro`];
+  delete safe[`dep${i}_parentesco_select`];
+}
+
+// opcional: não mandar vazios (melhora whitelist/patch parcial)
+Object.keys(safe).forEach(k => {
+  if (safe[k] === "" || safe[k] === undefined) delete safe[k];
+});
+
+const r = await window.Api.apiFetch("/api/filiados/me", {
+  method: "PUT",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(safe)
+});
+
                 if (r.ok) {
                     await carregarMeusDados();
                     alert("Dados salvos com sucesso!");
