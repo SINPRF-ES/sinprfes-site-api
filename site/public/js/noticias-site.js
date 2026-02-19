@@ -1,6 +1,16 @@
 // public/js/noticias-site.js
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const API_BASE = (window.Utils && window.Utils.resolveApiBase)
+    ? window.Utils.resolveApiBase()
+    : (window.API_BASE_URL || "").replace(/\/+$/, "");
+
+  if (!API_BASE) {
+    console.error("API_BASE não definido. Verifique config.js e utils.js");
+    alert("Erro de configuração do sistema. Tente novamente mais tarde.");
+    return;
+  }
+
   const newsContainer = document.querySelector(".page.container");
   if (!newsContainer) return;
 
@@ -30,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(window.API_BASE_URL + "/api/noticias", { headers });
+    const response = await fetch(`${API_BASE}/api/noticias`, { headers });
 
     if (response.status === 401) {
       loadingEl.innerHTML = `Para ver as notícias, acesse a <a href="/area-filiado.html">Página Inicial</a>.`;

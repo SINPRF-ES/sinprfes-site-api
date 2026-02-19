@@ -33,9 +33,9 @@
     }
 
     function avatarHtml(avatarUrl, nome) {
-        const { escapeHTML } = window.Utils || {};
+        const { escapeHTML, resolveApiBase } = window.Utils || {};
         const safeNome = (nome || "").toString();
-        const apiBase = window.Api?.BASE_URL || window.location.origin;
+        const apiBase = resolveApiBase ? resolveApiBase() : (window.API_BASE_URL || "");
 
         const src = avatarUrl
             ? (avatarUrl.startsWith('http') ? avatarUrl : apiBase + avatarUrl)
@@ -749,7 +749,8 @@
             const r = await window.Api.apiFetch(`/api/filiados/${id}/avatar`, { method: "POST", body: fd });
             if (r.ok) {
                 const d = await r.json();
-                const apiBase = window.Api?.BASE_URL || window.location.origin;
+                const { resolveApiBase } = window.Utils || {};
+                const apiBase = resolveApiBase ? resolveApiBase() : (window.API_BASE_URL || "");
 
                 const finalUrl = d.avatar_url.startsWith('http') ? d.avatar_url : apiBase + d.avatar_url;
                 document.getElementById("modal-avatar-preview").src = finalUrl;

@@ -161,7 +161,17 @@ document.addEventListener("DOMContentLoaded", () => {
             if(payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
 
             try {
-                const res = await fetch(window.API_BASE_URL + "/api/filiese", {
+                const API_BASE = (window.Utils && window.Utils.resolveApiBase)
+                    ? window.Utils.resolveApiBase()
+                    : (window.API_BASE_URL || "").replace(/\/+$/, "");
+
+                if (!API_BASE) {
+                    console.error("API_BASE não definido. Verifique config.js e utils.js");
+                    alert("Erro de configuração do sistema. Tente novamente mais tarde.");
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/api/filiese`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)

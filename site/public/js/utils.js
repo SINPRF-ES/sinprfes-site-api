@@ -6,13 +6,19 @@
 (function (global) {
   if (global.Utils) return;
 
-  const API_BASE = window.API_BASE_URL || window.ENV_CONFIG?.API_URL ||
-    ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? "http://localhost:3000"
-    : window.location.origin);
+  function resolveApiBase() {
+    const base =
+      window.API_BASE_URL ||
+      window.ENV_CONFIG?.API_URL ||
+      ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+        ? "http://localhost:3000"
+        : "https://api.sinprfes.org.br");
+
+    return String(base).replace(/\/+$/, "");
+  }
 
   window.Api = window.Api || {};
-  window.Api.BASE_URL = API_BASE;
+  window.Api.BASE_URL = resolveApiBase();
 
   function obterToken() {
     return localStorage.getItem("token");
@@ -28,6 +34,7 @@
 
   if (!window.Api.apiFetch) {
     window.Api.apiFetch = async function apiFetch(url, options = {}) {
+      const API_BASE = resolveApiBase();
       const token = obterToken();
       if (!token) {
         window.location.href = "/login.html";
@@ -288,7 +295,8 @@
     filterFiliados,
     lockScroll,
     unlockScroll,
-    fecharModal
+    fecharModal,
+    resolveApiBase
   };
 
   function fecharModal(id) {

@@ -1,6 +1,16 @@
 // public/js/login.js
 
 document.addEventListener("DOMContentLoaded", () => {
+  const API_BASE = (window.Utils && window.Utils.resolveApiBase)
+    ? window.Utils.resolveApiBase()
+    : (window.API_BASE_URL || "").replace(/\/+$/, "");
+
+  if (!API_BASE) {
+    console.error("API_BASE não definido. Verifique config.js e utils.js");
+    alert("Erro de configuração do sistema. Tente novamente mais tarde.");
+    return;
+  }
+
   const loginForm = document.getElementById("login-form");
   const loginMsg = document.getElementById("login-mensagem");
 
@@ -62,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!tokenExistente) return;
 
     try {
-      const resp = await fetch(window.API_BASE_URL + "/api/auth/me", {
+      const resp = await fetch(`${API_BASE}/api/auth/me`, {
         headers: {
           Authorization: "Bearer " + tokenExistente,
           "Content-Type": "application/json",
@@ -126,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = "Entrando...";
 
-        const resp = await fetch(window.API_BASE_URL + "/api/auth/login", {
+        const resp = await fetch(`${API_BASE}/api/auth/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -216,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = "Enviando...";
 
-        const resp = await fetch(window.API_BASE_URL + "/api/senha/recuperar", {
+        const resp = await fetch(`${API_BASE}/api/senha/recuperar`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
