@@ -1,7 +1,7 @@
 # Railway configuration for API service
 [build]
 builder = "nixpacks"
-buildCommand = "npm exec -y pnpm@9.15.9 -- -v && npm exec -y pnpm@9.15.9 -- install --frozen-lockfile && npm exec -y pnpm@9.15.9 -- --filter @sinprfes/backend run build"
+buildCommand = "cd .. && npm exec -y pnpm@9.15.9 -- -v && npm exec -y pnpm@9.15.9 -- install --frozen-lockfile && npm exec -y pnpm@9.15.9 -- --filter @sinprfes/backend run build"
 
 [deploy]
 startCommand = "node server.js"
