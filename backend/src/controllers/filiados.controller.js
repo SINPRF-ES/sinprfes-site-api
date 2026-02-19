@@ -26,33 +26,21 @@ const {
   normalizeSituacaoFuncional,
   normalizeSexo,
   normalizePerfil,
-  normalizeLotacao
+  normalizeLotacao,
+  normalizeNome
 } = require('../shared/canon');
+
+const {
+  normalizeTelefone,
+  normalizeCep,
+  parseDateToISO
+} = require('../shared/format');
 
 function perfilGestao(perfil) {
   const p = normalizePerfil(perfil);
   return ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
 }
 
-/**
- * Normaliza campos de data para o padrão YYYY-MM-DD.
- */
-function normalizeDateField(value) {
-  if (!value) return null;
-  const str = String(value).trim();
-  if (!str) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    return str.substring(0, 10);
-  }
-
-  if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
-    const [d, m, y] = str.split("/");
-    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  }
-
-  return str;
-}
 
 /**
  * Valida se um ID é numérico e seguro.
@@ -140,7 +128,7 @@ function validarESanitizarDependentes(body) {
   for (let i = 1; i <= 5; i++) {
     const nome = (body[`dep${i}_nome`] || "").trim();
     const cpf = (body[`dep${i}_cpf`] || "").replace(/\D/g, "");
-    const dataNascimento = normalizeDateField(body[`dep${i}_data_nascimento`]);
+    const dataNascimento = parseDateToISO(body[`dep${i}_data_nascimento`]);
     const parentesco = (body[`dep${i}_parentesco`] || "").trim();
 
     const temAlgumDado = nome || cpf || dataNascimento || parentesco;
@@ -278,25 +266,23 @@ exports.atualizarMeusDados = async (req, res) => {
   const atorId = req.user?.id;
   if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
-  // ✅ GARANTIA DE PERFIL: /me só aceita tokens de FILIADO
   const perfilAtor = (req.user?.perfil_acesso || "").toUpperCase();
-  if (perfilAtor !== "FILIADO") {
-    log.warn("FiliadoUpdatePerfilErrado", { atorId, perfilAtor, requestId });
-    return res.status(403).json({
-      success: false,
-      message: "Token não pertence a FILIADO. Faça login como filiado para alterar seus dados.",
-      requestId
-    });
-  }
 
   try {
     const body = req.body || {};
 
-    // 1. Whitelist estrita (FILIADO)
-    const editableFields = [
+    // 1. Whitelist Baseada em Perfil
+    const ehGestor = perfilGestao(perfilAtor);
+
+    const editableFields = ehGestor ? [
+      'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao',
+      'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
+      'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf', 'cep'
+    ] : [
       'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
       'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf', 'cep'
     ];
+
     // Incluir campos de dependentes no whitelist
     for (let i = 1; i <= 5; i++) {
       editableFields.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
@@ -316,6 +302,12 @@ exports.atualizarMeusDados = async (req, res) => {
 
     // 2. Validação e Normalização com Zod
     const schema = z.object({
+      nome: z.string().trim().min(2, "Nome muito curto").optional(),
+      cpf: z.string().transform(v => String(v).replace(/\D/g, "")).refine(v => v.length === 11, "CPF inválido").optional(),
+      siape: z.string().transform(v => String(v).replace(/\D/g, "")).optional(),
+      sexo: z.string().toUpperCase().optional(),
+      data_nascimento: z.string().optional(),
+      situacao: z.string().optional(),
       telefone1: z.string().nullable().optional(),
       telefone2: z.string().nullable().optional(),
       email1: z.string().trim().min(1, "Obrigatório").email("E-mail inválido").toLowerCase(),
@@ -353,17 +345,28 @@ exports.atualizarMeusDados = async (req, res) => {
     const validatedData = result.data;
 
     // Normalização manual para garantir que só campos enviados sejam incluídos e campos vazios virem null
-    if (validatedData.telefone1 !== undefined) payload.telefone1 = (validatedData.telefone1 && String(validatedData.telefone1).replace(/\D/g, "")) || null;
-    if (validatedData.telefone2 !== undefined) payload.telefone2 = (validatedData.telefone2 && String(validatedData.telefone2).replace(/\D/g, "")) || null;
+    if (validatedData.nome !== undefined) payload.nome = normalizeNome(validatedData.nome);
+    if (validatedData.cpf !== undefined) payload.cpf = validatedData.cpf; // Já normalizado no Zod (digits only)
+    if (validatedData.siape !== undefined) payload.siape = (validatedData.siape || "").toString().replace(/\D/g, "").slice(0, 7) || null;
+    if (validatedData.sexo !== undefined) payload.sexo = normalizeSexo(validatedData.sexo);
+    if (validatedData.data_nascimento !== undefined) payload.data_nascimento = parseDateToISO(validatedData.data_nascimento);
+    if (validatedData.situacao !== undefined) payload.situacao = normalizeSituacaoFuncional(validatedData.situacao);
+
+    if (validatedData.telefone1 !== undefined) payload.telefone1 = normalizeTelefone(validatedData.telefone1) || null;
+    if (validatedData.telefone2 !== undefined) payload.telefone2 = normalizeTelefone(validatedData.telefone2) || null;
     if (validatedData.email1 !== undefined) payload.email1 = validatedData.email1;
     if (validatedData.email2 !== undefined) payload.email2 = (validatedData.email2 && validatedData.email2.trim()) || null;
     if (validatedData.lotacao !== undefined) payload.lotacao = normalizeLotacao(validatedData.lotacao);
-    if (validatedData.logradouro_bairro !== undefined) payload.logradouro_bairro = validatedData.logradouro_bairro;
     if (validatedData.numero !== undefined) payload.numero = validatedData.numero;
     if (validatedData.complemento !== undefined) payload.complemento = (validatedData.complemento && validatedData.complemento.trim()) || null;
-    if (validatedData.cidade !== undefined) payload.cidade = validatedData.cidade;
-    if (validatedData.uf !== undefined) payload.uf = validatedData.uf;
-    if (validatedData.cep !== undefined) payload.cep = validatedData.cep;
+    if (validatedData.cep !== undefined) payload.cep = normalizeCep(validatedData.cep) || null;
+
+    // Endereço automático (Canon): Logradouro, Cidade e UF só podem ser alterados via fluxo buscaCEP (acompanhados de CEP)
+    if (validatedData.cep !== undefined) {
+      if (validatedData.logradouro_bairro !== undefined) payload.logradouro_bairro = validatedData.logradouro_bairro;
+      if (validatedData.cidade !== undefined) payload.cidade = validatedData.cidade;
+      if (validatedData.uf !== undefined) payload.uf = validatedData.uf;
+    }
 
     // 3. Dependentes (sempre processa o conjunto se algum campo de dependente vier)
     const temCamposDependentes = Object.keys(body).some(k => k.startsWith('dep'));
@@ -540,19 +543,20 @@ exports.atualizarFiliado = async (req, res) => {
       sexo: body.sexo ? normalizeSexo(body.sexo) : undefined,
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : undefined,
-      data_nascimento: normalizeDateField(body.data_nascimento) || undefined,
+      data_nascimento: parseDateToISO(body.data_nascimento) || undefined,
       telefone1: body.telefone1,
       telefone2: body.telefone2,
       email1: body.email1,
       email2: body.email2,
       lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
-      logradouro_bairro: body.logradouro_bairro,
       numero: body.numero,
       complemento: body.complemento,
-      cidade: body.cidade,
-      uf: body.uf,
       cep: body.cep,
+      // Endereço automático (Canon): Logradouro, Cidade e UF só podem ser alterados via fluxo buscaCEP (acompanhados de CEP)
+      logradouro_bairro: body.cep !== undefined ? body.logradouro_bairro : undefined,
+      cidade: body.cep !== undefined ? body.cidade : undefined,
+      uf: body.cep !== undefined ? body.uf : undefined,
       ...dadosDependentes,
     };
 
@@ -658,7 +662,7 @@ exports.criarFiliado = async (req, res) => {
       sexo: body.sexo ? normalizeSexo(body.sexo) : null,
       cpf: cpfLimpo,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
-      data_nascimento: normalizeDateField(body.data_nascimento),
+      data_nascimento: parseDateToISO(body.data_nascimento),
       telefone1: body.telefone1 || null,
       telefone2: body.telefone2 || null,
       email1: body.email1 || null,

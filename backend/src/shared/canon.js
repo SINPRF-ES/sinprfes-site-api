@@ -95,13 +95,13 @@
    */
   function normalizeSituacaoFuncional(val) {
     const s = slugify(val);
-    if (!s) return SITUACAO_FUNCIONAL.ATIVO; // Default seguro
+    if (!s) return null; // Sem default "ATIVO" (Canon: suportar "NÃO INFORMADO")
 
     if (s === 'ATIVO' || s === 'ATIVOS') return SITUACAO_FUNCIONAL.ATIVO;
     if (s === 'VETERANO' || s === 'VETERANOS' || s === 'APOSENTADO' || s === 'APOSENTADOS') return SITUACAO_FUNCIONAL.VETERANO;
     if (s === 'PENSIONISTA' || s === 'PENSIONISTAS') return SITUACAO_FUNCIONAL.PENSIONISTA;
 
-    return SITUACAO_FUNCIONAL.ATIVO;
+    return null;
   }
 
   /**

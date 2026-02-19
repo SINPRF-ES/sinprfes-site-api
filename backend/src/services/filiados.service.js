@@ -1,7 +1,11 @@
 // src/services/filiados.service.js
 const pool = require("../config/db");
 const log = require("../utils/log");
-const { normalizarCpf, normalizarCep } = require("../utils/format");
+const {
+  normalizeCpf: normalizarCpf,
+  normalizeCep: normalizarCep,
+  normalizeTelefone
+} = require("../shared/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
 const { normalizeParentesco } = require('../shared/dependentes/parentesco');
 const {
@@ -165,8 +169,8 @@ async function atualizarDadosProprios(id, dados) {
     addCampo("siape", (dados.siape || "").toString().replace(/\D/g, "").slice(0, 7) || null);
   }
 
-  addCampo("telefone1", dados.telefone1);
-  addCampo("telefone2", dados.telefone2);
+  addCampo("telefone1", (dados.telefone1 !== undefined) ? normalizeTelefone(dados.telefone1) : undefined);
+  addCampo("telefone2", (dados.telefone2 !== undefined) ? normalizeTelefone(dados.telefone2) : undefined);
   addCampo("email1", dados.email1);
   addCampo("email2", dados.email2);
 
@@ -288,8 +292,8 @@ async function atualizarFiliadoPorId(id, dados) {
     idx += 1;
   }
 
-  addCampo("telefone1", dados.telefone1);
-  addCampo("telefone2", dados.telefone2);
+  addCampo("telefone1", (dados.telefone1 !== undefined) ? normalizeTelefone(dados.telefone1) : undefined);
+  addCampo("telefone2", (dados.telefone2 !== undefined) ? normalizeTelefone(dados.telefone2) : undefined);
   addCampo("email1", dados.email1);
   addCampo("email2", dados.email2);
   if (dados.lotacao !== undefined) {
@@ -503,8 +507,8 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     placeholders.push(`NULLIF($${p}, '')::date`);
     p++;
 
-    push("telefone1", telefone1);
-    push("telefone2", telefone2);
+    push("telefone1", normalizeTelefone(telefone1));
+    push("telefone2", normalizeTelefone(telefone2));
     push("email1", email1);
     push("email2", email2);
     push("logradouro_bairro", logradouro_bairro);
