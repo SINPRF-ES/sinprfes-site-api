@@ -61,8 +61,13 @@ app.get('*', (req, res) => {
   }
 
   // 2. Bloquear fallback para QUALQUER coisa que pareça um arquivo (tenha extensão)
-  // Isso evita que o browser receba HTML quando espera JS/CSS/Imagens
+  // Isso evita que o browser receba HTML quando espera JS/CSS/Imagens.
+  // IMPORTANTE: Se chegamos aqui e tem extensão .js, é porque o arquivo REAL não existe.
   if (ext && ext.length > 1) {
+    if (ext === '.js') {
+      res.type('application/javascript');
+      return res.status(404).send('/* 404: File Not Found */');
+    }
     return res.status(404).send('Not Found');
   }
 

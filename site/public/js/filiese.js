@@ -160,6 +160,11 @@ document.addEventListener("DOMContentLoaded", () => {
             payload.telefone1 = payload.telefone1.replace(/\D/g, "");
             if(payload.telefone2) payload.telefone2 = payload.telefone2.replace(/\D/g, "");
 
+            // Workaround: o backend exige 'numero', mas o usuário quer opcional no form.
+            if (!payload.numero || payload.numero.trim() === "") {
+                payload.numero = "S/N";
+            }
+
             try {
                 const API_BASE = (window.Utils && window.Utils.resolveApiBase)
                     ? window.Utils.resolveApiBase()
