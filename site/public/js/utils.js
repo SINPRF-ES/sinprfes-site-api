@@ -21,7 +21,18 @@
   window.Api.BASE_URL = resolveApiBase();
 
   function obterToken() {
-    return localStorage.getItem("token");
+    const isFiliadoArea =
+      window.location.pathname.includes("area-filiado") ||
+      window.location.pathname.includes("area-filiado.html");
+
+    const tokenFiliado = localStorage.getItem("token_filiado");
+    const tokenGestao = localStorage.getItem("token_gestao");
+    const tokenLegado = localStorage.getItem("token");
+
+    if (isFiliadoArea) {
+      return tokenFiliado || tokenLegado;
+    }
+    return tokenGestao || tokenLegado;
   }
 
   function obterUserInfo() {

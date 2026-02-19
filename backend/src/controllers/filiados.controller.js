@@ -278,6 +278,17 @@ exports.atualizarMeusDados = async (req, res) => {
   const atorId = req.user?.id;
   if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
+  // ✅ GARANTIA DE PERFIL: /me só aceita tokens de FILIADO
+  const perfilAtor = (req.user?.perfil_acesso || "").toUpperCase();
+  if (perfilAtor !== "FILIADO") {
+    log.warn("FiliadoUpdatePerfilErrado", { atorId, perfilAtor, requestId });
+    return res.status(403).json({
+      success: false,
+      message: "Token não pertence a FILIADO. Faça login como filiado para alterar seus dados.",
+      requestId
+    });
+  }
+
   try {
     const body = req.body || {};
 

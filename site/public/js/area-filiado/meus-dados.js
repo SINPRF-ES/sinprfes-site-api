@@ -635,6 +635,13 @@
   // --- SUBMIT DADOS (PUT /me) ---
   document.getElementById("form-meus-dados").onsubmit = async (e) => {
     e.preventDefault();
+    const form = e.target;
+
+    function limparErros() {
+      form.querySelectorAll('.invalid-field').forEach(el => el.classList.remove('invalid-field'));
+      form.querySelectorAll('.field-error-msg').forEach(el => el.remove());
+    }
+    limparErros();
 
     const status = document.getElementById("meus-dados-status");
     status.textContent = "Salvando...";
@@ -698,13 +705,36 @@
 
       status.textContent = "Erro ao salvar.";
 
-      let d = null;
-      try { d = await r.json(); } catch {}
+      // Restore field-specific error highlighting
+      try {
+        const d = await r.json();
+        console.warn("[DEBUG ERRO BACKEND]", r.status, d);
 
-      console.warn("[DEBUG ERRO BACKEND]", r.status, d);
+        if (d?.fields) {
+          Object.keys(d.fields).forEach(key => {
+            let fieldId = `me-${key.replace(/_/g, '-')}`;
+            if (key === 'logradouro_bairro') fieldId = 'me-endereco';
 
-      if (d?.message) alert(d.message);
-      else alert(`Erro ao salvar (HTTP ${r.status}).`);
+            const el = document.getElementById(fieldId);
+            if (el) {
+              el.classList.add('invalid-field');
+              const span = document.createElement('span');
+              span.className = 'field-error-msg';
+              span.textContent = d.fields[key];
+              el.insertAdjacentElement('afterend', span);
+            }
+          });
+          const first = document.getElementById("form-meus-dados")?.querySelector('.invalid-field');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (d?.message) {
+          alert(d.message);
+        } else {
+          alert(`Erro ao salvar (HTTP ${r.status}).`);
+        }
+      } catch (errJson) {
+        console.error("Erro ao processar resposta de erro:", errJson);
+        alert(`Erro ao salvar (HTTP ${r.status}).`);
+      }
 
     } catch (err) {
       console.error(err);

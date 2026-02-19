@@ -62,7 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // AUTO-REDIRECT SE JÁ ESTIVER LOGADO
   // ==========================
   (async () => {
-    const tokenExistente = localStorage.getItem("token");
+    // Tenta obter o token usando a lógica de isolamento (se utils.js estiver carregado)
+    const tokenExistente = (window.Utils && window.Utils.obterToken)
+      ? window.Utils.obterToken()
+      : localStorage.getItem("token");
+
     if (!tokenExistente) return;
 
     try {
@@ -79,6 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (resp.status === 401 || resp.status === 403) {
         // Token inválido/expirado → limpa e deixa o usuário logar de novo
         localStorage.removeItem("token");
+        localStorage.removeItem("token_filiado");
+        localStorage.removeItem("token_gestao");
         localStorage.removeItem("perfil_acesso");
       }
     } catch (err) {
@@ -169,6 +175,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // Sucesso: salva token e perfil no localStorage
         if (data.token) {
           localStorage.setItem("token", data.token);
+
+          // ✅ ISOLAMENTO DE SESSÃO: salva no slot correto conforme perfil
+          const perfil = (data.perfil_acesso || "FILIADO").toUpperCase();
+          const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
+
+          if (ehGestao) {
+            localStorage.setItem("token_gestao", data.token);
+          } else {
+            localStorage.setItem("token_filiado", data.token);
+          }
         }
         if (data.perfil_acesso) {
           localStorage.setItem("perfil_acesso", data.perfil_acesso);
