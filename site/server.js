@@ -44,25 +44,27 @@ app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
 
 // Fallback inteligente para index.html (SPA/PWA)
 app.get('*', (req, res) => {
-  const ext = path.extname(req.path).toLowerCase();
-  const staticExtensions = ['.js', '.css', '.webmanifest', '.json', '.png', '.ico', '.svg', '.jpg', '.jpeg', '.webp'];
+  const pathname = req.path;
+  const ext = path.extname(pathname).toLowerCase();
 
   // 1. Proteger rotas de API
-  if (req.path.startsWith('/api')) {
+  if (pathname.startsWith('/api')) {
     return res.status(404).json({ error: 'API route not found' });
   }
 
-  // 2. Não servir HTML para requisições de arquivos estáticos inexistentes
-  if (ext && staticExtensions.includes(ext)) {
+  // 2. Bloquear fallback para QUALQUER coisa que pareça um arquivo (tenha extensão)
+  // Isso evita que o browser receba HTML quando espera JS/CSS/Imagens
+  if (ext && ext.length > 1) {
     return res.status(404).send('Not Found');
   }
 
-  // 3. Fallback apenas se aceitar HTML (navegação do browser)
+  // 3. Fallback apenas para rotas de navegação (sem extensão) que aceitam HTML
   if (req.accepts('html')) {
     res.setHeader('Cache-Control', 'no-cache');
     return res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
 
+  // 4. Se não for navegação HTML e não existir no static, 404 real
   res.status(404).send('Not Found');
 });
 

@@ -74,16 +74,19 @@ function parseFiliadoId(req, res, requestId) {
 }
 
 function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de dados") {
+    // Log detalhado sempre ocorre no servidor (seguro)
+    const errorInfo = {
+        message: err?.message,
+        detail: err?.detail,
+        hint: err?.hint,
+        code: err?.code,
+        constraint: err?.constraint,
+        requestId
+    };
+
     // Padrão de erro de Schema ou Constraint Violations (23... ou 42703)
     if (err && (String(err.code).startsWith('23') || err.code === '42703')) {
-        // Log detalhado no servidor (seguro)
-        log.error("FiliadosConstraintErro", {
-            message: err.message,
-            detail: err.detail,
-            code: err.code,
-            constraint: err.constraint,
-            requestId
-        });
+        log.error("FiliadosConstraintErro", errorInfo);
 
         // Resposta genérica segura para o cliente (NUNCA vazar err.detail que contém dados da linha)
         let safeMessage = "Não foi possível processar sua solicitação devido a um erro nos dados enviados.";
@@ -101,8 +104,18 @@ function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de d
         });
     }
 
-    log.error("FiliadosDbErro", { error: err.message, code: err.code, requestId });
-    return res.status(500).json({ success: false, message: defaultMessage, requestId });
+    // Para qualquer outro erro de banco (500)
+    log.error("FiliadosDbErro", errorInfo);
+
+    // Garantir que NUNCA enviamos a mensagem do erro se ela contiver palavras suspeitas de vazamento
+    const hasLeakRisk = err?.message && (err.message.includes("Failing row") || err.message.includes("violates"));
+    const finalMessage = hasLeakRisk ? defaultMessage : (defaultMessage || "Erro interno no servidor");
+
+    return res.status(500).json({
+        success: false,
+        message: finalMessage,
+        requestId
+    });
 }
 
 /**
