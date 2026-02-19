@@ -25,12 +25,19 @@ app.use('/api', createProxyMiddleware({
   target: API_BASE_URL,
   changeOrigin: true,
   logLevel: 'warn',
+
+  // Express remove o prefixo "/api" ao montar o middleware.
+  // Reanexamos para a API que expõe rotas sob "/api/*".
+  pathRewrite: (path) => `/api${path}`,
+
   on: {
     proxyReq: (proxyReq, req) => {
-      console.log(`[proxy] ${req.method} ${req.originalUrl} -> ${API_BASE_URL}${req.originalUrl}`);
+      // req.url aqui já está sem o "/api" (ex.: "/filiese")
+      console.log(`[proxy] ${req.method} ${req.originalUrl} -> ${API_BASE_URL}/api${req.url}`);
     }
   }
 }));
+
 
 // Servir arquivos estáticos do diretório 'public' com headers customizados
 app.use(express.static(path.join(__dirname, 'public'), {
