@@ -16,9 +16,8 @@
 
             try {
                 // Now including inactive blocks for management
-                const res = await fetch(`/api/content-blocks?page=${page}&includeInactive=true`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
+                const res = await window.Api.apiFetch(`/api/content-blocks?page=${page}&includeInactive=true`);
+                if (!res || !res.ok) throw new Error('Falha ao carregar blocos');
                 const blocks = await res.json();
                 this.renderBlocks(blocks);
             } catch (err) {
@@ -101,16 +100,12 @@
             };
 
             try {
-                const res = await fetch(`/api/content-blocks/${id}`, {
+                const res = await window.Api.apiFetch(`/api/content-blocks/${id}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(data)
+                    body: data
                 });
 
-                if (res.ok) {
+                if (res && res.ok) {
                     alert('Bloco atualizado com sucesso!');
                     this.loadBlocks(document.getElementById('cms-page-selector').value);
                 } else {

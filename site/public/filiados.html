@@ -14,6 +14,8 @@
   <title>SINPRF-ES</title>
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
+  <script src="/js/utils.js" defer></script>
+  <script src="/js/main.js" defer></script>
 
 </head>
 <body>
@@ -111,7 +113,17 @@
           if (q) params.append('q', q);
           if (situacao) params.append('situacao', situacao);
 
-          const url = '/api/filiados' + (params.toString() ? '?' + params.toString() : '');
+          const API_BASE = (window.Utils && window.Utils.resolveApiBase)
+            ? window.Utils.resolveApiBase()
+            : (window.API_BASE_URL || "").replace(/\/+$/, "");
+
+          if (!API_BASE) {
+            console.error("API_BASE não definido. Verifique config.js e utils.js");
+            alert("Erro de configuração do sistema. Tente novamente mais tarde.");
+            return;
+          }
+
+          const url = API_BASE + '/api/filiados' + (params.toString() ? '?' + params.toString() : '');
 
           const tbody = document.getElementById('tabela-filiados');
           const info  = document.getElementById('info-filiados');
@@ -169,7 +181,5 @@
   </div>
 
   <div id="site-footer"></div>
-
-  <script src="/js/main.js" defer></script>
 </body>
 </html>

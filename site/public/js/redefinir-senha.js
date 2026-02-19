@@ -1,6 +1,16 @@
 // public/js/redefinir-senha.js
 
 document.addEventListener("DOMContentLoaded", () => {
+  const API_BASE = (window.Utils && window.Utils.resolveApiBase)
+    ? window.Utils.resolveApiBase()
+    : (window.API_BASE_URL || "").replace(/\/+$/, "");
+
+  if (!API_BASE) {
+    console.error("API_BASE não definido. Verifique config.js e utils.js");
+    alert("Erro de configuração do sistema. Tente novamente mais tarde.");
+    return;
+  }
+
   const form = document.getElementById("reset-form");
   const msgEl = document.getElementById("reset-mensagem");
 
@@ -48,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = "Salvando...";
 
-        const resp = await fetch(window.API_BASE_URL + "/api/senha/resetar", {
+        const resp = await fetch(`${API_BASE}/api/senha/resetar`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
