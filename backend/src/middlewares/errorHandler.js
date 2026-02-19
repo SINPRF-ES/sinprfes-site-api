@@ -29,9 +29,25 @@ module.exports = (err, req, res, next) => {
     stack: err.stack
   });
 
+  // Detecção proativa de vazamento de erro de DB (Postgres/SQL)
+  const isDbError = err.code && (String(err.code).startsWith('23') || String(err.code).startsWith('42'));
+  const hasLeakRisk = err?.message && (
+    err.message.includes("Failing row") ||
+    err.message.includes("violates") ||
+    err.message.includes("SQLSTATE") ||
+    err.message.includes("check constraint") ||
+    err.message.includes("duplicate key")
+  );
+
+  let finalMessage = err.message;
+
+  if (status === 500 || isDbError || hasLeakRisk) {
+    finalMessage = "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.";
+  }
+
   res.status(status).json({
     success: false,
-    message: status === 500 ? "Erro interno no servidor." : err.message,
+    message: finalMessage,
     errorId: errorId,
     requestId: requestId,
     code: err.code || "INTERNAL_ERROR"
