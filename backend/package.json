@@ -9,7 +9,7 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "check:deps": "node scripts/check-root-deps.js",
-    "preinstall": "node scripts/check-root-deps.js || true"
+    "preinstall": "node scripts/check-root-deps.js"
   },
   "keywords": [
     "sinprf-es",
