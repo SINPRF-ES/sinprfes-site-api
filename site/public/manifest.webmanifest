@@ -1,0 +1,21 @@
+{
+  "name": "SINPRF-ES",
+  "short_name": "SINPRF-ES",
+  "description": "Sindicato dos Policiais Rodoviários Federais no Espírito Santo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#003366",
+  "theme_color": "#003366",
+  "icons": [
+    {
+      "src": "/img/placeholder-sinprf.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/placeholder-sinprf.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -10,15 +10,15 @@
     function inicializarNotificacoes(perfil) {
         // Controle de visibilidade do menu
         const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        const ehAutorizado = perfisAutorizados.includes(perfil);
         const navItem = document.getElementById('nav-notificacoes');
 
         if (navItem) {
-            if (perfisAutorizados.includes(perfil)) {
-                navItem.style.display = "block";
-            } else {
-                navItem.style.display = "none";
-            }
+            navItem.style.display = ehAutorizado ? "block" : "none";
         }
+
+        // Se não for autorizado, não inicializa handlers nem faz chamadas de API de gestão
+        if (!ehAutorizado) return;
 
         setupHandlers();
         carregarHistorico();
