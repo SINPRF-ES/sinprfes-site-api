@@ -550,7 +550,7 @@
                     inputOutro.style.display = 'none';
                     inputOutro.value = '';
                 } else if (parentescoValor) {
-                    selectParentesco.value = 'Outro';
+                    selectParentesco.value = 'OUTRO';
                     inputOutro.style.display = 'block';
                     inputOutro.value = parentescoValor;
                 } else {
@@ -646,18 +646,12 @@
     const status = document.getElementById("meus-dados-status");
     status.textContent = "Salvando...";
 
-    const onlyDigits = (v) =>
-      global.Formatters
-        ? global.Formatters.onlyDigits(v)
-        : (v || "").replace(/\D/g, "");
+    // Funções utilitárias locais para garantir limpeza dos dados
+    const onlyDigits = (v) => (v || "").toString().replace(/\D/g, "");
+    const val = (id) => (document.getElementById(id)?.value ?? "").trim();
+    const nul = (s) => (s === "" || s === undefined) ? null : s;
 
-    const val = (id) =>
-      (document.getElementById(id)?.value ?? "").trim();
-
-    const nul = (s) =>
-      s === "" || s === undefined ? null : s;
-
-    // ✅ PAYLOAD EXPLÍCITO — SOMENTE CAMPOS PERMITIDOS PARA FILIADO
+    // ✅ WHITELIST MANUAL (Garante que sexo, siape, etc não sejam enviados)
     const payload = {
       telefone1: nul(onlyDigits(val("me-telefone1"))),
       telefone2: nul(onlyDigits(val("me-telefone2"))),
@@ -672,17 +666,38 @@
       lotacao: nul(val("me-lotacao")),
     };
 
-    // ✅ DEPENDENTES (somente campos canônicos)
+    // ✅ DEPENDENTES - COMPACTAÇÃO E DERIVAÇÃO DE PARENTESCO
+    const dependentesCompactados = [];
     for (let i = 1; i <= 5; i++) {
       const nome = nul(val(`me-dep${i}_nome`));
       const cpf  = nul(onlyDigits(val(`me-dep${i}_cpf`)));
       const dn   = nul(val(`me-dep${i}_data_nascimento`));
-      const par  = nul(val(`me-dep${i}_parentesco`)); // hidden final
 
-      payload[`dep${i}_nome`] = nome;
-      payload[`dep${i}_cpf`] = cpf;
-      payload[`dep${i}_data_nascimento`] = dn ? `${dn}T00:00:00.000Z` : null;
-      payload[`dep${i}_parentesco`] = par;
+      // Derivação correta: select + outro
+      const selPar = val(`me-dep${i}_parentesco_select`);
+      const outPar = val(`me-dep${i}_parentesco_outro`);
+      let par = nul(selPar);
+      if (selPar === 'OUTRO') {
+        par = nul(outPar);
+      }
+
+      if (nome || cpf || dn || par) {
+        dependentesCompactados.push({
+          nome,
+          cpf,
+          data_nascimento: dn ? `${dn}T00:00:00.000Z` : null,
+          parentesco: par
+        });
+      }
+    }
+
+    // Preenche slots 1..5 sequencialmente com os dados compactados
+    for (let i = 1; i <= 5; i++) {
+      const dep = dependentesCompactados[i - 1] || null;
+      payload[`dep${i}_nome`] = dep ? dep.nome : null;
+      payload[`dep${i}_cpf`] = dep ? dep.cpf : null;
+      payload[`dep${i}_data_nascimento`] = dep ? dep.data_nascimento : null;
+      payload[`dep${i}_parentesco`] = dep ? dep.parentesco : null;
     }
 
     // 🔎 DEBUG TEMPORÁRIO

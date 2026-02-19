@@ -306,7 +306,7 @@ exports.atualizarMeusDados = async (req, res) => {
     const forbiddenFields = receivedFields.filter(f => !editableFields.includes(f));
 
     if (forbiddenFields.length > 0) {
-      return res.status(403).json({
+      return res.status(400).json({
         success: false,
         error: "FORBIDDEN_FIELD",
         message: `Os campos seguintes não podem ser alterados pelo usuário: ${forbiddenFields.join(', ')}`,
