@@ -632,162 +632,115 @@
             if (cepInput.value && onlyDigitsFn(cepInput.value).length === 8) buscarCep();
         };
 
-        // --- SUBMIT DADOS (PUT /me) ---
-        document.getElementById("form-meus-dados").onsubmit = async (e) => {
-            e.preventDefault();
-            const status = document.getElementById("meus-dados-status");
-            status.textContent = "Salvando...";
+  // --- SUBMIT DADOS (PUT /me) ---
+  document.getElementById("form-meus-dados").onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
 
-            const form = e.target;
-            const formData = new FormData(form);
-            const rawPayload = {};
+    function limparErros() {
+      form.querySelectorAll('.invalid-field').forEach(el => el.classList.remove('invalid-field'));
+      form.querySelectorAll('.field-error-msg').forEach(el => el.remove());
+    }
+    limparErros();
 
-            for (const [key, value] of formData.entries()) {
-                rawPayload[key] = value;
+    const status = document.getElementById("meus-dados-status");
+    status.textContent = "Salvando...";
+
+    const onlyDigits = (v) =>
+      global.Formatters
+        ? global.Formatters.onlyDigits(v)
+        : (v || "").replace(/\D/g, "");
+
+    const val = (id) =>
+      (document.getElementById(id)?.value ?? "").trim();
+
+    const nul = (s) =>
+      s === "" || s === undefined ? null : s;
+
+    // ✅ PAYLOAD EXPLÍCITO — SOMENTE CAMPOS PERMITIDOS PARA FILIADO
+    const payload = {
+      telefone1: nul(onlyDigits(val("me-telefone1"))),
+      telefone2: nul(onlyDigits(val("me-telefone2"))),
+      email1: nul(val("me-email1")),
+      email2: nul(val("me-email2")),
+      cep: nul(onlyDigits(val("me-cep"))),
+      logradouro_bairro: nul(val("me-endereco")),
+      numero: nul(val("me-numero")),
+      complemento: nul(val("me-complemento")),
+      cidade: nul(val("me-cidade")),
+      uf: nul(val("me-uf")),
+      lotacao: nul(val("me-lotacao")),
+    };
+
+    // ✅ DEPENDENTES (somente campos canônicos)
+    for (let i = 1; i <= 5; i++) {
+      const nome = nul(val(`me-dep${i}_nome`));
+      const cpf  = nul(onlyDigits(val(`me-dep${i}_cpf`)));
+      const dn   = nul(val(`me-dep${i}_data_nascimento`));
+      const par  = nul(val(`me-dep${i}_parentesco`)); // hidden final
+
+      payload[`dep${i}_nome`] = nome;
+      payload[`dep${i}_cpf`] = cpf;
+      payload[`dep${i}_data_nascimento`] = dn ? `${dn}T00:00:00.000Z` : null;
+      payload[`dep${i}_parentesco`] = par;
+    }
+
+    // 🔎 DEBUG TEMPORÁRIO
+    console.log("[DEBUG PUT /me] keys:", Object.keys(payload).sort());
+    console.log("[DEBUG PUT /me] payload:", payload);
+
+    try {
+      const r = await window.Api.apiFetch("/api/filiados/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (r.ok) {
+        await carregarMeusDados();
+        alert("Dados salvos com sucesso!");
+        status.textContent = "";
+        return;
+      }
+
+      status.textContent = "Erro ao salvar.";
+
+      // Restore field-specific error highlighting
+      try {
+        const d = await r.json();
+        console.warn("[DEBUG ERRO BACKEND]", r.status, d);
+
+        if (d?.fields) {
+          Object.keys(d.fields).forEach(key => {
+            let fieldId = `me-${key.replace(/_/g, '-')}`;
+            if (key === 'logradouro_bairro') fieldId = 'me-endereco';
+
+            const el = document.getElementById(fieldId);
+            if (el) {
+              el.classList.add('invalid-field');
+              const span = document.createElement('span');
+              span.className = 'field-error-msg';
+              span.textContent = d.fields[key];
+              el.insertAdjacentElement('afterend', span);
             }
+          });
+          const first = document.getElementById("form-meus-dados")?.querySelector('.invalid-field');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (d?.message) {
+          alert(d.message);
+        } else {
+          alert(`Erro ao salvar (HTTP ${r.status}).`);
+        }
+      } catch (errJson) {
+        console.error("Erro ao processar resposta de erro:", errJson);
+        alert(`Erro ao salvar (HTTP ${r.status}).`);
+      }
 
-            // Compactar dependentes antes de enviar
-            const dependentesCompactados = [];
-            for (let i = 1; i <= 5; i++) {
-                const n = rawPayload[`dep${i}_nome`];
-                const c = rawPayload[`dep${i}_cpf`];
-                const d = rawPayload[`dep${i}_data_nascimento`];
-                const p = rawPayload[`dep${i}_parentesco`];
-                if (n || c || d || p) {
-                    dependentesCompactados.push({ n, c, d, p });
-                }
-            }
-
-            const payload = { ...rawPayload };
-
-            // Normalização de Nomes (Canônico)
-            if (payload.nome && global.Canon?.normalizeNome) {
-                payload.nome = global.Canon.normalizeNome(payload.nome);
-            }
-            for (let i = 1; i <= 5; i++) {
-                if (payload[`dep${i}_nome`] && global.Canon?.normalizeNome) {
-                    payload[`dep${i}_nome`] = global.Canon.normalizeNome(payload[`dep${i}_nome`]);
-                }
-            }
-
-            // Limpa slots no payload
-            for (let i = 1; i <= 5; i++) {
-                payload[`dep${i}_nome`] = "";
-                payload[`dep${i}_cpf`] = "";
-                payload[`dep${i}_data_nascimento`] = "";
-                payload[`dep${i}_parentesco`] = "";
-            }
-            // Preenche sequencialmente
-            dependentesCompactados.forEach((dep, idx) => {
-                const i = idx + 1;
-                payload[`dep${i}_nome`] = dep.n;
-                payload[`dep${i}_cpf`] = dep.c;
-                payload[`dep${i}_data_nascimento`] = dep.d;
-                payload[`dep${i}_parentesco`] = dep.p;
-            });
-
-            const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
-
-            // Adiciona campos que não estão no form ou precisam de normalização.
-            // NOTA: 'sexo' e 'siape' NÃO devem ser enviados para /api/filiados/me (são forbidden na whitelist do backend).
-            payload.telefone1 = onlyDigitsFn(document.getElementById("me-telefone1").value);
-            payload.telefone2 = onlyDigitsFn(document.getElementById("me-telefone2").value);
-            payload.email1 = document.getElementById("me-email1").value;
-            payload.email2 = document.getElementById("me-email2").value;
-            payload.logradouro_bairro = document.getElementById("me-endereco").value;
-            payload.numero = document.getElementById("me-numero").value || null;
-            payload.complemento = document.getElementById("me-complemento").value;
-            payload.cidade = document.getElementById("me-cidade").value;
-            payload.uf = document.getElementById("me-uf").value;
-            payload.cep = onlyDigitsFn(document.getElementById("me-cep").value);
-            payload.lotacao = document.getElementById("me-lotacao").value;
-
-            // Sanitiza CPF dos dependentes
-            for (let i = 1; i <= 5; i++) {
-                const key = `dep${i}_cpf`;
-                if (payload[key]) {
-                    payload[key] = onlyDigitsFn(payload[key]);
-                }
-            }
-
-            // ✅ PATCH CRÍTICO: remover campos auxiliares de UI que o backend NÃO aceita
-            // (mesmo vazios, se existirem no JSON, disparam o 403 de whitelist)
-            for (let i = 1; i <= 5; i++) {
-                delete payload[`dep${i}_parentesco_outro`];
-                delete payload[`dep${i}_parentesco_select`];
-            }
-            delete payload.sexo;
-            delete payload.siape;
-
-            function limparErros() {
-                form.querySelectorAll('.invalid-field').forEach(el => el.classList.remove('invalid-field'));
-                form.querySelectorAll('.field-error-msg').forEach(el => el.remove());
-            }
-
-            limparErros();
-
-            try {
-                const safe = { ...payload };
-
-// remove *de novo* (belt and suspenders)
-delete safe.sexo;
-delete safe.siape;
-delete safe.cpf;
-delete safe.nome;
-delete safe.data_nascimento;
-delete safe.situacao;
-delete safe.perfil_acesso;
-
-for (let i = 1; i <= 5; i++) {
-  delete safe[`dep${i}_parentesco_outro`];
-  delete safe[`dep${i}_parentesco_select`];
-}
-
-// opcional: não mandar vazios (melhora whitelist/patch parcial)
-Object.keys(safe).forEach(k => {
-  if (safe[k] === "" || safe[k] === undefined) delete safe[k];
-});
-
-const r = await window.Api.apiFetch("/api/filiados/me", {
-  method: "PUT",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(safe)
-});
-
-                if (r.ok) {
-                    await carregarMeusDados();
-                    alert("Dados salvos com sucesso!");
-                } else {
-                    status.textContent = "Erro ao salvar.";
-                    try {
-                        const d = await r.json();
-                        if (d?.fields) {
-                            Object.keys(d.fields).forEach(key => {
-                                let fieldId = `me-${key.replace(/_/g, '-')}`;
-                                if (key === 'logradouro_bairro') fieldId = 'me-endereco';
-
-                                const el = document.getElementById(fieldId);
-                                if (el) {
-                                    el.classList.add('invalid-field');
-                                    const span = document.createElement('span');
-                                    span.className = 'field-error-msg';
-                                    span.textContent = d.fields[key];
-                                    el.insertAdjacentElement('afterend', span);
-                                }
-                            });
-                            const first = form.querySelector('.invalid-field');
-                            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        } else if (d?.message) {
-                            alert(d.message);
-                        }
-                    } catch (errJson) {
-                        console.error("Erro ao processar resposta de erro:", errJson);
-                    }
-                }
-            } catch (e) {
-                status.textContent = "Erro de conexão.";
-            }
-        };
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Erro de conexão.";
+    }
+  };
 
         // --- UPLOAD DE AVATAR ---
         const inputFile = document.getElementById("me-avatar-file");

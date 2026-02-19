@@ -8,11 +8,38 @@
     console.log("Sistema Página Inicial: Orquestrando inicialização...");
 
     document.addEventListener("DOMContentLoaded", async () => {
-        // 1. Verificação de Token
-        const token = localStorage.getItem("token");
+        // 1. Verificação de Token (Contexto: Filiado)
+        const token = (window.Utils && window.Utils.obterToken)
+            ? window.Utils.obterToken()
+            : localStorage.getItem("token");
+
         if (!token) {
             window.location.href = "/login.html";
             return;
+        }
+
+        // 🛡️ SEGURANÇA: Validar se o token é de FILIADO para esta área
+        try {
+            const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(atob(payloadBase64));
+            const perfil = (payload.perfil_acesso || payload.perfil || "").toUpperCase();
+
+            // Se for gestor, mas estiver na área do filiado, tudo bem, ele vê os próprios dados.
+            // O bug era usar token de GESTÃO (FUNCIONARIO) que às vezes não tem os mesmos campos ou permissões de /me
+            // mas o usuário quer garantir: "Faça login como FILIADO" se não for filiado?
+            // "se não for, limpar token_filiado e redirecionar"
+
+            // Na verdade, gestão PODE ser filiado. O problema é quando o token é estritamente de gestão (atorId de gestão).
+            // Vamos seguir a regra do prompt: verificar se é FILIADO.
+            if (perfil !== "FILIADO") {
+                console.warn("Acesso negado: Perfil no token não é FILIADO:", perfil);
+                localStorage.removeItem("token_filiado");
+                alert("Para acessar esta área, faça login como FILIADO.");
+                window.location.href = "/login.html";
+                return;
+            }
+        } catch (e) {
+            console.error("Erro ao validar token:", e);
         }
 
         const { obterUserInfo, exibirAlertaFlutuante } = window.Utils || {};
@@ -57,7 +84,11 @@
         if (btnLogout) {
             btnLogout.onclick = () => {
                 if(confirm("Deseja realmente sair?")) {
-                    localStorage.clear();
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("token_filiado");
+                    localStorage.removeItem("token_gestao");
+                    localStorage.removeItem("userInfo");
+                    localStorage.removeItem("perfil_acesso");
                     window.location.href = "/login.html";
                 }
             };
