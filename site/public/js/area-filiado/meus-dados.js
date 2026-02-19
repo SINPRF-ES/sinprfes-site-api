@@ -710,6 +710,15 @@
                 }
             }
 
+            // ✅ PATCH CRÍTICO: remover campos auxiliares de UI que o backend NÃO aceita
+            // (mesmo vazios, se existirem no JSON, disparam o 403 de whitelist)
+            for (let i = 1; i <= 5; i++) {
+                delete payload[`dep${i}_parentesco_outro`];
+                delete payload[`dep${i}_parentesco_select`];
+            }
+            delete payload.sexo;
+            delete payload.siape;
+
             function limparErros() {
                 form.querySelectorAll('.invalid-field').forEach(el => el.classList.remove('invalid-field'));
                 form.querySelectorAll('.field-error-msg').forEach(el => el.remove());
