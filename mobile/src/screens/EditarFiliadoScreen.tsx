@@ -89,7 +89,8 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
 
     try {
       setSaving(true);
-      const payload = buildUpdateFiliadoPayload(filiado);
+      // Passamos o perfil do ator para garantir que a whitelist correta seja aplicada (ex: FILIADO vs GESTÃO)
+      const payload = buildUpdateFiliadoPayload(filiado, usuario?.perfil_acesso || 'FILIADO');
 
       // Instrumentação de logs para depuração de datas (Step A)
       logger.info('FILIADO_SAVE_PAYLOAD_DATES', {
