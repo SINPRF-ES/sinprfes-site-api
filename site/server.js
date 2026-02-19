@@ -10,8 +10,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'site' });
 });
 
-// Rota explícita para config.js para evitar que caia no fallback HTML
-// e garantir headers de Content-Type e Cache corretos.
+// 1.1 Inserir rota explícita /config.js ANTES do proxy e do static
 app.get('/config.js', (req, res) => {
   res.type('application/javascript');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -21,12 +20,15 @@ app.get('/config.js', (req, res) => {
 // Proxy do site -> API
 const API_BASE_URL = process.env.API_BASE_URL || 'https://api.sinprfes.org.br';
 
+// 1.2 Corrigir o proxy /api removendo pathRewrite (evitar /api/api)
 app.use('/api', createProxyMiddleware({
   target: API_BASE_URL,
   changeOrigin: true,
   logLevel: 'warn',
-  onProxyReq: (proxyReq, req) => {
-    console.log(`[proxy] ${req.method} ${req.originalUrl} -> ${API_BASE_URL}${req.originalUrl}`);
+  on: {
+    proxyReq: (proxyReq, req) => {
+      console.log(`[proxy] ${req.method} ${req.originalUrl} -> ${API_BASE_URL}${req.originalUrl}`);
+    }
   }
 }));
 
@@ -39,6 +41,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
     if (fileName === 'manifest.webmanifest') {
       res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
+    // 1.3 Ajustar cache header para config.js e service-worker.js
     } else if (fileName === 'service-worker.js' || fileName === 'config.js') {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     } else if (fileName === 'index.html') {
@@ -62,7 +65,6 @@ app.get('*', (req, res) => {
 
   // 2. Bloquear fallback para QUALQUER coisa que pareça um arquivo (tenha extensão)
   // Isso evita que o browser receba HTML quando espera JS/CSS/Imagens.
-  // IMPORTANTE: Se chegamos aqui e tem extensão .js, é porque o arquivo REAL não existe.
   if (ext && ext.length > 1) {
     if (ext === '.js') {
       res.type('application/javascript');

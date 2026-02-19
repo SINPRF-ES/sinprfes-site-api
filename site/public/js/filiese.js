@@ -166,11 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             try {
-                const API_BASE = (window.Utils && window.Utils.resolveApiBase)
-                    ? window.Utils.resolveApiBase()
-                    : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || "").replace(/\/+$/, "");
-
-                const res = await fetch(`${API_BASE}/api/filiese`, {
+                const res = await fetch(`/api/filiese`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
