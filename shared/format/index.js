@@ -85,30 +85,6 @@ function normalizeCep(value) {
   return onlyDigits(value);
 }
 
-/**
- * Parses a date string (DD/MM/YYYY or YYYY-MM-DD) to ISO format (YYYY-MM-DD).
- * @param {string} value The input date string.
- * @returns {string | null} The ISO date string or null.
- */
-function parseDateToISO(value) {
-  if (!value) return null;
-  const str = String(value).trim();
-  if (!str) return null;
-
-  // Se for ISO ou similar (YYYY-MM-DD...)
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    return str.substring(0, 10);
-  }
-
-  // Se for formato brasileiro DD/MM/AAAA
-  if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
-    const [d, m, y] = str.split("/");
-    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  }
-
-  return null;
-}
-
 module.exports = {
   onlyDigits,
   formatCpf,
@@ -117,5 +93,4 @@ module.exports = {
   normalizeCpf,
   normalizeTelefone,
   normalizeCep,
-  parseDateToISO,
 };
