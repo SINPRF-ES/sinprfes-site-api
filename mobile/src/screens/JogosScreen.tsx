@@ -8,11 +8,11 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import SafeScreen from '../components/SafeScreen';
 import { PickerSafe } from '../components/PickerSafe';
 import { useAuth } from '../hooks/useAuth';
 import { logger } from '../infra/logger';
@@ -180,7 +180,7 @@ const JogosScreen = () => {
   if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeScreen style={styles.container}>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
         <View style={styles.banner}>
           <Text style={styles.bannerSubtitle}>🏅 Participe da maior integração esportiva da categoria!</Text>
@@ -348,7 +348,7 @@ const JogosScreen = () => {
           </View>
         )}
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </SafeScreen>
   );
 };
 

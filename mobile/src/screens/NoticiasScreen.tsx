@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../config/env';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
+import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
 export default function NoticiasScreen() {
@@ -123,7 +124,7 @@ export default function NoticiasScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <FlatList
         data={noticias}
         renderItem={renderItem}
@@ -138,7 +139,7 @@ export default function NoticiasScreen() {
           </View>
         }
       />
-    </View>
+    </SafeScreen>
   );
 }
 

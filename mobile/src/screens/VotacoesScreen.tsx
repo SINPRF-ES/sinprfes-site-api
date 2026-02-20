@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, FlatList }
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import SafeScreen from '../components/SafeScreen';
 import { useAuth } from '../hooks/useAuth';
 import type { RootStackParamList } from '../navigation';
 import { listarVotacoes } from '../services/votacaoService';
@@ -33,7 +34,7 @@ export default function VotacoesScreen() {
   useEffect(() => { carregar(); }, []);
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <Text style={styles.title}>Votações</Text>
 
       {loading ? (
@@ -59,7 +60,7 @@ export default function VotacoesScreen() {
           onRefresh={carregar}
         />
       )}
-    </View>
+    </SafeScreen>
   );
 }
 

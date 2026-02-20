@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, FlatList, AppState, AppStateStatus } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import SafeScreen from '../../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAssembleiaEstado, getAssembleiaEstadoMini, enviarVoto, pedirPalavra, concederPalavra, iniciarVotacaoProposta, gerarTokenQuorum, encerrarVotacao, encerrarAssembleia } from '../../services/assembleiaService';
 import { assembleiaSocket } from '../../services/assembleiaSocket';
@@ -318,7 +319,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
   const votosNominais = votacaoAtiva?.votos || [];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeScreen style={styles.container}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
             <Text style={styles.assembleiaTitulo}>{estado.assembleia.titulo}</Text>
@@ -526,7 +527,7 @@ export default function AssembleiaSalaScreen({ route, navigation }: any) {
         )}
       </ScrollView>
 
-    </View>
+    </SafeScreen>
   );
 }
 

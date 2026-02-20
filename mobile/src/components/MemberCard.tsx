@@ -6,7 +6,7 @@ import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 
 interface MemberCardProps {
   member: Usuario | null;
-  variant?: 'profile' | 'default';
+  variant?: 'default' | 'compact' | 'list' | 'profile'; // profile mantido por retrocompatibilidade temporária
   style?: ViewStyle;
 }
 
@@ -31,28 +31,35 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, variant = 'default', st
 
   const nome = String(member.nome || (member as any).name || 'Filiado');
 
+  const isCompact = variant === 'compact';
+  const isList = variant === 'list';
+
   return (
-    <View style={[styles.card, variant === 'profile' ? styles.cardProfile : styles.cardDefault, style]}>
+    <View style={[
+      styles.card,
+      isCompact ? styles.cardCompact : (isList ? styles.cardList : styles.cardDefault),
+      style
+    ]}>
       <View style={styles.row}>
-        <View style={styles.avatarWrap}>
+        <View style={[styles.avatarWrap, isCompact && styles.avatarWrapCompact]}>
           <Image
             source={member.avatar_url ? { uri: member.avatar_url as string } : require('../../assets/logo.png')}
-            style={styles.avatar}
+            style={[styles.avatar, isCompact && styles.avatarCompact]}
             resizeMode="cover"
           />
         </View>
 
         <View style={styles.info}>
-          <Text style={styles.nome} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.nome, isCompact && styles.nomeCompact]} numberOfLines={1} ellipsizeMode="tail">
             {nome}
           </Text>
 
           <View style={styles.metaRow}>
-            <Text style={styles.perfil} numberOfLines={1} ellipsizeMode="tail">
+            <Text style={[styles.perfil, isCompact && styles.perfilCompact]} numberOfLines={1} ellipsizeMode="tail">
               {perfil}
             </Text>
 
-            {situacao ? (
+            {situacao && !isCompact ? (
               <Badge
                 label={situacao}
                 variant={getSituacaoVariant(situacao)}
@@ -61,44 +68,50 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, variant = 'default', st
             ) : null}
           </View>
         </View>
+
+        {isCompact && situacao ? (
+          <Badge
+            label={situacao}
+            variant={getSituacaoVariant(situacao)}
+            style={styles.badgeCompact}
+          />
+        ) : null}
       </View>
 
-      {/* Opcional: uma linha sutil no "profile" pra dar acabamento (sem poluir) */}
-      {variant === 'profile' ? <View style={styles.divider} /> : null}
+      {variant === 'profile' || variant === 'default' ? <View style={styles.divider} /> : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  // Base do card no padrão “limpo” (borda #eee + sombra leve)
   card: {
     backgroundColor: '#fff',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#eee',
     padding: 16,
-
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
   },
-
-  // Pequenas variações por contexto
   cardDefault: {
-    paddingVertical: 14,
-  },
-  cardProfile: {
     paddingVertical: 18,
   },
-
+  cardCompact: {
+    padding: 12,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  cardList: {
+    paddingVertical: 12,
+    marginVertical: 4,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-
-  // Avatar com “aro” azul (identidade) e fundo neutro
   avatarWrap: {
     width: 64,
     height: 64,
@@ -110,6 +123,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#dbe6f7',
   },
+  avatarWrapCompact: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 10,
+  },
   avatar: {
     width: 56,
     height: 56,
@@ -118,39 +137,51 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#003366',
   },
-
+  avatarCompact: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+  },
   info: {
     flex: 1,
     justifyContent: 'center',
     minWidth: 0,
   },
-
   nome: {
     fontSize: 18,
     fontWeight: '800',
     color: '#003366',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-
+  nomeCompact: {
+    fontSize: 15,
+    marginBottom: 2,
+  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     flexWrap: 'wrap',
   },
-
   perfil: {
     fontSize: 12,
     color: '#6b7280',
     fontWeight: '700',
     letterSpacing: 0.6,
   },
-
+  perfilCompact: {
+    fontSize: 10,
+  },
   badge: {
     paddingHorizontal: 10,
     borderRadius: 99,
   },
-
+  badgeCompact: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 99,
+  },
   divider: {
     marginTop: 14,
     height: 1,

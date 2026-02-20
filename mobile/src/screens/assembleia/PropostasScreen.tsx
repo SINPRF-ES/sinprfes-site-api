@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, FlatList } from 'react-native';
+import SafeScreen from '../../components/SafeScreen';
 import { submeterProposta, getAssembleiaEstado } from '../../services/assembleiaService';
 import { Proposta } from '../../types/assembleia';
 
@@ -29,7 +30,8 @@ export default function PropostasScreen({ route }: any) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeScreen style={styles.container}>
+    <ScrollView>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Nova Proposta / Encaminhamento</Text>
         <TextInput
@@ -50,6 +52,7 @@ export default function PropostasScreen({ route }: any) {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </SafeScreen>
   );
 }
 
