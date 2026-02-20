@@ -3,7 +3,14 @@
   "private": true,
   "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": "20.x"
+    "node": ">=20.x"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
+      "react-native": "0.81.5"
+    }
   },
   "scripts": {
     "preinstall": "node scripts/check-lockfiles.js",
