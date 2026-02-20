@@ -14,28 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import { isGestao } from '../utils/filiadoUtils';
 
-/**
- * Canon do Drawer (ideal: extrair para src/navigation/types.ts para evitar duplicação).
- * Mantido aqui para não criar dependência circular com DrawerNavigator (que importa HomeScreen).
- */
-export type DrawerParamList = {
-  'Início': undefined;
-  Noticias: undefined;
-  MeusDados: undefined;
-  Filiados: undefined;
-  Publicacoes: undefined;
-  Ressarcimento: undefined;
-  Jogos2026: undefined;
-  Votacao: undefined;
-  Estatuto: undefined;
-  Seguranca: undefined;
-  Atualizacoes: undefined;
-  Logs: undefined;
-  Repasse: undefined;
-  Relatorios: undefined;
-  NotificacoesPush: undefined;
-  CriarFiliado: undefined;
-};
+import type { DrawerParamList } from '../navigation/types';
 
 type Props = DrawerScreenProps<DrawerParamList, 'Início'>;
 
@@ -58,7 +37,6 @@ export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
   const ehGestaoUsuario = isGestao(usuario?.perfil_acesso);
-
   const displayedItems = NAV_ITEMS.filter((i) => !i.requireGestao || ehGestaoUsuario);
 
   const primeiroNome = String(usuario?.nome || 'Filiado').trim().split(' ')[0];
@@ -104,7 +82,6 @@ export default function HomeScreen({ navigation }: Props) {
           ))}
         </View>
 
-        {/* espaço extra no final para não “colar” no gesto de navegação/home bar */}
         <View style={{ height: Math.max(12, insets.bottom) }} />
       </ScrollView>
     </SafeScreen>
