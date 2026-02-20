@@ -7,7 +7,6 @@ import type { DrawerScreenProps } from '@react-navigation/drawer';
 import SafeScreen from '../components/SafeScreen';
 import MemberCard from '../components/MemberCard';
 import JogosBanner from '../components/JogosBanner';
-import OtaUpdateBanner from '../components/OtaUpdateBanner';
 
 import { ENABLE_JOGOS } from '../config/features';
 import { useAuth } from '../hooks/useAuth';
@@ -20,16 +19,17 @@ type Props = DrawerScreenProps<DrawerParamList, 'Início'>;
 
 type NavItem = {
   label: string;
+  subtitle?: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   screen: keyof DrawerParamList;
   requireGestao?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Meus Dados', icon: 'account-details-outline', screen: 'MeusDados' },
-  { label: 'Listar Filiados', icon: 'account-group-outline', screen: 'Filiados' },
-  { label: 'Assembleias e Votações', icon: 'vote-outline', screen: 'Votacao' },
-  { label: 'Notícias', icon: 'newspaper-variant-outline', screen: 'Noticias' },
+  { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: 'account-details-outline', screen: 'MeusDados' },
+  { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados' },
+  { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao' },
+  { label: 'Notícias', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
@@ -44,14 +44,15 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <SafeScreen style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.header, { paddingTop: 20 + insets.top }]}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerText}>
-              <Text style={styles.welcomeTitle}>Olá,</Text>
-              <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-                {primeiroNome}
-              </Text>
-            </View>
+        <View style={[styles.header, { paddingTop: 18 + insets.top }]}>
+          <View style={styles.headerText}>
+            <Text style={styles.welcomeTitle}>Olá,</Text>
+            <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
+              {primeiroNome}
+            </Text>
+            <Text style={styles.welcomeSubtitle} numberOfLines={1} ellipsizeMode="tail">
+              {String(usuario?.perfil_acesso || '').toUpperCase() || 'FILIADO'}
+            </Text>
           </View>
         </View>
 
@@ -59,9 +60,14 @@ export default function HomeScreen({ navigation }: Props) {
           <MemberCard member={usuario} variant="profile" />
         </View>
 
-        <View style={styles.banners}>
-          <OtaUpdateBanner />
-          {ENABLE_JOGOS && <JogosBanner />}
+        {ENABLE_JOGOS && (
+          <View style={styles.banners}>
+            <JogosBanner />
+          </View>
+        )}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Ações rápidas</Text>
         </View>
 
         <View style={styles.grid}>
@@ -69,20 +75,32 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity
               key={item.label}
               style={styles.card}
+              activeOpacity={0.8}
               onPress={() => {
                 logNavigation(String(item.screen));
                 navigation.navigate(item.screen);
               }}
-              accessibilityRole="link"
+              accessibilityRole="button"
               accessibilityLabel={item.label}
             >
-              <MaterialCommunityIcons name={item.icon} size={40} color="#003366" />
-              <Text style={styles.cardLabel}>{item.label}</Text>
+              <View style={styles.iconChip}>
+                <MaterialCommunityIcons name={item.icon} size={26} color="#003366" />
+              </View>
+
+              <Text style={styles.cardLabel} numberOfLines={2}>
+                {item.label}
+              </Text>
+
+              {!!item.subtitle && (
+                <Text style={styles.cardSubtitle} numberOfLines={2}>
+                  {item.subtitle}
+                </Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={{ height: Math.max(12, insets.bottom) }} />
+        <View style={{ height: Math.max(14, insets.bottom) }} />
       </ScrollView>
     </SafeScreen>
   );
@@ -96,73 +114,107 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 8,
   },
+
   header: {
     backgroundColor: '#003366',
     paddingHorizontal: 20,
-    paddingBottom: 140,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+    paddingBottom: 130,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   headerText: {
-    flex: 1,
     justifyContent: 'center',
   },
   welcomeTitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#FFFFFF',
-    opacity: 0.8,
-    marginBottom: -2,
+    opacity: 0.85,
+    marginBottom: 0,
   },
   userName: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#FFFFFF',
+    marginTop: 2,
+  },
+  welcomeSubtitle: {
+    marginTop: 6,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    letterSpacing: 0.6,
   },
 
   memberCardContainer: {
-    marginTop: -90,
+    marginTop: -88,
     paddingHorizontal: 16,
   },
 
   banners: {
     paddingHorizontal: 16,
     marginTop: 8,
-    gap: 10,
+  },
+
+  sectionHeader: {
+    paddingHorizontal: 18,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1f2a37',
   },
 
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 14,
+    paddingTop: 6,
     paddingBottom: 16,
   },
+
+  // Inspirado no padrão do FENAPRF MemberCard (borda #eee + sombra leve)
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     margin: 8,
-    width: '42%',
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
+    width: '44%',
+    minHeight: 148,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+
+    borderWidth: 1,
+    borderColor: '#eee',
+
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
   },
+
+  iconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#eef3fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+
   cardLabel: {
-    marginTop: 12,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
+    fontWeight: '800',
+    color: '#003366',
+    marginBottom: 6,
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    lineHeight: 16,
   },
 });
