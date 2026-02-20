@@ -44,22 +44,7 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <SafeScreen style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-          <View style={styles.headerTop}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.headerBrand}>SINPRF/ES</Text>
-          </View>
-
-          <View style={styles.headerText}>
-            <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              Página Inicial
-            </Text>
-          </View>
-        </View>
+        <View style={[styles.header, { paddingTop: 12 }]} />
 
         <View style={styles.memberCardContainer}>
           <MemberCard member={usuario} variant="default" />
