@@ -56,7 +56,7 @@ export default function HomeScreen({ navigation }: Props) {
 
           <View style={styles.headerText}>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              Olá, {primeiroNome}
+              Página Inicial
             </Text>
           </View>
         </View>

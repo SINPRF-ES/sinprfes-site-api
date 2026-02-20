@@ -7,6 +7,7 @@ import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../u
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
 import MemberCard from '../components/MemberCard';
+import SafeScreen from '../components/SafeScreen';
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
@@ -34,13 +35,14 @@ const CustomDrawerContent = (props) => {
 
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
-      <View style={styles.header}>
-        <MemberCard
-          member={usuario}
-          variant="compact"
-          style={styles.memberCard}
-        />
-      </View>
+      <SafeScreen includeTop style={styles.safeContainer}>
+        <View style={styles.header}>
+          <MemberCard
+            member={usuario}
+            variant="compact"
+            style={styles.memberCard}
+          />
+        </View>
 
       <View style={styles.listContainer}>
         <DrawerItemList {...props} />
@@ -88,11 +90,12 @@ const CustomDrawerContent = (props) => {
         </TouchableOpacity>
       </View>
 
-      <DrawerItem
-        label={(props) => <DrawerItemLabel emoji={EMOJI.SAIR} label="Sair da conta" {...props} />}
-        onPress={handleLogoutPress}
-        inactiveTintColor="#666"
-      />
+        <DrawerItem
+          label={(props) => <DrawerItemLabel emoji={EMOJI.SAIR} label="Sair da conta" {...props} />}
+          onPress={handleLogoutPress}
+          inactiveTintColor="#666"
+        />
+      </SafeScreen>
     </DrawerContentScrollView>
   );
 };
@@ -100,6 +103,9 @@ const CustomDrawerContent = (props) => {
 const styles = StyleSheet.create({
   drawerContent: {
     paddingTop: 0,
+  },
+  safeContainer: {
+    paddingBottom: 0, // SafeScreen has bottom by default, but ScrollView already handles content
   },
   header: {
     paddingHorizontal: 16,

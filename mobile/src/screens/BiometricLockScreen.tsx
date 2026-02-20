@@ -40,11 +40,13 @@ export default function BiometricLockScreen() {
   return (
     <SafeScreen style={styles.container}>
       <View style={styles.logoContainer}>
-        <Image
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <View style={styles.logoWrapper}>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.brandText}>SINPRF/ES</Text>
       </View>
 
@@ -88,12 +90,28 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
+  },
+  logoWrapper: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 51, 102, 0.05)',
+
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 10,
+    width: 112,
+    height: 112,
   },
   brandText: {
     fontSize: 20,
