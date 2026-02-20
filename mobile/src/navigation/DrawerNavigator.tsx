@@ -28,26 +28,7 @@ import { isGestao, isDiretoria } from '../utils/filiadoUtils';
 import { logger } from '../infra/logger';
 import { EMOJI } from '../constants/emojis';
 
-export type DrawerParamList = {
-  'Início': undefined;
-  Noticias: undefined;
-  MeusDados: undefined;
-  Filiados: undefined;
-  Publicacoes: undefined;
-  Ressarcimento: undefined;
-  Jogos2026: undefined;
-  Votacao: undefined;
-  Estatuto: undefined;
-  Seguranca: undefined;
-  Atualizacoes: undefined;
-
-  // Condicionais / ocultas
-  Logs: undefined;
-  Repasse: undefined;
-  Relatorios: undefined;
-  NotificacoesPush: undefined;
-  CriarFiliado: undefined;
-};
+import type { DrawerParamList } from './types';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -183,7 +164,6 @@ export default function DrawerNavigator() {
         }}
       />
 
-      {/* Diagnóstico/Logs — somente DIRETORIA (item oculto no menu padrão) */}
       {ehDiretoriaUsuario && (
         <Drawer.Screen
           name="Logs"
@@ -196,7 +176,6 @@ export default function DrawerNavigator() {
         />
       )}
 
-      {/* Itens de gestão */}
       {ehGestaoUsuario && (
         <>
           <Drawer.Screen
