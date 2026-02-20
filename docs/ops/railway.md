@@ -4,9 +4,9 @@ Para garantir o deploy correto dos serviços no Railway, siga as instruções ab
 
 ## 1. Serviço: API (Backend)
 
-*   **Root Directory**: `backend`
-*   **Build Command**: `npm install -g pnpm@9.15.9 && pnpm install --frozen-lockfile`
-*   **Start Command**: `pnpm run start`
+*   **Root Directory**: `/` (Raiz do Monorepo)
+*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile`
+*   **Start Command**: `pnpm run start:backend`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080` (ou conforme desejado)
     *   `NODE_ENV`: `production`
@@ -17,15 +17,16 @@ Para garantir o deploy correto dos serviços no Railway, siga as instruções ab
 
 ## 2. Serviço: SITE (Frontend + Proxy)
 
-*   **Root Directory**: `site`
-*   **Build Command**: `npm install -g pnpm@9.15.9 && pnpm install --frozen-lockfile && pnpm run build`
-*   **Start Command**: `pnpm run start`
+*   **Root Directory**: `/` (Raiz do Monorepo)
+*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile && pnpm run build:site`
+*   **Start Command**: `pnpm run start:site`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080`
     *   `API_BASE_URL`: `https://api.sinprfes.org.br` (URL do serviço de API acima)
 
 ## Observações Gerais
 
+*   **Root Directory**: É mandatório configurar o **Root Directory** como `/` no painel do Railway para que o `pnpm-lock.yaml` na raiz seja detectado e utilizado corretamente pelo processo de build.
 *   **Node.js**: O projeto está fixado na versão **20.x**. O Railway deve detectar isso automaticamente via `.nvmrc` na raiz ou `engines` no `package.json`. Caso precise forçar, use `NIXPACKS_NODE_VERSION=20`.
 *   **Gerenciador de Pacotes**: Utilizar exclusivamente **pnpm**.
 *   **Segurança**: Nunca inclua segredos em Dockerfiles ou no código. Utilize sempre as variáveis de ambiente do painel do Railway.
