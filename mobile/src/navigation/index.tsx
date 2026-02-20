@@ -15,7 +15,8 @@ import LoginScreen from '../screens/LoginScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import BiometricLockScreen from '../screens/BiometricLockScreen';
 
-import DrawerNavigator, { type DrawerParamList } from './DrawerNavigator';
+import DrawerNavigator from './DrawerNavigator';
+import type { DrawerParamList } from './types';
 
 import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
 import EditarFiliadoScreen from '../screens/EditarFiliadoScreen';
@@ -31,10 +32,6 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   BiometricLock: undefined;
 
-  /**
-   * Canon: após autenticação, a navegação principal é o Drawer.
-   * Tipagem correta para navegação aninhada: navigate('Drawer', { screen: 'Noticias' }).
-   */
   Drawer: NavigatorScreenParams<DrawerParamList>;
 
   // Telas fora do Drawer (fluxos “deep” / auxiliares)
@@ -64,9 +61,7 @@ export default function RootNavigation() {
     const pending = pendingNavRef.current;
     if (!nav || !pending || !autenticado || bloqueadoPorBiometria) return;
 
-    // Canon: push para rota aninhada no Drawer
     nav.navigate('Drawer', { screen: pending.screen });
-
     pendingNavRef.current = null;
   }
 
