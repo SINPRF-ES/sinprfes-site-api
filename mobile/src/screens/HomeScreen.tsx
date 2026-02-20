@@ -1,53 +1,67 @@
-// src/screens/HomeScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { DrawerScreenProps } from '@react-navigation/drawer';
+
 import SafeScreen from '../components/SafeScreen';
+import MemberCard from '../components/MemberCard';
 import JogosBanner from '../components/JogosBanner';
 import OtaUpdateBanner from '../components/OtaUpdateBanner';
+
 import { ENABLE_JOGOS } from '../config/features';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
-import type { RootStackParamList } from '../navigation';
-import MemberCard from '../components/MemberCard';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isGestao } from '../utils/filiadoUtils';
 
-type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
+/**
+ * Canon do Drawer (ideal: extrair para src/navigation/types.ts para evitar duplicação).
+ * Mantido aqui para não criar dependência circular com DrawerNavigator (que importa HomeScreen).
+ */
+export type DrawerParamList = {
+  'Início': undefined;
+  Noticias: undefined;
+  MeusDados: undefined;
+  Filiados: undefined;
+  Publicacoes: undefined;
+  Ressarcimento: undefined;
+  Jogos2026: undefined;
+  Votacao: undefined;
+  Estatuto: undefined;
+  Seguranca: undefined;
+  Atualizacoes: undefined;
+  Logs: undefined;
+  Repasse: undefined;
+  Relatorios: undefined;
+  NotificacoesPush: undefined;
+  CriarFiliado: undefined;
+};
 
-const NAV_ITEMS = [
-  {
-    label: 'Meus Dados',
-    icon: 'account-details-outline',
-    screen: 'MeusDados',
-  },
-  {
-    label: 'Buscar Membros',
-    icon: 'account-search-outline',
-    screen: 'Users',
-  },
-  {
-    label: 'Assembleias e Votações',
-    icon: 'vote-outline',
-    screen: 'Votacao',
-  },
+type Props = DrawerScreenProps<DrawerParamList, 'Início'>;
+
+type NavItem = {
+  label: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  screen: keyof DrawerParamList;
+  requireGestao?: boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Meus Dados', icon: 'account-details-outline', screen: 'MeusDados' },
+  { label: 'Listar Filiados', icon: 'account-group-outline', screen: 'Filiados' },
+  { label: 'Assembleias e Votações', icon: 'vote-outline', screen: 'Votacao' },
+  { label: 'Notícias', icon: 'newspaper-variant-outline', screen: 'Noticias' },
 ];
 
-const GESTAO_ITEMS: any[] = [];
-
-export default function HomeScreen({ navigation }: HomeScreenProps) {
-  const { usuario: user } = useAuth();
+export default function HomeScreen({ navigation }: Props) {
+  const { usuario } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'COLABORADOR'].includes((user?.perfil_acesso || '').toUpperCase());
+  const ehGestaoUsuario = isGestao(usuario?.perfil_acesso);
 
-  const displayedItems = [...NAV_ITEMS];
-  if (ehGestao) {
-    displayedItems.push(...GESTAO_ITEMS);
-  }
+  const displayedItems = NAV_ITEMS.filter((i) => !i.requireGestao || ehGestaoUsuario);
 
-  // Mantido (mesmo sem uso) para compatibilidade/telemetria futura
-  // const perfil = (user?.perfil_acesso || 'CONSELHEIRO').toUpperCase();
+  const primeiroNome = String(usuario?.nome || 'Filiado').trim().split(' ')[0];
 
   return (
     <SafeScreen style={styles.container}>
@@ -57,14 +71,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <View style={styles.headerText}>
               <Text style={styles.welcomeTitle}>Olá,</Text>
               <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-                {String(user?.name || user?.nome || 'Membro').split(' ')[0]}
+                {primeiroNome}
               </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.memberCardContainer}>
-          <MemberCard member={user} variant="profile" />
+          <MemberCard member={usuario} variant="profile" />
         </View>
 
         <View style={styles.banners}>
@@ -78,13 +92,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               key={item.label}
               style={styles.card}
               onPress={() => {
-                logNavigation(item.screen);
-                navigation.navigate(item.screen as any);
+                logNavigation(String(item.screen));
+                navigation.navigate(item.screen);
               }}
               accessibilityRole="link"
               accessibilityLabel={item.label}
             >
-              <MaterialCommunityIcons name={item.icon as any} size={40} color="#003366" />
+              <MaterialCommunityIcons name={item.icon} size={40} color="#003366" />
               <Text style={styles.cardLabel}>{item.label}</Text>
             </TouchableOpacity>
           ))}
@@ -108,7 +122,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#003366',
     paddingHorizontal: 20,
-    paddingBottom: 140, // dá espaço real para o MemberCard “entrar” sem invadir o topo
+    paddingBottom: 140,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
@@ -134,7 +148,7 @@ const styles = StyleSheet.create({
   },
 
   memberCardContainer: {
-    marginTop: -90, // sobe o card, mas o header já reservou espaço suficiente
+    marginTop: -90,
     paddingHorizontal: 16,
   },
 
@@ -151,14 +165,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 16,
-    marginTop: 0, // remove o “puxão” que causava sobreposição em telas menores
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     margin: 8,
-    width: '42%', // ~2 colunas
+    width: '42%',
     height: 150,
     alignItems: 'center',
     justifyContent: 'center',
