@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Alert, BackHandler, Animated, DeviceEventEmitter } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, BackHandler } from 'react-native';
 import * as Updates from 'expo-updates';
 import { applyOtaUpdate, downloadAndInstallApk, UpdateCheckResult } from '../services/updateService';
 import { updateAutoScheduler } from '../services/updateAutoScheduler';
@@ -31,21 +30,16 @@ const UpdateAutoChecker: React.FC = () => {
             // Prioridade para Modal em atualizações obrigatórias ou quando o resultado chega pela primeira vez no app aberto
             if (result.isMandatory) {
                 setShowModal(true);
-                await AsyncStorage.removeItem('@sinprf/ota_update_available');
-            } else {
-                // Para opcionais, salva para o banner na Home
-                await AsyncStorage.setItem('@sinprf/ota_update_available', JSON.stringify(result));
-                DeviceEventEmitter.emit('ota_update_detected', result);
             }
         } else {
             setUpdateResult(null);
             setShowModal(false);
-            await AsyncStorage.removeItem('@sinprf/ota_update_available');
-            DeviceEventEmitter.emit('ota_update_detected', null);
         }
     });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+    };
   }, [autenticado, token, bloqueadoPorBiometria]);
 
   // Bloquear botão voltar se for obrigatório
