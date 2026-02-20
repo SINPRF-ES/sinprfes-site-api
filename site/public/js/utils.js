@@ -3,8 +3,8 @@
  * Carregado como script clássico (window.Utils)
  */
 
-(function (global) {
-  if (global.Utils) return;
+(function (window) {
+  if (window.Utils) return;
 
   function resolveApiBase() {
     const base =
@@ -19,6 +19,7 @@
 
   window.Api = window.Api || {};
   window.Api.BASE_URL = resolveApiBase();
+  window.DEBUG_API = false; // Mudar para true via console para habilitar logs detalhados
 
   function obterToken() {
     const isFiliadoArea =
@@ -66,6 +67,19 @@
       }
 
       const finalUrl = (url && url.startsWith('/')) ? (API_BASE + url) : url;
+
+      // 🔎 DEBUG TEMPORÁRIO /me (Instrumentação solicitada para detectar vazamentos)
+      if (window.DEBUG_API && String(url).includes("/api/filiados/me") && ["PUT", "PATCH"].includes(options.method)) {
+        try {
+          const keys = typeof options.body === "string"
+            ? Object.keys(JSON.parse(options.body || "{}"))
+            : Object.keys(options.body || {});
+          console.log("[apiFetch DEBUG /me] keys:", keys.sort());
+        } catch (e) {
+          // Ignora erro de parse se o body não for JSON
+        }
+      }
+
       const response = await fetch(finalUrl, { ...options, headers });
 
       if (response.status === 401) {
@@ -98,7 +112,7 @@
   }
 
   function formatarTelefoneTexto(v) {
-    if (global.Formatters) return global.Formatters.formatTelefone(v) || "-";
+    if (window.Formatters) return window.Formatters.formatTelefone(v) || "-";
     if (!v) return "-";
     v = String(v).replace(/\D/g, "");
     if (v.length === 11) return `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
@@ -107,7 +121,7 @@
   }
 
   function formatarCPF(cpf) {
-    if (global.Formatters) return global.Formatters.formatCpf(cpf);
+    if (window.Formatters) return window.Formatters.formatCpf(cpf);
     if (!cpf) return "";
     const only = String(cpf).replace(/\D/g, "");
     if (only.length !== 11) return cpf;
@@ -179,8 +193,8 @@
     if (!input || input._hasCpfMask) return;
 
     const formatar = (val) => {
-      if (global.Formatters && global.Formatters.formatCpfLive) {
-        return global.Formatters.formatCpfLive(val);
+      if (window.Formatters && window.Formatters.formatCpfLive) {
+        return window.Formatters.formatCpfLive(val);
       }
       let v = val.replace(/\D/g, "").slice(0, 11);
       if (v.length <= 3) return v;
@@ -252,7 +266,7 @@
         if (forOriginal) campo.htmlFor = `${nomePrefixo}${forOriginal.replace('depN_', `dep${i}_`)}`;
       });
       const selectParentesco = clone.querySelector(`select[name="dep${i}_parentesco_select"]`);
-      const options = global.ParentescoUtils ? global.ParentescoUtils.PARENTESCO_OPTIONS : [];
+      const options = window.ParentescoUtils ? window.ParentescoUtils.PARENTESCO_OPTIONS : [];
       selectParentesco.innerHTML = '<option value="" selected disabled>Selecione...</option>';
       options.forEach(opt => {
         const o = document.createElement('option');
@@ -277,7 +291,7 @@
     }
   }
 
-  global.Utils = {
+  window.Utils = {
     obterToken,
     obterUserInfo,
     apiFetch: window.Api.apiFetch,
@@ -370,7 +384,7 @@
    */
   async function searchFiliados(query, options = {}) {
     if (!_filiadosCache || options.forceRefresh) {
-      const r = await global.Utils.apiFetch('/api/filiados');
+      const r = await window.Utils.apiFetch('/api/filiados');
       if (r.ok) {
         const d = await r.json();
         _filiadosCache = d.filiados || d || [];
@@ -382,4 +396,4 @@
 
     return filterFiliados(_filiadosCache, query);
   }
-})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));
+})(typeof window !== 'undefined' ? window : this);

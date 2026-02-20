@@ -58,7 +58,7 @@
     "NENHUMA"
   ];
 
-  // Whitelist de campos editáveis para o perfil /me
+  // Whitelist de campos editáveis para o perfil /me (Task A1/B1)
   const ME_EDITABLE_FIELDS_FILIADO = [
     'telefone1', 'telefone2', 'email1', 'email2', 'lotacao',
     'cep', 'logradouro_bairro', 'numero', 'complemento', 'cidade', 'uf'
