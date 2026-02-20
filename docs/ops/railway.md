@@ -5,7 +5,7 @@ Para garantir o deploy correto dos serviços no Railway, siga as instruções ab
 ## 1. Serviço: API (Backend)
 
 *   **Root Directory**: `/` (Raiz do Monorepo)
-*   **Build Command**: `npm install -g pnpm@9.15.9 && pnpm install --frozen-lockfile`
+*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile`
 *   **Start Command**: `pnpm run start:backend`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080` (ou conforme desejado)
@@ -18,7 +18,7 @@ Para garantir o deploy correto dos serviços no Railway, siga as instruções ab
 ## 2. Serviço: SITE (Frontend + Proxy)
 
 *   **Root Directory**: `/` (Raiz do Monorepo)
-*   **Build Command**: `npm install -g pnpm@9.15.9 && pnpm install --frozen-lockfile && pnpm run build:site`
+*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile && pnpm run build:site`
 *   **Start Command**: `pnpm run start:site`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080`

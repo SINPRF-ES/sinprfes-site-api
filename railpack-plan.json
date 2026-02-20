@@ -1,6 +1,6 @@
 {
   "build": {
-    "install": "npm install -g pnpm@9.15.9 && pnpm install --frozen-lockfile",
+    "install": "npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile",
     "commands": [
       "pnpm --filter $FILTER build"
     ]
