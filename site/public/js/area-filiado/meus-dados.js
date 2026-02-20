@@ -3,11 +3,11 @@
  * Carregado como script clássico (window.MeusDados)
  */
 
-(function (global) {
-    if (global.MeusDados) return;
+(function (window) {
+    if (window.MeusDados) return;
 
     function formatarDataBR(isoStr) {
-        if (global.Formatters) return global.Formatters.formatISOToBR(isoStr);
+        if (window.Formatters) return window.Formatters.formatISOToBR(isoStr);
         if (!isoStr) return "";
         try {
             const parts = isoStr.split('T')[0].split('-');
@@ -99,7 +99,7 @@
             avatar_url
         } = dados;
 
-        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF } = global.Utils || {};
+        const { aplicarMascaraTelefone, aplicarMascaraCEP, aplicarMascaraCPF, gerarCamposDependentes, formatarCPF } = window.Utils || {};
 
         let situacaoRaw = (situacao || situacao_funcional || "NÃO INFORMADO").toUpperCase();
         // Strip "[OK] " or "OK " prefixes
@@ -118,11 +118,11 @@
             classeBadge = 'badge-pensionista';
         }
 
-        const lotacoesParaSelect = (global.Canon && global.Canon.LOTACOES) ? global.Canon.LOTACOES : ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
-        const currentLotNorm = (global.Canon && global.Canon.normalizeLotacao) ? global.Canon.normalizeLotacao(lotacao || "SEDE") : (lotacao || "SEDE").toUpperCase();
+        const lotacoesParaSelect = (window.Canon && window.Canon.LOTACOES) ? window.Canon.LOTACOES : ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares", "NENHUMA"];
+        const currentLotNorm = (window.Canon && window.Canon.normalizeLotacao) ? window.Canon.normalizeLotacao(lotacao || "SEDE") : (lotacao || "SEDE").toUpperCase();
         const opcoes = lotacoesParaSelect
             .map(op => {
-                const opNorm = (global.Canon && global.Canon.normalizeLotacao) ? global.Canon.normalizeLotacao(op) : op.toUpperCase();
+                const opNorm = (window.Canon && window.Canon.normalizeLotacao) ? window.Canon.normalizeLotacao(op) : op.toUpperCase();
                 return `<option value="${op}" ${currentLotNorm === opNorm ? "selected" : ""}>${op}</option>`;
             })
             .join("");
@@ -319,7 +319,7 @@
         }
 
         const avatarUrlSafe = (avatar_url || "").toString().trim();
-        const { resolveApiBase } = global.Utils || {};
+        const { resolveApiBase } = window.Utils || {};
         const apiBase = resolveApiBase
             ? resolveApiBase()
             : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || "").replace(/\/+$/, "");
@@ -333,7 +333,7 @@
             : `<div class="avatar-fallback"></div>`;
 
         // AgeUtils é carregado como global em area-filiado.html
-        const idadeTxt = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
+        const idadeTxt = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dados.data_nascimento) : '—';
 
         const situacaoLower = situacaoUpper.toLowerCase();
         const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes((perfil_acesso || "").toUpperCase());
@@ -526,7 +526,7 @@
             }
             if (dataNascimento) {
                 dataNascimento.value = dados[`dep${i}_data_nascimento`] ? dados[`dep${i}_data_nascimento`].split('T')[0] : '';
-                const depIdade = global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—';
+                const depIdade = window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—';
                 const idadeLabel = document.createElement('div');
                 idadeLabel.style.fontSize = '0.75rem';
                 idadeLabel.style.color = '#666';
@@ -534,7 +534,7 @@
                 idadeLabel.textContent = `Idade: ${depIdade}`;
                 dataNascimento.insertAdjacentElement('afterend', idadeLabel);
                 dataNascimento.onchange = () => {
-                    idadeLabel.textContent = `Idade: ${global.AgeUtils ? global.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—'}`;
+                    idadeLabel.textContent = `Idade: ${window.AgeUtils ? window.AgeUtils.formatAgeDetailed(dataNascimento.value) : '—'}`;
                 };
             }
 
@@ -630,7 +630,7 @@
         // --- CEP ---
         document.getElementById("btn-buscar-cep").onclick = buscarCep;
         cepInput.onblur = () => {
-            const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
+            const onlyDigitsFn = (v) => window.Formatters ? window.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
             if (cepInput.value && onlyDigitsFn(cepInput.value).length === 8) buscarCep();
         };
 
@@ -668,9 +668,9 @@
 
     status.textContent = "Salvando...";
 
-    // ✅ WHITELIST MANUAL (Garante que sexo, siape, etc não sejam enviados)
+    // ✅ COLETA DE DADOS (Camada 1: Pick from Whitelist)
     // Ref: shared/canon.js -> ME_EDITABLE_FIELDS_FILIADO
-    const payload = {
+    const allPossibleFields = {
       telefone1: nul(onlyDigits(val("me-telefone1"))),
       telefone2: nul(onlyDigits(val("me-telefone2"))),
       email1: nul(val("me-email1")),
@@ -684,9 +684,11 @@
       lotacao: nul(val("me-lotacao")),
     };
 
-    // Garantia extra: remove campos explicitamente proibidos para FILIADO
-    const forbidden = ["sexo", "siape", "cpf", "nome", "situacao", "data_nascimento"];
-    forbidden.forEach(f => delete payload[f]);
+    const payload = {};
+    const whitelist = (window.Canon && window.Canon.ME_EDITABLE_FIELDS_FILIADO) || Object.keys(allPossibleFields);
+    whitelist.forEach(f => {
+      if (allPossibleFields[f] !== undefined) payload[f] = allPossibleFields[f];
+    });
 
     // ✅ DEPENDENTES - COMPACTAÇÃO E DERIVAÇÃO DE PARENTESCO
     const dependentesCompactados = [];
@@ -720,9 +722,16 @@
       payload[`dep${i}_parentesco_outro`] = dep ? dep.parentesco_outro : null;
     }
 
-    // 🔎 DEBUG TEMPORÁRIO
-    console.log("[DEBUG PUT /me] keys:", Object.keys(payload).sort());
-    console.log("[DEBUG PUT /me] payload:", payload);
+    // Camada 2: “assert final” (defensivo)
+    const forbidden = ["sexo", "siape", "cpf", "nome", "situacao", "data_nascimento", "me_sexo", "me_siape"];
+    forbidden.forEach(f => delete payload[f]);
+
+    // 🔎 DEBUG TEMPORÁRIO (Instrumentação solicitada para detectar vazamentos)
+    if (window.DEBUG_API) {
+      console.log("[DEBUG PUT /me] keys:", Object.keys(payload).sort());
+      console.log("[DEBUG PUT /me] payload:", payload);
+      console.trace("[DEBUG PUT /me] Envio disparado");
+    }
 
     try {
       const r = await window.Api.apiFetch("/api/filiados/me", {
@@ -847,7 +856,7 @@
     }
 
     async function buscarCep() {
-        const onlyDigitsFn = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
+        const onlyDigitsFn = (v) => window.Formatters ? window.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
         const cep = onlyDigitsFn(document.getElementById("me-cep").value || "");
         if (cep.length !== 8) {
             alert("Informe um CEP válido (8 dígitos).");
@@ -870,7 +879,7 @@
         }
     }
 
-    global.MeusDados = {
+    window.MeusDados = {
         carregarMeusDados,
         labelSituacaoFuncional: (valor) => `Situação funcional do servidor: ${(valor || 'ATIVO').toString().toUpperCase()}`,
         labelEstadoCadastro: (filiado) => {
@@ -879,4 +888,4 @@
             return `Estado do cadastro: ${txt}`;
         }
     };
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : this);

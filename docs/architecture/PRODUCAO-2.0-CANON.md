@@ -127,12 +127,17 @@ graph TD
 *   **Parentesco Dependentes (`parentesco`):** `FILHO_ENTEADO`, `CONJUGE_COMPANHEIRO`, `PAI_MAE`, `IRMAO`, `OUTRO`.
 
 ### 5.3. Payload Crítico: Meus Dados (PUT /api/filiados/me)
+
+**Regras de Edição por Perfil:**
+- **FILIADO:** Pode alterar contatos (telefone/email), endereço completo, **lotação** e dependentes. É terminantemente proibido de alterar dados sensíveis como Nome, Sexo, CPF, SIAPE, Data de Nascimento ou Situação Funcional.
+- **GESTÃO (ADMIN/DIRETORIA/FUNCIONARIO):** Pode alterar todos os campos via endpoint administrativo ou via `/me`.
+
 ```json
 {
-  "nome": "String",
-  "sexo": "Enum (M/F)",
-  "cpf": "String (11 dígitos)",
-  "siape": "String (6-7 dígitos)",
+  "nome": "String (Somente Gestão)",
+  "sexo": "Enum M/F (Somente Gestão)",
+  "cpf": "String 11 dígitos (Somente Gestão)",
+  "siape": "String 6-7 dígitos (Somente Gestão)",
   "email1": "String (RFC 5322)",
   "telefone1": "String (Dígitos)",
   "cep": "String (8 dígitos)",
@@ -148,6 +153,8 @@ graph TD
 }
 ```
 *A compactação de dependentes é realizada pelo Backend; o Frontend deve enviar os slots `dep1` a `dep5` conforme preenchidos na UI. Se parentesco for diferente de OUTRO, o campo _outro é ignorado/limpo pelo Backend.*
+
+**Segurança:** O Backend aplica uma whitelist rigorosa baseada no perfil do usuário autenticado. Campos proibidos enviados por um FILIADO (como `sexo` ou `siape`) são silenciosamente descartados pelo controller para garantir resiliência de UX, enquanto os campos permitidos são processados normalmente.
 
 ## 6. Shared Formatters (Padrão Obrigatório)
 

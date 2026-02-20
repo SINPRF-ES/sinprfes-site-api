@@ -38,26 +38,21 @@ describe('Filiados Controller - atualizarMeusDados', () => {
     expect(payloadSent.email1).toBeUndefined();
   });
 
-  test('deve bloquear campos proibidos com 400', async () => {
+  test('deve ignorar campos proibidos em vez de retornar 400', async () => {
     req.body = {
-      perfil_acesso: 'ADMIN',
-      telefone1: '123',
-      email1: 'test@test.com',
-      logradouro_bairro: 'Rua A',
-      numero: '123',
-      cidade: 'Vitoria',
-      uf: 'ES',
-      cep: '29000000'
+      perfil_acesso: 'ADMIN', // Proibido para FILIADO
+      telefone1: '(27) 99999-0000',
+      email1: 'test@test.com'
     };
+    service.atualizarDadosProprios.mockResolvedValue({ id: 10 });
 
     await controller.atualizarMeusDados(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-      success: false,
-      error: "FORBIDDEN_FIELD"
-    }));
-    expect(service.atualizarDadosProprios).not.toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalledWith(400);
+    const payloadSent = service.atualizarDadosProprios.mock.calls[0][1];
+    expect(payloadSent.perfil_acesso).toBeUndefined();
+    expect(payloadSent.telefone1).toBe('27999990000');
+    expect(payloadSent.email1).toBe('test@test.com');
   });
 
   test('deve permitir dep1_parentesco_outro se parentesco for OUTRO', async () => {

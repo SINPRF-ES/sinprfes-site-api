@@ -270,6 +270,8 @@ exports.listarFiliados = async (req, res) => {
 
 /**
  * PUT /api/filiados/me
+ * Permite que o usuário atualize seus próprios dados.
+ * Implementa whitelist rigorosa baseada no perfil do usuário (Defesa em Profundidade).
  */
 exports.atualizarMeusDados = async (req, res) => {
   const requestId = req.requestId || uuidv4();
@@ -281,20 +283,24 @@ exports.atualizarMeusDados = async (req, res) => {
   try {
     const body = req.body || {};
 
-    // 1. Whitelist Baseada em Perfil
+    // 1. Whitelist Canônica por Perfil (B1)
+    // ADMIN, DIRETORIA e FUNCIONARIO usam a whitelist de GESTAO.
+    // FILIADO e demais perfis usam a whitelist de FILIADO.
     const ehGestor = perfilGestao(perfilAtor);
-    const editableFields = ehGestor ? ME_EDITABLE_FIELDS_GESTAO : ME_EDITABLE_FIELDS_FILIADO;
+    const whitelist = ehGestor ? ME_EDITABLE_FIELDS_GESTAO : ME_EDITABLE_FIELDS_FILIADO;
 
     const receivedFields = Object.keys(body);
-    const forbiddenFields = receivedFields.filter(f => !editableFields.includes(f));
+    const forbiddenFields = receivedFields.filter(f => !whitelist.includes(f));
 
     if (forbiddenFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: "FORBIDDEN_FIELD",
-        message: `Os campos seguintes não podem ser alterados pelo usuário: ${forbiddenFields.join(', ')}`,
+      log.warn("FiliadoTentouAlterarCamposProibidos", {
+        atorId,
+        perfilAtor,
+        forbiddenFields,
         requestId
       });
+      // Comportamento Canônico (B2): ignoramos campos proibidos e prosseguimos com os permitidos.
+      forbiddenFields.forEach(f => delete body[f]);
     }
 
     // 2. Validação e Normalização com Zod
