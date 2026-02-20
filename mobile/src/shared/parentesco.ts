@@ -49,3 +49,7 @@ export function isValidParentesco(value: string | null | undefined): boolean {
 export function isOutroParentesco(value: string | null | undefined): boolean {
   return value === 'OUTRO' || !isValidParentesco(value);
 }
+
+export function requiresParentescoOutro(value: string | null | undefined): boolean {
+  return normalizeParentesco(value) === 'OUTRO';
+}

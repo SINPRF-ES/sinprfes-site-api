@@ -7,7 +7,7 @@ const {
   normalizeTelefone
 } = require("../shared/format");
 const { anexarEstadoCadastro, anexarEstadoCadastroLista } = require("../utils/cadastro");
-const { normalizeParentesco } = require('../shared/dependentes/parentesco');
+const { normalizeParentesco, requiresParentescoOutro } = require('../shared/dependentes/parentesco');
 const {
   normalizeSituacaoFuncional,
   normalizeSexo,
@@ -29,17 +29,19 @@ function compactarDependentes(dados) {
     const cpf = dados[`dep${i}_cpf`];
     const data = dados[`dep${i}_data_nascimento`];
     const parentesco = dados[`dep${i}_parentesco`];
+    const parentesco_outro = dados[`dep${i}_parentesco_outro`];
 
-    if (nome !== undefined || cpf !== undefined || data !== undefined || parentesco !== undefined) {
+    if (nome !== undefined || cpf !== undefined || data !== undefined || parentesco !== undefined || parentesco_outro !== undefined) {
       houveAlgumCampoDependente = true;
     }
 
-    if (nome || cpf || data || parentesco) {
+    if (nome || cpf || data || parentesco || parentesco_outro) {
       dependentesCompactados.push({
         nome: nome || null,
         cpf: cpf || null,
         data_nascimento: data || null,
         parentesco: parentesco || null,
+        parentesco_outro: parentesco_outro || null
       });
     }
 
@@ -48,6 +50,7 @@ function compactarDependentes(dados) {
     delete dados[`dep${i}_cpf`];
     delete dados[`dep${i}_data_nascimento`];
     delete dados[`dep${i}_parentesco`];
+    delete dados[`dep${i}_parentesco_outro`];
   }
 
   // Se não recebemos nenhum campo de dependente, não alteramos nada (mantém como estava no banco)
@@ -60,6 +63,7 @@ function compactarDependentes(dados) {
     dados[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
     dados[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
     dados[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+    dados[`dep${i + 1}_parentesco_outro`] = dep ? dep.parentesco_outro : null;
   }
 
   return dados;
@@ -72,11 +76,11 @@ const FILIADO_COLUMNS = `
   lotacao, situacao, senha_hash, twofa_secret, perfil_acesso,
   avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
   arquivado_em, arquivado_motivo, arquivado_por,
-  dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco,
-  dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco,
-  dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco,
-  dep4_nome, dep4_cpf, dep4_data_nascimento, dep4_parentesco,
-  dep5_nome, dep5_cpf, dep5_data_nascimento, dep5_parentesco
+  dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco, dep1_parentesco_outro,
+  dep2_nome, dep2_cpf, dep2_data_nascimento, dep2_parentesco, dep2_parentesco_outro,
+  dep3_nome, dep3_cpf, dep3_data_nascimento, dep3_parentesco, dep3_parentesco_outro,
+  dep4_nome, dep4_cpf, dep4_data_nascimento, dep4_parentesco, dep4_parentesco_outro,
+  dep5_nome, dep5_cpf, dep5_data_nascimento, dep5_parentesco, dep5_parentesco_outro
 `;
 
 const FILIADO_COLUMNS_WITH_ALIAS = FILIADO_COLUMNS.split(",")
@@ -214,7 +218,16 @@ async function atualizarDadosProprios(id, dados) {
     }
 
     if (dados[`dep${i}_parentesco`] !== undefined) {
-      addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
+      const parentescoNorm = normalizeParentesco(dados[`dep${i}_parentesco`]);
+      addCampo(`dep${i}_parentesco`, parentescoNorm);
+
+      if (requiresParentescoOutro(parentescoNorm)) {
+        addCampo(`dep${i}_parentesco_outro`, dados[`dep${i}_parentesco_outro`] || null);
+      } else {
+        addCampo(`dep${i}_parentesco_outro`, null);
+      }
+    } else if (dados[`dep${i}_parentesco_outro`] !== undefined) {
+      addCampo(`dep${i}_parentesco_outro`, dados[`dep${i}_parentesco_outro`]);
     }
   }
 
@@ -335,7 +348,16 @@ async function atualizarFiliadoPorId(id, dados) {
     }
 
     if (dados[`dep${i}_parentesco`] !== undefined) {
-      addCampo(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
+      const parentescoNorm = normalizeParentesco(dados[`dep${i}_parentesco`]);
+      addCampo(`dep${i}_parentesco`, parentescoNorm);
+
+      if (requiresParentescoOutro(parentescoNorm)) {
+        addCampo(`dep${i}_parentesco_outro`, dados[`dep${i}_parentesco_outro`] || null);
+      } else {
+        addCampo(`dep${i}_parentesco_outro`, null);
+      }
+    } else if (dados[`dep${i}_parentesco_outro`] !== undefined) {
+      addCampo(`dep${i}_parentesco_outro`, dados[`dep${i}_parentesco_outro`]);
     }
   }
 
@@ -416,11 +438,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
         f.avatar_url,
         f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
         responsavel.nome AS arquivado_por_nome,
-        f.dep1_nome, f.dep1_cpf, f.dep1_data_nascimento, f.dep1_parentesco,
-        f.dep2_nome, f.dep2_cpf, f.dep2_data_nascimento, f.dep2_parentesco,
-        f.dep3_nome, f.dep3_cpf, f.dep3_data_nascimento, f.dep3_parentesco,
-        f.dep4_nome, f.dep4_cpf, f.dep4_data_nascimento, f.dep4_parentesco,
-        f.dep5_nome, f.dep5_cpf, f.dep5_data_nascimento, f.dep5_parentesco
+        f.dep1_nome, f.dep1_cpf, f.dep1_data_nascimento, f.dep1_parentesco, f.dep1_parentesco_outro,
+        f.dep2_nome, f.dep2_cpf, f.dep2_data_nascimento, f.dep2_parentesco, f.dep2_parentesco_outro,
+        f.dep3_nome, f.dep3_cpf, f.dep3_data_nascimento, f.dep3_parentesco, f.dep3_parentesco_outro,
+        f.dep4_nome, f.dep4_cpf, f.dep4_data_nascimento, f.dep4_parentesco, f.dep4_parentesco_outro,
+        f.dep5_nome, f.dep5_cpf, f.dep5_data_nascimento, f.dep5_parentesco, f.dep5_parentesco_outro
       FROM filiados f
       LEFT JOIN filiados responsavel ON f.arquivado_por = responsavel.id
       ${whereSql}
@@ -552,7 +574,14 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       placeholders.push(`NULLIF($${p}, '')::date`);
       p++;
 
-      push(`dep${i}_parentesco`, normalizeParentesco(dados[`dep${i}_parentesco`]));
+      const parentescoNorm = normalizeParentesco(dados[`dep${i}_parentesco`]);
+      push(`dep${i}_parentesco`, parentescoNorm);
+
+      if (requiresParentescoOutro(parentescoNorm)) {
+        push(`dep${i}_parentesco_outro`, dados[`dep${i}_parentesco_outro`] || null);
+      } else {
+        push(`dep${i}_parentesco_outro`, null);
+      }
     }
 
     const { rows } = await pool.query(

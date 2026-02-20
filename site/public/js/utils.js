@@ -265,7 +265,7 @@
       const atualizarParentesco = () => {
         if (selectParentesco.value === 'OUTRO') {
           inputOutro.style.display = 'block';
-          inputHiddenFinal.value = inputOutro.value.trim();
+          inputHiddenFinal.value = 'OUTRO';
         } else {
           inputOutro.style.display = 'none';
           inputOutro.value = '';
@@ -273,14 +273,6 @@
         }
       };
       selectParentesco.addEventListener('change', atualizarParentesco);
-      inputOutro.addEventListener('input', atualizarParentesco);
-
-      // Listener para o campo manual atualizar o hidden
-      inputOutro.addEventListener('input', () => {
-        if (selectParentesco.value === 'OUTRO') {
-          inputHiddenFinal.value = inputOutro.value.trim();
-        }
-      });
       container.appendChild(clone);
     }
   }

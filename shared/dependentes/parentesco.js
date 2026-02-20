@@ -46,19 +46,28 @@ function isValidParentesco(value) {
   return PARENTESCO_OPTIONS.some(o => o.value === value);
 }
 
+/**
+ * Retorna true se o parentesco normalizado for 'OUTRO'.
+ */
+function requiresParentescoOutro(value) {
+  return normalizeParentesco(value) === 'OUTRO';
+}
+
 // Suporte para Node (CommonJS) e Browser (Global)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     PARENTESCO_OPTIONS,
     normalizeParentesco,
     labelFromParentesco,
-    isValidParentesco
+    isValidParentesco,
+    requiresParentescoOutro
   };
 } else {
   window.ParentescoUtils = {
     PARENTESCO_OPTIONS,
     normalizeParentesco,
     labelFromParentesco,
-    isValidParentesco
+    isValidParentesco,
+    requiresParentescoOutro
   };
 }

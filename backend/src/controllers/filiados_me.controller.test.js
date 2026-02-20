@@ -60,19 +60,22 @@ describe('Filiados Controller - atualizarMeusDados', () => {
     expect(service.atualizarDadosProprios).not.toHaveBeenCalled();
   });
 
-  test('deve bloquear dep1_parentesco_outro com 400', async () => {
+  test('deve permitir dep1_parentesco_outro se parentesco for OUTRO', async () => {
     req.body = {
+      dep1_nome: 'Dependente Teste',
+      dep1_cpf: '12345678901',
+      dep1_parentesco: 'OUTRO',
       dep1_parentesco_outro: 'Tio'
     };
+    service.atualizarDadosProprios.mockResolvedValue({ id: 10 });
 
     await controller.atualizarMeusDados(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-      success: false,
-      error: "FORBIDDEN_FIELD"
+    expect(res.status).not.toHaveBeenCalledWith(400);
+    expect(res.status).not.toHaveBeenCalledWith(422);
+    expect(service.atualizarDadosProprios).toHaveBeenCalledWith(10, expect.objectContaining({
+      dep1_parentesco_outro: 'Tio'
     }));
-    expect(res.json.mock.calls[0][0].message).toContain('dep1_parentesco_outro');
   });
 
   test('deve retornar 422 para campos inválidos com objeto fields', async () => {

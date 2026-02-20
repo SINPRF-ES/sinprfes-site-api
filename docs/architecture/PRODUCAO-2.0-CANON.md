@@ -143,10 +143,11 @@ graph TD
   "dep1_nome": "String",
   "dep1_cpf": "String (11 dígitos)",
   "dep1_data_nascimento": "String (ISO)",
-  "dep1_parentesco": "Enum"
+  "dep1_parentesco": "Enum",
+  "dep1_parentesco_outro": "String (Obrigatório se parentesco for OUTRO)"
 }
 ```
-*A compactação de dependentes é realizada pelo Backend; o Frontend deve enviar os slots `dep1` a `dep5` conforme preenchidos na UI.*
+*A compactação de dependentes é realizada pelo Backend; o Frontend deve enviar os slots `dep1` a `dep5` conforme preenchidos na UI. Se parentesco for diferente de OUTRO, o campo _outro é ignorado/limpo pelo Backend.*
 
 ## 6. Shared Formatters (Padrão Obrigatório)
 

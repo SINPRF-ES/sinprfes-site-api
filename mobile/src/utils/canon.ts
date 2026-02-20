@@ -62,7 +62,13 @@ export const ME_EDITABLE_FIELDS_FILIADO = [
 ];
 
 for (let i = 1; i <= 5; i++) {
-  ME_EDITABLE_FIELDS_FILIADO.push(`dep${i}_nome`, `dep${i}_cpf`, `dep${i}_data_nascimento`, `dep${i}_parentesco`);
+  ME_EDITABLE_FIELDS_FILIADO.push(
+    `dep${i}_nome`,
+    `dep${i}_cpf`,
+    `dep${i}_data_nascimento`,
+    `dep${i}_parentesco`,
+    `dep${i}_parentesco_outro`
+  );
 }
 
 export const ME_EDITABLE_FIELDS_GESTAO = [
