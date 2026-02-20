@@ -53,15 +53,15 @@ const CustomDrawerContent = (props) => {
               {usuario.nome}
             </Text>
 
-            {usuario.telefone && (
+            {usuario.telefone1 && (
               <Text style={styles.subInfo}>
-                📞 {usuario.telefone}
+                📞 {usuario.telefone1}
               </Text>
             )}
 
-            {usuario.dataNascimento && (
+            {usuario.data_nascimento && (
               <Text style={styles.subInfo}>
-                🎂 {formatarData(usuario.dataNascimento)}
+                🎂 {formatarData(usuario.data_nascimento)}
               </Text>
             )}
 
@@ -72,6 +72,8 @@ const CustomDrawerContent = (props) => {
             )}
           </View>
         </View>
+
+        <View style={styles.separator} />
 
       <View style={styles.listContainer}>
         <DrawerItemList {...props} />
@@ -138,9 +140,12 @@ const styles = StyleSheet.create({
   },
   drawerHeader: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   avatar: {
     width: 64,
