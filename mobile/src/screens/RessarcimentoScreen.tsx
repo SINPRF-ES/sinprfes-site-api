@@ -8,7 +8,6 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -22,6 +21,7 @@ import { criarRessarcimento } from '../services/ressarcimentoService';
 import { logger } from '../infra/logger';
 import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import SafeScreen from '../components/SafeScreen';
 import api from '../services/apiService';
 
 const parsePtNumber = (input: string): number => {
@@ -315,7 +315,7 @@ const RessarcimentoScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeScreen style={styles.container}>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
           <Text style={styles.headerSubtitle}>Preencha os dados abaixo e anexe os comprovantes.</Text>
@@ -520,7 +520,7 @@ const RessarcimentoScreen = () => {
           )}
         </TouchableOpacity>
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </SafeScreen>
   );
 };
 

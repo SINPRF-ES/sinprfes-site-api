@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../hooks/useAuth';
+import SafeScreen from '../components/SafeScreen';
 
 export default function SegurancaScreen() {
   const { biometriaHabilitada, ativarBiometriaNesteAparelho } = useAuth();
@@ -26,7 +27,7 @@ export default function SegurancaScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title}>Segurança</Text>
 
@@ -43,7 +44,7 @@ export default function SegurancaScreen() {
           Ative para usar sua digital ou reconhecimento facial para entrar no aplicativo de forma mais rápida e segura.
         </Text>
       </View>
-    </View>
+    </SafeScreen>
   );
 }
 

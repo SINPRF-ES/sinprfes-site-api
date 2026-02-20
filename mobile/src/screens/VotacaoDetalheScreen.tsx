@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 
+import SafeScreen from '../components/SafeScreen';
 import { useAuth } from '../hooks/useAuth';
 import { obterVotacao, votar } from '../services/votacaoService';
 import { getStableDeviceId } from '../utils/deviceId';
@@ -97,7 +98,7 @@ export default function VotacaoDetalheScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <Text style={styles.title}>{votacao.titulo}</Text>
       <Text style={styles.desc}>{votacao.descricao}</Text>
       <Text style={styles.meta}>Status: {votacao.status}</Text>
@@ -130,7 +131,7 @@ export default function VotacaoDetalheScreen() {
       <Text style={styles.note}>
         Observação: votar exige internet. A leitura desta tela pode ser cacheada numa próxima etapa.
       </Text>
-    </View>
+    </SafeScreen>
   );
 }
 

@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
+import MemberCard from '../components/MemberCard';
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
@@ -32,17 +33,18 @@ const CustomDrawerContent = (props) => {
   };
 
   return (
-    <DrawerContentScrollView {...props}>
+    <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
       <View style={styles.header}>
-        <Image
-          source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/logo.png')}
-          style={styles.avatar}
-          resizeMode="contain"
+        <MemberCard
+          member={usuario}
+          variant="compact"
+          style={styles.memberCard}
         />
-        <Text style={styles.nome}>{usuario?.nome || 'Usuário'}</Text>
-        <Text style={styles.status}>{usuario?.situacao || 'ATIVO'}</Text>
       </View>
-      <DrawerItemList {...props} />
+
+      <View style={styles.listContainer}>
+        <DrawerItemList {...props} />
+      </View>
 
       {ehGestao && (
         <>
@@ -96,26 +98,24 @@ const CustomDrawerContent = (props) => {
 };
 
 const styles = StyleSheet.create({
+  drawerContent: {
+    paddingTop: 0,
+  },
   header: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     backgroundColor: '#003366',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     marginBottom: 10,
-    backgroundColor: '#ccc',
   },
-  nome: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  memberCard: {
+    elevation: 0,
+    shadowOpacity: 0,
+    backgroundColor: 'rgba(255,255,255,0.95)',
   },
-  status: {
-    color: '#fff',
-    fontSize: 14,
+  listContainer: {
+    paddingTop: 4,
   },
   separator: {
     height: 1,
