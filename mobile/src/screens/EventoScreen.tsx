@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
+import SafeScreen from "../components/SafeScreen";
 import { useAuth } from "../hooks/useAuth";
 import { API_BASE_URL } from "../config/env";
 
@@ -321,8 +322,8 @@ export default function EventoScreen() {
   }
 
   return (
+    <SafeScreen style={styles.page}>
     <ScrollView
-      style={styles.page}
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
@@ -471,6 +472,7 @@ export default function EventoScreen() {
         </>
       )}
     </ScrollView>
+    </SafeScreen>
   );
 }
 

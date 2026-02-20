@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { PickerSafe } from '../../components/PickerSafe';
+import SafeScreen from '../../components/SafeScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -104,7 +105,7 @@ export default function AssembleiasScreen({ navigation }: any) {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <View style={styles.filterContainer}>
         <PickerSafe
           label="Filtrar:"
@@ -140,7 +141,7 @@ export default function AssembleiasScreen({ navigation }: any) {
         />
       )}
 
-    </View>
+    </SafeScreen>
   );
 }
 

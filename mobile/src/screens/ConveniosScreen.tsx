@@ -1,16 +1,17 @@
 // src/screens/ConveniosScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import SafeScreen from '../components/SafeScreen';
 
 export default function ConveniosScreen() {
   return (
-    <View style={styles.container}>
+    <SafeScreen style={styles.container}>
       <Text style={styles.title}>Convênios</Text>
       <Text style={styles.subtitle}>
         Esta seção está em desenvolvimento. Em breve, você poderá consultar
         a lista de convênios e parceiros aqui.
       </Text>
-    </View>
+    </SafeScreen>
   );
 }
 

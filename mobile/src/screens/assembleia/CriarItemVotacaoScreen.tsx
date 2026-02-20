@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { PickerSafe } from '../../components/PickerSafe';
+import SafeScreen from '../../components/SafeScreen';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { iniciarVotacao } from '../../services/assembleiaService';
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
@@ -41,7 +42,8 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
   }, [navigation, handleSalvar]);
 
   return (
-    <KeyboardAwareScrollView style={styles.container} enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
+    <SafeScreen style={styles.container}>
+    <KeyboardAwareScrollView enableOnAndroid extraScrollHeight={50} keyboardOpeningTime={0}>
       <Text style={styles.label}>Título do Item *</Text>
       <TextInput
         style={styles.input}
@@ -74,6 +76,7 @@ export default function CriarItemVotacaoScreen({ route, navigation }: any) {
       />
 
     </KeyboardAwareScrollView>
+    </SafeScreen>
   );
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { DrawerScreenProps } from '@react-navigation/drawer';
@@ -44,20 +44,25 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <SafeScreen style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.header, { paddingTop: 18 + insets.top }]}>
+        <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
+          <View style={styles.headerTop}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerBrand}>SINPRF/ES</Text>
+          </View>
+
           <View style={styles.headerText}>
-            <Text style={styles.welcomeTitle}>Olá,</Text>
             <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-              {primeiroNome}
-            </Text>
-            <Text style={styles.welcomeSubtitle} numberOfLines={1} ellipsizeMode="tail">
-              {String(usuario?.perfil_acesso || '').toUpperCase() || 'FILIADO'}
+              Página Inicial
             </Text>
           </View>
         </View>
 
         <View style={styles.memberCardContainer}>
-          <MemberCard member={usuario} variant="profile" />
+          <MemberCard member={usuario} variant="default" />
         </View>
 
         {ENABLE_JOGOS && (
@@ -118,34 +123,38 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#003366',
     paddingHorizontal: 20,
-    paddingBottom: 130,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingBottom: 110,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  headerLogo: {
+    width: 32,
+    height: 32,
+    tintColor: '#FFFFFF',
+  },
+  headerBrand: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
   },
   headerText: {
     justifyContent: 'center',
   },
-  welcomeTitle: {
-    fontSize: 15,
-    color: '#FFFFFF',
-    opacity: 0.85,
-    marginBottom: 0,
-  },
   userName: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: 2,
-  },
-  welcomeSubtitle: {
-    marginTop: 6,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
-    letterSpacing: 0.6,
   },
 
   memberCardContainer: {
-    marginTop: -88,
+    marginTop: -80,
     paddingHorizontal: 16,
   },
 

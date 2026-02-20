@@ -9,6 +9,7 @@ import { logDebug } from '../utils/filiadoUtils';
 import api from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import * as Sharing from 'expo-sharing';
+import SafeScreen from '../components/SafeScreen';
 import { useNavigation } from '@react-navigation/native';
 
 const PublicacoesScreen: React.FC = ({ route }: any) => {
@@ -157,7 +158,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
   };
 
   return (
-    <View style={styles.fullScreen}>
+    <SafeScreen style={styles.fullScreen}>
       {isDownloading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
@@ -185,7 +186,7 @@ const PublicacoesScreen: React.FC = ({ route }: any) => {
           ListEmptyComponent={<View style={styles.centered}><Text>Nenhuma publicação encontrada.</Text></View>}
         />
       )}
-    </View>
+    </SafeScreen>
   );
 };
 

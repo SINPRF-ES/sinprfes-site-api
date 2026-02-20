@@ -125,26 +125,32 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 14,
+    padding: 16,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: '#eee',
+
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     borderLeftWidth: 5,
   },
   headerContainer: {
     flexDirection: 'row',
-    alignItems: 'center', // Garante alinhamento vertical
+    alignItems: 'center',
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 14,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   infoContainer: {
     flex: 1, // Permite que o container de info ocupe o espaço restante
@@ -157,9 +163,10 @@ const styles = StyleSheet.create({
   },
   nome: {
     fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1, // Faz o nome ocupar o espaço e quebrar a linha
-    marginRight: 8, // Espaçamento entre o nome e o badge
+    fontWeight: '800',
+    color: '#003366',
+    flex: 1,
+    marginRight: 8,
   },
   lotacao: {
     fontSize: 14,
@@ -210,14 +217,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   situacao: {
-    paddingVertical: 3,
+    paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 12,
+    borderRadius: 99,
     marginLeft: 8,
   },
   situacaoText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#fff',
     textTransform: 'uppercase',
   },

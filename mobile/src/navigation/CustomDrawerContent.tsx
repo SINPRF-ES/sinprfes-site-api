@@ -6,6 +6,8 @@ import { useAuth } from '../hooks/useAuth';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
+import MemberCard from '../components/MemberCard';
+import SafeScreen from '../components/SafeScreen';
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
@@ -32,17 +34,19 @@ const CustomDrawerContent = (props) => {
   };
 
   return (
-    <DrawerContentScrollView {...props}>
-      <View style={styles.header}>
-        <Image
-          source={usuario?.avatar_url ? { uri: usuario.avatar_url } : require('../../assets/logo.png')}
-          style={styles.avatar}
-          resizeMode="contain"
-        />
-        <Text style={styles.nome}>{usuario?.nome || 'Usuário'}</Text>
-        <Text style={styles.status}>{usuario?.situacao || 'ATIVO'}</Text>
+    <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
+      <SafeScreen includeTop style={styles.safeContainer}>
+        <View style={styles.header}>
+          <MemberCard
+            member={usuario}
+            variant="compact"
+            style={styles.memberCard}
+          />
+        </View>
+
+      <View style={styles.listContainer}>
+        <DrawerItemList {...props} />
       </View>
-      <DrawerItemList {...props} />
 
       {ehGestao && (
         <>
@@ -86,36 +90,38 @@ const CustomDrawerContent = (props) => {
         </TouchableOpacity>
       </View>
 
-      <DrawerItem
-        label={(props) => <DrawerItemLabel emoji={EMOJI.SAIR} label="Sair da conta" {...props} />}
-        onPress={handleLogoutPress}
-        inactiveTintColor="#666"
-      />
+        <DrawerItem
+          label={(props) => <DrawerItemLabel emoji={EMOJI.SAIR} label="Sair da conta" {...props} />}
+          onPress={handleLogoutPress}
+          inactiveTintColor="#666"
+        />
+      </SafeScreen>
     </DrawerContentScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  drawerContent: {
+    paddingTop: 0,
+  },
+  safeContainer: {
+    paddingBottom: 0, // SafeScreen has bottom by default, but ScrollView already handles content
+  },
   header: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     backgroundColor: '#003366',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     marginBottom: 10,
-    backgroundColor: '#ccc',
   },
-  nome: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  memberCard: {
+    elevation: 0,
+    shadowOpacity: 0,
+    backgroundColor: 'rgba(255,255,255,0.95)',
   },
-  status: {
-    color: '#fff',
-    fontSize: 14,
+  listContainer: {
+    paddingTop: 4,
   },
   separator: {
     height: 1,
