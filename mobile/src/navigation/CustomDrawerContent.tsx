@@ -10,8 +10,21 @@ import DrawerItemLabel from '../components/DrawerItemLabel';
 
 function formatarData(data: string) {
   if (!data) return '';
-  const d = new Date(data);
-  return d.toLocaleDateString('pt-BR');
+  // Formato esperado: YYYY-MM-DD...
+  const parts = data.split('T')[0].split('-');
+  if (parts.length !== 3) return data;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function maskTelefone(tel: string) {
+  if (!tel) return '';
+  const cleaned = tel.replace(/\D/g, '');
+  if (cleaned.length === 11) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  } else if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+  }
+  return tel;
 }
 
 const CustomDrawerContent = (props) => {
@@ -53,9 +66,21 @@ const CustomDrawerContent = (props) => {
               {usuario.nome}
             </Text>
 
+            {usuario.perfil_acesso && (
+              <Text style={[styles.subInfo, styles.perfil]}>
+                {String(usuario.perfil_acesso).toUpperCase()}
+              </Text>
+            )}
+
+            {(usuario.situacao_funcional || usuario.situacao) && (
+              <Text style={styles.subInfo}>
+                ⚖️ {String(usuario.situacao_funcional || usuario.situacao).toUpperCase()}
+              </Text>
+            )}
+
             {usuario.telefone1 && (
               <Text style={styles.subInfo}>
-                📞 {usuario.telefone1}
+                📞 {maskTelefone(usuario.telefone1)}
               </Text>
             )}
 
@@ -143,9 +168,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#EAF3FF',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#D6E6FF',
   },
   avatar: {
     width: 64,
@@ -165,6 +190,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  perfil: {
+    fontWeight: '700',
+    color: '#003366',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   listContainer: {
     paddingTop: 4,
