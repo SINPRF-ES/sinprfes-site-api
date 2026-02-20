@@ -2,15 +2,21 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
-import MemberCard from '../components/MemberCard';
-import SafeScreen from '../components/SafeScreen';
+
+function formatarData(data: string) {
+  if (!data) return '';
+  const d = new Date(data);
+  return d.toLocaleDateString('pt-BR');
+}
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
+  const insets = useSafeAreaInsets();
   const ehGestao = checkIsGestao(usuario?.perfil_acesso);
   const ehDiretoria = checkIsDiretoria(usuario?.perfil_acesso);
 
@@ -35,13 +41,36 @@ const CustomDrawerContent = (props) => {
 
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
-      <SafeScreen includeTop style={styles.safeContainer}>
-        <View style={styles.header}>
-          <MemberCard
-            member={usuario}
-            variant="compact"
-            style={styles.memberCard}
+      <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.drawerHeader}>
+          <Image
+            source={usuario.avatar_url ? { uri: usuario.avatar_url } : (usuario.fotoUrl ? { uri: usuario.fotoUrl } : require('../../assets/logo.png'))}
+            style={styles.avatar}
           />
+
+          <View style={styles.userInfo}>
+            <Text style={styles.nome} numberOfLines={2}>
+              {usuario.nome}
+            </Text>
+
+            {usuario.telefone && (
+              <Text style={styles.subInfo}>
+                📞 {usuario.telefone}
+              </Text>
+            )}
+
+            {usuario.dataNascimento && (
+              <Text style={styles.subInfo}>
+                🎂 {formatarData(usuario.dataNascimento)}
+              </Text>
+            )}
+
+            {usuario.lotacao && (
+              <Text style={styles.subInfo}>
+                📍 {usuario.lotacao}
+              </Text>
+            )}
+          </View>
         </View>
 
       <View style={styles.listContainer}>
@@ -95,30 +124,42 @@ const CustomDrawerContent = (props) => {
           onPress={handleLogoutPress}
           inactiveTintColor="#666"
         />
-      </SafeScreen>
+      </View>
     </DrawerContentScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   drawerContent: {
     paddingTop: 0,
   },
-  safeContainer: {
-    paddingBottom: 0, // SafeScreen has bottom by default, but ScrollView already handles content
-  },
-  header: {
+  drawerHeader: {
     paddingHorizontal: 16,
-    paddingVertical: 20,
-    backgroundColor: '#003366',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 10,
+    paddingBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  memberCard: {
-    elevation: 0,
-    shadowOpacity: 0,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginRight: 12,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  nome: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  subInfo: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
   listContainer: {
     paddingTop: 4,

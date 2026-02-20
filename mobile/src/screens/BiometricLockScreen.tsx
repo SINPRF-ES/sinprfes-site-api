@@ -50,7 +50,6 @@ export default function BiometricLockScreen() {
         <Text style={styles.brandText}>SINPRF/ES</Text>
       </View>
 
-      <Text style={styles.title}>Sessão Bloqueada</Text>
       <Text style={styles.subtitle}>
         Para sua segurança, confirme sua identidade para continuar.
       </Text>
@@ -93,9 +92,9 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logoWrapper: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
     backgroundColor: 'rgba(255, 255, 255, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -110,21 +109,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   logo: {
-    width: 112,
-    height: 112,
+    width: 200,
+    height: 200,
   },
   brandText: {
     fontSize: 20,
     fontWeight: '800',
     color: '#003366',
     letterSpacing: 2,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#003366',
-    textAlign: 'center',
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
