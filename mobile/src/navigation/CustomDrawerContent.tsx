@@ -2,15 +2,34 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
-import MemberCard from '../components/MemberCard';
-import SafeScreen from '../components/SafeScreen';
+
+function formatarData(data: string) {
+  if (!data) return '';
+  // Formato esperado: YYYY-MM-DD...
+  const parts = data.split('T')[0].split('-');
+  if (parts.length !== 3) return data;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function maskTelefone(tel: string) {
+  if (!tel) return '';
+  const cleaned = tel.replace(/\D/g, '');
+  if (cleaned.length === 11) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  } else if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+  }
+  return tel;
+}
 
 const CustomDrawerContent = (props) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
+  const insets = useSafeAreaInsets();
   const ehGestao = checkIsGestao(usuario?.perfil_acesso);
   const ehDiretoria = checkIsDiretoria(usuario?.perfil_acesso);
 
@@ -35,14 +54,51 @@ const CustomDrawerContent = (props) => {
 
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
-      <SafeScreen includeTop style={styles.safeContainer}>
-        <View style={styles.header}>
-          <MemberCard
-            member={usuario}
-            variant="compact"
-            style={styles.memberCard}
+      <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.drawerHeader}>
+          <Image
+            source={usuario.avatar_url ? { uri: usuario.avatar_url } : (usuario.fotoUrl ? { uri: usuario.fotoUrl } : require('../../assets/logo.png'))}
+            style={styles.avatar}
           />
+
+          <View style={styles.userInfo}>
+            <Text style={styles.nome} numberOfLines={2}>
+              {usuario.nome}
+            </Text>
+
+            {usuario.perfil_acesso && (
+              <Text style={[styles.subInfo, styles.perfil]}>
+                {String(usuario.perfil_acesso).toUpperCase()}
+              </Text>
+            )}
+
+            {(usuario.situacao_funcional || usuario.situacao) && (
+              <Text style={styles.subInfo}>
+                ⚖️ {String(usuario.situacao_funcional || usuario.situacao).toUpperCase()}
+              </Text>
+            )}
+
+            {usuario.telefone1 && (
+              <Text style={styles.subInfo}>
+                📞 {maskTelefone(usuario.telefone1)}
+              </Text>
+            )}
+
+            {usuario.data_nascimento && (
+              <Text style={styles.subInfo}>
+                🎂 {formatarData(usuario.data_nascimento)}
+              </Text>
+            )}
+
+            {usuario.lotacao && (
+              <Text style={styles.subInfo}>
+                📍 {usuario.lotacao}
+              </Text>
+            )}
+          </View>
         </View>
+
+        <View style={styles.separator} />
 
       <View style={styles.listContainer}>
         <DrawerItemList {...props} />
@@ -95,30 +151,51 @@ const CustomDrawerContent = (props) => {
           onPress={handleLogoutPress}
           inactiveTintColor="#666"
         />
-      </SafeScreen>
+      </View>
     </DrawerContentScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   drawerContent: {
     paddingTop: 0,
   },
-  safeContainer: {
-    paddingBottom: 0, // SafeScreen has bottom by default, but ScrollView already handles content
-  },
-  header: {
+  drawerHeader: {
     paddingHorizontal: 16,
-    paddingVertical: 20,
-    backgroundColor: '#003366',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 10,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EAF3FF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#D6E6FF',
   },
-  memberCard: {
-    elevation: 0,
-    shadowOpacity: 0,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginRight: 12,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  nome: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  subInfo: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  perfil: {
+    fontWeight: '700',
+    color: '#003366',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   listContainer: {
     paddingTop: 4,

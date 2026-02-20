@@ -50,7 +50,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, variant = 'default', st
         </View>
 
         <View style={styles.info}>
-          <Text style={[styles.nome, isCompact && styles.nomeCompact]} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.nome, isCompact && styles.nomeCompact]} numberOfLines={2} ellipsizeMode="tail">
             {nome}
           </Text>
 
@@ -153,6 +153,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#003366',
     marginBottom: 4,
+    flexShrink: 1,
   },
   nomeCompact: {
     fontSize: 15,
@@ -169,6 +170,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '700',
     letterSpacing: 0.6,
+    flexShrink: 1,
   },
   perfilCompact: {
     fontSize: 10,
