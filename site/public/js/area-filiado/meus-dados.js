@@ -21,12 +21,13 @@
     function compactarDependentes(filiado) {
         const dependentesValidos = [];
         for (let i = 1; i <= 5; i++) {
-            if (filiado[`dep${i}_nome`]) {
+            if (filiado[`dep${i}_nome`] || filiado[`dep${i}_cpf`] || filiado[`dep${i}_data_nascimento`] || filiado[`dep${i}_parentesco` ] || filiado[`dep${i}_parentesco_outro` ]) {
                 dependentesValidos.push({
                     nome: filiado[`dep${i}_nome`],
                     cpf: filiado[`dep${i}_cpf`],
                     data_nascimento: filiado[`dep${i}_data_nascimento`],
-                    parentesco: filiado[`dep${i}_parentesco`]
+                    parentesco: filiado[`dep${i}_parentesco`],
+                    parentesco_outro: filiado[`dep${i}_parentesco_outro`]
                 });
             }
         }
@@ -37,6 +38,7 @@
             filiado[`dep${i}_cpf`] = null;
             filiado[`dep${i}_data_nascimento`] = null;
             filiado[`dep${i}_parentesco`] = null;
+            filiado[`dep${i}_parentesco_outro`] = null;
         }
 
         // Preenche sequencialmente
@@ -46,6 +48,7 @@
             filiado[`dep${i}_cpf`] = dep.cpf;
             filiado[`dep${i}_data_nascimento`] = dep.data_nascimento;
             filiado[`dep${i}_parentesco`] = dep.parentesco;
+            filiado[`dep${i}_parentesco_outro`] = dep.parentesco_outro;
         });
     }
 
@@ -537,22 +540,21 @@
 
             // Lógica para preencher o campo de parentesco (select + outro)
             const parentescoValor = dados[`dep${i}_parentesco`] || '';
+            const parentescoOutroValor = dados[`dep${i}_parentesco_outro`] || '';
             const selectParentesco = document.getElementById(`me-dep${i}_parentesco_select`);
             const inputOutro = document.getElementById(`me-dep${i}_parentesco_outro`);
             const inputHidden = document.getElementById(`me-dep${i}_parentesco`);
 
             if (selectParentesco && inputOutro && inputHidden) {
                 inputHidden.value = parentescoValor;
-                const opcoesPadrao = Array.from(selectParentesco.options).map(opt => opt.value);
-
-                if (opcoesPadrao.includes(parentescoValor)) {
+                if (parentescoValor === 'OUTRO') {
+                    selectParentesco.value = 'OUTRO';
+                    inputOutro.style.display = 'block';
+                    inputOutro.value = parentescoOutroValor;
+                } else if (parentescoValor) {
                     selectParentesco.value = parentescoValor;
                     inputOutro.style.display = 'none';
                     inputOutro.value = '';
-                } else if (parentescoValor) {
-                    selectParentesco.value = 'OUTRO';
-                    inputOutro.style.display = 'block';
-                    inputOutro.value = parentescoValor;
                 } else {
                     selectParentesco.value = '';
                     inputOutro.style.display = 'none';
@@ -696,17 +698,14 @@
       // Derivação correta: select + outro
       const selPar = val(`me-dep${i}_parentesco_select`);
       const outPar = val(`me-dep${i}_parentesco_outro`);
-      let par = nul(selPar);
-      if (selPar === 'OUTRO') {
-        par = nul(outPar);
-      }
 
-      if (nome || cpf || dn || par) {
+      if (nome || cpf || dn || selPar || outPar) {
         dependentesCompactados.push({
           nome,
           cpf,
           data_nascimento: dn ? `${dn}T00:00:00.000Z` : null,
-          parentesco: par
+          parentesco: nul(selPar),
+          parentesco_outro: (selPar === 'OUTRO') ? nul(outPar) : null
         });
       }
     }
@@ -718,9 +717,7 @@
       payload[`dep${i}_cpf`] = dep ? dep.cpf : null;
       payload[`dep${i}_data_nascimento`] = dep ? dep.data_nascimento : null;
       payload[`dep${i}_parentesco`] = dep ? dep.parentesco : null;
-
-      // Garantir que parentesco_outro NUNCA seja enviado (causa 400 no backend)
-      delete payload[`dep${i}_parentesco_outro`];
+      payload[`dep${i}_parentesco_outro`] = dep ? dep.parentesco_outro : null;
     }
 
     // 🔎 DEBUG TEMPORÁRIO

@@ -15,7 +15,7 @@ const PARENTESCO_OPTIONS = [
  * Normaliza um input (value ou label) para um value canônico.
  */
 function normalizeParentesco(input) {
-  if (!input) return 'OUTRO';
+  if (!input) return null;
 
   const normalizedInput = input.trim().toUpperCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove acentos
@@ -46,19 +46,28 @@ function isValidParentesco(value) {
   return PARENTESCO_OPTIONS.some(o => o.value === value);
 }
 
+/**
+ * Retorna true se o parentesco normalizado for 'OUTRO'.
+ */
+function requiresParentescoOutro(value) {
+  return normalizeParentesco(value) === 'OUTRO';
+}
+
 // Suporte para Node (CommonJS) e Browser (Global)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     PARENTESCO_OPTIONS,
     normalizeParentesco,
     labelFromParentesco,
-    isValidParentesco
+    isValidParentesco,
+    requiresParentescoOutro
   };
 } else {
   window.ParentescoUtils = {
     PARENTESCO_OPTIONS,
     normalizeParentesco,
     labelFromParentesco,
-    isValidParentesco
+    isValidParentesco,
+    requiresParentescoOutro
   };
 }

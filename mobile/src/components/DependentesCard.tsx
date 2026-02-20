@@ -1,5 +1,5 @@
 // src/components/DependentesCard.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { PickerSafe } from './PickerSafe';
 import { Filiado } from '../types/filiado';
@@ -33,21 +33,18 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
     ...PARENTESCO_OPTIONS.map(opt => ({ label: opt.label, value: opt.value }))
   ];
 
-  const rawValue = filiado?.[`dep${index}_parentesco`] || '';
-  const currentParentescoValue = normalizeParentesco(rawValue);
-
-  // No site, se for uma opção padrão, o select mostra ela. Se não for, e tiver valor, mostra "OUTRO".
-  const isStandardOption = PARENTESCO_OPTIONS.some(opt => opt.value === rawValue);
-
-  const [parentescoMode, setParentescoMode] = useState(
-    rawValue === '' ? '' : (isStandardOption ? rawValue : 'OUTRO')
-  );
+  const parentescoValue = filiado?.[`dep${index}_parentesco`] || '';
+  const parentescoOutroValue = filiado?.[`dep${index}_parentesco_outro`] || '';
 
   const handleParentescoChange = (mode) => {
-    setParentescoMode(mode);
-    // Se mudar para OUTRO, inicialmente deixa o valor vazio no hidden para o usuário digitar
-    const newValue = mode === 'OUTRO' ? '' : mode;
-    handleDependentChange('parentesco', newValue);
+    setFiliado(f => {
+      if (!f) return null;
+      return {
+        ...f,
+        [`dep${index}_parentesco`]: mode,
+        [`dep${index}_parentesco_outro`]: mode === 'OUTRO' ? f[`dep${index}_parentesco_outro`] : null
+      };
+    });
   };
 
   return (
@@ -98,21 +95,21 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
 
       <PickerSafe
         label="Parentesco"
-        selectedValue={parentescoMode}
+        selectedValue={parentescoValue}
         onValueChange={handleParentescoChange}
         enabled={isEditing}
         items={parentescoOptions}
         pickerBoxStyle={!isEditing ? { backgroundColor: '#f0f0f0' } : undefined}
       />
 
-      {parentescoMode === 'OUTRO' && (
+      {parentescoValue === 'OUTRO' && (
         <>
           <Text style={styles.label}>Informe o parentesco</Text>
           <TextInput
             style={isEditing ? styles.input : styles.inputDisabled}
             placeholder="Informe o parentesco"
-            value={currentParentescoValue}
-            onChangeText={(text) => handleDependentChange('parentesco', text)}
+            value={parentescoOutroValue}
+            onChangeText={(text) => handleDependentChange('parentesco_outro', text)}
             editable={isEditing}
             accessibilityLabel={`Outro parentesco do Dependente ${index}`}
           />

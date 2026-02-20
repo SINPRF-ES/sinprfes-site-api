@@ -33,26 +33,31 @@ export interface Filiado {
   dep1_cpf?: string | null;
   dep1_data_nascimento?: string | null;
   dep1_parentesco?: string | null;
+  dep1_parentesco_outro?: string | null;
 
   dep2_nome?: string | null;
   dep2_cpf?: string | null;
   dep2_data_nascimento?: string | null;
   dep2_parentesco?: string | null;
+  dep2_parentesco_outro?: string | null;
 
   dep3_nome?: string | null;
   dep3_cpf?: string | null;
   dep3_data_nascimento?: string | null;
   dep3_parentesco?: string | null;
+  dep3_parentesco_outro?: string | null;
 
   dep4_nome?: string | null;
   dep4_cpf?: string | null;
   dep4_data_nascimento?: string | null;
   dep4_parentesco?: string | null;
+  dep4_parentesco_outro?: string | null;
 
   dep5_nome?: string | null;
   dep5_cpf?: string | null;
   dep5_data_nascimento?: string | null;
   dep5_parentesco?: string | null;
+  dep5_parentesco_outro?: string | null;
 
   // Campos de controle
   data_nascimento?: string | null;

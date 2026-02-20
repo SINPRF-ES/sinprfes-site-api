@@ -538,22 +538,19 @@
                 }
 
                 const pVal = filiado[`dep${i}_parentesco`] || "";
+                const pOutroVal = filiado[`dep${i}_parentesco_outro`] || "";
                 if (select && hidden) {
                     hidden.value = pVal;
-                    const options = Array.from(select.options).map(o => o.value);
-                    // Se o valor estiver nas opções e NÃO for OUTRO, seleciona e esconde campo manual
-                    if (pVal && pVal !== "OUTRO" && options.includes(pVal)) {
-                        select.value = pVal;
-                        if (outro) { outro.style.display = "none"; outro.value = ""; }
-                    } else if (pVal) {
-                        // Se for OUTRO ou valor customizado
+                    if (pVal === "OUTRO") {
                         select.value = "OUTRO";
                         if (outro) {
-                            outro.value = (pVal === "OUTRO") ? "" : pVal;
+                            outro.value = pOutroVal;
                             outro.style.display = "block";
                         }
+                    } else if (pVal) {
+                        select.value = pVal;
+                        if (outro) { outro.style.display = "none"; outro.value = ""; }
                     } else {
-                        // Vazio
                         select.value = "";
                         if (outro) { outro.style.display = "none"; outro.value = ""; }
                     }
@@ -599,6 +596,12 @@
                         if (hidden) hidden.value = "";
                         const outro = document.getElementById(`mod-dep${idx}_parentesco_outro`);
                         if (outro) { outro.value = ""; outro.style.display = "none"; }
+                        // Also clear the actual data in cache to ensure it's not sent
+                        filiado[`dep${idx}_nome`] = "";
+                        filiado[`dep${idx}_cpf`] = "";
+                        filiado[`dep${idx}_data_nascimento`] = "";
+                        filiado[`dep${idx}_parentesco`] = "";
+                        filiado[`dep${idx}_parentesco_outro`] = "";
                     });
                     painelExcluir.style.display = "none";
                     // Trigger submit to save and let backend compact
@@ -652,7 +655,7 @@
             const fd = new FormData(form);
             const rawPayload = {};
             fd.forEach((v, k) => {
-                if (!k.includes("_select") && !k.includes("_outro")) {
+                if (!k.includes("_select")) {
                     rawPayload[k] = v;
                 }
             });
@@ -670,6 +673,8 @@
 
                 // 2. Remover vazios, null, undefined ou placeholders
                 if (val === "" || val === null || val === undefined || val === "Selecione...") {
+                    // ✅ PATCH: se for parentesco_outro, permitimos enviar null se parentesco não for OUTRO
+                    // Porém o backend já limpa. Aqui apenas evitamos enviar se estiver vazio e não for OUTRO.
                     return;
                 }
 
@@ -900,7 +905,7 @@
             e.preventDefault();
             const fd = new FormData(form);
             const payload = {};
-            fd.forEach((v, k) => { if (!k.includes("_select") && !k.includes("_outro")) payload[k] = v; });
+            fd.forEach((v, k) => { if (!k.includes("_select")) payload[k] = v; });
 
             // Normalização de Nomes (Canônico)
             if (payload.nome && global.Canon?.normalizeNome) {

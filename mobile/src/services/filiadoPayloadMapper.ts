@@ -50,13 +50,17 @@ export const buildUpdateFiliadoPayload = (
     const depKeyCpf = `dep${i}_cpf` as keyof Filiado;
     const depKeyNascimento = `dep${i}_data_nascimento` as keyof Filiado;
     const depKeyParentesco = `dep${i}_parentesco` as keyof Filiado;
+    const depKeyParentescoOutro = `dep${i}_parentesco_outro` as keyof Filiado;
 
-    if (formState[depKeyNome]) {
-      payload[depKeyNome] = normalizeNome(formState[depKeyNome] as string);
-      payload[depKeyParentesco] = formState[depKeyParentesco];
-      payload[depKeyNascimento] = toIsoDateYYYYMMDD(formState[depKeyNascimento] as string) || formState[depKeyNascimento];
+    if (formState[depKeyNome] || formState[depKeyCpf] || formState[depKeyNascimento] || formState[depKeyParentesco] || formState[depKeyParentescoOutro]) {
+      payload[depKeyNome] = normalizeNome(formState[depKeyNome] as string) || null;
+      payload[depKeyParentesco] = formState[depKeyParentesco] || null;
+      payload[depKeyParentescoOutro] = (formState[depKeyParentesco] === 'OUTRO') ? (formState[depKeyParentescoOutro] || null) : null;
+      payload[depKeyNascimento] = toIsoDateYYYYMMDD(formState[depKeyNascimento] as string) || formState[depKeyNascimento] || null;
       if (formState[depKeyCpf]) {
         payload[depKeyCpf] = onlyDigits(formState[depKeyCpf] as string);
+      } else {
+        payload[depKeyCpf] = null;
       }
     }
   }

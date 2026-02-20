@@ -32,6 +32,8 @@ const {
   ME_EDITABLE_FIELDS_GESTAO
 } = require('../shared/canon');
 
+const { normalizeParentesco, requiresParentescoOutro } = require('../shared/dependentes/parentesco');
+
 const {
   normalizeTelefone,
   normalizeCep,
@@ -132,8 +134,9 @@ function validarESanitizarDependentes(body) {
     const cpf = (body[`dep${i}_cpf`] || "").replace(/\D/g, "");
     const dataNascimento = parseDateToISO(body[`dep${i}_data_nascimento`]);
     const parentesco = (body[`dep${i}_parentesco`] || "").trim();
+    const parentescoOutro = (body[`dep${i}_parentesco_outro`] || "").trim();
 
-    const temAlgumDado = nome || cpf || dataNascimento || parentesco;
+    const temAlgumDado = nome || cpf || dataNascimento || parentesco || parentescoOutro;
 
     if (temAlgumDado) {
       const numeroDependenteAtual = dependentesValidos.length + 1;
@@ -151,11 +154,16 @@ function validarESanitizarDependentes(body) {
         erros.push(`Dependente ${numeroDependenteAtual}: Data de nascimento inválida (use AAAA-MM-DD).`);
       }
 
+      if (requiresParentescoOutro(parentesco) && !parentescoOutro) {
+        erros.push(`Dependente ${numeroDependenteAtual}: O campo "Outro parentesco" é obrigatório quando o parentesco é "OUTRO".`);
+      }
+
       dependentesValidos.push({
         nome: nome || null,
         cpf: cpf || null,
         data_nascimento: dataNascimento || null,
         parentesco: parentesco || null,
+        parentesco_outro: parentescoOutro || null
       });
     }
   }
@@ -367,6 +375,7 @@ exports.atualizarMeusDados = async (req, res) => {
         payload[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
         payload[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
         payload[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+        payload[`dep${i + 1}_parentesco_outro`] = dep ? dep.parentesco_outro : null;
       }
     }
 
@@ -429,6 +438,7 @@ exports.excluirDependentes = async (req, res) => {
           cpf: filiado[`dep${i}_cpf`],
           data_nascimento: filiado[`dep${i}_data_nascimento`],
           parentesco: filiado[`dep${i}_parentesco`],
+          parentesco_outro: filiado[`dep${i}_parentesco_outro`],
         });
       }
     }
@@ -442,6 +452,7 @@ exports.excluirDependentes = async (req, res) => {
       dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
       dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
       dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+      dadosDependentes[`dep${i + 1}_parentesco_outro`] = dep ? dep.parentesco_outro : null;
     }
 
     const atualizado = await atualizarFiliadoPorId(idAlvo, dadosDependentes);
@@ -525,6 +536,7 @@ exports.atualizarFiliado = async (req, res) => {
       dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
       dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
       dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+      dadosDependentes[`dep${i + 1}_parentesco_outro`] = dep ? dep.parentesco_outro : null;
     }
 
     const payload = {
@@ -644,6 +656,7 @@ exports.criarFiliado = async (req, res) => {
       dadosDependentes[`dep${i + 1}_cpf`] = dep ? dep.cpf : null;
       dadosDependentes[`dep${i + 1}_data_nascimento`] = dep ? dep.data_nascimento : null;
       dadosDependentes[`dep${i + 1}_parentesco`] = dep ? dep.parentesco : null;
+      dadosDependentes[`dep${i + 1}_parentesco_outro`] = dep ? dep.parentesco_outro : null;
     }
 
     const dadosNovo = {
