@@ -248,6 +248,26 @@
     });
   }
 
+  /** Palette: Inicializa o toggle de "Mostrar Senha" para campos password. */
+  function initPasswordToggles() {
+    document.querySelectorAll('input[type="password"]:not([data-has-toggle])').forEach(el => {
+      const wrap = document.createElement('div');
+      wrap.className = 'password-input-wrapper';
+      el.parentNode.insertBefore(wrap, el);
+      wrap.appendChild(el);
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'password-toggle-btn'; btn.innerHTML = '👁️';
+      btn.onclick = () => {
+        const isPwd = el.type === 'password';
+        el.type = isPwd ? 'text' : 'password';
+        btn.innerHTML = isPwd ? '🙈' : '👁️';
+        btn.ariaLabel = isPwd ? 'Ocultar senha' : 'Mostrar senha';
+      };
+      wrap.appendChild(btn);
+      el.dataset.hasToggle = 'true';
+    });
+  }
+
   function gerarCamposDependentes(container, prefixoId = '') {
     const template = document.getElementById('template-dependentes');
     if (!template || !container) return;
@@ -313,7 +333,8 @@
     lockScroll,
     unlockScroll,
     fecharModal,
-    resolveApiBase
+    resolveApiBase,
+    initPasswordToggles
   };
 
   function fecharModal(id) {

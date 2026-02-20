@@ -21,3 +21,7 @@
 ## 2026-02-17 - [Traceable Error Responses]
 **Learning:** Including a `requestId` in API error responses empowers users to provide specific references when seeking support. This drastically reduces the time needed for developers to locate relevant logs in cloud environments (Railway/Render).
 **Action:** Standardized all backend controllers to include `requestId` in both success and error JSON payloads.
+
+## 2025-05-15 - [Password Visibility Toggle]
+**Learning:** Adding a password visibility toggle as a global utility (`initPasswordToggles`) is an efficient way to enhance legacy forms. Using a wrapper element with relative positioning ensures consistent button placement across different layouts, but care must be taken to keep the implementation under 50 lines to comply with agent constraints. Emojis (👁️/🙈) serve as effective, zero-dependency icons.
+**Action:** Use the `initPasswordToggles` pattern for future password fields and ensure it's called in the main entry point of the application.
