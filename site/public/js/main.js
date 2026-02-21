@@ -83,6 +83,11 @@ document.addEventListener("DOMContentLoaded", () => {
       </footer>
     `;
   }
+
+  // Palette: Inicializa toggles de senha se Utils estiver disponível
+  if (window.Utils && window.Utils.initPasswordToggles) {
+    window.Utils.initPasswordToggles();
+  }
 });
 
 // Registro do Service Worker para PWA
