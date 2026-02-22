@@ -68,12 +68,22 @@ function normalizeCpf(value) {
 }
 
 /**
+ * Normalizes a string to only digits, returning null if the result is empty.
+ * @param {string | null | undefined} value The input string.
+ * @returns {string | null} Only digits or null.
+ */
+function onlyDigitsOrNull(value) {
+  const digits = onlyDigits(value);
+  return digits === '' ? null : digits;
+}
+
+/**
  * Normalizes a telephone number string to only digits.
  * @param {string} value The input string.
  * @returns {string} The phone number with only digits.
  */
 function normalizeTelefone(value) {
-  return onlyDigits(value);
+  return onlyDigitsOrNull(value);
 }
 
 /**
@@ -111,6 +121,7 @@ function parseDateToISO(value) {
 
 module.exports = {
   onlyDigits,
+  onlyDigitsOrNull,
   formatCpf,
   formatTelefone,
   formatCep,

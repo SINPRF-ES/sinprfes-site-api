@@ -494,7 +494,7 @@ async function criarFiliadoInicial(dados, perfilCriador) {
       cidade = null,
       uf = null,
       cep = null,
-      lotacao = "SEDE",
+      lotacao = null,
       situacao = "ATIVO",
     } = dados;
 
