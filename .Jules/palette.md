@@ -25,3 +25,7 @@
 ## 2025-05-15 - [Password Visibility Toggle]
 **Learning:** Adding a password visibility toggle as a global utility (`initPasswordToggles`) is an efficient way to enhance legacy forms. Using a wrapper element with relative positioning ensures consistent button placement across different layouts, but care must be taken to keep the implementation under 50 lines to comply with agent constraints. Emojis (👁️/🙈) serve as effective, zero-dependency icons.
 **Action:** Use the `initPasswordToggles` pattern for future password fields and ensure it's called in the main entry point of the application.
+
+## 2025-05-20 - [Modern React Login UX]
+**Learning:** Modernizing legacy React login forms requires a multi-faceted approach: loading states for feedback, `inputMode="numeric"` for CPF, and `autoComplete` for password managers. Using `aria-label` is critical when visual labels are omitted in favor of placeholders to maintain accessibility.
+**Action:** Implement a holistic "Modern Login" pattern in React apps: `loading` state + `aria-label` + `autoComplete` + `inputMode` + `passwordToggle`.
