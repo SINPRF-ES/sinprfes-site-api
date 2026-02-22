@@ -551,8 +551,8 @@ exports.atualizarFiliado = async (req, res) => {
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : undefined,
       data_nascimento: parseDateToISO(body.data_nascimento) || undefined,
-      telefone1: body.telefone1,
-      telefone2: body.telefone2,
+      telefone1: normalizeTelefone(body.telefone1),
+      telefone2: normalizeTelefone(body.telefone2),
       email1: body.email1,
       email2: body.email2,
       lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
@@ -629,6 +629,15 @@ exports.criarFiliado = async (req, res) => {
       return res.status(400).json({ success: false, message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS, requestId });
     }
 
+    if (!body.lotacao || String(body.lotacao).trim() === "") {
+      return res.status(422).json({
+        success: false,
+        message: "Selecione a lotação",
+        fields: { lotacao: "Selecione a lotação" },
+        requestId
+      });
+    }
+
     if (body.siape) {
       const siapeLimpo = String(body.siape).replace(/\D/g, "");
       if (siapeLimpo && (siapeLimpo.length < 6 || siapeLimpo.length > 7)) {
@@ -671,11 +680,11 @@ exports.criarFiliado = async (req, res) => {
       cpf: cpfLimpo,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
       data_nascimento: parseDateToISO(body.data_nascimento),
-      telefone1: body.telefone1 || null,
-      telefone2: body.telefone2 || null,
+      telefone1: normalizeTelefone(body.telefone1),
+      telefone2: normalizeTelefone(body.telefone2),
       email1: body.email1 || null,
       email2: body.email2 || null,
-      lotacao: normalizeLotacao(body.lotacao || "SEDE"),
+      lotacao: normalizeLotacao(body.lotacao),
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       perfil_acesso: normalizePerfil(body.perfil_acesso || "FILIADO"),
       logradouro_bairro: body.logradouro_bairro || null,
