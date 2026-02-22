@@ -796,54 +796,68 @@
 
         container.innerHTML = `
             <div class="filiado-card" style="border-left-color: var(--amarelo);">
-                <h3>👤 Novo Filiado</h3>
+                <h3 style="margin-bottom:20px;">👤 Novo Filiado</h3>
                 <form id="form-novo-filiado-admin">
-                    <div class="edit-grid">
-                        <div class="edit-group">
-                            <label>Nome *</label>
-                            <input name="nome" required>
+                    <div class="data-card">
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>Nome *</label>
+                                <input name="nome" required>
+                            </div>
+                            <div class="field-group">
+                                <label>Sexo</label>
+                                <select name="sexo">
+                                    <option value="" selected>-</option>
+                                    <option value="M">♂️ Masculino</option>
+                                    <option value="F">♀️ Feminino</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="edit-group">
-                            <label>Sexo</label>
-                            <select name="sexo">
-                                <option value="" selected>-</option>
-                                <option value="M">♂️ Masculino</option>
-                                <option value="F">♀️ Feminino</option>
-                            </select>
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>CPF *</label>
+                                <input name="cpf" required placeholder="000.000.000-00">
+                            </div>
+                            <div class="field-group">
+                                <label>Matrícula (SIAPE)</label>
+                                <input name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
+                            </div>
                         </div>
-                        <div class="edit-group">
-                            <label>CPF *</label>
-                            <input name="cpf" required placeholder="000.000.000-00">
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>Email *</label>
+                                <input type="email" name="email1" required>
+                            </div>
+                            <div class="field-group">
+                                <label>Telefone 1 *</label>
+                                <input name="telefone1" class="campo-telefone" required placeholder="(00) 00000-0000">
+                            </div>
                         </div>
-                        <div class="edit-group">
-                            <label>Matrícula (SIAPE)</label>
-                            <input name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>Telefone 2</label>
+                                <input name="telefone2" class="campo-telefone" placeholder="(00) 00000-0000">
+                            </div>
+                            <div class="field-group">
+                                <label>Lotação *</label>
+                                <select name="lotacao" required style="border: 2px solid var(--primary-color);">
+                                    <option value="">Selecione a Lotação...</option>
+                                    ${LOTACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join("")}
+                                </select>
+                            </div>
                         </div>
-                        <div class="edit-group">
-                            <label>Email *</label>
-                            <input type="email" name="email1" required>
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>Data Nascimento</label>
+                                <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
+                            </div>
+                            <div class="field-group"></div>
                         </div>
-                        <div class="edit-group">
-                            <label>Telefone 1 *</label>
-                            <input name="telefone1" class="campo-telefone" required placeholder="(00) 00000-0000">
-                        </div>
-                        <div class="edit-group">
-                            <label>Telefone 2</label>
-                            <input name="telefone2" class="campo-telefone" placeholder="(00) 00000-0000">
-                        </div>
-                        <div class="edit-group">
-                            <label>Lotação *</label>
-                            <select name="lotacao" required>
-                                <option value="">Selecione...</option>
-                                ${LOTACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join("")}
-                            </select>
-                        </div>
-                        <div class="edit-group">
-                            <label>Data Nascimento</label>
-                            <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
-                        </div>
+                    </div>
 
-                        <div class="address-grid span-2">
+                    <div class="data-card bg-alt">
+                        <h3>🏠 Endereço</h3>
+                        <div class="address-grid-v2">
                             <div class="edit-group cep-group">
                                 <label>CEP</label>
                                 <div class="cep-input-wrapper">
