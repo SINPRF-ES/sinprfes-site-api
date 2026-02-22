@@ -4,7 +4,10 @@
  */
 
 (function (global) {
-    if (global.FiliadosAdmin) return;
+    const VERSION = "202405221000";
+    if (global.FiliadosAdmin && global.FiliadosAdmin.VERSION && global.FiliadosAdmin.VERSION >= VERSION) {
+        return;
+    }
 
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
@@ -109,7 +112,7 @@
 
             const campoBusca = document.getElementById("busca-filiados");
             if (campoBusca) {
-                campoBusca.addEventListener("input", (e) => filtrarLista(e.target.value));
+                campoBusca.oninput = (e) => filtrarLista(e.target.value);
 
                 const filtros = document.createElement("div");
                 filtros.className = "row-filtros";
@@ -145,9 +148,9 @@
                 campoBusca.insertAdjacentElement("afterend", filtros);
 
                 if (ehGestao) {
-                    document.getElementById("filtro-estado-cadastro").addEventListener("change", carregarLista);
+                    document.getElementById("filtro-estado-cadastro").onchange = carregarLista;
                 }
-                document.getElementById("filtro-situacao-funcional").addEventListener("change", () => filtrarLista(campoBusca.value));
+                document.getElementById("filtro-situacao-funcional").onchange = () => filtrarLista(campoBusca.value);
             }
             handlersConfigurados = true;
         }
@@ -636,7 +639,7 @@
 
         if (cepInput) {
             window.Utils?.aplicarMascaraCEP?.(cepInput);
-            cepInput.addEventListener('blur', executarBuscaCep);
+            cepInput.onblur = executarBuscaCep;
             // also trigger on search icon click
             const searchIcon = form.querySelector(".cep-search-icon");
             if (searchIcon) searchIcon.onclick = executarBuscaCep;
@@ -673,9 +676,10 @@
 
                 // 2. Remover vazios, null, undefined ou placeholders
                 if (val === "" || val === null || val === undefined || val === "Selecione...") {
-                    // ✅ PATCH: se for parentesco_outro, permitimos enviar null se parentesco não for OUTRO
-                    // Porém o backend já limpa. Aqui apenas evitamos enviar se estiver vazio e não for OUTRO.
-                    return;
+                    // Telefones vazios devem seguir para o Passo 5 para serem normalizados para NULL
+                    if (key !== 'telefone1' && key !== 'telefone2') {
+                        return;
+                    }
                 }
 
                 // 3. Remover campos readonly se não for gestor pleno
@@ -914,7 +918,7 @@
         const cepInp = form.querySelector("#new-cep");
         if (cepInp) {
             if (aplicarMascaraCEP) aplicarMascaraCEP(cepInp);
-            cepInp.addEventListener('blur', async () => {
+            cepInp.onblur = async () => {
                 const cep = (cepInp.value || "").replace(/\D/g, "");
                 if (cep.length === 8) {
                     try {
@@ -927,7 +931,7 @@
                         }
                     } catch (err) { console.error("Erro busca CEP", err); }
                 }
-            });
+            };
         }
 
         form.onsubmit = async (e) => {
@@ -1014,13 +1018,16 @@
     // No local declarations of apiFetch here. Using window.Api.apiFetch everywhere.
 
     global.FiliadosAdmin = {
+        VERSION,
         inicializarFiliados,
         abrirModalEdicao,
         confirmarArquivar,
         confirmarDesarquivar,
         uploadAvatar,
         removerAvatar,
-        handleParentescoChange
+        handleParentescoChange,
+        renderizarFormularioNovoFiliado,
+        abrirNovoFiliado
     };
 
 })(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));
