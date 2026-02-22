@@ -1,9 +1,9 @@
 /**
  * SINPRF-ES Service Worker
- * Versão: 1.0.3
+ * Versão: 1.0.4
  */
 
-const CACHE_NAME = 'sinprfes-cache-v1.0.3';
+const CACHE_NAME = 'sinprfes-cache-v1.0.4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
