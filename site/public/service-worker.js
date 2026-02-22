@@ -1,9 +1,9 @@
 /**
  * SINPRF-ES Service Worker
- * Versão: 1.0.2
+ * Versão: 1.0.3
  */
 
-const CACHE_NAME = 'sinprfes-cache-v1.0.2';
+const CACHE_NAME = 'sinprfes-cache-v1.0.3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -44,12 +44,13 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // 1. Estratégia Network-First para arquivos críticos e sem hash
+  // Incluímos .js para evitar que o cache-first entregue versões antigas de lógica
   const isCritical = [
     '/config.js',
     '/manifest.webmanifest',
     '/service-worker.js',
     '/index.html'
-  ].includes(url.pathname) || url.pathname === '/';
+  ].includes(url.pathname) || url.pathname === '/' || url.pathname.endsWith('.js');
 
   if (isCritical) {
     event.respondWith(
