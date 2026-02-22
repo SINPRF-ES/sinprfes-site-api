@@ -48,8 +48,8 @@ app.use(express.static(path.join(__dirname, 'public'), {
     if (fileName === 'manifest.webmanifest') {
       res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
-    // 1.3 Ajustar cache header para config.js e service-worker.js
-    } else if (fileName === 'service-worker.js' || fileName === 'config.js') {
+    // 1.3 Ajustar cache header para config.js e service-worker.js e scripts em geral
+    } else if (fileName === 'service-worker.js' || fileName === 'config.js' || filePath.endsWith('.js')) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     } else if (fileName === 'index.html') {
       res.setHeader('Cache-Control', 'no-cache');

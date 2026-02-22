@@ -691,6 +691,7 @@
                 // 5. Normalização de Documentos/Telefones
                 if (key === 'cpf' || key.includes('_cpf') || key === 'telefone1' || key === 'telefone2' || key === 'cep' || key === 'siape') {
                     val = onlyDigits(val);
+                    if ((key === 'telefone1' || key === 'telefone2') && val === "") val = null;
                 }
 
                 payload[key] = val;
@@ -962,6 +963,12 @@
             };
             payload.telefone1 = normalizeTel(payload.telefone1);
             payload.telefone2 = normalizeTel(payload.telefone2);
+
+            // Validação explícita de lotação (Task C)
+            if (!payload.lotacao || payload.lotacao.trim() === "" || payload.lotacao === "Selecione a Lotação...") {
+                alert("Lotação é obrigatória. Por favor, selecione uma opção.");
+                return;
+            }
 
             // Conversão Data de Nascimento para ISO
             if (payload.data_nascimento) {
