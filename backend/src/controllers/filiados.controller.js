@@ -551,8 +551,8 @@ exports.atualizarFiliado = async (req, res) => {
       cpf: body.cpf ? normalizarCpf(body.cpf) : undefined,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : undefined,
       data_nascimento: parseDateToISO(body.data_nascimento) || undefined,
-      telefone1: normalizeTelefone(body.telefone1),
-      telefone2: normalizeTelefone(body.telefone2),
+      telefone1: body.telefone1 !== undefined ? normalizeTelefone(body.telefone1) : undefined,
+      telefone2: body.telefone2 !== undefined ? normalizeTelefone(body.telefone2) : undefined,
       email1: body.email1,
       email2: body.email2,
       lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
@@ -625,11 +625,11 @@ exports.criarFiliado = async (req, res) => {
     }
 
     const body = req.body || {};
-    if (!body.nome || !body.cpf || !body.email1) {
+    if (!body.nome || !body.cpf || !body.email1 || !body.telefone1) {
       return res.status(400).json({ success: false, message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS, requestId });
     }
 
-    if (!body.lotacao || String(body.lotacao).trim() === "") {
+    if (!body.lotacao || String(body.lotacao).trim() === "" || body.lotacao === "Selecione a Lotação...") {
       return res.status(422).json({
         success: false,
         message: "Selecione a lotação",
@@ -681,7 +681,7 @@ exports.criarFiliado = async (req, res) => {
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
       data_nascimento: parseDateToISO(body.data_nascimento),
       telefone1: normalizeTelefone(body.telefone1),
-      telefone2: normalizeTelefone(body.telefone2),
+      telefone2: (body.telefone2 !== undefined && body.telefone2 !== "") ? normalizeTelefone(body.telefone2) : null,
       email1: body.email1 || null,
       email2: body.email2 || null,
       lotacao: normalizeLotacao(body.lotacao),
