@@ -150,7 +150,8 @@
    */
   function normalizeLotacao(val) {
     const s = slugify(val);
-    if (!s || s === 'NENHUMA') return 'NENHUMA';
+    if (!s) return null;
+    if (s === 'NENHUMA') return 'NENHUMA';
 
     for (const lot of LOTACOES) {
       if (slugify(lot) === s) return lot;
@@ -163,7 +164,7 @@
     if (s.includes('LINHARES')) return "DEL 04 - Linhares";
     if (s.includes('SEDE')) return "SEDE";
 
-    return 'SEDE'; // Fallback seguro para garantir compatibilidade com CHECK CONSTRAINT
+    return null; // Removido fallback "SEDE" para exigir escolha explícita
   }
 
   /**

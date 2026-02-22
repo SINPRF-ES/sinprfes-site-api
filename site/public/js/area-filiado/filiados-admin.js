@@ -828,6 +828,17 @@
                             <input name="telefone1" class="campo-telefone" required placeholder="(00) 00000-0000">
                         </div>
                         <div class="edit-group">
+                            <label>Telefone 2</label>
+                            <input name="telefone2" class="campo-telefone" placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="edit-group">
+                            <label>Lotação *</label>
+                            <select name="lotacao" required>
+                                <option value="">Selecione...</option>
+                                ${LOTACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join("")}
+                            </select>
+                        </div>
+                        <div class="edit-group">
                             <label>Data Nascimento</label>
                             <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
                         </div>
@@ -879,7 +890,10 @@
 
         // Aplicar Máscaras
         if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
-        if (aplicarMascaraTelefone) aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
+        if (aplicarMascaraTelefone) {
+            aplicarMascaraTelefone(form.querySelector('input[name="telefone1"]'));
+            aplicarMascaraTelefone(form.querySelector('input[name="telefone2"]'));
+        }
         if (aplicarMascaraData) aplicarMascaraData(form.querySelector('input[name="data_nascimento"]'));
 
         const cepInp = form.querySelector("#new-cep");
@@ -928,7 +942,12 @@
             payload.cpf = cpfLimp;
 
             // Sanitização Telefone
-            if (payload.telefone1) payload.telefone1 = onlyDigits(payload.telefone1);
+            const normalizeTel = (v) => {
+                const d = onlyDigits(v);
+                return d === "" ? null : d;
+            };
+            payload.telefone1 = normalizeTel(payload.telefone1);
+            payload.telefone2 = normalizeTel(payload.telefone2);
 
             // Conversão Data de Nascimento para ISO
             if (payload.data_nascimento) {
