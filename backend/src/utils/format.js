@@ -114,11 +114,22 @@ function formatarConta(conta) {
   return limpa.replace(/(\d+)(\d{1})$/, "$1-$2");
 }
 
+/**
+ * Aplica máscara de CEP: 00000-000
+ */
+function formatarCEP(cep) {
+  if (!cep) return "";
+  const limpo = cep.toString().replace(/\D/g, "");
+  if (limpo.length !== 8) return cep;
+  return limpo.replace(/(\d{5})(\d{3})/, "$1-$2");
+}
+
 module.exports = {
   normalizarCpf,
   normalizarCep,
   formatarCPF,
   formatarTelefone,
+  formatarCEP,
   formatarDataBR,
   formatarAgencia,
   formatarConta,

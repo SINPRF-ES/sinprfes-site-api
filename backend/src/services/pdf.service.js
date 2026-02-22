@@ -8,7 +8,7 @@ const path = require("path");
 const { PDFDocument: PDFLibDocument } = require("pdf-lib");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
-const { formatarCPF, formatarTelefone, formatarDataBR, formatarAgencia, formatarConta } = require("../utils/format");
+const { formatarCPF, formatarTelefone, formatarCEP, formatarDataBR, formatarAgencia, formatarConta } = require("../utils/format");
 const { labelFromParentesco } = require('../shared/dependentes/parentesco');
 
 // Caminho do logo (brasão) - ajuste se necessário no seu projeto
@@ -459,12 +459,12 @@ async function gerarPdfFichaFiliacao(dados) {
     doc.font("Helvetica").fontSize(11);
 
     doc.text(`Nome: ${dados.nome || ""}`);
-    doc.text(`CPF: ${dados.cpf || ""}`);
+    doc.text(`CPF: ${formatarCPF(dados.cpf)}`);
     doc.text(`Matrícula: ${dados.matricula || ""}`);
     doc.text(`Lotação: ${dados.lotacao || ""}`);
     doc.text(`E-mail: ${dados.email || ""}`);
-    doc.text(`Telefone 1: ${dados.telefone1 || ""}`);
-    doc.text(`Telefone 2: ${dados.telefone2 || ""}`);
+    doc.text(`Telefone 1: ${formatarTelefone(dados.telefone1)}`);
+    doc.text(`Telefone 2: ${formatarTelefone(dados.telefone2)}`);
     doc.moveDown(1);
 
     linha(doc);
@@ -480,7 +480,7 @@ async function gerarPdfFichaFiliacao(dados) {
     );
     doc.text(`Bairro: ${dados.bairro || ""}`);
     doc.text(`Cidade: ${dados.cidade || ""} - UF: ${dados.uf || ""}`);
-    doc.text(`CEP: ${dados.cep || ""}`);
+    doc.text(`CEP: ${formatarCEP(dados.cep)}`);
     doc.moveDown(1);
 
     linha(doc);
@@ -938,7 +938,7 @@ async function gerarPdfDossieFiliado(filiado, options = {}) {
     doc.text(`Telefone 2: ${filiado.telefone2 ? formatarTelefone(filiado.telefone2) : "-"}`);
     doc.moveDown(0.5);
     doc.text(`Endereço: ${filiado.logradouro_bairro || ""}, nº ${filiado.numero || ""} ${filiado.complemento || ""}`);
-    doc.text(`Cidade: ${filiado.cidade || ""} - UF: ${filiado.uf || ""} | CEP: ${filiado.cep || ""}`);
+    doc.text(`Cidade: ${filiado.cidade || ""} - UF: ${filiado.uf || ""} | CEP: ${formatarCEP(filiado.cep)}`);
     doc.moveDown(1);
     linha(doc);
 
