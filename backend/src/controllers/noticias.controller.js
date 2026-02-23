@@ -72,9 +72,18 @@ exports.listar = async (req, res) => {
         [ids]
       );
 
-      // Agrupa as mídias por notícia
+      // Otimização Bolt: Substituição de filtro aninhado (O(N*M)) por agrupamento via Map (O(N+M))
+      // Isso evita percorrer toda a lista de mídias para cada notícia.
+      const midiasMap = new Map();
+      allMidias.forEach(m => {
+        if (!midiasMap.has(m.noticia_id)) {
+          midiasMap.set(m.noticia_id, []);
+        }
+        midiasMap.get(m.noticia_id).push(m);
+      });
+
       noticias.forEach(n => {
-        n.midias = allMidias.filter(m => m.noticia_id === n.id);
+        n.midias = midiasMap.get(n.id) || [];
       });
     }
 
