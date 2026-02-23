@@ -63,20 +63,22 @@
             return;
         }
 
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
         listaEl.innerHTML = cacheNoticias.map(n => {
             const isDraft = n.status === 'RASCUNHO';
             const date = new Date(n.published_at || n.created_at).toLocaleDateString('pt-BR');
 
             return `
                 <div class="noticia-admin-card ${isDraft ? 'draft' : ''}" style="background:#fff; border:1px solid #ddd; border-radius:12px; padding:15px; margin-bottom:15px; display:flex; gap:15px; align-items:center;">
-                    ${n.capa_url ? `<img src="${n.capa_url}" style="width:80px; height:80px; object-fit:cover; border-radius:8px;">` : `<div style="width:80px; height:80px; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;">📷</div>`}
+                    ${n.capa_url ? `<img src="${safeEscape(n.capa_url)}" style="width:80px; height:80px; object-fit:cover; border-radius:8px;">` : `<div style="width:80px; height:80px; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;">📷</div>`}
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between;">
                             <span style="font-size:0.8rem; color:#888;">${date}</span>
                             ${isDraft ? `<span class="badge badge-warning" style="font-size:0.7rem;">RASCUNHO</span>` : `<span class="badge badge-success" style="font-size:0.7rem;">PUBLICADA</span>`}
                         </div>
-                        <h4 style="margin:5px 0; color:#003366;">${n.titulo}</h4>
-                        <p style="margin:0; font-size:0.85rem; color:#666; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${n.conteudo}</p>
+                        <h4 style="margin:5px 0; color:#003366;">${safeEscape(n.titulo)}</h4>
+                        <p style="margin:0; font-size:0.85rem; color:#666; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${safeEscape(n.conteudo)}</p>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:5px;">
                         <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar</button>
@@ -110,21 +112,23 @@
 
         if (window.Utils?.lockScroll) window.Utils.lockScroll();
 
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
         corpoEl.innerHTML = `
             <form id="form-noticia-admin">
                 <div class="field-group">
                     <label>Título</label>
-                    <input type="text" name="titulo" value="${noticia.titulo}" required placeholder="Título chamativo...">
+                    <input type="text" name="titulo" value="${safeEscape(noticia.titulo)}" required placeholder="Título chamativo...">
                 </div>
                 <div class="field-group" style="margin-top:15px;">
                     <label>Conteúdo (Markdown suportado)</label>
-                    <textarea name="conteudo" rows="10" required placeholder="Texto da notícia..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">${noticia.conteudo}</textarea>
+                    <textarea name="conteudo" rows="10" required placeholder="Texto da notícia..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">${safeEscape(noticia.conteudo)}</textarea>
                 </div>
 
                 <div class="field-group" style="margin-top:15px;">
                     <label>Capa da Notícia (Upload)</label>
                     <div id="capa-preview-container" style="margin-bottom:10px;">
-                        ${noticia.capa_url ? `<img src="${noticia.capa_url}" style="width:100%; height:150px; object-fit:cover; border-radius:8px;">` : '<p style="font-size:0.8rem; color:#999;">Nenhuma capa selecionada.</p>'}
+                        ${noticia.capa_url ? `<img src="${safeEscape(noticia.capa_url)}" style="width:100%; height:150px; object-fit:cover; border-radius:8px;">` : '<p style="font-size:0.8rem; color:#999;">Nenhuma capa selecionada.</p>'}
                     </div>
                     <input type="file" id="input-capa" accept="image/*" style="display:none;">
                     <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('input-capa').click()">📸 Selecionar Capa</button>
@@ -136,7 +140,7 @@
                     <div id="midias-galeria" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:10px;">
                         ${(noticia.midias || []).map(m => `
                             <div class="midia-thumb" style="position:relative; aspect-ratio:1/1; background:#eee; border-radius:8px; overflow:hidden;">
-                                ${m.tipo === 'IMAGEM' ? `<img src="${m.url}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="display:flex; align-items:center; justify-content:center; height:100%;">🎬</div>`}
+                                ${m.tipo === 'IMAGEM' ? `<img src="${safeEscape(m.url)}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="display:flex; align-items:center; justify-content:center; height:100%;">🎬</div>`}
                                 <button type="button" onclick="NoticiasAdmin.removerMidia('${m.id}', '${noticia.id}')" style="position:absolute; top:2px; right:2px; background:rgba(255,255,255,0.8); border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; color:red;">×</button>
                             </div>
                         `).join('')}

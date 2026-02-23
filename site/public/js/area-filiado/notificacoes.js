@@ -103,6 +103,8 @@
         const select = document.getElementById('push-target-filiado-select');
         select.innerHTML = '<option>Buscando...</option>';
 
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
         try {
             const r = await window.Api.apiFetch(`/api/filiados?q=${encodeURIComponent(query)}`);
             if (r.ok) {
@@ -111,7 +113,7 @@
                 if (filiados.length === 0) {
                     select.innerHTML = '<option value="">Nenhum encontrado</option>';
                 } else {
-                    select.innerHTML = filiados.map(f => `<option value="${f.id}" data-nome="${f.nome}" data-cpf="${f.cpf}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
+                    select.innerHTML = filiados.map(f => `<option value="${f.id}" data-nome="${safeEscape(f.nome)}" data-cpf="${safeEscape(f.cpf)}">${safeEscape(f.nome)} (CPF: ${safeEscape(f.cpf)})</option>`).join('');
                 }
             }
         } catch (e) {
@@ -241,6 +243,8 @@
             return;
         }
 
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
         let html = historyCache.map(c => {
             const data = formatarData(c.created_at);
             const statusClass = c.status === 'SENT' ? 'status-sent' : 'status-failed';
@@ -273,9 +277,9 @@
                         <span class="history-date">${data}</span>
                         <span class="history-status ${statusClass}">${statusLabel}</span>
                     </div>
-                    <div class="history-author">Por: ${c.autor_nome || 'Sistema'} | Destino: ${targetLabel}</div>
-                    ${c.title ? `<div class="history-title">${c.title}</div>` : ''}
-                    <div class="history-body" style="white-space: pre-wrap;">${c.body}</div>
+                    <div class="history-author">Por: ${safeEscape(c.autor_nome || 'Sistema')} | Destino: ${safeEscape(targetLabel)}</div>
+                    ${c.title ? `<div class="history-title">${safeEscape(c.title)}</div>` : ''}
+                    <div class="history-body" style="white-space: pre-wrap;">${safeEscape(c.body)}</div>
                     <div class="history-results">
                         <span title="Sucesso">🚀 ${c.result?.sent || 0}</span>
                         <span title="Falhas">❌ ${c.result?.failed || 0}</span>

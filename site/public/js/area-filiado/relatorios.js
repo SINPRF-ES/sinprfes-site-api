@@ -72,12 +72,14 @@
         const select = document.getElementById('relatorio-filiado-select');
         select.innerHTML = '<option>Buscando...</option>';
 
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
         try {
             const filiados = await window.Utils.searchFiliados(query);
             if (filiados.length === 0) {
                 select.innerHTML = '<option value="">Nenhum encontrado</option>';
             } else {
-                select.innerHTML = filiados.map(f => `<option value="${f.id}">${f.nome} (CPF: ${f.cpf})</option>`).join('');
+                select.innerHTML = filiados.map(f => `<option value="${f.id}">${safeEscape(f.nome)} (CPF: ${safeEscape(f.cpf)})</option>`).join('');
             }
         } catch (e) {
             console.error("Erro na busca de filiados", e);
@@ -177,6 +179,8 @@
         const container = document.getElementById('relatorio-preview-container');
         if (!container) return;
 
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
         container.style.display = 'block';
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -196,12 +200,12 @@
                     if (section.kind === 'kv') {
                         return `
                             <div style="margin-bottom:30px;">
-                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${section.title}</h4>
+                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${safeEscape(section.title)}</h4>
                                 <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:20px;">
                                     ${section.items.map(item => `
                                         <div>
-                                            <span style="display:block; font-size:0.75rem; color:#777; text-transform: uppercase; font-weight: bold;">${item.label}</span>
-                                            <span style="font-size: 1rem; color: #333;">${item.value}</span>
+                                            <span style="display:block; font-size:0.75rem; color:#777; text-transform: uppercase; font-weight: bold;">${safeEscape(item.label)}</span>
+                                            <span style="font-size: 1rem; color: #333;">${safeEscape(item.value)}</span>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -210,18 +214,18 @@
                     } else if (section.kind === 'table') {
                         return `
                             <div style="margin-bottom:30px;">
-                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${section.title}</h4>
+                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${safeEscape(section.title)}</h4>
                                 <div style="overflow-x:auto;">
                                     <table class="repasse-tabela" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
                                         <thead>
                                             <tr style="background:#f8f9fa;">
-                                                ${section.columns.map(col => `<th style="border:1px solid #ddd; padding:12px 10px; text-align:left; color: var(--azul-fundo);">${col}</th>`).join('')}
+                                                ${section.columns.map(col => `<th style="border:1px solid #ddd; padding:12px 10px; text-align:left; color: var(--azul-fundo);">${safeEscape(col)}</th>`).join('')}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             ${section.rows.map(row => `
                                                 <tr>
-                                                    ${row.map(cell => `<td style="border:1px solid #ddd; padding:12px 10px;">${cell}</td>`).join('')}
+                                                    ${row.map(cell => `<td style="border:1px solid #ddd; padding:12px 10px;">${safeEscape(cell)}</td>`).join('')}
                                                 </tr>
                                             `).join('')}
                                         </tbody>
@@ -279,6 +283,8 @@
             return;
         }
 
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
         const tipoLabels = {
             INDIVIDUAL: "👤 Dossiê Individual",
             LOTACAO: "📍 Por Lotação",
@@ -301,14 +307,14 @@
                     return `
                         <div class="history-card">
                             <div class="history-header">
-                                <strong style="color:var(--azul-card);">${tipoLabels[h.report_type] || h.report_type}</strong>
+                                <strong style="color:var(--azul-card);">${safeEscape(tipoLabels[h.report_type] || h.report_type)}</strong>
                                 <span class="history-date">${data}</span>
                             </div>
                             <div style="font-size:0.85rem; color:#555; margin-top:8px;">
-                                ${labelParam}: <span style="color:var(--azul-fundo); font-weight:600;">${valor}</span>
+                                ${safeEscape(labelParam)}: <span style="color:var(--azul-fundo); font-weight:600;">${safeEscape(valor)}</span>
                             </div>
                             <div style="font-size:0.85rem; color:#777; margin-top:4px;">
-                                Solicitante: ${h.requester_name}
+                                Solicitante: ${safeEscape(h.requester_name)}
                             </div>
                         </div>
                     `;
