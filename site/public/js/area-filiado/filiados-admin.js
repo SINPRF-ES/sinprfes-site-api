@@ -46,9 +46,12 @@
             ? (avatarUrl.startsWith('http') ? avatarUrl : apiBase + avatarUrl)
             : "/img/avatar-placeholder.png";
 
-        const escapedNome = escapeHTML ? escapeHTML(safeNome) : safeNome;
+        // Proteção XSS: Failsafe se utilitário ausente
+        const safeEscape = (v) => escapeHTML ? escapeHTML(v) : "";
+        const escapedNome = safeEscape(safeNome);
+        const escapedSrc = safeEscape(src);
 
-        return `<img class="avatar-mini" src="${src}" alt="Avatar ${escapedNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
+        return `<img class="avatar-mini" src="${escapedSrc}" alt="Avatar ${escapedNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
     }
 
     function formatISOToBRDateTime(isoStr) {

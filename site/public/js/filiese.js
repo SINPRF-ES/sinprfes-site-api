@@ -173,9 +173,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 const data = await res.json();
+                const safeEscape = (v) => (window.Utils && window.Utils.escapeHTML) ? window.Utils.escapeHTML(v) : (v || "");
 
                 if(res.ok) {
-                    msgContainer.innerHTML = `✅ <strong>Sucesso!</strong> ${data.message}`;
+                    msgContainer.innerHTML = `✅ <strong>Sucesso!</strong> ${safeEscape(data.message)}`;
                     msgContainer.classList.add("status-success");
                     form.reset();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -183,7 +184,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     throw new Error(data.message || "Erro desconhecido.");
                 }
             } catch(err) {
-                msgContainer.innerHTML = `❌ <strong>Erro:</strong> ${err.message}`;
+                const safeEscape = (v) => (window.Utils && window.Utils.escapeHTML) ? window.Utils.escapeHTML(v) : (v || "");
+                msgContainer.innerHTML = `❌ <strong>Erro:</strong> ${safeEscape(err.message)}`;
                 msgContainer.classList.add("status-error");
             } finally {
                 msgContainer.style.display = "block";

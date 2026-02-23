@@ -65,22 +65,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       const fotos = midias.filter(m => m.tipo === 'IMAGEM' && m.url !== noticia.capa_url);
       const videos = midias.filter(m => m.tipo === 'VIDEO');
 
+      // Proteção XSS: Failsafe (vazio) se utilitário ausente
+      const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
       article.innerHTML = `
         <header class="section-header">
-          <h2>${noticia.titulo}</h2>
+          <h2>${safeEscape(noticia.titulo)}</h2>
           <p class="news-meta">${publishedDate} · Institucional</p>
         </header>
 
         <div class="noticia-conteudo">
-          ${noticia.capa_url ? `<img src="${noticia.capa_url}" alt="${noticia.titulo}" style="width:100%; max-height:400px; object-fit:cover; border-radius:8px; margin-bottom:20px;">` : ""}
+          ${noticia.capa_url ? `<img src="${safeEscape(noticia.capa_url)}" alt="${safeEscape(noticia.titulo)}" style="width:100%; max-height:400px; object-fit:cover; border-radius:8px; margin-bottom:20px;">` : ""}
 
-          <div class="markdown-body" style="white-space: pre-wrap; line-height: 1.6; margin-bottom:20px;">${noticia.conteudo}</div>
+          <div class="markdown-body" style="white-space: pre-wrap; line-height: 1.6; margin-bottom:20px;">${safeEscape(noticia.conteudo)}</div>
 
           ${videos.length > 0 ? `
             <div class="noticia-videos" style="margin-top:20px;">
               ${videos.map(v => `
                 <video controls style="width:100%; max-width:600px; border-radius:8px; margin-bottom:10px; background:#000;">
-                  <source src="${v.url}" type="video/mp4">
+                  <source src="${safeEscape(v.url)}" type="video/mp4">
                   Seu navegador não suporta o player de vídeo.
                 </video>
               `).join('')}
@@ -90,8 +93,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           ${fotos.length > 0 ? `
             <div class="noticia-galeria" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin-top:20px;">
               ${fotos.map(f => `
-                <a href="${f.url}" target="_blank">
-                  <img src="${f.url}" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; cursor:pointer;">
+                <a href="${safeEscape(f.url)}" target="_blank">
+                  <img src="${safeEscape(f.url)}" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; cursor:pointer;">
                 </a>
               `).join('')}
             </div>

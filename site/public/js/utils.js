@@ -143,9 +143,10 @@
 
   /**
    * Escapa caracteres HTML para prevenir XSS.
+   * Padronizado para uso em templates innerHTML.
    */
   function escapeHTML(str) {
-    if (!str) return "";
+    if (str === null || str === undefined) return "";
     return String(str)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
