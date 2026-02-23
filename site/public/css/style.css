@@ -86,5 +86,8 @@ footer {
 
 /* Palette: Password Toggle Styles */
 .password-input-wrapper { position: relative; display: flex; align-items: center; width: 100%; }
-.password-toggle-btn { position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 1.2rem; z-index: 10; padding: 0; line-height: 1; }
+.password-toggle-btn { position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 1.2rem; z-index: 10; padding: 0; line-height: 1; transition: transform 0.1s ease, opacity 0.1s ease; }
+.password-toggle-btn:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; border-radius: 4px; }
+.password-toggle-btn:hover { opacity: 0.8; transform: scale(1.1); }
+.password-toggle-btn:active { transform: scale(0.95); }
 .password-input-wrapper input { padding-right: 40px; }

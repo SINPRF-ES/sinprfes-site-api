@@ -159,7 +159,7 @@
     if (sessionStorage.getItem('fechouAlertaJogos')) return;
     const div = document.createElement('div');
     div.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: #e67e22; color: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.4); z-index: 9999; max-width: 300px; font-family: sans-serif; border: 2px solid #fff;";
-    div.innerHTML = `<button style="position: absolute; top: 5px; right: 8px; background: none; border: none; color: white; font-weight: bold; cursor: pointer;">✕</button><h3 style="margin: 0 0 10px 0; font-size: 1.2rem;">🏆 Jogos 2026</h3><p style="margin: 0 0 15px 0;">Não esqueça sua pré-inscrição!</p><button id="btn-ir-jogos" style="background: white; color: #d35400; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%;">Inscrever-se</button>`;
+    div.innerHTML = `<button aria-label="Fechar" style="position: absolute; top: 5px; right: 8px; background: none; border: none; color: white; font-weight: bold; cursor: pointer;">✕</button><h3 style="margin: 0 0 10px 0; font-size: 1.2rem;">🏆 Jogos 2026</h3><p style="margin: 0 0 15px 0;">Não esqueça sua pré-inscrição!</p><button id="btn-ir-jogos" style="background: white; color: #d35400; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%;">Inscrever-se</button>`;
     document.body.appendChild(div);
     div.querySelector('button').addEventListener('click', () => { div.remove(); sessionStorage.setItem('fechouAlertaJogos', 'true'); });
     div.querySelector('#btn-ir-jogos').addEventListener('click', () => {
@@ -258,11 +258,17 @@
       wrap.appendChild(el);
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'password-toggle-btn'; btn.innerHTML = '👁️';
+      btn.setAttribute('aria-label', 'Mostrar senha');
+      btn.setAttribute('title', 'Mostrar senha');
+      btn.setAttribute('aria-pressed', 'false');
       btn.onclick = () => {
-        const isPwd = el.type === 'password';
-        el.type = isPwd ? 'text' : 'password';
-        btn.innerHTML = isPwd ? '🙈' : '👁️';
-        btn.ariaLabel = isPwd ? 'Ocultar senha' : 'Mostrar senha';
+        const showing = el.type === 'password';
+        el.type = showing ? 'text' : 'password';
+        btn.innerHTML = showing ? '🙈' : '👁️';
+        const label = showing ? 'Ocultar senha' : 'Mostrar senha';
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
+        btn.setAttribute('aria-pressed', showing ? 'true' : 'false');
       };
       wrap.appendChild(btn);
       el.dataset.hasToggle = 'true';
