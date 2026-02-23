@@ -29,3 +29,7 @@
 ## 2025-05-20 - [Modern React Login UX]
 **Learning:** Modernizing legacy React login forms requires a multi-faceted approach: loading states for feedback, `inputMode="numeric"` for CPF, and `autoComplete` for password managers. Using `aria-label` is critical when visual labels are omitted in favor of placeholders to maintain accessibility.
 **Action:** Implement a holistic "Modern Login" pattern in React apps: `loading` state + `aria-label` + `autoComplete` + `inputMode` + `passwordToggle`.
+
+## 2025-05-22 - [Initial ARIA States for Dynamic UI]
+**Learning:** Dynamically generated UI elements (like password toggles or floating alerts) often miss critical initial accessibility metadata. Adding `aria-label`, `title`, and `aria-pressed` at the moment of creation—not just after the first interaction—is essential for a "fail-secure" accessible experience.
+**Action:** Always set descriptive ARIA labels and appropriate initial states (`aria-pressed="false"`) when creating icon-only buttons via JavaScript. Ensure these elements have `:focus-visible` styles in CSS to support keyboard navigation.
