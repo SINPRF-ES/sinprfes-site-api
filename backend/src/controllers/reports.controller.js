@@ -328,22 +328,37 @@ exports.getHistory = async (req, res) => {
     // ADMIN vê tudo, outros vêem apenas o próprio histórico por padrão (ajustável conforme UX)
     const history = await reportsService.listarHistorico(perfil === "ADMIN" ? null : requesterId);
 
-    // Resolver nomes para relatórios individuais (A1 - Retrocompatibilidade e Robustez)
-    for (const item of history) {
-      if (item.report_type === 'INDIVIDUAL') {
-        const p = typeof item.params === 'string' ? JSON.parse(item.params) : item.params;
-        if (!p.filiadoNome && p.filiadoId) {
-          try {
-            const filiado = await filiadosService.buscarPorId(p.filiadoId);
-            if (filiado) {
-              p.filiadoNome = filiado.nome;
-              item.params = p; // Atualiza o objeto para a resposta
-            }
-          } catch (e) {
-            log.error("ErroAoResolverNomeNoHistorico", { id: p.filiadoId, requestId, atorId });
-          }
+    // Otimização Bolt: Resolver nomes para relatórios individuais em batch (evita N+1 queries)
+    const itemsToResolve = [];
+    history.forEach((item) => {
+      if (typeof item.params === "string") {
+        try {
+          item.params = JSON.parse(item.params);
+        } catch (e) {
+          /* ignore */
         }
       }
+
+      if (
+        item.report_type === "INDIVIDUAL" &&
+        item.params &&
+        !item.params.filiadoNome &&
+        item.params.filiadoId
+      ) {
+        itemsToResolve.push(item);
+      }
+    });
+
+    if (itemsToResolve.length > 0) {
+      const ids = [...new Set(itemsToResolve.map((item) => item.params.filiadoId))];
+      const nomesMap = await filiadosService.buscarNomesPorIds(ids);
+
+      itemsToResolve.forEach((item) => {
+        const nome = nomesMap[item.params.filiadoId];
+        if (nome) {
+          item.params.filiadoNome = nome;
+        }
+      });
     }
 
     return res.json(history);

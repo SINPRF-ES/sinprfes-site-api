@@ -722,6 +722,23 @@ async function salvarTwoFaSecret(userId, secret) {
 }
 
 /**
+ * Busca apenas os nomes de múltiplos filiados pelos seus IDs.
+ * Retorna um objeto mapeando id -> nome para fácil acesso (O(N) batch fetch).
+ */
+async function buscarNomesPorIds(ids) {
+  if (!ids || ids.length === 0) return {};
+  const { rows } = await pool.query(
+    "SELECT id, nome FROM filiados WHERE id = ANY($1)",
+    [ids]
+  );
+  const map = {};
+  rows.forEach((r) => {
+    map[r.id] = r.nome;
+  });
+  return map;
+}
+
+/**
  * Busca aniversariantes do dia (filiados e dependentes)
  */
 async function buscarAniversariantesDoDia() {
@@ -778,4 +795,5 @@ module.exports = {
   arquivarFiliadoPorId,
   desarquivarFiliadoPorId,
   buscarAniversariantesDoDia,
+  buscarNomesPorIds,
 };
