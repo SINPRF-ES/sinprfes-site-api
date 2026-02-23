@@ -1,6 +1,6 @@
-# Relatório de Auditoria: Permissões de Edição de Filiados
+# Relatório de Auditoria: Permissões de Edição de Filiados (STATUS: CONCLUÍDO)
 
-Este documento detalha os pontos identificados onde a permissão de edição de dados de filiados está restrita indevidamente (apenas ADMIN) ou onde há inconsistências com a nova regra de gestão (ADMIN, DIRETORIA, FUNCIONARIO).
+Este documento detalha os pontos identificados onde a permissão de edição de dados de filiados está restrita indevidamente (apenas ADMIN) ou onde há inconsistências com a nova regra de gestão (ADMIN, DIRETORIA, FUNCIONARIO). Todas as ações mapeadas foram implementadas e validadas conforme a regra canônica de gestão (Trio: ADMIN, DIRETORIA, FUNCIONARIO).
 
 ## 1. Mapeamento de Pontos
 

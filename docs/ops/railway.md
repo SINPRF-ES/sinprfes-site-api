@@ -1,12 +1,12 @@
 # Configuração do Railway (Canon do Monorepo)
 
-Para garantir o deploy correto dos serviços no Railway, siga as instruções abaixo para cada serviço. **Não utilize arquivos `railway.toml` no repositório**, pois a configuração deve ser feita diretamente no painel do Railway para respeitar os Root Directories do monorepo.
+O projeto utiliza o arquivo `railpack-plan.json` na raiz para definir o plano de build e deploy de forma automatizada pelo Railway (Nixpacks). **Não utilize arquivos `railway.toml` no repositório**, pois as configurações específicas de serviço (como Root Directory e variáveis) devem ser feitas diretamente no painel do Railway.
 
 ## 1. Serviço: API (Backend)
 
 *   **Root Directory**: `/` (Raiz do Monorepo)
-*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile`
-*   **Start Command**: `pnpm run start:backend`
+*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile && pnpm --filter backend build`
+*   **Start Command**: `pnpm --filter backend start`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080` (ou conforme desejado)
     *   `NODE_ENV`: `production`
@@ -18,8 +18,8 @@ Para garantir o deploy correto dos serviços no Railway, siga as instruções ab
 ## 2. Serviço: SITE (Frontend + Proxy)
 
 *   **Root Directory**: `/` (Raiz do Monorepo)
-*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile && pnpm run build:site`
-*   **Start Command**: `pnpm run start:site`
+*   **Build Command**: `npm install -g pnpm@9.15.9 --force && pnpm install --frozen-lockfile && pnpm --filter site build`
+*   **Start Command**: `pnpm --filter site start`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080`
     *   `API_BASE_URL`: `https://api.sinprfes.org.br` (URL do serviço de API acima)
