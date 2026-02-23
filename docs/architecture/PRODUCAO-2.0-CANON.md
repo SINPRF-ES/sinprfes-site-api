@@ -8,7 +8,7 @@ Este documento define o estado "CANON" (fonte única de verdade) do repositório
 ### 1.2. O que está incluído
 - **Núcleo de Gestão de Filiados:** Cadastro, edição, arquivamento e auditoria.
 - **Área do Filiado (Meus Dados):** Autenticação, atualização de perfil, dependentes e 2FA.
-- **Módulos Satélites:** Publicações (Drive), Ressarcimento de Despesas e Jogos 2026.
+- **Módulos Satélites:** Publicações (Drive), Ressarcimento de Despesas, Jogos 2026 e Notícias Internas (CMS).
 - **Camada Shared:** Formatters e utilitários compartilhados entre Web e Mobile.
 
 ### 1.3. Fora de Escopo
@@ -178,6 +178,7 @@ Todo PR ou alteração deve validar:
 - [ ] Scripts no site usam guardas de inicialização (ex: `if (window.__MEUS_DADOS_INIT__) return;`).
 - [ ] O contrato de resposta da API não foi alterado para campos existentes.
 - [ ] Em alterações de dependentes, a compactação de slots (dep1..dep5) foi mantida.
+- [ ] Railway: O deploy utiliza o `railpack-plan.json` na raiz para definir o plano de build.
 - [ ] Mobile: As variáveis de ambiente usam o prefixo `EXPO_PUBLIC_`.
 
 ### 7.2. Smoke Tests Obrigatórios
@@ -196,13 +197,16 @@ Os seguintes componentes estão estáveis e não devem ser modificados sem aprov
 - **Layout de Cards:** Padrão de cores e centralização de títulos (`.res-header`, `.res-card h3`).
 - **CEP Lookup:** Preenchimento automático de campos de endereço (logradouro, bairro, cidade, UF).
 
-## 9. Roadmap Controlado
+## 9. Funcionalidades Consolidadas (V2.0)
 
-- **Módulo Notícias Internas (CMS):** Perfil `COMUNICADOR` com princípio de *least privilege*. Ausência de acesso a dados de terceiros. Conteúdo consumido via API pelo site público, sem edição de HTML por usuários não técnicos.
+- **Módulo Notícias Internas (CMS):** Perfil `COMUNICADOR` com princípio de *least privilege*. Ausência de acesso a dados de terceiros. Conteúdo consumido via API pelo site público, sem edição de HTML por usuários não técnicos. Blocos persistidos em `data/content_blocks.json`.
+
+## 10. Roadmap e Melhorias Futuras
+
 - **Melhoria PDF Mobile:** Transição para visualizador de PDF 100% nativo (atualmente via WebView + Base64).
 - **Notificações:** Expansão do sistema de Push para eventos específicos.
 
-## 10. Protocolo de Manutenção e Evolução
+## 11. Protocolo de Manutenção e Evolução
 
 ### 10.1. Como comparar vs CANON
 Para verificar se o estado atual do código divergiu do padrão Produção 2.0, utilize:
