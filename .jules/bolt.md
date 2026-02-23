@@ -18,3 +18,7 @@
 ## 2026-02-03 - [FlatList Search Optimization]
 **Learning:** Calling expensive normalization functions (`normalizeText`, `onlyDigits`) inside a `filter` that runs on every keystroke (O(N) * M) causes significant UI lag in large lists. Memoizing the list items (`React.memo`) is insufficient if callbacks passed to them (`onEdit`, `renderItem`) are recreated on every render.
 **Action:** Pre-calculate normalized search fields once when data is fetched/processed. Stabilize callbacks with `useCallback`. Tune `FlatList` props (`windowSize`, `removeClippedSubviews`) to manage memory and render pressure.
+
+## 2026-02-23 - [Controller Media Grouping Optimization]
+**Learning:** Nested loops ($O(N \times M)$) in controllers when associating related entities (like news and media) are a hidden performance tax that grows with data size. Using a `Map` to pre-group related items reduces complexity to $O(N+M)$ and is a consistent pattern for high-performance Node.js backends.
+**Action:** Always scan controllers for `.filter()` or `.find()` calls inside a `.forEach()` or `.map()` when processing database results. Replace them with `Map`-based aggregation.
