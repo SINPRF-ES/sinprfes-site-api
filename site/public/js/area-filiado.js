@@ -39,25 +39,24 @@
 
         function atualizarVisibilidadeAbas(p) {
             const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
-            const ehComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(p);
 
-            const navRepasse = document.getElementById("tab-repasse");
-            if (navRepasse) navRepasse.style.display = ehGestao ? "block" : "none";
+            const abasConfig = [
+                { id: "nav-repasse", visivel: ehGestao },
+                { id: "nav-noticias", visivel: true },
+                { id: "nav-cms", visivel: ehGestao },
+                { id: "nav-notificacoes", visivel: true },
+                { id: "nav-relatorios", visivel: ehGestao },
+                { id: "nav-novo-filiado", visivel: ehGestao }
+            ];
 
-            const navNoticias = document.getElementById("tab-noticias");
-            if (navNoticias) navNoticias.style.display = "block";
-
-            const navCms = document.getElementById("tab-cms");
-            if (navCms) navCms.style.display = ehGestao ? "block" : "none";
-
-            const navNotificacoes = document.getElementById("tab-notificacoes");
-            if (navNotificacoes) navNotificacoes.style.display = "block";
-
-            const navRelatorios = document.getElementById("tab-relatorios");
-            if (navRelatorios) navRelatorios.style.display = ehGestao ? "block" : "none";
-
-            const navNovoFiliado = document.getElementById("tab-novo-filiado");
-            if (navNovoFiliado) navNovoFiliado.style.display = ehGestao ? "block" : "none";
+            abasConfig.forEach(aba => {
+                const el = document.getElementById(aba.id);
+                if (el) {
+                    el.style.display = aba.visivel ? "block" : "none";
+                } else {
+                    console.warn(`[WARNING] Item de navegação esperado não encontrado: ${aba.id}`);
+                }
+            });
         }
 
         console.log("Perfil inicial (Cache):", perfil);
@@ -124,10 +123,10 @@
             // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
             if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
 
-            const navNovoFiliado = document.getElementById("tab-novo-filiado");
+            const navNovoFiliado = document.getElementById("nav-novo-filiado");
             if (navNovoFiliado) {
                 navNovoFiliado.onclick = () => {
-                    const btnTabFiliados = document.getElementById("tab-filiados");
+                    const btnTabFiliados = document.getElementById("nav-filiados");
                     if (btnTabFiliados) {
                         btnTabFiliados.click();
                         setTimeout(() => {

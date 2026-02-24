@@ -27,7 +27,7 @@
         }
 
         grid.innerHTML = actions.map(a => `
-            <div class="action-card" onclick="document.getElementById('tab-${a.target.replace('sec-', '')}').click()">
+            <div class="action-card" onclick="document.getElementById('nav-${a.target.replace('sec-', '')}').click()">
                 <div class="icon">${a.icon}</div>
                 <div class="label">${a.label}</div>
                 <div class="subtitle">${a.subtitle}</div>
