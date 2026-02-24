@@ -15,22 +15,28 @@
         const permissions = user.permissions || [];
 
         // PUSH_GERENCIAR habilita o painel de envio e histórico de campanhas
-        const ehGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
+        const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
 
         const adminContainer = document.getElementById('notificacoes-admin-container');
-        if (adminContainer) adminContainer.style.display = ehGestao ? "block" : "none";
+        const membroContainer = document.getElementById('notificacoes-membro-container');
 
-        if (ehGestao) {
-            console.log("[Notificações] Perfil com permissão de gestão detectado.");
+        const displayAdmin = isGestao ? "block" : "none";
+        const displayMembro = isGestao ? "none" : "block";
+
+        if (adminContainer) adminContainer.style.display = displayAdmin;
+        if (membroContainer) membroContainer.style.display = displayMembro;
+
+        console.log(`[Notificações] Modo: ${isGestao ? 'GESTÃO' : 'MEMBRO'} | Permissões:`, permissions, `| Displays: Admin=${displayAdmin}, Membro=${displayMembro}`);
+
+        if (isGestao) {
             setupHandlers();
             popularLotacoes();
             carregarCampanhasGestao();
         } else {
-            // Se for filiado comum, garante que o container de gestão esteja oculto e limpo
+            // Se for filiado comum, garante que o container de gestão esteja limpo
             if (adminContainer) adminContainer.innerHTML = '';
+            carregarHistoricoMe();
         }
-
-        carregarHistoricoMe();
     }
 
     function popularLotacoes() {
