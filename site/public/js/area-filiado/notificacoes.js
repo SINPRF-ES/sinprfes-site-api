@@ -10,13 +10,8 @@
     let isLoadingMe = false;
     let isLoadingGestao = false;
 
-    function inicializarNotificacoes(user) {
-        if (!user) user = window.Utils?.obterUserInfo() || {};
-        const permissions = user.permissions || [];
-
-        // PUSH_GERENCIAR habilita o painel de envio e histórico de campanhas
-        const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
-
+    function applyNotificationsMode(params) {
+        const { isGestao, permissions } = params;
         const adminContainer = document.getElementById('notificacoes-admin-container');
         const membroContainer = document.getElementById('notificacoes-membro-container');
 
@@ -26,15 +21,24 @@
         if (adminContainer) adminContainer.style.display = displayAdmin;
         if (membroContainer) membroContainer.style.display = displayMembro;
 
-        console.log(`[Notificações] Modo: ${isGestao ? 'GESTÃO' : 'MEMBRO'} | Permissões:`, permissions, `| Displays: Admin=${displayAdmin}, Membro=${displayMembro}`);
+        console.log(`[Notificações] applyNotificationsMode: isGestao=${isGestao} | Permissions:`, permissions, `| Displays: Admin=${displayAdmin}, Membro=${displayMembro}`);
+    }
+
+    function inicializarNotificacoes(user) {
+        // Usa user fornecido ou busca do cache (obterUserInfo) se o fornecido estiver vazio/sem permissões
+        const userEfetivo = (user && user.permissions) ? user : (window.Utils?.obterUserInfo() || {});
+        const permissions = userEfetivo.permissions || [];
+
+        // PUSH_GERENCIAR habilita o painel de envio e histórico de campanhas
+        const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
+
+        applyNotificationsMode({ isGestao, permissions });
 
         if (isGestao) {
             setupHandlers();
             popularLotacoes();
             carregarCampanhasGestao();
         } else {
-            // Se for filiado comum, garante que o container de gestão esteja limpo
-            if (adminContainer) adminContainer.innerHTML = '';
             carregarHistoricoMe();
         }
     }

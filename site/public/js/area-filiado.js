@@ -114,6 +114,7 @@
 
                     atualizarVisibilidadeAbas(perfilReal);
                     userInfo = dadosFrescos; // Atualiza objeto global com permissões
+                    localStorage.setItem("userInfo", JSON.stringify(dadosFrescos)); // Sincroniza cache local
 
                     // Força re-render do menu/módulos se necessário
                     if (inicializarFiliados) inicializarFiliados(perfil);
