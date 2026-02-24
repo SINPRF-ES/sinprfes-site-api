@@ -14,6 +14,7 @@ import { AuthStore } from './authStore';
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
+let lastAuthErrorTimestamp = 0;
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom: any) => {
@@ -266,7 +267,28 @@ api.interceptors.response.use(
       const errorData = response?.data;
       const errorMsg = errorData?.error || errorData?.message || '';
       const isMissingToken = errorMsg.includes('Token de acesso não informado');
+      const isInvalidSession = errorMsg.includes('Sessão inválida ou expirada');
       const authReady = AuthStore.isReady();
+
+      // Caso 0: Anti-loop para Sessão Inválida (Redirecionamento único)
+      if (isInvalidSession) {
+        const now = Date.now();
+        if (now - lastAuthErrorTimestamp < 10000) { // 10s cooldown
+          logger.warn('API_401_ANTILOOP_TRIGGERED', { url });
+          return Promise.reject(error);
+        }
+        lastAuthErrorTimestamp = now;
+
+        logger.warn(`SESSION_CLEARED_REASON: session_invalid_direct | Route: ${url}`);
+        await limparSessao();
+
+        if (typeof global !== 'undefined' && (global as any).onSessionExpired) {
+          (global as any).onSessionExpired();
+        } else if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
+          (window as any).onSessionExpired();
+        }
+        return Promise.reject(error);
+      }
 
       // Caso 1: Se o bootstrap ainda não terminou ou o token está ausente, não limpamos a sessão.
       // Tentamos aguardar o gate e re-executar uma única vez.
@@ -353,10 +375,18 @@ api.interceptors.response.use(
         });
 
         // Só limpamos a sessão se realmente falhou o refresh de um token que existia e o boot está pronto
+        const now = Date.now();
+        if (now - lastAuthErrorTimestamp < 10000) {
+           return Promise.reject(refreshError);
+        }
+        lastAuthErrorTimestamp = now;
+
         logger.warn(`SESSION_CLEARED_REASON: refresh_failed | Route: ${url}`);
         await limparSessao();
 
-        if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
+        if (typeof global !== 'undefined' && (global as any).onSessionExpired) {
+          (global as any).onSessionExpired();
+        } else if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
           (window as any).onSessionExpired();
         }
         return Promise.reject(refreshError);

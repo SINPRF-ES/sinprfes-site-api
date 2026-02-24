@@ -17,11 +17,28 @@
             try {
                 // Now including inactive blocks for management
                 const res = await window.Api.apiFetch(`/api/content-blocks?page=${page}&includeInactive=true`);
-                if (!res || !res.ok) throw new Error('Falha ao carregar blocos');
+                if (!res) throw new Error('Falha na conexão');
+                if (res.status === 401) return; // handled by apiFetch
+                if (res.status === 403) {
+                    container.innerHTML = '<p>Você não tem permissão para gerenciar o conteúdo do site.</p>';
+                    return;
+                }
+                if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+
                 const blocks = await res.json();
+                if (!Array.isArray(blocks)) throw new Error('Formato de dados inválido');
+
                 this.renderBlocks(blocks);
             } catch (err) {
-                container.innerHTML = '<p>Erro ao carregar blocos.</p>';
+                console.error("CMSAdmin.loadBlocks.Error", err);
+                container.innerHTML = `
+                    <div style="padding: 20px; border: 1px dashed #e74c3c; color: #e74c3c; border-radius: 8px; text-align: center;">
+                        <p><strong>⚠️ Erro Crítico de Conteúdo</strong></p>
+                        <p>Não foi possível carregar ou processar os blocos do site.</p>
+                        <p style="font-size: 0.8rem; margin-top: 10px;">Causa: ${err.message}</p>
+                        <p style="font-size: 0.8rem;">Se o problema persistir, o arquivo de dados pode estar corrompido. Entre em contato com o suporte.</p>
+                    </div>
+                `;
             }
         },
 
@@ -89,14 +106,24 @@
         },
 
         async save(id) {
+            const titleEl = document.getElementById(`title-${id}`);
+            const bodyEl = document.getElementById(`body-${id}`);
+            const typeEl = document.getElementById(`type-${id}`);
+            const urlEl = document.getElementById(`url-${id}`);
+            const linkEl = document.getElementById(`link-${id}`);
+            const orderEl = document.getElementById(`order-${id}`);
+            const activeEl = document.getElementById(`active-${id}`);
+
+            if (!titleEl || !bodyEl) return;
+
             const data = {
-                title: document.getElementById(`title-${id}`).value,
-                body: document.getElementById(`body-${id}`).value,
-                media_type: document.getElementById(`type-${id}`).value,
-                media_url: document.getElementById(`url-${id}`).value,
-                link_url: document.getElementById(`link-${id}`).value,
-                ordenacao: parseInt(document.getElementById(`order-${id}`).value),
-                is_active: document.getElementById(`active-${id}`).checked
+                title: titleEl.value,
+                body: bodyEl.value,
+                media_type: typeEl.value,
+                media_url: urlEl.value,
+                link_url: linkEl.value,
+                ordenacao: parseInt(orderEl.value) || 0,
+                is_active: activeEl.checked
             };
 
             try {
@@ -108,11 +135,12 @@
                 if (res && res.ok) {
                     alert('Bloco atualizado com sucesso!');
                     this.loadBlocks(document.getElementById('cms-page-selector').value);
-                } else {
-                    const err = await res.json();
-                    alert('Erro ao salvar: ' + (err.error || 'Erro desconhecido'));
+                } else if (res) {
+                    const errData = await res.json();
+                    alert('Erro ao salvar: ' + (errData.error || errData.message || 'Erro desconhecido'));
                 }
             } catch (err) {
+                if (err.message === "Sessão expirada") return;
                 alert('Erro na requisição: ' + err.message);
             }
         }

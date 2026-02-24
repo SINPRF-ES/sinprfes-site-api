@@ -1,14 +1,16 @@
 // mobile/src/components/PickerSafe.tsx
-import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, TextStyle, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ViewStyle, TextStyle, Platform, Modal, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { Picker, PickerProps } from '@react-native-picker/picker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-interface PickerSafeProps extends PickerProps {
+interface PickerSafeProps extends Omit<PickerProps, 'onValueChange'> {
   label?: string;
   items?: { label: string; value: any }[];
   containerStyle?: ViewStyle;
   labelStyle?: TextStyle;
   pickerBoxStyle?: ViewStyle;
+  onValueChange?: (itemValue: any, itemIndex: number) => void;
 }
 
 export const PickerSafe: React.FC<PickerSafeProps> & { Item: typeof Picker.Item } = ({
@@ -18,32 +20,99 @@ export const PickerSafe: React.FC<PickerSafeProps> & { Item: typeof Picker.Item 
   containerStyle,
   labelStyle,
   pickerBoxStyle,
+  selectedValue,
+  onValueChange,
+  enabled = true,
   ...pickerProps
 }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Se for iOS, mantemos o Picker nativo pois ele lida bem com texto longo (roda lateral)
+  // Ou podemos usar o Modal para consistência. Vamos de Modal para garantir "anti-truncamento".
+
+  const resolvedItems = items || React.Children.map(children, (child: any) => {
+    if (child?.props) {
+      return { label: child.props.label, value: child.props.value };
+    }
+    return null;
+  })?.filter(Boolean) || [];
+
+  const selectedItem = resolvedItems.find(i => i.value === selectedValue);
+
+  const handleSelect = (item: any, index: number) => {
+    if (onValueChange) {
+      onValueChange(item.value, index);
+    }
+    setModalVisible(false);
+  };
+
   return (
     <View style={[styles.block, containerStyle]}>
       {label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
-      <View style={[styles.pickerBox, pickerBoxStyle]}>
-        <Picker
-          {...pickerProps}
-          style={[
-            styles.picker,
-            pickerProps.style,
-            Platform.OS === 'android' && { height: 50 }
-          ]}
+
+      <TouchableOpacity
+        style={[styles.pickerBox, pickerBoxStyle, !enabled && styles.disabled]}
+        onPress={() => enabled && setModalVisible(true)}
+        disabled={!enabled}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.selectedValueText, !selectedItem && styles.placeholderText]} numberOfLines={1}>
+          {selectedItem ? selectedItem.label : (pickerProps.prompt || 'Selecione...')}
+        </Text>
+        <MaterialCommunityIcons name="chevron-down" size={20} color="#666" />
+      </TouchableOpacity>
+
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
         >
-          {items
-            ? items.map((item, index) => (
-                <Picker.Item key={index} label={item.label} value={item.value} />
-              ))
-            : children
-          }
-        </Picker>
-      </View>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{label || 'Selecione uma opção'}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={resolvedItems}
+              keyExtractor={(item, index) => `${item.value}-${index}`}
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.itemRow,
+                    item.value === selectedValue && styles.selectedItemRow
+                  ]}
+                  onPress={() => handleSelect(item, index)}
+                >
+                  <Text style={[
+                    styles.itemLabel,
+                    item.value === selectedValue && styles.selectedItemLabel
+                  ]}>
+                    {item.label}
+                  </Text>
+                  {item.value === selectedValue && (
+                    <MaterialCommunityIcons name="check" size={20} color="#003366" />
+                  )}
+                </TouchableOpacity>
+              )}
+              style={styles.list}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
 
+// @ts-ignore
 PickerSafe.Item = Picker.Item;
 
 const styles = StyleSheet.create({
@@ -62,21 +131,82 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 10,
-    overflow: 'hidden',
     backgroundColor: '#fff',
-    justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        // iOS picker has its own height behavior
-      },
-      android: {
-        minHeight: 50,
-      }
-    })
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    minHeight: 50,
   },
-  picker: {
+  disabled: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#eee',
+  },
+  selectedValueText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  placeholderText: {
+    color: '#999',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
     width: '100%',
-    backgroundColor: 'transparent',
+    maxHeight: Dimensions.get('window').height * 0.7,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  list: {
+    width: '100%',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9f9f9',
+  },
+  selectedItemRow: {
+    backgroundColor: '#f0f4f8',
+  },
+  itemLabel: {
+    fontSize: 16,
+    color: '#444',
+    flex: 1,
+    marginRight: 10,
+  },
+  selectedItemLabel: {
+    color: '#003366',
+    fontWeight: 'bold',
   },
 });
 
