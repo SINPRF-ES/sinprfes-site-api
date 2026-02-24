@@ -114,6 +114,7 @@
 
         const { tipo, params } = formData;
         const btnGerar = document.getElementById('btn-gerar-relatorio');
+        if (!btnGerar) return;
         const originalText = btnGerar.innerHTML;
 
         try {
@@ -130,12 +131,15 @@
             if (r.ok) {
                 alert(data.message || "Relatório gerado com sucesso! Verifique seu e-mail.");
                 carregarHistorico();
+            } else if (r.status === 403) {
+                alert("Sem permissão para gerar relatórios.");
             } else {
-                alert(data.message || "Erro ao gerar relatório.");
+                alert(data.message || data.error || "Erro ao gerar relatório.");
             }
         } catch (e) {
+            if (e.message === "Sessão expirada") return;
             console.error("Relatorios.GerarErro", e);
-            alert("Erro de conexão ao gerar relatório.");
+            alert("Erro ao processar solicitação. Verifique sua conexão.");
         } finally {
             btnGerar.disabled = false;
             btnGerar.innerHTML = originalText;
@@ -148,6 +152,7 @@
 
         const { tipo, params } = formData;
         const btnPreview = document.getElementById('btn-preview-relatorio');
+        if (!btnPreview) return;
         const originalText = btnPreview.innerHTML;
 
         try {
@@ -163,12 +168,15 @@
 
             if (r.ok) {
                 renderizarPreview(data);
+            } else if (r.status === 403) {
+                alert("Sem permissão para visualizar relatórios.");
             } else {
-                alert(data.message || "Erro ao gerar preview.");
+                alert(data.message || data.error || "Erro ao gerar preview.");
             }
         } catch (e) {
+            if (e.message === "Sessão expirada") return;
             console.error("Relatorios.PreviewErro", e);
-            alert("Erro de conexão ao carregar preview.");
+            alert("Erro ao carregar visualização.");
         } finally {
             btnPreview.disabled = false;
             btnPreview.innerHTML = originalText;
@@ -264,14 +272,17 @@
 
         try {
             const r = await window.Api.apiFetch('/api/reports/history');
-            if (r.ok) {
+            if (r && r.ok) {
                 const data = await r.json();
                 historyCache = data || [];
                 renderizarHistorico(listEl);
-            } else {
-                listEl.innerHTML = `<p style="color:red;">Erro ao carregar histórico.</p>`;
+            } else if (r && r.status === 403) {
+                listEl.innerHTML = `<p style="color:#666;">Histórico indisponível (Sem permissão).</p>`;
+            } else if (r) {
+                listEl.innerHTML = `<p style="color:red;">Erro ao carregar histórico (${r.status}).</p>`;
             }
         } catch (e) {
+            if (e.message === "Sessão expirada") return;
             console.error("Relatorios.HistoryErro", e);
             listEl.innerHTML = `<p style="color:red;">Erro de conexão ao carregar histórico.</p>`;
         }

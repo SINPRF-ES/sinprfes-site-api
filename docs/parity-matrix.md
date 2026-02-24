@@ -20,7 +20,7 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 | **Repasse** | ✅ `RepasseScreen.tsx` | ✅ `sec-repasse` | `/api/repasse` | `REPASSE_GERENCIAR` | ✅ OK |
 | **Relatórios** | ✅ `RelatoriosScreen.tsx` | ✅ `sec-relatorios` | `/api/reports` | `RELATORIOS_VER` | ✅ OK |
 | **Notificações** | ✅ `NotificacoesPushScreen`| ✅ `sec-notificacoes` | `/api/push` | `PUSH_GERENCIAR` | ✅ OK |
-| **CMS** | ❌ Ausente | ✅ `sec-cms` | `/api/content-blocks`| `EDIT_CONTENT` | 🎨 Front-only |
+| **CMS** | ❌ Ausente | ✅ `sec-cms` | `/api/content-blocks`| `EDIT_CONTENT` | ✅ OK (Site) |
 | **Diagnóstico** | ✅ `LogsScreen.tsx` | ❌ Ausente | `/api/diagnostico` | `ADMIN`, `DIRETORIA` | ⚠️ Divergente |
 
 ---
@@ -36,11 +36,12 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Endpoints:** `POST /api/push/campaigns`, `GET /api/push/history/me`
 - **Permissões:** `PUSH_GERENCIAR` (para envio), todos (para histórico)
 - **Divergências:** O App recebe Push nativo; o Site apenas exibe o histórico de mensagens enviadas.
+- **Estabilidade:** Corrigido loop de autenticação 401 em `/api/push/campaigns` no Mobile com implementação de logout unificado e anti-loop.
 
 ### 3. CMS (Conteúdo do Site)
-- **Endpoints:** `GET/POST /api/content-blocks`
+- **Endpoints:** `GET/PUT /api/content-blocks`
 - **Permissões:** `EDIT_CONTENT`
-- **Drift:** Módulo exclusivo do Site. Não há necessidade de edição de blocos do site via App no momento.
+- **Drift:** Módulo exclusivo do Site. Não há necessidade de edição de blocos do site via App no momento. Implementada resiliência contra dados corrompidos e erros de JSON no frontend.
 
 ### 4. Diagnóstico (Logs)
 - **Endpoints:** `/api/diagnostico`

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useRef } from 'react';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
 import { updateAutoScheduler } from '../services/updateAutoScheduler';
@@ -66,6 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   useEffect(() => {
+    // Define callback global para apiService (Logout Unificado)
+    (global as any).onSessionExpired = () => {
+       console.warn('[Auth.onSessionExpired] Sessão expirada detectada pelo ApiService');
+       logout();
+    };
+
     async function loadSession() {
       AuthStore.init();
       try {

@@ -134,8 +134,10 @@
                 unificarContagemAtivos();
 
                 renderizarMeses();
+            } else if (r.status === 401 || r.status === 403) {
+              container.innerHTML = `<p style="color:#c0392b; text-align:center;">Acesso Negado. Você não tem permissão para ver os detalhes de repasse.</p>`;
             } else {
-              container.innerHTML = `<p style="color:#c0392b; text-align:center;">Erro ao carregar dados. Verifique suas permissões.</p>`;
+              container.innerHTML = `<p style="color:#c0392b; text-align:center;">Erro ao carregar dados. Tente novamente.</p>`;
             }
         } catch (e) {
             container.innerHTML = `<p style="color:#c0392b; text-align:center;">Erro de conexão.</p>`;
@@ -175,6 +177,7 @@
 
         if (!container || !repasseData) return;
 
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilLogado);
         totalGeralEl.textContent = formatCurrency(repasseData.totalAcumuladoGeral || 0);
 
         const nomesMeses = [
@@ -204,11 +207,15 @@
                         <div class="month-config-row">
                             <div style="flex: 1; max-width: 200px;">
                                 <label style="display:block; font-weight:bold; font-size:0.8rem; margin-bottom:5px;">Per Capita do Mês</label>
-                                <input type="number" step="0.01" value="${m.perCapita}" onchange="Repasse.atualizarPerCapita(${m.month}, this.value)" style="padding:8px; border:1px solid #ccc; border-radius:4px; width:100%;">
+                                ${ehGestao
+                                    ? `<input type="number" step="0.01" value="${m.perCapita}" onchange="Repasse.atualizarPerCapita(${m.month}, this.value)" style="padding:8px; border:1px solid #ccc; border-radius:4px; width:100%;">`
+                                    : `<span style="font-size:1.1rem; color:#003366; font-weight:bold;">${formatCurrency(m.perCapita)}</span>`
+                                }
                             </div>
+                            ${ehGestao ? `
                             <div style="flex: 1; text-align: right;">
                                 <button class="btn-repasse-save" onclick="Repasse.salvarMes(${m.month})">💾 Salvar Alterações de ${nomesMeses[m.month-1]}</button>
-                            </div>
+                            </div>` : ''}
                         </div>
 
                         <div style="overflow-x:auto;">
@@ -249,6 +256,7 @@
     }
 
     function renderRowLocalidade(month, loc) {
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilLogado);
         const percent = loc.percentual;
         const percentDisplay = percent === null ? "—" : percent.toFixed(0) + "%";
         const hasWarning = (loc.prfTotal <= 0);
@@ -268,25 +276,28 @@
             return normalizeText(r.lotacao).includes(kw);
         });
 
+        const respNome = loc.responsavelNome || (responsaveisCache.find(r => r.id == loc.responsavelId)?.nome) || "—";
+
         return `
             <tr>
                 <td style="font-weight:bold; color:#003366;">${loc.lotacao}</td>
                 <td>
+                    ${ehGestao ? `
                     <select onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { responsavelId: this.value })">
                         <option value="">Selecione...</option>
                         ${filteredResps.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
-                    </select>
+                    </select>` : `<span>${respNome}</span>`}
                 </td>
                 <td style="text-align:center;">${loc.filiadosAtivos}</td>
                 <td style="text-align:center;">
-                    <input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { prfTotal: this.value })" style="width:70px; text-align:center;">
+                    ${ehGestao ? `<input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { prfTotal: this.value })" style="width:70px; text-align:center;">` : `<span>${loc.prfTotal}</span>`}
                 </td>
                 <td style="text-align:center; color:${colorPercent}; font-weight:bold;">
                     ${hasWarning ? '<span title="PRF Total deve ser maior que zero">⚠️</span>' : percentDisplay}
                 </td>
                 <td style="text-align:right; font-weight:bold;">${formatCurrency(loc.creditoMes)}</td>
                 <td style="text-align:right;">
-                    <input type="number" step="0.01" value="${loc.reembolsoMes}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { reembolsoMes: this.value })" style="width:100px; text-align:right;">
+                    ${ehGestao ? `<input type="number" step="0.01" value="${loc.reembolsoMes}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { reembolsoMes: this.value })" style="width:100px; text-align:right;">` : `<span>${formatCurrency(loc.reembolsoMes)}</span>`}
                 </td>
                 <td style="text-align:right; color:#e67e22; font-weight:bold;">${formatCurrency(loc.acumuladoAno)}</td>
             </tr>
