@@ -51,18 +51,18 @@
           <span class="af-sidebar-title">SINPRF/ES</span>
         </div>
 
-        <div class="af-sidebar-nav">
-          <button class="af-nav-item active" data-target="sec-meus-dados">👤 Meus Dados</button>
-          <button class="af-nav-item" data-target="sec-filiados">👥 Filiados</button>
-          <button class="af-nav-item" data-target="sec-publicacoes">📚 Publicações</button>
-          <button class="af-nav-item" data-target="sec-ressarcimento">💸 Ressarcimento</button>
-          <button class="af-nav-item" data-target="sec-jogos">🏆 Jogos 2026</button>
-          <button class="af-nav-item" data-target="sec-assembleias">🗳️ Assembleias e Votações</button>
-          <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" style="display:none;">📰 Notícias</button>
-          <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;">💱 Repasse</button>
-          <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" style="display:none;">📢 Notificações</button>
-          <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;">📊 Relatórios</button>
-          <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;">🌐 Site (CMS)</button>
+        <div class="af-sidebar-nav" role="tablist" aria-orientation="vertical">
+          <button class="af-nav-item active" data-target="sec-meus-dados" id="tab-meus-dados" role="tab" aria-selected="true" aria-controls="sec-meus-dados"><span aria-hidden="true">👤</span> Meus Dados</button>
+          <button class="af-nav-item" data-target="sec-filiados" id="tab-filiados" role="tab" aria-selected="false" aria-controls="sec-filiados"><span aria-hidden="true">👥</span> Filiados</button>
+          <button class="af-nav-item" data-target="sec-publicacoes" id="tab-publicacoes" role="tab" aria-selected="false" aria-controls="sec-publicacoes"><span aria-hidden="true">📚</span> Publicações</button>
+          <button class="af-nav-item" data-target="sec-ressarcimento" id="tab-ressarcimento" role="tab" aria-selected="false" aria-controls="sec-ressarcimento"><span aria-hidden="true">💸</span> Ressarcimento</button>
+          <button class="af-nav-item" data-target="sec-jogos" id="tab-jogos" role="tab" aria-selected="false" aria-controls="sec-jogos"><span aria-hidden="true">🏆</span> Jogos 2026</button>
+          <button class="af-nav-item" data-target="sec-assembleias" id="tab-assembleias" role="tab" aria-selected="false" aria-controls="sec-assembleias"><span aria-hidden="true">🗳️</span> Assembleias e Votações</button>
+          <button class="af-nav-item" data-target="sec-noticias" id="tab-noticias" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-noticias"><span aria-hidden="true">📰</span> Notícias</button>
+          <button class="af-nav-item" data-target="sec-repasse" id="tab-repasse" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-repasse"><span aria-hidden="true">💱</span> Repasse</button>
+          <button class="af-nav-item" data-target="sec-notificacoes" id="tab-notificacoes" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-notificacoes"><span aria-hidden="true">📢</span> Notificações</button>
+          <button class="af-nav-item" data-target="sec-relatorios" id="tab-relatorios" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-relatorios"><span aria-hidden="true">📊</span> Relatórios</button>
+          <button class="af-nav-item" data-target="sec-cms" id="tab-cms" style="display:none;" role="tab" aria-selected="false" aria-controls="tab-cms"><span aria-hidden="true">🌐</span> Site (CMS)</button>
         </div>
 
         <div class="af-sidebar-footer">
@@ -72,32 +72,32 @@
 
       <!-- Conteúdo Principal -->
       <main class="af-content">
-        <section id="sec-meus-dados" class="af-section active">
+        <section id="sec-meus-dados" class="af-section active" role="tabpanel" aria-labelledby="tab-meus-dados">
           <div id="area-filiado-conteudo">
             <p>Carregando seus dados...</p>
           </div>
           <div id="alerta-endereco-desatualizado" class="alerta alerta-warning" style="display:none; margin-top:20px;"></div>
         </section>
 
-        <section id="sec-filiados" class="af-section" style="display:none;">
+        <section id="sec-filiados" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-filiados">
           <!-- Conteúdo carregado via JS -->
         </section>
 
-        <section id="sec-publicacoes" class="af-section" style="display:none;">
+        <section id="sec-publicacoes" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-publicacoes">
            <div class="section-card">
               <p>Carregando biblioteca...</p>
            </div>
         </section>
 
-        <section id="sec-ressarcimento" class="af-section" style="display:none;">
+        <section id="sec-ressarcimento" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-ressarcimento">
           <!-- Conteúdo carregado via JS -->
         </section>
 
-        <section id="sec-jogos" class="af-section" style="display:none;">
+        <section id="sec-jogos" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-jogos">
           <!-- Conteúdo carregado via JS -->
         </section>
 
-        <section id="sec-assembleias" class="af-section" style="display:none;">
+        <section id="sec-assembleias" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-assembleias">
           <div id="sec-assembleias-lista">
              <div id="area-assembleias-lista">
                <p>Carregando assembleias...</p>
@@ -113,15 +113,15 @@
           </div>
         </section>
 
-        <section id="sec-repasse" class="af-section" style="display:none;">
+        <section id="sec-repasse" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-repasse">
           <!-- Conteúdo carregado via JS -->
         </section>
 
-        <section id="sec-noticias" class="af-section" style="display:none;">
+        <section id="sec-noticias" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-noticias">
           <!-- Conteúdo carregado via NoticiasAdmin -->
         </section>
 
-        <section id="sec-cms" class="af-section" style="display:none;">
+        <section id="sec-cms" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-cms">
           <div class="section-card">
               <div class="af-standard-header">
                   <h2>Gerenciar Conteúdo do Site</h2>
@@ -144,7 +144,7 @@
           </div>
         </section>
 
-        <section id="sec-relatorios" class="af-section" style="display:none;">
+        <section id="sec-relatorios" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-relatorios">
           <div class="af-standard-header">
               <h2>📊 Relatórios e Dossiês</h2>
               <p class="section-subtitle">Gere PDFs consolidados e receba-os por e-mail.</p>
@@ -217,7 +217,7 @@
           </div>
         </section>
 
-        <section id="sec-notificacoes" class="af-section" style="display:none;">
+        <section id="sec-notificacoes" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-notificacoes">
           <div class="section-card">
               <div class="af-standard-header">
                   <h2>📢 Notificações Push</h2>

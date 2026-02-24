@@ -33,3 +33,7 @@
 ## 2025-05-22 - [Initial ARIA States for Dynamic UI]
 **Learning:** Dynamically generated UI elements (like password toggles or floating alerts) often miss critical initial accessibility metadata. Adding `aria-label`, `title`, and `aria-pressed` at the moment of creation—not just after the first interaction—is essential for a "fail-secure" accessible experience.
 **Action:** Always set descriptive ARIA labels and appropriate initial states (`aria-pressed="false"`) when creating icon-only buttons via JavaScript. Ensure these elements have `:focus-visible` styles in CSS to support keyboard navigation.
+
+## 2025-05-23 - [ARIA Tab Pattern for Sidebar Navigation]
+**Learning:** Sidebar navigation that switches between different views on the same page should follow the WAI-ARIA Tab pattern. This involves using `role="tablist"` on the container, `role="tab"` on the buttons, and `role="tabpanel"` on the target sections. Consistent IDs (e.g., prefixed with `tab-`) and appropriate `aria-selected`, `aria-controls`, and `aria-labelledby` attributes ensure assistive technologies correctly interpret the relationship and state of the navigation.
+**Action:** Implement the ARIA Tab pattern for all non-navigation sidebar menus. Ensure JS logic updates `aria-selected` synchronously with visual state changes. Wrap decorative emojis in `<span aria-hidden="true">` to reduce screen reader noise.

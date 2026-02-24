@@ -14,8 +14,12 @@
             btn.addEventListener("click", () => {
                 const alvo = btn.dataset.target;
 
-                navButtons.forEach(b => b.classList.remove("active"));
+                navButtons.forEach(b => {
+                    b.classList.remove("active");
+                    b.setAttribute("aria-selected", "false");
+                });
                 btn.classList.add("active");
+                btn.setAttribute("aria-selected", "true");
 
                 sections.forEach(s => {
                     const ativo = s.id === alvo;

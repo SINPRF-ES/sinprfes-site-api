@@ -11,7 +11,7 @@
         // Controle de visibilidade do menu
         const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
         const ehAutorizado = perfisAutorizados.includes(perfil);
-        const navItem = document.getElementById('nav-notificacoes');
+        const navItem = document.getElementById('tab-notificacoes');
 
         if (navItem) {
             navItem.style.display = ehAutorizado ? "block" : "none";
