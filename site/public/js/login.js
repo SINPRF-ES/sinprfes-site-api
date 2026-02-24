@@ -186,6 +186,14 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem("token_filiado", data.token);
           }
         }
+
+        // Salva informações do usuário para uso imediato (evita delay de carregarMeusDados)
+        const userInfo = {
+          perfil_acesso: (data.perfil_acesso || "FILIADO").toUpperCase(),
+          permissions: data.permissions || []
+        };
+        localStorage.setItem("userInfo", JSON.stringify(userInfo));
+
         if (data.perfil_acesso) {
           localStorage.setItem("perfil_acesso", data.perfil_acesso);
         }

@@ -7,10 +7,12 @@
     let historyCache = [];
     let isShowingArchived = false;
 
+    let isLoadingMe = false;
+    let isLoadingGestao = false;
+
     function inicializarNotificacoes(user) {
         if (!user) user = window.Utils?.obterUserInfo() || {};
         const permissions = user.permissions || [];
-        const perfilLogado = (user.perfil_acesso || user.perfil || "").toUpperCase();
 
         // PUSH_GERENCIAR habilita o painel de envio e histórico de campanhas
         const ehGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
@@ -19,9 +21,13 @@
         if (adminContainer) adminContainer.style.display = ehGestao ? "block" : "none";
 
         if (ehGestao) {
+            console.log("[Notificações] Perfil com permissão de gestão detectado.");
             setupHandlers();
-            carregarCampanhasGestao();
             popularLotacoes();
+            carregarCampanhasGestao();
+        } else {
+            // Se for filiado comum, garante que o container de gestão esteja oculto e limpo
+            if (adminContainer) adminContainer.innerHTML = '';
         }
 
         carregarHistoricoMe();
@@ -221,9 +227,12 @@
 
     async function carregarHistoricoMe() {
         const listEl = document.getElementById('lista-notificacoes-recebidas');
-        if (!listEl) return;
+        if (!listEl || isLoadingMe) return;
 
         try {
+            isLoadingMe = true;
+            listEl.innerHTML = '<p style="text-align:center; padding:40px; color:#666;">⌛ Carregando suas notificações...</p>';
+
             const r = await window.Api.apiFetch('/api/push/history/me');
             const data = await r.json();
 
@@ -231,11 +240,19 @@
                 renderizarNotificacoesRecebidas(data.notifications || []);
             } else {
                 const msg = data.message || data.error || "Erro ao carregar notificações.";
-                listEl.innerHTML = `<p style="color:red; padding:20px; text-align:center;">⚠️ ${msg} ${data.requestId ? `<br><small>ID: ${data.requestId}</small>` : ''}</p>`;
+                listEl.innerHTML = `
+                    <div style="color:#e74c3c; padding:30px; text-align:center; background:#fff5f5; border-radius:8px; border:1px solid #ffcccc;">
+                        <p style="font-weight:bold; margin-bottom:5px;">⚠️ ${msg}</p>
+                        ${data.requestId ? `<small style="color:#666;">Solicitação: ${data.requestId}</small>` : ''}
+                    </div>`;
             }
         } catch (e) {
             console.error("Notificacoes.HistoricoMeErro", e);
-            listEl.innerHTML = `<p style="color:red; padding:20px; text-align:center;">❌ Erro de conexão ao carregar suas notificações.</p>`;
+            if (e.message !== "Sessão expirada") {
+                listEl.innerHTML = `<p style="color:#e74c3c; padding:20px; text-align:center;">❌ Erro de conexão ao carregar notificações.</p>`;
+            }
+        } finally {
+            isLoadingMe = false;
         }
     }
 
@@ -307,9 +324,12 @@
 
     async function carregarCampanhasGestao() {
         const listEl = document.getElementById('push-history-list');
-        if (!listEl) return;
+        if (!listEl || isLoadingGestao) return;
 
         try {
+            isLoadingGestao = true;
+            listEl.innerHTML = '<p style="padding:15px; color:#666;">⌛ Carregando campanhas...</p>';
+
             const url = isShowingArchived ? '/api/push/campaigns?includeArchived=1' : '/api/push/campaigns';
             const r = await window.Api.apiFetch(url);
             const data = await r.json();
@@ -318,15 +338,25 @@
                 historyCache = data.campaigns || [];
                 renderizarHistorico(listEl);
             } else {
-                const msg = data.message || data.error || "Erro ao carregar histórico de campanhas.";
-                listEl.innerHTML = `<p style="color:red; padding:10px;">⚠️ ${msg} ${data.requestId ? `<br><small>ID: ${data.requestId}</small>` : ''}</p>`;
+                let msg = data.message || data.error || "Erro ao carregar histórico de campanhas.";
                 if (r.status === 403) {
-                    console.warn("Sem permissão para acessar notificações de gestão.");
+                    msg = "Sem permissão para acessar notificações de gestão.";
+                    console.warn(msg);
                 }
+
+                listEl.innerHTML = `
+                    <div style="color:#e74c3c; padding:15px; background:#fff5f5; border-radius:8px; border:1px solid #ffcccc;">
+                        <p style="font-weight:bold; margin-bottom:5px;">⚠️ ${msg}</p>
+                        ${data.requestId ? `<small style="color:#666;">Solicitação: ${data.requestId}</small>` : ''}
+                    </div>`;
             }
         } catch (e) {
             console.error("Notificacoes.CampanhasErro", e);
-            listEl.innerHTML = `<p style="color:red; padding:10px;">❌ Erro de conexão ao carregar histórico de gestão.</p>`;
+            if (e.message !== "Sessão expirada") {
+                listEl.innerHTML = `<p style="color:#e74c3c; padding:10px;">❌ Erro de conexão ao carregar histórico de gestão.</p>`;
+            }
+        } finally {
+            isLoadingGestao = false;
         }
     }
 

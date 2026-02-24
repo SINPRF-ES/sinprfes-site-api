@@ -115,11 +115,15 @@ exports.login = async (req, res) => {
       hasRefreshToken: true
     });
 
+    const perfil = (filiado.perfil_acesso || "FILIADO").toUpperCase();
+    const permissions = rolesConfig[perfil] || [];
+
     return res.json({
       message: Textos.SUCESSO.LOGIN_REALIZADO, // ✨
       token,
       refreshToken,
-      perfil_acesso: filiado.perfil_acesso || "FILIADO",
+      perfil_acesso: perfil,
+      permissions
     });
   } catch (err) {
     log.error("AuthLoginErroInterno", { error: err, requestId: req.requestId });

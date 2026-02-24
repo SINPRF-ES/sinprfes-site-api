@@ -36,8 +36,13 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Endpoints:** `POST /api/push/campaigns/send`, `GET /api/push/campaigns` (Gestão), `GET /api/push/history/me` (Membro)
 - **Permissões:** `PUSH_GERENCIAR` (para envio e gestão de campanhas), `VIEW_SELF` (para histórico pessoal)
 - **Divergências:** O App recebe Push nativo; o Site exibe o histórico de mensagens.
-- **Site Implementation:** Fluxos separados para Membro e Gestão baseados em permissões (`PUSH_GERENCIAR`). Tratamento robusto de erros 401/403 com feedback visual na UI e inclusão de `requestId`.
-- **Estabilidade:** Corrigido loop de autenticação 401 em `/api/push/campaigns` (Mobile e Site) com implementação de logout unificado e limpeza total de tokens no `localStorage`.
+- **Site Implementation:**
+  - **Fluxos Separados:** Separação lógica entre "Minhas Notificações" (Histórico do Filiado) e "Painel de Gestão" (Campanhas), garantindo que filiados comuns nunca chamem endpoints administrativos.
+  - **Permissions-First:** A determinação do perfil de gestão no Site prioriza o array de `permissions` retornado pelo bootstrap (`/api/auth/me` ou `/api/filiados/me`), evitando dependência de strings de perfil.
+  - **Tratamento de Erros:** Implementado tratamento explícito para 401 (Sessão Expirada) e 403 (Sem Permissão), com mensagens amigáveis na UI e exibição de `requestId` para suporte.
+- **Estabilidade:**
+  - Corrigido loop de autenticação 401 em `/api/push/campaigns` com implementação de logout unificado e limpeza total de tokens no `localStorage`.
+  - Adicionados estados de "Carregando..." para evitar telas estáticas durante o fetch de dados.
 
 ### 3. CMS (Conteúdo do Site)
 - **Endpoints:** `GET/PUT /api/content-blocks`
