@@ -166,6 +166,35 @@ exports.pushHealth = async (req, res) => {
   }
 };
 
+exports.listMyNotifications = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const userId = req.user?.id;
+  const perfil = (req.user?.perfil_acesso || "").toUpperCase();
+  const lotacao = req.user?.lotacao;
+  const situacao = (req.user?.situacao || req.user?.situacao_funcional || "").toUpperCase();
+
+  try {
+    const notifications = await pushCampaignService.listMyNotifications({
+        userId, perfil, lotacao, situacao
+    });
+
+    log.info("PushCampaign.ListMyNotificationsSucesso", { requestId, userId, count: notifications.length });
+
+    return res.json({ success: true, notifications });
+  } catch (e) {
+    log.error("PushCampaign.ListMyNotificationsErro", {
+        requestId,
+        userId,
+        error: e.message
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao listar notificações.",
+      code: "INTERNAL_SERVER_ERROR"
+    });
+  }
+};
+
 exports.listCampaigns = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;

@@ -9,6 +9,7 @@
     const MIN_YEAR = 2026;
     let yearCurrent = Math.max(new Date().getFullYear(), MIN_YEAR);
     let responsaveisCache = [];
+    let filiadosCache = [];
     let repasseData = null;
     let perfilLogado = null;
 
@@ -96,7 +97,18 @@
         }
 
         await carregarResponsaveis();
+        await carregarFiliados();
         await carregarDados();
+    }
+
+    async function carregarFiliados() {
+        try {
+            const r = await window.Api.apiFetch("/api/filiados");
+            if (r.ok) {
+                const d = await r.json();
+                filiadosCache = d.filiados || d || [];
+            }
+        } catch (e) { console.error("Erro filiados", e); }
     }
 
     async function carregarResponsaveis() {
@@ -117,6 +129,10 @@
             const r = await window.Api.apiFetch(`/api/repasse?year=${yearCurrent}`);
             if (r.ok) {
                 repasseData = await r.json();
+
+                // Paridade App: Unificar contagem de filiados ativos (B1)
+                unificarContagemAtivos();
+
                 renderizarMeses();
             } else {
               container.innerHTML = `<p style="color:#c0392b; text-align:center;">Erro ao carregar dados. Verifique suas permissões.</p>`;
@@ -124,6 +140,33 @@
         } catch (e) {
             container.innerHTML = `<p style="color:#c0392b; text-align:center;">Erro de conexão.</p>`;
         }
+    }
+
+    function unificarContagemAtivos() {
+        if (!repasseData || !filiadosCache.length) return;
+
+        const activeFiliados = filiadosCache.filter(f => {
+            const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
+            return situacao === 'ATIVO' && !f.arquivado_em;
+        });
+
+        const counts = {};
+        Object.keys(LOTACAO_KEYWORDS).forEach(lot => {
+            const kw = LOTACAO_KEYWORDS[lot];
+            counts[lot] = activeFiliados.filter(f =>
+                normalizeText(f.lotacao || 'SEDE').includes(kw)
+            ).length;
+        });
+
+        repasseData.meses.forEach(m => {
+            m.localidades.forEach(l => {
+                if (counts[l.lotacao] !== undefined) {
+                    l.filiadosAtivos = counts[l.lotacao];
+                }
+            });
+            // Recalcula o mês com base nos novos ativos
+            recalcular(m.month);
+        });
     }
 
     function renderizarMeses() {

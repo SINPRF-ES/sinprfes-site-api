@@ -8,21 +8,20 @@
     let isShowingArchived = false;
 
     function inicializarNotificacoes(perfil) {
-        // Controle de visibilidade do menu
-        const perfisAutorizados = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-        const ehAutorizado = perfisAutorizados.includes(perfil);
-        const navItem = document.getElementById('tab-notificacoes');
+        const perfilLogado = (perfil || "").toUpperCase();
+        const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+        const ehGestao = perfisGestao.includes(perfilLogado);
 
-        if (navItem) {
-            navItem.style.display = ehAutorizado ? "block" : "none";
+        const adminContainer = document.getElementById('notificacoes-admin-container');
+        if (adminContainer) adminContainer.style.display = ehGestao ? "block" : "none";
+
+        if (ehGestao) {
+            setupHandlers();
+            carregarHistorico();
+            popularLotacoes();
         }
 
-        // Se não for autorizado, não inicializa handlers nem faz chamadas de API de gestão
-        if (!ehAutorizado) return;
-
-        setupHandlers();
-        carregarHistorico();
-        popularLotacoes();
+        carregarMinhasNotificacoes();
     }
 
     function popularLotacoes() {
@@ -217,6 +216,89 @@
         }
     }
 
+    async function carregarMinhasNotificacoes() {
+        const listEl = document.getElementById('lista-notificacoes-recebidas');
+        if (!listEl) return;
+
+        try {
+            const r = await window.Api.apiFetch('/api/push/history/me');
+            if (r.ok) {
+                const data = await r.json();
+                renderizarNotificacoesRecebidas(data.notifications || []);
+            } else {
+                listEl.innerHTML = `<p style="color:red; text-align:center;">Erro ao carregar notificações.</p>`;
+            }
+        } catch (e) {
+            listEl.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão.</p>`;
+        }
+    }
+
+    function renderizarNotificacoesRecebidas(lista) {
+        const container = document.getElementById('lista-notificacoes-recebidas');
+        if (!container) return;
+
+        if (!lista.length) {
+            container.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">Nenhuma notificação recebida.</p>`;
+            return;
+        }
+
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+        const seenIds = JSON.parse(localStorage.getItem('notif_seen_ids') || '[]');
+
+        container.innerHTML = lista.map(n => {
+            const date = formatarData(n.created_at);
+            const viewed = seenIds.includes(n.id);
+
+            return `
+                <div class="history-card" style="border-left-color: ${viewed ? '#ccc' : '#27ae60'}; cursor: pointer; position: relative;" onclick="Notificacoes.abrirDetalhe('${n.id}')">
+                    ${!viewed ? '<span class="badge badge-warning" style="position:absolute; top:10px; right:10px; font-size:0.6rem;">NOVA</span>' : ''}
+                    <div class="history-header">
+                        <span class="history-date">${date}</span>
+                    </div>
+                    ${n.title ? `<div class="history-title" style="color:#003366;">${safeEscape(n.title)}</div>` : ''}
+                    <div class="history-body" style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${safeEscape(n.body)}</div>
+                </div>
+            `;
+        }).join('');
+
+        // Store received notifications for detail modal lookup
+        global._receivedNotifications = lista;
+    }
+
+    function abrirDetalhe(id) {
+        const n = (global._receivedNotifications || []).find(x => x.id === id);
+        if (!n) return;
+
+        // Marca como lida
+        const seenIds = JSON.parse(localStorage.getItem('notif_seen_ids') || '[]');
+        if (!seenIds.includes(id)) {
+            seenIds.push(id);
+            localStorage.setItem('notif_seen_ids', JSON.stringify(seenIds.slice(-100))); // Keep last 100
+            renderizarNotificacoesRecebidas(global._receivedNotifications);
+        }
+
+        const modal = document.getElementById("modal-generic");
+        const tituloEl = document.getElementById("modal-generic-titulo");
+        const corpoEl = document.getElementById("modal-generic-corpo");
+
+        tituloEl.textContent = "Notificação";
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+
+        corpoEl.innerHTML = `
+            <div style="padding:10px;">
+                <h3 style="color:#003366; margin-bottom:10px;">${safeEscape(n.title || "Informativo")}</h3>
+                <p style="font-size:0.8rem; color:#888; margin-bottom:20px;">Enviado em: ${formatarData(n.created_at)}</p>
+                <div style="white-space: pre-wrap; line-height:1.6; color:#333; font-size:1.1rem; background:#f9f9f9; padding:20px; border-radius:12px;">${safeEscape(n.body)}</div>
+                <div style="text-align:center; margin-top:30px;">
+                    <button class="btn btn-primary" onclick="Utils.fecharModal('modal-generic')">Fechar</button>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = "flex";
+        if (window.Utils?.lockScroll) window.Utils.lockScroll();
+    }
+
     async function carregarHistorico() {
         const listEl = document.getElementById('push-history-list');
         if (!listEl) return;
@@ -321,7 +403,8 @@
 
     global.Notificacoes = {
         inicializarNotificacoes,
-        carregarHistorico
+        carregarHistorico,
+        abrirDetalhe
     };
 
 })(typeof window !== 'undefined' ? window : global);
