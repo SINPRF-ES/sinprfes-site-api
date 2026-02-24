@@ -98,11 +98,12 @@ exports.sendCampaign = async (req, res) => {
         ...result,
         success: false,
         message: "FCM credentials missing/invalid in Expo project. Configure FCM V1 service account in EAS/Expo credentials.",
-        code: "FCM_CREDENTIALS_ERROR"
+        code: "FCM_CREDENTIALS_ERROR",
+        requestId
       });
     }
 
-    return res.json(result);
+    return res.json({ ...result, requestId });
   } catch (e) {
     const errorId = uuidv4();
     log.error("PushCampaign.ControllerErro", {
@@ -169,6 +170,8 @@ exports.pushHealth = async (req, res) => {
 exports.listMyNotifications = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   const perfil = (req.user?.perfil_acesso || "").toUpperCase();
   const lotacao = req.user?.lotacao;
   const situacao = (req.user?.situacao || req.user?.situacao_funcional || "").toUpperCase();
@@ -180,7 +183,7 @@ exports.listMyNotifications = async (req, res) => {
 
     log.info("PushCampaign.ListMyNotificationsSucesso", { requestId, userId, count: notifications.length });
 
-    return res.json({ success: true, notifications });
+    return res.json({ success: true, notifications, requestId });
   } catch (e) {
     log.error("PushCampaign.ListMyNotificationsErro", {
         requestId,
@@ -205,7 +208,7 @@ exports.listCampaigns = async (req, res) => {
     const limit = includeArchived ? 50 : 5;
 
     const campaigns = await pushCampaignService.listCampaigns(limit);
-    return res.json({ success: true, campaigns });
+    return res.json({ success: true, campaigns, requestId });
   } catch (e) {
     log.error("PushCampaign.ListErro", {
         requestId,

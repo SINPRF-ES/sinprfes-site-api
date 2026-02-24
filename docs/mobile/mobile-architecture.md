@@ -21,7 +21,7 @@ The SINPRF-ES mobile application is built using **Expo SDK 54**. It follows a mo
 ## Build and Update Strategy
 - **OTA Updates**: Handled via EAS Update for JS/Asset changes. See [OTA Runbook](../runbooks/ota-update.md).
 - **Native Builds**: Handled via EAS Build for changes requiring native code modification or SDK updates. See [apk-build.md](./apk-build.md).
-- **Unified Update Flow**: The app uses `UpdateAutoChecker.tsx` as the single entry point for all updates. It handles both OTA and APK updates through a unified modal/banner system, replacing legacy components like `OtaUpdateBanner`.
+- **Unified Update Flow**: The app uses `UpdateAutoChecker.tsx` as the single entry point for all updates (mandatory and APK), and `UpdateAutoScheduler.ts` for background OTA check-ins. This unified system replaces legacy components like `OtaUpdateBanner` and explicit manual check buttons.
 - **Distribution**: APKs are distributed via a custom update mechanism integrated with Google Drive and the backend.
 
 ## Parity with Site
