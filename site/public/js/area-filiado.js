@@ -37,7 +37,31 @@
         let userInfo = obterUserInfo ? obterUserInfo() : {};
         let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
 
+        function atualizarVisibilidadeAbas(p) {
+            const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
+            const ehComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(p);
+
+            const navRepasse = document.getElementById("tab-repasse");
+            if (navRepasse) navRepasse.style.display = ehGestao ? "block" : "none";
+
+            const navNoticias = document.getElementById("tab-noticias");
+            if (navNoticias) navNoticias.style.display = "block";
+
+            const navCms = document.getElementById("tab-cms");
+            if (navCms) navCms.style.display = ehGestao ? "block" : "none";
+
+            const navNotificacoes = document.getElementById("tab-notificacoes");
+            if (navNotificacoes) navNotificacoes.style.display = "block";
+
+            const navRelatorios = document.getElementById("tab-relatorios");
+            if (navRelatorios) navRelatorios.style.display = ehGestao ? "block" : "none";
+
+            const navNovoFiliado = document.getElementById("tab-novo-filiado");
+            if (navNovoFiliado) navNovoFiliado.style.display = ehGestao ? "block" : "none";
+        }
+
         console.log("Perfil inicial (Cache):", perfil);
+        atualizarVisibilidadeAbas(perfil);
 
         // 2. Configura Navegação Global
         if (configurarNavegacao) {
@@ -58,8 +82,8 @@
                 else if (abaAlvo === 'sec-estatuto' && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
                 else if (abaAlvo === 'sec-seguranca') {
                     if (window.Seguranca && window.Seguranca.renderizarSeguranca) {
-                        const userInfo = window.Utils?.obterUserInfo();
-                        window.Seguranca.renderizarSeguranca(userInfo, carregarMeusDados);
+                        const info = window.Utils?.obterUserInfo();
+                        window.Seguranca.renderizarSeguranca(info, carregarMeusDados);
                     }
                 }
             });
@@ -86,48 +110,26 @@
                 const dadosFrescos = await carregarMeusDados();
                 if (dadosFrescos && dadosFrescos.perfil_acesso) {
                     const perfilReal = dadosFrescos.perfil_acesso.toUpperCase();
-                    if (perfilReal !== perfil) {
-                        console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
-                        perfil = perfilReal;
-                        // Força re-render do menu/módulos se necessário
-                        if (inicializarFiliados) inicializarFiliados(perfil);
-                        if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
-                    }
+                    console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
+                    perfil = perfilReal;
+
+                    atualizarVisibilidadeAbas(perfilReal);
+
+                    // Força re-render do menu/módulos se necessário
+                    if (inicializarFiliados) inicializarFiliados(perfil);
+                    if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 }
             }
 
             // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
             if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
 
-            // Exibe abas restritas conforme perfil (Regra de Ouro)
-            const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-            const ehGestao = perfisGestao.includes(perfil);
-            const perfisComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
-
-            const navRepasse = document.getElementById("tab-repasse");
-            if (navRepasse) navRepasse.style.display = ehGestao ? "block" : "none";
-
-            const navNoticias = document.getElementById("tab-noticias");
-            // Paridade: Notícias disponível para todos, mas gestão aparece para Comunicação
-            if (navNoticias) navNoticias.style.display = "block";
-
-            const navCms = document.getElementById("tab-cms");
-            if (navCms) navCms.style.display = ehGestao ? "block" : "none";
-
-            const navNotificacoes = document.getElementById("tab-notificacoes");
-            if (navNotificacoes) navNotificacoes.style.display = "block";
-
-            const navRelatorios = document.getElementById("tab-relatorios");
-            if (navRelatorios) navRelatorios.style.display = ehGestao ? "block" : "none";
-
             const navNovoFiliado = document.getElementById("tab-novo-filiado");
             if (navNovoFiliado) {
-                navNovoFiliado.style.display = ehGestao ? "block" : "none";
                 navNovoFiliado.onclick = () => {
                     const btnTabFiliados = document.getElementById("tab-filiados");
                     if (btnTabFiliados) {
                         btnTabFiliados.click();
-                        // Pequeno delay para garantir que a seção carregou
                         setTimeout(() => {
                             const containerNovo = document.getElementById("novo-filiado-container");
                             if (containerNovo && abrirNovoFiliado) {
