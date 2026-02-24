@@ -14,6 +14,7 @@ const {
   listarParaPerfil,
 } = require("../services/filiados.service");
 const authService = require("../services/auth.service");
+const rolesConfig = require("../config/roles.config");
 
 function gerarToken(filiado) {
   const perfil = filiado.perfil_acesso || "FILIADO";
@@ -114,11 +115,15 @@ exports.login = async (req, res) => {
       hasRefreshToken: true
     });
 
+    const perfil = (filiado.perfil_acesso || "FILIADO").toUpperCase();
+    const permissions = rolesConfig[perfil] || [];
+
     return res.json({
       message: Textos.SUCESSO.LOGIN_REALIZADO, // ✨
       token,
       refreshToken,
-      perfil_acesso: filiado.perfil_acesso || "FILIADO",
+      perfil_acesso: perfil,
+      permissions
     });
   } catch (err) {
     log.error("AuthLoginErroInterno", { error: err, requestId: req.requestId });
@@ -228,7 +233,9 @@ exports.me = async (req, res) => {
     }
 
     const { senha_hash, twofa_secret, ...limpo } = filiado;
-    return res.json(limpo);
+    const perfil = (limpo.perfil_acesso || "FILIADO").toUpperCase();
+    const permissions = rolesConfig[perfil] || [];
+    return res.json({ ...limpo, permissions });
   } catch (err) {
     log.error("AuthMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
     return res.status(500).json({ error: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨

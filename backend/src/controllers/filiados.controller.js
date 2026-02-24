@@ -32,6 +32,7 @@ const {
   ME_EDITABLE_FIELDS_GESTAO
 } = require('../shared/canon');
 
+const rolesConfig = require("../config/roles.config");
 const { normalizeParentesco, requiresParentescoOutro } = require('../shared/dependentes/parentesco');
 
 const {
@@ -228,10 +229,13 @@ exports.getMe = async (req, res) => {
     }
 
     const { senha_hash, twofa_secret, ...dadosFiliado } = filiado;
+    const perfil = (dadosFiliado.perfil_acesso || "FILIADO").toUpperCase();
+    const permissions = rolesConfig[perfil] || [];
 
     return res.json({
       ...dadosFiliado,
       twofa_ativo: !!twofa_secret,
+      permissions,
       requestId
     });
   } catch (err) {

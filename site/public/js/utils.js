@@ -83,10 +83,19 @@
       const response = await fetch(finalUrl, { ...options, headers });
 
       if (response.status === 401) {
-        alert("Sessão expirada. Faça login novamente.");
+        // Evita múltiplos alertas e loops se já estivermos saindo
+        if (window._isRedirecting401) throw new Error("Sessão expirada (redirecionando)");
+        window._isRedirecting401 = true;
+
+        console.warn("[Utils] 401 Unauthorized detectado. Limpando sessão e redirecionando.");
+
         localStorage.removeItem("token");
+        localStorage.removeItem("token_filiado");
+        localStorage.removeItem("token_gestao");
         localStorage.removeItem("userInfo");
         localStorage.removeItem("perfil_acesso");
+
+        alert("Sessão expirada. Por favor, entre novamente.");
         window.location.href = "/login.html";
         throw new Error("Sessão expirada");
       }
