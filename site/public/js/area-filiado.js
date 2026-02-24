@@ -94,19 +94,19 @@
             const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
             const perfisComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
 
-            const navRepasse = document.getElementById("nav-repasse");
+            const navRepasse = document.getElementById("tab-repasse");
             if (navRepasse) navRepasse.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
-            const navNoticias = document.getElementById("nav-noticias");
+            const navNoticias = document.getElementById("tab-noticias");
             if (navNoticias) navNoticias.style.display = perfisComunicacao.includes(perfil) ? "block" : "none";
 
-            const navCms = document.getElementById("nav-cms");
+            const navCms = document.getElementById("tab-cms");
             if (navCms) navCms.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
-            const navNotificacoes = document.getElementById("nav-notificacoes");
+            const navNotificacoes = document.getElementById("tab-notificacoes");
             if (navNotificacoes) navNotificacoes.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
-            const navRelatorios = document.getElementById("nav-relatorios");
+            const navRelatorios = document.getElementById("tab-relatorios");
             if (navRelatorios) navRelatorios.style.display = perfisGestao.includes(perfil) ? "block" : "none";
 
         } catch (err) {
