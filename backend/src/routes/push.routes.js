@@ -20,6 +20,12 @@ router.get(
   campaignController.listCampaigns
 );
 
+router.get(
+  "/history/me",
+  auth,
+  campaignController.listMyNotifications
+);
+
 router.post(
   "/campaigns/send",
   auth,

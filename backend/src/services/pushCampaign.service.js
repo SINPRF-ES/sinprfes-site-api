@@ -174,6 +174,35 @@ async function listCampaigns(limit = 20, offset = 0) {
 }
 
 /**
+ * Retorna as notificações que o usuário logado deve visualizar.
+ * Cruza os critérios de alvo da campanha com os dados do usuário.
+ */
+async function listMyNotifications({ userId, perfil, lotacao, situacao }) {
+  // Nota: target_type pode ser 'ALL', 'ATIVOS', 'VETERANOS', 'LOTACAO', 'JOGOS', 'FILIADO'
+  // target_value pode ser uma string (lotacao) ou um JSON (filiado object)
+
+  const sql = `
+    SELECT c.id, c.title, c.body, c.created_at, c.target_type, c.target_value
+    FROM push_campaigns c
+    WHERE
+        c.status = 'SENT'
+        AND (
+            c.target_type = 'ALL'
+            OR (c.target_type = 'ATIVOS' AND $1 = 'ATIVO')
+            OR (c.target_type = 'VETERANOS' AND $1 IN ('VETERANO', 'PENSIONISTA'))
+            OR (c.target_type = 'LOTACAO' AND c.target_value::text = '"' || $2 || '"')
+            OR (c.target_type = 'FILIADO' AND (c.target_value->>'id')::int = $3)
+            OR (c.target_type = 'JOGOS' AND EXISTS (SELECT 1 FROM pre_inscricoes_jogos pi WHERE pi.filiado_id = $3))
+        )
+    ORDER BY c.created_at DESC
+    LIMIT 50;
+  `;
+
+  const { rows } = await pool.query(sql, [situacao, lotacao, userId]);
+  return rows;
+}
+
+/**
  * Remove campanhas com mais de 60 dias
  */
 async function cleanupOldCampaigns() {
