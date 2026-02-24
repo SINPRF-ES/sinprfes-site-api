@@ -10,27 +10,37 @@
     let isLoadingMe = false;
     let isLoadingGestao = false;
 
+    function applyNotificationsMode(params) {
+        const { isGestao, permissions } = params;
+        const adminContainer = document.getElementById('notificacoes-admin-container');
+        const membroContainer = document.getElementById('notificacoes-membro-container');
+
+        const displayAdmin = isGestao ? "block" : "none";
+        const displayMembro = isGestao ? "none" : "block";
+
+        if (adminContainer) adminContainer.style.display = displayAdmin;
+        if (membroContainer) membroContainer.style.display = displayMembro;
+
+        console.log(`[Notificações] applyNotificationsMode: isGestao=${isGestao} | Permissions:`, permissions, `| Displays: Admin=${displayAdmin}, Membro=${displayMembro}`);
+    }
+
     function inicializarNotificacoes(user) {
-        if (!user) user = window.Utils?.obterUserInfo() || {};
-        const permissions = user.permissions || [];
+        // Usa user fornecido ou busca do cache (obterUserInfo) se o fornecido estiver vazio/sem permissões
+        const userEfetivo = (user && user.permissions) ? user : (window.Utils?.obterUserInfo() || {});
+        const permissions = userEfetivo.permissions || [];
 
         // PUSH_GERENCIAR habilita o painel de envio e histórico de campanhas
-        const ehGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
+        const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
 
-        const adminContainer = document.getElementById('notificacoes-admin-container');
-        if (adminContainer) adminContainer.style.display = ehGestao ? "block" : "none";
+        applyNotificationsMode({ isGestao, permissions });
 
-        if (ehGestao) {
-            console.log("[Notificações] Perfil com permissão de gestão detectado.");
+        if (isGestao) {
             setupHandlers();
             popularLotacoes();
             carregarCampanhasGestao();
         } else {
-            // Se for filiado comum, garante que o container de gestão esteja oculto e limpo
-            if (adminContainer) adminContainer.innerHTML = '';
+            carregarHistoricoMe();
         }
-
-        carregarHistoricoMe();
     }
 
     function popularLotacoes() {
