@@ -33,10 +33,11 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Divergências:** No Site, o botão "Novo Filiado" é um item de menu que abre uma aba específica, no App é uma tela separada. Funcionalidade preservada.
 
 ### 2. Notificações
-- **Endpoints:** `POST /api/push/campaigns`, `GET /api/push/history/me`
-- **Permissões:** `PUSH_GERENCIAR` (para envio), todos (para histórico)
-- **Divergências:** O App recebe Push nativo; o Site apenas exibe o histórico de mensagens enviadas.
-- **Estabilidade:** Corrigido loop de autenticação 401 em `/api/push/campaigns` no Mobile com implementação de logout unificado e anti-loop.
+- **Endpoints:** `POST /api/push/campaigns/send`, `GET /api/push/campaigns` (Gestão), `GET /api/push/history/me` (Membro)
+- **Permissões:** `PUSH_GERENCIAR` (para envio e gestão de campanhas), `VIEW_SELF` (para histórico pessoal)
+- **Divergências:** O App recebe Push nativo; o Site exibe o histórico de mensagens.
+- **Site Implementation:** Fluxos separados para Membro e Gestão baseados em permissões (`PUSH_GERENCIAR`). Tratamento robusto de erros 401/403 com feedback visual na UI e inclusão de `requestId`.
+- **Estabilidade:** Corrigido loop de autenticação 401 em `/api/push/campaigns` (Mobile e Site) com implementação de logout unificado e limpeza total de tokens no `localStorage`.
 
 ### 3. CMS (Conteúdo do Site)
 - **Endpoints:** `GET/PUT /api/content-blocks`

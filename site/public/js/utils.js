@@ -85,6 +85,8 @@
       if (response.status === 401) {
         alert("Sessão expirada. Faça login novamente.");
         localStorage.removeItem("token");
+        localStorage.removeItem("token_filiado");
+        localStorage.removeItem("token_gestao");
         localStorage.removeItem("userInfo");
         localStorage.removeItem("perfil_acesso");
         window.location.href = "/login.html";

@@ -7,21 +7,24 @@
     let historyCache = [];
     let isShowingArchived = false;
 
-    function inicializarNotificacoes(perfil) {
-        const perfilLogado = (perfil || "").toUpperCase();
-        const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-        const ehGestao = perfisGestao.includes(perfilLogado);
+    function inicializarNotificacoes(user) {
+        if (!user) user = window.Utils?.obterUserInfo() || {};
+        const permissions = user.permissions || [];
+        const perfilLogado = (user.perfil_acesso || user.perfil || "").toUpperCase();
+
+        // PUSH_GERENCIAR habilita o painel de envio e histórico de campanhas
+        const ehGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
 
         const adminContainer = document.getElementById('notificacoes-admin-container');
         if (adminContainer) adminContainer.style.display = ehGestao ? "block" : "none";
 
         if (ehGestao) {
             setupHandlers();
-            carregarHistorico();
+            carregarCampanhasGestao();
             popularLotacoes();
         }
 
-        carregarMinhasNotificacoes();
+        carregarHistoricoMe();
     }
 
     function popularLotacoes() {
@@ -198,7 +201,7 @@
                 messageCount.style.color = '';
                 messageCount.style.fontWeight = 'normal';
 
-                carregarHistorico();
+                carregarCampanhasGestao();
             } else {
                 const errorMsg = data.message || data.error || "Erro ao enviar notificação.";
                 if (r.status === 429) {
@@ -216,20 +219,23 @@
         }
     }
 
-    async function carregarMinhasNotificacoes() {
+    async function carregarHistoricoMe() {
         const listEl = document.getElementById('lista-notificacoes-recebidas');
         if (!listEl) return;
 
         try {
             const r = await window.Api.apiFetch('/api/push/history/me');
+            const data = await r.json();
+
             if (r.ok) {
-                const data = await r.json();
                 renderizarNotificacoesRecebidas(data.notifications || []);
             } else {
-                listEl.innerHTML = `<p style="color:red; text-align:center;">Erro ao carregar notificações.</p>`;
+                const msg = data.message || data.error || "Erro ao carregar notificações.";
+                listEl.innerHTML = `<p style="color:red; padding:20px; text-align:center;">⚠️ ${msg} ${data.requestId ? `<br><small>ID: ${data.requestId}</small>` : ''}</p>`;
             }
         } catch (e) {
-            listEl.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão.</p>`;
+            console.error("Notificacoes.HistoricoMeErro", e);
+            listEl.innerHTML = `<p style="color:red; padding:20px; text-align:center;">❌ Erro de conexão ao carregar suas notificações.</p>`;
         }
     }
 
@@ -299,23 +305,28 @@
         if (window.Utils?.lockScroll) window.Utils.lockScroll();
     }
 
-    async function carregarHistorico() {
+    async function carregarCampanhasGestao() {
         const listEl = document.getElementById('push-history-list');
         if (!listEl) return;
 
         try {
             const url = isShowingArchived ? '/api/push/campaigns?includeArchived=1' : '/api/push/campaigns';
             const r = await window.Api.apiFetch(url);
+            const data = await r.json();
+
             if (r.ok) {
-                const data = await r.json();
                 historyCache = data.campaigns || [];
                 renderizarHistorico(listEl);
             } else {
-                listEl.innerHTML = `<p style="color:red;">Erro ao carregar histórico.</p>`;
+                const msg = data.message || data.error || "Erro ao carregar histórico de campanhas.";
+                listEl.innerHTML = `<p style="color:red; padding:10px;">⚠️ ${msg} ${data.requestId ? `<br><small>ID: ${data.requestId}</small>` : ''}</p>`;
+                if (r.status === 403) {
+                    console.warn("Sem permissão para acessar notificações de gestão.");
+                }
             }
         } catch (e) {
-            console.error("Notificacoes.HistoryErro", e);
-            listEl.innerHTML = `<p style="color:red;">Erro de conexão ao carregar histórico.</p>`;
+            console.error("Notificacoes.CampanhasErro", e);
+            listEl.innerHTML = `<p style="color:red; padding:10px;">❌ Erro de conexão ao carregar histórico de gestão.</p>`;
         }
     }
 
@@ -389,10 +400,10 @@
 
         // Atribui handlers após renderizar
         const btnShow = document.getElementById('btn-show-archived');
-        if (btnShow) btnShow.onclick = () => { isShowingArchived = true; carregarHistorico(); };
+        if (btnShow) btnShow.onclick = () => { isShowingArchived = true; carregarCampanhasGestao(); };
 
         const btnHide = document.getElementById('btn-hide-archived');
-        if (btnHide) btnHide.onclick = () => { isShowingArchived = false; carregarHistorico(); };
+        if (btnHide) btnHide.onclick = () => { isShowingArchived = false; carregarCampanhasGestao(); };
     }
 
     function formatarData(isoStr) {
@@ -403,7 +414,8 @@
 
     global.Notificacoes = {
         inicializarNotificacoes,
-        carregarHistorico,
+        carregarCampanhasGestao,
+        carregarHistoricoMe,
         abrirDetalhe
     };
 
