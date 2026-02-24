@@ -53,6 +53,13 @@
                 else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
+                else if (abaAlvo === 'sec-estatuto' && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
+                else if (abaAlvo === 'sec-seguranca') {
+                    if (window.Seguranca && window.Seguranca.renderizarSeguranca) {
+                        const userInfo = window.Utils?.obterUserInfo();
+                        window.Seguranca.renderizarSeguranca(userInfo, carregarMeusDados);
+                    }
+                }
             });
         }
 

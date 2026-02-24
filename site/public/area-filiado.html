@@ -24,6 +24,7 @@
   <!-- Módulos de Seção -->
   <script src="/js/area-filiado/navegacao.js" defer></script>
   <script src="/js/area-filiado/seguranca.js" defer></script>
+  <script src="/js/area-filiado/estatuto.js" defer></script>
   <script src="/js/area-filiado/meus-dados.js" defer></script>
   <script src="/js/area-filiado/filiados-admin.js?v=202405221000" defer></script>
   <script src="/js/area-filiado/ressarcimento.js" defer></script>
@@ -58,6 +59,7 @@
           <button class="af-nav-item" data-target="sec-ressarcimento" id="tab-ressarcimento" role="tab" aria-selected="false" aria-controls="sec-ressarcimento"><span aria-hidden="true">💸</span> Ressarcimento</button>
           <button class="af-nav-item" data-target="sec-jogos" id="tab-jogos" role="tab" aria-selected="false" aria-controls="sec-jogos"><span aria-hidden="true">🏆</span> Jogos 2026</button>
           <button class="af-nav-item" data-target="sec-assembleias" id="tab-assembleias" role="tab" aria-selected="false" aria-controls="sec-assembleias"><span aria-hidden="true">🗳️</span> Assembleias e Votações</button>
+          <button class="af-nav-item" data-target="sec-estatuto" id="tab-estatuto" role="tab" aria-selected="false" aria-controls="sec-estatuto"><span aria-hidden="true">📜</span> Estatuto</button>
           <button class="af-nav-item" data-target="sec-noticias" id="tab-noticias" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-noticias"><span aria-hidden="true">📰</span> Notícias</button>
           <button class="af-nav-item" data-target="sec-repasse" id="tab-repasse" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-repasse"><span aria-hidden="true">💱</span> Repasse</button>
           <button class="af-nav-item" data-target="sec-notificacoes" id="tab-notificacoes" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-notificacoes"><span aria-hidden="true">📢</span> Notificações</button>
@@ -159,10 +161,10 @@
                   <div class="field-group">
                       <label style="font-weight: bold; color: #333;">Tipo de Relatório</label>
                       <select id="relatorio-tipo" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
-                          <option value="INDIVIDUAL">Dossiê do Filiado (Individual)</option>
-                          <option value="LOTACAO">Distribuição por Lotação</option>
-                          <option value="SITUACAO">Distribuição por Situação Funcional</option>
-                          <option value="GLOBAL">Global (Completo)</option>
+                          <option value="INDIVIDUAL">👤 Dossiê do Filiado (Individual)</option>
+                          <option value="LOTACAO">📍 Distribuição por Lotação</option>
+                          <option value="SITUACAO">📑 Distribuição por Situação Funcional</option>
+                          <option value="GLOBAL">🌏 Global (Completo)</option>
                       </select>
                   </div>
 
