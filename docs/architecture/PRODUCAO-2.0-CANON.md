@@ -200,11 +200,11 @@ Os seguintes componentes estão estáveis e não devem ser modificados sem aprov
 ## 9. Funcionalidades Consolidadas (V2.0)
 
 - **Módulo Notícias Internas (CMS):** Perfil `COMUNICADOR` com princípio de *least privilege*. Ausência de acesso a dados de terceiros. Conteúdo consumido via API pelo site público, sem edição de HTML por usuários não técnicos. Blocos persistidos em `data/content_blocks.json`.
+- **Central de Notificações (Push History):** Sincronização entre histórico de campanhas e visualização personalizada para o filiado no Site e no App.
 
 ## 10. Roadmap e Melhorias Futuras
 
 - **Melhoria PDF Mobile:** Transição para visualizador de PDF 100% nativo (atualmente via WebView + Base64).
-- **Notificações:** Expansão do sistema de Push para eventos específicos.
 
 ## 11. Protocolo de Manutenção e Evolução
 

@@ -415,9 +415,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     }
 
     // Busca por CPF (somente se houver dígitos na busca)
+    // BOLT: Removemos regexp_replace pois CPFs são persistidos normalizados (somente dígitos).
+    // Isso permite o uso de índices no PostgreSQL.
     if (apenasDigitos) {
       params.push(`%${apenasDigitos}%`);
-      searchConds.push(`regexp_replace(f.cpf, '[^0-9]', '', 'g') LIKE $${params.length}`);
+      searchConds.push(`f.cpf LIKE $${params.length}`);
     }
 
     if (searchConds.length > 0) {

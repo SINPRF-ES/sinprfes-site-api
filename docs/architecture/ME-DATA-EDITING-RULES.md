@@ -12,7 +12,7 @@ O usuário comum tem autonomia para manter seus dados de contato, endereço e de
 **Campos Permitidos:**
 - **Contatos:** `telefone1`, `telefone2`, `email1`, `email2`
 - **Lotação:** `lotacao` (Permitido para que o filiado informe sua unidade atual)
-- **Endereço:** `cep`, `logradouro_bairro`, `numero`, `complemento`, `cidade`, `uf` (Nota: `logradouro_bairro`, `cidade` e `uf` só são aceitos se o `cep` estiver presente no payload)
+- **Endereço:** `cep`, `logradouro_bairro`, `numero`, `complemento`, `cidade`, `uf` (Nota Técnica: `logradouro_bairro`, `cidade` e `uf` só são aceitos se o `cep` estiver presente no payload para garantir a integridade do fluxo `buscaCEP` no backend)
 - **Dependentes:** Todos os campos de `dep1` até `dep5` (`nome`, `cpf`, `data_nascimento`, `parentesco`, `parentesco_outro`)
 
 **Campos Proibidos (Bloqueados no Backend):**

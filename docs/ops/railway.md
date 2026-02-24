@@ -1,6 +1,8 @@
 # Configuração do Railway (Canon do Monorepo)
 
-O projeto utiliza o arquivo `railpack-plan.json` na raiz para definir o plano de build e deploy de forma automatizada pelo Railway (Nixpacks). **Não utilize arquivos `railway.toml` no repositório**, pois as configurações específicas de serviço (como Root Directory e variáveis) devem ser feitas diretamente no painel do Railway.
+O projeto utiliza o arquivo `railpack-plan.json` na raiz para definir o plano de build e deploy de forma automatizada pelo Railway (Nixpacks). O `railpack-plan.json` centraliza a instalação do `pnpm` e define as etapas de build/start para cada serviço através de filtros.
+
+**Não utilize arquivos `railway.toml` no repositório**, pois as configurações específicas de serviço (como Root Directory e variáveis) devem ser feitas diretamente no painel do Railway.
 
 ## 1. Serviço: API (Backend)
 
