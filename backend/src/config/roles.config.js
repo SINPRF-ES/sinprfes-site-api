@@ -29,6 +29,7 @@ module.exports = {
     "VIEW_SELF",
     "EDIT_SELF",
 
+    "JOGOS_GERENCIAR",
     "VOTACAO_VOTAR",
     "PUSH_GERENCIAR",
     "REPASSE_GERENCIAR",

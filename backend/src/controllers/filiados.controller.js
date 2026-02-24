@@ -477,6 +477,14 @@ exports.excluirDependentes = async (req, res) => {
 };
 
 /**
+ * DELETE /api/filiados/me/dependentes
+ */
+exports.excluirDependentesMe = async (req, res) => {
+  req.params.id = req.user.id;
+  return exports.excluirDependentes(req, res);
+};
+
+/**
  * PUT /api/filiados/:id
  */
 exports.atualizarFiliado = async (req, res) => {

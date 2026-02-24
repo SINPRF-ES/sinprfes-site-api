@@ -608,7 +608,7 @@
 
             if (confirm(`Tem certeza que deseja excluir ${indicesParaExcluir.length} dependente(s)? Esta ação não pode ser desfeita.`)) {
                 try {
-                    const r = await window.Api.apiFetch(`/api/filiados/${dados.id}/dependentes`, {
+                    const r = await window.Api.apiFetch(`/api/filiados/me/dependentes`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ indices: indicesParaExcluir })

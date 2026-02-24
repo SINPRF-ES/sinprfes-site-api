@@ -109,7 +109,7 @@ export default function MeusDadosScreen() {
         indices: selectedDependenteIndices
       });
 
-      const response = await api.delete(`/api/filiados/${canonicalId}/dependentes`, {
+      const response = await api.delete(`/api/filiados/me/dependentes`, {
         data: { indices: selectedDependenteIndices }
       });
 

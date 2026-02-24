@@ -83,6 +83,12 @@ router.post(
 
 router.delete("/me/avatar", authMiddleware, filiadosController.removerAvatarMe);
 
+router.delete(
+  "/me/dependentes",
+  authMiddleware,
+  filiadosController.excluirDependentesMe
+);
+
 router.post("/2fa/desativar", authMiddleware, filiadosController.desativar2fa);
 
 // =============================================================================
@@ -145,6 +151,7 @@ router.post(
 router.delete(
   "/:id/dependentes",
   authMiddleware,
+  requirePermission("EDIT_FILIADO"),
   filiadosController.excluirDependentes
 );
 

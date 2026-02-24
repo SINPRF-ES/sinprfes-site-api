@@ -55,11 +55,10 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 *Nenhuma divergência crítica de segurança detectada no scan inicial.*
 
 ### Severidade 🟠 Alta
-- **Gestão de Dependentes:** `DELETE /api/filiados/:id/dependentes` não possui middleware `requirePermission` no backend, dependendo apenas do `authMiddleware`.
-  - **Risco:** Um filiado autenticado poderia tecnicamente tentar chamar este endpoint para outros IDs se não houver checagem de propriedade no controller.
+*Nenhuma divergência de alta severidade detectada.*
 
 ### Severidade 🟡 Média
-- **Visualização de Logs:** Disponível apenas no App. Útil para suporte proativo, mas ausente no dashboard Web.
+- **Visualização de Logs:** Disponível apenas no App. Justificativa: os logs exibidos são locais do dispositivo (App), úteis para suporte proativo de falhas nativas. No Site, logs de console estão disponíveis via DevTools do navegador.
 
 ### Severidade 🟢 Baixa
 - **UX de Novo Filiado:** Fluxos ligeiramente diferentes entre App e Site (Tela vs Aba), mas com paridade de campos.
@@ -67,6 +66,4 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 ---
 
 ## 🛑 Relatório de Exposição Técnica
-- **Endpoint:** `DELETE /api/filiados/:id/dependentes`
-- **Status:** Sem `requirePermission`.
-- **Recomendação:** Adicionar `requirePermission("EDIT_FILIADO")` ou validar se o `:id` corresponde ao `req.user.id`.
+*Nenhuma exposição técnica crítica pendente.*
