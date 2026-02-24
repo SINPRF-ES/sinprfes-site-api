@@ -1,6 +1,6 @@
-# Sistema SINPRF/ES — Monorepo Híbrido (Backend + Web + Mobile)
+# Guardian Soft — Railway + Parity Edition (SINPRF/ES)
 
-Este documento consolida **regras críticas de arquitetura** e **regras explícitas de negócio** (perfis, permissões, estados cadastrais e padronização de formatação) que **devem ser seguidas rigorosamente** por todos os clientes (Site e App Mobile).
+Este repositório institucionaliza o **Canon de Paridade**, garantindo que o ecossistema SINPRF/ES (Backend + Site + Mobile) opere sob uma única fonte da verdade, com paridade funcional e visual rigorosa entre todas as plataformas.
 
 ---
 
@@ -13,6 +13,8 @@ A documentação completa do projeto foi organizada e centralizada no diretório
 - [**Mobile**](./docs/mobile/): Guia do desenvolvedor mobile, configuração Expo e arquitetura do app.
 - [**Operações (Ops)**](./docs/ops/): Guias operacionais (deploy, Railway, Cloudflare, DNS, etc.).
 - [**Runbooks**](./docs/runbooks/): Passo-a-passo executável (OTA, homologação, etc.).
+- [**Paridade (Canon)**](./docs/PARITY_CANON.md): Regras oficiais de sincronização entre plataformas.
+- [**Matriz de Paridade**](./docs/parity-matrix.md): Status real de paridade App vs Site.
 - [**OTA Runbook Oficial**](./docs/runbooks/ota-update.md): Único guia oficial para atualizações Over-the-Air.
 
 ---
