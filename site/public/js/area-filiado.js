@@ -76,7 +76,7 @@
                 else if (abaAlvo === 'sec-noticias' && inicializarNoticias) inicializarNoticias(perfil);
                 else if (abaAlvo === 'sec-cms' && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
                 else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
-                else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
+                else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(userInfo);
                 else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
                 else if (abaAlvo === 'sec-estatuto' && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
                 else if (abaAlvo === 'sec-seguranca') {
@@ -113,15 +113,16 @@
                     perfil = perfilReal;
 
                     atualizarVisibilidadeAbas(perfilReal);
+                    userInfo = dadosFrescos; // Atualiza objeto global com permissões
 
                     // Força re-render do menu/módulos se necessário
                     if (inicializarFiliados) inicializarFiliados(perfil);
-                    if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
+                    if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(userInfo);
                 }
             }
 
             // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
-            if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
+            if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(userInfo);
 
             const navNovoFiliado = document.getElementById("nav-novo-filiado");
             if (navNovoFiliado) {
