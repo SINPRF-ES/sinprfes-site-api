@@ -23,6 +23,7 @@
 
   <!-- Módulos de Seção -->
   <script src="/js/area-filiado/navegacao.js" defer></script>
+  <script src="/js/area-filiado/home.js" defer></script>
   <script src="/js/area-filiado/seguranca.js" defer></script>
   <script src="/js/area-filiado/estatuto.js" defer></script>
   <script src="/js/area-filiado/meus-dados.js" defer></script>
@@ -33,9 +34,9 @@
   <script src="/js/area-filiado/publicacoes.js" defer></script>
   <script src="/js/area-filiado/repasse.js" defer></script>
   <script src="/js/area-filiado/notificacoes.js" defer></script>
+  <script src="/js/area-filiado/noticias-admin.js" defer></script>
   <script src="/js/area-filiado/assembleia-utils.js" defer></script>
   <script src="/js/area-filiado/assembleias.js" defer></script>
-  <script src="/js/area-filiado/noticias-admin.js" defer></script>
   <script src="/js/area-filiado/cms-admin.js" defer></script>
   <script src="/js/area-filiado/relatorios.js" defer></script>
 
@@ -53,17 +54,22 @@
         </div>
 
         <div class="af-sidebar-nav" role="tablist" aria-orientation="vertical">
-          <button class="af-nav-item active" data-target="sec-meus-dados" id="tab-meus-dados" role="tab" aria-selected="true" aria-controls="sec-meus-dados"><span aria-hidden="true">👤</span> Meus Dados</button>
+          <button class="af-nav-item active" data-target="sec-home" id="tab-home" role="tab" aria-selected="true" aria-controls="sec-home"><span aria-hidden="true">🏠</span> Página Inicial</button>
+          <button class="af-nav-item" data-target="sec-noticias" id="tab-noticias" role="tab" aria-selected="false" aria-controls="sec-noticias"><span aria-hidden="true">📰</span> Notícias</button>
+          <button class="af-nav-item" data-target="sec-meus-dados" id="tab-meus-dados" role="tab" aria-selected="false" aria-controls="sec-meus-dados"><span aria-hidden="true">👤</span> Meus Dados</button>
           <button class="af-nav-item" data-target="sec-filiados" id="tab-filiados" role="tab" aria-selected="false" aria-controls="sec-filiados"><span aria-hidden="true">👥</span> Filiados</button>
           <button class="af-nav-item" data-target="sec-publicacoes" id="tab-publicacoes" role="tab" aria-selected="false" aria-controls="sec-publicacoes"><span aria-hidden="true">📚</span> Publicações</button>
           <button class="af-nav-item" data-target="sec-ressarcimento" id="tab-ressarcimento" role="tab" aria-selected="false" aria-controls="sec-ressarcimento"><span aria-hidden="true">💸</span> Ressarcimento</button>
           <button class="af-nav-item" data-target="sec-jogos" id="tab-jogos" role="tab" aria-selected="false" aria-controls="sec-jogos"><span aria-hidden="true">🏆</span> Jogos 2026</button>
           <button class="af-nav-item" data-target="sec-assembleias" id="tab-assembleias" role="tab" aria-selected="false" aria-controls="sec-assembleias"><span aria-hidden="true">🗳️</span> Assembleias e Votações</button>
           <button class="af-nav-item" data-target="sec-estatuto" id="tab-estatuto" role="tab" aria-selected="false" aria-controls="sec-estatuto"><span aria-hidden="true">📜</span> Estatuto</button>
-          <button class="af-nav-item" data-target="sec-noticias" id="tab-noticias" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-noticias"><span aria-hidden="true">📰</span> Notícias</button>
+          <button class="af-nav-item" data-target="sec-seguranca" id="tab-seguranca" role="tab" aria-selected="false" aria-controls="sec-seguranca"><span aria-hidden="true">🔒</span> Segurança</button>
+
+          <!-- Gestão -->
+          <button class="af-nav-item" data-target="sec-notificacoes" id="tab-notificacoes" role="tab" aria-selected="false" aria-controls="sec-notificacoes"><span aria-hidden="true">📢</span> Notificações</button>
           <button class="af-nav-item" data-target="sec-repasse" id="tab-repasse" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-repasse"><span aria-hidden="true">💱</span> Repasse</button>
-          <button class="af-nav-item" data-target="sec-notificacoes" id="tab-notificacoes" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-notificacoes"><span aria-hidden="true">📢</span> Notificações</button>
           <button class="af-nav-item" data-target="sec-relatorios" id="tab-relatorios" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-relatorios"><span aria-hidden="true">📊</span> Relatórios</button>
+          <button class="af-nav-item" id="tab-novo-filiado" style="display:none;" role="tab"><span aria-hidden="true">➕</span> Novo Filiado</button>
           <button class="af-nav-item" data-target="sec-cms" id="tab-cms" style="display:none;" role="tab" aria-selected="false" aria-controls="tab-cms"><span aria-hidden="true">🌐</span> Site (CMS)</button>
         </div>
 
@@ -74,7 +80,19 @@
 
       <!-- Conteúdo Principal -->
       <main class="af-content">
-        <section id="sec-meus-dados" class="af-section active" role="tabpanel" aria-labelledby="tab-meus-dados">
+        <section id="sec-home" class="af-section active" role="tabpanel" aria-labelledby="tab-home">
+            <div id="home-conteudo">
+                <div class="af-standard-header">
+                    <h2 id="home-boas-vindas">Bem-vindo(a)!</h2>
+                    <p class="section-subtitle">O que você deseja fazer hoje?</p>
+                </div>
+                <div class="home-quick-actions" id="home-actions-grid">
+                    <!-- Cards injetados via JS -->
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-meus-dados" class="af-section" role="tabpanel" aria-labelledby="tab-meus-dados">
           <div id="area-filiado-conteudo">
             <p>Carregando seus dados...</p>
           </div>
@@ -113,6 +131,25 @@
           <div id="sec-assembleias-sala" style="display:none;">
              <div id="area-assembleia-sala-conteudo"></div>
           </div>
+        </section>
+
+        <section id="sec-estatuto" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-estatuto">
+            <div class="section-card">
+                <div class="af-standard-header">
+                    <h2>📜 Estatuto SINPRF/ES</h2>
+                    <p class="section-subtitle">Consulte as normas que regem nosso sindicato.</p>
+                </div>
+                <div id="estatuto-conteudo-af" style="margin-top:20px; max-height: 70vh; overflow-y: auto; border: 1px solid #eee; padding: 20px; border-radius: 12px; background: #fff;">
+                    <p style="text-align:center; padding:40px; color:#666;">Carregando estatuto...</p>
+                </div>
+                <div style="text-align:center; margin-top:20px;">
+                    <a href="/estatuto.html" target="_blank" class="btn btn-outline btn-sm">Abrir em nova aba ↗</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-seguranca" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-seguranca">
+            <div id="seguranca-conteudo"></div>
         </section>
 
         <section id="sec-repasse" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-repasse">
@@ -220,10 +257,20 @@
         </section>
 
         <section id="sec-notificacoes" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="tab-notificacoes">
-          <div class="section-card">
+          <div id="notificacoes-membro-container">
               <div class="af-standard-header">
-                  <h2>📢 Notificações Push</h2>
-                  <p class="section-subtitle">Envie mensagens para todos os filiados com o app instalado.</p>
+                  <h2>📢 Minhas Notificações</h2>
+                  <p class="section-subtitle">Acompanhe os comunicados enviados para você.</p>
+              </div>
+              <div id="lista-notificacoes-recebidas" class="history-list">
+                  <p style="text-align:center; padding:40px; color:#666;">Carregando notificações...</p>
+              </div>
+          </div>
+
+          <div id="notificacoes-admin-container" style="display:none; margin-top:40px; border-top: 2px dashed #ccc; padding-top:40px;">
+              <div class="af-standard-header">
+                  <h2>🚀 Enviar Notificação (Gestão)</h2>
+                  <p class="section-subtitle">Envie mensagens push para os filiados.</p>
               </div>
 
               <div class="form-container" style="max-width: 600px; margin: 20px auto 0 auto;">
