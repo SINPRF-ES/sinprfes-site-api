@@ -21,8 +21,9 @@
 
         const { obterUserInfo, exibirAlertaFlutuante } = window.Utils || {};
         const { configurarNavegacao } = window.Navegacao || {};
+        const { inicializarHome } = window.Home || {};
         const { carregarMeusDados } = window.MeusDados || {};
-        const { inicializarFiliados } = window.FiliadosAdmin || {};
+        const { inicializarFiliados, abrirNovoFiliado } = window.FiliadosAdmin || {};
         const { inicializarRessarcimento } = window.Ressarcimento || {};
         const { inicializarJogos } = window.Jogos || {};
         const { inicializarPublicacoes } = window.Publicacoes || {};
@@ -36,13 +37,38 @@
         let userInfo = obterUserInfo ? obterUserInfo() : {};
         let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
 
+        function atualizarVisibilidadeAbas(p) {
+            const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
+            const ehComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(p);
+
+            const navRepasse = document.getElementById("tab-repasse");
+            if (navRepasse) navRepasse.style.display = ehGestao ? "block" : "none";
+
+            const navNoticias = document.getElementById("tab-noticias");
+            if (navNoticias) navNoticias.style.display = "block";
+
+            const navCms = document.getElementById("tab-cms");
+            if (navCms) navCms.style.display = ehGestao ? "block" : "none";
+
+            const navNotificacoes = document.getElementById("tab-notificacoes");
+            if (navNotificacoes) navNotificacoes.style.display = "block";
+
+            const navRelatorios = document.getElementById("tab-relatorios");
+            if (navRelatorios) navRelatorios.style.display = ehGestao ? "block" : "none";
+
+            const navNovoFiliado = document.getElementById("tab-novo-filiado");
+            if (navNovoFiliado) navNovoFiliado.style.display = ehGestao ? "block" : "none";
+        }
+
         console.log("Perfil inicial (Cache):", perfil);
+        atualizarVisibilidadeAbas(perfil);
 
         // 2. Configura Navegação Global
         if (configurarNavegacao) {
             configurarNavegacao((abaAlvo) => {
                 console.log("Navegando para:", abaAlvo);
-                if (abaAlvo === 'sec-meus-dados' && carregarMeusDados) carregarMeusDados();
+                if (abaAlvo === 'sec-home' && inicializarHome) inicializarHome(perfil);
+                else if (abaAlvo === 'sec-meus-dados' && carregarMeusDados) carregarMeusDados();
                 else if (abaAlvo === 'sec-filiados' && inicializarFiliados) inicializarFiliados(perfil);
                 else if (abaAlvo === 'sec-ressarcimento' && inicializarRessarcimento) inicializarRessarcimento();
                 else if (abaAlvo === 'sec-jogos' && inicializarJogos) inicializarJogos(perfil);
@@ -53,6 +79,13 @@
                 else if (abaAlvo === 'sec-repasse' && inicializarRepasse) inicializarRepasse(perfil);
                 else if (abaAlvo === 'sec-notificacoes' && Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 else if (abaAlvo === 'sec-relatorios' && inicializarRelatorios) inicializarRelatorios(perfil);
+                else if (abaAlvo === 'sec-estatuto' && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
+                else if (abaAlvo === 'sec-seguranca') {
+                    if (window.Seguranca && window.Seguranca.renderizarSeguranca) {
+                        const info = window.Utils?.obterUserInfo();
+                        window.Seguranca.renderizarSeguranca(info, carregarMeusDados);
+                    }
+                }
             });
         }
 
@@ -77,45 +110,50 @@
                 const dadosFrescos = await carregarMeusDados();
                 if (dadosFrescos && dadosFrescos.perfil_acesso) {
                     const perfilReal = dadosFrescos.perfil_acesso.toUpperCase();
-                    if (perfilReal !== perfil) {
-                        console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
-                        perfil = perfilReal;
-                        // Força re-render do menu/módulos se necessário
-                        if (inicializarFiliados) inicializarFiliados(perfil);
-                        if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
-                    }
+                    console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
+                    perfil = perfilReal;
+
+                    atualizarVisibilidadeAbas(perfilReal);
+
+                    // Força re-render do menu/módulos se necessário
+                    if (inicializarFiliados) inicializarFiliados(perfil);
+                    if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
                 }
             }
 
             // Inicializa a visibilidade do menu de notificações se o perfil já for conhecido
             if (Notificacoes && Notificacoes.inicializarNotificacoes) Notificacoes.inicializarNotificacoes(perfil);
 
-            // Exibe abas restritas conforme perfil (Regra de Ouro)
-            const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-            const perfisComunicacao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
+            const navNovoFiliado = document.getElementById("tab-novo-filiado");
+            if (navNovoFiliado) {
+                navNovoFiliado.onclick = () => {
+                    const btnTabFiliados = document.getElementById("tab-filiados");
+                    if (btnTabFiliados) {
+                        btnTabFiliados.click();
+                        setTimeout(() => {
+                            const containerNovo = document.getElementById("novo-filiado-container");
+                            if (containerNovo && abrirNovoFiliado) {
+                                abrirNovoFiliado(containerNovo);
+                                containerNovo.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }, 100);
+                    }
+                };
+            }
 
-            const navRepasse = document.getElementById("tab-repasse");
-            if (navRepasse) navRepasse.style.display = perfisGestao.includes(perfil) ? "block" : "none";
-
-            const navNoticias = document.getElementById("tab-noticias");
-            if (navNoticias) navNoticias.style.display = perfisComunicacao.includes(perfil) ? "block" : "none";
-
-            const navCms = document.getElementById("tab-cms");
-            if (navCms) navCms.style.display = perfisGestao.includes(perfil) ? "block" : "none";
-
-            const navNotificacoes = document.getElementById("tab-notificacoes");
-            if (navNotificacoes) navNotificacoes.style.display = perfisGestao.includes(perfil) ? "block" : "none";
-
-            const navRelatorios = document.getElementById("tab-relatorios");
-            if (navRelatorios) navRelatorios.style.display = perfisGestao.includes(perfil) ? "block" : "none";
+            // Inicializa Home se for a aba ativa
+            const abaAtiva = document.querySelector(".af-section.active");
+            if (abaAtiva && abaAtiva.id === 'sec-home' && inicializarHome) {
+                inicializarHome(perfil);
+            }
 
         } catch (err) {
             console.error("Falha na sincronização inicial:", err);
         }
 
-        // 5. Aciona a aba inicial se não for Meus Dados
+        // 5. Aciona a aba inicial se não for Meus Dados e não for Home
         const abaAtiva = document.querySelector(".af-section.active");
-        if (abaAtiva && abaAtiva.id !== 'sec-meus-dados') {
+        if (abaAtiva && abaAtiva.id !== 'sec-meus-dados' && abaAtiva.id !== 'sec-home') {
             const btnAtivo = document.querySelector(`.af-nav-item[data-target="${abaAtiva.id}"]`);
             if(btnAtivo) btnAtivo.click();
         }

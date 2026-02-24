@@ -7,33 +7,53 @@
     if (global.Seguranca) return;
 
     function renderizarSeguranca(filiado, callbackRecarregar) {
-        let container = document.getElementById('seguranca-container');
+        // Suporta renderização em dois lugares:
+        // 1. Aba própria (sec-seguranca)
+        // 2. Inline em Meus Dados
+        const containers = [
+            document.getElementById('seguranca-conteudo'),
+            document.getElementById('seguranca-container')
+        ].filter(Boolean);
 
-        if (!container) {
+        if (containers.length === 0) {
             const pai = document.querySelector('#sec-meus-dados .section-card');
-            if(pai) {
-                container = document.createElement('div');
-                container.id = 'seguranca-container';
-                pai.appendChild(container);
+            if (pai) {
+                const c = document.createElement('div');
+                c.id = 'seguranca-container';
+                pai.appendChild(c);
+                containers.push(c);
             } else return;
         }
 
-        if (filiado.twofa_ativo) {
-            container.innerHTML = `
-                <div class="section-box" style="margin-top: 20px; border-left: 5px solid #27ae60;">
-                    <h3 class="section-subtitle" style="color: #27ae60; margin-bottom: 8px;">✅ Parabéns! Você está mais seguro.</h3>
-                    <p class="field-hint" style="margin-bottom: 12px;">A autenticação em duas etapas (2FA) está <strong>ATIVADA</strong>.</p>
-                    <div class="form-actions"><button id="btn-desativar-2fa" class="btn btn-outline btn-sm" style="border-color: #27ae60; color: #27ae60;">Desativar 2FA</button></div>
-                </div>`;
-            document.getElementById("btn-desativar-2fa").onclick = () => desativar2FA(callbackRecarregar);
-        } else {
-            container.innerHTML = `
-                <div class="section-box" style="margin-top: 20px; border-left: 5px solid #ffc107;">
-                    <h3 class="section-subtitle" style="margin-bottom: 8px;">⚠️ Segurança da conta</h3>
-                    <p class="field-hint" style="margin-bottom: 12px;">Para aumentar a segurança, ative a autenticação em duas etapas (2FA).</p>
-                    <div class="form-actions"><a href="/config-2fa.html" class="btn btn-primary btn-sm">Ativar 2FA</a></div>
-                </div>`;
-        }
+        const html = filiado.twofa_ativo ? `
+            <div class="section-card">
+                <div class="af-standard-header">
+                    <h2>🔒 Segurança da Conta</h2>
+                    <p class="section-subtitle">Gerencie suas opções de proteção.</p>
+                </div>
+                <div class="section-box" style="margin-top: 20px; border-left: 5px solid #27ae60; background: #f0fff4;">
+                    <h3 class="section-subtitle" style="color: #27ae60; margin-bottom: 8px;">✅ Autenticação em duas etapas (2FA) ATIVADA</h3>
+                    <p class="field-hint" style="margin-bottom: 12px;">Sua conta está protegida por um código adicional ao fazer login.</p>
+                    <div style="text-align:center;"><button id="btn-desativar-2fa" class="btn btn-outline btn-sm" style="border-color: #27ae60; color: #27ae60;">Desativar 2FA</button></div>
+                </div>
+            </div>` : `
+            <div class="section-card">
+                <div class="af-standard-header">
+                    <h2>🔒 Segurança da Conta</h2>
+                    <p class="section-subtitle">Gerencie suas opções de proteção.</p>
+                </div>
+                <div class="section-box" style="margin-top: 20px; border-left: 5px solid #ffc107; background: #fffdf0;">
+                    <h3 class="section-subtitle" style="margin-bottom: 8px;">⚠️ Aumente sua segurança</h3>
+                    <p class="field-hint" style="margin-bottom: 12px;">Ative a autenticação em duas etapas (2FA) para proteger seu acesso.</p>
+                    <div style="text-align:center;"><a href="/config-2fa.html" class="btn btn-primary">Ativar 2FA Agora</a></div>
+                </div>
+            </div>`;
+
+        containers.forEach(c => {
+            c.innerHTML = html;
+            const btn = c.querySelector("#btn-desativar-2fa");
+            if (btn) btn.onclick = () => desativar2FA(callbackRecarregar);
+        });
     }
 
     async function desativar2FA(callbackRecarregar) {
