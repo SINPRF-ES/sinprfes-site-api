@@ -45,7 +45,7 @@ router.get(
 router.post(
   "/broadcast",
   auth,
-  requirePermission("VOTACAO_GERENCIAR"),
+  requirePermission("PUSH_GERENCIAR"),
   pushController.broadcast
 );
 

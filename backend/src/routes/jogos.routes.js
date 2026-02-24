@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const authMiddleware = require("../middlewares/auth");
+const requirePermission = require("../middlewares/requirePermission");
 const jogosController = require("../controllers/jogos.controller");
 
 // Cria/atualiza a pré-inscrição do filiado
@@ -14,6 +15,11 @@ router.get("/inscricao", authMiddleware, jogosController.obterMinhaInscricao);
 router.delete("/inscricao", authMiddleware, jogosController.cancelarInscricao);
 
 // Lista todas as pré-inscrições (somente perfis com permissão)
-router.get("/inscricoes", authMiddleware, jogosController.listarInscricoes);
+router.get(
+  "/inscricoes",
+  authMiddleware,
+  requirePermission("JOGOS_GERENCIAR"),
+  jogosController.listarInscricoes
+);
 
 module.exports = router;
