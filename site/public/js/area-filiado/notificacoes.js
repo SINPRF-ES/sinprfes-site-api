@@ -40,29 +40,31 @@
   }
 
   /**
-   * Canon: busca o usuário completo do servidor se faltarem permissões.
-   * Prioriza dados com array de permissions populado.
+   * Canon: busca o usuário completo do servidor.
+   * Em Notificações, priorizamos /api/auth/me para evitar usar cache stale
+   * que pode manter perfil/permissões defasados e derrubar o modo de gestão.
    */
   async function getUserCanon(user) {
-    const hasPermissions = (u) => u && normalizePermissions(u.permissions).length > 0;
+    const normalizeUser = (u) => {
+      if (!u || typeof u !== "object") return null;
+      return {
+        ...u,
+        permissions: normalizePermissions(u.permissions),
+      };
+    };
 
-    // 1) Se o argumento já é válido, usa ele
-    if (hasPermissions(user)) return user;
-
-    // 2) Tenta cache do Utils (localStorage)
+    // Fallback local (usado só se /me falhar)
+    const userArg = normalizeUser(user);
     const cached = window.Utils?.obterUserInfo();
-    if (hasPermissions(cached)) return cached;
+    const cachedNorm = normalizeUser(cached);
 
-    // 3) Busca oficial no backend (/api/auth/me) se não houver permissões no cache ou argumento
+    // Fonte canônica principal: /api/auth/me
     try {
       const r = await window.Api.apiFetch("/api/auth/me");
       if (r && r.ok) {
-        const info = await r.json();
-        if (info) {
-          info.permissions = normalizePermissions(info.permissions);
-          localStorage.setItem("userInfo", JSON.stringify(info));
-          if (info.permissions.length > 0) return info;
-        }
+        const info = normalizeUser(await r.json()) || {};
+        localStorage.setItem("userInfo", JSON.stringify(info));
+        return info;
       } else {
         console.warn("[Notificacoes] Failed to fetch canon user. Status:", r?.status);
       }
@@ -71,7 +73,7 @@
     }
 
     // Fallback para o que tivermos (mesmo sem permissões)
-    return cached || user || {};
+    return cachedNorm || userArg || {};
   }
 
   // Helper: aplica display com prioridade
