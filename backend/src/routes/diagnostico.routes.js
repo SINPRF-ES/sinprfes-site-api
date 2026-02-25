@@ -4,10 +4,11 @@ const router = express.Router();
 const auth = require("../middlewares/auth");
 const controller = require("../controllers/diagnostico.controller");
 const { diagnosticLimiter } = require("../middlewares/assembleiaRateLimit");
+const { ehPerfilGestao } = require("../shared/canon");
 
 const authorize = (req, res, next) => {
   const perfil = (req.user.perfil_acesso || "").toUpperCase();
-  if (perfil === 'ADMIN' || perfil === 'DIRETORIA') {
+  if (ehPerfilGestao(perfil)) {
     return next();
   }
   return res.status(403).json({ error: "Acesso restrito a administradores ou diretoria" });

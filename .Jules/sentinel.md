@@ -7,3 +7,8 @@
 ## 2026-02-17 - [UUID Validation Guard]
 **Learning:** Malformed UUIDs passed to PostgreSQL queries (e.g., `WHERE id = $1`) cause immediate 500 errors if not validated at the controller layer. Using a central `parseUuid` utility with regex validation prevents these unhandled exceptions and allows returning a clean 400 error.
 **Action:** Created `backend/src/utils/parseUuid.js` and integrated it into `assembleias.controller.js` for all UUID parameters.
+
+## 2026-05-25 - [Centralized Authorization Logic]
+**Pattern:** Business rules for profile-based access (e.g., "ehPerfilGestao") must be centralized in a shared module (Canon) to prevent drift between Backend and Site.
+**Implementation:** Use `Canon.ehPerfilGestao(perfil)` for coarse-grained checks and the `permissions` array for fine-grained UI/API gating.
+**Benefit:** Ensures that adding a new administrative role only requires updating one file to maintain system-wide consistency.

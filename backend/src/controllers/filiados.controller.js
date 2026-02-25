@@ -28,6 +28,7 @@ const {
   normalizePerfil,
   normalizeLotacao,
   normalizeNome,
+  ehPerfilGestao,
   ME_EDITABLE_FIELDS_FILIADO,
   ME_EDITABLE_FIELDS_GESTAO
 } = require('../shared/canon');
@@ -40,11 +41,6 @@ const {
   normalizeCep,
   parseDateToISO
 } = require('../shared/format');
-
-function perfilGestao(perfil) {
-  const p = normalizePerfil(perfil);
-  return ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
-}
 
 
 /**
@@ -197,7 +193,7 @@ exports.getFiliadoById = async (req, res) => {
     }
 
     const perfilAtor = (req.user.perfil_acesso || "FILIADO").toUpperCase();
-    const ehGestor = perfilGestao(perfilAtor);
+    const ehGestor = ehPerfilGestao(perfilAtor);
     const ehProprioUsuario = String(atorId) === String(idAlvo);
 
     if (!ehGestor && !ehProprioUsuario) {
@@ -257,7 +253,7 @@ exports.listarFiliados = async (req, res) => {
     const termoBusca = (req.query.q || "").toString();
     const incluirArquivados = String(req.query.incluirArquivados || "").trim() === "1";
 
-    const incluirArquivadosEfetivo = incluirArquivados && perfilGestao(perfilAcesso);
+    const incluirArquivadosEfetivo = incluirArquivados && ehPerfilGestao(perfilAcesso);
 
     const lista = await listarParaPerfil(perfilAcesso, termoBusca, incluirArquivadosEfetivo);
 
@@ -290,7 +286,7 @@ exports.atualizarMeusDados = async (req, res) => {
     // 1. Whitelist Canônica por Perfil (B1)
     // ADMIN, DIRETORIA e FUNCIONARIO usam a whitelist de GESTAO.
     // FILIADO e demais perfis usam a whitelist de FILIADO.
-    const ehGestor = perfilGestao(perfilAtor);
+    const ehGestor = ehPerfilGestao(perfilAtor);
     const whitelist = ehGestor ? ME_EDITABLE_FIELDS_GESTAO : ME_EDITABLE_FIELDS_FILIADO;
 
     const receivedFields = Object.keys(body);
@@ -428,7 +424,7 @@ exports.excluirDependentes = async (req, res) => {
       return res.status(400).json({ success: false, message: "Indices inválidos.", requestId });
     }
 
-    const ehGestor = perfilGestao(req.user.perfil_acesso);
+    const ehGestor = ehPerfilGestao(req.user.perfil_acesso);
     const ehProprioUsuario = String(atorId) === String(idAlvo);
 
     if (!ehGestor && !ehProprioUsuario) {
@@ -502,7 +498,7 @@ exports.atualizarFiliado = async (req, res) => {
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
 
-    if (!perfilGestao(perfilAtor)) {
+    if (!ehPerfilGestao(perfilAtor)) {
       return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
@@ -632,7 +628,7 @@ exports.criarFiliado = async (req, res) => {
   try {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
 
-    if (!perfilGestao(perfilCriador)) {
+    if (!ehPerfilGestao(perfilCriador)) {
       return res.status(403).json({ success: false, message: Textos.FILIADOS.PERMISSAO_CRIAR, requestId });
     }
 
@@ -740,7 +736,7 @@ exports.arquivarFiliado = async (req, res) => {
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) {
+    if (!ehPerfilGestao(perfilAtor)) {
       return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
@@ -774,7 +770,7 @@ exports.desarquivarFiliado = async (req, res) => {
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) {
+    if (!ehPerfilGestao(perfilAtor)) {
       return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 
@@ -837,7 +833,7 @@ exports.uploadAvatarPorId = async (req, res) => {
 
   try {
     const perfilAtor = (req.user.perfil_acesso || "").toUpperCase();
-    if (!perfilGestao(perfilAtor)) {
+    if (!ehPerfilGestao(perfilAtor)) {
       return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
     }
 

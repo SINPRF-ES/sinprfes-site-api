@@ -38,7 +38,7 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Divergências:** O App recebe Push nativo; o Site exibe o histórico de mensagens.
 - **Site Implementation:**
   - **Fluxos Separados:** Separação lógica entre "Minhas Notificações" (Histórico do Filiado) e "Painel de Gestão" (Campanhas), garantindo que filiados comuns nunca chamem endpoints administrativos.
-  - **Permissions-First:** A determinação do perfil de gestão no Site prioriza o array de `permissions` retornado pelo bootstrap (`/api/auth/me` ou `/api/filiados/me`), evitando dependência de strings de perfil.
+  - **Permissions-First:** A determinação do perfil de gestão no Site prioriza o array de `permissions` retornado pelo bootstrap (`/api/auth/me` ou `/api/filiados/me`), evitando dependência de strings de perfil. **Enforced:** A visibilidade das abas administrativas agora é baseada estritamente no array de permissões.
   - **Tratamento de Erros:** Implementado tratamento explícito para 401 (Sessão Expirada) e 403 (Sem Permissão), com mensagens amigáveis na UI e exibição de `requestId` para suporte.
 - **Estabilidade:**
   - Corrigido loop de autenticação 401 em `/api/push/campaigns` com implementação de logout unificado e limpeza total de tokens no `localStorage`.

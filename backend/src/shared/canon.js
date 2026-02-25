@@ -201,8 +201,18 @@
     normalizeEstadoCadastro,
     normalizeLotacao,
     normalizeNome,
+    ehPerfilGestao,
     slugify,
     ME_EDITABLE_FIELDS_FILIADO,
     ME_EDITABLE_FIELDS_GESTAO
   };
+
+  /**
+   * Verifica se o perfil informado possui acesso de gestão.
+   * Centraliza a regra de negócio para Backend e Frontend.
+   */
+  function ehPerfilGestao(perfil) {
+    const p = normalizePerfil(perfil);
+    return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.FUNCIONARIO].includes(p);
+  }
 }));

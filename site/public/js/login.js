@@ -49,6 +49,11 @@ document.addEventListener("DOMContentLoaded", () => {
   aplicarMascaraCpf(loginCpfInput);
   aplicarMascaraCpf(forgotCpfInput);
 
+  // Palette: Inicializa toggle de visibilidade de senha
+  if (window.Utils && window.Utils.initPasswordToggles) {
+    window.Utils.initPasswordToggles();
+  }
+
   // Campo extra para 2FA (se existir no HTML)
   const campo2fa = document.getElementById("campo-2fa");
   const inputToken2fa = document.getElementById("login-token-2fa");
