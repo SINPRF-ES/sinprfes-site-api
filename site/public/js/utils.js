@@ -21,27 +21,41 @@
   window.Api.BASE_URL = resolveApiBase();
   window.DEBUG_API = false; // Mudar para true via console para habilitar logs detalhados
 
+  /**
+   * Canon fix:
+   * A Área do Filiado é híbrida (membro + gestão). Não amarrar seleção de token por pathname.
+   * Preferir sempre o token mais privilegiado disponível.
+   *
+   * Ordem:
+   * 1) token (legado/unificado)
+   * 2) token_gestao
+   * 3) token_filiado
+   */
   function obterToken() {
-    const isFiliadoArea =
-      window.location.pathname.includes("area-filiado") ||
-      window.location.pathname.includes("area-filiado.html");
-
-    const tokenFiliado = localStorage.getItem("token_filiado");
-    const tokenGestao = localStorage.getItem("token_gestao");
     const tokenLegado = localStorage.getItem("token");
-
-    if (isFiliadoArea) {
-      return tokenFiliado || tokenLegado;
-    }
-    return tokenGestao || tokenLegado;
+    const tokenGestao = localStorage.getItem("token_gestao");
+    const tokenFiliado = localStorage.getItem("token_filiado");
+    return tokenLegado || tokenGestao || tokenFiliado || null;
   }
 
+  /**
+   * Canon hardening:
+   * - Primário: localStorage.userInfo
+   * - Fallback: sessionStorage.userInfo (se algum fluxo estiver usando)
+   * - Nunca lançar; retorna {} em erro
+   */
   function obterUserInfo() {
     try {
-      return JSON.parse(localStorage.getItem("userInfo") || "{}");
-    } catch (e) {
-      return {};
-    }
+      const raw = localStorage.getItem("userInfo");
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+
+    try {
+      const raw = sessionStorage.getItem("userInfo");
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+
+    return {};
   }
 
   if (!window.Api.apiFetch) {
@@ -94,6 +108,9 @@
         localStorage.removeItem("token_gestao");
         localStorage.removeItem("userInfo");
         localStorage.removeItem("perfil_acesso");
+
+        // também limpa o fallback, se existir
+        try { sessionStorage.removeItem("userInfo"); } catch (e) {}
 
         alert("Sessão expirada. Por favor, entre novamente.");
         window.location.href = "/login.html";
