@@ -249,22 +249,8 @@
                 .field-group { display:flex; flex-direction:column; gap:6px; }
 
                 /* ✅ CEP alinhado como na gestão */
-                .cep-wrapper {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
                 #me-cep {
                     max-width: 180px;   /* controla o tamanho visual */
-                }
-                #btn-buscar-cep {
-                    width: 44px;
-                    min-width: 44px;
-                    height: 42px;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 0;
                 }
 
                 /* Avatar Row Renovado - Agora no Topo */
@@ -459,7 +445,7 @@
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
                                 <input class="ui-input campo-cep" type="text" id="me-cep" value="${cep || ""}" placeholder="00000-000" />
-                                <span class="cep-search-icon" id="btn-buscar-cep" style="cursor:pointer;">🔍</span>
+                                <button type="button" class="cep-search-btn cep-search-icon" id="btn-buscar-cep" title="Buscar endereço pelo CEP" aria-label="Buscar endereço pelo CEP">🔍</button>
                             </div>
                         </div>
                         <div class="edit-group logradouro-group">
