@@ -6,6 +6,16 @@
 (function (global) {
     if (global.Assembleias) return;
 
+    const safeEscape = (v) => {
+        if (window.Utils?.escapeHTML) return window.Utils.escapeHTML(v);
+        return String(v || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    };
+
     let pollingInterval = null;
     let currentAssembleiaId = null;
     let currentFiltro = 'ATIVAS';
@@ -281,15 +291,15 @@
                             <span class="filiado-badge" style="${badgeStyle} font-weight:800; padding:8px 16px; border-radius:20px; font-size:0.8rem; text-transform:uppercase;">${label}</span>
                         </div>
 
-                        <h3 style="margin:0; color:#003366; font-size:1.6rem; font-weight:900; line-height:1.3;">${emoji} ${a.tipo} - ${a.titulo}</h3>
+                        <h3 style="margin:0; color:#003366; font-size:1.6rem; font-weight:900; line-height:1.3;">${emoji} ${safeEscape(a.tipo)} - ${safeEscape(a.titulo)}</h3>
 
                         <div style="margin-top:5px; font-size:1.1rem; color:#555; display:flex; gap:25px; flex-wrap:wrap; font-weight:600; justify-content:center;">
                             <span style="display:flex; align-items:center; gap:8px;">📅 Data: <span style="color:#003366;">${dataBr}</span></span>
-                            <span style="display:flex; align-items:center; gap:8px;">🕒 Horário: <span style="color:#003366;">${a.hora_primeira_chamada || '--:--'}</span></span>
+                            <span style="display:flex; align-items:center; gap:8px;">🕒 Horário: <span style="color:#003366;">${safeEscape(a.hora_primeira_chamada) || '--:--'}</span></span>
                         </div>
 
                         <div style="margin-top:15px;">
-                            <button class="btn btn-primary btn-lg" style="padding: 15px 40px; font-weight: 800; border-radius: 30px; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);" onclick="Assembleias.abrirDetalhes('${a.id}')">Ver Detalhes e Participar</button>
+                            <button class="btn btn-primary btn-lg" style="padding: 15px 40px; font-weight: 800; border-radius: 30px; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);" onclick="Assembleias.abrirDetalhes('${safeEscape(a.id)}')">Ver Detalhes e Participar</button>
                         </div>
                     </div>
                 </div>
@@ -340,13 +350,13 @@
                         <div style="margin-bottom:15px;">
                             <span class="filiado-badge" style="background:#003366; color:#fff; padding:8px 16px; font-size:0.85rem;">${label}</span>
                         </div>
-                        <h2 style="color:#003366; margin:0; font-size:2.2rem; font-weight:800; line-height:1.2;">${a.titulo}</h2>
-                        <div style="margin-top:12px; color:#555; font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:1rem;">${a.tipo}</div>
+                        <h2 style="color:#003366; margin:0; font-size:2.2rem; font-weight:800; line-height:1.2;">${safeEscape(a.titulo)}</h2>
+                        <div style="margin-top:12px; color:#555; font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:1rem;">${safeEscape(a.tipo)}</div>
                     </div>
 
                     <div class="section-block section-block-alt" style="background: #f8fbff; border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 1px solid #e0e8f0; text-align: center;">
                         <h4 style="color:#003366; margin-bottom:20px; font-weight: 800; font-size: 1.2rem; display:flex; align-items:center; gap:10px; justify-content:center;">📌 Pauta da Assembleia</h4>
-                        <div style="color:#333; white-space: pre-wrap; line-height:1.7; font-size:1.05rem; text-align: center;">${a.pauta}</div>
+                        <div style="color:#333; white-space: pre-wrap; line-height:1.7; font-size:1.05rem; text-align: center;">${safeEscape(a.pauta)}</div>
                     </div>
 
                     <div class="field-row" style="margin-bottom:35px; display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:25px;">
@@ -357,7 +367,7 @@
                         ${!isEncerrada ? `
                         <div class="field-group" style="background:#fff; padding:15px; border-radius:10px; border:1px solid #ddd; text-align: center;">
                             <label style="font-weight:800; color:#003366; font-size:0.9rem; text-transform:uppercase; margin-bottom:8px; display:block;">🕒 Chamadas (1ª / 2ª)</label>
-                            <div style="font-size:1.3rem; font-weight:700; color:#333;">${a.hora_primeira_chamada} / ${a.hora_segunda_chamada}</div>
+                            <div style="font-size:1.3rem; font-weight:700; color:#333;">${safeEscape(a.hora_primeira_chamada)} / ${safeEscape(a.hora_segunda_chamada)}</div>
                         </div>
                         ` : ''}
                     </div>
@@ -394,7 +404,7 @@
                                 <summary style="cursor:pointer; color:#003366; font-size:0.95rem; font-weight:700; padding:10px; background:#f9f9f9; border-radius:8px;">Ver Lista Nominal</summary>
                                 <div style="margin-top:10px; max-height:200px; overflow-y:auto; font-size:0.9rem; padding:15px; background:#fff; border:1px solid #eee; border-radius:10px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);">
                                     ${estado.quorumVigente?.presentes?.length ?
-                                        estado.quorumVigente.presentes.map(p => `<div style="padding:8px 0; border-bottom:1px solid #f5f5f5; font-weight:500;">✅ ${p.nome}</div>`).join("") :
+                                        estado.quorumVigente.presentes.map(p => `<div style="padding:8px 0; border-bottom:1px solid #f5f5f5; font-weight:500;">✅ ${safeEscape(p.nome)}</div>`).join("") :
                                         '<p style="color:#999; text-align:center; padding:10px;">Nenhum registro de presença.</p>'}
                                 </div>
                             </details>
@@ -406,7 +416,7 @@
                     ${canSeeToken ? `
                         <div class="section-block" style="margin-bottom:35px; border:3px solid #f1c40f; background:#fffdf0; border-radius:15px; padding:25px; text-align:center; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.2);">
                             <h4 style="color:#856404; margin-bottom:15px; text-transform:uppercase; font-size:0.9rem; letter-spacing:1px; font-weight:900;">🔑 Token de Presença Vigente</h4>
-                            <div style="font-size:3.5rem; font-weight:900; color:#003366; letter-spacing:10px;">${estado.quorumVigente.token}</div>
+                            <div style="font-size:3.5rem; font-weight:900; color:#003366; letter-spacing:10px;">${safeEscape(estado.quorumVigente.token)}</div>
                             <p style="color:#666; margin-top:10px; font-size:0.9rem; font-weight:600;">Compartilhe este código com os filiados presentes.</p>
                         </div>
                     ` : ''}
@@ -565,8 +575,8 @@
         const jArea = document.getElementById('mesa-justificativa-area');
         const form = document.getElementById('form-compor-mesa');
 
-        pSelect.innerHTML = currentPresentes.map(p => `<option value="${p.id}">${p.nome}</option>`).join("");
-        sSelect.innerHTML = currentPresentes.map(p => `<option value="${p.id}">${p.nome}</option>`).join("");
+        pSelect.innerHTML = currentPresentes.map(p => `<option value="${safeEscape(p.id)}">${safeEscape(p.nome)}</option>`).join("");
+        sSelect.innerHTML = currentPresentes.map(p => `<option value="${safeEscape(p.id)}">${safeEscape(p.nome)}</option>`).join("");
 
         if (currentPresentes.length > 1) sSelect.selectedIndex = 1;
 
@@ -734,15 +744,15 @@
                 </div>
 
                 <div style="text-align:center; margin-bottom:35px;">
-                    <h4 style="color:#003366; font-size:1.8rem; margin:0; font-weight:800;">${assembleia.titulo}</h4>
-                    <p style="margin-top:8px; color:#666; font-size:1.1rem; font-weight:600; text-transform:uppercase; letter-spacing:1px;">${assembleia.tipo}</p>
+                    <h4 style="color:#003366; font-size:1.8rem; margin:0; font-weight:800;">${safeEscape(assembleia.titulo)}</h4>
+                    <p style="margin-top:8px; color:#666; font-size:1.1rem; font-weight:600; text-transform:uppercase; letter-spacing:1px;">${safeEscape(assembleia.tipo)}</p>
                 </div>
 
                 <!-- Bloco de Token Vigente na Sala -->
                 ${canSeeToken ? `
                     <div class="section-block" style="margin-bottom:35px; border:3px solid #f1c40f; background:#fffdf0; border-radius:15px; padding:20px; text-align:center;">
                         <h4 style="color:#856404; margin-bottom:10px; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; font-weight:900;">🔑 Token de Presença Vigente</h4>
-                        <div style="font-size:2.5rem; font-weight:900; color:#003366; letter-spacing:8px;">${quorumVigente.token}</div>
+                        <div style="font-size:2.5rem; font-weight:900; color:#003366; letter-spacing:8px;">${safeEscape(quorumVigente.token)}</div>
                     </div>
                 ` : ''}
 
@@ -752,11 +762,11 @@
                     <div style="display:flex; justify-content:space-around; flex-wrap:wrap; gap:30px;">
                         <div style="text-align:center;">
                             <small style="color:#666; font-weight:800; text-transform:uppercase; font-size:0.75rem;">Presidente</small><br>
-                            <strong style="font-size:1.3rem; color:#003366; font-weight:800;">${mesa?.presidente_nome || 'A definir'}</strong>
+                            <strong style="font-size:1.3rem; color:#003366; font-weight:800;">${safeEscape(mesa?.presidente_nome) || 'A definir'}</strong>
                         </div>
                         <div style="text-align:center;">
                             <small style="color:#666; font-weight:800; text-transform:uppercase; font-size:0.75rem;">Secretário</small><br>
-                            <strong style="font-size:1.3rem; color:#003366; font-weight:800;">${mesa?.secretario_nome || 'A definir'}</strong>
+                            <strong style="font-size:1.3rem; color:#003366; font-weight:800;">${safeEscape(mesa?.secretario_nome) || 'A definir'}</strong>
                         </div>
                     </div>
                 </div>
@@ -769,13 +779,13 @@
                                 <span class="filiado-badge" style="background:#27ae60; color:#fff; padding:8px 16px; font-weight:900; font-size:0.9rem;">🗳️ VOTAÇÃO EM CURSO</span>
                                 <div id="timer-votacao" style="font-weight:900; color:#e74c3c; font-size:2.5rem; font-family:'Courier New', monospace; background:#fff; padding:5px 15px; border-radius:10px; border:2px solid #e74c3c;">--:--</div>
                             </div>
-                            <h4 style="margin:0 0 15px 0; color:#003366; font-size:1.8rem; font-weight:800;">${votacaoAtiva.titulo}</h4>
-                            <p style="font-size:1.1rem; color:#333; line-height:1.6; font-weight:500;">${votacaoAtiva.descricao}</p>
+                            <h4 style="margin:0 0 15px 0; color:#003366; font-size:1.8rem; font-weight:800;">${safeEscape(votacaoAtiva.titulo)}</h4>
+                            <p style="font-size:1.1rem; color:#333; line-height:1.6; font-weight:500;">${safeEscape(votacaoAtiva.descricao)}</p>
 
                             ${votacaoAtiva.status === 'ATIVA' && !votacaoAtiva.userVoted ? `
                                 <div style="display:flex; gap:20px; margin-top:30px; flex-wrap:wrap;">
-                                    <button class="btn btn-success btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'SIM')">Votar SIM</button>
-                                    <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);" onclick="Assembleias.votar('${assembleia.id}', '${votacaoAtiva.id}', 'NAO')">Votar NÃO</button>
+                                    <button class="btn btn-success btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);" onclick="Assembleias.votar('${safeEscape(assembleia.id)}', '${safeEscape(votacaoAtiva.id)}', 'SIM')">Votar SIM</button>
+                                    <button class="btn btn-danger btn-lg" style="flex:1; font-size:1.8rem; padding:20px; border-radius:15px; font-weight:900; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);" onclick="Assembleias.votar('${safeEscape(assembleia.id)}', '${safeEscape(votacaoAtiva.id)}', 'NAO')">Votar NÃO</button>
                                 </div>
                             ` : `
                                 <div style="margin-top:30px; padding:25px; text-align:center; color:#27ae60; font-weight:900; background:#fff; border: 2px solid #27ae60; border-radius:15px; font-size:1.4rem;">
@@ -822,11 +832,11 @@
                             ${pedidosPalavra?.length ? pedidosPalavra.map(p => `
                                 <div style="padding:15px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; align-items:center; background:${p.status === 'EM_FALA' ? '#fff9e6' : 'transparent'}; border-radius:8px;">
                                     <div style="font-size:1rem;">
-                                        <strong style="color:#003366; font-weight:800;">${p.filiado_nome}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(p.criado_em)}</small><br>
-                                        <span class="filiado-badge" style="font-size:0.7rem; margin-top:6px; font-weight:700;">${p.status}</span>
+                                        <strong style="color:#003366; font-weight:800;">${safeEscape(p.filiado_nome)}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(p.criado_em)}</small><br>
+                                        <span class="filiado-badge" style="font-size:0.7rem; margin-top:6px; font-weight:700;">${safeEscape(p.status)}</span>
                                     </div>
                                     ${temAutoridade && p.status === 'PENDENTE' ? `
-                                        <button class="btn btn-primary btn-sm" style="font-weight:700;" onclick="Assembleias.concederPalavra('${assembleia.id}', '${p.id}')">Conceder Fala</button>
+                                        <button class="btn btn-primary btn-sm" style="font-weight:700;" onclick="Assembleias.concederPalavra('${safeEscape(assembleia.id)}', '${safeEscape(p.id)}')">Conceder Fala</button>
                                     ` : ''}
                                 </div>
                             `).join("") : '<p style="padding:30px; color:#999; font-size:1rem; text-align:center; font-style:italic; font-weight:500;">A fila de oradores está vazia.</p>'}
@@ -840,14 +850,14 @@
                             ${propostas?.length ? propostas.map(pr => `
                                 <div style="padding:15px; border-bottom:1px solid #f5f5f5; background:${pr.status === 'EM_VOTACAO' ? '#e8f5e9' : 'transparent'}; border-radius:8px; margin-bottom:10px;">
                                     <div style="font-size:1rem;">
-                                        <strong style="color:#003366; font-weight:800;">${pr.titulo}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(pr.criado_em)}</small><br>
-                                        <small style="color:#666; font-weight:600;">Autor: ${pr.autor_nome}</small>
+                                        <strong style="color:#003366; font-weight:800;">${safeEscape(pr.titulo)}</strong> <small style="color:#999;">· ${window.Formatters.formatTimeSP(pr.criado_em)}</small><br>
+                                        <small style="color:#666; font-weight:600;">Autor: ${safeEscape(pr.autor_nome)}</small>
                                     </div>
                                     <div style="margin-top:8px;">
-                                        <span class="filiado-badge" style="font-size:0.7rem; font-weight:700;">${pr.status}</span>
+                                        <span class="filiado-badge" style="font-size:0.7rem; font-weight:700;">${safeEscape(pr.status)}</span>
                                     </div>
                                     ${temAutoridade && pr.status === 'ATIVA' ? `
-                                        <button class="btn btn-success btn-sm" style="margin-top:12px; width:100%; font-weight:800;" onclick="Assembleias.votarProposta('${assembleia.id}', '${pr.id}')">Lançar para Votação</button>
+                                        <button class="btn btn-success btn-sm" style="margin-top:12px; width:100%; font-weight:800;" onclick="Assembleias.votarProposta('${safeEscape(assembleia.id)}', '${safeEscape(pr.id)}')">Lançar para Votação</button>
                                     ` : ''}
                                 </div>
                             `).join("") : '<p style="padding:30px; color:#999; font-size:1rem; text-align:center; font-style:italic; font-weight:500;">Nenhuma proposta apresentada ainda.</p>'}
@@ -864,7 +874,7 @@
                             ` : ''}
                             <button class="btn btn-outline btn-sm" style="font-weight:700; border-color:#e74c3c; color:#e74c3c;" onclick="Assembleias.solicitarRecontagem('${assembleia.id}')">🔄 Solicitar Recontagem</button>
                             ${isDiretoria && votacaoAtiva && votacaoAtiva.status === 'ATIVA' ? `
-                                <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarVotacaoManual('${assembleia.id}', '${votacaoAtiva.id}')">⏹️ Encerrar Votacao Item</button>
+                                <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarVotacaoManual('${safeEscape(assembleia.id)}', '${safeEscape(votacaoAtiva.id)}')">⏹️ Encerrar Votacao Item</button>
                             ` : ''}
                             ${isDiretoria ? `
                                 <button class="btn btn-danger btn-sm" style="font-weight:800;" onclick="Assembleias.encerrarAssembleia('${assembleia.id}')">🚫 Encerrar Assembleia</button>
