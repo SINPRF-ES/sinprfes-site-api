@@ -258,8 +258,9 @@ footer {
     border: 1px solid var(--ui-border);
     background: var(--ui-surface);
     border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
 }
 
 .estatuto-toc summary {
@@ -269,16 +270,36 @@ footer {
 }
 
 .estatuto-toc-list {
-    margin: 10px 0 0;
+    margin: 6px 0 0;
     padding-left: 1rem;
     display: grid;
-    gap: 6px;
+    gap: 4px;
 }
 
 .estatuto-toc-list a {
     color: var(--ui-primary);
     text-decoration: underline;
     text-underline-offset: 2px;
+}
+
+.estatuto-layout {
+    display: grid;
+    grid-template-columns: minmax(190px, 240px) 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.estatuto-layout .estatuto-toc {
+    position: sticky;
+    top: 8px;
+    max-height: calc(70vh - 18px);
+    overflow: auto;
+}
+
+.estatuto-top-link {
+    display: inline-block;
+    font-weight: 700;
+    margin-bottom: 4px;
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -345,4 +366,78 @@ footer {
 #lista-filiados {
     display: grid;
     gap: var(--ui-space-3);
+}
+
+.filiado-card {
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-border);
+    border-left: 5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.filiado-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filiado-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.filiado-avatar-frame {
+    width: 88px;
+    height: 88px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid var(--ui-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.avatar-mini {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 88px;
+    max-height: 88px;
+}
+
+.filiado-nome { font-weight: 700; color: var(--ui-text); }
+.filiado-meta { color: var(--ui-text-muted); }
+
+.filiado-right { text-align: right; }
+
+.filiado-badge {
+    display: inline-flex;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    font-weight: 800;
+}
+
+.filiado-card.status-ativo { border-left-color: #16a34a; }
+.filiado-card.status-veterano { border-left-color: #eab308; }
+.filiado-card.status-pensionista { border-left-color: #ec4899; }
+
+.filiado-badge.badge-ativo { background: #16a34a; color: #fff; }
+.filiado-badge.badge-veterano { background: #eab308; color: #1f2937; }
+.filiado-badge.badge-pensionista { background: #ec4899; color: #fff; }
+
+@media (max-width: 900px) {
+    .estatuto-layout { grid-template-columns: 1fr; }
+    .estatuto-layout .estatuto-toc {
+        position: static;
+        max-height: none;
+    }
+    .filiado-right { text-align: left; width: 100%; }
 }

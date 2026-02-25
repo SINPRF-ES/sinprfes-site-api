@@ -31,25 +31,51 @@
             return { id, text, level: heading.tagName.toLowerCase() };
         });
 
-        const toc = document.createElement('details');
+        const toc = document.createElement('nav');
         toc.className = 'estatuto-toc';
-        toc.open = true;
-        toc.innerHTML = `<summary>📚 Sumário</summary><ol class="estatuto-toc-list"></ol>`;
+        toc.setAttribute('aria-label', 'Sumário do estatuto');
+        toc.innerHTML = `<div style="font-weight:700; color:var(--ui-primary);">📚 Sumário</div><ol class="estatuto-toc-list"></ol>`;
         const list = toc.querySelector('.estatuto-toc-list');
 
         list.innerHTML = items.map(item => (
-            `<li style="margin-left:${item.level === 'h3' ? '16px' : '0'}"><a href="#${item.id}">${item.text}</a></li>`
+            `<li style="margin-left:${item.level === 'h3' ? '12px' : '0'}"><a href="#${item.id}">${item.text}</a></li>`
         )).join('');
 
-        toc.addEventListener('click', (event) => {
+        const body = document.createElement('div');
+        body.className = 'estatuto-body';
+        body.innerHTML = container.innerHTML;
+
+        const topLink = document.createElement('a');
+        topLink.href = '#';
+        topLink.className = 'estatuto-top-link';
+        topLink.textContent = '↑ Voltar ao sumário';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'estatuto-layout';
+        wrapper.appendChild(toc);
+
+        const article = document.createElement('div');
+        article.className = 'estatuto-article';
+        article.appendChild(topLink);
+        article.appendChild(body);
+        wrapper.appendChild(article);
+
+        container.innerHTML = '';
+        container.appendChild(wrapper);
+
+        wrapper.addEventListener('click', (event) => {
             const link = event.target.closest('a[href^="#"]');
             if (!link) return;
             event.preventDefault();
-            const target = container.querySelector(link.getAttribute('href'));
+
+            if (link.classList.contains('estatuto-top-link')) {
+                toc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+
+            const target = wrapper.querySelector(link.getAttribute('href'));
             if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
-
-        container.prepend(toc);
     }
 
     async function inicializarEstatuto() {

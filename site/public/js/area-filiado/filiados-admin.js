@@ -51,7 +51,7 @@
         const escapedNome = safeEscape(safeNome);
         const escapedSrc = safeEscape(src);
 
-        return `<img class="avatar-mini" src="${escapedSrc}" alt="Avatar ${escapedNome}" onerror="this.src='/img/avatar-placeholder.png'">`;
+        return `<div class="filiado-avatar-frame"><img class="avatar-mini" src="${escapedSrc}" alt="Avatar ${escapedNome}" onerror="this.src='/img/avatar-placeholder.png'"></div>`;
     }
 
     function formatISOToBRDateTime(isoStr) {
@@ -253,7 +253,7 @@
                                 `}
                             </div>
                         </div>
-                        <div style="text-align:right;">
+                        <div class="filiado-right">
                             <span class="filiado-badge badge-${situacaoLower}">${safeEscape(situacao)}</span>
                             <div style="margin-top:5px; font-size:0.85rem;">${safeEscape(tels) || '-'}</div>
             ${!["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ?
