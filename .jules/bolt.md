@@ -22,3 +22,7 @@
 ## 2026-02-23 - [Controller Media Grouping Optimization]
 **Learning:** Nested loops ($O(N \times M)$) in controllers when associating related entities (like news and media) are a hidden performance tax that grows with data size. Using a `Map` to pre-group related items reduces complexity to $O(N+M)$ and is a consistent pattern for high-performance Node.js backends.
 **Action:** Always scan controllers for `.filter()` or `.find()` calls inside a `.forEach()` or `.map()` when processing database results. Replace them with `Map`-based aggregation.
+
+## 2026-02-25 - [Sequential DB Queries and Nested Lookups in Repasse Service]
+**Learning:** Sequential `await` calls for independent database queries and using `.find()` inside nested loops (creating O(N * M) complexity) significantly slow down complex data aggregation functions like `getRepasseAno`. Parallelizing queries with `Promise.all` and pre-indexing datasets with `Map` can reduce execution time by an order of magnitude as data grows.
+**Action:** Always scan for loops containing `.find()` or `.filter()` on other datasets. Replace them with `Map`-based lookups and use `Promise.all` for independent DB operations.

@@ -70,41 +70,39 @@ async function listarResponsaveis(lotacaoKey = null) {
 }
 
 async function getRepasseAno(year) {
-  // Busca todas as configurações de per_capita para o ano
-  const { rows: configRows } = await pool.query(
-    `SELECT * FROM repasse_mes WHERE year = $1`,
-    [year]
-  );
+  // BOLT: Parallelize initial queries and filiado counts to reduce sequential DB roundtrips.
+  const [configRowsResult, lotacaoRowsResult, ...ativosCounts] = await Promise.all([
+    pool.query(`SELECT * FROM repasse_mes WHERE year = $1`, [year]),
+    pool.query(`SELECT rl.*, f.nome as responsavel_nome, f.cpf as responsavel_cpf
+                FROM repasse_lotacao rl
+                LEFT JOIN filiados f ON rl.responsavel_id = f.id
+                WHERE rl.year = $1`, [year]),
+    ...LOTACOES_REPASSE.map(lot => getFiliadosAtivosCount(lot))
+  ]);
 
-  // Busca todos os dados de lotação para o ano
-  const { rows: lotacaoRows } = await pool.query(
-    `SELECT rl.*, f.nome as responsavel_nome, f.cpf as responsavel_cpf
-     FROM repasse_lotacao rl
-     LEFT JOIN filiados f ON rl.responsavel_id = f.id
-     WHERE rl.year = $1`,
-    [year]
-  );
+  const configRows = configRowsResult.rows;
+  const lotacaoRows = lotacaoRowsResult.rows;
 
-  // Calcula filiados ativos atuais para cada localidade
-  // (O requisito diz: "Para TODOS os cálculos do módulo 'Repasse': 'Filiados ativos' = SOMENTE SITUAÇÃO FUNCIONAL = ATIVO")
-  // Note: O número de filiados ativos pode variar com o tempo, mas para o cálculo do repasse do MÊS,
-  // geralmente se usa o valor no momento. O requisito não diz para persistir esse número,
-  // diz para calculá-lo ("Campos calculados (não persistir): filiadosAtivos").
-  // Isso implica que o histórico será recalculado com base no estado ATUAL do banco?
-  // Geralmente repasse se baseia no histórico, mas o requisito é explícito: "não persistir".
-
+  // BOLT: Assemble ativosPorLotacao from parallel results.
   const ativosPorLotacao = {};
-  for (const lot of LOTACOES_REPASSE) {
-    ativosPorLotacao[lot] = await getFiliadosAtivosCount(lot);
-  }
+  LOTACOES_REPASSE.forEach((lot, i) => {
+    ativosPorLotacao[lot] = ativosCounts[i];
+  });
+
+  // BOLT: Pre-index configurations and lotação data to avoid O(N*M) lookups inside loops.
+  const configByMonth = new Map(configRows.map(r => [r.month, r]));
+  const lotacaoDataMap = new Map();
+  lotacaoRows.forEach(r => {
+    lotacaoDataMap.set(`${r.month}_${r.lotacao_key}`, r);
+  });
 
   const meses = [];
   for (let month = 1; month <= 12; month++) {
-    const config = configRows.find(r => r.month === month) || { per_capita: 0 };
+    const config = configByMonth.get(month) || { per_capita: 0 };
     const perCapita = parseFloat(config.per_capita);
 
     const localidades = LOTACOES_REPASSE.map(lot => {
-      const data = lotacaoRows.find(r => r.month === month && r.lotacao_key === lot) || {
+      const data = lotacaoDataMap.get(`${month}_${lot}`) || {
         responsavel_id: null,
         responsavel_nome: null,
         responsavel_cpf: null,
@@ -148,33 +146,24 @@ async function getRepasseAno(year) {
     });
   }
 
-  // Cálculo do acumulado por localidade no ano
-  // acumuladoAno = soma(créditos mensais) – soma(reembolsos)
-  const lotacoesAcumulado = LOTACOES_REPASSE.map(lot => {
-    let somaCreditos = 0;
-    let somaReembolsos = 0;
+  // BOLT: Calculate accumulated values using O(N+M) instead of nested loops.
+  const lotacoesAcumuladoMap = new Map(LOTACOES_REPASSE.map(lot => [lot, 0]));
 
-    meses.forEach(m => {
-      const loc = m.localidades.find(l => l.lotacao === lot);
-      somaCreditos += loc.creditoMes;
-      somaReembolsos += loc.reembolsoMes;
-    });
-
-    return {
-      lotacao: lot,
-      acumuladoAno: somaCreditos - somaReembolsos
-    };
-  });
-
-  // Anexar o acumulado em cada localidade de cada mês (para exibição na tela)
   meses.forEach(m => {
     m.localidades.forEach(loc => {
-      const acc = lotacoesAcumulado.find(la => la.lotacao === loc.lotacao);
-      loc.acumuladoAno = acc.acumuladoAno;
+      const current = lotacoesAcumuladoMap.get(loc.lotacao);
+      lotacoesAcumuladoMap.set(loc.lotacao, current + loc.creditoMes - loc.reembolsoMes);
     });
   });
 
-  const totalAcumuladoGeral = lotacoesAcumulado.reduce((acc, curr) => acc + curr.acumuladoAno, 0);
+  // Anexar o acumulado em cada localidade de cada mês
+  meses.forEach(m => {
+    m.localidades.forEach(loc => {
+      loc.acumuladoAno = lotacoesAcumuladoMap.get(loc.lotacao);
+    });
+  });
+
+  const totalAcumuladoGeral = Array.from(lotacoesAcumuladoMap.values()).reduce((acc, val) => acc + val, 0);
 
   return {
     year,
@@ -188,17 +177,19 @@ async function getRepasseAno(year) {
  * Usado pelo módulo de Relatórios para evitar duplicação de lógica.
  */
 async function getUltimosDadosParaRelatorio(lotacaoKey) {
-  // 1. Total de filiados ativos atuais (Source of Truth do Repasse)
-  const filiadosAtivos = await getFiliadosAtivosCount(lotacaoKey);
+  // BOLT: Parallelize independent queries to reduce latency.
+  const [filiadosAtivos, prfRowsResult] = await Promise.all([
+    getFiliadosAtivosCount(lotacaoKey),
+    pool.query(`
+      SELECT rl.year, rl.month, rl.prf_total
+      FROM repasse_lotacao rl
+      WHERE rl.lotacao_key = $1
+      ORDER BY rl.year DESC, rl.month DESC
+      LIMIT 1
+    `, [lotacaoKey])
+  ]);
 
-  // 2. Busca o registro mais recente de prf_total para esta lotação
-  const { rows } = await pool.query(`
-    SELECT rl.year, rl.month, rl.prf_total
-    FROM repasse_lotacao rl
-    WHERE rl.lotacao_key = $1
-    ORDER BY rl.year DESC, rl.month DESC
-    LIMIT 1
-  `, [lotacaoKey]);
+  const rows = prfRowsResult.rows;
 
   if (rows.length === 0) {
     return {
