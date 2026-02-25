@@ -12,6 +12,7 @@
 
   // Evita duplicar handlers se inicializar múltiplas vezes
   let _handlersReady = false;
+  let _currentSyncMode = null; // 'gestao' ou 'membro'
 
   function normalizePermissions(raw) {
     if (Array.isArray(raw)) return raw.filter(Boolean).map((p) => String(p).trim()).filter(Boolean);
@@ -100,11 +101,13 @@
   }
 
   function applyNotificationsMode(params) {
-    const { isGestao } = params;
+    const { isGestao, forceVisibleSection } = params;
 
-    debugNotif("applyNotificationsMode", { isGestao });
+    debugNotif("applyNotificationsMode", { isGestao, forceVisibleSection });
 
-    ensureNotificationsSectionVisible();
+    if (forceVisibleSection) {
+      ensureNotificationsSectionVisible();
+    }
 
     const adminContainer = document.getElementById("notificacoes-admin-container");
     const membroContainer = document.getElementById("notificacoes-membro-container");
@@ -144,39 +147,65 @@
     }, 150);
   }
 
-  async function inicializarNotificacoes(user) {
-    const canonUser = await getUserCanon(user);
-    const permissions = normalizePermissions(canonUser.permissions);
-    const perfil = (canonUser.perfil_acesso || "").toUpperCase();
+  /**
+   * Sincroniza o modo de exibição (Gestão vs Membro) de forma reativa.
+   * Centraliza a lógica de permissões e visibilidade.
+   */
+  async function sincronizarModo(perfil, permissions) {
+    const normalizedPermissions = normalizePermissions(permissions);
+    const normalizedPerfil = (perfil || "").toUpperCase();
 
     // Gestão se tiver PUSH_GERENCIAR, wildcard ou for de um perfil administrativo conhecido (fallback)
-    const ehGestorPerfil = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
-    const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*") || ehGestorPerfil;
+    const ehGestorPerfil = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(normalizedPerfil);
+    const isGestao = normalizedPermissions.includes("PUSH_GERENCIAR") || normalizedPermissions.includes("*") || ehGestorPerfil;
 
-    // 1) aplica modo e garante seção visível
-    debugNotif("inicializarNotificacoes", {
-      perfil,
-      permissions,
-      isGestao,
-    });
+    const novoModo = isGestao ? "gestao" : "membro";
 
-    applyNotificationsMode({ isGestao, permissions });
+    const sec = document.getElementById("sec-notificacoes");
+    const isActive = sec && sec.classList.contains("active");
 
-    // 2) bind handlers uma única vez (idempotente)
-    if (!_handlersReady) {
-      setupHandlers();
-      _handlersReady = true;
-    }
-
-    // 3) popular lotações sempre que entrar em gestão (barato e garante consistência)
-    if (isGestao) popularLotacoes();
-
-    // 4) carrega dados conforme modo
-    if (isGestao) {
-      await carregarCampanhasGestao();
+    // Idempotência: se o modo já é o mesmo, evita re-renderizar containers desnecessariamente
+    if (_currentSyncMode === novoModo) {
+      debugNotif("sincronizarModo: Modo já sincronizado", { novoModo });
     } else {
-      await carregarHistoricoMe();
+      _currentSyncMode = novoModo;
+
+      // 1) aplica modo (containers internos)
+      // Passamos forceVisibleSection: false se estivermos apenas sincronizando em background
+      applyNotificationsMode({
+        isGestao,
+        permissions: normalizedPermissions,
+        forceVisibleSection: isActive
+      });
+
+      // 2) bind handlers uma única vez
+      if (!_handlersReady) {
+        setupHandlers();
+        _handlersReady = true;
+      }
+
+      // 3) popular lotações se entrar em gestão
+      if (isGestao) popularLotacoes();
     }
+
+    // 4) Carrega dados se a seção estiver ativa
+    if (isActive) {
+      if (isGestao) {
+        await carregarCampanhasGestao();
+      } else {
+        await carregarHistoricoMe();
+      }
+    }
+  }
+
+  async function inicializarNotificacoes(user) {
+    debugNotif("inicializarNotificacoes (Lazy Load)");
+    const canonUser = await getUserCanon(user);
+
+    // Força a seção a ficar visível no lazy load
+    ensureNotificationsSectionVisible();
+
+    await sincronizarModo(canonUser.perfil_acesso, canonUser.permissions);
   }
 
   function popularLotacoes() {
@@ -608,6 +637,7 @@
 
   window.Notificacoes = {
     inicializarNotificacoes,
+    sincronizarModo,
     carregarCampanhasGestao,
     carregarHistoricoMe,
     abrirDetalhe,
