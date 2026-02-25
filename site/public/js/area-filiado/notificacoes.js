@@ -24,6 +24,100 @@
   }
 
   const GESTAO_PERFIS = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
+  const filiadoNomeCache = new Map();
+  const filiadoNomePending = new Map();
+
+  function parseTargetValue(raw) {
+    if (raw == null) return null;
+    if (typeof raw === "object") return raw;
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+        try { return JSON.parse(trimmed); } catch (_) { return trimmed; }
+      }
+      return trimmed;
+    }
+    return raw;
+  }
+
+  async function resolverNomeFiliado(id) {
+    const cacheKey = String(id || "").trim();
+    if (!cacheKey) return null;
+    if (filiadoNomeCache.has(cacheKey)) return filiadoNomeCache.get(cacheKey);
+    if (filiadoNomePending.has(cacheKey)) return filiadoNomePending.get(cacheKey);
+
+    const promise = (async () => {
+      try {
+        const r = await window.Api.apiFetch(`/api/filiados?q=${encodeURIComponent(cacheKey)}`);
+        if (!r.ok) return null;
+        const data = await r.json();
+        const list = Array.isArray(data?.filiados) ? data.filiados : [];
+        const exact = list.find(f => String(f.id) === cacheKey) || list[0];
+        const nome = exact?.nome ? String(exact.nome).trim() : null;
+        if (nome) filiadoNomeCache.set(cacheKey, nome);
+        return nome;
+      } catch (_) {
+        return null;
+      } finally {
+        filiadoNomePending.delete(cacheKey);
+      }
+    })();
+
+    filiadoNomePending.set(cacheKey, promise);
+    return promise;
+  }
+
+  function formatarDestinoCampanha(c) {
+    const type = String(c?.target_type || "ALL").toUpperCase();
+    const targetValue = parseTargetValue(c?.target_value);
+
+    if (type !== "FILIADO") {
+      const suffix = (targetValue != null && targetValue !== "") ? `: ${String(targetValue)}` : "";
+      return `Destino: ${type}${suffix}`;
+    }
+
+    if (targetValue && typeof targetValue === "object" && !Array.isArray(targetValue)) {
+      const nome = String(targetValue.nome || "").trim();
+      const cpf = String(targetValue.cpf || "").trim();
+      if (nome && cpf) return `Destino: FILIADO: ${nome} (CPF: ${cpf})`;
+      if (nome) return `Destino: FILIADO: ${nome}`;
+      if (targetValue.id != null) return `Destino: FILIADO: Filiado #${targetValue.id}`;
+    }
+
+    if (typeof targetValue === "string" || typeof targetValue === "number") {
+      const idStr = String(targetValue).trim();
+      if (filiadoNomeCache.has(idStr)) return `Destino: FILIADO: ${filiadoNomeCache.get(idStr)}`;
+      return `Destino: FILIADO: Filiado #${idStr} (Carregando nome...)`;
+    }
+
+    return "Destino: FILIADO";
+  }
+
+  async function hidratarNomesFiliadosNoHistorico(container) {
+    if (!container || !historyCache.length) return;
+    const ids = new Set();
+    historyCache.forEach((c) => {
+      const type = String(c?.target_type || "").toUpperCase();
+      if (type !== "FILIADO") return;
+      const value = parseTargetValue(c?.target_value);
+      if (value && typeof value === "object" && value.id != null && value.nome) {
+        filiadoNomeCache.set(String(value.id), String(value.nome));
+      }
+      if (typeof value === "string" || typeof value === "number") {
+        const id = String(value).trim();
+        if (id && !filiadoNomeCache.has(id)) ids.add(id);
+      } else if (value && typeof value === "object" && value.id != null && !value.nome) {
+        const id = String(value.id).trim();
+        if (id && !filiadoNomeCache.has(id)) ids.add(id);
+      }
+    });
+
+    if (!ids.size) return;
+    await Promise.all(Array.from(ids).map((id) => resolverNomeFiliado(id)));
+    renderizarHistorico(container);
+  }
+
 
   function resolveContext(arg) {
     const argObj = arg && typeof arg === "object" ? arg : {};
@@ -269,16 +363,17 @@
     const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
     let html = historyCache.map(c => {
       const data = formatarData(c.created_at);
-      const targetLabel = c.target_type + (c.target_value ? `: ${c.target_value}` : "");
+      const targetLabel = formatarDestinoCampanha(c);
       return `
           <div class="history-card" style="background:#fff; border:1px solid #eee; border-radius:8px; padding:15px; margin-bottom:10px; border-left:4px solid #003366;">
             <div class="history-header" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="history-date" style="font-size:0.8rem; color:#888;">${data}</span></div>
-            <div class="history-author" style="font-size:0.85rem; color:#555; margin-bottom:5px;">Destino: ${safeEscape(targetLabel)}</div>
+            <div class="history-author" style="font-size:0.85rem; color:#555; margin-bottom:5px;">${safeEscape(targetLabel)}</div>
             ${c.title ? `<div class="history-title" style="font-weight:bold; color:#003366; margin-bottom:5px;">${safeEscape(c.title)}</div>` : ""}
             <div class="history-body" style="white-space: pre-wrap; font-size:0.95rem; color:#333;">${safeEscape(c.body)}</div>
           </div>`;
     }).join("");
     container.innerHTML = html;
+    hidratarNomesFiliadosNoHistorico(container);
   }
 
   function formatarData(isoStr) { if (!isoStr) return ""; return new Date(isoStr).toLocaleString("pt-BR"); }
