@@ -58,6 +58,17 @@
     let userInfo = obterUserInfoFresco();
     let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
 
+    function inicializarNotificacoesComPerfil(perfilAtual) {
+      if (!Notificacoes) return;
+      if (Notificacoes.inicializarNotificacoes) {
+        Notificacoes.inicializarNotificacoes({ perfil: perfilAtual });
+        return;
+      }
+      if (Notificacoes.inicializar) {
+        Notificacoes.inicializar({ perfil: perfilAtual });
+      }
+    }
+
     function atualizarVisibilidadeAbas(p) {
       const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
 
@@ -98,8 +109,8 @@
         else if (abaAlvo === "sec-noticias" && inicializarNoticias) inicializarNoticias(perfil);
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
-        else if (abaAlvo === "sec-notificacoes" && Notificacoes && Notificacoes.inicializarNotificacoes) {
-          Notificacoes.inicializarNotificacoes({ perfil });
+        else if (abaAlvo === "sec-notificacoes") {
+          inicializarNotificacoesComPerfil(perfil);
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
         else if (abaAlvo === "sec-estatuto" && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
@@ -147,12 +158,8 @@
           if (inicializarFiliados) inicializarFiliados(perfil);
 
           // Re-sincroniza notificações apenas quando a aba já está ativa
-          if (
-            window.Notificacoes &&
-            window.Notificacoes.inicializarNotificacoes &&
-            document.querySelector(".af-section.active")?.id === "sec-notificacoes"
-          ) {
-            window.Notificacoes.inicializarNotificacoes({ perfil: perfilReal });
+          if (document.querySelector(".af-section.active")?.id === "sec-notificacoes") {
+            inicializarNotificacoesComPerfil(perfilReal);
           }
         }
       }

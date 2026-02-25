@@ -47,7 +47,13 @@
     const argPerfil = typeof argObj.perfil === "string" ? argObj.perfil : "";
     const argPermissions = normalizePermissions(argObj.permissions);
 
-    const cached = window.Utils?.obterUserInfo?.() || {};
+    let cached = {};
+    try {
+      cached = window.Utils?.obterUserInfo?.() || {};
+    } catch (_) {
+      cached = {};
+    }
+
     const cachedPerfil = (cached.perfil_acesso || cached.perfil || "").toUpperCase();
     const cachedPermissions = normalizePermissions(cached.permissions);
 
@@ -164,7 +170,14 @@
     debugNotif("inicializar", { perfilEfetivo, permissionsEfetivas, ehGestao });
 
     const desiredMode = ehGestao ? "gestao" : "membro";
-    if (_currentSyncMode !== desiredMode) {
+    const adminContainerAtual = document.getElementById("notificacoes-admin-container");
+    const membroContainerAtual = document.getElementById("notificacoes-membro-container");
+    const precisaRenderizar =
+      _currentSyncMode !== desiredMode ||
+      !adminContainerAtual ||
+      !membroContainerAtual;
+
+    if (precisaRenderizar) {
       if (ehGestao) renderAdminTemplate(container);
       else renderMembroTemplate(container);
       _handlersReady = false;
