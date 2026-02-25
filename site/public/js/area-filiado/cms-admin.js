@@ -61,42 +61,42 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                         <h4 style="margin:0; color:var(--amarelo);">ID: ${block.id}</h4>
                         <label style="font-size:0.8rem; cursor: pointer;">
-                            <input type="checkbox" id="active-${block.id}" ${block.is_active ? 'checked' : ''}> Ativo no site
+                            <input type="checkbox" style="width:auto;" id="active-${block.id}" ${block.is_active ? 'checked' : ''}> Ativo no site
                         </label>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Título</label>
-                            <input type="text" id="title-${block.id}" value="${block.title || ''}">
+                            <input class="ui-input" type="text" id="title-${block.id}" value="${block.title || ''}">
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Corpo (Texto)</label>
-                            <textarea id="body-${block.id}" rows="3">${block.body || ''}</textarea>
+                            <textarea class="ui-textarea" id="body-${block.id}" rows="3">${block.body || ''}</textarea>
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Tipo de Mídia</label>
-                            <select id="type-${block.id}">
+                            <select class="ui-select" id="type-${block.id}">
                                 <option value="image" ${block.media_type === 'image' ? 'selected' : ''}>Imagem</option>
                                 <option value="video" ${block.media_type === 'video' ? 'selected' : ''}>Vídeo (URL)</option>
                             </select>
                         </div>
                         <div class="field-group">
                             <label>URL da Mídia</label>
-                            <input type="text" id="url-${block.id}" value="${block.media_url || ''}">
+                            <input class="ui-input" type="text" id="url-${block.id}" value="${block.media_url || ''}">
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Link (URL Saiba Mais)</label>
-                            <input type="text" id="link-${block.id}" value="${block.link_url || ''}">
+                            <input class="ui-input" type="text" id="link-${block.id}" value="${block.link_url || ''}">
                         </div>
                         <div class="field-group">
                             <label>Ordem</label>
-                            <input type="number" id="order-${block.id}" value="${block.ordenacao || 0}">
+                            <input class="ui-input" type="number" style="width: 100px;" id="order-${block.id}" value="${block.ordenacao || 0}">
                         </div>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="CMSAdmin.save('${block.id}')" style="margin-top:10px;">Salvar Alterações</button>

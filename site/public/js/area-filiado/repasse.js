@@ -218,8 +218,8 @@
                             </div>` : ''}
                         </div>
 
-                        <div style="overflow-x:auto;">
-                            <table class="repasse-tabela">
+                        <div class="ui-table-wrapper">
+                            <table class="repasse-tabela ui-table">
                                 <thead>
                                     <tr>
                                         <th>Localidade</th>

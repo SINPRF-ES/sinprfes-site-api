@@ -223,8 +223,8 @@
                         return `
                             <div style="margin-bottom:30px;">
                                 <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${safeEscape(section.title)}</h4>
-                                <div style="overflow-x:auto;">
-                                    <table class="repasse-tabela" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
+                                <div class="ui-table-wrapper">
+                                    <table class="repasse-tabela ui-table" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
                                         <thead>
                                             <tr style="background:#f8f9fa;">
                                                 ${section.columns.map(col => `<th style="border:1px solid #ddd; padding:12px 10px; text-align:left; color: var(--azul-fundo);">${safeEscape(col)}</th>`).join('')}

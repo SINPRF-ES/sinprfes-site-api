@@ -13,6 +13,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <title>SINPRF-ES</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/ui-canon.css" />
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
@@ -21,40 +22,40 @@
 <body>
   <div id="site-header"></div>
 
-  <div class="container">
+  <div class="ui-container" style="margin-top: var(--ui-space-5);">
     <main class="page-content" id="filiados">
 
-      <section class="card">
+      <section class="ui-card">
         <h2 class="section-title">
           <span class="emoji">🧾</span>
           <span>Filiados ao SINPRF-ES</span>
         </h2>
-        <p class="section-subtitle">
+        <p class="section-subtitle" style="color: var(--ui-text-muted); margin-bottom: var(--ui-space-4);">
           Consulta básica dos filiados cadastrados no sistema do sindicato.
         </p>
 
-        <div class="section-box" style="margin-bottom: 12px;">
+        <div class="ui-card" style="margin-bottom: var(--ui-space-4); background: var(--ui-bg);">
           <form id="filtro-filiados" onsubmit="return false;">
-            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;">
+            <div style="display:flex; flex-wrap:wrap; gap: var(--ui-space-3); align-items:flex-end;">
               <div style="flex:1 1 220px; min-width:0;">
-                <label for="busca-nome" style="font-size:11px; color:var(--texto-fraco); display:block; margin-bottom:2px;">
+                <label for="busca-nome" class="ui-label">
                   Buscar por nome / e-mail
                 </label>
                 <input
                   type="text"
                   id="busca-nome"
+                  class="ui-input"
                   placeholder="Digite parte do nome ou e-mail"
-                  style="width:100%; padding:6px 8px; border-radius:10px; border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.4); color:var(--texto-claro); font-size:13px;"
                 >
               </div>
 
               <div style="flex:0 0 150px;">
-                <label for="filtro-situacao" style="font-size:11px; color:var(--texto-fraco); display:block; margin-bottom:2px;">
+                <label for="filtro-situacao" class="ui-label">
                   Situação
                 </label>
                 <select
                   id="filtro-situacao"
-                  style="width:100%; padding:6px 8px; border-radius:10px; border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.4); color:var(--texto-claro); font-size:13px;"
+                  class="ui-select"
                 >
                   <option value="">Todas</option>
                   <option value="Ativo">Ativo</option>
@@ -63,7 +64,7 @@
               </div>
 
               <div style="flex:0 0 auto;">
-                <button class="btn btn-primary" id="btn-aplicar-filtro" type="button">
+                <button class="ui-button ui-button-secondary" id="btn-aplicar-filtro" type="button">
                   Buscar
                 </button>
               </div>
@@ -71,8 +72,8 @@
           </form>
         </div>
 
-        <div class="section-box" style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <div class="ui-table-wrapper">
+          <table class="ui-table">
             <thead>
               <tr style="border-bottom:1px solid rgba(255,255,255,0.12);">
                 <th style="text-align:left; padding:6px 4px;">Nome</th>

@@ -12,36 +12,65 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/ui-canon.css" />
   <script src="/js/utils.js" defer></script>
+  <style>
+    .member-card {
+      padding: var(--ui-space-3);
+      text-align: center;
+      background: var(--ui-surface);
+      border-radius: var(--ui-radius);
+      box-shadow: var(--ui-shadow);
+      border: 1px solid var(--ui-border);
+    }
+    .member-photo {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto var(--ui-space-2) auto;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid var(--ui-secondary);
+    }
+    .member-role {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--ui-primary);
+      opacity: 0.7;
+    }
+    .member-name {
+      font-weight: 700;
+      color: var(--ui-text);
+    }
+  </style>
 </head>
 <body>
 
   <!-- HEADER DINÂMICO -->
   <div id="site-header"></div>
 
-  <div class="container">
+  <div class="ui-container" style="margin-top: var(--ui-space-5);">
     <main class="page-content" id="diretoria">
-      <section class="card">
+      <section class="ui-card">
         <h2 class="section-title">
           <span class="emoji">👔</span> Diretoria e Conselho Fiscal
         </h2>
-        <p class="section-subtitle">
+        <p class="section-subtitle" style="color: var(--ui-text-muted); margin-bottom: var(--ui-space-4);">
           Composição da Diretoria Executiva e do Conselho Fiscal do
           Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo – Gestão 2025/2027.
         </p>
 
         <div class="section-box">
-          <div class="board-group-title">Diretoria Executiva</div>
+          <div class="board-group-title" style="font-size: 1.5rem; font-weight: 800; color: var(--ui-primary); margin-bottom: var(--ui-space-4); border-left: 5px solid var(--ui-secondary); padding-left: var(--ui-space-3);">Diretoria Executiva</div>
 
-          <div class="board-grid">
+          <div class="board-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--ui-space-4);">
             <!-- PRESIDENTE -->
-            <article class="member-card">
-              <div class="member-photo">
+            <article class="member-card ui-card" style="padding: var(--ui-space-3); text-align: center;">
+              <div class="member-photo" style="width: 120px; height: 120px; margin: 0 auto var(--ui-space-2) auto; border-radius: 50%; overflow: hidden; border: 3px solid var(--ui-secondary);">
                 <img src="/img/diretor/presidente.jpg" alt="Foto do Presidente" style="width:100%;height:100%;object-fit:cover;">
               </div>
               <div class="member-info">
-                <div class="member-role">PRESIDENTE</div>
-                <div class="member-name">Marcelo Fávero Brandão</div>
+                <div class="member-role" style="font-size: 0.75rem; font-weight: 800; color: var(--ui-primary); opacity: 0.7;">PRESIDENTE</div>
+                <div class="member-name" style="font-weight: 700; color: var(--ui-text);">Marcelo Fávero Brandão</div>
               </div>
             </article>
 

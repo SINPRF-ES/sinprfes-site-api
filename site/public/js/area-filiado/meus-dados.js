@@ -132,13 +132,13 @@
             s.id = 'style-meus-dados';
             s.textContent = `
                 .profile-header {
-                    background: linear-gradient(135deg, #003366 0%, #00152b 100%);
+                    background: linear-gradient(135deg, var(--ui-primary) 0%, #00152b 100%);
                     color: #fff;
-                    padding: 35px 30px;
-                    border-radius: 15px;
-                    border-bottom: 6px solid var(--amarelo);
-                    margin-bottom: 25px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                    padding: var(--ui-space-5);
+                    border-radius: var(--ui-radius);
+                    border-bottom: 6px solid var(--ui-secondary);
+                    margin-bottom: var(--ui-space-4);
+                    box-shadow: var(--ui-shadow);
                     display: flex;
                     justify-content: center;
                 }
@@ -181,41 +181,41 @@
                 .badge-veterano { background: #f39c12; }
                 .badge-pensionista { background: #e91e63; }
                 .badge-desconhecido { background: #95a5a6; }
-                .data-card {
-                    background: #fff;
-                    color: #333;
-                    padding: 25px;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    margin-bottom: 20px;
-                    border: 1px solid #e0e0e0;
+                .ui-card {
+                    background: var(--ui-surface);
+                    color: var(--ui-text);
+                    padding: var(--ui-space-4);
+                    border-radius: var(--ui-radius);
+                    box-shadow: var(--ui-shadow);
+                    margin-bottom: var(--ui-space-3);
+                    border: 1px solid var(--ui-border);
                     transition: background-color 0.3s ease;
                 }
-                .data-card.bg-alt { background-color: #f7f9fc; }
-                .data-card h3 {
-                    color: #003366;
+                .ui-card.bg-alt { background-color: var(--ui-bg); }
+                .ui-card h3 {
+                    color: var(--ui-primary);
                     font-size: 1.2rem;
                     padding-bottom: 10px;
                     margin-bottom: 20px;
                     font-weight: bold;
                     text-align: center;
                 }
-                .data-card input, .data-card select {
+                .ui-card input, .ui-card select {
                     width: 100%;
                     padding: 10px;
-                    border: 1px solid #ccc;
-                    border-radius: 6px;
-                    color: #333;
-                    background-color: #fff;
+                    border: 1px solid var(--ui-border);
+                    border-radius: var(--ui-radius);
+                    color: var(--ui-text);
+                    background-color: var(--ui-surface);
                     font-size: 1rem;
                     box-sizing: border-box;
                 }
-                .data-card input:focus, .data-card select:focus {
-                    border-color: #003366;
+                .ui-card input:focus, .ui-card select:focus {
+                    border-color: var(--ui-primary);
                     outline: none;
                     background-color: #f9fbff;
                 }
-                .data-card label {
+                .ui-card label {
                     font-weight: 600;
                     font-size: 0.9rem;
                     color: #555;
@@ -363,12 +363,12 @@
             </div>
 
             <form id="form-meus-dados">
-                <div class="data-card">
+                <div class="ui-card">
                     <h3>👤 Informações Pessoais</h3>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Nome</label>
-                            <input type="text" value="${nome || ""}" readonly />
+                            <input class="ui-input" type="text" value="${nome || ""}" readonly />
                         </div>
                         <div class="field-group">
                             <label>Sexo</label>
@@ -381,27 +381,27 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>CPF</label>
-                            <input type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
+                            <input class="ui-input" type="text" value="${formatarCPF ? formatarCPF(cpf || "") : cpf}" readonly />
                         </div>
                         <div class="field-group">
                             <label>Matrícula (SIAPE)</label>
-                            <input type="text" id="me-siape" value="${dados.siape || "-"}" readonly />
+                            <input class="ui-input" type="text" id="me-siape" value="${dados.siape || "-"}" readonly />
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Data de Nascimento</label>
-                            <input type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
+                            <input class="ui-input" type="text" value="${formatarDataBR(dados.data_nascimento)}" readonly />
                         </div>
                         <div class="field-group">
                             <label>Idade</label>
-                            <input type="text" value="${idadeTxt}" readonly />
+                            <input class="ui-input" type="text" value="${idadeTxt}" readonly />
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Lotação</label>
-                            <select id="me-lotacao">
+                            <select class="ui-select" id="me-lotacao">
                                 ${opcoes}
                             </select>
                         </div>
@@ -409,70 +409,70 @@
                     </div>
                 </div>
 
-                <div class="data-card bg-alt">
+                <div class="ui-card bg-alt">
                     <h3>📞 Contato</h3>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Telefone 1</label>
-                            <input type="text" id="me-telefone1" value="${telefone1 || ""}" />
+                            <input class="ui-input" type="text" id="me-telefone1" value="${telefone1 || ""}" />
                         </div>
                         <div class="field-group">
                             <label>Telefone 2</label>
-                            <input type="text" id="me-telefone2" value="${telefone2 || ""}" />
+                            <input class="ui-input" type="text" id="me-telefone2" value="${telefone2 || ""}" />
                         </div>
                     </div>
 
                     <div class="field-row">
                         <div class="field-group">
                             <label>Email 1</label>
-                            <input type="email" id="me-email1" value="${email1 || ""}" />
+                            <input class="ui-input" type="email" id="me-email1" value="${email1 || ""}" />
                         </div>
                         <div class="field-group">
                             <label>Email 2</label>
-                            <input type="email" id="me-email2" value="${email2 || ""}" />
+                            <input class="ui-input" type="email" id="me-email2" value="${email2 || ""}" />
                         </div>
                     </div>
                 </div>
 
-                <div class="data-card">
+                <div class="ui-card">
                     <h3>🏠 Endereço</h3>
                     <div class="address-grid-v2">
                         <!-- Linha 1: CEP + Logradouro -->
                         <div class="edit-group cep-group">
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
-                                <input type="text" id="me-cep" value="${cep || ""}" placeholder="00000-000" class="campo-cep" />
+                                <input class="ui-input campo-cep" type="text" id="me-cep" value="${cep || ""}" placeholder="00000-000" />
                                 <span class="cep-search-icon" id="btn-buscar-cep" style="cursor:pointer;">🔍</span>
                             </div>
                         </div>
                         <div class="edit-group logradouro-group">
                             <label>Logradouro / Bairro</label>
-                            <input type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly style="background:#f0f0f0;" />
+                            <input class="ui-input" type="text" id="me-endereco" value="${logradouro_bairro || ""}" readonly style="background:#f0f0f0;" />
                         </div>
 
                         <!-- Linha 2: Número + Complemento -->
                         <div class="edit-group">
                             <label>Número</label>
-                            <input type="text" id="me-numero" value="${numero || ""}" />
+                            <input class="ui-input" type="text" id="me-numero" value="${numero || ""}" />
                         </div>
                         <div class="edit-group">
                             <label>Complemento</label>
-                            <input type="text" id="me-complemento" value="${complemento || ""}" />
+                            <input class="ui-input" type="text" id="me-complemento" value="${complemento || ""}" />
                         </div>
 
                         <!-- Linha 3: Cidade + UF -->
                         <div class="edit-group">
                             <label>Cidade</label>
-                            <input type="text" id="me-cidade" value="${cidade || ""}" readonly style="background:#f0f0f0;" />
+                            <input class="ui-input" type="text" id="me-cidade" value="${cidade || ""}" readonly style="background:#f0f0f0;" />
                         </div>
                         <div class="edit-group">
                             <label>UF</label>
-                            <input type="text" id="me-uf" value="${uf || ""}" readonly style="background:#f0f0f0;" />
+                            <input class="ui-input" type="text" id="me-uf" value="${uf || ""}" readonly style="background:#f0f0f0;" />
                         </div>
                     </div>
                 </div>
 
-                <div class="data-card bg-alt">
+                <div class="ui-card bg-alt">
                     <div class="dependentes-header" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
                         <h3 style="margin: 0;">👶 Dependentes (até 5)</h3>
                         <button type="button" id="btn-toggle-excluir-dependentes" class="btn btn-danger-outline btn-sm" style="position: absolute; right: 0;">Excluir</button>
@@ -591,7 +591,7 @@
         dependentesAtuais.forEach(dep => {
             containerCheckboxes.innerHTML += `
                 <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" name="excluir_dependente" value="${dep.index}" style="width: auto;">
+                    <input type="checkbox" style="width:auto;" name="excluir_dependente" value="${dep.index}" style="width: auto;">
                     Dependente ${dep.index + 1}: ${dep.nome}
                 </label>
             `;

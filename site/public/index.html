@@ -13,6 +13,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <title>SINPRF-ES</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/ui-canon.css" />
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
@@ -21,53 +22,53 @@
 <body>
   <div id="site-header"></div>
 
-  <div class="container">
-    <main class="page-content" id="inicio">
+  <div class="ui-container">
+    <main class="page-content" id="inicio" style="margin-top: var(--ui-space-5);">
 
-      <section class="card">
+      <section class="ui-card">
         <h2 class="section-title">
           <span class="emoji">👋</span>
           <span>Bem-vindo ao SINPRF-ES</span>
         </h2>
-        <p class="section-subtitle">
+        <p class="section-subtitle" style="color: var(--ui-text-muted); margin-bottom: var(--ui-space-3);">
           Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo.
         </p>
 
-        <div class="section-box">
+        <div class="section-box" style="background: var(--ui-bg); padding: var(--ui-space-3); border-radius: var(--ui-radius); margin-bottom: var(--ui-space-3);">
           <p>
             Nossa missão é defender, representar e fortalecer os policiais rodoviários federais do estado,
             garantindo direitos, melhorias, valorização e bem-estar.
           </p>
         </div>
 
-        <div class="btn-row">
-          <a href="/diretoria.html" class="btn btn-outline">Conheça a Diretoria</a>
-          <a href="/estatuto.html" class="btn btn-primary">Consultar Estatuto</a>
+        <div class="btn-row" style="display: flex; gap: var(--ui-space-3); flex-wrap: wrap;">
+          <a href="/diretoria.html" class="ui-button ui-button-outline">Conheça a Diretoria</a>
+          <a href="/estatuto.html" class="ui-button ui-button-secondary">Consultar Estatuto</a>
         </div>
       </section>
       
-      <section class="card destaque-jogos" style="margin-top: 20px;">
+      <section class="ui-card destaque-jogos" style="margin-top: var(--ui-space-4);">
         <h2 class="section-title">
           <span class="emoji">🏅</span>
           <span>Jogos de Integração da PRF 2026</span>
         </h2>
-        <p class="section-subtitle">
+        <p class="section-subtitle" style="color: var(--ui-text-muted); margin-bottom: var(--ui-space-3);">
           O SINPRF-ES está organizando a delegação capixaba.
           Confira as informações completas e manifeste seu interesse!
         </p>
-        <div class="btn-row">
-          <a href="/noticias.html#jogos-2026" class="btn btn-outline">Ver Matéria Completa</a>
-          <a href="/area-filiado.html#sec-jogos" class="btn btn-primary">Fazer Pré-inscrição (Acesso Restrito)</a>
+        <div class="btn-row" style="display: flex; gap: var(--ui-space-3); flex-wrap: wrap;">
+          <a href="/noticias.html#jogos-2026" class="ui-button ui-button-outline">Ver Matéria Completa</a>
+          <a href="/area-filiado.html#sec-jogos" class="ui-button ui-button-secondary">Fazer Pré-inscrição (Acesso Restrito)</a>
         </div>
       </section>
       </main>
   </div>
-<section class="container" style="margin-top: 40px; margin-bottom: 40px;">
+<section class="ui-container" style="margin-top: 40px; margin-bottom: 40px;">
   <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <h2 class="section-title">
       <span class="emoji">📸</span> Acompanhe no Instagram
     </h2>
-    <a href="https://instagram.com/sinprfes" target="_blank" class="btn btn-outline btn-sm">Ver perfil completo</a>
+    <a href="https://instagram.com/sinprfes" target="_blank" class="ui-button ui-button-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver perfil completo</a>
   </div>
 
   <div id="insta-feed" class="insta-grid">
