@@ -76,7 +76,7 @@
         { id: "nav-repasse", visivel: ehGestao },
         { id: "nav-noticias", visivel: true },
         { id: "nav-cms", visivel: ehGestao },
-        { id: "nav-notificacoes", visivel: true },
+        { id: "nav-notificacoes", visivel: ehGestao },
         { id: "nav-relatorios", visivel: ehGestao },
         { id: "nav-novo-filiado", visivel: ehGestao }
       ];
@@ -98,6 +98,7 @@
     if (configurarNavegacao) {
       configurarNavegacao((abaAlvo) => {
         console.log("Navegando para:", abaAlvo);
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
 
         if (abaAlvo === "sec-home" && inicializarHome) inicializarHome(perfil);
         else if (abaAlvo === "sec-meus-dados" && carregarMeusDados) carregarMeusDados();

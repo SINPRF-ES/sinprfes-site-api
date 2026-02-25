@@ -1,8 +1,0 @@
-
-> @sinprfes/site@1.0.0 start /app/site
-> node server.js
-
-SINPRF-ES Site rodando na porta 8082
-Proxy configurado: /api/* -> https://api.sinprfes.org.br/api/*
-Terminated
- ELIFECYCLE  Command failed with exit code 143.
