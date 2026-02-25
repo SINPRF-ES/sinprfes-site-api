@@ -69,16 +69,22 @@
       }
     }
 
-    function atualizarVisibilidadeAbas(p) {
-      const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(p);
+    /**
+     * Atualiza visibilidade das abas baseada em permissões (Permissions-First).
+     * @param {Object} info - Objeto userInfo com perfil e permissions.
+     */
+    function atualizarVisibilidadeAbas(info) {
+      const p = (info.perfil_acesso || info.perfil || "FILIADO").toUpperCase();
+      const perms = info.permissions || [];
+      const hasPerm = (perm) => perms.includes("*") || perms.includes(perm);
 
       const abasConfig = [
-        { id: "nav-repasse", visivel: ehGestao },
+        { id: "nav-repasse", visivel: hasPerm('REPASSE_GERENCIAR') },
         { id: "nav-noticias", visivel: true },
-        { id: "nav-cms", visivel: ehGestao },
-        { id: "nav-notificacoes", visivel: ehGestao },
-        { id: "nav-relatorios", visivel: ehGestao },
-        { id: "nav-novo-filiado", visivel: ehGestao }
+        { id: "nav-cms", visivel: hasPerm('EDIT_CONTENT') },
+        { id: "nav-notificacoes", visivel: hasPerm('PUSH_GERENCIAR') },
+        { id: "nav-relatorios", visivel: hasPerm('RELATORIOS_VER') },
+        { id: "nav-novo-filiado", visivel: hasPerm('CREATE_FILIADO') }
       ];
 
       abasConfig.forEach((aba) => {
@@ -92,13 +98,15 @@
     }
 
     console.log("Perfil inicial (Cache):", perfil);
-    atualizarVisibilidadeAbas(perfil);
+    atualizarVisibilidadeAbas(userInfo);
 
     // 2. Configura Navegação Global
     if (configurarNavegacao) {
       configurarNavegacao((abaAlvo) => {
         console.log("Navegando para:", abaAlvo);
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
+        const userInfoAtu = obterUserInfoFresco();
+        const permsAtu = userInfoAtu.permissions || [];
+        const hasPerm = (perm) => permsAtu.includes("*") || permsAtu.includes(perm);
 
         if (abaAlvo === "sec-home" && inicializarHome) inicializarHome(perfil);
         else if (abaAlvo === "sec-meus-dados" && carregarMeusDados) carregarMeusDados();
@@ -111,8 +119,7 @@
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
         else if (abaAlvo === "sec-notificacoes") {
-          const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
-          if (!ehGestao) {
+          if (!hasPerm('PUSH_GERENCIAR')) {
             console.warn("Acesso negado: Notificações é restrito à gestão.");
             const btnHome = document.getElementById("nav-home");
             if (btnHome) btnHome.click();
@@ -153,21 +160,29 @@
 
         if (dadosFrescos && dadosFrescos.perfil_acesso) {
           const perfilReal = dadosFrescos.perfil_acesso.toUpperCase();
-          console.log(`Perfil atualizado via API: ${perfil} -> ${perfilReal}`);
-          perfil = perfilReal;
 
-          // Atualiza cache e referência
-          userInfo = dadosFrescos;
-          localStorage.setItem("userInfo", JSON.stringify(dadosFrescos));
+          const infoAntigaStr = JSON.stringify(userInfo);
+          const infoNovaStr = JSON.stringify(dadosFrescos);
 
-          atualizarVisibilidadeAbas(perfilReal);
+          if (infoAntigaStr !== infoNovaStr) {
+            console.log(`Dados/Perfil atualizados via API: ${perfil} -> ${perfilReal}`);
+            perfil = perfilReal;
 
-          // Re-render de módulos que dependem de perfil
-          if (inicializarFiliados) inicializarFiliados(perfil);
+            // Atualiza cache e referência
+            userInfo = dadosFrescos;
+            localStorage.setItem("userInfo", JSON.stringify(dadosFrescos));
 
-          // Re-sincroniza notificações apenas quando a aba já está ativa
-          if (document.querySelector(".af-section.active")?.id === "sec-notificacoes") {
-            inicializarNotificacoesComPerfil(perfilReal);
+            atualizarVisibilidadeAbas(dadosFrescos);
+
+            // Re-render de módulos que dependem de perfil
+            if (inicializarFiliados) inicializarFiliados(perfil);
+
+            // Re-sincroniza notificações apenas quando a aba já está ativa
+            if (document.querySelector(".af-section.active")?.id === "sec-notificacoes") {
+              inicializarNotificacoesComPerfil(perfilReal);
+            }
+          } else {
+            console.log("Sessão sincronizada (sem alterações no perfil).");
           }
         }
       }

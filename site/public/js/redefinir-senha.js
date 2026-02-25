@@ -12,6 +12,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
 
+  // Palette: Inicializa toggle de visibilidade de senha
+  if (window.Utils && window.Utils.initPasswordToggles) {
+    window.Utils.initPasswordToggles();
+  }
+
   if (!token) {
     if (msgEl) {
       msgEl.textContent = "Link inválido. Falta o token na URL.";
