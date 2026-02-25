@@ -98,6 +98,7 @@
     if (configurarNavegacao) {
       configurarNavegacao((abaAlvo) => {
         console.log("Navegando para:", abaAlvo);
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
 
         if (abaAlvo === "sec-home" && inicializarHome) inicializarHome(perfil);
         else if (abaAlvo === "sec-meus-dados" && carregarMeusDados) carregarMeusDados();
