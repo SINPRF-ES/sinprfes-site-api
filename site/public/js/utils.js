@@ -344,9 +344,101 @@
     }
   }
 
+
+  function initNotificationsForensics() {
+    if (window.__notifForensicsInstalled) return;
+    if (localStorage.getItem("DEBUG_NOTIF") !== "1") return;
+
+    window.__notifForensicsInstalled = true;
+
+    const watchIds = new Set(["notificacoes-admin-container", "notificacoes-membro-container", "sec-notificacoes", "af-content"]);
+    const isWatchedElement = (el) => {
+      if (!el || el.nodeType !== 1) return false;
+      if (watchIds.has(el.id)) return true;
+      if (el.classList?.contains("af-main-layout")) return true;
+      if (el.classList?.contains("af-section") && el.id === "sec-notificacoes") return true;
+      if (el.tagName === "BODY") return true;
+      return false;
+    };
+
+    const trace = (action, details = {}) => {
+      const when = new Date().toISOString();
+      const stack = new Error().stack;
+      console.log("[DEBUG_NOTIF]", { when, action, ...details, stack });
+    };
+
+    const styleProto = window.CSSStyleDeclaration && window.CSSStyleDeclaration.prototype;
+    if (styleProto && !styleProto.__notifForensicsPatchedSetProperty) {
+      const originalSetProperty = styleProto.setProperty;
+      styleProto.setProperty = function (prop, value, priority) {
+        const owner = this && this.ownerElement;
+        if (String(prop).toLowerCase() === "display" && isWatchedElement(owner)) {
+          trace("setProperty(display)", {
+            element: owner.id || owner.className || owner.tagName,
+            oldValue: owner.style.display,
+            newValue: value,
+            priority: priority || "",
+          });
+        }
+        return originalSetProperty.call(this, prop, value, priority);
+      };
+      styleProto.__notifForensicsPatchedSetProperty = true;
+
+      const displayDescriptor = Object.getOwnPropertyDescriptor(styleProto, "display");
+      if (displayDescriptor && displayDescriptor.configurable && typeof displayDescriptor.set === "function") {
+        Object.defineProperty(styleProto, "display", {
+          configurable: true,
+          enumerable: displayDescriptor.enumerable,
+          get: displayDescriptor.get,
+          set: function (value) {
+            const owner = this && this.ownerElement;
+            if (isWatchedElement(owner)) {
+              trace("style.display=", {
+                element: owner.id || owner.className || owner.tagName,
+                oldValue: owner.style.display,
+                newValue: value,
+              });
+            }
+            return displayDescriptor.set.call(this, value);
+          },
+        });
+      }
+    }
+
+    const observerTargets = [
+      document.getElementById("notificacoes-admin-container"),
+      document.getElementById("notificacoes-membro-container"),
+      document.getElementById("sec-notificacoes"),
+      document.querySelector(".af-content"),
+      document.querySelector(".af-main-layout"),
+      document.body,
+    ].filter(Boolean);
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        const target = mutation.target;
+        if (!isWatchedElement(target)) return;
+        trace("mutation", {
+          element: target.id || target.className || target.tagName,
+          attribute: mutation.attributeName,
+          style: target.getAttribute("style") || "",
+          className: target.className || "",
+          hidden: !!target.hidden,
+        });
+      });
+    });
+
+    observerTargets.forEach((target) => {
+      observer.observe(target, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    });
+
+    trace("init", { targets: observerTargets.map((el) => el.id || el.className || el.tagName) });
+  }
+
   window.Utils = {
     obterToken,
     obterUserInfo,
+    initNotificationsForensics,
     apiFetch: window.Api.apiFetch,
     aplicarMascaraTelefone,
     formatarTelefoneTexto,
