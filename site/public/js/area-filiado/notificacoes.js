@@ -15,18 +15,20 @@
 
   /**
    * Canon: busca o usuário completo do servidor se faltarem permissões.
+   * Prioriza dados com array de permissions populado.
    */
   async function getUserCanon(user) {
-    // 1) Se já temos permissões, retorna
-    if (user && Array.isArray(user.permissions) && user.permissions.length > 0) return user;
+    const hasPermissions = (u) => u && Array.isArray(u.permissions) && u.permissions.length > 0;
 
-    // 2) Tenta cache do Utils
+    // 1) Se o argumento já é válido, usa ele
+    if (hasPermissions(user)) return user;
+
+    // 2) Tenta cache do Utils (localStorage)
     const cached = window.Utils?.obterUserInfo();
-    if (cached && Array.isArray(cached.permissions) && cached.permissions.length > 0) return cached;
+    if (hasPermissions(cached)) return cached;
 
-    // 3) Busca oficial no backend (/api/auth/me é o mais leve para permissões)
+    // 3) Busca oficial no backend (/api/auth/me) se não houver permissões no cache ou argumento
     try {
-      console.log("[Notificacoes] Fetching canon user from /api/auth/me...");
       const r = await window.Api.apiFetch("/api/auth/me");
       if (r && r.ok) {
         const info = await r.json();
@@ -34,11 +36,14 @@
           localStorage.setItem("userInfo", JSON.stringify(info));
           return info;
         }
+      } else {
+        console.warn("[Notificacoes] Failed to fetch canon user. Status:", r?.status);
       }
     } catch (e) {
       console.error("[Notificacoes] Error fetching canon user", e);
     }
 
+    // Fallback para o que tivermos (mesmo sem permissões)
     return cached || user || {};
   }
 
@@ -52,67 +57,70 @@
     const sec = document.getElementById("sec-notificacoes");
     if (!sec) return;
 
-    // Garante que a seção não fica presa em display none por alguma corrida
-    sec.classList.add("active");
-    setDisplay(sec, "block");
+    // Garante que a seção tem o estado básico correto, mas sem !important no display
+    // para não quebrar a navegação global gerida pelo navegacao.js
+    if (!sec.classList.contains("active")) {
+      sec.classList.add("active");
+      sec.style.display = "block";
+    }
+
+    // Propriedades secundárias podem usar !important se necessário para garantir renderização
     sec.style.setProperty("visibility", "visible", "important");
     sec.style.setProperty("opacity", "1", "important");
     sec.style.setProperty("max-height", "none", "important");
-    sec.style.setProperty("position", "relative", "important");
-    sec.style.setProperty("z-index", "1", "important");
   }
 
   function applyNotificationsMode(params) {
-    const { isGestao, permissions } = params;
+    const { isGestao } = params;
 
     ensureNotificationsSectionVisible();
 
     const adminContainer = document.getElementById("notificacoes-admin-container");
     const membroContainer = document.getElementById("notificacoes-membro-container");
 
+    if (!adminContainer || !membroContainer) {
+      console.warn("[Notificacoes] Containers not found in DOM.");
+      return;
+    }
+
     const displayAdmin = isGestao ? "block" : "none";
     const displayMembro = isGestao ? "none" : "block";
 
-    // IMPORTANTE: usar important para não depender de CSS/ordem de execução
+    // IMPORTANTE: usar setDisplay helper (!important) nos containers INTERNOS
     setDisplay(adminContainer, displayAdmin);
     setDisplay(membroContainer, displayMembro);
 
-    // Também garante visibilidade real (alguns CSS podem mexer em opacity/visibility)
-    if (adminContainer) {
-      adminContainer.style.setProperty("visibility", "visible", "important");
-      adminContainer.style.setProperty("opacity", "1", "important");
-      adminContainer.style.setProperty("max-height", "none", "important");
-      adminContainer.style.setProperty("position", "relative", "important");
-      adminContainer.style.setProperty("z-index", "1", "important");
-    }
-    if (membroContainer) {
-      membroContainer.style.setProperty("visibility", "visible", "important");
-      membroContainer.style.setProperty("opacity", "1", "important");
-      membroContainer.style.setProperty("max-height", "none", "important");
-      membroContainer.style.setProperty("position", "relative", "important");
-      membroContainer.style.setProperty("z-index", "1", "important");
-    }
+    // Garante visibilidade real nos containers internos
+    const containers = [adminContainer, membroContainer];
+    containers.forEach(el => {
+      if (!el) return;
+      el.style.setProperty("visibility", "visible", "important");
+      el.style.setProperty("opacity", "1", "important");
+      el.style.setProperty("max-height", "none", "important");
+    });
 
-    // Validação de segurança: se o container correto não estiver visível, força.
+    /**
+     * Validação de segurança (Anti-Race):
+     * Se após o render o container correto ainda estiver oculto por algum CSS externo,
+     * força a exibição após um pequeno delay.
+     */
     setTimeout(() => {
-      const a = document.getElementById('notificacoes-admin-container');
-      const m = document.getElementById('notificacoes-membro-container');
-      if (isGestao && a && getComputedStyle(a).display === "none") {
-        a.style.setProperty("display", "block", "important");
-        console.warn("[Notificacoes] admin container was hidden unexpectedly. Forced display:block.");
-      } else if (!isGestao && m && getComputedStyle(m).display === "none") {
-        m.style.setProperty("display", "block", "important");
-        console.warn("[Notificacoes] member container was hidden unexpectedly. Forced display:block.");
+      const target = isGestao ? adminContainer : membroContainer;
+      if (target && getComputedStyle(target).display === "none") {
+        target.style.setProperty("display", "block", "important");
+        console.warn(`[Notificacoes] ${isGestao ? 'Admin' : 'Member'} container was hidden by CSS. Forced display:block.`);
       }
-    }, 100);
+    }, 150);
   }
 
   async function inicializarNotificacoes(user) {
     const canonUser = await getUserCanon(user);
     const permissions = Array.isArray(canonUser.permissions) ? canonUser.permissions : [];
+    const perfil = (canonUser.perfil_acesso || "").toUpperCase();
 
-    // Gestão se tiver PUSH_GERENCIAR (ou wildcard)
-    const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
+    // Gestão se tiver PUSH_GERENCIAR, wildcard ou for de um perfil administrativo conhecido (fallback)
+    const ehGestorPerfil = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
+    const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*") || ehGestorPerfil;
 
     // 1) aplica modo e garante seção visível
     applyNotificationsMode({ isGestao, permissions });

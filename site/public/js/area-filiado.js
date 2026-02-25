@@ -99,6 +99,7 @@
         else if (abaAlvo === "sec-notificacoes" && Notificacoes && Notificacoes.inicializarNotificacoes) {
           if (_notifInitInFlight) return;
           _notifInitInFlight = true;
+
           // Lazy init: não passamos argumentos, o módulo busca o user canon se necessário
           Notificacoes.inicializarNotificacoes().finally(() => { _notifInitInFlight = false; });
         }
