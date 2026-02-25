@@ -1,35 +1,15 @@
 /**
- * Módulo de Notificações Push (Página Inicial)
+ * Módulo de Notificações Push (Página Inicial - Gestão Only)
  */
 (function (window) {
   if (window.Notificacoes) return;
 
   let historyCache = [];
   let isShowingArchived = false;
-
-  let isLoadingMe = false;
   let isLoadingGestao = false;
 
   // Evita duplicar handlers se inicializar múltiplas vezes
   let _handlersReady = false;
-  let _currentSyncMode = null; // 'gestao' ou 'membro'
-
-  function normalizePermissions(raw) {
-    if (Array.isArray(raw)) return raw.filter(Boolean).map((p) => String(p).trim()).filter(Boolean);
-    if (typeof raw === "string") {
-      return raw
-        .split(/[;,\s]+/)
-        .map((p) => String(p).trim())
-        .filter(Boolean);
-    }
-    if (raw && typeof raw === "object") {
-      return Object.entries(raw)
-        .filter(([, value]) => !!value)
-        .map(([key]) => String(key).trim())
-        .filter(Boolean);
-    }
-    return [];
-  }
 
   function debugNotif(action, details = {}) {
     if (localStorage.getItem("DEBUG_NOTIF") !== "1") return;
@@ -42,28 +22,7 @@
 
   const GESTAO_PERFIS = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
 
-  function resolveContext(arg) {
-    const argObj = arg && typeof arg === "object" ? arg : {};
-    const argPerfil = typeof argObj.perfil === "string" ? argObj.perfil : "";
-    const argPermissions = normalizePermissions(argObj.permissions);
-
-    let cached = {};
-    try {
-      cached = window.Utils?.obterUserInfo?.() || {};
-    } catch (_) {
-      cached = {};
-    }
-
-    const cachedPerfil = (cached.perfil_acesso || cached.perfil || "").toUpperCase();
-    const cachedPermissions = normalizePermissions(cached.permissions);
-
-    const perfilEfetivo = (argPerfil || cachedPerfil || "FILIADO").toUpperCase();
-    const permissionsEfetivas = argPermissions.length ? argPermissions : cachedPermissions;
-
-    return { perfilEfetivo, permissionsEfetivas };
-  }
-
-  function renderAdminTemplate(container) {
+  function renderTemplate(container) {
     container.innerHTML = `
       <div id="notificacoes-admin-container">
         <div class="af-standard-header">
@@ -123,77 +82,55 @@
             </div>
         </div>
       </div>
-
-      <div id="notificacoes-membro-container" style="display:none"></div>
     `;
   }
 
-  function renderMembroTemplate(container) {
-    container.innerHTML = `
-      <div id="notificacoes-admin-container" style="display:none"></div>
-      <div id="notificacoes-membro-container">
-        <div class="af-standard-header">
-            <h2>📢 Minhas Notificações</h2>
-            <p class="section-subtitle">Acompanhe os comunicados enviados para você.</p>
-        </div>
-        <div id="lista-notificacoes-recebidas" class="history-list">
-            <p style="text-align:center; padding:40px; color:#666;">Carregando notificações...</p>
-        </div>
-      </div>
-    `;
-  }
-
-  function applyMode(ehGestao) {
-    const adminContainer = document.getElementById("notificacoes-admin-container");
-    const membroContainer = document.getElementById("notificacoes-membro-container");
-    if (!adminContainer || !membroContainer) return;
-
-    adminContainer.style.display = ehGestao ? "block" : "none";
-    membroContainer.style.display = ehGestao ? "none" : "block";
-  }
-
-  function setupHandlersOnce() {
-    if (_handlersReady) return;
-    setupHandlers();
-    _handlersReady = true;
-  }
-
-  async function inicializar(arg, permissionsLegacy) {
+  async function inicializar(arg) {
     const container = document.getElementById("sec-notificacoes");
-    if (!container) return;
-
-    const normalizedArg = (arg && typeof arg === "object") ? arg : { perfil: arg, permissions: permissionsLegacy };
-    const { perfilEfetivo, permissionsEfetivas } = resolveContext(normalizedArg);
-    const forcaPermissaoGestao = permissionsEfetivas.includes("PUSH_GERENCIAR") || permissionsEfetivas.includes("*");
-    const ehGestao = GESTAO_PERFIS.includes(perfilEfetivo) || forcaPermissaoGestao;
-
-    debugNotif("inicializar", { perfilEfetivo, permissionsEfetivas, ehGestao });
-
-    const desiredMode = ehGestao ? "gestao" : "membro";
-    const adminContainerAtual = document.getElementById("notificacoes-admin-container");
-    const membroContainerAtual = document.getElementById("notificacoes-membro-container");
-    const precisaRenderizar =
-      _currentSyncMode !== desiredMode ||
-      !adminContainerAtual ||
-      !membroContainerAtual;
-
-    if (precisaRenderizar) {
-      if (ehGestao) renderAdminTemplate(container);
-      else renderMembroTemplate(container);
-      _handlersReady = false;
-      _currentSyncMode = desiredMode;
-    }
-
-    applyMode(ehGestao);
-
-    if (ehGestao) {
-      setupHandlersOnce();
-      popularLotacoes();
-      await carregarCampanhasGestao();
+    if (!container) {
+      console.error("[Notificacoes] Container #sec-notificacoes não encontrado.");
       return;
     }
 
-    await carregarHistoricoMe();
+    // Identifica perfil
+    let perfil = "FILIADO";
+    if (arg && typeof arg === "object" && arg.perfil) {
+      perfil = arg.perfil.toUpperCase();
+    } else if (typeof arg === "string") {
+      perfil = arg.toUpperCase();
+    } else {
+      try {
+        const userInfo = window.Utils?.obterUserInfo?.() || {};
+        perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
+      } catch (_) {}
+    }
+
+    const ehGestao = GESTAO_PERFIS.includes(perfil);
+
+    if (!ehGestao) {
+      container.innerHTML = `
+        <div style="padding: 40px; text-align: center; color: #666;">
+          <p>⚠️ Você não tem permissão para acessar este módulo.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Feedback visual obrigatório (B5)
+    container.innerHTML = `
+      <div style="padding: 40px; text-align: center; color: #003366;">
+        <p>⌛ Carregando painel de notificações...</p>
+      </div>
+    `;
+
+    debugNotif("inicializar", { perfil, ehGestao });
+
+    renderTemplate(container);
+    _handlersReady = false; // Força re-binding dos handlers no novo HTML
+
+    setupHandlersOnce();
+    popularLotacoes();
+    await carregarCampanhasGestao();
   }
 
   async function inicializarNotificacoes(arg) {
@@ -216,6 +153,12 @@
     select.innerHTML = lotacoes.map((l) => `<option value="${l}">${l}</option>`).join("");
   }
 
+  function setupHandlersOnce() {
+    if (_handlersReady) return;
+    setupHandlers();
+    _handlersReady = true;
+  }
+
   function setupHandlers() {
     const btnSend = document.getElementById("btn-send-push");
     const titleInput = document.getElementById("push-title");
@@ -223,30 +166,31 @@
     const targetTypeSelect = document.getElementById("push-target-type");
     const filiadoSearchInput = document.getElementById("push-target-filiado-search");
 
-    if (titleInput) {
-      titleInput.oninput = () => {
-        const len = titleInput.value.length;
-        const counter = document.getElementById("push-title-count");
-        if (!counter) return;
-        counter.textContent = String(len);
-        counter.style.color = len > 54 ? "#e74c3c" : "";
-        counter.style.fontWeight = len > 54 ? "bold" : "normal";
-      };
+    if (!btnSend || !titleInput || !messageInput || !targetTypeSelect) {
+      console.error("[Notificacoes] Falha ao localizar elementos do formulário para setupHandlers.");
+      return;
     }
 
-    if (messageInput) {
-      messageInput.oninput = () => {
-        const len = messageInput.value.length;
-        const counter = document.getElementById("push-message-count");
-        if (!counter) return;
-        counter.textContent = String(len);
-        counter.style.color = len > 216 ? "#e74c3c" : "";
-        counter.style.fontWeight = len > 216 ? "bold" : "normal";
-      };
-    }
+    titleInput.oninput = () => {
+      const len = titleInput.value.length;
+      const counter = document.getElementById("push-title-count");
+      if (!counter) return;
+      counter.textContent = String(len);
+      counter.style.color = len > 54 ? "#e74c3c" : "";
+      counter.style.fontWeight = len > 54 ? "bold" : "normal";
+    };
 
-    if (btnSend) btnSend.onclick = handleSend;
-    if (targetTypeSelect) targetTypeSelect.onchange = handleTargetTypeChange;
+    messageInput.oninput = () => {
+      const len = messageInput.value.length;
+      const counter = document.getElementById("push-message-count");
+      if (!counter) return;
+      counter.textContent = String(len);
+      counter.style.color = len > 216 ? "#e74c3c" : "";
+      counter.style.fontWeight = len > 216 ? "bold" : "normal";
+    };
+
+    btnSend.onclick = handleSend;
+    targetTypeSelect.onchange = handleTargetTypeChange;
 
     if (filiadoSearchInput) {
       let debounceTimer;
@@ -420,105 +364,6 @@
     }
   }
 
-  async function carregarHistoricoMe() {
-    const listEl = document.getElementById("lista-notificacoes-recebidas");
-    if (!listEl || isLoadingMe) return;
-
-    try {
-      isLoadingMe = true;
-      listEl.innerHTML =
-        '<p style="text-align:center; padding:40px; color:#666;">⌛ Carregando suas notificações...</p>';
-
-      const r = await window.Api.apiFetch("/api/push/history/me");
-      const data = await r.json().catch(() => ({}));
-
-      if (r.ok) {
-        renderizarNotificacoesRecebidas(data.notifications || []);
-      } else {
-        const msg = data.message || data.error || "Erro ao carregar notificações.";
-        listEl.innerHTML = `
-          <div style="color:#e74c3c; padding:30px; text-align:center; background:#fff5f5; border-radius:8px; border:1px solid #ffcccc;">
-            <p style="font-weight:bold; margin-bottom:5px;">⚠️ ${msg}</p>
-            ${data.requestId ? `<small style="color:#666;">Solicitação: ${data.requestId}</small>` : ""}
-          </div>`;
-      }
-    } catch (e) {
-      console.error("Notificacoes.HistoricoMeErro", e);
-      listEl.innerHTML = `<p style="color:#e74c3c; padding:20px; text-align:center;">❌ Erro de conexão ao carregar notificações.</p>`;
-    } finally {
-      isLoadingMe = false;
-    }
-  }
-
-  function renderizarNotificacoesRecebidas(lista) {
-    const container = document.getElementById("lista-notificacoes-recebidas");
-    if (!container) return;
-
-    if (!lista.length) {
-      container.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">Nenhuma notificação recebida.</p>`;
-      return;
-    }
-
-    const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
-    const seenIds = JSON.parse(localStorage.getItem("notif_seen_ids") || "[]");
-
-    container.innerHTML = lista
-      .map((n) => {
-        const date = formatarData(n.created_at);
-        const viewed = seenIds.includes(n.id);
-
-        return `
-          <div class="history-card" style="border-left-color: ${viewed ? "#ccc" : "#27ae60"}; cursor: pointer; position: relative;" onclick="Notificacoes.abrirDetalhe('${n.id}')">
-            ${!viewed ? '<span class="badge badge-warning" style="position:absolute; top:10px; right:10px; font-size:0.6rem;">NOVA</span>' : ""}
-            <div class="history-header">
-              <span class="history-date">${date}</span>
-            </div>
-            ${n.title ? `<div class="history-title" style="color:#003366;">${safeEscape(n.title)}</div>` : ""}
-            <div class="history-body" style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${safeEscape(
-              n.body
-            )}</div>
-          </div>`;
-      })
-      .join("");
-
-    window._receivedNotifications = lista;
-  }
-
-  function abrirDetalhe(id) {
-    const n = (window._receivedNotifications || []).find((x) => x.id === id);
-    if (!n) return;
-
-    const seenIds = JSON.parse(localStorage.getItem("notif_seen_ids") || "[]");
-    if (!seenIds.includes(id)) {
-      seenIds.push(id);
-      localStorage.setItem("notif_seen_ids", JSON.stringify(seenIds.slice(-100)));
-      renderizarNotificacoesRecebidas(window._receivedNotifications);
-    }
-
-    const modal = document.getElementById("modal-generic");
-    const tituloEl = document.getElementById("modal-generic-titulo");
-    const corpoEl = document.getElementById("modal-generic-corpo");
-    if (!modal || !tituloEl || !corpoEl) return;
-
-    tituloEl.textContent = "Notificação";
-    const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
-
-    corpoEl.innerHTML = `
-      <div style="padding:10px;">
-        <h3 style="color:#003366; margin-bottom:10px;">${safeEscape(n.title || "Informativo")}</h3>
-        <p style="font-size:0.8rem; color:#888; margin-bottom:20px;">Enviado em: ${formatarData(n.created_at)}</p>
-        <div style="white-space: pre-wrap; line-height:1.6; color:#333; font-size:1.1rem; background:#f9f9f9; padding:20px; border-radius:12px;">${safeEscape(
-          n.body
-        )}</div>
-        <div style="text-align:center; margin-top:30px;">
-          <button class="btn btn-primary" onclick="Utils.fecharModal('modal-generic')">Fechar</button>
-        </div>
-      </div>`;
-
-    modal.style.display = "flex";
-    if (window.Utils?.lockScroll) window.Utils.lockScroll();
-  }
-
   async function carregarCampanhasGestao() {
     const listEl = document.getElementById("push-history-list");
     if (!listEl || isLoadingGestao) return;
@@ -631,8 +476,6 @@
   window.Notificacoes = {
     inicializar,
     inicializarNotificacoes,
-    carregarCampanhasGestao,
-    carregarHistoricoMe,
-    abrirDetalhe,
+    carregarCampanhasGestao
   };
 })(typeof window !== "undefined" ? window : this);
