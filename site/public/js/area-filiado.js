@@ -111,12 +111,6 @@
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
         else if (abaAlvo === "sec-notificacoes") {
-          if (!ehGestao) {
-            console.warn("Acesso negado: Notificações é restrito à gestão.");
-            const btnHome = document.getElementById("nav-home");
-            if (btnHome) btnHome.click();
-            return;
-          }
           inicializarNotificacoesComPerfil(perfil);
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);

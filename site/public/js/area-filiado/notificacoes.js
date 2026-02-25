@@ -22,7 +22,28 @@
 
   const GESTAO_PERFIS = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
 
-  function renderTemplate(container) {
+  function resolveContext(arg) {
+    const argObj = arg && typeof arg === "object" ? arg : {};
+    const argPerfil = typeof argObj.perfil === "string" ? argObj.perfil : "";
+    const argPermissions = normalizePermissions(argObj.permissions);
+
+    let cached = {};
+    try {
+      cached = window.Utils?.obterUserInfo?.() || {};
+    } catch (_) {
+      cached = {};
+    }
+
+    const cachedPerfil = (cached.perfil_acesso || cached.perfil || "").toUpperCase();
+    const cachedPermissions = normalizePermissions(cached.permissions);
+
+    const perfilEfetivo = (argPerfil || cachedPerfil || "FILIADO").toUpperCase();
+    const permissionsEfetivas = argPermissions.length ? argPermissions : cachedPermissions;
+
+    return { perfilEfetivo, permissionsEfetivas };
+  }
+
+  function renderAdminTemplate(container) {
     container.innerHTML = `
       <div id="notificacoes-admin-container">
         <div class="af-standard-header">
@@ -82,55 +103,77 @@
             </div>
         </div>
       </div>
+
+      <div id="notificacoes-membro-container" style="display:none"></div>
     `;
   }
 
-  async function inicializar(arg) {
-    const container = document.getElementById("sec-notificacoes");
-    if (!container) {
-      console.error("[Notificacoes] Container #sec-notificacoes não encontrado.");
-      return;
-    }
-
-    // Identifica perfil
-    let perfil = "FILIADO";
-    if (arg && typeof arg === "object" && arg.perfil) {
-      perfil = arg.perfil.toUpperCase();
-    } else if (typeof arg === "string") {
-      perfil = arg.toUpperCase();
-    } else {
-      try {
-        const userInfo = window.Utils?.obterUserInfo?.() || {};
-        perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
-      } catch (_) {}
-    }
-
-    const ehGestao = GESTAO_PERFIS.includes(perfil);
-
-    if (!ehGestao) {
-      container.innerHTML = `
-        <div style="padding: 40px; text-align: center; color: #666;">
-          <p>⚠️ Você não tem permissão para acessar este módulo.</p>
-        </div>
-      `;
-      return;
-    }
-
-    // Feedback visual obrigatório (B5)
+  function renderMembroTemplate(container) {
     container.innerHTML = `
-      <div style="padding: 40px; text-align: center; color: #003366;">
-        <p>⌛ Carregando painel de notificações...</p>
+      <div id="notificacoes-admin-container" style="display:none"></div>
+      <div id="notificacoes-membro-container">
+        <div class="af-standard-header">
+            <h2>📢 Minhas Notificações</h2>
+            <p class="section-subtitle">Acompanhe os comunicados enviados para você.</p>
+        </div>
+        <div id="lista-notificacoes-recebidas" class="history-list">
+            <p style="text-align:center; padding:40px; color:#666;">Carregando notificações...</p>
+        </div>
       </div>
     `;
+  }
 
-    debugNotif("inicializar", { perfil, ehGestao });
+  function applyMode(ehGestao) {
+    const adminContainer = document.getElementById("notificacoes-admin-container");
+    const membroContainer = document.getElementById("notificacoes-membro-container");
+    if (!adminContainer || !membroContainer) return;
 
-    renderTemplate(container);
-    _handlersReady = false; // Força re-binding dos handlers no novo HTML
+    adminContainer.style.display = ehGestao ? "block" : "none";
+    membroContainer.style.display = ehGestao ? "none" : "block";
+  }
 
-    setupHandlersOnce();
-    popularLotacoes();
-    await carregarCampanhasGestao();
+  function setupHandlersOnce() {
+    if (_handlersReady) return;
+    setupHandlers();
+    _handlersReady = true;
+  }
+
+  async function inicializar(arg, permissionsLegacy) {
+    const container = document.getElementById("sec-notificacoes");
+    if (!container) return;
+
+    const normalizedArg = (arg && typeof arg === "object") ? arg : { perfil: arg, permissions: permissionsLegacy };
+    const { perfilEfetivo, permissionsEfetivas } = resolveContext(normalizedArg);
+    const forcaPermissaoGestao = permissionsEfetivas.includes("PUSH_GERENCIAR") || permissionsEfetivas.includes("*");
+    const ehGestao = GESTAO_PERFIS.includes(perfilEfetivo) || forcaPermissaoGestao;
+
+    debugNotif("inicializar", { perfilEfetivo, permissionsEfetivas, ehGestao });
+
+    const desiredMode = ehGestao ? "gestao" : "membro";
+    const adminContainerAtual = document.getElementById("notificacoes-admin-container");
+    const membroContainerAtual = document.getElementById("notificacoes-membro-container");
+    const precisaRenderizar =
+      _currentSyncMode !== desiredMode ||
+      !adminContainerAtual ||
+      !membroContainerAtual;
+
+    if (precisaRenderizar) {
+      if (ehGestao) renderAdminTemplate(container);
+      else renderMembroTemplate(container);
+      _handlersReady = false;
+      _currentSyncMode = desiredMode;
+    }
+
+    applyMode(ehGestao);
+
+    if (ehGestao) {
+      setupHandlersOnce();
+      popularLotacoes();
+      await carregarCampanhasGestao();
+      return;
+    }
+
+    await carregarHistoricoMe();
   }
 
   async function inicializarNotificacoes(arg) {
@@ -476,6 +519,8 @@
   window.Notificacoes = {
     inicializar,
     inicializarNotificacoes,
-    carregarCampanhasGestao
+    carregarCampanhasGestao,
+    carregarHistoricoMe,
+    abrirDetalhe,
   };
 })(typeof window !== "undefined" ? window : this);
