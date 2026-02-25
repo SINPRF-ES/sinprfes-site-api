@@ -53,18 +53,35 @@
     }
 
     async function carregarMeusDados() {
-        if (!window.Api.apiFetch) return null;
+        if (!window.Api?.apiFetch) {
+            console.warn("[MeusDados] Api wrapper indisponível.");
+            return null;
+        }
 
         const conteudo = document.getElementById("area-filiado-conteudo");
         const alerta = document.getElementById("alerta-endereco-desatualizado");
 
-        if (!conteudo) return null;
-        conteudo.innerHTML = "Carregando seus dados...";
+        if (!conteudo) {
+            console.warn("[MeusDados] Container #area-filiado-conteudo não encontrado.");
+            return null;
+        }
+
+        conteudo.innerHTML = `<div class="ui-card" role="status" aria-live="polite"><p style="margin:0; text-align:center; color: var(--ui-text-muted);">⌛ Carregando seus dados...</p></div>`;
         if (alerta) alerta.style.display = 'none';
 
         try {
             const resp = await window.Api.apiFetch("/api/filiados/me");
-            if (!resp.ok) throw new Error();
+            const requestId = resp.headers?.get("x-request-id") || resp.headers?.get("cf-ray") || "n/d";
+
+            if (!resp.ok) {
+                let msg = "Não foi possível carregar seus dados agora.";
+                if (resp.status === 401) msg = "Sua sessão expirou. Faça login novamente.";
+                else if (resp.status === 403) msg = "Você não possui permissão para visualizar seus dados.";
+                else if (resp.status >= 500) msg = "Serviço temporariamente indisponível. Tente novamente em instantes.";
+                conteudo.innerHTML = `<div class="ui-card" role="alert"><h3 style="margin-top:0; color:#b91c1c;">Erro ao carregar Meus Dados</h3><p style="margin:0 0 8px 0;">${msg}</p><small style="color:var(--ui-text-muted);">Código: ${resp.status} · Request ID: ${requestId}</small></div>`;
+                return null;
+            }
+
             const dados = await resp.json();
 
             // Compactar dependentes antes de renderizar
@@ -77,16 +94,16 @@
             }
 
             renderizarFormularioMeusDados(dados, conteudo);
-            if (global.Seguranca && global.Seguranca.renderizarSeguranca) {
-                global.Seguranca.renderizarSeguranca(dados, carregarMeusDados);
+            if (window.Seguranca && window.Seguranca.renderizarSeguranca) {
+                window.Seguranca.renderizarSeguranca(dados, carregarMeusDados);
             }
-            if (global.Ressarcimento && global.Ressarcimento.preencherFormularioRessarcimentoComDados) {
-                global.Ressarcimento.preencherFormularioRessarcimentoComDados(dados);
+            if (window.Ressarcimento && window.Ressarcimento.preencherFormularioRessarcimentoComDados) {
+                window.Ressarcimento.preencherFormularioRessarcimentoComDados(dados);
             }
 
             return dados;
         } catch (e) {
-            conteudo.innerHTML = "<p>Erro ao carregar dados.</p>";
+            conteudo.innerHTML = `<div class="ui-card" role="alert"><h3 style="margin-top:0; color:#b91c1c;">Erro ao carregar Meus Dados</h3><p style="margin:0;">Falha de conexão ao buscar seus dados. Verifique sua internet e tente novamente.</p></div>`;
             return null;
         }
     }
