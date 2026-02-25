@@ -150,6 +150,11 @@
 
           // Re-render de módulos que dependem de perfil (mas NÃO inicializar Notificações fora da aba)
           if (inicializarFiliados) inicializarFiliados(perfil);
+
+          // Sincroniza modo de notificações se o módulo estiver carregado
+          if (window.Notificacoes && window.Notificacoes.sincronizarModo) {
+            window.Notificacoes.sincronizarModo(perfilReal, dadosFrescos.permissions);
+          }
         }
       }
 
