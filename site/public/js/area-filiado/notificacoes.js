@@ -1,8 +1,8 @@
 /**
  * Módulo de Notificações Push (Página Inicial)
  */
-(function (global) {
-  if (global.Notificacoes) return;
+(function (window) {
+  if (window.Notificacoes) return;
 
   let historyCache = [];
   let isShowingArchived = false;
@@ -11,34 +11,44 @@
   let isLoadingGestao = false;
 
   // Evita duplicar handlers se inicializar múltiplas vezes
-  let handlersBound = false;
+  let _handlersReady = false;
 
-  // Helper: userInfo mais fresco possível (evita cache desatualizado)
-  function obterUserInfoFresco(fallbackUser) {
-    // 1) se veio user e tem permissions array, usa
-    if (fallbackUser && Array.isArray(fallbackUser.permissions)) return fallbackUser;
+  /**
+   * Canon: busca o usuário completo do servidor se faltarem permissões.
+   * Prioriza dados com array de permissions populado.
+   */
+  async function getUserCanon(user) {
+    const hasPermissions = (u) => u && Array.isArray(u.permissions) && u.permissions.length > 0;
 
-    // 2) Utils.obterUserInfo (se existir)
-    if (global.Utils?.obterUserInfo) {
-      const u = global.Utils.obterUserInfo();
-      if (u && Array.isArray(u.permissions)) return u;
+    // 1) Se o argumento já é válido, usa ele
+    if (hasPermissions(user)) return user;
+
+    // 2) Tenta cache do Utils (localStorage)
+    const cached = window.Utils?.obterUserInfo();
+    if (hasPermissions(cached)) return cached;
+
+    // 3) Busca oficial no backend (/api/auth/me) se não houver permissões no cache ou argumento
+    try {
+      const r = await window.Api.apiFetch("/api/auth/me");
+      if (r && r.ok) {
+        const info = await r.json();
+        if (info && info.permissions) {
+          localStorage.setItem("userInfo", JSON.stringify(info));
+          return info;
+        }
+      } else {
+        console.warn("[Notificacoes] Failed to fetch canon user. Status:", r?.status);
+      }
+    } catch (e) {
+      console.error("[Notificacoes] Error fetching canon user", e);
     }
 
-    // 3) localStorage.userInfo
-    try {
-      const raw = localStorage.getItem("userInfo");
-      if (raw) {
-        const u = JSON.parse(raw);
-        if (u && Array.isArray(u.permissions)) return u;
-        return u || {};
-      }
-    } catch (_) {}
-
-    return fallbackUser || {};
+    // Fallback para o que tivermos (mesmo sem permissões)
+    return cached || user || {};
   }
 
-  // Helper: aplica display com prioridade (equivalente ao "force" mas escopado)
-  function setDisplayImportant(el, value) {
+  // Helper: aplica display com prioridade
+  function setDisplay(el, value) {
     if (!el) return;
     el.style.setProperty("display", value, "important");
   }
@@ -47,67 +57,78 @@
     const sec = document.getElementById("sec-notificacoes");
     if (!sec) return;
 
-    // Garante que a seção não fica presa em display none por alguma corrida
-    sec.classList.add("active");
-    setDisplayImportant(sec, "block");
+    // Garante que a seção tem o estado básico correto, mas sem !important no display
+    // para não quebrar a navegação global gerida pelo navegacao.js
+    if (!sec.classList.contains("active")) {
+      sec.classList.add("active");
+      sec.style.display = "block";
+    }
+
+    // Propriedades secundárias podem usar !important se necessário para garantir renderização
     sec.style.setProperty("visibility", "visible", "important");
     sec.style.setProperty("opacity", "1", "important");
     sec.style.setProperty("max-height", "none", "important");
-    sec.style.setProperty("position", "relative", "important");
-    sec.style.setProperty("z-index", "1", "important");
   }
 
   function applyNotificationsMode(params) {
-    const { isGestao, permissions } = params;
+    const { isGestao } = params;
 
     ensureNotificationsSectionVisible();
 
     const adminContainer = document.getElementById("notificacoes-admin-container");
     const membroContainer = document.getElementById("notificacoes-membro-container");
 
+    if (!adminContainer || !membroContainer) {
+      console.warn("[Notificacoes] Containers not found in DOM.");
+      return;
+    }
+
     const displayAdmin = isGestao ? "block" : "none";
     const displayMembro = isGestao ? "none" : "block";
 
-    // IMPORTANTE: usar important para não depender de CSS/ordem de execução
-    setDisplayImportant(adminContainer, displayAdmin);
-    setDisplayImportant(membroContainer, displayMembro);
+    // IMPORTANTE: usar setDisplay helper (!important) nos containers INTERNOS
+    setDisplay(adminContainer, displayAdmin);
+    setDisplay(membroContainer, displayMembro);
 
-    // Também garante visibilidade real (alguns CSS podem mexer em opacity/visibility)
-    if (adminContainer) {
-      adminContainer.style.setProperty("visibility", "visible", "important");
-      adminContainer.style.setProperty("opacity", "1", "important");
-      adminContainer.style.setProperty("max-height", "none", "important");
-      adminContainer.style.setProperty("position", "relative", "important");
-      adminContainer.style.setProperty("z-index", "1", "important");
-    }
-    if (membroContainer) {
-      membroContainer.style.setProperty("visibility", "visible", "important");
-      membroContainer.style.setProperty("opacity", "1", "important");
-      membroContainer.style.setProperty("max-height", "none", "important");
-      membroContainer.style.setProperty("position", "relative", "important");
-      membroContainer.style.setProperty("z-index", "1", "important");
-    }
+    // Garante visibilidade real nos containers internos
+    const containers = [adminContainer, membroContainer];
+    containers.forEach(el => {
+      if (!el) return;
+      el.style.setProperty("visibility", "visible", "important");
+      el.style.setProperty("opacity", "1", "important");
+      el.style.setProperty("max-height", "none", "important");
+    });
 
-    console.log(
-      `[Notificações] applyNotificationsMode: isGestao=${isGestao}`,
-      { permissions, displayAdmin, displayMembro }
-    );
+    /**
+     * Validação de segurança (Anti-Race):
+     * Se após o render o container correto ainda estiver oculto por algum CSS externo,
+     * força a exibição após um pequeno delay.
+     */
+    setTimeout(() => {
+      const target = isGestao ? adminContainer : membroContainer;
+      if (target && getComputedStyle(target).display === "none") {
+        target.style.setProperty("display", "block", "important");
+        console.warn(`[Notificacoes] ${isGestao ? 'Admin' : 'Member'} container was hidden by CSS. Forced display:block.`);
+      }
+    }, 150);
   }
 
-  function inicializarNotificacoes(user) {
-    const userEfetivo = obterUserInfoFresco(user);
-    const permissions = Array.isArray(userEfetivo.permissions) ? userEfetivo.permissions : [];
+  async function inicializarNotificacoes(user) {
+    const canonUser = await getUserCanon(user);
+    const permissions = Array.isArray(canonUser.permissions) ? canonUser.permissions : [];
+    const perfil = (canonUser.perfil_acesso || "").toUpperCase();
 
-    // Gestão se tiver PUSH_GERENCIAR (ou wildcard)
-    const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*");
+    // Gestão se tiver PUSH_GERENCIAR, wildcard ou for de um perfil administrativo conhecido (fallback)
+    const ehGestorPerfil = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
+    const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*") || ehGestorPerfil;
 
     // 1) aplica modo e garante seção visível
     applyNotificationsMode({ isGestao, permissions });
 
     // 2) bind handlers uma única vez (idempotente)
-    if (!handlersBound) {
+    if (!_handlersReady) {
       setupHandlers();
-      handlersBound = true;
+      _handlersReady = true;
     }
 
     // 3) popular lotações sempre que entrar em gestão (barato e garante consistência)
@@ -115,24 +136,17 @@
 
     // 4) carrega dados conforme modo
     if (isGestao) {
-      carregarCampanhasGestao();
+      await carregarCampanhasGestao();
     } else {
-      carregarHistoricoMe();
+      await carregarHistoricoMe();
     }
-
-    /**
-     * Anti-race: se alguma rotina posterior (navegação/perfil cache) reverter display,
-     * reaplica o modo logo após o call stack e também após um pequeno delay.
-     */
-    queueMicrotask(() => applyNotificationsMode({ isGestao, permissions }));
-    setTimeout(() => applyNotificationsMode({ isGestao, permissions }), 250);
   }
 
   function popularLotacoes() {
     const select = document.getElementById("push-target-lotacao");
     if (!select) return;
     const lotacoes =
-      global.Canon?.LOTACOES || [
+      window.Canon?.LOTACOES || [
         "SEDE",
         "DEL 01 - Viana",
         "DEL 02 - Serra",
@@ -218,10 +232,10 @@
 
     select.innerHTML = "<option>Buscando...</option>";
 
-    const safeEscape = (v) => (global.Utils?.escapeHTML ? global.Utils.escapeHTML(v) : String(v || ""));
+    const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
 
     try {
-      const r = await global.Api.apiFetch(`/api/filiados?q=${encodeURIComponent(query)}`);
+      const r = await window.Api.apiFetch(`/api/filiados?q=${encodeURIComponent(query)}`);
       if (r.ok) {
         const data = await r.json();
         const filiados = data.filiados || [];
@@ -279,7 +293,7 @@
 
     let targetLabel = targetType;
     if (targetType === "FILIADO" && targetValue && typeof targetValue === "object") {
-      targetLabel = `Filiado — ${targetValue.nome} (${global.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
+      targetLabel = `Filiado — ${targetValue.nome} (${window.Formatters?.formatCpf(targetValue.cpf) || targetValue.cpf})`;
     } else if (targetValue) {
       targetLabel = `${targetType} (${targetValue})`;
     }
@@ -303,7 +317,7 @@
         targetValue,
       };
 
-      const r = await global.Api.apiFetch("/api/push/campaigns/send", {
+      const r = await window.Api.apiFetch("/api/push/campaigns/send", {
         method: "POST",
         body: payload,
       });
@@ -356,7 +370,7 @@
       listEl.innerHTML =
         '<p style="text-align:center; padding:40px; color:#666;">⌛ Carregando suas notificações...</p>';
 
-      const r = await global.Api.apiFetch("/api/push/history/me");
+      const r = await window.Api.apiFetch("/api/push/history/me");
       const data = await r.json().catch(() => ({}));
 
       if (r.ok) {
@@ -386,7 +400,7 @@
       return;
     }
 
-    const safeEscape = (v) => (global.Utils?.escapeHTML ? global.Utils.escapeHTML(v) : String(v || ""));
+    const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
     const seenIds = JSON.parse(localStorage.getItem("notif_seen_ids") || "[]");
 
     container.innerHTML = lista
@@ -408,18 +422,18 @@
       })
       .join("");
 
-    global._receivedNotifications = lista;
+    window._receivedNotifications = lista;
   }
 
   function abrirDetalhe(id) {
-    const n = (global._receivedNotifications || []).find((x) => x.id === id);
+    const n = (window._receivedNotifications || []).find((x) => x.id === id);
     if (!n) return;
 
     const seenIds = JSON.parse(localStorage.getItem("notif_seen_ids") || "[]");
     if (!seenIds.includes(id)) {
       seenIds.push(id);
       localStorage.setItem("notif_seen_ids", JSON.stringify(seenIds.slice(-100)));
-      renderizarNotificacoesRecebidas(global._receivedNotifications);
+      renderizarNotificacoesRecebidas(window._receivedNotifications);
     }
 
     const modal = document.getElementById("modal-generic");
@@ -428,7 +442,7 @@
     if (!modal || !tituloEl || !corpoEl) return;
 
     tituloEl.textContent = "Notificação";
-    const safeEscape = (v) => (global.Utils?.escapeHTML ? global.Utils.escapeHTML(v) : String(v || ""));
+    const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
 
     corpoEl.innerHTML = `
       <div style="padding:10px;">
@@ -443,7 +457,7 @@
       </div>`;
 
     modal.style.display = "flex";
-    if (global.Utils?.lockScroll) global.Utils.lockScroll();
+    if (window.Utils?.lockScroll) window.Utils.lockScroll();
   }
 
   async function carregarCampanhasGestao() {
@@ -455,7 +469,7 @@
       listEl.innerHTML = '<p style="padding:15px; color:#666;">⌛ Carregando campanhas...</p>';
 
       const url = isShowingArchived ? "/api/push/campaigns?includeArchived=1" : "/api/push/campaigns";
-      const r = await global.Api.apiFetch(url);
+      const r = await window.Api.apiFetch(url);
       const data = await r.json().catch(() => ({}));
 
       if (r.ok) {
@@ -485,7 +499,7 @@
       return;
     }
 
-    const safeEscape = (v) => (global.Utils?.escapeHTML ? global.Utils.escapeHTML(v) : String(v || ""));
+    const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
 
     let html = historyCache
       .map((c) => {
@@ -503,7 +517,7 @@
           }
 
           if (parsed && typeof parsed === "object") {
-            displayTargetValue = `${parsed.nome || ""} (${global.Formatters?.formatCpf(parsed.cpf || "") || parsed.cpf || ""})`;
+            displayTargetValue = `${parsed.nome || ""} (${window.Formatters?.formatCpf(parsed.cpf || "") || parsed.cpf || ""})`;
             if (displayTargetValue.trim() === "()") displayTargetValue = parsed.id || c.target_value;
           }
         }
@@ -555,10 +569,10 @@
     return d.toLocaleString("pt-BR");
   }
 
-  global.Notificacoes = {
+  window.Notificacoes = {
     inicializarNotificacoes,
     carregarCampanhasGestao,
     carregarHistoricoMe,
     abrirDetalhe,
   };
-})(typeof window !== "undefined" ? window : global);
+})(typeof window !== "undefined" ? window : this);

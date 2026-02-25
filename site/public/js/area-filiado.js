@@ -33,6 +33,7 @@
     const { inicializarRelatorios } = window.Relatorios || {};
     const { CMSAdmin } = window || {};
     const { Notificacoes } = window || {};
+    let _notifInitInFlight = false;
 
     // Helper: sempre pegar userInfo mais fresco possível
     function obterUserInfoFresco() {
@@ -96,9 +97,11 @@
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
         else if (abaAlvo === "sec-notificacoes" && Notificacoes && Notificacoes.inicializarNotificacoes) {
-          // CRÍTICO: sempre passar userInfo FRESCO no momento do clique.
-          const infoAtual = obterUserInfoFresco();
-          Notificacoes.inicializarNotificacoes(infoAtual);
+          if (_notifInitInFlight) return;
+          _notifInitInFlight = true;
+
+          // Lazy init: não passamos argumentos, o módulo busca o user canon se necessário
+          Notificacoes.inicializarNotificacoes().finally(() => { _notifInitInFlight = false; });
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
         else if (abaAlvo === "sec-estatuto" && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
