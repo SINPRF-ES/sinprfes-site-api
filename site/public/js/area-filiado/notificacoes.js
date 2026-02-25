@@ -12,6 +12,7 @@
 
   // Evita duplicar handlers se inicializar múltiplas vezes
   let _handlersReady = false;
+  let _currentSyncMode = null; // 'gestao' ou 'membro'
 
   function normalizePermissions(raw) {
     if (Array.isArray(raw)) return raw.filter(Boolean).map((p) => String(p).trim()).filter(Boolean);
@@ -160,6 +161,16 @@
       _handlersReady = false; // Reset handlers flag since we re-rendered the UI
       await carregarHistoricoMe();
     }
+  }
+
+  async function inicializarNotificacoes(user) {
+    debugNotif("inicializarNotificacoes (Lazy Load)");
+    const canonUser = await getUserCanon(user);
+
+    // Força a seção a ficar visível no lazy load
+    ensureNotificationsSectionVisible();
+
+    await sincronizarModo(canonUser.perfil_acesso, canonUser.permissions);
   }
 
   function popularLotacoes() {
