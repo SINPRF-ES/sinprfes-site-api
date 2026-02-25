@@ -39,30 +39,29 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------- HEADER ----------------
   if (headerEl && !isEmbed) {
     headerEl.innerHTML = `
-      <header class="site-header">
-        <div class="container header-content">
+      <header class="site-header" style="background: var(--ui-primary); color: white; padding: var(--ui-space-3) 0;">
+        <div class="ui-container header-content" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--ui-space-3);">
           <div class="logo-area">
-            <a href="/index.html" class="logo-link">
-              <img src="/img/placeholder-sinprf.png" alt="SINPRF-ES" class="logo-img">
-              <span class="logo-text">
+            <a href="/index.html" class="logo-link" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 12px;">
+              <img src="/img/placeholder-sinprf.png" alt="SINPRF-ES" class="logo-img" style="height: 50px;">
+              <span class="logo-text" style="font-weight: 800; line-height: 1.1;">
                 SINPRF-ES<br>
-                <small>Sindicato dos Policiais Rodoviários Federais no ES</small>
+                <small style="font-weight: 400; opacity: 0.8;">Sindicato dos Policiais Rodoviários Federais no ES</small>
               </span>
             </a>
           </div>
 
-          <nav class="main-nav">
-            <a href="/index.html" class="${isActive("index.html")}">Início</a>
-            <a href="/diretoria.html" class="${isActive("diretoria.html")}">Diretoria</a>
-            <a href="/estatuto.html" class="${isActive("estatuto.html")}">Estatuto</a>
-            <a href="/noticias.html" class="${isActive("noticias.html")}">Notícias</a>
-            <a href="/contato.html" class="${isActive("contato.html")}">Contato</a>
+          <nav class="main-nav" style="display: flex; gap: var(--ui-space-3); flex-wrap: wrap;">
+            <a href="/index.html" class="${isActive("index.html")}" style="color: white; text-decoration: none; font-weight: 500;">Início</a>
+            <a href="/diretoria.html" class="${isActive("diretoria.html")}" style="color: white; text-decoration: none; font-weight: 500;">Diretoria</a>
+            <a href="/estatuto.html" class="${isActive("estatuto.html")}" style="color: white; text-decoration: none; font-weight: 500;">Estatuto</a>
+            <a href="/noticias.html" class="${isActive("noticias.html")}" style="color: white; text-decoration: none; font-weight: 500;">Notícias</a>
+            <a href="/contato.html" class="${isActive("contato.html")}" style="color: white; text-decoration: none; font-weight: 500;">Contato</a>
           </nav>
 
-          <div class="header-actions">
-            <a href="/filiese.html" class="btn btn-outline">Filie-se</a>
-            <!-- 🔽 aqui é a mudança: agora aponta direto para a Página Inicial -->
-            <a href="/area-filiado.html" class="btn btn-primary">Página Inicial</a>
+          <div class="header-actions" style="display: flex; gap: var(--ui-space-2);">
+            <a href="/filiese.html" class="ui-button ui-button-outline" style="color: white; border-color: white; padding: 0.5rem 1rem;">Filie-se</a>
+            <a href="/area-filiado.html" class="ui-button ui-button-secondary" style="padding: 0.5rem 1rem;">Página Inicial</a>
           </div>
         </div>
       </header>
@@ -73,10 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (footerEl && !isEmbed) {
     const ano = new Date().getFullYear();
     footerEl.innerHTML = `
-      <footer class="site-footer">
-        <div class="container footer-content">
-          <p>&copy; ${ano} SINPRF-ES – Sindicato dos Policiais Rodoviários Federais no Espírito Santo.</p>
-          <p class="footer-small">
+      <footer class="site-footer" style="background: var(--ui-primary); color: white; padding: var(--ui-space-5) 0; margin-top: var(--ui-space-6);">
+        <div class="ui-container footer-content" style="text-align: center;">
+          <p style="margin: 0;">&copy; ${ano} SINPRF-ES – Sindicato dos Policiais Rodoviários Federais no Espírito Santo.</p>
+          <p class="footer-small" style="font-size: 0.8rem; opacity: 0.7; margin-top: var(--ui-space-2);">
             Desenvolvido para uso institucional. Todos os direitos reservados.
           </p>
         </div>

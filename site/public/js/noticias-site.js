@@ -55,8 +55,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     noticias.forEach(noticia => {
       const article = document.createElement("article");
-      article.className = "news-item card card-section";
-      article.style.marginBottom = "40px";
+      article.className = "news-item ui-card";
+      article.style.marginBottom = "var(--ui-space-5)";
       article.id = noticia.id;
 
       const publishedDate = new Date(noticia.published_at || noticia.created_at).toLocaleDateString("pt-BR");

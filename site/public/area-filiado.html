@@ -12,6 +12,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <title>Página Inicial - SINPRF/ES</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/ui-canon.css" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
 
@@ -104,7 +105,7 @@
         </section>
 
         <section id="sec-publicacoes" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-publicacoes">
-           <div class="section-card">
+           <div class="ui-card">
               <p>Carregando biblioteca...</p>
            </div>
         </section>
@@ -134,7 +135,7 @@
         </section>
 
         <section id="sec-estatuto" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-estatuto">
-            <div class="section-card">
+            <div class="ui-card">
                 <div class="af-standard-header">
                     <h2>📜 Estatuto SINPRF/ES</h2>
                     <p class="section-subtitle">Consulte as normas que regem nosso sindicato.</p>
@@ -161,7 +162,7 @@
         </section>
 
         <section id="sec-cms" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-cms">
-          <div class="section-card">
+          <div class="ui-card">
               <div class="af-standard-header">
                   <h2>Gerenciar Conteúdo do Site</h2>
                   <p class="section-subtitle">Edite os blocos de informação da Home e Notícias.</p>
@@ -189,7 +190,7 @@
               <p class="section-subtitle">Gere PDFs consolidados e receba-os por e-mail.</p>
           </div>
 
-          <div class="data-card" style="max-width: 700px; margin: 20px auto;">
+          <div class="ui-card" style="max-width: 700px; margin: 20px auto;">
               <h3 style="color: var(--azul-fundo); margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                   ⚙️ Parâmetros do Relatório
               </h3>
@@ -231,22 +232,22 @@
                       </select>
                   </div>
 
-                  <div style="text-align: center; margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                      <button id="btn-gerar-relatorio" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.1rem; width: 100%; max-width: 400px;">
+                  <div style="text-align: center; margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: var(--ui-space-3);">
+                      <button id="btn-gerar-relatorio" class="ui-button ui-button-secondary" style="width: 100%; max-width: 400px;">
                           📄 Gerar e Enviar PDF
                       </button>
-                      <button id="btn-preview-relatorio" class="btn btn-outline" style="padding: 15px 40px; font-size: 1.1rem; width: 100%; max-width: 400px; color: var(--azul-fundo); border-color: var(--azul-fundo);">
+                      <button id="btn-preview-relatorio" class="ui-button ui-button-outline" style="width: 100%; max-width: 400px;">
                           👁️ Visualizar na Tela
                       </button>
                   </div>
               </div>
           </div>
 
-          <div id="relatorio-preview-container" class="data-card" style="display: none; max-width: 900px; margin: 20px auto; padding: 0; overflow: hidden;">
+          <div id="relatorio-preview-container" class="ui-card" style="display: none; max-width: 900px; margin: 20px auto; padding: 0; overflow: hidden;">
               <!-- Conteúdo carregado via JS -->
           </div>
 
-          <div class="data-card" style="max-width: 700px; margin: 20px auto;">
+          <div class="ui-card" style="max-width: 700px; margin: 20px auto;">
               <h3 style="color: var(--azul-fundo); margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                   📜 Histórico de Solicitações
               </h3>
@@ -264,26 +265,26 @@
   </div>
 
   <!-- Modal de Edição de Filiado -->
-  <div id="modal-editar-filiado" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modal-titulo">Editar Filiado</h2>
-        <button type="button" class="modal-close" onclick="Utils.fecharModal('modal-editar-filiado')">×</button>
+  <div id="modal-editar-filiado" class="ui-modal-overlay" style="display:none;">
+    <div class="ui-modal">
+      <div class="ui-modal-header">
+        <h2 id="modal-titulo" style="margin: 0;">Editar Filiado</h2>
+        <button type="button" class="ui-button ui-button-outline" style="padding: 0.25rem 0.75rem; font-size: 1.5rem; line-height: 1;" onclick="Utils.fecharModal('modal-editar-filiado')">×</button>
       </div>
-      <div class="modal-body" id="modal-corpo">
+      <div class="ui-modal-body" id="modal-corpo">
         <!-- Form carregado dinamicamente -->
       </div>
     </div>
   </div>
 
   <!-- Modal Genérico -->
-  <div id="modal-generic" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modal-generic-titulo">Título</h2>
-        <button type="button" class="modal-close" onclick="Utils.fecharModal('modal-generic')">×</button>
+  <div id="modal-generic" class="ui-modal-overlay" style="display:none;">
+    <div class="ui-modal">
+      <div class="ui-modal-header">
+        <h2 id="modal-generic-titulo" style="margin: 0;">Título</h2>
+        <button type="button" class="ui-button ui-button-outline" style="padding: 0.25rem 0.75rem; font-size: 1.5rem; line-height: 1;" onclick="Utils.fecharModal('modal-generic')">×</button>
       </div>
-      <div class="modal-body" id="modal-generic-corpo">
+      <div class="ui-modal-body" id="modal-generic-corpo">
         <!-- Conteúdo dinâmico -->
       </div>
     </div>

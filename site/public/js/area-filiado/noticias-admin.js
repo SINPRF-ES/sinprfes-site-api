@@ -17,13 +17,13 @@
         const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(perfilLogado);
 
         container.innerHTML = `
-            <div class="section-card">
+            <div class="ui-card">
                 <div class="af-standard-header" style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:20px;">
                     <div>
                         <h2 style="margin:0;">📰 Gerenciar Notícias</h2>
                         <p class="section-subtitle">Crie e publique informes para os filiados.</p>
                     </div>
-                    ${ehGestao ? `<button id="btn-nova-noticia" class="btn btn-primary" style="margin-top:10px;">+ Nova Notícia</button>` : ''}
+                    ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary" style="margin-top:10px;">+ Nova Notícia</button>` : ''}
                 </div>
 
                 <div id="lista-noticias-admin" class="noticias-grid">
@@ -118,11 +118,11 @@
             <form id="form-noticia-admin">
                 <div class="field-group">
                     <label>Título</label>
-                    <input type="text" name="titulo" value="${safeEscape(noticia.titulo)}" required placeholder="Título chamativo...">
+                    <input class="ui-input" type="text" name="titulo" value="${safeEscape(noticia.titulo)}" required placeholder="Título chamativo...">
                 </div>
                 <div class="field-group" style="margin-top:15px;">
                     <label>Conteúdo (Markdown suportado)</label>
-                    <textarea name="conteudo" rows="10" required placeholder="Texto da notícia..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">${safeEscape(noticia.conteudo)}</textarea>
+                    <textarea class="ui-textarea" name="conteudo" rows="10" required placeholder="Texto da notícia..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">${safeEscape(noticia.conteudo)}</textarea>
                 </div>
 
                 <div class="field-group" style="margin-top:15px;">
@@ -130,7 +130,7 @@
                     <div id="capa-preview-container" style="margin-bottom:10px;">
                         ${noticia.capa_url ? `<img src="${safeEscape(noticia.capa_url)}" style="width:100%; height:150px; object-fit:cover; border-radius:8px;">` : '<p style="font-size:0.8rem; color:#999;">Nenhuma capa selecionada.</p>'}
                     </div>
-                    <input type="file" id="input-capa" accept="image/*" style="display:none;">
+                    <input class="ui-input" type="file" id="input-capa" accept="image/*" style="display:none;">
                     <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('input-capa').click()">📸 Selecionar Capa</button>
                     <p id="capa-status" style="font-size:0.7rem; color:#666; margin-top:5px;"></p>
                 </div>
@@ -145,7 +145,7 @@
                             </div>
                         `).join('')}
                     </div>
-                    <input type="file" id="input-midia" accept="image/*,video/*" multiple style="display:none;">
+                    <input class="ui-input" type="file" id="input-midia" accept="image/*,video/*" multiple style="display:none;">
                     <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('input-midia').click()">➕ Adicionar Mídias</button>
                     <p id="midias-status" style="font-size:0.7rem; color:#666; margin-top:5px;"></p>
                 </div>
@@ -153,8 +153,8 @@
                 <div style="margin-top:25px; display:flex; justify-content:space-between; align-items:center;">
                     ${id ? `<button type="button" class="btn btn-danger-outline btn-sm" onclick="NoticiasAdmin.deletarNoticia('${id}')">🗑️ Excluir</button>` : '<div></div>'}
                     <div style="display:flex; gap:10px;">
-                        <button type="button" class="btn btn-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
-                        <button type="submit" id="btn-salvar-noticia" class="btn btn-primary">Salvar Notícia</button>
+                        <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
+                        <button type="submit" id="btn-salvar-noticia" class="ui-button ui-button-secondary">Salvar Notícia</button>
                     </div>
                 </div>
             </form>

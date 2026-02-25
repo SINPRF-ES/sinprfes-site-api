@@ -352,7 +352,7 @@
                         <button id="btn-export-xls" class="btn-export" style="background:#2980b9;">Exportar XLS</button>
                     </div>
                 </div>
-                <div id="tabela-jogos-wrapper" style="max-height: 600px; overflow: auto;">Carregando...</div>
+                <div id="tabela-jogos-wrapper" class="ui-table-wrapper" style="max-height: 600px;">Carregando...</div>
             `;
             cardBody.appendChild(container);
 
@@ -382,7 +382,7 @@
         function renderizarTabela(dados) {
             const wrapper = document.getElementById("tabela-jogos-wrapper");
             const html = `
-                <table class="jogos-tabela" id="tabela-inscricoes-jogos">
+                <table class="jogos-tabela ui-table" id="tabela-inscricoes-jogos">
                     <thead>
                         <tr>
                             <th>Nome</th>

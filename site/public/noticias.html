@@ -12,6 +12,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <title>Notícias – SINPRF-ES</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/ui-canon.css" />
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
@@ -22,11 +23,15 @@
   <!-- Header padrão (injetado via main.js) -->
   <div id="site-header"></div>
 
-  <main class="page container">
+  <main class="page container ui-container" style="margin-top: var(--ui-space-5);">
     <h1>Notícias</h1>
 
-    <div id="news-loading" class="card" style="padding: 20px; text-align: center;">
+    <div id="news-loading" class="ui-card" style="text-align: center;">
       <p>Buscando as últimas atualizações...</p>
+    </div>
+
+    <div id="news-container" class="ui-stack">
+        <!-- Notícias serão carregadas aqui via JS -->
     </div>
   </main>
 

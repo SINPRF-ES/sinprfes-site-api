@@ -90,7 +90,7 @@
                         <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
                             <button id="btn-novo-filiado" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo Filiado</button>
                             <div id="filiados-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
-                            <input type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
+                            <input class="ui-input" type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
                         </div>
                     </div>
                     <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
@@ -126,15 +126,15 @@
                     ${ehGestao ? `
                     <label>
                         Estado:
-                        <select id="filtro-estado-cadastro">
+                        <select class="ui-select" id="filtro-estado-cadastro">
                             <option value="CADASTRO_ATIVO" selected>Ativos</option>
                             <option value="ARQUIVADOS">Arquivados</option>
                             <option value="TODOS">Todos</option>
                         </select>
-                    </label>` : '<input type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
+                    </label>` : '<input class="ui-input" type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
                     <label>
                         Situação:
-                        <select id="filtro-situacao-funcional">
+                        <select class="ui-select" id="filtro-situacao-funcional">
                             <option value="TODOS" selected>Todos</option>
                             <option value="ATIVO">Ativo</option>
                             <option value="VETERANO">Veterano</option>
@@ -322,16 +322,16 @@
             ` : ''}
 
             <form id="form-edicao-modal">
-                <div class="data-card">
+                <div class="ui-card">
                     <h3>👤 Informações Pessoais</h3>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Nome</label>
-                            <input name="nome" value="${safeEscape(f.nome)}" required>
+                            <input class="ui-input" name="nome" value="${safeEscape(f.nome)}" required>
                         </div>
                         <div class="field-group">
                             <label>Sexo</label>
-                            <select name="sexo" ${ehGestao ? "" : "disabled"}>
+                            <select class="ui-select" name="sexo" ${ehGestao ? "" : "disabled"}>
                                 <option value="" ${!f.sexo ? "selected" : ""}>-</option>
                                 <option value="M" ${f.sexo === "M" ? "selected" : ""}>♂️ Masculino</option>
                                 <option value="F" ${f.sexo === "F" ? "selected" : ""}>♀️ Feminino</option>
@@ -341,33 +341,33 @@
                     <div class="field-row">
                         <div class="field-group">
                             <label>CPF</label>
-                            <input name="cpf" value="${safeEscape(f.cpf)}" ${ehGestao ? "" : "readonly"}>
+                            <input class="ui-input" name="cpf" value="${safeEscape(f.cpf)}" ${ehGestao ? "" : "readonly"}>
                         </div>
                         <div class="field-group">
                             <label>Matrícula (SIAPE)</label>
-                            <input name="siape" value="${safeEscape(f.siape)}" placeholder="6 ou 7 dígitos" maxlength="7" ${ehGestao ? "" : "readonly"}>
+                            <input class="ui-input" name="siape" value="${safeEscape(f.siape)}" placeholder="6 ou 7 dígitos" maxlength="7" ${ehGestao ? "" : "readonly"}>
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Data Nascimento</label>
-                            <input type="date" name="data_nascimento" id="edit-data-nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
+                            <input class="ui-input" type="date" name="data_nascimento" id="edit-data-nascimento" value="${toDateInputValue ? toDateInputValue(f.data_nascimento) : ""}">
                         </div>
                         <div class="field-group">
                             <label>Idade (Calculada)</label>
-                            <input type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f8f9fa;">
+                            <input class="ui-input" type="text" id="edit-idade-display" value="${idade}" readonly style="background:#f8f9fa;">
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Situação Funcional</label>
-                            <select name="situacao">
+                            <select class="ui-select" name="situacao">
                                 ${SITUACAO_OPCOES.map(op => `<option value="${op}" ${(f.situacao || f.situacao_funcional || "").toUpperCase() === op ? "selected" : ""}>${op}</option>`).join("")}
                             </select>
                         </div>
                         <div class="field-group">
                             <label>Lotação</label>
-                            <select name="lotacao">
+                            <select class="ui-select" name="lotacao">
                                 <option value="">Selecione...</option>
                                 ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
                             </select>
@@ -377,7 +377,7 @@
                         <div class="field-row">
                             <div class="field-group">
                                 <label>Perfil de Acesso</label>
-                                <select name="perfil_acesso">
+                                <select class="ui-select" name="perfil_acesso">
                                     <option value="FILIADO" ${f.perfil_acesso === "FILIADO" ? "selected" : ""}>FILIADO</option>
                                     <option value="COMUNICADOR" ${f.perfil_acesso === "COMUNICADOR" ? "selected" : ""}>COMUNICADOR</option>
                                     <option value="ORGANIZADOR" ${f.perfil_acesso === "ORGANIZADOR" ? "selected" : ""}>ORGANIZADOR</option>
@@ -388,72 +388,72 @@
                             </div>
                             <div class="field-group"></div>
                         </div>
-                    ` : `<input type="hidden" name="perfil_acesso" value="${f.perfil_acesso}">`}
+                    ` : `<input class="ui-input" type="hidden" name="perfil_acesso" value="${f.perfil_acesso}">`}
                 </div>
 
-                <div class="data-card bg-alt">
+                <div class="ui-card bg-alt">
                     <h3>📞 Contato</h3>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Email 1</label>
-                            <input name="email1" value="${safeEscape(f.email1)}">
+                            <input class="ui-input" name="email1" value="${safeEscape(f.email1)}">
                         </div>
                         <div class="field-group">
                             <label>Telefone 1</label>
-                            <input name="telefone1" class="campo-telefone" value="${safeEscape(f.telefone1)}">
+                            <input class="ui-input campo-telefone" name="telefone1" value="${safeEscape(f.telefone1)}">
                         </div>
                     </div>
                     <div class="field-row">
                         <div class="field-group">
                             <label>Email 2</label>
-                            <input name="email2" value="${safeEscape(f.email2)}">
+                            <input class="ui-input" name="email2" value="${safeEscape(f.email2)}">
                         </div>
                         <div class="field-group">
                             <label>Telefone 2</label>
-                            <input name="telefone2" class="campo-telefone" value="${safeEscape(f.telefone2)}">
+                            <input class="ui-input campo-telefone" name="telefone2" value="${safeEscape(f.telefone2)}">
                         </div>
                     </div>
                 </div>
 
-                <div class="data-card">
+                <div class="ui-card">
                     <h3>🏠 Endereço</h3>
                     <div class="address-grid-v2">
                         <!-- Linha 1: CEP + Logradouro -->
                         <div class="edit-group cep-group">
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
-                                <input name="cep" id="edit-cep" value="${safeEscape(f.cep)}" class="campo-cep">
+                                <input class="ui-input campo-cep" name="cep" id="edit-cep" value="${safeEscape(f.cep)}">
                                 <span class="cep-search-icon">🔍</span>
                             </div>
                         </div>
                         <div class="edit-group logradouro-group">
                             <label>Logradouro / Bairro</label>
-                            <input name="logradouro_bairro" id="edit-logradouro" value="${safeEscape(f.logradouro_bairro)}" readonly style="background:#f8f9fa;">
+                            <input class="ui-input" name="logradouro_bairro" id="edit-logradouro" value="${safeEscape(f.logradouro_bairro)}" readonly style="background:#f8f9fa;">
                         </div>
 
                         <!-- Linha 2: Número + Complemento -->
                         <div class="edit-group">
                             <label>Número</label>
-                            <input name="numero" value="${safeEscape(f.numero)}">
+                            <input class="ui-input" name="numero" value="${safeEscape(f.numero)}">
                         </div>
                         <div class="edit-group">
                             <label>Complemento</label>
-                            <input name="complemento" value="${safeEscape(f.complemento)}">
+                            <input class="ui-input" name="complemento" value="${safeEscape(f.complemento)}">
                         </div>
 
                         <!-- Linha 3: Cidade + UF -->
                         <div class="edit-group">
                             <label>Cidade</label>
-                            <input name="cidade" id="edit-cidade" value="${safeEscape(f.cidade)}" readonly style="background:#f8f9fa;">
+                            <input class="ui-input" name="cidade" id="edit-cidade" value="${safeEscape(f.cidade)}" readonly style="background:#f8f9fa;">
                         </div>
                         <div class="edit-group">
                             <label>UF</label>
-                            <input name="uf" id="edit-uf" value="${safeEscape(f.uf)}" readonly style="background:#f8f9fa;">
+                            <input class="ui-input" name="uf" id="edit-uf" value="${safeEscape(f.uf)}" readonly style="background:#f8f9fa;">
                         </div>
                     </div>
                 </div>
 
-                <div class="data-card bg-alt">
+                <div class="ui-card bg-alt">
                     <div class="dependentes-header" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px; position: relative;">
                         <h3 style="margin: 0;">👨‍👩‍👧‍👦 Dependentes (até 5)</h3>
                         <button type="button" id="btn-toggle-excluir-modal" class="btn btn-danger-outline btn-sm" style="position: absolute; right: 0;">Excluir</button>
@@ -470,7 +470,7 @@
                     <div id="modal-dependentes-container"></div>
                 </div>
 
-                <div class="data-card">
+                <div class="ui-card">
                     <h3>🖼️ Avatar (Foto)</h3>
                     <div class="subcard flex-center" style="gap: 20px; flex-wrap: wrap;">
                         <img id="modal-avatar-preview" class="avatar-preview" src="${f.avatar_url || '/img/avatar-placeholder.png'}" alt="Preview" onerror="this.src='/img/avatar-placeholder.png'" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #ffc107;">
@@ -581,7 +581,7 @@
             dependentesAtuais.forEach(dep => {
                 containerCheckboxes.innerHTML += `
                     <label style="display: flex; align-items: center; gap: 8px; font-weight:normal; cursor:pointer;">
-                        <input type="checkbox" name="excluir_dep_index" value="${dep.index}" style="width: auto;">
+                        <input type="checkbox" style="width:auto;" name="excluir_dep_index" value="${dep.index}" style="width: auto;">
                         Dependente ${dep.index}: ${safeEscape(dep.nome)}
                     </label>
                 `;
@@ -806,15 +806,15 @@
             <div class="filiado-card" style="border-left-color: var(--amarelo);">
                 <h3 style="margin-bottom:20px;">👤 Novo Filiado</h3>
                 <form id="form-novo-filiado-admin">
-                    <div class="data-card">
+                    <div class="ui-card">
                         <div class="field-row">
                             <div class="field-group">
                                 <label>Nome *</label>
-                                <input name="nome" required>
+                                <input class="ui-input" name="nome" required>
                             </div>
                             <div class="field-group">
                                 <label>Sexo</label>
-                                <select name="sexo">
+                                <select class="ui-select" name="sexo">
                                     <option value="" selected>-</option>
                                     <option value="M">♂️ Masculino</option>
                                     <option value="F">♀️ Feminino</option>
@@ -824,31 +824,31 @@
                         <div class="field-row">
                             <div class="field-group">
                                 <label>CPF *</label>
-                                <input name="cpf" required placeholder="000.000.000-00">
+                                <input class="ui-input" name="cpf" required placeholder="000.000.000-00">
                             </div>
                             <div class="field-group">
                                 <label>Matrícula (SIAPE)</label>
-                                <input name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
+                                <input class="ui-input" name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
                             </div>
                         </div>
                         <div class="field-row">
                             <div class="field-group">
                                 <label>Email *</label>
-                                <input type="email" name="email1" required>
+                                <input class="ui-input" type="email" name="email1" required>
                             </div>
                             <div class="field-group">
                                 <label>Telefone 1 *</label>
-                                <input name="telefone1" class="campo-telefone" required placeholder="(00) 00000-0000">
+                                <input class="ui-input campo-telefone" name="telefone1" required placeholder="(00) 00000-0000">
                             </div>
                         </div>
                         <div class="field-row">
                             <div class="field-group">
                                 <label>Telefone 2</label>
-                                <input name="telefone2" class="campo-telefone" placeholder="(00) 00000-0000">
+                                <input class="ui-input campo-telefone" name="telefone2" placeholder="(00) 00000-0000">
                             </div>
                             <div class="field-group">
                                 <label>Lotação *</label>
-                                <select name="lotacao" required style="border: 2px solid var(--primary-color);">
+                                <select class="ui-select" name="lotacao" required style="border: 2px solid var(--primary-color);">
                                     <option value="">Selecione a Lotação...</option>
                                     ${LOTACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join("")}
                                 </select>
@@ -857,41 +857,41 @@
                         <div class="field-row">
                             <div class="field-group">
                                 <label>Data Nascimento</label>
-                                <input name="data_nascimento" class="campo-data" placeholder="DD/MM/AAAA">
+                                <input class="ui-input campo-data" name="data_nascimento" placeholder="DD/MM/AAAA">
                             </div>
                             <div class="field-group"></div>
                         </div>
                     </div>
 
-                    <div class="data-card bg-alt">
+                    <div class="ui-card bg-alt">
                         <h3>🏠 Endereço</h3>
                         <div class="address-grid-v2">
                             <div class="edit-group cep-group">
                                 <label>CEP</label>
                                 <div class="cep-input-wrapper">
-                                    <input name="cep" id="new-cep" class="campo-cep" placeholder="00000-000">
+                                    <input class="ui-input campo-cep" name="cep" id="new-cep" placeholder="00000-000">
                                     <span class="cep-search-icon">🔍</span>
                                 </div>
                             </div>
                             <div class="edit-group logradouro-group">
                                 <label>Logradouro / Bairro</label>
-                                <input name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
+                                <input class="ui-input" name="logradouro_bairro" id="new-logradouro" readonly style="background:#f0f0f0;">
                             </div>
                             <div class="edit-group">
                                 <label>Número</label>
-                                <input name="numero">
+                                <input class="ui-input" name="numero">
                             </div>
                             <div class="edit-group">
                                 <label>Complemento</label>
-                                <input name="complemento">
+                                <input class="ui-input" name="complemento">
                             </div>
                             <div class="edit-group">
                                 <label>Cidade</label>
-                                <input name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
+                                <input class="ui-input" name="cidade" id="new-cidade" readonly style="background:#f0f0f0;">
                             </div>
                             <div class="edit-group">
                                 <label>UF</label>
-                                <input name="uf" id="new-uf" readonly style="background:#f0f0f0;">
+                                <input class="ui-input" name="uf" id="new-uf" readonly style="background:#f0f0f0;">
                             </div>
                         </div>
                     </div>

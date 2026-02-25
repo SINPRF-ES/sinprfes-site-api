@@ -13,6 +13,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
 
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/ui-canon.css" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
   <script src="/js/login.js" defer></script>
@@ -20,22 +21,23 @@
 <body>
   <div id="site-header"></div>
 
-  <main class="page container">
-    <section class="card login-card">
+  <main class="page ui-container" style="margin-top: var(--ui-space-5); margin-bottom: var(--ui-space-5); display: flex; justify-content: center;">
+    <section class="ui-card login-card" style="max-width: 500px; width: 100%;">
       <h1>Página Inicial</h1>
-      <p class="page-intro">
+      <p class="page-intro" style="color: var(--ui-text-muted); margin-bottom: var(--ui-space-4);">
         Acesse sua Página Inicial para consultar e atualizar seus dados cadastrais,
         além de acessar conteúdos exclusivos.
       </p>
 
       <!-- FORMULÁRIO DE LOGIN -->
-      <form id="login-form" class="form-grid">
-        <div class="form-group form-group-full">
-          <label for="login-cpf">CPF</label>
+      <form id="login-form" class="ui-stack">
+        <div class="ui-form-group">
+          <label for="login-cpf" class="ui-label">CPF</label>
           <input
             type="text"
             id="login-cpf"
             name="cpf"
+            class="ui-input"
             placeholder="000.000.000-00"
             inputmode="numeric"
             autocomplete="username"
@@ -43,12 +45,13 @@
           />
         </div>
 
-        <div class="form-group form-group-full">
-          <label for="login-senha">Senha</label>
+        <div class="ui-form-group">
+          <label for="login-senha" class="ui-label">Senha</label>
           <input
             type="password"
             id="login-senha"
             name="senha"
+            class="ui-input"
             autocomplete="current-password"
             required
           />
@@ -56,52 +59,54 @@
 
         <!-- CAMPO 2FA (aparece só quando o backend exigir) -->
         <div
-          class="form-group form-group-full"
+          class="ui-form-group"
           id="campo-2fa"
-          style="display: none; margin-top: 8px;"
+          style="display: none;"
         >
-          <label for="login-token-2fa">Código de 2FA</label>
+          <label for="login-token-2fa" class="ui-label">Código de 2FA</label>
           <input
             type="text"
             id="login-token-2fa"
             name="token_2fa"
+            class="ui-input"
             inputmode="numeric"
             pattern="[0-9]*"
             placeholder="123456"
           />
-          <p class="field-hint">
+          <p class="field-hint" style="font-size: 0.8rem; color: var(--ui-text-muted); margin-top: 4px;">
             Abra o aplicativo autenticador (Google Authenticator ou similar) e
             informe o código temporário exibido para o SINPRF-ES.
           </p>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="ui-button ui-button-secondary" style="width: 100%;">
             Entrar
           </button>
         </div>
 
-        <p id="login-mensagem" class="field-hint"></p>
+        <p id="login-mensagem" class="field-hint" style="font-size: 0.875rem; color: var(--ui-danger); text-align: center;"></p>
       </form>
 
-      <hr class="form-separator" />
+      <hr class="form-separator" style="margin: var(--ui-space-5) 0; border: 0; border-top: 1px solid var(--ui-border);" />
 
       <!-- ESQUECI MINHA SENHA / PRIMEIRO ACESSO -->
-      <section class="form-card">
-        <h2>Esqueci minha senha / Primeiro acesso</h2>
-        <p class="field-hint">
+      <section class="form-card ui-stack">
+        <h2 style="font-size: 1.25rem;">Esqueci minha senha / Primeiro acesso</h2>
+        <p class="field-hint" style="font-size: 0.9rem; color: var(--ui-text-muted);">
           Se for seu primeiro acesso, ou se você esqueceu sua senha,
           utilize esta opção. Você receberá um link no e-mail cadastrado
           para criar uma nova senha.
         </p>
 
-        <form id="forgot-form" class="form-grid">
-          <div class="form-group form-group-full">
-            <label for="forgot-cpf">CPF</label>
+        <form id="forgot-form" class="ui-stack">
+          <div class="ui-form-group">
+            <label for="forgot-cpf" class="ui-label">CPF</label>
             <input
               type="text"
               id="forgot-cpf"
               name="cpf"
+              class="ui-input"
               placeholder="000.000.000-00"
               inputmode="numeric"
               autocomplete="username"
@@ -110,7 +115,7 @@
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn btn-outline">
+            <button type="submit" class="ui-button ui-button-outline" style="width: 100%;">
               Enviar link para criar nova senha
             </button>
           </div>

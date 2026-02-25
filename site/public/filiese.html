@@ -13,6 +13,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/ui-canon.css">
   <style>
     /* --- Identidade Visual: Azul, Amarelo e Branco --- */
     
@@ -221,9 +222,9 @@
     <p>Juntos somos mais fortes. Preencha seus dados para gerar a ficha.</p>
   </header>
 
-  <main class="container">
+  <main class="ui-container">
     
-    <div class="form-card filiese-processo-card" style="border-left: 6px solid #ffc107; border-top: none;">
+    <div class="ui-card filiese-processo-card" style="border-left: 6px solid #ffc107; margin-bottom: var(--ui-space-4);">
       <div class="filiese-processo-wrap">
         
         <div class="filiese-processo-texto">
@@ -245,10 +246,10 @@
       </div>
     </div>
 
-    <form id="filiese-form">
+    <form id="filiese-form" class="ui-stack">
       
-      <section class="form-card">
-        <h2 class="section-title">👤 1. Dados do Servidor</h2>
+      <section class="ui-card">
+        <h2 class="section-title" style="color: var(--ui-primary); border-bottom: 2px solid var(--ui-secondary); padding-bottom: var(--ui-space-2); margin-bottom: var(--ui-space-4);">👤 1. Dados do Servidor</h2>
         <div class="form-grid">
           <div class="form-group">
             <label for="nome">Nome Completo *</label>
@@ -273,8 +274,8 @@
         </div>
       </section>
 
-      <section class="form-card">
-        <h2 class="section-title">📞 2. Contatos</h2>
+      <section class="ui-card">
+        <h2 class="section-title" style="color: var(--ui-primary); border-bottom: 2px solid var(--ui-secondary); padding-bottom: var(--ui-space-2); margin-bottom: var(--ui-space-4);">📞 2. Contatos</h2>
         <div class="form-grid">
           <div class="form-group">
             <label for="email_pessoal">E-mail Pessoal *</label>
@@ -295,8 +296,8 @@
         </div>
       </section>
 
-      <section class="form-card">
-        <h2 class="section-title">📍 3. Endereço Residencial</h2>
+      <section class="ui-card">
+        <h2 class="section-title" style="color: var(--ui-primary); border-bottom: 2px solid var(--ui-secondary); padding-bottom: var(--ui-space-2); margin-bottom: var(--ui-space-4);">📍 3. Endereço Residencial</h2>
         <div class="form-grid">
           <div class="form-group">
             <label for="cep">CEP *</label>
@@ -338,8 +339,8 @@
         </div>
       </section>
 
-      <section class="form-card">
-        <h2 class="section-title">📝 4. Autorização</h2>
+      <section class="ui-card">
+        <h2 class="section-title" style="color: var(--ui-primary); border-bottom: 2px solid var(--ui-secondary); padding-bottom: var(--ui-space-2); margin-bottom: var(--ui-space-4);">📝 4. Autorização</h2>
         
         <label class="checkbox-wrapper">
           <input type="checkbox" id="aceite_estatuto" name="aceite_estatuto" required>
