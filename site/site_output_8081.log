@@ -4,3 +4,5 @@
 
 SINPRF-ES Site rodando na porta 8080
 Proxy configurado: /api/* -> https://api.sinprfes.org.br/api/*
+Terminated
+ ELIFECYCLE  Command failed with exit code 143.

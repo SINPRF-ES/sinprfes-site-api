@@ -99,12 +99,12 @@
         else if (abaAlvo === "sec-noticias" && inicializarNoticias) inicializarNoticias(perfil);
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
-        else if (abaAlvo === "sec-notificacoes" && Notificacoes && Notificacoes.inicializarNotificacoes) {
+        else if (abaAlvo === "sec-notificacoes" && Notificacoes && Notificacoes.inicializar) {
           if (_notifInitInFlight) return;
           _notifInitInFlight = true;
 
-          // Lazy init: não passamos argumentos, o módulo busca o user canon se necessário
-          Notificacoes.inicializarNotificacoes().finally(() => { _notifInitInFlight = false; });
+          const info = obterUserInfoFresco();
+          Notificacoes.inicializar(perfil, info.permissions).finally(() => { _notifInitInFlight = false; });
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
         else if (abaAlvo === "sec-estatuto" && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
@@ -148,12 +148,12 @@
 
           atualizarVisibilidadeAbas(perfilReal);
 
-          // Re-render de módulos que dependem de perfil (mas NÃO inicializar Notificações fora da aba)
+          // Re-render de módulos que dependem de perfil
           if (inicializarFiliados) inicializarFiliados(perfil);
 
-          // Sincroniza modo de notificações se o módulo estiver carregado
-          if (window.Notificacoes && window.Notificacoes.sincronizarModo) {
-            window.Notificacoes.sincronizarModo(perfilReal, dadosFrescos.permissions);
+          // Inicializa/Sincroniza notificações reativamente
+          if (window.Notificacoes && window.Notificacoes.inicializar) {
+            window.Notificacoes.inicializar(perfilReal, dadosFrescos.permissions);
           }
         }
       }
