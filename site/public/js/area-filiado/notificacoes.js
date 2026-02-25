@@ -76,105 +76,88 @@
     return cachedNorm || userArg || {};
   }
 
-  // Helper: aplica display com prioridade
-  function setDisplay(el, value) {
-    if (!el) return;
-    el.style.setProperty("display", value, "important");
-  }
 
-  function ensureNotificationsSectionVisible() {
-    const sec = document.getElementById("sec-notificacoes");
-    if (!sec) return;
+  async function inicializar(perfil, permissions) {
+    const normPermissions = normalizePermissions(permissions);
+    const normPerfil = (perfil || "").toUpperCase();
+    const isGestao = normPermissions.includes("PUSH_GERENCIAR") || normPermissions.includes("*") || ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(normPerfil);
 
-    // Garante que a seção tem o estado básico correto, mas sem !important no display
-    // para não quebrar a navegação global gerida pelo navegacao.js
-    if (!sec.classList.contains("active")) {
-      sec.classList.add("active");
-      sec.style.display = "block";
-    }
+    const container = document.getElementById("sec-notificacoes");
+    if (!container) return;
 
-    // Propriedades secundárias podem usar !important se necessário para garantir renderização
-    sec.style.setProperty("visibility", "visible", "important");
-    sec.style.setProperty("opacity", "1", "important");
-    sec.style.setProperty("max-height", "none", "important");
-  }
-
-  function applyNotificationsMode(params) {
-    const { isGestao } = params;
-
-    debugNotif("applyNotificationsMode", { isGestao });
-
-    ensureNotificationsSectionVisible();
-
-    const adminContainer = document.getElementById("notificacoes-admin-container");
-    const membroContainer = document.getElementById("notificacoes-membro-container");
-
-    if (!adminContainer || !membroContainer) {
-      console.warn("[Notificacoes] Containers not found in DOM.");
-      return;
-    }
-
-    const displayAdmin = isGestao ? "block" : "none";
-    const displayMembro = isGestao ? "none" : "block";
-
-    // IMPORTANTE: usar setDisplay helper (!important) nos containers INTERNOS
-    setDisplay(adminContainer, displayAdmin);
-    setDisplay(membroContainer, displayMembro);
-
-    // Garante visibilidade real nos containers internos
-    const containers = [adminContainer, membroContainer];
-    containers.forEach(el => {
-      if (!el) return;
-      el.style.setProperty("visibility", "visible", "important");
-      el.style.setProperty("opacity", "1", "important");
-      el.style.setProperty("max-height", "none", "important");
-    });
-
-    /**
-     * Validação de segurança (Anti-Race):
-     * Se após o render o container correto ainda estiver oculto por algum CSS externo,
-     * força a exibição após um pequeno delay.
-     */
-    setTimeout(() => {
-      const target = isGestao ? adminContainer : membroContainer;
-      if (target && getComputedStyle(target).display === "none") {
-        target.style.setProperty("display", "block", "important");
-        console.warn(`[Notificacoes] ${isGestao ? 'Admin' : 'Member'} container was hidden by CSS. Forced display:block.`);
-      }
-    }, 150);
-  }
-
-  async function inicializarNotificacoes(user) {
-    const canonUser = await getUserCanon(user);
-    const permissions = normalizePermissions(canonUser.permissions);
-    const perfil = (canonUser.perfil_acesso || "").toUpperCase();
-
-    // Gestão se tiver PUSH_GERENCIAR, wildcard ou for de um perfil administrativo conhecido (fallback)
-    const ehGestorPerfil = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
-    const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*") || ehGestorPerfil;
-
-    // 1) aplica modo e garante seção visível
-    debugNotif("inicializarNotificacoes", {
-      perfil,
-      permissions,
-      isGestao,
-    });
-
-    applyNotificationsMode({ isGestao, permissions });
-
-    // 2) bind handlers uma única vez (idempotente)
-    if (!_handlersReady) {
-      setupHandlers();
-      _handlersReady = true;
-    }
-
-    // 3) popular lotações sempre que entrar em gestão (barato e garante consistência)
-    if (isGestao) popularLotacoes();
-
-    // 4) carrega dados conforme modo
     if (isGestao) {
+      container.innerHTML = `
+        <div class="af-standard-header">
+            <h2>🚀 Enviar Notificação (Gestão)</h2>
+            <p class="section-subtitle">Envie mensagens push para os filiados.</p>
+        </div>
+
+        <div class="form-container" style="max-width: 600px; margin: 20px auto 0 auto;">
+            <div class="field-group">
+                <label>Público de Destino</label>
+                <select id="push-target-type">
+                    <option value="ALL">Todos os filiados com app</option>
+                    <option value="ATIVOS">Apenas ATIVOS</option>
+                    <option value="VETERANOS">Veteranos / Pensionistas</option>
+                    <option value="LOTACAO">Por Lotação (somente ativos)</option>
+                    <option value="JOGOS">Inscritos nos Jogos</option>
+                    <option value="FILIADO">Especificar um Filiado</option>
+                </select>
+            </div>
+
+            <div id="push-target-value-container" class="field-group" style="margin-top: 15px; display: none;">
+                <label id="push-target-value-label">Valor do Filtro</label>
+
+                <select id="push-target-lotacao" style="display: none;">
+                    <!-- Populando via popularLotacoes() -->
+                </select>
+
+                <div id="push-target-filiado-wrapper" style="display: none;">
+                    <input type="text" id="push-target-filiado-search" placeholder="Buscar por nome ou CPF..." inputmode="search" autocomplete="off" />
+                    <select id="push-target-filiado-select" style="margin-top: 5px;">
+                        <option value="">Aguardando busca...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="field-group" style="margin-top: 15px;">
+                <label>Título (opcional)</label>
+                <input type="text" id="push-title" maxlength="60" placeholder="Ex: Informativo SINPRF-ES" />
+                <small class="char-counter"><span id="push-title-count">0</span>/60</small>
+            </div>
+
+            <div class="field-group" style="margin-top: 15px;">
+                <label>Mensagem *</label>
+                <textarea id="push-message" maxlength="240" rows="4" placeholder="Digite sua mensagem aqui..."></textarea>
+                <small class="char-counter"><span id="push-message-count">0</span>/240</small>
+            </div>
+
+            <button id="btn-send-push" class="btn btn-primary" style="margin-top: 20px;">
+                🚀 Enviar Agora
+            </button>
+        </div>
+
+        <div class="history-container" style="margin-top: 40px;">
+            <h3>📜 Histórico de Envios</h3>
+            <div id="push-history-list" class="history-list">
+                <p>Carregando histórico...</p>
+            </div>
+        </div>
+      `;
+      popularLotacoes();
+      setupHandlers();
       await carregarCampanhasGestao();
     } else {
+      container.innerHTML = `
+        <div class="af-standard-header">
+            <h2>📢 Minhas Notificações</h2>
+            <p class="section-subtitle">Acompanhe os comunicados enviados para você.</p>
+        </div>
+        <div id="lista-notificacoes-recebidas" class="history-list">
+            <p style="text-align:center; padding:40px; color:#666;">Carregando notificações...</p>
+        </div>
+      `;
+      _handlersReady = false; // Reset handlers flag since we re-rendered the UI
       await carregarHistoricoMe();
     }
   }
@@ -607,7 +590,7 @@
   }
 
   window.Notificacoes = {
-    inicializarNotificacoes,
+    inicializar,
     carregarCampanhasGestao,
     carregarHistoricoMe,
     abrirDetalhe,
