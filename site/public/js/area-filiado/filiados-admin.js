@@ -423,7 +423,7 @@
                             <label>CEP</label>
                             <div class="cep-input-wrapper">
                                 <input class="ui-input campo-cep" name="cep" id="edit-cep" value="${safeEscape(f.cep)}">
-                                <span class="cep-search-icon">🔍</span>
+                                <button type="button" class="cep-search-btn cep-search-icon" title="Buscar endereço pelo CEP" aria-label="Buscar endereço pelo CEP">🔍</button>
                             </div>
                         </div>
                         <div class="edit-group logradouro-group">
@@ -870,7 +870,7 @@
                                 <label>CEP</label>
                                 <div class="cep-input-wrapper">
                                     <input class="ui-input campo-cep" name="cep" id="new-cep" placeholder="00000-000">
-                                    <span class="cep-search-icon">🔍</span>
+                                    <button type="button" class="cep-search-btn cep-search-icon" title="Buscar endereço pelo CEP" aria-label="Buscar endereço pelo CEP">🔍</button>
                                 </div>
                             </div>
                             <div class="edit-group logradouro-group">

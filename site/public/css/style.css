@@ -93,6 +93,19 @@ footer {
 .password-toggle-btn:active { transform: scale(0.95); }
 .password-input-wrapper input { padding-right: 40px; }
 
+/* Palette: CEP Search Button Styles */
+.cep-input-wrapper { display: flex; align-items: center; gap: 8px; width: 100%; }
+.cep-search-btn {
+    width: 44px; min-width: 44px; height: 42px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0; background: var(--white); border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius); cursor: pointer; font-size: 1.1rem;
+    transition: all 0.2s ease;
+}
+.cep-search-btn:hover { background: #f8fafc; border-color: var(--ui-primary); transform: translateY(-1px); }
+.cep-search-btn:active { transform: translateY(0); }
+.cep-search-btn:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
+
 /* Área do Filiado - Layout & Navigation */
 .af-body { margin: 0; padding: 0; background: var(--ui-bg); overflow-x: hidden; }
 .af-container { display: flex; flex-direction: column; min-height: 100dvh; }
