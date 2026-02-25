@@ -2,10 +2,10 @@
 
 :root {
   /* Colors */
-  --ui-bg: #f4f7f6;
+  --ui-bg: #eef2f7;
   --ui-surface: #ffffff;
-  --ui-text: #333333;
-  --ui-text-muted: #666666;
+  --ui-text: #1f2937;
+  --ui-text-muted: #475569;
   --ui-primary: #003366;
   --ui-primary-contrast: #ffffff;
   --ui-secondary: #ffcc00;
@@ -13,7 +13,7 @@
   --ui-danger: #dc3545;
   --ui-success: #28a745;
   --ui-warning: #ffc107;
-  --ui-border: #e0e0e0;
+  --ui-border: #cbd5e1;
 
   /* Spacing */
   --ui-space-1: 0.25rem;
@@ -135,6 +135,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .ui-input, .ui-select, .ui-textarea {
+  color: var(--ui-text);
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--ui-border);
@@ -143,6 +144,17 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--ui-surface);
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
+}
+
+.ui-input::placeholder, .ui-textarea::placeholder {
+  color: var(--ui-text-muted);
+  opacity: 1;
+}
+
+.ui-input:disabled, .ui-select:disabled, .ui-textarea:disabled {
+  background-color: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
 }
 
 .ui-input:focus, .ui-select:focus, .ui-textarea:focus {
@@ -194,8 +206,16 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Accessibility */
 :focus-visible {
-  outline: 3px solid var(--ui-secondary);
+  outline: 3px solid #f59e0b;
   outline-offset: 2px;
+}
+
+a {
+  color: var(--ui-primary);
+}
+
+a:hover {
+  color: #0b4f94;
 }
 
 /* Modals */

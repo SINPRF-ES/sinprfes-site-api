@@ -83,14 +83,14 @@
             if (secFiliados) {
                 const placeholder = isReadOnlyProfile ? "Buscar por nome..." : "Buscar por nome ou CPF...";
                 secFiliados.innerHTML = `
-                    <div class="search-box-container af-standard-header">
-                        <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px;">
+                    <div class="search-box-container af-standard-header filiados-layout">
+                        <div class="filiados-title-row">
                             <h2 style="margin:0;">👥 Filiados</h2>
                         </div>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-                            <button id="btn-novo-filiado" class="btn btn-primary" style="display:none; margin-bottom:10px;">+ Novo Filiado</button>
-                            <div id="filiados-count" style="font-weight: bold; margin-bottom: 5px;">Total: 0</div>
-                            <input class="ui-input" type="text" id="busca-filiados" placeholder="${placeholder}" style="width:100%; max-width: 450px; padding:10px; border-radius:8px; border:none; color:#333;">
+                        <div class="filiados-toolbar">
+                            <button id="btn-novo-filiado" class="btn btn-primary filiados-novo-btn" style="display:none;">+ Novo Filiado</button>
+                            <div id="filiados-count" class="filiados-count">Total: 0</div>
+                            <input class="ui-input filiados-search" type="text" id="busca-filiados" placeholder="${placeholder}">
                         </div>
                     </div>
                     <div id="novo-filiado-container" style="display:none; margin-bottom:20px;"></div>
@@ -166,7 +166,7 @@
         if (!listaEl) return;
 
         try {
-            listaEl.innerHTML = `<p style="text-align:center; color:#fff;">Carregando...</p>`;
+            listaEl.innerHTML = `<p style="text-align:center; color:var(--ui-text-muted);">Carregando...</p>`;
             const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
             let url = "/api/filiados";
             if (estado !== "CADASTRO_ATIVO") url += "?incluirArquivados=1";
