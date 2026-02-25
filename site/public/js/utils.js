@@ -35,7 +35,7 @@
     const tokenLegado = localStorage.getItem("token");
     const tokenGestao = localStorage.getItem("token_gestao");
     const tokenFiliado = localStorage.getItem("token_filiado");
-    return tokenLegado || tokenGestao || tokenFiliado || null;
+    return tokenLegado || tokenGestao || tokenFiliado;
   }
 
   /**
