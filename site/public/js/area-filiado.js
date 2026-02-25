@@ -76,7 +76,7 @@
         { id: "nav-repasse", visivel: ehGestao },
         { id: "nav-noticias", visivel: true },
         { id: "nav-cms", visivel: ehGestao },
-        { id: "nav-notificacoes", visivel: true },
+        { id: "nav-notificacoes", visivel: ehGestao },
         { id: "nav-relatorios", visivel: ehGestao },
         { id: "nav-novo-filiado", visivel: ehGestao }
       ];
@@ -110,6 +110,13 @@
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
         else if (abaAlvo === "sec-notificacoes") {
+          const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
+          if (!ehGestao) {
+            console.warn("Acesso negado: Notificações é restrito à gestão.");
+            const btnHome = document.getElementById("nav-home");
+            if (btnHome) btnHome.click();
+            return;
+          }
           inicializarNotificacoesComPerfil(perfil);
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
