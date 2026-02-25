@@ -8,6 +8,9 @@
   console.log("Sistema Página Inicial: Orquestrando inicialização...");
 
   document.addEventListener("DOMContentLoaded", async () => {
+    if (window.Utils?.initNotificationsForensics) {
+      window.Utils.initNotificationsForensics();
+    }
     // 1. Verificação de Token (Contexto: Filiado)
     const token =
       (window.Utils && window.Utils.obterToken)

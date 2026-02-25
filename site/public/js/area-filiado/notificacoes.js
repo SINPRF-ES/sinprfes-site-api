@@ -13,12 +13,38 @@
   // Evita duplicar handlers se inicializar múltiplas vezes
   let _handlersReady = false;
 
+  function normalizePermissions(raw) {
+    if (Array.isArray(raw)) return raw.filter(Boolean).map((p) => String(p).trim()).filter(Boolean);
+    if (typeof raw === "string") {
+      return raw
+        .split(/[;,\s]+/)
+        .map((p) => String(p).trim())
+        .filter(Boolean);
+    }
+    if (raw && typeof raw === "object") {
+      return Object.entries(raw)
+        .filter(([, value]) => !!value)
+        .map(([key]) => String(key).trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function debugNotif(action, details = {}) {
+    if (localStorage.getItem("DEBUG_NOTIF") !== "1") return;
+    console.log("[DEBUG_NOTIF][Notificacoes]", {
+      when: new Date().toISOString(),
+      action,
+      ...details,
+    });
+  }
+
   /**
    * Canon: busca o usuário completo do servidor se faltarem permissões.
    * Prioriza dados com array de permissions populado.
    */
   async function getUserCanon(user) {
-    const hasPermissions = (u) => u && Array.isArray(u.permissions) && u.permissions.length > 0;
+    const hasPermissions = (u) => u && normalizePermissions(u.permissions).length > 0;
 
     // 1) Se o argumento já é válido, usa ele
     if (hasPermissions(user)) return user;
@@ -32,9 +58,10 @@
       const r = await window.Api.apiFetch("/api/auth/me");
       if (r && r.ok) {
         const info = await r.json();
-        if (info && info.permissions) {
+        if (info) {
+          info.permissions = normalizePermissions(info.permissions);
           localStorage.setItem("userInfo", JSON.stringify(info));
-          return info;
+          if (info.permissions.length > 0) return info;
         }
       } else {
         console.warn("[Notificacoes] Failed to fetch canon user. Status:", r?.status);
@@ -72,6 +99,8 @@
 
   function applyNotificationsMode(params) {
     const { isGestao } = params;
+
+    debugNotif("applyNotificationsMode", { isGestao });
 
     ensureNotificationsSectionVisible();
 
@@ -115,7 +144,7 @@
 
   async function inicializarNotificacoes(user) {
     const canonUser = await getUserCanon(user);
-    const permissions = Array.isArray(canonUser.permissions) ? canonUser.permissions : [];
+    const permissions = normalizePermissions(canonUser.permissions);
     const perfil = (canonUser.perfil_acesso || "").toUpperCase();
 
     // Gestão se tiver PUSH_GERENCIAR, wildcard ou for de um perfil administrativo conhecido (fallback)
@@ -123,6 +152,12 @@
     const isGestao = permissions.includes("PUSH_GERENCIAR") || permissions.includes("*") || ehGestorPerfil;
 
     // 1) aplica modo e garante seção visível
+    debugNotif("inicializarNotificacoes", {
+      perfil,
+      permissions,
+      isGestao,
+    });
+
     applyNotificationsMode({ isGestao, permissions });
 
     // 2) bind handlers uma única vez (idempotente)
