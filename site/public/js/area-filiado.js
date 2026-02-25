@@ -36,7 +36,6 @@
     const { inicializarRelatorios } = window.Relatorios || {};
     const { CMSAdmin } = window || {};
     const { Notificacoes } = window || {};
-    let _notifInitInFlight = false;
 
     // Helper: sempre pegar userInfo mais fresco possível
     function obterUserInfoFresco() {
@@ -99,12 +98,8 @@
         else if (abaAlvo === "sec-noticias" && inicializarNoticias) inicializarNoticias(perfil);
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
-        else if (abaAlvo === "sec-notificacoes" && Notificacoes && Notificacoes.inicializar) {
-          if (_notifInitInFlight) return;
-          _notifInitInFlight = true;
-
-          const info = obterUserInfoFresco();
-          Notificacoes.inicializar(perfil, info.permissions).finally(() => { _notifInitInFlight = false; });
+        else if (abaAlvo === "sec-notificacoes" && Notificacoes && Notificacoes.inicializarNotificacoes) {
+          Notificacoes.inicializarNotificacoes({ perfil });
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
         else if (abaAlvo === "sec-estatuto" && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
@@ -151,9 +146,13 @@
           // Re-render de módulos que dependem de perfil
           if (inicializarFiliados) inicializarFiliados(perfil);
 
-          // Inicializa/Sincroniza notificações reativamente
-          if (window.Notificacoes && window.Notificacoes.inicializar) {
-            window.Notificacoes.inicializar(perfilReal, dadosFrescos.permissions);
+          // Re-sincroniza notificações apenas quando a aba já está ativa
+          if (
+            window.Notificacoes &&
+            window.Notificacoes.inicializarNotificacoes &&
+            document.querySelector(".af-section.active")?.id === "sec-notificacoes"
+          ) {
+            window.Notificacoes.inicializarNotificacoes({ perfil: perfilReal });
           }
         }
       }

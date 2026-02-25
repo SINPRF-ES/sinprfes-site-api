@@ -40,54 +40,26 @@
     });
   }
 
-  /**
-   * Canon: busca o usuário completo do servidor.
-   * Em Notificações, priorizamos /api/auth/me para evitar usar cache stale
-   * que pode manter perfil/permissões defasados e derrubar o modo de gestão.
-   */
-  async function getUserCanon(user) {
-    const normalizeUser = (u) => {
-      if (!u || typeof u !== "object") return null;
-      return {
-        ...u,
-        permissions: normalizePermissions(u.permissions),
-      };
-    };
+  const GESTAO_PERFIS = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
 
-    // Fallback local (usado só se /me falhar)
-    const userArg = normalizeUser(user);
-    const cached = window.Utils?.obterUserInfo();
-    const cachedNorm = normalizeUser(cached);
+  function resolveContext(arg) {
+    const argObj = arg && typeof arg === "object" ? arg : {};
+    const argPerfil = typeof argObj.perfil === "string" ? argObj.perfil : "";
+    const argPermissions = normalizePermissions(argObj.permissions);
 
-    // Fonte canônica principal: /api/auth/me
-    try {
-      const r = await window.Api.apiFetch("/api/auth/me");
-      if (r && r.ok) {
-        const info = normalizeUser(await r.json()) || {};
-        localStorage.setItem("userInfo", JSON.stringify(info));
-        return info;
-      } else {
-        console.warn("[Notificacoes] Failed to fetch canon user. Status:", r?.status);
-      }
-    } catch (e) {
-      console.error("[Notificacoes] Error fetching canon user", e);
-    }
+    const cached = window.Utils?.obterUserInfo?.() || {};
+    const cachedPerfil = (cached.perfil_acesso || cached.perfil || "").toUpperCase();
+    const cachedPermissions = normalizePermissions(cached.permissions);
 
-    // Fallback para o que tivermos (mesmo sem permissões)
-    return cachedNorm || userArg || {};
+    const perfilEfetivo = (argPerfil || cachedPerfil || "FILIADO").toUpperCase();
+    const permissionsEfetivas = argPermissions.length ? argPermissions : cachedPermissions;
+
+    return { perfilEfetivo, permissionsEfetivas };
   }
 
-
-  async function inicializar(perfil, permissions) {
-    const normPermissions = normalizePermissions(permissions);
-    const normPerfil = (perfil || "").toUpperCase();
-    const isGestao = normPermissions.includes("PUSH_GERENCIAR") || normPermissions.includes("*") || ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(normPerfil);
-
-    const container = document.getElementById("sec-notificacoes");
-    if (!container) return;
-
-    if (isGestao) {
-      container.innerHTML = `
+  function renderAdminTemplate(container) {
+    container.innerHTML = `
+      <div id="notificacoes-admin-container">
         <div class="af-standard-header">
             <h2>🚀 Enviar Notificação (Gestão)</h2>
             <p class="section-subtitle">Envie mensagens push para os filiados.</p>
@@ -144,12 +116,16 @@
                 <p>Carregando histórico...</p>
             </div>
         </div>
-      `;
-      popularLotacoes();
-      setupHandlers();
-      await carregarCampanhasGestao();
-    } else {
-      container.innerHTML = `
+      </div>
+
+      <div id="notificacoes-membro-container" style="display:none"></div>
+    `;
+  }
+
+  function renderMembroTemplate(container) {
+    container.innerHTML = `
+      <div id="notificacoes-admin-container" style="display:none"></div>
+      <div id="notificacoes-membro-container">
         <div class="af-standard-header">
             <h2>📢 Minhas Notificações</h2>
             <p class="section-subtitle">Acompanhe os comunicados enviados para você.</p>
@@ -157,20 +133,59 @@
         <div id="lista-notificacoes-recebidas" class="history-list">
             <p style="text-align:center; padding:40px; color:#666;">Carregando notificações...</p>
         </div>
-      `;
-      _handlersReady = false; // Reset handlers flag since we re-rendered the UI
-      await carregarHistoricoMe();
-    }
+      </div>
+    `;
   }
 
-  async function inicializarNotificacoes(user) {
-    debugNotif("inicializarNotificacoes (Lazy Load)");
-    const canonUser = await getUserCanon(user);
+  function applyMode(ehGestao) {
+    const adminContainer = document.getElementById("notificacoes-admin-container");
+    const membroContainer = document.getElementById("notificacoes-membro-container");
+    if (!adminContainer || !membroContainer) return;
 
-    // Força a seção a ficar visível no lazy load
-    ensureNotificationsSectionVisible();
+    adminContainer.style.display = ehGestao ? "block" : "none";
+    membroContainer.style.display = ehGestao ? "none" : "block";
+  }
 
-    await sincronizarModo(canonUser.perfil_acesso, canonUser.permissions);
+  function setupHandlersOnce() {
+    if (_handlersReady) return;
+    setupHandlers();
+    _handlersReady = true;
+  }
+
+  async function inicializar(arg, permissionsLegacy) {
+    const container = document.getElementById("sec-notificacoes");
+    if (!container) return;
+
+    const normalizedArg = (arg && typeof arg === "object") ? arg : { perfil: arg, permissions: permissionsLegacy };
+    const { perfilEfetivo, permissionsEfetivas } = resolveContext(normalizedArg);
+    const forcaPermissaoGestao = permissionsEfetivas.includes("PUSH_GERENCIAR") || permissionsEfetivas.includes("*");
+    const ehGestao = GESTAO_PERFIS.includes(perfilEfetivo) || forcaPermissaoGestao;
+
+    debugNotif("inicializar", { perfilEfetivo, permissionsEfetivas, ehGestao });
+
+    const desiredMode = ehGestao ? "gestao" : "membro";
+    if (_currentSyncMode !== desiredMode) {
+      if (ehGestao) renderAdminTemplate(container);
+      else renderMembroTemplate(container);
+      _handlersReady = false;
+      _currentSyncMode = desiredMode;
+    }
+
+    applyMode(ehGestao);
+
+    if (ehGestao) {
+      setupHandlersOnce();
+      popularLotacoes();
+      await carregarCampanhasGestao();
+      return;
+    }
+
+    await carregarHistoricoMe();
+  }
+
+  async function inicializarNotificacoes(arg) {
+    debugNotif("inicializarNotificacoes (orquestrador)", { arg });
+    await inicializar(arg);
   }
 
   function popularLotacoes() {
@@ -602,6 +617,7 @@
 
   window.Notificacoes = {
     inicializar,
+    inicializarNotificacoes,
     carregarCampanhasGestao,
     carregarHistoricoMe,
     abrirDetalhe,
