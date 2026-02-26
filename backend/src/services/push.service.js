@@ -89,7 +89,7 @@ async function deactivateOtherProjectTokens(userId, currentProjectId) {
 
 async function listActiveTokens(limit = 10000) {
   const sql = `
-    SELECT expo_push_token, project_id
+    SELECT expo_push_token, expo_project_id, project_id
     FROM push_tokens
     WHERE revoked_at IS NULL
       AND disabled_at IS NULL
@@ -102,7 +102,7 @@ async function listActiveTokens(limit = 10000) {
   const { rows } = await pool.query(sql, [limit, pushConfig.APP_SCOPE]);
   return rows.map((r) => ({
     token: r.expo_push_token,
-    projectId: r.project_id
+    projectId: r.expo_project_id || r.project_id || null
   })).filter(r => !!r.token);
 }
 
@@ -175,7 +175,7 @@ async function resolvePushTargets(targetType, targetValue) {
   switch (targetType) {
     case 'ATIVOS':
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO'
@@ -185,7 +185,7 @@ async function resolvePushTargets(targetType, targetValue) {
       break;
     case 'VETERANOS':
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
@@ -195,7 +195,7 @@ async function resolvePushTargets(targetType, targetValue) {
       break;
     case 'LOTACAO':
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO' AND f.lotacao = $1
@@ -206,7 +206,7 @@ async function resolvePushTargets(targetType, targetValue) {
     case 'JOGOS':
       // Exemplo: inscritos em qualquer modalidade dos jogos
       sql = `
-        SELECT DISTINCT pt.expo_push_token, pt.project_id
+        SELECT DISTINCT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN inscricoes_jogos ij ON pt.user_id = ij.filiado_id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL
@@ -217,7 +217,7 @@ async function resolvePushTargets(targetType, targetValue) {
     case 'FILIADO': {
       const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.user_id = $1
           AND pt.app_scope = $2
@@ -228,7 +228,7 @@ async function resolvePushTargets(targetType, targetValue) {
     case 'ALL':
     default:
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.expo_push_token IS NOT NULL
           AND pt.app_scope = $1
@@ -240,7 +240,7 @@ async function resolvePushTargets(targetType, targetValue) {
   const { rows } = await pool.query(sql, params);
   return rows.map(r => ({
     token: r.expo_push_token,
-    projectId: r.project_id
+    projectId: r.expo_project_id || r.project_id || null
   })).filter(r => !!r.token);
 }
 
@@ -296,11 +296,13 @@ async function revokeSpecificToken(expoPushToken) {
 
 async function sendBroadcast({ title, body, data }) {
   const targets = await listActiveTokens();
-  if (!targets.length) return { sent: 0 };
+  const validTargets = targets.filter(t => !!t.projectId);
+
+  if (!validTargets.length) return { sent: 0, ignoredNoProjectId: targets.length };
 
   // Agrupar por project_id para evitar erro do Expo
-  const groups = targets.reduce((acc, curr) => {
-    const pid = curr.projectId || "unspecified";
+  const groups = validTargets.reduce((acc, curr) => {
+    const pid = curr.projectId;
     if (!acc[pid]) acc[pid] = [];
     acc[pid].push(curr.token);
     return acc;
@@ -315,7 +317,7 @@ async function sendBroadcast({ title, body, data }) {
       body,
       data: data || {},
       priority: "high",
-      ...(projectId !== "unspecified" ? { _projectId: projectId } : {})
+      ...(projectId !== "unspecified" ? { projectId: projectId } : {})
     }));
 
     const chunks = expo.chunkPushNotifications(messages);
