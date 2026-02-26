@@ -139,29 +139,33 @@ exports.sendCampaign = async (req, res) => {
 exports.pushHealth = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const userId = req.user?.id;
-  const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
 
   try {
-    const tokens = await pushService.listActiveTokens(10);
-    const hasTokens = tokens.length > 0;
+    const scopes = await pushService.getScopesDiagnostics();
+    // Procurar pelo scope SINDICATO (canon)
+    const sindicatoScope = scopes.find(s => s.app_scope === 'SINDICATO') || { total: 0, valid: 0 };
 
     const checklist = {
-      hasTokens,
-      tokensCount: tokens.length,
-      expoConfigOk: "Unknown (Requires dry-run with real credentials)",
+      hasTokens: sindicatoScope.valid > 0,
+      token_count_valid: parseInt(sindicatoScope.valid, 10),
+      token_count_total: parseInt(sindicatoScope.total, 10),
+      missing_project_id: parseInt(sindicatoScope.missing_project_id || 0, 10),
+      expoConfigOk: "Unknown (Requires dry-run)",
       notes: [
         "FCM V1 requires a Service Account Key (.json) configured in EAS/Expo Credentials.",
-        "Check server logs for 'InvalidCredentials' if sent=0.",
-        "Use /api/push/campaigns/send for a real test."
+        "Check /api/push/diagnostics/scopes for detailed distribution."
       ]
     };
 
-    log.info("PushCampaign.HealthCheck", { requestId, userId, tokensCount: tokens.length });
+    log.info("PushCampaign.HealthCheck", { requestId, userId, validTokens: sindicatoScope.valid });
 
     return res.json({
       success: true,
       requestId,
-      checklist
+      checklist,
+      // Fallback/Legacy flat fields to ensure compatibility if needed
+      token_count_valid: checklist.token_count_valid,
+      missing_project_id: checklist.missing_project_id
     });
   } catch (e) {
     log.error("PushCampaign.HealthError", { requestId, error: e.message });

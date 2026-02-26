@@ -12,8 +12,19 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
     return { status: 'denied_recorded' };
   }
 
-  if (expoPushToken && !Expo.isExpoPushToken(expoPushToken)) {
+  const isExpo = expoPushToken && Expo.isExpoPushToken(expoPushToken);
+  if (expoPushToken && !isExpo) {
     throw new Error("ExpoPushToken inválido.");
+  }
+
+  // Hard validation: Se o token for do Expo, ele DEVE ter um project_id associado
+  // Caso contrário, ele será desativado para evitar ChunkError no SDK
+  let disabledAt = null;
+  let disabledReason = null;
+
+  if (isExpo && !expoProjectId && !projectId) {
+    disabledAt = new Date();
+    disabledReason = 'missing_project_id';
   }
 
   const sql = `
@@ -22,7 +33,7 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
       revoked_at, permission_status, project_id, disabled_at, disabled_reason,
       app_scope, expo_project_id, updated_at
     )
-    VALUES ($1, $2, $3, $4, NOW(), NULL, $5, $6, NULL, NULL, $7, $8, NOW())
+    VALUES ($1, $2, $3, $4, NOW(), NULL, $5, $6, $9, $10, $7, $8, NOW())
     ON CONFLICT (expo_push_token)
     DO UPDATE SET
       user_id = EXCLUDED.user_id,
@@ -32,8 +43,8 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
       revoked_at = NULL,
       permission_status = EXCLUDED.permission_status,
       project_id = EXCLUDED.project_id,
-      disabled_at = NULL,
-      disabled_reason = NULL,
+      disabled_at = EXCLUDED.disabled_at,
+      disabled_reason = EXCLUDED.disabled_reason,
       app_scope = EXCLUDED.app_scope,
       expo_project_id = EXCLUDED.expo_project_id,
       updated_at = NOW()
@@ -48,7 +59,9 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
     permissionStatus ? String(permissionStatus) : 'granted',
     projectId ? String(projectId) : null,
     appScope || pushConfig.APP_SCOPE,
-    expoProjectId || null
+    expoProjectId || null,
+    disabledAt,
+    disabledReason
   ]);
 
   return r.rows[0] || null;
@@ -136,10 +149,17 @@ async function getDiagnostics(userId) {
  */
 async function getScopesDiagnostics() {
   const sql = `
-    SELECT app_scope, expo_project_id, COUNT(*) as count, MIN(last_seen) as oldest, MAX(last_seen) as newest
+    SELECT
+      app_scope,
+      expo_project_id,
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE revoked_at IS NULL AND disabled_at IS NULL) as valid,
+      COUNT(*) FILTER (WHERE disabled_reason = 'missing_project_id') as missing_project_id,
+      MIN(last_seen) as oldest,
+      MAX(last_seen) as newest
     FROM push_tokens
     GROUP BY app_scope, expo_project_id
-    ORDER BY count DESC;
+    ORDER BY valid DESC, total DESC;
   `;
   const { rows } = await pool.query(sql);
   return rows;

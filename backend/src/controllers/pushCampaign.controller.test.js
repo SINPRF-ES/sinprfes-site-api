@@ -145,13 +145,18 @@ describe('Push Campaign Controller', () => {
 
   describe('pushHealth', () => {
     test('should return health status', async () => {
-      pushService.listActiveTokens.mockResolvedValue(['token1', 'token2']);
+      pushService.getScopesDiagnostics.mockResolvedValue([
+          { app_scope: 'SINDICATO', valid: 2, total: 2 }
+      ]);
 
       await controller.pushHealth(req, res);
 
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true,
-        checklist: expect.objectContaining({ hasTokens: true })
+        checklist: expect.objectContaining({
+            hasTokens: true,
+            token_count_valid: 2
+        })
       }));
     });
   });

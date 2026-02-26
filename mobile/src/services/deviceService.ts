@@ -1,6 +1,7 @@
 // mobile/src/services/deviceService.ts
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import api from './apiService';
@@ -17,10 +18,21 @@ function maskToken(token: string | null): string {
 /**
  * Obtém o token de push do Expo para este dispositivo.
  */
-export async function obterExpoPushToken(): Promise<{ token: string | null; platform: string; permission: string; projectId?: string }> {
+export async function obterExpoPushToken(): Promise<{ token: string | null; platform: string; permission: string; projectId?: string; deviceId?: string }> {
   if (!Device.isDevice) {
     logger.info('Push info: Dispositivo físico não detectado (Emulador)');
     return { token: null, platform: `EMULATOR_${Platform.OS}`, permission: 'undetermined' };
+  }
+
+  let deviceId = 'unknown';
+  try {
+    if (Platform.OS === 'android') {
+      deviceId = Application.androidId || 'unknown_android';
+    } else if (Platform.OS === 'ios') {
+      deviceId = (await Application.getIosIdForVendorAsync()) || 'unknown_ios';
+    }
+  } catch (err) {
+    logger.warn('Push info: Erro ao obter deviceId', err);
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -33,20 +45,25 @@ export async function obterExpoPushToken(): Promise<{ token: string | null; plat
 
   if (finalStatus !== 'granted') {
     logger.warn('Push info: Permissão negada para notificações push', { finalStatus });
-    return { token: null, platform: Platform.OS, permission: finalStatus };
+    return { token: null, platform: Platform.OS, permission: finalStatus, deviceId };
   }
 
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-  if (!projectId) {
+  const easProjectId = (Constants.easConfig as any)?.projectId || Constants.expoConfig?.extra?.eas?.projectId;
+
+  if (__DEV__) {
+      logger.info('Push info: EAS Project ID detectado', { easProjectId });
+  }
+
+  if (!easProjectId) {
       logger.warn('Push info: ID do projeto Expo não encontrado na configuração.');
   }
 
   try {
-    const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
-    return { token: expoToken.data, platform: Platform.OS, permission: finalStatus, projectId };
+    const expoToken = await Notifications.getExpoPushTokenAsync({ projectId: easProjectId });
+    return { token: expoToken.data, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, deviceId };
   } catch (error: any) {
     logger.error('Push info: Erro ao obter o Expo Push Token', error);
-    return { token: null, platform: Platform.OS, permission: finalStatus, projectId };
+    return { token: null, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, deviceId };
   }
 }
 
@@ -59,13 +76,14 @@ export async function registrarDispositivoParaPush(): Promise<void> {
 
   const endpoint = '/api/push/register';
   try {
-    const { token, platform, permission, projectId } = await obterExpoPushToken();
+    const { token, platform, permission, projectId, deviceId } = await obterExpoPushToken();
     const tokenMasked = maskToken(token);
 
     logger.info('Iniciando registro de dispositivo para push', {
         platform,
         permission,
         projectId,
+        deviceId,
         tokenMasked,
         apiUrl: `${API_BASE_URL}${endpoint}`
     });
@@ -81,7 +99,8 @@ export async function registrarDispositivoParaPush(): Promise<void> {
       permissionStatus: permission,
       projectId, // Legacy/EAS Project ID
       appScope: APP_SCOPE,
-      expoProjectId: projectId // Canonical name requested
+      expoProjectId: projectId, // Canonical name requested
+      deviceId
     });
 
     logger.info('Dispositivo registrado para notificações push com sucesso', {

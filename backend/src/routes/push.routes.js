@@ -12,7 +12,7 @@ const { pushCampaignLimiter } = require("../middlewares/securityRateLimit");
 router.post("/register", auth, pushController.register);
 router.post("/unregister", auth, pushController.unregister);
 router.get("/diagnostics/me", auth, pushController.diagnosticsMe);
-router.get("/diagnostics/scopes", auth, requirePermission("ADMIN"), pushController.diagnosticsScopes);
+router.get("/diagnostics/scopes", auth, requirePermission("PUSH_GERENCIAR"), pushController.diagnosticsScopes);
 
 // Campanhas de Push
 router.get(

@@ -209,7 +209,44 @@
 
     setupHandlersOnce();
     popularLotacoes();
-    await carregarCampanhasGestao();
+    await Promise.all([
+        carregarCampanhasGestao(),
+        verificarSaudePush()
+    ]);
+  }
+
+  async function verificarSaudePush() {
+    const container = document.getElementById("notificacoes-admin-container");
+    if (!container) return;
+
+    try {
+        const r = await window.Api.apiFetch("/api/push/health");
+        if (r.ok) {
+            const data = await r.json();
+            const checklist = data.checklist || {};
+            const valid = parseInt(checklist.token_count_valid || 0, 10);
+
+            if (valid === 0) {
+                const alertDiv = document.createElement("div");
+                alertDiv.className = "ui-alert ui-alert-warning";
+                alertDiv.style.margin = "20px auto";
+                alertDiv.style.maxWidth = "600px";
+                alertDiv.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:1.5rem;">⚠️</span>
+                        <div>
+                            <strong>Nenhum token válido para o escopo SINDICATO.</strong><br>
+                            A entrega falhará. Peça aos filiados que abram o app para registrar o push corretamente.
+                            ${checklist.missing_project_id > 0 ? `<br><small>Detectados ${checklist.missing_project_id} dispositivos com versão antiga/sem ID de projeto.</small>` : ""}
+                        </div>
+                    </div>
+                `;
+                container.insertBefore(alertDiv, container.querySelector(".form-container"));
+            }
+        }
+    } catch (e) {
+        console.warn("[Notificacoes] Falha ao verificar saúde do push", e);
+    }
   }
 
   async function inicializarNotificacoes(arg) {
