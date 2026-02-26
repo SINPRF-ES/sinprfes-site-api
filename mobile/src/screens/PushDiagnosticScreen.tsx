@@ -19,6 +19,8 @@ import { logger } from '../infra/logger';
 interface BackendToken {
   expo_push_token: string;
   project_id: string | null;
+  expo_project_id: string | null;
+  app_scope: string | null;
   platform: string | null;
   last_seen: string;
   disabled_at: string | null;
@@ -125,8 +127,13 @@ export default function PushDiagnosticScreen() {
         </TouchableOpacity>
 
         <View style={styles.tokenRow}>
+          <Text style={styles.tokenLabel}>Scope:</Text>
+          <Text style={styles.tokenValue}>{item.app_scope || 'N/A'}</Text>
+        </View>
+
+        <View style={styles.tokenRow}>
           <Text style={styles.tokenLabel}>Projeto:</Text>
-          <Text style={styles.tokenValue}>{item.project_id || 'N/A'}</Text>
+          <Text style={styles.tokenValue}>{item.expo_project_id || item.project_id || 'N/A'}</Text>
         </View>
 
         <View style={styles.tokenRow}>

@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 import api from './apiService';
 import { AuthStore } from './authStore';
 import { logger } from '../infra/logger';
-import { API_BASE_URL } from '../config/env';
+import { API_BASE_URL, APP_SCOPE } from '../config/env';
 
 function maskToken(token: string | null): string {
   if (!token) return 'null';
@@ -79,7 +79,9 @@ export async function registrarDispositivoParaPush(): Promise<void> {
       expoPushToken: token,
       platform,
       permissionStatus: permission,
-      projectId
+      projectId, // Legacy/EAS Project ID
+      appScope: APP_SCOPE,
+      expoProjectId: projectId // Canonical name requested
     });
 
     logger.info('Dispositivo registrado para notificações push com sucesso', {
