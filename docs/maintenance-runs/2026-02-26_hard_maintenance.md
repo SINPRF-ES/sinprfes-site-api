@@ -3,7 +3,7 @@
 ## 📝 Informações Gerais
 - **Data/Hora:** 2026-02-26
 - **Branch:** `fix/diagnostico-parity`
-- **Escopo:** Melhoria de paridade no módulo de Diagnóstico (Site ↔ App).
+- **Escopo:** Melhoria de paridade no módulo de Diagnóstico (Site ↔ App) + Correção de Contraste e Layout do Estatuto.
 - **Declaração de "Sem Surpresas":** Não serão alteradas áreas não relacionadas ao escopo definido.
 
 ## 📊 Baseline de Paridade (Resumo)
@@ -43,6 +43,10 @@
     - Implementação: 🟢 Uso estrito de `.ui-card`, `.ui-button` e badges de status compatíveis com o restante da Área do Filiado.
 - **PALETTE-A3: Formatting & Dates**
     - Implementação: 🟢 Uso de `toLocaleString('pt-BR')` para datas de "Visto em", mantendo consistência com o App.
+- **PALETTE-A4: Contrast & Layout (Fix)**
+    - Identificado: 🔴 Select de filtro em Assembleias com baixo contraste (texto branco em fundo claro).
+    - Identificado: 🔴 Container do Estatuto com `max-height` fixo quebrando o comportamento sticky do sumário interno.
+    - Ação: 🟢 Restaurar cores de contraste e layout fluido.
 
 ## 🔄 PARITY ENFORCEMENT
 - **Diferença Identificada:** 🟢 Paridade Restaurada. O App mostra "Meus Tokens" e permite "Testar Push". O Site agora implementa a mesma lógica via seção "Meus Dispositivos / Tokens" e botão "Testar Push (em mim)".

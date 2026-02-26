@@ -32,7 +32,7 @@
 
           <!-- Ações -->
           <div style="display:flex; gap:10px; justify-content: flex-end;">
-             <button id="btn-test-push-self" class="ui-button ui-button-sm" style="background-color: #2ecc71; border-color: #2ecc71;">
+             <button id="btn-test-push-self" class="ui-button ui-button-primary ui-button-sm" style="background-color: var(--ui-success); border-color: var(--ui-success);">
                 <span class="btn-text">🚀 Testar Push (em mim)</span>
                 <span class="btn-loader" style="display:none;">⌛ Enviando...</span>
              </button>
@@ -140,7 +140,7 @@
           const { checklist } = data;
 
           pushStatusEl.innerHTML = `
-            <div style="font-size:1.5rem; font-weight:bold; color: ${checklist.hasTokens ? '#2ecc71' : '#e74c3c'};">
+            <div style="font-size:1.5rem; font-weight:bold; color: ${checklist.hasTokens ? 'var(--ui-success)' : 'var(--ui-danger)'};">
                 ${checklist.hasTokens ? '✅ Operacional' : '❌ Atenção'}
             </div>
             <div style="font-size:0.85rem; color:#666; margin-top:5px;">
@@ -149,7 +149,7 @@
           `;
 
           checklistEl.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px; padding:10px; background:#f9f9f9; border-radius:6px; border: 1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:10px; padding:10px; background:var(--ui-bg); border-radius:6px; border: 1px solid var(--ui-border);">
                 <span style="font-size:1.2rem;">${checklist.hasTokens ? '✅' : '❌'}</span>
                 <div style="flex:1;">
                     <div style="font-weight:bold; font-size:0.9rem;">Tokens de Push</div>
@@ -199,14 +199,14 @@
             const isRevoked = !!t.revoked_at;
             const isDisabled = !!t.disabled_at;
             const isActive = !isRevoked && !isDisabled;
-            const statusColor = isActive ? '#2ecc71' : '#e74c3c';
+            const statusColor = isActive ? 'var(--ui-success)' : 'var(--ui-danger)';
             const statusText = isActive ? 'ATIVO' : (isRevoked ? 'REVOGADO' : 'DESATIVADO');
 
             return `
-              <div style="padding:12px; border:1px solid #eee; border-radius:8px; background:#fff; border-left: 4px solid ${isActive ? 'var(--azul-fundo)' : '#ccc'}; opacity: ${isActive ? 1 : 0.7}">
+              <div style="padding:12px; border:1px solid var(--ui-border); border-radius:8px; background:var(--ui-surface); border-left: 4px solid ${isActive ? 'var(--ui-primary)' : 'var(--ui-border)'}; opacity: ${isActive ? 1 : 0.7}">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-weight:bold; font-size:0.85rem; color:#333;">Dispositivo #${idx + 1}</span>
-                    <span style="font-size:0.7rem; font-weight:bold; color:#fff; background:${statusColor}; padding:2px 6px; border-radius:4px;">${statusText}</span>
+                    <span style="font-weight:bold; font-size:0.85rem; color:var(--ui-text);">Dispositivo #${idx + 1}</span>
+                    <span style="font-size:0.7rem; font-weight:bold; color:var(--ui-primary-contrast); background:${statusColor}; padding:2px 6px; border-radius:4px;">${statusText}</span>
                 </div>
 
                 <div style="font-family:monospace; font-size:0.75rem; color:#666; background:#f4f4f4; padding:5px; border-radius:4px; margin-bottom:8px; word-break:break-all;">
@@ -214,18 +214,18 @@
                 </div>
 
                 <div style="display:grid; grid-template-columns: 80px 1fr; gap:4px; font-size:0.75rem;">
-                    <span style="color:#888;">Scope:</span>
-                    <span style="color:#333; font-weight:500;">${t.app_scope || 'N/A'}</span>
+                    <span style="color:var(--ui-text-muted);">Scope:</span>
+                    <span style="color:var(--ui-text); font-weight:500;">${t.app_scope || 'N/A'}</span>
 
-                    <span style="color:#888;">Projeto:</span>
-                    <span style="color:#333; font-weight:500;">${t.expo_project_id || t.project_id || 'N/A'}</span>
+                    <span style="color:var(--ui-text-muted);">Projeto:</span>
+                    <span style="color:var(--ui-text); font-weight:500;">${t.expo_project_id || t.project_id || 'N/A'}</span>
 
-                    <span style="color:#888;">Plataforma:</span>
-                    <span style="color:#333; font-weight:500;">${t.platform || 'N/A'}</span>
+                    <span style="color:var(--ui-text-muted);">Plataforma:</span>
+                    <span style="color:var(--ui-text); font-weight:500;">${t.platform || 'N/A'}</span>
 
                     ${isDisabled ? `
-                        <span style="color:#888;">Motivo:</span>
-                        <span style="color:#e74c3c; font-weight:500;">${t.disabled_reason || 'Desconhecido'}</span>
+                        <span style="color:var(--ui-text-muted);">Motivo:</span>
+                        <span style="color:var(--ui-danger); font-weight:500;">${t.disabled_reason || 'Desconhecido'}</span>
                     ` : ''}
                 </div>
 
