@@ -17,9 +17,11 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   // 1. Buscar tokens
   let tokens;
   let noTokenOrDenied = 0;
+  let diagnostics = null;
   try {
     tokens = await pushService.resolvePushTargets(targetType, targetValue);
     noTokenOrDenied = await pushService.countNoTokenTargets(targetType, targetValue);
+    diagnostics = await pushService.getResolveDiagnostics(targetType, targetValue);
     log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { count: tokens.length, noTokenOrDenied });
   } catch (e) {
     log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
@@ -49,10 +51,12 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
         failed: tokensSemProjeto.length,
         noTokenOrDenied,
         details: "Nenhum token com Project ID encontrado.",
-        missingProjectId: tokensSemProjeto.length
+        missingProjectId: tokensSemProjeto.length,
+        diagnostics,
+        requestId
       }
     });
-    return { success: true, sent: 0, failed: tokensSemProjeto.length, noTokenOrDenied, campaignId };
+    return { success: true, sent: 0, failed: tokensSemProjeto.length, noTokenOrDenied, campaignId, diagnostics, requestId };
   }
 
   // 2. Agrupar tokens por project_id para evitar conflitos no mesmo request
@@ -79,6 +83,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   let hasCredentialError = false;
   const failureReasons = {}; // reason -> count
   const byProject = []; // { projectId, sent, failed }
+  const unspecifiedCount = tokensSemProjeto.length;
   let projectConflictDetected = projectIds.length > 1;
 
   // 3. Enviar por grupo
@@ -147,7 +152,10 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     failuresTop,
     byProject,
     projectConflictDetected,
-    durationMs: new Date() - startTime
+    durationMs: new Date() - startTime,
+    diagnostics,
+    requestId,
+    unspecifiedCount
   };
 
   // 5. Salvar registro

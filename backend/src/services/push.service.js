@@ -30,7 +30,7 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
   let disabledAt = null;
   let disabledReason = null;
 
-  if (isExpo && !finalExpoProjectId && !finalProjectId) {
+  if (isExpo && (!finalExpoProjectId || finalExpoProjectId === '') && (!finalProjectId || finalProjectId === '')) {
     disabledAt = new Date();
     disabledReason = 'missing_project_id';
   }
@@ -76,7 +76,47 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
   if (result && disabledReason) {
     result.disabled_reason = disabledReason;
   }
+
+  await cleanupDuplicateTokens({
+    userId,
+    appScope: appScope || pushConfig.APP_SCOPE,
+    expoProjectId: finalExpoProjectId || finalProjectId,
+    deviceId,
+    keepToken: expoPushToken
+  });
+
+  // Reabilitar automaticamente se o token tinha sido desativado apenas por ausência de projectId
+  if (finalExpoProjectId || finalProjectId) {
+    await pool.query(`
+      UPDATE push_tokens
+      SET disabled_at = NULL, disabled_reason = NULL
+      WHERE expo_push_token = $1
+        AND disabled_reason = 'missing_project_id'
+    `, [expoPushToken]);
+  }
+
   return result;
+}
+
+
+async function cleanupDuplicateTokens({ userId, appScope, expoProjectId, deviceId, keepToken }) {
+  if (!userId || !appScope || !expoProjectId || !deviceId || !keepToken) return;
+
+  const sql = `
+    UPDATE push_tokens
+    SET
+      disabled_at = NOW(),
+      disabled_reason = 'deduplicated'
+    WHERE user_id = $1
+      AND app_scope = $2
+      AND COALESCE(expo_project_id, project_id) = $3
+      AND device_id = $4
+      AND expo_push_token != $5
+      AND revoked_at IS NULL
+      AND disabled_at IS NULL;
+  `;
+
+  await pool.query(sql, [userId, appScope, expoProjectId, deviceId, keepToken]);
 }
 
 async function revokeToken({ userId, expoPushToken }) {
@@ -104,8 +144,8 @@ async function deactivateOtherProjectTokens(userId, currentProjectId) {
       disabled_reason = 'project_mismatch'
     WHERE
       user_id = $1
-      AND project_id IS NOT NULL
-      AND project_id != $2
+      AND COALESCE(expo_project_id, project_id) IS NOT NULL
+      AND COALESCE(expo_project_id, project_id) != $2
       AND revoked_at IS NULL
       AND disabled_at IS NULL;
   `;
@@ -114,12 +154,13 @@ async function deactivateOtherProjectTokens(userId, currentProjectId) {
 
 async function listActiveTokens(limit = 10000) {
   const sql = `
-    SELECT expo_push_token, expo_project_id, project_id
+    SELECT expo_push_token, expo_project_id, project_id, COALESCE(expo_project_id, project_id) as resolved_project_id
     FROM push_tokens
     WHERE revoked_at IS NULL
       AND disabled_at IS NULL
       AND expo_push_token IS NOT NULL
       AND app_scope = $2
+      AND COALESCE(expo_project_id, project_id) IS NOT NULL
     ORDER BY last_seen DESC
     LIMIT $1;
   `;
@@ -127,7 +168,7 @@ async function listActiveTokens(limit = 10000) {
   const { rows } = await pool.query(sql, [limit, pushConfig.APP_SCOPE]);
   return rows.map((r) => ({
     token: r.expo_push_token,
-    projectId: r.expo_project_id || r.project_id || null
+    projectId: r.resolved_project_id || r.expo_project_id || r.project_id || null
   })).filter(r => !!r.token);
 }
 
@@ -208,7 +249,7 @@ async function resolvePushTargets(targetType, targetValue) {
   switch (targetType) {
     case 'ATIVOS':
       sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id, COALESCE(pt.expo_project_id, pt.project_id) as resolved_project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO'
@@ -218,7 +259,7 @@ async function resolvePushTargets(targetType, targetValue) {
       break;
     case 'VETERANOS':
       sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id, COALESCE(pt.expo_project_id, pt.project_id) as resolved_project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
@@ -228,7 +269,7 @@ async function resolvePushTargets(targetType, targetValue) {
       break;
     case 'LOTACAO':
       sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id, COALESCE(pt.expo_project_id, pt.project_id) as resolved_project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO' AND f.lotacao = $1
@@ -239,7 +280,7 @@ async function resolvePushTargets(targetType, targetValue) {
     case 'JOGOS':
       // Exemplo: inscritos em qualquer modalidade dos jogos
       sql = `
-        SELECT DISTINCT pt.expo_push_token, pt.expo_project_id, pt.project_id
+        SELECT DISTINCT pt.expo_push_token, pt.expo_project_id, pt.project_id, COALESCE(pt.expo_project_id, pt.project_id) as resolved_project_id
         FROM push_tokens pt
         JOIN inscricoes_jogos ij ON pt.user_id = ij.filiado_id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL
@@ -250,7 +291,7 @@ async function resolvePushTargets(targetType, targetValue) {
     case 'FILIADO': {
       const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id, COALESCE(pt.expo_project_id, pt.project_id) as resolved_project_id
         FROM push_tokens pt
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.user_id = $1
           AND pt.app_scope = $2
@@ -261,7 +302,7 @@ async function resolvePushTargets(targetType, targetValue) {
     case 'ALL':
     default:
       sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id, COALESCE(pt.expo_project_id, pt.project_id) as resolved_project_id
         FROM push_tokens pt
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.expo_push_token IS NOT NULL
           AND pt.app_scope = $1
@@ -273,34 +314,41 @@ async function resolvePushTargets(targetType, targetValue) {
   const { rows } = await pool.query(sql, params);
 
   if (rows.length === 0) {
-    // Diagnóstico quando não há tokens válidos
-    const diagSql = `
-      SELECT
-        COUNT(*) as total,
-        COUNT(*) FILTER (WHERE revoked_at IS NOT NULL) as revoked,
-        COUNT(*) FILTER (WHERE disabled_at IS NOT NULL) as disabled,
-        COUNT(*) FILTER (WHERE disabled_reason = 'missing_project_id') as missing_project_id,
-        COUNT(*) FILTER (WHERE disabled_reason = 'scope_mismatch') as scope_mismatch,
-        COUNT(*) FILTER (WHERE app_scope != $1) as other_scope
-      FROM push_tokens
-      WHERE user_id = $2 OR $2 IS NULL
-    `;
-    const targetId = targetType === 'FILIADO' ? ((typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue) : null;
-    const diag = await pool.query(diagSql, [scope, targetId]);
-    const d = diag.rows[0];
-
+    const diagnostics = await getResolveDiagnostics(targetType, targetValue);
     log.warn("PushService.ResolveTargetsEmpty", {
-        targetType,
-        targetValue,
-        scope,
-        diagnostics: d
+      targetType,
+      targetValue,
+      scope,
+      diagnostics
     });
   }
 
   return rows.map(r => ({
     token: r.expo_push_token,
-    projectId: r.expo_project_id || r.project_id || null
+    projectId: r.resolved_project_id || r.expo_project_id || r.project_id || null
   })).filter(r => !!r.token);
+}
+
+
+async function getResolveDiagnostics(targetType, targetValue) {
+  const scope = pushConfig.APP_SCOPE;
+  const targetId = targetType === 'FILIADO' ? ((typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue) : null;
+  const diagSql = `
+    SELECT
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE revoked_at IS NOT NULL) as revoked,
+      COUNT(*) FILTER (WHERE disabled_at IS NOT NULL) as disabled,
+      COUNT(*) FILTER (WHERE disabled_reason = 'missing_project_id') as missing_project_id,
+      COUNT(*) FILTER (WHERE disabled_reason = 'scope_mismatch') as scope_mismatch,
+      COUNT(*) FILTER (WHERE disabled_reason = 'project_mismatch') as project_mismatch,
+      COUNT(*) FILTER (WHERE (expo_project_id IS NULL OR expo_project_id = '') AND (project_id IS NULL OR project_id = '')) as without_project_id,
+      COUNT(*) FILTER (WHERE app_scope != $1) as other_scope
+    FROM push_tokens
+    WHERE user_id = $2 OR $2 IS NULL
+  `;
+
+  const diag = await pool.query(diagSql, [scope, targetId]);
+  return diag.rows[0] || null;
 }
 
 /**
@@ -401,5 +449,6 @@ module.exports = {
   deactivateOtherProjectTokens,
   getDiagnostics,
   getScopesDiagnostics,
-  deactivateMismatchedScopeTokens
+  deactivateMismatchedScopeTokens,
+  getResolveDiagnostics
 };

@@ -31,7 +31,7 @@ interface BackendToken {
 }
 
 export default function PushDiagnosticScreen() {
-  const [localInfo, setLocalInfo] = useState<{ token: string | null; platform: string; permission: string; projectId?: string } | null>(null);
+  const [localInfo, setLocalInfo] = useState<{ token: string | null; platform: string; permission: string; projectId?: string; expoProjectId?: string } | null>(null);
   const [backendTokens, setBackendTokens] = useState<BackendToken[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,18 +67,28 @@ export default function PushDiagnosticScreen() {
   const handleReRegister = async () => {
     setActionLoading(true);
     try {
-      const result = await registrarDispositivoParaPush();
+      const result = await registrarDispositivoParaPush({ force: true });
 
       if (result && result.success && result.ok !== false) {
         Alert.alert('Sucesso', 'Token registrado no backend com sucesso.');
       } else if (result && result.ok === false) {
         Alert.alert(
           'Atenção: Registro Parcial',
-          `O token foi enviado, mas o backend retornou um aviso:\n\nMotivo: ${result.reason}\nMensagem: ${result.message}\n\nDica: ${result.hint || 'Verifique as configurações do projeto.'}`
+          `O token foi enviado, mas o backend retornou um aviso:
+
+Motivo: ${result.reason}
+Mensagem: ${result.message}
+RequestId: ${result.requestId || 'N/A'}
+
+Dica: ${result.hint || 'Verifique as configurações do projeto.'}`
         );
       } else {
-        const errorMsg = result?.error || result?.message || 'Erro desconhecido';
-        Alert.alert('Falha no Registro', `Ocorreu um erro ao registrar o token:\n\n${errorMsg}`);
+        const errorMsg = result?.data?.error || result?.error || result?.message || 'Erro desconhecido';
+        const backendRequestId = result?.data?.requestId || result?.requestId || 'N/A';
+        Alert.alert('Falha no Registro', `Ocorreu um erro ao registrar o token:
+
+${errorMsg}
+RequestId: ${backendRequestId}`);
       }
 
       fetchData(true);
@@ -110,8 +120,10 @@ export default function PushDiagnosticScreen() {
         Alert.alert('Erro', response.data.message || 'Falha ao enviar push de teste.');
       }
     } catch (error: any) {
-        const msg = error.response?.data?.message || error.message;
-        Alert.alert('Erro', `Falha na requisição: ${msg}`);
+        const msg = error.response?.data?.message || error.response?.data?.error || error.message;
+      const requestId = error.response?.data?.requestId || error.response?.headers?.['x-request-id'] || 'N/A';
+        Alert.alert('Erro', `Falha na requisição: ${msg}
+RequestId: ${requestId}`);
     } finally {
       setActionLoading(false);
     }
@@ -196,7 +208,7 @@ export default function PushDiagnosticScreen() {
           </View>
           <View style={styles.tokenRow}>
             <Text style={styles.tokenLabel}>Projeto ID:</Text>
-            <Text style={styles.tokenValue}>{localInfo?.projectId || 'Não configurado'}</Text>
+            <Text style={styles.tokenValue}>{localInfo?.expoProjectId || localInfo?.projectId || 'Não configurado'}</Text>
           </View>
           <View style={styles.tokenRow}>
             <Text style={styles.tokenLabel}>Permissão:</Text>
@@ -213,7 +225,7 @@ export default function PushDiagnosticScreen() {
             disabled={actionLoading}
           >
             <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
-            <Text style={styles.actionButtonText}> Re-registrar</Text>
+            <Text style={styles.actionButtonText}> Re-registrar token agora</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

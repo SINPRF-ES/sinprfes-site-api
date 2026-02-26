@@ -178,8 +178,11 @@
         </div>
 
         <div class="history-container" style="margin-top: 40px;">
-            <h3>📜 Histórico de Envios</h3>
-            <div id="push-history-list" class="history-list"><p>Carregando histórico...</p></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+              <h3 style="margin:0;">📜 Histórico de Envios</h3>
+              <button id="btn-toggle-push-history" class="ui-button ui-button-secondary" style="padding:8px 12px; font-size:0.85rem;">Visualizar anteriores</button>
+            </div>
+            <div id="push-history-list" class="history-list" style="margin-top:10px;"><p>Carregando histórico...</p></div>
         </div>
       </div>
     `;
@@ -273,8 +276,18 @@
     const messageInput = document.getElementById("push-message");
     const targetTypeSelect = document.getElementById("push-target-type");
     const filiadoSearchInput = document.getElementById("push-target-filiado-search");
+    const btnToggleHistory = document.getElementById("btn-toggle-push-history");
 
     if (!btnSend || !titleInput || !messageInput || !targetTypeSelect) return;
+
+    if (btnToggleHistory) {
+      btnToggleHistory.onclick = async () => {
+        isShowingArchived = !isShowingArchived;
+        btnToggleHistory.textContent = isShowingArchived ? "Mostrar só 5 recentes" : "Visualizar anteriores";
+        await carregarCampanhasGestao();
+      };
+      btnToggleHistory.textContent = isShowingArchived ? "Mostrar só 5 recentes" : "Visualizar anteriores";
+    }
 
     titleInput.oninput = () => {
       const counter = document.getElementById("push-title-count");
@@ -407,21 +420,27 @@
     const safeEscape = (v) => (window.Utils?.escapeHTML ? window.Utils.escapeHTML(v) : String(v || ""));
     let html = historyCache.map(c => {
       const data = formatarData(c.created_at);
-      const targetLabel = formatarDestinoCampanha(c);
+      const targetLabel = formatarDestinoCampanha(c).replace(/^Destino:\s*/i, "");
+      const authorName = c.autor_nome ? String(c.autor_nome).trim() : "Sistema";
+      const status = String(c.status || "ENVIADO").toUpperCase();
       const result = c.result || {};
-      const failures = result.failuresTop && result.failuresTop.length > 0 ? ` <span title="${safeEscape(result.failuresTop.map(f => `${f.reason}: ${f.count}`).join(', '))}">⚠️</span>` : "";
+      const sent = Number(result.sent || 0);
+      const failed = Number(result.failed || 0);
+      const noTokenOrDenied = Number(result.noTokenOrDenied || 0);
+      const failures = result.failuresTop && result.failuresTop.length > 0
+        ? ` <span title="${safeEscape(result.failuresTop.map(f => `${f.reason}: ${f.count}`).join(', '))}">⚠️</span>`
+        : "";
 
       return `
-          <div class="history-card" style="background:#fff; border:1px solid #eee; border-radius:8px; padding:15px; margin-bottom:10px; border-left:4px solid #003366;">
-            <div class="history-header" style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <div class="history-card" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:10px; border-left:4px solid #003366;">
+            <div class="history-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
                 <span class="history-date" style="font-size:0.8rem; color:#888;">${data}</span>
-                <span class="history-result" style="font-size:0.75rem; font-weight:bold; color:#666;">
-                    🚀 ${result.sent || 0} ❌ ${result.failed || 0} ${failures}
-                </span>
+                <span class="history-status" style="font-size:0.95rem; font-weight:bold; color:${status === 'SENT' || status === 'ENVIADO' ? '#2ecc71' : '#666'};">${status === 'SENT' ? 'ENVIADO' : safeEscape(status)}</span>
             </div>
-            <div class="history-author" style="font-size:0.85rem; color:#555; margin-bottom:5px;">${safeEscape(targetLabel)}</div>
-            ${c.title ? `<div class="history-title" style="font-weight:bold; color:#003366; margin-bottom:5px;">${safeEscape(c.title)}</div>` : ""}
-            <div class="history-body" style="white-space: pre-wrap; font-size:0.95rem; color:#333;">${safeEscape(c.body)}</div>
+            <div class="history-author" style="font-size:0.95rem; color:#555; margin-bottom:8px;">Por: ${safeEscape(authorName)} | Destino: ${safeEscape(targetLabel)}</div>
+            ${c.title ? `<div class="history-title" style="font-weight:bold; font-size:1.1rem; color:#003366; margin-bottom:4px;">${safeEscape(c.title)}</div>` : ""}
+            <div class="history-body" style="white-space: pre-wrap; font-size:1.05rem; color:#333; margin-bottom:8px;">${safeEscape(c.body)}</div>
+            <div class="history-result" style="font-size:1.05rem; font-weight:bold; color:#555;">🚀 ${sent} &nbsp; ❌ ${failed} &nbsp; 🚫 ${noTokenOrDenied}${failures}</div>
           </div>`;
     }).join("");
     container.innerHTML = html;
