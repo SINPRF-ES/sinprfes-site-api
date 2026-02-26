@@ -31,12 +31,17 @@
           </div>
 
           <!-- Ações -->
-          <div style="display:flex; gap:10px; justify-content: flex-end;">
+          <div class="ui-card" style="padding:15px; display:flex; flex-direction:column; gap:10px;">
+             <label for="diagnostico-push-body" style="font-size:0.85rem; color:#555;">Mensagem do teste push (opcional)</label>
+             <textarea id="diagnostico-push-body" class="ui-textarea" rows="3" maxlength="240" placeholder="Se vazio, será usado um texto padrão automático."></textarea>
+             <div style="display:flex; gap:10px; justify-content:flex-end;">
              <button id="btn-test-push-self" class="ui-button ui-button-primary ui-button-sm" style="background-color: var(--ui-success); border-color: var(--ui-success);">
                 <span class="btn-text">🚀 Testar Push (em mim)</span>
                 <span class="btn-loader" style="display:none;">⌛ Enviando...</span>
              </button>
              <button id="btn-refresh-diagnostico" class="ui-button ui-button-outline ui-button-sm">🔄 Atualizar</button>
+             </div>
+             <div id="diagnostico-push-test-result" style="display:none; font-size:0.85rem; padding:10px; border-radius:6px; border:1px solid var(--ui-border); background:var(--ui-bg);"></div>
           </div>
 
           <!-- Checklist -->
@@ -91,8 +96,11 @@
 
     async testarPushEmMim() {
       const btn = document.getElementById("btn-test-push-self");
+      if (!btn) return;
       const text = btn.querySelector(".btn-text");
       const loader = btn.querySelector(".btn-loader");
+      const resultadoEl = document.getElementById("diagnostico-push-test-result");
+      const bodyInput = document.getElementById("diagnostico-push-body");
 
       if (btn.disabled) return;
 
@@ -101,31 +109,97 @@
         text.style.display = "none";
         loader.style.display = "inline";
 
-        const res = await window.Api.apiFetch("/api/push/campaigns/send", {
-          method: "POST",
-          body: JSON.stringify({
-            title: "Teste de Diagnóstico (Site)",
-            body: `Teste enviado via Área do Filiado em ${new Date().toLocaleTimeString('pt-BR')}`,
-            targetType: "FILIADO",
-            targetValue: "self"
-          })
+        const agora = new Date();
+        const bodyDigitado = (bodyInput?.value || "").trim();
+        const body = bodyDigitado || `Teste push (Diagnóstico) em ${this.formatarDataHora(agora)}`;
+        if (bodyInput && !bodyDigitado) bodyInput.value = body;
+
+        const userInfo = window.Utils?.obterUserInfo?.() || {};
+        const targetValue = {
+          id: userInfo.id ?? userInfo.filiado_id ?? userInfo.user_id ?? "self",
+          nome: String(userInfo.nome || "Filiado").trim(),
+          cpf: String(userInfo.cpf || "").trim()
+        };
+
+        const payload = {
+          title: "Diagnóstico: teste",
+          body,
+          targetType: "FILIADO",
+          targetValue,
+          data: {
+            source: "diagnostico_site",
+            ts: new Date().toISOString()
+          }
+        };
+
+        console.log("[Diagnostico.PushTest] payload enviado", {
+          keys: Object.keys(payload),
+          bodyPreview: body.slice(0, 40),
+          targetType: payload.targetType,
+          targetValue: {
+            id: targetValue.id,
+            nome: targetValue.nome,
+            cpfMasked: this.mascararCpf(targetValue.cpf)
+          }
         });
 
-        const data = await res.json();
+        const res = await window.Api.apiFetch("/api/push/campaigns/send", {
+          method: "POST",
+          body: payload
+        });
 
-        if (data.success) {
-          alert(`Push enviado com sucesso!\n🚀 Enviados: ${data.sent}\n❌ Falhas: ${data.failed}\nID: ${data.requestId}`);
+        const data = await res.json().catch(() => ({}));
+        const requestId = data?.requestId || res.headers.get("x-request-id") || "N/A";
+        const status = res.status;
+        const infoBase = `HTTP ${status} | requestId: ${requestId} | success: ${!!data.success} | sent: ${Number(data.sent || 0)} | failed: ${Number(data.failed || 0)} | noTokenOrDenied: ${Number(data.noTokenOrDenied || 0)}`;
+
+        if (res.ok && data.success) {
+          if (resultadoEl) {
+            resultadoEl.style.display = "block";
+            resultadoEl.style.borderColor = "var(--ui-success)";
+            resultadoEl.innerHTML = `<strong>✅ Push de diagnóstico enviado.</strong><br>${infoBase}`;
+          }
         } else {
-          alert(`Falha ao enviar push: ${data.message || 'Erro desconhecido'}`);
+          const bodyError = data?.errors?.body;
+          const detalhe = (res.status === 400 && bodyError)
+            ? `Falha de validação: body obrigatório`
+            : (data.message || "Erro desconhecido");
+          if (resultadoEl) {
+            resultadoEl.style.display = "block";
+            resultadoEl.style.borderColor = "var(--ui-danger)";
+            resultadoEl.innerHTML = `<strong>❌ ${detalhe}</strong><br>${infoBase}`;
+          }
         }
       } catch (err) {
         console.error("Erro ao testar push:", err);
-        alert("Erro técnico ao solicitar envio de push.");
+        if (resultadoEl) {
+          resultadoEl.style.display = "block";
+          resultadoEl.style.borderColor = "var(--ui-danger)";
+          resultadoEl.innerHTML = `<strong>❌ Erro técnico ao solicitar envio de push.</strong><br>${err.message}`;
+        }
       } finally {
         btn.disabled = false;
         text.style.display = "inline";
         loader.style.display = "none";
       }
+    },
+
+    formatarDataHora(date) {
+      return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    },
+
+    mascararCpf(cpf) {
+      const digits = String(cpf || "").replace(/\D+/g, "");
+      if (!digits) return "";
+      if (digits.length <= 4) return `***${digits}`;
+      return `${digits.slice(0, 3)}***${digits.slice(-2)}`;
     },
 
     async carregarSaude() {
