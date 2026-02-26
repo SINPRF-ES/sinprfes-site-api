@@ -22,23 +22,39 @@
 
         const used = new Set();
         const items = headings.map((heading, idx) => {
-            const text = heading.textContent?.trim() || `Seção ${idx + 1}`;
-            let id = heading.id || slugify(text) || `secao-${idx + 1}`;
+            const html = heading.innerHTML;
+            let label = "";
+            let title = "";
+
+            if (html.includes('<br>')) {
+                const parts = html.split('<br>');
+                label = parts[0].trim().replace(/<[^>]+>/g, '');
+                title = parts.slice(1).join(' ').trim().replace(/<[^>]+>/g, '');
+            } else {
+                title = heading.textContent?.trim() || `Seção ${idx + 1}`;
+            }
+
+            let id = heading.id || slugify(title) || `secao-${idx + 1}`;
             while (used.has(id)) id = `${id}-${idx + 1}`;
             used.add(id);
             heading.id = id;
             heading.style.scrollMarginTop = '12px';
-            return { id, text, level: heading.tagName.toLowerCase() };
+            return { id, label, title, level: heading.tagName.toLowerCase() };
         });
 
         const toc = document.createElement('nav');
         toc.className = 'estatuto-toc';
         toc.setAttribute('aria-label', 'Sumário do estatuto');
-        toc.innerHTML = `<div style="font-weight:700; color:var(--ui-primary);">📚 Sumário</div><ol class="estatuto-toc-list"></ol>`;
+        toc.innerHTML = `<div class="estatuto-toc-header">📚 Sumário</div><ol class="estatuto-toc-list"></ol>`;
         const list = toc.querySelector('.estatuto-toc-list');
 
         list.innerHTML = items.map(item => (
-            `<li style="margin-left:${item.level === 'h3' ? '12px' : '0'}"><a href="#${item.id}">${item.text}</a></li>`
+            `<li class="toc-item level-${item.level}">
+                <a href="#${item.id}">
+                    ${item.label ? `<span class="toc-label">${item.label}</span><span class="toc-separator"> – </span>` : ''}
+                    <span class="toc-text">${item.title}</span>
+                </a>
+            </li>`
         )).join('');
 
         const body = document.createElement('div');

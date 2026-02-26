@@ -268,31 +268,62 @@ footer {
 .btn-danger-outline:hover { background: #b91c1c; color: #fff; }
 
 .estatuto-toc {
-    border: 1px solid var(--ui-border);
-    background: var(--ui-surface);
+    padding: 16px 20px;
+    background: #f8fafc;
     border-radius: 10px;
-    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    line-height: 1.5;
     margin-bottom: 10px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
 }
 
-.estatuto-toc summary {
+.estatuto-toc-header {
     font-weight: 700;
     color: var(--ui-primary);
-    cursor: pointer;
+    margin-bottom: 12px;
 }
 
 .estatuto-toc-list {
-    margin: 6px 0 0;
-    padding-left: 1rem;
-    display: grid;
-    gap: 4px;
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.toc-item {
+    margin-bottom: 8px;
+}
+
+.toc-item.level-h3 {
+    margin-left: 12px;
 }
 
 .estatuto-toc-list a {
-    color: var(--ui-primary);
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    text-decoration: none;
+    color: #1e3a8a;
+    font-weight: 500;
+    display: block;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.estatuto-toc-list a:hover {
+    background: rgba(30, 58, 138, 0.08);
+}
+
+.estatuto-toc .toc-label {
+    font-weight: 700;
+}
+
+.estatuto-toc .toc-separator {
+    margin: 0 4px;
+}
+
+.estatuto-toc .toc-text {
+    font-weight: 500;
 }
 
 .estatuto-layout {
