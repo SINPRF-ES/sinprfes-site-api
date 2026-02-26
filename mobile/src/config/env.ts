@@ -56,3 +56,9 @@ if (!resolvedApiUrl) {
 }
 
 export const API_BASE_URL = resolvedApiUrl;
+
+/**
+ * APP_SCOPE identifies the current project to avoid token mixing in the backend.
+ * Value MUST be 'SINDICATO' for this repository.
+ */
+export const APP_SCOPE = 'SINDICATO';

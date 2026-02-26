@@ -26,27 +26,53 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     throw e;
   }
 
-  if (!tokens.length) {
-    log.warn("PushCampaign.SemTokens", { requestId, targetType, targetValue });
+  // 1.1 Filtrar tokens sem Project ID (Quarentena)
+  const tokensValidos = tokens.filter(t => !!t.projectId);
+  const tokensSemProjeto = tokens.filter(t => !t.projectId);
+
+  if (tokensSemProjeto.length > 0) {
+    log.warn("PushCampaign.TokensSemProjeto", {
+      requestId,
+      count: tokensSemProjeto.length,
+      tokensMasked: tokensSemProjeto.slice(0, 5).map(t => (t.token || '').substring(0, 15) + '...')
+    });
+  }
+
+  if (!tokensValidos.length) {
+    log.warn("PushCampaign.SemTokensValidos", { requestId, targetType, targetValue, totalOriginal: tokens.length });
     const campaignId = await saveCampaignRecord({
       title, body, targetType, targetValue, data, createdBy,
       status: 'SENT',
       sentAt: new Date(),
-      result: { sent: 0, failed: 0, noTokenOrDenied, details: "Nenhum token encontrado." }
+      result: {
+        sent: 0,
+        failed: tokensSemProjeto.length,
+        noTokenOrDenied,
+        details: "Nenhum token com Project ID encontrado.",
+        missingProjectId: tokensSemProjeto.length
+      }
     });
-    return { success: true, sent: 0, failed: 0, noTokenOrDenied, campaignId };
+    return { success: true, sent: 0, failed: tokensSemProjeto.length, noTokenOrDenied, campaignId };
   }
 
   // 2. Agrupar tokens por project_id para evitar conflitos no mesmo request
-  const groups = tokens.reduce((acc, curr) => {
-    const pid = curr.projectId || "unspecified";
+  const groups = tokensValidos.reduce((acc, curr) => {
+    const pid = curr.projectId; // Já garantido que existe pelo filter acima
     if (!acc[pid]) acc[pid] = [];
     acc[pid].push(curr.token);
     return acc;
   }, {});
 
   const projectIds = Object.keys(groups);
-  log.info("PushCampaign.Agrupamento", { requestId, projectsCount: projectIds.length, projects: projectIds });
+  const projectStats = {};
+  projectIds.forEach(pid => { projectStats[pid] = groups[pid].length; });
+
+  log.info("PushCampaign.Agrupamento", {
+    requestId,
+    projectsCount: projectIds.length,
+    projects: projectIds,
+    projectDetails: projectStats
+  });
 
   let sentCount = 0;
   let errorCount = 0;
@@ -58,6 +84,8 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   // 3. Enviar por grupo
   for (const projectId of projectIds) {
     const groupTokens = groups[projectId];
+    log.info("PushCampaign.EnviandoGrupo", { requestId, projectId, count: groupTokens.length });
+
     const messages = groupTokens.map((token) => ({
       to: token,
       sound: "default",
@@ -65,7 +93,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
       body: body,
       data: data || {},
       priority: "high",
-      ...(projectId !== "unspecified" ? { _projectId: projectId } : {})
+      ...(projectId !== "unspecified" ? { projectId: projectId } : {})
     }));
 
     const chunks = expo.chunkPushNotifications(messages);
@@ -112,8 +140,9 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
 
   const resultData = {
     sent: sentCount,
-    failed: errorCount,
+    failed: errorCount + tokensSemProjeto.length,
     noTokenOrDenied,
+    missingProjectId: tokensSemProjeto.length,
     hasCredentialError,
     failuresTop,
     byProject,

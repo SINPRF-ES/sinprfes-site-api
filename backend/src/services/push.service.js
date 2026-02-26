@@ -1,10 +1,11 @@
 // src/services/push.service.js
 const { Expo } = require("expo-server-sdk");
 const pool = require("../config/db");
+const pushConfig = require("../config/push.config");
 
 const expo = new Expo();
 
-async function upsertToken({ userId, expoPushToken, deviceId, platform, permissionStatus, projectId }) {
+async function upsertToken({ userId, expoPushToken, deviceId, platform, permissionStatus, projectId, appScope, expoProjectId }) {
   // Se for negado, podemos não ter o token, mas registramos o status se tivermos userId
   if (permissionStatus === 'denied' && !expoPushToken) {
     // Apenas log de interesse para saber que o usuário negou
@@ -16,8 +17,12 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
   }
 
   const sql = `
-    INSERT INTO push_tokens (user_id, expo_push_token, device_id, platform, last_seen, revoked_at, permission_status, project_id, disabled_at, disabled_reason)
-    VALUES ($1, $2, $3, $4, NOW(), NULL, $5, $6, NULL, NULL)
+    INSERT INTO push_tokens (
+      user_id, expo_push_token, device_id, platform, last_seen,
+      revoked_at, permission_status, project_id, disabled_at, disabled_reason,
+      app_scope, expo_project_id, updated_at
+    )
+    VALUES ($1, $2, $3, $4, NOW(), NULL, $5, $6, NULL, NULL, $7, $8, NOW())
     ON CONFLICT (expo_push_token)
     DO UPDATE SET
       user_id = EXCLUDED.user_id,
@@ -28,7 +33,10 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
       permission_status = EXCLUDED.permission_status,
       project_id = EXCLUDED.project_id,
       disabled_at = NULL,
-      disabled_reason = NULL
+      disabled_reason = NULL,
+      app_scope = EXCLUDED.app_scope,
+      expo_project_id = EXCLUDED.expo_project_id,
+      updated_at = NOW()
     RETURNING id;
   `;
 
@@ -38,7 +46,9 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
     deviceId ? String(deviceId) : null,
     platform ? String(platform) : null,
     permissionStatus ? String(permissionStatus) : 'granted',
-    projectId ? String(projectId) : null
+    projectId ? String(projectId) : null,
+    appScope || pushConfig.APP_SCOPE,
+    expoProjectId || null
   ]);
 
   return r.rows[0] || null;
@@ -79,17 +89,20 @@ async function deactivateOtherProjectTokens(userId, currentProjectId) {
 
 async function listActiveTokens(limit = 10000) {
   const sql = `
-    SELECT expo_push_token, project_id
+    SELECT expo_push_token, expo_project_id, project_id
     FROM push_tokens
-    WHERE revoked_at IS NULL AND disabled_at IS NULL AND expo_push_token IS NOT NULL
+    WHERE revoked_at IS NULL
+      AND disabled_at IS NULL
+      AND expo_push_token IS NOT NULL
+      AND app_scope = $2
     ORDER BY last_seen DESC
     LIMIT $1;
   `;
 
-  const { rows } = await pool.query(sql, [limit]);
+  const { rows } = await pool.query(sql, [limit, pushConfig.APP_SCOPE]);
   return rows.map((r) => ({
     token: r.expo_push_token,
-    projectId: r.project_id
+    projectId: r.expo_project_id || r.project_id || null
   })).filter(r => !!r.token);
 }
 
@@ -101,6 +114,8 @@ async function getDiagnostics(userId) {
     SELECT
       expo_push_token,
       project_id,
+      expo_project_id,
+      app_scope,
       platform,
       device_id,
       last_seen,
@@ -117,71 +132,115 @@ async function getDiagnostics(userId) {
 }
 
 /**
+ * Retorna contagem de tokens por scope e projeto para admin.
+ */
+async function getScopesDiagnostics() {
+  const sql = `
+    SELECT app_scope, expo_project_id, COUNT(*) as count, MIN(last_seen) as oldest, MAX(last_seen) as newest
+    FROM push_tokens
+    GROUP BY app_scope, expo_project_id
+    ORDER BY count DESC;
+  `;
+  const { rows } = await pool.query(sql);
+  return rows;
+}
+
+/**
+ * Desativa tokens de outros scopes para o mesmo usuário.
+ */
+async function deactivateMismatchedScopeTokens(userId, currentAppScope) {
+  if (!userId || !currentAppScope) return;
+  const sql = `
+    UPDATE push_tokens
+    SET
+      disabled_at = NOW(),
+      disabled_reason = 'scope_mismatch'
+    WHERE
+      user_id = $1
+      AND app_scope != $2
+      AND revoked_at IS NULL
+      AND disabled_at IS NULL;
+  `;
+  await pool.query(sql, [userId, currentAppScope]);
+}
+
+/**
  * Resolve destinatários com base no targetType e targetValue
  */
 async function resolvePushTargets(targetType, targetValue) {
   let sql = "";
   let params = [];
+  const scope = pushConfig.APP_SCOPE;
 
   switch (targetType) {
     case 'ATIVOS':
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO'
+          AND pt.app_scope = $1
       `;
+      params = [scope];
       break;
     case 'VETERANOS':
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
+          AND pt.app_scope = $1
       `;
+      params = [scope];
       break;
     case 'LOTACAO':
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN filiados f ON pt.user_id = f.id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO' AND f.lotacao = $1
+          AND pt.app_scope = $2
       `;
-      params = [targetValue];
+      params = [targetValue, scope];
       break;
     case 'JOGOS':
       // Exemplo: inscritos em qualquer modalidade dos jogos
       sql = `
-        SELECT DISTINCT pt.expo_push_token, pt.project_id
+        SELECT DISTINCT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         JOIN inscricoes_jogos ij ON pt.user_id = ij.filiado_id
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL
+          AND pt.app_scope = $1
       `;
+      params = [scope];
       break;
     case 'FILIADO': {
       const targetId = (typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue;
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.user_id = $1
+          AND pt.app_scope = $2
       `;
-      params = [targetId];
+      params = [targetId, scope];
       break;
     }
     case 'ALL':
     default:
       sql = `
-        SELECT pt.expo_push_token, pt.project_id
+        SELECT pt.expo_push_token, pt.expo_project_id, pt.project_id
         FROM push_tokens pt
         WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.expo_push_token IS NOT NULL
+          AND pt.app_scope = $1
       `;
+      params = [scope];
       break;
   }
 
   const { rows } = await pool.query(sql, params);
   return rows.map(r => ({
     token: r.expo_push_token,
-    projectId: r.project_id
+    projectId: r.expo_project_id || r.project_id || null
   })).filter(r => !!r.token);
 }
 
@@ -220,9 +279,11 @@ async function countNoTokenTargets(targetType, targetValue) {
   sql = `
     SELECT COUNT(*) as count
     FROM (${filiadosSql}) f
-    LEFT JOIN push_tokens pt ON f.id = pt.user_id AND pt.revoked_at IS NULL
+    LEFT JOIN push_tokens pt ON f.id = pt.user_id AND pt.revoked_at IS NULL AND pt.app_scope = $${params.length + 1}
     WHERE pt.id IS NULL OR pt.permission_status = 'denied'
   `;
+
+  params.push(pushConfig.APP_SCOPE);
 
   const { rows } = await pool.query(sql, params);
   return parseInt(rows[0].count, 10) || 0;
@@ -235,11 +296,13 @@ async function revokeSpecificToken(expoPushToken) {
 
 async function sendBroadcast({ title, body, data }) {
   const targets = await listActiveTokens();
-  if (!targets.length) return { sent: 0 };
+  const validTargets = targets.filter(t => !!t.projectId);
+
+  if (!validTargets.length) return { sent: 0, ignoredNoProjectId: targets.length };
 
   // Agrupar por project_id para evitar erro do Expo
-  const groups = targets.reduce((acc, curr) => {
-    const pid = curr.projectId || "unspecified";
+  const groups = validTargets.reduce((acc, curr) => {
+    const pid = curr.projectId;
     if (!acc[pid]) acc[pid] = [];
     acc[pid].push(curr.token);
     return acc;
@@ -254,7 +317,7 @@ async function sendBroadcast({ title, body, data }) {
       body,
       data: data || {},
       priority: "high",
-      ...(projectId !== "unspecified" ? { _projectId: projectId } : {})
+      ...(projectId !== "unspecified" ? { projectId: projectId } : {})
     }));
 
     const chunks = expo.chunkPushNotifications(messages);
@@ -277,5 +340,7 @@ module.exports = {
   countNoTokenTargets,
   revokeSpecificToken,
   deactivateOtherProjectTokens,
-  getDiagnostics
+  getDiagnostics,
+  getScopesDiagnostics,
+  deactivateMismatchedScopeTokens
 };

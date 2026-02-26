@@ -32,6 +32,22 @@ describe('Push Controller', () => {
       expect(res.json).toHaveBeenCalledWith({ success: true, id: 100, requestId: 'test-request-id' });
     });
 
+    test('should return 400 if appScope is mismatched', async () => {
+      req.body = {
+        expoPushToken: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]',
+        appScope: 'WRONG_SCOPE'
+      };
+
+      await controller.register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        error: 'App Scope mismatch.',
+        requestId: 'test-request-id'
+      }));
+    });
+
     test('should return 401 if user is not authenticated', async () => {
       req.user = null;
       req.body = { expoPushToken: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]' };
