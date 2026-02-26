@@ -1,5 +1,6 @@
 // src/controllers/push.controller.js
 const pushService = require("../services/push.service");
+const pushConfig = require("../config/push.config");
 const log = require("../utils/log");
 const { v4: uuidv4 } = require("uuid");
 
@@ -17,7 +18,7 @@ exports.register = async (req, res) => {
     return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente).", requestId });
   }
 
-  const { expoPushToken, deviceId, platform, permissionStatus, projectId } = req.body || {};
+  const { expoPushToken, deviceId, platform, permissionStatus, projectId, appScope, expoProjectId } = req.body || {};
   const bodyKeys = req.body ? Object.keys(req.body) : [];
 
   try {
@@ -29,9 +30,19 @@ exports.register = async (req, res) => {
       platform,
       permissionStatus,
       projectId,
+      appScope,
+      expoProjectId,
       expoPushTokenMasked: maskToken(expoPushToken),
       bodyKeys
     });
+
+    // Hard safety: Rejeitar se appScope diferente do repo
+    if (appScope && appScope !== pushConfig.APP_SCOPE) {
+      log.warn("PushRegisterScopeMismatch", { requestId, atorId, appScope, expected: pushConfig.APP_SCOPE });
+      return res.status(400).json({ success: false, error: "App Scope mismatch.", requestId });
+    }
+
+    const finalAppScope = appScope || pushConfig.APP_SCOPE;
 
     // Se negou, registramos mesmo sem token
     if (permissionStatus === 'denied' && !expoPushToken) {
@@ -41,7 +52,9 @@ exports.register = async (req, res) => {
             deviceId: deviceId ? String(deviceId) : null,
             platform: platform ? String(platform) : null,
             permissionStatus,
-            projectId: projectId ? String(projectId) : null
+            projectId: projectId ? String(projectId) : null,
+            appScope: finalAppScope,
+            expoProjectId: expoProjectId ? String(expoProjectId) : null
         });
         return res.json({ success: true, message: "Status de permissão negado registrado.", requestId });
     }
@@ -50,7 +63,10 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, error: "expoPushToken é obrigatório.", requestId });
     }
 
-    // Se temos um projectId, desativamos tokens de outros projetos para este usuário
+    // Isolamento: Desativar tokens de outros scopes para este usuário
+    await pushService.deactivateMismatchedScopeTokens(atorId, finalAppScope);
+
+    // Se temos um projectId (EAS), desativamos tokens de outros projetos para este usuário
     if (projectId) {
       await pushService.deactivateOtherProjectTokens(atorId, projectId);
     }
@@ -61,7 +77,9 @@ exports.register = async (req, res) => {
       deviceId: deviceId ? String(deviceId) : null,
       platform: platform ? String(platform) : null,
       permissionStatus: permissionStatus || 'granted',
-      projectId: projectId ? String(projectId) : null
+      projectId: projectId ? String(projectId) : null,
+      appScope: finalAppScope,
+      expoProjectId: expoProjectId ? String(expoProjectId) : null
     });
 
     return res.json({ success: true, id: result?.id ?? null, requestId });
@@ -119,6 +137,17 @@ exports.unregister = async (req, res) => {
       stack: e.stack
     });
     return res.status(500).json({ success: false, error: "Erro ao remover push token.", errorId, requestId });
+  }
+};
+
+exports.diagnosticsScopes = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  try {
+    const scopes = await pushService.getScopesDiagnostics();
+    return res.json({ success: true, scopes, requestId });
+  } catch (e) {
+    log.error("PushDiagnosticsScopesErro", { requestId, error: e.message });
+    return res.status(500).json({ success: false, error: "Erro ao carregar diagnóstico de scopes.", requestId });
   }
 };
 
