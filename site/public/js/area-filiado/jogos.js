@@ -67,7 +67,7 @@
             const s = document.createElement('style');
             s.id = 'style-jogos';
             s.textContent = `
-                .jogos-card { background: #ffffff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; margin: 0 auto 25px auto; max-width: 1000px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+                .jogos-card { background: #ffffff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; margin: 0 auto 25px auto; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
                 .jogos-banner { background: #003366; color: #ffffff; padding: 30px; text-align: center; }
                 .jogos-banner h2 { font-size: 2rem; margin-bottom: 10px; color: #f1c40f; }
                 .jogos-body { padding: 30px; background: #ffffff; color: #333; }
@@ -110,62 +110,64 @@
         const grupos = agruparModalidades(MODALIDADES_JOGOS_2026);
 
         secJogos.innerHTML = `
-            <div class="jogos-card">
-                <div class="jogos-banner">
-                    <h2>🏅 Jogos de Integração da PRF - 2026</h2>
-                    <p>Participe da maior integração esportiva da categoria!</p>
-                    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; font-weight: 500; opacity: 0.9;">
-                        <span>📍 Local: Poços de Caldas-MG</span>
-                        <span>📅 Data: 12 a 17/04/2026</span>
+            <div class="jogos-page">
+                <div class="jogos-card">
+                    <div class="jogos-banner">
+                        <h2>🏅 Jogos de Integração da PRF - 2026</h2>
+                        <p>Participe da maior integração esportiva da categoria!</p>
+                        <div style="margin-top: 15px; display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; font-weight: 500; opacity: 0.9;">
+                            <span>📍 Local: Poços de Caldas-MG</span>
+                            <span>📅 Data: 12 a 17/04/2026</span>
+                        </div>
                     </div>
-                </div>
-                <div class="jogos-body">
-                    <form id="form-jogos">
-                        <div class="jogos-form-group">
-                            <label>Sexo (Para fins de categoria esportiva)</label>
-                            <select name="sexo" id="jogos-sexo" required>
-                                <option value="">Selecione...</option>
-                                <option value="MASCULINO">Masculino</option>
-                                <option value="FEMININO">Feminino</option>
-                            </select>
-                        </div>
+                    <div class="jogos-body">
+                        <form id="form-jogos">
+                            <div class="jogos-form-group">
+                                <label>Sexo (Para fins de categoria esportiva)</label>
+                                <select name="sexo" id="jogos-sexo" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="MASCULINO">Masculino</option>
+                                    <option value="FEMININO">Feminino</option>
+                                </select>
+                            </div>
 
-                        <label style="font-weight:bold; display:block; margin-bottom:15px;">Selecione as modalidades que deseja participar (ao menos 1):</label>
-                        <div class="jogos-grid">
-                            ${Object.keys(grupos).map(grupo => `
-                                <div class="jogos-grupo-box">
-                                    <div class="jogos-grupo-titulo">${grupo}</div>
-                                    ${grupos[grupo].map(m => `
-                                        <label class="mod-item">
-                                            <input type="checkbox" name="modalidades" value="${m.id}">
-                                            <span class="mod-label">${m.label}</span>
-                                        </label>
-                                    `).join("")}
-                                </div>
-                            `).join("")}
-                        </div>
+                            <label style="font-weight:bold; display:block; margin-bottom:15px;">Selecione as modalidades que deseja participar (ao menos 1):</label>
+                            <div class="jogos-grid">
+                                ${Object.keys(grupos).map(grupo => `
+                                    <div class="jogos-grupo-box">
+                                        <div class="jogos-grupo-titulo">${grupo}</div>
+                                        ${grupos[grupo].map(m => `
+                                            <label class="mod-item">
+                                                <input type="checkbox" name="modalidades" value="${m.id}">
+                                                <span class="mod-label">${m.label}</span>
+                                            </label>
+                                        `).join("")}
+                                    </div>
+                                `).join("")}
+                            </div>
 
-                        <div class="jogos-form-group" style="margin-top:25px;">
-                            <label>Levará familiares? (Quantos?)</label>
-                            <input type="number" name="qtd_familiares" id="jogos-qtd-fam" value="0" min="0">
-                        </div>
+                            <div class="jogos-form-group" style="margin-top:25px;">
+                                <label>Levará familiares? (Quantos?)</label>
+                                <input type="number" name="qtd_familiares" id="jogos-qtd-fam" value="0" min="0">
+                            </div>
 
-                        <div class="jogos-form-group">
-                            <label>Nome dos familiares (um por linha)</label>
-                            <textarea name="familiares" id="jogos-fam-nomes" rows="3" placeholder="Ex: Maria (Esposa), João (Filho)..."></textarea>
-                        </div>
+                            <div class="jogos-form-group">
+                                <label>Nome dos familiares (um por linha)</label>
+                                <textarea name="familiares" id="jogos-fam-nomes" rows="3" placeholder="Ex: Maria (Esposa), João (Filho)..."></textarea>
+                            </div>
 
-                        <div class="jogos-form-group">
-                            <label>Observações Adicionais</label>
-                            <textarea name="observacoes" id="jogos-obs" rows="3" placeholder="Restrições alimentares, necessidades especiais, etc."></textarea>
-                        </div>
+                            <div class="jogos-form-group">
+                                <label>Observações Adicionais</label>
+                                <textarea name="observacoes" id="jogos-obs" rows="3" placeholder="Restrições alimentares, necessidades especiais, etc."></textarea>
+                            </div>
 
-                        <button type="submit" class="btn-jogos">Confirmar / Atualizar Inscrição 🚀</button>
-                        <button type="button" id="btn-cancelar-jogos" class="btn-jogos-cancelar" disabled title="Você ainda não possui inscrição ativa.">Cancelar minha Inscrição ❌</button>
-                        <div id="jogos-status" style="margin-top:15px; text-align:center; font-weight:bold;"></div>
-                    </form>
+                            <button type="submit" class="btn-jogos">Confirmar / Atualizar Inscrição 🚀</button>
+                            <button type="button" id="btn-cancelar-jogos" class="btn-jogos-cancelar" disabled title="Você ainda não possui inscrição ativa.">Cancelar minha Inscrição ❌</button>
+                            <div id="jogos-status" style="margin-top:15px; text-align:center; font-weight:bold;"></div>
+                        </form>
 
-                    <div id="jogos-resumo-inscricao" class="inscricao-resumo"></div>
+                        <div id="jogos-resumo-inscricao" class="inscricao-resumo"></div>
+                    </div>
                 </div>
             </div>
         `;
@@ -352,7 +354,7 @@
                         <button id="btn-export-xls" class="btn-export" style="background:#2980b9;">Exportar XLS</button>
                     </div>
                 </div>
-                <div id="tabela-jogos-wrapper" class="ui-table-wrapper" style="max-height: 600px;">Carregando...</div>
+                <div id="tabela-jogos-wrapper" class="jogos-table-container" style="max-height: 600px;">Carregando...</div>
             `;
             cardBody.appendChild(container);
 
