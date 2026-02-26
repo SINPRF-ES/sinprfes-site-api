@@ -1,8 +1,4 @@
 
-> sinprfes-monorepo@ start:site /app
-> pnpm --filter @sinprfes/site run start
-
-
 > @sinprfes/site@1.0.0 start /app/site
 > node server.js
 
