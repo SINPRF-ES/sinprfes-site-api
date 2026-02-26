@@ -115,11 +115,7 @@
         if (bodyInput && !bodyDigitado) bodyInput.value = body;
 
         const userInfo = window.Utils?.obterUserInfo?.() || {};
-        const targetValue = {
-          id: userInfo.id ?? userInfo.filiado_id ?? userInfo.user_id ?? "self",
-          nome: String(userInfo.nome || "Filiado").trim(),
-          cpf: String(userInfo.cpf || "").trim()
-        };
+        const targetValue = "self";
 
         const payload = {
           title: "Diagnóstico: teste",
@@ -136,10 +132,11 @@
           keys: Object.keys(payload),
           bodyPreview: body.slice(0, 40),
           targetType: payload.targetType,
-          targetValue: {
-            id: targetValue.id,
-            nome: targetValue.nome,
-            cpfMasked: this.mascararCpf(targetValue.cpf)
+          targetValue,
+          actor: {
+            id: userInfo.id ?? userInfo.filiado_id ?? userInfo.user_id ?? null,
+            nome: String(userInfo.nome || "").trim(),
+            cpfMasked: this.mascararCpf(userInfo.cpf)
           }
         });
 
