@@ -3,11 +3,37 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './apiService';
 import { AuthStore } from './authStore';
 import { logger } from '../infra/logger';
 import { API_BASE_URL, APP_SCOPE } from '../config/env';
 import { getExpoProjectId } from '../utils/expoConfig';
+
+const PUSH_REGISTRATION_META_KEY = 'push_registration_meta_v1';
+
+async function shouldRegisterToken(token: string, expoProjectId?: string, force = false): Promise<boolean> {
+  if (force) return true;
+
+  try {
+    const raw = await AsyncStorage.getItem(PUSH_REGISTRATION_META_KEY);
+    if (!raw) return true;
+    const parsed = JSON.parse(raw);
+    return parsed?.token !== token || parsed?.expoProjectId !== expoProjectId;
+  } catch (error) {
+    logger.warn('Push info: erro ao ler metadados locais de registro', error);
+    return true;
+  }
+}
+
+async function persistRegisteredTokenMeta(token: string, expoProjectId?: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(PUSH_REGISTRATION_META_KEY, JSON.stringify({ token, expoProjectId, updatedAt: new Date().toISOString() }));
+  } catch (error) {
+    logger.warn('Push info: erro ao persistir metadados locais de registro', error);
+  }
+}
+
 
 function maskToken(token: string | null): string {
   if (!token) return 'null';
@@ -18,7 +44,7 @@ function maskToken(token: string | null): string {
 /**
  * Obtém o token de push do Expo para este dispositivo.
  */
-export async function obterExpoPushToken(): Promise<{ token: string | null; platform: string; permission: string; projectId?: string; deviceId?: string }> {
+export async function obterExpoPushToken(): Promise<{ token: string | null; platform: string; permission: string; projectId?: string; expoProjectId?: string; deviceId?: string }> {
   if (!Device.isDevice) {
     logger.info('Push info: Dispositivo físico não detectado (Emulador)');
     return { token: null, platform: `EMULATOR_${Platform.OS}`, permission: 'undetermined' };
@@ -56,29 +82,31 @@ export async function obterExpoPushToken(): Promise<{ token: string | null; plat
 
   try {
     const expoToken = await Notifications.getExpoPushTokenAsync({ projectId: easProjectId });
-    return { token: expoToken.data, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, deviceId };
+    return { token: expoToken.data, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, expoProjectId: easProjectId, deviceId };
   } catch (error: any) {
     logger.error('Push info: Erro ao obter o Expo Push Token', error);
-    return { token: null, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, deviceId };
+    return { token: null, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, expoProjectId: easProjectId, deviceId };
   }
 }
 
 /**
  * Registra o dispositivo no backend para receber notificações push.
  */
-export async function registrarDispositivoParaPush(): Promise<any> {
+export async function registrarDispositivoParaPush(options?: { force?: boolean }): Promise<any> {
   // Aguarda inicialização da sessão antes de registrar push (exige token)
   await AuthStore.waitReady();
 
   const endpoint = '/api/push/register';
   try {
-    const { token, platform, permission, projectId, deviceId } = await obterExpoPushToken();
+    const { token, platform, permission, projectId, expoProjectId, deviceId } = await obterExpoPushToken();
+    const force = !!options?.force;
     const tokenMasked = maskToken(token);
 
     logger.info('Iniciando registro de dispositivo para push', {
       platform,
       permission,
       projectId,
+      expoProjectId,
       deviceId,
       tokenMasked,
       apiUrl: `${API_BASE_URL}${endpoint}`
@@ -89,13 +117,19 @@ export async function registrarDispositivoParaPush(): Promise<any> {
       return { ok: false, reason: 'no_token', message: 'Token de push não pôde ser obtido.' };
     }
 
+    const mustRegister = await shouldRegisterToken(token, expoProjectId || projectId, force);
+    if (!mustRegister) {
+      logger.info('Registro de push ignorado: token/projeto inalterados localmente');
+      return { success: true, ok: true, skipped: true, reason: 'unchanged_local' };
+    }
+
     const response = await api.post(endpoint, {
       expoPushToken: token,
       platform,
       permissionStatus: permission,
-      projectId, // Legacy/EAS Project ID
+      projectId: projectId || expoProjectId, // Legacy/EAS Project ID
       appScope: APP_SCOPE,
-      expoProjectId: projectId, // Canonical name requested
+      expoProjectId: expoProjectId || projectId, // Canonical name requested
       deviceId
     });
 
@@ -114,6 +148,10 @@ export async function registrarDispositivoParaPush(): Promise<any> {
       });
     }
 
+    if (result.success && result.ok !== false) {
+      await persistRegisteredTokenMeta(token, expoProjectId || projectId);
+    }
+
     return result;
 
   } catch (e: any) {
@@ -129,6 +167,6 @@ export async function registrarDispositivoParaPush(): Promise<any> {
       apiUrl: `${API_BASE_URL}${endpoint}`
     });
     // Não relançar o erro para não bloquear o fluxo de login, mas retornar erro para o diagnóstico.
-    return { ok: false, error: e.message, status, data: errorData };
+    return { ok: false, error: e.message, status, data: errorData, requestId };
   }
 }

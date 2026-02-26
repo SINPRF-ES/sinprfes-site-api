@@ -55,3 +55,11 @@ Apenas usuários com os seguintes perfis podem acessar o módulo (site e mobile)
 ## Detalhes de Implementação (Estatuto Mobile)
 Para garantir a remoção determinística de elementos indesejados no WebView do Estatuto (especialmente em Androids antigos), os seguintes seletores são removidos via `MutationObserver`:
 `#site-header`, `#site-footer`, `.estatuto-nav`, `.estatuto-nav-title`, `.barra-azul`, `header`, `nav`, `.navbar`, `.site-header`, `#header`, `#nav`.
+
+## Validação e recuperação de tokens inválidos (SINDICATO)
+
+1. No app, abrir **Segurança > Diagnóstico Push** e tocar em **Re-registrar token agora**.
+2. Confirmar na tela que o **Projeto ID** local está preenchido com o EAS projectId do SINDICATO.
+3. No backend, validar em `push_tokens` que o token tem `expo_project_id` preenchido e `disabled_at IS NULL`.
+4. Em caso de tokens antigos com `missing_project_id`, executar `backend/scripts/migration_push_missing_project_fix_v24.sql`.
+5. Repetir envio de teste por `FILIADO`, `ALL` e `LOTACAO` e conferir no retorno `diagnostics` + `requestId`.

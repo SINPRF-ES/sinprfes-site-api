@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import api from '../services/apiService';
 import { updateAutoScheduler } from '../services/updateAutoScheduler';
+import { registrarDispositivoParaPush } from '../services/deviceService';
 
 import type { AuthContextData } from '../types/auth';
 import type { Usuario } from '../types/usuario';
@@ -102,6 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (bio) {
               setBloqueadoPorBiometria(true);
             }
+
+            await registrarDispositivoParaPush();
           } catch (error: any) {
             console.error('[Auth.loadSession.error]', error.message);
             // Se o token for inválido (401), o interceptor de resposta já limpou o storage.
