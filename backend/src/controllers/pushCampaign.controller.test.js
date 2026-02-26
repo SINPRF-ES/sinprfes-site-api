@@ -41,18 +41,16 @@ describe('Push Campaign Controller', () => {
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, sent: 0 }));
     });
 
-    test('should return 400 if body is missing', async () => {
+    test('should fallback body when body is missing', async () => {
       req.body = { title: 'Test' };
+      pushCampaignService.sendCampaign.mockResolvedValue({ success: true, sent: 1, campaignId: 'uuid' });
 
       await controller.sendCampaign(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        success: false,
-        message: 'Payload inválido: title e body devem ser string não-vazia.',
-        errors: expect.objectContaining({ body: 'O corpo da mensagem (body) é obrigatório.' }),
-        code: 'VALIDATION_ERROR'
+      expect(pushCampaignService.sendCampaign).toHaveBeenCalledWith(expect.objectContaining({
+        body: expect.stringMatching(/Diagnóstico push em/)
       }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, sent: 1 }));
     });
 
     test('should return 400 if body is not a string', async () => {

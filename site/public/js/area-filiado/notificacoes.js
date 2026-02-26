@@ -27,6 +27,22 @@
   const filiadoNomeCache = new Map();
   const filiadoNomePending = new Map();
 
+  function mascararCpf(valor) {
+    const digits = String(valor || "").replace(/\D+/g, "");
+    if (digits.length !== 11) return "***.***.***-**";
+    return `${digits.slice(0, 3)}.***.***-${digits.slice(-2)}`;
+  }
+
+  function formatarValorDestino(value) {
+    if (value == null || value === "") return "";
+    if (typeof value === "object") {
+      if (Array.isArray(value)) return value.join(", ");
+      return value.nome || value.id || JSON.stringify(value);
+    }
+    return String(value);
+  }
+
+
   function parseTargetValue(raw) {
     if (raw == null) return null;
     if (typeof raw === "object") return raw;
@@ -73,14 +89,15 @@
     const targetValue = parseTargetValue(c?.target_value);
 
     if (type !== "FILIADO") {
-      const suffix = (targetValue != null && targetValue !== "") ? `: ${String(targetValue)}` : "";
+      const suffixValue = formatarValorDestino(targetValue);
+      const suffix = suffixValue ? `: ${suffixValue}` : "";
       return `Destino: ${type}${suffix}`;
     }
 
     if (targetValue && typeof targetValue === "object" && !Array.isArray(targetValue)) {
       const nome = String(targetValue.nome || "").trim();
       const cpf = String(targetValue.cpf || "").trim();
-      if (nome && cpf) return `Destino: FILIADO: ${nome} (CPF: ${cpf})`;
+      if (nome && cpf) return `Destino: FILIADO: ${nome} (CPF: ${mascararCpf(cpf)})`;
       if (nome) return `Destino: FILIADO: ${nome}`;
       if (targetValue.id != null) return `Destino: FILIADO: Filiado #${targetValue.id}`;
     }
@@ -88,7 +105,7 @@
     if (typeof targetValue === "string" || typeof targetValue === "number") {
       const idStr = String(targetValue).trim();
       if (filiadoNomeCache.has(idStr)) return `Destino: FILIADO: ${filiadoNomeCache.get(idStr)}`;
-      return `Destino: FILIADO: Filiado #${idStr} (Carregando nome...)`;
+      return `Destino: FILIADO: Filiado #${idStr}`;
     }
 
     return "Destino: FILIADO";
@@ -385,7 +402,6 @@
         if (failuresTop && failuresTop.length > 0) {
             msg += `\n\nPrincipais erros:\n` + failuresTop.map(f => `- ${f.reason}: ${f.count}`).join('\n');
         }
-        msg += `\n\nID da Requisição: ${requestId}`;
         alert(msg);
 
         document.getElementById("push-title").value = "";
@@ -430,6 +446,17 @@
       const failures = result.failuresTop && result.failuresTop.length > 0
         ? ` <span title="${safeEscape(result.failuresTop.map(f => `${f.reason}: ${f.count}`).join(', '))}">⚠️</span>`
         : "";
+      const requestId = result.requestId || c.requestId || "";
+      const detalhes = [];
+      if (result.failuresTop && result.failuresTop.length) {
+        detalhes.push(`Falhas: ${result.failuresTop.map(f => `${f.reason}: ${f.count}`).join(' | ')}`);
+      }
+      if (requestId) {
+        detalhes.push(`requestId: ${requestId}`);
+      }
+      const detailsHtml = detalhes.length
+        ? `<details style="margin-top:8px;"><summary style="cursor:pointer; color:#666; font-size:0.85rem;">Detalhes técnicos</summary><div style="margin-top:6px; font-size:0.8rem; color:#777; white-space:pre-wrap;">${safeEscape(detalhes.join('\n'))}</div></details>`
+        : "";
 
       return `
           <div class="history-card" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:10px; border-left:4px solid #003366;">
@@ -441,6 +468,7 @@
             ${c.title ? `<div class="history-title" style="font-weight:bold; font-size:1.1rem; color:#003366; margin-bottom:4px;">${safeEscape(c.title)}</div>` : ""}
             <div class="history-body" style="white-space: pre-wrap; font-size:1.05rem; color:#333; margin-bottom:8px;">${safeEscape(c.body)}</div>
             <div class="history-result" style="font-size:1.05rem; font-weight:bold; color:#555;">🚀 ${sent} &nbsp; ❌ ${failed} &nbsp; 🚫 ${noTokenOrDenied}${failures}</div>
+            ${detailsHtml}
           </div>`;
     }).join("");
     container.innerHTML = html;

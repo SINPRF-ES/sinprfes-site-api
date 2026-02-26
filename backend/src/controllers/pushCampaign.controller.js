@@ -33,16 +33,13 @@ exports.sendCampaign = async (req, res) => {
 
   try {
     const { title, body, targetType, targetValue, data } = req.body || {};
+    const fallbackBody = `Diagnóstico push em ${new Date().toLocaleString('pt-BR')}`;
     const errors = {};
 
     // Validação
-    if (body === undefined || body === null) {
-      errors.body = "O corpo da mensagem (body) é obrigatório.";
-    } else if (typeof body !== 'string') {
+    if (body !== undefined && body !== null && typeof body !== 'string') {
       errors.body = "O corpo da mensagem (body) deve ser uma string.";
-    } else if (body.trim().length === 0) {
-      errors.body = "O corpo da mensagem (body) não pode ser vazio.";
-    } else if (body.length > 240) {
+    } else if (typeof body === 'string' && body.length > 240) {
       errors.body = "O corpo da mensagem não pode exceder 240 caracteres.";
     }
 
@@ -72,7 +69,7 @@ exports.sendCampaign = async (req, res) => {
 
     // Sanitização de tamanho
     const sanitizedTitle = (title && typeof title === 'string') ? title.trim().substring(0, 60) : null;
-    const sanitizedBody = body.trim().substring(0, 240);
+    const sanitizedBody = (typeof body === 'string' && body.trim() ? body.trim() : fallbackBody).substring(0, 240);
 
     // Suporte para 'self' no diagnóstico
     let finalTargetValue = targetValue;

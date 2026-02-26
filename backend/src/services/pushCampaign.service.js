@@ -2,19 +2,16 @@
 const { Expo } = require("expo-server-sdk");
 const pool = require("../config/db");
 const pushService = require("./push.service");
+const pushConfig = require("../config/push.config");
 const log = require("../utils/log");
 
 const expo = new Expo();
 
-/**
- * Envia uma campanha de push para todos os tokens ativos.
- * @param {Object} params - { title, body, targetType, targetValue, data, createdBy, requestId, perfil }
- */
 async function sendCampaign({ title, body, targetType, targetValue, data, createdBy, requestId, perfil }) {
   const startTime = new Date();
-  log.info("PushCampaign.Iniciado", { requestId, userId: createdBy, perfil, title, body, targetType, targetValue });
+  const safeBody = typeof body === "string" && body.trim() ? body.trim() : "Notificação SINPRF-ES";
+  log.info("PushCampaign.Iniciado", { requestId, userId: createdBy, perfil, title, body: safeBody, targetType, targetValue });
 
-  // 1. Buscar tokens
   let tokens;
   let noTokenOrDenied = 0;
   let diagnostics = null;
@@ -22,113 +19,140 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     tokens = await pushService.resolvePushTargets(targetType, targetValue);
     noTokenOrDenied = await pushService.countNoTokenTargets(targetType, targetValue);
     diagnostics = await pushService.getResolveDiagnostics(targetType, targetValue);
-    log.info('PUSH_CAMPAIGN_TOKENS_RESOLVED', { count: tokens.length, noTokenOrDenied });
   } catch (e) {
     log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
     throw e;
   }
 
-  // 1.1 Filtrar tokens sem Project ID (Quarentena)
-  const tokensValidos = tokens.filter(t => !!t.projectId);
-  const tokensSemProjeto = tokens.filter(t => !t.projectId);
+  const expectedProjectId = String(pushConfig.EXPO_PROJECT_ID || "").trim() || null;
+  const totalOriginal = tokens.length;
+  const tokensSemProjeto = tokens.filter((t) => !t.expoProjectId);
+  const tokensProjetoInvalido = tokens.filter((t) => t.expoProjectId && expectedProjectId && t.expoProjectId !== expectedProjectId);
+  const tokensValidos = tokens.filter((t) => t.expoProjectId && (!expectedProjectId || t.expoProjectId === expectedProjectId));
 
-  if (tokensSemProjeto.length > 0) {
-    log.warn("PushCampaign.TokensSemProjeto", {
-      requestId,
-      count: tokensSemProjeto.length,
-      tokensMasked: tokensSemProjeto.slice(0, 5).map(t => (t.token || '').substring(0, 15) + '...')
-    });
-  }
+  const projectGroups = tokens.reduce((acc, curr) => {
+    const pid = curr.expoProjectId || "missing";
+    acc[pid] = acc[pid] || [];
+    acc[pid].push(curr);
+    return acc;
+  }, {});
+
+  const byProjectCount = Object.entries(projectGroups).map(([projectId, list]) => ({ projectId, count: list.length }));
+  const projectConflictDetected = Object.keys(projectGroups).filter((projectId) => projectId !== "missing").length > 1;
+
+  log.info("PushCampaign.TokenResumo", {
+    requestId,
+    targetType,
+    targetValue,
+    expectedProjectId,
+    totalOriginal,
+    totalValid: tokensValidos.length,
+    invalid_missing_expo_project_id: tokensSemProjeto.length,
+    invalid_project_mismatch: tokensProjetoInvalido.length,
+    revoked: Number(diagnostics?.revoked || 0),
+    disabled: Number(diagnostics?.disabled || 0),
+    byProject: byProjectCount,
+    projectConflictDetected
+  });
 
   if (!tokensValidos.length) {
-    log.warn("PushCampaign.SemTokensValidos", { requestId, targetType, targetValue, totalOriginal: tokens.length });
+    log.warn("PushCampaign.SemTokensValidos", { requestId, targetType, targetValue, totalOriginal });
     const campaignId = await saveCampaignRecord({
-      title, body, targetType, targetValue, data, createdBy,
-      status: 'SENT',
+      title,
+      body: safeBody,
+      targetType,
+      targetValue,
+      data,
+      createdBy,
+      status: "FAILED",
       sentAt: new Date(),
       result: {
         sent: 0,
-        failed: tokensSemProjeto.length,
+        failed: tokensSemProjeto.length + tokensProjetoInvalido.length,
         noTokenOrDenied,
-        details: "Nenhum token com Project ID encontrado.",
+        failuresTop: [{ reason: "Sem tokens válidos", count: totalOriginal || 1 }],
         missingProjectId: tokensSemProjeto.length,
+        projectMismatchFiltered: tokensProjetoInvalido.length,
+        byProject: byProjectCount,
+        projectConflictDetected,
         diagnostics,
         requestId
       }
     });
-    return { success: true, sent: 0, failed: tokensSemProjeto.length, noTokenOrDenied, campaignId, diagnostics, requestId };
+    return {
+      success: true,
+      sent: 0,
+      failed: tokensSemProjeto.length + tokensProjetoInvalido.length,
+      noTokenOrDenied,
+      campaignId,
+      failuresTop: [{ reason: "Sem tokens válidos", count: totalOriginal || 1 }],
+      byProject: byProjectCount,
+      projectConflictDetected,
+      diagnostics,
+      requestId
+    };
   }
 
-  // 2. Agrupar tokens por project_id para evitar conflitos no mesmo request
   const groups = tokensValidos.reduce((acc, curr) => {
-    const pid = curr.projectId; // Já garantido que existe pelo filter acima
+    const pid = curr.expoProjectId;
     if (!acc[pid]) acc[pid] = [];
     acc[pid].push(curr.token);
     return acc;
   }, {});
 
-  const projectIds = Object.keys(groups);
-  const projectStats = {};
-  projectIds.forEach(pid => { projectStats[pid] = groups[pid].length; });
-
-  log.info("PushCampaign.Agrupamento", {
-    requestId,
-    projectsCount: projectIds.length,
-    projects: projectIds,
-    projectDetails: projectStats
-  });
-
   let sentCount = 0;
   let errorCount = 0;
   let hasCredentialError = false;
-  const failureReasons = {}; // reason -> count
-  const byProject = []; // { projectId, sent, failed }
-  const unspecifiedCount = tokensSemProjeto.length;
-  let projectConflictDetected = projectIds.length > 1;
+  const failureReasons = {};
+  const byProject = [];
 
-  // 3. Enviar por grupo
-  for (const projectId of projectIds) {
-    const groupTokens = groups[projectId];
-    log.info("PushCampaign.EnviandoGrupo", { requestId, projectId, count: groupTokens.length });
-
+  for (const [projectId, groupTokens] of Object.entries(groups)) {
     const messages = groupTokens.map((token) => ({
       to: token,
       sound: "default",
       title: title || "SINPRF-ES",
-      body: body,
+      body: safeBody,
       data: data || {},
       priority: "high",
-      ...(projectId !== "unspecified" ? { projectId: projectId } : {})
+      projectId
     }));
 
     const chunks = expo.chunkPushNotifications(messages);
     let pSent = 0;
     let pFailed = 0;
-
     let chunkIdx = 0;
+
     for (const chunk of chunks) {
-      chunkIdx++;
+      chunkIdx += 1;
+      const chunkProjectIds = [...new Set(chunk.map((msg) => msg.projectId))];
+      if (chunkProjectIds.length > 1) {
+        log.error("PushCampaign.ChunkProjetoMisturado", { requestId, projectId, chunkIdx, chunkProjectIds });
+        pFailed += chunk.length;
+        failureReasons.project_mismatch_filtered = (failureReasons.project_mismatch_filtered || 0) + chunk.length;
+        continue;
+      }
+
       try {
         const tickets = await expo.sendPushNotificationsAsync(chunk);
-        for (let i = 0; i < tickets.length; i++) {
+        for (let i = 0; i < tickets.length; i += 1) {
           const ticket = tickets[i];
-          if (ticket.status === 'error') {
-            pFailed++;
+          if (ticket.status === "error") {
+            pFailed += 1;
             const errorCode = ticket.details?.error || "UnknownError";
             failureReasons[errorCode] = (failureReasons[errorCode] || 0) + 1;
 
-            if (errorCode === 'InvalidCredentials') hasCredentialError = true;
-            if (errorCode === 'DeviceNotRegistered') {
+            if (errorCode === "InvalidCredentials") hasCredentialError = true;
+            if (errorCode === "DeviceNotRegistered") {
               await pushService.revokeSpecificToken(chunk[i].to);
             }
           } else {
-            pSent++;
+            pSent += 1;
           }
         }
       } catch (e) {
         log.error("PushCampaign.ChunkErro", { requestId, projectId, chunkIdx, error: e.message });
         pFailed += chunk.length;
-        failureReasons["TransportError"] = (failureReasons["TransportError"] || 0) + chunk.length;
+        failureReasons.TransportError = (failureReasons.TransportError || 0) + chunk.length;
       }
     }
 
@@ -137,7 +161,15 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     errorCount += pFailed;
   }
 
-  // Top 5 razões de falha
+  if (tokensProjetoInvalido.length > 0) {
+    errorCount += tokensProjetoInvalido.length;
+    failureReasons.project_mismatch_filtered = (failureReasons.project_mismatch_filtered || 0) + tokensProjetoInvalido.length;
+  }
+  if (tokensSemProjeto.length > 0) {
+    errorCount += tokensSemProjeto.length;
+    failureReasons.missing_expo_project_id = (failureReasons.missing_expo_project_id || 0) + tokensSemProjeto.length;
+  }
+
   const failuresTop = Object.entries(failureReasons)
     .map(([reason, count]) => ({ reason, count }))
     .sort((a, b) => b.count - a.count)
@@ -145,38 +177,33 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
 
   const resultData = {
     sent: sentCount,
-    failed: errorCount + tokensSemProjeto.length,
+    failed: errorCount,
     noTokenOrDenied,
     missingProjectId: tokensSemProjeto.length,
+    projectMismatchFiltered: tokensProjetoInvalido.length,
     hasCredentialError,
     failuresTop,
     byProject,
     projectConflictDetected,
     durationMs: new Date() - startTime,
     diagnostics,
-    requestId,
-    unspecifiedCount
+    requestId
   };
 
-  // 5. Salvar registro
-  let campaignId;
-  try {
-    campaignId = await saveCampaignRecord({
-        title, body, targetType, targetValue, data, createdBy,
-        status: (errorCount === tokens.length && tokens.length > 0) ? 'FAILED' : 'SENT',
-        sentAt: new Date(),
-        result: resultData
-    });
-    log.info("PushCampaign.RegistroSalvo", { requestId, campaignId });
-  } catch (e) {
-    log.error("PushCampaign.ErroSalvarRegistro", { requestId, error: e.message });
-    // Não vamos falhar o retorno se apenas o log no banco falhou,
-    // mas na v1 o registro é importante. Vamos deixar propagar para diagnosticar.
-    throw e;
-  }
+  const allCandidates = totalOriginal || tokensSemProjeto.length + tokensProjetoInvalido.length;
+  const campaignId = await saveCampaignRecord({
+    title,
+    body: safeBody,
+    targetType,
+    targetValue,
+    data,
+    createdBy,
+    status: sentCount === 0 && allCandidates > 0 ? "FAILED" : "SENT",
+    sentAt: new Date(),
+    result: resultData
+  });
 
   log.info("PushCampaign.Finalizado", { requestId, userId: createdBy, campaignId, ...resultData });
-
   return { success: true, campaignId, ...resultData };
 }
 
@@ -189,7 +216,7 @@ async function saveCampaignRecord({ title, body, targetType, targetValue, data, 
   const r = await pool.query(sql, [
     title || null,
     body,
-    targetType || 'ALL',
+    targetType || "ALL",
     targetValue ? JSON.stringify(targetValue) : null,
     data ? JSON.stringify(data) : null,
     createdBy,
@@ -212,14 +239,7 @@ async function listCampaigns(limit = 20, offset = 0) {
   return rows;
 }
 
-/**
- * Retorna as notificações que o usuário logado deve visualizar.
- * Cruza os critérios de alvo da campanha com os dados do usuário.
- */
 async function listMyNotifications({ userId, perfil, lotacao, situacao }) {
-  // Nota: target_type pode ser 'ALL', 'ATIVOS', 'VETERANOS', 'LOTACAO', 'JOGOS', 'FILIADO'
-  // target_value pode ser uma string (lotacao) ou um JSON (filiado object)
-
   const sql = `
     SELECT c.id, c.title, c.body, c.created_at, c.target_type, c.target_value
     FROM push_campaigns c
@@ -241,13 +261,10 @@ async function listMyNotifications({ userId, perfil, lotacao, situacao }) {
   return rows;
 }
 
-/**
- * Remove campanhas com mais de 60 dias
- */
 async function cleanupOldCampaigns() {
-    const sql = `DELETE FROM push_campaigns WHERE created_at < NOW() - INTERVAL '60 days'`;
-    const r = await pool.query(sql);
-    return r.rowCount;
+  const sql = `DELETE FROM push_campaigns WHERE created_at < NOW() - INTERVAL '60 days'`;
+  const r = await pool.query(sql);
+  return r.rowCount;
 }
 
 module.exports = {
