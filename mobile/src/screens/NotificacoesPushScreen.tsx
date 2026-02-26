@@ -180,10 +180,14 @@ export default function NotificacoesPushScreen() {
       });
 
       if (response.data.success) {
-        Alert.alert(
-            'Sucesso',
-            `Notificação enviada!\n🚀 Sucesso: ${response.data.sent}\n❌ Falhas: ${response.data.failed}\n🚫 Sem Token/Negado: ${response.data.noTokenOrDenied || 0}`
-        );
+        const { sent, failed, noTokenOrDenied, failuresTop, requestId } = response.data;
+        let msg = `🚀 Sucesso: ${sent}\n❌ Falhas: ${failed}\n🚫 Sem Token: ${noTokenOrDenied || 0}`;
+        if (failuresTop && failuresTop.length > 0) {
+          msg += `\n\nPrincipais erros:\n${failuresTop.map((f: any) => `- ${f.reason}: ${f.count}`).join('\n')}`;
+        }
+        msg += `\n\nID: ${requestId}`;
+
+        Alert.alert(sent > 0 ? 'Enviado' : 'Falha no Envio', msg);
         setTitle('');
         setBody('');
         fetchHistory(true, isShowingArchived);
@@ -261,6 +265,11 @@ export default function NotificacoesPushScreen() {
           <Text style={styles.resultText}>🚀 {item.result?.sent || 0}</Text>
           <Text style={styles.resultText}>❌ {item.result?.failed || 0}</Text>
           <Text style={styles.resultText}>🚫 {item.result?.noTokenOrDenied || 0}</Text>
+          {(item as any).result?.failuresTop?.length > 0 && (
+            <Text style={[styles.resultText, { color: '#e74c3c' }]}>
+              ⚠️ {(item as any).result.failuresTop[0].reason}
+            </Text>
+          )}
         </View>
       </View>
     );

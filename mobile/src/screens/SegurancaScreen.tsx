@@ -1,11 +1,16 @@
 // mobile/src/screens/SegurancaScreen.tsx
 import React from 'react';
-import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
+import { View, Text, Switch, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../hooks/useAuth';
 import SafeScreen from '../components/SafeScreen';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
+import { DrawerParamList } from '../navigation/types';
 
 export default function SegurancaScreen() {
+  const navigation = useNavigation<DrawerNavigationProp<DrawerParamList>>();
   const { biometriaHabilitada, ativarBiometriaNesteAparelho } = useAuth();
 
   const handleToggleBiometria = async (value: boolean) => {
@@ -42,6 +47,23 @@ export default function SegurancaScreen() {
         </View>
         <Text style={styles.description}>
           Ative para usar sua digital ou reconhecimento facial para entrar no aplicativo de forma mais rápida e segura.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 20 }]}>
+        <Text style={[styles.title, { fontSize: 18, marginBottom: 15 }]}>Notificações Push</Text>
+        <TouchableOpacity
+          style={styles.diagButton}
+          onPress={() => navigation.navigate('PushDiagnostic')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons name="cellphone-cog" size={24} color="#003366" />
+            <Text style={styles.diagButtonText}>Diagnóstico de Recebimento</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
+        </TouchableOpacity>
+        <Text style={styles.description}>
+          Se você não estiver recebendo as notificações do sindicato, use esta ferramenta para diagnosticar e corrigir o problema.
         </Text>
       </View>
     </SafeScreen>
@@ -84,5 +106,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 5,
+  },
+  diagButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  diagButtonText: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 12,
   },
 });
