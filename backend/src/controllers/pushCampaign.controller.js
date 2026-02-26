@@ -65,7 +65,8 @@ exports.sendCampaign = async (req, res) => {
         success: false,
         message: "Payload inválido: title e body devem ser string não-vazia.",
         errors,
-        code: "VALIDATION_ERROR"
+        code: "VALIDATION_ERROR",
+        requestId
       });
     }
 
@@ -125,7 +126,8 @@ exports.sendCampaign = async (req, res) => {
       success: false,
       message: "Erro ao processar campanha de push.",
       errorId,
-      code: "INTERNAL_SERVER_ERROR"
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
     };
 
     if ((process.env.ASSEMBLEIA_ENV || "dev") === "dev") {

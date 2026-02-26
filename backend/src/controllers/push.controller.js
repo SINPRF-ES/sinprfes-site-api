@@ -43,6 +43,7 @@ exports.register = async (req, res) => {
     }
 
     const finalAppScope = appScope || pushConfig.APP_SCOPE;
+    const finalProjectId = expoProjectId || projectId || null;
 
     // Se negou, registramos mesmo sem token
     if (permissionStatus === 'denied' && !expoPushToken) {
@@ -52,9 +53,9 @@ exports.register = async (req, res) => {
             deviceId: deviceId ? String(deviceId) : null,
             platform: platform ? String(platform) : null,
             permissionStatus,
-            projectId: projectId ? String(projectId) : null,
+            projectId: finalProjectId ? String(finalProjectId) : null,
             appScope: finalAppScope,
-            expoProjectId: expoProjectId ? String(expoProjectId) : null
+            expoProjectId: finalProjectId ? String(finalProjectId) : null
         });
         return res.json({ success: true, message: "Status de permissão negado registrado.", requestId });
     }
@@ -67,8 +68,8 @@ exports.register = async (req, res) => {
     await pushService.deactivateMismatchedScopeTokens(atorId, finalAppScope);
 
     // Se temos um projectId (EAS), desativamos tokens de outros projetos para este usuário
-    if (projectId) {
-      await pushService.deactivateOtherProjectTokens(atorId, projectId);
+    if (finalProjectId) {
+      await pushService.deactivateOtherProjectTokens(atorId, finalProjectId);
     }
 
     const result = await pushService.upsertToken({
@@ -77,9 +78,9 @@ exports.register = async (req, res) => {
       deviceId: deviceId ? String(deviceId) : null,
       platform: platform ? String(platform) : null,
       permissionStatus: permissionStatus || 'granted',
-      projectId: projectId ? String(projectId) : null,
+      projectId: finalProjectId ? String(finalProjectId) : null,
       appScope: finalAppScope,
-      expoProjectId: expoProjectId ? String(expoProjectId) : null
+      expoProjectId: finalProjectId ? String(finalProjectId) : null
     });
 
     // Se o service marcou como desativado por falta de project_id, avisamos o client
