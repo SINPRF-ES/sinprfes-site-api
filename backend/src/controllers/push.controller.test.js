@@ -29,7 +29,23 @@ describe('Push Controller', () => {
 
       await controller.register(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ success: true, id: 100, requestId: 'test-request-id' });
+      expect(res.json).toHaveBeenCalledWith({ success: true, ok: true, id: 100, requestId: 'test-request-id' });
+    });
+
+    test('should return 200 with ok:false if projectId is missing', async () => {
+      req.body = { expoPushToken: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]', platform: 'android' };
+      pushService.upsertToken.mockResolvedValue({ id: 100, disabled_reason: 'missing_project_id' });
+
+      await controller.register(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        ok: false,
+        id: 100,
+        reason: 'missing_project_id',
+        message: expect.any(String),
+        requestId: 'test-request-id'
+      });
     });
 
     test('should return 400 if appScope is mismatched', async () => {
@@ -89,6 +105,43 @@ describe('Push Controller', () => {
         error: 'Erro ao registrar push token.',
         errorId: expect.any(String),
         requestId: 'test-request-id'
+      }));
+    });
+  });
+
+  describe('diagnosticsMe', () => {
+    test('should return aggregated stats for the user', async () => {
+      const now = new Date().toISOString();
+      const mockTokens = [
+        {
+          expo_push_token: 'ExponentPushToken[v1]',
+          expo_project_id: 'proj-1',
+          last_seen: now,
+          revoked_at: null,
+          disabled_at: null,
+          disabled_reason: null
+        },
+        {
+          expo_push_token: 'ExponentPushToken[v2]',
+          expo_project_id: null,
+          last_seen: now,
+          revoked_at: null,
+          disabled_at: now,
+          disabled_reason: 'missing_project_id'
+        }
+      ];
+      pushService.getDiagnostics.mockResolvedValue(mockTokens);
+
+      await controller.diagnosticsMe(req, res);
+
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+        token_count_total: 2,
+        token_count_valid: 1,
+        easProjectId: 'proj-1',
+        token_count_disabled_by_reason: {
+          missing_project_id: 1
+        }
       }));
     });
   });

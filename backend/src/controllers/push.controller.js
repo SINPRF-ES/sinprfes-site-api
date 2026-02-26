@@ -82,7 +82,19 @@ exports.register = async (req, res) => {
       expoProjectId: expoProjectId ? String(expoProjectId) : null
     });
 
-    return res.json({ success: true, id: result?.id ?? null, requestId });
+    // Se o service marcou como desativado por falta de project_id, avisamos o client
+    if (result && result.disabled_reason === 'missing_project_id') {
+       return res.json({
+         success: true,
+         ok: false,
+         id: result.id,
+         reason: 'missing_project_id',
+         message: "Token registrado mas desativado por falta de EAS Project ID.",
+         requestId
+       });
+    }
+
+    return res.json({ success: true, ok: true, id: result?.id ?? null, requestId });
   } catch (e) {
     const errorId = uuidv4();
     log.error("PushRegisterErro", {
@@ -161,7 +173,46 @@ exports.diagnosticsMe = async (req, res) => {
 
   try {
     const tokens = await pushService.getDiagnostics(atorId);
-    return res.json({ success: true, tokens, requestId });
+
+    const stats = {
+        app_scope: pushConfig.APP_SCOPE,
+        easProjectId: null,
+        token_count_total: tokens.length,
+        token_count_valid: 0,
+        token_count_disabled_by_reason: {},
+        newest_last_seen: null,
+        oldest_last_seen: null
+    };
+
+    tokens.forEach(t => {
+        if (!stats.easProjectId && t.expo_project_id) {
+            stats.easProjectId = t.expo_project_id;
+        }
+
+        const isValid = !t.revoked_at && !t.disabled_at && !!(t.expo_project_id || t.project_id);
+        if (isValid) stats.token_count_valid++;
+
+        if (t.disabled_reason) {
+            stats.token_count_disabled_by_reason[t.disabled_reason] = (stats.token_count_disabled_by_reason[t.disabled_reason] || 0) + 1;
+        }
+
+        if (!stats.newest_last_seen || new Date(t.last_seen) > new Date(stats.newest_last_seen)) {
+            stats.newest_last_seen = t.last_seen;
+        }
+        if (!stats.oldest_last_seen || new Date(t.last_seen) < new Date(stats.oldest_last_seen)) {
+            stats.oldest_last_seen = t.last_seen;
+        }
+    });
+
+    return res.json({
+        success: true,
+        requestId,
+        ...stats,
+        tokens: tokens.map(t => ({
+            ...t,
+            expo_push_token: maskToken(t.expo_push_token)
+        }))
+    });
   } catch (e) {
     log.error("PushDiagnosticsMeErro", { requestId, atorId, error: e.message });
     return res.status(500).json({ success: false, error: "Erro ao carregar diagnóstico de push.", requestId });
