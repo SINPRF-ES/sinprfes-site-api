@@ -84,12 +84,12 @@ exports.register = async (req, res) => {
     });
 
     // Se o service marcou como desativado por falta de project_id, avisamos o client
-    if (result && result.disabled_reason === 'missing_project_id') {
+    if (result && (result.disabled_reason === 'missing_expo_project_id' || result.disabled_reason === 'missing_project_id')) {
        return res.json({
          success: true,
          ok: false,
          id: result.id,
-         reason: 'missing_project_id',
+         reason: result.disabled_reason,
          message: "Token registrado mas desativado por falta de EAS Project ID no backend.",
          hint: "Certifique-se de que o App está enviando o projectId/expoProjectId corretamente.",
          requestId

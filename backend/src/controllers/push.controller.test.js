@@ -34,7 +34,7 @@ describe('Push Controller', () => {
 
     test('should return 200 with ok:false if projectId is missing', async () => {
       req.body = { expoPushToken: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]', platform: 'android' };
-      pushService.upsertToken.mockResolvedValue({ id: 100, disabled_reason: 'missing_project_id' });
+      pushService.upsertToken.mockResolvedValue({ id: 100, disabled_reason: 'missing_expo_project_id' });
 
       await controller.register(req, res);
 
@@ -42,7 +42,7 @@ describe('Push Controller', () => {
         success: true,
         ok: false,
         id: 100,
-        reason: 'missing_project_id',
+        reason: 'missing_expo_project_id',
         message: expect.any(String),
         hint: expect.any(String),
         requestId: 'test-request-id'
@@ -128,7 +128,7 @@ describe('Push Controller', () => {
           last_seen: now,
           revoked_at: null,
           disabled_at: now,
-          disabled_reason: 'missing_project_id'
+          disabled_reason: 'missing_expo_project_id'
         }
       ];
       pushService.getDiagnostics.mockResolvedValue(mockTokens);
@@ -141,7 +141,7 @@ describe('Push Controller', () => {
         token_count_valid: 1,
         easProjectId: 'proj-1',
         token_count_disabled_by_reason: {
-          missing_project_id: 1
+          missing_expo_project_id: 1
         }
       }));
     });
