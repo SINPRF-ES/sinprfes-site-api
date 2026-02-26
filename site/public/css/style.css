@@ -481,3 +481,36 @@ footer {
     }
     .filiado-right { text-align: left; width: 100%; }
 }
+
+/* Módulo Jogos 2026 - Wide Layout Expansion */
+#sec-jogos .jogos-page {
+    width: 100%;
+    max-width: min(1600px, calc(100vw - 320px));
+    margin: 0 auto;
+    padding-inline: clamp(12px, 2vw, 28px);
+    box-sizing: border-box;
+}
+
+/* Expand content flex ONLY when Jogos 2026 is the active section */
+.af-main-layout:has(#sec-jogos.active) > .af-content {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+#tabela-jogos-wrapper.jogos-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#sec-jogos .jogos-tabela {
+    width: 100%;
+    min-width: 980px;
+    table-layout: auto;
+}
+
+@media (max-width: 900px) {
+    #sec-jogos .jogos-page {
+        max-width: 100%;
+        padding-inline: clamp(12px, 2vw, 20px);
+    }
+}
