@@ -26,8 +26,9 @@
             let label = "";
             let title = "";
 
-            if (html.includes('<br>')) {
-                const parts = html.split('<br>');
+            const brRegex = /<br\s*\/?>/i;
+            if (brRegex.test(html)) {
+                const parts = html.split(brRegex);
                 label = parts[0].trim().replace(/<[^>]+>/g, '');
                 title = parts.slice(1).join(' ').trim().replace(/<[^>]+>/g, '');
             } else {
@@ -45,7 +46,7 @@
         const toc = document.createElement('nav');
         toc.className = 'estatuto-toc';
         toc.setAttribute('aria-label', 'Sumário do estatuto');
-        toc.innerHTML = `<div class="estatuto-toc-header">📚 Sumário</div><ol class="estatuto-toc-list"></ol>`;
+        toc.innerHTML = `<div class="estatuto-toc-header">📚 Sumário</div><ul class="estatuto-toc-list"></ul>`;
         const list = toc.querySelector('.estatuto-toc-list');
 
         list.innerHTML = items.map(item => (

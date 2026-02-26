@@ -268,62 +268,58 @@ footer {
 .btn-danger-outline:hover { background: #b91c1c; color: #fff; }
 
 .estatuto-toc {
-    padding: 16px 20px;
-    background: #f8fafc;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    line-height: 1.5;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  line-height: 1.5;
 }
 
 .estatuto-toc-header {
-    font-weight: 700;
-    color: var(--ui-primary);
-    margin-bottom: 12px;
+  font-weight: 700;
+  color: var(--ui-primary);
+  margin-bottom: 12px;
 }
 
-.estatuto-toc-list {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
+.estatuto-toc ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
 }
 
-.toc-item {
-    margin-bottom: 8px;
+.estatuto-toc li {
+  margin-bottom: 8px;
 }
 
 .toc-item.level-h3 {
-    margin-left: 12px;
+  margin-left: 12px;
 }
 
-.estatuto-toc-list a {
-    text-decoration: none;
-    color: #1e3a8a;
-    font-weight: 500;
-    display: block;
-    padding: 6px 8px;
-    border-radius: 6px;
-    transition: background 0.2s ease;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
+.estatuto-toc a {
+  text-decoration: none;
+  color: #1e3a8a;
+  font-weight: 500;
+  display: block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  white-space: normal;
 }
 
-.estatuto-toc-list a:hover {
-    background: rgba(30, 58, 138, 0.08);
+.estatuto-toc a:hover {
+  background: rgba(30, 58, 138, 0.08);
 }
 
 .estatuto-toc .toc-label {
-    font-weight: 700;
+  font-weight: 700;
 }
 
 .estatuto-toc .toc-separator {
-    margin: 0 4px;
+  margin: 0 4px;
 }
 
 .estatuto-toc .toc-text {
-    font-weight: 500;
+  font-weight: 500;
 }
 
 .estatuto-layout {
@@ -335,9 +331,9 @@ footer {
 
 .estatuto-layout .estatuto-toc {
     position: sticky;
-    top: 8px;
-    max-height: calc(70vh - 18px);
-    overflow: auto;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
 .estatuto-top-link {
