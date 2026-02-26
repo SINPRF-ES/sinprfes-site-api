@@ -21,7 +21,7 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 | **Relatórios** | ✅ `RelatoriosScreen.tsx` | ✅ `sec-relatorios` | `/api/reports` | `RELATORIOS_VER` | ✅ OK |
 | **Notificações** | ✅ `NotificacoesPushScreen`| ✅ `sec-notificacoes` | `/api/push` | `PUSH_GERENCIAR` | ✅ OK |
 | **CMS** | ❌ Ausente | ✅ `sec-cms` | `/api/content-blocks`| `EDIT_CONTENT` | ✅ OK (Site) |
-| **Diagnóstico** | ✅ `LogsScreen.tsx` | ❌ Ausente | `/api/diagnostico` | `ADMIN`, `DIRETORIA` | ⚠️ Divergente |
+| **Diagnóstico** | ✅ `LogsScreen.tsx` | ⚠️ Parcial (`sec-diagnostico`) | `/api/diagnostico`, `/api/push/health` | `PUSH_GERENCIAR` | 🟡 Parcial |
 
 ---
 
@@ -50,9 +50,9 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Drift:** Módulo exclusivo do Site. Não há necessidade de edição de blocos do site via App no momento. Implementada resiliência contra dados corrompidos e erros de JSON no frontend.
 
 ### 4. Diagnóstico (Logs)
-- **Endpoints:** `/api/diagnostico`
-- **Permissões:** `DIRETORIA`
-- **Drift:** O App possui uma tela de "Logs" para depuração em tempo real por diretores. O Site não possui interface equivalente para visualizar logs do backend ou do frontend.
+- **Endpoints:** `/api/diagnostico`, `/api/push/health`
+- **Permissões:** `PUSH_GERENCIAR`, `ADMIN`, `DIRETORIA`
+- **Drift:** O App possui uma tela de "Logs" para depuração em tempo real. O Site agora possui uma aba de "Diagnóstico" (Parcial) que permite visualizar a saúde do sistema e do Push Notification, alcançando paridade funcional básica para gestão.
 
 ---
 

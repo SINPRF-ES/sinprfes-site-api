@@ -12,3 +12,8 @@
 **Pattern:** Business rules for profile-based access (e.g., "ehPerfilGestao") must be centralized in a shared module (Canon) to prevent drift between Backend and Site.
 **Implementation:** Use `Canon.ehPerfilGestao(perfil)` for coarse-grained checks and the `permissions` array for fine-grained UI/API gating.
 **Benefit:** Ensures that adding a new administrative role only requires updating one file to maintain system-wide consistency.
+
+## 2026-02-26 - [Global Request Tracing]
+**Pattern:** Every controller method must initialize `requestId = req.requestId || uuidv4()` and include it in all log entries and JSON responses.
+**Benefit:** Enables seamless cross-referencing between client-side errors and backend logs in distributed environments (Railway/Cloud).
+**Implementation:** Standardized in `auth.controller.js` and `pushCampaign.controller.js`.

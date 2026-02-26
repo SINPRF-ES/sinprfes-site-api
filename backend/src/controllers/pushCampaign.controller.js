@@ -141,6 +141,7 @@ exports.sendCampaign = async (req, res) => {
 exports.pushHealth = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
   try {
     const scopes = await pushService.getScopesDiagnostics();
@@ -213,6 +214,7 @@ exports.listMyNotifications = async (req, res) => {
 exports.listCampaigns = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;
+  if (!createdBy) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
 
   try {

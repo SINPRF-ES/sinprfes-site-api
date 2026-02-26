@@ -224,36 +224,48 @@ exports.logout = async (req, res) => {
 };
 
 exports.me = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ error: "Não autenticado", requestId });
+
   try {
-    const userId = req.user.id;
-    const filiado = await buscarPorId(userId);
+    const filiado = await buscarPorId(atorId);
 
     if (!filiado) {
-      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO }); // ✨
+      log.warn("AuthMeNaoEncontrado", { requestId, atorId });
+      return res.status(404).json({ error: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
     }
 
     const { senha_hash, twofa_secret, ...limpo } = filiado;
     const perfil = (limpo.perfil_acesso || "FILIADO").toUpperCase();
     const permissions = rolesConfig[perfil] || [];
-    return res.json({ ...limpo, permissions });
+
+    log.info("AuthMeSucesso", { requestId, atorId, perfil });
+    return res.json({ ...limpo, permissions, requestId });
   } catch (err) {
-    log.error("AuthMeErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.CARREGAR_DADOS }); // ✨
+    log.error("AuthMeErro", { error: err, requestId, userId: atorId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId });
   }
 };
 
 exports.listarFiliados = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ error: "Não autenticado", requestId });
+
   try {
     const perfil = req.user.perfil_acesso || "FILIADO";
     const lista = await listarParaPerfil(perfil);
 
+    log.info("AuthListarFiliadosSucesso", { requestId, atorId, perfil, total: lista.length });
     return res.json({
       perfil_acesso: perfil,
       total: lista.length,
       filiados: lista,
+      requestId
     });
   } catch (err) {
-    log.error("AuthListarFiliadosErro", { error: err, requestId: req.requestId, userId: req.user?.id });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS }); // ✨
+    log.error("AuthListarFiliadosErro", { error: err, requestId, userId: atorId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LISTAR_FILIADOS, requestId });
   }
 };
