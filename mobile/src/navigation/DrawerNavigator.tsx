@@ -17,6 +17,7 @@ import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
+import PushDiagnosticScreen from '../screens/PushDiagnosticScreen';
 import RepasseScreen from '../screens/RepasseScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
 
@@ -184,6 +185,15 @@ export default function DrawerNavigator() {
             options={{
               title: 'Repasse',
               drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.REPASSE} label="Repasse" {...props} />,
+            }}
+          />
+
+          <Drawer.Screen
+            name="PushDiagnostic"
+            component={PushDiagnosticScreen}
+            options={{
+              title: 'Diagnóstico de Push',
+              drawerItemStyle: { display: 'none' },
             }}
           />
 

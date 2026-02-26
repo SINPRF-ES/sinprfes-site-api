@@ -17,7 +17,7 @@ function maskToken(token: string | null): string {
 /**
  * Obtém o token de push do Expo para este dispositivo.
  */
-async function obterExpoPushToken(): Promise<{ token: string | null; platform: string; permission: string }> {
+export async function obterExpoPushToken(): Promise<{ token: string | null; platform: string; permission: string; projectId?: string }> {
   if (!Device.isDevice) {
     logger.info('Push info: Dispositivo físico não detectado (Emulador)');
     return { token: null, platform: `EMULATOR_${Platform.OS}`, permission: 'undetermined' };
@@ -36,16 +36,17 @@ async function obterExpoPushToken(): Promise<{ token: string | null; platform: s
     return { token: null, platform: Platform.OS, permission: finalStatus };
   }
 
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+  if (!projectId) {
+      logger.warn('Push info: ID do projeto Expo não encontrado na configuração.');
+  }
+
   try {
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    if (!projectId) {
-      throw new Error('ID do projeto Expo não encontrado na configuração.');
-    }
     const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
-    return { token: expoToken.data, platform: Platform.OS, permission: finalStatus };
+    return { token: expoToken.data, platform: Platform.OS, permission: finalStatus, projectId };
   } catch (error: any) {
     logger.error('Push info: Erro ao obter o Expo Push Token', error);
-    return { token: null, platform: Platform.OS, permission: finalStatus };
+    return { token: null, platform: Platform.OS, permission: finalStatus, projectId };
   }
 }
 
@@ -58,12 +59,13 @@ export async function registrarDispositivoParaPush(): Promise<void> {
 
   const endpoint = '/api/push/register';
   try {
-    const { token, platform, permission } = await obterExpoPushToken();
+    const { token, platform, permission, projectId } = await obterExpoPushToken();
     const tokenMasked = maskToken(token);
 
     logger.info('Iniciando registro de dispositivo para push', {
         platform,
         permission,
+        projectId,
         tokenMasked,
         apiUrl: `${API_BASE_URL}${endpoint}`
     });
@@ -76,6 +78,8 @@ export async function registrarDispositivoParaPush(): Promise<void> {
     const response = await api.post(endpoint, {
       expoPushToken: token,
       platform,
+      permissionStatus: permission,
+      projectId
     });
 
     logger.info('Dispositivo registrado para notificações push com sucesso', {

@@ -19,4 +19,5 @@ export type DrawerParamList = {
   Relatorios: undefined;
   NotificacoesPush: undefined;
   CriarFiliado: undefined;
+  PushDiagnostic: undefined;
 };
