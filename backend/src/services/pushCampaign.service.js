@@ -126,7 +126,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   try {
     campaignId = await saveCampaignRecord({
         title, body, targetType, targetValue, data, createdBy,
-        status: (errorCount === messages.length && messages.length > 0) ? 'FAILED' : 'SENT',
+        status: (errorCount === tokens.length && tokens.length > 0) ? 'FAILED' : 'SENT',
         sentAt: new Date(),
         result: resultData
     });
