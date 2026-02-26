@@ -331,9 +331,9 @@ footer {
 
 .estatuto-layout .estatuto-toc {
     position: sticky;
-    top: 8px;
-    max-height: calc(70vh - 18px);
-    overflow: auto;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
 .estatuto-top-link {
