@@ -21,7 +21,7 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 | **Relatórios** | ✅ `RelatoriosScreen.tsx` | ✅ `sec-relatorios` | `/api/reports` | `RELATORIOS_VER` | ✅ OK |
 | **Notificações** | ✅ `NotificacoesPushScreen`| ✅ `sec-notificacoes` | `/api/push` | `PUSH_GERENCIAR` | ✅ OK |
 | **CMS** | ❌ Ausente | ✅ `sec-cms` | `/api/content-blocks`| `EDIT_CONTENT` | ✅ OK (Site) |
-| **Diagnóstico** | ✅ `LogsScreen.tsx` | ⚠️ Parcial (`sec-diagnostico`) | `/api/diagnostico`, `/api/push/health` | `PUSH_GERENCIAR` | 🟡 Parcial |
+| **Diagnóstico** | ✅ `LogsScreen.tsx` | ✅ `sec-diagnostico` | `/api/diagnostico`, `/api/push/health`, `/api/push/diagnostics/me` | `PUSH_GERENCIAR` | ✅ OK |
 
 ---
 
@@ -50,22 +50,23 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Drift:** Módulo exclusivo do Site. Não há necessidade de edição de blocos do site via App no momento. Implementada resiliência contra dados corrompidos e erros de JSON no frontend.
 
 ### 4. Diagnóstico (Logs)
-- **Endpoints:** `/api/diagnostico`, `/api/push/health`
+- **Endpoints:** `/api/diagnostico`, `/api/push/health`, `/api/push/diagnostics/me`, `/api/push/campaigns/send` (target: self)
 - **Permissões:** `PUSH_GERENCIAR`, `ADMIN`, `DIRETORIA`
-- **Drift:** O App possui uma tela de "Logs" para depuração em tempo real. O Site agora possui uma aba de "Diagnóstico" (Parcial) que permite visualizar a saúde do sistema e do Push Notification, alcançando paridade funcional básica para gestão.
+- **Paridade Alcançada:** O Site agora possui paridade funcional com o App no módulo de Diagnóstico. Ambos permitem visualizar a saúde global do sistema (Push), listar os tokens registrados para o usuário atual (com masking de segurança) e realizar disparos de teste direcionados ao próprio dispositivo ("Testar Push em mim").
+- **Drift residual:** O App possui uma visualização de logs locais em tempo real (úteis para depuração de hardware/nativo), enquanto no Site o desenvolvedor utiliza o console do navegador.
 
 ---
 
 ## 🚨 Drift Analysis
 
 ### Severidade 🔴 Crítica
-*Nenhuma divergência crítica de segurança detectada no scan inicial.*
+*Nenhuma divergência crítica de segurança detectada.*
 
 ### Severidade 🟠 Alta
 *Nenhuma divergência de alta severidade detectada.*
 
 ### Severidade 🟡 Média
-- **Visualização de Logs:** Disponível apenas no App. Justificativa: os logs exibidos são locais do dispositivo (App), úteis para suporte proativo de falhas nativas. No Site, logs de console estão disponíveis via DevTools do navegador.
+*Nenhuma divergência de média severidade detectada.*
 
 ### Severidade 🟢 Baixa
 - **UX de Novo Filiado:** Fluxos ligeiramente diferentes entre App e Site (Tela vs Aba), mas com paridade de campos.

@@ -203,8 +203,8 @@
                         ` : ''}
 
                         <div style="width:100%; max-width:250px; margin-top:10px;">
-                            <label style="font-size:0.85rem; color:#fff; display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase;">Filtrar por status:</label>
-                            <select id="filtro-assembleias" class="btn btn-outline" style="width:100%; color:#fff; background:transparent; border: 2px solid #fff; border-radius:8px; font-weight:600;" onchange="Assembleias.mudarFiltro(this.value)">
+                            <label style="font-size:0.85rem; color:var(--ui-primary); display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase;">Filtrar por status:</label>
+                            <select id="filtro-assembleias" class="btn btn-outline" style="width:100%; color:var(--ui-primary); background:transparent; border: 2px solid var(--ui-primary); border-radius:8px; font-weight:600;" onchange="Assembleias.mudarFiltro(this.value)">
                                 <option value="ATIVAS" style="color:#333;">Ativas</option>
                                 <option value="ENCERRADAS" style="color:#333;">Encerradas</option>
                                 <option value="TODAS" style="color:#333;">Todas</option>
