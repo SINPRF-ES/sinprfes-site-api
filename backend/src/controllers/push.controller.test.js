@@ -44,6 +44,7 @@ describe('Push Controller', () => {
         id: 100,
         reason: 'missing_project_id',
         message: expect.any(String),
+        hint: expect.any(String),
         requestId: 'test-request-id'
       });
     });
