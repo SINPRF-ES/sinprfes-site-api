@@ -40,6 +40,7 @@
   <script src="/js/area-filiado/assembleias.js" defer></script>
   <script src="/js/area-filiado/cms-admin.js" defer></script>
   <script src="/js/area-filiado/relatorios.js" defer></script>
+  <script src="/js/area-filiado/diagnostico.js" defer></script>
 
   <!-- Inicializador Principal -->
   <script src="/js/area-filiado.js" defer></script>
@@ -72,6 +73,7 @@
           <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-relatorios"><span aria-hidden="true">📊</span> Relatórios</button>
           <button class="af-nav-item" id="nav-novo-filiado" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-filiados"><span aria-hidden="true">➕</span> Novo Filiado</button>
           <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-cms"><span aria-hidden="true">🌐</span> Site (CMS)</button>
+          <button class="af-nav-item" data-target="sec-diagnostico" id="nav-diagnostico" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-diagnostico"><span aria-hidden="true">🛠️</span> Diagnóstico</button>
         </div>
 
         <div class="af-sidebar-footer">
@@ -259,6 +261,16 @@
 
         <section id="sec-notificacoes" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-notificacoes">
           <!-- Conteúdo renderizado via Notificacoes.inicializar() -->
+        </section>
+
+        <section id="sec-diagnostico" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-diagnostico">
+          <div class="af-standard-header">
+              <h2>🛠️ Diagnóstico do Sistema</h2>
+              <p class="section-subtitle">Monitoramento em tempo real da saúde da plataforma.</p>
+          </div>
+          <div id="diagnostico-conteudo" class="ui-card">
+              <p>Carregando diagnóstico...</p>
+          </div>
         </section>
       </main>
     </div>

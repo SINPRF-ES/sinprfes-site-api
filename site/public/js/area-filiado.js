@@ -83,6 +83,7 @@
         { id: "nav-noticias", visivel: true },
         { id: "nav-cms", visivel: hasPerm('EDIT_CONTENT') },
         { id: "nav-notificacoes", visivel: hasPerm('PUSH_GERENCIAR') },
+        { id: "nav-diagnostico", visivel: hasPerm('PUSH_GERENCIAR') },
         { id: "nav-relatorios", visivel: hasPerm('RELATORIOS_VER') },
         { id: "nav-novo-filiado", visivel: hasPerm('CREATE_FILIADO') }
       ];
@@ -126,6 +127,9 @@
             return;
           }
           inicializarNotificacoesComPerfil(perfil);
+        }
+        else if (abaAlvo === "sec-diagnostico" && window.Diagnostico) {
+          window.Diagnostico.inicializar();
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
         else if (abaAlvo === "sec-estatuto" && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();

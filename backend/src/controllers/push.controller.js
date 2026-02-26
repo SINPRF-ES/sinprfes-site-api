@@ -156,11 +156,14 @@ exports.unregister = async (req, res) => {
 
 exports.diagnosticsScopes = async (req, res) => {
   const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
     const scopes = await pushService.getScopesDiagnostics();
+    log.info("PushDiagnosticsScopesAcessado", { requestId, atorId });
     return res.json({ success: true, scopes, requestId });
   } catch (e) {
-    log.error("PushDiagnosticsScopesErro", { requestId, error: e.message });
+    log.error("PushDiagnosticsScopesErro", { requestId, atorId, error: e.message });
     return res.status(500).json({ success: false, error: "Erro ao carregar diagnóstico de scopes.", requestId });
   }
 };
