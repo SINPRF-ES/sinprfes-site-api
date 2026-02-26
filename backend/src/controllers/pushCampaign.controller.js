@@ -73,11 +73,17 @@ exports.sendCampaign = async (req, res) => {
     const sanitizedTitle = (title && typeof title === 'string') ? title.trim().substring(0, 60) : null;
     const sanitizedBody = body.trim().substring(0, 240);
 
+    // Suporte para 'self' no diagnóstico
+    let finalTargetValue = targetValue;
+    if (targetType === 'FILIADO' && targetValue === 'self') {
+      finalTargetValue = { id: createdBy };
+    }
+
     const result = await pushCampaignService.sendCampaign({
       title: sanitizedTitle,
       body: sanitizedBody,
       targetType: targetType || 'ALL',
-      targetValue,
+      targetValue: finalTargetValue,
       data,
       createdBy,
       requestId,

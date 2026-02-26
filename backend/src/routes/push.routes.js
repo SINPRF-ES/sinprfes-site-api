@@ -11,6 +11,7 @@ const { pushCampaignLimiter } = require("../middlewares/securityRateLimit");
 // Qualquer logado pode registrar/remover o token do próprio device
 router.post("/register", auth, pushController.register);
 router.post("/unregister", auth, pushController.unregister);
+router.get("/diagnostics/me", auth, pushController.diagnosticsMe);
 
 // Campanhas de Push
 router.get(

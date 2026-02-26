@@ -330,11 +330,18 @@
       const r = await window.Api.apiFetch("/api/push/campaigns/send", { method: "POST", body: { title: title || null, body, targetType, targetValue } });
       const data = await r.json().catch(() => ({}));
       if (r.ok) {
-        alert("Sucesso! Notificação enviada.");
+        const { sent, failed, noTokenOrDenied, failuresTop, requestId } = data;
+        let msg = `Notificação processada.\n🚀 Sucesso: ${sent}\n❌ Falhas: ${failed}\n🚫 Sem Token: ${noTokenOrDenied || 0}`;
+        if (failuresTop && failuresTop.length > 0) {
+            msg += `\n\nPrincipais erros:\n` + failuresTop.map(f => `- ${f.reason}: ${f.count}`).join('\n');
+        }
+        msg += `\n\nID da Requisição: ${requestId}`;
+        alert(msg);
+
         document.getElementById("push-title").value = "";
         document.getElementById("push-message").value = "";
         carregarCampanhasGestao();
-      } else alert(data.message || "Erro ao enviar.");
+      } else alert(data.message || "Erro ao enviar. ID: " + (data.requestId || "N/A"));
     } catch (e) { alert("Erro de conexão."); }
     finally { btnSend.disabled = false; btnSend.innerHTML = originalText; }
   }
@@ -364,9 +371,17 @@
     let html = historyCache.map(c => {
       const data = formatarData(c.created_at);
       const targetLabel = formatarDestinoCampanha(c);
+      const result = c.result || {};
+      const failures = result.failuresTop && result.failuresTop.length > 0 ? ` <span title="${safeEscape(result.failuresTop.map(f => `${f.reason}: ${f.count}`).join(', '))}">⚠️</span>` : "";
+
       return `
           <div class="history-card" style="background:#fff; border:1px solid #eee; border-radius:8px; padding:15px; margin-bottom:10px; border-left:4px solid #003366;">
-            <div class="history-header" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="history-date" style="font-size:0.8rem; color:#888;">${data}</span></div>
+            <div class="history-header" style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                <span class="history-date" style="font-size:0.8rem; color:#888;">${data}</span>
+                <span class="history-result" style="font-size:0.75rem; font-weight:bold; color:#666;">
+                    🚀 ${result.sent || 0} ❌ ${result.failed || 0} ${failures}
+                </span>
+            </div>
             <div class="history-author" style="font-size:0.85rem; color:#555; margin-bottom:5px;">${safeEscape(targetLabel)}</div>
             ${c.title ? `<div class="history-title" style="font-weight:bold; color:#003366; margin-bottom:5px;">${safeEscape(c.title)}</div>` : ""}
             <div class="history-body" style="white-space: pre-wrap; font-size:0.95rem; color:#333;">${safeEscape(c.body)}</div>

@@ -37,85 +37,87 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
     return { success: true, sent: 0, failed: 0, noTokenOrDenied, campaignId };
   }
 
-  // 2. Preparar mensagens
-  const messages = tokens.map((token) => ({
-    to: token,
-    sound: "default",
-    title: title || "SINPRF-ES",
-    body: body,
-    data: data || {},
-    priority: "high",
-  }));
+  // 2. Agrupar tokens por project_id para evitar conflitos no mesmo request
+  const groups = tokens.reduce((acc, curr) => {
+    const pid = curr.projectId || "unspecified";
+    if (!acc[pid]) acc[pid] = [];
+    acc[pid].push(curr.token);
+    return acc;
+  }, {});
 
-  // 3. Chunks e Envio
-  const chunks = expo.chunkPushNotifications(messages);
-  log.info("PushCampaign.ChunksCriados", { requestId, chunksCount: chunks.length, messagesCount: messages.length });
+  const projectIds = Object.keys(groups);
+  log.info("PushCampaign.Agrupamento", { requestId, projectsCount: projectIds.length, projects: projectIds });
 
-  const tickets = [];
   let sentCount = 0;
   let errorCount = 0;
   let hasCredentialError = false;
-  const errors = [];
+  const failureReasons = {}; // reason -> count
+  const byProject = []; // { projectId, sent, failed }
+  let projectConflictDetected = projectIds.length > 1;
 
-  let chunkIdx = 0;
-  for (const chunk of chunks) {
-    chunkIdx++;
-    try {
-      log.info("PushCampaign.EnviandoChunk", {
-        requestId,
-        chunkIdx,
-        chunkSize: chunk.length,
-        totalChunks: chunks.length
-      });
-      const chunkTickets = await expo.sendPushNotificationsAsync(chunk);
-      tickets.push(...chunkTickets);
+  // 3. Enviar por grupo
+  for (const projectId of projectIds) {
+    const groupTokens = groups[projectId];
+    const messages = groupTokens.map((token) => ({
+      to: token,
+      sound: "default",
+      title: title || "SINPRF-ES",
+      body: body,
+      data: data || {},
+      priority: "high",
+      ...(projectId !== "unspecified" ? { _projectId: projectId } : {})
+    }));
 
-      // Log detalhado dos tickets deste chunk
-      for (let i = 0; i < chunkTickets.length; i++) {
-        const ticket = chunkTickets[i];
-        if (ticket.status === 'error') {
-          errorCount++;
-          const errorCode = ticket.details?.error;
-          const errorMessage = ticket.message;
+    const chunks = expo.chunkPushNotifications(messages);
+    let pSent = 0;
+    let pFailed = 0;
 
-          if (errorCode === 'InvalidCredentials') {
-            hasCredentialError = true;
+    let chunkIdx = 0;
+    for (const chunk of chunks) {
+      chunkIdx++;
+      try {
+        const tickets = await expo.sendPushNotificationsAsync(chunk);
+        for (let i = 0; i < tickets.length; i++) {
+          const ticket = tickets[i];
+          if (ticket.status === 'error') {
+            pFailed++;
+            const errorCode = ticket.details?.error || "UnknownError";
+            failureReasons[errorCode] = (failureReasons[errorCode] || 0) + 1;
+
+            if (errorCode === 'InvalidCredentials') hasCredentialError = true;
+            if (errorCode === 'DeviceNotRegistered') {
+              await pushService.revokeSpecificToken(chunk[i].to);
+            }
+          } else {
+            pSent++;
           }
-
-          // Auto-revogação se o dispositivo não estiver mais registrado
-          if (errorCode === 'DeviceNotRegistered') {
-            log.info("PushCampaign.RevogandoTokenInvalido", { token: chunk[i].to.substring(0, 15) + "..." });
-            await pushService.revokeSpecificToken(chunk[i].to);
-          }
-
-          log.error("PushCampaign.TicketErro", {
-            requestId,
-            chunkIdx,
-            token: chunk[i].to.substring(0, 15) + "...",
-            errorCode,
-            errorMessage
-          });
-          errors.push(`Token[${i}]: ${errorCode || errorMessage}`);
-        } else {
-          sentCount++;
         }
+      } catch (e) {
+        log.error("PushCampaign.ChunkErro", { requestId, projectId, chunkIdx, error: e.message });
+        pFailed += chunk.length;
+        failureReasons["TransportError"] = (failureReasons["TransportError"] || 0) + chunk.length;
       }
-
-    } catch (error) {
-      log.error("PushCampaign.ChunkErro", { requestId, chunkIdx, error: error.message });
-      errorCount += chunk.length;
-      errors.push(`Chunk ${chunkIdx} (Transport Error): ${error.message}`);
     }
+
+    byProject.push({ projectId, sent: pSent, failed: pFailed });
+    sentCount += pSent;
+    errorCount += pFailed;
   }
 
-  // 4. Analisar tickets (v1 simplificada: logs já feitos acima)
+  // Top 5 razões de falha
+  const failuresTop = Object.entries(failureReasons)
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   const resultData = {
     sent: sentCount,
     failed: errorCount,
     noTokenOrDenied,
     hasCredentialError,
-    errors: errors.length > 0 ? errors : undefined,
+    failuresTop,
+    byProject,
+    projectConflictDetected,
     durationMs: new Date() - startTime
   };
 
@@ -124,7 +126,7 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   try {
     campaignId = await saveCampaignRecord({
         title, body, targetType, targetValue, data, createdBy,
-        status: (errorCount === messages.length && messages.length > 0) ? 'FAILED' : 'SENT',
+        status: (errorCount === tokens.length && tokens.length > 0) ? 'FAILED' : 'SENT',
         sentAt: new Date(),
         result: resultData
     });

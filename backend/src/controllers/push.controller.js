@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
     return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente).", requestId });
   }
 
-  const { expoPushToken, deviceId, platform, permissionStatus } = req.body || {};
+  const { expoPushToken, deviceId, platform, permissionStatus, projectId } = req.body || {};
   const bodyKeys = req.body ? Object.keys(req.body) : [];
 
   try {
@@ -28,6 +28,7 @@ exports.register = async (req, res) => {
       atorId,
       platform,
       permissionStatus,
+      projectId,
       expoPushTokenMasked: maskToken(expoPushToken),
       bodyKeys
     });
@@ -39,7 +40,8 @@ exports.register = async (req, res) => {
             expoPushToken: null,
             deviceId: deviceId ? String(deviceId) : null,
             platform: platform ? String(platform) : null,
-            permissionStatus
+            permissionStatus,
+            projectId: projectId ? String(projectId) : null
         });
         return res.json({ success: true, message: "Status de permissão negado registrado.", requestId });
     }
@@ -48,12 +50,18 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, error: "expoPushToken é obrigatório.", requestId });
     }
 
+    // Se temos um projectId, desativamos tokens de outros projetos para este usuário
+    if (projectId) {
+      await pushService.deactivateOtherProjectTokens(atorId, projectId);
+    }
+
     const result = await pushService.upsertToken({
       userId: atorId,
       expoPushToken: String(expoPushToken),
       deviceId: deviceId ? String(deviceId) : null,
       platform: platform ? String(platform) : null,
-      permissionStatus: permissionStatus || 'granted'
+      permissionStatus: permissionStatus || 'granted',
+      projectId: projectId ? String(projectId) : null
     });
 
     return res.json({ success: true, id: result?.id ?? null, requestId });
@@ -111,6 +119,23 @@ exports.unregister = async (req, res) => {
       stack: e.stack
     });
     return res.status(500).json({ success: false, error: "Erro ao remover push token.", errorId, requestId });
+  }
+};
+
+exports.diagnosticsMe = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
+  if (!atorId) {
+    return res.status(401).json({ success: false, error: "Usuário não autenticado.", requestId });
+  }
+
+  try {
+    const tokens = await pushService.getDiagnostics(atorId);
+    return res.json({ success: true, tokens, requestId });
+  } catch (e) {
+    log.error("PushDiagnosticsMeErro", { requestId, atorId, error: e.message });
+    return res.status(500).json({ success: false, error: "Erro ao carregar diagnóstico de push.", requestId });
   }
 };
 
