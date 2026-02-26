@@ -2,6 +2,7 @@
 const { Expo } = require("expo-server-sdk");
 const pool = require("../config/db");
 const pushConfig = require("../config/push.config");
+const log = require("../utils/log");
 
 const expo = new Expo();
 
@@ -17,12 +18,19 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
     throw new Error("ExpoPushToken inválido.");
   }
 
+  // Normalização de project IDs
+  let finalProjectId = projectId;
+  let finalExpoProjectId = expoProjectId;
+
+  if (finalExpoProjectId && !finalProjectId) finalProjectId = finalExpoProjectId;
+  if (finalProjectId && !finalExpoProjectId) finalExpoProjectId = finalProjectId;
+
   // Hard validation: Se o token for do Expo, ele DEVE ter um project_id associado
   // Caso contrário, ele será desativado para evitar ChunkError no SDK
   let disabledAt = null;
   let disabledReason = null;
 
-  if (isExpo && !expoProjectId && !projectId) {
+  if (isExpo && !finalExpoProjectId && !finalProjectId) {
     disabledAt = new Date();
     disabledReason = 'missing_project_id';
   }
@@ -57,14 +65,18 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
     deviceId ? String(deviceId) : null,
     platform ? String(platform) : null,
     permissionStatus ? String(permissionStatus) : 'granted',
-    projectId ? String(projectId) : null,
+    finalProjectId ? String(finalProjectId) : null,
     appScope || pushConfig.APP_SCOPE,
-    expoProjectId || null,
+    finalExpoProjectId ? String(finalExpoProjectId) : null,
     disabledAt,
     disabledReason
   ]);
 
-  return r.rows[0] || null;
+  const result = r.rows[0] || null;
+  if (result && disabledReason) {
+    result.disabled_reason = disabledReason;
+  }
+  return result;
 }
 
 async function revokeToken({ userId, expoPushToken }) {
@@ -135,7 +147,8 @@ async function getDiagnostics(userId) {
       revoked_at,
       disabled_at,
       disabled_reason,
-      permission_status
+      permission_status,
+      updated_at
     FROM push_tokens
     WHERE user_id = $1
     ORDER BY last_seen DESC;
@@ -258,6 +271,32 @@ async function resolvePushTargets(targetType, targetValue) {
   }
 
   const { rows } = await pool.query(sql, params);
+
+  if (rows.length === 0) {
+    // Diagnóstico quando não há tokens válidos
+    const diagSql = `
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE revoked_at IS NOT NULL) as revoked,
+        COUNT(*) FILTER (WHERE disabled_at IS NOT NULL) as disabled,
+        COUNT(*) FILTER (WHERE disabled_reason = 'missing_project_id') as missing_project_id,
+        COUNT(*) FILTER (WHERE disabled_reason = 'scope_mismatch') as scope_mismatch,
+        COUNT(*) FILTER (WHERE app_scope != $1) as other_scope
+      FROM push_tokens
+      WHERE user_id = $2 OR $2 IS NULL
+    `;
+    const targetId = targetType === 'FILIADO' ? ((typeof targetValue === 'object' && targetValue !== null) ? targetValue.id : targetValue) : null;
+    const diag = await pool.query(diagSql, [scope, targetId]);
+    const d = diag.rows[0];
+
+    log.warn("PushService.ResolveTargetsEmpty", {
+        targetType,
+        targetValue,
+        scope,
+        diagnostics: d
+    });
+  }
+
   return rows.map(r => ({
     token: r.expo_push_token,
     projectId: r.expo_project_id || r.project_id || null

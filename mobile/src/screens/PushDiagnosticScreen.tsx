@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { obterExpoPushToken, registrarDispositivoParaPush } from '../services/deviceService';
 import api from '../services/apiService';
 import { logger } from '../infra/logger';
+import { APP_SCOPE } from '../config/env';
 
 interface BackendToken {
   expo_push_token: string;
@@ -66,11 +67,24 @@ export default function PushDiagnosticScreen() {
   const handleReRegister = async () => {
     setActionLoading(true);
     try {
-      await registrarDispositivoParaPush();
-      Alert.alert('Sucesso', 'Token re-registrado no backend.');
+      const result = await registrarDispositivoParaPush();
+
+      if (result && result.success && result.ok !== false) {
+        Alert.alert('Sucesso', 'Token registrado no backend com sucesso.');
+      } else if (result && result.ok === false) {
+        Alert.alert(
+          'Atenção: Registro Parcial',
+          `O token foi enviado, mas o backend retornou um aviso:\n\nMotivo: ${result.reason}\nMensagem: ${result.message}\n\nDica: ${result.hint || 'Verifique as configurações do projeto.'}`
+        );
+      } else {
+        const errorMsg = result?.error || result?.message || 'Erro desconhecido';
+        Alert.alert('Falha no Registro', `Ocorreu um erro ao registrar o token:\n\n${errorMsg}`);
+      }
+
       fetchData(true);
     } catch (error: any) {
-      Alert.alert('Erro', 'Falha ao re-registrar token.');
+      logger.error('PushDiagnostic.handleReRegisterErro', error);
+      Alert.alert('Erro', 'Falha ao processar re-registro do token.');
     } finally {
       setActionLoading(false);
     }
@@ -175,6 +189,10 @@ export default function PushDiagnosticScreen() {
             <TouchableOpacity style={{ flex: 1 }} onPress={() => copyToClipboard(localInfo?.token || '')}>
               <Text style={styles.tokenValue} numberOfLines={1}>{localInfo?.token || 'Não obtido'}</Text>
             </TouchableOpacity>
+          </View>
+          <View style={styles.tokenRow}>
+            <Text style={styles.tokenLabel}>Scope:</Text>
+            <Text style={styles.tokenValue}>{APP_SCOPE}</Text>
           </View>
           <View style={styles.tokenRow}>
             <Text style={styles.tokenLabel}>Projeto ID:</Text>

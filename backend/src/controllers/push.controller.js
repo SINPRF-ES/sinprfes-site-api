@@ -89,7 +89,8 @@ exports.register = async (req, res) => {
          ok: false,
          id: result.id,
          reason: 'missing_project_id',
-         message: "Token registrado mas desativado por falta de EAS Project ID.",
+         message: "Token registrado mas desativado por falta de EAS Project ID no backend.",
+         hint: "Certifique-se de que o App está enviando o projectId/expoProjectId corretamente.",
          requestId
        });
     }
