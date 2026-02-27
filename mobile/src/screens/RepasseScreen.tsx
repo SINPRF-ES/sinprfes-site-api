@@ -165,19 +165,29 @@ export default function RepasseScreen() {
 
                 <View style={styles.card}>
                   <Text style={styles.cardTitle}>Apoio operacional por lotação</Text>
-                  <View style={styles.tableHeader}><Text style={[styles.th, { flex: 2 }]}>Lotação</Text><Text style={styles.th}>Ativos</Text><Text style={[styles.th, styles.right]}>Crédito</Text><Text style={[styles.th, styles.right]}>Débitos</Text><Text style={[styles.th, styles.right]}>Saldo</Text></View>
-                  {resumo.apoioPorLotacao.map((row, idx) => {
-                    const semLotacao = row.lotacao === 'SEM LOTAÇÃO';
-                    return (
-                      <View key={row.lotacao} style={[styles.tr, idx % 2 === 0 ? styles.even : styles.odd, semLotacao && styles.semLotacao]}>
-                        <Text style={[styles.td, { flex: 2, fontWeight: semLotacao ? '700' : '500' }]}>{row.lotacao}</Text>
-                        <Text style={styles.td}>{row.qtdAtivos}</Text>
-                        <Text style={[styles.td, styles.right]}>{formatCurrency(row.creditoApoioOperacional)}</Text>
-                        <Text style={[styles.td, styles.right]}>{formatCurrency(row.debitosApoioOperacional)}</Text>
-                        <Text style={[styles.td, styles.right, { fontWeight: '700' }]}>{formatCurrency(row.saldoApoioOperacional)}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator>
+                    <View>
+                      <View style={styles.tableHeader}>
+                        <View style={[styles.tableHeaderCellContainer, { width: 170 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 70 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Crédito</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Débitos</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Saldo</Text></View>
                       </View>
-                    );
-                  })}
+                      {resumo.apoioPorLotacao.map((row, idx) => {
+                        const semLotacao = row.lotacao === 'SEM LOTAÇÃO';
+                        return (
+                          <View key={row.lotacao} style={[styles.tableRow, idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd, semLotacao && styles.semLotacao]}>
+                            <View style={[styles.tableCellContainer, { width: 170 }]}><Text style={[styles.tableCell, { fontWeight: semLotacao ? '700' : '500' }]}>{row.lotacao}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 70 }]}><Text style={styles.tableCell}>{row.qtdAtivos}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight]}>{formatCurrency(row.creditoApoioOperacional)}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight]}>{formatCurrency(row.debitosApoioOperacional)}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight, { fontWeight: '700' }]}>{formatCurrency(row.saldoApoioOperacional)}</Text></View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
                 </View>
 
                 <View style={[styles.card, styles.highlightCard]}>
@@ -241,13 +251,31 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: '#fff', fontWeight: '700' },
   secondaryBtn: { borderWidth: 1, borderColor: '#0b3a67', borderRadius: 8, padding: 8, alignItems: 'center' },
   secondaryBtnText: { color: '#0b3a67', fontWeight: '700' },
-  tableHeader: { flexDirection: 'row', borderWidth: 1, borderColor: '#cfd8e3', backgroundColor: '#e8eef5', paddingVertical: 8, paddingHorizontal: 6 },
-  th: { flex: 1, fontSize: 11, color: '#0b3a67', fontWeight: '700' },
-  tr: { flexDirection: 'row', borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#dbe3ec', paddingVertical: 8, paddingHorizontal: 6 },
-  td: { flex: 1, fontSize: 12, color: '#223243' },
-  right: { textAlign: 'right' },
-  even: { backgroundColor: '#fff' },
-  odd: { backgroundColor: '#f7f9fb' },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#e8eef5', borderTopWidth: 1, borderLeftWidth: 1, borderColor: '#cfd8e3' },
+  tableHeaderText: { fontSize: 11, color: '#0b3a67', fontWeight: '700', textTransform: 'uppercase' },
+  tableHeaderCellContainer: {
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#cfd8e3',
+    minHeight: 44,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  tableRow: { flexDirection: 'row', borderLeftWidth: 1, borderColor: '#dbe3ec' },
+  tableRowEven: { backgroundColor: '#fff' },
+  tableRowOdd: { backgroundColor: '#f7f9fb' },
+  tableCellContainer: {
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#dbe3ec',
+    minHeight: 52,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  tableCell: { fontSize: 12, color: '#223243' },
+  textRight: { textAlign: 'right' },
   semLotacao: { backgroundColor: '#fff5da' },
   eventBox: { borderWidth: 1, borderColor: '#dce4ec', borderRadius: 10, padding: 10, marginTop: 8, backgroundColor: '#fff' },
   eventTitle: { color: '#0b3a67', fontWeight: '700' },
