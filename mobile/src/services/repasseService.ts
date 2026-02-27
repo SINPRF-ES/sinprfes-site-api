@@ -69,7 +69,7 @@ const repasseService = {
   listarResponsaveis: async (q = ''): Promise<Responsavel[]> => {
     try {
       logger.info('REPASSE_API_CALL', { fn: 'listarResponsaveis', q });
-      const url = q ? `/api/repasse/responsaveis?q=${encodeURIComponent(q)}` : '/api/repasse/responsaveis';
+      const url = `/api/repasse/responsaveis?q=${encodeURIComponent(q || '')}`;
       const response = await apiService.get(url);
       const data = response.data?.responsaveis ?? response.data ?? [];
       return Array.isArray(data) ? data : [];

@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { LOTACOES_REPASSE, normalizeLotacao, slugify } = require('../shared/canon');
+const { LOTACOES_REPASSE, normalizeLotacao } = require('../shared/canon');
 
 // Keywords para busca robusta se necessário, mas agora usamos a normalização canônica
 const LOTACAO_KEYWORDS = {
@@ -70,8 +70,7 @@ async function listarResponsaveis(lotacaoKey = null) {
   let query = `
     SELECT id, nome, cpf, lotacao, perfil_acesso, situacao, arquivado_em
     FROM filiados
-    WHERE UPPER(situacao) IN ('ATIVO', 'VETERANO')
-      AND arquivado_em IS NULL
+    WHERE arquivado_em IS NULL
   `;
   const params = [];
 
@@ -555,19 +554,35 @@ async function alocarEmEvento(eventoId, filiadoId) {
 }
 
 async function listarResponsaveisComBusca(q = '') {
-  const needle = slugify(q || '');
+  const term = String(q || '').trim();
+
+  if (!term) {
+    const { rows } = await pool.query(`
+      SELECT id, nome, cpf, lotacao, situacao
+      FROM filiados
+      WHERE arquivado_em IS NULL
+      ORDER BY nome ASC
+      LIMIT 50
+    `);
+    return rows;
+  }
+
   const { rows } = await pool.query(`
     SELECT id, nome, cpf, lotacao, situacao
     FROM filiados
     WHERE arquivado_em IS NULL
-      AND UPPER(situacao) IN ('ATIVO', 'VETERANO')
-    ORDER BY nome ASC
-    LIMIT 200
-  `);
-  if (!needle) return rows.slice(0, 50);
-  return rows
-    .filter((f) => slugify(f.nome).includes(needle) || slugify(f.lotacao).includes(needle))
-    .slice(0, 50);
+      AND unaccent(lower(nome)) LIKE '%' || unaccent(lower($1)) || '%'
+    ORDER BY
+      CASE
+        WHEN unaccent(lower(nome)) LIKE unaccent(lower($1)) || '%' THEN 0
+        ELSE 1
+      END,
+      LENGTH(unaccent(lower(nome))) ASC,
+      nome ASC
+    LIMIT 50
+  `, [term]);
+
+  return rows;
 }
 
 module.exports = {

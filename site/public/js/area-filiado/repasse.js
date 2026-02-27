@@ -106,7 +106,7 @@
     }
 
     async function carregarResponsaveis(q = '') {
-        const query = q ? `?q=${encodeURIComponent(q)}` : '';
+        const query = `?q=${encodeURIComponent(q || '')}`;
         const resp = await window.Api.apiFetch(`/api/repasse/responsaveis${query}`);
         if (!resp.ok) {
             responsaveis = [];
@@ -143,8 +143,15 @@
         renderAlocar();
     }
 
+    function formatSituacaoLabel(situacao) {
+        const val = String(situacao || '').toUpperCase();
+        if (val === 'VETERANO') return 'Veterano';
+        if (val === 'ATIVO') return 'Ativo';
+        return situacao || 'Não informado';
+    }
+
     function responsavelLabel(r) {
-        return `${r.nome} (${r.situacao || 'Não informado'})${r.lotacao ? ` — ${r.lotacao}` : ''}`;
+        return `${r.nome} (${formatSituacaoLabel(r.situacao)})${r.lotacao ? ` — ${r.lotacao}` : ''}`;
     }
 
     function renderEventoForm() {
@@ -164,6 +171,7 @@
                             <option value="">Selecione</option>
                             ${options}
                         </select>
+                        <div id="evt-resp-empty" style="font-size:.85rem;color:#6b7c8c;margin-top:4px;${responsaveis.length ? 'display:none;' : ''}">Nenhum filiado encontrado.</div>
                     </div>
                     <div><label>Data do evento</label><input id="evt-data-evento" type="date" style="width:100%;"></div>
                     <div><label>Data limite alocação</label><input id="evt-data-limite" type="date" style="width:100%;"></div>
@@ -190,6 +198,8 @@
             const atual = select.value;
             select.innerHTML = `<option value="">Selecione</option>${responsaveis.map((r) => `<option value="${r.id}">${responsavelLabel(r)}</option>`).join('')}`;
             if (responsaveis.some((f) => String(f.id) === String(atual))) select.value = atual;
+            const empty = document.getElementById('evt-resp-empty');
+            if (empty) empty.style.display = responsaveis.length ? 'none' : 'block';
         }, 250);
     }
 

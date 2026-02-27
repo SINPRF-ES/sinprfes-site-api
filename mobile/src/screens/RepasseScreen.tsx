@@ -50,6 +50,13 @@ export default function RepasseScreen() {
   const formatCurrency = (v: number | string | null | undefined) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
 
+  const formatSituacaoLabel = (situacao?: string) => {
+    const val = String(situacao || '').toUpperCase();
+    if (val === 'VETERANO') return 'Veterano';
+    if (val === 'ATIVO') return 'Ativo';
+    return situacao || 'Não informado';
+  };
+
   const loadResponsaveis = useCallback(async (q = '') => {
     if (!ehGestao) return;
     const rows = await repasseService.listarResponsaveis(q);
@@ -151,11 +158,14 @@ export default function RepasseScreen() {
                       items={[
                         { label: 'Selecione...', value: null },
                         ...responsaveis.map((r) => ({
-                          label: `${r.nome} (${r.situacao || 'Não informado'})`,
+                          label: `${r.nome} (${formatSituacaoLabel(r.situacao)})`,
                           value: r.id,
                         })),
                       ]}
                     />
+                    {responsaveis.length === 0 && queryResp.trim().length > 0 && (
+                      <Text style={styles.emptyPickerText}>Nenhum filiado encontrado.</Text>
+                    )}
                     <TextInput style={styles.input} placeholder="Data do evento (AAAA-MM-DD)" value={eventoForm.data_evento} onChangeText={(v) => setEventoForm((p) => ({ ...p, data_evento: v }))} />
                     <TextInput style={styles.input} placeholder="Data limite (AAAA-MM-DD)" value={eventoForm.data_limite_alocacao} onChangeText={(v) => setEventoForm((p) => ({ ...p, data_limite_alocacao: v }))} />
                     <TextInput style={styles.input} placeholder="Descrição" value={eventoForm.descricao} onChangeText={(v) => setEventoForm((p) => ({ ...p, descricao: v }))} />
@@ -247,6 +257,7 @@ const styles = StyleSheet.create({
   highlightCard: { borderLeftWidth: 4, borderLeftColor: '#0b8f6a' },
   highlightValue: { fontSize: 24, fontWeight: '700', color: '#0b3a67' },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cfd8e3', borderRadius: 8, padding: 10, marginBottom: 8 },
+  emptyPickerText: { fontSize: 12, color: '#6b7c8c', marginTop: 4 },
   primaryBtn: { backgroundColor: '#0b3a67', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 6 },
   primaryBtnText: { color: '#fff', fontWeight: '700' },
   secondaryBtn: { borderWidth: 1, borderColor: '#0b3a67', borderRadius: 8, padding: 8, alignItems: 'center' },
