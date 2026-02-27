@@ -82,7 +82,7 @@ async function listarResponsaveis(lotacaoKey = null) {
     }
   }
 
-  query += ` ORDER BY nome ASC LIMIT 50`;
+  query += ` ORDER BY nome ASC`;
 
   const { rows } = await pool.query(query, params);
 
@@ -562,16 +562,24 @@ async function listarResponsaveisComBusca(q = '') {
       FROM filiados
       WHERE arquivado_em IS NULL
       ORDER BY nome ASC
-      LIMIT 50
     `);
     return rows;
+  }
+
+  const digits = term.replace(/\D/g, '');
+  const params = [term];
+  let extraCond = '';
+
+  if (digits) {
+    params.push(`%${digits}%`);
+    extraCond = ` OR cpf LIKE $2`;
   }
 
   const { rows } = await pool.query(`
     SELECT id, nome, cpf, lotacao, situacao
     FROM filiados
     WHERE arquivado_em IS NULL
-      AND unaccent(lower(nome)) LIKE '%' || unaccent(lower($1)) || '%'
+      AND (unaccent(lower(nome)) LIKE '%' || unaccent(lower($1)) || '%' ${extraCond})
     ORDER BY
       CASE
         WHEN unaccent(lower(nome)) LIKE unaccent(lower($1)) || '%' THEN 0
@@ -579,8 +587,7 @@ async function listarResponsaveisComBusca(q = '') {
       END,
       LENGTH(unaccent(lower(nome))) ASC,
       nome ASC
-    LIMIT 50
-  `, [term]);
+  `, params);
 
   return rows;
 }

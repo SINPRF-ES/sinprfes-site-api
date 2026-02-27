@@ -15,6 +15,7 @@ import SafeScreen from '../components/SafeScreen';
 import { PickerSafe } from '../components/PickerSafe';
 import repasseService, { RepasseEvento, RepasseResumo, Responsavel } from '../services/repasseService';
 import { useAuth } from '../hooks/useAuth';
+import { formatDateToDdMmYyyy, formatISOToBR, toISODate } from '../utils/date';
 
 const MIN_YEAR = 2026;
 
@@ -30,6 +31,7 @@ export default function RepasseScreen() {
   const [alocacoesExpanded, setAlocacoesExpanded] = useState(false);
 
   const [queryResp, setQueryResp] = useState('');
+  const [allResponsaveisCache, setAllResponsaveisCache] = useState<Responsavel[] | null>(null);
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [eventoForm, setEventoForm] = useState({
     titulo: '',
@@ -59,9 +61,29 @@ export default function RepasseScreen() {
 
   const loadResponsaveis = useCallback(async (q = '') => {
     if (!ehGestao) return;
-    const rows = await repasseService.listarResponsaveis(q);
-    setResponsaveis(rows);
-  }, [ehGestao]);
+
+    let baseList = allResponsaveisCache;
+    if (!baseList) {
+      baseList = await repasseService.listarResponsaveis('');
+      setAllResponsaveisCache(baseList);
+    }
+
+    if (q && q.length >= 2) {
+      const termo = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      const apenasDigitos = q.replace(/\D/g, "");
+
+      const filtered = baseList.filter(f => {
+        const nomeNorm = f.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const matchesNome = nomeNorm.includes(termo);
+        const cpfDigits = (f.cpf || "").replace(/\D/g, "");
+        const matchesCpf = apenasDigitos && cpfDigits.includes(apenasDigitos);
+        return matchesNome || matchesCpf;
+      });
+      setResponsaveis(filtered);
+    } else {
+      setResponsaveis(baseList);
+    }
+  }, [ehGestao, allResponsaveisCache]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -98,7 +120,12 @@ export default function RepasseScreen() {
       return;
     }
     try {
-      await repasseService.criarEvento(eventoForm);
+      const payload = {
+        ...eventoForm,
+        data_evento: toISODate(eventoForm.data_evento) || '',
+        data_limite_alocacao: toISODate(eventoForm.data_limite_alocacao) || '',
+      };
+      await repasseService.criarEvento(payload);
       Alert.alert('Sucesso', 'Evento cadastrado com sucesso.');
       setEventoForm({ titulo: '', responsavel_filiado_id: null, data_evento: '', data_limite_alocacao: '', status: 'RASCUNHO', descricao: '' });
       await loadData();
@@ -166,8 +193,20 @@ export default function RepasseScreen() {
                     {responsaveis.length === 0 && queryResp.trim().length > 0 && (
                       <Text style={styles.emptyPickerText}>Nenhum filiado encontrado.</Text>
                     )}
-                    <TextInput style={styles.input} placeholder="Data do evento (AAAA-MM-DD)" value={eventoForm.data_evento} onChangeText={(v) => setEventoForm((p) => ({ ...p, data_evento: v }))} />
-                    <TextInput style={styles.input} placeholder="Data limite (AAAA-MM-DD)" value={eventoForm.data_limite_alocacao} onChangeText={(v) => setEventoForm((p) => ({ ...p, data_limite_alocacao: v }))} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Data do evento (DD/MM/AAAA)"
+                      value={eventoForm.data_evento}
+                      onChangeText={(v) => setEventoForm((p) => ({ ...p, data_evento: formatDateToDdMmYyyy(v) }))}
+                      keyboardType="numeric"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Data limite (DD/MM/AAAA)"
+                      value={eventoForm.data_limite_alocacao}
+                      onChangeText={(v) => setEventoForm((p) => ({ ...p, data_limite_alocacao: formatDateToDdMmYyyy(v) }))}
+                      keyboardType="numeric"
+                    />
                     <TextInput style={styles.input} placeholder="Descrição" value={eventoForm.descricao} onChangeText={(v) => setEventoForm((p) => ({ ...p, descricao: v }))} />
                     <TouchableOpacity style={styles.primaryBtn} onPress={criarEvento}><Text style={styles.primaryBtnText}>Cadastrar evento</Text></TouchableOpacity>
                   </View>
@@ -214,7 +253,7 @@ export default function RepasseScreen() {
                   {alocacoesExpanded && resumo.alocacoesPorEvento.map((grupo) => (
                     <View key={grupo.evento.id} style={styles.eventBox}>
                       <Text style={styles.eventTitle}>{grupo.evento.titulo}</Text>
-                      <Text style={styles.eventMeta}>Evento: {String(grupo.evento.data_evento).slice(0, 10)} • Limite: {String(grupo.evento.data_limite_alocacao).slice(0, 10)}</Text>
+                      <Text style={styles.eventMeta}>Evento: {formatISOToBR(grupo.evento.data_evento)} • Limite: {formatISOToBR(grupo.evento.data_limite_alocacao)}</Text>
                       <Text style={styles.eventTotal}>Total alocado: {formatCurrency(grupo.totalAlocado)}</Text>
                       {grupo.itens.length === 0 ? <Text style={styles.itemText}>Sem alocações.</Text> : grupo.itens.map((i) => (
                         <Text key={`${grupo.evento.id}-${i.filiado_id}`} style={styles.itemText}>• {i.nome} ({i.situacao}) — {formatCurrency(i.valorAlocado)}</Text>
@@ -230,7 +269,7 @@ export default function RepasseScreen() {
                   ) : (
                     eventosAbertos.map((e) => (
                       <TouchableOpacity key={e.id} style={styles.listBtn} onPress={() => alocarMeuRecurso(e.id)}>
-                        <Text style={styles.listBtnText}>{e.titulo} • limite {String(e.data_limite_alocacao).slice(0, 10)}</Text>
+                        <Text style={styles.listBtnText}>{e.titulo} • limite {formatISOToBR(e.data_limite_alocacao)}</Text>
                       </TouchableOpacity>
                     ))
                   )}
