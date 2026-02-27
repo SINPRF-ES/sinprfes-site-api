@@ -1,746 +1,259 @@
-import React, { Component, ErrorInfo, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   ActivityIndicator,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { PickerSafe } from '../components/PickerSafe';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SafeScreen from '../components/SafeScreen';
-import repasseService, { MesRepasse, Responsavel } from '../services/repasseService';
-import { getFiliados } from '../services/apiService';
+import { PickerSafe } from '../components/PickerSafe';
+import repasseService, { RepasseEvento, RepasseResumo, Responsavel } from '../services/repasseService';
 import { useAuth } from '../hooks/useAuth';
-import { logger } from '../infra/logger';
-import * as Canon from '../utils/canon';
 
-const nomesMeses = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
-
-const LOTACAO_KEYWORDS: any = {
-  "SEDE": "SEDE",
-  "DEL 01 - Viana": "VIANA",
-  "DEL 02 - Serra": "SERRA",
-  "DEL 03 - Guarapari": "GUARAPARI",
-  "DEL 04 - Linhares": "LINHARES"
-};
-
-class RepasseErrorBoundary extends Component<{ children: ReactNode, breadcrumbs: string[] }, { hasError: boolean }> {
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    logger.error('REPASSE_RENDER_ERROR', error, {
-      componentStack: errorInfo.componentStack,
-      breadcrumbs: this.props.breadcrumbs
-    });
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={{ padding: 20, alignItems: 'center' }}>
-          <Text style={{ color: 'red', fontWeight: 'bold' }}>⚠️ Erro ao carregar repasse.</Text>
-          <Text style={{ color: '#666', marginTop: 10 }}>Tente recarregar a tela.</Text>
-        </View>
-      );
-    }
-    return this.props.children;
-  }
-}
+const MIN_YEAR = 2026;
 
 export default function RepasseScreen() {
   const { usuario } = useAuth();
-  const breadcrumbsRef = useRef<string[]>([]);
-
-  const bc = (msg: string, meta?: any) => {
-    breadcrumbsRef.current.push(msg);
-    if (breadcrumbsRef.current.length > 50) breadcrumbsRef.current.shift();
-    logger.info('REPASSE_BC', { msg, ...meta });
-  };
-
-  const safeNumber = (v: any, fallback = 0) => {
-    const n = typeof v === 'number' ? v : Number(v);
-    return Number.isFinite(n) ? n : fallback;
-  };
-
-  const normalizeLocalidade = (str: string) => {
-    return (str || '')
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .toUpperCase();
-  };
-
-  const formatCurrency = (v: any) =>
-    safeNumber(v, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-  const MIN_YEAR = 2026;
-  const currentYear = new Date().getFullYear();
-  const initialYear = Math.max(currentYear, MIN_YEAR);
+  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  const initialYear = Math.max(new Date().getFullYear(), MIN_YEAR);
 
   const [year, setYear] = useState(initialYear);
+  const [loading, setLoading] = useState(false);
+  const [resumo, setResumo] = useState<RepasseResumo | null>(null);
+  const [eventosAbertos, setEventosAbertos] = useState<RepasseEvento[]>([]);
+  const [alocacoesExpanded, setAlocacoesExpanded] = useState(false);
 
-  const years = React.useMemo(() => {
+  const [queryResp, setQueryResp] = useState('');
+  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
+  const [eventoForm, setEventoForm] = useState({
+    titulo: '',
+    responsavel_filiado_id: null as number | null,
+    data_evento: '',
+    data_limite_alocacao: '',
+    status: 'RASCUNHO',
+    descricao: '',
+  });
+
+  const years = useMemo(() => {
     const end = Math.max(initialYear, year) + 5;
     const arr = [];
     for (let y = MIN_YEAR; y <= end; y++) arr.push(y);
     return arr;
-  }, [year, initialYear]);
+  }, [initialYear, year]);
 
-  const [loading, setLoading] = useState(true);
-  const [meses, setMeses] = useState<MesRepasse[]>([]);
-  const [totalAcumuladoGeral, setTotalAcumuladoGeral] = useState(0);
-  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
-  const [expandedMonth, setExpandedMonth] = useState<number | null>(new Date().getMonth() + 1);
+  const formatCurrency = (v: number | string | null | undefined) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
 
-  console.info('[REPASSE][STATE]', {
-    year,
-    loading,
-    mesesCount: meses?.length,
-    totalAcumuladoGeral,
-    responsaveisCount: responsaveis?.length,
-    expandedMonth,
-    usuarioPerfil: usuario?.perfil_acesso,
-  });
+  const loadResponsaveis = useCallback(async (q = '') => {
+    if (!ehGestao) return;
+    const rows = await repasseService.listarResponsaveis(q);
+    setResponsaveis(rows);
+  }, [ehGestao]);
 
-  // Implementação local para máxima robustez contra erros de importação (UI_RENDER_CRASH)
-  const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
-
-  const fetchData = useCallback(async () => {
-    bc('fetch:start', { year });
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-
-      bc('api:call:start', { year, ehGestao });
-      const [respAno, respResps, respFiliados] = await Promise.allSettled([
-        repasseService.getRepasseAno(year),
-        ehGestao ? repasseService.listarResponsaveis() : Promise.resolve([]),
-        getFiliados()
+      const [resumoResp, eventosResp] = await Promise.all([
+        repasseService.getResumo(year),
+        repasseService.listarEventos(year, 'ABERTO'),
       ]);
-      bc('api:call:end', {
-        anoStatus: respAno.status,
-        respsStatus: respResps.status,
-        filiadosStatus: respFiliados.status
-      });
-
-      if (respAno.status === 'fulfilled') {
-        const data = respAno.value;
-
-        // Passo 1: Normalização robusta de dados (sanitização preventiva)
-        const mesesApi = Array.isArray(data?.meses) ? data.meses : [];
-        const mesesNorm: MesRepasse[] = mesesApi.map(m => ({
-          ...m,
-          month: safeNumber(m?.month, 0),
-          perCapita: safeNumber(m?.perCapita, 0),
-          totalRepasseMes: safeNumber(m?.totalRepasseMes, 0),
-          localidades: Array.isArray(m?.localidades) ? m.localidades.map(l => ({
-            ...l,
-            lotacao: String(l?.lotacao || ''),
-            filiadosAtivos: safeNumber(l?.filiadosAtivos, 0),
-            prfTotal: safeNumber(l?.prfTotal, 0),
-            percentual: (l?.percentual == null) ? null : safeNumber(l.percentual),
-            creditoMes: safeNumber(l?.creditoMes, 0),
-            reembolsoMes: safeNumber(l?.reembolsoMes, 0),
-            acumuladoAno: safeNumber(l?.acumuladoAno, 0),
-            responsavelId: l?.responsavelId ?? null,
-            responsavelNome: String(l?.responsavelNome || ''),
-          })) : [],
-        }));
-
-        // Task 2: Unificar contagem de filiados ativos (Fonte: Listar Filiados)
-        if (respFiliados.status === 'fulfilled') {
-          const allFiliados = Array.isArray(respFiliados.value) ? respFiliados.value : [];
-          bc('REPASSE_LOCALIDADE_NORMALIZATION', { allFiliadosCount: allFiliados.length });
-
-          const activeFiliados = allFiliados.filter(f => {
-            const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
-            return situacao === 'ATIVO' && !f.arquivado_em;
-          });
-
-          const counts: any = {};
-          Object.keys(LOTACAO_KEYWORDS).forEach(lot => {
-            const kw = LOTACAO_KEYWORDS[lot];
-            counts[lot] = activeFiliados.filter(f =>
-              normalizeLocalidade(f.lotacao || 'SEDE').includes(kw)
-            ).length;
-          });
-
-          bc('unify_counts:done', counts);
-
-          mesesNorm.forEach(m => {
-            m.localidades.forEach(l => {
-              if (counts[l.lotacao] !== undefined) {
-                l.filiadosAtivos = counts[l.lotacao];
-                // Recalcular percentual e crédito com base no novo número de ativos
-                const perCapita = Number(m.perCapita || 0);
-                if (l.prfTotal > 0) {
-                  l.percentual = (l.filiadosAtivos / l.prfTotal) * 100;
-                  const base = l.filiadosAtivos * perCapita;
-                  let factor = 0;
-                  if (l.percentual >= 90) factor = 1.0;
-                  else if (l.percentual >= 80) factor = 0.7;
-                  else if (l.percentual >= 70) factor = 0.4;
-                  l.creditoMes = base * factor;
-                } else {
-                  l.percentual = null;
-                  l.creditoMes = 0;
-                }
-              }
-            });
-            m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + (l.creditoMes || 0), 0);
-          });
-        } else {
-          logger.warn('REPASSE_FILIADOS_COUNT_FALLBACK', { reason: respFiliados.status });
-        }
-
-        // Recalcular acumulado anual após unificação de contagens
-        const acumulados: any = {};
-        Canon.LOTACOES_REPASSE.forEach(lot => {
-          let somaCred = 0;
-          let somaReem = 0;
-          mesesNorm.forEach(mes => {
-            const l = mes.localidades.find(ll => ll.lotacao === lot);
-            if (l) {
-              somaCred += l.creditoMes;
-              somaReem += l.reembolsoMes;
-            }
-          });
-          acumulados[lot] = somaCred - somaReem;
-        });
-
-        mesesNorm.forEach(mes => {
-          mes.localidades.forEach(l => {
-            l.acumuladoAno = acumulados[l.lotacao] || 0;
-          });
-        });
-
-        const totalAcumuladoNorm = Object.values(acumulados).reduce((acc: any, curr: any) => acc + curr, 0) as number;
-
-        bc('normalize:done', {
-          mesesLen: mesesNorm.length,
-          total: totalAcumuladoNorm
-        });
-
-        setMeses(mesesNorm);
-        setTotalAcumuladoGeral(totalAcumuladoNorm);
-      } else {
-        logger.error('REPASSE_FETCH_ERROR', respAno.reason, {
-          fn: 'getRepasseAno',
-          breadcrumbs: breadcrumbsRef.current,
-          year
-        });
-        setMeses([]);
-      }
-
-      if (respResps.status === 'fulfilled') {
-        const respsData = respResps.value;
-        const respList = Array.isArray(respsData) ? respsData : [];
-
-        // Mobile logs (obrigatório)
-        const total = respList.length;
-        const byLotacaoCounts: any = {};
-        const orgs = respList.filter(r => (r.perfil_acesso || '').toUpperCase() === 'ORGANIZADOR');
-        respList.forEach(r => {
-          const l = r.lotacao || 'SEM LOTACAO';
-          byLotacaoCounts[l] = (byLotacaoCounts[l] || 0) + 1;
-        });
-
-        console.info("[REPASSE_UI] responsaveis loaded", {
-          total,
-          byLotacaoCounts,
-          organizadores: orgs.length,
-          organizadorLotacoes: orgs.map(o => o.lotacao)
-        });
-
-        setResponsaveis(respList);
-      } else {
-        setResponsaveis([]);
-      }
-
-      if (respAno.status === 'rejected') {
-        Alert.alert('Erro', 'Não foi possível carregar os dados de repasse para este ano.');
-      }
-    } catch (err: any) {
-      logger.error('REPASSE_FETCH_ERROR', err, {
-        message: err.message,
-        stack: err.stack,
-        breadcrumbs: breadcrumbsRef.current,
-        year
-      });
-      setMeses([]);
-      setResponsaveis([]);
+      setResumo(resumoResp);
+      setEventosAbertos(eventosResp);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível carregar os dados de repasse.');
+      setResumo(null);
+      setEventosAbertos([]);
     } finally {
       setLoading(false);
     }
-  }, [year, ehGestao]);
+  }, [year]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    loadData();
+  }, [loadData]);
 
-  const handleUpdateLocalidade = (month: number, lotacao: string, field: string, value: any) => {
-    const newMeses = [...meses];
-    const mesIndex = newMeses.findIndex(m => m.month === month);
-    if (mesIndex === -1) return;
+  useEffect(() => {
+    const id = setTimeout(() => {
+      loadResponsaveis(queryResp);
+    }, 250);
+    return () => clearTimeout(id);
+  }, [loadResponsaveis, queryResp]);
 
-    const locIndex = newMeses[mesIndex].localidades.findIndex(l => l.lotacao === lotacao);
-    if (locIndex === -1) return;
-
-    const loc = { ...newMeses[mesIndex].localidades[locIndex] };
-    if (field === 'responsavelId') loc.responsavelId = value;
-    if (field === 'prfTotal') loc.prfTotal = parseInt(value) || 0;
-    if (field === 'reembolsoMes') loc.reembolsoMes = parseFloat(value) || 0;
-
-    newMeses[mesIndex].localidades[locIndex] = loc;
-
-    recalculate(newMeses, month);
-    setMeses(newMeses);
-  };
-
-  const handleUpdatePerCapita = (month: number, value: string) => {
-    const newMeses = [...meses];
-    const mesIndex = newMeses.findIndex(m => m.month === month);
-    if (mesIndex === -1) return;
-
-    newMeses[mesIndex].perCapita = parseFloat(value) || 0;
-    recalculate(newMeses, month);
-    setMeses(newMeses);
-  };
-
-  const recalculate = (mesesList: MesRepasse[], month: number) => {
-    console.info('[REPASSE][LOGIC] Recalculate start', { month });
-    const m = (mesesList || []).find(m => m.month === month);
-    if (!m) return;
-
-    const perCapita = Number(m.perCapita || 0);
-    console.info('[REPASSE][FOR_EACH][recalculate.localidades]', { count: m.localidades?.length });
-    (m.localidades || []).forEach(loc => {
-      const prfTotal = Number(loc.prfTotal || 0);
-      const filiadosAtivos = Number(loc.filiadosAtivos || 0);
-
-      if (prfTotal > 0) {
-        loc.percentual = (filiadosAtivos / prfTotal) * 100;
-        const base = filiadosAtivos * perCapita;
-        let factor = 0;
-        if (loc.percentual >= 90) factor = 1.0;
-        else if (loc.percentual >= 80) factor = 0.7;
-        else if (loc.percentual >= 70) factor = 0.4;
-        loc.creditoMes = base * factor;
-      } else {
-        loc.percentual = null;
-        loc.creditoMes = 0;
-      }
-    });
-
-    console.info('[REPASSE][REDUCE][totalRepasseMes]');
-    m.totalRepasseMes = (m.localidades || []).reduce((acc, l) => acc + Number(l.creditoMes || 0), 0);
-
-    const acumulados: any = {};
-    console.info('[REPASSE][FOR_EACH][lotacoes]');
-    Canon.LOTACOES_REPASSE.forEach(lot => {
-      let somaCred = 0;
-      let somaReem = 0;
-      console.info(`[REPASSE][FOR_EACH][mesesList] for lotacao ${lot}`);
-      (mesesList || []).forEach(mes => {
-        const l = (mes.localidades || []).find(ll => ll.lotacao === lot);
-        if (l) {
-            somaCred += Number(l.creditoMes || 0);
-            somaReem += Number(l.reembolsoMes || 0);
-        }
-      });
-      acumulados[lot] = somaCred - somaReem;
-    });
-
-    console.info('[REPASSE][FOR_EACH][mesesList] update acumuladoAno');
-    (mesesList || []).forEach(mes => {
-      (mes.localidades || []).forEach(l => {
-        l.acumuladoAno = Number(acumulados[l.lotacao] || 0);
-      });
-    });
-
-    console.info('[REPASSE][REDUCE][totalAcumuladoGeral]');
-    setTotalAcumuladoGeral(Object.values(acumulados).reduce((acc: any, curr: any) => acc + Number(curr || 0), 0) as number);
-  };
-
-  const handleSaveMonth = async (month: number) => {
-    const m = meses.find(ms => ms.month === month);
-    if (!m) return;
-
+  const criarEvento = async () => {
+    if (!eventoForm.titulo || !eventoForm.data_evento || !eventoForm.data_limite_alocacao) {
+      Alert.alert('Validação', 'Preencha título, data do evento e data limite.');
+      return;
+    }
     try {
-      setLoading(true);
-      console.info('[REPASSE][MAP][handleSaveMonth.localidades]');
-      await repasseService.updateRepasseMes(
-        year,
-        month,
-        m.perCapita,
-        (m.localidades || []).map(l => ({
-          lotacaoKey: l.lotacao,
-          responsavelId: l.responsavelId,
-          prfTotal: l.prfTotal,
-          reembolsoMes: l.reembolsoMes
-        }))
-      );
-      Alert.alert('Sucesso', `Dados de ${nomesMeses[month - 1]} salvos.`);
-      fetchData();
-    } catch (err) {
-      Alert.alert('Erro', 'Falha ao salvar dados.');
-    } finally {
-      setLoading(false);
+      await repasseService.criarEvento(eventoForm);
+      Alert.alert('Sucesso', 'Evento cadastrado com sucesso.');
+      setEventoForm({ titulo: '', responsavel_filiado_id: null, data_evento: '', data_limite_alocacao: '', status: 'RASCUNHO', descricao: '' });
+      await loadData();
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Erro ao cadastrar evento.');
     }
   };
 
-  const getPercentColor = (percent: number | null | undefined) => {
-    if (percent == null || !Number.isFinite(percent)) return '#888';
-    if (percent < 70) return '#c62828';
-    if (percent < 80) return '#fcc419';
-    return '#2e7d32';
+  const alocarMeuRecurso = async (eventoId: number) => {
+    try {
+      await repasseService.alocarMeuRecurso(eventoId);
+      Alert.alert('Sucesso', 'Recurso alocado com sucesso.');
+      await loadData();
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Falha ao alocar recurso.');
+    }
   };
 
-
-  if (loading && meses.length === 0) {
-    console.info('[REPASSE][RENDER] Loading state active');
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#003366" /></View>;
-  }
-
-  if (!meses) {
-    console.warn('[REPASSE][RENDER] meses indefinido');
-    return <View style={styles.centered}><Text>Carregando repasse...</Text></View>;
-  }
-
-  bc('render:start', { selectedYear: year, mesesLen: meses?.length, totalType: typeof totalAcumuladoGeral });
-
   return (
-    <SafeScreen style={styles.container}>
-      <RepasseErrorBoundary breadcrumbs={breadcrumbsRef.current}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
-          <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.title}>💱 Repasse Mensal</Text>
-              <Text style={styles.subtitle}>Gestão de créditos por localidade</Text>
+    <SafeScreen style={styles.screen}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.mainCard}>
+            <Text style={styles.title}>Repasse</Text>
+            <Text style={styles.subtitle}>Ano {year} • Apoio operacional e alocações</Text>
+
+            <View style={styles.yearRow}>
+              <PickerSafe
+                label="Ano"
+                labelStyle={styles.yearLabel}
+                selectedValue={year}
+                onValueChange={(v) => setYear(Number(v))}
+                mode="dropdown"
+                items={years.map((y) => ({ label: String(y), value: y }))}
+                containerStyle={{ flex: 1 }}
+              />
             </View>
-          </View>
 
-          <View style={styles.yearSelectionRow}>
-            <PickerSafe
-              label="Ano:"
-              labelStyle={styles.yearLabel}
-              containerStyle={{ flex: 1 }}
-              selectedValue={year}
-              onValueChange={(v) => setYear(v as number)}
-              mode="dropdown"
-              dropdownIconColor="#003366"
-              items={years.map(y => ({ label: String(y), value: y }))}
-            />
-          </View>
+            {loading && <ActivityIndicator color="#0b3a67" style={{ marginVertical: 16 }} />}
 
-          <View style={styles.statsCard}>
-            <Text style={styles.statsLabel}>Total Acumulado Geral ({year})</Text>
-            <Text style={styles.statsValue}>{formatCurrency(totalAcumuladoGeral)}</Text>
-          </View>
-
-          {meses.length === 0 && !loading && (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="cash-off" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>Nenhum dado de repasse encontrado para o ano de {year}.</Text>
-            </View>
-          )}
-
-          {(() => {
-            bc('render:list:meses', { mesesLen: meses.length });
-
-            if (!Array.isArray(meses)) {
-              return null;
-            }
-
-            return meses.map((m) => (
-              <View key={m.month} style={styles.monthCard}>
-                <TouchableOpacity
-                  style={styles.monthHeader}
-                  onPress={() => setExpandedMonth(expandedMonth === m.month ? null : m.month)}
-                >
-                  <View style={styles.monthHeaderLeft}>
-                    <Text style={styles.monthName}>{nomesMeses[m.month - 1] || `Mês ${m.month}`}</Text>
-                    <Text style={styles.monthCapita}>Per Capita: {formatCurrency(m.perCapita)}</Text>
-                  </View>
-                  <View style={styles.monthHeaderRight}>
-                    <Text style={styles.monthTotal}>{formatCurrency(m.totalRepasseMes)}</Text>
-                    <MaterialCommunityIcons
-                      name={expandedMonth === m.month ? 'chevron-up' : 'chevron-down'}
-                      size={24}
-                      color="#003366"
+            {!loading && resumo && (
+              <>
+                {ehGestao && (
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Cadastrar evento (gestão)</Text>
+                    <TextInput style={styles.input} placeholder="Título" value={eventoForm.titulo} onChangeText={(v) => setEventoForm((p) => ({ ...p, titulo: v }))} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Buscar responsável por nome ou lotação"
+                      value={queryResp}
+                      onChangeText={setQueryResp}
                     />
-                  </View>
-                </TouchableOpacity>
-
-                {expandedMonth === m.month && (
-                  <View style={styles.monthDetails}>
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>Per Capita do Mês</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={String(m.perCapita)}
-                        keyboardType="numeric"
-                        onChangeText={(v) => handleUpdatePerCapita(m.month, v)}
-                      />
-                    </View>
-
-                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                      <View style={styles.tableContainer}>
-                        <View style={styles.tableHeader}>
-                          <View style={[styles.tableHeaderCell, { width: 130 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
-                          {ehGestao && <View style={[styles.tableHeaderCell, { width: 200 }]}><Text style={styles.tableHeaderText}>Responsável</Text></View>}
-                          <View style={[styles.tableHeaderCell, { width: 70 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
-                          <View style={[styles.tableHeaderCell, { width: 90 }]}><Text style={styles.tableHeaderText}>PRF Total</Text></View>
-                          <View style={[styles.tableHeaderCell, { width: 60 }]}><Text style={styles.tableHeaderText}>%</Text></View>
-                          <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Crédito Mês</Text></View>
-                          <View style={[styles.tableHeaderCell, { width: 110 }]}><Text style={styles.tableHeaderText}>Reembolso</Text></View>
-                          <View style={[styles.tableHeaderCell, { width: 120 }]}><Text style={styles.tableHeaderText}>Acumulado Ano</Text></View>
-                        </View>
-
-                        {(() => {
-                          bc('render:list:localidades', { month: m.month, locLen: m.localidades?.length });
-
-                          if (!Array.isArray(m.localidades)) {
-                            return null;
-                          }
-
-                          return m.localidades.map((loc, idx) => (
-                            <View
-                              key={loc.lotacao}
-                              style={[
-                                styles.tableRow,
-                                idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
-                              ]}
-                            >
-                              <View style={[styles.tableCell, { width: 130 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{String(loc.lotacao || '—')}</Text></View>
-
-                              {ehGestao && (
-                                <View style={[styles.tableCell, { width: 200 }]}>
-                                  <PickerSafe
-                                    containerStyle={{ marginBottom: 0 }}
-                                    pickerBoxStyle={{ height: 52 }}
-                                    selectedValue={loc.responsavelId}
-                                    onValueChange={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'responsavelId', v)}
-                                    mode="dropdown"
-                                    dropdownIconColor="#003366"
-                                    items={(() => {
-                                      const kw = LOTACAO_KEYWORDS[loc.lotacao];
-                                      const respList = (responsaveis || []);
-
-                                      const filtered = respList.filter(r => {
-                                        if (!kw) return true;
-                                        if (!r.lotacao) return false;
-                                        return normalizeLocalidade(r.lotacao).includes(kw);
-                                      });
-
-                                      console.info("[REPASSE_UI] picker options", {
-                                        lotacao: loc.lotacao,
-                                        key: kw,
-                                        optionsCount: filtered.length,
-                                        optionIds: filtered.map(o => o.id).slice(0, 10)
-                                      });
-
-                                      if (filtered.length === 0 && loc.filiadosAtivos > 0) {
-                                        console.warn("[REPASSE_UI] lotacao sem responsaveis", {
-                                          lotacao: loc.lotacao,
-                                          filiadosAtivos: loc.filiadosAtivos
-                                        });
-                                      }
-
-                                      return [
-                                        { label: "Selecione...", value: null },
-                                        ...filtered.map(r => ({ label: r.nome, value: r.id }))
-                                      ];
-                                    })()}
-                                  />
-                                </View>
-                              )}
-
-                              <View style={[styles.tableCell, { width: 70 }]}><Text style={styles.valueCell}>{Number(loc.filiadosAtivos || 0)}</Text></View>
-
-                              <View style={[styles.tableCell, { width: 90 }]}>
-                                {ehGestao ? (
-                                  <TextInput
-                                    style={styles.inputCell}
-                                    value={String(loc.prfTotal || 0)}
-                                    keyboardType="numeric"
-                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'prfTotal', v)}
-                                  />
-                                ) : (
-                                  <Text style={styles.valueCell}>{Number(loc.prfTotal || 0)}</Text>
-                                )}
-                              </View>
-
-                              <View style={[styles.tableCell, { width: 60 }]}>
-                                <Text style={[styles.valueCell, { color: getPercentColor(loc.percentual), fontWeight: 'bold' }]}>
-                                  {(loc.percentual == null || !Number.isFinite(loc.percentual)) ? '—' : `${Number(loc.percentual).toFixed(1)}%`}
-                                </Text>
-                              </View>
-
-                              <View style={[styles.tableCell, { width: 110 }]}><Text style={[styles.valueCell, { fontWeight: 'bold' }]}>{formatCurrency(loc.creditoMes)}</Text></View>
-
-                              <View style={[styles.tableCell, { width: 110 }]}>
-                                {ehGestao ? (
-                                  <TextInput
-                                    style={styles.inputCell}
-                                    value={String(loc.reembolsoMes || 0)}
-                                    keyboardType="numeric"
-                                    onChangeText={(v) => handleUpdateLocalidade(m.month, loc.lotacao, 'reembolsoMes', v)}
-                                  />
-                                ) : (
-                                  <Text style={styles.valueCell}>{formatCurrency(loc.reembolsoMes)}</Text>
-                                )}
-                              </View>
-
-                              <View style={[styles.tableCell, { width: 120 }]}><Text style={[styles.valueCell, { color: '#e67e22', fontWeight: 'bold' }]}>{formatCurrency(loc.acumuladoAno)}</Text></View>
-                            </View>
-                          ));
-                        })()}
-                      </View>
-                    </ScrollView>
-
-                    <TouchableOpacity
-                      style={styles.saveButton}
-                      onPress={() => handleSaveMonth(m.month)}
-                    >
-                      <Text style={styles.saveButtonText}>Salvar {nomesMeses[m.month - 1]}</Text>
-                    </TouchableOpacity>
+                    <PickerSafe
+                      selectedValue={eventoForm.responsavel_filiado_id}
+                      onValueChange={(v) => setEventoForm((p) => ({ ...p, responsavel_filiado_id: v as number | null }))}
+                      mode="dropdown"
+                      items={[
+                        { label: 'Selecione...', value: null },
+                        ...responsaveis.map((r) => ({
+                          label: `${r.nome} (${r.situacao || 'Não informado'})`,
+                          value: r.id,
+                        })),
+                      ]}
+                    />
+                    <TextInput style={styles.input} placeholder="Data do evento (AAAA-MM-DD)" value={eventoForm.data_evento} onChangeText={(v) => setEventoForm((p) => ({ ...p, data_evento: v }))} />
+                    <TextInput style={styles.input} placeholder="Data limite (AAAA-MM-DD)" value={eventoForm.data_limite_alocacao} onChangeText={(v) => setEventoForm((p) => ({ ...p, data_limite_alocacao: v }))} />
+                    <TextInput style={styles.input} placeholder="Descrição" value={eventoForm.descricao} onChangeText={(v) => setEventoForm((p) => ({ ...p, descricao: v }))} />
+                    <TouchableOpacity style={styles.primaryBtn} onPress={criarEvento}><Text style={styles.primaryBtnText}>Cadastrar evento</Text></TouchableOpacity>
                   </View>
                 )}
-              </View>
-            ));
-          })()}
-            <View style={{ height: 40 }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </RepasseErrorBoundary>
+
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Apoio operacional por lotação</Text>
+                  <View style={styles.tableHeader}><Text style={[styles.th, { flex: 2 }]}>Lotação</Text><Text style={styles.th}>Ativos</Text><Text style={[styles.th, styles.right]}>Crédito</Text><Text style={[styles.th, styles.right]}>Débitos</Text><Text style={[styles.th, styles.right]}>Saldo</Text></View>
+                  {resumo.apoioPorLotacao.map((row, idx) => {
+                    const semLotacao = row.lotacao === 'SEM LOTAÇÃO';
+                    return (
+                      <View key={row.lotacao} style={[styles.tr, idx % 2 === 0 ? styles.even : styles.odd, semLotacao && styles.semLotacao]}>
+                        <Text style={[styles.td, { flex: 2, fontWeight: semLotacao ? '700' : '500' }]}>{row.lotacao}</Text>
+                        <Text style={styles.td}>{row.qtdAtivos}</Text>
+                        <Text style={[styles.td, styles.right]}>{formatCurrency(row.creditoApoioOperacional)}</Text>
+                        <Text style={[styles.td, styles.right]}>{formatCurrency(row.debitosApoioOperacional)}</Text>
+                        <Text style={[styles.td, styles.right, { fontWeight: '700' }]}>{formatCurrency(row.saldoApoioOperacional)}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                <View style={[styles.card, styles.highlightCard]}>
+                  <Text style={styles.cardTitle}>Recurso não alocado</Text>
+                  <Text style={styles.highlightValue}>{formatCurrency(resumo.recursoNaoAlocadoTotal)}</Text>
+                </View>
+
+                <View style={styles.card}>
+                  <Text style={[styles.cardTitle, { textAlign: 'center' }]}>Alocações por evento</Text>
+                  <TouchableOpacity style={styles.secondaryBtn} onPress={() => setAlocacoesExpanded((v) => !v)}>
+                    <Text style={styles.secondaryBtnText}>{alocacoesExpanded ? 'Ocultar alocações' : 'Mostrar alocações'}</Text>
+                  </TouchableOpacity>
+
+                  {alocacoesExpanded && resumo.alocacoesPorEvento.map((grupo) => (
+                    <View key={grupo.evento.id} style={styles.eventBox}>
+                      <Text style={styles.eventTitle}>{grupo.evento.titulo}</Text>
+                      <Text style={styles.eventMeta}>Evento: {String(grupo.evento.data_evento).slice(0, 10)} • Limite: {String(grupo.evento.data_limite_alocacao).slice(0, 10)}</Text>
+                      <Text style={styles.eventTotal}>Total alocado: {formatCurrency(grupo.totalAlocado)}</Text>
+                      {grupo.itens.length === 0 ? <Text style={styles.itemText}>Sem alocações.</Text> : grupo.itens.map((i) => (
+                        <Text key={`${grupo.evento.id}-${i.filiado_id}`} style={styles.itemText}>• {i.nome} ({i.situacao}) — {formatCurrency(i.valorAlocado)}</Text>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Alocar meu recurso</Text>
+                  {eventosAbertos.length === 0 ? (
+                    <Text style={styles.itemText}>Sem eventos abertos no momento.</Text>
+                  ) : (
+                    eventosAbertos.map((e) => (
+                      <TouchableOpacity key={e.id} style={styles.listBtn} onPress={() => alocarMeuRecurso(e.id)}>
+                        <Text style={styles.listBtnText}>{e.titulo} • limite {String(e.data_limite_alocacao).slice(0, 10)}</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 15 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#003366' },
-  subtitle: { fontSize: 13, color: '#666' },
-  yearSelectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
-  yearLabel: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  yearPickerWrapper: { backgroundColor: '#fff', borderRadius: 8, flex: 1, elevation: 2 },
-  yearPicker: { height: 52 },
-  statsCard: { backgroundColor: '#003366', padding: 20, borderRadius: 12, marginBottom: 20, elevation: 4 },
-  statsLabel: { color: '#fff', opacity: 0.8, fontSize: 13, marginBottom: 5 },
-  statsValue: { color: '#ffc107', fontSize: 24, fontWeight: 'bold' },
-  monthCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, elevation: 2, overflow: 'hidden' },
-  monthHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  monthHeaderLeft: { flex: 1 },
-  monthName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  monthCapita: { fontSize: 12, color: '#777', marginTop: 2 },
-  monthHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  monthTotal: { fontSize: 15, fontWeight: 'bold', color: '#003366' },
-  monthDetails: { padding: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  inputGroup: { marginBottom: 15 },
-  label: { fontSize: 12, fontWeight: 'bold', color: '#666', marginBottom: 5 },
-  input: { backgroundColor: '#f9f9f9', padding: 10, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
-  saveButton: { backgroundColor: '#003366', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 15 },
-  saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 20 },
-  emptyText: { color: '#999', fontSize: 16, textAlign: 'center', marginTop: 10 },
-
-  tableContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginTop: 10,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f3f5',
-    borderBottomWidth: 2,
-    borderBottomColor: '#ccc',
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-  },
-  tableHeaderText: {
-    fontWeight: 'bold',
-    color: '#003366',
-    fontSize: 11,
-    textAlign: 'center',
-    textTransform: 'uppercase'
-  },
-  tableHeaderCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
-    borderRightWidth: 1,
-    borderRightColor: '#ccc',
-    minHeight: 44
-  },
-  tableRow: {
-    flexDirection: 'row',
-  },
-  tableRowEven: { backgroundColor: '#fff' },
-  tableRowOdd: { backgroundColor: '#f8f9fa' },
-  tableCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 6,
-    borderRightWidth: 1,
-    borderRightColor: '#ccc',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    minHeight: 52
-  },
-  valueCell: {
-    fontSize: 12,
-    color: '#333',
-    textAlign: 'center'
-  },
-  inputCell: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#bbb',
-    borderRadius: 6,
-    padding: 4,
-    fontSize: 12,
-    width: '95%',
-    textAlign: 'center',
-    height: 36
-  },
-  pickerWrapperCell: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#bbb',
-    borderRadius: 6,
-    width: '95%',
-    height: 52,
-    justifyContent: 'center'
-  },
-  pickerCell: {
-    color: '#333',
-    height: 52
-  },
+  screen: { flex: 1, backgroundColor: '#edf1f5' },
+  container: { padding: 14 },
+  mainCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  title: { textAlign: 'center', fontSize: 28, fontWeight: '700', color: '#0b3a67' },
+  subtitle: { textAlign: 'center', color: '#5a6f82', marginBottom: 10 },
+  yearRow: { marginBottom: 12 },
+  yearLabel: { color: '#0b3a67', fontWeight: '700' },
+  card: { backgroundColor: '#f9fbfd', borderRadius: 12, borderWidth: 1, borderColor: '#dce4ec', padding: 12, marginBottom: 12 },
+  cardTitle: { color: '#0b3a67', fontWeight: '700', marginBottom: 8, fontSize: 16 },
+  highlightCard: { borderLeftWidth: 4, borderLeftColor: '#0b8f6a' },
+  highlightValue: { fontSize: 24, fontWeight: '700', color: '#0b3a67' },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cfd8e3', borderRadius: 8, padding: 10, marginBottom: 8 },
+  primaryBtn: { backgroundColor: '#0b3a67', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 6 },
+  primaryBtnText: { color: '#fff', fontWeight: '700' },
+  secondaryBtn: { borderWidth: 1, borderColor: '#0b3a67', borderRadius: 8, padding: 8, alignItems: 'center' },
+  secondaryBtnText: { color: '#0b3a67', fontWeight: '700' },
+  tableHeader: { flexDirection: 'row', borderWidth: 1, borderColor: '#cfd8e3', backgroundColor: '#e8eef5', paddingVertical: 8, paddingHorizontal: 6 },
+  th: { flex: 1, fontSize: 11, color: '#0b3a67', fontWeight: '700' },
+  tr: { flexDirection: 'row', borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#dbe3ec', paddingVertical: 8, paddingHorizontal: 6 },
+  td: { flex: 1, fontSize: 12, color: '#223243' },
+  right: { textAlign: 'right' },
+  even: { backgroundColor: '#fff' },
+  odd: { backgroundColor: '#f7f9fb' },
+  semLotacao: { backgroundColor: '#fff5da' },
+  eventBox: { borderWidth: 1, borderColor: '#dce4ec', borderRadius: 10, padding: 10, marginTop: 8, backgroundColor: '#fff' },
+  eventTitle: { color: '#0b3a67', fontWeight: '700' },
+  eventMeta: { fontSize: 12, color: '#677788', marginVertical: 3 },
+  eventTotal: { fontSize: 13, fontWeight: '700', color: '#0b8f6a', marginBottom: 4 },
+  itemText: { fontSize: 13, color: '#314354' },
+  listBtn: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cfd8e3', borderRadius: 8, padding: 10, marginTop: 8 },
+  listBtnText: { color: '#0b3a67', fontWeight: '600' },
 });
