@@ -60,4 +60,28 @@ describe('repasse.service responsáveis search', () => {
     expect(params).toEqual(['abc1', '%1%']);
     expect(sql).toContain("OR cpf LIKE $2");
   });
+
+  test('listarResponsaveisComBusca com CPF apenas dígitos', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 3, nome: 'John', cpf: '12345678901' }] });
+    const repasseService = require('./repasse.service');
+
+    const rows = await repasseService.listarResponsaveisComBusca('123');
+
+    expect(rows).toEqual([{ id: 3, nome: 'John', cpf: '12345678901' }]);
+    const [sql, params] = pool.query.mock.calls[0];
+    expect(params).toEqual(['123', '%123%']);
+    expect(sql).toContain("OR cpf LIKE $2");
+  });
+
+  test('listarResponsaveisComBusca com termo misto', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 4, nome: 'Alice' }] });
+    const repasseService = require('./repasse.service');
+
+    const rows = await repasseService.listarResponsaveisComBusca('abc1');
+
+    expect(rows).toEqual([{ id: 4, nome: 'Alice' }]);
+    const [sql, params] = pool.query.mock.calls[0];
+    expect(params).toEqual(['abc1', '%1%']);
+    expect(sql).toContain("OR cpf LIKE $2");
+  });
 });
