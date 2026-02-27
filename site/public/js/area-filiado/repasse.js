@@ -1,427 +1,350 @@
 /**
- * Módulo Repasse (Página Inicial)
- * Carregado como script clássico (window.Repasse)
+ * Módulo Repasse reformulado (Apoio Operacional + Eventos)
  */
-
 (function (global) {
     if (global.Repasse) return;
 
     const MIN_YEAR = 2026;
     let yearCurrent = Math.max(new Date().getFullYear(), MIN_YEAR);
-    let responsaveisCache = [];
-    let filiadosCache = [];
     let repasseData = null;
-    let perfilLogado = null;
+    let eventosAbertos = [];
+    let responsaveis = [];
+    let perfilLogado = 'FILIADO';
 
-    const LOTACOES_REPASSE = global.Canon?.LOTACOES_REPASSE || [];
+    function formatCurrency(v) {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
+    }
+
+    function normalizeText(str) {
+        return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    }
+
+    function ehGestao() {
+        return ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((perfilLogado || '').toUpperCase());
+    }
 
     async function inicializarRepasse(perfil) {
-        perfilLogado = (perfil || "").toUpperCase();
-        const container = document.getElementById("sec-repasse");
+        perfilLogado = (perfil || 'FILIADO').toUpperCase();
+        const container = document.getElementById('sec-repasse');
         if (!container) return;
 
-        if (!document.getElementById('style-repasse')) {
-            const s = document.createElement('style');
-            s.id = 'style-repasse';
-            s.textContent = `
-                .repasse-card { background: #ffffff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; margin: 0 auto 25px auto; max-width: 1100px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-                .repasse-header-main { background: #003366; color: #ffffff; padding: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-                .repasse-header-main h2 { margin: 0; color: #f1c40f; font-size: 1.8rem; }
-                .repasse-body { padding: 25px; background: #ffffff; color: #333; }
-                .repasse-stats-box { background: #f8f9fa; border-left: 5px solid #f1c40f; padding: 15px; border-radius: 4px; margin-bottom: 25px; }
-                .repasse-stats-label { font-size: 0.9rem; color: #666; display: block; margin-bottom: 5px; }
-                .repasse-stats-value { font-size: 1.5rem; font-weight: bold; color: #003366; }
-
-                .month-container { margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
-                .month-tab { background: #f1f3f5; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
-                .month-tab:hover { background: #e9ecef; }
-                .month-tab h3 { margin: 0; font-size: 1.1rem; color: #003366; }
-                .month-tab-info { display: flex; align-items: center; gap: 20px; }
-                .month-tab-total { font-weight: bold; color: #27ae60; }
-
-                .month-content { padding: 20px; display: none; border-top: 1px solid #eee; background: #fff; }
-                .month-config-row { display: flex; gap: 20px; margin-bottom: 20px; align-items: flex-end; }
-
-                .repasse-tabela { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; background: #fff; }
-                .repasse-tabela th, .repasse-tabela td { border: 1px solid #ddd; padding: 12px 10px; text-align: left; }
-                .repasse-tabela th { background: #f1f3f5; color: #003366; position: sticky; top: 0; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
-                .repasse-tabela tr:nth-child(even) { background: #f8f9fa; }
-                .repasse-tabela input, .repasse-tabela select { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
-
-                .btn-repasse-save { background: #003366; color: #ffffff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-                .btn-repasse-save:hover { background: #004488; }
-            `;
-            document.head.appendChild(s);
+        if (!ehGestao()) {
+            container.innerHTML = '<p style="padding:16px; color:#b00;">Acesso restrito à gestão.</p>';
+            return;
         }
 
         container.innerHTML = `
-            <div class="repasse-card">
-                <div class="repasse-header-main">
+            <section class="card" style="padding:16px; max-width:1100px; margin:0 auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <h2 style="margin:0;">💱 Repasse</h2>
                     <div>
-                        <h2>💱 Repasse por Localidade</h2>
-                        <p style="margin: 5px 0 0 0; opacity: 0.9;">Gestão de créditos e reembolsos mensais</p>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <label style="font-weight:bold;">Ano:</label>
-                        <select id="repasse-year-select" style="padding:8px; border-radius:6px; background:#fff; color:#333; border:none;">
-                            ${(() => {
-                                const endYear = Math.max(yearCurrent, new Date().getFullYear()) + 5;
-                                let options = '';
-                                for (let y = MIN_YEAR; y <= endYear; y++) {
-                                    options += `<option value="${y}" ${y === yearCurrent ? "selected" : ""}>${y}</option>`;
-                                }
-                                return options;
-                            })()}
-                        </select>
+                        <label for="repasse-year-select">Ano:</label>
+                        <select id="repasse-year-select"></select>
                     </div>
                 </div>
-                <div class="repasse-body">
-                    <div class="repasse-stats-box">
-                        <span class="repasse-stats-label">Total Acumulado Geral (${yearCurrent})</span>
-                        <span id="total-acumulado-geral" class="repasse-stats-value">R$ 0,00</span>
-                    </div>
 
-                    <div id="repasse-meses-container">
-                        <p style="text-align:center; padding:40px; color:#666;">Carregando dados...</p>
+                <div id="repasse-config-form" style="margin-top:16px;"></div>
+                <div id="repasse-evento-form" style="margin-top:16px;"></div>
+
+                <div id="repasse-config" style="margin-top:16px;"></div>
+                <div id="repasse-apoio" style="margin-top:16px;"></div>
+                <div id="repasse-nao-alocado" style="margin-top:16px;"></div>
+                <div id="repasse-alocacoes" style="margin-top:16px;"></div>
+                <div id="repasse-alocar" style="margin-top:16px;"></div>
+            </section>
+        `;
+
+        const yearSelect = document.getElementById('repasse-year-select');
+        const endYear = new Date().getFullYear() + 5;
+        for (let y = MIN_YEAR; y <= endYear; y++) {
+            const opt = document.createElement('option');
+            opt.value = String(y);
+            opt.textContent = String(y);
+            if (y === yearCurrent) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', async (e) => {
+            yearCurrent = Number(e.target.value);
+            await carregarDados();
+        });
+
+        await carregarResponsaveis();
+        await carregarDados();
+    }
+
+    async function carregarResponsaveis() {
+        const resp = await window.Api.apiFetch('/api/repasse/responsaveis');
+        if (!resp.ok) {
+            responsaveis = [];
+            return;
+        }
+        const data = await resp.json();
+        responsaveis = data.responsaveis || [];
+    }
+
+    async function carregarDados() {
+        const [resumoResp, eventosResp] = await Promise.all([
+            window.Api.apiFetch(`/api/repasse/resumo?ano=${yearCurrent}`),
+            window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}&status=ABERTO`)
+        ]);
+
+        if (!resumoResp.ok) {
+            document.getElementById('repasse-apoio').innerHTML = '<p style="color:#b00;">Não foi possível carregar o resumo.</p>';
+            return;
+        }
+
+        const resumo = await resumoResp.json();
+        repasseData = resumo;
+
+        if (eventosResp.ok) {
+            const de = await eventosResp.json();
+            eventosAbertos = de.eventos || [];
+        } else {
+            eventosAbertos = [];
+        }
+
+        renderConfigForm();
+        renderEventoForm();
+        renderConfig();
+        renderApoio();
+        renderNaoAlocado();
+        renderAlocacoes();
+        renderAlocar();
+    }
+
+    function renderConfigForm() {
+        const c = repasseData?.config || {};
+        document.getElementById('repasse-config-form').innerHTML = `
+            <div class="card" style="padding:12px; background:#fffbe6; border:1px solid #ead89a;">
+                <h3 style="margin-top:0;">Configuração anual (gestão)</h3>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; align-items:end;">
+                    <div>
+                        <label>Per capta global anual</label>
+                        <input id="cfg-global" type="number" min="0" step="0.01" value="${Number(c.perCapitaGlobalAnual || 0)}" style="width:100%;">
+                    </div>
+                    <div>
+                        <label>Per capta apoio operacional anual</label>
+                        <input id="cfg-apoio" type="number" min="0" step="0.01" value="${Number(c.perCapitaApoioOperacionalAnual || 0)}" style="width:100%;">
+                    </div>
+                    <div>
+                        <button class="ui-btn" onclick="Repasse.salvarConfigAnual()">Salvar configuração</button>
                     </div>
                 </div>
             </div>
         `;
-
-        const selectYear = document.getElementById("repasse-year-select");
-        if (selectYear) {
-            selectYear.onchange = (e) => {
-                yearCurrent = parseInt(e.target.value);
-                carregarDados();
-            };
-        }
-
-        await carregarResponsaveis();
-        await carregarFiliados();
-        await carregarDados();
     }
 
-    async function carregarFiliados() {
-        try {
-            const r = await window.Api.apiFetch("/api/filiados");
-            if (r.ok) {
-                const d = await r.json();
-                filiadosCache = d.filiados || d || [];
-            }
-        } catch (e) { console.error("Erro filiados", e); }
-    }
-
-    async function carregarResponsaveis() {
-        try {
-            const r = await window.Api.apiFetch("/api/repasse/responsaveis");
-            if (r.ok) {
-                const d = await r.json();
-                responsaveisCache = d.responsaveis || [];
-            }
-        } catch (e) { console.error("Erro responsaveis", e); }
-    }
-
-    async function carregarDados() {
-        const container = document.getElementById("repasse-meses-container");
-        if (!container) return;
-
-        try {
-            const r = await window.Api.apiFetch(`/api/repasse?year=${yearCurrent}`);
-            if (r.ok) {
-                repasseData = await r.json();
-
-                // Paridade App: Unificar contagem de filiados ativos (B1)
-                unificarContagemAtivos();
-
-                renderizarMeses();
-            } else if (r.status === 401 || r.status === 403) {
-              container.innerHTML = `<p style="color:#c0392b; text-align:center;">Acesso Negado. Você não tem permissão para ver os detalhes de repasse.</p>`;
-            } else {
-              container.innerHTML = `<p style="color:#c0392b; text-align:center;">Erro ao carregar dados. Tente novamente.</p>`;
-            }
-        } catch (e) {
-            container.innerHTML = `<p style="color:#c0392b; text-align:center;">Erro de conexão.</p>`;
-        }
-    }
-
-    function unificarContagemAtivos() {
-        if (!repasseData || !filiadosCache.length) return;
-
-        const activeFiliados = filiadosCache.filter(f => {
-            const situacao = (f.situacao_funcional || f.situacao || 'ATIVO').toUpperCase();
-            return situacao === 'ATIVO' && !f.arquivado_em;
-        });
-
-        const counts = {};
-        Object.keys(LOTACAO_KEYWORDS).forEach(lot => {
-            const kw = LOTACAO_KEYWORDS[lot];
-            counts[lot] = activeFiliados.filter(f =>
-                normalizeText(f.lotacao || 'SEDE').includes(kw)
-            ).length;
-        });
-
-        repasseData.meses.forEach(m => {
-            m.localidades.forEach(l => {
-                if (counts[l.lotacao] !== undefined) {
-                    l.filiadosAtivos = counts[l.lotacao];
-                }
-            });
-            // Recalcula o mês com base nos novos ativos
-            recalcular(m.month);
-        });
-    }
-
-    function renderizarMeses() {
-        const container = document.getElementById("repasse-meses-container");
-        const totalGeralEl = document.getElementById("total-acumulado-geral");
-
-        if (!container || !repasseData) return;
-
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilLogado);
-        totalGeralEl.textContent = formatCurrency(repasseData.totalAcumuladoGeral || 0);
-
-        const nomesMeses = [
-            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-        ];
-
-        const mesesAbertos = Array.from(document.querySelectorAll(".month-content"))
-            .map((el, idx) => el.style.display === "block" ? idx + 1 : null)
-            .filter(Boolean);
-
-        container.innerHTML = repasseData.meses.map(m => {
-            const totalMes = m.totalRepasseMes || 0;
-            const isAberto = mesesAbertos.includes(m.month) || (m.month === new Date().getMonth() + 1 && mesesAbertos.length === 0);
-
-            return `
-                <div class="month-container">
-                    <div class="month-tab" onclick="const c = this.nextElementSibling; c.style.display = c.style.display === 'none' ? 'block' : 'none'">
-                        <h3>${nomesMeses[m.month - 1]}</h3>
-                        <div class="month-tab-info">
-                            <span style="font-size:0.85rem; color:#666;">Per Capita: ${formatCurrency(m.perCapita)}</span>
-                            <span class="month-tab-total">${formatCurrency(totalMes)}</span>
-                            <span style="color:#003366;">⌄</span>
-                        </div>
+    function renderEventoForm() {
+        const options = responsaveis.map((r) => `<option value="${r.id}">${r.nome} (${r.lotacao || 'SEM LOTAÇÃO'})</option>`).join('');
+        document.getElementById('repasse-evento-form').innerHTML = `
+            <div class="card" style="padding:12px; background:#f8f9fa; border:1px solid #ddd;">
+                <h3 style="margin-top:0;">Cadastrar evento (gestão)</h3>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; align-items:end;">
+                    <div style="grid-column:1 / -1;">
+                        <label>Título</label>
+                        <input id="evt-titulo" type="text" placeholder="Ex: Festa de Linhares" style="width:100%;">
                     </div>
-                    <div class="month-content" id="content-month-${m.month}" style="display:${isAberto ? 'block' : 'none'};">
-                        <div class="month-config-row">
-                            <div style="flex: 1; max-width: 200px;">
-                                <label style="display:block; font-weight:bold; font-size:0.8rem; margin-bottom:5px;">Per Capita do Mês</label>
-                                ${ehGestao
-                                    ? `<input type="number" step="0.01" value="${m.perCapita}" onchange="Repasse.atualizarPerCapita(${m.month}, this.value)" style="padding:8px; border:1px solid #ccc; border-radius:4px; width:100%;">`
-                                    : `<span style="font-size:1.1rem; color:#003366; font-weight:bold;">${formatCurrency(m.perCapita)}</span>`
-                                }
-                            </div>
-                            ${ehGestao ? `
-                            <div style="flex: 1; text-align: right;">
-                                <button class="btn-repasse-save" onclick="Repasse.salvarMes(${m.month})">💾 Salvar Alterações de ${nomesMeses[m.month-1]}</button>
-                            </div>` : ''}
-                        </div>
-
-                        <div class="ui-table-wrapper">
-                            <table class="repasse-tabela ui-table">
-                                <thead>
-                                    <tr>
-                                        <th>Localidade</th>
-                                        <th>Responsável</th>
-                                        <th style="text-align:center;">Ativos</th>
-                                        <th style="text-align:center;">PRF Total</th>
-                                        <th style="text-align:center;">%</th>
-                                        <th style="text-align:right;">Crédito</th>
-                                        <th style="text-align:right;">Reembolso</th>
-                                        <th style="text-align:right;">Acumulado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${m.localidades.map(loc => renderRowLocalidade(m.month, loc)).join("")}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div>
+                        <label>Responsável (busca por nome/lotação)</label>
+                        <input id="evt-resp-busca" type="text" placeholder="Digite para filtrar..." oninput="Repasse.filtrarResponsaveis(this.value)" style="width:100%; margin-bottom:4px;">
+                        <select id="evt-responsavel" style="width:100%;">
+                            <option value="">Selecione</option>
+                            ${options}
+                        </select>
+                    </div>
+                    <div>
+                        <label>Data do evento</label>
+                        <input id="evt-data-evento" type="date" style="width:100%;">
+                    </div>
+                    <div>
+                        <label>Data limite alocação</label>
+                        <input id="evt-data-limite" type="date" style="width:100%;">
+                    </div>
+                    <div>
+                        <label>Status inicial</label>
+                        <select id="evt-status" style="width:100%;">
+                            <option value="RASCUNHO">RASCUNHO</option>
+                            <option value="ABERTO">ABERTO</option>
+                        </select>
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label>Descrição (opcional)</label>
+                        <textarea id="evt-descricao" rows="2" style="width:100%;"></textarea>
+                    </div>
+                    <div>
+                        <button class="ui-btn" onclick="Repasse.criarEvento()">Cadastrar evento</button>
                     </div>
                 </div>
-            `;
-        }).join("");
-    }
-
-    const LOTACAO_KEYWORDS = {
-        "SEDE": "SEDE",
-        "DEL 01 - Viana": "VIANA",
-        "DEL 02 - Serra": "SERRA",
-        "DEL 03 - Guarapari": "GUARAPARI",
-        "DEL 04 - Linhares": "LINHARES"
-    };
-
-    function normalizeText(str) {
-        return (str || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    }
-
-    function renderRowLocalidade(month, loc) {
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilLogado);
-        const percent = loc.percentual;
-        const percentDisplay = percent === null ? "—" : percent.toFixed(0) + "%";
-        const hasWarning = (loc.prfTotal <= 0);
-
-        let colorPercent = "#666";
-        if (percent !== null) {
-            if (percent < 70) colorPercent = "#e74c3c";
-            else if (percent < 80) colorPercent = "#f39c12";
-            else colorPercent = "#27ae60";
-        }
-
-        // Paridade com o app: filtrar responsáveis por lotação
-        const kw = LOTACAO_KEYWORDS[loc.lotacao];
-        const filteredResps = responsaveisCache.filter(r => {
-            if (!kw) return true;
-            if (!r.lotacao) return false;
-            return normalizeText(r.lotacao).includes(kw);
-        });
-
-        const respNome = loc.responsavelNome || (responsaveisCache.find(r => r.id == loc.responsavelId)?.nome) || "—";
-
-        return `
-            <tr>
-                <td style="font-weight:bold; color:#003366;">${loc.lotacao}</td>
-                <td>
-                    ${ehGestao ? `
-                    <select onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { responsavelId: this.value })">
-                        <option value="">Selecione...</option>
-                        ${filteredResps.map(r => `<option value="${r.id}" ${r.id == loc.responsavelId ? "selected" : ""}>${r.nome}</option>`).join("")}
-                    </select>` : `<span>${respNome}</span>`}
-                </td>
-                <td style="text-align:center;">${loc.filiadosAtivos}</td>
-                <td style="text-align:center;">
-                    ${ehGestao ? `<input type="number" value="${loc.prfTotal}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { prfTotal: this.value })" style="width:70px; text-align:center;">` : `<span>${loc.prfTotal}</span>`}
-                </td>
-                <td style="text-align:center; color:${colorPercent}; font-weight:bold;">
-                    ${hasWarning ? '<span title="PRF Total deve ser maior que zero">⚠️</span>' : percentDisplay}
-                </td>
-                <td style="text-align:right; font-weight:bold;">${formatCurrency(loc.creditoMes)}</td>
-                <td style="text-align:right;">
-                    ${ehGestao ? `<input type="number" step="0.01" value="${loc.reembolsoMes}" onchange="Repasse.atualizarLocalidade(${month}, '${loc.lotacao}', { reembolsoMes: this.value })" style="width:100px; text-align:right;">` : `<span>${formatCurrency(loc.reembolsoMes)}</span>`}
-                </td>
-                <td style="text-align:right; color:#e67e22; font-weight:bold;">${formatCurrency(loc.acumuladoAno)}</td>
-            </tr>
+            </div>
         `;
     }
 
-    function atualizarPerCapita(month, value) {
-        const m = repasseData.meses.find(m => m.month === month);
-        if (m) {
-            m.perCapita = parseFloat(value) || 0;
-            recalcular(month);
-            renderizarMeses();
+    function filtrarResponsaveis(termo) {
+        const select = document.getElementById('evt-responsavel');
+        if (!select) return;
+        const needle = normalizeText(termo);
+        const filtrados = !needle
+            ? responsaveis
+            : responsaveis.filter((r) => normalizeText(r.nome).includes(needle) || normalizeText(r.lotacao).includes(needle));
+
+        const atual = select.value;
+        select.innerHTML = `<option value="">Selecione</option>${filtrados.map((r) => `<option value="${r.id}">${r.nome} (${r.lotacao || 'SEM LOTAÇÃO'})</option>`).join('')}`;
+        if (filtrados.some((f) => String(f.id) === String(atual))) select.value = atual;
+    }
+
+    async function salvarConfigAnual() {
+        const perCapitaGlobalAnual = Number(document.getElementById('cfg-global')?.value || 0);
+        const perCapitaApoioOperacionalAnual = Number(document.getElementById('cfg-apoio')?.value || 0);
+
+        const resp = await window.Api.apiFetch(`/api/repasse/config?ano=${yearCurrent}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ perCapitaGlobalAnual, perCapitaApoioOperacionalAnual })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Erro ao salvar configuração.');
+            return;
         }
+        alert('Configuração salva com sucesso.');
+        await carregarDados();
     }
 
-    function atualizarLocalidade(month, lotacao, data) {
-        const m = repasseData.meses.find(m => m.month === month);
-        if (m) {
-            const canonLot = global.Canon?.normalizeLotacao(lotacao);
-            const loc = m.localidades.find(l => l.lotacao === canonLot);
-            if (loc) {
-                if (data.responsavelId !== undefined) loc.responsavelId = data.responsavelId;
-                if (data.prfTotal !== undefined) loc.prfTotal = parseInt(data.prfTotal) || 0;
-                if (data.reembolsoMes !== undefined) loc.reembolsoMes = parseFloat(data.reembolsoMes) || 0;
-
-                recalcular(month);
-                renderizarMeses();
-            }
-        }
-    }
-
-    function recalcular(month) {
-        const m = repasseData.meses.find(m => m.month === month);
-        const perCapita = m.perCapita;
-
-        m.localidades.forEach(loc => {
-            if (loc.prfTotal > 0) {
-                loc.percentual = (loc.filiadosAtivos / loc.prfTotal) * 100;
-                const base = loc.filiadosAtivos * perCapita;
-
-                let factor = 0;
-                if (loc.percentual >= 90) factor = 1.0;
-                else if (loc.percentual >= 80) factor = 0.7;
-                else if (loc.percentual >= 70) factor = 0.4;
-
-                loc.creditoMes = base * factor;
-            } else {
-                loc.percentual = null;
-                loc.creditoMes = 0;
-            }
-        });
-
-        m.totalRepasseMes = m.localidades.reduce((acc, l) => acc + l.creditoMes, 0);
-
-        const acumulados = {};
-        LOTACOES_REPASSE.forEach(lot => {
-            let somaCred = 0;
-            let somaReem = 0;
-            repasseData.meses.forEach(mes => {
-                const l = mes.localidades.find(ll => global.Canon?.normalizeLotacao(ll.lotacao) === lot);
-                if (l) {
-                    somaCred += l.creditoMes;
-                    somaReem += l.reembolsoMes;
-                }
-            });
-            acumulados[lot] = somaCred - somaReem;
-        });
-
-        repasseData.meses.forEach(mes => {
-            mes.localidades.forEach(l => {
-                l.acumuladoAno = acumulados[global.Canon?.normalizeLotacao(l.lotacao)];
-            });
-        });
-
-        repasseData.totalAcumuladoGeral = Object.values(acumulados).reduce((acc, curr) => acc + curr, 0);
-    }
-
-    async function salvarMes(month) {
-        const m = repasseData.meses.find(m => m.month === month);
-        if (!m) return;
-
+    async function criarEvento() {
         const payload = {
-            year: yearCurrent,
-            month: month,
-            perCapita: m.perCapita,
-            localidades: m.localidades.map(l => ({
-                lotacaoKey: l.lotacao,
-                responsavelId: l.responsavelId || null,
-                prfTotal: l.prfTotal,
-                reembolsoMes: l.reembolsoMes
-            }))
+            titulo: document.getElementById('evt-titulo')?.value?.trim(),
+            responsavel_filiado_id: Number(document.getElementById('evt-responsavel')?.value) || null,
+            data_evento: document.getElementById('evt-data-evento')?.value,
+            data_limite_alocacao: document.getElementById('evt-data-limite')?.value,
+            status: document.getElementById('evt-status')?.value,
+            descricao: document.getElementById('evt-descricao')?.value?.trim() || null
         };
 
-        try {
-            const r = await window.Api.apiFetch("/api/repasse", {
-                method: "POST",
-                body: payload
-            });
-            if (r.ok) {
-                alert("Dados de " + getNomeMes(month) + " salvos com sucesso!");
-                await carregarDados();
-                document.getElementById("content-month-" + month).style.display = "block";
-            } else {
-                const err = await r.json();
-                alert("Erro ao salvar: " + (err.message || "Tente novamente."));
-            }
-        } catch (e) {
-            alert("Erro de conexão.");
+        if (!payload.titulo || !payload.data_evento || !payload.data_limite_alocacao) {
+            alert('Preencha título, data do evento e data limite.');
+            return;
         }
+
+        const resp = await window.Api.apiFetch('/api/repasse/eventos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Erro ao cadastrar evento.');
+            return;
+        }
+        alert('Evento cadastrado com sucesso.');
+        await carregarDados();
     }
 
-    function getNomeMes(m) {
-        return ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][m-1];
+    function renderConfig() {
+        if (!repasseData) return;
+        const c = repasseData.config || {};
+        document.getElementById('repasse-config').innerHTML = `
+            <div class="card" style="padding:12px; background:#f8f9fa;">
+                <strong>Configuração anual</strong>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-top:8px;">
+                    <div>Per capta global: <b>${formatCurrency(c.perCapitaGlobalAnual)}</b></div>
+                    <div>Apoio operacional: <b>${formatCurrency(c.perCapitaApoioOperacionalAnual)}</b></div>
+                    <div>Evento ativo (derivado): <b>${formatCurrency(c.perCapitaEventoAtivoAnual)}</b></div>
+                    <div>Evento veterano: <b>${formatCurrency(c.perCapitaEventoVeteranoAnual)}</b></div>
+                </div>
+            </div>
+        `;
     }
 
-    function formatCurrency(v) {
-        return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    function renderApoio() {
+        const rows = (repasseData.apoioPorLotacao || []).map((r) => `
+            <tr>
+              <td>${r.lotacao}</td>
+              <td style="text-align:center;">${r.qtdAtivos}</td>
+              <td style="text-align:right;">${formatCurrency(r.creditoApoioOperacional)}</td>
+              <td style="text-align:right;">${formatCurrency(r.debitosApoioOperacional)}</td>
+              <td style="text-align:right; font-weight:700;">${formatCurrency(r.saldoApoioOperacional)}</td>
+            </tr>
+        `).join('');
+
+        document.getElementById('repasse-apoio').innerHTML = `
+            <h3>Apoio operacional por lotação real</h3>
+            <div class="ui-table-wrapper">
+              <table class="ui-table" style="width:100%;">
+                <thead><tr><th>Lotação</th><th>Ativos</th><th>Crédito</th><th>Débitos</th><th>Saldo</th></tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+        `;
+    }
+
+    function renderNaoAlocado() {
+        document.getElementById('repasse-nao-alocado').innerHTML = `
+            <div class="card" style="padding:12px; border-left:4px solid #0a7;">
+                <div style="font-size:0.9rem; color:#666;">Recurso não alocado (eventos)</div>
+                <div style="font-size:1.5rem; font-weight:700;">${formatCurrency(repasseData.recursoNaoAlocadoTotal)}</div>
+            </div>
+        `;
+    }
+
+    function renderAlocacoes() {
+        const grupos = repasseData.alocacoesPorEvento || [];
+        const details = grupos.map((g) => {
+            const itens = (g.itens || []).map((i) => `<li>${i.nome} (${i.situacao}) — ${formatCurrency(i.valorAlocado)}</li>`).join('') || '<li>Sem alocações</li>';
+            return `
+                <details>
+                    <summary><b>${g.evento.titulo}</b> — Total ${formatCurrency(g.totalAlocado)} (${g.contagemAtivos} ativos / ${g.contagemVeteranos} veteranos)</summary>
+                    <ul>${itens}</ul>
+                </details>
+            `;
+        }).join('') || '<p>Sem eventos no ano.</p>';
+
+        document.getElementById('repasse-alocacoes').innerHTML = `
+            <details>
+                <summary style="cursor:pointer;"><b>Ver alocações</b></summary>
+                <div style="margin-top:8px;">${details}</div>
+            </details>
+        `;
+    }
+
+    function renderAlocar() {
+        const today = new Date().toISOString().slice(0, 10);
+        const options = eventosAbertos.map((e) => {
+            const disabled = today > e.data_limite_alocacao;
+            const suffix = disabled ? ' (prazo encerrado)' : '';
+            return `<option value="${e.id}" ${disabled ? 'disabled' : ''}>${e.titulo} — evento ${e.data_evento} / limite ${e.data_limite_alocacao}${suffix}</option>`;
+        }).join('');
+
+        document.getElementById('repasse-alocar').innerHTML = `
+            <h3>Alocar meu recurso</h3>
+            ${eventosAbertos.length
+                ? `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <select id="repasse-evento-select">${options}</select>
+                    <button class="ui-btn" onclick="Repasse.alocarMeuRecurso()">Alocar</button>
+                  </div>`
+                : '<p>Sem eventos abertos no momento.</p>'}
+        `;
+    }
+
+    async function alocarMeuRecurso() {
+        const select = document.getElementById('repasse-evento-select');
+        if (!select || !select.value) return;
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${select.value}/alocar`, { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Falha ao alocar recurso.');
+            return;
+        }
+        alert('Recurso alocado com sucesso.');
+        await carregarDados();
     }
 
     global.Repasse = {
         inicializarRepasse,
-        atualizarPerCapita,
-        atualizarLocalidade,
-        salvarMes
+        salvarConfigAnual,
+        criarEvento,
+        filtrarResponsaveis,
+        alocarMeuRecurso
     };
-
-})(typeof window !== 'undefined' ? window : global);
+})(window);

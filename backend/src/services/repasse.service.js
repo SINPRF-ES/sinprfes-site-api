@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { LOTACOES_REPASSE, normalizeLotacao } = require('../shared/canon');
+const { LOTACOES_REPASSE, normalizeLotacao, slugify } = require('../shared/canon');
 
 // Keywords para busca robusta se necessário, mas agora usamos a normalização canônica
 const LOTACAO_KEYWORDS = {
@@ -16,6 +16,40 @@ const factorFromPercentual = (percent) => {
   if (percent < 90) return 0.7;
   return 1.0;
 };
+
+const STATUS_EVENTO = {
+  RASCUNHO: 'RASCUNHO',
+  ABERTO: 'ABERTO',
+  ENCERRADO: 'ENCERRADO'
+};
+
+const STATUS_ALOCACAO = {
+  ATIVA: 'ATIVA',
+  REVOGADA: 'REVOGADA'
+};
+
+function toLotacaoReal(value) {
+  const normalized = normalizeLotacao(value);
+  if (!normalized || normalized === 'NENHUMA') return 'SEM LOTAÇÃO';
+  return normalized;
+}
+
+function computeConfig(configRow, ano) {
+  const perCapitaGlobalAnual = Number(configRow?.per_capita_global_anual || 0);
+  const perCapitaApoioOperacionalAnual = Number(configRow?.per_capita_apoio_operacional_anual || 0);
+
+  return {
+    ano_ref: ano,
+    perCapitaGlobalAnual,
+    perCapitaApoioOperacionalAnual,
+    perCapitaEventoAtivoAnual: perCapitaGlobalAnual - perCapitaApoioOperacionalAnual,
+    perCapitaEventoVeteranoAnual: perCapitaGlobalAnual
+  };
+}
+
+function getAnoFromDate(dateStr) {
+  return new Date(dateStr).getUTCFullYear();
+}
 
 async function getFiliadosAtivosCount(lotacaoKey) {
   const keyword = LOTACAO_KEYWORDS[lotacaoKey];
@@ -250,10 +284,301 @@ async function updateRepasseMes(year, month, perCapita, localidadesData) {
   }
 }
 
+async function getRepasseResumo(ano) {
+  const [configResult, filiadosResult, debitosResult, eventosResult] = await Promise.all([
+    pool.query(`SELECT * FROM repasse_config WHERE ano_ref = $1`, [ano]),
+    pool.query(`
+      SELECT id, nome, situacao, lotacao
+      FROM filiados
+      WHERE arquivado_em IS NULL
+        AND UPPER(situacao) IN ('ATIVO', 'VETERANO')
+    `),
+    pool.query(`
+      SELECT lotacao_id, COALESCE(SUM(valor), 0) AS total
+      FROM repasse_movimentos
+      WHERE ano_ref = $1
+        AND tipo = 'APOIO_OPERACIONAL_DEBITO'
+      GROUP BY lotacao_id
+    `, [ano]),
+    pool.query(`
+      SELECT
+        e.id, e.titulo, e.data_evento, e.data_limite_alocacao, e.status,
+        rf.id AS responsavel_id, rf.nome AS responsavel_nome,
+        a.filiado_id, f.nome AS filiado_nome, f.situacao AS filiado_situacao, a.valor_alocado
+      FROM repasse_eventos e
+      LEFT JOIN filiados rf ON rf.id = e.responsavel_filiado_id
+      LEFT JOIN repasse_evento_alocacoes a
+        ON a.evento_id = e.id
+        AND a.ano_ref = $1
+        AND a.status = 'ATIVA'
+      LEFT JOIN filiados f ON f.id = a.filiado_id
+      WHERE EXTRACT(YEAR FROM e.data_evento) = $1
+      ORDER BY e.data_evento, e.titulo, f.nome
+    `, [ano])
+  ]);
+
+  const config = computeConfig(configResult.rows[0], ano);
+  const debitosByLotacao = new Map(debitosResult.rows.map((r) => [r.lotacao_id || 'SEM LOTAÇÃO', Number(r.total || 0)]));
+
+  const apoioCount = new Map();
+  let qtdAtivosTotal = 0;
+  let qtdVeteranosTotal = 0;
+
+  filiadosResult.rows.forEach((f) => {
+    const situacao = String(f.situacao || '').toUpperCase();
+    const lotacaoReal = toLotacaoReal(f.lotacao);
+    if (situacao === 'ATIVO') {
+      qtdAtivosTotal += 1;
+      apoioCount.set(lotacaoReal, (apoioCount.get(lotacaoReal) || 0) + 1);
+    }
+    if (situacao === 'VETERANO') qtdVeteranosTotal += 1;
+  });
+
+  const lotacoesResumo = [...LOTACOES_REPASSE, 'SEM LOTAÇÃO'];
+  const apoioPorLotacao = lotacoesResumo.map((lotacao) => {
+    const qtdAtivos = apoioCount.get(lotacao) || 0;
+    const credito = qtdAtivos * config.perCapitaApoioOperacionalAnual;
+    const debitos = debitosByLotacao.get(lotacao) || 0;
+    return {
+      lotacao,
+      qtdAtivos,
+      creditoApoioOperacional: credito,
+      debitosApoioOperacional: debitos,
+      saldoApoioOperacional: credito - debitos
+    };
+  });
+
+  const eventosMap = new Map();
+  let somaAlocadoEventos = 0;
+
+  eventosResult.rows.forEach((row) => {
+    if (!eventosMap.has(row.id)) {
+      eventosMap.set(row.id, {
+        evento: {
+          id: row.id,
+          titulo: row.titulo,
+          data_evento: row.data_evento,
+          data_limite_alocacao: row.data_limite_alocacao,
+          status: row.status,
+          responsavel: row.responsavel_id ? { id: row.responsavel_id, nome: row.responsavel_nome } : null
+        },
+        totalAlocado: 0,
+        contagemAtivos: 0,
+        contagemVeteranos: 0,
+        itens: []
+      });
+    }
+
+    if (row.filiado_id) {
+      const bucket = eventosMap.get(row.id);
+      const valor = Number(row.valor_alocado || 0);
+      const situacao = String(row.filiado_situacao || '').toUpperCase();
+      bucket.totalAlocado += valor;
+      somaAlocadoEventos += valor;
+      if (situacao === 'ATIVO') bucket.contagemAtivos += 1;
+      if (situacao === 'VETERANO') bucket.contagemVeteranos += 1;
+      bucket.itens.push({
+        filiadoId: row.filiado_id,
+        nome: row.filiado_nome,
+        situacao,
+        valorAlocado: valor
+      });
+    }
+  });
+
+  const recursoNaoAlocadoTotal =
+    (config.perCapitaGlobalAnual * qtdVeteranosTotal) +
+    (config.perCapitaEventoAtivoAnual * qtdAtivosTotal) -
+    somaAlocadoEventos;
+
+  return {
+    ano_ref: ano,
+    config,
+    apoioPorLotacao,
+    recursoNaoAlocadoTotal,
+    alocacoesPorEvento: Array.from(eventosMap.values())
+  };
+}
+
+async function updateRepasseConfig(ano, perCapitaGlobalAnual, perCapitaApoioOperacionalAnual) {
+  if (!(perCapitaGlobalAnual > 0)) throw new Error('perCapitaGlobalAnual deve ser maior que zero');
+  if (perCapitaApoioOperacionalAnual < 0 || perCapitaApoioOperacionalAnual > perCapitaGlobalAnual) {
+    throw new Error('perCapitaApoioOperacionalAnual inválido');
+  }
+
+  await pool.query(`
+    INSERT INTO repasse_config (ano_ref, per_capita_global_anual, per_capita_apoio_operacional_anual)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (ano_ref) DO UPDATE SET
+      per_capita_global_anual = EXCLUDED.per_capita_global_anual,
+      per_capita_apoio_operacional_anual = EXCLUDED.per_capita_apoio_operacional_anual,
+      updated_at = NOW()
+  `, [ano, perCapitaGlobalAnual, perCapitaApoioOperacionalAnual]);
+
+  const { rows } = await pool.query(`SELECT * FROM repasse_config WHERE ano_ref = $1`, [ano]);
+  return computeConfig(rows[0], ano);
+}
+
+async function listarEventos(ano, status = null) {
+  const params = [ano];
+  let statusFilter = '';
+  if (status) {
+    params.push(String(status).toUpperCase());
+    statusFilter = ` AND e.status = $2`;
+  }
+
+  const { rows } = await pool.query(`
+    SELECT e.*, f.nome AS responsavel_nome
+    FROM repasse_eventos e
+    LEFT JOIN filiados f ON f.id = e.responsavel_filiado_id
+    WHERE EXTRACT(YEAR FROM e.data_evento) = $1
+    ${statusFilter}
+    ORDER BY e.data_evento ASC, e.titulo ASC
+  `, params);
+
+  return rows;
+}
+
+async function criarEvento(payload, userId) {
+  const status = String(payload.status || STATUS_EVENTO.RASCUNHO).toUpperCase();
+  if (!Object.values(STATUS_EVENTO).includes(status)) throw new Error('Status de evento inválido');
+  if (payload.data_limite_alocacao > payload.data_evento) throw new Error('Data limite deve ser <= data do evento');
+
+  const { rows } = await pool.query(`
+    INSERT INTO repasse_eventos
+      (titulo, descricao, responsavel_filiado_id, data_evento, data_limite_alocacao, status, created_by_user_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *
+  `, [payload.titulo, payload.descricao || null, payload.responsavel_filiado_id || null, payload.data_evento, payload.data_limite_alocacao, status, userId]);
+
+  return rows[0];
+}
+
+async function atualizarEvento(id, payload) {
+  const status = payload.status ? String(payload.status).toUpperCase() : null;
+  if (status && !Object.values(STATUS_EVENTO).includes(status)) throw new Error('Status de evento inválido');
+  if (payload.data_evento && payload.data_limite_alocacao && payload.data_limite_alocacao > payload.data_evento) {
+    throw new Error('Data limite deve ser <= data do evento');
+  }
+
+  const { rows } = await pool.query(`SELECT * FROM repasse_eventos WHERE id = $1`, [id]);
+  if (!rows.length) throw new Error('Evento não encontrado');
+  const atual = rows[0];
+
+  const dataEvento = payload.data_evento || atual.data_evento;
+  const dataLimite = payload.data_limite_alocacao || atual.data_limite_alocacao;
+  if (dataLimite > dataEvento) throw new Error('Data limite deve ser <= data do evento');
+
+  const updated = await pool.query(`
+    UPDATE repasse_eventos
+    SET titulo = $2,
+        descricao = $3,
+        responsavel_filiado_id = $4,
+        data_evento = $5,
+        data_limite_alocacao = $6,
+        status = $7,
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+  `, [id, payload.titulo || atual.titulo, payload.descricao ?? atual.descricao, payload.responsavel_filiado_id ?? atual.responsavel_filiado_id, dataEvento, dataLimite, status || atual.status]);
+
+  return updated.rows[0];
+}
+
+async function alterarStatusEvento(id, status) {
+  const nextStatus = String(status || '').toUpperCase();
+  if (!Object.values(STATUS_EVENTO).includes(nextStatus)) throw new Error('Status de evento inválido');
+  const { rows } = await pool.query(`
+    UPDATE repasse_eventos SET status = $2, updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+  `, [id, nextStatus]);
+  if (!rows.length) throw new Error('Evento não encontrado');
+  return rows[0];
+}
+
+async function alocarEmEvento(eventoId, filiadoId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const eventoResult = await client.query(`SELECT * FROM repasse_eventos WHERE id = $1 FOR UPDATE`, [eventoId]);
+    if (!eventoResult.rows.length) throw new Error('Evento não encontrado');
+    const evento = eventoResult.rows[0];
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    if (evento.status !== STATUS_EVENTO.ABERTO || hoje > evento.data_limite_alocacao) {
+      throw new Error('Evento fora do prazo de alocação');
+    }
+
+    const filiadoResult = await client.query(`
+      SELECT id, situacao, arquivado_em
+      FROM filiados
+      WHERE id = $1
+      FOR UPDATE
+    `, [filiadoId]);
+    if (!filiadoResult.rows.length) throw new Error('Filiado não encontrado');
+    const filiado = filiadoResult.rows[0];
+    if (filiado.arquivado_em) throw new Error('Filiado não elegível para alocação');
+    const situacao = String(filiado.situacao || '').toUpperCase();
+    if (!['ATIVO', 'VETERANO'].includes(situacao)) throw new Error('Filiado não elegível para alocação');
+
+    const ano = getAnoFromDate(evento.data_evento);
+    const configResult = await client.query(`SELECT * FROM repasse_config WHERE ano_ref = $1`, [ano]);
+    const config = computeConfig(configResult.rows[0], ano);
+    if (config.perCapitaGlobalAnual <= 0) throw new Error('Configuração anual de repasse não encontrada');
+
+    const valor = situacao === 'ATIVO' ? config.perCapitaEventoAtivoAnual : config.perCapitaEventoVeteranoAnual;
+
+    await client.query(`
+      UPDATE repasse_evento_alocacoes
+      SET status = $3, revogado_em = NOW()
+      WHERE ano_ref = $1
+        AND filiado_id = $2
+        AND status = $4
+    `, [ano, filiadoId, STATUS_ALOCACAO.REVOGADA, STATUS_ALOCACAO.ATIVA]);
+
+    const inserted = await client.query(`
+      INSERT INTO repasse_evento_alocacoes (ano_ref, evento_id, filiado_id, valor_alocado, status)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [ano, eventoId, filiadoId, valor, STATUS_ALOCACAO.ATIVA]);
+
+    await client.query('COMMIT');
+    return inserted.rows[0];
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+async function listarResponsaveisComBusca(q = '') {
+  const { rows } = await pool.query(`
+    SELECT id, nome, cpf, lotacao, situacao
+    FROM filiados
+    WHERE arquivado_em IS NULL
+      AND UPPER(situacao) IN ('ATIVO', 'VETERANO')
+    ORDER BY nome ASC
+  `);
+  const needle = slugify(q || '');
+  if (!needle) return rows;
+  return rows.filter((f) => slugify(f.nome).includes(needle) || slugify(f.lotacao).includes(needle));
+}
+
 module.exports = {
   getRepasseAno,
   getUltimosDadosParaRelatorio,
   updateRepasseMes,
   listarResponsaveis,
-  factorFromPercentual
+  factorFromPercentual,
+  getRepasseResumo,
+  updateRepasseConfig,
+  listarEventos,
+  criarEvento,
+  atualizarEvento,
+  alterarStatusEvento,
+  alocarEmEvento,
+  listarResponsaveisComBusca
 };
