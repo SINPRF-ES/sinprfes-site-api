@@ -10,17 +10,47 @@
     let eventosAbertos = [];
     let responsaveis = [];
     let perfilLogado = 'FILIADO';
+    let alocacoesExpanded = false;
+    let searchTimer = null;
 
     function formatCurrency(v) {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
     }
 
-    function normalizeText(str) {
-        return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-    }
-
     function ehGestao() {
         return ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((perfilLogado || '').toUpperCase());
+    }
+
+    function injectStyles() {
+        if (document.getElementById('repasse-modern-style')) return;
+        const style = document.createElement('style');
+        style.id = 'repasse-modern-style';
+        style.textContent = `
+            .repasse-shell{max-width:1200px;margin:0 auto;padding:18px;background:#eef2f6;border-radius:14px;}
+            .repasse-header{text-align:center;margin-bottom:14px;}
+            .repasse-title{margin:0;color:#0b3a67;font-size:2rem;}
+            .repasse-subtitle{margin:.3rem 0 0;color:#607589;}
+            .repasse-card{background:#fff;border:1px solid #d9e2ec;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);padding:14px;margin-top:14px;}
+            .repasse-card h3{margin:0 0 8px;color:#0b3a67;text-align:center;}
+            .repasse-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;align-items:end;}
+            .repasse-alert{border-left:4px solid #0b8f6a;background:#f3fbf8;}
+            .repasse-alert-value{font-size:1.7rem;font-weight:700;color:#0b3a67;}
+            .repasse-table-wrap{overflow-x:auto;}
+            .repasse-table{width:100%;border-collapse:collapse;min-width:760px;}
+            .repasse-table th,.repasse-table td{border:1px solid #dbe3ec;padding:9px;}
+            .repasse-table th{background:#e8eef5;color:#0b3a67;text-transform:uppercase;font-size:.75rem;}
+            .repasse-table tbody tr:nth-child(even){background:#f8fbff;}
+            .repasse-table tbody tr:hover{background:#edf4fb;}
+            .repasse-table .num{text-align:right;}
+            .repasse-table .center{text-align:center;}
+            .badge-sem-lotacao{display:inline-block;background:#fff0c7;color:#7f5700;border:1px solid #e5c979;padding:2px 6px;border-radius:999px;font-size:.75rem;font-weight:700;margin-left:6px;}
+            .repasse-evento-box{border:1px solid #dbe3ec;background:#fff;border-radius:10px;padding:10px;margin-top:8px;}
+            .repasse-evento-title{font-weight:700;color:#0b3a67;}
+            .repasse-evento-total{font-weight:700;color:#0b8f6a;margin:.3rem 0;}
+            .repasse-toggle{display:flex;justify-content:center;}
+            @media (max-width: 768px){.repasse-shell{padding:10px}}
+        `;
+        document.head.appendChild(style);
     }
 
     async function inicializarRepasse(perfil) {
@@ -33,24 +63,25 @@
             return;
         }
 
+        injectStyles();
+
         container.innerHTML = `
-            <section class="card" style="padding:16px; max-width:1100px; margin:0 auto;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <h2 style="margin:0;">💱 Repasse</h2>
-                    <div>
-                        <label for="repasse-year-select">Ano:</label>
-                        <select id="repasse-year-select"></select>
+            <section class="repasse-shell">
+                <header class="repasse-header">
+                    <h2 class="repasse-title">Repasse</h2>
+                    <div class="repasse-subtitle" id="repasse-subtitle">Ano ${yearCurrent} • Apoio operacional e alocações</div>
+                </header>
+                <div class="repasse-card">
+                    <div style="max-width:240px;margin:0 auto;">
+                        <label for="repasse-year-select">Ano</label>
+                        <select id="repasse-year-select" style="width:100%"></select>
                     </div>
                 </div>
-
-                <div id="repasse-config-form" style="margin-top:16px;"></div>
-                <div id="repasse-evento-form" style="margin-top:16px;"></div>
-
-                <div id="repasse-config" style="margin-top:16px;"></div>
-                <div id="repasse-apoio" style="margin-top:16px;"></div>
-                <div id="repasse-nao-alocado" style="margin-top:16px;"></div>
-                <div id="repasse-alocacoes" style="margin-top:16px;"></div>
-                <div id="repasse-alocar" style="margin-top:16px;"></div>
+                <div id="repasse-evento-form"></div>
+                <div id="repasse-apoio"></div>
+                <div id="repasse-nao-alocado"></div>
+                <div id="repasse-alocacoes"></div>
+                <div id="repasse-alocar"></div>
             </section>
         `;
 
@@ -65,15 +96,18 @@
         }
         yearSelect.addEventListener('change', async (e) => {
             yearCurrent = Number(e.target.value);
+            const subtitle = document.getElementById('repasse-subtitle');
+            if (subtitle) subtitle.textContent = `Ano ${yearCurrent} • Apoio operacional e alocações`;
             await carregarDados();
         });
 
-        await carregarResponsaveis();
+        await carregarResponsaveis('');
         await carregarDados();
     }
 
-    async function carregarResponsaveis() {
-        const resp = await window.Api.apiFetch('/api/repasse/responsaveis');
+    async function carregarResponsaveis(q = '') {
+        const query = `?q=${encodeURIComponent(q || '')}`;
+        const resp = await window.Api.apiFetch(`/api/repasse/responsaveis${query}`);
         if (!resp.ok) {
             responsaveis = [];
             return;
@@ -93,8 +127,7 @@
             return;
         }
 
-        const resumo = await resumoResp.json();
-        repasseData = resumo;
+        repasseData = await resumoResp.json();
 
         if (eventosResp.ok) {
             const de = await eventosResp.json();
@@ -103,63 +136,45 @@
             eventosAbertos = [];
         }
 
-        renderConfigForm();
         renderEventoForm();
-        renderConfig();
         renderApoio();
         renderNaoAlocado();
         renderAlocacoes();
         renderAlocar();
     }
 
-    function renderConfigForm() {
-        const c = repasseData?.config || {};
-        document.getElementById('repasse-config-form').innerHTML = `
-            <div class="card" style="padding:12px; background:#fffbe6; border:1px solid #ead89a;">
-                <h3 style="margin-top:0;">Configuração anual (gestão)</h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; align-items:end;">
-                    <div>
-                        <label>Per capta global anual</label>
-                        <input id="cfg-global" type="number" min="0" step="0.01" value="${Number(c.perCapitaGlobalAnual || 0)}" style="width:100%;">
-                    </div>
-                    <div>
-                        <label>Per capta apoio operacional anual</label>
-                        <input id="cfg-apoio" type="number" min="0" step="0.01" value="${Number(c.perCapitaApoioOperacionalAnual || 0)}" style="width:100%;">
-                    </div>
-                    <div>
-                        <button class="ui-btn" onclick="Repasse.salvarConfigAnual()">Salvar configuração</button>
-                    </div>
-                </div>
-            </div>
-        `;
+    function formatSituacaoLabel(situacao) {
+        const val = String(situacao || '').toUpperCase();
+        if (val === 'VETERANO') return 'Veterano';
+        if (val === 'ATIVO') return 'Ativo';
+        return situacao || 'Não informado';
+    }
+
+    function responsavelLabel(r) {
+        return `${r.nome} (${formatSituacaoLabel(r.situacao)})${r.lotacao ? ` — ${r.lotacao}` : ''}`;
     }
 
     function renderEventoForm() {
-        const options = responsaveis.map((r) => `<option value="${r.id}">${r.nome} (${r.lotacao || 'SEM LOTAÇÃO'})</option>`).join('');
+        const options = responsaveis.map((r) => `<option value="${r.id}">${responsavelLabel(r)}</option>`).join('');
         document.getElementById('repasse-evento-form').innerHTML = `
-            <div class="card" style="padding:12px; background:#f8f9fa; border:1px solid #ddd;">
-                <h3 style="margin-top:0;">Cadastrar evento (gestão)</h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; align-items:end;">
+            <div class="repasse-card">
+                <h3>Cadastrar evento (gestão)</h3>
+                <div class="repasse-grid">
                     <div style="grid-column:1 / -1;">
                         <label>Título</label>
                         <input id="evt-titulo" type="text" placeholder="Ex: Festa de Linhares" style="width:100%;">
                     </div>
                     <div>
-                        <label>Responsável (busca por nome/lotação)</label>
-                        <input id="evt-resp-busca" type="text" placeholder="Digite para filtrar..." oninput="Repasse.filtrarResponsaveis(this.value)" style="width:100%; margin-bottom:4px;">
+                        <label>Responsável (ativos e veteranos)</label>
+                        <input id="evt-resp-busca" type="text" placeholder="Digite para buscar..." oninput="Repasse.buscarResponsaveis(this.value)" style="width:100%; margin-bottom:4px;">
                         <select id="evt-responsavel" style="width:100%;">
                             <option value="">Selecione</option>
                             ${options}
                         </select>
+                        <div id="evt-resp-empty" style="font-size:.85rem;color:#6b7c8c;margin-top:4px;${responsaveis.length ? 'display:none;' : ''}">Nenhum filiado encontrado.</div>
                     </div>
-                    <div>
-                        <label>Data do evento</label>
-                        <input id="evt-data-evento" type="date" style="width:100%;">
-                    </div>
-                    <div>
-                        <label>Data limite alocação</label>
-                        <input id="evt-data-limite" type="date" style="width:100%;">
-                    </div>
+                    <div><label>Data do evento</label><input id="evt-data-evento" type="date" style="width:100%;"></div>
+                    <div><label>Data limite alocação</label><input id="evt-data-limite" type="date" style="width:100%;"></div>
                     <div>
                         <label>Status inicial</label>
                         <select id="evt-status" style="width:100%;">
@@ -167,48 +182,25 @@
                             <option value="ABERTO">ABERTO</option>
                         </select>
                     </div>
-                    <div style="grid-column:1 / -1;">
-                        <label>Descrição (opcional)</label>
-                        <textarea id="evt-descricao" rows="2" style="width:100%;"></textarea>
-                    </div>
-                    <div>
-                        <button class="ui-btn" onclick="Repasse.criarEvento()">Cadastrar evento</button>
-                    </div>
+                    <div style="grid-column:1 / -1;"><label>Descrição</label><textarea id="evt-descricao" rows="2" style="width:100%;"></textarea></div>
+                    <div><button class="ui-btn" onclick="Repasse.criarEvento()">Cadastrar evento</button></div>
                 </div>
             </div>
         `;
     }
 
-    function filtrarResponsaveis(termo) {
-        const select = document.getElementById('evt-responsavel');
-        if (!select) return;
-        const needle = normalizeText(termo);
-        const filtrados = !needle
-            ? responsaveis
-            : responsaveis.filter((r) => normalizeText(r.nome).includes(needle) || normalizeText(r.lotacao).includes(needle));
-
-        const atual = select.value;
-        select.innerHTML = `<option value="">Selecione</option>${filtrados.map((r) => `<option value="${r.id}">${r.nome} (${r.lotacao || 'SEM LOTAÇÃO'})</option>`).join('')}`;
-        if (filtrados.some((f) => String(f.id) === String(atual))) select.value = atual;
-    }
-
-    async function salvarConfigAnual() {
-        const perCapitaGlobalAnual = Number(document.getElementById('cfg-global')?.value || 0);
-        const perCapitaApoioOperacionalAnual = Number(document.getElementById('cfg-apoio')?.value || 0);
-
-        const resp = await window.Api.apiFetch(`/api/repasse/config?ano=${yearCurrent}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ perCapitaGlobalAnual, perCapitaApoioOperacionalAnual })
-        });
-
-        const data = await resp.json();
-        if (!resp.ok) {
-            alert(data.message || 'Erro ao salvar configuração.');
-            return;
-        }
-        alert('Configuração salva com sucesso.');
-        await carregarDados();
+    async function buscarResponsaveis(termo) {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(async () => {
+            await carregarResponsaveis(termo || '');
+            const select = document.getElementById('evt-responsavel');
+            if (!select) return;
+            const atual = select.value;
+            select.innerHTML = `<option value="">Selecione</option>${responsaveis.map((r) => `<option value="${r.id}">${responsavelLabel(r)}</option>`).join('')}`;
+            if (responsaveis.some((f) => String(f.id) === String(atual))) select.value = atual;
+            const empty = document.getElementById('evt-resp-empty');
+            if (empty) empty.style.display = responsaveis.length ? 'none' : 'block';
+        }, 250);
     }
 
     async function criarEvento() {
@@ -241,70 +233,64 @@
         await carregarDados();
     }
 
-    function renderConfig() {
-        if (!repasseData) return;
-        const c = repasseData.config || {};
-        document.getElementById('repasse-config').innerHTML = `
-            <div class="card" style="padding:12px; background:#f8f9fa;">
-                <strong>Configuração anual</strong>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-top:8px;">
-                    <div>Per capta global: <b>${formatCurrency(c.perCapitaGlobalAnual)}</b></div>
-                    <div>Apoio operacional: <b>${formatCurrency(c.perCapitaApoioOperacionalAnual)}</b></div>
-                    <div>Evento ativo (derivado): <b>${formatCurrency(c.perCapitaEventoAtivoAnual)}</b></div>
-                    <div>Evento veterano: <b>${formatCurrency(c.perCapitaEventoVeteranoAnual)}</b></div>
-                </div>
-            </div>
-        `;
-    }
-
     function renderApoio() {
-        const rows = (repasseData.apoioPorLotacao || []).map((r) => `
+        const rows = (repasseData.apoioPorLotacao || []).map((r) => {
+            const sem = r.lotacao === 'SEM LOTAÇÃO';
+            return `
             <tr>
-              <td>${r.lotacao}</td>
-              <td style="text-align:center;">${r.qtdAtivos}</td>
-              <td style="text-align:right;">${formatCurrency(r.creditoApoioOperacional)}</td>
-              <td style="text-align:right;">${formatCurrency(r.debitosApoioOperacional)}</td>
-              <td style="text-align:right; font-weight:700;">${formatCurrency(r.saldoApoioOperacional)}</td>
+              <td>${r.lotacao}${sem ? '<span class="badge-sem-lotacao">SEM LOTAÇÃO</span>' : ''}</td>
+              <td class="center">${r.qtdAtivos}</td>
+              <td class="num">${formatCurrency(r.creditoApoioOperacional)}</td>
+              <td class="num">${formatCurrency(r.debitosApoioOperacional)}</td>
+              <td class="num" style="font-weight:700;">${formatCurrency(r.saldoApoioOperacional)}</td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         document.getElementById('repasse-apoio').innerHTML = `
-            <h3>Apoio operacional por lotação real</h3>
-            <div class="ui-table-wrapper">
-              <table class="ui-table" style="width:100%;">
-                <thead><tr><th>Lotação</th><th>Ativos</th><th>Crédito</th><th>Débitos</th><th>Saldo</th></tr></thead>
-                <tbody>${rows}</tbody>
-              </table>
+            <div class="repasse-card">
+              <h3>Apoio operacional por lotação</h3>
+              <div class="repasse-table-wrap">
+                <table class="repasse-table">
+                  <thead><tr><th>Lotação</th><th>Ativos</th><th>Crédito</th><th>Débitos</th><th>Saldo</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
             </div>
         `;
     }
 
     function renderNaoAlocado() {
         document.getElementById('repasse-nao-alocado').innerHTML = `
-            <div class="card" style="padding:12px; border-left:4px solid #0a7;">
-                <div style="font-size:0.9rem; color:#666;">Recurso não alocado (eventos)</div>
-                <div style="font-size:1.5rem; font-weight:700;">${formatCurrency(repasseData.recursoNaoAlocadoTotal)}</div>
+            <div class="repasse-card repasse-alert">
+                <div style="font-size:0.9rem; color:#4f5e6d;">Recurso não alocado</div>
+                <div class="repasse-alert-value">${formatCurrency(repasseData.recursoNaoAlocadoTotal)}</div>
             </div>
         `;
     }
 
     function renderAlocacoes() {
         const grupos = repasseData.alocacoesPorEvento || [];
-        const details = grupos.map((g) => {
-            const itens = (g.itens || []).map((i) => `<li>${i.nome} (${i.situacao}) — ${formatCurrency(i.valorAlocado)}</li>`).join('') || '<li>Sem alocações</li>';
-            return `
-                <details>
-                    <summary><b>${g.evento.titulo}</b> — Total ${formatCurrency(g.totalAlocado)} (${g.contagemAtivos} ativos / ${g.contagemVeteranos} veteranos)</summary>
-                    <ul>${itens}</ul>
-                </details>
-            `;
-        }).join('') || '<p>Sem eventos no ano.</p>';
+        const content = !alocacoesExpanded
+            ? ''
+            : (grupos.map((g) => {
+                const itens = (g.itens || []).map((i) => `<li>${i.nome} (${i.situacao}) — ${formatCurrency(i.valorAlocado)}</li>`).join('') || '<li>Sem alocações</li>';
+                return `
+                    <div class="repasse-evento-box">
+                        <div class="repasse-evento-title">${g.evento.titulo}</div>
+                        <div style="font-size:.9rem;color:#607589;">Evento: ${String(g.evento.data_evento).slice(0, 10)} • Limite: ${String(g.evento.data_limite_alocacao).slice(0, 10)}</div>
+                        <div class="repasse-evento-total">Total alocado: ${formatCurrency(g.totalAlocado)}</div>
+                        <ul style="margin:0;padding-left:16px;">${itens}</ul>
+                    </div>
+                `;
+            }).join('') || '<p>Sem eventos no ano.</p>');
 
         document.getElementById('repasse-alocacoes').innerHTML = `
-            <details>
-                <summary style="cursor:pointer;"><b>Ver alocações</b></summary>
-                <div style="margin-top:8px;">${details}</div>
-            </details>
+            <div class="repasse-card">
+                <h3>Alocações por evento</h3>
+                <div class="repasse-toggle"><button class="ui-btn" onclick="Repasse.toggleAlocacoes()">${alocacoesExpanded ? 'Ocultar alocações' : 'Mostrar alocações'}</button></div>
+                <div style="margin-top:8px;">${content}</div>
+            </div>
         `;
     }
 
@@ -317,13 +303,15 @@
         }).join('');
 
         document.getElementById('repasse-alocar').innerHTML = `
-            <h3>Alocar meu recurso</h3>
-            ${eventosAbertos.length
+            <div class="repasse-card">
+                <h3>Alocar meu recurso</h3>
+                ${eventosAbertos.length
                 ? `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                     <select id="repasse-evento-select">${options}</select>
                     <button class="ui-btn" onclick="Repasse.alocarMeuRecurso()">Alocar</button>
                   </div>`
                 : '<p>Sem eventos abertos no momento.</p>'}
+            </div>
         `;
     }
 
@@ -340,11 +328,16 @@
         await carregarDados();
     }
 
+    function toggleAlocacoes() {
+        alocacoesExpanded = !alocacoesExpanded;
+        renderAlocacoes();
+    }
+
     global.Repasse = {
         inicializarRepasse,
-        salvarConfigAnual,
         criarEvento,
-        filtrarResponsaveis,
-        alocarMeuRecurso
+        buscarResponsaveis,
+        alocarMeuRecurso,
+        toggleAlocacoes
     };
 })(window);

@@ -161,7 +161,8 @@ async function listarResponsaveis(req, res) {
 
   try {
     const { lotacao, q } = req.query;
-    const responsaveis = q
+    const shouldUseBusca = q !== undefined;
+    const responsaveis = shouldUseBusca
       ? await repasseService.listarResponsaveisComBusca(q)
       : await repasseService.listarResponsaveis(lotacao);
 
