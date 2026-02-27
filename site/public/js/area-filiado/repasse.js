@@ -5,6 +5,21 @@
     if (global.Repasse) return;
 
     const MIN_YEAR = 2026;
+
+    function isoToBr(iso) {
+        if (!iso) return '';
+        const [y, m, d] = String(iso).split('T')[0].split('-');
+        if (!y || !m || !d) return iso;
+        return `${d}/${m}/${y}`;
+    }
+
+    function brToIso(br) {
+        if (!br) return null;
+        const [d, m, y] = br.split('/');
+        if (!d || !m || !y) return null;
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+
     let yearCurrent = Math.max(new Date().getFullYear(), MIN_YEAR);
     let repasseData = null;
     let eventosAbertos = [];
@@ -173,8 +188,8 @@
                         </select>
                         <div id="evt-resp-empty" style="font-size:.85rem;color:#6b7c8c;margin-top:4px;${responsaveis.length ? 'display:none;' : ''}">Nenhum filiado encontrado.</div>
                     </div>
-                    <div><label>Data do evento</label><input id="evt-data-evento" type="date" style="width:100%;"></div>
-                    <div><label>Data limite alocação</label><input id="evt-data-limite" type="date" style="width:100%;"></div>
+                    <div><label>Data do evento</label><input id="evt-data-evento" type="text" placeholder="DD/MM/AAAA" style="width:100%;"></div>
+                    <div><label>Data limite alocação</label><input id="evt-data-limite" type="text" placeholder="DD/MM/AAAA" style="width:100%;"></div>
                     <div>
                         <label>Status inicial</label>
                         <select id="evt-status" style="width:100%;">
@@ -187,6 +202,11 @@
                 </div>
             </div>
         `;
+
+        if (window.Utils?.aplicarMascaraData) {
+            window.Utils.aplicarMascaraData(document.getElementById('evt-data-evento'));
+            window.Utils.aplicarMascaraData(document.getElementById('evt-data-limite'));
+        }
     }
 
     async function buscarResponsaveis(termo) {
@@ -207,8 +227,8 @@
         const payload = {
             titulo: document.getElementById('evt-titulo')?.value?.trim(),
             responsavel_filiado_id: Number(document.getElementById('evt-responsavel')?.value) || null,
-            data_evento: document.getElementById('evt-data-evento')?.value,
-            data_limite_alocacao: document.getElementById('evt-data-limite')?.value,
+            data_evento: brToIso(document.getElementById('evt-data-evento')?.value),
+            data_limite_alocacao: brToIso(document.getElementById('evt-data-limite')?.value),
             status: document.getElementById('evt-status')?.value,
             descricao: document.getElementById('evt-descricao')?.value?.trim() || null
         };
@@ -278,7 +298,7 @@
                 return `
                     <div class="repasse-evento-box">
                         <div class="repasse-evento-title">${g.evento.titulo}</div>
-                        <div style="font-size:.9rem;color:#607589;">Evento: ${String(g.evento.data_evento).slice(0, 10)} • Limite: ${String(g.evento.data_limite_alocacao).slice(0, 10)}</div>
+                        <div style="font-size:.9rem;color:#607589;">Evento: ${isoToBr(g.evento.data_evento)} • Limite: ${isoToBr(g.evento.data_limite_alocacao)}</div>
                         <div class="repasse-evento-total">Total alocado: ${formatCurrency(g.totalAlocado)}</div>
                         <ul style="margin:0;padding-left:16px;">${itens}</ul>
                     </div>
@@ -299,7 +319,7 @@
         const options = eventosAbertos.map((e) => {
             const disabled = today > e.data_limite_alocacao;
             const suffix = disabled ? ' (prazo encerrado)' : '';
-            return `<option value="${e.id}" ${disabled ? 'disabled' : ''}>${e.titulo} — evento ${e.data_evento} / limite ${e.data_limite_alocacao}${suffix}</option>`;
+            return `<option value="${e.id}" ${disabled ? 'disabled' : ''}>${e.titulo} — evento ${isoToBr(e.data_evento)} / limite ${isoToBr(e.data_limite_alocacao)}${suffix}</option>`;
         }).join('');
 
         document.getElementById('repasse-alocar').innerHTML = `
