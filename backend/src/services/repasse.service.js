@@ -70,7 +70,7 @@ async function listarResponsaveis(lotacaoKey = null) {
   let query = `
     SELECT id, nome, cpf, lotacao, perfil_acesso, situacao, arquivado_em
     FROM filiados
-    WHERE situacao = 'ATIVO'
+    WHERE UPPER(situacao) IN ('ATIVO', 'VETERANO')
       AND arquivado_em IS NULL
   `;
   const params = [];
@@ -83,7 +83,7 @@ async function listarResponsaveis(lotacaoKey = null) {
     }
   }
 
-  query += ` ORDER BY nome ASC`;
+  query += ` ORDER BY nome ASC LIMIT 50`;
 
   const { rows } = await pool.query(query, params);
 
@@ -555,16 +555,19 @@ async function alocarEmEvento(eventoId, filiadoId) {
 }
 
 async function listarResponsaveisComBusca(q = '') {
+  const needle = slugify(q || '');
   const { rows } = await pool.query(`
     SELECT id, nome, cpf, lotacao, situacao
     FROM filiados
     WHERE arquivado_em IS NULL
       AND UPPER(situacao) IN ('ATIVO', 'VETERANO')
     ORDER BY nome ASC
+    LIMIT 200
   `);
-  const needle = slugify(q || '');
-  if (!needle) return rows;
-  return rows.filter((f) => slugify(f.nome).includes(needle) || slugify(f.lotacao).includes(needle));
+  if (!needle) return rows.slice(0, 50);
+  return rows
+    .filter((f) => slugify(f.nome).includes(needle) || slugify(f.lotacao).includes(needle))
+    .slice(0, 50);
 }
 
 module.exports = {

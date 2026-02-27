@@ -1,31 +1,37 @@
 import apiService from './apiService';
 import { logger } from '../infra/logger';
 
-export interface LocalidadeRepasse {
-  lotacao: string;
-  responsavelId: number | null;
-  responsavelNome: string | null;
-  responsavelCpf: string | null;
-  filiadosAtivos: number;
-  prfTotal: number;
-  percentual: number | null;
-  creditoMes: number;
-  reembolsoMes: number;
-  acumuladoAno: number;
+export interface RepasseEvento {
+  id: number;
+  titulo: string;
+  data_evento: string;
+  data_limite_alocacao: string;
+  status: string;
 }
 
-export interface MesRepasse {
-  month: number;
-  perCapita: number;
-  localidades: LocalidadeRepasse[];
-  totalRepasseMes: number;
-}
-
-export interface RepasseAnoResponse {
-  success: boolean;
-  year: number;
-  meses: MesRepasse[];
-  totalAcumuladoGeral: number;
+export interface RepasseResumo {
+  config: {
+    ano_ref: number;
+    perCapitaGlobalAnual: number;
+    perCapitaApoioOperacionalAnual: number;
+    perCapitaEventoAtivoAnual: number;
+    perCapitaEventoVeteranoAnual: number;
+  };
+  apoioPorLotacao: Array<{
+    lotacao: string;
+    qtdAtivos: number;
+    creditoApoioOperacional: number;
+    debitosApoioOperacional: number;
+    saldoApoioOperacional: number;
+  }>;
+  recursoNaoAlocadoTotal: number;
+  alocacoesPorEvento: Array<{
+    evento: { id: number; titulo: string; data_evento: string; data_limite_alocacao: string; status: string };
+    totalAlocado: number;
+    contagemAtivos: number;
+    contagemVeteranos: number;
+    itens: Array<{ filiado_id: number; nome: string; situacao: string; valorAlocado: number }>;
+  }>;
 }
 
 export interface Responsavel {
@@ -39,72 +45,36 @@ export interface Responsavel {
 }
 
 const repasseService = {
-  getRepasseAno: async (year: number): Promise<RepasseAnoResponse> => {
-    try {
-      logger.info('REPASSE_API_CALL', { fn: 'getRepasseAno', year });
-      const response = await apiService.get(`/api/repasse?year=${year}`);
-      const res = response.data;
-
-      logger.info('REPASSE_API_OK', {
-        fn: 'getRepasseAno',
-        hasMeses: Array.isArray(res?.meses),
-        totalType: typeof res?.totalAcumuladoGeral
-      });
-
-      return res;
-    } catch (error: any) {
-      logger.error('REPASSE_API_ERR', error, {
-        fn: 'getRepasseAno',
-        year,
-        statusCode: error.response?.status
-      });
-      throw error;
-    }
+  getResumo: async (ano: number): Promise<RepasseResumo> => {
+    const response = await apiService.get(`/api/repasse/resumo?ano=${ano}`);
+    return response.data;
   },
 
-  updateRepasseMes: async (year: number, month: number, perCapita: number, localidades: any[]): Promise<any> => {
-    try {
-      logger.info('REPASSE_API_CALL', { fn: 'updateRepasseMes', year, month });
-      const response = await apiService.post('/api/repasse', {
-        year,
-        month,
-        perCapita,
-        localidades
-      });
-      logger.info('REPASSE_API_OK', { fn: 'updateRepasseMes' });
-      return response.data;
-    } catch (error: any) {
-      logger.error('REPASSE_API_ERR', error, {
-        fn: 'updateRepasseMes',
-        year,
-        month,
-        statusCode: error.response?.status
-      });
-      throw error;
-    }
+  listarEventos: async (ano: number, status?: string): Promise<RepasseEvento[]> => {
+    const url = status ? `/api/repasse/eventos?ano=${ano}&status=${encodeURIComponent(status)}` : `/api/repasse/eventos?ano=${ano}`;
+    const response = await apiService.get(url);
+    return response.data?.eventos || [];
   },
 
-  listarResponsaveis: async (lotacao?: string): Promise<Responsavel[]> => {
+  criarEvento: async (payload: any): Promise<any> => {
+    const response = await apiService.post('/api/repasse/eventos', payload);
+    return response.data;
+  },
+
+  alocarMeuRecurso: async (eventoId: number): Promise<any> => {
+    const response = await apiService.post(`/api/repasse/eventos/${eventoId}/alocar`);
+    return response.data;
+  },
+
+  listarResponsaveis: async (q = ''): Promise<Responsavel[]> => {
     try {
-      logger.info('REPASSE_API_CALL', { fn: 'listarResponsaveis', lotacao });
-      const url = lotacao ? `/api/repasse/responsaveis?lotacao=${encodeURIComponent(lotacao)}` : '/api/repasse/responsaveis';
+      logger.info('REPASSE_API_CALL', { fn: 'listarResponsaveis', q });
+      const url = q ? `/api/repasse/responsaveis?q=${encodeURIComponent(q)}` : '/api/repasse/responsaveis';
       const response = await apiService.get(url);
-
-      // Suporta retorno direto ou dentro de .responsaveis, garantindo sempre um array
       const data = response.data?.responsaveis ?? response.data ?? [];
-
-      if (!Array.isArray(data)) {
-        logger.error('REPASSE_API_ERR', new Error('Data is not an array'), { fn: 'listarResponsaveis', data });
-        return [];
-      }
-
-      logger.info('REPASSE_API_OK', { fn: 'listarResponsaveis', count: data.length });
-      return data;
+      return Array.isArray(data) ? data : [];
     } catch (error: any) {
-      logger.error('REPASSE_API_ERR', error, {
-        fn: 'listarResponsaveis',
-        statusCode: error.response?.status
-      });
+      logger.error('REPASSE_API_ERR', error, { fn: 'listarResponsaveis', statusCode: error.response?.status });
       return [];
     }
   }
