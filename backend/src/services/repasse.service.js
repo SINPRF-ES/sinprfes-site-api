@@ -82,7 +82,7 @@ async function listarResponsaveis(lotacaoKey = null) {
     }
   }
 
-  query += ` ORDER BY nome ASC LIMIT 50`;
+  query += ` ORDER BY nome ASC`;
 
   const { rows } = await pool.query(query, params);
 
@@ -562,7 +562,6 @@ async function listarResponsaveisComBusca(q = '') {
       FROM filiados
       WHERE arquivado_em IS NULL
       ORDER BY nome ASC
-      LIMIT 50
     `);
     return rows;
   }
@@ -588,7 +587,6 @@ async function listarResponsaveisComBusca(q = '') {
       END,
       LENGTH(unaccent(lower(nome))) ASC,
       nome ASC
-    LIMIT 50
   `, params);
 
   return rows;

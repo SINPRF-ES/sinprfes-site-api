@@ -24,6 +24,7 @@
     let repasseData = null;
     let eventosAbertos = [];
     let responsaveis = [];
+    let allResponsaveisCache = null;
     let perfilLogado = 'FILIADO';
     let alocacoesExpanded = false;
     let searchTimer = null;
@@ -121,14 +122,21 @@
     }
 
     async function carregarResponsaveis(q = '') {
-        const query = `?q=${encodeURIComponent(q || '')}`;
-        const resp = await window.Api.apiFetch(`/api/repasse/responsaveis${query}`);
-        if (!resp.ok) {
-            responsaveis = [];
-            return;
+        if (!allResponsaveisCache) {
+            const resp = await window.Api.apiFetch(`/api/repasse/responsaveis`);
+            if (!resp.ok) {
+                responsaveis = [];
+                return;
+            }
+            const data = await resp.json();
+            allResponsaveisCache = data.responsaveis || [];
         }
-        const data = await resp.json();
-        responsaveis = data.responsaveis || [];
+
+        if (q && q.length >= 2) {
+            responsaveis = window.Utils.filterFiliados(allResponsaveisCache, q, { perfil: perfilLogado });
+        } else {
+            responsaveis = allResponsaveisCache;
+        }
     }
 
     async function carregarDados() {

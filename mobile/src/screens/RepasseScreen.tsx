@@ -31,6 +31,7 @@ export default function RepasseScreen() {
   const [alocacoesExpanded, setAlocacoesExpanded] = useState(false);
 
   const [queryResp, setQueryResp] = useState('');
+  const [allResponsaveisCache, setAllResponsaveisCache] = useState<Responsavel[] | null>(null);
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [eventoForm, setEventoForm] = useState({
     titulo: '',
@@ -60,9 +61,29 @@ export default function RepasseScreen() {
 
   const loadResponsaveis = useCallback(async (q = '') => {
     if (!ehGestao) return;
-    const rows = await repasseService.listarResponsaveis(q);
-    setResponsaveis(rows);
-  }, [ehGestao]);
+
+    let baseList = allResponsaveisCache;
+    if (!baseList) {
+      baseList = await repasseService.listarResponsaveis('');
+      setAllResponsaveisCache(baseList);
+    }
+
+    if (q && q.length >= 2) {
+      const termo = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      const apenasDigitos = q.replace(/\D/g, "");
+
+      const filtered = baseList.filter(f => {
+        const nomeNorm = f.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const matchesNome = nomeNorm.includes(termo);
+        const cpfDigits = (f.cpf || "").replace(/\D/g, "");
+        const matchesCpf = apenasDigitos && cpfDigits.includes(apenasDigitos);
+        return matchesNome || matchesCpf;
+      });
+      setResponsaveis(filtered);
+    } else {
+      setResponsaveis(baseList);
+    }
+  }, [ehGestao, allResponsaveisCache]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
