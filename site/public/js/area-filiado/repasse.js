@@ -32,6 +32,7 @@
     let repassePollingId = null;
     let isLoadingRepasse = false;
     let selectedLotacaoForLista = null;
+    let movimentosListaAtual = [];
     let repasseVisibilityBound = false;
 
     document.addEventListener('keydown', (event) => {
@@ -551,16 +552,8 @@
         }
     }
 
-    async function abrirModalListaDebitos(lotacao, keepOpen = false) {
-        selectedLotacaoForLista = lotacao;
-        const resp = await window.Api.apiFetch(`/api/repasse/movimentos?ano=${yearCurrent}&lotacaoId=${encodeURIComponent(lotacao)}`);
-        if (!resp.ok) {
-            alert('Erro ao carregar lista de débitos.');
-            return;
-        }
-        const data = await resp.json();
-        const movimentos = data.movimentos || [];
 
+    function renderListaDebitosModal(lotacao, keepOpen = false) {
         const modalId = 'modal-lista-debitos';
         let modal = document.getElementById(modalId);
         if (!modal) {
@@ -571,7 +564,7 @@
             document.body.appendChild(modal);
         }
 
-        const rows = movimentos.map(m => `
+        const rows = movimentosListaAtual.map(m => `
             <tr>
                 <td>${isoToBr(m.created_at)}</td>
                 <td>${formatCentavosBRL(valorBackendToCentavos(m))}</td>
@@ -606,6 +599,18 @@
         `;
         bindModalOverlayClose(modal, fecharModalListaDebitos);
         if (!keepOpen) openModal(modal, fecharModalListaDebitos);
+    }
+
+    async function abrirModalListaDebitos(lotacao, keepOpen = false) {
+        selectedLotacaoForLista = lotacao;
+        const resp = await window.Api.apiFetch(`/api/repasse/movimentos?ano=${yearCurrent}&lotacaoId=${encodeURIComponent(lotacao)}`);
+        if (!resp.ok) {
+            alert('Erro ao carregar lista de débitos.');
+            return;
+        }
+        const data = await resp.json();
+        movimentosListaAtual = data.movimentos || [];
+        renderListaDebitosModal(lotacao, keepOpen);
     }
 
     function fecharModalListaDebitos() {
@@ -753,8 +758,10 @@
         }
 
         fecharModalExcluirDebito();
+        movimentosListaAtual = movimentosListaAtual.filter((m) => Number(m.id) !== Number(id));
+        renderListaDebitosModal(lotacao, true);
         await carregarDados();
-        await abrirModalListaDebitos(lotacao);
+        await abrirModalListaDebitos(lotacao, true);
     }
 
     global.Repasse = {

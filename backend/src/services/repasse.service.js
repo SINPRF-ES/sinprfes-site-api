@@ -297,6 +297,7 @@ async function getRepasseResumo(ano) {
       FROM repasse_movimentos
       WHERE ano_ref = $1
         AND tipo = 'APOIO_OPERACIONAL_DEBITO'
+        AND deleted_at IS NULL
       GROUP BY lotacao_id
     `, [ano]),
     pool.query(`
@@ -617,7 +618,9 @@ async function atualizarMovimento(id, payload, userId) {
         observacao = $3,
         updated_at = NOW(),
         updated_by_user_id = $4
-    WHERE id = $1 AND tipo = 'APOIO_OPERACIONAL_DEBITO'
+    WHERE id = $1
+      AND tipo = 'APOIO_OPERACIONAL_DEBITO'
+      AND deleted_at IS NULL
     RETURNING *
   `, [id, valor, observacao, userId]);
 

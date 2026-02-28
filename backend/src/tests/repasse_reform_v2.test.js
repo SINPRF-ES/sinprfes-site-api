@@ -23,6 +23,7 @@ describe('Repasse reform v2', () => {
       .mockResolvedValueOnce({ rows: [] });
 
     const resumo = await repasseService.getRepasseResumo(2026);
+    expect(pool.query).toHaveBeenNthCalledWith(3, expect.stringContaining('AND deleted_at IS NULL'), [2026]);
     const viana = resumo.apoioPorLotacao.find((l) => l.lotacao === 'DEL 01 - Viana');
     const sem = resumo.apoioPorLotacao.find((l) => l.lotacao === 'SEM LOTAÇÃO');
 
