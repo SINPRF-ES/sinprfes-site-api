@@ -10,12 +10,86 @@ function normalizeProjectId(projectId, expoProjectId) {
   return String(expoProjectId || projectId || "").trim() || null;
 }
 
+function normalizeScope(s) {
+  return String(s || "").trim().toUpperCase();
+}
+
 function scopeValue(appScope) {
-  return appScope || pushConfig.APP_SCOPE;
+  return normalizeScope(appScope || pushConfig.APP_SCOPE);
 }
 
 function configuredExpoProjectId() {
   return String(pushConfig.EXPO_PROJECT_ID || "").trim() || null;
+}
+
+function normalizeTargetId(targetValue) {
+  const rawId = typeof targetValue === "object" && targetValue !== null ? targetValue.id : targetValue;
+  const targetId = Number.parseInt(rawId, 10);
+  if (Number.isNaN(targetId)) {
+    const err = new Error("targetValue.id inválido para FILIADO.");
+    err.statusCode = 400;
+    throw err;
+  }
+  return targetId;
+}
+
+function buildResolveTargetClause(targetType, targetValue, startIndex = 1) {
+  const conditions = [];
+  const params = [];
+  let joins = "";
+
+  switch (targetType) {
+    case "ATIVOS":
+      joins = "JOIN filiados f ON pt.user_id = f.id";
+      conditions.push("f.situacao = 'ATIVO'");
+      break;
+    case "VETERANOS":
+      joins = "JOIN filiados f ON pt.user_id = f.id";
+      conditions.push("(f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')");
+      break;
+    case "LOTACAO":
+      joins = "JOIN filiados f ON pt.user_id = f.id";
+      conditions.push("f.situacao = 'ATIVO'");
+      conditions.push(`f.lotacao = $${startIndex + params.length}`);
+      params.push(targetValue);
+      break;
+    case "JOGOS":
+      joins = "JOIN inscricoes_jogos ij ON pt.user_id = ij.filiado_id";
+      break;
+    case "FILIADO": {
+      const targetId = normalizeTargetId(targetValue);
+      conditions.push(`pt.user_id = $${startIndex + params.length}`);
+      params.push(targetId);
+      break;
+    }
+    case "ALL":
+    default:
+      break;
+  }
+
+  return { joins, conditions, params };
+}
+
+function buildValidPushTokenFilters({ scope, expoProjectId, startIndex = 1 }) {
+  const where = [
+    "pt.revoked_at IS NULL",
+    "pt.disabled_at IS NULL",
+    "pt.expo_push_token IS NOT NULL",
+    `UPPER(TRIM(pt.app_scope)) = UPPER(TRIM($${startIndex}))`
+  ];
+  const params = [scope];
+
+  if (expoProjectId) {
+    where.push(`pt.expo_project_id = $${startIndex + 1}`);
+    params.push(expoProjectId);
+  } else {
+    where.push("NULLIF(TRIM(pt.expo_project_id), '') IS NOT NULL");
+  }
+
+  return {
+    where,
+    params
+  };
 }
 
 async function upsertToken({ userId, expoPushToken, deviceId, platform, permissionStatus, projectId, appScope, expoProjectId }) {
@@ -30,7 +104,19 @@ async function upsertToken({ userId, expoPushToken, deviceId, platform, permissi
 
   const finalScope = scopeValue(appScope);
   const envExpoProjectId = configuredExpoProjectId();
-  const tokenExpoProjectId = normalizeProjectId(projectId, expoProjectId);
+  let tokenExpoProjectId = normalizeProjectId(projectId, expoProjectId);
+
+  if (isExpo && !tokenExpoProjectId && expoPushToken) {
+    const existing = await pool.query(
+      `SELECT expo_project_id FROM push_tokens WHERE expo_push_token = $1 LIMIT 1`,
+      [expoPushToken]
+    );
+    const existingProjectId = normalizeProjectId(existing.rows[0]?.expo_project_id, existing.rows[0]?.expo_project_id);
+    if (existingProjectId) {
+      tokenExpoProjectId = existingProjectId;
+      log.info("PushService.UpsertTokenReuseExistingProjectId", { userId, appScope: finalScope });
+    }
+  }
 
   let disabledAt = null;
   let disabledReason = null;
@@ -119,7 +205,7 @@ async function cleanupDuplicateTokens({ userId, appScope, expoProjectId, deviceI
       disabled_at = NOW(),
       disabled_reason = 'deduplicated'
     WHERE user_id = $1
-      AND app_scope = $2
+      AND UPPER(TRIM(app_scope)) = UPPER(TRIM($2))
       AND expo_project_id = $3
       AND device_id = $4
       AND expo_push_token != $5
@@ -142,8 +228,8 @@ async function revokeToken({ userId, expoPushToken }) {
   return r.rowCount > 0;
 }
 
-async function deactivateOtherProjectTokens(userId, currentProjectId) {
-  if (!userId || !currentProjectId) return;
+async function deactivateOtherProjectTokens(userId, currentProjectId, currentAppScope) {
+  if (!userId || !currentProjectId || !currentAppScope) return;
   const sql = `
     UPDATE push_tokens
     SET
@@ -151,12 +237,13 @@ async function deactivateOtherProjectTokens(userId, currentProjectId) {
       disabled_reason = 'project_mismatch'
     WHERE
       user_id = $1
+      AND UPPER(TRIM(app_scope)) = UPPER(TRIM($3))
       AND expo_project_id IS NOT NULL
       AND expo_project_id != $2
       AND revoked_at IS NULL
       AND disabled_at IS NULL;
   `;
-  await pool.query(sql, [userId, currentProjectId]);
+  await pool.query(sql, [userId, currentProjectId, currentAppScope]);
 }
 
 async function listActiveTokens(limit = 10000) {
@@ -166,13 +253,13 @@ async function listActiveTokens(limit = 10000) {
     WHERE revoked_at IS NULL
       AND disabled_at IS NULL
       AND expo_push_token IS NOT NULL
-      AND app_scope = $2
+      AND UPPER(TRIM(app_scope)) = UPPER(TRIM($2))
       AND expo_project_id = $3
     ORDER BY last_seen DESC
     LIMIT $1;
   `;
 
-  const scope = pushConfig.APP_SCOPE;
+  const scope = normalizeScope(pushConfig.APP_SCOPE);
   const expoProjectId = configuredExpoProjectId();
   const { rows } = await pool.query(sql, [limit, scope, expoProjectId]);
 
@@ -224,6 +311,7 @@ async function getScopesDiagnostics() {
 
 async function deactivateMismatchedScopeTokens(userId, currentAppScope) {
   if (!userId || !currentAppScope) return;
+  const normalizedScope = normalizeScope(currentAppScope);
   const sql = `
     UPDATE push_tokens
     SET
@@ -231,95 +319,44 @@ async function deactivateMismatchedScopeTokens(userId, currentAppScope) {
       disabled_reason = 'scope_mismatch'
     WHERE
       user_id = $1
-      AND app_scope != $2
+      AND UPPER(TRIM(app_scope)) != UPPER(TRIM($2))
       AND revoked_at IS NULL
       AND disabled_at IS NULL;
   `;
-  await pool.query(sql, [userId, currentAppScope]);
+  await pool.query(sql, [userId, normalizedScope]);
 }
 
 async function resolvePushTargets(targetType, targetValue) {
-  let sql = "";
-  let params = [];
-  const scope = pushConfig.APP_SCOPE;
+  const scope = normalizeScope(pushConfig.APP_SCOPE);
   const expoProjectId = configuredExpoProjectId();
+  const normalizedTargetValue = targetType === "FILIADO" ? normalizeTargetId(targetValue) : targetValue;
 
-  switch (targetType) {
-    case "ATIVOS":
-      sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id
-        FROM push_tokens pt
-        JOIN filiados f ON pt.user_id = f.id
-        WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO'
-          AND pt.app_scope = $1
-          AND pt.expo_project_id = $2
-      `;
-      params = [scope, expoProjectId];
-      break;
-    case "VETERANOS":
-      sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id
-        FROM push_tokens pt
-        JOIN filiados f ON pt.user_id = f.id
-        WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND (f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')
-          AND pt.app_scope = $1
-          AND pt.expo_project_id = $2
-      `;
-      params = [scope, expoProjectId];
-      break;
-    case "LOTACAO":
-      sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id
-        FROM push_tokens pt
-        JOIN filiados f ON pt.user_id = f.id
-        WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND f.situacao = 'ATIVO' AND f.lotacao = $1
-          AND pt.app_scope = $2
-          AND pt.expo_project_id = $3
-      `;
-      params = [targetValue, scope, expoProjectId];
-      break;
-    case "JOGOS":
-      sql = `
-        SELECT DISTINCT pt.expo_push_token, pt.expo_project_id
-        FROM push_tokens pt
-        JOIN inscricoes_jogos ij ON pt.user_id = ij.filiado_id
-        WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL
-          AND pt.app_scope = $1
-          AND pt.expo_project_id = $2
-      `;
-      params = [scope, expoProjectId];
-      break;
-    case "FILIADO": {
-      const targetId = typeof targetValue === "object" && targetValue !== null ? targetValue.id : targetValue;
-      sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id
-        FROM push_tokens pt
-        WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.user_id = $1
-          AND pt.app_scope = $2
-          AND pt.expo_project_id = $3
-      `;
-      params = [targetId, scope, expoProjectId];
-      break;
-    }
-    case "ALL":
-    default:
-      sql = `
-        SELECT pt.expo_push_token, pt.expo_project_id
-        FROM push_tokens pt
-        WHERE pt.revoked_at IS NULL AND pt.disabled_at IS NULL AND pt.expo_push_token IS NOT NULL
-          AND pt.app_scope = $1
-          AND pt.expo_project_id = $2
-      `;
-      params = [scope, expoProjectId];
-      break;
-  }
+  log.info("PushService.ResolveTargetsInput", {
+    targetType,
+    targetId: targetType === "FILIADO" ? normalizedTargetValue : null,
+    scope,
+    scopeRaw: JSON.stringify(scope),
+    scopeLen: scope.length,
+    expoProjectId
+  });
+
+  const targetClause = buildResolveTargetClause(targetType, normalizedTargetValue);
+  const validFilters = buildValidPushTokenFilters({ scope, expoProjectId, startIndex: targetClause.params.length + 1 });
+
+  const sql = `
+    SELECT ${targetType === "JOGOS" ? "DISTINCT" : ""} pt.expo_push_token, pt.expo_project_id
+    FROM push_tokens pt
+    ${targetClause.joins}
+    WHERE ${[...validFilters.where, ...targetClause.conditions].join(" AND ")}
+  `;
+  const params = [...targetClause.params, ...validFilters.params];
 
   const { rows } = await pool.query(sql, params);
-  const diagnostics = await getResolveDiagnostics(targetType, targetValue);
+  const diagnostics = await getResolveDiagnostics(targetType, normalizedTargetValue);
 
   log.info("PushService.ResolveTargetsCounts", {
     targetType,
-    targetValue,
+    targetValue: normalizedTargetValue,
     scope,
     expoProjectId,
     totalOriginal: Number(diagnostics.total || 0),
@@ -331,7 +368,7 @@ async function resolvePushTargets(targetType, targetValue) {
   });
 
   if (rows.length === 0) {
-    log.warn("PushService.ResolveTargetsEmpty", { targetType, targetValue, scope, diagnostics });
+    log.warn("PushService.ResolveTargetsEmpty", { targetType, targetValue: normalizedTargetValue, scope, diagnostics });
   }
 
   return rows
@@ -340,23 +377,30 @@ async function resolvePushTargets(targetType, targetValue) {
 }
 
 async function getResolveDiagnostics(targetType, targetValue) {
-  const scope = pushConfig.APP_SCOPE;
+  const scope = normalizeScope(pushConfig.APP_SCOPE);
   const envExpoProjectId = configuredExpoProjectId();
-  const targetId = targetType === "FILIADO" ? (typeof targetValue === "object" && targetValue !== null ? targetValue.id : targetValue) : null;
+  const normalizedTargetValue = targetType === "FILIADO" ? normalizeTargetId(targetValue) : targetValue;
+  const targetClause = buildResolveTargetClause(targetType, normalizedTargetValue);
+  const validFilters = buildValidPushTokenFilters({ scope, expoProjectId: envExpoProjectId, startIndex: targetClause.params.length + 1 });
+
   const diagSql = `
     SELECT
       COUNT(*) as total,
       COUNT(*) FILTER (WHERE revoked_at IS NOT NULL) as revoked,
       COUNT(*) FILTER (WHERE disabled_at IS NOT NULL) as disabled,
       COUNT(*) FILTER (WHERE disabled_reason IN ('missing_expo_project_id', 'missing_project_id')) as missing_project_id,
-      COUNT(*) FILTER (WHERE app_scope != $1) as other_scope,
+      COUNT(*) FILTER (WHERE UPPER(TRIM(app_scope)) != UPPER(TRIM($${targetClause.params.length + 1}))) as other_scope,
       COUNT(*) FILTER (WHERE expo_project_id IS NULL OR expo_project_id = '') as without_expo_project_id,
-      COUNT(*) FILTER (WHERE expo_project_id IS NOT NULL AND expo_project_id != $3) as project_mismatch_scope
-    FROM push_tokens
-    WHERE user_id = $2 OR $2 IS NULL
+      COUNT(*) FILTER (WHERE expo_project_id IS NOT NULL ${envExpoProjectId ? `AND expo_project_id != $${targetClause.params.length + 2}` : ""}) as project_mismatch_scope
+    FROM (
+      SELECT pt.*
+      FROM push_tokens pt
+      ${targetClause.joins}
+      WHERE ${[...validFilters.where, ...targetClause.conditions].join(" AND ")}
+    ) base
   `;
 
-  const diag = await pool.query(diagSql, [scope, targetId, envExpoProjectId]);
+  const diag = await pool.query(diagSql, [...targetClause.params, ...validFilters.params]);
   return diag.rows[0] || null;
 }
 
@@ -377,7 +421,7 @@ async function countNoTokenTargets(targetType, targetValue) {
       params = [targetValue];
       break;
     case "FILIADO": {
-      const targetIdCount = typeof targetValue === "object" && targetValue !== null ? targetValue.id : targetValue;
+      const targetIdCount = normalizeTargetId(targetValue);
       filiadosSql = "SELECT id FROM filiados WHERE id = $1";
       params = [targetIdCount];
       break;
@@ -388,17 +432,28 @@ async function countNoTokenTargets(targetType, targetValue) {
       break;
   }
 
+  const appScopeParamIndex = params.length + 1;
+  const scopeParams = [normalizeScope(pushConfig.APP_SCOPE)];
+  let projectFilterSql = "NULLIF(TRIM(pt.expo_project_id), '') IS NOT NULL";
+  const configuredProjectId = configuredExpoProjectId();
+  if (configuredProjectId) {
+    projectFilterSql = `pt.expo_project_id = $${params.length + 2}`;
+    scopeParams.push(configuredProjectId);
+  }
+
   sql = `
     SELECT COUNT(*) as count
     FROM (${filiadosSql}) f
     LEFT JOIN push_tokens pt ON f.id = pt.user_id
       AND pt.revoked_at IS NULL
-      AND pt.app_scope = $${params.length + 1}
-      AND pt.expo_project_id = $${params.length + 2}
+      AND pt.disabled_at IS NULL
+      AND pt.expo_push_token IS NOT NULL
+      AND UPPER(TRIM(pt.app_scope)) = UPPER(TRIM($${appScopeParamIndex}))
+      AND ${projectFilterSql}
     WHERE pt.id IS NULL OR pt.permission_status = 'denied'
   `;
 
-  params.push(pushConfig.APP_SCOPE, configuredExpoProjectId());
+  params.push(...scopeParams);
 
   const { rows } = await pool.query(sql, params);
   return parseInt(rows[0].count, 10) || 0;
@@ -446,5 +501,6 @@ module.exports = {
   getDiagnostics,
   getScopesDiagnostics,
   deactivateMismatchedScopeTokens,
-  getResolveDiagnostics
+  getResolveDiagnostics,
+  normalizeScope
 };

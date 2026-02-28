@@ -4,6 +4,10 @@ const pushService = require("../services/push.service");
 const log = require("../utils/log");
 const { v4: uuidv4 } = require("uuid");
 
+function normalizeScope(s) {
+  return String(s || "").trim().toUpperCase();
+}
+
 exports.sendCampaign = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;
@@ -109,6 +113,21 @@ exports.sendCampaign = async (req, res) => {
 
     return res.json({ ...result, requestId });
   } catch (e) {
+    if (e.statusCode === 400) {
+      log.warn("PushCampaign.ControllerErroValidacao", {
+        requestId,
+        userId: createdBy,
+        perfil,
+        error: e.message
+      });
+      return res.status(400).json({
+        success: false,
+        message: e.message,
+        code: "VALIDATION_ERROR",
+        requestId
+      });
+    }
+
     const errorId = uuidv4();
     log.error("PushCampaign.ControllerErro", {
       errorId,
@@ -143,7 +162,7 @@ exports.pushHealth = async (req, res) => {
   try {
     const scopes = await pushService.getScopesDiagnostics();
     // Procurar pelo scope SINDICATO (canon)
-    const sindicatoScope = scopes.find(s => s.app_scope === 'SINDICATO') || { total: 0, valid: 0 };
+    const sindicatoScope = scopes.find((s) => normalizeScope(s.app_scope) === 'SINDICATO') || { total: 0, valid: 0 };
 
     const checklist = {
       hasTokens: sindicatoScope.valid > 0,
