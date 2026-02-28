@@ -201,6 +201,22 @@ async function atualizarMovimento(req, res) {
   }
 }
 
+
+async function excluirMovimento(req, res) {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  try {
+    const movimento = await repasseService.excluirMovimento(Number(req.params.id), req.body, atorId);
+    log.info("RepasseExcluirMovimentoSucesso", { requestId, atorId, movimentoId: req.params.id });
+    res.json({ success: true, movimento, requestId });
+  } catch (err) {
+    log.error("RepasseExcluirMovimentoErro", { requestId, atorId, error: err.message });
+    res.status(400).json({ success: false, message: err.message, requestId });
+  }
+}
+
 async function listarResponsaveis(req, res) {
   const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
@@ -236,5 +252,6 @@ module.exports = {
   listarResponsaveis,
   listarMovimentos,
   criarMovimento,
-  atualizarMovimento
+  atualizarMovimento,
+  excluirMovimento
 };

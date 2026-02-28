@@ -95,6 +95,29 @@ function normalizeCep(value) {
   return onlyDigits(value);
 }
 
+
+
+/**
+ * Sanitiza uma entrada monetária para centavos (somente dígitos).
+ * @param {string | number | null | undefined} input
+ * @returns {string}
+ */
+function sanitizeToCentavos(input) {
+  const digits = onlyDigits(input);
+  const normalized = digits.replace(/^0+(?=\d)/, '');
+  return normalized || '0';
+}
+
+/**
+ * Formata centavos no padrão BRL: R$ x.xxx,xx.
+ * @param {string | number | null | undefined} centavos
+ * @returns {string}
+ */
+function formatCentavosBRL(centavos) {
+  const safeCentavos = Number(sanitizeToCentavos(centavos));
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safeCentavos / 100);
+}
+
 module.exports = {
   onlyDigits,
   onlyDigitsOrNull,
@@ -104,4 +127,6 @@ module.exports = {
   normalizeCpf,
   normalizeTelefone,
   normalizeCep,
+  sanitizeToCentavos,
+  formatCentavosBRL,
 };

@@ -60,13 +60,26 @@ export const formatConta = (conta: string | null | undefined): string => {
   return `${limited.slice(0, -1)}-${limited.slice(-1)}`;
 };
 
+export const sanitizeToCentavos = (input: string | number | null | undefined): string => {
+  const digits = onlyDigits(input as any);
+  const normalized = digits.replace(/^0+(?=\d)/, '');
+  return normalized || '0';
+};
+
+export const formatCentavosBRL = (centavos: string | number | null | undefined): string => {
+  const safeCentavos = Number(sanitizeToCentavos(centavos));
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safeCentavos / 100);
+};
+
 const Formatters = {
   onlyDigits,
   formatCpf,
   formatTelefone,
   formatCep,
   formatAgencia,
-  formatConta
+  formatConta,
+  sanitizeToCentavos,
+  formatCentavosBRL
 };
 
 export default Formatters;

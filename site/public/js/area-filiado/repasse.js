@@ -28,9 +28,103 @@
     let perfilLogado = 'FILIADO';
     let alocacoesExpanded = false;
     let searchTimer = null;
+    let activeModalCloser = null;
+    let repassePollingId = null;
+    let isLoadingRepasse = false;
+    let selectedLotacaoForLista = null;
+    let repasseVisibilityBound = false;
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && typeof activeModalCloser === 'function') {
+            activeModalCloser();
+        }
+    });
 
     function formatCurrency(v) {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
+    }
+
+    function sanitizeToCentavos(input) {
+        if (window.Formatters?.sanitizeToCentavos) return window.Formatters.sanitizeToCentavos(input);
+        const digitsOnly = String(input || '').replace(/\D/g, '');
+        const normalized = digitsOnly.replace(/^0+(?=\d)/, '');
+        return normalized || '0';
+    }
+
+    function formatCentavosBRL(centavos) {
+        if (window.Formatters?.formatCentavosBRL) return window.Formatters.formatCentavosBRL(centavos);
+        const valorCentavos = Number(sanitizeToCentavos(centavos));
+        const valorReais = valorCentavos / 100;
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorReais);
+    }
+
+    function decimalToCentavos(valor) {
+        const numero = Number(valor || 0);
+        return Number.isFinite(numero) ? String(Math.round(numero * 100)) : '0';
+    }
+
+    function valorBackendToCentavos(movimento) {
+        if (movimento.valor_centavos !== undefined && movimento.valor_centavos !== null) return sanitizeToCentavos(movimento.valor_centavos);
+        if (movimento.valorCentavos !== undefined && movimento.valorCentavos !== null) return sanitizeToCentavos(movimento.valorCentavos);
+        return decimalToCentavos(movimento.valor);
+    }
+
+    function bindModalOverlayClose(modal, handleClose) {
+        modal.onclick = (event) => {
+            if (event.target === modal) handleClose();
+        };
+    }
+
+    function openModal(modal, handleClose) {
+        activeModalCloser = handleClose;
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+
+    function closeModalById(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        if (activeModalCloser) activeModalCloser = null;
+    }
+
+    function setCurrencyInputValue(inputId, centavos) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const sanitized = sanitizeToCentavos(centavos);
+        input.dataset.centavos = sanitized;
+        input.value = formatCentavosBRL(sanitized);
+    }
+
+    function handleCurrencyInputChange(input) {
+        const centavos = sanitizeToCentavos(input?.value);
+        if (!input) return;
+        input.dataset.centavos = centavos;
+        input.value = formatCentavosBRL(centavos);
+    }
+
+    function iniciarSyncRepasse() {
+        if (repassePollingId) return;
+        repassePollingId = setInterval(async () => {
+            if (document.visibilityState !== 'visible' || isLoadingRepasse) return;
+            await carregarDados();
+            if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
+                await abrirModalListaDebitos(selectedLotacaoForLista, true);
+            }
+        }, 12000);
+    }
+
+    function bindRepasseVisibilitySync() {
+        if (repasseVisibilityBound) return;
+        repasseVisibilityBound = true;
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState !== 'visible') return;
+            await carregarDados();
+            if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
+                await abrirModalListaDebitos(selectedLotacaoForLista, true);
+            }
+        });
     }
 
     function ehGestao() {
@@ -119,6 +213,8 @@
         });
 
         await carregarResponsaveis('');
+        bindRepasseVisibilitySync();
+        iniciarSyncRepasse();
         await carregarDados();
     }
 
@@ -141,6 +237,8 @@
     }
 
     async function carregarDados() {
+        if (isLoadingRepasse) return;
+        isLoadingRepasse = true;
         const [resumoResp, eventosResp] = await Promise.all([
             window.Api.apiFetch(`/api/repasse/resumo?ano=${yearCurrent}`),
             window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}&status=ABERTO`)
@@ -148,6 +246,7 @@
 
         if (!resumoResp.ok) {
             document.getElementById('repasse-apoio').innerHTML = '<p style="color:#b00;">Não foi possível carregar o resumo.</p>';
+            isLoadingRepasse = false;
             return;
         }
 
@@ -165,6 +264,7 @@
         renderNaoAlocado();
         renderAlocacoes();
         renderAlocar();
+        isLoadingRepasse = false;
     }
 
     function formatSituacaoLabel(situacao) {
@@ -375,6 +475,7 @@
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
             document.body.appendChild(modal);
         }
 
@@ -388,7 +489,7 @@
                     <p>Lotação: <strong>${lotacao}</strong></p>
                     <div style="margin-bottom:12px;">
                         <label>Valor (R$)</label>
-                        <input type="number" id="debito-valor" step="0.01" style="width:100%;" placeholder="0,00">
+                        <input type="text" id="debito-valor" inputmode="numeric" style="width:100%;" value="R$ 0,00" oninput="Repasse.handleCurrencyInputChange(this)">
                     </div>
                     <div style="margin-bottom:12px;">
                         <label>Observação</label>
@@ -401,18 +502,21 @@
                 </div>
             </div>
         `;
-        modal.classList.add('active');
+        bindModalOverlayClose(modal, fecharModalDebito);
+        setCurrencyInputValue('debito-valor', '0');
+        openModal(modal, fecharModalDebito);
     }
 
     function fecharModalDebito() {
-        document.getElementById('modal-lancar-debito')?.classList.remove('active');
+        closeModalById('modal-lancar-debito');
     }
 
     async function salvarDebito(lotacao) {
-        const valor = parseFloat(document.getElementById('debito-valor')?.value);
+        const valorCentavos = sanitizeToCentavos(document.getElementById('debito-valor')?.dataset?.centavos || document.getElementById('debito-valor')?.value);
+        const valorCentavosNumero = Number(valorCentavos);
         const observacao = document.getElementById('debito-obs')?.value?.trim();
 
-        if (isNaN(valor) || valor <= 0) {
+        if (!Number.isFinite(valorCentavosNumero) || valorCentavosNumero <= 0) {
             alert('Informe um valor válido maior que zero.');
             return;
         }
@@ -424,7 +528,7 @@
         const payload = {
             ano_ref: yearCurrent,
             lotacao_id: lotacao,
-            valor,
+            valor_centavos: valorCentavosNumero,
             observacao
         };
 
@@ -442,9 +546,13 @@
 
         fecharModalDebito();
         await carregarDados();
+        if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
+            await abrirModalListaDebitos(selectedLotacaoForLista, true);
+        }
     }
 
-    async function abrirModalListaDebitos(lotacao) {
+    async function abrirModalListaDebitos(lotacao, keepOpen = false) {
+        selectedLotacaoForLista = lotacao;
         const resp = await window.Api.apiFetch(`/api/repasse/movimentos?ano=${yearCurrent}&lotacaoId=${encodeURIComponent(lotacao)}`);
         if (!resp.ok) {
             alert('Erro ao carregar lista de débitos.');
@@ -459,16 +567,18 @@
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
             document.body.appendChild(modal);
         }
 
         const rows = movimentos.map(m => `
             <tr>
                 <td>${isoToBr(m.created_at)}</td>
-                <td>${formatCurrency(m.valor)}</td>
+                <td>${formatCentavosBRL(valorBackendToCentavos(m))}</td>
                 <td style="font-size:0.85rem;">${window.Utils.escapeHTML(m.observacao)}</td>
                 <td class="center">
-                    <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalEdicaoDebito(${m.id}, ${m.valor}, '${window.Utils.escapeHTML(m.observacao).replace(/'/g, "\\'")}', '${lotacao}')">Editar</button>
+                    <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalEdicaoDebito(${m.id}, '${valorBackendToCentavos(m)}', '${window.Utils.escapeHTML(m.observacao).replace(/'/g, "\\'")}', '${lotacao}')">Editar</button>
+                    <button class="ui-btn ui-btn-sm" style="background:#b42318" onclick="Repasse.abrirModalExcluirDebito(${m.id}, '${lotacao}')">Excluir</button>
                 </td>
             </tr>
         `).join('') || '<tr><td colspan="4" class="center">Nenhum débito lançado.</td></tr>';
@@ -494,11 +604,12 @@
                 </div>
             </div>
         `;
-        modal.classList.add('active');
+        bindModalOverlayClose(modal, fecharModalListaDebitos);
+        if (!keepOpen) openModal(modal, fecharModalListaDebitos);
     }
 
     function fecharModalListaDebitos() {
-        document.getElementById('modal-lista-debitos')?.classList.remove('active');
+        closeModalById('modal-lista-debitos');
     }
 
     function abrirModalEdicaoDebito(id, valor, observacao, lotacao) {
@@ -508,6 +619,7 @@
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
             document.body.appendChild(modal);
         }
 
@@ -521,7 +633,7 @@
                     <p>Lotação: <strong>${lotacao}</strong></p>
                     <div style="margin-bottom:12px;">
                         <label>Valor (R$)</label>
-                        <input type="number" id="edit-debito-valor" step="0.01" style="width:100%;" value="${valor}">
+                        <input type="text" id="edit-debito-valor" inputmode="numeric" style="width:100%;" value="${formatCentavosBRL(valor)}" oninput="Repasse.handleCurrencyInputChange(this)">
                     </div>
                     <div style="margin-bottom:12px;">
                         <label>Observação</label>
@@ -534,18 +646,21 @@
                 </div>
             </div>
         `;
-        modal.classList.add('active');
+        bindModalOverlayClose(modal, fecharModalEdicaoDebito);
+        setCurrencyInputValue('edit-debito-valor', valor);
+        openModal(modal, fecharModalEdicaoDebito);
     }
 
     function fecharModalEdicaoDebito() {
-        document.getElementById('modal-editar-debito')?.classList.remove('active');
+        closeModalById('modal-editar-debito');
     }
 
     async function atualizarDebito(id, lotacao) {
-        const valor = parseFloat(document.getElementById('edit-debito-valor')?.value);
+        const valorCentavos = sanitizeToCentavos(document.getElementById('edit-debito-valor')?.dataset?.centavos || document.getElementById('edit-debito-valor')?.value);
+        const valorCentavosNumero = Number(valorCentavos);
         const observacao = document.getElementById('edit-debito-obs')?.value?.trim();
 
-        if (isNaN(valor) || valor <= 0) {
+        if (!Number.isFinite(valorCentavosNumero) || valorCentavosNumero <= 0) {
             alert('Informe um valor válido maior que zero.');
             return;
         }
@@ -554,7 +669,10 @@
             return;
         }
 
-        const payload = { valor, observacao };
+        const payload = {
+            valor_centavos: valorCentavosNumero,
+            observacao
+        };
 
         const resp = await window.Api.apiFetch(`/api/repasse/movimentos/${id}`, {
             method: 'PUT',
@@ -575,6 +693,70 @@
         await abrirModalListaDebitos(lotacao);
     }
 
+    function abrirModalExcluirDebito(id, lotacao) {
+        const modalId = 'modal-excluir-debito';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="ui-modal" style="max-width:460px;">
+                <div class="ui-modal-header">
+                    <h3>Excluir lançamento</h3>
+                    <button class="ui-modal-close" onclick="Repasse.fecharModalExcluirDebito()">×</button>
+                </div>
+                <div class="ui-modal-body">
+                    <p>Tem certeza que deseja excluir este lançamento?</p>
+                    <label>Informe o motivo da exclusão</label>
+                    <textarea id="delete-debito-justificativa" rows="3" style="width:100%;" oninput="Repasse.validarJustificativaExclusao()"></textarea>
+                </div>
+                <div class="ui-modal-footer">
+                    <button class="ui-btn ui-btn-secondary" onclick="Repasse.fecharModalExcluirDebito()">Cancelar</button>
+                    <button id="btn-confirm-excluir-debito" class="ui-btn" style="background:#b42318" disabled onclick="Repasse.confirmarExclusaoDebito(${id}, '${lotacao}')">Confirmar Exclusão</button>
+                </div>
+            </div>
+        `;
+
+        bindModalOverlayClose(modal, fecharModalExcluirDebito);
+        openModal(modal, fecharModalExcluirDebito);
+    }
+
+    function validarJustificativaExclusao() {
+        const justificativa = document.getElementById('delete-debito-justificativa')?.value?.trim() || '';
+        const btn = document.getElementById('btn-confirm-excluir-debito');
+        if (btn) btn.disabled = justificativa.length < 5;
+    }
+
+    function fecharModalExcluirDebito() {
+        closeModalById('modal-excluir-debito');
+    }
+
+    async function confirmarExclusaoDebito(id, lotacao) {
+        const justificativa = document.getElementById('delete-debito-justificativa')?.value?.trim() || '';
+        if (justificativa.length < 5) return;
+
+        const resp = await window.Api.apiFetch(`/api/repasse/movimentos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ justificativa })
+        });
+
+        if (!resp.ok) {
+            const data = await resp.json();
+            alert(data.message || 'Erro ao excluir débito.');
+            return;
+        }
+
+        fecharModalExcluirDebito();
+        await carregarDados();
+        await abrirModalListaDebitos(lotacao);
+    }
+
     global.Repasse = {
         inicializarRepasse,
         criarEvento,
@@ -588,6 +770,11 @@
         fecharModalListaDebitos,
         abrirModalEdicaoDebito,
         fecharModalEdicaoDebito,
-        atualizarDebito
+        atualizarDebito,
+        handleCurrencyInputChange,
+        abrirModalExcluirDebito,
+        fecharModalExcluirDebito,
+        validarJustificativaExclusao,
+        confirmarExclusaoDebito
     };
 })(window);
