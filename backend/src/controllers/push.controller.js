@@ -4,6 +4,10 @@ const pushConfig = require("../config/push.config");
 const log = require("../utils/log");
 const { v4: uuidv4 } = require("uuid");
 
+function normalizeScope(s) {
+  return String(s || "").trim().toUpperCase();
+}
+
 function maskToken(token) {
   if (!token || typeof token !== 'string') return "invalid-token";
   if (token.length < 15) return "***";
@@ -37,12 +41,12 @@ exports.register = async (req, res) => {
     });
 
     // Hard safety: Rejeitar se appScope diferente do repo
-    if (appScope && appScope !== pushConfig.APP_SCOPE) {
+    if (appScope && normalizeScope(appScope) !== normalizeScope(pushConfig.APP_SCOPE)) {
       log.warn("PushRegisterScopeMismatch", { requestId, atorId, appScope, expected: pushConfig.APP_SCOPE });
       return res.status(400).json({ success: false, error: "App Scope mismatch.", requestId });
     }
 
-    const finalAppScope = appScope || pushConfig.APP_SCOPE;
+    const finalAppScope = normalizeScope(appScope || pushConfig.APP_SCOPE);
     const finalProjectId = expoProjectId || projectId || null;
 
     // Se negou, registramos mesmo sem token
@@ -69,7 +73,7 @@ exports.register = async (req, res) => {
 
     // Se temos um projectId (EAS), desativamos tokens de outros projetos para este usuário
     if (finalProjectId) {
-      await pushService.deactivateOtherProjectTokens(atorId, finalProjectId);
+      await pushService.deactivateOtherProjectTokens(atorId, finalProjectId, finalAppScope);
     }
 
     const result = await pushService.upsertToken({
