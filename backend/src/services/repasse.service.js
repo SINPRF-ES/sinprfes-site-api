@@ -553,6 +553,65 @@ async function alocarEmEvento(eventoId, filiadoId) {
   }
 }
 
+async function listarMovimentos(ano, lotacaoId) {
+  const { rows } = await pool.query(`
+    SELECT m.*, f.nome as created_by_nome
+    FROM repasse_movimentos m
+    LEFT JOIN filiados f ON f.id = m.created_by_user_id
+    WHERE m.ano_ref = $1
+      AND m.lotacao_id = $2
+      AND m.tipo = 'APOIO_OPERACIONAL_DEBITO'
+    ORDER BY m.created_at DESC
+  `, [ano, lotacaoId]);
+  return rows;
+}
+
+async function criarMovimento(payload, userId) {
+  const { ano_ref, lotacao_id, valor, observacao } = payload;
+
+  if (!ano_ref || !lotacao_id || !valor || valor <= 0) {
+    throw new Error('Dados inválidos para lançamento de débito.');
+  }
+  if (!observacao || observacao.length < 3 || observacao.length > 1000) {
+    throw new Error('Observação deve ter entre 3 e 1000 caracteres.');
+  }
+
+  const { rows } = await pool.query(`
+    INSERT INTO repasse_movimentos (ano_ref, lotacao_id, tipo, valor, observacao, created_by_user_id)
+    VALUES ($1, $2, 'APOIO_OPERACIONAL_DEBITO', $3, $4, $5)
+    RETURNING *
+  `, [ano_ref, lotacao_id, valor, observacao, userId]);
+
+  return rows[0];
+}
+
+async function atualizarMovimento(id, payload, userId) {
+  const { valor, observacao } = payload;
+
+  if (!valor || valor <= 0) {
+    throw new Error('Valor inválido.');
+  }
+  if (!observacao || observacao.length < 3 || observacao.length > 1000) {
+    throw new Error('Observação deve ter entre 3 e 1000 caracteres.');
+  }
+
+  const { rows } = await pool.query(`
+    UPDATE repasse_movimentos
+    SET valor = $2,
+        observacao = $3,
+        updated_at = NOW(),
+        updated_by_user_id = $4
+    WHERE id = $1 AND tipo = 'APOIO_OPERACIONAL_DEBITO'
+    RETURNING *
+  `, [id, valor, observacao, userId]);
+
+  if (rows.length === 0) {
+    throw new Error('Movimento não encontrado ou não permitido para edição.');
+  }
+
+  return rows[0];
+}
+
 async function listarResponsaveisComBusca(q = '') {
   const term = String(q || '').trim();
 
@@ -605,5 +664,8 @@ module.exports = {
   atualizarEvento,
   alterarStatusEvento,
   alocarEmEvento,
-  listarResponsaveisComBusca
+  listarResponsaveisComBusca,
+  listarMovimentos,
+  criarMovimento,
+  atualizarMovimento
 };
