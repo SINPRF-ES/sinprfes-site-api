@@ -60,6 +60,10 @@ describe("Repasse Service - Debitos", () => {
 
       const result = await repasseService.atualizarMovimento(1, payload, 1);
       expect(result.valor).toBe(60);
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('AND deleted_at IS NULL'),
+        [1, 60, 'Gasto Editado', 1]
+      );
     });
   });
 

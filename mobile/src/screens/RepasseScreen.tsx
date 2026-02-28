@@ -142,6 +142,11 @@ export default function RepasseScreen() {
     }
   }, [modalListaVisible, selectedLotacao, year]);
 
+  const refreshNow = useCallback(async () => {
+    await loadData();
+    await refreshListaIfOpen();
+  }, [loadData, refreshListaIfOpen]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -209,8 +214,7 @@ export default function RepasseScreen() {
       });
       setModalDebitoVisible(false);
       Alert.alert('Sucesso', 'Débito lançado com sucesso.');
-      await loadData();
-      await refreshListaIfOpen();
+      await refreshNow();
     } catch (error: any) {
       Alert.alert('Erro', error?.response?.data?.message || 'Erro ao salvar débito.');
     }
@@ -254,7 +258,7 @@ export default function RepasseScreen() {
       setModalEditVisible(false);
       setModalListaVisible(false);
       Alert.alert('Sucesso', 'Débito atualizado.');
-      await loadData();
+      await refreshNow();
       await abrirVerDebitos(selectedLotacao);
     } catch (error: any) {
       Alert.alert('Erro', error?.response?.data?.message || 'Erro ao atualizar débito.');
@@ -271,10 +275,12 @@ export default function RepasseScreen() {
     if (justificativa.length < 5) return;
 
     try {
-      await repasseService.excluirMovimento(deleteForm.id, { justificativa });
+      const deletedId = deleteForm.id;
+      setMovimentos((prev) => prev.filter((m) => m.id !== deletedId));
+      await repasseService.excluirMovimento(deletedId, { justificativa });
       setModalDeleteVisible(false);
       Alert.alert('Sucesso', 'Débito excluído.');
-      await loadData();
+      await refreshNow();
       await abrirVerDebitos(selectedLotacao);
     } catch (error: any) {
       Alert.alert('Erro', error?.response?.data?.message || 'Erro ao excluir débito.');
@@ -290,12 +296,11 @@ export default function RepasseScreen() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active' && isFocusedScreen) {
-        loadData();
-        refreshListaIfOpen();
+        refreshNow();
       }
     });
     return () => sub.remove();
-  }, [isFocusedScreen, loadData, refreshListaIfOpen]);
+  }, [isFocusedScreen, refreshNow]);
 
   useEffect(() => {
     if (!isFocusedScreen) {
@@ -305,15 +310,14 @@ export default function RepasseScreen() {
     }
 
     pollingRef.current = setInterval(() => {
-      loadData();
-      refreshListaIfOpen();
+      refreshNow();
     }, 12000);
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
       pollingRef.current = null;
     };
-  }, [isFocusedScreen, loadData, refreshListaIfOpen]);
+  }, [isFocusedScreen, refreshNow]);
 
   return (
     <SafeScreen style={styles.screen}>
