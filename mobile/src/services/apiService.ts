@@ -16,6 +16,12 @@ let isRefreshing = false;
 let failedQueue: any[] = [];
 let lastAuthErrorTimestamp = 0;
 
+const shouldForceLogoutAfterRefreshError = (refreshError: any): boolean => {
+  const status = refreshError?.response?.status;
+  const errorMsg = String(refreshError?.response?.data?.error || refreshError?.response?.data?.message || refreshError?.message || '').toLowerCase();
+  return status === 401 || errorMsg.includes('invalid_grant') || errorMsg.includes('refresh token');
+};
+
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom: any) => {
     if (error) {
@@ -26,6 +32,31 @@ const processQueue = (error: any, token: string | null = null) => {
   });
   failedQueue = [];
 };
+
+export async function refreshAccessToken(): Promise<string> {
+  const refreshToken = await carregarRefreshToken();
+  if (!refreshToken) {
+    throw new Error('NO_REFRESH_TOKEN');
+  }
+
+  const refreshResponse = await api.post('/api/auth/refresh', { refreshToken });
+  const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data || {};
+
+  if (!newToken) {
+    throw new Error('INVALID_REFRESH_RESPONSE');
+  }
+
+  const sessaoAtual = await carregarSessao();
+  if (sessaoAtual) {
+    await salvarSessao({
+      ...sessaoAtual,
+      token: newToken,
+      refreshToken: newRefreshToken,
+    });
+  }
+
+  return newToken;
+}
 
 /**
  * CANONICAL AXIOS INSTANCE
@@ -267,28 +298,7 @@ api.interceptors.response.use(
       const errorData = response?.data;
       const errorMsg = errorData?.error || errorData?.message || '';
       const isMissingToken = errorMsg.includes('Token de acesso não informado');
-      const isInvalidSession = errorMsg.includes('Sessão inválida ou expirada');
       const authReady = AuthStore.isReady();
-
-      // Caso 0: Anti-loop para Sessão Inválida (Redirecionamento único)
-      if (isInvalidSession) {
-        const now = Date.now();
-        if (now - lastAuthErrorTimestamp < 10000) { // 10s cooldown
-          logger.warn('API_401_ANTILOOP_TRIGGERED', { url });
-          return Promise.reject(error);
-        }
-        lastAuthErrorTimestamp = now;
-
-        logger.warn(`SESSION_CLEARED_REASON: session_invalid_direct | Route: ${url}`);
-        await limparSessao();
-
-        if (typeof global !== 'undefined' && (global as any).onSessionExpired) {
-          (global as any).onSessionExpired();
-        } else if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
-          (window as any).onSessionExpired();
-        }
-        return Promise.reject(error);
-      }
 
       // Caso 1: Se o bootstrap ainda não terminou ou o token está ausente, não limpamos a sessão.
       // Tentamos aguardar o gate e re-executar uma única vez.
@@ -335,29 +345,13 @@ api.interceptors.response.use(
         if (!refreshToken) {
           isRefreshing = false;
           logger.warn('API_401_REFRESH_SKIPPED: No refresh token available', { url });
-          // Não limpamos sessão aqui automaticamente para evitar loops em chamadas paralelas
           return Promise.reject(error);
         }
 
         logger.info('API_401_REFRESH_START', { url });
 
-        // Unificado para usar a instância 'api' (garante baseURL correta via env.ts)
-        const refreshResponse = await api.post("/api/auth/refresh", {
-          refreshToken,
-        });
-
-        const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
+        const newToken = await refreshAccessToken();
         logger.info('API_401_REFRESH_SUCCESS', { url });
-
-        // Atualiza a sessão no storage
-        const sessaoAtual = await carregarSessao();
-        if (sessaoAtual) {
-          await salvarSessao({
-            ...sessaoAtual,
-            token: newToken,
-            refreshToken: newRefreshToken
-          });
-        }
 
         processQueue(null, newToken);
         isRefreshing = false;
@@ -374,7 +368,10 @@ api.interceptors.response.use(
           message: refreshError.message
         });
 
-        // Só limpamos a sessão se realmente falhou o refresh de um token que existia e o boot está pronto
+        if (!shouldForceLogoutAfterRefreshError(refreshError)) {
+          return Promise.reject(refreshError);
+        }
+
         const now = Date.now();
         if (now - lastAuthErrorTimestamp < 10000) {
            return Promise.reject(refreshError);

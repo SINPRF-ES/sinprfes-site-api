@@ -5,6 +5,7 @@
     if (global.Repasse) return;
 
     const MIN_YEAR = 2026;
+    const AUTO_POLL_INTERVAL_MS = 30000;
 
     function isoToBr(iso) {
         if (!iso) return '';
@@ -34,6 +35,9 @@
     let selectedLotacaoForLista = null;
     let movimentosListaAtual = [];
     let repasseVisibilityBound = false;
+    let lastResumoSignature = '';
+    let lastEventosSignature = '';
+    let lastMovimentosSignature = '';
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && typeof activeModalCloser === 'function') {
@@ -109,11 +113,11 @@
         if (repassePollingId) return;
         repassePollingId = setInterval(async () => {
             if (document.visibilityState !== 'visible' || isLoadingRepasse) return;
-            await carregarDados();
+            await refreshNow({ showLoading: false });
             if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
                 await abrirModalListaDebitos(selectedLotacaoForLista, true);
             }
-        }, 12000);
+        }, AUTO_POLL_INTERVAL_MS);
     }
 
     function bindRepasseVisibilitySync() {
@@ -121,7 +125,7 @@
         repasseVisibilityBound = true;
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState !== 'visible') return;
-            await carregarDados();
+            await refreshNow({ showLoading: false });
             if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
                 await abrirModalListaDebitos(selectedLotacaoForLista, true);
             }
@@ -187,6 +191,7 @@
                     <div style="max-width:240px;margin:0 auto;">
                         <label for="repasse-year-select">Ano</label>
                         <select id="repasse-year-select" style="width:100%"></select>
+                        <button id="repasse-hard-refresh" class="ui-btn" style="margin-top:8px;width:100%;">Atualizar</button>
                     </div>
                 </div>
                 <div id="repasse-evento-form"></div>
@@ -210,14 +215,44 @@
             yearCurrent = Number(e.target.value);
             const subtitle = document.getElementById('repasse-subtitle');
             if (subtitle) subtitle.textContent = `Ano ${yearCurrent} • Apoio operacional e alocações`;
-            await carregarDados();
+            await refreshNow({ showLoading: true });
         });
+
+        const hardRefreshBtn = document.getElementById('repasse-hard-refresh');
+        if (hardRefreshBtn) {
+            hardRefreshBtn.addEventListener('click', async () => {
+                await refreshNow({ showLoading: true });
+            });
+        }
 
         await carregarResponsaveis('');
         bindRepasseVisibilitySync();
         iniciarSyncRepasse();
-        await carregarDados();
+        await refreshNow({ showLoading: true });
     }
+
+
+    function assinaturaResumo(resumo) {
+        if (!resumo) return '';
+        return JSON.stringify({
+            totalNaoAlocado: resumo.totalNaoAlocado,
+            lotacoes: (resumo.apoioPorLotacao || []).map((r) => [r.lotacao, r.qtdAtivos, r.creditoApoioOperacional, r.debitosApoioOperacional, r.saldoApoioOperacional]),
+            alocacoes: (resumo.alocacoes || []).map((a) => [a.eventoId, a.valorAlocado])
+        });
+    }
+
+    function assinaturaEventos(eventos) {
+        return JSON.stringify((eventos || []).map((e) => [e.id, e.titulo, e.status, e.valor_total_alocado]));
+    }
+
+    function assinaturaMovimentos(movimentos) {
+        return JSON.stringify((movimentos || []).map((m) => [m.id, m.updated_at || m.created_at, m.valor_centavos ?? m.valorCentavos ?? m.valor, m.observacao]));
+    }
+
+    async function refreshNow({ showLoading = false } = {}) {
+        await carregarDados({ showLoading });
+    }
+
 
     async function carregarResponsaveis(q = '') {
         if (!allResponsaveisCache) {
@@ -237,7 +272,7 @@
         }
     }
 
-    async function carregarDados() {
+    async function carregarDados({ showLoading = false } = {}) {
         if (isLoadingRepasse) return;
         isLoadingRepasse = true;
         const [resumoResp, eventosResp] = await Promise.all([
@@ -251,7 +286,7 @@
             return;
         }
 
-        repasseData = await resumoResp.json();
+        const proximoResumo = await resumoResp.json();
 
         if (eventosResp.ok) {
             const de = await eventosResp.json();
@@ -259,6 +294,20 @@
         } else {
             eventosAbertos = [];
         }
+
+        const novaAssinaturaResumo = assinaturaResumo(proximoResumo);
+        const novaAssinaturaEventos = assinaturaEventos(eventosAbertos);
+        const resumoMudou = novaAssinaturaResumo !== lastResumoSignature;
+        const eventosMudaram = novaAssinaturaEventos !== lastEventosSignature;
+
+        if (!resumoMudou && !eventosMudaram && !showLoading) {
+            isLoadingRepasse = false;
+            return;
+        }
+
+        repasseData = proximoResumo;
+        lastResumoSignature = novaAssinaturaResumo;
+        lastEventosSignature = novaAssinaturaEventos;
 
         renderEventoForm();
         renderApoio();
@@ -360,7 +409,7 @@
             return;
         }
         alert('Evento cadastrado com sucesso.');
-        await carregarDados();
+        await refreshNow({ showLoading: false });
     }
 
     function renderApoio() {
@@ -461,7 +510,7 @@
             return;
         }
         alert('Recurso alocado com sucesso.');
-        await carregarDados();
+        await refreshNow({ showLoading: false });
     }
 
     function toggleAlocacoes() {
@@ -546,7 +595,7 @@
         }
 
         fecharModalDebito();
-        await carregarDados();
+        await refreshNow({ showLoading: false });
         if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
             await abrirModalListaDebitos(selectedLotacaoForLista, true);
         }
@@ -609,7 +658,12 @@
             return;
         }
         const data = await resp.json();
-        movimentosListaAtual = data.movimentos || [];
+        const novaLista = data.movimentos || [];
+        const novaAssinatura = assinaturaMovimentos(novaLista);
+        if (!keepOpen || novaAssinatura !== lastMovimentosSignature) {
+            movimentosListaAtual = novaLista;
+            lastMovimentosSignature = novaAssinatura;
+        }
         renderListaDebitosModal(lotacao, keepOpen);
     }
 
@@ -693,7 +747,7 @@
 
         fecharModalEdicaoDebito();
         fecharModalListaDebitos();
-        await carregarDados();
+        await refreshNow({ showLoading: false });
         // Reabre a lista para mostrar a alteração
         await abrirModalListaDebitos(lotacao);
     }
@@ -760,7 +814,7 @@
         fecharModalExcluirDebito();
         movimentosListaAtual = movimentosListaAtual.filter((m) => Number(m.id) !== Number(id));
         renderListaDebitosModal(lotacao, true);
-        await carregarDados();
+        await refreshNow({ showLoading: false });
         await abrirModalListaDebitos(lotacao, true);
     }
 

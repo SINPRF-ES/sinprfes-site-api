@@ -16,8 +16,13 @@ import {
   carregarBiometriaHabilitada,
   definirBiometriaHabilitada,
   carregarRefreshToken,
+  carregarLastStrongAuthAt,
+  salvarLastStrongAuthAt,
 } from '../services/storageService';
 import { AuthStore } from '../services/authStore';
+import { refreshAccessToken } from '../services/apiService';
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 const AuthContext = createContext<AuthContextData | null>(null);
 
@@ -79,26 +84,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
+        const hasRefreshToken = !!(await carregarRefreshToken());
+        const lastStrongAuthAt = await carregarLastStrongAuthAt();
+        const strongAuthExpired = !lastStrongAuthAt || (Date.now() - lastStrongAuthAt > THIRTY_DAYS_MS);
 
         console.log('[Biometria.init]', { enabled: bio, hasToken: !!sessao?.token });
         setBiometriaHabilitada(bio);
 
-        if (sessao?.token) {
-          // Define o token para que o interceptor do axios possa usá-lo
-          setToken(sessao.token);
+        if (!hasRefreshToken || strongAuthExpired) {
+          setToken(null);
+          setUsuario(null);
+          return;
         }
+
+        if (sessao?.token) setToken(sessao.token);
 
         // Marca como pronto após restaurar do storage, permitindo que interceptores sigam
         AuthStore.setReady();
 
-        if (sessao?.token) {
+        if (sessao?.token || hasRefreshToken) {
           try {
-            // Valida o token e busca os dados do usuário atualizados
-            const { data: usuarioAtualizado } = await api.get('/api/filiados/me');
+            let usuarioAtualizado;
+
+            try {
+              const meResponse = await api.get('/api/filiados/me');
+              usuarioAtualizado = meResponse.data;
+            } catch (meError: any) {
+              const status = meError?.response?.status;
+              if (status === 401) {
+                const newToken = await refreshAccessToken();
+                setToken(newToken);
+                const meRetryResponse = await api.get('/api/filiados/me');
+                usuarioAtualizado = meRetryResponse.data;
+              } else {
+                throw meError;
+              }
+            }
+
             setUsuario(usuarioAtualizado);
 
             // Atualiza o usuário no storage
-            await salvarSessao({ token: sessao.token, usuario: usuarioAtualizado });
+            const tokenAtual = (await carregarSessao())?.token || sessao?.token;
+            if (tokenAtual) {
+              await salvarSessao({ token: tokenAtual, usuario: usuarioAtualizado });
+            }
 
             if (bio) {
               setBloqueadoPorBiometria(true);
@@ -107,10 +136,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await registrarDispositivoParaPush();
           } catch (error: any) {
             console.error('[Auth.loadSession.error]', error.message);
-            // Se o token for inválido (401), o interceptor de resposta já limpou o storage.
-            // Aqui limpamos o estado local para forçar redirecionamento para Login.
-            setToken(null);
-            setUsuario(null);
+            const status = error?.response?.status;
+            if (status === 401) {
+              const hasRefresh = !!(await carregarRefreshToken());
+              if (!hasRefresh) {
+                setToken(null);
+                setUsuario(null);
+              }
+            }
           }
         }
       } finally {
@@ -127,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsuario(novoUsuario);
     setBloqueadoPorBiometria(false);
     await salvarSessao({ token: novoToken, usuario: novoUsuario, refreshToken: novoRefreshToken });
+    await salvarLastStrongAuthAt();
   }
 
   async function logout(removerBiometria = false) {

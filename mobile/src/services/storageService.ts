@@ -12,6 +12,7 @@ const BIOMETRIA_KEY = '@sinprf/biometria_habilitada'; // Legacy AsyncStorage
 const BIOMETRIA_SECURE_KEY = 'sinprf_biometria_enabled'; // Novo SecureStore
 const BIOMETRIC_CREDENTIAL_KEY = 'sinprf_biometric_token';
 const LAST_UPDATE_CHECK_KEY = '@sinprf/last_update_check';
+const LAST_STRONG_AUTH_AT_KEY = '@sinprf/last_strong_auth_at';
 
 export async function salvarSessao(sessao: Sessao): Promise<void> {
   try {
@@ -60,6 +61,7 @@ export async function limparSessao(manterBiometria = true): Promise<void> {
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await AsyncStorage.removeItem(HAS_REFRESH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
+    await AsyncStorage.removeItem(LAST_STRONG_AUTH_AT_KEY);
 
     if (!manterBiometria) {
       await SecureStore.deleteItemAsync(BIOMETRIC_CREDENTIAL_KEY);
@@ -69,6 +71,16 @@ export async function limparSessao(manterBiometria = true): Promise<void> {
   } catch (e) {
     logger.error('[Storage.limparSessao]', e);
   }
+}
+
+export async function salvarLastStrongAuthAt(timestamp = Date.now()): Promise<void> {
+  await AsyncStorage.setItem(LAST_STRONG_AUTH_AT_KEY, String(timestamp));
+}
+
+export async function carregarLastStrongAuthAt(): Promise<number> {
+  const v = await AsyncStorage.getItem(LAST_STRONG_AUTH_AT_KEY);
+  const parsed = Number(v);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export async function carregarTokenBiometrico(): Promise<string | null> {
