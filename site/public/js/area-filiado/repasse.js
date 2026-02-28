@@ -28,9 +28,74 @@
     let perfilLogado = 'FILIADO';
     let alocacoesExpanded = false;
     let searchTimer = null;
+    let activeModalCloser = null;
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && typeof activeModalCloser === 'function') {
+            activeModalCloser();
+        }
+    });
 
     function formatCurrency(v) {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
+    }
+
+    function sanitizeToCentavos(input) {
+        const digitsOnly = String(input || '').replace(/\D/g, '');
+        const normalized = digitsOnly.replace(/^0+(?=\d)/, '');
+        return normalized || '0';
+    }
+
+    function formatCentavosBRL(centavos) {
+        const valorCentavos = Number(sanitizeToCentavos(centavos));
+        const valorReais = valorCentavos / 100;
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorReais);
+    }
+
+    function decimalToCentavos(valor) {
+        const numero = Number(valor || 0);
+        return Number.isFinite(numero) ? String(Math.round(numero * 100)) : '0';
+    }
+
+    function valorBackendToCentavos(movimento) {
+        if (movimento.valor_centavos !== undefined && movimento.valor_centavos !== null) return sanitizeToCentavos(movimento.valor_centavos);
+        if (movimento.valorCentavos !== undefined && movimento.valorCentavos !== null) return sanitizeToCentavos(movimento.valorCentavos);
+        return decimalToCentavos(movimento.valor);
+    }
+
+    function bindModalOverlayClose(modal, handleClose) {
+        modal.onclick = (event) => {
+            if (event.target === modal) handleClose();
+        };
+    }
+
+    function openModal(modal, handleClose) {
+        activeModalCloser = handleClose;
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+
+    function closeModalById(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        if (activeModalCloser) activeModalCloser = null;
+    }
+
+    function setCurrencyInputValue(inputId, centavos) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const sanitized = sanitizeToCentavos(centavos);
+        input.dataset.centavos = sanitized;
+        input.value = formatCentavosBRL(sanitized);
+    }
+
+    function handleCurrencyInputChange(input) {
+        const centavos = sanitizeToCentavos(input?.value);
+        if (!input) return;
+        input.dataset.centavos = centavos;
+        input.value = formatCentavosBRL(centavos);
     }
 
     function ehGestao() {
@@ -375,6 +440,7 @@
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
             document.body.appendChild(modal);
         }
 
@@ -388,7 +454,7 @@
                     <p>Lotação: <strong>${lotacao}</strong></p>
                     <div style="margin-bottom:12px;">
                         <label>Valor (R$)</label>
-                        <input type="number" id="debito-valor" step="0.01" style="width:100%;" placeholder="0,00">
+                        <input type="text" id="debito-valor" inputmode="numeric" style="width:100%;" value="R$ 0,00" oninput="Repasse.handleCurrencyInputChange(this)">
                     </div>
                     <div style="margin-bottom:12px;">
                         <label>Observação</label>
@@ -401,18 +467,21 @@
                 </div>
             </div>
         `;
-        modal.classList.add('active');
+        bindModalOverlayClose(modal, fecharModalDebito);
+        setCurrencyInputValue('debito-valor', '0');
+        openModal(modal, fecharModalDebito);
     }
 
     function fecharModalDebito() {
-        document.getElementById('modal-lancar-debito')?.classList.remove('active');
+        closeModalById('modal-lancar-debito');
     }
 
     async function salvarDebito(lotacao) {
-        const valor = parseFloat(document.getElementById('debito-valor')?.value);
+        const valorCentavos = sanitizeToCentavos(document.getElementById('debito-valor')?.dataset?.centavos || document.getElementById('debito-valor')?.value);
+        const valorCentavosNumero = Number(valorCentavos);
         const observacao = document.getElementById('debito-obs')?.value?.trim();
 
-        if (isNaN(valor) || valor <= 0) {
+        if (!Number.isFinite(valorCentavosNumero) || valorCentavosNumero <= 0) {
             alert('Informe um valor válido maior que zero.');
             return;
         }
@@ -424,7 +493,9 @@
         const payload = {
             ano_ref: yearCurrent,
             lotacao_id: lotacao,
-            valor,
+            valor: valorCentavosNumero / 100,
+            valor_centavos: valorCentavosNumero,
+            valorCentavos: valorCentavosNumero,
             observacao
         };
 
@@ -459,16 +530,17 @@
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
             document.body.appendChild(modal);
         }
 
         const rows = movimentos.map(m => `
             <tr>
                 <td>${isoToBr(m.created_at)}</td>
-                <td>${formatCurrency(m.valor)}</td>
+                <td>${formatCentavosBRL(valorBackendToCentavos(m))}</td>
                 <td style="font-size:0.85rem;">${window.Utils.escapeHTML(m.observacao)}</td>
                 <td class="center">
-                    <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalEdicaoDebito(${m.id}, ${m.valor}, '${window.Utils.escapeHTML(m.observacao).replace(/'/g, "\\'")}', '${lotacao}')">Editar</button>
+                    <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalEdicaoDebito(${m.id}, '${valorBackendToCentavos(m)}', '${window.Utils.escapeHTML(m.observacao).replace(/'/g, "\\'")}', '${lotacao}')">Editar</button>
                 </td>
             </tr>
         `).join('') || '<tr><td colspan="4" class="center">Nenhum débito lançado.</td></tr>';
@@ -494,11 +566,12 @@
                 </div>
             </div>
         `;
-        modal.classList.add('active');
+        bindModalOverlayClose(modal, fecharModalListaDebitos);
+        openModal(modal, fecharModalListaDebitos);
     }
 
     function fecharModalListaDebitos() {
-        document.getElementById('modal-lista-debitos')?.classList.remove('active');
+        closeModalById('modal-lista-debitos');
     }
 
     function abrirModalEdicaoDebito(id, valor, observacao, lotacao) {
@@ -508,6 +581,7 @@
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
             document.body.appendChild(modal);
         }
 
@@ -521,7 +595,7 @@
                     <p>Lotação: <strong>${lotacao}</strong></p>
                     <div style="margin-bottom:12px;">
                         <label>Valor (R$)</label>
-                        <input type="number" id="edit-debito-valor" step="0.01" style="width:100%;" value="${valor}">
+                        <input type="text" id="edit-debito-valor" inputmode="numeric" style="width:100%;" value="${formatCentavosBRL(valor)}" oninput="Repasse.handleCurrencyInputChange(this)">
                     </div>
                     <div style="margin-bottom:12px;">
                         <label>Observação</label>
@@ -534,18 +608,21 @@
                 </div>
             </div>
         `;
-        modal.classList.add('active');
+        bindModalOverlayClose(modal, fecharModalEdicaoDebito);
+        setCurrencyInputValue('edit-debito-valor', valor);
+        openModal(modal, fecharModalEdicaoDebito);
     }
 
     function fecharModalEdicaoDebito() {
-        document.getElementById('modal-editar-debito')?.classList.remove('active');
+        closeModalById('modal-editar-debito');
     }
 
     async function atualizarDebito(id, lotacao) {
-        const valor = parseFloat(document.getElementById('edit-debito-valor')?.value);
+        const valorCentavos = sanitizeToCentavos(document.getElementById('edit-debito-valor')?.dataset?.centavos || document.getElementById('edit-debito-valor')?.value);
+        const valorCentavosNumero = Number(valorCentavos);
         const observacao = document.getElementById('edit-debito-obs')?.value?.trim();
 
-        if (isNaN(valor) || valor <= 0) {
+        if (!Number.isFinite(valorCentavosNumero) || valorCentavosNumero <= 0) {
             alert('Informe um valor válido maior que zero.');
             return;
         }
@@ -554,7 +631,12 @@
             return;
         }
 
-        const payload = { valor, observacao };
+        const payload = {
+            valor: valorCentavosNumero / 100,
+            valor_centavos: valorCentavosNumero,
+            valorCentavos: valorCentavosNumero,
+            observacao
+        };
 
         const resp = await window.Api.apiFetch(`/api/repasse/movimentos/${id}`, {
             method: 'PUT',
@@ -588,6 +670,7 @@
         fecharModalListaDebitos,
         abrirModalEdicaoDebito,
         fecharModalEdicaoDebito,
-        atualizarDebito
+        atualizarDebito,
+        handleCurrencyInputChange
     };
 })(window);
