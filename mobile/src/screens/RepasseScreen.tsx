@@ -306,23 +306,23 @@ export default function RepasseScreen() {
                   <ScrollView horizontal showsHorizontalScrollIndicator>
                     <View>
                       <View style={styles.tableHeader}>
-                        <View style={[styles.tableHeaderCellContainer, { width: 170 }]}><Text style={styles.tableHeaderText}>Lotação</Text></View>
-                        <View style={[styles.tableHeaderCellContainer, { width: 70 }]}><Text style={styles.tableHeaderText}>Ativos</Text></View>
-                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Crédito</Text></View>
-                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Débitos</Text></View>
-                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Saldo</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 170 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Lotação</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 70 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Ativos</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Crédito</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Débitos</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Saldo</Text></View>
                         <View style={[styles.tableHeaderCellContainer, { width: 120 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Ações</Text></View>
                       </View>
                       {resumo.apoioPorLotacao.map((row, idx) => {
                         const semLotacao = row.lotacao === 'SEM LOTAÇÃO';
                         return (
                           <View key={row.lotacao} style={[styles.tableRow, idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd, semLotacao && styles.semLotacao]}>
-                            <View style={[styles.tableCellContainer, { width: 170 }]}><Text style={[styles.tableCell, { fontWeight: semLotacao ? '700' : '500' }]}>{row.lotacao}</Text></View>
-                            <View style={[styles.tableCellContainer, { width: 70 }]}><Text style={styles.tableCell}>{row.qtdAtivos}</Text></View>
-                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight]}>{formatCurrency(row.creditoApoioOperacional)}</Text></View>
-                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight]}>{formatCurrency(row.debitosApoioOperacional)}</Text></View>
-                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight, { fontWeight: '700' }]}>{formatCurrency(row.saldoApoioOperacional)}</Text></View>
-                            <View style={[styles.tableCellContainer, { width: 120, flexDirection: 'row', gap: 4 }]}>
+                            <View style={[styles.tableCellContainer, { width: 170 }]}><Text style={[styles.tableCell, styles.textCenter, { fontWeight: semLotacao ? '700' : '500' }]}>{row.lotacao}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 70 }]}><Text style={[styles.tableCell, styles.textCenter]}>{row.qtdAtivos}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textCenter, { color: '#0b3a67', fontWeight: '600' }]}>{formatCurrency(row.creditoApoioOperacional)}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textCenter, { color: '#dc3545', fontWeight: '600' }]}>{formatCurrency(row.debitosApoioOperacional)}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textCenter, { fontWeight: '700' }]}>{formatCurrency(row.saldoApoioOperacional)}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 120, flexDirection: 'row', gap: 4, justifyContent: 'center' }]}>
                               <TouchableOpacity style={styles.actionBtn} onPress={() => abrirLancarDebito(row.lotacao)}><Text style={styles.actionBtnText}>Lançar</Text></TouchableOpacity>
                               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#607589' }]} onPress={() => abrirVerDebitos(row.lotacao)}><Text style={styles.actionBtnText}>Ver</Text></TouchableOpacity>
                             </View>

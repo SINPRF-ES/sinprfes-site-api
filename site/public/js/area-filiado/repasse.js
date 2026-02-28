@@ -267,11 +267,11 @@
             const sem = r.lotacao === 'SEM LOTAÇÃO';
             return `
             <tr>
-              <td>${r.lotacao}${sem ? '<span class="badge-sem-lotacao">SEM LOTAÇÃO</span>' : ''}</td>
+              <td class="center">${r.lotacao}${sem ? '<span class="badge-sem-lotacao">SEM LOTAÇÃO</span>' : ''}</td>
               <td class="center">${r.qtdAtivos}</td>
-              <td class="num">${formatCurrency(r.creditoApoioOperacional)}</td>
-              <td class="num">${formatCurrency(r.debitosApoioOperacional)}</td>
-              <td class="num" style="font-weight:700;">${formatCurrency(r.saldoApoioOperacional)}</td>
+              <td class="center" style="color:var(--ui-primary);font-weight:600;">${formatCurrency(r.creditoApoioOperacional)}</td>
+              <td class="center" style="color:var(--ui-danger);font-weight:600;">${formatCurrency(r.debitosApoioOperacional)}</td>
+              <td class="center" style="font-weight:700;">${formatCurrency(r.saldoApoioOperacional)}</td>
               <td class="center">
                 <div style="display:flex;gap:4px;justify-content:center;">
                   <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalDebito('${r.lotacao}')" title="Lançar débito">Lançar</button>
@@ -287,7 +287,7 @@
               <h3>Apoio operacional por lotação</h3>
               <div class="repasse-table-wrap">
                 <table class="repasse-table">
-                  <thead><tr><th>Lotação</th><th>Ativos</th><th>Crédito</th><th>Débitos</th><th>Saldo</th><th>Ações</th></tr></thead>
+                  <thead><tr><th class="center">Lotação</th><th class="center">Ativos</th><th class="center">Crédito</th><th class="center">Débitos</th><th class="center">Saldo</th><th class="center">Ações</th></tr></thead>
                   <tbody>${rows}</tbody>
                 </table>
               </div>
