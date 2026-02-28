@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
 import { PickerSafe } from '../components/PickerSafe';
-import repasseService, { RepasseEvento, RepasseResumo, Responsavel } from '../services/repasseService';
+import repasseService, { RepasseEvento, RepasseMovimento, RepasseResumo, Responsavel } from '../services/repasseService';
 import { useAuth } from '../hooks/useAuth';
 import { formatDateToDdMmYyyy, formatISOToBR, toISODate } from '../utils/date';
 
@@ -29,6 +30,17 @@ export default function RepasseScreen() {
   const [resumo, setResumo] = useState<RepasseResumo | null>(null);
   const [eventosAbertos, setEventosAbertos] = useState<RepasseEvento[]>([]);
   const [alocacoesExpanded, setAlocacoesExpanded] = useState(false);
+
+  // Débitos
+  const [modalDebitoVisible, setModalDebitoVisible] = useState(false);
+  const [selectedLotacao, setSelectedLotacao] = useState('');
+  const [debitoForm, setDebitoForm] = useState({ valor: '', observacao: '' });
+
+  const [modalListaVisible, setModalListaVisible] = useState(false);
+  const [movimentos, setMovimentos] = useState<RepasseMovimento[]>([]);
+
+  const [modalEditVisible, setModalEditVisible] = useState(false);
+  const [editForm, setEditForm] = useState({ id: 0, valor: '', observacao: '' });
 
   const [queryResp, setQueryResp] = useState('');
   const [allResponsaveisCache, setAllResponsaveisCache] = useState<Responsavel[] | null>(null);
@@ -144,6 +156,83 @@ export default function RepasseScreen() {
     }
   };
 
+  const abrirLancarDebito = (lot: string) => {
+    setSelectedLotacao(lot);
+    setDebitoForm({ valor: '', observacao: '' });
+    setModalDebitoVisible(true);
+  };
+
+  const salvarDebito = async () => {
+    const val = parseFloat(debitoForm.valor.replace(',', '.'));
+    if (isNaN(val) || val <= 0) {
+      Alert.alert('Validação', 'Informe um valor válido maior que zero.');
+      return;
+    }
+    if (debitoForm.observacao.length < 3) {
+      Alert.alert('Validação', 'Informe uma observação (mínimo 3 caracteres).');
+      return;
+    }
+
+    try {
+      await repasseService.criarMovimento({
+        ano_ref: year,
+        lotacao_id: selectedLotacao,
+        valor: val,
+        observacao: debitoForm.observacao,
+      });
+      setModalDebitoVisible(false);
+      Alert.alert('Sucesso', 'Débito lançado com sucesso.');
+      await loadData();
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Erro ao salvar débito.');
+    }
+  };
+
+  const abrirVerDebitos = async (lot: string) => {
+    setSelectedLotacao(lot);
+    setLoading(true);
+    try {
+      const list = await repasseService.listarMovimentos(year, lot);
+      setMovimentos(list);
+      setModalListaVisible(true);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível carregar os débitos.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const abrirEditarDebito = (mov: RepasseMovimento) => {
+    setEditForm({ id: mov.id, valor: String(mov.valor).replace('.', ','), observacao: mov.observacao });
+    setModalEditVisible(true);
+  };
+
+  const atualizarDebito = async () => {
+    const val = parseFloat(editForm.valor.replace(',', '.'));
+    if (isNaN(val) || val <= 0) {
+      Alert.alert('Validação', 'Informe um valor válido maior que zero.');
+      return;
+    }
+    if (editForm.observacao.length < 3) {
+      Alert.alert('Validação', 'Informe uma observação (mínimo 3 caracteres).');
+      return;
+    }
+
+    try {
+      await repasseService.atualizarMovimento(editForm.id, {
+        valor: val,
+        observacao: editForm.observacao,
+      });
+      setModalEditVisible(false);
+      setModalListaVisible(false);
+      Alert.alert('Sucesso', 'Débito atualizado.');
+      await loadData();
+      await abrirVerDebitos(selectedLotacao);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Erro ao atualizar débito.');
+    }
+  };
+
   return (
     <SafeScreen style={styles.screen}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -222,6 +311,7 @@ export default function RepasseScreen() {
                         <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Crédito</Text></View>
                         <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Débitos</Text></View>
                         <View style={[styles.tableHeaderCellContainer, { width: 130 }]}><Text style={[styles.tableHeaderText, styles.textRight]}>Saldo</Text></View>
+                        <View style={[styles.tableHeaderCellContainer, { width: 120 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Ações</Text></View>
                       </View>
                       {resumo.apoioPorLotacao.map((row, idx) => {
                         const semLotacao = row.lotacao === 'SEM LOTAÇÃO';
@@ -232,6 +322,10 @@ export default function RepasseScreen() {
                             <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight]}>{formatCurrency(row.creditoApoioOperacional)}</Text></View>
                             <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight]}>{formatCurrency(row.debitosApoioOperacional)}</Text></View>
                             <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textRight, { fontWeight: '700' }]}>{formatCurrency(row.saldoApoioOperacional)}</Text></View>
+                            <View style={[styles.tableCellContainer, { width: 120, flexDirection: 'row', gap: 4 }]}>
+                              <TouchableOpacity style={styles.actionBtn} onPress={() => abrirLancarDebito(row.lotacao)}><Text style={styles.actionBtnText}>Lançar</Text></TouchableOpacity>
+                              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#607589' }]} onPress={() => abrirVerDebitos(row.lotacao)}><Text style={styles.actionBtnText}>Ver</Text></TouchableOpacity>
+                            </View>
                           </View>
                         );
                       })}
@@ -278,6 +372,85 @@ export default function RepasseScreen() {
             )}
           </View>
         </ScrollView>
+
+        {/* Modal Lançar Débito */}
+        <Modal visible={modalDebitoVisible} transparent animationType="fade" onRequestClose={() => setModalDebitoVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Lançar Débito</Text>
+              <Text style={styles.modalSubtitle}>Lotação: {selectedLotacao}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Valor (R$)"
+                keyboardType="numeric"
+                value={debitoForm.valor}
+                onChangeText={(v) => setDebitoForm((p) => ({ ...p, valor: v }))}
+              />
+              <TextInput
+                style={[styles.input, { height: 80 }]}
+                placeholder="Observação"
+                multiline
+                value={debitoForm.observacao}
+                onChangeText={(v) => setDebitoForm((p) => ({ ...p, observacao: v }))}
+              />
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalDebitoVisible(false)}><Text style={styles.cancelBtnText}>Cancelar</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={salvarDebito}><Text style={styles.saveBtnText}>Salvar</Text></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal Lista Débitos */}
+        <Modal visible={modalListaVisible} transparent animationType="fade" onRequestClose={() => setModalListaVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { maxWidth: '90%', width: 500 }]}>
+              <Text style={styles.modalTitle}>Débitos: {selectedLotacao}</Text>
+              <ScrollView style={{ maxHeight: 400 }}>
+                {movimentos.length === 0 ? <Text style={styles.emptyText}>Nenhum débito encontrado.</Text> : movimentos.map((m) => (
+                  <View key={m.id} style={styles.movimentoItem}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.movimentoDate}>{formatISOToBR(m.created_at)}</Text>
+                      <Text style={styles.movimentoValue}>{formatCurrency(m.valor)}</Text>
+                      <Text style={styles.movimentoObs}>{m.observacao}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.editBtn} onPress={() => abrirEditarDebito(m)}><Text style={styles.editBtnText}>Editar</Text></TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalListaVisible(false)}><Text style={styles.cancelBtnText}>Fechar</Text></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal Editar Débito */}
+        <Modal visible={modalEditVisible} transparent animationType="fade" onRequestClose={() => setModalEditVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Editar Débito</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Valor (R$)"
+                keyboardType="numeric"
+                value={editForm.valor}
+                onChangeText={(v) => setEditForm((p) => ({ ...p, valor: v }))}
+              />
+              <TextInput
+                style={[styles.input, { height: 80 }]}
+                placeholder="Observação"
+                multiline
+                value={editForm.observacao}
+                onChangeText={(v) => setEditForm((p) => ({ ...p, observacao: v }))}
+              />
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalEditVisible(false)}><Text style={styles.cancelBtnText}>Cancelar</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={atualizarDebito}><Text style={styles.saveBtnText}>Salvar</Text></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeScreen>
   );
@@ -334,4 +507,23 @@ const styles = StyleSheet.create({
   itemText: { fontSize: 13, color: '#314354' },
   listBtn: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cfd8e3', borderRadius: 8, padding: 10, marginTop: 8 },
   listBtnText: { color: '#0b3a67', fontWeight: '600' },
+  textCenter: { textAlign: 'center' },
+  actionBtn: { padding: 6, borderRadius: 4, backgroundColor: '#0b3a67', minWidth: 50, alignItems: 'center' },
+  actionBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0b3a67', marginBottom: 4 },
+  modalSubtitle: { fontSize: 14, color: '#5a6f82', marginBottom: 12 },
+  modalFooter: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 10 },
+  cancelBtn: { padding: 10 },
+  cancelBtnText: { color: '#607589', fontWeight: '600' },
+  saveBtn: { backgroundColor: '#0b3a67', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
+  saveBtnText: { color: '#fff', fontWeight: '700' },
+  emptyText: { textAlign: 'center', marginVertical: 20, color: '#5a6f82' },
+  movimentoItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee', flexDirection: 'row', alignItems: 'center' },
+  movimentoDate: { fontSize: 11, color: '#5a6f82' },
+  movimentoValue: { fontSize: 15, fontWeight: '700', color: '#0b3a67' },
+  movimentoObs: { fontSize: 13, color: '#223243' },
+  editBtn: { backgroundColor: '#e8eef5', padding: 8, borderRadius: 6 },
+  editBtnText: { fontSize: 12, color: '#0b3a67', fontWeight: '600' },
 });

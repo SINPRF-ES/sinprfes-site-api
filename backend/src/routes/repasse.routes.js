@@ -20,4 +20,8 @@ router.post("/eventos/:id/alocar", auth, requirePermission("REPASSE_GERENCIAR"),
 
 router.get("/responsaveis", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.listarResponsaveis);
 
+router.get("/movimentos", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.listarMovimentos);
+router.post("/movimentos", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.criarMovimento);
+router.put("/movimentos/:id", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.atualizarMovimento);
+
 module.exports = router;

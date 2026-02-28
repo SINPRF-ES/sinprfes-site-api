@@ -154,6 +154,53 @@ async function alocarMeuRecurso(req, res) {
   }
 }
 
+async function listarMovimentos(req, res) {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  try {
+    const { ano, lotacaoId } = req.query;
+    if (!ano || !lotacaoId) {
+      return res.status(400).json({ success: false, message: "Ano e lotação são obrigatórios.", requestId });
+    }
+    const movimentos = await repasseService.listarMovimentos(Number(ano), lotacaoId);
+    res.json({ success: true, movimentos, requestId });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message, requestId });
+  }
+}
+
+async function criarMovimento(req, res) {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  try {
+    const movimento = await repasseService.criarMovimento(req.body, atorId);
+    log.info("RepasseCriarMovimentoSucesso", { requestId, atorId, lotacaoId: req.body.lotacao_id });
+    res.status(201).json({ success: true, movimento, requestId });
+  } catch (err) {
+    log.error("RepasseCriarMovimentoErro", { requestId, atorId, error: err.message });
+    res.status(400).json({ success: false, message: err.message, requestId });
+  }
+}
+
+async function atualizarMovimento(req, res) {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  try {
+    const movimento = await repasseService.atualizarMovimento(Number(req.params.id), req.body, atorId);
+    log.info("RepasseAtualizarMovimentoSucesso", { requestId, atorId, movimentoId: req.params.id });
+    res.json({ success: true, movimento, requestId });
+  } catch (err) {
+    log.error("RepasseAtualizarMovimentoErro", { requestId, atorId, error: err.message });
+    res.status(400).json({ success: false, message: err.message, requestId });
+  }
+}
+
 async function listarResponsaveis(req, res) {
   const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
@@ -186,5 +233,8 @@ module.exports = {
   abrirEvento,
   encerrarEvento,
   alocarMeuRecurso,
-  listarResponsaveis
+  listarResponsaveis,
+  listarMovimentos,
+  criarMovimento,
+  atualizarMovimento
 };

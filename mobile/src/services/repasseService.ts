@@ -44,6 +44,18 @@ export interface Responsavel {
   arquivado_em?: string | null;
 }
 
+export interface RepasseMovimento {
+  id: number;
+  ano_ref: number;
+  lotacao_id: string;
+  tipo: string;
+  valor: number;
+  observacao: string;
+  created_at: string;
+  created_by_user_id: number;
+  created_by_nome?: string;
+}
+
 const repasseService = {
   getResumo: async (ano: number): Promise<RepasseResumo> => {
     const response = await apiService.get(`/api/repasse/resumo?ano=${ano}`);
@@ -77,6 +89,21 @@ const repasseService = {
       logger.error('REPASSE_API_ERR', error, { fn: 'listarResponsaveis', statusCode: error.response?.status });
       return [];
     }
+  },
+
+  listarMovimentos: async (ano: number, lotacaoId: string): Promise<RepasseMovimento[]> => {
+    const response = await apiService.get(`/api/repasse/movimentos?ano=${ano}&lotacaoId=${encodeURIComponent(lotacaoId)}`);
+    return response.data?.movimentos || [];
+  },
+
+  criarMovimento: async (payload: { ano_ref: number; lotacao_id: string; valor: number; observacao: string }): Promise<any> => {
+    const response = await apiService.post('/api/repasse/movimentos', payload);
+    return response.data;
+  },
+
+  atualizarMovimento: async (id: number, payload: { valor: number; observacao: string }): Promise<any> => {
+    const response = await apiService.put(`/api/repasse/movimentos/${id}`, payload);
+    return response.data;
   }
 };
 

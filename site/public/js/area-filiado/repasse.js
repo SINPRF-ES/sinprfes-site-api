@@ -59,6 +59,7 @@
             .repasse-table tbody tr:hover{background:#edf4fb;}
             .repasse-table .num{text-align:right;}
             .repasse-table .center{text-align:center;}
+            .ui-btn-sm{padding:4px 8px;font-size:0.75rem;}
             .badge-sem-lotacao{display:inline-block;background:#fff0c7;color:#7f5700;border:1px solid #e5c979;padding:2px 6px;border-radius:999px;font-size:.75rem;font-weight:700;margin-left:6px;}
             .repasse-evento-box{border:1px solid #dbe3ec;background:#fff;border-radius:10px;padding:10px;margin-top:8px;}
             .repasse-evento-title{font-weight:700;color:#0b3a67;}
@@ -271,6 +272,12 @@
               <td class="num">${formatCurrency(r.creditoApoioOperacional)}</td>
               <td class="num">${formatCurrency(r.debitosApoioOperacional)}</td>
               <td class="num" style="font-weight:700;">${formatCurrency(r.saldoApoioOperacional)}</td>
+              <td class="center">
+                <div style="display:flex;gap:4px;justify-content:center;">
+                  <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalDebito('${r.lotacao}')" title="Lançar débito">Lançar</button>
+                  <button class="ui-btn ui-btn-sm" style="background:#607589" onclick="Repasse.abrirModalListaDebitos('${r.lotacao}')" title="Ver débitos">Ver</button>
+                </div>
+              </td>
             </tr>
         `;
         }).join('');
@@ -280,7 +287,7 @@
               <h3>Apoio operacional por lotação</h3>
               <div class="repasse-table-wrap">
                 <table class="repasse-table">
-                  <thead><tr><th>Lotação</th><th>Ativos</th><th>Crédito</th><th>Débitos</th><th>Saldo</th></tr></thead>
+                  <thead><tr><th>Lotação</th><th>Ativos</th><th>Crédito</th><th>Débitos</th><th>Saldo</th><th>Ações</th></tr></thead>
                   <tbody>${rows}</tbody>
                 </table>
               </div>
@@ -361,11 +368,226 @@
         renderAlocacoes();
     }
 
+    function abrirModalDebito(lotacao) {
+        const modalId = 'modal-lancar-debito';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'ui-modal-overlay';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="ui-modal" style="max-width:400px;">
+                <div class="ui-modal-header">
+                    <h3>Lançar Débito</h3>
+                    <button class="ui-modal-close" onclick="Repasse.fecharModalDebito()">×</button>
+                </div>
+                <div class="ui-modal-body">
+                    <p>Lotação: <strong>${lotacao}</strong></p>
+                    <div style="margin-bottom:12px;">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="debito-valor" step="0.01" style="width:100%;" placeholder="0,00">
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label>Observação</label>
+                        <textarea id="debito-obs" rows="3" style="width:100%;" placeholder="Ex: Aquisição de geladeira"></textarea>
+                    </div>
+                </div>
+                <div class="ui-modal-footer">
+                    <button class="ui-btn ui-btn-secondary" onclick="Repasse.fecharModalDebito()">Cancelar</button>
+                    <button class="ui-btn" onclick="Repasse.salvarDebito('${lotacao}')">Salvar Débito</button>
+                </div>
+            </div>
+        `;
+        modal.classList.add('active');
+    }
+
+    function fecharModalDebito() {
+        document.getElementById('modal-lancar-debito')?.classList.remove('active');
+    }
+
+    async function salvarDebito(lotacao) {
+        const valor = parseFloat(document.getElementById('debito-valor')?.value);
+        const observacao = document.getElementById('debito-obs')?.value?.trim();
+
+        if (isNaN(valor) || valor <= 0) {
+            alert('Informe um valor válido maior que zero.');
+            return;
+        }
+        if (!observacao || observacao.length < 3) {
+            alert('Informe uma observação (mínimo 3 caracteres).');
+            return;
+        }
+
+        const payload = {
+            ano_ref: yearCurrent,
+            lotacao_id: lotacao,
+            valor,
+            observacao
+        };
+
+        const resp = await window.Api.apiFetch('/api/repasse/movimentos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+            const data = await resp.json();
+            alert(data.message || 'Erro ao salvar débito.');
+            return;
+        }
+
+        fecharModalDebito();
+        await carregarDados();
+    }
+
+    async function abrirModalListaDebitos(lotacao) {
+        const resp = await window.Api.apiFetch(`/api/repasse/movimentos?ano=${yearCurrent}&lotacaoId=${encodeURIComponent(lotacao)}`);
+        if (!resp.ok) {
+            alert('Erro ao carregar lista de débitos.');
+            return;
+        }
+        const data = await resp.json();
+        const movimentos = data.movimentos || [];
+
+        const modalId = 'modal-lista-debitos';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'ui-modal-overlay';
+            document.body.appendChild(modal);
+        }
+
+        const rows = movimentos.map(m => `
+            <tr>
+                <td>${isoToBr(m.created_at)}</td>
+                <td>${formatCurrency(m.valor)}</td>
+                <td style="font-size:0.85rem;">${window.Utils.escapeHTML(m.observacao)}</td>
+                <td class="center">
+                    <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalEdicaoDebito(${m.id}, ${m.valor}, '${window.Utils.escapeHTML(m.observacao).replace(/'/g, "\\'")}', '${lotacao}')">Editar</button>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="4" class="center">Nenhum débito lançado.</td></tr>';
+
+        modal.innerHTML = `
+            <div class="ui-modal" style="max-width:700px;">
+                <div class="ui-modal-header">
+                    <h3>Débitos: ${lotacao} (${yearCurrent})</h3>
+                    <button class="ui-modal-close" onclick="Repasse.fecharModalListaDebitos()">×</button>
+                </div>
+                <div class="ui-modal-body">
+                    <div class="repasse-table-wrap">
+                        <table class="repasse-table">
+                            <thead>
+                                <tr><th>Data</th><th>Valor</th><th>Observação</th><th>Ações</th></tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="ui-modal-footer">
+                    <button class="ui-btn ui-btn-secondary" onclick="Repasse.fecharModalListaDebitos()">Fechar</button>
+                </div>
+            </div>
+        `;
+        modal.classList.add('active');
+    }
+
+    function fecharModalListaDebitos() {
+        document.getElementById('modal-lista-debitos')?.classList.remove('active');
+    }
+
+    function abrirModalEdicaoDebito(id, valor, observacao, lotacao) {
+        const modalId = 'modal-editar-debito';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'ui-modal-overlay';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="ui-modal" style="max-width:400px;">
+                <div class="ui-modal-header">
+                    <h3>Editar Débito</h3>
+                    <button class="ui-modal-close" onclick="Repasse.fecharModalEdicaoDebito()">×</button>
+                </div>
+                <div class="ui-modal-body">
+                    <p>Lotação: <strong>${lotacao}</strong></p>
+                    <div style="margin-bottom:12px;">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="edit-debito-valor" step="0.01" style="width:100%;" value="${valor}">
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label>Observação</label>
+                        <textarea id="edit-debito-obs" rows="3" style="width:100%;">${window.Utils.escapeHTML(observacao)}</textarea>
+                    </div>
+                </div>
+                <div class="ui-modal-footer">
+                    <button class="ui-btn ui-btn-secondary" onclick="Repasse.fecharModalEdicaoDebito()">Cancelar</button>
+                    <button class="ui-btn" onclick="Repasse.atualizarDebito(${id}, '${lotacao}')">Salvar Alterações</button>
+                </div>
+            </div>
+        `;
+        modal.classList.add('active');
+    }
+
+    function fecharModalEdicaoDebito() {
+        document.getElementById('modal-editar-debito')?.classList.remove('active');
+    }
+
+    async function atualizarDebito(id, lotacao) {
+        const valor = parseFloat(document.getElementById('edit-debito-valor')?.value);
+        const observacao = document.getElementById('edit-debito-obs')?.value?.trim();
+
+        if (isNaN(valor) || valor <= 0) {
+            alert('Informe um valor válido maior que zero.');
+            return;
+        }
+        if (!observacao || observacao.length < 3) {
+            alert('Informe uma observação (mínimo 3 caracteres).');
+            return;
+        }
+
+        const payload = { valor, observacao };
+
+        const resp = await window.Api.apiFetch(`/api/repasse/movimentos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+            const data = await resp.json();
+            alert(data.message || 'Erro ao atualizar débito.');
+            return;
+        }
+
+        fecharModalEdicaoDebito();
+        fecharModalListaDebitos();
+        await carregarDados();
+        // Reabre a lista para mostrar a alteração
+        await abrirModalListaDebitos(lotacao);
+    }
+
     global.Repasse = {
         inicializarRepasse,
         criarEvento,
         buscarResponsaveis,
         alocarMeuRecurso,
-        toggleAlocacoes
+        toggleAlocacoes,
+        abrirModalDebito,
+        fecharModalDebito,
+        salvarDebito,
+        abrirModalListaDebitos,
+        fecharModalListaDebitos,
+        abrirModalEdicaoDebito,
+        fecharModalEdicaoDebito,
+        atualizarDebito
     };
 })(window);
