@@ -86,11 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Token válido → pula o login e vai direto pra Página Inicial
         window.location.href = "/area-filiado.html";
       } else if (resp.status === 401 || resp.status === 403) {
-        // Token inválido/expirado → limpa e deixa o usuário logar de novo
-        localStorage.removeItem("token");
-        localStorage.removeItem("token_filiado");
-        localStorage.removeItem("token_gestao");
-        localStorage.removeItem("perfil_acesso");
+        // Pré-check não limpa sessão diretamente para evitar logout indevido.
       }
     } catch (err) {
       console.error("Erro ao verificar sessão existente:", err);
@@ -180,6 +176,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Sucesso: salva token e perfil no localStorage
         if (data.token) {
           localStorage.setItem("token", data.token);
+          if (data.refreshToken) {
+            localStorage.setItem("refresh_token", data.refreshToken);
+          }
+          localStorage.setItem("lastStrongAuthAt", String(Date.now()));
 
           // ✅ ISOLAMENTO DE SESSÃO: salva no slot correto conforme perfil
           const perfil = (data.perfil_acesso || "FILIADO").toUpperCase();

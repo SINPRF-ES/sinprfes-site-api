@@ -22,6 +22,7 @@ import { formatDateToDdMmYyyy, formatISOToBR, toISODate } from '../utils/date';
 import { formatCentavosBRL, sanitizeToCentavos } from '../shared/format/formatters';
 
 const MIN_YEAR = 2026;
+const AUTO_POLL_INTERVAL_MS = 30000;
 
 export default function RepasseScreen() {
   const { usuario } = useAuth();
@@ -49,6 +50,9 @@ export default function RepasseScreen() {
   const [isFocusedScreen, setIsFocusedScreen] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = useRef(false);
+  const lastResumoSignatureRef = useRef<string>('');
+  const lastEventosSignatureRef = useRef<string>('');
+  const lastMovimentosSignatureRef = useRef<string>('');
 
   const [queryResp, setQueryResp] = useState('');
   const [allResponsaveisCache, setAllResponsaveisCache] = useState<Responsavel[] | null>(null);
@@ -111,23 +115,46 @@ export default function RepasseScreen() {
     }
   }, [ehGestao, allResponsaveisCache]);
 
-  const loadData = useCallback(async () => {
+  const makeResumoSignature = (value: RepasseResumo | null) => {
+    if (!value) return '';
+    return JSON.stringify({
+      totalNaoAlocado: value.totalNaoAlocado,
+      lotacoes: (value.apoioPorLotacao || []).map((r) => [r.lotacao, r.qtdAtivos, r.creditoApoioOperacional, r.debitosApoioOperacional, r.saldoApoioOperacional]),
+      alocacoes: (value.alocacoes || []).map((a) => [a.eventoId, a.valorAlocado]),
+    });
+  };
+
+  const makeEventosSignature = (value: RepasseEvento[]) => JSON.stringify((value || []).map((e) => [e.id, e.titulo, e.status, e.valor_total_alocado]));
+  const makeMovimentosSignature = (value: RepasseMovimento[]) => JSON.stringify((value || []).map((m) => [m.id, m.updated_at || m.created_at, m.valor_centavos ?? m.valorCentavos ?? m.valor, m.observacao]));
+
+  const loadData = useCallback(async (showLoading = true) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       const [resumoResp, eventosResp] = await Promise.all([
         repasseService.getResumo(year),
         repasseService.listarEventos(year, 'ABERTO'),
       ]);
-      setResumo(resumoResp);
-      setEventosAbertos(eventosResp);
+      const resumoSignature = makeResumoSignature(resumoResp);
+      const eventosSignature = makeEventosSignature(eventosResp);
+
+      if (resumoSignature !== lastResumoSignatureRef.current) {
+        lastResumoSignatureRef.current = resumoSignature;
+        setResumo(resumoResp);
+      }
+      if (eventosSignature !== lastEventosSignatureRef.current) {
+        lastEventosSignatureRef.current = eventosSignature;
+        setEventosAbertos(eventosResp);
+      }
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar os dados de repasse.');
-      setResumo(null);
-      setEventosAbertos([]);
+      if (showLoading) {
+        Alert.alert('Erro', 'Não foi possível carregar os dados de repasse.');
+        setResumo(null);
+        setEventosAbertos([]);
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
       isFetchingRef.current = false;
     }
   }, [year]);
@@ -136,14 +163,18 @@ export default function RepasseScreen() {
     if (!modalListaVisible || !selectedLotacao) return;
     try {
       const list = await repasseService.listarMovimentos(year, selectedLotacao);
-      setMovimentos(list);
+      const sig = makeMovimentosSignature(list);
+      if (sig !== lastMovimentosSignatureRef.current) {
+        lastMovimentosSignatureRef.current = sig;
+        setMovimentos(list);
+      }
     } catch (_error) {
       // noop
     }
   }, [modalListaVisible, selectedLotacao, year]);
 
-  const refreshNow = useCallback(async () => {
-    await loadData();
+  const refreshNow = useCallback(async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+    await loadData(showLoading);
     await refreshListaIfOpen();
   }, [loadData, refreshListaIfOpen]);
 
@@ -172,7 +203,7 @@ export default function RepasseScreen() {
       await repasseService.criarEvento(payload);
       Alert.alert('Sucesso', 'Evento cadastrado com sucesso.');
       setEventoForm({ titulo: '', responsavel_filiado_id: null, data_evento: '', data_limite_alocacao: '', status: 'RASCUNHO', descricao: '' });
-      await loadData();
+      await refreshNow({ showLoading: false });
     } catch (error: any) {
       Alert.alert('Erro', error?.response?.data?.message || 'Erro ao cadastrar evento.');
     }
@@ -182,7 +213,7 @@ export default function RepasseScreen() {
     try {
       await repasseService.alocarMeuRecurso(eventoId);
       Alert.alert('Sucesso', 'Recurso alocado com sucesso.');
-      await loadData();
+      await refreshNow({ showLoading: false });
     } catch (error: any) {
       Alert.alert('Erro', error?.response?.data?.message || 'Falha ao alocar recurso.');
     }
@@ -225,6 +256,8 @@ export default function RepasseScreen() {
     setLoading(true);
     try {
       const list = await repasseService.listarMovimentos(year, lot);
+      const sig = makeMovimentosSignature(list);
+      lastMovimentosSignatureRef.current = sig;
       setMovimentos(list);
       setModalListaVisible(true);
     } catch (error) {
@@ -296,7 +329,7 @@ export default function RepasseScreen() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active' && isFocusedScreen) {
-        refreshNow();
+        refreshNow({ showLoading: false });
       }
     });
     return () => sub.remove();
@@ -310,8 +343,8 @@ export default function RepasseScreen() {
     }
 
     pollingRef.current = setInterval(() => {
-      refreshNow();
-    }, 12000);
+      refreshNow({ showLoading: false });
+    }, AUTO_POLL_INTERVAL_MS);
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -337,6 +370,9 @@ export default function RepasseScreen() {
                 items={years.map((y) => ({ label: String(y), value: y }))}
                 containerStyle={{ flex: 1 }}
               />
+              <TouchableOpacity style={[styles.actionBtn, { alignSelf: 'flex-end' }]} onPress={() => refreshNow({ showLoading: true })}>
+                <Text style={styles.actionBtnText}>Atualizar</Text>
+              </TouchableOpacity>
             </View>
 
             {loading && <ActivityIndicator color="#0b3a67" style={{ marginVertical: 16 }} />}

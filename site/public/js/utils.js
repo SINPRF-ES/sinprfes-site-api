@@ -38,6 +38,80 @@
     return tokenLegado || tokenGestao || tokenFiliado;
   }
 
+  function obterRefreshToken() {
+    return localStorage.getItem("refresh_token");
+  }
+
+  function limparSessaoLocal() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("token_filiado");
+    localStorage.removeItem("token_gestao");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("lastStrongAuthAt");
+    localStorage.removeItem("userInfo");
+    localStorage.removeItem("perfil_acesso");
+    try { sessionStorage.removeItem("userInfo"); } catch (e) {}
+  }
+
+  function shouldRequireStrongLogin() {
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const last = Number(localStorage.getItem("lastStrongAuthAt") || 0);
+    return !last || (Date.now() - last > THIRTY_DAYS_MS);
+  }
+
+  let refreshPromise = null;
+
+  async function refreshAccessToken() {
+    if (refreshPromise) return refreshPromise;
+
+    const refreshToken = obterRefreshToken();
+    if (!refreshToken) throw new Error("NO_REFRESH_TOKEN");
+
+    refreshPromise = (async () => {
+      const API_BASE = resolveApiBase();
+      const resp = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!resp.ok) {
+        const err = new Error("REFRESH_FAILED");
+        err.status = resp.status;
+        try {
+          err.data = await resp.json();
+        } catch (e) {
+          err.data = null;
+        }
+        throw err;
+      }
+
+      const data = await resp.json().catch(() => ({}));
+      if (!data.token) throw new Error("INVALID_REFRESH_RESPONSE");
+
+      localStorage.setItem("token", data.token);
+      const userInfo = obterUserInfo();
+      const perfil = String(userInfo?.perfil_acesso || localStorage.getItem("perfil_acesso") || "FILIADO").toUpperCase();
+      const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
+      if (ehGestao) {
+        localStorage.setItem("token_gestao", data.token);
+      } else {
+        localStorage.setItem("token_filiado", data.token);
+      }
+      if (data.refreshToken) {
+        localStorage.setItem("refresh_token", data.refreshToken);
+      }
+
+      return data.token;
+    })();
+
+    try {
+      return await refreshPromise;
+    } finally {
+      refreshPromise = null;
+    }
+  }
+
   /**
    * Canon hardening:
    * - Primário: localStorage.userInfo
@@ -62,7 +136,8 @@
     window.Api.apiFetch = async function apiFetch(url, options = {}) {
       const API_BASE = resolveApiBase();
       const token = obterToken();
-      if (!token) {
+      if (!token || shouldRequireStrongLogin()) {
+        limparSessaoLocal();
         window.location.href = "/login.html";
         return;
       }
@@ -97,21 +172,29 @@
       const response = await fetch(finalUrl, { ...options, headers });
 
       if (response.status === 401) {
-        // Evita múltiplos alertas e loops se já estivermos saindo
+        const originalUrl = String(url || "");
+        const isAuthRoute = originalUrl.includes('/api/auth/login') || originalUrl.includes('/api/auth/refresh');
+        if (!isAuthRoute && !options._retry401) {
+          try {
+            const newToken = await refreshAccessToken();
+            const retryHeaders = new Headers(options.headers || {});
+            retryHeaders.set("Authorization", `Bearer ${newToken}`);
+            const retryOptions = { ...options, _retry401: true, headers: retryHeaders };
+            return await fetch(finalUrl, retryOptions);
+          } catch (refreshErr) {
+            const status = refreshErr?.status;
+            const message = String(refreshErr?.data?.error || refreshErr?.data?.message || refreshErr?.message || '').toLowerCase();
+            const shouldLogout = status === 401 || message.includes('invalid_grant') || message.includes('refresh token');
+            if (!shouldLogout) {
+              throw refreshErr;
+            }
+          }
+        }
+
         if (window._isRedirecting401) throw new Error("Sessão expirada (redirecionando)");
         window._isRedirecting401 = true;
-
-        console.warn("[Utils] 401 Unauthorized detectado. Limpando sessão e redirecionando.");
-
-        localStorage.removeItem("token");
-        localStorage.removeItem("token_filiado");
-        localStorage.removeItem("token_gestao");
-        localStorage.removeItem("userInfo");
-        localStorage.removeItem("perfil_acesso");
-
-        // também limpa o fallback, se existir
-        try { sessionStorage.removeItem("userInfo"); } catch (e) {}
-
+        console.warn("[Utils] 401 após tentativa de refresh. Limpando sessão e redirecionando.");
+        limparSessaoLocal();
         alert("Sessão expirada. Por favor, entre novamente.");
         window.location.href = "/login.html";
         throw new Error("Sessão expirada");
