@@ -23,5 +23,6 @@ router.get("/responsaveis", auth, requirePermission("REPASSE_GERENCIAR"), repass
 router.get("/movimentos", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.listarMovimentos);
 router.post("/movimentos", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.criarMovimento);
 router.put("/movimentos/:id", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.atualizarMovimento);
+router.delete("/movimentos/:id", auth, requirePermission("REPASSE_GERENCIAR"), repasseController.excluirMovimento);
 
 module.exports = router;

@@ -50,6 +50,8 @@ export interface RepasseMovimento {
   lotacao_id: string;
   tipo: string;
   valor: number;
+  valor_centavos?: number;
+  valorCentavos?: number;
   observacao: string;
   created_at: string;
   created_by_user_id: number;
@@ -96,13 +98,18 @@ const repasseService = {
     return response.data?.movimentos || [];
   },
 
-  criarMovimento: async (payload: { ano_ref: number; lotacao_id: string; valor: number; observacao: string }): Promise<any> => {
+  criarMovimento: async (payload: { ano_ref: number; lotacao_id: string; valor_centavos: number; observacao: string }): Promise<any> => {
     const response = await apiService.post('/api/repasse/movimentos', payload);
     return response.data;
   },
 
-  atualizarMovimento: async (id: number, payload: { valor: number; observacao: string }): Promise<any> => {
+  atualizarMovimento: async (id: number, payload: { valor_centavos: number; observacao: string }): Promise<any> => {
     const response = await apiService.put(`/api/repasse/movimentos/${id}`, payload);
+    return response.data;
+  },
+
+  excluirMovimento: async (id: number, payload: { justificativa: string }): Promise<any> => {
+    const response = await apiService.delete(`/api/repasse/movimentos/${id}`, { data: payload });
     return response.data;
   }
 };

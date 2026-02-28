@@ -553,6 +553,19 @@ async function alocarEmEvento(eventoId, filiadoId) {
   }
 }
 
+function parseValorDebito(payload = {}) {
+  const centavosRaw = payload.valor_centavos ?? payload.valorCentavos;
+  if (centavosRaw !== undefined && centavosRaw !== null && String(centavosRaw).trim() !== '') {
+    const centavos = Number(String(centavosRaw).replace(/\D/g, ''));
+    if (!Number.isFinite(centavos) || centavos <= 0) return null;
+    return centavos / 100;
+  }
+
+  const valor = Number(payload.valor);
+  if (!Number.isFinite(valor) || valor <= 0) return null;
+  return valor;
+}
+
 async function listarMovimentos(ano, lotacaoId) {
   const { rows } = await pool.query(`
     SELECT m.*, f.nome as created_by_nome
@@ -561,13 +574,15 @@ async function listarMovimentos(ano, lotacaoId) {
     WHERE m.ano_ref = $1
       AND m.lotacao_id = $2
       AND m.tipo = 'APOIO_OPERACIONAL_DEBITO'
+      AND m.deleted_at IS NULL
     ORDER BY m.created_at DESC
   `, [ano, lotacaoId]);
   return rows;
 }
 
 async function criarMovimento(payload, userId) {
-  const { ano_ref, lotacao_id, valor, observacao } = payload;
+  const { ano_ref, lotacao_id, observacao } = payload;
+  const valor = parseValorDebito(payload);
 
   if (!ano_ref || !lotacao_id || !valor || valor <= 0) {
     throw new Error('Dados inválidos para lançamento de débito.');
@@ -586,7 +601,8 @@ async function criarMovimento(payload, userId) {
 }
 
 async function atualizarMovimento(id, payload, userId) {
-  const { valor, observacao } = payload;
+  const { observacao } = payload;
+  const valor = parseValorDebito(payload);
 
   if (!valor || valor <= 0) {
     throw new Error('Valor inválido.');
@@ -607,6 +623,34 @@ async function atualizarMovimento(id, payload, userId) {
 
   if (rows.length === 0) {
     throw new Error('Movimento não encontrado ou não permitido para edição.');
+  }
+
+  return rows[0];
+}
+
+
+async function excluirMovimento(id, payload, userId) {
+  const motivo = String(payload?.justificativa || payload?.motivo || '').trim();
+
+  if (motivo.length < 5 || motivo.length > 1000) {
+    throw new Error('Justificativa deve ter entre 5 e 1000 caracteres.');
+  }
+
+  const { rows } = await pool.query(`
+    UPDATE repasse_movimentos
+    SET deleted_at = NOW(),
+        deleted_by_user_id = $2,
+        delete_reason = $3,
+        updated_at = NOW(),
+        updated_by_user_id = $2
+    WHERE id = $1
+      AND tipo = 'APOIO_OPERACIONAL_DEBITO'
+      AND deleted_at IS NULL
+    RETURNING *
+  `, [id, userId, motivo]);
+
+  if (rows.length === 0) {
+    throw new Error('Movimento não encontrado ou já excluído.');
   }
 
   return rows[0];
@@ -667,5 +711,6 @@ module.exports = {
   listarResponsaveisComBusca,
   listarMovimentos,
   criarMovimento,
-  atualizarMovimento
+  atualizarMovimento,
+  excluirMovimento
 };

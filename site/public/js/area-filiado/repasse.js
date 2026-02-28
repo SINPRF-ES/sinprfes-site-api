@@ -29,6 +29,10 @@
     let alocacoesExpanded = false;
     let searchTimer = null;
     let activeModalCloser = null;
+    let repassePollingId = null;
+    let isLoadingRepasse = false;
+    let selectedLotacaoForLista = null;
+    let repasseVisibilityBound = false;
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && typeof activeModalCloser === 'function') {
@@ -41,12 +45,14 @@
     }
 
     function sanitizeToCentavos(input) {
+        if (window.Formatters?.sanitizeToCentavos) return window.Formatters.sanitizeToCentavos(input);
         const digitsOnly = String(input || '').replace(/\D/g, '');
         const normalized = digitsOnly.replace(/^0+(?=\d)/, '');
         return normalized || '0';
     }
 
     function formatCentavosBRL(centavos) {
+        if (window.Formatters?.formatCentavosBRL) return window.Formatters.formatCentavosBRL(centavos);
         const valorCentavos = Number(sanitizeToCentavos(centavos));
         const valorReais = valorCentavos / 100;
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorReais);
@@ -96,6 +102,29 @@
         if (!input) return;
         input.dataset.centavos = centavos;
         input.value = formatCentavosBRL(centavos);
+    }
+
+    function iniciarSyncRepasse() {
+        if (repassePollingId) return;
+        repassePollingId = setInterval(async () => {
+            if (document.visibilityState !== 'visible' || isLoadingRepasse) return;
+            await carregarDados();
+            if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
+                await abrirModalListaDebitos(selectedLotacaoForLista, true);
+            }
+        }, 12000);
+    }
+
+    function bindRepasseVisibilitySync() {
+        if (repasseVisibilityBound) return;
+        repasseVisibilityBound = true;
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState !== 'visible') return;
+            await carregarDados();
+            if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
+                await abrirModalListaDebitos(selectedLotacaoForLista, true);
+            }
+        });
     }
 
     function ehGestao() {
@@ -184,6 +213,8 @@
         });
 
         await carregarResponsaveis('');
+        bindRepasseVisibilitySync();
+        iniciarSyncRepasse();
         await carregarDados();
     }
 
@@ -206,6 +237,8 @@
     }
 
     async function carregarDados() {
+        if (isLoadingRepasse) return;
+        isLoadingRepasse = true;
         const [resumoResp, eventosResp] = await Promise.all([
             window.Api.apiFetch(`/api/repasse/resumo?ano=${yearCurrent}`),
             window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}&status=ABERTO`)
@@ -213,6 +246,7 @@
 
         if (!resumoResp.ok) {
             document.getElementById('repasse-apoio').innerHTML = '<p style="color:#b00;">Não foi possível carregar o resumo.</p>';
+            isLoadingRepasse = false;
             return;
         }
 
@@ -230,6 +264,7 @@
         renderNaoAlocado();
         renderAlocacoes();
         renderAlocar();
+        isLoadingRepasse = false;
     }
 
     function formatSituacaoLabel(situacao) {
@@ -493,9 +528,7 @@
         const payload = {
             ano_ref: yearCurrent,
             lotacao_id: lotacao,
-            valor: valorCentavosNumero / 100,
             valor_centavos: valorCentavosNumero,
-            valorCentavos: valorCentavosNumero,
             observacao
         };
 
@@ -513,9 +546,13 @@
 
         fecharModalDebito();
         await carregarDados();
+        if (selectedLotacaoForLista && document.getElementById('modal-lista-debitos')?.classList.contains('active')) {
+            await abrirModalListaDebitos(selectedLotacaoForLista, true);
+        }
     }
 
-    async function abrirModalListaDebitos(lotacao) {
+    async function abrirModalListaDebitos(lotacao, keepOpen = false) {
+        selectedLotacaoForLista = lotacao;
         const resp = await window.Api.apiFetch(`/api/repasse/movimentos?ano=${yearCurrent}&lotacaoId=${encodeURIComponent(lotacao)}`);
         if (!resp.ok) {
             alert('Erro ao carregar lista de débitos.');
@@ -541,6 +578,7 @@
                 <td style="font-size:0.85rem;">${window.Utils.escapeHTML(m.observacao)}</td>
                 <td class="center">
                     <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalEdicaoDebito(${m.id}, '${valorBackendToCentavos(m)}', '${window.Utils.escapeHTML(m.observacao).replace(/'/g, "\\'")}', '${lotacao}')">Editar</button>
+                    <button class="ui-btn ui-btn-sm" style="background:#b42318" onclick="Repasse.abrirModalExcluirDebito(${m.id}, '${lotacao}')">Excluir</button>
                 </td>
             </tr>
         `).join('') || '<tr><td colspan="4" class="center">Nenhum débito lançado.</td></tr>';
@@ -567,7 +605,7 @@
             </div>
         `;
         bindModalOverlayClose(modal, fecharModalListaDebitos);
-        openModal(modal, fecharModalListaDebitos);
+        if (!keepOpen) openModal(modal, fecharModalListaDebitos);
     }
 
     function fecharModalListaDebitos() {
@@ -632,9 +670,7 @@
         }
 
         const payload = {
-            valor: valorCentavosNumero / 100,
             valor_centavos: valorCentavosNumero,
-            valorCentavos: valorCentavosNumero,
             observacao
         };
 
@@ -657,6 +693,70 @@
         await abrirModalListaDebitos(lotacao);
     }
 
+    function abrirModalExcluirDebito(id, lotacao) {
+        const modalId = 'modal-excluir-debito';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="ui-modal" style="max-width:460px;">
+                <div class="ui-modal-header">
+                    <h3>Excluir lançamento</h3>
+                    <button class="ui-modal-close" onclick="Repasse.fecharModalExcluirDebito()">×</button>
+                </div>
+                <div class="ui-modal-body">
+                    <p>Tem certeza que deseja excluir este lançamento?</p>
+                    <label>Informe o motivo da exclusão</label>
+                    <textarea id="delete-debito-justificativa" rows="3" style="width:100%;" oninput="Repasse.validarJustificativaExclusao()"></textarea>
+                </div>
+                <div class="ui-modal-footer">
+                    <button class="ui-btn ui-btn-secondary" onclick="Repasse.fecharModalExcluirDebito()">Cancelar</button>
+                    <button id="btn-confirm-excluir-debito" class="ui-btn" style="background:#b42318" disabled onclick="Repasse.confirmarExclusaoDebito(${id}, '${lotacao}')">Confirmar Exclusão</button>
+                </div>
+            </div>
+        `;
+
+        bindModalOverlayClose(modal, fecharModalExcluirDebito);
+        openModal(modal, fecharModalExcluirDebito);
+    }
+
+    function validarJustificativaExclusao() {
+        const justificativa = document.getElementById('delete-debito-justificativa')?.value?.trim() || '';
+        const btn = document.getElementById('btn-confirm-excluir-debito');
+        if (btn) btn.disabled = justificativa.length < 5;
+    }
+
+    function fecharModalExcluirDebito() {
+        closeModalById('modal-excluir-debito');
+    }
+
+    async function confirmarExclusaoDebito(id, lotacao) {
+        const justificativa = document.getElementById('delete-debito-justificativa')?.value?.trim() || '';
+        if (justificativa.length < 5) return;
+
+        const resp = await window.Api.apiFetch(`/api/repasse/movimentos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ justificativa })
+        });
+
+        if (!resp.ok) {
+            const data = await resp.json();
+            alert(data.message || 'Erro ao excluir débito.');
+            return;
+        }
+
+        fecharModalExcluirDebito();
+        await carregarDados();
+        await abrirModalListaDebitos(lotacao);
+    }
+
     global.Repasse = {
         inicializarRepasse,
         criarEvento,
@@ -671,6 +771,10 @@
         abrirModalEdicaoDebito,
         fecharModalEdicaoDebito,
         atualizarDebito,
-        handleCurrencyInputChange
+        handleCurrencyInputChange,
+        abrirModalExcluirDebito,
+        fecharModalExcluirDebito,
+        validarJustificativaExclusao,
+        confirmarExclusaoDebito
     };
 })(window);

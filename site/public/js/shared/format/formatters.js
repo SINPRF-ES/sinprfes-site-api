@@ -114,6 +114,17 @@
       format();
     },
 
+    sanitizeToCentavos: function (input) {
+      const digits = this.onlyDigits(input);
+      const normalized = digits.replace(/^0+(?=\d)/, '');
+      return normalized || '0';
+    },
+
+    formatCentavosBRL: function (centavos) {
+      const safeCentavos = Number(this.sanitizeToCentavos(centavos));
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safeCentavos / 100);
+    },
+
     applyMaskConta: function (el) {
       if (!el) return;
       const format = () => { el.value = this.formatConta(el.value); };

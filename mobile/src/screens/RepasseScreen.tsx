@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   KeyboardAvoidingView,
   Modal,
@@ -12,11 +13,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import SafeScreen from '../components/SafeScreen';
 import { PickerSafe } from '../components/PickerSafe';
 import repasseService, { RepasseEvento, RepasseMovimento, RepasseResumo, Responsavel } from '../services/repasseService';
 import { useAuth } from '../hooks/useAuth';
 import { formatDateToDdMmYyyy, formatISOToBR, toISODate } from '../utils/date';
+import { formatCentavosBRL, sanitizeToCentavos } from '../shared/format/formatters';
 
 const MIN_YEAR = 2026;
 
@@ -34,13 +37,18 @@ export default function RepasseScreen() {
   // Débitos
   const [modalDebitoVisible, setModalDebitoVisible] = useState(false);
   const [selectedLotacao, setSelectedLotacao] = useState('');
-  const [debitoForm, setDebitoForm] = useState({ valor: '', observacao: '' });
+  const [debitoForm, setDebitoForm] = useState({ valorCentavos: '0', observacao: '' });
 
   const [modalListaVisible, setModalListaVisible] = useState(false);
   const [movimentos, setMovimentos] = useState<RepasseMovimento[]>([]);
 
   const [modalEditVisible, setModalEditVisible] = useState(false);
-  const [editForm, setEditForm] = useState({ id: 0, valor: '', observacao: '' });
+  const [editForm, setEditForm] = useState({ id: 0, valorCentavos: '0', observacao: '' });
+  const [deleteForm, setDeleteForm] = useState({ id: 0, justificativa: '' });
+  const [modalDeleteVisible, setModalDeleteVisible] = useState(false);
+  const [isFocusedScreen, setIsFocusedScreen] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isFetchingRef = useRef(false);
 
   const [queryResp, setQueryResp] = useState('');
   const [allResponsaveisCache, setAllResponsaveisCache] = useState<Responsavel[] | null>(null);
@@ -63,6 +71,12 @@ export default function RepasseScreen() {
 
   const formatCurrency = (v: number | string | null | undefined) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
+
+  const valorBackendToCentavos = (mov: RepasseMovimento) => {
+    if (mov.valor_centavos !== undefined && mov.valor_centavos !== null) return sanitizeToCentavos(String(mov.valor_centavos));
+    if (mov.valorCentavos !== undefined && mov.valorCentavos !== null) return sanitizeToCentavos(String(mov.valorCentavos));
+    return sanitizeToCentavos(String(Math.round(Number(mov.valor || 0) * 100)));
+  };
 
   const formatSituacaoLabel = (situacao?: string) => {
     const val = String(situacao || '').toUpperCase();
@@ -98,6 +112,8 @@ export default function RepasseScreen() {
   }, [ehGestao, allResponsaveisCache]);
 
   const loadData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
     try {
       const [resumoResp, eventosResp] = await Promise.all([
@@ -112,8 +128,19 @@ export default function RepasseScreen() {
       setEventosAbertos([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [year]);
+
+  const refreshListaIfOpen = useCallback(async () => {
+    if (!modalListaVisible || !selectedLotacao) return;
+    try {
+      const list = await repasseService.listarMovimentos(year, selectedLotacao);
+      setMovimentos(list);
+    } catch (_error) {
+      // noop
+    }
+  }, [modalListaVisible, selectedLotacao, year]);
 
   useEffect(() => {
     loadData();
@@ -158,13 +185,13 @@ export default function RepasseScreen() {
 
   const abrirLancarDebito = (lot: string) => {
     setSelectedLotacao(lot);
-    setDebitoForm({ valor: '', observacao: '' });
+    setDebitoForm({ valorCentavos: '0', observacao: '' });
     setModalDebitoVisible(true);
   };
 
   const salvarDebito = async () => {
-    const val = parseFloat(debitoForm.valor.replace(',', '.'));
-    if (isNaN(val) || val <= 0) {
+    const valorCentavos = Number(sanitizeToCentavos(debitoForm.valorCentavos));
+    if (!Number.isFinite(valorCentavos) || valorCentavos <= 0) {
       Alert.alert('Validação', 'Informe um valor válido maior que zero.');
       return;
     }
@@ -177,12 +204,13 @@ export default function RepasseScreen() {
       await repasseService.criarMovimento({
         ano_ref: year,
         lotacao_id: selectedLotacao,
-        valor: val,
+        valor_centavos: valorCentavos,
         observacao: debitoForm.observacao,
       });
       setModalDebitoVisible(false);
       Alert.alert('Sucesso', 'Débito lançado com sucesso.');
       await loadData();
+      await refreshListaIfOpen();
     } catch (error: any) {
       Alert.alert('Erro', error?.response?.data?.message || 'Erro ao salvar débito.');
     }
@@ -203,13 +231,13 @@ export default function RepasseScreen() {
   };
 
   const abrirEditarDebito = (mov: RepasseMovimento) => {
-    setEditForm({ id: mov.id, valor: String(mov.valor).replace('.', ','), observacao: mov.observacao });
+    setEditForm({ id: mov.id, valorCentavos: valorBackendToCentavos(mov), observacao: mov.observacao });
     setModalEditVisible(true);
   };
 
   const atualizarDebito = async () => {
-    const val = parseFloat(editForm.valor.replace(',', '.'));
-    if (isNaN(val) || val <= 0) {
+    const valorCentavos = Number(sanitizeToCentavos(editForm.valorCentavos));
+    if (!Number.isFinite(valorCentavos) || valorCentavos <= 0) {
       Alert.alert('Validação', 'Informe um valor válido maior que zero.');
       return;
     }
@@ -220,7 +248,7 @@ export default function RepasseScreen() {
 
     try {
       await repasseService.atualizarMovimento(editForm.id, {
-        valor: val,
+        valor_centavos: valorCentavos,
         observacao: editForm.observacao,
       });
       setModalEditVisible(false);
@@ -232,6 +260,60 @@ export default function RepasseScreen() {
       Alert.alert('Erro', error?.response?.data?.message || 'Erro ao atualizar débito.');
     }
   };
+
+  const abrirExcluirDebito = (mov: RepasseMovimento) => {
+    setDeleteForm({ id: mov.id, justificativa: '' });
+    setModalDeleteVisible(true);
+  };
+
+  const excluirDebito = async () => {
+    const justificativa = deleteForm.justificativa.trim();
+    if (justificativa.length < 5) return;
+
+    try {
+      await repasseService.excluirMovimento(deleteForm.id, { justificativa });
+      setModalDeleteVisible(false);
+      Alert.alert('Sucesso', 'Débito excluído.');
+      await loadData();
+      await abrirVerDebitos(selectedLotacao);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Erro ao excluir débito.');
+    }
+  };
+
+  useFocusEffect(useCallback(() => {
+    setIsFocusedScreen(true);
+    loadData();
+    return () => setIsFocusedScreen(false);
+  }, [loadData]));
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && isFocusedScreen) {
+        loadData();
+        refreshListaIfOpen();
+      }
+    });
+    return () => sub.remove();
+  }, [isFocusedScreen, loadData, refreshListaIfOpen]);
+
+  useEffect(() => {
+    if (!isFocusedScreen) {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = null;
+      return;
+    }
+
+    pollingRef.current = setInterval(() => {
+      loadData();
+      refreshListaIfOpen();
+    }, 12000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    };
+  }, [isFocusedScreen, loadData, refreshListaIfOpen]);
 
   return (
     <SafeScreen style={styles.screen}>
@@ -383,8 +465,8 @@ export default function RepasseScreen() {
                 style={styles.input}
                 placeholder="Valor (R$)"
                 keyboardType="numeric"
-                value={debitoForm.valor}
-                onChangeText={(v) => setDebitoForm((p) => ({ ...p, valor: v }))}
+                value={formatCentavosBRL(debitoForm.valorCentavos)}
+                onChangeText={(v) => setDebitoForm((p) => ({ ...p, valorCentavos: sanitizeToCentavos(v) }))}
               />
               <TextInput
                 style={[styles.input, { height: 80 }]}
@@ -411,10 +493,13 @@ export default function RepasseScreen() {
                   <View key={m.id} style={styles.movimentoItem}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.movimentoDate}>{formatISOToBR(m.created_at)}</Text>
-                      <Text style={styles.movimentoValue}>{formatCurrency(m.valor)}</Text>
+                      <Text style={styles.movimentoValue}>{formatCentavosBRL(valorBackendToCentavos(m))}</Text>
                       <Text style={styles.movimentoObs}>{m.observacao}</Text>
                     </View>
-                    <TouchableOpacity style={styles.editBtn} onPress={() => abrirEditarDebito(m)}><Text style={styles.editBtnText}>Editar</Text></TouchableOpacity>
+                    <View style={{ gap: 6 }}>
+                      <TouchableOpacity style={styles.editBtn} onPress={() => abrirEditarDebito(m)}><Text style={styles.editBtnText}>Editar</Text></TouchableOpacity>
+                      <TouchableOpacity style={styles.deleteBtn} onPress={() => abrirExcluirDebito(m)}><Text style={styles.deleteBtnText}>Excluir</Text></TouchableOpacity>
+                    </View>
                   </View>
                 ))}
               </ScrollView>
@@ -434,8 +519,8 @@ export default function RepasseScreen() {
                 style={styles.input}
                 placeholder="Valor (R$)"
                 keyboardType="numeric"
-                value={editForm.valor}
-                onChangeText={(v) => setEditForm((p) => ({ ...p, valor: v }))}
+                value={formatCentavosBRL(editForm.valorCentavos)}
+                onChangeText={(v) => setEditForm((p) => ({ ...p, valorCentavos: sanitizeToCentavos(v) }))}
               />
               <TextInput
                 style={[styles.input, { height: 80 }]}
@@ -447,6 +532,33 @@ export default function RepasseScreen() {
               <View style={styles.modalFooter}>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalEditVisible(false)}><Text style={styles.cancelBtnText}>Cancelar</Text></TouchableOpacity>
                 <TouchableOpacity style={styles.saveBtn} onPress={atualizarDebito}><Text style={styles.saveBtnText}>Salvar</Text></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal Excluir Débito */}
+        <Modal visible={modalDeleteVisible} transparent animationType="fade" onRequestClose={() => setModalDeleteVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Excluir Lançamento</Text>
+              <Text style={styles.modalSubtitle}>Tem certeza que deseja excluir este lançamento?</Text>
+              <TextInput
+                style={[styles.input, { height: 90 }]}
+                placeholder="Informe o motivo da exclusão"
+                multiline
+                value={deleteForm.justificativa}
+                onChangeText={(v) => setDeleteForm((p) => ({ ...p, justificativa: v }))}
+              />
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalDeleteVisible(false)}><Text style={styles.cancelBtnText}>Cancelar</Text></TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveBtn, deleteForm.justificativa.trim().length < 5 && { opacity: 0.5 }]}
+                  disabled={deleteForm.justificativa.trim().length < 5}
+                  onPress={excluirDebito}
+                >
+                  <Text style={styles.saveBtnText}>Confirmar Exclusão</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -526,4 +638,6 @@ const styles = StyleSheet.create({
   movimentoObs: { fontSize: 13, color: '#223243' },
   editBtn: { backgroundColor: '#e8eef5', padding: 8, borderRadius: 6 },
   editBtnText: { fontSize: 12, color: '#0b3a67', fontWeight: '600' },
+  deleteBtn: { backgroundColor: '#fee4e2', padding: 8, borderRadius: 6 },
+  deleteBtnText: { fontSize: 12, color: '#b42318', fontWeight: '700' },
 });
