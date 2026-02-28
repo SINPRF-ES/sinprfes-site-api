@@ -404,6 +404,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
 
   if (filtro) {
     const termoLimpo = filtro.toLowerCase();
+    const termoSemAcento = termoLimpo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const apenasDigitos = filtro.replace(/\D/g, "");
 
     const searchConds = [];
@@ -412,6 +413,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     if (termoLimpo) {
       params.push(`%${termoLimpo}%`);
       searchConds.push(`LOWER(f.nome) LIKE $${params.length}`);
+
+      params.push(`%${termoSemAcento}%`);
+      searchConds.push(
+        `translate(LOWER(f.nome), 'áàãâäéèêëíìîïóòõôöúùûüçñ', 'aaaaaeeeeiiiiooooouuuucn') LIKE $${params.length}`
+      );
     }
 
     // Busca por CPF (somente se houver dígitos na busca)

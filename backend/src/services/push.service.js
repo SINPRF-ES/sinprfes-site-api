@@ -71,15 +71,24 @@ function buildResolveTargetClause(targetType, targetValue, startIndex = 1) {
 }
 
 function buildValidPushTokenFilters({ scope, expoProjectId, startIndex = 1 }) {
+  const where = [
+    "pt.revoked_at IS NULL",
+    "pt.disabled_at IS NULL",
+    "pt.expo_push_token IS NOT NULL",
+    `UPPER(TRIM(pt.app_scope)) = UPPER(TRIM($${startIndex}))`
+  ];
+  const params = [scope];
+
+  if (expoProjectId) {
+    where.push(`pt.expo_project_id = $${startIndex + 1}`);
+    params.push(expoProjectId);
+  } else {
+    where.push("NULLIF(TRIM(pt.expo_project_id), '') IS NOT NULL");
+  }
+
   return {
-    where: [
-      "pt.revoked_at IS NULL",
-      "pt.disabled_at IS NULL",
-      "pt.expo_push_token IS NOT NULL",
-      `UPPER(TRIM(pt.app_scope)) = UPPER(TRIM($${startIndex}))`,
-      `pt.expo_project_id = $${startIndex + 1}`
-    ],
-    params: [scope, expoProjectId]
+    where,
+    params
   };
 }
 
@@ -382,7 +391,7 @@ async function getResolveDiagnostics(targetType, targetValue) {
       COUNT(*) FILTER (WHERE disabled_reason IN ('missing_expo_project_id', 'missing_project_id')) as missing_project_id,
       COUNT(*) FILTER (WHERE UPPER(TRIM(app_scope)) != UPPER(TRIM($${targetClause.params.length + 1}))) as other_scope,
       COUNT(*) FILTER (WHERE expo_project_id IS NULL OR expo_project_id = '') as without_expo_project_id,
-      COUNT(*) FILTER (WHERE expo_project_id IS NOT NULL AND expo_project_id != $${targetClause.params.length + 2}) as project_mismatch_scope
+      COUNT(*) FILTER (WHERE expo_project_id IS NOT NULL ${envExpoProjectId ? `AND expo_project_id != $${targetClause.params.length + 2}` : ""}) as project_mismatch_scope
     FROM (
       SELECT pt.*
       FROM push_tokens pt
@@ -423,6 +432,15 @@ async function countNoTokenTargets(targetType, targetValue) {
       break;
   }
 
+  const appScopeParamIndex = params.length + 1;
+  const scopeParams = [normalizeScope(pushConfig.APP_SCOPE)];
+  let projectFilterSql = "NULLIF(TRIM(pt.expo_project_id), '') IS NOT NULL";
+  const configuredProjectId = configuredExpoProjectId();
+  if (configuredProjectId) {
+    projectFilterSql = `pt.expo_project_id = $${params.length + 2}`;
+    scopeParams.push(configuredProjectId);
+  }
+
   sql = `
     SELECT COUNT(*) as count
     FROM (${filiadosSql}) f
@@ -430,12 +448,12 @@ async function countNoTokenTargets(targetType, targetValue) {
       AND pt.revoked_at IS NULL
       AND pt.disabled_at IS NULL
       AND pt.expo_push_token IS NOT NULL
-      AND UPPER(TRIM(pt.app_scope)) = UPPER(TRIM($${params.length + 1}))
-      AND pt.expo_project_id = $${params.length + 2}
+      AND UPPER(TRIM(pt.app_scope)) = UPPER(TRIM($${appScopeParamIndex}))
+      AND ${projectFilterSql}
     WHERE pt.id IS NULL OR pt.permission_status = 'denied'
   `;
 
-  params.push(normalizeScope(pushConfig.APP_SCOPE), configuredExpoProjectId());
+  params.push(...scopeParams);
 
   const { rows } = await pool.query(sql, params);
   return parseInt(rows[0].count, 10) || 0;
