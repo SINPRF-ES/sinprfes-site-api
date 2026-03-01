@@ -41,7 +41,54 @@ app.use((req, res, next) => {
 // Limite de tamanho do corpo JSON (Proteção contra DoS)
 app.use(express.json({ limit: "100kb" }));
 
+/**
+ * ==============================
+ * 🧪 TESTE MINIO (POST /api/test-upload)
+ * ==============================
+ * Requer variáveis:
+ * - MINIO_ENDPOINT (ex: https://sindicato-files.sinprfes.org.br)
+ * - MINIO_BUCKET   (ex: documentos)
+ * - MINIO_ACCESS_KEY (ex: svc_sindicato)
+ * - MINIO_SECRET_KEY (senha do svc)
+ */
+app.post("/api/test-upload", async (req, res) => {
+  try {
+    const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
+    const endpoint = process.env.MINIO_ENDPOINT;
+    const bucket = process.env.MINIO_BUCKET;
+    const accessKeyId = process.env.MINIO_ACCESS_KEY;
+    const secretAccessKey = process.env.MINIO_SECRET_KEY;
+
+    if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+      return res.status(500).json({
+        success: false,
+        error: "Variáveis MINIO_* ausentes (MINIO_ENDPOINT, MINIO_BUCKET, MINIO_ACCESS_KEY, MINIO_SECRET_KEY)."
+      });
+    }
+
+    const s3 = new S3Client({
+      region: "us-east-1",
+      endpoint,
+      credentials: { accessKeyId, secretAccessKey },
+      forcePathStyle: true,
+    });
+
+    await s3.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: `health/test-${Date.now()}.txt`,
+      Body: "ok",
+      ContentType: "text/plain",
+    }));
+
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      error: String(e && e.message ? e.message : e)
+    });
+  }
+});
 
 // --- IMPORTAÇÃO DAS ROTAS ---
 const filieseRoutes = require("./routes/filiese.routes");
