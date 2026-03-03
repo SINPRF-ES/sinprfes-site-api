@@ -177,17 +177,17 @@ export default function DrawerNavigator() {
         />
       )}
 
+      <Drawer.Screen
+        name="Repasse"
+        component={RepasseScreen}
+        options={{
+          title: 'Repasse',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.REPASSE} label="Repasse" {...props} />,
+        }}
+      />
+
       {ehGestaoUsuario && (
         <>
-          <Drawer.Screen
-            name="Repasse"
-            component={RepasseScreen}
-            options={{
-              title: 'Repasse',
-              drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.REPASSE} label="Repasse" {...props} />,
-            }}
-          />
-
           <Drawer.Screen
             name="PushDiagnostic"
             component={PushDiagnosticScreen}

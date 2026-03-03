@@ -21,8 +21,9 @@
             { label: 'Ressarcimento', subtitle: 'Solicite seu reembolso', icon: '💸', target: 'sec-ressarcimento' },
         ];
 
+        actions.push({ label: 'Repasse', subtitle: 'Apoio operacional e alocações', icon: '💱', target: 'sec-repasse' });
+
         if (ehGestao) {
-            actions.push({ label: 'Repasse', subtitle: 'Gestão de localidades', icon: '💱', target: 'sec-repasse' });
             actions.push({ label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: '📊', target: 'sec-relatorios' });
         }
 
