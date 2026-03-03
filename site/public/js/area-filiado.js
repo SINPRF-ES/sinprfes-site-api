@@ -79,7 +79,7 @@
       const hasPerm = (perm) => perms.includes("*") || perms.includes(perm);
 
       const abasConfig = [
-        { id: "nav-repasse", visivel: hasPerm('REPASSE_GERENCIAR') },
+        { id: "nav-repasse", visivel: true },
         { id: "nav-noticias", visivel: true },
         { id: "nav-cms", visivel: hasPerm('EDIT_CONTENT') },
         { id: "nav-notificacoes", visivel: hasPerm('PUSH_GERENCIAR') },
