@@ -21,7 +21,7 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 | **Relatórios** | ✅ `RelatoriosScreen.tsx` | ✅ `sec-relatorios` | `/api/reports` | `RELATORIOS_VER` | ✅ OK |
 | **Notificações** | ✅ `NotificacoesPushScreen`| ✅ `sec-notificacoes` | `/api/push` | `PUSH_GERENCIAR` | ✅ OK |
 | **CMS** | ❌ Ausente | ✅ `sec-cms` | `/api/content-blocks`| `EDIT_CONTENT` | ✅ OK (Site) |
-| **Diagnóstico** | ✅ `LogsScreen.tsx` | ✅ `sec-diagnostico` | `/api/diagnostico`, `/api/push/health`, `/api/push/diagnostics/me` | `PUSH_GERENCIAR` | ✅ OK |
+| **Diagnóstico** | ✅ `LogsScreen.tsx` | ✅ `sec-diagnostico` | `/api/diagnostico`, `/api/push/health`, `/api/push/diagnostics/me` | `PUSH_GERENCIAR`, `ADMIN` | ✅ OK |
 
 ---
 

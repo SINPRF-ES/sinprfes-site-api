@@ -1,8 +1,24 @@
 const pool = require("../config/db");
 const log = require("../utils/log");
 const cloudinary = require("../services/cloudinary.service");
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
 
 const PERFIS_GESTAO = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
+
+function parseNoticiaId(req, res, requestId) {
+    const raw = String(req.params.id || "").trim();
+    if (!/^\d+$/.test(raw)) {
+        res.status(400).json({ success: false, message: "ID de notícia inválido.", requestId });
+        return null;
+    }
+    const id = Number(raw);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        res.status(400).json({ success: false, message: "ID de notícia inválido.", requestId });
+        return null;
+    }
+    return id;
+}
 
 function verificarGestao(req) {
   const perfil = (req.user?.perfil_acesso || "").toUpperCase();
@@ -13,7 +29,7 @@ exports.listar = async (req, res) => {
   const start = Date.now();
   const method = "GET";
   const endpoint = "/api/noticias";
-  const requestId = req.requestId;
+  const requestId = req.requestId || uuidv4();
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
   const queryParams = req.query;
@@ -124,10 +140,12 @@ exports.listar = async (req, res) => {
 
 exports.detalhar = async (req, res) => {
   const start = Date.now();
-  const { id } = req.params;
+  const requestId = req.requestId || uuidv4();
+  const id = parseNoticiaId(req, res, requestId);
+  if (id === null) return;
+
   const method = "GET";
   const endpoint = `/api/noticias/${id}`;
-  const requestId = req.requestId;
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
@@ -141,7 +159,7 @@ exports.detalhar = async (req, res) => {
     );
 
     if (newsRows.length === 0) {
-      return res.status(404).json({ message: "Notícia não encontrada." });
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
     }
 
     const noticia = newsRows[0];
@@ -162,25 +180,9 @@ exports.detalhar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json(noticia);
+    return res.json({ ...noticia, requestId });
   } catch (err) {
-    log.error("NOTICIAS_DETAIL_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      id,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao detalhar notícia.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao detalhar notícia.");
   }
 };
 
@@ -188,7 +190,7 @@ exports.criar = async (req, res) => {
   const start = Date.now();
   const method = "POST";
   const endpoint = "/api/noticias";
-  const requestId = req.requestId;
+  const requestId = req.requestId || uuidv4();
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
@@ -196,7 +198,7 @@ exports.criar = async (req, res) => {
     const { titulo, conteudo, capa_url } = req.body;
 
     if (!titulo || !conteudo) {
-      return res.status(400).json({ message: "Título e conteúdo são obrigatórios." });
+      return res.status(400).json({ success: false, message: "Título e conteúdo são obrigatórios.", requestId });
     }
 
     const { rows } = await pool.query(
@@ -214,34 +216,20 @@ exports.criar = async (req, res) => {
       profile,
       durationMs: Date.now() - start
     });
-    return res.status(201).json(rows[0]);
+    return res.status(201).json({ ...rows[0], requestId });
   } catch (err) {
-    log.error("NOTICIAS_CREATE_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack,
-      body: req.body
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao criar notícia.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao criar notícia.");
   }
 };
 
 exports.atualizar = async (req, res) => {
   const start = Date.now();
-  const { id } = req.params;
+  const requestId = req.requestId || uuidv4();
+  const id = parseNoticiaId(req, res, requestId);
+  if (id === null) return;
+
   const method = "PUT";
   const endpoint = `/api/noticias/${id}`;
-  const requestId = req.requestId;
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
@@ -260,7 +248,7 @@ exports.atualizar = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: "Notícia não encontrada." });
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
     }
 
     log.info("NOTICIAS_UPDATE_SUCCESS", {
@@ -272,35 +260,20 @@ exports.atualizar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json(rows[0]);
+    return res.json({ ...rows[0], requestId });
   } catch (err) {
-    log.error("NOTICIAS_UPDATE_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      id,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack,
-      body: req.body
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao atualizar notícia.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao atualizar notícia.");
   }
 };
 
 exports.publicar = async (req, res) => {
   const start = Date.now();
-  const { id } = req.params;
+  const requestId = req.requestId || uuidv4();
+  const id = parseNoticiaId(req, res, requestId);
+  if (id === null) return;
+
   const method = "POST";
   const endpoint = `/api/noticias/${id}/publicar`;
-  const requestId = req.requestId;
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
@@ -315,7 +288,7 @@ exports.publicar = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: "Notícia não encontrada." });
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
     }
 
     log.info("NOTICIAS_PUBLISH_SUCCESS", {
@@ -327,34 +300,20 @@ exports.publicar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json(rows[0]);
+    return res.json({ ...rows[0], requestId });
   } catch (err) {
-    log.error("NOTICIAS_PUBLISH_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      id,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao publicar notícia.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao publicar notícia.");
   }
 };
 
 exports.excluir = async (req, res) => {
   const start = Date.now();
-  const { id } = req.params;
+  const requestId = req.requestId || uuidv4();
+  const id = parseNoticiaId(req, res, requestId);
+  if (id === null) return;
+
   const method = "DELETE";
   const endpoint = `/api/noticias/${id}`;
-  const requestId = req.requestId;
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
@@ -362,7 +321,7 @@ exports.excluir = async (req, res) => {
     const { rowCount } = await pool.query("DELETE FROM noticias WHERE id = $1", [id]);
 
     if (rowCount === 0) {
-      return res.status(404).json({ message: "Notícia não encontrada." });
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
     }
 
     log.info("NOTICIAS_DELETE_SUCCESS", {
@@ -374,34 +333,20 @@ exports.excluir = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json({ success: true });
+    return res.json({ success: true, requestId });
   } catch (err) {
-    log.error("NOTICIAS_DELETE_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      id,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao excluir notícia.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao excluir notícia.");
   }
 };
 
 exports.adicionarMidia = async (req, res) => {
   const start = Date.now();
-  const { id } = req.params; // noticia_id
+  const requestId = req.requestId || uuidv4();
+  const id = parseNoticiaId(req, res, requestId);
+  if (id === null) return;
+
   const method = "POST";
   const endpoint = `/api/noticias/${id}/midias`;
-  const requestId = req.requestId;
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
@@ -409,7 +354,7 @@ exports.adicionarMidia = async (req, res) => {
     const { tipo, ordem } = req.body;
 
     if (!req.file) {
-      return res.status(400).json({ message: "Arquivo não enviado." });
+      return res.status(400).json({ success: false, message: "Arquivo não enviado.", requestId });
     }
 
     const resourceType = tipo === "VIDEO" ? "video" : "image";
@@ -434,34 +379,22 @@ exports.adicionarMidia = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.status(201).json(rows[0]);
+    return res.status(201).json({ ...rows[0], requestId });
   } catch (err) {
-    log.error("NOTICIAS_ADD_MEDIA_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      id,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao adicionar mídia.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao adicionar mídia.");
   }
 };
 
 exports.removerMidia = async (req, res) => {
   const start = Date.now();
-  const { midiaId } = req.params;
+  const requestId = req.requestId || uuidv4();
+  const midiaId = String(req.params.midiaId || "").trim();
+  if (!/^\d+$/.test(midiaId)) {
+      return res.status(400).json({ success: false, message: "ID de mídia inválido.", requestId });
+  }
+
   const method = "DELETE";
   const endpoint = `/api/noticias/midias/${midiaId}`;
-  const requestId = req.requestId;
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
@@ -469,7 +402,7 @@ exports.removerMidia = async (req, res) => {
     const { rowCount } = await pool.query("DELETE FROM noticia_midias WHERE id = $1", [midiaId]);
 
     if (rowCount === 0) {
-      return res.status(404).json({ message: "Mídia não encontrada." });
+      return res.status(404).json({ success: false, message: "Mídia não encontrada.", requestId });
     }
 
     log.info("NOTICIAS_REMOVE_MEDIA_SUCCESS", {
@@ -481,46 +414,32 @@ exports.removerMidia = async (req, res) => {
       midiaId,
       durationMs: Date.now() - start
     });
-    return res.json({ success: true });
+    return res.json({ success: true, requestId });
   } catch (err) {
-    log.error("NOTICIAS_REMOVE_MEDIA_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      midiaId,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao remover mídia.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao remover mídia.");
   }
 };
 
 exports.adicionarMidiaExterna = async (req, res) => {
   const start = Date.now();
-  const { id } = req.params; // noticia_id
+  const requestId = req.requestId || uuidv4();
+  const id = parseNoticiaId(req, res, requestId);
+  if (id === null) return;
+
   const method = "POST";
   const endpoint = `/api/noticias/${id}/midias_external`;
-  const requestId = req.requestId;
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
   try {
     if (!verificarGestao(req)) {
-      return res.status(403).json({ message: "Acesso negado." });
+      return res.status(403).json({ success: false, message: "Acesso negado.", requestId });
     }
 
     const { tipo, url, ordem } = req.body;
 
     if (!url) {
-      return res.status(400).json({ message: "URL da mídia não fornecida." });
+      return res.status(400).json({ success: false, message: "URL da mídia não fornecida.", requestId });
     }
 
     const { rows } = await pool.query(
@@ -539,26 +458,9 @@ exports.adicionarMidiaExterna = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.status(201).json(rows[0]);
+    return res.status(201).json({ ...rows[0], requestId });
   } catch (err) {
-    log.error("NOTICIAS_ADD_EXTERNAL_MEDIA_FAILED", {
-      endpoint,
-      method,
-      requestId,
-      userId,
-      profile,
-      id,
-      durationMs: Date.now() - start,
-      errorMessage: err.message,
-      stack: err.stack,
-      body: req.body
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao associar mídia externa.",
-      code: "INTERNAL_SERVER_ERROR",
-      requestId
-    });
+    return handleDbError(err, res, requestId, "Erro ao associar mídia externa.");
   }
 };
 
@@ -566,13 +468,13 @@ exports.obterAssinaturaUpload = async (req, res) => {
   const start = Date.now();
   const method = "POST";
   const endpoint = "/api/noticias/upload-signature";
-  const requestId = req.requestId;
+  const requestId = req.requestId || uuidv4();
   const userId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
   try {
     if (!verificarGestao(req)) {
-      return res.status(403).json({ message: "Acesso negado." });
+      return res.status(403).json({ success: false, message: "Acesso negado.", requestId });
     }
 
     const { folder, tags } = req.body;
@@ -581,9 +483,6 @@ exports.obterAssinaturaUpload = async (req, res) => {
     const params = {
       folder: folder || "noticias",
       tags: tags || "noticia",
-      // Padronização Cloudinary (f_auto, q_auto via presets ou params se suportado na assinatura)
-      // Nota: f_auto/q_auto são geralmente aplicados na entrega (URL), não no upload.
-      // Mas podemos definir um eager transformation se quisermos.
     };
 
     const signatureData = cloudinary.gerarAssinaturaUpload(params);
@@ -595,7 +494,7 @@ exports.obterAssinaturaUpload = async (req, res) => {
       profile,
       durationMs: Date.now() - start
     });
-    return res.json(signatureData);
+    return res.json({ ...signatureData, requestId });
   } catch (err) {
     log.error("NOTICIAS_GET_SIGNATURE_FAILED", {
       endpoint,

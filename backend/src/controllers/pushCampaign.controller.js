@@ -11,6 +11,8 @@ function normalizeScope(s) {
 exports.sendCampaign = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const createdBy = req.user?.id;
+  if (!createdBy) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
 
   const payloadForLog = req.body ? {
@@ -156,8 +158,8 @@ exports.sendCampaign = async (req, res) => {
 
 exports.pushHealth = async (req, res) => {
   const requestId = req.requestId || uuidv4();
-  const userId = req.user?.id;
-  if (!userId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
   try {
     const scopes = await pushService.getScopesDiagnostics();
@@ -176,7 +178,7 @@ exports.pushHealth = async (req, res) => {
       ]
     };
 
-    log.info("PushCampaign.HealthCheck", { requestId, userId, validTokens: sindicatoScope.valid });
+    log.info("PushCampaign.HealthCheck", { requestId, userId: atorId, validTokens: sindicatoScope.valid });
 
     return res.json({
       success: true,
@@ -198,8 +200,8 @@ exports.pushHealth = async (req, res) => {
 
 exports.listMyNotifications = async (req, res) => {
   const requestId = req.requestId || uuidv4();
-  const userId = req.user?.id;
-  if (!userId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
   const perfil = (req.user?.perfil_acesso || "").toUpperCase();
   const lotacao = req.user?.lotacao;
@@ -207,10 +209,10 @@ exports.listMyNotifications = async (req, res) => {
 
   try {
     const notifications = await pushCampaignService.listMyNotifications({
-        userId, perfil, lotacao, situacao
+        userId: atorId, perfil, lotacao, situacao
     });
 
-    log.info("PushCampaign.ListMyNotificationsSucesso", { requestId, userId, count: notifications.length });
+    log.info("PushCampaign.ListMyNotificationsSucesso", { requestId, userId: atorId, count: notifications.length });
 
     return res.json({ success: true, notifications, requestId });
   } catch (e) {
@@ -229,8 +231,9 @@ exports.listMyNotifications = async (req, res) => {
 
 exports.listCampaigns = async (req, res) => {
   const requestId = req.requestId || uuidv4();
-  const createdBy = req.user?.id;
-  if (!createdBy) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
   const perfil = req.user?.perfil_acesso || req.user?.perfil || "FILIADO";
 
   try {
@@ -238,11 +241,12 @@ exports.listCampaigns = async (req, res) => {
     const limit = includeArchived ? 50 : 5;
 
     const campaigns = await pushCampaignService.listCampaigns(limit);
+    log.info("PushCampaign.ListSucesso", { requestId, atorId, count: campaigns.length });
     return res.json({ success: true, campaigns, requestId });
   } catch (e) {
     log.error("PushCampaign.ListErro", {
         requestId,
-        userId: createdBy,
+        userId: atorId,
         perfil,
         error: e.message
     });
