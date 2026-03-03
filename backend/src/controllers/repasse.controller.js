@@ -177,6 +177,58 @@ async function alocarMeuRecurso(req, res) {
   }
 }
 
+async function retirarMinhaAlocacao(req, res) {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  try {
+    const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), atorId, req.body || {});
+    log.info("RepasseRetirarMinhaAlocacaoSucesso", { requestId, atorId, eventoId: req.params.id });
+    res.json({ success: true, alocacao, requestId });
+  } catch (err) {
+    log.error("RepasseRetirarMinhaAlocacaoErro", { requestId, atorId, error: err.message });
+    res.status(400).json({ success: false, message: err.message, requestId });
+  }
+}
+
+async function retirarAlocacaoGestao(req, res) {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  try {
+    const filiadoId = Number(req.body?.filiado_id || req.body?.filiadoId);
+    if (!filiadoId) {
+      return res.status(400).json({ success: false, message: "Filiado é obrigatório.", requestId });
+    }
+    const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), filiadoId, {
+      ...req.body,
+      ignorarPrazo: true,
+    });
+    log.info("RepasseRetirarAlocacaoGestaoSucesso", { requestId, atorId, eventoId: req.params.id, filiadoId });
+    res.json({ success: true, alocacao, requestId });
+  } catch (err) {
+    log.error("RepasseRetirarAlocacaoGestaoErro", { requestId, atorId, error: err.message });
+    res.status(400).json({ success: false, message: err.message, requestId });
+  }
+}
+
+async function excluirEvento(req, res) {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+
+  try {
+    const evento = await repasseService.excluirEvento(Number(req.params.id), req.body || {}, atorId);
+    log.info("RepasseExcluirEventoSucesso", { requestId, atorId, eventoId: req.params.id });
+    res.json({ success: true, evento, requestId });
+  } catch (err) {
+    log.error("RepasseExcluirEventoErro", { requestId, atorId, error: err.message });
+    res.status(400).json({ success: false, message: err.message, requestId });
+  }
+}
+
 async function listarMovimentos(req, res) {
   const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
@@ -271,6 +323,9 @@ module.exports = {
   abrirEvento,
   encerrarEvento,
   alocarMeuRecurso,
+  retirarMinhaAlocacao,
+  retirarAlocacaoGestao,
+  excluirEvento,
   listarResponsaveis,
   listarMovimentos,
   criarMovimento,

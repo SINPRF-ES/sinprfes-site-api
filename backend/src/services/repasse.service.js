@@ -432,6 +432,7 @@ async function listarEventos(ano, status = null) {
     FROM repasse_eventos e
     LEFT JOIN filiados f ON f.id = e.responsavel_filiado_id
     WHERE EXTRACT(YEAR FROM e.data_evento) = $1
+      AND e.deleted_at IS NULL
     ${statusFilter}
     ORDER BY e.data_evento ASC, e.titulo ASC
   `, params);
@@ -461,7 +462,7 @@ async function atualizarEvento(id, payload) {
     throw new Error('Data limite deve ser <= data do evento');
   }
 
-  const { rows } = await pool.query(`SELECT * FROM repasse_eventos WHERE id = $1`, [id]);
+  const { rows } = await pool.query(`SELECT * FROM repasse_eventos WHERE id = $1 AND deleted_at IS NULL`, [id]);
   if (!rows.length) throw new Error('Evento não encontrado');
   const atual = rows[0];
 
@@ -491,6 +492,7 @@ async function alterarStatusEvento(id, status) {
   const { rows } = await pool.query(`
     UPDATE repasse_eventos SET status = $2, updated_at = NOW()
     WHERE id = $1
+      AND deleted_at IS NULL
     RETURNING *
   `, [id, nextStatus]);
   if (!rows.length) throw new Error('Evento não encontrado');
@@ -502,7 +504,7 @@ async function alocarEmEvento(eventoId, filiadoId) {
   try {
     await client.query('BEGIN');
 
-    const eventoResult = await client.query(`SELECT * FROM repasse_eventos WHERE id = $1 FOR UPDATE`, [eventoId]);
+    const eventoResult = await client.query(`SELECT * FROM repasse_eventos WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, [eventoId]);
     if (!eventoResult.rows.length) throw new Error('Evento não encontrado');
     const evento = eventoResult.rows[0];
 
@@ -552,6 +554,70 @@ async function alocarEmEvento(eventoId, filiadoId) {
   } finally {
     client.release();
   }
+}
+
+async function retirarAlocacaoEvento(eventoId, filiadoId, payload = {}) {
+  const motivo = String(payload?.justificativa || payload?.motivo || '').trim();
+  const ignorarPrazo = Boolean(payload?.ignorarPrazo);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const eventoResult = await client.query(`SELECT * FROM repasse_eventos WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, [eventoId]);
+    if (!eventoResult.rows.length) throw new Error('Evento não encontrado');
+    const evento = eventoResult.rows[0];
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    if (!ignorarPrazo && hoje > evento.data_limite_alocacao) {
+      throw new Error('Prazo para retirar alocação encerrado');
+    }
+
+    const ano = getAnoFromDate(evento.data_evento);
+    const revoked = await client.query(`
+      UPDATE repasse_evento_alocacoes
+      SET status = $4, revogado_em = NOW()
+      WHERE ano_ref = $1
+        AND evento_id = $2
+        AND filiado_id = $3
+        AND status = $5
+      RETURNING *
+    `, [ano, eventoId, filiadoId, STATUS_ALOCACAO.REVOGADA, STATUS_ALOCACAO.ATIVA]);
+
+    if (!revoked.rows.length) throw new Error('Alocação ativa não encontrada para este filiado no evento informado.');
+
+    if (motivo && motivo.length > 1000) {
+      throw new Error('Justificativa deve ter no máximo 1000 caracteres.');
+    }
+
+    await client.query('COMMIT');
+    return revoked.rows[0];
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+async function excluirEvento(id, payload, userId) {
+  const motivo = String(payload?.justificativa || payload?.motivo || '').trim();
+  if (motivo.length < 5 || motivo.length > 1000) {
+    throw new Error('Justificativa deve ter entre 5 e 1000 caracteres.');
+  }
+
+  const { rows } = await pool.query(`
+    UPDATE repasse_eventos
+    SET deleted_at = NOW(),
+        deleted_by_user_id = $2,
+        delete_reason = $3,
+        updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING *
+  `, [id, userId, motivo]);
+
+  if (!rows.length) throw new Error('Evento não encontrado ou já excluído.');
+  return rows[0];
 }
 
 function parseValorDebito(payload = {}) {
@@ -711,6 +777,8 @@ module.exports = {
   atualizarEvento,
   alterarStatusEvento,
   alocarEmEvento,
+  retirarAlocacaoEvento,
+  excluirEvento,
   listarResponsaveisComBusca,
   listarMovimentos,
   criarMovimento,

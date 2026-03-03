@@ -33,6 +33,7 @@ export default function RepasseScreen() {
   const [loading, setLoading] = useState(false);
   const [resumo, setResumo] = useState<RepasseResumo | null>(null);
   const [eventosAbertos, setEventosAbertos] = useState<RepasseEvento[]>([]);
+  const [eventosTodos, setEventosTodos] = useState<RepasseEvento[]>([]);
   const [alocacoesExpanded, setAlocacoesExpanded] = useState(false);
 
   // Débitos
@@ -47,6 +48,9 @@ export default function RepasseScreen() {
   const [editForm, setEditForm] = useState({ id: 0, valorCentavos: '0', observacao: '' });
   const [deleteForm, setDeleteForm] = useState({ id: 0, justificativa: '' });
   const [modalDeleteVisible, setModalDeleteVisible] = useState(false);
+  const [modalDeleteEventoVisible, setModalDeleteEventoVisible] = useState(false);
+  const [deleteEventoId, setDeleteEventoId] = useState(0);
+  const [deleteEventoJustificativa, setDeleteEventoJustificativa] = useState('');
   const [isFocusedScreen, setIsFocusedScreen] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = useRef(false);
@@ -132,9 +136,10 @@ export default function RepasseScreen() {
     isFetchingRef.current = true;
     if (showLoading) setLoading(true);
     try {
-      const [resumoResp, eventosResp] = await Promise.all([
+      const [resumoResp, eventosResp, todosResp] = await Promise.all([
         repasseService.getResumo(year),
         repasseService.listarEventos(year, 'ABERTO'),
+        repasseService.listarEventos(year),
       ]);
       const resumoSignature = makeResumoSignature(resumoResp);
       const eventosSignature = makeEventosSignature(eventosResp);
@@ -147,11 +152,13 @@ export default function RepasseScreen() {
         lastEventosSignatureRef.current = eventosSignature;
         setEventosAbertos(eventosResp);
       }
+      setEventosTodos(todosResp || []);
     } catch (error) {
       if (showLoading) {
         Alert.alert('Erro', 'Não foi possível carregar os dados de repasse.');
         setResumo(null);
         setEventosAbertos([]);
+        setEventosTodos([]);
       }
     } finally {
       if (showLoading) setLoading(false);
@@ -214,16 +221,53 @@ export default function RepasseScreen() {
   };
 
   const alocarMeuRecurso = async (eventoId: number) => {
-    if (!ehGestao) {
-      Alert.alert('Acesso restrito', 'Ação permitida apenas para gestão.');
-      return;
-    }
     try {
       await repasseService.alocarMeuRecurso(eventoId);
       Alert.alert('Sucesso', 'Recurso alocado com sucesso.');
       await refreshNow({ showLoading: false });
     } catch (error: any) {
       Alert.alert('Erro', error?.response?.data?.message || 'Falha ao alocar recurso.');
+    }
+  };
+
+  const retirarMinhaAlocacao = async (eventoId: number) => {
+    try {
+      await repasseService.retirarMinhaAlocacao(eventoId);
+      Alert.alert('Sucesso', 'Alocação retirada com sucesso.');
+      await refreshNow({ showLoading: false });
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Falha ao retirar alocação.');
+    }
+  };
+
+  const editarEventoGestao = async (evento: RepasseEvento) => {
+    if (!ehGestao) return;
+    try {
+      await repasseService.atualizarEvento(evento.id, { status: evento.status === 'ABERTO' ? 'ENCERRADO' : 'ABERTO' });
+      Alert.alert('Sucesso', 'Evento atualizado.');
+      await refreshNow({ showLoading: false });
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Falha ao atualizar evento.');
+    }
+  };
+
+  const excluirEventoGestao = (eventoId: number) => {
+    if (!ehGestao) return;
+    setDeleteEventoId(eventoId);
+    setDeleteEventoJustificativa('');
+    setModalDeleteEventoVisible(true);
+  };
+
+  const confirmarExclusaoEvento = async () => {
+    const justificativa = deleteEventoJustificativa.trim();
+    if (justificativa.length < 5) return;
+    try {
+      await repasseService.excluirEvento(deleteEventoId, { justificativa });
+      setModalDeleteEventoVisible(false);
+      Alert.alert('Sucesso', 'Evento excluído.');
+      await refreshNow({ showLoading: false });
+    } catch (error: any) {
+      Alert.alert('Erro', error?.response?.data?.message || 'Falha ao excluir evento.');
     }
   };
 
@@ -506,17 +550,40 @@ export default function RepasseScreen() {
                 </View>
 
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Alocar meu recurso</Text>
+                  <Text style={styles.cardTitle}>Alocação de recurso</Text>
                   {eventosAbertos.length === 0 ? (
                     <Text style={styles.itemText}>Sem eventos abertos no momento.</Text>
                   ) : (
                     eventosAbertos.map((e) => (
-                      <TouchableOpacity key={e.id} style={styles.listBtn} onPress={() => alocarMeuRecurso(e.id)}>
-                        <Text style={styles.listBtnText}>{e.titulo} • limite {formatISOToBR(e.data_limite_alocacao)}</Text>
-                      </TouchableOpacity>
+                      <View key={e.id} style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                        <TouchableOpacity style={[styles.listBtn, { flex: 1, marginTop: 0 }]} onPress={() => alocarMeuRecurso(e.id)}>
+                          <Text style={styles.listBtnText}>{e.titulo} • limite {formatISOToBR(e.data_limite_alocacao)}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.deleteBtn} onPress={() => retirarMinhaAlocacao(e.id)}>
+                          <Text style={styles.deleteBtnText}>Retirar</Text>
+                        </TouchableOpacity>
+                      </View>
                     ))
                   )}
                 </View>
+
+                {ehGestao && (
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Gestão de eventos</Text>
+                    {eventosTodos.length === 0 ? (
+                      <Text style={styles.itemText}>Sem eventos cadastrados.</Text>
+                    ) : eventosTodos.map((e) => (
+                      <View key={`gestao-${e.id}`} style={styles.eventBox}>
+                        <Text style={styles.eventTitle}>{e.titulo}</Text>
+                        <Text style={styles.eventMeta}>Status: {e.status} • Limite: {formatISOToBR(e.data_limite_alocacao)}</Text>
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                          <TouchableOpacity style={styles.editBtn} onPress={() => editarEventoGestao(e)}><Text style={styles.editBtnText}>Alternar status</Text></TouchableOpacity>
+                          <TouchableOpacity style={styles.deleteBtn} onPress={() => excluirEventoGestao(e.id)}><Text style={styles.deleteBtnText}>Excluir</Text></TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -630,6 +697,33 @@ export default function RepasseScreen() {
             </View>
           </View>
         </Modal>
+
+        <Modal visible={modalDeleteEventoVisible} transparent animationType="fade" onRequestClose={() => setModalDeleteEventoVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Excluir Evento</Text>
+              <Text style={styles.modalSubtitle}>Informe a justificativa da exclusão.</Text>
+              <TextInput
+                style={[styles.input, { height: 90 }]}
+                placeholder="Justificativa"
+                multiline
+                value={deleteEventoJustificativa}
+                onChangeText={setDeleteEventoJustificativa}
+              />
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalDeleteEventoVisible(false)}><Text style={styles.cancelBtnText}>Cancelar</Text></TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveBtn, deleteEventoJustificativa.trim().length < 5 && { opacity: 0.5 }]}
+                  disabled={deleteEventoJustificativa.trim().length < 5}
+                  onPress={confirmarExclusaoEvento}
+                >
+                  <Text style={styles.saveBtnText}>Excluir Evento</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
       </KeyboardAvoidingView>
     </SafeScreen>
   );
