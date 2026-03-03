@@ -219,7 +219,7 @@
             });
         }
 
-        await carregarResponsaveis('');
+        if (ehGestao()) await carregarResponsaveis('');
         bindRepasseVisibilitySync();
         iniciarSyncRepasse();
         await refreshNow({ showLoading: true });
