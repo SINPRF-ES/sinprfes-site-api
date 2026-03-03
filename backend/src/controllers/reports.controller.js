@@ -322,11 +322,10 @@ exports.getHistory = async (req, res) => {
   }
 
   try {
-    const requesterId = req.user.id;
     const perfil = (req.user.perfil_acesso || "").toUpperCase();
 
     // ADMIN vê tudo, outros vêem apenas o próprio histórico por padrão (ajustável conforme UX)
-    const history = await reportsService.listarHistorico(perfil === "ADMIN" ? null : requesterId);
+    const history = await reportsService.listarHistorico(perfil === "ADMIN" ? null : atorId);
 
     // Otimização Bolt: Resolver nomes para relatórios individuais em batch (evita N+1 queries)
     const itemsToResolve = [];

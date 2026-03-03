@@ -17,3 +17,8 @@
 **Pattern:** Every controller method must initialize `requestId = req.requestId || uuidv4()` and include it in all log entries and JSON responses.
 **Benefit:** Enables seamless cross-referencing between client-side errors and backend logs in distributed environments (Railway/Cloud).
 **Implementation:** Standardized in `auth.controller.js` and `pushCampaign.controller.js`.
+
+## 2026-03-03 - [Database Error Masking]
+**Pattern:** To prevent sensitive database schema or row details from leaking to the client, all controllers interacting with the database must implement or use a `handleDbError` utility.
+**Implementation:** This utility maps PostgreSQL constraint violations (e.g., 23505 - unique key, 23514 - check constraint) to safe, generic 422 or 409 responses, while logging full details with `requestId` on the server.
+**Benefit:** Protects internal data structures while providing actionable, non-sensitive feedback to the user. Standardized in `repasse.controller.js` and `noticias.controller.js`.
