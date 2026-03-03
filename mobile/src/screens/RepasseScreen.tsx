@@ -190,6 +190,10 @@ export default function RepasseScreen() {
   }, [loadResponsaveis, queryResp]);
 
   const criarEvento = async () => {
+    if (!ehGestao) {
+      Alert.alert('Acesso restrito', 'Ação permitida apenas para gestão.');
+      return;
+    }
     if (!eventoForm.titulo || !eventoForm.data_evento || !eventoForm.data_limite_alocacao) {
       Alert.alert('Validação', 'Preencha título, data do evento e data limite.');
       return;
@@ -220,12 +224,20 @@ export default function RepasseScreen() {
   };
 
   const abrirLancarDebito = (lot: string) => {
+    if (!ehGestao) {
+      Alert.alert('Acesso restrito', 'Ação permitida apenas para gestão.');
+      return;
+    }
     setSelectedLotacao(lot);
     setDebitoForm({ valorCentavos: '0', observacao: '' });
     setModalDebitoVisible(true);
   };
 
   const salvarDebito = async () => {
+    if (!ehGestao) {
+      Alert.alert('Acesso restrito', 'Ação permitida apenas para gestão.');
+      return;
+    }
     const valorCentavos = Number(sanitizeToCentavos(debitoForm.valorCentavos));
     if (!Number.isFinite(valorCentavos) || valorCentavos <= 0) {
       Alert.alert('Validação', 'Informe um valor válido maior que zero.');
@@ -252,6 +264,10 @@ export default function RepasseScreen() {
   };
 
   const abrirVerDebitos = async (lot: string) => {
+    if (!ehGestao) {
+      Alert.alert('Acesso restrito', 'Ação permitida apenas para gestão.');
+      return;
+    }
     setSelectedLotacao(lot);
     setLoading(true);
     try {
@@ -273,6 +289,10 @@ export default function RepasseScreen() {
   };
 
   const atualizarDebito = async () => {
+    if (!ehGestao) {
+      Alert.alert('Acesso restrito', 'Ação permitida apenas para gestão.');
+      return;
+    }
     const valorCentavos = Number(sanitizeToCentavos(editForm.valorCentavos));
     if (!Number.isFinite(valorCentavos) || valorCentavos <= 0) {
       Alert.alert('Validação', 'Informe um valor válido maior que zero.');
@@ -304,6 +324,10 @@ export default function RepasseScreen() {
   };
 
   const excluirDebito = async () => {
+    if (!ehGestao) {
+      Alert.alert('Acesso restrito', 'Ação permitida apenas para gestão.');
+      return;
+    }
     const justificativa = deleteForm.justificativa.trim();
     if (justificativa.length < 5) return;
 
@@ -436,10 +460,9 @@ export default function RepasseScreen() {
                         <View style={[styles.tableHeaderCellContainer, { width: 120 }]}><Text style={[styles.tableHeaderText, styles.textCenter]}>Ações</Text></View>
                       </View>
                       {resumo.apoioPorLotacao.map((row, idx) => {
-                        const semLotacao = row.lotacao === 'SEM LOTAÇÃO';
                         return (
-                          <View key={row.lotacao} style={[styles.tableRow, idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd, semLotacao && styles.semLotacao]}>
-                            <View style={[styles.tableCellContainer, { width: 170 }]}><Text style={[styles.tableCell, styles.textCenter, { fontWeight: semLotacao ? '700' : '500' }]}>{row.lotacao}</Text></View>
+                          <View key={row.lotacao} style={[styles.tableRow, idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd]}>
+                            <View style={[styles.tableCellContainer, { width: 170 }]}><Text style={[styles.tableCell, styles.textCenter, { fontWeight: '500' }]}>{row.lotacao}</Text></View>
                             <View style={[styles.tableCellContainer, { width: 70 }]}><Text style={[styles.tableCell, styles.textCenter]}>{row.qtdAtivos}</Text></View>
                             <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textCenter, { color: '#0b3a67', fontWeight: '600' }]}>{formatCurrency(row.creditoApoioOperacional)}</Text></View>
                             <View style={[styles.tableCellContainer, { width: 130 }]}><Text style={[styles.tableCell, styles.textCenter, { color: '#dc3545', fontWeight: '600' }]}>{formatCurrency(row.debitosApoioOperacional)}</Text></View>
@@ -651,7 +674,6 @@ const styles = StyleSheet.create({
   },
   tableCell: { fontSize: 12, color: '#223243' },
   textRight: { textAlign: 'right' },
-  semLotacao: { backgroundColor: '#fff5da' },
   eventBox: { borderWidth: 1, borderColor: '#dce4ec', borderRadius: 10, padding: 10, marginTop: 8, backgroundColor: '#fff' },
   eventTitle: { color: '#0b3a67', fontWeight: '700' },
   eventMeta: { fontSize: 12, color: '#677788', marginVertical: 3 },

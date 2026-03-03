@@ -159,7 +159,6 @@
             .repasse-table .num{text-align:right;}
             .repasse-table .center{text-align:center;}
             .ui-btn-sm{padding:4px 8px;font-size:0.75rem;}
-            .badge-sem-lotacao{display:inline-block;background:#fff0c7;color:#7f5700;border:1px solid #e5c979;padding:2px 6px;border-radius:999px;font-size:.75rem;font-weight:700;margin-left:6px;}
             .repasse-evento-box{border:1px solid #dbe3ec;background:#fff;border-radius:10px;padding:10px;margin-top:8px;}
             .repasse-evento-title{font-weight:700;color:#0b3a67;}
             .repasse-evento-total{font-weight:700;color:#0b8f6a;margin:.3rem 0;}
@@ -173,11 +172,6 @@
         perfilLogado = (perfil || 'FILIADO').toUpperCase();
         const container = document.getElementById('sec-repasse');
         if (!container) return;
-
-        if (!ehGestao()) {
-            container.innerHTML = '<p style="padding:16px; color:#b00;">Acesso restrito à gestão.</p>';
-            return;
-        }
 
         injectStyles();
 
@@ -225,7 +219,7 @@
             });
         }
 
-        await carregarResponsaveis('');
+        if (ehGestao()) await carregarResponsaveis('');
         bindRepasseVisibilitySync();
         iniciarSyncRepasse();
         await refreshNow({ showLoading: true });
@@ -330,6 +324,10 @@
 
     function renderEventoForm() {
         const options = responsaveis.map((r) => `<option value="${r.id}">${responsavelLabel(r)}</option>`).join('');
+        if (!ehGestao()) {
+            document.getElementById('repasse-evento-form').innerHTML = '';
+            return;
+        }
         document.getElementById('repasse-evento-form').innerHTML = `
             <div class="repasse-card">
                 <h3>Cadastrar evento (gestão)</h3>
@@ -383,6 +381,7 @@
     }
 
     async function criarEvento() {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
         const payload = {
             titulo: document.getElementById('evt-titulo')?.value?.trim(),
             responsavel_filiado_id: Number(document.getElementById('evt-responsavel')?.value) || null,
@@ -414,20 +413,20 @@
 
     function renderApoio() {
         const rows = (repasseData.apoioPorLotacao || []).map((r) => {
-            const sem = r.lotacao === 'SEM LOTAÇÃO';
+            const acoes = ehGestao()
+                ? `<div style="display:flex;gap:4px;justify-content:center;">
+                  <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalDebito('${r.lotacao}')" title="Lançar débito">Lançar</button>
+                  <button class="ui-btn ui-btn-sm" style="background:#607589" onclick="Repasse.abrirModalListaDebitos('${r.lotacao}')" title="Ver débitos">Ver</button>
+                </div>`
+                : '<span style="color:#607589;">Somente gestão</span>';
             return `
             <tr>
-              <td class="center">${r.lotacao}${sem ? '<span class="badge-sem-lotacao">SEM LOTAÇÃO</span>' : ''}</td>
+              <td class="center">${r.lotacao}</td>
               <td class="center">${r.qtdAtivos}</td>
               <td class="center" style="color:var(--ui-primary);font-weight:600;">${formatCurrency(r.creditoApoioOperacional)}</td>
               <td class="center" style="color:var(--ui-danger);font-weight:600;">${formatCurrency(r.debitosApoioOperacional)}</td>
               <td class="center" style="font-weight:700;">${formatCurrency(r.saldoApoioOperacional)}</td>
-              <td class="center">
-                <div style="display:flex;gap:4px;justify-content:center;">
-                  <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalDebito('${r.lotacao}')" title="Lançar débito">Lançar</button>
-                  <button class="ui-btn ui-btn-sm" style="background:#607589" onclick="Repasse.abrirModalListaDebitos('${r.lotacao}')" title="Ver débitos">Ver</button>
-                </div>
-              </td>
+              <td class="center">${acoes}</td>
             </tr>
         `;
         }).join('');
@@ -562,6 +561,7 @@
     }
 
     async function salvarDebito(lotacao) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
         const valorCentavos = sanitizeToCentavos(document.getElementById('debito-valor')?.dataset?.centavos || document.getElementById('debito-valor')?.value);
         const valorCentavosNumero = Number(valorCentavos);
         const observacao = document.getElementById('debito-obs')?.value?.trim();
@@ -715,6 +715,7 @@
     }
 
     async function atualizarDebito(id, lotacao) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
         const valorCentavos = sanitizeToCentavos(document.getElementById('edit-debito-valor')?.dataset?.centavos || document.getElementById('edit-debito-valor')?.value);
         const valorCentavosNumero = Number(valorCentavos);
         const observacao = document.getElementById('edit-debito-obs')?.value?.trim();
@@ -796,6 +797,7 @@
     }
 
     async function confirmarExclusaoDebito(id, lotacao) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
         const justificativa = document.getElementById('delete-debito-justificativa')?.value?.trim() || '';
         if (justificativa.length < 5) return;
 
