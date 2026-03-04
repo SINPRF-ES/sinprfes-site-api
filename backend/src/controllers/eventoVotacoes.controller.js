@@ -1,5 +1,8 @@
 // src/controllers/eventoVotacoes.controller.js
 const service = require("../services/eventoVotacoes.service");
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
+const log = require("../utils/log");
 
 function num(v) {
   const n = Number(v);
@@ -7,75 +10,99 @@ function num(v) {
 }
 
 exports.criarSimNao = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
     const eventoId = num(req.params.id);
-    if (!eventoId) return res.status(400).json({ error: "Evento inválido." });
+    if (!eventoId) return res.status(400).json({ success: false, error: "Evento inválido.", requestId });
 
     const { titulo, duracao_min } = req.body || {};
-    if (!titulo) return res.status(400).json({ error: "titulo é obrigatório." });
+    if (!titulo) return res.status(400).json({ success: false, error: "titulo é obrigatório.", requestId });
 
     const v = await service.criarVotacaoSimNao({
       eventoId,
       titulo,
       duracaoMin: duracao_min ?? 2,
-      criadoPor: req.user.id,
+      criadoPor: atorId,
     });
 
-    return res.status(201).json(v);
-  } catch (e) {
-    console.error("EventoVotacaoCriarErro:", e);
-    return res.status(500).json({ error: e.message || "Erro ao criar votação." });
+    log.info("EventoVotacaoCriada", { requestId, atorId, eventoId, votacaoId: v.id });
+
+    return res.status(201).json({
+      ...v,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao criar votação.");
   }
 };
 
 exports.listar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
     const eventoId = num(req.params.id);
-    if (!eventoId) return res.status(400).json({ error: "Evento inválido." });
+    if (!eventoId) return res.status(400).json({ success: false, error: "Evento inválido.", requestId });
 
-    const rows = await service.listarVotacoesEvento({ eventoId, userId: req.user.id });
-    return res.json(rows);
-  } catch (e) {
-    console.error("EventoVotacaoListarErro:", e);
-    return res.status(500).json({ error: "Erro ao listar votações." });
+    const rows = await service.listarVotacoesEvento({ eventoId, userId: atorId });
+    return res.json({
+      success: true,
+      votacoes: rows,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao listar votações.");
   }
 };
 
 exports.detalhe = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
     const eventoId = num(req.params.id);
     const votacaoId = num(req.params.votacaoId);
-    if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos." });
+    if (!eventoId || !votacaoId) return res.status(400).json({ success: false, error: "Parâmetros inválidos.", requestId });
 
-    const v = await service.detalheVotacao({ eventoId, votacaoId, userId: req.user.id });
-    if (!v) return res.status(404).json({ error: "Votação não encontrada." });
+    const v = await service.detalheVotacao({ eventoId, votacaoId, userId: atorId });
+    if (!v) return res.status(404).json({ success: false, error: "Votação não encontrada.", requestId });
 
-    return res.json(v);
-  } catch (e) {
-    console.error("EventoVotacaoDetalheErro:", e);
-    return res.status(500).json({ error: "Erro ao obter votação." });
+    return res.json({
+      ...v,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao obter votação.");
   }
 };
 
 exports.abrir = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
     const eventoId = num(req.params.id);
     const votacaoId = num(req.params.votacaoId);
-    if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos." });
+    if (!eventoId || !votacaoId) return res.status(400).json({ success: false, error: "Parâmetros inválidos.", requestId });
 
-    const r = await service.abrirVotacao({ eventoId, votacaoId, abertoPor: req.user.id });
-    return res.json(r);
-  } catch (e) {
-    console.error("EventoVotacaoAbrirErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao abrir votação." });
+    const r = await service.abrirVotacao({ eventoId, votacaoId, abertoPor: atorId });
+
+    log.info("EventoVotacaoAberta", { requestId, atorId, eventoId, votacaoId });
+
+    return res.json({
+      ...r,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, err.message || "Erro ao abrir votação.");
   }
 };
 
 exports.votar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
     const eventoId = num(req.params.id);
     const votacaoId = num(req.params.votacaoId);
-    if (!eventoId || !votacaoId) return res.status(400).json({ error: "Parâmetros inválidos." });
+    if (!eventoId || !votacaoId) return res.status(400).json({ success: false, error: "Parâmetros inválidos.", requestId });
 
     const { opcao_id, opcaoId } = req.body || {};
     const opcao = opcao_id ?? opcaoId;
@@ -83,13 +110,17 @@ exports.votar = async (req, res) => {
     const r = await service.votar({
       eventoId,
       votacaoId,
-      userId: req.user.id,
+      userId: atorId,
       opcaoId: opcao,
     });
 
-    return res.status(201).json(r);
-  } catch (e) {
-    console.error("EventoVotacaoVotarErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao votar." });
+    log.info("EventoVotoRegistrado", { requestId, atorId, eventoId, votacaoId, opcaoId: opcao });
+
+    return res.status(201).json({
+      ...r,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, err.message || "Erro ao votar.");
   }
 };

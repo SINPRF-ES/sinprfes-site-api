@@ -1,6 +1,8 @@
 const pool = require("../config/db");
 const log = require("../utils/log");
 const Textos = require("../utils/textos");
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
 
 // E-mails (confirmação / cancelamento)
 const {
@@ -34,13 +36,16 @@ function getUserNome(req) {
  * - Dispara e-mail de confirmação (best-effort: não derruba a inscrição se falhar)
  */
 exports.registrarInscricao = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
-    const userId = getUserId(req);
+    const userId = atorId || getUserId(req);
     const filiadoNome = getUserNome(req);
 
     if (!userId) {
-      log.error("JogosInscricaoErroUserId", { user: req?.user });
-      return res.status(401).json({ error: "Usuário não autenticado." });
+      log.error("JogosInscricaoErroUserId", { user: req?.user, requestId });
+      return res.status(401).json({ success: false, error: "Usuário não autenticado.", requestId });
     }
 
     const { modalidades, observacoes, familiares, qtd_familiares, sexo } = req.body || {};
@@ -130,14 +135,13 @@ exports.registrarInscricao = async (req, res) => {
     }
 
     return res.status(200).json({
+      success: true,
       message: Textos?.SUCESSO?.INSCRICAO_JOGOS_SUCESSO || "Pré-inscrição registrada com sucesso.",
       inscricao,
+      requestId
     });
   } catch (err) {
-    log.error("JogosInscricaoErro", err);
-    return res.status(500).json({
-      error: Textos?.ERROS_INTERNOS?.ATUALIZAR_DADOS || "Erro interno ao registrar pré-inscrição.",
-    });
+    return handleDbError(err, res, requestId, Textos?.ERROS_INTERNOS?.ATUALIZAR_DADOS || "Erro interno ao registrar pré-inscrição.");
   }
 };
 
@@ -147,12 +151,15 @@ exports.registrarInscricao = async (req, res) => {
  * - Dispara e-mail de cancelamento (best-effort).
  */
 exports.cancelarInscricao = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
-    const userId = getUserId(req);
+    const userId = atorId || getUserId(req);
 
     if (!userId) {
-      log.error("JogosCancelarErroUserId", { user: req?.user });
-      return res.status(401).json({ error: "Usuário não autenticado." });
+      log.error("JogosCancelarErroUserId", { user: req?.user, requestId });
+      return res.status(401).json({ success: false, error: "Usuário não autenticado.", requestId });
     }
 
     // Captura dados para e-mail antes de apagar
@@ -217,10 +224,9 @@ exports.cancelarInscricao = async (req, res) => {
       log.error("EmailJogosCancelamentoErro", emailErr);
     }
 
-    return res.json({ message: "Sua pré-inscrição foi cancelada com sucesso." });
+    return res.json({ success: true, message: "Sua pré-inscrição foi cancelada com sucesso.", requestId });
   } catch (err) {
-    log.error("JogosCancelarErro", err);
-    return res.status(500).json({ error: "Erro ao cancelar inscrição." });
+    return handleDbError(err, res, requestId, "Erro ao cancelar inscrição.");
   }
 };
 
@@ -229,11 +235,14 @@ exports.cancelarInscricao = async (req, res) => {
  * IMPORTANTE: inclui data_nascimento para cálculo de idade no frontend.
  */
 exports.obterMinhaInscricao = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
-    const userId = getUserId(req);
+    const userId = atorId || getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ error: "Usuário não autenticado." });
+      return res.status(401).json({ success: false, error: "Usuário não autenticado.", requestId });
     }
 
     const query = `
@@ -255,14 +264,15 @@ exports.obterMinhaInscricao = async (req, res) => {
       return res.status(204).send();
     }
 
-    log.info("JogosMinhaInscricaoVisualizada", { userId });
+    log.info("JogosMinhaInscricaoVisualizada", { userId, requestId });
 
-    return res.json(rows[0]);
-  } catch (err) {
-    log.error("JogosMinhaInscricaoErro", err);
-    return res.status(500).json({
-      error: Textos?.ERROS_INTERNOS?.LISTAR_FILIADOS || "Erro ao obter inscrição.",
+    return res.json({
+      success: true,
+      inscricao: rows[0] || null,
+      requestId
     });
+  } catch (err) {
+    return handleDbError(err, res, requestId, Textos?.ERROS_INTERNOS?.LISTAR_FILIADOS || "Erro ao obter inscrição.");
   }
 };
 
@@ -271,11 +281,14 @@ exports.obterMinhaInscricao = async (req, res) => {
  * IMPORTANTE: inclui data_nascimento para cálculo de idade no frontend.
  */
 exports.listarInscricoes = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
     const perfil = (req.user.perfil_acesso || "").toUpperCase();
 
     if (!PERFIS_JOGOS_MANAGER.includes(perfil)) {
-      return res.status(403).json({ error: "Acesso negado." });
+      return res.status(403).json({ success: false, error: "Acesso negado.", requestId });
     }
 
     const query = `
@@ -292,13 +305,10 @@ exports.listarInscricoes = async (req, res) => {
 
     const { rows } = await pool.query(query);
 
-    log.info("JogosListagemVisualizada", { viewerId: getUserId(req) });
+    log.info("JogosListagemVisualizada", { viewerId: atorId, requestId });
 
-    return res.json({ total: rows.length, inscricoes: rows });
+    return res.json({ success: true, total: rows.length, inscricoes: rows, requestId });
   } catch (err) {
-    log.error("JogosListagemErro", err);
-    return res.status(500).json({
-      error: Textos?.ERROS_INTERNOS?.LISTAR_FILIADOS || "Erro ao listar inscrições.",
-    });
+    return handleDbError(err, res, requestId, Textos?.ERROS_INTERNOS?.LISTAR_FILIADOS || "Erro ao listar inscrições.");
   }
 };

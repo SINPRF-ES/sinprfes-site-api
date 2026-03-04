@@ -1,8 +1,11 @@
 const { gerarPdfFichaFiliacao } = require("../services/pdf.service");
 const { enviarEmailFichaFiliacao } = require("../services/email.service");
 const log = require("../utils/log");
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
 
 exports.enviarFichaFiliacao = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   try {
     const ip = req.ip || req.connection?.remoteAddress || "";
     const userAgent = req.get("user-agent") || "";
@@ -81,6 +84,7 @@ exports.enviarFichaFiliacao = async (req, res) => {
 
     // DEBUG crítico: garante que estamos enviando e-mail corretamente normalizado
     log.info("DEBUG_FILIACAO_EMAIL", {
+      requestId,
       email_destino: payloadPdfEmail.email_destino,
       email_pessoal: payloadPdfEmail.email_pessoal,
       email_funcional: payloadPdfEmail.email_funcional,
@@ -91,6 +95,7 @@ exports.enviarFichaFiliacao = async (req, res) => {
 
     // 5. Envia e-mail
     log.info("EnviandoFichaFiliacao", {
+      requestId,
       nome: dados.nome,
       emailSindicato: process.env.MAIL_TO_FILIACAO,
       emailCopia: payloadPdfEmail.email_destino,
@@ -99,18 +104,21 @@ exports.enviarFichaFiliacao = async (req, res) => {
     await enviarEmailFichaFiliacao(payloadPdfEmail, pdfBuffer);
 
     log.info("FilieseSolicitacaoCriada", {
+      requestId,
       cpf: cpfNumerico,
       nome: dados.nome,
     });
 
     return res.status(201).json({
+      success: true,
       message:
         "Sua ficha de filiação foi gerada e enviada para o seu e-mail. Por favor, verifique sua caixa de entrada (e spam), assine o documento e nos devolva.",
+      requestId
     });
   } catch (err) {
-    log.error("FilieseSolicitacaoErro", err);
+    log.error("FilieseSolicitacaoErro", { error: err.message, requestId });
     return res
       .status(500)
-      .json({ message: "Erro interno ao processar a solicitação." });
+      .json({ success: false, message: "Erro interno ao processar a solicitação.", requestId });
   }
 };

@@ -1,23 +1,29 @@
 // src/controllers/eventos.controller.js
 const service = require("../services/eventos.service");
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
+const log = require("../utils/log");
 
-function parseId(req) {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id) || id <= 0) return null;
+function parseId(req, res, requestId) {
+  const raw = String(req.params.id || "").trim();
+  if (!/^\d+$/.test(raw)) {
+    if (res) res.status(400).json({ success: false, error: "ID inválido.", requestId });
+    return null;
+  }
+  const id = Number(raw);
+  if (!Number.isFinite(id) || id <= 0) {
+    if (res) res.status(400).json({ success: false, error: "ID inválido.", requestId });
+    return null;
+  }
   return id;
 }
 
-function badRequest(res, msg) {
-  return res.status(400).json({ error: msg });
+function badRequest(res, msg, requestId) {
+  return res.status(400).json({ success: false, error: msg, requestId });
 }
 
-function notFound(res, msg = "Recurso não encontrado.") {
-  return res.status(404).json({ error: msg });
-}
-
-function serverError(res, e, fallbackMsg) {
-  console.error(fallbackMsg, e);
-  return res.status(500).json({ error: e.message || fallbackMsg });
+function notFound(res, requestId, msg = "Recurso não encontrado.") {
+  return res.status(404).json({ success: false, error: msg, requestId });
 }
 
 function strOrNull(v) {
@@ -48,6 +54,8 @@ async function resolveNullTransition(res, eventoId, msgIfExists) {
  * Cria evento (RASCUNHO ou AGENDADO)
  */
 exports.criar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
     const {
       tipo,
@@ -85,12 +93,17 @@ exports.criar = async (req, res) => {
       duracaoPrevistaMin: durMin,
       editalPdfUrl: strOrNull(edital_pdf_url),
       status: strOrNull(status)?.toUpperCase().trim() || "RASCUNHO",
-      createdBy: req.user?.id ?? null,
+      createdBy: atorId ?? null,
     });
 
-    return res.status(201).json(created);
-  } catch (e) {
-    return serverError(res, e, "EventoCriarErro:");
+    log.info("EventoCriado", { requestId, atorId, eventoId: created.id });
+
+    return res.status(201).json({
+      ...created,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao criar evento.");
   }
 };
 
@@ -99,26 +112,34 @@ exports.criar = async (req, res) => {
  * Transiciona RASCUNHO -> AGENDADO
  */
 exports.agendar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const updated = await service.agendarEvento({
       eventoId: id,
-      agendadoPor: req.user?.id ?? null,
+      agendadoPor: atorId ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
         id,
-        "Transição inválida: evento deve estar em RASCUNHO para ser AGENDADO."
+        "Transição inválida: evento deve estar em RASCUNHO para ser AGENDADO.",
+        requestId
       );
     }
 
-    return res.json(updated);
-  } catch (e) {
-    return serverError(res, e, "EventoAgendarErro:");
+    log.info("EventoAgendado", { requestId, atorId, eventoId: id });
+
+    return res.json({
+      ...updated,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao agendar evento.");
   }
 };
 
@@ -127,26 +148,34 @@ exports.agendar = async (req, res) => {
  * Cancela o evento (ex.: AGENDADO/ABERTO -> CANCELADO)
  */
 exports.cancelar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const updated = await service.cancelarEvento({
       eventoId: id,
-      canceladoPor: req.user?.id ?? null,
+      canceladoPor: atorId ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
         id,
-        "Transição inválida: evento não pode ser cancelado no status atual."
+        "Transição inválida: evento não pode ser cancelado no status atual.",
+        requestId
       );
     }
 
-    return res.json(updated);
-  } catch (e) {
-    return serverError(res, e, "EventoCancelarErro:");
+    log.info("EventoCancelado", { requestId, atorId, eventoId: id });
+
+    return res.json({
+      ...updated,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao cancelar evento.");
   }
 };
 
@@ -155,17 +184,21 @@ exports.cancelar = async (req, res) => {
  * Detalhe do evento
  */
 exports.detalhe = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const evento = await service.obterEvento({ eventoId: id });
-    if (!evento) return notFound(res, "Evento não encontrado.");
+    if (!evento) return notFound(res, requestId, "Evento não encontrado.");
 
-    return res.json(evento);
-  } catch (e) {
-    console.error("EventoDetalheErro:", e);
-    return res.status(500).json({ error: "Erro ao carregar evento." });
+    return res.json({
+      ...evento,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao carregar evento.");
   }
 };
 
@@ -173,13 +206,17 @@ exports.detalhe = async (req, res) => {
  * GET /api/eventos/proximo
  * Próximo evento (para Home do app)
  */
-exports.proximo = async (_req, res) => {
+exports.proximo = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   try {
     const evento = await service.obterProximoEvento();
-    return res.json({ evento: evento || null });
-  } catch (e) {
-    console.error("EventoProximoErro:", e);
-    return res.status(500).json({ error: "Erro ao carregar próximo evento." });
+    return res.json({
+      success: true,
+      evento: evento || null,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao carregar próximo evento.");
   }
 };
 
@@ -188,27 +225,38 @@ exports.proximo = async (_req, res) => {
  * Transiciona AGENDADO -> ABERTO
  */
 exports.abrir = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const updated = await service.abrirEvento({
       eventoId: id,
-      abertoPor: req.user?.id ?? null,
+      abertoPor: atorId ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
         id,
-        "Transição inválida: evento deve estar AGENDADO para ser ABERTO."
+        "Transição inválida: evento deve estar AGENDADO para ser ABERTO.",
+        requestId
       );
     }
 
-    return res.json(updated);
-  } catch (e) {
-    console.error("EventoAbrirErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao abrir evento." });
+    log.info("EventoAberto", { requestId, atorId, eventoId: id });
+
+    return res.json({
+      ...updated,
+      requestId
+    });
+  } catch (err) {
+    const msg = err.message || "Erro ao abrir evento.";
+    if (msg.includes("inválida")) {
+        return badRequest(res, msg, requestId);
+    }
+    return handleDbError(err, res, requestId, msg);
   }
 };
 
@@ -217,27 +265,38 @@ exports.abrir = async (req, res) => {
  * Transiciona ABERTO -> ENCERRADO
  */
 exports.encerrar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const updated = await service.encerrarEvento({
       eventoId: id,
-      encerradoPor: req.user?.id ?? null,
+      encerradoPor: atorId ?? null,
     });
 
     if (!updated) {
       return await resolveNullTransition(
         res,
         id,
-        "Transição inválida: evento deve estar ABERTO para ser ENCERRADO."
+        "Transição inválida: evento deve estar ABERTO para ser ENCERRADO.",
+        requestId
       );
     }
 
-    return res.json(updated);
-  } catch (e) {
-    console.error("EventoEncerrarErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao encerrar evento." });
+    log.info("EventoEncerrado", { requestId, atorId, eventoId: id });
+
+    return res.json({
+      ...updated,
+      requestId
+    });
+  } catch (err) {
+    const msg = err.message || "Erro ao encerrar evento.";
+    if (msg.includes("inválida")) {
+        return badRequest(res, msg, requestId);
+    }
+    return handleDbError(err, res, requestId, msg);
   }
 };
 
@@ -247,21 +306,31 @@ exports.encerrar = async (req, res) => {
  * body: { deviceId?: string }
  */
 exports.entrar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const { deviceId } = req.body || {};
     const presenca = await service.entrarNoEvento({
       eventoId: id,
-      userId: req.user?.id,
+      userId: atorId,
       deviceId: deviceId ? String(deviceId) : null,
     });
 
-    return res.json(presenca);
-  } catch (e) {
-    console.error("EventoEntrarErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao entrar no evento." });
+    log.info("EventoEntrou", { requestId, atorId, eventoId: id });
+
+    return res.json({
+      ...presenca,
+      requestId
+    });
+  } catch (err) {
+    const msg = err.message || "Erro ao entrar no evento.";
+    if (msg.includes("não está aberto") || msg.includes("encerrado")) {
+        return badRequest(res, msg, requestId);
+    }
+    return handleDbError(err, res, requestId, msg);
   }
 };
 
@@ -270,19 +339,22 @@ exports.entrar = async (req, res) => {
  * Sai da presença ativa
  */
 exports.sair = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const ok = await service.sairDoEvento({
       eventoId: id,
-      userId: req.user?.id,
+      userId: atorId,
     });
 
-    return res.json({ ok: !!ok });
-  } catch (e) {
-    console.error("EventoSairErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao sair do evento." });
+    log.info("EventoSaiu", { requestId, atorId, eventoId: id });
+
+    return res.json({ success: !!ok, requestId });
+  } catch (err) {
+    return handleDbError(err, res, requestId, err.message || "Erro ao sair do evento.");
   }
 };
 
@@ -291,15 +363,20 @@ exports.sair = async (req, res) => {
  * Lista presenças (apenas diretoria/admin)
  */
 exports.presencas = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const rows = await service.listarPresencas({ eventoId: id });
-    return res.json(rows);
-  } catch (e) {
-    console.error("EventoPresencasErro:", e);
-    return res.status(500).json({ error: "Erro ao listar presenças." });
+    return res.json({
+      success: true,
+      presencas: rows,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao listar presenças.");
   }
 };
 
@@ -308,14 +385,21 @@ exports.presencas = async (req, res) => {
  * Derruba todos os presentes e incrementa o epoch do quórum
  */
 exports.recontarQuorum = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
   try {
-    const id = parseId(req);
-    if (!id) return badRequest(res, "ID inválido.");
+    const id = parseId(req, res, requestId);
+    if (!id) return;
 
     const r = await service.recontarQuorum({ eventoId: id });
-    return res.json(r);
-  } catch (e) {
-    console.error("EventoRecontarQuorumErro:", e);
-    return res.status(400).json({ error: e.message || "Erro ao recontar quórum." });
+
+    log.info("EventoQuorumRecontado", { requestId, atorId, eventoId: id });
+
+    return res.json({
+      ...r,
+      requestId
+    });
+  } catch (err) {
+    return handleDbError(err, res, requestId, err.message || "Erro ao recontar quórum.");
   }
 };

@@ -130,12 +130,13 @@ document.addEventListener("DOMContentLoaded", () => {
         payload.token_2fa = inputToken2fa.value.trim();
       }
 
-      const btnSubmit = loginForm.querySelector('button[type="submit"]');
+      const btnSubmit = document.getElementById("btn-login-submit") || loginForm.querySelector('button[type="submit"]');
       const originalBtnText = btnSubmit.innerHTML;
 
       try {
         btnSubmit.disabled = true;
-        btnSubmit.innerHTML = "Entrando...";
+        btnSubmit.innerHTML = '<span aria-hidden="true" class="ui-spinner"></span> Entrando...';
+        btnSubmit.setAttribute("aria-busy", "true");
 
         const resp = await fetch(`${API_BASE}/api/auth/login`, {
           method: "POST",
@@ -218,6 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalBtnText;
+        btnSubmit.removeAttribute("aria-busy");
       }
     });
   }
@@ -242,12 +244,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const btnSubmit = forgotForm.querySelector('button[type="submit"]');
+      const btnSubmit = document.getElementById("btn-forgot-submit") || forgotForm.querySelector('button[type="submit"]');
       const originalBtnText = btnSubmit.innerHTML;
 
       try {
         btnSubmit.disabled = true;
-        btnSubmit.innerHTML = "Enviando...";
+        btnSubmit.innerHTML = '<span aria-hidden="true" class="ui-spinner"></span> Enviando...';
+        btnSubmit.setAttribute("aria-busy", "true");
 
         const resp = await fetch(`${API_BASE}/api/senha/recuperar`, {
           method: "POST",
@@ -288,6 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalBtnText;
+        btnSubmit.removeAttribute("aria-busy");
       }
     });
   }

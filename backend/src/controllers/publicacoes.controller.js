@@ -1,8 +1,13 @@
 // src/controllers/publicacoes.controller.js
 const { listarArquivosPublicos, obterArquivoStream } = require("../services/drive.service");
 const log = require("../utils/log");
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
 
 exports.listar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
     const folderId = req.query.folderId;
 
@@ -10,47 +15,51 @@ exports.listar = async (req, res) => {
     const arquivos = await listarArquivosPublicos(folderId);
 
     const publicacoes = arquivos.map(file => {
-      const nomeUpper = file.name.toUpperCase();
+      const { name, mimeType, id, webViewLink, webContentLink, createdTime } = file;
+      const nomeUpper = name.toUpperCase();
       let tipo = "OUTROS";
       
-      // 🟢 O SEGREDO ESTÁ AQUI: Identificar corretamente a pasta pelo MimeType
-      const isFolder = file.mimeType === "application/vnd.google-apps.folder";
+      const isFolder = mimeType === "application/vnd.google-apps.folder";
 
       if (isFolder) {
           tipo = "PASTA";
       } else {
-          // Lógica de cores para arquivos
           if (nomeUpper.includes("ATA")) tipo = "ATA";
           else if (nomeUpper.includes("NOTA") || nomeUpper.includes("COMUNICADO")) tipo = "NOTA";
           else if (nomeUpper.includes("BALANÇO") || nomeUpper.includes("BALANCO")) tipo = "BALANCO";
       }
 
       return {
-        id: file.id,
-        titulo: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
-        tipo: tipo,
-        // Envia essa flag explicitamente
-        isFolder: isFolder, 
+        id,
+        titulo: name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
+        tipo,
+        isFolder,
         descricao: isFolder ? "Pasta de documentos" : "Documento oficial.", 
-        arquivo_url: file.webViewLink,
-        data_publicacao: file.createdTime,
-        // Novos campos para o mobile (contrato expandido)
-        name: file.name,
-        mimeType: file.mimeType,
-        webViewLink: file.webViewLink,
-        webContentLink: file.webContentLink,
-        createdTime: file.createdTime
+        arquivo_url: webViewLink,
+        data_publicacao: createdTime,
+        name,
+        mimeType,
+        webViewLink,
+        webContentLink,
+        createdTime
       };
     });
 
-    return res.json(publicacoes);
+    return res.json({
+      success: true,
+      publicacoes,
+      requestId
+    });
   } catch (err) {
-    log.error("ErroListarDrive", err);
-    return res.status(500).json({ message: "Erro ao sincronizar com o Drive." });
+    log.error("ErroListarDrive", { error: err.message, requestId, atorId });
+    return res.status(500).json({ success: false, message: "Erro ao sincronizar com o Drive.", requestId });
   }
 };
-// Adicione esta nova função:
+
 exports.visualizar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
     const fileId = req.params.id;
     const dados = await obterArquivoStream(fileId);

@@ -37,3 +37,7 @@
 ## 2025-05-23 - [ARIA Tab Pattern for Sidebar Navigation]
 **Learning:** Sidebar navigation that switches between different views on the same page should follow the WAI-ARIA Tab pattern. This involves using `role="tablist"` on the container, `role="tab"` on the buttons, and `role="tabpanel"` on the target sections. Consistent IDs (e.g., prefixed with `tab-`) and appropriate `aria-selected`, `aria-controls`, and `aria-labelledby` attributes ensure assistive technologies correctly interpret the relationship and state of the navigation.
 **Action:** Implement the ARIA Tab pattern for all non-navigation sidebar menus. Ensure JS logic updates `aria-selected` synchronously with visual state changes. Wrap decorative emojis in `<span aria-hidden="true">` to reduce screen reader noise.
+
+## 2026-03-04 - [Accessible Forms and Real-time Feedback]
+**Learning:** Web forms must provide explicit context for screen readers and visual feedback for all users. Using `aria-describedby` linked to `sr-only` hints provides precise instructions without cluttering the UI. `aria-live="polite"` on message containers ensures asynchronous feedback (like login errors) is announced.
+**Action:** Always use `aria-describedby` for complex fields (like CPF/formatted inputs) and `aria-live` for status messages. Buttons performing async actions must use `aria-busy="true"` and show a visual indicator (spinner) while disabled.
