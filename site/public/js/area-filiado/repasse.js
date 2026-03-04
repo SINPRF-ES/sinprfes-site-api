@@ -191,7 +191,7 @@
         container.innerHTML = `
             <section class="repasse-shell">
                 <header class="repasse-header">
-                    <h2 class="repasse-title">Repasse</h2>
+                    <h2 class="repasse-title">💱 Repasse</h2>
                     <div class="repasse-subtitle" id="repasse-subtitle">Ano ${yearCurrent} • Apoio operacional e alocações</div>
                 </header>
                 <div class="repasse-card">

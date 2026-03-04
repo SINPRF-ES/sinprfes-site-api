@@ -26,4 +26,19 @@ router.get(
   reportsController.getHistory
 );
 
+
+router.get(
+  "/efetivo-manual",
+  authMiddleware,
+  requirePermission("RELATORIOS_VER"),
+  reportsController.getEfetivoManual
+);
+
+router.put(
+  "/efetivo-manual",
+  authMiddleware,
+  requirePermission("REPASSE_GERENCIAR"),
+  reportsController.upsertEfetivoManual
+);
+
 module.exports = router;

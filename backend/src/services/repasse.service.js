@@ -151,6 +151,7 @@ async function getRepasseAno(year) {
 
       if (prfTotal > 0) {
         percentual = (filiadosAtivos / prfTotal) * 100;
+        // Regra de negócio: base de repasse é sempre quantidade de filiados ATIVOS (cadastro ativo).
         const base = filiadosAtivos * perCapita;
         const factor = factorFromPercentual(percentual);
         creditoMes = base * factor;
@@ -210,17 +211,32 @@ async function getRepasseAno(year) {
  * Usado pelo módulo de Relatórios para evitar duplicação de lógica.
  */
 async function getUltimosDadosParaRelatorio(lotacaoKey) {
-  // BOLT: Parallelize independent queries to reduce latency.
-  const [filiadosAtivos, prfRowsResult] = await Promise.all([
-    getFiliadosAtivosCount(lotacaoKey),
-    pool.query(`
+  return getUltimosDadosParaRelatorioComOverride(lotacaoKey);
+}
+
+async function getUltimosDadosParaRelatorioComOverride(lotacaoKey, prfTotalOverride) {
+  const queries = [getFiliadosAtivosCount(lotacaoKey)];
+  if (typeof prfTotalOverride === "undefined") {
+    queries.push(pool.query(`
       SELECT rl.year, rl.month, rl.prf_total
       FROM repasse_lotacao rl
       WHERE rl.lotacao_key = $1
       ORDER BY rl.year DESC, rl.month DESC
       LIMIT 1
-    `, [lotacaoKey])
-  ]);
+    `, [lotacaoKey]));
+  }
+
+  const [filiadosAtivos, prfRowsResult] = await Promise.all(queries);
+
+  if (typeof prfTotalOverride !== "undefined") {
+    const prfTotal = prfTotalOverride == null ? null : Number(prfTotalOverride);
+    return {
+      filiadosAtivos,
+      prfTotal,
+      percentual: prfTotal > 0 ? (filiadosAtivos / prfTotal) * 100 : null,
+      competencia: null
+    };
+  }
 
   const rows = prfRowsResult.rows;
 
@@ -245,6 +261,51 @@ async function getUltimosDadosParaRelatorio(lotacaoKey) {
     percentual,
     competencia: { year, month }
   };
+}
+
+async function getEfetivoManualLotacoes() {
+  const { rows } = await pool.query(`
+    SELECT lotacao_key, prf_total, updated_at
+    FROM report_efetivo_lotacao
+    WHERE deleted_at IS NULL
+  `);
+
+  const totais = {};
+  rows.forEach((row) => {
+    totais[row.lotacao_key] = Number(row.prf_total || 0);
+  });
+
+  return {
+    totais,
+    updatedAt: rows.length ? rows.map((r) => r.updated_at).sort().reverse()[0] : null
+  };
+}
+
+async function upsertEfetivoManualLotacoes(totais, updatedByUserId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const lotacaoKey of LOTACOES_REPASSE) {
+      if (!Object.prototype.hasOwnProperty.call(totais, lotacaoKey)) continue;
+      const prfTotal = Number(totais[lotacaoKey]);
+      await client.query(`
+        INSERT INTO report_efetivo_lotacao (lotacao_key, prf_total, updated_by)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (lotacao_key)
+        DO UPDATE SET
+          prf_total = EXCLUDED.prf_total,
+          updated_by = EXCLUDED.updated_by,
+          updated_at = NOW(),
+          deleted_at = NULL
+      `, [lotacaoKey, prfTotal, updatedByUserId]);
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function updateRepasseMes(year, month, perCapita, localidadesData) {
@@ -821,6 +882,9 @@ async function listarResponsaveisComBusca(q = '') {
 module.exports = {
   getRepasseAno,
   getUltimosDadosParaRelatorio,
+  getUltimosDadosParaRelatorioComOverride,
+  getEfetivoManualLotacoes,
+  upsertEfetivoManualLotacoes,
   updateRepasseMes,
   listarResponsaveis,
   factorFromPercentual,
