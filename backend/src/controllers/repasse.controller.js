@@ -29,7 +29,9 @@ async function getResumo(req, res) {
 
   try {
     const ano = parseInt(req.query.ano || req.query.year) || new Date().getFullYear();
-    const data = await repasseService.getRepasseResumo(ano);
+    const perfil = String(req.user?.perfil_acesso || '').toUpperCase();
+    const includeCancelados = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfil);
+    const data = await repasseService.getRepasseResumo(ano, { includeCancelados });
     log.info("RepasseGetResumoSucesso", { requestId, atorId, ano });
     res.json({ success: true, ...data, requestId });
   } catch (err) {
