@@ -45,11 +45,9 @@ exports.listar = async (req, res) => {
       };
     });
 
-    return res.json({
-      success: true,
-      publicacoes,
-      requestId
-    });
+    // Retorno em array para compatibilidade com clientes legados (mobile).
+    // O frontend web já é tolerante a ambos os formatos.
+    return res.json(publicacoes);
   } catch (err) {
     log.error("ErroListarDrive", { error: err.message, requestId, atorId });
     return res.status(500).json({ success: false, message: "Erro ao sincronizar com o Drive.", requestId });
