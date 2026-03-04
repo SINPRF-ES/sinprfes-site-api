@@ -6,10 +6,18 @@
 
     let historyCache = [];
     let showFullHistory = false;
+    let perfilLogado = "FILIADO";
+    const LOTACOES_RELATORIO = ["SEDE", "DEL 01 - Viana", "DEL 02 - Serra", "DEL 03 - Guarapari", "DEL 04 - Linhares"];
 
     function inicializarRelatorios(perfil) {
+        perfilLogado = (perfil || "FILIADO").toUpperCase();
         setupHandlers();
+        configurarEfetivoManual();
         carregarHistorico();
+    }
+
+    function ehPerfilGestao() {
+        return ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfilLogado);
     }
 
     function setupHandlers() {
@@ -36,6 +44,76 @@
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => handleFiliadoSearch(filiadoSearchInput.value), 400);
             };
+        }
+    }
+
+
+    function configurarEfetivoManual() {
+        const card = document.getElementById('relatorio-efetivo-manual-card');
+        const grid = document.getElementById('relatorio-efetivo-manual-grid');
+        const btnSalvar = document.getElementById('btn-relatorio-efetivo-salvar');
+        const btnRecarregar = document.getElementById('btn-relatorio-efetivo-recarregar');
+
+        if (!card || !grid || !btnSalvar || !btnRecarregar) return;
+        if (!ehPerfilGestao()) {
+            card.style.display = 'none';
+            return;
+        }
+
+        card.style.display = 'block';
+        grid.innerHTML = LOTACOES_RELATORIO.map((lot) => `
+            <div class="field-group">
+                <label for="efetivo-manual-${lot.replace(/[^a-z0-9]/gi, "-").toLowerCase()}">${lot}</label>
+                <input id="efetivo-manual-${lot.replace(/[^a-z0-9]/gi, "-").toLowerCase()}" data-lotacao="${lot}" type="number" min="0" step="1" placeholder="Ex: 100" style="padding:10px;border-radius:8px;" />
+            </div>
+        `).join('');
+
+        btnSalvar.onclick = salvarEfetivoManual;
+        btnRecarregar.onclick = carregarEfetivoManual;
+        carregarEfetivoManual();
+    }
+
+    async function carregarEfetivoManual() {
+        try {
+            const r = await window.Api.apiFetch('/api/reports/efetivo-manual');
+            if (!r.ok) return;
+            const data = await r.json();
+            const totais = data.totais || {};
+            LOTACOES_RELATORIO.forEach((lot) => {
+                const input = document.querySelector(`[data-lotacao="${lot}"]`);
+                if (input) input.value = Number.isFinite(Number(totais[lot])) ? String(Number(totais[lot])) : '0';
+            });
+        } catch (e) {
+            console.error('Relatorios.EfetivoManualLoadErro', e);
+        }
+    }
+
+    async function salvarEfetivoManual() {
+        const totais = {};
+        for (const lot of LOTACOES_RELATORIO) {
+            const input = document.querySelector(`[data-lotacao="${lot}"]`);
+            const valor = Number(input?.value || 0);
+            if (!Number.isFinite(valor) || valor < 0) {
+                alert(`Valor inválido para ${lot}.`);
+                return;
+            }
+            totais[lot] = Math.trunc(valor);
+        }
+
+        try {
+            const r = await window.Api.apiFetch('/api/reports/efetivo-manual', {
+                method: 'PUT',
+                body: { totais }
+            });
+            const data = await r.json();
+            if (!r.ok) {
+                alert(data.message || data.error || 'Erro ao salvar efetivo manual.');
+                return;
+            }
+            alert('Efetivo manual salvo com sucesso.');
+        } catch (e) {
+            console.error('Relatorios.EfetivoManualSaveErro', e);
+            alert('Erro ao salvar efetivo manual.');
         }
     }
 

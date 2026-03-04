@@ -192,6 +192,18 @@
               <p class="section-subtitle">Gere PDFs consolidados e receba-os por e-mail.</p>
           </div>
 
+          <div id="relatorio-efetivo-manual-card" class="ui-card" style="max-width: 700px; margin: 20px auto; display:none;">
+              <h3 style="color: var(--azul-fundo); margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                  🧮 Efetivo Total PRF por Lotação
+              </h3>
+              <p style="margin-top:0; color:#475467; font-size:0.92rem;">Preencha os totais de efetivo (filiados e não filiados) para cálculo do % de filiação nos relatórios.</p>
+              <div id="relatorio-efetivo-manual-grid" class="form-container" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px;"></div>
+              <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+                  <button id="btn-relatorio-efetivo-recarregar" class="ui-button ui-button-outline" style="max-width:220px;">Atualizar dados</button>
+                  <button id="btn-relatorio-efetivo-salvar" class="ui-button ui-button-secondary" style="max-width:260px;">Salvar efetivo manual</button>
+              </div>
+          </div>
+
           <div class="ui-card" style="max-width: 700px; margin: 20px auto;">
               <h3 style="color: var(--azul-fundo); margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                   ⚙️ Parâmetros do Relatório

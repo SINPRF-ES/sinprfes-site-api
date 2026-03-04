@@ -3,9 +3,10 @@ const reportsService = require("../services/reports.service");
 const pdfService = require("../services/pdf.service");
 const emailService = require("../services/email.service");
 const filiadosService = require("../services/filiados.service");
+const repasseService = require("../services/repasse.service");
 const log = require("../utils/log");
 const { formatarCPF } = require("../utils/format");
-const { slugify } = require('../shared/canon');
+const { slugify, LOTACOES_REPASSE } = require('../shared/canon');
 const { v4: uuidv4 } = require("uuid");
 
 /**
@@ -364,5 +365,58 @@ exports.getHistory = async (req, res) => {
   } catch (err) {
     log.error("ErroListarHistoricoRelatorios", { error: err.message, requestId, atorId });
     return res.status(500).json({ message: "Erro ao carregar histórico.", requestId });
+  }
+};
+
+
+exports.getEfetivoManual = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
+  if (!atorId) {
+    return res.status(401).json({ success: false, message: "Usuário não autenticado.", requestId });
+  }
+
+  try {
+    const data = await repasseService.getEfetivoManualLotacoes();
+    const totais = {};
+    LOTACOES_REPASSE.forEach((lot) => {
+      totais[lot] = Number(data.totais[lot] || 0);
+    });
+    return res.json({ success: true, totais, updatedAt: data.updatedAt, requestId });
+  } catch (err) {
+    log.error("ErroBuscarEfetivoManual", { error: err.message, requestId, atorId });
+    return res.status(500).json({ success: false, message: "Erro ao buscar efetivo manual.", requestId });
+  }
+};
+
+exports.upsertEfetivoManual = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
+  if (!atorId) {
+    return res.status(401).json({ success: false, message: "Usuário não autenticado.", requestId });
+  }
+
+  const totais = req.body?.totais;
+  if (!totais || typeof totais !== 'object') {
+    return res.status(400).json({ success: false, message: "Objeto de totais é obrigatório.", requestId });
+  }
+
+  try {
+    const payload = {};
+    for (const lotacao of LOTACOES_REPASSE) {
+      const valor = Number(totais[lotacao]);
+      if (!Number.isFinite(valor) || valor < 0) {
+        return res.status(400).json({ success: false, message: `Valor inválido para ${lotacao}.`, requestId });
+      }
+      payload[lotacao] = Math.trunc(valor);
+    }
+
+    await repasseService.upsertEfetivoManualLotacoes(payload, atorId);
+    return res.json({ success: true, message: "Efetivo manual atualizado com sucesso.", requestId });
+  } catch (err) {
+    log.error("ErroSalvarEfetivoManual", { error: err.message, requestId, atorId });
+    return res.status(500).json({ success: false, message: "Erro ao salvar efetivo manual.", requestId });
   }
 };
