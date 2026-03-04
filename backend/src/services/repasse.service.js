@@ -283,7 +283,7 @@ async function updateRepasseMes(year, month, perCapita, localidadesData) {
   }
 }
 
-async function getRepasseResumo(ano) {
+async function getRepasseResumo(ano, options = {}) {
   const [configResult, filiadosResult, debitosResult, eventosResult] = await Promise.all([
     pool.query(`SELECT * FROM repasse_config WHERE ano_ref = $1`, [ano]),
     pool.query(`
@@ -303,10 +303,13 @@ async function getRepasseResumo(ano) {
     pool.query(`
       SELECT
         e.id, e.titulo, e.data_evento, e.data_limite_alocacao, e.status,
+        e.deleted_at, e.delete_reason, e.deleted_by_user_id,
+        df.nome AS deleted_by_nome,
         rf.id AS responsavel_id, rf.nome AS responsavel_nome,
         a.filiado_id, f.nome AS filiado_nome, f.situacao AS filiado_situacao, a.valor_alocado
       FROM repasse_eventos e
       LEFT JOIN filiados rf ON rf.id = e.responsavel_filiado_id
+      LEFT JOIN filiados df ON df.id = e.deleted_by_user_id
       LEFT JOIN repasse_evento_alocacoes a
         ON a.evento_id = e.id
         AND a.ano_ref = $1
@@ -318,6 +321,7 @@ async function getRepasseResumo(ano) {
   ]);
 
   const config = computeConfig(configResult.rows[0], ano);
+  const includeCancelados = Boolean(options?.includeCancelados);
   const debitosByLotacao = new Map(debitosResult.rows.map((r) => [r.lotacao_id || 'SEM LOTAÇÃO', Number(r.total || 0)]));
 
   const apoioCount = new Map();
@@ -349,7 +353,6 @@ async function getRepasseResumo(ano) {
   });
 
   const eventosMap = new Map();
-  let somaAlocadoEventos = 0;
 
   eventosResult.rows.forEach((row) => {
     if (!eventosMap.has(row.id)) {
@@ -360,6 +363,10 @@ async function getRepasseResumo(ano) {
           data_evento: row.data_evento,
           data_limite_alocacao: row.data_limite_alocacao,
           status: row.status,
+          deleted_at: row.deleted_at,
+          delete_reason: row.delete_reason,
+          deleted_by_user_id: row.deleted_by_user_id,
+          deleted_by_nome: row.deleted_by_nome,
           responsavel: row.responsavel_id ? { id: row.responsavel_id, nome: row.responsavel_nome } : null
         },
         totalAlocado: 0,
@@ -374,7 +381,6 @@ async function getRepasseResumo(ano) {
       const valor = Number(row.valor_alocado || 0);
       const situacao = String(row.filiado_situacao || '').toUpperCase();
       bucket.totalAlocado += valor;
-      somaAlocadoEventos += valor;
       if (situacao === 'ATIVO') bucket.contagemAtivos += 1;
       if (situacao === 'VETERANO') bucket.contagemVeteranos += 1;
       bucket.itens.push({
@@ -386,17 +392,23 @@ async function getRepasseResumo(ano) {
     }
   });
 
+  const alocacoesTodas = Array.from(eventosMap.values());
+  const alocacoesAtivas = alocacoesTodas.filter((g) => !g.evento.deleted_at);
+  const alocacoesCanceladas = alocacoesTodas.filter((g) => g.evento.deleted_at);
+
+  const totalAlocadoAtivo = alocacoesAtivas.reduce((acc, g) => acc + Number(g.totalAlocado || 0), 0);
   const recursoNaoAlocadoTotal =
     (config.perCapitaGlobalAnual * qtdVeteranosTotal) +
     (config.perCapitaEventoAtivoAnual * qtdAtivosTotal) -
-    somaAlocadoEventos;
+    totalAlocadoAtivo;
 
   return {
     ano_ref: ano,
     config,
     apoioPorLotacao,
     recursoNaoAlocadoTotal,
-    alocacoesPorEvento: Array.from(eventosMap.values())
+    alocacoesPorEvento: alocacoesAtivas,
+    ...(includeCancelados ? { alocacoesCanceladas } : {})
   };
 }
 
@@ -419,7 +431,8 @@ async function updateRepasseConfig(ano, perCapitaGlobalAnual, perCapitaApoioOper
   return computeConfig(rows[0], ano);
 }
 
-async function listarEventos(ano, status = null) {
+async function listarEventos(ano, status = null, options = {}) {
+  const includeCancelados = Boolean(options?.includeCancelados);
   const params = [ano];
   let statusFilter = '';
   if (status) {
@@ -428,11 +441,12 @@ async function listarEventos(ano, status = null) {
   }
 
   const { rows } = await pool.query(`
-    SELECT e.*, f.nome AS responsavel_nome
+    SELECT e.*, f.nome AS responsavel_nome, df.nome AS deleted_by_nome
     FROM repasse_eventos e
     LEFT JOIN filiados f ON f.id = e.responsavel_filiado_id
+    LEFT JOIN filiados df ON df.id = e.deleted_by_user_id
     WHERE EXTRACT(YEAR FROM e.data_evento) = $1
-      AND e.deleted_at IS NULL
+      ${includeCancelados ? '' : 'AND e.deleted_at IS NULL'}
     ${statusFilter}
     ORDER BY e.data_evento ASC, e.titulo ASC
   `, params);
@@ -534,7 +548,10 @@ async function alocarEmEvento(eventoId, filiadoId) {
 
     await client.query(`
       UPDATE repasse_evento_alocacoes
-      SET status = $3, revogado_em = NOW()
+      SET status = $3,
+          revogado_em = NOW(),
+          revogado_motivo = 'Realocação automática para novo evento',
+          revogado_por_user_id = $2
       WHERE ano_ref = $1
         AND filiado_id = $2
         AND status = $4
@@ -556,9 +573,12 @@ async function alocarEmEvento(eventoId, filiadoId) {
   }
 }
 
-async function retirarAlocacaoEvento(eventoId, filiadoId, payload = {}) {
+async function retirarAlocacaoEvento(eventoId, filiadoId, payload = {}, atorId = null) {
   const motivo = String(payload?.justificativa || payload?.motivo || '').trim();
   const ignorarPrazo = Boolean(payload?.ignorarPrazo);
+  if (motivo.length < 5 || motivo.length > 1000) {
+    throw new Error('Justificativa deve ter entre 5 e 1000 caracteres.');
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -575,19 +595,18 @@ async function retirarAlocacaoEvento(eventoId, filiadoId, payload = {}) {
     const ano = getAnoFromDate(evento.data_evento);
     const revoked = await client.query(`
       UPDATE repasse_evento_alocacoes
-      SET status = $4, revogado_em = NOW()
+      SET status = $4,
+          revogado_em = NOW(),
+          revogado_motivo = $6,
+          revogado_por_user_id = $7
       WHERE ano_ref = $1
         AND evento_id = $2
         AND filiado_id = $3
         AND status = $5
       RETURNING *
-    `, [ano, eventoId, filiadoId, STATUS_ALOCACAO.REVOGADA, STATUS_ALOCACAO.ATIVA]);
+    `, [ano, eventoId, filiadoId, STATUS_ALOCACAO.REVOGADA, STATUS_ALOCACAO.ATIVA, motivo, atorId || filiadoId]);
 
     if (!revoked.rows.length) throw new Error('Alocação ativa não encontrada para este filiado no evento informado.');
-
-    if (motivo && motivo.length > 1000) {
-      throw new Error('Justificativa deve ter no máximo 1000 caracteres.');
-    }
 
     await client.query('COMMIT');
     return revoked.rows[0];
@@ -605,19 +624,54 @@ async function excluirEvento(id, payload, userId) {
     throw new Error('Justificativa deve ter entre 5 e 1000 caracteres.');
   }
 
-  const { rows } = await pool.query(`
-    UPDATE repasse_eventos
-    SET deleted_at = NOW(),
-        deleted_by_user_id = $2,
-        delete_reason = $3,
-        updated_at = NOW()
-    WHERE id = $1
-      AND deleted_at IS NULL
-    RETURNING *
-  `, [id, userId, motivo]);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  if (!rows.length) throw new Error('Evento não encontrado ou já excluído.');
-  return rows[0];
+    const eventoResult = await client.query(`
+      SELECT *
+      FROM repasse_eventos
+      WHERE id = $1
+        AND deleted_at IS NULL
+      FOR UPDATE
+    `, [id]);
+
+    if (!eventoResult.rows.length) throw new Error('Evento não encontrado ou já excluído.');
+    const evento = eventoResult.rows[0];
+    const ano = getAnoFromDate(evento.data_evento);
+
+    await client.query(`
+      UPDATE repasse_evento_alocacoes
+      SET status = $3,
+          revogado_em = NOW(),
+          revogado_motivo = $5,
+          revogado_por_user_id = $4
+      WHERE ano_ref = $1
+        AND evento_id = $2
+        AND status = $6
+    `, [ano, id, STATUS_ALOCACAO.REVOGADA, userId, `Evento cancelado: ${motivo}`, STATUS_ALOCACAO.ATIVA]);
+
+    const { rows } = await client.query(`
+      UPDATE repasse_eventos
+      SET deleted_at = NOW(),
+          deleted_by_user_id = $2,
+          delete_reason = $3,
+          updated_at = NOW()
+      WHERE id = $1
+        AND deleted_at IS NULL
+      RETURNING *
+    `, [id, userId, motivo]);
+
+    if (!rows.length) throw new Error('Evento não encontrado ou já excluído.');
+
+    await client.query('COMMIT');
+    return rows[0];
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 function parseValorDebito(payload = {}) {

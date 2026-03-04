@@ -29,7 +29,9 @@ async function getResumo(req, res) {
 
   try {
     const ano = parseInt(req.query.ano || req.query.year) || new Date().getFullYear();
-    const data = await repasseService.getRepasseResumo(ano);
+    const perfil = String(req.user?.perfil_acesso || '').toUpperCase();
+    const includeCancelados = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfil);
+    const data = await repasseService.getRepasseResumo(ano, { includeCancelados });
     log.info("RepasseGetResumoSucesso", { requestId, atorId, ano });
     res.json({ success: true, ...data, requestId });
   } catch (err) {
@@ -93,7 +95,10 @@ async function listarEventos(req, res) {
 
   try {
     const ano = parseInt(req.query.ano || req.query.year) || new Date().getFullYear();
-    const eventos = await repasseService.listarEventos(ano, req.query.status);
+    const perfil = String(req.user?.perfil_acesso || '').toUpperCase();
+    const podeVerCancelados = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfil);
+    const includeCancelados = podeVerCancelados && String(req.query.includeCancelados || req.query.include_cancelados || '') === '1';
+    const eventos = await repasseService.listarEventos(ano, req.query.status, { includeCancelados });
     log.info("RepasseListarEventosSucesso", { requestId, atorId, ano });
     res.json({ success: true, eventos, requestId });
   } catch (err) {
@@ -183,7 +188,7 @@ async function retirarMinhaAlocacao(req, res) {
   if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
   try {
-    const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), atorId, req.body || {});
+    const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), atorId, req.body || {}, atorId);
     log.info("RepasseRetirarMinhaAlocacaoSucesso", { requestId, atorId, eventoId: req.params.id });
     res.json({ success: true, alocacao, requestId });
   } catch (err) {
@@ -205,7 +210,7 @@ async function retirarAlocacaoGestao(req, res) {
     const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), filiadoId, {
       ...req.body,
       ignorarPrazo: true,
-    });
+    }, atorId);
     log.info("RepasseRetirarAlocacaoGestaoSucesso", { requestId, atorId, eventoId: req.params.id, filiadoId });
     res.json({ success: true, alocacao, requestId });
   } catch (err) {

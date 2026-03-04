@@ -289,7 +289,7 @@
         ]);
 
         if (ehGestao()) {
-            const eventosGestaoResp = await window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}`);
+            const eventosGestaoResp = await window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}&includeCancelados=1`);
             if (eventosGestaoResp.ok) {
                 const dataEventos = await eventosGestaoResp.json();
                 eventosGestao = dataEventos.eventos || [];
@@ -482,10 +482,17 @@
 
     function renderAlocacoes() {
         const grupos = repasseData.alocacoesPorEvento || [];
+        const cancelados = ehGestao() ? (repasseData.alocacoesCanceladas || []) : [];
         const content = !alocacoesExpanded
             ? ''
             : (grupos.map((g) => {
-                const itens = (g.itens || []).map((i) => `<li>${i.nome} (${i.situacao}) — ${formatCurrency(i.valorAlocado)}</li>`).join('') || '<li>Sem alocações</li>';
+                const itens = (g.itens || []).map((i) => {
+                    const filiadoId = Number(i.filiado_id || i.filiadoId || 0);
+                    const botaoGestao = ehGestao() && filiadoId
+                        ? ` <button class="ui-btn ui-btn-sm" style="background:#b42318;" onclick="Repasse.retirarAlocacaoGestao(${g.evento.id}, ${filiadoId}, '${String(i.nome || '').replace(/'/g, "\'")}')">Cancelar</button>`
+                        : '';
+                    return `<li>${i.nome} (${i.situacao}) — ${formatCurrency(i.valorAlocado)}${botaoGestao}</li>`;
+                }).join('') || '<li>Sem alocações</li>';
                 return `
                     <div class="repasse-evento-box">
                         <div class="repasse-evento-title">${g.evento.titulo}</div>
@@ -496,11 +503,23 @@
                 `;
             }).join('') || '<p>Sem eventos no ano.</p>');
 
+        const canceladosContent = !alocacoesExpanded || !ehGestao()
+            ? ''
+            : `
+                <div style="margin-top:10px;">
+                    <h4 style="margin:0 0 6px;color:#667085;">Cancelados (somente gestão)</h4>
+                    ${cancelados.length ? cancelados.map((g) => {
+                        const tooltip = `Motivo: ${g.evento.delete_reason || 'Não informado'} | Por: ${g.evento.deleted_by_nome || `ID ${g.evento.deleted_by_user_id || '-'}`} | Em: ${isoToBr(g.evento.deleted_at || '')}`;
+                        return `<div class="repasse-evento-box" title="${tooltip.replace(/"/g, '&quot;')}"><div class="repasse-evento-title">${g.evento.titulo}</div><div style="font-size:.9rem;color:#607589;">Evento cancelado • passe o mouse para auditoria</div></div>`;
+                    }).join('') : '<p style="color:#607589;">Sem eventos cancelados no ano.</p>'}
+                </div>
+            `;
+
         document.getElementById('repasse-alocacoes').innerHTML = `
             <div class="repasse-card">
                 <h3>Alocações por evento</h3>
                 <div class="repasse-toggle"><button class="ui-btn" onclick="Repasse.toggleAlocacoes()">${alocacoesExpanded ? 'Ocultar alocações' : 'Mostrar alocações'}</button></div>
-                <div style="margin-top:8px;">${content}</div>
+                <div style="margin-top:8px;">${content}${canceladosContent}</div>
             </div>
         `;
     }
@@ -513,10 +532,6 @@
             return `<option value="${e.id}" ${disabled ? 'disabled' : ''}>${e.titulo} — evento ${isoToBr(e.data_evento)} / limite ${isoToBr(e.data_limite_alocacao)}${suffix}</option>`;
         }).join('');
 
-        if (!ehGestao()) {
-            document.getElementById('repasse-alocar').innerHTML = '';
-            return;
-        }
         document.getElementById('repasse-alocar').innerHTML = `
             <div class="repasse-card">
                 <h3>Alocar meu recurso</h3>
@@ -524,6 +539,7 @@
                 ? `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                     <select id="repasse-evento-select">${options}</select>
                     <button class="ui-btn" onclick="Repasse.alocarMeuRecurso()">Alocar</button>
+                    <button class="ui-btn" style="background:#667085;" onclick="Repasse.retirarMinhaAlocacao()">Retirar minha alocação</button>
                   </div>`
                 : '<p>Sem eventos abertos no momento.</p>'}
             </div>
@@ -548,7 +564,10 @@
             return;
         }
 
-        const rows = eventosGestao.map((evento) => {
+        const ativos = eventosGestao.filter((e) => !e.deleted_at);
+        const cancelados = eventosGestao.filter((e) => e.deleted_at);
+
+        const rows = ativos.map((evento) => {
             const status = String(evento.status || '').toUpperCase();
             const botoesStatus = status === 'ABERTO'
                 ? `<button class="ui-btn ui-btn-sm" style="background:#667085" onclick="Repasse.encerrarEvento(${evento.id})">Encerrar</button>`
@@ -572,6 +591,18 @@
             `;
         }).join('');
 
+        const rowsCancelados = cancelados.map((evento) => {
+            const tooltip = `Motivo: ${evento.delete_reason || 'Não informado'} | Por: ${evento.deleted_by_nome || `ID ${evento.deleted_by_user_id || '-'}`} | Em: ${isoToBr(evento.deleted_at || '')}`;
+            return `
+              <tr title="${tooltip.replace(/"/g, '&quot;')}">
+                <td>${evento.titulo || '-'}</td>
+                <td class="center">${isoToBr(evento.data_evento)}</td>
+                <td>${evento.deleted_by_nome || '-'}</td>
+                <td class="center">${isoToBr(evento.deleted_at || '')}</td>
+              </tr>
+            `;
+        }).join('');
+
         container.innerHTML = `
             <div class="repasse-card">
                 <h3>Eventos do ano (gestão)</h3>
@@ -587,8 +618,18 @@
                                 <th class="center">Ações</th>
                             </tr>
                         </thead>
-                        <tbody>${rows}</tbody>
+                        <tbody>${rows || '<tr><td colspan="6" class="center">Sem eventos ativos.</td></tr>'}</tbody>
                     </table>
+                </div>
+                <div style="margin-top:12px;">
+                  <h4 style="margin:0 0 6px;color:#667085;">Cancelados (somente gestão)</h4>
+                  <div class="repasse-table-wrap">
+                    <table class="repasse-table">
+                      <thead><tr><th>Título</th><th class="center">Data</th><th>Cancelado por</th><th class="center">Cancelado em</th></tr></thead>
+                      <tbody>${rowsCancelados || '<tr><td colspan="4" class="center">Sem eventos cancelados.</td></tr>'}</tbody>
+                    </table>
+                  </div>
+                  <div style="font-size:.85rem;color:#607589;margin-top:6px;">Passe o mouse sobre a linha para ver o motivo do cancelamento.</div>
                 </div>
             </div>
         `;
@@ -772,7 +813,6 @@
     }
 
     async function alocarMeuRecurso() {
-        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
         const select = document.getElementById('repasse-evento-select');
         if (!select || !select.value) return;
         const resp = await window.Api.apiFetch(`/api/repasse/eventos/${select.value}/alocar`, { method: 'POST' });
@@ -782,6 +822,53 @@
             return;
         }
         alert('Recurso alocado com sucesso.');
+        await refreshNow({ showLoading: false });
+    }
+
+
+    async function retirarMinhaAlocacao() {
+        const select = document.getElementById('repasse-evento-select');
+        if (!select || !select.value) return;
+        const justificativa = (prompt('Informe a justificativa para retirar sua alocação (mínimo 5 caracteres):') || '').trim();
+        if (justificativa.length < 5) {
+            alert('Justificativa deve ter no mínimo 5 caracteres.');
+            return;
+        }
+
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${select.value}/desalocar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ justificativa })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Falha ao retirar alocação.');
+            return;
+        }
+        alert('Alocação retirada com sucesso.');
+        await refreshNow({ showLoading: false });
+    }
+
+
+    async function retirarAlocacaoGestao(eventoId, filiadoId, nome) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
+        const justificativa = (prompt(`Informe a justificativa para cancelar a alocação de ${nome || 'filiado'} (mínimo 5 caracteres):`) || '').trim();
+        if (justificativa.length < 5) {
+            alert('Justificativa deve ter no mínimo 5 caracteres.');
+            return;
+        }
+
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${eventoId}/desalocar-gestao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filiado_id: filiadoId, justificativa })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Falha ao cancelar alocação.');
+            return;
+        }
+        alert('Alocação cancelada com sucesso.');
         await refreshNow({ showLoading: false });
     }
 
@@ -1098,6 +1185,8 @@
         criarEvento,
         buscarResponsaveis,
         alocarMeuRecurso,
+        retirarMinhaAlocacao,
+        retirarAlocacaoGestao,
         toggleAlocacoes,
         abrirModalDebito,
         fecharModalDebito,

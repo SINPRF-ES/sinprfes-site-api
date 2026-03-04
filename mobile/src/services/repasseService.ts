@@ -7,6 +7,10 @@ export interface RepasseEvento {
   data_evento: string;
   data_limite_alocacao: string;
   status: string;
+  deleted_at?: string | null;
+  delete_reason?: string | null;
+  deleted_by_user_id?: number | null;
+  deleted_by_nome?: string | null;
 }
 
 export interface RepasseResumo {
@@ -26,11 +30,18 @@ export interface RepasseResumo {
   }>;
   recursoNaoAlocadoTotal: number;
   alocacoesPorEvento: Array<{
-    evento: { id: number; titulo: string; data_evento: string; data_limite_alocacao: string; status: string };
+    evento: RepasseEvento;
     totalAlocado: number;
     contagemAtivos: number;
     contagemVeteranos: number;
-    itens: Array<{ filiado_id: number; nome: string; situacao: string; valorAlocado: number }>;
+    itens: Array<{ filiado_id?: number; filiadoId?: number; nome: string; situacao: string; valorAlocado: number }>;
+  }>;
+  alocacoesCanceladas?: Array<{
+    evento: RepasseEvento;
+    totalAlocado: number;
+    contagemAtivos: number;
+    contagemVeteranos: number;
+    itens: Array<{ filiado_id?: number; filiadoId?: number; nome: string; situacao: string; valorAlocado: number }>;
   }>;
 }
 
@@ -64,9 +75,11 @@ const repasseService = {
     return response.data;
   },
 
-  listarEventos: async (ano: number, status?: string): Promise<RepasseEvento[]> => {
-    const url = status ? `/api/repasse/eventos?ano=${ano}&status=${encodeURIComponent(status)}` : `/api/repasse/eventos?ano=${ano}`;
-    const response = await apiService.get(url);
+  listarEventos: async (ano: number, status?: string, includeCancelados = false): Promise<RepasseEvento[]> => {
+    const params = new URLSearchParams({ ano: String(ano) });
+    if (status) params.set('status', status);
+    if (includeCancelados) params.set('includeCancelados', '1');
+    const response = await apiService.get(`/api/repasse/eventos?${params.toString()}`);
     return response.data?.eventos || [];
   },
 
