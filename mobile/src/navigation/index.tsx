@@ -7,6 +7,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
 import { TouchableOpacity, Text } from 'react-native';
+import { COLORS } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
@@ -95,8 +96,8 @@ export default function RootNavigation() {
 
       <Stack.Navigator
         screenOptions={({ navigation }) => ({
-          headerTintColor: '#fff',
-          headerStyle: { backgroundColor: '#003366' },
+          headerTintColor: COLORS.white,
+          headerStyle: { backgroundColor: COLORS.prfBlue },
           headerTitleAlign: 'center',
           headerLeft: () => {
             const canGoBack = navigation.canGoBack();
@@ -107,8 +108,8 @@ export default function RootNavigation() {
                 onPress={() => navigation.goBack()}
                 style={{ flexDirection: 'row', alignItems: 'center' }}
               >
-                <Ionicons name="arrow-back" size={26} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', marginLeft: 4 }}>
+                <Ionicons name="arrow-back" size={26} color={COLORS.white} />
+                <Text style={{ color: COLORS.white, fontSize: 12, fontWeight: 'bold', marginLeft: 4 }}>
                   Voltar
                 </Text>
               </TouchableOpacity>

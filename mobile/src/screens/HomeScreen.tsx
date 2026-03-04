@@ -14,6 +14,7 @@ import { logNavigation } from '../infra/logger';
 import { isGestao } from '../utils/filiadoUtils';
 
 import type { DrawerParamList } from '../navigation/types';
+import { COLORS } from '../theme/colors';
 
 type Props = DrawerScreenProps<DrawerParamList, 'Início'>;
 
@@ -74,7 +75,7 @@ export default function HomeScreen({ navigation }: Props) {
               accessibilityLabel={item.label}
             >
               <View style={styles.iconChip}>
-                <MaterialCommunityIcons name={item.icon} size={26} color="#003366" />
+                <MaterialCommunityIcons name={item.icon} size={26} color={COLORS.prfBlue} />
               </View>
 
               <Text style={styles.cardLabel} numberOfLines={2}>
@@ -99,14 +100,14 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f4f8',
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     paddingBottom: 8,
   },
 
   header: {
-    backgroundColor: '#003366',
+    backgroundColor: COLORS.prfBlue,
     paddingHorizontal: 20,
     paddingBottom: 110,
     borderBottomLeftRadius: 32,
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   headerBrand: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: COLORS.white,
     letterSpacing: 1,
   },
   headerText: {
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: COLORS.white,
   },
 
   memberCardContainer: {
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#1f2a37',
+    color: COLORS.text,
   },
 
   grid: {
@@ -170,18 +171,18 @@ const styles = StyleSheet.create({
 
   // Inspirado no padrão do FENAPRF MemberCard (borda #eee + sombra leve)
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
     margin: 8,
     width: '44%',
     minHeight: 148,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'flex-start',
 
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: COLORS.border,
 
     elevation: 3,
     shadowColor: '#000',
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#eef3fb',
+    backgroundColor: '#eaf3ff',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -203,12 +204,16 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#003366',
+    color: COLORS.prfBlue,
     marginBottom: 6,
+    textAlign: 'center',
+    width: '100%',
   },
   cardSubtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: COLORS.textMuted,
     lineHeight: 16,
+    textAlign: 'center',
+    width: '100%',
   },
 });
