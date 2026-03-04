@@ -16,10 +16,22 @@ export const getHistory = async () => {
   return response.data;
 };
 
+export const getEfetivoManual = async () => {
+  const response = await api.get('/api/reports/efetivo-manual');
+  return response.data;
+};
+
+export const upsertEfetivoManual = async (totais: Record<string, number>) => {
+  const response = await api.put('/api/reports/efetivo-manual', { totais });
+  return response.data;
+};
+
 const reportsService = {
   generateReport,
   previewReport,
   getHistory,
+  getEfetivoManual,
+  upsertEfetivoManual,
 };
 
 export default reportsService;
