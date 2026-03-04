@@ -153,7 +153,10 @@
 
             const r = await window.Api.apiFetch(url);
             if(!r.ok) throw new Error("Erro API");
-            let lista = await r.json();
+            const payload = await r.json();
+            let lista = Array.isArray(payload)
+                ? payload
+                : (Array.isArray(payload?.publicacoes) ? payload.publicacoes : []);
 
             // Filtragem de Pastas Técnicas (Apps, Noticias) para não-gestão
             const perfil = (options.perfil || "").toUpperCase();
