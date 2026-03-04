@@ -289,7 +289,7 @@
         ]);
 
         if (ehGestao()) {
-            const eventosGestaoResp = await window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}`);
+            const eventosGestaoResp = await window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}&includeCancelados=1`);
             if (eventosGestaoResp.ok) {
                 const dataEventos = await eventosGestaoResp.json();
                 eventosGestao = dataEventos.eventos || [];
@@ -526,10 +526,6 @@
             return `<option value="${e.id}" ${disabled ? 'disabled' : ''}>${e.titulo} — evento ${isoToBr(e.data_evento)} / limite ${isoToBr(e.data_limite_alocacao)}${suffix}</option>`;
         }).join('');
 
-        if (!ehGestao()) {
-            document.getElementById('repasse-alocar').innerHTML = '';
-            return;
-        }
         document.getElementById('repasse-alocar').innerHTML = `
             <div class="repasse-card">
                 <h3>Alocar meu recurso</h3>

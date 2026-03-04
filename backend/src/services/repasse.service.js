@@ -431,7 +431,8 @@ async function updateRepasseConfig(ano, perCapitaGlobalAnual, perCapitaApoioOper
   return computeConfig(rows[0], ano);
 }
 
-async function listarEventos(ano, status = null) {
+async function listarEventos(ano, status = null, options = {}) {
+  const includeCancelados = Boolean(options?.includeCancelados);
   const params = [ano];
   let statusFilter = '';
   if (status) {
@@ -440,10 +441,12 @@ async function listarEventos(ano, status = null) {
   }
 
   const { rows } = await pool.query(`
-    SELECT e.*, f.nome AS responsavel_nome
+    SELECT e.*, f.nome AS responsavel_nome, df.nome AS deleted_by_nome
     FROM repasse_eventos e
     LEFT JOIN filiados f ON f.id = e.responsavel_filiado_id
+    LEFT JOIN filiados df ON df.id = e.deleted_by_user_id
     WHERE EXTRACT(YEAR FROM e.data_evento) = $1
+      ${includeCancelados ? '' : 'AND e.deleted_at IS NULL'}
     ${statusFilter}
     ORDER BY e.data_evento ASC, e.titulo ASC
   `, params);

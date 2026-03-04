@@ -95,7 +95,10 @@ async function listarEventos(req, res) {
 
   try {
     const ano = parseInt(req.query.ano || req.query.year) || new Date().getFullYear();
-    const eventos = await repasseService.listarEventos(ano, req.query.status);
+    const perfil = String(req.user?.perfil_acesso || '').toUpperCase();
+    const podeVerCancelados = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfil);
+    const includeCancelados = podeVerCancelados && String(req.query.includeCancelados || req.query.include_cancelados || '') === '1';
+    const eventos = await repasseService.listarEventos(ano, req.query.status, { includeCancelados });
     log.info("RepasseListarEventosSucesso", { requestId, atorId, ano });
     res.json({ success: true, eventos, requestId });
   } catch (err) {

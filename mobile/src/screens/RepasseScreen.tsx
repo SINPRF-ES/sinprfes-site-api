@@ -139,7 +139,7 @@ export default function RepasseScreen() {
       const [resumoResp, eventosResp, todosResp] = await Promise.all([
         repasseService.getResumo(year),
         repasseService.listarEventos(year, 'ABERTO'),
-        repasseService.listarEventos(year),
+        repasseService.listarEventos(year, undefined, ehGestao),
       ]);
       const resumoSignature = makeResumoSignature(resumoResp);
       const eventosSignature = makeEventosSignature(eventosResp);
