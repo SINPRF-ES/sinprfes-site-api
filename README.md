@@ -434,3 +434,4 @@ O sistema permite a geração de relatórios estruturados e dossiês individuais
 - **Auditoria (Jobs):** Toda solicitação de relatório é registrada na tabela `report_jobs`, permitindo o acompanhamento do histórico de geração (quem solicitou, quando e com quais parâmetros).
 - **Configuração de E-mail:** A cópia para o sindicato é configurada via variável de ambiente `REPORTS_COPY_EMAIL`.
 - **Permissões:** O acesso ao módulo é restrito aos perfis de gestão (`ADMIN`, `DIRETORIA`, `FUNCIONARIO`) e ao perfil `ORGANIZADOR` (apenas visualização/geração conforme permissão `RELATORIOS_VER`).
+- 
