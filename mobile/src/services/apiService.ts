@@ -16,6 +16,22 @@ let isRefreshing = false;
 let failedQueue: any[] = [];
 let lastAuthErrorTimestamp = 0;
 
+const triggerSessionExpired = async (reason: string, url?: string) => {
+  const now = Date.now();
+  if (now - lastAuthErrorTimestamp < 10000) {
+    return;
+  }
+  lastAuthErrorTimestamp = now;
+
+  logger.warn(`SESSION_CLEARED_REASON: ${reason} | Route: ${url}`);
+  await limparSessao();
+
+  const globalLike = globalThis as any;
+  if (typeof globalLike?.onSessionExpired === 'function') {
+    globalLike.onSessionExpired();
+  }
+};
+
 const shouldForceLogoutAfterRefreshError = (refreshError: any): boolean => {
   const status = refreshError?.response?.status;
   const errorMsg = String(refreshError?.response?.data?.error || refreshError?.response?.data?.message || refreshError?.message || '').toLowerCase();
@@ -345,6 +361,7 @@ api.interceptors.response.use(
         if (!refreshToken) {
           isRefreshing = false;
           logger.warn('API_401_REFRESH_SKIPPED: No refresh token available', { url });
+          await triggerSessionExpired('missing_refresh_token', url);
           return Promise.reject(error);
         }
 
@@ -372,20 +389,7 @@ api.interceptors.response.use(
           return Promise.reject(refreshError);
         }
 
-        const now = Date.now();
-        if (now - lastAuthErrorTimestamp < 10000) {
-           return Promise.reject(refreshError);
-        }
-        lastAuthErrorTimestamp = now;
-
-        logger.warn(`SESSION_CLEARED_REASON: refresh_failed | Route: ${url}`);
-        await limparSessao();
-
-        if (typeof global !== 'undefined' && (global as any).onSessionExpired) {
-          (global as any).onSessionExpired();
-        } else if (typeof window !== 'undefined' && (window as any).onSessionExpired) {
-          (window as any).onSessionExpired();
-        }
+        await triggerSessionExpired('refresh_failed', url);
         return Promise.reject(refreshError);
       }
     }
