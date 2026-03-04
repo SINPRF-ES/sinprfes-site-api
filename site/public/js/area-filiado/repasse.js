@@ -38,6 +38,8 @@
     let lastResumoSignature = '';
     let lastEventosSignature = '';
     let lastMovimentosSignature = '';
+    let eventosGestao = [];
+    let podeGerenciarRepasse = false;
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && typeof activeModalCloser === 'function') {
@@ -133,7 +135,17 @@
     }
 
     function ehGestao() {
-        return ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((perfilLogado || '').toUpperCase());
+        return Boolean(podeGerenciarRepasse || ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((perfilLogado || '').toUpperCase()));
+    }
+
+    function atualizarPermissaoGestao() {
+        try {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const perms = Array.isArray(userInfo?.permissions) ? userInfo.permissions : [];
+            podeGerenciarRepasse = perms.includes('*') || perms.includes('REPASSE_GERENCIAR');
+        } catch (_) {
+            podeGerenciarRepasse = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((perfilLogado || '').toUpperCase());
+        }
     }
 
     function injectStyles() {
@@ -170,6 +182,7 @@
 
     async function inicializarRepasse(perfil) {
         perfilLogado = (perfil || 'FILIADO').toUpperCase();
+        atualizarPermissaoGestao();
         const container = document.getElementById('sec-repasse');
         if (!container) return;
 
@@ -193,6 +206,7 @@
                 <div id="repasse-nao-alocado"></div>
                 <div id="repasse-alocacoes"></div>
                 <div id="repasse-alocar"></div>
+                <div id="repasse-eventos-gestao"></div>
             </section>
         `;
 
@@ -274,6 +288,18 @@
             window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}&status=ABERTO`)
         ]);
 
+        if (ehGestao()) {
+            const eventosGestaoResp = await window.Api.apiFetch(`/api/repasse/eventos?ano=${yearCurrent}`);
+            if (eventosGestaoResp.ok) {
+                const dataEventos = await eventosGestaoResp.json();
+                eventosGestao = dataEventos.eventos || [];
+            } else {
+                eventosGestao = [];
+            }
+        } else {
+            eventosGestao = [];
+        }
+
         if (!resumoResp.ok) {
             document.getElementById('repasse-apoio').innerHTML = '<p style="color:#b00;">Não foi possível carregar o resumo.</p>';
             isLoadingRepasse = false;
@@ -308,6 +334,7 @@
         renderNaoAlocado();
         renderAlocacoes();
         renderAlocar();
+        renderGestaoEventos();
         isLoadingRepasse = false;
     }
 
@@ -501,6 +528,247 @@
                 : '<p>Sem eventos abertos no momento.</p>'}
             </div>
         `;
+    }
+
+    function renderGestaoEventos() {
+        const container = document.getElementById('repasse-eventos-gestao');
+        if (!container) return;
+        if (!ehGestao()) {
+            container.innerHTML = '';
+            return;
+        }
+
+        if (!eventosGestao.length) {
+            container.innerHTML = `
+                <div class="repasse-card">
+                    <h3>Eventos do ano (gestão)</h3>
+                    <p>Sem eventos cadastrados para ${yearCurrent}.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const rows = eventosGestao.map((evento) => {
+            const status = String(evento.status || '').toUpperCase();
+            const botoesStatus = status === 'ABERTO'
+                ? `<button class="ui-btn ui-btn-sm" style="background:#667085" onclick="Repasse.encerrarEvento(${evento.id})">Encerrar</button>`
+                : `<button class="ui-btn ui-btn-sm" style="background:#027a48" onclick="Repasse.abrirEvento(${evento.id})">Abrir</button>`;
+
+            return `
+                <tr>
+                    <td>${evento.titulo || '-'}</td>
+                    <td class="center">${isoToBr(evento.data_evento)}</td>
+                    <td class="center">${isoToBr(evento.data_limite_alocacao)}</td>
+                    <td class="center">${status || '-'}</td>
+                    <td>${evento.responsavel_nome || '-'}</td>
+                    <td class="center">
+                        <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+                            <button class="ui-btn ui-btn-sm" onclick="Repasse.abrirModalEditarEvento(${evento.id})">Editar</button>
+                            ${botoesStatus}
+                            <button class="ui-btn ui-btn-sm" style="background:#b42318" onclick="Repasse.abrirModalExcluirEvento(${evento.id})">Cancelar</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="repasse-card">
+                <h3>Eventos do ano (gestão)</h3>
+                <div class="repasse-table-wrap">
+                    <table class="repasse-table">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th class="center">Data</th>
+                                <th class="center">Limite</th>
+                                <th class="center">Status</th>
+                                <th>Responsável</th>
+                                <th class="center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    function abrirModalEditarEvento(id) {
+        const evento = (eventosGestao || []).find((e) => Number(e.id) === Number(id));
+        if (!evento) return;
+        const modalId = 'modal-editar-evento';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
+            document.body.appendChild(modal);
+        }
+
+        const options = responsaveis.map((r) => `<option value="${r.id}" ${Number(r.id) === Number(evento.responsavel_filiado_id) ? 'selected' : ''}>${responsavelLabel(r)}</option>`).join('');
+
+        modal.innerHTML = `
+            <div class="ui-modal" style="max-width:560px;">
+                <div class="ui-modal-header">
+                    <h3>Editar evento</h3>
+                    <button class="ui-modal-close" onclick="Repasse.fecharModalEditarEvento()">×</button>
+                </div>
+                <div class="ui-modal-body">
+                    <label>Título</label>
+                    <input id="edit-evt-titulo" type="text" value="${evento.titulo || ''}" style="width:100%;margin-bottom:10px;">
+                    <label>Data do evento</label>
+                    <input id="edit-evt-data-evento" type="text" value="${isoToBr(evento.data_evento)}" style="width:100%;margin-bottom:10px;">
+                    <label>Data limite de alocação</label>
+                    <input id="edit-evt-data-limite" type="text" value="${isoToBr(evento.data_limite_alocacao)}" style="width:100%;margin-bottom:10px;">
+                    <label>Responsável</label>
+                    <select id="edit-evt-responsavel" style="width:100%;margin-bottom:10px;"><option value="">Selecione</option>${options}</select>
+                    <label>Descrição</label>
+                    <textarea id="edit-evt-descricao" rows="3" style="width:100%;">${evento.descricao || ''}</textarea>
+                </div>
+                <div class="ui-modal-footer">
+                    <button class="ui-btn ui-btn-secondary" onclick="Repasse.fecharModalEditarEvento()">Cancelar</button>
+                    <button class="ui-btn" onclick="Repasse.salvarEdicaoEvento(${evento.id})">Salvar alterações</button>
+                </div>
+            </div>
+        `;
+
+        bindModalOverlayClose(modal, fecharModalEditarEvento);
+        openModal(modal, fecharModalEditarEvento);
+        if (window.Utils?.aplicarMascaraData) {
+            window.Utils.aplicarMascaraData(document.getElementById('edit-evt-data-evento'));
+            window.Utils.aplicarMascaraData(document.getElementById('edit-evt-data-limite'));
+        }
+    }
+
+    function fecharModalEditarEvento() {
+        closeModalById('modal-editar-evento');
+    }
+
+    async function salvarEdicaoEvento(id) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
+        const titulo = document.getElementById('edit-evt-titulo')?.value?.trim();
+        const dataEvento = brToIso(document.getElementById('edit-evt-data-evento')?.value?.trim());
+        const dataLimite = brToIso(document.getElementById('edit-evt-data-limite')?.value?.trim());
+        const responsavelIdRaw = document.getElementById('edit-evt-responsavel')?.value;
+        const descricao = document.getElementById('edit-evt-descricao')?.value?.trim() || null;
+
+        if (!titulo || !dataEvento || !dataLimite) {
+            alert('Preencha título e datas válidas.');
+            return;
+        }
+
+        const payload = {
+            titulo,
+            descricao,
+            data_evento: dataEvento,
+            data_limite_alocacao: dataLimite,
+            responsavel_filiado_id: responsavelIdRaw ? Number(responsavelIdRaw) : null
+        };
+
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Erro ao atualizar evento.');
+            return;
+        }
+
+        fecharModalEditarEvento();
+        await refreshNow({ showLoading: false });
+    }
+
+    async function abrirEvento(id) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${id}/abrir`, { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Erro ao abrir evento.');
+            return;
+        }
+        await refreshNow({ showLoading: false });
+    }
+
+    async function encerrarEvento(id) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${id}/encerrar`, { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Erro ao encerrar evento.');
+            return;
+        }
+        await refreshNow({ showLoading: false });
+    }
+
+    function abrirModalExcluirEvento(id) {
+        const evento = (eventosGestao || []).find((e) => Number(e.id) === Number(id));
+        if (!evento) return;
+
+        const modalId = 'modal-excluir-evento';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'ui-modal-overlay';
+            modal.style.display = 'none';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="ui-modal" style="max-width:460px;">
+                <div class="ui-modal-header">
+                    <h3>Cancelar evento</h3>
+                    <button class="ui-modal-close" onclick="Repasse.fecharModalExcluirEvento()">×</button>
+                </div>
+                <div class="ui-modal-body">
+                    <p>Evento: <strong>${evento.titulo}</strong></p>
+                    <label>Informe a justificativa do cancelamento</label>
+                    <textarea id="delete-evento-justificativa" rows="3" style="width:100%;" oninput="Repasse.validarJustificativaExclusaoEvento()"></textarea>
+                </div>
+                <div class="ui-modal-footer">
+                    <button class="ui-btn ui-btn-secondary" onclick="Repasse.fecharModalExcluirEvento()">Voltar</button>
+                    <button id="btn-confirm-excluir-evento" class="ui-btn" style="background:#b42318" disabled onclick="Repasse.confirmarExclusaoEvento(${evento.id})">Cancelar evento</button>
+                </div>
+            </div>
+        `;
+
+        bindModalOverlayClose(modal, fecharModalExcluirEvento);
+        openModal(modal, fecharModalExcluirEvento);
+    }
+
+    function validarJustificativaExclusaoEvento() {
+        const justificativa = document.getElementById('delete-evento-justificativa')?.value?.trim() || '';
+        const btn = document.getElementById('btn-confirm-excluir-evento');
+        if (btn) btn.disabled = justificativa.length < 5;
+    }
+
+    function fecharModalExcluirEvento() {
+        closeModalById('modal-excluir-evento');
+    }
+
+    async function confirmarExclusaoEvento(id) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
+        const justificativa = document.getElementById('delete-evento-justificativa')?.value?.trim() || '';
+        if (justificativa.length < 5) return;
+
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ justificativa })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Erro ao cancelar evento.');
+            return;
+        }
+
+        fecharModalExcluirEvento();
+        await refreshNow({ showLoading: false });
     }
 
     async function alocarMeuRecurso() {
@@ -843,6 +1111,15 @@
         abrirModalExcluirDebito,
         fecharModalExcluirDebito,
         validarJustificativaExclusao,
-        confirmarExclusaoDebito
+        confirmarExclusaoDebito,
+        abrirModalEditarEvento,
+        fecharModalEditarEvento,
+        salvarEdicaoEvento,
+        abrirEvento,
+        encerrarEvento,
+        abrirModalExcluirEvento,
+        fecharModalExcluirEvento,
+        validarJustificativaExclusaoEvento,
+        confirmarExclusaoEvento
     };
 })(window);
