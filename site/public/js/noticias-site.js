@@ -57,6 +57,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const article = document.createElement("article");
       article.className = "news-item ui-card";
       article.style.marginBottom = "var(--ui-space-5)";
+      article.style.background = "#ffffff";
+      article.style.color = "#1f2937";
       article.id = noticia.id;
 
       const publishedDate = new Date(noticia.published_at || noticia.created_at).toLocaleDateString("pt-BR");
@@ -69,15 +71,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
 
       article.innerHTML = `
-        <header class="section-header">
-          <h2>${safeEscape(noticia.titulo)}</h2>
-          <p class="news-meta">${publishedDate} · Institucional</p>
+        <header class="section-header" style="background:#f8fafc; padding:12px; border-radius:8px;">
+          <h2 style="margin-bottom:6px; color:#0f172a;">${safeEscape(noticia.titulo)}</h2>
+          <p class="news-meta" style="color:#475569; margin:0;">${publishedDate} · Institucional</p>
         </header>
 
         <div class="noticia-conteudo">
           ${noticia.capa_url ? `<img src="${safeEscape(noticia.capa_url)}" alt="${safeEscape(noticia.titulo)}" style="width:100%; max-height:400px; object-fit:cover; border-radius:8px; margin-bottom:20px;">` : ""}
 
-          <div class="markdown-body" style="white-space: pre-wrap; line-height: 1.6; margin-bottom:20px;">${safeEscape(noticia.conteudo)}</div>
+          <div class="markdown-body" style="white-space: pre-wrap; line-height: 1.6; margin-bottom:20px; color:#1f2937;">${safeEscape(noticia.conteudo)}</div>
 
           ${videos.length > 0 ? `
             <div class="noticia-videos" style="margin-top:20px;">
