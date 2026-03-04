@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ import { normalizeText, maskCPF } from '../utils/masks';
 import { onlyDigits } from '../shared/format/formatters';
 import { useAuth } from '../hooks/useAuth';
 import reportsService from '../services/reportsService';
-import api, { getFiliados } from '../services/apiService';
+import { getFiliados } from '../services/apiService';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -50,6 +50,60 @@ export default function RelatoriosScreen() {
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [efetivoManual, setEfetivoManual] = useState<Record<string, string>>({});
+  const [savingEfetivo, setSavingEfetivo] = useState(false);
+
+
+  const isGestao = useMemo(() => {
+    const perfil = String((usuario as any)?.perfil_acesso || '').toUpperCase();
+    return ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfil);
+  }, [usuario]);
+
+  const lotacoesEfetivo = useMemo(
+    () => ['SEDE', 'DEL 01 - Viana', 'DEL 02 - Serra', 'DEL 03 - Guarapari', 'DEL 04 - Linhares'],
+    []
+  );
+
+  const carregarEfetivoManual = useCallback(async () => {
+    if (!isGestao) return;
+    try {
+      const data = await reportsService.getEfetivoManual();
+      const totais = data?.totais || {};
+      const nextState: Record<string, string> = {};
+      lotacoesEfetivo.forEach((lot) => {
+        const v = Number(totais[lot]);
+        nextState[lot] = Number.isFinite(v) ? String(v) : '0';
+      });
+      setEfetivoManual(nextState);
+    } catch (error: any) {
+      logger.error('Reports.LoadEfetivoManualErro', error);
+    }
+  }, [isGestao, lotacoesEfetivo]);
+
+  const salvarEfetivoManual = useCallback(async () => {
+    if (!isGestao) return;
+    const payload: Record<string, number> = {};
+    for (const lot of lotacoesEfetivo) {
+      const valor = Number((efetivoManual[lot] || '0').trim());
+      if (!Number.isFinite(valor) || valor < 0) {
+        Alert.alert('Erro', `Valor inválido para ${lot}.`);
+        return;
+      }
+      payload[lot] = Math.trunc(valor);
+    }
+
+    setSavingEfetivo(true);
+    try {
+      await reportsService.upsertEfetivoManual(payload);
+      Alert.alert('Sucesso', 'Efetivo manual salvo com sucesso.');
+      await carregarEfetivoManual();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Erro ao salvar efetivo manual.';
+      Alert.alert('Erro', msg);
+    } finally {
+      setSavingEfetivo(false);
+    }
+  }, [isGestao, lotacoesEfetivo, efetivoManual, carregarEfetivoManual]);
 
   const fetchHistory = useCallback(async (isRefresh = false) => {
     try {
@@ -68,6 +122,10 @@ export default function RelatoriosScreen() {
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  useEffect(() => {
+    if (isGestao) carregarEfetivoManual();
+  }, [isGestao, carregarEfetivoManual]);
 
   const loadFiliados = useCallback(async () => {
     try {
@@ -279,6 +337,47 @@ export default function RelatoriosScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} />}
       >
+
+        {isGestao && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🧮 Efetivo Total PRF por Lotação</Text>
+            <Text style={styles.helperText}>
+              Preencha os totais de efetivo (filiados e não filiados) para cálculo do % de filiação nos relatórios.
+            </Text>
+
+            {lotacoesEfetivo.map((lot) => (
+              <View key={lot} style={{ marginBottom: 12 }}>
+                <Text style={styles.label}>{lot}</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={efetivoManual[lot] ?? ''}
+                  onChangeText={(v) => setEfetivoManual((prev) => ({ ...prev, [lot]: v.replace(/[^0-9]/g, '') }))}
+                  placeholder="Ex: 100"
+                />
+              </View>
+            ))}
+
+            <View style={styles.inlineButtons}>
+              <TouchableOpacity
+                style={[styles.buttonSecondary, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
+                onPress={carregarEfetivoManual}
+                disabled={savingEfetivo}
+              >
+                <Text style={styles.buttonSecondaryText}>Atualizar dados</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
+                onPress={salvarEfetivoManual}
+                disabled={savingEfetivo}
+              >
+                {savingEfetivo ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Salvar efetivo manual</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
 
@@ -471,9 +570,31 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    marginBottom: 16,
   },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 16 },
   label: { fontSize: 14, color: '#666', marginBottom: 8, fontWeight: 'bold' },
+
+  helperText: { color: '#475467', fontSize: 13, marginTop: -6, marginBottom: 12 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    color: '#101828',
+  },
+  inlineButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  inlineButton: {
+    flex: 1,
+    marginTop: 0,
+    height: 48,
+  },
   pickerContainer: {
     borderWidth: 1,
     borderColor: '#ccc',
