@@ -151,6 +151,7 @@ async function getRepasseAno(year) {
 
       if (prfTotal > 0) {
         percentual = (filiadosAtivos / prfTotal) * 100;
+        // Regra de negócio: base de repasse é sempre quantidade de filiados ATIVOS (cadastro ativo).
         const base = filiadosAtivos * perCapita;
         const factor = factorFromPercentual(percentual);
         creditoMes = base * factor;
@@ -210,12 +211,12 @@ async function getRepasseAno(year) {
  * Usado pelo módulo de Relatórios para evitar duplicação de lógica.
  */
 async function getUltimosDadosParaRelatorio(lotacaoKey) {
-  return getUltimosDadosParaRelatorioComOverride(lotacaoKey, null);
+  return getUltimosDadosParaRelatorioComOverride(lotacaoKey);
 }
 
-async function getUltimosDadosParaRelatorioComOverride(lotacaoKey, prfTotalOverride = null) {
+async function getUltimosDadosParaRelatorioComOverride(lotacaoKey, prfTotalOverride) {
   const queries = [getFiliadosAtivosCount(lotacaoKey)];
-  if (prfTotalOverride == null) {
+  if (typeof prfTotalOverride === "undefined") {
     queries.push(pool.query(`
       SELECT rl.year, rl.month, rl.prf_total
       FROM repasse_lotacao rl
@@ -227,8 +228,8 @@ async function getUltimosDadosParaRelatorioComOverride(lotacaoKey, prfTotalOverr
 
   const [filiadosAtivos, prfRowsResult] = await Promise.all(queries);
 
-  if (prfTotalOverride != null) {
-    const prfTotal = Number(prfTotalOverride);
+  if (typeof prfTotalOverride !== "undefined") {
+    const prfTotal = prfTotalOverride == null ? null : Number(prfTotalOverride);
     return {
       filiadosAtivos,
       prfTotal,

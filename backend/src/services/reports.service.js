@@ -86,16 +86,22 @@ async function buscarDadosAgregados(tipo, valor) {
   // Adiciona dados do Repasse se for relatório por Lotação
   if (tipo === "LOTACAO") {
     const efetivoManual = await repasseService.getEfetivoManualLotacoes();
-    const repasseData = await repasseService.getUltimosDadosParaRelatorioComOverride(valor, efetivoManual.totais[valor]);
+    const totalManual = Object.prototype.hasOwnProperty.call(efetivoManual.totais, valor)
+      ? efetivoManual.totais[valor]
+      : null;
+    const repasseData = await repasseService.getUltimosDadosParaRelatorioComOverride(valor, totalManual);
     result.repasse = repasseData;
   }
 
-  // Especial: Situação ATIVO deve consumir Repasse globalmente e por lotação
+  // Especial: Situação ATIVO consome apenas efetivo manual para % de filiação em relatórios
   if (tipo === "SITUACAO" && valor === "ATIVO") {
     const efetivoManual = await repasseService.getEfetivoManualLotacoes();
     const breakdown = [];
     for (const lot of LOTACOES_REPASSE) {
-      const repData = await repasseService.getUltimosDadosParaRelatorioComOverride(lot, efetivoManual.totais[lot]);
+      const totalManual = Object.prototype.hasOwnProperty.call(efetivoManual.totais, lot)
+        ? efetivoManual.totais[lot]
+        : null;
+      const repData = await repasseService.getUltimosDadosParaRelatorioComOverride(lot, totalManual);
       breakdown.push({ lotacao: lot, ...repData });
     }
     result.repasseBreakdown = breakdown;
