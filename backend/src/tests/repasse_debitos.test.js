@@ -80,3 +80,45 @@ describe("Repasse Service - Debitos", () => {
     });
   });
 });
+
+
+describe("retirarAlocacaoEvento", () => {
+  it("should revoke active allocation", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [{ id: 10, data_evento: '2026-05-20', data_limite_alocacao: '2099-01-01' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 90, status: 'REVOGADA' }] })
+      .mockResolvedValueOnce({});
+    const client = { query, release: jest.fn() };
+    pool.connect.mockResolvedValue(client);
+
+    const result = await repasseService.retirarAlocacaoEvento(10, 99, {});
+    expect(result.id).toBe(90);
+    expect(query).toHaveBeenCalledWith('BEGIN');
+    expect(query).toHaveBeenCalledWith('COMMIT');
+  });
+
+  it("should reject after deadline", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [{ id: 10, data_evento: '2026-05-20', data_limite_alocacao: '2020-01-01' }] })
+      .mockResolvedValueOnce({});
+    const client = { query, release: jest.fn() };
+    pool.connect.mockResolvedValue(client);
+
+    await expect(repasseService.retirarAlocacaoEvento(10, 99, {})).rejects.toThrow('Prazo para retirar alocação encerrado');
+    expect(query).toHaveBeenCalledWith('ROLLBACK');
+  });
+});
+
+describe("excluirEvento", () => {
+  it("should soft delete event with justification", async () => {
+    pool.query.mockResolvedValue({ rows: [{ id: 22, delete_reason: 'Evento cancelado' }] });
+    const result = await repasseService.excluirEvento(22, { justificativa: 'Evento cancelado' }, 1);
+    expect(result.delete_reason).toBe('Evento cancelado');
+  });
+
+  it("should reject short justification", async () => {
+    await expect(repasseService.excluirEvento(1, { justificativa: 'abc' }, 1)).rejects.toThrow('Justificativa deve ter');
+  });
+});

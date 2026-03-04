@@ -75,8 +75,29 @@ const repasseService = {
     return response.data;
   },
 
+  atualizarEvento: async (eventoId: number, payload: any): Promise<any> => {
+    const response = await apiService.put(`/api/repasse/eventos/${eventoId}`, payload);
+    return response.data;
+  },
+
   alocarMeuRecurso: async (eventoId: number): Promise<any> => {
     const response = await apiService.post(`/api/repasse/eventos/${eventoId}/alocar`);
+    return response.data;
+  },
+
+
+  retirarMinhaAlocacao: async (eventoId: number, payload?: { justificativa?: string }): Promise<any> => {
+    const response = await apiService.post(`/api/repasse/eventos/${eventoId}/desalocar`, payload || {});
+    return response.data;
+  },
+
+  retirarAlocacaoGestao: async (eventoId: number, payload: { filiado_id: number; justificativa?: string }): Promise<any> => {
+    const response = await apiService.post(`/api/repasse/eventos/${eventoId}/desalocar-gestao`, payload);
+    return response.data;
+  },
+
+  excluirEvento: async (eventoId: number, payload: { justificativa: string }): Promise<any> => {
+    const response = await apiService.delete(`/api/repasse/eventos/${eventoId}`, { data: payload });
     return response.data;
   },
 
