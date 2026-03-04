@@ -547,6 +547,22 @@ export default function RepasseScreen() {
                       ))}
                     </View>
                   ))}
+
+                  {ehGestao && alocacoesExpanded && (
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={[styles.eventMeta, { fontWeight: '700' }]}>Cancelados (somente gestão)</Text>
+                      {(resumo.alocacoesCanceladas || []).length === 0 ? (
+                        <Text style={styles.itemText}>Sem eventos cancelados.</Text>
+                      ) : (resumo.alocacoesCanceladas || []).map((grupo) => (
+                        <View key={`cancelado-${grupo.evento.id}`} style={styles.eventBox}>
+                          <Text style={styles.eventTitle}>{grupo.evento.titulo}</Text>
+                          <Text style={styles.itemText}>Motivo: {grupo.evento.delete_reason || 'Não informado'}</Text>
+                          <Text style={styles.itemText}>Cancelado por: {grupo.evento.deleted_by_nome || `ID ${grupo.evento.deleted_by_user_id || '-'}`}</Text>
+                          <Text style={styles.itemText}>Cancelado em: {formatISOToBR(grupo.evento.deleted_at || '')}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.card}>
@@ -570,9 +586,9 @@ export default function RepasseScreen() {
                 {ehGestao && (
                   <View style={styles.card}>
                     <Text style={styles.cardTitle}>Gestão de eventos</Text>
-                    {eventosTodos.length === 0 ? (
-                      <Text style={styles.itemText}>Sem eventos cadastrados.</Text>
-                    ) : eventosTodos.map((e) => (
+                    {eventosTodos.filter((e) => !e.deleted_at).length === 0 ? (
+                      <Text style={styles.itemText}>Sem eventos ativos.</Text>
+                    ) : eventosTodos.filter((e) => !e.deleted_at).map((e) => (
                       <View key={`gestao-${e.id}`} style={styles.eventBox}>
                         <Text style={styles.eventTitle}>{e.titulo}</Text>
                         <Text style={styles.eventMeta}>Status: {e.status} • Limite: {formatISOToBR(e.data_limite_alocacao)}</Text>
@@ -580,6 +596,18 @@ export default function RepasseScreen() {
                           <TouchableOpacity style={styles.editBtn} onPress={() => editarEventoGestao(e)}><Text style={styles.editBtnText}>Alternar status</Text></TouchableOpacity>
                           <TouchableOpacity style={styles.deleteBtn} onPress={() => excluirEventoGestao(e.id)}><Text style={styles.deleteBtnText}>Excluir</Text></TouchableOpacity>
                         </View>
+                      </View>
+                    ))}
+
+                    <Text style={[styles.eventMeta, { fontWeight: '700', marginTop: 10 }]}>Cancelados</Text>
+                    {eventosTodos.filter((e) => !!e.deleted_at).length === 0 ? (
+                      <Text style={styles.itemText}>Sem eventos cancelados.</Text>
+                    ) : eventosTodos.filter((e) => !!e.deleted_at).map((e) => (
+                      <View key={`gestao-cancelado-${e.id}`} style={styles.eventBox}>
+                        <Text style={styles.eventTitle}>{e.titulo}</Text>
+                        <Text style={styles.itemText}>Motivo: {e.delete_reason || 'Não informado'}</Text>
+                        <Text style={styles.itemText}>Cancelado por: {e.deleted_by_nome || `ID ${e.deleted_by_user_id || '-'}`}</Text>
+                        <Text style={styles.itemText}>Cancelado em: {formatISOToBR(e.deleted_at || '')}</Text>
                       </View>
                     ))}
                   </View>

@@ -7,6 +7,10 @@ export interface RepasseEvento {
   data_evento: string;
   data_limite_alocacao: string;
   status: string;
+  deleted_at?: string | null;
+  delete_reason?: string | null;
+  deleted_by_user_id?: number | null;
+  deleted_by_nome?: string | null;
 }
 
 export interface RepasseResumo {
@@ -26,7 +30,14 @@ export interface RepasseResumo {
   }>;
   recursoNaoAlocadoTotal: number;
   alocacoesPorEvento: Array<{
-    evento: { id: number; titulo: string; data_evento: string; data_limite_alocacao: string; status: string };
+    evento: RepasseEvento;
+    totalAlocado: number;
+    contagemAtivos: number;
+    contagemVeteranos: number;
+    itens: Array<{ filiado_id: number; nome: string; situacao: string; valorAlocado: number }>;
+  }>;
+  alocacoesCanceladas?: Array<{
+    evento: RepasseEvento;
     totalAlocado: number;
     contagemAtivos: number;
     contagemVeteranos: number;
