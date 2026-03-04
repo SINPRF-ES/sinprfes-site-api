@@ -6,6 +6,8 @@ const { enviarEmailBase } = require("../services/email.service");
 const authService = require("../services/auth.service");
 const log = require("../utils/log");
 const Textos = require ("../utils/textos"); // 🟢 TEXTOS
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
 
 function getEmailPrincipal(row) {
   if (row.email1 && row.email1.trim() !== "") return row.email1.trim();
@@ -14,11 +16,12 @@ function getEmailPrincipal(row) {
 }
 
 exports.solicitarResetSenha = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   try {
     const { cpf } = req.body || {};
 
     if (!cpf) {
-      return res.status(400).json({ error: Textos.SENHA.INFORME_CPF }); // ✨
+      return res.status(400).json({ success: false, error: Textos.SENHA.INFORME_CPF, requestId }); // ✨
     }
 
     const cpfLimpo = cpf.replace(/\D/g, "");
@@ -34,8 +37,10 @@ exports.solicitarResetSenha = async (req, res) => {
 
     if (rows.length === 0) {
       return res.json({
+        success: true,
         message: mensagemPadrao,
         email_destino: null,
+        requestId
       });
     }
 
@@ -43,10 +48,12 @@ exports.solicitarResetSenha = async (req, res) => {
     const emailDestino = getEmailPrincipal(user);
 
     if (!emailDestino) {
-      log.warn("SenhaResetSemEmail", { userId: user.id });
+      log.warn("SenhaResetSemEmail", { requestId, userId: user.id });
       return res.json({
+        success: true,
         message: Textos.SENHA.EMAIL_NAO_CADASTRADO, // ✨
         email_destino: null,
+        requestId
       });
     }
 
@@ -81,33 +88,42 @@ exports.solicitarResetSenha = async (req, res) => {
 
     await enviarEmailBase(emailDestino, subject, corpoEmail);
     
-    log.info("SenhaResetEmailEnviado", { userId: user.id, email: emailDestino });
+    log.info("SenhaResetEmailEnviado", { requestId, userId: user.id, email: emailDestino });
 
     return res.json({
+      success: true,
       message: mensagemPadrao,
       email_destino: emailDestino,
+      requestId
     });
   } catch (err) {
-    log.error("SenhaResetSolicitarErro", err);
+    log.error("SenhaResetSolicitarErro", { error: err.message, requestId });
     return res.status(500).json({
+      success: false,
       error: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, // ✨ Reutilizando esta mensagem
+      requestId
     });
   }
 };
 
 exports.resetarSenha = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   try {
     const { token, senha_nova } = req.body || {};
 
     if (!token || !senha_nova) {
       return res.status(400).json({
+        success: false,
         error: Textos.SENHA.TOKEN_E_SENHA_OBRIGATORIOS, // ✨
+        requestId
       });
     }
 
     if (senha_nova.length < 6) {
       return res.status(400).json({
+        success: false,
         error: Textos.SENHA.SENHA_MUITO_CURTA, // ✨
+        requestId
       });
     }
 
@@ -115,15 +131,19 @@ exports.resetarSenha = async (req, res) => {
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      log.warn("SenhaResetTokenInvalido", { error: err.message });
+      log.warn("SenhaResetTokenInvalido", { error: err.message, requestId });
       return res.status(400).json({
+        success: false,
         error: Textos.SENHA.TOKEN_SENHA_EXPIRADO, // ✨
+        requestId
       });
     }
 
     if (payload.tipo !== "reset-senha") {
       return res.status(400).json({
+        success: false,
         error: Textos.SENHA.TOKEN_TIPO_INVALIDO, // ✨
+        requestId
       });
     }
 
@@ -141,15 +161,14 @@ exports.resetarSenha = async (req, res) => {
     // Revoga todas as sessões ativas ao trocar a senha por segurança
     await authService.revokeAllRefreshTokens(userId, "Password Change");
 
-    log.info("SenhaAlteradaSucesso", { userId });
+    log.info("SenhaAlteradaSucesso", { requestId, userId });
 
     return res.json({
+      success: true,
       message: Textos.SUCESSO.SENHA_REDEFINIDA, // ✨
+      requestId
     });
   } catch (err) {
-    log.error("SenhaResetConfirmarErro", err);
-    return res.status(500).json({
-      error: Textos.ERROS_INTERNOS.RESET_SENHA, // ✨
-    });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.RESET_SENHA);
   }
 };

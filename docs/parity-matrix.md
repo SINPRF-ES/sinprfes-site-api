@@ -70,6 +70,7 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 
 ### Severidade 🟢 Baixa
 - **UX de Novo Filiado:** Fluxos ligeiramente diferentes entre App e Site (Tela vs Aba), mas com paridade de campos.
+- **Backend Response Standard:** All endpoints now consistently return `requestId` and `success` flags, matching the App's requirement for structured error handling.
 
 ---
 

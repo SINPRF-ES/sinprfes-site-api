@@ -6,6 +6,8 @@
 const { gerarPdfRessarcimento } = require("../services/pdf.service");
 const { enviarEmailRessarcimento } = require("../services/email.service");
 const log = require("../utils/log"); // 🟢 LOGGER
+const { v4: uuidv4 } = require("uuid");
+const { handleDbError } = require("../utils/dbError");
 
 /**
  * Controller para criação de pedido de ressarcimento.
@@ -15,6 +17,9 @@ const log = require("../utils/log"); // 🟢 LOGGER
  * - user (do middleware auth)
  */
 exports.criarRequerimento = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const atorId = req.user?.id;
+
   try {
     const usuario = req.user || {}; // id, cpf, nome, possivelmente email/email1/email2 — vindos do token
     const body = req.body || {};
@@ -80,6 +85,7 @@ exports.criarRequerimento = async (req, res) => {
 
     // 🟢 LOG SUCESSO PRELIMINAR (Recebido)
     log.info("RessarcimentoRecebido", {
+      requestId,
       filiadoId: usuario.id,
       valorTotal: pedido.valor_total,
       qtdAnexos: anexos.length,
@@ -90,6 +96,7 @@ exports.criarRequerimento = async (req, res) => {
 
     if (!pedido.email_destino) {
       log.warn("RessarcimentoSemEmailDestino", {
+        requestId,
         filiadoId: usuario.id,
       });
       // continua mesmo assim: sindicato recebe, filiado talvez não receba cópia
@@ -102,18 +109,16 @@ exports.criarRequerimento = async (req, res) => {
     await enviarEmailRessarcimento(pedido, pdfBuffer);
 
     // 🟢 LOG SUCESSO FINAL
-    log.info("RessarcimentoProcessado", { filiadoId: usuario.id });
+    log.info("RessarcimentoProcessado", { requestId, filiadoId: usuario.id });
 
     return res.status(200).json({
+      success: true,
       message: pedido.email_destino
         ? "Solicitação de ressarcimento registrada. O sindicato recebeu o pedido e uma cópia foi enviada para o seu e-mail."
         : "Solicitação de ressarcimento registrada. O sindicato recebeu o pedido (sem envio de cópia por falta de e-mail cadastrado).",
+      requestId
     });
   } catch (err) {
-    // 🔴 LOG ERRO
-    log.error("RessarcimentoErro", err);
-    return res
-      .status(500)
-      .json({ error: "Erro ao registrar pedido de ressarcimento." });
+    return handleDbError(err, res, requestId, "Erro ao registrar pedido de ressarcimento.");
   }
 };
