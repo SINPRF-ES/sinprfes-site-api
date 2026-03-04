@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
+import { COLORS } from '../theme/colors';
 
 function formatarData(data: string) {
   if (!data) return '';
@@ -168,9 +169,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EAF3FF',
+    backgroundColor: '#eaf3ff',
     borderBottomWidth: 1,
-    borderBottomColor: '#D6E6FF',
+    borderBottomColor: '#c7def6',
   },
   avatar: {
     width: 64,
@@ -188,12 +189,12 @@ const styles = StyleSheet.create({
   },
   subInfo: {
     fontSize: 13,
-    color: '#666',
+    color: COLORS.textMuted,
     marginTop: 2,
   },
   perfil: {
     fontWeight: '700',
-    color: '#003366',
+    color: COLORS.prfBlue,
     fontSize: 11,
     letterSpacing: 0.5,
   },
@@ -202,12 +203,12 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#e2e8f0',
     marginVertical: 10,
   },
   sectionHeader: {
     fontWeight: 'bold',
-    color: '#003366',
+    color: COLORS.prfBlue,
     marginLeft: -16, // Alinha com o texto dos outros itens
   },
   closeAppContainer: {
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   closeAppButton: {
-    backgroundColor: '#003366',
+    backgroundColor: COLORS.prfBlue,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   closeAppButtonText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: 'bold',
     fontSize: 16,
   },

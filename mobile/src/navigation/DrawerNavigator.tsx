@@ -3,6 +3,8 @@ import { TouchableOpacity, Text } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 
+import { COLORS } from '../theme/colors';
+
 import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
@@ -51,16 +53,16 @@ export default function DrawerNavigator() {
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={({ navigation }) => ({
-        headerTintColor: '#fff',
-        headerStyle: { backgroundColor: '#003366' },
+        headerTintColor: COLORS.white,
+        headerStyle: { backgroundColor: COLORS.prfBlue },
         headerTitleAlign: 'center',
         headerLeft: () => (
           <TouchableOpacity
             onPress={() => navigation.toggleDrawer()}
             style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}
           >
-            <Ionicons name="menu" size={26} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', marginLeft: 4 }}>Menu</Text>
+            <Ionicons name="menu" size={26} color={COLORS.white} />
+            <Text style={{ color: COLORS.white, fontSize: 12, fontWeight: 'bold', marginLeft: 4 }}>Menu</Text>
           </TouchableOpacity>
         ),
       })}

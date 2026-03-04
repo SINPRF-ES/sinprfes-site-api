@@ -10,6 +10,8 @@
   --ui-primary-contrast: #ffffff;
   --ui-secondary: #ffcc00;
   --ui-secondary-contrast: #003366;
+  --ui-sindicato-blue: #1f6fb2;
+  --ui-sindicato-pink: #e83e8c;
   --ui-danger: #dc3545;
   --ui-success: #28a745;
   --ui-warning: #ffc107;
@@ -289,4 +291,20 @@ a:hover {
   .logo-text small {
     display: none;
   }
+}
+
+
+.section-title {
+  color: var(--ui-primary);
+  text-align: center;
+  margin-bottom: var(--ui-space-2);
+}
+
+.section-subtitle {
+  text-align: center;
+  color: var(--ui-text-muted);
+}
+
+.btn-row {
+  justify-content: center;
 }

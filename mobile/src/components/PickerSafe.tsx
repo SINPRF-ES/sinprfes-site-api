@@ -3,10 +3,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle, Platform, Modal, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { Picker, PickerProps } from '@react-native-picker/picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { COLORS } from '../theme/colors';
+
+type PickerSafeItem = { label: string; value: any };
 
 interface PickerSafeProps extends Omit<PickerProps, 'onValueChange'> {
   label?: string;
-  items?: { label: string; value: any }[];
+  items?: PickerSafeItem[];
   containerStyle?: ViewStyle;
   labelStyle?: TextStyle;
   pickerBoxStyle?: ViewStyle;
@@ -37,9 +40,9 @@ export const PickerSafe: React.FC<PickerSafeProps> & { Item: typeof Picker.Item 
     return null;
   })?.filter(Boolean) || [];
 
-  const selectedItem = resolvedItems.find(i => i.value === selectedValue);
+  const selectedItem = resolvedItems.find((i: PickerSafeItem) => i.value === selectedValue);
 
-  const handleSelect = (item: any, index: number) => {
+  const handleSelect = (item: PickerSafeItem, index: number) => {
     if (onValueChange) {
       onValueChange(item.value, index);
     }
@@ -56,10 +59,10 @@ export const PickerSafe: React.FC<PickerSafeProps> & { Item: typeof Picker.Item 
         disabled={!enabled}
         activeOpacity={0.7}
       >
-        <Text style={[styles.selectedValueText, !selectedItem && styles.placeholderText]} numberOfLines={1}>
+        <Text style={[styles.selectedValueText, !selectedItem && styles.placeholderText]} numberOfLines={2}>
           {selectedItem ? selectedItem.label : (pickerProps.prompt || 'Selecione...')}
         </Text>
-        <MaterialCommunityIcons name="chevron-down" size={20} color="#666" />
+        <MaterialCommunityIcons name="chevron-down" size={20} color={COLORS.textMuted} />
       </TouchableOpacity>
 
       <Modal
@@ -77,7 +80,7 @@ export const PickerSafe: React.FC<PickerSafeProps> & { Item: typeof Picker.Item 
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{label || 'Selecione uma opção'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#666" />
+                <MaterialCommunityIcons name="close" size={24} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -99,7 +102,7 @@ export const PickerSafe: React.FC<PickerSafeProps> & { Item: typeof Picker.Item 
                     {item.label}
                   </Text>
                   {item.value === selectedValue && (
-                    <MaterialCommunityIcons name="check" size={20} color="#003366" />
+                    <MaterialCommunityIcons name="check" size={20} color={COLORS.prfBlue} />
                   )}
                 </TouchableOpacity>
               )}
@@ -129,9 +132,9 @@ const styles = StyleSheet.create({
   pickerBox: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORS.border,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -139,20 +142,22 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   disabled: {
-    backgroundColor: '#f5f5f5',
-    borderColor: '#eee',
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
   },
   selectedValueText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: COLORS.text,
     flex: 1,
+    lineHeight: 20,
+    paddingRight: 8,
   },
   placeholderText: {
-    color: '#999',
+    color: '#94a3b8',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -160,7 +165,7 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxHeight: Dimensions.get('window').height * 0.7,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     borderRadius: 15,
     padding: 15,
     elevation: 5,
@@ -180,8 +185,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#003366',
+    fontWeight: '700',
+    color: COLORS.prfBlue,
   },
   list: {
     width: '100%',
@@ -196,17 +201,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f9f9f9',
   },
   selectedItemRow: {
-    backgroundColor: '#f0f4f8',
+    backgroundColor: '#eaf3ff',
   },
   itemLabel: {
     fontSize: 16,
-    color: '#444',
+    color: COLORS.text,
     flex: 1,
     marginRight: 10,
   },
   selectedItemLabel: {
-    color: '#003366',
-    fontWeight: 'bold',
+    color: COLORS.prfBlue,
+    fontWeight: '700',
   },
 });
 

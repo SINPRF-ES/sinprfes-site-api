@@ -514,3 +514,35 @@ footer {
         padding-inline: clamp(12px, 2vw, 20px);
     }
 }
+
+
+.af-standard-header h2,
+.af-section h2 {
+    text-align: center;
+    color: var(--ui-primary);
+}
+
+.af-standard-header .section-subtitle {
+    text-align: center;
+    color: var(--ui-text-muted);
+}
+
+.af-nav-item.active {
+    background: linear-gradient(90deg, var(--ui-secondary), #ffd84d);
+    color: var(--ui-secondary-contrast);
+}
+
+.ui-button-secondary,
+.btn-primary {
+    box-shadow: 0 2px 8px rgba(255, 204, 0, 0.35);
+}
+
+.ui-button-outline {
+    border-color: var(--ui-sindicato-blue);
+    color: var(--ui-sindicato-blue);
+}
+
+.ui-button-outline:hover {
+    background-color: var(--ui-sindicato-blue);
+    color: var(--ui-primary-contrast);
+}

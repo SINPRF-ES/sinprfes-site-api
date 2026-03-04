@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { COLORS } from '../theme/colors';
 
 const { height } = Dimensions.get('window');
 
@@ -62,7 +63,7 @@ export default function HeaderMenu({ actions }: Props) {
     <View>
       <TouchableOpacity onPress={openSheet} style={styles.anchor}>
         <View style={styles.triggerWithLabel}>
-          <MaterialCommunityIcons name="dots-vertical" size={24} color="#fff" />
+          <MaterialCommunityIcons name="dots-vertical" size={24} color={COLORS.white} />
           <Text style={styles.label}>Opções</Text>
         </View>
       </TouchableOpacity>
@@ -106,7 +107,7 @@ export default function HeaderMenu({ actions }: Props) {
                         <MaterialCommunityIcons
                           name={item.icon as any}
                           size={26}
-                          color={item.isDestructive ? '#fff' : '#003366'}
+                          color={item.isDestructive ? COLORS.white : COLORS.prfBlue}
                           style={styles.menuIcon}
                         />
                       )}
@@ -143,24 +144,24 @@ const styles = StyleSheet.create({
   triggerWithLabel: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   label: {
-    color: '#fff',
+    color: COLORS.white,
     fontSize: 12,
     fontWeight: 'bold',
     marginLeft: 2,
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'flex-end',
   },
   bottomSheet: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
     ...Platform.select({
       ios: {
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     }),
   },
   destructiveItem: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: COLORS.sindicatoPink,
   },
   menuIcon: {
     marginRight: 15,
@@ -212,10 +213,10 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.text,
   },
   destructiveText: {
-    color: '#fff',
+    color: COLORS.white,
   },
   cancelButton: {
     marginTop: 20,
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.textMuted,
     fontWeight: 'bold',
   },
 });
