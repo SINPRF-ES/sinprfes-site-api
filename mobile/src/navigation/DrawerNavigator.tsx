@@ -80,8 +80,8 @@ export default function DrawerNavigator() {
         name="Noticias"
         component={NoticiasScreen}
         options={{
-          title: 'Notícias',
-          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.NOTICIAS} label="Notícias" {...props} />,
+          title: 'Informes',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.NOTICIAS} label="Informes" {...props} />,
         }}
       />
 

@@ -546,3 +546,18 @@ footer {
     background-color: var(--ui-sindicato-blue);
     color: var(--ui-primary-contrast);
 }
+
+/* Melhorias de contraste para páginas públicas */
+.public-page {
+  color: var(--ui-text);
+}
+
+.public-card {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.public-card .section-subtitle,
+.public-page p {
+  color: #334155;
+}

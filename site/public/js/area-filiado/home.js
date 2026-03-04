@@ -14,7 +14,7 @@
 
         const actions = [
             { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: '👤', target: 'sec-meus-dados' },
-            { label: 'Notícias', subtitle: 'Avisos e comunicados', icon: '📰', target: 'sec-noticias' },
+            { label: 'Informes', subtitle: 'Avisos e comunicados', icon: '📰', target: 'sec-noticias' },
             { label: 'Assembleias', subtitle: 'Votações e sessões', icon: '🗳️', target: 'sec-assembleias' },
             { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: '👥', target: 'sec-filiados' },
             { label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: '📚', target: 'sec-publicacoes' },

@@ -57,7 +57,7 @@
 
         <div class="af-sidebar-nav" role="tablist" aria-orientation="vertical">
           <button class="af-nav-item active" data-target="sec-home" id="nav-home" role="tab" aria-selected="true" aria-controls="sec-home"><span aria-hidden="true">🏠</span> Página Inicial</button>
-          <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" role="tab" aria-selected="false" aria-controls="sec-noticias"><span aria-hidden="true">📰</span> Notícias</button>
+          <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" role="tab" aria-selected="false" aria-controls="sec-noticias"><span aria-hidden="true">📰</span> Informes</button>
           <button class="af-nav-item" data-target="sec-meus-dados" id="nav-meus-dados" role="tab" aria-selected="false" aria-controls="sec-meus-dados"><span aria-hidden="true">👤</span> Meus Dados</button>
           <button class="af-nav-item" data-target="sec-filiados" id="nav-filiados" role="tab" aria-selected="false" aria-controls="sec-filiados"><span aria-hidden="true">👥</span> Filiados</button>
           <button class="af-nav-item" data-target="sec-publicacoes" id="nav-publicacoes" role="tab" aria-selected="false" aria-controls="sec-publicacoes"><span aria-hidden="true">📚</span> Publicações</button>
@@ -160,24 +160,19 @@
         </section>
 
         <section id="sec-noticias" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-noticias">
-          <!-- Conteúdo carregado via NoticiasAdmin -->
+          <!-- Conteúdo carregado via Informes (módulo interno autenticado) -->
         </section>
 
         <section id="sec-cms" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-cms">
           <div class="ui-card">
               <div class="af-standard-header">
                   <h2>Gerenciar Conteúdo do Site</h2>
-                  <p class="section-subtitle">Edite os blocos de informação da Home e Notícias.</p>
+                  <p class="section-subtitle">Edite apenas conteúdo externo do site público (Início e Notícias).</p>
               </div>
 
-              <div class="field-row" style="max-width: 300px; margin: 0 auto;">
-                  <div class="field-group">
-                      <label>Selecionar Página</label>
-                      <select id="cms-page-selector">
-                          <option value="home">Início (Home)</option>
-                          <option value="noticias">Notícias</option>
-                      </select>
-                  </div>
+              <div class="field-row" style="justify-content:center; gap:10px; margin: 0 auto;">
+                  <button type="button" id="cms-page-home" class="ui-button ui-button-outline">Editar Início (Home)</button>
+                  <button type="button" id="cms-page-noticias" class="ui-button ui-button-outline">Editar Notícias</button>
               </div>
 
               <div id="cms-blocks-admin" style="margin-top:20px; display: flex; flex-direction: column; gap: 20px;">

@@ -30,7 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: 'account-details-outline', screen: 'MeusDados' },
   { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados' },
   { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao' },
-  { label: 'Notícias', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
+  { label: 'Informes', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
 ];
 
 export default function HomeScreen({ navigation }: Props) {

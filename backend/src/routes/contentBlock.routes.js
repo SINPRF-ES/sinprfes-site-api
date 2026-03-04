@@ -15,4 +15,10 @@ router.put("/:id",
   contentBlockController.updateBlock
 );
 
+router.post("/upload-signature",
+  authMiddleware,
+  requirePermission("EDIT_CONTENT"),
+  contentBlockController.obterAssinaturaUpload
+);
+
 module.exports = router;

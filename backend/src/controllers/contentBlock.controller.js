@@ -1,6 +1,7 @@
 // src/controllers/contentBlock.controller.js
 const fs = require('fs');
 const fsPromises = require('fs').promises;
+const cloudinary = require('../services/cloudinary.service');
 const path = require('path');
 
 // Basic sanitization
@@ -112,6 +113,24 @@ const writeDataAtomic = async (data) => {
   }
 };
 
+
+const obterAssinaturaUpload = async (req, res) => {
+  try {
+    const { folder, tags } = req.body || {};
+    const params = {
+      folder: folder || 'sinprfes/avatars/cms',
+      tags: tags || 'cms,site-publico',
+      timestamp: Math.floor(Date.now() / 1000)
+    };
+
+    const signatureData = cloudinary.gerarAssinaturaUpload(params);
+    return res.json({ success: true, ...signatureData, folder: params.folder, tags: params.tags });
+  } catch (err) {
+    console.error('Erro ao gerar assinatura CMS:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao gerar assinatura de upload' });
+  }
+};
+
 const getBlocks = async (req, res) => {
   const { page, includeInactive } = req.query;
   try {
@@ -187,5 +206,6 @@ const updateBlock = async (req, res) => {
 
 module.exports = {
   getBlocks,
-  updateBlock
+  updateBlock,
+  obterAssinaturaUpload
 };

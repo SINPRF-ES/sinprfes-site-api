@@ -20,14 +20,14 @@
             <div class="ui-card">
                 <div class="af-standard-header" style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:20px;">
                     <div>
-                        <h2 style="margin:0;">📰 Gerenciar Notícias</h2>
+                        <h2 style="margin:0;">📰 Gerenciar Informes</h2>
                         <p class="section-subtitle">Crie e publique informes para os filiados.</p>
                     </div>
-                    ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary" style="margin-top:10px;">+ Nova Notícia</button>` : ''}
+                    ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary" style="margin-top:10px;">+ Novo Informe</button>` : ''}
                 </div>
 
                 <div id="lista-noticias-admin" class="noticias-grid">
-                    <p style="text-align:center; padding:40px; color:#666;">Carregando notícias...</p>
+                    <p style="text-align:center; padding:40px; color:#666;">Carregando informes...</p>
                 </div>
             </div>
         `;
@@ -49,7 +49,7 @@
                 cacheNoticias = await r.json();
                 renderizarLista();
             } else {
-                listaEl.innerHTML = `<p style="color:red; text-align:center;">Erro ao carregar notícias.</p>`;
+                listaEl.innerHTML = `<p style="color:red; text-align:center;">Erro ao carregar informes.</p>`;
             }
         } catch (e) {
             listaEl.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão.</p>`;
@@ -59,7 +59,7 @@
     function renderizarLista() {
         const listaEl = document.getElementById("lista-noticias-admin");
         if (!listaEl || !cacheNoticias.length) {
-            listaEl.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">Nenhuma notícia encontrada.</p>`;
+            listaEl.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">Nenhum informe encontrado.</p>`;
             return;
         }
 
@@ -108,7 +108,7 @@
         const tituloEl = document.getElementById("modal-generic-titulo");
         const corpoEl = document.getElementById("modal-generic-corpo");
 
-        tituloEl.textContent = id ? "Editar Notícia" : "Nova Notícia";
+        tituloEl.textContent = id ? "Editar Informe" : "Novo Informe";
 
         if (window.Utils?.lockScroll) window.Utils.lockScroll();
 
@@ -154,7 +154,7 @@
                     ${id ? `<button type="button" class="btn btn-danger-outline btn-sm" onclick="NoticiasAdmin.deletarNoticia('${id}')">🗑️ Excluir</button>` : '<div></div>'}
                     <div style="display:flex; gap:10px;">
                         <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
-                        <button type="submit" id="btn-salvar-noticia" class="ui-button ui-button-secondary">Salvar Notícia</button>
+                        <button type="submit" id="btn-salvar-noticia" class="ui-button ui-button-secondary">Salvar Informe</button>
                     </div>
                 </div>
             </form>
@@ -206,7 +206,7 @@
                     await carregarNoticias();
                 } else {
                     const err = await r.json();
-                    alert(err.message || "Erro ao salvar notícia.");
+                    alert(err.message || "Erro ao salvar informe.");
                 }
             } catch (err) {
                 alert("Erro de conexão.");
