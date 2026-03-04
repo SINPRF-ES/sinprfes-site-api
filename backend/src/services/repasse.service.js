@@ -548,7 +548,10 @@ async function alocarEmEvento(eventoId, filiadoId) {
 
     await client.query(`
       UPDATE repasse_evento_alocacoes
-      SET status = $3, revogado_em = NOW()
+      SET status = $3,
+          revogado_em = NOW(),
+          revogado_motivo = 'Realocação automática para novo evento',
+          revogado_por_user_id = $2
       WHERE ano_ref = $1
         AND filiado_id = $2
         AND status = $4
@@ -570,9 +573,12 @@ async function alocarEmEvento(eventoId, filiadoId) {
   }
 }
 
-async function retirarAlocacaoEvento(eventoId, filiadoId, payload = {}) {
+async function retirarAlocacaoEvento(eventoId, filiadoId, payload = {}, atorId = null) {
   const motivo = String(payload?.justificativa || payload?.motivo || '').trim();
   const ignorarPrazo = Boolean(payload?.ignorarPrazo);
+  if (motivo.length < 5 || motivo.length > 1000) {
+    throw new Error('Justificativa deve ter entre 5 e 1000 caracteres.');
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -589,19 +595,18 @@ async function retirarAlocacaoEvento(eventoId, filiadoId, payload = {}) {
     const ano = getAnoFromDate(evento.data_evento);
     const revoked = await client.query(`
       UPDATE repasse_evento_alocacoes
-      SET status = $4, revogado_em = NOW()
+      SET status = $4,
+          revogado_em = NOW(),
+          revogado_motivo = $6,
+          revogado_por_user_id = $7
       WHERE ano_ref = $1
         AND evento_id = $2
         AND filiado_id = $3
         AND status = $5
       RETURNING *
-    `, [ano, eventoId, filiadoId, STATUS_ALOCACAO.REVOGADA, STATUS_ALOCACAO.ATIVA]);
+    `, [ano, eventoId, filiadoId, STATUS_ALOCACAO.REVOGADA, STATUS_ALOCACAO.ATIVA, motivo, atorId || filiadoId]);
 
     if (!revoked.rows.length) throw new Error('Alocação ativa não encontrada para este filiado no evento informado.');
-
-    if (motivo && motivo.length > 1000) {
-      throw new Error('Justificativa deve ter no máximo 1000 caracteres.');
-    }
 
     await client.query('COMMIT');
     return revoked.rows[0];
@@ -638,11 +643,13 @@ async function excluirEvento(id, payload, userId) {
     await client.query(`
       UPDATE repasse_evento_alocacoes
       SET status = $3,
-          revogado_em = NOW()
+          revogado_em = NOW(),
+          revogado_motivo = $5,
+          revogado_por_user_id = $4
       WHERE ano_ref = $1
         AND evento_id = $2
-        AND status = $4
-    `, [ano, id, STATUS_ALOCACAO.REVOGADA, STATUS_ALOCACAO.ATIVA]);
+        AND status = $6
+    `, [ano, id, STATUS_ALOCACAO.REVOGADA, userId, `Evento cancelado: ${motivo}`, STATUS_ALOCACAO.ATIVA]);
 
     const { rows } = await client.query(`
       UPDATE repasse_eventos

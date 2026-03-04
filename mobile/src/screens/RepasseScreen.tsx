@@ -51,6 +51,8 @@ export default function RepasseScreen() {
   const [modalDeleteEventoVisible, setModalDeleteEventoVisible] = useState(false);
   const [deleteEventoId, setDeleteEventoId] = useState(0);
   const [deleteEventoJustificativa, setDeleteEventoJustificativa] = useState('');
+  const [modalCancelAlocacaoVisible, setModalCancelAlocacaoVisible] = useState(false);
+  const [cancelAlocacaoForm, setCancelAlocacaoForm] = useState({ eventoId: 0, filiadoId: 0, nome: '', justificativa: '', gestao: false });
   const [isFocusedScreen, setIsFocusedScreen] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = useRef(false);
@@ -230,9 +232,28 @@ export default function RepasseScreen() {
     }
   };
 
-  const retirarMinhaAlocacao = async (eventoId: number) => {
+  const abrirRetiradaMinhaAlocacao = (eventoId: number) => {
+    setCancelAlocacaoForm({ eventoId, filiadoId: Number(usuario?.id || 0), nome: usuario?.nome || 'Meu recurso', justificativa: '', gestao: false });
+    setModalCancelAlocacaoVisible(true);
+  };
+
+  const abrirRetiradaGestaoAlocacao = (eventoId: number, filiadoId: number, nome: string) => {
+    if (!ehGestao) return;
+    setCancelAlocacaoForm({ eventoId, filiadoId, nome, justificativa: '', gestao: true });
+    setModalCancelAlocacaoVisible(true);
+  };
+
+  const confirmarRetiradaAlocacao = async () => {
+    const justificativa = cancelAlocacaoForm.justificativa.trim();
+    if (justificativa.length < 5) return;
+
     try {
-      await repasseService.retirarMinhaAlocacao(eventoId);
+      if (cancelAlocacaoForm.gestao) {
+        await repasseService.retirarAlocacaoGestao(cancelAlocacaoForm.eventoId, { filiado_id: cancelAlocacaoForm.filiadoId, justificativa });
+      } else {
+        await repasseService.retirarMinhaAlocacao(cancelAlocacaoForm.eventoId, { justificativa });
+      }
+      setModalCancelAlocacaoVisible(false);
       Alert.alert('Sucesso', 'Alocação retirada com sucesso.');
       await refreshNow({ showLoading: false });
     } catch (error: any) {
@@ -542,9 +563,19 @@ export default function RepasseScreen() {
                       <Text style={styles.eventTitle}>{grupo.evento.titulo}</Text>
                       <Text style={styles.eventMeta}>Evento: {formatISOToBR(grupo.evento.data_evento)} • Limite: {formatISOToBR(grupo.evento.data_limite_alocacao)}</Text>
                       <Text style={styles.eventTotal}>Total alocado: {formatCurrency(grupo.totalAlocado)}</Text>
-                      {grupo.itens.length === 0 ? <Text style={styles.itemText}>Sem alocações.</Text> : grupo.itens.map((i) => (
-                        <Text key={`${grupo.evento.id}-${i.filiado_id}`} style={styles.itemText}>• {i.nome} ({i.situacao}) — {formatCurrency(i.valorAlocado)}</Text>
-                      ))}
+                      {grupo.itens.length === 0 ? <Text style={styles.itemText}>Sem alocações.</Text> : grupo.itens.map((i) => {
+                        const filiadoId = Number(i.filiado_id || i.filiadoId || 0);
+                        return (
+                          <View key={`${grupo.evento.id}-${filiadoId}-${i.nome}`} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                            <Text style={[styles.itemText, { flex: 1 }]}>• {i.nome} ({i.situacao}) — {formatCurrency(i.valorAlocado)}</Text>
+                            {ehGestao && filiadoId > 0 && (
+                              <TouchableOpacity style={styles.deleteBtn} onPress={() => abrirRetiradaGestaoAlocacao(grupo.evento.id, filiadoId, i.nome)}>
+                                <Text style={styles.deleteBtnText}>Cancelar</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        );
+                      })}
                     </View>
                   ))}
 
@@ -575,7 +606,7 @@ export default function RepasseScreen() {
                         <TouchableOpacity style={[styles.listBtn, { flex: 1, marginTop: 0 }]} onPress={() => alocarMeuRecurso(e.id)}>
                           <Text style={styles.listBtnText}>{e.titulo} • limite {formatISOToBR(e.data_limite_alocacao)}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.deleteBtn} onPress={() => retirarMinhaAlocacao(e.id)}>
+                        <TouchableOpacity style={styles.deleteBtn} onPress={() => abrirRetiradaMinhaAlocacao(e.id)}>
                           <Text style={styles.deleteBtnText}>Retirar</Text>
                         </TouchableOpacity>
                       </View>
@@ -616,6 +647,34 @@ export default function RepasseScreen() {
             )}
           </View>
         </ScrollView>
+
+
+        {/* Modal Cancelar Alocação */}
+        <Modal visible={modalCancelAlocacaoVisible} transparent animationType="fade" onRequestClose={() => setModalCancelAlocacaoVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Cancelar alocação</Text>
+              <Text style={styles.modalSubtitle}>{cancelAlocacaoForm.gestao ? `Filiado: ${cancelAlocacaoForm.nome}` : 'Sua própria alocação'}</Text>
+              <TextInput
+                style={[styles.input, { height: 90 }]}
+                placeholder="Informe a justificativa"
+                multiline
+                value={cancelAlocacaoForm.justificativa}
+                onChangeText={(v) => setCancelAlocacaoForm((p) => ({ ...p, justificativa: v }))}
+              />
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalCancelAlocacaoVisible(false)}><Text style={styles.cancelBtnText}>Cancelar</Text></TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveBtn, cancelAlocacaoForm.justificativa.trim().length < 5 && { opacity: 0.5 }]}
+                  disabled={cancelAlocacaoForm.justificativa.trim().length < 5}
+                  onPress={confirmarRetiradaAlocacao}
+                >
+                  <Text style={styles.saveBtnText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Modal Lançar Débito */}
         <Modal visible={modalDebitoVisible} transparent animationType="fade" onRequestClose={() => setModalDebitoVisible(false)}>

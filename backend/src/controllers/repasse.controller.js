@@ -188,7 +188,7 @@ async function retirarMinhaAlocacao(req, res) {
   if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
   try {
-    const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), atorId, req.body || {});
+    const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), atorId, req.body || {}, atorId);
     log.info("RepasseRetirarMinhaAlocacaoSucesso", { requestId, atorId, eventoId: req.params.id });
     res.json({ success: true, alocacao, requestId });
   } catch (err) {
@@ -210,7 +210,7 @@ async function retirarAlocacaoGestao(req, res) {
     const alocacao = await repasseService.retirarAlocacaoEvento(Number(req.params.id), filiadoId, {
       ...req.body,
       ignorarPrazo: true,
-    });
+    }, atorId);
     log.info("RepasseRetirarAlocacaoGestaoSucesso", { requestId, atorId, eventoId: req.params.id, filiadoId });
     res.json({ success: true, alocacao, requestId });
   } catch (err) {

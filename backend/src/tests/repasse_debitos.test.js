@@ -92,12 +92,16 @@ describe("retirarAlocacaoEvento", () => {
     const client = { query, release: jest.fn() };
     pool.connect.mockResolvedValue(client);
 
-    const result = await repasseService.retirarAlocacaoEvento(10, 99, {});
+    const result = await repasseService.retirarAlocacaoEvento(10, 99, { justificativa: 'Solicitação do filiado' }, 99);
     expect(result.id).toBe(90);
     expect(query).toHaveBeenCalledWith('BEGIN');
     expect(query).toHaveBeenCalledWith('COMMIT');
   });
 
+
+  it("should require justification", async () => {
+    await expect(repasseService.retirarAlocacaoEvento(10, 99, { justificativa: 'abc' }, 99)).rejects.toThrow('Justificativa deve ter entre 5 e 1000 caracteres.');
+  });
   it("should reject after deadline", async () => {
     const query = jest.fn()
       .mockResolvedValueOnce({})
@@ -106,7 +110,7 @@ describe("retirarAlocacaoEvento", () => {
     const client = { query, release: jest.fn() };
     pool.connect.mockResolvedValue(client);
 
-    await expect(repasseService.retirarAlocacaoEvento(10, 99, {})).rejects.toThrow('Prazo para retirar alocação encerrado');
+    await expect(repasseService.retirarAlocacaoEvento(10, 99, { justificativa: 'Solicitação do filiado' }, 99)).rejects.toThrow('Prazo para retirar alocação encerrado');
     expect(query).toHaveBeenCalledWith('ROLLBACK');
   });
 });

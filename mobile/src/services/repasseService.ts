@@ -34,14 +34,14 @@ export interface RepasseResumo {
     totalAlocado: number;
     contagemAtivos: number;
     contagemVeteranos: number;
-    itens: Array<{ filiado_id: number; nome: string; situacao: string; valorAlocado: number }>;
+    itens: Array<{ filiado_id?: number; filiadoId?: number; nome: string; situacao: string; valorAlocado: number }>;
   }>;
   alocacoesCanceladas?: Array<{
     evento: RepasseEvento;
     totalAlocado: number;
     contagemAtivos: number;
     contagemVeteranos: number;
-    itens: Array<{ filiado_id: number; nome: string; situacao: string; valorAlocado: number }>;
+    itens: Array<{ filiado_id?: number; filiadoId?: number; nome: string; situacao: string; valorAlocado: number }>;
   }>;
 }
 

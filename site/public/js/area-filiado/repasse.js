@@ -486,7 +486,13 @@
         const content = !alocacoesExpanded
             ? ''
             : (grupos.map((g) => {
-                const itens = (g.itens || []).map((i) => `<li>${i.nome} (${i.situacao}) — ${formatCurrency(i.valorAlocado)}</li>`).join('') || '<li>Sem alocações</li>';
+                const itens = (g.itens || []).map((i) => {
+                    const filiadoId = Number(i.filiado_id || i.filiadoId || 0);
+                    const botaoGestao = ehGestao() && filiadoId
+                        ? ` <button class="ui-btn ui-btn-sm" style="background:#b42318;" onclick="Repasse.retirarAlocacaoGestao(${g.evento.id}, ${filiadoId}, '${String(i.nome || '').replace(/'/g, "\'")}')">Cancelar</button>`
+                        : '';
+                    return `<li>${i.nome} (${i.situacao}) — ${formatCurrency(i.valorAlocado)}${botaoGestao}</li>`;
+                }).join('') || '<li>Sem alocações</li>';
                 return `
                     <div class="repasse-evento-box">
                         <div class="repasse-evento-title">${g.evento.titulo}</div>
@@ -533,6 +539,7 @@
                 ? `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                     <select id="repasse-evento-select">${options}</select>
                     <button class="ui-btn" onclick="Repasse.alocarMeuRecurso()">Alocar</button>
+                    <button class="ui-btn" style="background:#667085;" onclick="Repasse.retirarMinhaAlocacao()">Retirar minha alocação</button>
                   </div>`
                 : '<p>Sem eventos abertos no momento.</p>'}
             </div>
@@ -806,7 +813,6 @@
     }
 
     async function alocarMeuRecurso() {
-        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
         const select = document.getElementById('repasse-evento-select');
         if (!select || !select.value) return;
         const resp = await window.Api.apiFetch(`/api/repasse/eventos/${select.value}/alocar`, { method: 'POST' });
@@ -816,6 +822,53 @@
             return;
         }
         alert('Recurso alocado com sucesso.');
+        await refreshNow({ showLoading: false });
+    }
+
+
+    async function retirarMinhaAlocacao() {
+        const select = document.getElementById('repasse-evento-select');
+        if (!select || !select.value) return;
+        const justificativa = (prompt('Informe a justificativa para retirar sua alocação (mínimo 5 caracteres):') || '').trim();
+        if (justificativa.length < 5) {
+            alert('Justificativa deve ter no mínimo 5 caracteres.');
+            return;
+        }
+
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${select.value}/desalocar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ justificativa })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Falha ao retirar alocação.');
+            return;
+        }
+        alert('Alocação retirada com sucesso.');
+        await refreshNow({ showLoading: false });
+    }
+
+
+    async function retirarAlocacaoGestao(eventoId, filiadoId, nome) {
+        if (!ehGestao()) { alert('Ação permitida apenas para gestão.'); return; }
+        const justificativa = (prompt(`Informe a justificativa para cancelar a alocação de ${nome || 'filiado'} (mínimo 5 caracteres):`) || '').trim();
+        if (justificativa.length < 5) {
+            alert('Justificativa deve ter no mínimo 5 caracteres.');
+            return;
+        }
+
+        const resp = await window.Api.apiFetch(`/api/repasse/eventos/${eventoId}/desalocar-gestao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filiado_id: filiadoId, justificativa })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || 'Falha ao cancelar alocação.');
+            return;
+        }
+        alert('Alocação cancelada com sucesso.');
         await refreshNow({ showLoading: false });
     }
 
@@ -1132,6 +1185,8 @@
         criarEvento,
         buscarResponsaveis,
         alocarMeuRecurso,
+        retirarMinhaAlocacao,
+        retirarAlocacaoGestao,
         toggleAlocacoes,
         abrirModalDebito,
         fecharModalDebito,
