@@ -101,3 +101,46 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+
+async function renderCmsBlocksPublic(page, mountSelector) {
+  const mount = document.querySelector(mountSelector);
+  if (!mount) return;
+
+  try {
+    const API_BASE = (window.Utils && window.Utils.resolveApiBase)
+      ? window.Utils.resolveApiBase()
+      : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || '').replace(/\/+$/, '');
+
+    if (!API_BASE) return;
+
+    const response = await fetch(`${API_BASE}/api/content-blocks?page=${encodeURIComponent(page)}`);
+    if (!response.ok) return;
+
+    const blocks = await response.json();
+    if (!Array.isArray(blocks) || blocks.length === 0) return;
+
+    mount.innerHTML = blocks.map((block) => {
+      const title = window.Utils?.escapeHTML ? window.Utils.escapeHTML(block.title || '') : (block.title || '');
+      const body = block.body || '';
+      const media = block.media_url
+        ? (block.media_type === 'video'
+          ? `<video controls style="width:100%; border-radius:8px; margin-bottom:12px;"><source src="${block.media_url}" /></video>`
+          : `<img src="${block.media_url}" alt="${title}" style="width:100%; max-height:420px; object-fit:cover; border-radius:8px; margin-bottom:12px;" />`)
+        : '';
+      return `
+        <section class="ui-card public-card" style="margin-top: var(--ui-space-4);">
+          ${title ? `<h2 class="section-title"><span>${title}</span></h2>` : ''}
+          ${media}
+          ${body ? `<div class="section-box" style="background: var(--ui-bg); padding: var(--ui-space-3); border-radius: var(--ui-radius);">${body}</div>` : ''}
+        </section>
+      `;
+    }).join('');
+  } catch (err) {
+    console.warn('Falha ao carregar CMS público:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderCmsBlocksPublic('home', '#cms-home-blocks');
+});
