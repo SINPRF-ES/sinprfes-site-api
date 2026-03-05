@@ -1,5 +1,28 @@
 // public/js/noticias-site.js
 
+
+async function renderCmsNewsBlocks(API_BASE, mountEl) {
+  if (!mountEl || !API_BASE) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/content-blocks?page=noticias`);
+    if (!response.ok) return;
+    const blocks = await response.json();
+    if (!Array.isArray(blocks) || blocks.length === 0) return;
+
+    mountEl.innerHTML = blocks.map((block) => {
+      const title = window.Utils?.escapeHTML ? window.Utils.escapeHTML(block.title || '') : (block.title || '');
+      const media = block.media_url
+        ? (block.media_type === 'video'
+          ? `<video controls style="width:100%; border-radius:8px; margin-bottom:12px;"><source src="${block.media_url}" /></video>`
+          : `<img src="${block.media_url}" alt="${title}" style="width:100%; max-height:380px; object-fit:cover; border-radius:8px; margin-bottom:12px;" />`)
+        : '';
+      return `<section class="ui-card" style="margin-bottom: var(--ui-space-4);">${title ? `<h2 style="margin-bottom:10px;">${title}</h2>` : ''}${media}${block.body ? `<div>${block.body}</div>` : ''}</section>`;
+    }).join('');
+  } catch (err) {
+    console.warn('Falha ao carregar blocos de notícias do CMS:', err);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const API_BASE = (window.Utils && window.Utils.resolveApiBase)
     ? window.Utils.resolveApiBase()
@@ -12,6 +35,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const h1 = newsContainer.querySelector("h1");
   newsContainer.innerHTML = "";
   if (h1) newsContainer.appendChild(h1);
+
+  const cmsContainer = document.createElement("div");
+  cmsContainer.id = "cms-news-blocks";
+  newsContainer.appendChild(cmsContainer);
+
+  await renderCmsNewsBlocks(API_BASE, cmsContainer);
 
   const loadingEl = document.createElement("p");
   loadingEl.textContent = "Carregando notícias...";

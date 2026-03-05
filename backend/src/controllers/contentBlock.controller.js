@@ -19,6 +19,54 @@ const sanitizeBody = (html) => {
 
 const DATA_PATH = path.join(__dirname, '../../data/content_blocks.json');
 
+const DEFAULT_BLOCKS = [
+  {
+    id: '1',
+    page: 'home',
+    ordenacao: 1,
+    title: 'Bem-vindo ao SINPRF-ES',
+    body: 'Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo.',
+    media_type: 'image',
+    media_url: '',
+    is_active: true,
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '2',
+    page: 'home',
+    ordenacao: 2,
+    title: 'Ações e Informes',
+    body: 'Acompanhe as ações institucionais e os principais informes aos filiados.',
+    media_type: 'image',
+    media_url: '',
+    is_active: false,
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'news-1',
+    page: 'noticias',
+    ordenacao: 1,
+    title: 'Destaque de Notícias',
+    body: 'Espaço para bloco de apoio à página de notícias.',
+    media_type: 'image',
+    media_url: '',
+    is_active: true,
+    updated_at: new Date().toISOString()
+  }
+];
+
+function ensureDefaultBlocks(blocks) {
+  if (!Array.isArray(blocks)) return [...DEFAULT_BLOCKS];
+  const merged = [...blocks];
+  const ids = new Set(merged.map((b) => String(b.id)));
+  for (const block of DEFAULT_BLOCKS) {
+    if (!ids.has(String(block.id))) {
+      merged.push({ ...block, updated_at: new Date().toISOString() });
+    }
+  }
+  return merged;
+}
+
 // Simple memory mutex to prevent concurrent writes
 let isWriting = false;
 const waitLock = () => new Promise(resolve => {
@@ -41,60 +89,15 @@ const releaseLock = () => {
 const readData = () => {
   try {
     if (!fs.existsSync(DATA_PATH)) {
-      // Initial seeds
-      const initialData = [
-        {
-          id: 'home-1',
-          page: 'home',
-          ordenacao: 1,
-          title: 'Vigilância em Foco',
-          body: 'Acompanhe as últimas ações de patrulhamento e segurança nas rodovias federais do Espírito Santo.',
-          media_type: 'image',
-          media_url: 'img/prf-hero.jpg',
-          is_active: true,
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: 'home-2',
-          page: 'home',
-          ordenacao: 2,
-          title: 'Modernização da Frota',
-          body: 'Novas viaturas equipadas com tecnologia de ponta chegam para reforçar o trabalho dos nossos policiais.',
-          media_type: 'image',
-          media_url: 'img/prf-vtr.jpg',
-          is_active: true,
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: 'home-3',
-          page: 'home',
-          ordenacao: 3,
-          title: 'Treinamento Tático',
-          body: 'Policiais participam de capacitação avançada em abordagem e operações especiais.',
-          media_type: 'image',
-          media_url: 'img/prf-treino.jpg',
-          is_active: true,
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: 'news-1',
-          page: 'noticias',
-          ordenacao: 1,
-          title: 'Nova Sede Inaugurada',
-          body: 'O sindicato agora conta com uma sede moderna para melhor atender todos os filiados.',
-          media_type: 'image',
-          media_url: 'img/brasao.png',
-          is_active: true,
-          updated_at: new Date().toISOString()
-        }
-      ];
+      const initialData = ensureDefaultBlocks([]);
       if (!fs.existsSync(path.dirname(DATA_PATH))) {
         fs.mkdirSync(path.dirname(DATA_PATH), { recursive: true });
       }
       fs.writeFileSync(DATA_PATH, JSON.stringify(initialData, null, 2));
       return initialData;
     }
-    return JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
+    return ensureDefaultBlocks(data);
   } catch (err) {
     console.error("CRITICAL: Erro ao ler ou parsear JSON de blocos de conteúdo:", err);
     throw new Error("Erro ao carregar dados do CMS (JSON Corrompido)");

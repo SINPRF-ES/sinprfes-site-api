@@ -3,17 +3,13 @@ const log = require("../utils/log");
 const cloudinary = require("../services/cloudinary.service");
 const { v4: uuidv4 } = require("uuid");
 const { handleDbError } = require("../utils/dbError");
+const { parseUuid } = require("../utils/parseUuid");
 
 const PERFIS_GESTAO = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
 
 function parseNoticiaId(req, res, requestId) {
-    const raw = String(req.params.id || "").trim();
-    if (!/^\d+$/.test(raw)) {
-        res.status(400).json({ success: false, message: "ID de notícia inválido.", requestId });
-        return null;
-    }
-    const id = Number(raw);
-    if (!Number.isSafeInteger(id) || id <= 0) {
+    const id = parseUuid(String(req.params.id || ""));
+    if (!id) {
         res.status(400).json({ success: false, message: "ID de notícia inválido.", requestId });
         return null;
     }
@@ -388,8 +384,8 @@ exports.adicionarMidia = async (req, res) => {
 exports.removerMidia = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
-  const midiaId = String(req.params.midiaId || "").trim();
-  if (!/^\d+$/.test(midiaId)) {
+  const midiaId = parseUuid(String(req.params.midiaId || ""));
+  if (!midiaId) {
       return res.status(400).json({ success: false, message: "ID de mídia inválido.", requestId });
   }
 
