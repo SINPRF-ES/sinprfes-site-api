@@ -85,7 +85,7 @@ export default function NoticiasScreen() {
 
     if (ehGestaoNoticias) {
       actions.push({
-        label: 'Criar notícia',
+        label: 'Criar informe',
         onPress: () => navigation.navigate('NoticiaEditor', { newsId: null }),
         icon: 'plus'
       });
@@ -106,7 +106,7 @@ export default function NoticiasScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#003366" />
-        <Text style={styles.loadingText}>Carregando notícias...</Text>
+        <Text style={styles.loadingText}>Carregando informes...</Text>
       </View>
     );
   }
@@ -115,7 +115,7 @@ export default function NoticiasScreen() {
     return (
       <View style={styles.centered}>
         <FontAwesome name="exclamation-circle" size={50} color="#d32f2f" />
-        <Text style={styles.errorText}>Erro ao carregar notícias.</Text>
+        <Text style={styles.errorText}>Erro ao carregar informes.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryText}>Tentar novamente</Text>
         </TouchableOpacity>
@@ -135,7 +135,7 @@ export default function NoticiasScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhuma notícia encontrada.</Text>
+            <Text style={styles.emptyText}>Nenhum informe encontrado.</Text>
           </View>
         }
       />

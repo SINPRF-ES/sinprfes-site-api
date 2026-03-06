@@ -56,7 +56,7 @@ export default function NoticiaEditorScreen() {
       setStatus(data.status);
       setMidias(data.midias || []);
     } catch (err) {
-      Alert.alert('Erro', 'Não foi possível carregar a notícia.');
+      Alert.alert('Erro', 'Não foi possível carregar o informe.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -79,9 +79,9 @@ export default function NoticiaEditorScreen() {
         navigation.setParams({ newsId: created.id });
       }
       queryClient.invalidateQueries({ queryKey: ['noticias'] });
-      Alert.alert('Sucesso', 'Notícia salva com sucesso.');
+      Alert.alert('Sucesso', 'Informe salvo com sucesso.');
     } catch (err) {
-      Alert.alert('Erro', 'Erro ao salvar notícia.');
+      Alert.alert('Erro', 'Erro ao salvar informe.');
     } finally {
       setSaving(false);
     }
@@ -89,11 +89,11 @@ export default function NoticiaEditorScreen() {
 
   const handlePublish = async () => {
     if (!newsId) {
-      Alert.alert('Aviso', 'Salve a notícia como rascunho antes de publicar.');
+      Alert.alert('Aviso', 'Salve o informe como rascunho antes de publicar.');
       return;
     }
 
-    Alert.alert('Confirmar', 'Deseja publicar esta notícia agora?', [
+    Alert.alert('Confirmar', 'Deseja publicar este informe agora?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Publicar',
@@ -103,9 +103,9 @@ export default function NoticiaEditorScreen() {
             await publicarNoticia(newsId);
             setStatus('PUBLICADA');
             queryClient.invalidateQueries({ queryKey: ['noticias'] });
-            Alert.alert('Sucesso', 'Notícia publicada!');
+            Alert.alert('Sucesso', 'Informe publicado!');
           } catch (err) {
-            Alert.alert('Erro', 'Erro ao publicar notícia.');
+            Alert.alert('Erro', 'Erro ao publicar informe.');
           } finally {
             setSaving(false);
           }
@@ -115,7 +115,7 @@ export default function NoticiaEditorScreen() {
   };
 
   const handleDelete = async () => {
-    Alert.alert('Confirmar', 'Deseja EXCLUIR permanentemente esta notícia?', [
+    Alert.alert('Confirmar', 'Deseja EXCLUIR permanentemente este informe?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
@@ -127,7 +127,7 @@ export default function NoticiaEditorScreen() {
             queryClient.invalidateQueries({ queryKey: ['noticias'] });
             navigation.goBack();
           } catch (err) {
-            Alert.alert('Erro', 'Erro ao excluir notícia.');
+            Alert.alert('Erro', 'Erro ao excluir informe.');
           } finally {
             setSaving(false);
           }
@@ -167,7 +167,7 @@ export default function NoticiaEditorScreen() {
 
   const uploadMidia = async (asset: any, isCapa: boolean) => {
     if (!newsId) {
-      Alert.alert('Aviso', 'Salve a notícia primeiro para poder adicionar mídias.');
+      Alert.alert('Aviso', 'Salve o informe primeiro para poder adicionar mídias.');
       return;
     }
 
@@ -214,7 +214,7 @@ export default function NoticiaEditorScreen() {
     <SafeScreen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{newsId ? 'Editar Notícia' : 'Nova Notícia'}</Text>
+          <Text style={styles.headerTitle}>{newsId ? 'Editar Informe' : 'Novo Informe'}</Text>
           {status === 'PUBLICADA' && (
             <View style={styles.publishedBadge}>
               <Text style={styles.publishedText}>PUBLICADA</Text>
@@ -228,7 +228,7 @@ export default function NoticiaEditorScreen() {
             style={styles.input}
             value={titulo}
             onChangeText={setTitulo}
-            placeholder="Digite o título da notícia"
+            placeholder="Digite o título do informe"
           />
 
           <Text style={styles.label}>Conteúdo (Markdown suportado)</Text>
@@ -236,13 +236,13 @@ export default function NoticiaEditorScreen() {
             style={[styles.input, styles.textArea]}
             value={conteudo}
             onChangeText={setConteudo}
-            placeholder="Digite o conteúdo da notícia..."
+            placeholder="Digite o conteúdo do informe..."
             multiline
             numberOfLines={10}
             textAlignVertical="top"
           />
 
-          <Text style={styles.label}>Capa da Notícia</Text>
+          <Text style={styles.label}>Capa do Informe</Text>
           {capaUrl ? (
             <View style={styles.capaPreviewContainer}>
               <Image source={{ uri: capaUrl }} style={styles.capaPreview} />
@@ -292,7 +292,7 @@ export default function NoticiaEditorScreen() {
 
           {newsId && (
             <TouchableOpacity style={[styles.btn, styles.btnDelete]} onPress={handleDelete} disabled={saving}>
-              <Text style={styles.btnText}>Excluir Notícia</Text>
+              <Text style={styles.btnText}>Excluir Informe</Text>
             </TouchableOpacity>
           )}
         </View>

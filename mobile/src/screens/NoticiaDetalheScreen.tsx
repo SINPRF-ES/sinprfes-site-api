@@ -10,9 +10,9 @@ import SafeScreen from '../components/SafeScreen';
 
 const { width } = Dimensions.get('window');
 
-export default function NoticiaDetalheScreen({ route }: any) {
+export default function NoticiaDetalheScreen({ route, navigation }: any) {
   const { newsId } = route.params;
-  const { token } = useAuth();
+  const { token, usuario } = useAuth();
 
   const { data: noticia, isLoading, isError, refetch } = useQuery({
     queryKey: ['noticia', newsId],
@@ -43,7 +43,7 @@ export default function NoticiaDetalheScreen({ route }: any) {
   if (isError || !noticia) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Erro ao carregar os detalhes da notícia.</Text>
+        <Text style={styles.errorText}>Erro ao carregar os detalhes do informe.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryText}>Tentar novamente</Text>
         </TouchableOpacity>

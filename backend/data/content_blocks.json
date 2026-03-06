@@ -6,7 +6,7 @@
     "is_active": true,
     "ordenacao": 1,
     "body": "<p>Hello</p>",
-    "updated_at": "2026-03-04T03:11:42.964Z",
+    "updated_at": "2026-03-06T02:38:21.218Z",
     "updated_by": 1
   },
   {
@@ -15,5 +15,16 @@
     "title": "T2",
     "is_active": false,
     "ordenacao": 2
+  },
+  {
+    "id": "news-1",
+    "page": "noticias",
+    "ordenacao": 1,
+    "title": "Destaque de Notícias",
+    "body": "Espaço para bloco de apoio à página de notícias.",
+    "media_type": "image",
+    "media_url": "",
+    "is_active": true,
+    "updated_at": "2026-03-06T02:38:21.217Z"
   }
 ]
