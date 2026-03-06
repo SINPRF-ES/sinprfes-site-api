@@ -106,6 +106,7 @@ const publicacoesRoutes = require("./routes/publicacoes.routes");
 const noticiasRoutes = require("./routes/noticias.routes");
 const informesRoutes = require("./routes/informes.routes");
 const repasseRoutes = require("./routes/repasse.routes");
+const adminInstagramIntegrationRoutes = require("./routes/adminInstagramIntegration.routes");
 
 // 🟣 NOVO: Rota de Votações
 const votacoesRoutes = require("./routes/votacoes.routes");
@@ -144,8 +145,9 @@ app.use("/api/ressarcimentos", ressarcimentoRoutes);
 // Jogos
 app.use("/api/jogos", jogosRoutes);
 
-// Instagram (Feed público via RSS)
+// Instagram (Feed público + integração oficial Meta)
 app.use("/api/public", require("./routes/publicInstagramFeed"));
+app.use("/api/admin/integrations/instagram", adminInstagramIntegrationRoutes);
 
 // Publicações
 app.use("/api/publicacoes", publicacoesRoutes);
