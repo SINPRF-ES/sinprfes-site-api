@@ -41,7 +41,7 @@
                 .total-label { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
                 .total-value { font-size: 2rem; font-weight: bold; margin-top: 5px; }
                 .file-upload-wrapper { border: 2px dashed #ccc; padding: 30px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #fff; display: block; }
-                .file-upload-wrapper:hover { border-color: #003366; background: #f8fbff; }
+                .file-upload-wrapper:hover, .file-upload-wrapper:focus-within { border-color: #003366; background: #f8fbff; outline: none; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.2); }
                 .upload-icon { font-size: 2.5rem; color: #003366; margin-bottom: 10px; }
                 .upload-text { font-weight: bold; color: #333; }
                 .upload-hint { font-size: 0.8rem; color: #777; margin-top: 5px; }
@@ -125,11 +125,11 @@
 
                 <div class="res-card">
                     <h3>📎 Comprovantes</h3>
-                    <label class="file-upload-wrapper">
-                        <div class="upload-icon">📂</div>
+                    <label class="file-upload-wrapper" role="button" tabindex="0" aria-label="Anexar documentos de comprovação (PDF, JPG ou PNG)">
+                        <div class="upload-icon" aria-hidden="true">📂</div>
                         <div class="upload-text">Anexar Documentos</div>
                         <div class="upload-hint">PDF, JPG ou PNG</div>
-                        <input type="file" id="res-anexos" name="anexos" multiple style="display:none;">
+                        <input type="file" id="res-anexos" name="anexos" multiple style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
                     </label>
                     <div id="file-list" style="margin-top:10px; text-align:center;"></div>
                 </div>
@@ -186,13 +186,13 @@
             }
 
             fileList.innerHTML = `
-                <div style="margin-top: 15px; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <div style="margin-top: 15px; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #ddd;" role="region" aria-label="Lista de arquivos anexados">
                     <p style="font-weight: bold; margin-bottom: 10px; color: #003366;">✅ ${selectedFiles.length} arquivo(s) selecionado(s):</p>
                     <ul style="list-style: none; padding: 0; margin: 0;">
                         ${selectedFiles.map((f, i) => `
                             <li style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee;">
                                 <span style="font-size: 0.9rem; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">${f.name}</span>
-                                <button type="button" class="btn-remove-file" data-index="${i}" style="background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.8rem;">Remover</button>
+                                <button type="button" class="btn-remove-file" data-index="${i}" aria-label="Remover arquivo ${f.name}" style="background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.8rem;">Remover</button>
                             </li>
                         `).join("")}
                     </ul>
@@ -206,6 +206,16 @@
                     renderFileList();
                 };
             });
+        }
+
+        const fileWrapper = document.querySelector(".file-upload-wrapper");
+        if (fileWrapper) {
+            fileWrapper.onkeydown = (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    inputFile.click();
+                }
+            };
         }
 
         inputFile.onchange = () => {
@@ -272,9 +282,10 @@
 
         form.onsubmit = async (e) => {
             e.preventDefault();
-            const btn = form.querySelector("button");
+            const btn = form.querySelector("button[type='submit']");
             const status = document.getElementById("res-status");
             btn.disabled = true;
+            btn.setAttribute("aria-busy", "true");
             status.textContent = "🚀 Enviando...";
 
             const fd = new FormData(form);
@@ -302,6 +313,7 @@
                 status.textContent = "❌ Erro de conexão.";
             } finally {
                 btn.disabled = false;
+                btn.removeAttribute("aria-busy");
             }
         };
 
