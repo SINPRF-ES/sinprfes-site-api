@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const noticiasController = require("../controllers/noticias.controller");
 const authMiddleware = require("../middlewares/auth");
+const optionalAuth = require("../middlewares/optionalAuth");
 const requirePermission = require("../middlewares/requirePermission");
 const multer = require("multer");
 
@@ -11,8 +12,8 @@ const upload = multer({
 });
 
 // Leitura
-router.get("/", authMiddleware, noticiasController.listar);
-router.get("/:id", authMiddleware, noticiasController.detalhar);
+router.get("/", optionalAuth, noticiasController.listar);
+router.get("/:id", optionalAuth, noticiasController.detalhar);
 
 // Gestão
 router.post("/",

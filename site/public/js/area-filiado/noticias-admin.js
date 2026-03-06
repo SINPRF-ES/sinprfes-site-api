@@ -48,7 +48,7 @@
         if (!listaEl) return;
 
         try {
-            const r = await window.Api.apiFetch("/api/noticias");
+            const r = await window.Api.apiFetch("/api/noticias?audiencia=INTERNA");
             if (r.ok) {
                 cacheNoticias = await r.json();
                 renderizarLista();
