@@ -102,8 +102,12 @@
     }
 
     function formatarConteudoHtml(conteudo) {
+        if (window.InformesRenderer?.renderInformesMarkdown) {
+            return window.InformesRenderer.renderInformesMarkdown(conteudo);
+        }
+
         const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
-        return safeEscape(conteudo || '').replace(/\n/g, '<br>');
+        return `<p>${safeEscape(conteudo || '')}</p>`;
     }
 
     async function abrirVisualizacaoNoticia(id) {

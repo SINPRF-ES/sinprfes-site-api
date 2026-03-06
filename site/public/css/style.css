@@ -561,3 +561,44 @@ footer {
 .public-page p {
   color: #334155;
 }
+
+/* Informes markdown parity with mobile app */
+.informe-markdown,
+.markdown-body {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #444;
+}
+
+.informe-markdown p,
+.markdown-body p {
+  margin: 8px 0;
+}
+
+.informe-markdown h1,
+.markdown-body h1,
+.informe-markdown h2,
+.markdown-body h2,
+.informe-markdown h3,
+.markdown-body h3 {
+  color: #333;
+  margin: 10px 0;
+  line-height: 1.3;
+}
+
+.informe-markdown ul,
+.markdown-body ul,
+.informe-markdown ol,
+.markdown-body ol {
+  margin: 8px 0 8px 24px;
+}
+
+.informe-markdown li,
+.markdown-body li {
+  margin: 4px 0;
+}
+
+.informe-markdown strong,
+.markdown-body strong {
+  font-weight: 700;
+}
