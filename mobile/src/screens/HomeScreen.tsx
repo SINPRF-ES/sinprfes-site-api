@@ -24,12 +24,13 @@ type NavItem = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   screen: keyof DrawerParamList;
   requireGestao?: boolean;
+  hiddenForComunicador?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: 'account-details-outline', screen: 'MeusDados' },
-  { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados' },
-  { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao' },
+  { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados', hiddenForComunicador: true },
+  { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao', hiddenForComunicador: true },
   { label: 'Informes', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
 ];
 
@@ -38,7 +39,8 @@ export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
   const ehGestaoUsuario = isGestao(usuario?.perfil_acesso);
-  const displayedItems = NAV_ITEMS.filter((i) => !i.requireGestao || ehGestaoUsuario);
+  const isComunicador = (usuario?.perfil_acesso || '').toUpperCase() === 'COMUNICADOR';
+  const displayedItems = NAV_ITEMS.filter((i) => (!i.requireGestao || ehGestaoUsuario) && !(isComunicador && i.hiddenForComunicador));
 
   const primeiroNome = String(usuario?.nome || 'Filiado').trim().split(' ')[0];
 
@@ -51,7 +53,7 @@ export default function HomeScreen({ navigation }: Props) {
           <MemberCard member={usuario} variant="default" />
         </View>
 
-        {ENABLE_JOGOS && (
+        {ENABLE_JOGOS && !isComunicador && (
           <View style={styles.banners}>
             <JogosBanner />
           </View>

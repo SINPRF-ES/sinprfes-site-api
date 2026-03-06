@@ -77,15 +77,20 @@
       const p = (info.perfil_acesso || info.perfil || "FILIADO").toUpperCase();
       const perms = info.permissions || [];
       const hasPerm = (perm) => perms.includes("*") || perms.includes(perm);
+      const isComunicador = p === "COMUNICADOR";
 
       const abasConfig = [
-        { id: "nav-repasse", visivel: true },
+        { id: "nav-filiados", visivel: !isComunicador },
+        { id: "nav-publicacoes", visivel: !isComunicador },
+        { id: "nav-jogos", visivel: !isComunicador },
+        { id: "nav-assembleias", visivel: !isComunicador },
+        { id: "nav-repasse", visivel: !isComunicador },
         { id: "nav-noticias", visivel: true },
         { id: "nav-cms", visivel: hasPerm('EDIT_CONTENT') },
         { id: "nav-notificacoes", visivel: hasPerm('PUSH_GERENCIAR') },
         { id: "nav-diagnostico", visivel: hasPerm('PUSH_GERENCIAR') },
         { id: "nav-relatorios", visivel: hasPerm('RELATORIOS_VER') },
-        { id: "nav-novo-filiado", visivel: hasPerm('CREATE_FILIADO') }
+        { id: "nav-novo-filiado", visivel: !isComunicador && hasPerm('CREATE_FILIADO') }
       ];
 
       abasConfig.forEach((aba) => {
