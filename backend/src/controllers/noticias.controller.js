@@ -22,6 +22,12 @@ function verificarGestao(req) {
   return PERFIS_GESTAO.includes(perfil);
 }
 
+function resolverAudienciaEscopo(req, fallback) {
+  const fromScope = req.audienciaEscopo ? String(req.audienciaEscopo).toUpperCase() : null;
+  if (fromScope && AUDIENCIAS_VALIDAS.includes(fromScope)) return fromScope;
+  return fallback;
+}
+
 exports.listar = async (req, res) => {
   const start = Date.now();
   const method = "GET";
@@ -37,6 +43,7 @@ exports.listar = async (req, res) => {
   try {
     const { status, audiencia } = req.query;
     const audienciaNorm = audiencia ? String(audiencia).toUpperCase() : null;
+    const audienciaEscopo = resolverAudienciaEscopo(req, null);
     const isGestao = verificarGestao(req);
     const isAutenticado = Boolean(req.user?.id);
 
@@ -78,16 +85,24 @@ exports.listar = async (req, res) => {
     `;
 
     if (!isAutenticado) {
-      query += " WHERE n.status = 'PUBLICADA' AND n.audiencia = 'PUBLICA'";
+      const audienciaLeitura = resolverAudienciaEscopo(req, "PUBLICA");
+      params.push(audienciaLeitura);
+      query += ` WHERE n.status = 'PUBLICADA' AND n.audiencia = $${params.length}`;
     } else if (!isGestao) {
-      query += " WHERE n.status = 'PUBLICADA' AND n.audiencia = 'INTERNA'";
+      const audienciaLeitura = resolverAudienciaEscopo(req, "INTERNA");
+      params.push(audienciaLeitura);
+      query += ` WHERE n.status = 'PUBLICADA' AND n.audiencia = $${params.length}`;
     } else {
       query += " WHERE 1=1";
+      if (audienciaEscopo) {
+        params.push(audienciaEscopo);
+        query += ` AND n.audiencia = $${params.length}`;
+      }
       if (status) {
         params.push(status.toUpperCase());
         query += ` AND n.status = $${params.length}`;
       }
-      if (audienciaNorm) {
+      if (audienciaNorm && !audienciaEscopo) {
         params.push(audienciaNorm);
         query += ` AND n.audiencia = $${params.length}`;
       }
@@ -182,12 +197,15 @@ exports.detalhar = async (req, res) => {
     const noticia = newsRows[0];
     const isGestao = verificarGestao(req);
     const isAutenticado = Boolean(req.user?.id);
+    const audienciaEscopo = resolverAudienciaEscopo(req, null);
 
     const podeVisualizar = !isAutenticado
       ? noticia.status === "PUBLICADA" && noticia.audiencia === "PUBLICA"
       : (isGestao || (noticia.status === "PUBLICADA" && noticia.audiencia === "INTERNA"));
 
-    if (!podeVisualizar) {
+    const respeitaEscopo = !audienciaEscopo || noticia.audiencia === audienciaEscopo;
+
+    if (!podeVisualizar || !respeitaEscopo) {
       return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
     }
 
@@ -223,7 +241,7 @@ exports.criar = async (req, res) => {
 
   try {
     const { titulo, conteudo, capa_url, audiencia } = req.body;
-    const audienciaFinal = audiencia ? String(audiencia).toUpperCase() : "INTERNA";
+    const audienciaFinal = resolverAudienciaEscopo(req, audiencia ? String(audiencia).toUpperCase() : "INTERNA");
 
     if (!titulo || !conteudo) {
       return res.status(400).json({ success: false, message: "Título e conteúdo são obrigatórios.", requestId });
@@ -267,7 +285,8 @@ exports.atualizar = async (req, res) => {
 
   try {
     const { titulo, conteudo, capa_url, status, audiencia } = req.body;
-    const audienciaFinal = audiencia ? String(audiencia).toUpperCase() : null;
+    const audienciaEscopo = resolverAudienciaEscopo(req, null);
+    const audienciaFinal = audienciaEscopo || (audiencia ? String(audiencia).toUpperCase() : null);
 
     if (audienciaFinal && !AUDIENCIAS_VALIDAS.includes(audienciaFinal)) {
       return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });

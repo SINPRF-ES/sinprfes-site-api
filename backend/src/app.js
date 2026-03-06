@@ -105,6 +105,7 @@ const eventoVotacoesRoutes = require("./routes/eventoVotacoes.routes");
 // 🟢 Rota de Publicações (Google Drive)
 const publicacoesRoutes = require("./routes/publicacoes.routes");
 const noticiasRoutes = require("./routes/noticias.routes");
+const informesRoutes = require("./routes/informes.routes");
 const repasseRoutes = require("./routes/repasse.routes");
 
 // 🟣 NOVO: Rota de Votações
@@ -150,6 +151,7 @@ app.use("/api/instagram", instagramRoutes);
 // Publicações
 app.use("/api/publicacoes", publicacoesRoutes);
 app.use("/api/noticias", noticiasRoutes);
+app.use("/api/informes", informesRoutes);
 
 // 💱 NOVO: Repasse
 app.use("/api/repasse", repasseRoutes);

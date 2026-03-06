@@ -48,7 +48,7 @@
         if (!listaEl) return;
 
         try {
-            const r = await window.Api.apiFetch("/api/noticias?audiencia=INTERNA");
+            const r = await window.Api.apiFetch("/api/informes");
             if (r.ok) {
                 cacheNoticias = await r.json();
                 renderizarLista();
@@ -121,7 +121,7 @@
         let noticia = cacheNoticias.find(n => n.id === id);
 
         try {
-            const r = await window.Api.apiFetch(`/api/noticias/${id}`);
+            const r = await window.Api.apiFetch(`/api/informes/${id}`);
             if (r.ok) noticia = await r.json();
         } catch (e) { }
 
@@ -181,7 +181,7 @@
 
         if (id) {
             try {
-                const r = await window.Api.apiFetch(`/api/noticias/${id}`);
+                const r = await window.Api.apiFetch(`/api/informes/${id}`);
                 if (r.ok) noticia = await r.json();
             } catch (e) { console.error("Erro ao carregar detalhe", e); }
         }
@@ -277,7 +277,7 @@
             };
 
             try {
-                const url = id ? `/api/noticias/${id}` : "/api/noticias";
+                const url = id ? `/api/informes/${id}` : "/api/informes";
                 const method = id ? "PUT" : "POST";
                 const r = await window.Api.apiFetch(url, { method, body: payload });
 
@@ -311,7 +311,7 @@
             formData.append('file', file);
             formData.append('tipo', tipo);
 
-            const r = await window.Api.apiFetch(`/api/noticias/${noticiaId}/midias`, {
+            const r = await window.Api.apiFetch(`/api/informes/${noticiaId}/midias`, {
                 method: 'POST',
                 body: formData
             });
@@ -323,7 +323,7 @@
 
                 if (isCapa) {
                     // Atualiza a capa da notícia com a URL recém obtida
-                    await window.Api.apiFetch(`/api/noticias/${noticiaId}`, {
+                    await window.Api.apiFetch(`/api/informes/${noticiaId}`, {
                         method: 'PUT',
                         body: { capa_url: midia.url }
                     });
@@ -343,7 +343,7 @@
     async function removerMidia(midiaId, noticiaId) {
         if (!confirm("Remover esta mídia?")) return;
         try {
-            const r = await window.Api.apiFetch(`/api/noticias/midias/${midiaId}`, { method: 'DELETE' });
+            const r = await window.Api.apiFetch(`/api/informes/midias/${midiaId}`, { method: 'DELETE' });
             if (r.ok) {
                 abrirModalNoticia(noticiaId);
             }
@@ -358,7 +358,7 @@
 
         if (!confirm("Deseja publicar esta notícia agora? Ela ficará visível para todos.")) return;
         try {
-            const r = await window.Api.apiFetch(`/api/noticias/${id}/publicar`, { method: "POST" });
+            const r = await window.Api.apiFetch(`/api/informes/${id}/publicar`, { method: "POST" });
             if (r.ok) {
                 await carregarNoticias();
             } else {
@@ -375,7 +375,7 @@
 
         if (!confirm("Tem certeza que deseja EXCLUIR permanentemente esta notícia?")) return;
         try {
-            const r = await window.Api.apiFetch(`/api/noticias/${id}`, { method: "DELETE" });
+            const r = await window.Api.apiFetch(`/api/informes/${id}`, { method: "DELETE" });
             if (r.ok) {
                 if (window.Utils?.fecharModal) window.Utils.fecharModal("modal-generic");
                 else document.getElementById("modal-generic").style.display = "none";
