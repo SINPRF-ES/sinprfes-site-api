@@ -4,6 +4,8 @@ const CACHE_TIME = 15 * 60 * 1000;
 const MAX_POSTS = 5;
 const USERNAME = "sinprfes";
 const REQUEST_TIMEOUT_MS = 8000;
+const ERROR_RETRY_BACKOFF_MS = 2 * 60 * 1000;
+const ERROR_LOG_THROTTLE_MS = 5 * 60 * 1000;
 
 const RSSHUB_BASE_URLS = [
   "https://rsshub.app",
@@ -14,6 +16,11 @@ const RSSHUB_BASE_URLS = [
 let cache = {
   timestamp: 0,
   data: null,
+};
+
+let fetchState = {
+  nextRetryAt: 0,
+  lastUnavailableLogAt: 0,
 };
 
 function decodeXml(value = "") {
@@ -64,7 +71,7 @@ async function fetchFeedFromBase(baseUrl) {
   const rssUrl = `${baseUrl}/instagram/user/${USERNAME}`;
   const response = await fetch(rssUrl, {
     headers: {
-      "User-Agent": "SINPRFES-InstagramFeed/1.1",
+      "User-Agent": "SINPRFES-InstagramFeed/1.2",
       Accept: "application/rss+xml, application/xml, text/xml",
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -82,23 +89,36 @@ async function fetchFeedFromBase(baseUrl) {
 }
 
 async function fetchFeed() {
-  let lastError = null;
+  const failures = [];
 
   for (const baseUrl of RSSHUB_BASE_URLS) {
     try {
       const posts = await fetchFeedFromBase(baseUrl);
+
+      if (failures.length > 0) {
+        log.info("InstagramRssRecoveredWithFallback", {
+          successBaseUrl: baseUrl,
+          previousFailures: failures,
+        });
+      }
+
       return posts;
     } catch (err) {
-      lastError = err;
-      log.warn("InstagramRssSourceFailed", {
+      failures.push({
         baseUrl,
-        errorMessage: err?.message || String(err),
         status: err?.status || null,
+        errorMessage: err?.message || String(err),
       });
     }
   }
 
-  throw lastError || new Error("instagram_rss_unavailable");
+  const error = new Error("instagram_rss_unavailable");
+  error.failures = failures;
+  throw error;
+}
+
+function shouldLogUnavailable(now) {
+  return now - fetchState.lastUnavailableLogAt >= ERROR_LOG_THROTTLE_MS;
 }
 
 async function getInstagramFeed() {
@@ -106,6 +126,10 @@ async function getInstagramFeed() {
 
   if (cache.data && now - cache.timestamp < CACHE_TIME) {
     return cache.data;
+  }
+
+  if (fetchState.nextRetryAt && now < fetchState.nextRetryAt) {
+    return cache.data || [];
   }
 
   try {
@@ -116,13 +140,23 @@ async function getInstagramFeed() {
       data: posts,
     };
 
+    fetchState = {
+      nextRetryAt: 0,
+      lastUnavailableLogAt: fetchState.lastUnavailableLogAt,
+    };
+
     return posts;
   } catch (err) {
-    log.warn("InstagramRssUnavailable", {
-      errorMessage: err?.message || String(err),
-      status: err?.status || null,
-      usedCachedData: Boolean(cache.data),
-    });
+    fetchState.nextRetryAt = now + ERROR_RETRY_BACKOFF_MS;
+
+    if (shouldLogUnavailable(now)) {
+      fetchState.lastUnavailableLogAt = now;
+      log.warn("InstagramRssUnavailable", {
+        usedCachedData: Boolean(cache.data),
+        nextRetryInMs: ERROR_RETRY_BACKOFF_MS,
+        failures: Array.isArray(err?.failures) ? err.failures : [],
+      });
+    }
 
     if (cache.data) {
       return cache.data;
