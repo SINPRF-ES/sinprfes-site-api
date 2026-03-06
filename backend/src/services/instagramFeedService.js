@@ -5,6 +5,7 @@ const MAX_POSTS = 5;
 const USERNAME = "sinprfes";
 const REQUEST_TIMEOUT_MS = 8000;
 const ERROR_RETRY_BACKOFF_MS = 2 * 60 * 1000;
+const RATE_LIMIT_BACKOFF_MS = Number(process.env.INSTAGRAM_RATE_LIMIT_BACKOFF_MS || 15 * 60 * 1000);
 const ERROR_LOG_THROTTLE_MS = 5 * 60 * 1000;
 
 const DEFAULT_RSSHUB_BASE_URLS = [
@@ -19,6 +20,8 @@ const RSSHUB_BASE_URLS = (
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
+
+const RSSHUB_ROUTE_TEMPLATE = process.env.INSTAGRAM_RSSHUB_ROUTE_TEMPLATE || "/instagram/user/:username";
 
 let cache = {
   timestamp: 0,
@@ -74,11 +77,17 @@ function parseRssItems(xml) {
     .filter((post) => post.link);
 }
 
+function buildRssUrl(baseUrl) {
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const path = RSSHUB_ROUTE_TEMPLATE.replace(":username", USERNAME).replace(/^\/+/, "");
+  return `${normalizedBase}/${path}`;
+}
+
 async function fetchFeedFromBase(baseUrl) {
-  const rssUrl = `${baseUrl}/instagram/user/${USERNAME}`;
+  const rssUrl = buildRssUrl(baseUrl);
   const response = await fetch(rssUrl, {
     headers: {
-      "User-Agent": "SINPRFES-InstagramFeed/1.2",
+      "User-Agent": "SINPRFES-InstagramFeed/1.3",
       Accept: "application/rss+xml, application/xml, text/xml",
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -105,6 +114,7 @@ async function fetchFeed() {
       if (failures.length > 0) {
         log.info("InstagramRssRecoveredWithFallback", {
           successBaseUrl: baseUrl,
+          routeTemplate: RSSHUB_ROUTE_TEMPLATE,
           previousFailures: failures,
         });
       }
@@ -113,6 +123,7 @@ async function fetchFeed() {
     } catch (err) {
       failures.push({
         baseUrl,
+        rssUrl: err?.rssUrl || buildRssUrl(baseUrl),
         status: err?.status || null,
         errorMessage: err?.message || String(err),
       });
@@ -128,10 +139,13 @@ function shouldLogUnavailable(now) {
   return now - fetchState.lastUnavailableLogAt >= ERROR_LOG_THROTTLE_MS;
 }
 
-
 function isLikelyBotBlocked(failures = []) {
   if (!Array.isArray(failures) || failures.length === 0) return false;
   return failures.every((failure) => [403, 429].includes(failure?.status));
+}
+
+function hasRateLimitFailure(failures = []) {
+  return Array.isArray(failures) && failures.some((failure) => failure?.status === 429);
 }
 
 async function getInstagramFeed() {
@@ -160,14 +174,19 @@ async function getInstagramFeed() {
 
     return posts;
   } catch (err) {
-    fetchState.nextRetryAt = now + ERROR_RETRY_BACKOFF_MS;
+    const failures = Array.isArray(err?.failures) ? err.failures : [];
+    const nextRetryInMs = hasRateLimitFailure(failures)
+      ? RATE_LIMIT_BACKOFF_MS
+      : ERROR_RETRY_BACKOFF_MS;
+
+    fetchState.nextRetryAt = now + nextRetryInMs;
 
     if (shouldLogUnavailable(now)) {
       fetchState.lastUnavailableLogAt = now;
-      const failures = Array.isArray(err?.failures) ? err.failures : [];
       const logPayload = {
         usedCachedData: Boolean(cache.data),
-        nextRetryInMs: ERROR_RETRY_BACKOFF_MS,
+        routeTemplate: RSSHUB_ROUTE_TEMPLATE,
+        nextRetryInMs,
         failures,
       };
 
