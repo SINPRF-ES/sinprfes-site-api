@@ -97,7 +97,6 @@ const senhaRoutes = require("./routes/senha.routes");
 const authRoutes = require("./routes/auth.routes");
 const ressarcimentoRoutes = require("./routes/ressarcimento.routes");
 const jogosRoutes = require("./routes/jogos.routes");
-const instagramRoutes = require("./routes/instagram.routes");
 const pushRoutes = require("./routes/push.routes");
 const eventosRoutes = require("./routes/eventos.routes");
 const eventoVotacoesRoutes = require("./routes/eventoVotacoes.routes");
@@ -145,8 +144,8 @@ app.use("/api/ressarcimentos", ressarcimentoRoutes);
 // Jogos
 app.use("/api/jogos", jogosRoutes);
 
-// Instagram (Feed)
-app.use("/api/instagram", instagramRoutes);
+// Instagram (Feed público via RSS)
+app.use("/api/public", require("./routes/publicInstagramFeed"));
 
 // Publicações
 app.use("/api/publicacoes", publicacoesRoutes);
