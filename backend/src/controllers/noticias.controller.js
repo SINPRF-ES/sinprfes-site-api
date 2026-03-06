@@ -18,7 +18,8 @@ function parseNoticiaId(req, res, requestId) {
 }
 
 function verificarGestao(req) {
-  return ehPerfilGestao(req.user?.perfil_acesso);
+  const perfil = (req.user?.perfil_acesso || "").toUpperCase();
+  return ehPerfilGestao(perfil) || perfil === "COMUNICADOR";
 }
 
 function resolverAudienciaEscopo(req, fallback) {

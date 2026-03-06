@@ -193,12 +193,7 @@
    */
   function ehPerfilGestao(perfil) {
     const p = normalizePerfil(perfil);
-    return [
-      PERFIL_ACESSO.ADMIN,
-      PERFIL_ACESSO.DIRETORIA,
-      PERFIL_ACESSO.FUNCIONARIO,
-      PERFIL_ACESSO.COMUNICADOR
-    ].includes(p);
+    return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.FUNCIONARIO].includes(p);
   }
 
   return {
