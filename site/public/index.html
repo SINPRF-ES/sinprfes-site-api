@@ -70,7 +70,7 @@
     <h2 class="section-title">
       <span class="emoji">📸</span> Acompanhe no Instagram
     </h2>
-    <a href="https://instagram.com/sinprfes" target="_blank" class="ui-button ui-button-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver perfil completo</a>
+    <a id="insta-profile-link" href="https://instagram.com/sinprfes" target="_blank" rel="noopener noreferrer" class="ui-button ui-button-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver perfil completo</a>
   </div>
 
   <div id="insta-feed" class="insta-grid public-card" style="padding:12px; border-radius: 8px;">
@@ -143,6 +143,8 @@
       const resp = await fetch(`${API_BASE}/api/instagram`);
       const json = await resp.json();
       const fotos = json.data || [];
+      const profileLink = document.getElementById("insta-profile-link");
+      if (profileLink && json.profileUrl) profileLink.href = json.profileUrl;
 
       if (fotos.length === 0) {
         feedContainer.innerHTML = "<p>Não foi possível carregar o feed no momento.</p>";
@@ -150,12 +152,13 @@
       }
 
       feedContainer.innerHTML = fotos.map(item => {
-        // Se for VIDEO, a API manda 'thumbnail_url', se for IMAGE ou CAROUSEL, manda 'media_url'
-        const imgUrl = item.media_type === 'VIDEO' ? item.thumbnail_url : item.media_url;
-        
+        const imgUrl = item.imageUrl || (item.media_type === 'VIDEO' ? item.thumbnail_url : item.media_url);
+        const postUrl = item.postUrl || item.permalink || '#';
+        const altText = item.caption || 'Foto Instagram';
+
         return `
-          <a href="${item.permalink}" target="_blank" class="insta-item">
-            <img src="${imgUrl}" alt="${item.caption || 'Foto Instagram'}" loading="lazy">
+          <a href="${postUrl}" target="_blank" rel="noopener noreferrer" class="insta-item">
+            <img src="${imgUrl}" alt="${altText}" loading="lazy">
             <div class="insta-overlay">
                Ver no Instagram
             </div>
