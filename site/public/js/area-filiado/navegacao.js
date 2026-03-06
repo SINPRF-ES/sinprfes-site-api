@@ -8,6 +8,13 @@
 
   function configurarNavegacao(callbackMudanca) {
     const navButtons = document.querySelectorAll(".af-nav-item");
+
+    function atualizarTitulo(btn) {
+      const label = btn.textContent.trim();
+      if (label) {
+        document.title = `${label} - SINPRF/ES`;
+      }
+    }
     const sections = document.querySelectorAll(".af-section");
     const debugNotif = localStorage.getItem("DEBUG_NOTIF") === "1";
 
@@ -50,9 +57,18 @@
           secoesTotal: sections.length,
         });
 
+        // Atualiza o título da página com emoji e label do botão
+        atualizarTitulo(btn);
+
         if (callbackMudanca) callbackMudanca(alvo);
       });
     });
+
+    // Atualiza o título inicial baseado na aba ativa
+    const btnAtivo = document.querySelector(".af-nav-item.active");
+    if (btnAtivo) {
+      atualizarTitulo(btnAtivo);
+    }
   }
 
   global.Navegacao = {
