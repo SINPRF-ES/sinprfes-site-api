@@ -14,10 +14,20 @@
   <title>SINPRF-ES</title>
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="/css/ui-canon.css" />
+  <link rel="stylesheet" href="/css/components/instagram-feed.css" />
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
-  <script src="/js/home-instagram.js" defer></script>
+  <script src="/js/components/instagramFeed.js" defer></script>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SocialMediaPosting",
+      "publisher": "SINPRF-ES",
+      "url": "https://instagram.com/sinprfes"
+    }
+  </script>
 
 </head>
 <body>
@@ -66,65 +76,22 @@
       </section>
       </main>
   </div>
-<section class="ui-container" style="margin-top: 40px; margin-bottom: 40px;">
-  <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<section class="ui-container home-instagram">
+  <div class="home-instagram-header">
     <h2 class="section-title">
-      <span class="emoji">📸</span> Acompanhe no Instagram
+      <span class="emoji">📸</span>
+      <span>Instagram</span>
     </h2>
-    <a id="insta-profile-link" href="https://instagram.com/sinprfes" target="_blank" rel="noopener noreferrer" class="ui-button ui-button-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver perfil completo</a>
   </div>
 
-  <div id="insta-feed" class="insta-grid public-card" style="padding:12px; border-radius: 8px;">
-    <p style="color: #666;">Carregando fotos...</p>
+  <div id="instagram-feed" class="public-card" style="padding:12px; border-radius: 8px;"></div>
+
+  <div class="instagram-more">
+    <a href="https://instagram.com/sinprfes" target="_blank" rel="noopener noreferrer" class="ui-button ui-button-outline" data-instagram-click="ver_mais">
+      Ver mais no Instagram
+    </a>
   </div>
 </section>
-
-<style>
-  /* CSS Específico para a grade do Instagram */
-  .insta-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Responsivo automático */
-    gap: 10px;
-  }
-  
-  .insta-item {
-    position: relative;
-    aspect-ratio: 1 / 1; /* Quadrado perfeito */
-    overflow: hidden;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: transform 0.2s;
-  }
-
-  .insta-item:hover {
-    transform: scale(1.02);
-  }
-
-  .insta-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .insta-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    font-size: 0.8rem;
-    padding: 5px;
-    opacity: 0;
-    transition: opacity 0.2s;
-    text-align: center;
-  }
-
-  .insta-item:hover .insta-overlay {
-    opacity: 1;
-  }
-</style>
-
 
 
   <div id="site-footer"></div>
