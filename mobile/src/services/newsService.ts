@@ -20,6 +20,7 @@ export interface NewsPost {
   created_at: string;
   updated_at: string;
   published_at: string | null;
+  audiencia?: 'INTERNA' | 'PUBLICA';
   midias?: NewsMedia[];
 }
 
@@ -32,37 +33,37 @@ export const fetchNoticias = async (statusArg?: any): Promise<NewsPost[]> => {
   const params: any = {};
   if (status) params.status = status;
 
-  const { data } = await api.get('/api/noticias', { params });
+  const { data } = await api.get('/api/informes', { params });
   return data;
 };
 
 export const fetchNoticia = async (id: string): Promise<NewsPost> => {
-  const { data } = await api.get(`/api/noticias/${id}`);
+  const { data } = await api.get(`/api/informes/${id}`);
   return data;
 };
 
 export const createNoticia = async (noticia: Partial<NewsPost>): Promise<NewsPost> => {
-  const { data } = await api.post('/api/noticias', noticia);
+  const { data } = await api.post('/api/informes', noticia);
   return data;
 };
 
 export const updateNoticia = async (id: string, noticia: Partial<NewsPost>): Promise<NewsPost> => {
-  const { data } = await api.put(`/api/noticias/${id}`, noticia);
+  const { data } = await api.put(`/api/informes/${id}`, noticia);
   return data;
 };
 
 export const publicarNoticia = async (id: string): Promise<NewsPost> => {
-  const { data } = await api.post(`/api/noticias/${id}/publicar`);
+  const { data } = await api.post(`/api/informes/${id}/publicar`);
   return data;
 };
 
 export const deleteNoticia = async (id: string): Promise<void> => {
-  await api.delete(`/api/noticias/${id}`);
+  await api.delete(`/api/informes/${id}`);
 };
 
 export const addNoticiaMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'VIDEO'): Promise<NewsMedia> => {
   // 1. Obter assinatura para upload direto (Signed Upload)
-  const { data: signatureData } = await api.post('/api/noticias/upload-signature', {
+  const { data: signatureData } = await api.post('/api/informes/upload-signature', {
     folder: 'noticias',
     tags: 'noticia'
   });
@@ -96,7 +97,7 @@ export const addNoticiaMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'V
   }
 
   // 3. Associar a mídia no nosso backend
-  const { data } = await api.post(`/api/noticias/${id}/midias_external`, {
+  const { data } = await api.post(`/api/informes/${id}/midias_external`, {
     tipo,
     url: uploadResult.secure_url,
     ordem: 0
@@ -106,5 +107,5 @@ export const addNoticiaMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'V
 };
 
 export const deleteNoticiaMidia = async (midiaId: string): Promise<void> => {
-  await api.delete(`/api/noticias/midias/${midiaId}`);
+  await api.delete(`/api/informes/midias/${midiaId}`);
 };

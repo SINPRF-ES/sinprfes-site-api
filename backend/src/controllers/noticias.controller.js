@@ -6,6 +6,7 @@ const { handleDbError } = require("../utils/dbError");
 const { parseUuid } = require("../utils/parseUuid");
 
 const PERFIS_GESTAO = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
+const AUDIENCIAS_VALIDAS = ["INTERNA", "PUBLICA"];
 
 function parseNoticiaId(req, res, requestId) {
     const id = parseUuid(String(req.params.id || ""));
@@ -21,6 +22,12 @@ function verificarGestao(req) {
   return PERFIS_GESTAO.includes(perfil);
 }
 
+function resolverAudienciaEscopo(req, fallback) {
+  const fromScope = req.audienciaEscopo ? String(req.audienciaEscopo).toUpperCase() : null;
+  if (fromScope && AUDIENCIAS_VALIDAS.includes(fromScope)) return fromScope;
+  return fallback;
+}
+
 exports.listar = async (req, res) => {
   const start = Date.now();
   const method = "GET";
@@ -34,8 +41,11 @@ exports.listar = async (req, res) => {
   let params = [];
 
   try {
-    const { status } = req.query;
+    const { status, audiencia } = req.query;
+    const audienciaNorm = audiencia ? String(audiencia).toUpperCase() : null;
+    const audienciaEscopo = resolverAudienciaEscopo(req, null);
     const isGestao = verificarGestao(req);
+    const isAutenticado = Boolean(req.user?.id);
 
     // Validação estrita: se vier algo que não seja string, é erro 400.
     if (status && typeof status !== 'string') {
@@ -59,17 +69,43 @@ exports.listar = async (req, res) => {
       });
     }
 
+    if (audienciaNorm && !AUDIENCIAS_VALIDAS.includes(audienciaNorm)) {
+      return res.status(400).json({
+        success: false,
+        message: "Parâmetro 'audiencia' inválido. Use INTERNA ou PUBLICA.",
+        code: "INVALID_QUERY_PARAMS",
+        requestId
+      });
+    }
+
     query = `
       SELECT n.*, f.nome as autor_nome
       FROM noticias n
       LEFT JOIN filiados f ON n.autor_id = f.id
     `;
 
-    if (!isGestao) {
-      query += " WHERE n.status = 'PUBLICADA'";
-    } else if (status) {
-      query += " WHERE n.status = $1";
-      params.push(status.toUpperCase());
+    if (!isAutenticado) {
+      const audienciaLeitura = resolverAudienciaEscopo(req, "PUBLICA");
+      params.push(audienciaLeitura);
+      query += ` WHERE n.status = 'PUBLICADA' AND n.audiencia = $${params.length}`;
+    } else if (!isGestao) {
+      const audienciaLeitura = resolverAudienciaEscopo(req, "INTERNA");
+      params.push(audienciaLeitura);
+      query += ` WHERE n.status = 'PUBLICADA' AND n.audiencia = $${params.length}`;
+    } else {
+      query += " WHERE 1=1";
+      if (audienciaEscopo) {
+        params.push(audienciaEscopo);
+        query += ` AND n.audiencia = $${params.length}`;
+      }
+      if (status) {
+        params.push(status.toUpperCase());
+        query += ` AND n.status = $${params.length}`;
+      }
+      if (audienciaNorm && !audienciaEscopo) {
+        params.push(audienciaNorm);
+        query += ` AND n.audiencia = $${params.length}`;
+      }
     }
 
     query += " ORDER BY n.published_at DESC, n.created_at DESC";
@@ -159,6 +195,19 @@ exports.detalhar = async (req, res) => {
     }
 
     const noticia = newsRows[0];
+    const isGestao = verificarGestao(req);
+    const isAutenticado = Boolean(req.user?.id);
+    const audienciaEscopo = resolverAudienciaEscopo(req, null);
+
+    const podeVisualizar = !isAutenticado
+      ? noticia.status === "PUBLICADA" && noticia.audiencia === "PUBLICA"
+      : (isGestao || (noticia.status === "PUBLICADA" && noticia.audiencia === "INTERNA"));
+
+    const respeitaEscopo = !audienciaEscopo || noticia.audiencia === audienciaEscopo;
+
+    if (!podeVisualizar || !respeitaEscopo) {
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
 
     const { rows: midiaRows } = await pool.query(
       "SELECT * FROM noticia_midias WHERE noticia_id = $1 ORDER BY ordem ASC",
@@ -191,17 +240,22 @@ exports.criar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
-    const { titulo, conteudo, capa_url } = req.body;
+    const { titulo, conteudo, capa_url, audiencia } = req.body;
+    const audienciaFinal = resolverAudienciaEscopo(req, audiencia ? String(audiencia).toUpperCase() : "INTERNA");
 
     if (!titulo || !conteudo) {
       return res.status(400).json({ success: false, message: "Título e conteúdo são obrigatórios.", requestId });
     }
 
+    if (!AUDIENCIAS_VALIDAS.includes(audienciaFinal)) {
+      return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
+    }
+
     const { rows } = await pool.query(
-      `INSERT INTO noticias (titulo, conteudo, status, autor_id, capa_url)
-       VALUES ($1, $2, 'RASCUNHO', $3, $4)
+      `INSERT INTO noticias (titulo, conteudo, status, autor_id, capa_url, audiencia)
+       VALUES ($1, $2, 'RASCUNHO', $3, $4, $5)
        RETURNING *`,
-      [titulo, conteudo, req.user.id, capa_url]
+      [titulo, conteudo, req.user.id, capa_url, audienciaFinal]
     );
 
     log.info("NOTICIAS_CREATE_SUCCESS", {
@@ -230,17 +284,24 @@ exports.atualizar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
-    const { titulo, conteudo, capa_url, status } = req.body;
+    const { titulo, conteudo, capa_url, status, audiencia } = req.body;
+    const audienciaEscopo = resolverAudienciaEscopo(req, null);
+    const audienciaFinal = audienciaEscopo || (audiencia ? String(audiencia).toUpperCase() : null);
+
+    if (audienciaFinal && !AUDIENCIAS_VALIDAS.includes(audienciaFinal)) {
+      return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
+    }
 
     const { rows } = await pool.query(
       `UPDATE noticias
        SET titulo = COALESCE($1, titulo),
            conteudo = COALESCE($2, conteudo),
            capa_url = COALESCE($3, capa_url),
-           status = COALESCE($4, status)
-       WHERE id = $5
+           status = COALESCE($4, status),
+           audiencia = COALESCE($5, audiencia)
+       WHERE id = $6
        RETURNING *`,
-      [titulo, conteudo, capa_url, status, id]
+      [titulo, conteudo, capa_url, status, audienciaFinal, id]
     );
 
     if (rows.length === 0) {

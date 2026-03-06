@@ -56,14 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Wait, if it's "qualquer autenticado", the public site might not be able to see it
     // unless we make a public route or the user is logged in.
 
-    // Let's check if the user is logged in via localStorage.
-    const token = localStorage.getItem("token");
-    const headers = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE}/api/noticias`, { headers });
+    const response = await fetch(`${API_BASE}/api/noticias`);
 
     if (response.status === 401) {
       loadingEl.innerHTML = `Para ver as notícias, acesse a <a href="/area-filiado.html">Página Inicial</a>.`;
