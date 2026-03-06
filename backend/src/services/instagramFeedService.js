@@ -3,6 +3,13 @@ const log = require("../utils/log");
 const CACHE_TIME = 15 * 60 * 1000;
 const MAX_POSTS = 5;
 const USERNAME = "sinprfes";
+const REQUEST_TIMEOUT_MS = 8000;
+
+const RSSHUB_BASE_URLS = [
+  "https://rsshub.app",
+  "https://rsshub.rssforever.com",
+  "https://rsshub.feeded.xyz",
+];
 
 let cache = {
   timestamp: 0,
@@ -42,29 +49,56 @@ function readMediaUrl(xmlChunk) {
 function parseRssItems(xml) {
   const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map((entry) => entry[1]);
 
-  return items.slice(0, MAX_POSTS).map((item) => ({
-    title: readTag(item, "title"),
-    link: readTag(item, "link"),
-    image: readMediaUrl(item),
-    date: readTag(item, "pubDate"),
-  })).filter((post) => post.link);
+  return items
+    .slice(0, MAX_POSTS)
+    .map((item) => ({
+      title: readTag(item, "title"),
+      link: readTag(item, "link"),
+      image: readMediaUrl(item),
+      date: readTag(item, "pubDate"),
+    }))
+    .filter((post) => post.link);
 }
 
-async function fetchFeed() {
-  const rssUrl = `https://rsshub.app/instagram/user/${USERNAME}`;
+async function fetchFeedFromBase(baseUrl) {
+  const rssUrl = `${baseUrl}/instagram/user/${USERNAME}`;
   const response = await fetch(rssUrl, {
     headers: {
-      "User-Agent": "SINPRFES-InstagramFeed/1.0",
+      "User-Agent": "SINPRFES-InstagramFeed/1.1",
       Accept: "application/rss+xml, application/xml, text/xml",
     },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!response.ok) {
-    throw new Error(`instagram_rss_http_${response.status}`);
+    const error = new Error(`instagram_rss_http_${response.status}`);
+    error.status = response.status;
+    error.rssUrl = rssUrl;
+    throw error;
   }
 
   const xml = await response.text();
   return parseRssItems(xml);
+}
+
+async function fetchFeed() {
+  let lastError = null;
+
+  for (const baseUrl of RSSHUB_BASE_URLS) {
+    try {
+      const posts = await fetchFeedFromBase(baseUrl);
+      return posts;
+    } catch (err) {
+      lastError = err;
+      log.warn("InstagramRssSourceFailed", {
+        baseUrl,
+        errorMessage: err?.message || String(err),
+        status: err?.status || null,
+      });
+    }
+  }
+
+  throw lastError || new Error("instagram_rss_unavailable");
 }
 
 async function getInstagramFeed() {
@@ -84,7 +118,11 @@ async function getInstagramFeed() {
 
     return posts;
   } catch (err) {
-    log.error("InstagramRssError", err?.message || err);
+    log.warn("InstagramRssUnavailable", {
+      errorMessage: err?.message || String(err),
+      status: err?.status || null,
+      usedCachedData: Boolean(cache.data),
+    });
 
     if (cache.data) {
       return cache.data;
