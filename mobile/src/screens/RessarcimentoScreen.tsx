@@ -406,6 +406,7 @@ const RessarcimentoScreen = () => {
                 value={form.km_total}
                 onChangeText={(v) => handleInputChange('km_total', v)}
                 keyboardType="numeric"
+                inputMode="numeric"
                 placeholder="0"
               />
             </View>
@@ -420,6 +421,7 @@ const RessarcimentoScreen = () => {
             value={form.valor_outros}
             onChangeText={(v) => handleInputChange('valor_outros', v)}
             keyboardType="numeric"
+            inputMode="decimal"
             placeholder="0.00"
           />
 
@@ -460,6 +462,7 @@ const RessarcimentoScreen = () => {
                 onChangeText={(v) => handleInputChange('agencia', v)}
                 placeholder="0000-0"
                 keyboardType="numeric"
+                inputMode="numeric"
                 maxLength={6}
               />
             </View>
@@ -471,6 +474,7 @@ const RessarcimentoScreen = () => {
                 onChangeText={(v) => handleInputChange('conta', v)}
                 placeholder="00000-0"
                 keyboardType="numeric"
+                inputMode="numeric"
                 maxLength={7}
               />
             </View>
@@ -486,7 +490,12 @@ const RessarcimentoScreen = () => {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📎 Comprovantes</Text>
-          <TouchableOpacity style={styles.attachButton} onPress={handlePickAnexos}>
+          <TouchableOpacity
+            style={styles.attachButton}
+            onPress={handlePickAnexos}
+            accessibilityRole="button"
+            accessibilityLabel="Anexar documentos (PDF, JPG ou PNG)"
+          >
             <MaterialCommunityIcons name="paperclip" size={24} color="#003366" />
             <Text style={styles.attachButtonText}>Anexar Documentos (PDF, JPG, PNG)</Text>
           </TouchableOpacity>
@@ -501,7 +510,11 @@ const RessarcimentoScreen = () => {
               <Text style={styles.anexoName} numberOfLines={1}>
                 {anexo.name || anexo.uri.split('/').pop()}
               </Text>
-              <TouchableOpacity onPress={() => handleRemoveAnexo(index)}>
+              <TouchableOpacity
+                onPress={() => handleRemoveAnexo(index)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remover anexo ${anexo.name || 'documento'}`}
+              >
                 <MaterialCommunityIcons name="close-circle" size={24} color="#dc3545" />
               </TouchableOpacity>
             </View>
@@ -512,6 +525,9 @@ const RessarcimentoScreen = () => {
           style={[styles.submitButton, (loading || !form.descricao) && styles.disabledButton]}
           onPress={handleSubmit}
           disabled={loading || !form.descricao}
+          accessibilityRole="button"
+          accessibilityLabel="Enviar solicitação de ressarcimento"
+          accessibilityState={{ disabled: loading || !form.descricao, busy: loading }}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />

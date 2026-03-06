@@ -4,8 +4,8 @@ const cloudinary = require("../services/cloudinary.service");
 const { v4: uuidv4 } = require("uuid");
 const { handleDbError } = require("../utils/dbError");
 const { parseUuid } = require("../utils/parseUuid");
+const { ehPerfilGestao } = require("../shared/canon");
 
-const PERFIS_GESTAO = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"];
 const AUDIENCIAS_VALIDAS = ["INTERNA", "PUBLICA"];
 
 function parseNoticiaId(req, res, requestId) {
@@ -18,8 +18,7 @@ function parseNoticiaId(req, res, requestId) {
 }
 
 function verificarGestao(req) {
-  const perfil = (req.user?.perfil_acesso || "").toUpperCase();
-  return PERFIS_GESTAO.includes(perfil);
+  return ehPerfilGestao(req.user?.perfil_acesso);
 }
 
 function resolverAudienciaEscopo(req, fallback) {
