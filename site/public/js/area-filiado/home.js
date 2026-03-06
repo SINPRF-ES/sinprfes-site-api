@@ -12,16 +12,20 @@
 
         const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
 
+        const isComunicador = perfil === 'COMUNICADOR';
+
         const actions = [
             { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: '👤', target: 'sec-meus-dados' },
             { label: 'Informes', subtitle: 'Avisos e comunicados', icon: '📰', target: 'sec-noticias' },
-            { label: 'Assembleias', subtitle: 'Votações e sessões', icon: '🗳️', target: 'sec-assembleias' },
-            { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: '👥', target: 'sec-filiados' },
-            { label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: '📚', target: 'sec-publicacoes' },
             { label: 'Ressarcimento', subtitle: 'Solicite seu reembolso', icon: '💸', target: 'sec-ressarcimento' },
         ];
 
-        actions.push({ label: 'Repasse', subtitle: 'Apoio operacional e alocações', icon: '💱', target: 'sec-repasse' });
+        if (!isComunicador) {
+            actions.push({ label: 'Assembleias', subtitle: 'Votações e sessões', icon: '🗳️', target: 'sec-assembleias' });
+            actions.push({ label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: '👥', target: 'sec-filiados' });
+            actions.push({ label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: '📚', target: 'sec-publicacoes' });
+            actions.push({ label: 'Repasse', subtitle: 'Apoio operacional e alocações', icon: '💱', target: 'sec-repasse' });
+        }
 
         if (ehGestao) {
             actions.push({ label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: '📊', target: 'sec-relatorios' });

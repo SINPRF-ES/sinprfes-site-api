@@ -39,6 +39,7 @@ export default function DrawerNavigator() {
   const { usuario } = useAuth();
   const ehGestaoUsuario = isGestao(usuario?.perfil_acesso);
   const ehDiretoriaUsuario = isDiretoria(usuario?.perfil_acesso);
+  const isComunicador = (usuario?.perfil_acesso || '').toUpperCase() === 'COMUNICADOR';
 
   useEffect(() => {
     logger.info('NAV_GATE_EVAL', {
@@ -94,6 +95,7 @@ export default function DrawerNavigator() {
         }}
       />
 
+      {!isComunicador && (
       <Drawer.Screen
         name="Filiados"
         component={FiliadosScreen}
@@ -102,7 +104,9 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.FILIADOS} label="Filiados" {...props} />,
         }}
       />
+      )}
 
+      {!isComunicador && (
       <Drawer.Screen
         name="Publicacoes"
         component={PublicacoesScreen}
@@ -111,6 +115,7 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.PUBLICACOES} label="Publicações" {...props} />,
         }}
       />
+      )}
 
       <Drawer.Screen
         name="Ressarcimento"
@@ -121,6 +126,7 @@ export default function DrawerNavigator() {
         }}
       />
 
+      {!isComunicador && (
       <Drawer.Screen
         name="Jogos2026"
         component={JogosScreen}
@@ -129,7 +135,9 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.JOGOS} label="Jogos 2026" {...props} />,
         }}
       />
+      )}
 
+      {!isComunicador && (
       <Drawer.Screen
         name="Votacao"
         component={AssembleiaStack}
@@ -139,6 +147,7 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ASSEMBLEIA} label="Assembleias e Votações" {...props} />,
         }}
       />
+      )}
 
       <Drawer.Screen
         name="Estatuto"
@@ -179,6 +188,7 @@ export default function DrawerNavigator() {
         />
       )}
 
+      {!isComunicador && (
       <Drawer.Screen
         name="Repasse"
         component={RepasseScreen}
@@ -187,6 +197,7 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.REPASSE} label="Repasse" {...props} />,
         }}
       />
+      )}
 
       {ehGestaoUsuario && (
         <>
