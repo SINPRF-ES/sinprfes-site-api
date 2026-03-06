@@ -61,6 +61,13 @@
     return sanitizeHtml(rendered);
   }
 
+
+  function renderInformesPlainText(conteudo) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = renderInformesMarkdown(conteudo);
+    return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
   function mountRenderedMarkdown(container, conteudo) {
     if (!container) return;
     container.innerHTML = renderInformesMarkdown(conteudo);
@@ -69,6 +76,7 @@
 
   global.InformesRenderer = {
     renderInformesMarkdown,
+    renderInformesPlainText,
     mountRenderedMarkdown,
   };
 })(window);
