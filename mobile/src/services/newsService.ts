@@ -32,6 +32,7 @@ export const fetchNoticias = async (statusArg?: any): Promise<NewsPost[]> => {
   // Usamos um objeto de params limpo para evitar poluição
   const params: any = {};
   if (status) params.status = status;
+  params.audiencia = 'INTERNA';
 
   const { data } = await api.get('/api/informes', { params });
   return data;
