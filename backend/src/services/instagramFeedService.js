@@ -7,11 +7,18 @@ const REQUEST_TIMEOUT_MS = 8000;
 const ERROR_RETRY_BACKOFF_MS = 2 * 60 * 1000;
 const ERROR_LOG_THROTTLE_MS = 5 * 60 * 1000;
 
-const RSSHUB_BASE_URLS = [
+const DEFAULT_RSSHUB_BASE_URLS = [
   "https://rsshub.app",
   "https://rsshub.rssforever.com",
   "https://rsshub.feeded.xyz",
 ];
+
+const RSSHUB_BASE_URLS = (
+  process.env.INSTAGRAM_RSSHUB_BASE_URLS || DEFAULT_RSSHUB_BASE_URLS.join(",")
+)
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 let cache = {
   timestamp: 0,
@@ -121,6 +128,12 @@ function shouldLogUnavailable(now) {
   return now - fetchState.lastUnavailableLogAt >= ERROR_LOG_THROTTLE_MS;
 }
 
+
+function isLikelyBotBlocked(failures = []) {
+  if (!Array.isArray(failures) || failures.length === 0) return false;
+  return failures.every((failure) => [403, 429].includes(failure?.status));
+}
+
 async function getInstagramFeed() {
   const now = Date.now();
 
@@ -151,11 +164,18 @@ async function getInstagramFeed() {
 
     if (shouldLogUnavailable(now)) {
       fetchState.lastUnavailableLogAt = now;
-      log.warn("InstagramRssUnavailable", {
+      const failures = Array.isArray(err?.failures) ? err.failures : [];
+      const logPayload = {
         usedCachedData: Boolean(cache.data),
         nextRetryInMs: ERROR_RETRY_BACKOFF_MS,
-        failures: Array.isArray(err?.failures) ? err.failures : [],
-      });
+        failures,
+      };
+
+      if (isLikelyBotBlocked(failures)) {
+        log.info("InstagramRssLikelyBotBlocked", logPayload);
+      } else {
+        log.warn("InstagramRssUnavailable", logPayload);
+      }
     }
 
     if (cache.data) {
