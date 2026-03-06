@@ -6,7 +6,24 @@ let cacheInstagram = []; // Armazena as fotos na memória
 let lastUpdate = null;
 
 // Pegue este token do seu arquivo .env
-const INSTAGRAM_TOKEN = process.env.INSTAGRAM_TOKEN; 
+const INSTAGRAM_TOKEN = process.env.INSTAGRAM_TOKEN;
+const INSTAGRAM_FEED_LIMIT = Number(process.env.INSTAGRAM_FEED_LIMIT || 6);
+const INSTAGRAM_PROFILE_URL =
+  process.env.INSTAGRAM_PROFILE_URL || "https://instagram.com/sinprfes";
+
+function mapInstagramItem(item) {
+  const imageUrl =
+    item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url;
+
+  return {
+    id: item.id,
+    caption: item.caption || "",
+    mediaType: item.media_type,
+    imageUrl,
+    postUrl: item.permalink,
+    timestamp: item.timestamp
+  };
+}
 
 async function atualizarFeedInstagram() {
   if (!INSTAGRAM_TOKEN) {
@@ -17,12 +34,12 @@ async function atualizarFeedInstagram() {
   try {
     // 1. URL para pegar as mídias (fotos/vídeos)
     // Limitamos a 6 itens para o site
-    const url = `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,permalink,thumbnail_url,timestamp&limit=6&access_token=${INSTAGRAM_TOKEN}`;
+    const url = `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,permalink,thumbnail_url,timestamp&limit=${INSTAGRAM_FEED_LIMIT}&access_token=${INSTAGRAM_TOKEN}`;
 
     const resp = await axios.get(url);
-    
+
     if (resp.data && resp.data.data) {
-      cacheInstagram = resp.data.data;
+      cacheInstagram = resp.data.data.map(mapInstagramItem);
       lastUpdate = new Date();
       log.info("InstagramFeedAtualizado", { itens: cacheInstagram.length });
     }
@@ -55,6 +72,7 @@ setInterval(renovarTokenInstagram, 1000 * 60 * 60 * 24 * 10);
 module.exports = {
   getFeed: () => ({
     data: cacheInstagram,
+    profileUrl: INSTAGRAM_PROFILE_URL,
     updatedAt: lastUpdate
   })
 };
