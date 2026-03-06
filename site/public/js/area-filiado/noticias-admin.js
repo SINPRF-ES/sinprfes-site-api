@@ -81,7 +81,7 @@
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between;">
                             <span style="font-size:0.8rem; color:#888;">${date}</span>
-                            ${isDraft ? `<span class="badge badge-warning" style="font-size:0.7rem;">RASCUNHO</span>` : `<span class="badge badge-success" style="font-size:0.7rem;">PUBLICADA</span>`}
+                            ${ehGestao ? (isDraft ? `<span class="badge badge-warning" style="font-size:0.7rem;">RASCUNHO</span>` : `<span class="badge badge-success" style="font-size:0.7rem;">PUBLICADA</span>`) : ''}
                         </div>
                         <h4 style="margin:5px 0; color:#003366;">${safeEscape(n.titulo)}</h4>
                         <p style="margin:0; font-size:0.85rem; color:#666; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${safeEscape(n.conteudo)}</p>
@@ -91,10 +91,73 @@
                         <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar</button>
                         ${isDraft ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.publicarNoticia('${n.id}')">🚀 Publicar</button>` : ''}
                     </div>
-                    ` : ''}
+                    ` : `
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirVisualizacaoNoticia('${n.id}')">📖 Ler informe</button>
+                    </div>
+                    `}
                 </div>
             `;
         }).join("");
+    }
+
+    function formatarConteudoHtml(conteudo) {
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+        return safeEscape(conteudo || '').replace(/\n/g, '<br>');
+    }
+
+    async function abrirVisualizacaoNoticia(id) {
+        let noticia = cacheNoticias.find(n => n.id === id);
+
+        try {
+            const r = await window.Api.apiFetch(`/api/noticias/${id}`);
+            if (r.ok) noticia = await r.json();
+        } catch (e) { }
+
+        if (!noticia) {
+            alert("Não foi possível carregar o informe.");
+            return;
+        }
+
+        const modal = document.getElementById("modal-generic");
+        if (!modal) {
+            alert("Estrutura de modal não encontrada. Verifique area-filiado.html");
+            return;
+        }
+
+        const tituloEl = document.getElementById("modal-generic-titulo");
+        const corpoEl = document.getElementById("modal-generic-corpo");
+        const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+        const date = new Date(noticia.published_at || noticia.created_at).toLocaleDateString('pt-BR');
+
+        tituloEl.textContent = "Informe";
+
+        if (window.Utils?.lockScroll) window.Utils.lockScroll();
+
+        corpoEl.innerHTML = `
+            <article>
+                ${noticia.capa_url ? `<img src="${safeEscape(noticia.capa_url)}" alt="Capa do informe" style="width:100%; max-height:320px; object-fit:cover; border-radius:10px; margin-bottom:15px;">` : ''}
+                <p style="font-size:0.8rem; color:#777; margin:0 0 8px 0;">${date}</p>
+                <h3 style="margin:0 0 15px 0; color:#003366;">${safeEscape(noticia.titulo)}</h3>
+                <div style="color:#333; line-height:1.6; font-size:1rem;">${formatarConteudoHtml(noticia.conteudo)}</div>
+                ${(noticia.midias || []).length ? `
+                <div style="margin-top:20px;">
+                    <h4 style="margin-bottom:10px;">Mídias</h4>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px;">
+                        ${(noticia.midias || []).map(m => m.tipo === 'IMAGEM'
+                            ? `<img src="${safeEscape(m.url)}" alt="Mídia do informe" style="width:100%; height:120px; object-fit:cover; border-radius:8px;">`
+                            : `<a href="${safeEscape(m.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" style="text-align:center;">🎬 Ver vídeo</a>`
+                        ).join('')}
+                    </div>
+                </div>
+                ` : ''}
+                <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+                    <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Fechar</button>
+                </div>
+            </article>
+        `;
+
+        modal.style.display = "flex";
     }
 
     async function abrirModalNoticia(id = null) {
@@ -315,6 +378,7 @@
     global.NoticiasAdmin = {
         inicializarNoticias,
         abrirModalNoticia,
+        abrirVisualizacaoNoticia,
         publicarNoticia,
         deletarNoticia,
         removerMidia
