@@ -68,6 +68,12 @@
         }
 
         const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
+        const resumoSemMarkdown = (conteudo) => {
+            if (window.InformesRenderer?.renderInformesPlainText) {
+                return window.InformesRenderer.renderInformesPlainText(conteudo || '');
+            }
+            return String(conteudo || '').replace(/\n+/g, ' ').trim();
+        };
 
         const ehGestao = ehGestaoNoticias();
 
@@ -84,11 +90,12 @@
                             ${ehGestao ? (isDraft ? `<span class="badge badge-warning" style="font-size:0.7rem;">RASCUNHO</span>` : `<span class="badge badge-success" style="font-size:0.7rem;">PUBLICADA</span>`) : ''}
                         </div>
                         <h4 style="margin:5px 0; color:#003366;">${safeEscape(n.titulo)}</h4>
-                        <p style="margin:0; font-size:0.85rem; color:#666; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${safeEscape(n.conteudo)}</p>
+                        <p style="margin:0; font-size:0.85rem; color:#666; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${safeEscape(resumoSemMarkdown(n.conteudo))}</p>
                     </div>
                     ${ehGestao ? `
                     <div style="display:flex; flex-direction:column; gap:5px;">
                         <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar</button>
+                        <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirVisualizacaoNoticia('${n.id}')">📖 Ler informe</button>
                         ${isDraft ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.publicarNoticia('${n.id}')">🚀 Publicar</button>` : ''}
                     </div>
                     ` : `
@@ -102,8 +109,12 @@
     }
 
     function formatarConteudoHtml(conteudo) {
+        if (window.InformesRenderer?.renderInformesMarkdown) {
+            return window.InformesRenderer.renderInformesMarkdown(conteudo);
+        }
+
         const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
-        return safeEscape(conteudo || '').replace(/\n/g, '<br>');
+        return `<p>${safeEscape(conteudo || '')}</p>`;
     }
 
     async function abrirVisualizacaoNoticia(id) {

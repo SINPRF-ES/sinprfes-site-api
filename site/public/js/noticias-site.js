@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="noticia-conteudo">
           ${noticia.capa_url ? `<img src="${safeEscape(noticia.capa_url)}" alt="${safeEscape(noticia.titulo)}" style="width:100%; max-height:400px; object-fit:cover; border-radius:8px; margin-bottom:20px;">` : ""}
 
-          <div class="markdown-body" style="white-space: pre-wrap; line-height: 1.6; margin-bottom:20px; color:#1f2937;">${safeEscape(noticia.conteudo)}</div>
+          <div class="markdown-body informe-markdown" style="line-height:1.6; margin-bottom:20px; color:#1f2937;"></div>
 
           ${videos.length > 0 ? `
             <div class="noticia-videos" style="margin-top:20px;">
@@ -132,6 +132,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           ` : ''}
         </div>
       `;
+
+      const markdownEl = article.querySelector('.informe-markdown');
+      if (window.InformesRenderer?.mountRenderedMarkdown) {
+        window.InformesRenderer.mountRenderedMarkdown(markdownEl, noticia.conteudo);
+      } else {
+        markdownEl.innerHTML = `<p>${safeEscape(noticia.conteudo || '')}</p>`;
+      }
 
       newsContainer.appendChild(article);
     });

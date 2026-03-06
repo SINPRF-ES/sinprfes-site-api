@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4caf50',
   },
   btnDelete: {
-    backgroundColor: '#fff',
+    backgroundColor: '#d32f2f',
     borderWidth: 1,
     borderColor: '#d32f2f',
   },
