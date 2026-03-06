@@ -17,6 +17,7 @@
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
+  <script src="/js/home-instagram.js" defer></script>
 
 </head>
 <body>
@@ -124,54 +125,7 @@
   }
 </style>
 
-<script>
-  // Script rápido para carregar o feed (pode ir para o main.js se preferir)
-  document.addEventListener("DOMContentLoaded", async () => {
-    const feedContainer = document.getElementById("insta-feed");
-    if(!feedContainer) return;
 
-    try {
-      const API_BASE = (window.Utils && window.Utils.resolveApiBase)
-        ? window.Utils.resolveApiBase()
-        : (window.API_BASE_URL || "").replace(/\/+$/, "");
-
-      if (!API_BASE) {
-        console.error("API_BASE não definido. Verifique config.js e utils.js");
-        return;
-      }
-
-      const resp = await fetch(`${API_BASE}/api/instagram`);
-      const json = await resp.json();
-      const fotos = json.data || [];
-      const profileLink = document.getElementById("insta-profile-link");
-      if (profileLink && json.profileUrl) profileLink.href = json.profileUrl;
-
-      if (fotos.length === 0) {
-        feedContainer.innerHTML = "<p>Não foi possível carregar o feed no momento.</p>";
-        return;
-      }
-
-      feedContainer.innerHTML = fotos.map(item => {
-        const imgUrl = item.imageUrl || (item.media_type === 'VIDEO' ? item.thumbnail_url : item.media_url);
-        const postUrl = item.postUrl || item.permalink || '#';
-        const altText = item.caption || 'Foto Instagram';
-
-        return `
-          <a href="${postUrl}" target="_blank" rel="noopener noreferrer" class="insta-item">
-            <img src="${imgUrl}" alt="${altText}" loading="lazy">
-            <div class="insta-overlay">
-               Ver no Instagram
-            </div>
-          </a>
-        `;
-      }).join("");
-
-    } catch (err) {
-      console.error("Erro ao carregar Instagram", err);
-      feedContainer.innerHTML = ""; // Esconde silenciosamente em caso de erro
-    }
-  });
-</script>
 
   <div id="site-footer"></div>
 </body>
