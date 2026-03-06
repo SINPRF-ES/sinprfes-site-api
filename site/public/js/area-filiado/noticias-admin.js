@@ -9,12 +9,16 @@
     let cacheNoticias = [];
     let perfilLogado = null;
 
+    function ehGestaoNoticias() {
+        return ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(perfilLogado);
+    }
+
     async function inicializarNoticias(perfil) {
         perfilLogado = (perfil || "").toUpperCase();
         const container = document.getElementById("sec-noticias");
         if (!container) return;
 
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(perfilLogado);
+        const ehGestao = ehGestaoNoticias();
 
         container.innerHTML = `
             <div class="ui-card">
@@ -65,6 +69,8 @@
 
         const safeEscape = (v) => (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : "";
 
+        const ehGestao = ehGestaoNoticias();
+
         listaEl.innerHTML = cacheNoticias.map(n => {
             const isDraft = n.status === 'RASCUNHO';
             const date = new Date(n.published_at || n.created_at).toLocaleDateString('pt-BR');
@@ -80,16 +86,23 @@
                         <h4 style="margin:5px 0; color:#003366;">${safeEscape(n.titulo)}</h4>
                         <p style="margin:0; font-size:0.85rem; color:#666; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${safeEscape(n.conteudo)}</p>
                     </div>
+                    ${ehGestao ? `
                     <div style="display:flex; flex-direction:column; gap:5px;">
                         <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar</button>
                         ${isDraft ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.publicarNoticia('${n.id}')">🚀 Publicar</button>` : ''}
                     </div>
+                    ` : ''}
                 </div>
             `;
         }).join("");
     }
 
     async function abrirModalNoticia(id = null) {
+        if (!ehGestaoNoticias()) {
+            alert("Apenas perfis de gestão podem editar informes.");
+            return;
+        }
+
         let noticia = { titulo: '', conteudo: '', capa_url: '', status: 'RASCUNHO', midias: [] };
 
         if (id) {
@@ -151,7 +164,7 @@
                 </div>
 
                 <div style="margin-top:25px; display:flex; justify-content:space-between; align-items:center;">
-                    ${id ? `<button type="button" class="btn btn-danger-outline btn-sm" onclick="NoticiasAdmin.deletarNoticia('${id}')">🗑️ Excluir</button>` : '<div></div>'}
+                    ${id ? `<button type="button" class="btn btn-danger btn-sm" onclick="NoticiasAdmin.deletarNoticia('${id}')">🗑️ Excluir</button>` : '<div></div>'}
                     <div style="display:flex; gap:10px;">
                         <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
                         <button type="submit" id="btn-salvar-noticia" class="ui-button ui-button-secondary">Salvar Informe</button>
@@ -264,6 +277,11 @@
     }
 
     async function publicarNoticia(id) {
+        if (!ehGestaoNoticias()) {
+            alert("Apenas perfis de gestão podem publicar informes.");
+            return;
+        }
+
         if (!confirm("Deseja publicar esta notícia agora? Ela ficará visível para todos.")) return;
         try {
             const r = await window.Api.apiFetch(`/api/noticias/${id}/publicar`, { method: "POST" });
@@ -276,6 +294,11 @@
     }
 
     async function deletarNoticia(id) {
+        if (!ehGestaoNoticias()) {
+            alert("Apenas perfis de gestão podem excluir informes.");
+            return;
+        }
+
         if (!confirm("Tem certeza que deseja EXCLUIR permanentemente esta notícia?")) return;
         try {
             const r = await window.Api.apiFetch(`/api/noticias/${id}`, { method: "DELETE" });
