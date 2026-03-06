@@ -95,6 +95,7 @@
                     ${ehGestao ? `
                     <div style="display:flex; flex-direction:column; gap:5px;">
                         <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar</button>
+                        <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirVisualizacaoNoticia('${n.id}')">📖 Ler informe</button>
                         ${isDraft ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.publicarNoticia('${n.id}')">🚀 Publicar</button>` : ''}
                     </div>
                     ` : `
