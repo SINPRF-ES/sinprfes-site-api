@@ -20,6 +20,10 @@ exports.criarRequerimento = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
 
+  if (!atorId) {
+    return res.status(401).json({ success: false, message: "Não autenticado.", requestId });
+  }
+
   try {
     const usuario = req.user || {}; // id, cpf, nome, possivelmente email/email1/email2 — vindos do token
     const body = req.body || {};
@@ -47,14 +51,14 @@ exports.criarRequerimento = async (req, res) => {
     const pedido = {
       // Do usuário autenticado
       id_filiado: usuario.id,
-      cpf: body.cpf || usuario.cpf || "",
+      cpf: String(body.cpf || usuario.cpf || "").replace(/\D/g, ""),
       nome: body.nome || usuario.nome || "",
 
       // Contato / envio
       email_destino: emailDestino,
       email1,               // 🟢 agora o service pode usar como fallback
       email2,               // 🟢 idem
-      telefone_contato: body.telefone_contato || "",
+      telefone_contato: String(body.telefone_contato || usuario.telefone1 || "").replace(/\D/g, ""),
 
       // Atividade
       data_inicio: body.data_inicio || "",
