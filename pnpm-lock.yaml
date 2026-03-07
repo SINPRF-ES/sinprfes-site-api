@@ -119,6 +119,9 @@ importers:
       pdfkit:
         specifier: ^0.17.2
         version: 0.17.2
+      playwright:
+        specifier: 1.58.2
+        version: 1.58.2
       pg:
         specifier: ^8.13.0
         version: 8.18.0

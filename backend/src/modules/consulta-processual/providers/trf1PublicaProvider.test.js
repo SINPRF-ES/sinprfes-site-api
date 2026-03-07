@@ -1,8 +1,22 @@
+jest.mock('../service/playwrightBrowserService', () => ({
+  launchBrowser: jest.fn(),
+}));
+
 const Trf1PublicaProvider = require('./trf1PublicaProvider');
+const { launchBrowser } = require('../service/playwrightBrowserService');
 
 describe('Trf1PublicaProvider', () => {
-  it('retorna skipped quando playwright não está instalado', async () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
     process.env.CONSULTA_PROCESSUAL_TRF1_ENABLED = 'true';
+  });
+
+  it('retorna skipped quando browser service reporta ausência do pacote', async () => {
+    launchBrowser.mockResolvedValue({
+      ok: false,
+      reasonCode: 'PLAYWRIGHT_PACKAGE_MISSING',
+      reason: 'Playwright package is not installed in backend runtime.',
+    });
 
     const provider = new Trf1PublicaProvider();
     const result = await provider.consultarPorCpf({
