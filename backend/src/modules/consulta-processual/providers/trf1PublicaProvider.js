@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const ConsultaProcessualProvider = require('./ConsultaProcessualProvider');
 const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConfig');
@@ -7,6 +8,20 @@ const { launchBrowser } = require('../service/playwrightBrowserService');
 const log = require('../../../utils/log');
 
 const TRF1_URL = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
+
+function saveDebugTextFile(filePath, content) {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, String(content || ''), 'utf8');
+  } catch (err) {
+    log.warn('ConsultaProcessualProviderDebugWriteFailed', {
+      event: 'ConsultaProcessualProviderDebugWriteFailed',
+      source: 'trf1',
+      filePath,
+      errorMessage: err.message,
+    });
+  }
+}
 
 class Trf1PublicaProvider extends ConsultaProcessualProvider {
   getId() { return 'trf1'; }
@@ -53,37 +68,137 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       const grid = page.locator('#fPP\\:processosGridPanel');
       await grid.waitFor({ state: 'visible', timeout: cfg.searchTimeoutMs });
 
-      const rows = await page.evaluate(() => {
-        const table = document.querySelector('#fPP\\:processosTable');
-        if (!table) return [];
-        const trs = Array.from(table.querySelectorAll('tr')).slice(1);
+      const extraction = await page.evaluate(() => {
+        const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
+        const DATE_TIME_RE = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}/;
 
-        return trs.map((tr) => {
+        const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const byId = (id) => document.querySelector(id);
+
+        const panel = byId('#fPP\\:processosGridPanel');
+        const panelBody = byId('#fPP\\:processosGridPanel_body');
+        const table = byId('#fPP\\:processosTable');
+
+        const primaryRows = table
+          ? Array.from(table.querySelectorAll('tr')).filter((tr) => tr.querySelectorAll('td').length > 0)
+          : [];
+
+        const fallbackRows = panel
+          ? Array.from(panel.querySelectorAll('tr')).filter((tr) => tr.querySelectorAll('td').length > 0)
+          : [];
+
+        const processRows = (primaryRows.length ? primaryRows : fallbackRows)
+          .filter((tr) => !tr.querySelector('th'));
+
+        const blocks = processRows.map((tr, index) => {
           const tds = Array.from(tr.querySelectorAll('td'));
-          const cellText = (idx) => (tds[idx]?.textContent || '').replace(/\s+/g, ' ').trim();
-          const link = tr.querySelector('a[href]');
-          const movementRaw = cellText(4);
-          const movementParts = movementRaw.split('(');
+          const detailsAnchor = tr.querySelector('a[href],button,[role="button"]');
+          const rowText = clean(tr.textContent || '');
+          const cnj = rowText.match(CNJ_RE)?.[0] || null;
+
+          const movementRawByCell = clean(tds[4]?.textContent || '');
+          const movementRawByLabel = clean((rowText.match(/(?:última\s+movimentaç[aã]o\s*:?\s*)(.*)/i)?.[1] || ''));
+          const movementRaw = movementRawByCell || movementRawByLabel;
+          const movementDate = movementRaw.match(DATE_TIME_RE)?.[0] || rowText.match(DATE_TIME_RE)?.[0] || null;
+
           return {
-            processNumber: cellText(0) || null,
-            processClass: cellText(1) || null,
-            subject: cellText(2) || null,
-            parties: cellText(3) || null,
-            lastMovement: (movementParts[0] || '').trim() || null,
-            lastMovementText: movementRaw || null,
-            detailsUrl: link ? link.href : null,
-            providerMeta: {},
+            index,
+            processNumber: cnj,
+            processClass: clean(tds[1]?.textContent || ''),
+            subject: clean(tds[2]?.textContent || ''),
+            parties: clean(tds[3]?.textContent || ''),
+            lastMovement: clean(movementRaw.replace(DATE_TIME_RE, '').replace(/[()]/g, ' ')),
+            lastMovementAt: movementDate,
+            rawLastMovementText: movementRaw || null,
+            detailsUrl: detailsAnchor?.href || null,
+            rawText: rowText,
+            providerMeta: {
+              rowIndex: index,
+              domStrategy: primaryRows.length ? 'table-row' : 'panel-row-fallback',
+            },
           };
-        }).filter((it) => it.processNumber);
+        });
+
+        const panelText = clean(panel?.textContent || panelBody?.textContent || table?.textContent || '');
+        const panelCnjs = Array.from(new Set(panelText.match(CNJ_RE) || []));
+        const detailsButtons = Array.from(document.querySelectorAll('a,button')).filter((el) =>
+          /VER DETALHES DO PROCESSO/i.test(clean(el.textContent || '')),
+        );
+
+        return {
+          rows: blocks,
+          debug: {
+            html: {
+              panel: panel?.innerHTML || '',
+              panelBody: panelBody?.innerHTML || '',
+              table: table?.innerHTML || '',
+            },
+            counts: {
+              detailsControls: detailsButtons.length,
+              tr: panel ? panel.querySelectorAll('tr').length : 0,
+              td: panel ? panel.querySelectorAll('td').length : 0,
+              cnjBlocks: panelCnjs.length,
+              processRows: processRows.length,
+            },
+            panelTextRaw: panelText,
+            panelCnjs,
+          },
+        };
       });
 
-      const items = parseTrf1Rows(rows);
+      const items = parseTrf1Rows(extraction.rows);
+      const parsedCnjs = items.map((it) => it.processNumber).filter(Boolean);
+
+      if (cfg.debug) {
+        const debugBaseDir = path.resolve(process.cwd(), 'backend/tmp/consulta-processual-debug');
+        const stamp = `${Date.now()}-${requestId || 'no-request'}`;
+        const prefix = path.join(debugBaseDir, `trf1-${stamp}`);
+
+        await page.screenshot({ path: `${prefix}.png`, fullPage: true });
+        saveDebugTextFile(`${prefix}-panel.html`, extraction.debug.html.panel);
+        saveDebugTextFile(`${prefix}-panel-body.html`, extraction.debug.html.panelBody);
+        saveDebugTextFile(`${prefix}-table.html`, extraction.debug.html.table);
+        saveDebugTextFile(`${prefix}-panel-text.txt`, extraction.debug.panelTextRaw);
+
+        log.info('ConsultaProcessualProviderDebug', {
+          event: 'ConsultaProcessualProviderDebug',
+          requestId,
+          userId,
+          source: this.getId(),
+          cpfMasked,
+          debugArtifactsPrefix: prefix,
+          ...extraction.debug.counts,
+          parsedItems: items.length,
+          parsedCnjs,
+          panelCnjs: extraction.debug.panelCnjs,
+        });
+      }
+
+      const countedFromText = extraction.debug.panelTextRaw.match(/(\d+)\s+resultados? encontrados/i);
+      if (countedFromText) {
+        const expectedCount = Number(countedFromText[1]);
+        if (Number.isFinite(expectedCount) && expectedCount !== items.length) {
+          log.warn('ConsultaProcessualProviderCountMismatch', {
+            event: 'ConsultaProcessualProviderCountMismatch',
+            requestId,
+            userId,
+            source: this.getId(),
+            cpfMasked,
+            expectedCount,
+            parsedCount: items.length,
+            parsedCnjs,
+          });
+        }
+      }
+
       log.info('ConsultaProcessualProviderResult', {
         requestId,
         userId,
         source: this.getId(),
         cpfMasked,
-        count: items.length,
+        blocksDetected: extraction.rows.length,
+        validItems: items.length,
+        cnjs: parsedCnjs,
         durationMs: Date.now() - startedAt,
       });
 
