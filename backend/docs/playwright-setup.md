@@ -1,63 +1,76 @@
-# Configuração do Playwright no Backend
+# Configuração do Playwright no Backend (Railway)
 
-Este documento descreve como o Playwright e o Chromium são configurados e instalados no serviço backend para garantir a funcionalidade da Consulta Processual em ambientes cloud (Railway).
+Este documento define o setup **canônico e definitivo** da API para Playwright/Chromium no Railway.
 
-## Fonte autoritativa de build
+## Fonte autoritativa da API
 
-A partir desta configuração, o backend deve ser deployado via **Dockerfile dedicado em `/backend/Dockerfile`**.
+Para o serviço da API, o build deve seguir exatamente:
 
+- **Monorepo na raiz usa pnpm**.
 - **Root Directory do serviço API no Railway:** `/backend`
-- **Dockerfile:** `/backend/Dockerfile`
-- **Package real do backend:** `/backend/package.json`
-- **Start command real do backend:** `npm start` (equivalente a `node server.js`)
+- **Builder da API:** `Dockerfile`
+- **Dockerfile autoritativo da API:** `/backend/Dockerfile`
+- **Custom Start Command:** vazio
+- **Custom Build Command:** vazio
 
-> Se o Root Directory ainda não estiver definido no Railway, configure para `/backend`.
+> `nixpacks.toml` e `railpack-plan.json` na raiz podem existir para outros contextos, mas **não são fonte autoritativa para o serviço da API** quando o serviço está em `/backend` com builder Dockerfile.
 
-## Estratégia determinística
+## Dockerfile canônico da API
 
-Para evitar falhas por cache implícito e diferenças de ambiente:
+O `/backend/Dockerfile` foi padronizado para:
 
-1. O Dockerfile usa imagem Debian/Bookworm com Node 20.
-2. Executa `npm ci` no diretório do backend.
-3. Executa `npx playwright install --with-deps chromium` durante o build da imagem.
-4. Mantém `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` para caminho fixo dos binários.
+1. `FROM node:20-bookworm`
+2. ativar Corepack e fixar `pnpm@9.15.9`
+3. instalar dependências de produção com pnpm
+4. instalar Chromium e dependências Linux com `pnpm exec playwright install --with-deps chromium`
+5. expor porta `8080`
+6. iniciar com `node server.js`
 
-Com isso, o Chromium e as dependências Linux passam a fazer parte da imagem final do backend de forma determinística.
+Variáveis relevantes no container:
 
-## Validação
+- `NODE_ENV=production`
+- `PORT=8080`
+- `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`
 
-### Local (Docker)
+Com isso, o Chromium é instalado durante o build e passa a existir de forma determinística na imagem final.
 
-```bash
-cd backend
-docker build -t sinprfes-backend:playwright .
-docker run --rm -e NODE_ENV=production sinprfes-backend:playwright npm run check:playwright
-```
+## Diagnóstico do browser service
 
-Saída esperada:
+O serviço diferencia explicitamente os cenários:
 
-- `PLAYWRIGHT_PACKAGE_OK`
-- `PLAYWRIGHT_BROWSER_PRESENT`
-- `PLAYWRIGHT_LAUNCH_OK`
+- `PLAYWRIGHT_PACKAGE_MISSING`: pacote `playwright` ausente.
+- `PLAYWRIGHT_BROWSER_MISSING`: executável do Chromium ausente.
+- `PLAYWRIGHT_SYSTEM_DEPS_MISSING`: bibliotecas Linux ausentes.
+- `PLAYWRIGHT_LAUNCH_FAILED`: falha genérica de launch.
 
-### Railway (pós-deploy)
+Em debug (`CONSULTA_PROCESSUAL_DEBUG=true`), o backend registra `executablePath` para facilitar triagem.
 
-1. Confirmar no serviço API: Root Directory = `/backend`.
-2. Confirmar que o deploy detectou e usou `/backend/Dockerfile`.
-3. No shell/runtime do serviço, executar:
+## Flags cloud-safe no launch
+
+Mantidas como padrão para execução em nuvem:
+
+- `headless=true` por padrão em produção
+- `--no-sandbox`
+- `--disable-setuid-sandbox`
+
+## Checklist operacional (Railway UI)
+
+1. `Root Directory = /backend`
+2. `Builder = Dockerfile`
+3. `Custom Start Command =` vazio
+4. `Custom Build Command =` vazio
+5. redeploy do serviço
+
+## Validação rápida pós-deploy
+
+No runtime do serviço da API:
 
 ```bash
 npm run check:playwright
 ```
 
-## Resolução de Problemas (Reason Codes)
+Saída esperada inclui:
 
-O diagnóstico do browser service diferencia explicitamente:
-
-- `PLAYWRIGHT_PACKAGE_MISSING`: pacote `playwright` não instalado.
-- `PLAYWRIGHT_BROWSER_MISSING`: executável do Chromium ausente.
-- `PLAYWRIGHT_SYSTEM_DEPS_MISSING`: bibliotecas Linux ausentes.
-- `PLAYWRIGHT_LAUNCH_FAILED`: falha genérica de launch.
-- `PLAYWRIGHT_LAUNCH_OK`: browser iniciado com sucesso.
-
-Em modo debug (`CONSULTA_PROCESSUAL_DEBUG=true`), o serviço também registra o `executablePath` detectado.
+- `PLAYWRIGHT_PACKAGE_OK`
+- `PLAYWRIGHT_BROWSER_PRESENT`
+- `PLAYWRIGHT_LAUNCH_OK`

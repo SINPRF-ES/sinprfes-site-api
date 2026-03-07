@@ -2,18 +2,21 @@ FROM node:20-bookworm
 
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-COPY package*.json ./
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
-RUN npm install --package-lock-only \
-    && npm ci --omit=dev \
-    && npx playwright install --with-deps chromium \
-    && npm cache clean --force
+COPY package.json ./
+COPY scripts/check-root-deps.js ./scripts/check-root-deps.js
+
+RUN pnpm install --prod --no-frozen-lockfile
+RUN pnpm exec playwright install --with-deps chromium
+RUN pnpm store prune
 
 COPY . .
 
 EXPOSE 8080
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
