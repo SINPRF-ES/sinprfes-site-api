@@ -45,7 +45,9 @@
                 <div class="section-box" style="margin-top: 20px; border-left: 5px solid #ffc107; background: #fffdf0;">
                     <h3 class="section-subtitle" style="margin-bottom: 8px;">⚠️ Aumente sua segurança</h3>
                     <p class="field-hint" style="margin-bottom: 12px;">Ative a autenticação em duas etapas (2FA) para proteger seu acesso.</p>
-                    <div style="text-align:center;"><a href="/config-2fa.html" class="btn btn-primary">Ativar 2FA Agora</a></div>
+                    <div style="display:flex; justify-content:center; margin-top: 8px;">
+                        <a href="/config-2fa.html" class="btn btn-primary" style="display:inline-flex; align-items:center; justify-content:center; white-space:normal; text-align:center; max-width: 100%;">Ativar 2FA Agora</a>
+                    </div>
                 </div>
             </div>`;
 
