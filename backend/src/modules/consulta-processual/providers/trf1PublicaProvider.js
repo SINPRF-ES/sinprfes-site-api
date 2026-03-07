@@ -3,19 +3,10 @@ const ConsultaProcessualProvider = require('./ConsultaProcessualProvider');
 const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConfig');
 const { parseTrf1Rows } = require('../parsers/trf1ProcessParser');
 const { createSourceResult } = require('../dto/consultaProcessualDto');
+const { launchBrowser } = require('../service/playwrightBrowserService');
 const log = require('../../../utils/log');
 
 const TRF1_URL = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
-
-function loadPlaywrightModule() {
-  try {
-    // eslint-disable-next-line global-require
-    return require('playwright');
-  } catch (err) {
-    if (err.code === 'MODULE_NOT_FOUND') return null;
-    throw err;
-  }
-}
 
 class Trf1PublicaProvider extends ConsultaProcessualProvider {
   getId() { return 'trf1'; }
@@ -32,21 +23,24 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
 
     let browser;
     try {
-      const playwright = loadPlaywrightModule();
-      if (!playwright?.chromium) {
+      const browserResult = await launchBrowser({ config: cfg });
+      if (!browserResult.ok) {
         log.info('ConsultaProcessualProviderSkipped', {
+          event: 'ConsultaProcessualProviderSkipped',
           requestId,
           userId,
           source: this.getId(),
           cpfMasked,
-          reason: 'Playwright not installed',
+          reasonCode: browserResult.reasonCode,
+          reason: browserResult.reason,
+          ...(browserResult.errorMessage ? { errorMessage: browserResult.errorMessage } : {}),
           durationMs: Date.now() - startedAt,
         });
 
         return createSourceResult({ source: this.getId(), sourceLabel: this.getLabel(), status: 'skipped', items: [] });
       }
 
-      browser = await playwright.chromium.launch({ headless: cfg.headless });
+      browser = browserResult.browser;
       const context = await browser.newContext();
       const page = await context.newPage();
 
@@ -94,11 +88,14 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
 
       return createSourceResult({ source: this.getId(), sourceLabel: this.getLabel(), status: 'success', items });
     } catch (err) {
+      const timeoutError = err?.name === 'TimeoutError' || /timeout/i.test(String(err?.message || ''));
       log.warn('ConsultaProcessualProviderError', {
+        event: 'ConsultaProcessualProviderError',
         requestId,
         userId,
         source: this.getId(),
         cpfMasked,
+        reasonCode: timeoutError ? 'TRF1_PORTAL_TIMEOUT' : 'TRF1_PORTAL_UNAVAILABLE',
         errorMessage: err.message,
         durationMs: Date.now() - startedAt,
       });

@@ -29,9 +29,9 @@ Este serviço serve os arquivos estáticos do site institucional e da área do f
 Este serviço provê a API REST em JSON para o site e para o aplicativo mobile.
 
 ### Configuração no Railway:
-- **Root Directory:** `/backend`
-- **Build Command:** `pnpm install` (automático via `railway.toml`)
-- **Start Command:** `node server.js` (automático via `railway.toml`)
+- **Root Directory:** `/` (raiz do monorepo)
+- **Build Command:** `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
+- **Start Command:** `pnpm --filter @sinprfes/backend start`
 
 ### Variáveis de Ambiente Necessárias:
 - `PORT`: `3000` (O Railway costuma injetar automaticamente)
@@ -39,6 +39,8 @@ Este serviço provê a API REST em JSON para o site e para o aplicativo mobile.
 - `JWT_SECRET`: (Segredo para tokens JWT)
 - `CLOUDINARY_URL`: (Configuração do Cloudinary para imagens)
 - *(E outras variáveis já configuradas no .env do backend)*
+
+> Nota técnica (Consulta Processual/TRF1): o Railway instala dependências a partir da raiz (`/`) e o runtime da API executa o workspace `backend`; por isso o Playwright deve ficar em `backend/package.json` e o Chromium precisa ser preparado durante o build.
 
 ---
 

@@ -50,6 +50,7 @@ Todos os providers implementam:
 - Reuso de execução concorrente por `userId + provider`.
 
 ## Variáveis de ambiente
+### Flags do módulo
 - `CONSULTA_PROCESSUAL_ENABLED` (default: `true`)
 - `CONSULTA_PROCESSUAL_TRF1_ENABLED` (default: `true`)
 - `CONSULTA_PROCESSUAL_TIMEOUT_MS` (default: `45000`)
@@ -58,8 +59,39 @@ Todos os providers implementam:
 - `CONSULTA_PROCESSUAL_CACHE_TTL_MS` (default: `300000`)
 - `CONSULTA_PROCESSUAL_MIN_INTERVAL_MS` (default: `3000`)
 - `CONSULTA_PROCESSUAL_DEBUG` (default: `false`)
-- `CONSULTA_PROCESSUAL_HEADLESS` (default: `true`)
+- `CONSULTA_PROCESSUAL_HEADLESS` (default: `true` em `production`; `false` em `dev` quando não definido)
 - `CONSULTA_PROCESSUAL_DEBUG_SCREENSHOT` (default: `false`)
+
+### Flags de automação Playwright (novas)
+- `PLAYWRIGHT_ENABLED` (default: `true`)
+- `PLAYWRIGHT_BROWSER` (default: `chromium`)
+- `PLAYWRIGHT_LAUNCH_TIMEOUT_MS` (default: `30000`)
+- `PLAYWRIGHT_EXTRA_ARGS` (default: `--no-sandbox,--disable-setuid-sandbox`)
+- `PLAYWRIGHT_INSTALL_CHROMIUM` (default: `true`, usada em build para preparar browser)
+
+## Notas operacionais (Railway / monorepo)
+- Serviço API no Railway roda com **Root Directory `/`** (raiz do monorepo).
+- Dependências são instaladas via `pnpm install --frozen-lockfile` a partir da raiz e resolvidas por workspace.
+- O backend roda do workspace `backend` via `pnpm --filter @sinprfes/backend start`.
+- Por isso o Playwright deve estar em `backend/package.json` (runtime do backend), nunca em `site/`, `mobile/` ou apenas no root.
+
+### Build/Start recomendados para API no Railway
+- **Build Command**: `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
+- **Start Command**: `pnpm --filter @sinprfes/backend start`
+
+### Diagnóstico Playwright
+- Script: `pnpm --filter @sinprfes/backend run check:playwright`
+- Saídas esperadas:
+  - `PLAYWRIGHT_PACKAGE_OK`
+  - `PLAYWRIGHT_BROWSER_OK`
+  - `PLAYWRIGHT_LAUNCH_OK`
+- Falhas tratadas:
+  - `PLAYWRIGHT_PACKAGE_MISSING`
+  - `PLAYWRIGHT_BROWSER_MISSING`
+  - `PLAYWRIGHT_LAUNCH_FAILED`
+
+## Conclusão sobre env vars existentes do projeto
+As env vars globais já existentes no serviço (por exemplo: `APP_BASE_URL`, `DATABASE_URL`, `JWT_SECRET`, integrações Google/Cloudinary/Instagram/MinIO/Resend) **não resolvem instalação de Playwright**. O problema é de dependência + preparação de browser no build/runtime, não de segredo/credencial.
 
 ## Limitações conhecidas
 - Atualmente integra apenas TRF1.
