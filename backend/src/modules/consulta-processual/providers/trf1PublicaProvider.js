@@ -200,7 +200,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
 
       const parsedItems = parseTrf1Rows(extraction.rows);
       const rawItems = buildRawItemsFromExtraction(extraction);
-      const items = rawItems.length ? rawItems : parsedItems;
+      const items = parsedItems.length ? parsedItems : rawItems;
       const parsedCnjs = parsedItems.map((it) => it.processNumber).filter(Boolean);
 
       if (cfg.debug) {
