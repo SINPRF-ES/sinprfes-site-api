@@ -1,0 +1,14 @@
+node_modules
+.env
+npm-debug.log*
+.DS_Store
+frontend
+tmp
+google.json
+*.log
+dist
+build
+.git
+.github
+.jules
+.Jules

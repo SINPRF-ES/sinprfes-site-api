@@ -144,6 +144,7 @@ async function launchBrowser(options = {}) {
         reasonCode: REASON_CODES.BROWSER_MISSING,
         reason: 'Playwright package is present, but Chromium executable is missing from the system.',
         errorMessage: compactErrorMessage(rawErrorMessage),
+        playwrightBrowsersPath: process.env.PLAYWRIGHT_BROWSERS_PATH || 'NOT_SET',
         ...(executablePath ? { executablePath } : {}),
       });
     }
