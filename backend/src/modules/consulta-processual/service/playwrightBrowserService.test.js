@@ -53,6 +53,27 @@ describe('playwrightBrowserService', () => {
     expect(result.reasonCode).toBe(REASON_CODES.LAUNCH_FAILED);
   });
 
+
+  it('retorna BROWSER_MISSING quando executável do Chromium não existe no runtime', async () => {
+    const result = await launchBrowser({
+      config: {
+        playwrightEnabled: true,
+        playwrightBrowser: 'chromium',
+        headless: true,
+        playwrightLaunchTimeoutMs: 30000,
+        playwrightExtraArgs: ['--no-sandbox'],
+      },
+      playwrightLoader: () => ({
+        chromium: {
+          launch: jest.fn().mockRejectedValue(new Error("browserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium/chrome")),
+        },
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reasonCode).toBe(REASON_CODES.BROWSER_MISSING);
+  });
+
   it('retorna SYSTEM_DEPS_MISSING quando faltar biblioteca de sistema Linux', async () => {
     const result = await launchBrowser({
       config: {
