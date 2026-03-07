@@ -41,6 +41,13 @@ router.post("/:id/publicar",
   noticiasController.publicar
 );
 
+router.post("/:id/arquivar",
+  escopoPublico,
+  authMiddleware,
+  requirePermission("NOTICIAS_GERENCIAR"),
+  noticiasController.arquivar
+);
+
 router.delete("/:id",
   authMiddleware,
   requirePermission("NOTICIAS_GERENCIAR"),
