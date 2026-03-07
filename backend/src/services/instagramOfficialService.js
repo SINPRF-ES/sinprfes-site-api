@@ -17,7 +17,7 @@ let runtimeAuth = {
   accessToken: "",
   expiresAt: null,
   tokenSource: null,
-  userId: process.env.INSTAGRAM_USER_ID || process.env.INSTAGRAM_ACCOUNT_ID || "",
+  userId: process.env.INSTAGRAM_ACCOUNT_ID || "",
 };
 
 const pendingStates = new Map();
@@ -38,7 +38,7 @@ function getConfig() {
     scopes,
     staticAccessToken: process.env.INSTAGRAM_ACCESS_TOKEN || "",
     refreshEnabled: String(process.env.INSTAGRAM_REFRESH_ENABLED || "false").toLowerCase() === "true",
-    accountId: process.env.INSTAGRAM_ACCOUNT_ID || process.env.INSTAGRAM_USER_ID || "",
+    accountId: process.env.INSTAGRAM_ACCOUNT_ID || "",
   };
 }
 
@@ -201,7 +201,6 @@ async function getRecentMedia(accessToken = getActiveAccessToken()) {
 
 function normalizeMediaForFrontend(mediaList = []) {
   return mediaList
-    .slice(0, MAX_POSTS)
     .map((item) => {
       const children = Array.isArray(item?.children?.data) ? item.children.data : [];
       const firstChild = children[0] || {};
@@ -215,7 +214,8 @@ function normalizeMediaForFrontend(mediaList = []) {
         date: item.timestamp || null,
       };
     })
-    .filter((item) => item.link && item.image);
+    .filter((item) => item.link && item.image)
+    .slice(0, MAX_POSTS);
 }
 
 function getStatus() {
@@ -230,6 +230,52 @@ function getStatus() {
     tokenSource: runtimeAuth.accessToken ? runtimeAuth.tokenSource : (config.staticAccessToken ? "env" : null),
     tokenExpiresAt: runtimeAuth.expiresAt,
   };
+}
+
+function getTokenPreview(token = "") {
+  if (!token) return null;
+  if (token.length <= 10) return `${token.slice(0, 2)}***`;
+  return `${token.slice(0, 6)}***${token.slice(-4)}`;
+}
+
+async function refreshLongLivedAccessToken(accessToken = getActiveAccessToken()) {
+  if (!accessToken) {
+    throw new Error("instagram_access_token_missing");
+  }
+
+  const config = getConfig();
+  const url = new URL(getApiUrl("refresh_access_token", config));
+  url.searchParams.set("grant_type", "ig_refresh_token");
+  url.searchParams.set("access_token", accessToken);
+
+  const response = await fetchWithTimeout(url.toString(), { method: "GET" });
+  const payload = await response.json();
+
+  if (!response.ok || !payload?.access_token) {
+    log.warn("InstagramOfficialTokenExchangeFailed", {
+      stage: "refresh_long_lived",
+      status: response.status,
+      hasPayload: Boolean(payload),
+      errorCode: payload?.error?.code,
+    });
+    throw new Error("instagram_long_lived_refresh_failed");
+  }
+
+  runtimeAuth = {
+    ...runtimeAuth,
+    accessToken: payload.access_token,
+    expiresAt: payload.expires_in ? Date.now() + payload.expires_in * 1000 : runtimeAuth.expiresAt,
+    tokenSource: "refresh_runtime",
+  };
+
+  log.info("InstagramOfficialTokenRefreshSucceeded", {
+    tokenSourceAfterRefresh: runtimeAuth.tokenSource,
+    expiresInSeconds: payload.expires_in || null,
+    tokenPreview: getTokenPreview(payload.access_token),
+    persistedInEnvironment: false,
+  });
+
+  return getStatus();
 }
 
 async function handleOAuthCallback({ code, state }) {
@@ -342,4 +388,5 @@ module.exports = {
   getPublicFeed,
   getStatus,
   handleOAuthCallback,
+  refreshLongLivedAccessToken,
 };

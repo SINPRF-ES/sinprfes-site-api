@@ -12,6 +12,7 @@ const server = http.createServer(app);
 const { initBirthdayScheduler } = require("./src/jobs/birthdayScheduler");
 const { initPushCleanupScheduler } = require("./src/jobs/pushCleanupScheduler");
 const { initReportCleanupScheduler } = require("./src/jobs/reportCleanupScheduler");
+const { initInstagramTokenRefreshScheduler } = require("./src/jobs/instagramTokenRefreshScheduler");
 
 // Porta (obrigatório usar process.env.PORT em ambientes cloud)
 const PORT = process.env.PORT || 3000;
@@ -55,6 +56,14 @@ server.listen(PORT, "0.0.0.0", () => {
       console.log("[BOOT] reportCleanupScheduler inicializado");
     } catch (e) {
       console.error("[BOOT] reportCleanupScheduler init failed:", e?.message);
+    }
+
+    // Inicializa o scheduler de refresh do token oficial do Instagram
+    try {
+      initInstagramTokenRefreshScheduler();
+      console.log("[BOOT] instagramTokenRefreshScheduler inicializado");
+    } catch (e) {
+      console.error("[BOOT] instagramTokenRefreshScheduler init failed:", e?.message);
     }
   });
 });

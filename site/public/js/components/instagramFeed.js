@@ -71,13 +71,16 @@
     posts.forEach((post, index) => {
       const card = document.createElement("div");
       card.className = "instagram-card";
-      const safeTitle = (post.title || "Post no Instagram").replace(/"/g, "&quot;");
+      const rawTitle = (post.title || "").trim();
+      const safeTitle = (rawTitle || "Post no Instagram").replace(/"/g, "&quot;");
+      const cardCaption = rawTitle || "Sem legenda disponível.";
 
       card.innerHTML = `
         <a href="${post.link}" target="_blank" rel="noopener noreferrer" data-instagram-click="post_${index + 1}" aria-label="${safeTitle}">
           <div class="instagram-image-wrapper">
             <img src="${post.image}" alt="${safeTitle}" loading="lazy">
           </div>
+          <p class="instagram-card-caption">${cardCaption}</p>
         </a>
       `;
       wrapper.appendChild(card);
@@ -86,7 +89,9 @@
     container.innerHTML = "";
     container.appendChild(wrapper);
 
-    enableCarousel(wrapper);
+    if (posts.length > 1) {
+      enableCarousel(wrapper);
+    }
     enableAnalytics();
   }
 
