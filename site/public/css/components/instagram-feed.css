@@ -27,6 +27,12 @@
   scroll-snap-align: start;
 }
 
+.instagram-card a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
 .instagram-image-wrapper {
   position: relative;
   width: 100%;
@@ -42,6 +48,19 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.instagram-card-caption {
+  margin: 8px 0 0;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-height: 2.45em;
 }
 
 .insta-card-skeleton {
