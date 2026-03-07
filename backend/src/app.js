@@ -8,26 +8,74 @@ app.set('trust proxy', 1);
 
 const cors = require("cors");
 
-const allowedOrigins = [
+app.use(require("./middlewares/requestId"));
+app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições
+
+
+const DEFAULT_PROD_ORIGINS = [
   "https://sinprfes.org.br",
+  "https://www.sinprfes.org.br",
 ];
+
+const DEFAULT_DEV_ORIGINS = [
+  ...DEFAULT_PROD_ORIGINS,
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+
+function parseAllowedOrigins() {
+  const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (envOrigins.length > 0) return envOrigins;
+
+  if (process.env.NODE_ENV === "production") {
+    return DEFAULT_PROD_ORIGINS;
+  }
+
+  return DEFAULT_DEV_ORIGINS;
+}
+
+const allowedOrigins = parseAllowedOrigins();
+
+if (process.env.NODE_ENV !== "production") {
+  console.log("[CORS] Allowed origins:", allowedOrigins.join(", "));
+}
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Permite chamadas server-to-server/curl sem Origin
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (!origin) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[CORS] Origin ausente (permitido para server-to-server)");
+      }
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[CORS] Origin permitido: ${origin}`);
+      }
+      return callback(null, true);
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[CORS] Origin bloqueado: ${origin}`);
+    }
+
     return callback(null, false);
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+  optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
-
-app.use(require("./middlewares/requestId"));
-app.use(require("./middlewares/requestTracker")); // Rastreamento de requisições
 
 // Configurações de Segurança de Cabeçalhos (Defense in Depth)
 app.use((req, res, next) => {

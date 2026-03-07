@@ -38,9 +38,37 @@ Este serviço provê a API REST em JSON para o site e para o aplicativo mobile.
 - `DATABASE_URL`: (URL de conexão com o PostgreSQL)
 - `JWT_SECRET`: (Segredo para tokens JWT)
 - `CLOUDINARY_URL`: (Configuração do Cloudinary para imagens)
+- `CORS_ALLOWED_ORIGINS`: lista separada por vírgula com as origens permitidas no browser.
+  - Exemplo produção: `https://sinprfes.org.br,https://www.sinprfes.org.br`
+  - Exemplo homologação (se existir): adicionar também `https://hml.sinprfes.org.br`
+  - Em desenvolvimento, se a variável não estiver definida, o backend usa fallback local (`localhost`/`127.0.0.1`) + domínios oficiais.
 - *(E outras variáveis já configuradas no .env do backend)*
 
 > Nota técnica (Consulta Processual/TRF1): o Railway instala dependências a partir da raiz (`/`) e o runtime da API executa o workspace `backend`; por isso o Playwright deve ficar em `backend/package.json` e o Chromium precisa ser preparado durante o build com dependências Linux (`playwright install --with-deps chromium`).
+
+---
+
+
+### CORS (API)
+
+A API aplica CORS globalmente no Express com whitelist explícita de origens (sem `origin: *`).
+
+- O controle é centralizado em `backend/src/app.js`.
+- A whitelist é lida de `CORS_ALLOWED_ORIGINS` (CSV), com fallback seguro por ambiente.
+- `OPTIONS` (preflight) é tratado globalmente com `app.options("*", cors(...))`.
+- Métodos permitidos: `GET, POST, PUT, PATCH, DELETE, OPTIONS`.
+- Headers permitidos: `Authorization, Content-Type, Accept, X-Requested-With`.
+- A API não habilita `credentials: true` por padrão (fluxo atual usa JWT via header `Authorization`).
+
+Checklist rápido de CORS em produção:
+1. Definir `CORS_ALLOWED_ORIGINS` no serviço API do Railway.
+2. Garantir que inclui todos os domínios web legítimos (ex.: com e sem `www`).
+3. Validar preflight:
+   - `curl -i -X OPTIONS https://api.sinprfes.org.br/api/filiados/me -H "Origin: https://sinprfes.org.br" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: Authorization,Content-Type"`
+   - Esperado: status `204` e header `Access-Control-Allow-Origin: https://sinprfes.org.br`.
+4. Validar bloqueio de origem não autorizada:
+   - `curl -i -X OPTIONS https://api.sinprfes.org.br/api/filiados/me -H "Origin: https://origem-nao-autorizada.example" -H "Access-Control-Request-Method: GET"`
+   - Esperado: sem `Access-Control-Allow-Origin` para a origem inválida (bloqueio de CORS).
 
 ---
 
