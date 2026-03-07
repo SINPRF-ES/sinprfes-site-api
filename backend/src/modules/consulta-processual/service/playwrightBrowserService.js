@@ -78,15 +78,22 @@ async function launchBrowser(options = {}) {
   const browserTypeName = cfg.playwrightBrowser || 'chromium';
   const browserType = playwright[browserTypeName];
 
+  let executablePath = null;
+  if (browserType && typeof browserType.executablePath === 'function') {
+    try {
+      executablePath = browserType.executablePath();
+    } catch (e) {
+      if (cfg.debug) {
+        console.log(`[PLAYWRIGHT_DEBUG] Could not get executablePath: ${e.message}`);
+      }
+    }
+  }
+
   if (cfg.debug) {
     console.log('[PLAYWRIGHT_DEBUG] Starting launch sequence:');
     console.log(`[PLAYWRIGHT_DEBUG] Browser Type: ${browserTypeName}`);
     console.log(`[PLAYWRIGHT_DEBUG] PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH || 'not set'}`);
-    try {
-      console.log(`[PLAYWRIGHT_DEBUG] Executable Path: ${browserType.executablePath()}`);
-    } catch (e) {
-      console.log(`[PLAYWRIGHT_DEBUG] Could not get executablePath: ${e.message}`);
-    }
+    console.log(`[PLAYWRIGHT_DEBUG] Executable Path: ${executablePath || 'NOT_AVAILABLE'}`);
   }
 
   if (!browserType || typeof browserType.launch !== 'function') {
@@ -94,6 +101,7 @@ async function launchBrowser(options = {}) {
       ok: false,
       reasonCode: REASON_CODES.BROWSER_MISSING,
       reason: `Playwright browser type "${browserTypeName}" is unavailable in current runtime.`,
+      ...(executablePath ? { executablePath } : {}),
     };
   }
 
@@ -123,6 +131,7 @@ async function launchBrowser(options = {}) {
         reasonCode: REASON_CODES.BROWSER_MISSING,
         reason: 'Playwright package is present, but Chromium executable is missing from the system.',
         errorMessage: compactErrorMessage(rawErrorMessage),
+        ...(executablePath ? { executablePath } : {}),
       };
     }
 
@@ -135,6 +144,7 @@ async function launchBrowser(options = {}) {
         reason: 'Playwright Chromium is installed, but required Linux system libraries are missing.',
         errorMessage: compactErrorMessage(rawErrorMessage),
         ...(missingLibrary ? { missingLibrary } : {}),
+        ...(executablePath ? { executablePath } : {}),
       };
     }
 
@@ -143,6 +153,7 @@ async function launchBrowser(options = {}) {
       reasonCode: REASON_CODES.LAUNCH_FAILED,
       reason: `Failed to launch Playwright ${browserTypeName}.`,
       errorMessage: compactErrorMessage(rawErrorMessage),
+      ...(executablePath ? { executablePath } : {}),
     };
   }
 }

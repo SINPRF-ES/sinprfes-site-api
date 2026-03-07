@@ -307,12 +307,18 @@ Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adot
 
 ## 🚀 Deploy em Nuvem (Railway/Outros)
 
-- Build Command: `cd backend && pnpm install`
-- Start Command: `cd backend && pnpm start`
-- Node Version: 20.x (definida em `backend/package.json`)
-- Root Directory: `/` (nunca usar `/mobile`)
+### API (backend)
 
-O ambiente de deploy não deve instalar nem considerar dependências do diretório `/mobile`.
+- Root Directory: `/backend`
+- Build: via `backend/Dockerfile` (fonte autoritativa)
+- Start Command real: `npm start` (`node server.js`)
+- Node Version: 20.x (imagem Debian/Bookworm)
+
+### SITE
+
+- Mantém deploy separado e não deve ser impactado pelo deploy da API.
+
+O ambiente de deploy da API não deve instalar nem considerar dependências do diretório `/mobile`.
 
 ---
 
