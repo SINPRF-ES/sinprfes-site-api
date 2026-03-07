@@ -35,9 +35,10 @@
 
     .contato-acao {
       background: var(--ui-bg);
-      padding: var(--ui-space-5);
+      padding: clamp(1rem, 2vw, var(--ui-space-5));
       border-radius: var(--ui-radius);
       border: 1px solid var(--ui-border);
+      min-width: 0;
     }
 
     .contato-acao h3 {
@@ -52,15 +53,26 @@
     }
 
     .contato-btn-group {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ui-space-3);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--ui-space-2);
+      width: 100%;
     }
 
     .contato-btn-group .ui-button {
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
       box-sizing: border-box;
-      white-space: nowrap;
+      white-space: normal;
+      text-align: center;
+      padding-inline: 0.75rem;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
+    }
+
+    .contato-btn-group .ui-button:last-child {
+      grid-column: 1 / -1;
     }
 
     .contato-divider {
@@ -75,6 +87,16 @@
       font-style: italic;
       text-align: center;
       line-height: 1.4;
+    }
+
+    @media (max-width: 900px) {
+      .contato-btn-group {
+        grid-template-columns: 1fr;
+      }
+
+      .contato-btn-group .ui-button:last-child {
+        grid-column: auto;
+      }
     }
   </style>
   <script src="/js/utils.js" defer></script>
