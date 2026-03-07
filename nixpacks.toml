@@ -6,4 +6,4 @@ cmds = ["npm install -g pnpm@9.15.9 --force", "pnpm install --frozen-lockfile"]
 
 [phases.build]
 dependsOn = ["install"]
-cmds = ["pnpm --filter ${FILTER:-*} build", "if [ \"$FILTER\" = \"@sinprfes/backend\" ]; then pnpm --filter @sinprfes/backend run playwright:install; fi"]
+cmds = ["pnpm --filter ${FILTER:-*} build", "if [ -z \"$FILTER\" ] || [ \"$FILTER\" = \"*\" ] || [ \"$FILTER\" = \"@sinprfes/backend\" ]; then pnpm --filter @sinprfes/backend run playwright:install; fi"]
