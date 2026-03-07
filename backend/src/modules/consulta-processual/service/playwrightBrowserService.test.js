@@ -71,5 +71,39 @@ describe('playwrightBrowserService', () => {
 
     expect(result.ok).toBe(false);
     expect(result.reasonCode).toBe(REASON_CODES.SYSTEM_DEPS_MISSING);
+    expect(result.missingLibrary).toBe('libglib-2.0.so.0');
+    expect(result.errorMessage).toBe('error while loading shared libraries: libglib-2.0.so.0: cannot open shared object file');
+  });
+
+  it('compacta errorMessage quando Playwright retorna call log gigante', async () => {
+    const giantMessage = [
+      'browserType.launch: Target page, context or browser has been closed',
+      'Browser logs:',
+      '<launching> ...',
+      '[pid=32][err] /root/.cache/ms-playwright/.../chrome-headless-shell: error while loading shared libraries: libglib-2.0.so.0: cannot open shared object file: No such file or directory',
+      'Call log:',
+      '- <launching> ...',
+      '- [pid=32][err] ...',
+    ].join('\n');
+
+    const result = await launchBrowser({
+      config: {
+        playwrightEnabled: true,
+        playwrightBrowser: 'chromium',
+        headless: true,
+        playwrightLaunchTimeoutMs: 30000,
+        playwrightExtraArgs: ['--no-sandbox'],
+      },
+      playwrightLoader: () => ({
+        chromium: {
+          launch: jest.fn().mockRejectedValue(new Error(giantMessage)),
+        },
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reasonCode).toBe(REASON_CODES.SYSTEM_DEPS_MISSING);
+    expect(result.errorMessage).toContain('error while loading shared libraries');
+    expect(result.errorMessage).not.toContain('Call log:');
   });
 });
