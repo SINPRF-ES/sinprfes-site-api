@@ -7,7 +7,7 @@ O projeto utiliza o arquivo `railpack-plan.json` na raiz para definir o plano de
 ## 1. Serviço: API (Backend)
 
 *   **Root Directory**: `/` (Raiz do Monorepo)
-*   **Build Command**: `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
+*   **Build Command**: `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 PLAYWRIGHT_INSTALL_WITH_DEPS=true pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
 *   **Start Command**: `pnpm --filter @sinprfes/backend start`
 *   **Variáveis de Ambiente**:
     *   `PORT`: `8080` (ou conforme desejado)
@@ -29,7 +29,7 @@ O projeto utiliza o arquivo `railpack-plan.json` na raiz para definir o plano de
 ## Observações Gerais
 
 *   **Root Directory**: É mandatório configurar o **Root Directory** como `/` no painel do Railway para que o `pnpm-lock.yaml` na raiz seja detectado e utilizado corretamente pelo processo de build.
-*   **Playwright (Consulta Processual/TRF1)**: o pacote npm está em `backend/package.json` e o Chromium é preparado explicitamente no build via `build:railway` (`playwright install chromium`).
+*   **Playwright (Consulta Processual/TRF1)**: o pacote npm está em `backend/package.json` e o Chromium é preparado explicitamente no build via `build:railway` com `playwright install --with-deps chromium` para evitar falha de libs Linux ausentes (`libglib-2.0.so.0`, etc.).
 *   **Node.js**: O projeto está fixado na versão **20.x**. O Railway deve detectar isso automaticamente via `.nvmrc` na raiz ou `engines` no `package.json`. Caso precise forçar, use `NIXPACKS_NODE_VERSION=20`.
 *   **Gerenciador de Pacotes**: Utilizar exclusivamente **pnpm**.
 *   **Segurança**: Nunca inclua segredos em Dockerfiles ou no código. Utilize sempre as variáveis de ambiente do painel do Railway.

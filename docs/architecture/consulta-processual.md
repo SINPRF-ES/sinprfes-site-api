@@ -68,6 +68,7 @@ Todos os providers implementam:
 - `PLAYWRIGHT_LAUNCH_TIMEOUT_MS` (default: `30000`)
 - `PLAYWRIGHT_EXTRA_ARGS` (default: `--no-sandbox,--disable-setuid-sandbox`)
 - `PLAYWRIGHT_INSTALL_CHROMIUM` (default: `true`, usada em build para preparar browser)
+- `PLAYWRIGHT_INSTALL_WITH_DEPS` (default: `true`, instala dependências Linux do Chromium no build)
 
 ## Notas operacionais (Railway / monorepo)
 - Serviço API no Railway roda com **Root Directory `/`** (raiz do monorepo).
@@ -76,7 +77,7 @@ Todos os providers implementam:
 - Por isso o Playwright deve estar em `backend/package.json` (runtime do backend), nunca em `site/`, `mobile/` ou apenas no root.
 
 ### Build/Start recomendados para API no Railway
-- **Build Command**: `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
+- **Build Command**: `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 PLAYWRIGHT_INSTALL_WITH_DEPS=true pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
 - **Start Command**: `pnpm --filter @sinprfes/backend start`
 
 ### Diagnóstico Playwright
@@ -88,6 +89,7 @@ Todos os providers implementam:
 - Falhas tratadas:
   - `PLAYWRIGHT_PACKAGE_MISSING`
   - `PLAYWRIGHT_BROWSER_MISSING`
+  - `PLAYWRIGHT_SYSTEM_DEPS_MISSING`
   - `PLAYWRIGHT_LAUNCH_FAILED`
 
 ## Conclusão sobre env vars existentes do projeto

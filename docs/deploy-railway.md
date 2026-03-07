@@ -30,7 +30,7 @@ Este serviço provê a API REST em JSON para o site e para o aplicativo mobile.
 
 ### Configuração no Railway:
 - **Root Directory:** `/` (raiz do monorepo)
-- **Build Command:** `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
+- **Build Command:** `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 PLAYWRIGHT_INSTALL_WITH_DEPS=true pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
 - **Start Command:** `pnpm --filter @sinprfes/backend start`
 
 ### Variáveis de Ambiente Necessárias:
@@ -40,7 +40,7 @@ Este serviço provê a API REST em JSON para o site e para o aplicativo mobile.
 - `CLOUDINARY_URL`: (Configuração do Cloudinary para imagens)
 - *(E outras variáveis já configuradas no .env do backend)*
 
-> Nota técnica (Consulta Processual/TRF1): o Railway instala dependências a partir da raiz (`/`) e o runtime da API executa o workspace `backend`; por isso o Playwright deve ficar em `backend/package.json` e o Chromium precisa ser preparado durante o build.
+> Nota técnica (Consulta Processual/TRF1): o Railway instala dependências a partir da raiz (`/`) e o runtime da API executa o workspace `backend`; por isso o Playwright deve ficar em `backend/package.json` e o Chromium precisa ser preparado durante o build com dependências Linux (`playwright install --with-deps chromium`).
 
 ---
 

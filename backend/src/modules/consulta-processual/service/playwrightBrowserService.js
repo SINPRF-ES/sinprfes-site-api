@@ -4,8 +4,17 @@ const REASON_CODES = {
   PLAYWRIGHT_DISABLED: 'PLAYWRIGHT_DISABLED',
   PACKAGE_MISSING: 'PLAYWRIGHT_PACKAGE_MISSING',
   BROWSER_MISSING: 'PLAYWRIGHT_BROWSER_MISSING',
+  SYSTEM_DEPS_MISSING: 'PLAYWRIGHT_SYSTEM_DEPS_MISSING',
   LAUNCH_FAILED: 'PLAYWRIGHT_LAUNCH_FAILED',
 };
+
+function hasMissingSystemDeps(errorMessage = '') {
+  const msg = String(errorMessage || '').toLowerCase();
+  return msg.includes('error while loading shared libraries')
+    || msg.includes('cannot open shared object file')
+    || msg.includes('libglib-2.0.so.0')
+    || msg.includes('host system is missing dependencies');
+}
 
 function loadPlaywrightModule() {
   try {
@@ -66,6 +75,15 @@ async function launchBrowser(options = {}) {
       },
     };
   } catch (err) {
+    if (hasMissingSystemDeps(err.message)) {
+      return {
+        ok: false,
+        reasonCode: REASON_CODES.SYSTEM_DEPS_MISSING,
+        reason: 'Playwright Chromium is installed, but required Linux system libraries are missing.',
+        errorMessage: err.message,
+      };
+    }
+
     return {
       ok: false,
       reasonCode: REASON_CODES.LAUNCH_FAILED,
@@ -79,4 +97,5 @@ module.exports = {
   REASON_CODES,
   loadPlaywrightModule,
   launchBrowser,
+  hasMissingSystemDeps,
 };

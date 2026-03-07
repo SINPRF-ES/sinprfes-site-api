@@ -27,6 +27,14 @@ async function main() {
       process.exit(3);
     }
 
+    if (result.reasonCode === 'PLAYWRIGHT_SYSTEM_DEPS_MISSING') {
+      console.log('PLAYWRIGHT_PACKAGE_OK');
+      console.log('PLAYWRIGHT_BROWSER_OK');
+      console.log('PLAYWRIGHT_SYSTEM_DEPS_MISSING');
+      if (result.errorMessage) console.log(result.errorMessage);
+      process.exit(6);
+    }
+
     console.log(result.reasonCode || 'PLAYWRIGHT_CHECK_FAILED');
     process.exit(4);
   }

@@ -52,4 +52,24 @@ describe('playwrightBrowserService', () => {
     expect(result.ok).toBe(false);
     expect(result.reasonCode).toBe(REASON_CODES.LAUNCH_FAILED);
   });
+
+  it('retorna SYSTEM_DEPS_MISSING quando faltar biblioteca de sistema Linux', async () => {
+    const result = await launchBrowser({
+      config: {
+        playwrightEnabled: true,
+        playwrightBrowser: 'chromium',
+        headless: true,
+        playwrightLaunchTimeoutMs: 30000,
+        playwrightExtraArgs: ['--no-sandbox'],
+      },
+      playwrightLoader: () => ({
+        chromium: {
+          launch: jest.fn().mockRejectedValue(new Error('error while loading shared libraries: libglib-2.0.so.0: cannot open shared object file')),
+        },
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reasonCode).toBe(REASON_CODES.SYSTEM_DEPS_MISSING);
+  });
 });
