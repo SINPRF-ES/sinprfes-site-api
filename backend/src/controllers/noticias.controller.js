@@ -7,6 +7,7 @@ const { parseUuid } = require("../utils/parseUuid");
 const { ehPerfilGestao } = require("../shared/canon");
 
 const AUDIENCIAS_VALIDAS = ["INTERNA", "PUBLICA"];
+const NOTICIAS_POR_PAGINA = 3;
 
 function parseNoticiaId(req, res, requestId) {
     const id = parseUuid(String(req.params.id || ""));
@@ -41,7 +42,7 @@ exports.listar = async (req, res) => {
   let params = [];
 
   try {
-    const { status, audiencia } = req.query;
+    const { status, audiencia, pagina } = req.query;
     const audienciaNorm = audiencia ? String(audiencia).toUpperCase() : null;
     const audienciaEscopo = resolverAudienciaEscopo(req, null);
     const isGestao = verificarGestao(req);
@@ -84,6 +85,9 @@ exports.listar = async (req, res) => {
       LEFT JOIN filiados f ON n.autor_id = f.id
     `;
 
+    const paginaSolicitada = Number.parseInt(String(pagina || "1"), 10);
+    const paginaAtual = Number.isNaN(paginaSolicitada) || paginaSolicitada < 1 ? 1 : paginaSolicitada;
+
     if (!isAutenticado) {
       const audienciaLeitura = resolverAudienciaEscopo(req, "PUBLICA");
       params.push(audienciaLeitura);
@@ -108,7 +112,20 @@ exports.listar = async (req, res) => {
       }
     }
 
-    query += " ORDER BY n.published_at DESC, n.created_at DESC";
+    query += " ORDER BY COALESCE(n.sort_date, n.published_at, n.created_at) DESC, n.created_at DESC";
+
+    const paginacaoPublica = !isAutenticado || !isGestao;
+
+    let total = null;
+    if (paginacaoPublica) {
+      const countQuery = `SELECT COUNT(*)::int AS total FROM (${query}) noticias_filtradas`;
+      const countResult = await pool.query(countQuery, params);
+      total = countResult.rows[0]?.total || 0;
+      params.push(NOTICIAS_POR_PAGINA);
+      query += ` LIMIT $${params.length}`;
+      params.push((paginaAtual - 1) * NOTICIAS_POR_PAGINA);
+      query += ` OFFSET $${params.length}`;
+    }
 
     const { rows: noticias } = await pool.query(query, params);
 
@@ -144,7 +161,20 @@ exports.listar = async (req, res) => {
       count: noticias.length
     });
 
-    return res.json(noticias);
+    if (!paginacaoPublica) {
+      return res.json(noticias);
+    }
+
+    const totalPaginas = Math.max(1, Math.ceil(total / NOTICIAS_POR_PAGINA));
+    return res.json({
+      items: noticias,
+      pagination: {
+        page: paginaAtual,
+        perPage: NOTICIAS_POR_PAGINA,
+        totalItems: total,
+        totalPages: totalPaginas,
+      },
+    });
   } catch (err) {
     log.error("NOTICIAS_GET_FAILED", {
       endpoint,
@@ -240,7 +270,7 @@ exports.criar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
-    const { titulo, conteudo, capa_url, audiencia } = req.body;
+    const { titulo, conteudo, capa_url, audiencia, subtitulo, destaque, data_noticia } = req.body;
     const audienciaFinal = resolverAudienciaEscopo(req, audiencia ? String(audiencia).toUpperCase() : "INTERNA");
 
     if (!titulo || !conteudo) {
@@ -251,11 +281,25 @@ exports.criar = async (req, res) => {
       return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
     }
 
+    if (audienciaFinal === "PUBLICA") {
+      const { rows: atuais } = await pool.query(
+        `SELECT id FROM noticias WHERE audiencia = 'PUBLICA' AND status_editorial = 'ATUAL' LIMIT 1`
+      );
+      if (atuais.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: "Já existe uma notícia atual. Arquive a notícia atual antes de criar outra.",
+          code: "CURRENT_NEWS_ALREADY_EXISTS",
+          requestId,
+        });
+      }
+    }
+
     const { rows } = await pool.query(
-      `INSERT INTO noticias (titulo, conteudo, status, autor_id, capa_url, audiencia)
-       VALUES ($1, $2, 'RASCUNHO', $3, $4, $5)
+      `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date)
+       VALUES ($1, $2, $3, 'PUBLICADA', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))
        RETURNING *`,
-      [titulo, conteudo, req.user.id, capa_url, audienciaFinal]
+      [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), data_noticia || null]
     );
 
     log.info("NOTICIAS_CREATE_SUCCESS", {
@@ -284,7 +328,7 @@ exports.atualizar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
-    const { titulo, conteudo, capa_url, status, audiencia } = req.body;
+    const { titulo, subtitulo, conteudo, capa_url, status, audiencia, destaque, data_noticia } = req.body;
     const audienciaEscopo = resolverAudienciaEscopo(req, null);
     const audienciaFinal = audienciaEscopo || (audiencia ? String(audiencia).toUpperCase() : null);
 
@@ -292,16 +336,39 @@ exports.atualizar = async (req, res) => {
       return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
     }
 
+    const { rows: estadoRows } = await pool.query(
+      "SELECT status_editorial, is_editable, audiencia FROM noticias WHERE id = $1",
+      [id]
+    );
+
+    if (estadoRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
+
+    const noticiaAtual = estadoRows[0];
+    if (noticiaAtual.status_editorial === "ARQUIVADA" || noticiaAtual.is_editable === false) {
+      return res.status(409).json({
+        success: false,
+        message: "Esta notícia está arquivada e não pode mais ser editada.",
+        code: "ARCHIVED_NEWS_IMMUTABLE",
+        requestId,
+      });
+    }
+
     const { rows } = await pool.query(
       `UPDATE noticias
        SET titulo = COALESCE($1, titulo),
-           conteudo = COALESCE($2, conteudo),
-           capa_url = COALESCE($3, capa_url),
-           status = COALESCE($4, status),
-           audiencia = COALESCE($5, audiencia)
-       WHERE id = $6
+           subtitulo = COALESCE($2, subtitulo),
+           conteudo = COALESCE($3, conteudo),
+           capa_url = COALESCE($4, capa_url),
+           status = COALESCE($5, status),
+           audiencia = COALESCE($6, audiencia),
+           destaque = COALESCE($7, destaque),
+           data_noticia = COALESCE($8, data_noticia),
+           sort_date = COALESCE($8, sort_date)
+       WHERE id = $9
        RETURNING *`,
-      [titulo, conteudo, capa_url, status, audienciaFinal, id]
+      [titulo, subtitulo, conteudo, capa_url, status, audienciaFinal, destaque, data_noticia, id]
     );
 
     if (rows.length === 0) {
@@ -335,10 +402,23 @@ exports.publicar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
+    const { rows: estadoRows } = await pool.query(
+      "SELECT status_editorial, is_editable FROM noticias WHERE id = $1",
+      [id]
+    );
+
+    if (estadoRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
+
+    if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
+      return res.status(409).json({ success: false, message: "Notícia arquivada não pode ser publicada novamente.", requestId });
+    }
+
     const { rows } = await pool.query(
       `UPDATE noticias
        SET status = 'PUBLICADA',
-           published_at = NOW()
+           published_at = COALESCE(published_at, NOW())
        WHERE id = $1
        RETURNING *`,
       [id]
@@ -363,6 +443,57 @@ exports.publicar = async (req, res) => {
   }
 };
 
+exports.arquivar = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const id = parseNoticiaId(req, res, requestId);
+  if (id === null) return;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows } = await client.query(
+      `SELECT id, status_editorial, audiencia
+       FROM noticias
+       WHERE id = $1
+       FOR UPDATE`,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
+
+    const noticia = rows[0];
+
+    if (noticia.status_editorial === "ARQUIVADA") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "A notícia já está arquivada.", requestId });
+    }
+
+    await client.query(
+      `UPDATE noticias
+       SET status_editorial = 'ARQUIVADA',
+           is_editable = false,
+           archived_at = NOW(),
+           status = 'PUBLICADA',
+           published_at = COALESCE(published_at, NOW()),
+           sort_date = COALESCE(sort_date, published_at, created_at)
+       WHERE id = $1`,
+      [id]
+    );
+
+    await client.query("COMMIT");
+    return res.json({ success: true, requestId });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    return handleDbError(err, res, requestId, "Erro ao arquivar notícia atual.");
+  } finally {
+    client.release();
+  }
+};
+
 exports.excluir = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
@@ -375,6 +506,20 @@ exports.excluir = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
+    const { rows: lockRows } = await pool.query("SELECT status_editorial FROM noticias WHERE id = $1", [id]);
+    if (lockRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
+
+    if (lockRows[0].status_editorial === "ARQUIVADA") {
+      return res.status(409).json({
+        success: false,
+        message: "Notícia arquivada não pode ser excluída.",
+        code: "ARCHIVED_NEWS_IMMUTABLE",
+        requestId,
+      });
+    }
+
     const { rowCount } = await pool.query("DELETE FROM noticias WHERE id = $1", [id]);
 
     if (rowCount === 0) {
