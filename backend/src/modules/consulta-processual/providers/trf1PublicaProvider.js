@@ -7,6 +7,16 @@ const log = require('../../../utils/log');
 
 const TRF1_URL = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
 
+function loadPlaywrightModule() {
+  try {
+    // eslint-disable-next-line global-require
+    return require('playwright');
+  } catch (err) {
+    if (err.code === 'MODULE_NOT_FOUND') return null;
+    throw err;
+  }
+}
+
 class Trf1PublicaProvider extends ConsultaProcessualProvider {
   getId() { return 'trf1'; }
   getLabel() { return 'TRF1'; }
@@ -22,7 +32,20 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
 
     let browser;
     try {
-      const playwright = await import('playwright');
+      const playwright = loadPlaywrightModule();
+      if (!playwright?.chromium) {
+        log.info('ConsultaProcessualProviderSkipped', {
+          requestId,
+          userId,
+          source: this.getId(),
+          cpfMasked,
+          reason: 'Playwright not installed',
+          durationMs: Date.now() - startedAt,
+        });
+
+        return createSourceResult({ source: this.getId(), sourceLabel: this.getLabel(), status: 'skipped', items: [] });
+      }
+
       browser = await playwright.chromium.launch({ headless: cfg.headless });
       const context = await browser.newContext();
       const page = await context.newPage();
