@@ -6,7 +6,7 @@
     "is_active": true,
     "ordenacao": 1,
     "body": "<p>Hello</p>",
-    "updated_at": "2026-03-06T18:05:43.570Z",
+    "updated_at": "2026-03-07T03:32:27.129Z",
     "updated_by": 1
   },
   {
@@ -25,7 +25,7 @@
     "media_type": "image",
     "media_url": "",
     "is_active": true,
-    "updated_at": "2026-03-06T18:05:43.569Z"
+    "updated_at": "2026-03-07T03:32:27.129Z"
   },
   {
     "id": "news-2",
@@ -36,6 +36,6 @@
     "media_type": "image",
     "media_url": "",
     "is_active": true,
-    "updated_at": "2026-03-06T18:05:43.569Z"
+    "updated_at": "2026-03-07T03:32:27.129Z"
   }
 ]

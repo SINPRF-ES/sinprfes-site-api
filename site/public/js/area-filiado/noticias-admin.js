@@ -56,24 +56,22 @@
     await carregarNoticias();
   }
 
-  async function carregarNoticias() {
+  async function carregarNoticias(paginaArquivadas = 1) {
     const atualEl = document.getElementById("noticia-atual-admin");
     const arquivadasEl = document.getElementById("noticias-arquivadas-admin");
     if (!atualEl || !arquivadasEl) return;
 
-    const { ok, data } = await requestJson("/api/noticias");
-    if (!ok) {
-      atualEl.innerHTML = `<p style="color:red;">Erro ao carregar notícias.</p>`;
-      arquivadasEl.innerHTML = "";
-      return;
-    }
+    // Busca notícia atual
+    const respAtual = await requestJson("/api/noticias?status_editorial=ATUAL");
+    noticiaAtual = (Array.isArray(respAtual.data) ? respAtual.data[0] : respAtual.data.items?.[0]) || null;
 
-    const lista = Array.isArray(data) ? data : (data.items || []);
-    noticiaAtual = lista.find((n) => n.status_editorial === "ATUAL") || null;
-    noticiasArquivadas = lista.filter((n) => n.status_editorial === "ARQUIVADA");
+    // Busca arquivadas paginadas
+    const respArq = await requestJson(`/api/noticias?status_editorial=ARQUIVADA&pagina=${paginaArquivadas}`);
+    noticiasArquivadas = respArq.data.items || [];
+    const pagination = respArq.data.pagination || { page: 1, totalPages: 1 };
 
     renderizarAtual();
-    renderizarArquivadas();
+    renderizarArquivadas(pagination);
   }
 
   function escape(v) {
@@ -114,7 +112,7 @@
     });
   }
 
-  function renderizarArquivadas() {
+  function renderizarArquivadas(pagination) {
     const el = document.getElementById("noticias-arquivadas-admin");
     if (!el) return;
     if (!noticiasArquivadas.length) {
@@ -122,12 +120,27 @@
       return;
     }
 
-    el.innerHTML = noticiasArquivadas.map((n) => `
-      <div>
+    let html = noticiasArquivadas.map((n) => `
+      <div style="margin-bottom:16px;">
         ${renderCardNoticia(n)}
-        <p style="margin:-4px 0 10px; font-size:0.85rem; color:#b91c1c;">Esta notícia está consolidada e não pode mais ser editada.</p>
+        <p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Esta notícia está consolidada e não pode mais ser editada.</p>
       </div>
     `).join("");
+
+    if (pagination && pagination.totalPages > 1) {
+      html += `
+        <div class="cms-pagination" style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+          ${Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(p => `
+            <button class="ui-button ui-button-sm ${p === pagination.page ? 'ui-button-secondary' : 'ui-button-outline'}"
+                    onclick="NoticiasAdmin.carregarNoticias(${p})" ${p === pagination.page ? 'disabled' : ''}>
+              ${p}
+            </button>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    el.innerHTML = html;
   }
 
   async function abrirVisualizacaoNoticia(id) {
@@ -151,6 +164,10 @@
 
   async function abrirModalNoticia(id = null) {
     if (!ehGestaoNoticias()) return alert("Apenas gestão pode editar notícias.");
+
+    if (!id && noticiaAtual) {
+      return alert("Já existe uma notícia atual. Arquive a notícia atual antes de criar outra.");
+    }
 
     let noticia = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", destaque: false };
     if (id) {

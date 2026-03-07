@@ -42,11 +42,21 @@ exports.listar = async (req, res) => {
   let params = [];
 
   try {
-    const { status, audiencia, pagina } = req.query;
+    const { status, audiencia, pagina, status_editorial } = req.query;
     const audienciaNorm = audiencia ? String(audiencia).toUpperCase() : null;
+    const statusEditorialNorm = status_editorial ? String(status_editorial).toUpperCase() : null;
     const audienciaEscopo = resolverAudienciaEscopo(req, null);
     const isGestao = verificarGestao(req);
     const isAutenticado = Boolean(req.user?.id);
+
+    if (statusEditorialNorm && !['ATUAL', 'ARQUIVADA'].includes(statusEditorialNorm)) {
+      return res.status(400).json({
+        success: false,
+        message: "Parâmetro 'status_editorial' inválido. Use ATUAL ou ARQUIVADA.",
+        code: "INVALID_QUERY_PARAMS",
+        requestId
+      });
+    }
 
     // Validação estrita: se vier algo que não seja string, é erro 400.
     if (status && typeof status !== 'string') {
@@ -110,11 +120,16 @@ exports.listar = async (req, res) => {
         params.push(audienciaNorm);
         query += ` AND n.audiencia = $${params.length}`;
       }
+      if (statusEditorialNorm) {
+        params.push(statusEditorialNorm);
+        query += ` AND n.status_editorial = $${params.length}`;
+      }
     }
 
     query += " ORDER BY COALESCE(n.sort_date, n.published_at, n.created_at) DESC, n.created_at DESC";
 
-    const paginacaoPublica = !isAutenticado || !isGestao;
+    const forcarPaginacao = Boolean(pagina);
+    const paginacaoPublica = !isAutenticado || !isGestao || forcarPaginacao;
 
     let total = null;
     if (paginacaoPublica) {
@@ -281,18 +296,17 @@ exports.criar = async (req, res) => {
       return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
     }
 
-    if (audienciaFinal === "PUBLICA") {
-      const { rows: atuais } = await pool.query(
-        `SELECT id FROM noticias WHERE audiencia = 'PUBLICA' AND status_editorial = 'ATUAL' LIMIT 1`
-      );
-      if (atuais.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: "Já existe uma notícia atual. Arquive a notícia atual antes de criar outra.",
-          code: "CURRENT_NEWS_ALREADY_EXISTS",
-          requestId,
-        });
-      }
+    const { rows: atuais } = await pool.query(
+      `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' LIMIT 1`,
+      [audienciaFinal]
+    );
+    if (atuais.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Já existe uma notícia atual para a audiência ${audienciaFinal}. Arquive a notícia atual antes de criar outra.`,
+        code: "CURRENT_NEWS_ALREADY_EXISTS",
+        requestId,
+      });
     }
 
     const { rows } = await pool.query(
@@ -345,14 +359,29 @@ exports.atualizar = async (req, res) => {
       return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
     }
 
-    const noticiaAtual = estadoRows[0];
-    if (noticiaAtual.status_editorial === "ARQUIVADA" || noticiaAtual.is_editable === false) {
+    const noticiaAlvo = estadoRows[0];
+    if (noticiaAlvo.status_editorial === "ARQUIVADA" || noticiaAlvo.is_editable === false) {
       return res.status(409).json({
         success: false,
         message: "Esta notícia está arquivada e não pode mais ser editada.",
         code: "ARCHIVED_NEWS_IMMUTABLE",
         requestId,
       });
+    }
+
+    if (audienciaFinal && audienciaFinal !== noticiaAlvo.audiencia) {
+      const { rows: atuais } = await pool.query(
+        `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' AND id != $2 LIMIT 1`,
+        [audienciaFinal, id]
+      );
+      if (atuais.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: `Já existe uma notícia atual para a audiência ${audienciaFinal}. Não é possível mover esta notícia atual para lá sem antes arquivar a existente.`,
+          code: "CURRENT_NEWS_ALREADY_EXISTS",
+          requestId,
+        });
+      }
     }
 
     const { rows } = await pool.query(
@@ -553,6 +582,19 @@ exports.adicionarMidia = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
+    const { rows: estadoRows } = await pool.query(
+      "SELECT status_editorial, is_editable FROM noticias WHERE id = $1",
+      [id]
+    );
+
+    if (estadoRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
+
+    if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
+      return res.status(409).json({ success: false, message: "Notícia arquivada não permite adição de mídias.", requestId });
+    }
+
     const { tipo, ordem } = req.body;
 
     if (!req.file) {
@@ -601,6 +643,17 @@ exports.removerMidia = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
+    const { rows: midiaRows } = await pool.query(
+      "SELECT n.status_editorial, n.is_editable FROM noticias n JOIN noticia_midias nm ON n.id = nm.noticia_id WHERE nm.id = $1",
+      [midiaId]
+    );
+
+    if (midiaRows.length > 0) {
+      if (midiaRows[0].status_editorial === "ARQUIVADA" || midiaRows[0].is_editable === false) {
+        return res.status(409).json({ success: false, message: "Mídia de notícia arquivada não pode ser removida.", requestId });
+      }
+    }
+
     const { rowCount } = await pool.query("DELETE FROM noticia_midias WHERE id = $1", [midiaId]);
 
     if (rowCount === 0) {
@@ -636,6 +689,19 @@ exports.adicionarMidiaExterna = async (req, res) => {
   try {
     if (!verificarGestao(req)) {
       return res.status(403).json({ success: false, message: "Acesso negado.", requestId });
+    }
+
+    const { rows: estadoRows } = await pool.query(
+      "SELECT status_editorial, is_editable FROM noticias WHERE id = $1",
+      [id]
+    );
+
+    if (estadoRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
+
+    if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
+      return res.status(409).json({ success: false, message: "Notícia arquivada não permite adição de mídias externas.", requestId });
     }
 
     const { tipo, url, ordem } = req.body;
