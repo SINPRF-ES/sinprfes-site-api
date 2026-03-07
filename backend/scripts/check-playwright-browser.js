@@ -21,13 +21,15 @@ async function main() {
   console.log('PLAYWRIGHT_PACKAGE_OK');
 
   const executablePath = chromium.executablePath();
+  console.log(`PLAYWRIGHT_EXECUTABLE_PATH=${executablePath || 'NOT_FOUND'}`);
+  console.log(`PLAYWRIGHT_BROWSERS_PATH=${process.env.PLAYWRIGHT_BROWSERS_PATH || 'NOT_SET'}`);
+
   if (!executablePath) {
     console.log('PLAYWRIGHT_BROWSER_MISSING');
     process.exit(2);
   }
 
   console.log('PLAYWRIGHT_BROWSER_PRESENT');
-  console.log(`PLAYWRIGHT_EXECUTABLE_PATH=${executablePath}`);
 
   let browser;
   try {

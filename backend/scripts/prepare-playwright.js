@@ -101,6 +101,11 @@ try {
   ensureBackendContext();
   installLinuxSystemDeps();
 
+  // Force local installation of browsers in node_modules/playwright-core/.local-browsers
+  // instead of global cache /root/.cache/ms-playwright
+  process.env.PLAYWRIGHT_BROWSERS_PATH = '0';
+
+  console.log('Installing Playwright Chromium (locally in node_modules)...');
   execSync('npx playwright install chromium', {
     stdio: 'inherit',
     cwd: backendRoot,

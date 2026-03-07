@@ -77,6 +77,18 @@ async function launchBrowser(options = {}) {
 
   const browserTypeName = cfg.playwrightBrowser || 'chromium';
   const browserType = playwright[browserTypeName];
+
+  if (cfg.debug) {
+    console.log('[PLAYWRIGHT_DEBUG] Starting launch sequence:');
+    console.log(`[PLAYWRIGHT_DEBUG] Browser Type: ${browserTypeName}`);
+    console.log(`[PLAYWRIGHT_DEBUG] PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH || 'not set'}`);
+    try {
+      console.log(`[PLAYWRIGHT_DEBUG] Executable Path: ${browserType.executablePath()}`);
+    } catch (e) {
+      console.log(`[PLAYWRIGHT_DEBUG] Could not get executablePath: ${e.message}`);
+    }
+  }
+
   if (!browserType || typeof browserType.launch !== 'function') {
     return {
       ok: false,
