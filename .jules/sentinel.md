@@ -7,3 +7,8 @@
 **Vulnerability:** Extensive use of `innerHTML` with template strings containing user-provided data (names, CPFs, etc.) in the filiados management modules.
 **Learning:** In a Vanilla JS application using client-side rendering, it's easy to overlook sanitization when building complex HTML structures in JS. A centralized `escapeHTML` utility is essential.
 **Prevention:** Always escape user-controlled variables when using `innerHTML`. Prefer `textContent` for simple text updates, and use a robust escaping helper for template strings.
+
+## 2026-03-07 - [Fixed Layout Content Overlap]
+**Vulnerability:** Content being hidden under fixed headers when using `anchor` navigation or initial page load.
+**Learning:** Implementing `position: fixed` on headers requires dynamic offset calculation to maintain layout integrity across different viewports. Relying solely on CSS `margin-top` often leads to "white gaps" or overlap on mobile.
+**Prevention:** Use a combination of CSS `scroll-margin-top` for anchor links and dynamic JavaScript to apply `padding-top` to the body or main container based on the actual header height.

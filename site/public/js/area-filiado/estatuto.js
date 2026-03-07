@@ -120,7 +120,8 @@
     }
 
     global.EstatutoAF = {
-        inicializarEstatuto
+        inicializarEstatuto,
+        montarToc
     };
 
 })(typeof window !== 'undefined' ? window : global);

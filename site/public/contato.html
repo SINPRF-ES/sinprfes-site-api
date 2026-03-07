@@ -13,6 +13,70 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/ui-canon.css" />
+  <style>
+    .contato-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--ui-space-5);
+      align-items: start;
+    }
+
+    .contato-info-item {
+      margin-bottom: var(--ui-space-4);
+    }
+
+    .contato-info-item strong {
+      display: block;
+      color: var(--ui-primary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      margin-bottom: var(--ui-space-1);
+    }
+
+    .contato-acao {
+      background: var(--ui-bg);
+      padding: var(--ui-space-5);
+      border-radius: var(--ui-radius);
+      border: 1px solid var(--ui-border);
+    }
+
+    .contato-acao h3 {
+      margin-bottom: var(--ui-space-2);
+      color: var(--ui-primary);
+      text-align: center;
+    }
+
+    .contato-acao p {
+      text-align: center;
+      margin-bottom: var(--ui-space-4);
+    }
+
+    .contato-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ui-space-3);
+    }
+
+    .contato-btn-group .ui-button {
+      width: 100%;
+      box-sizing: border-box;
+      white-space: nowrap;
+    }
+
+    .contato-divider {
+      margin: var(--ui-space-5) 0;
+      border: 0;
+      border-top: 1px solid var(--ui-border);
+    }
+
+    .contato-dica {
+      font-size: 0.85rem;
+      color: var(--ui-text-muted);
+      font-style: italic;
+      text-align: center;
+      line-height: 1.4;
+    }
+  </style>
   <script src="/js/utils.js" defer></script>
 </head>
 <body>
@@ -20,7 +84,7 @@
   <!-- HEADER DINÂMICO -->
   <div id="site-header"></div>
 
-  <div class="ui-container" style="margin-top: var(--ui-space-5);">
+  <div class="ui-container">
     <main class="page-content">
 
       <section class="ui-card">
@@ -31,55 +95,57 @@
           Canais oficiais de atendimento ao filiado e ao público.
         </p>
 
-                <div class="section-box contato-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--ui-space-5);">
+        <div class="section-box contato-grid">
 
           <div class="contato-info">
-            <p><strong>Razão Social:</strong><br>
+            <div class="contato-info-item">
+              <strong>Razão Social</strong>
               SINDICATO DOS POLICIAIS RODOVIÁRIOS FEDERAIS NO ESTADO DO ESPÍRITO SANTO
-            </p>
+            </div>
 
-            <p><strong>CNPJ:</strong><br>
+            <div class="contato-info-item">
+              <strong>CNPJ</strong>
               39.387.378.0001/25
-            </p>
+            </div>
 
-            <p><strong>Endereço:</strong><br>
+            <div class="contato-info-item">
+              <strong>Endereço</strong>
               Avenida Nair de Azevedo Silva, 450, Lojas 14/20<br>
               Bairro Mário Cypreste – Vitória/ES
-            </p>
+            </div>
 
-            <p><strong>Gestão:</strong><br>
+            <div class="contato-info-item">
+              <strong>Gestão</strong>
               2025 / 2027
-            </p>
+            </div>
 
-            <p><strong>Telefones:</strong><br>
+            <div class="contato-info-item">
+              <strong>Telefones / WhatsApp</strong>
               (27) 99607-3073<br>
               (27) 99691-9312
-            </p>
+            </div>
 
-            <p><strong>WhatsApp / Telegram:</strong><br>
-              (27) 99607-3073<br>
-              (27) 99691-9312
-            </p>
-
-            <p><strong>E-mail institucional:</strong><br>
+            <div class="contato-info-item">
+              <strong>E-mail institucional</strong>
               <a href="mailto:sinprfes@sinprfes.org.br">sinprfes@sinprfes.org.br</a>
-            </p>
+            </div>
 
-            <p><strong>Site oficial:</strong><br>
+            <div class="contato-info-item">
+              <strong>Site oficial</strong>
               <a href="https://www.sinprfes.org.br/site/" target="_blank">
                 www.sinprfes.org.br/site/
               </a>
-            </p>
+            </div>
           </div>
 
           <aside class="contato-acao">
             <h3>Atendimento rápido</h3>
             <p>Escolha o canal de contato preferido:</p>
 
-            <div class="btn-row ui-stack">
-              <a class="ui-button ui-button-secondary" style="width: 100%;" href="https://wa.me/5527996073073" target="_blank">💬 WhatsApp 1</a>
-              <a class="ui-button ui-button-secondary" style="width: 100%;" href="https://wa.me/5527996919312" target="_blank">💬 WhatsApp 2</a>
-              <a class="ui-button ui-button-outline" style="width: 100%;" href="mailto:sinprfes@sinprfes.org.br">📧 Enviar e-mail</a>
+            <div class="contato-btn-group">
+              <a class="ui-button ui-button-secondary" href="https://wa.me/5527996073073" target="_blank">💬 WhatsApp 1</a>
+              <a class="ui-button ui-button-secondary" href="https://wa.me/5527996919312" target="_blank">💬 WhatsApp 2</a>
+              <a class="ui-button ui-button-outline" href="mailto:sinprfes@sinprfes.org.br">📧 Enviar e-mail</a>
             </div>
 
             <hr class="contato-divider">

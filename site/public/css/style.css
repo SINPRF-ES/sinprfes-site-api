@@ -14,6 +14,16 @@ body {
     color: var(--text-color);
     background-color: var(--bg-light);
     line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-top: 85px; /* Compensação para o header fixo */
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-top: 130px; /* Mais espaço no mobile para header com wrap */
+    }
 }
 
 .navbar {
@@ -58,10 +68,103 @@ body {
     margin-bottom: 1rem;
 }
 
-footer {
-    background-color: var(--primary-color);
-    color: var(--white);
-    padding: 30px 0;
+.site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--ui-primary);
+    color: white;
+    padding: var(--ui-space-3) 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--ui-space-3);
+}
+
+.logo-link {
+    text-decoration: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-img {
+    height: 50px;
+}
+
+.logo-text {
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.logo-text small {
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.main-nav {
+    display: flex;
+    gap: var(--ui-space-3);
+    flex-wrap: wrap;
+}
+
+.main-nav .nav-link {
+    color: white !important;
+    text-decoration: none;
+    font-weight: 500;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+}
+
+.main-nav .nav-link:hover,
+.main-nav .nav-link.active {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--ui-space-2);
+}
+
+.header-btn-outline {
+    color: white !important;
+    border-color: white !important;
+    padding: 0.5rem 1rem !important;
+}
+
+.header-btn-outline:hover {
+    background: white !important;
+    color: var(--ui-primary) !important;
+}
+
+.site-footer {
+    background: var(--ui-primary);
+    color: white;
+    padding: var(--ui-space-5) 0;
+    margin-top: auto; /* Garante que o footer fique no final */
+}
+
+.footer-content {
+    text-align: center;
+}
+
+.footer-content p {
+    margin: 0;
+}
+
+.footer-small {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-top: var(--ui-space-2);
 }
 
 /* Custom styles for components */
