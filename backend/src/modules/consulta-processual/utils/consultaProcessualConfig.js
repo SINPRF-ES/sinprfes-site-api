@@ -9,6 +9,8 @@ function parseIntSafe(v, d) {
 }
 
 function getConsultaProcessualConfig() {
+  const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+
   return {
     enabled: parseBool(process.env.CONSULTA_PROCESSUAL_ENABLED, true),
     trf1Enabled: parseBool(process.env.CONSULTA_PROCESSUAL_TRF1_ENABLED, true),
@@ -16,8 +18,15 @@ function getConsultaProcessualConfig() {
     initialLoadTimeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_INITIAL_LOAD_TIMEOUT_MS, 30000),
     searchTimeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_SEARCH_TIMEOUT_MS, 15000),
     debug: parseBool(process.env.CONSULTA_PROCESSUAL_DEBUG, false),
-    headless: parseBool(process.env.CONSULTA_PROCESSUAL_HEADLESS, true),
+    headless: parseBool(process.env.CONSULTA_PROCESSUAL_HEADLESS, isProd),
     debugScreenshot: parseBool(process.env.CONSULTA_PROCESSUAL_DEBUG_SCREENSHOT, false),
+    playwrightEnabled: parseBool(process.env.PLAYWRIGHT_ENABLED, true),
+    playwrightBrowser: String(process.env.PLAYWRIGHT_BROWSER || 'chromium').toLowerCase(),
+    playwrightLaunchTimeoutMs: parseIntSafe(process.env.PLAYWRIGHT_LAUNCH_TIMEOUT_MS, 30000),
+    playwrightExtraArgs: String(process.env.PLAYWRIGHT_EXTRA_ARGS || '--no-sandbox,--disable-setuid-sandbox')
+      .split(',')
+      .map((it) => it.trim())
+      .filter(Boolean),
     cacheTtlMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_CACHE_TTL_MS, 5 * 60 * 1000),
     minIntervalMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_MIN_INTERVAL_MS, 3000),
   };
