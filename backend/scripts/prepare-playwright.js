@@ -63,7 +63,13 @@ function installLinuxSystemDeps() {
     'rm -rf /var/lib/apt/lists/*'
   ].join(' && ');
 
-  execSync(aptInstallCmd, { stdio: 'inherit' });
+  try {
+    execSync(aptInstallCmd, { stdio: 'inherit' });
+  } catch (err) {
+    console.warn('Warning: Failed to install system dependencies via apt-get in prepare-playwright.js.');
+    console.warn('This is expected if running in a restricted environment like Nixpacks where system libs should be handled by nixpacks.toml.');
+    // Do not fail the build here, as nixpacks.toml should have already handled this.
+  }
   console.log('Playwright Linux system dependencies installation completed (apt-get).');
 }
 
