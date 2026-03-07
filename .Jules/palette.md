@@ -41,3 +41,7 @@
 ## 2026-03-04 - [Accessible Forms and Real-time Feedback]
 **Learning:** Web forms must provide explicit context for screen readers and visual feedback for all users. Using `aria-describedby` linked to `sr-only` hints provides precise instructions without cluttering the UI. `aria-live="polite"` on message containers ensures asynchronous feedback (like login errors) is announced.
 **Action:** Always use `aria-describedby` for complex fields (like CPF/formatted inputs) and `aria-live` for status messages. Buttons performing async actions must use `aria-busy="true"` and show a visual indicator (spinner) while disabled.
+
+## 2026-03-07 - [Accessible Action Cards & Global Spinner]
+**Learning:** Dashboard action cards implemented as `div` elements are invisible to keyboard users and screen readers unless explicitly marked with `role="button"`, `tabindex="0"`, and `onkeydown` handlers. Standardizing a `.ui-spinner` in the global CSS (`ui-canon.css`) prevents visual fragmentation and ensures that `aria-busy` feedback is consistent across all modules.
+**Action:** Always convert interactive `div` cards to accessible buttons using the ARIA button pattern. Use the centralized `.ui-spinner` and `:focus-visible` styles to ensure interaction parity for all users.

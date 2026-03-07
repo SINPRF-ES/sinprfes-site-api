@@ -31,13 +31,21 @@
             actions.push({ label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: '📊', target: 'sec-relatorios' });
         }
 
-        grid.innerHTML = actions.map(a => `
-            <div class="action-card" onclick="document.getElementById('nav-${a.target.replace('sec-', '')}').click()">
-                <div class="icon">${a.icon}</div>
-                <div class="label">${a.label}</div>
-                <div class="subtitle">${a.subtitle}</div>
-            </div>
-        `).join('');
+        grid.innerHTML = actions.map(a => {
+            const targetId = `nav-${a.target.replace('sec-', '')}`;
+            return `
+                <div class="action-card"
+                     role="button"
+                     tabindex="0"
+                     aria-label="${a.label}: ${a.subtitle}"
+                     onclick="document.getElementById('${targetId}').click()"
+                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('${targetId}').click(); }">
+                    <div class="icon" aria-hidden="true">${a.icon}</div>
+                    <div class="label">${a.label}</div>
+                    <div class="subtitle">${a.subtitle}</div>
+                </div>
+            `;
+        }).join('');
 
         // Atualiza saudação
         const userInfo = window.Utils?.obterUserInfo();
