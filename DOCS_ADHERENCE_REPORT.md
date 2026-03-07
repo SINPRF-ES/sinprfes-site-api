@@ -1,54 +1,47 @@
-# Relatório de Aderência da Documentação (Markdown)
+# Relatório de Aderência de Package Manager e Documentação
 
-Este relatório detalha a conformidade dos arquivos Markdown do repositório com a implementação atual do projeto e sugere as atualizações necessárias.
+Data da varredura: 2026-03-07
 
-## 1. Categorização de Arquivos
+## 1) Package manager canônico do monorepo
 
-### 1.1 Documentação Viva (Living Docs)
-Arquivos que devem refletir o estado atual e as regras canônicas do sistema.
-- `README.md`: Centralizador de regras e visão geral. (**Aderente**)
-- `docs/architecture/PRODUCAO-2.0-CANON.md`: Definição de estado canônico. (**Parcialmente Aderente** - Requer mover CMS de Roadmap para Implementado)
-- `docs/architecture/ME-DATA-EDITING-RULES.md`: Regras de edição de perfil. (**Parcialmente Aderente** - Falta detalhar requisito de CEP para endereço)
-- `docs/ops/railway.md`: Guia de deploy. (**Parcialmente Aderente** - Requer menção ao `railpack-plan.json`)
-- `docs/mobile/mobile-architecture.md`: Arquitetura do app mobile. (**Parcialmente Aderente** - Requer atualização sobre fluxo de updates)
-- `docs/ops/RELATORIOS.md`: Detalhamento do módulo de relatórios. (**Aderente**)
-- `docs/runbooks/ota-update.md`: Guia de atualização OTA. (**Aderente**)
+O monorepo está **padronizado em pnpm** na raiz:
 
-### 1.2 Relatórios Históricos e Auditorias
-Arquivos que registram marcos temporais ou tarefas concluídas.
-- `docs/architecture/relatorio-permissoes-edicao.md`: Auditoria de permissões (Jan 2026). (**Concluído**)
-- `docs/architecture/EVIDENCE_MAP.md`: Mapa de evidências de correções. (**Histórico**)
-- `docs/ops/RELATORIO_FINAL_IMPLEMENTACAO.md`: Resumo de hardening v4.3. (**Histórico**)
-- `AUDIT_REPORT.md`: Auditoria de dependências React. (**Histórico**)
+- `packageManager: pnpm@9.15.9` no `package.json` raiz.
+- `pnpm-workspace.yaml` define workspaces (`backend`, `mobile`, `site`, `assembleia-app`, `shared/**`).
+- O script de preinstall (`scripts/check-lockfiles.js`) bloqueia `package-lock.json` em qualquer subpasta e também bloqueia `pnpm-lock.yaml` fora da raiz.
+- Existe somente um lockfile rastreado no git: `pnpm-lock.yaml` na raiz.
 
-### 1.3 Drafts e Outros
-- `docs/ops/noticia-join-prf.md`: Rascunho de notícia.
+## 2) Onde ainda aparece `npm` (e por quê)
 
-## 2. Inconsistências Identificadas e Sugestões
+Apesar do padrão geral ser `pnpm`, há uso **intencional de npm** no contexto de runtime/deploy do backend:
 
-### A. Módulo CMS (Notícias Internas)
-- **Situação:** `PRODUCAO-2.0-CANON.md` lista o CMS no Roadmap.
-- **Realidade:** O CMS está implementado, utilizando `data/content_blocks.json` e acessível via aba "Site (CMS)".
-- **Sugestão:** Mover para a seção de funcionalidades implementadas.
+- `backend/Dockerfile` usa `npm install --package-lock-only`, `npm ci --omit=dev` e `CMD ["npm", "start"]` para imagem isolada de produção.
+- `README.md` e `docs/ops/railway.md` refletem esse start de runtime com `npm start` para o serviço da API em produção.
+- `backend/docs/playwright-setup.md` também referencia fluxo Docker com `npm ci` / `npm run check:playwright`.
 
-### B. Edição de Endereço (Meus Dados)
-- **Situação:** `ME-DATA-EDITING-RULES.md` lista os campos de endereço como permitidos para FILIADOS.
-- **Realidade:** O backend exige que os campos `logradouro_bairro`, `cidade` e `uf` sejam enviados junto com o `cep` para serem processados (Fluxo `buscaCEP`).
-- **Sugestão:** Adicionar esta nota técnica para evitar confusão em integrações futuras.
+Conclusão: **não há evidência de migração de volta para npm no monorepo**; o que existe é um **uso híbrido documentado**: pnpm para workspace/monorepo e npm no container do backend.
 
-### C. Configuração Railway
-- **Situação:** `railway.md` instrui configuração manual no painel e diz para não usar `railway.toml`.
-- **Realidade:** O projeto agora utiliza `railpack-plan.json` na raiz para padronizar o build monorepo.
-- **Sugestão:** Documentar o uso do `railpack-plan.json` e atualizar os comandos de build/start recomendados.
+## 3) Aderência da documentação (.md) entre si
 
-### D. Atualizações Mobile
-- **Situação:** `mobile-architecture.md` menciona estratégia geral de updates.
-- **Realidade:** O fluxo foi simplificado com a remoção do `OtaUpdateBanner` e centralização no `UpdateAutoChecker`.
-- **Sugestão:** Refletir essa simplificação na arquitetura mobile.
+### 3.1 Compatibilidade geral
 
-## 3. Plano de Ação (Implementado neste PR)
-1. Atualizar `PRODUCAO-2.0-CANON.md` (CMS status).
-2. Atualizar `ME-DATA-EDITING-RULES.md` (Condicional de CEP).
-3. Atualizar `railway.md` (`railpack-plan.json`).
-4. Atualizar `mobile-architecture.md` (Update flow).
-5. Marcar `relatorio-permissoes-edicao.md` como Concluído.
+- Os documentos estão **majoritariamente compatíveis** com o estado técnico atual (pnpm no monorepo + npm no Docker do backend).
+
+### 3.2 Pontos de atenção
+
+- Há mistura de instruções `pnpm` e `npm` em arquivos Markdown sem sempre explicitar contexto (desenvolvimento monorepo vs runtime Docker), o que pode confundir novos contribuidores.
+- `docs/architecture/consulta-processual.md` explicita corretamente o uso de `pnpm` no workspace e também a instalação de `pnpm` em ambiente de build remoto.
+
+### 3.3 Veredito de aderência
+
+- **Aderência técnica:** boa.
+- **Aderência de clareza documental:** parcial (recomendado padronizar uma seção fixa “Quando usar pnpm vs npm” nos docs principais).
+
+## 4) Recomendações objetivas
+
+1. No `README.md`, adicionar um bloco curto:
+   - "Monorepo/dev: use pnpm"
+   - "Container backend/prod: npm dentro do Dockerfile"
+2. Em `docs/ops/railway.md`, manter a regra atual e reforçar em uma nota de destaque a diferença entre build do monorepo e runtime da imagem.
+3. Em `backend/docs/playwright-setup.md`, incluir uma linha de contexto: "neste documento os comandos npm são executados dentro do contexto do backend/container".
+
