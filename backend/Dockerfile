@@ -9,6 +9,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 COPY package.json ./
+COPY scripts/check-root-deps.js ./scripts/check-root-deps.js
 
 RUN pnpm install --prod --no-frozen-lockfile
 RUN pnpm exec playwright install --with-deps chromium
