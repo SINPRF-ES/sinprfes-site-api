@@ -2,57 +2,62 @@
 
 Este documento descreve como o Playwright e o Chromium são configurados e instalados no serviço backend para garantir a funcionalidade da Consulta Processual em ambientes cloud (Railway).
 
-## Estratégia de Instalação Local
+## Fonte autoritativa de build
 
-Para evitar problemas com caches globais ou permissões em ambientes de CI/CD e Cloud, adotamos a instalação local dos binários do browser dentro da estrutura do projeto.
+A partir desta configuração, o backend deve ser deployado via **Dockerfile dedicado em `/backend/Dockerfile`**.
 
-- **Variável de Ambiente:** `PLAYWRIGHT_BROWSERS_PATH=0`
-- **Localização dos Binários:** `backend/node_modules/playwright-core/.local-browsers`
+- **Root Directory do serviço API no Railway:** `/backend`
+- **Dockerfile:** `/backend/Dockerfile`
+- **Package real do backend:** `/backend/package.json`
+- **Start command real do backend:** `npm start` (equivalente a `node server.js`)
 
-Ao definir `PLAYWRIGHT_BROWSERS_PATH=0`, o Playwright instala o Chromium dentro da pasta `node_modules` do projeto, garantindo que o executável seja incluído no build final do aplicativo e esteja acessível em runtime.
+> Se o Root Directory ainda não estiver definido no Railway, configure para `/backend`.
 
-## Configuração no Railway (nixpacks.toml)
+## Estratégia determinística
 
-O arquivo `nixpacks.toml` na raiz do monorepo orquestra o build. O backend é buildado com a variável de ambiente necessária:
+Para evitar falhas por cache implícito e diferenças de ambiente:
 
-```toml
-[phases.build]
-dependsOn = ["install"]
-cmds = [
-  "pnpm --filter ${FILTER:-*} build",
-  "if [ -z \"$FILTER\" ] || [ \"$FILTER\" = \"*\" ] || [ \"$FILTER\" = \"@sinprfes/backend\" ]; then PLAYWRIGHT_BROWSERS_PATH=0 pnpm --filter @sinprfes/backend run build:railway; fi"
-]
-```
+1. O Dockerfile usa imagem Debian/Bookworm com Node 20.
+2. Executa `npm ci` no diretório do backend.
+3. Executa `npx playwright install --with-deps chromium` durante o build da imagem.
+4. Mantém `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` para caminho fixo dos binários.
 
-O comando `build:railway` no `backend/package.json` executa o script `scripts/prepare-playwright.js`, que realiza a instalação.
-
-## Scripts de Gerenciamento
-
-Os seguintes scripts estão disponíveis no `backend/package.json`:
-
-- `pnpm run playwright:install`: Instala o Chromium localmente.
-- `pnpm run check:playwright`: Executa o diagnóstico completo do estado do Playwright e do browser.
+Com isso, o Chromium e as dependências Linux passam a fazer parte da imagem final do backend de forma determinística.
 
 ## Validação
 
-### Localmente
-Para validar a instalação local na sua máquina:
-1. Navegue até a pasta `backend/`.
-2. Execute `PLAYWRIGHT_BROWSERS_PATH=0 npm run playwright:install`.
-3. Verifique se a pasta `node_modules/playwright-core/.local-browsers` foi criada.
-4. Execute `npm run check:playwright` e verifique se o output indica `PLAYWRIGHT_LAUNCH_OK`.
+### Local (Docker)
 
-### No Railway
-Após o deploy, você pode validar o estado através dos logs de build (procurando por "Installing Playwright Chromium (locally in node_modules)") ou executando o script de diagnóstico via console SSH/Railway Run:
 ```bash
-PLAYWRIGHT_BROWSERS_PATH=0 node scripts/check-playwright-browser.js
+cd backend
+docker build -t sinprfes-backend:playwright .
+docker run --rm -e NODE_ENV=production sinprfes-backend:playwright npm run check:playwright
+```
+
+Saída esperada:
+
+- `PLAYWRIGHT_PACKAGE_OK`
+- `PLAYWRIGHT_BROWSER_PRESENT`
+- `PLAYWRIGHT_LAUNCH_OK`
+
+### Railway (pós-deploy)
+
+1. Confirmar no serviço API: Root Directory = `/backend`.
+2. Confirmar que o deploy detectou e usou `/backend/Dockerfile`.
+3. No shell/runtime do serviço, executar:
+
+```bash
+npm run check:playwright
 ```
 
 ## Resolução de Problemas (Reason Codes)
 
-O sistema de diagnóstico utiliza os seguintes códigos para identificar falhas:
-- `PLAYWRIGHT_PACKAGE_MISSING`: O pacote `playwright` não foi encontrado.
-- `PLAYWRIGHT_BROWSER_MISSING`: O executável do Chromium não foi encontrado no caminho esperado.
-- `PLAYWRIGHT_SYSTEM_DEPS_MISSING`: O browser foi encontrado, mas faltam bibliotecas de sistema (Linux) para executá-lo.
-- `PLAYWRIGHT_LAUNCH_FAILED`: Erro genérico ao tentar iniciar o browser.
-- `PLAYWRIGHT_LAUNCH_OK`: Tudo operando corretamente.
+O diagnóstico do browser service diferencia explicitamente:
+
+- `PLAYWRIGHT_PACKAGE_MISSING`: pacote `playwright` não instalado.
+- `PLAYWRIGHT_BROWSER_MISSING`: executável do Chromium ausente.
+- `PLAYWRIGHT_SYSTEM_DEPS_MISSING`: bibliotecas Linux ausentes.
+- `PLAYWRIGHT_LAUNCH_FAILED`: falha genérica de launch.
+- `PLAYWRIGHT_LAUNCH_OK`: browser iniciado com sucesso.
+
+Em modo debug (`CONSULTA_PROCESSUAL_DEBUG=true`), o serviço também registra o `executablePath` detectado.
