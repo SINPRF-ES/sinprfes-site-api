@@ -309,10 +309,15 @@ Para evitar divergencia de mascara/formatacao entre Web e Mobile, o projeto adot
 
 ### API (backend)
 
-- Root Directory: `/backend`
-- Build: via `backend/Dockerfile` (fonte autoritativa)
-- Start Command real: `npm start` (`node server.js`)
-- Node Version: 20.x (imagem Debian/Bookworm)
+- Monorepo canônico na raiz: **pnpm**.
+- Root Directory (Railway): `/backend`.
+- Builder da API: `Dockerfile`.
+- Build autoritativo: `/backend/Dockerfile`.
+- `nixpacks.toml`/`railpack-plan.json` na raiz não são autoritativos para este serviço.
+- Custom Start Command: **vazio**.
+- Custom Build Command: **vazio**.
+- Runtime: `node server.js` (equivalente ao script `npm start`).
+- Node Version: 20.x (imagem Debian/Bookworm).
 
 ### SITE
 

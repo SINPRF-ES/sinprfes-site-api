@@ -44,6 +44,27 @@ function compactErrorMessage(errorMessage = '', limit = 500) {
   return message.length > limit ? `${message.slice(0, limit)}…` : message;
 }
 
+
+function debugLog(cfg, message) {
+  if (cfg?.debug) {
+    console.log(`[PLAYWRIGHT_DEBUG] ${message}`);
+  }
+}
+
+function buildFailureResult(cfg, payload) {
+  const result = {
+    ok: false,
+    ...payload,
+  };
+
+  const executablePathInfo = result.executablePath || 'NOT_AVAILABLE';
+  debugLog(cfg, `reasonCode=${result.reasonCode}; executablePath=${executablePathInfo}`);
+  if (result.errorMessage) {
+    debugLog(cfg, `errorMessage=${result.errorMessage}`);
+  }
+
+  return result;
+}
 function loadPlaywrightModule() {
   try {
     // eslint-disable-next-line global-require
@@ -59,20 +80,18 @@ async function launchBrowser(options = {}) {
   const loader = options.playwrightLoader || loadPlaywrightModule;
 
   if (!cfg.playwrightEnabled) {
-    return {
-      ok: false,
+    return buildFailureResult(cfg, {
       reasonCode: REASON_CODES.PLAYWRIGHT_DISABLED,
       reason: 'Playwright integration disabled by environment configuration.',
-    };
+    });
   }
 
   const playwright = loader();
   if (!playwright) {
-    return {
-      ok: false,
+    return buildFailureResult(cfg, {
       reasonCode: REASON_CODES.PACKAGE_MISSING,
       reason: 'Playwright package is not installed in backend runtime.',
-    };
+    });
   }
 
   const browserTypeName = cfg.playwrightBrowser || 'chromium';
@@ -83,26 +102,21 @@ async function launchBrowser(options = {}) {
     try {
       executablePath = browserType.executablePath();
     } catch (e) {
-      if (cfg.debug) {
-        console.log(`[PLAYWRIGHT_DEBUG] Could not get executablePath: ${e.message}`);
-      }
+      debugLog(cfg, `Could not get executablePath: ${e.message}`);
     }
   }
 
-  if (cfg.debug) {
-    console.log('[PLAYWRIGHT_DEBUG] Starting launch sequence:');
-    console.log(`[PLAYWRIGHT_DEBUG] Browser Type: ${browserTypeName}`);
-    console.log(`[PLAYWRIGHT_DEBUG] PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH || 'not set'}`);
-    console.log(`[PLAYWRIGHT_DEBUG] Executable Path: ${executablePath || 'NOT_AVAILABLE'}`);
-  }
+  debugLog(cfg, 'Starting launch sequence:');
+  debugLog(cfg, `Browser Type: ${browserTypeName}`);
+  debugLog(cfg, `PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH || 'not set'}`);
+  debugLog(cfg, `Executable Path: ${executablePath || 'NOT_AVAILABLE'}`);
 
   if (!browserType || typeof browserType.launch !== 'function') {
-    return {
-      ok: false,
+    return buildFailureResult(cfg, {
       reasonCode: REASON_CODES.BROWSER_MISSING,
       reason: `Playwright browser type "${browserTypeName}" is unavailable in current runtime.`,
       ...(executablePath ? { executablePath } : {}),
-    };
+    });
   }
 
   try {
@@ -126,35 +140,32 @@ async function launchBrowser(options = {}) {
     const rawErrorMessage = String(err?.message || 'Unknown Playwright launch error');
 
     if (isBrowserMissingExecutableError(rawErrorMessage)) {
-      return {
-        ok: false,
+      return buildFailureResult(cfg, {
         reasonCode: REASON_CODES.BROWSER_MISSING,
         reason: 'Playwright package is present, but Chromium executable is missing from the system.',
         errorMessage: compactErrorMessage(rawErrorMessage),
         ...(executablePath ? { executablePath } : {}),
-      };
+      });
     }
 
     if (hasMissingSystemDeps(rawErrorMessage)) {
       const missingLibrary = extractMissingLibrary(rawErrorMessage);
 
-      return {
-        ok: false,
+      return buildFailureResult(cfg, {
         reasonCode: REASON_CODES.SYSTEM_DEPS_MISSING,
         reason: 'Playwright Chromium is installed, but required Linux system libraries are missing.',
         errorMessage: compactErrorMessage(rawErrorMessage),
         ...(missingLibrary ? { missingLibrary } : {}),
         ...(executablePath ? { executablePath } : {}),
-      };
+      });
     }
 
-    return {
-      ok: false,
+    return buildFailureResult(cfg, {
       reasonCode: REASON_CODES.LAUNCH_FAILED,
       reason: `Failed to launch Playwright ${browserTypeName}.`,
       errorMessage: compactErrorMessage(rawErrorMessage),
       ...(executablePath ? { executablePath } : {}),
-    };
+    });
   }
 }
 
