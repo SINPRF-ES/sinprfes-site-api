@@ -89,7 +89,7 @@
     container.innerHTML = "";
     container.appendChild(wrapper);
 
-    if (posts.length > 1) {
+    if (posts.length > 1 && window.innerWidth <= 768) {
       enableCarousel(wrapper);
     }
     enableAnalytics();

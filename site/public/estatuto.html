@@ -15,6 +15,9 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/ui-canon.css" />
 
+  <script src="/js/utils.js" defer></script>
+  <script src="/js/area-filiado/estatuto.js" defer></script>
+
   <script>
     (function() {
       var params = new URLSearchParams(window.location.search);
@@ -35,26 +38,19 @@
       background-color: #0b1724;
     }
     
-    /* 1. SOBRESCRITA DA LARGURA DO CONTEÚDO PRINCIPAL (page-content) */
-    /* Remove a limitação de 960px do style.css para esta página */
-    .estatuto-page .page-content {
-        max-width: 100%; 
-    }
-
-
     .estatuto-page {
-      padding: 2rem 1rem 3rem;
+      padding: 2rem 0 3rem;
     }
 
     .estatuto-card {
       background-color: #ffffff;
       color: #222222;
-      width: 70vw;    /* DEFININDO A LARGURA: 70% da Viewport */
-      max-width: 80%; /* Garante que não use mais que 80% em telas grandes (desktop) */
+      width: 100%;
       margin: 0 auto;
       padding: 2.5rem 2rem 3rem;
       border-radius: 12px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20);
+      box-sizing: border-box;
     }
 
     .estatuto-card h1,
@@ -87,90 +83,12 @@
       margin-bottom: 0;
     }
     
-    /* Regra para desktop */
-    @media (min-width: 992px) {
-      .estatuto-nav {
-        flex-wrap: nowrap;
-        justify-content: center;
-      }
-    }
-
-    /* Barra fixa dos títulos */
-.estatuto-nav {
-  position: fixed;
-  top: 78px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 70vw;
-  max-width: 80%;
-  box-sizing: border-box;
-
-  margin: 0;
-  padding: 0.85rem 2rem;
-
-  background: #c8ddff !important;
-  border-bottom: 1px solid #dde3ea;
-
-  display: flex;
-  flex-wrap: nowrap; /* Mantido para Desktop */
-  justify-content: center;
-  gap: 0.5rem;
-  z-index: 1200;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-
-    /* Em telas grandes, todos em uma linha */
-@media (min-width: 992px) {
-  .estatuto-nav {
-    flex-wrap: nowrap;
-    padding-left: 2rem;
-    padding-right: 2rem;
-  }
-}
-
-    .estatuto-nav-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #555;
-      margin-right: 0.5rem;
-      align-self: center;
-      white-space: nowrap;
-    }
-
-    .estatuto-nav a {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.35rem 0.8rem;
-      border-radius: 999px;
-      text-decoration: none;
-      background-color: #003366;
-      color: #ffffff;
-      opacity: 0.9;
-      white-space: nowrap;
-      text-align: center;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .estatuto-nav a:hover {
-      opacity: 1;
-      transform: translateY(-1px);
-    }
-    
     /* Documento em si */
     .estatuto-documento {
-      margin-top: 1.5rem;
       font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.75;
       font-size: 0.96rem;
       color: #222222;
-      /* AJUSTE: Adiciona um padding-top para compensar o espaço da barra fixa de navegação */
-      padding-top: 55px;
-      margin-top: 0;
     }
 
     .estatuto-documento h1 {
@@ -271,37 +189,16 @@
       margin-bottom: 0.15rem;
     }
 
-    /* Espaço para o scroll ancorado não ficar escondido sob o nav fixo */
-    .estatuto-documento h2,
-    .estatuto-documento h3 {
-      scroll-margin-top: 130px;
+    /* Estilos do TOC (Baseados no style.css, mas ajustados para página pública) */
+    .estatuto-layout .estatuto-toc {
+      top: 100px; /* Ajuste para o header fixo */
+      max-height: calc(100vh - 120px);
     }
 
     /* Responsivo */
     @media (max-width: 768px) {
       .estatuto-card {
         padding: 1.7rem 1.1rem 2.2rem;
-        width: 95%; /* Prioriza largura total no mobile */
-        max-width: 95%; 
-      }
-
-      .estatuto-nav {
-        padding-left: 10px;
-        padding-right: 10px;
-        top: 88px;
-        flex-wrap: nowrap; /* MANTIDO: Para não quebrar os botões */
-        width: 95%; /* Prioriza largura total no mobile */
-        max-width: 95%;
-        
-        /* 🟢 CORREÇÃO CRÍTICA: Permite rolagem horizontal */
-        overflow-x: auto; 
-        justify-content: flex-start; /* Alinha os itens à esquerda para iniciar a rolagem */
-        
-      }
-
-      .estatuto-nav a {
-        font-size: 0.75rem;
-        flex-shrink: 0; /* Garante que os botões não encolham */
       }
 
       .estatuto-documento h1 {
@@ -315,23 +212,16 @@
       .estatuto-documento h3 {
         font-size: 0.87rem;
       }
-
-      /* Novo ajuste de scroll margin para mobile */
-      .estatuto-documento h2,
-      .estatuto-documento h3 {
-          scroll-margin-top: 130px;
-      }
     }
   </style>
-  <script src="/js/utils.js" defer></script>
 </head>
 <body>
 
   <div id="site-header"></div>
 
-  <div class="container estatuto-page">
+  <div class="ui-container estatuto-page">
     <main class="page-content" id="estatuto">
-      <section class="card estatuto-card">
+      <section class="ui-card estatuto-card" id="estatuto-container">
         <header class="estatuto-header">
           <h2>
             <span class="emoji">📘</span>
@@ -343,22 +233,7 @@
           </p>
         </header>
 
-        <nav class="estatuto-nav">
-          <span class="estatuto-nav-title">Ir para:</span>
-          <a href="#titulo1">Título I</a>
-          <a href="#titulo2">Título II</a>
-          <a href="#titulo3">Título III</a>
-          <a href="#titulo4">Título IV</a>
-          <a href="#titulo5">Título V</a>
-          <a href="#titulo6">Título VI</a>
-          <a href="#titulo7">Título VII</a>
-          <a href="#titulo8">Título VIII</a>
-          <a href="#titulo9">Título IX</a>
-          <a href="#titulo10">Título X</a>
-          <a href="#topo-estatuto">Topo</a>
-        </nav>
-
-        <article class="estatuto-documento">
+        <article class="estatuto-documento" id="estatuto-content">
           <h1 id="topo-estatuto">Estatuto do Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo</h1>
 
           <div class="preambulo">
@@ -969,5 +844,18 @@
   <div id="site-footer"></div>
 
   <script src="/js/main.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Pequeno timeout para garantir que o DOM esteja pronto e scripts carregados
+      setTimeout(() => {
+        if (window.EstatutoAF && window.EstatutoAF.montarToc) {
+          const container = document.getElementById('estatuto-content');
+          if (container) {
+            window.EstatutoAF.montarToc(container);
+          }
+        }
+      }, 100);
+    });
+  </script>
 </body>
 </html>

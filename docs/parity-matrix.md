@@ -55,6 +55,10 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Paridade Alcançada:** O Site agora possui paridade funcional com o App no módulo de Diagnóstico. Ambos permitem visualizar a saúde global do sistema (Push), listar os tokens registrados para o usuário atual (com masking de segurança) e realizar disparos de teste direcionados ao próprio dispositivo ("Testar Push em mim").
 - **Drift residual:** O App possui uma visualização de logs locais em tempo real (úteis para depuração de hardware/nativo), enquanto no Site o desenvolvedor utiliza o console do navegador.
 
+### 5. Estatuto (Externo vs Interno)
+- **Estratégia:** Unificação da lógica de sumário (TOC) via `site/public/js/area-filiado/estatuto.js`.
+- **Paridade Alcançada:** O site externo agora utiliza o mesmo gerador dinâmico de sumário da área interna, garantindo que qualquer alteração no documento base seja refletida instantaneamente em ambas as áreas com navegação lateral fixa e responsiva.
+
 ---
 
 ## 🚨 Drift Analysis
