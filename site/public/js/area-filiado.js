@@ -34,6 +34,7 @@
     const { inicializarRepasse } = window.Repasse || {};
     const { inicializarNoticias } = window.NoticiasAdmin || {};
     const { inicializarRelatorios } = window.Relatorios || {};
+    const { inicializarConsultaProcessual } = window.ConsultaProcessual || {};
     const { CMSAdmin } = window || {};
     const { Notificacoes } = window || {};
 
@@ -90,6 +91,7 @@
         { id: "nav-notificacoes", visivel: hasPerm('PUSH_GERENCIAR') },
         { id: "nav-diagnostico", visivel: hasPerm('PUSH_GERENCIAR') },
         { id: "nav-relatorios", visivel: hasPerm('RELATORIOS_VER') },
+        { id: "nav-consulta-processual", visivel: hasPerm('CONSULTA_PROCESSUAL_CONSULTAR') },
         { id: "nav-novo-filiado", visivel: !isComunicador && hasPerm('CREATE_FILIADO') }
       ];
 
@@ -137,6 +139,7 @@
           window.Diagnostico.inicializar();
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
+        else if (abaAlvo === "sec-consulta-processual" && inicializarConsultaProcessual) inicializarConsultaProcessual();
         else if (abaAlvo === "sec-estatuto" && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
         else if (abaAlvo === "sec-seguranca") {
           if (window.Seguranca && window.Seguranca.renderizarSeguranca) {

@@ -42,6 +42,7 @@
   <script src="/js/area-filiado/assembleia-utils.js" defer></script>
   <script src="/js/area-filiado/assembleias.js" defer></script>
   <script src="/js/area-filiado/cms-admin.js" defer></script>
+  <script src="/js/area-filiado/consulta-processual.js" defer></script>
   <script src="/js/area-filiado/relatorios.js" defer></script>
   <script src="/js/area-filiado/diagnostico.js" defer></script>
 
@@ -74,6 +75,7 @@
           <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" role="tab" aria-selected="false" aria-controls="sec-notificacoes"><span aria-hidden="true">📢</span> Notificações</button>
           <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-repasse"><span aria-hidden="true">💱</span> Repasse</button>
           <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-relatorios"><span aria-hidden="true">📊</span> Relatórios</button>
+          <button class="af-nav-item" data-target="sec-consulta-processual" id="nav-consulta-processual" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-consulta-processual"><span aria-hidden="true">⚖️</span> Consulta Processual</button>
           <button class="af-nav-item" id="nav-novo-filiado" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-filiados"><span aria-hidden="true">➕</span> Novo Filiado</button>
           <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-cms"><span aria-hidden="true">🌐</span> Site (CMS)</button>
           <button class="af-nav-item" data-target="sec-diagnostico" id="nav-diagnostico" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-diagnostico"><span aria-hidden="true">🛠️</span> Diagnóstico</button>
@@ -267,6 +269,21 @@
                   <p>Carregando histórico...</p>
               </div>
           </div>
+        </section>
+
+        <section id="sec-consulta-processual" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-consulta-processual">
+          <div class="af-standard-header">
+            <h2>⚖️ Consulta Processual</h2>
+            <p class="section-subtitle">Consulta automática de processos vinculados ao CPF do usuário logado em fontes públicas integradas.</p>
+          </div>
+          <div class="ui-card" style="max-width: 1200px; margin: 0 auto;">
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <button id="btn-consulta-processual" class="ui-button ui-button-secondary">Consultar processos</button>
+              <span id="consulta-processual-last-updated" class="section-subtitle">Última atualização: -</span>
+            </div>
+            <p id="consulta-processual-feedback" class="section-subtitle">Aguardando consulta.</p>
+          </div>
+          <div id="consulta-processual-output" style="margin-top: 12px;"></div>
         </section>
 
         <section id="sec-notificacoes" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-notificacoes">

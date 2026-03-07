@@ -602,3 +602,23 @@ footer {
 .markdown-body strong {
   font-weight: 700;
 }
+
+/* Consulta Processual */
+.consulta-processual-table-wrap { overflow-x: auto; }
+.consulta-processual-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.consulta-processual-table th,
+.consulta-processual-table td {
+  border-bottom: 1px solid var(--ui-border);
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.consulta-processual-table th {
+  background: #f8fafc;
+  color: var(--ui-primary);
+  font-weight: 700;
+}
