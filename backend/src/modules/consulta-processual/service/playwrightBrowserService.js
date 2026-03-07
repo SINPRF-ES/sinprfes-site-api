@@ -16,6 +16,26 @@ function hasMissingSystemDeps(errorMessage = '') {
     || msg.includes('host system is missing dependencies');
 }
 
+function extractMissingLibrary(errorMessage = '') {
+  const text = String(errorMessage || '');
+  const match = text.match(/loading shared libraries:\s*([^:\n]+):/i)
+    || text.match(/shared object file:\s*([^\s]+)/i)
+    || text.match(/\b(lib[\w.+-]+\.so(?:\.\d+)*)\b/i);
+  return match?.[1] || null;
+}
+
+function compactErrorMessage(errorMessage = '', limit = 500) {
+  const normalized = String(errorMessage || '')
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const relevantLine = normalized.find((line) => /error while loading shared libraries|cannot open shared object file|host system is missing dependencies/i.test(line));
+  const message = relevantLine || normalized[0] || 'Unknown Playwright launch error';
+  return message.length > limit ? `${message.slice(0, limit)}…` : message;
+}
+
 function loadPlaywrightModule() {
   try {
     // eslint-disable-next-line global-require
@@ -75,12 +95,16 @@ async function launchBrowser(options = {}) {
       },
     };
   } catch (err) {
-    if (hasMissingSystemDeps(err.message)) {
+    const rawErrorMessage = String(err?.message || 'Unknown Playwright launch error');
+
+    if (hasMissingSystemDeps(rawErrorMessage)) {
+      const missingLibrary = extractMissingLibrary(rawErrorMessage);
       return {
         ok: false,
         reasonCode: REASON_CODES.SYSTEM_DEPS_MISSING,
         reason: 'Playwright Chromium is installed, but required Linux system libraries are missing.',
-        errorMessage: err.message,
+        errorMessage: compactErrorMessage(rawErrorMessage),
+        ...(missingLibrary ? { missingLibrary } : {}),
       };
     }
 
@@ -88,7 +112,7 @@ async function launchBrowser(options = {}) {
       ok: false,
       reasonCode: REASON_CODES.LAUNCH_FAILED,
       reason: `Failed to launch Playwright ${browserTypeName}.`,
-      errorMessage: err.message,
+      errorMessage: compactErrorMessage(rawErrorMessage),
     };
   }
 }
@@ -98,4 +122,6 @@ module.exports = {
   loadPlaywrightModule,
   launchBrowser,
   hasMissingSystemDeps,
+  extractMissingLibrary,
+  compactErrorMessage,
 };

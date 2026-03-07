@@ -34,6 +34,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           reasonCode: browserResult.reasonCode,
           reason: browserResult.reason,
           ...(browserResult.errorMessage ? { errorMessage: browserResult.errorMessage } : {}),
+          ...(browserResult.missingLibrary ? { missingLibrary: browserResult.missingLibrary } : {}),
           durationMs: Date.now() - startedAt,
         });
 
