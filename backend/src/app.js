@@ -119,6 +119,7 @@ const diagnosticoRoutes = require("./routes/diagnostico.routes");
 
 // 📊 NOVO: Rota de Relatórios
 const reportsRoutes = require("./routes/reports.routes");
+const consultaProcessualRoutes = require("./routes/consultaProcessual.routes");
 
 // ==============================
 // REGISTRO DE ROTAS (Prefixos)
@@ -171,6 +172,9 @@ app.use("/api/push", pushRoutes);
 
 // 📊 NOVO: Relatórios
 app.use("/api/reports", reportsRoutes);
+
+// ⚖️ Consulta Processual
+app.use("/api/consulta-processual", consultaProcessualRoutes);
 
 // Push de eventos
 app.use("/api/eventos", eventosRoutes);

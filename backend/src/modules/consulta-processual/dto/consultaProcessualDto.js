@@ -1,0 +1,31 @@
+function normalizeItem(input = {}) {
+  return {
+    source: input.source || null,
+    sourceLabel: input.sourceLabel || null,
+    processNumber: input.processNumber || null,
+    processClass: input.processClass || null,
+    subject: input.subject || null,
+    parties: input.parties || null,
+    lastMovement: input.lastMovement || null,
+    lastMovementAt: input.lastMovementAt || null,
+    rawLastMovementText: input.rawLastMovementText || null,
+    detailsUrl: input.detailsUrl || null,
+    providerMeta: input.providerMeta || {},
+  };
+}
+
+function createSourceResult({ source, sourceLabel, status = 'success', items = [], error = null, cached = false, cacheAgeSeconds = null }) {
+  const normalizedItems = Array.isArray(items) ? items.map(normalizeItem) : [];
+  return {
+    source,
+    sourceLabel,
+    status,
+    count: normalizedItems.length,
+    items: normalizedItems,
+    ...(error ? { error } : {}),
+    ...(cached ? { cached: true } : {}),
+    ...(Number.isFinite(cacheAgeSeconds) ? { cacheAgeSeconds } : {}),
+  };
+}
+
+module.exports = { normalizeItem, createSourceResult };
