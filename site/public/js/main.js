@@ -16,6 +16,7 @@ if (typeof window.API_BASE_URL === "undefined") {
 document.addEventListener("DOMContentLoaded", () => {
   const headerEl = document.getElementById("site-header");
   const footerEl = document.getElementById("site-footer");
+  const bodyEl = document.body;
 
   // Descobre qual página estamos (ex.: "index.html", "diretoria.html", etc.)
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
@@ -34,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.paddingTop = "0";
     if (headerEl) headerEl.style.display = "none";
     if (footerEl) footerEl.style.display = "none";
+  } else {
+    bodyEl.classList.add("public-shell");
   }
 
   // ---------------- HEADER ----------------
@@ -81,6 +84,17 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </footer>
     `;
+  }
+
+  function syncPublicShellOffsets() {
+    const header = document.querySelector('.site-header');
+    const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+    document.documentElement.style.setProperty('--public-header-offset', `${headerHeight}px`);
+  }
+
+  if (!isEmbed) {
+    syncPublicShellOffsets();
+    window.addEventListener('resize', syncPublicShellOffsets, { passive: true });
   }
 
   // Palette: Inicializa toggles de senha se Utils estiver disponível

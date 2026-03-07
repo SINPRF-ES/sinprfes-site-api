@@ -7,6 +7,33 @@
     --text-muted-color: var(--ui-text-muted, #475569);
     --bg-light: var(--ui-bg, #f4f7f6);
     --white: var(--ui-surface, #ffffff);
+    --public-header-offset: 85px;
+}
+
+
+body.public-shell {
+    min-height: 100vh;
+    padding-top: var(--public-header-offset);
+    display: flex;
+    flex-direction: column;
+}
+
+#site-header,
+#site-footer {
+    width: 100%;
+}
+
+body.public-shell .ui-container {
+    width: 100%;
+}
+
+body.public-shell .page-content {
+    padding-top: var(--ui-space-4);
+    padding-bottom: var(--ui-space-5);
+}
+
+body.public-shell #site-footer {
+    margin-top: auto;
 }
 
 body {
@@ -14,16 +41,7 @@ body {
     color: var(--text-color);
     background-color: var(--bg-light);
     line-height: 1.6;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    padding-top: 85px; /* Compensação para o header fixo */
-}
-
-@media (max-width: 768px) {
-    body {
-        padding-top: 130px; /* Mais espaço no mobile para header com wrap */
-    }
+    margin: 0;
 }
 
 .navbar {
@@ -146,11 +164,27 @@ body {
     color: var(--ui-primary) !important;
 }
 
+
+@media (max-width: 900px) {
+    .header-content {
+        justify-content: center;
+    }
+
+    .main-nav {
+        justify-content: center;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
 .site-footer {
     background: var(--ui-primary);
     color: white;
     padding: var(--ui-space-5) 0;
-    margin-top: auto; /* Garante que o footer fique no final */
 }
 
 .footer-content {

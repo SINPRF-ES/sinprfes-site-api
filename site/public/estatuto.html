@@ -39,7 +39,7 @@
     }
     
     .estatuto-page {
-      padding: 2rem 0 3rem;
+      padding: clamp(1rem, 2vw, 2rem) 0 3rem;
     }
 
     .estatuto-card {
@@ -191,8 +191,8 @@
 
     /* Estilos do TOC (Baseados no style.css, mas ajustados para página pública) */
     .estatuto-layout .estatuto-toc {
-      top: 100px; /* Ajuste para o header fixo */
-      max-height: calc(100vh - 120px);
+      top: calc(var(--public-header-offset, 85px) + 16px);
+      max-height: calc(100vh - (var(--public-header-offset, 85px) + 32px));
     }
 
     /* Responsivo */
@@ -846,15 +846,12 @@
   <script src="/js/main.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Pequeno timeout para garantir que o DOM esteja pronto e scripts carregados
-      setTimeout(() => {
-        if (window.EstatutoAF && window.EstatutoAF.montarToc) {
-          const container = document.getElementById('estatuto-content');
-          if (container) {
-            window.EstatutoAF.montarToc(container);
-          }
+      if (window.EstatutoAF && window.EstatutoAF.montarToc) {
+        const container = document.getElementById('estatuto-content');
+        if (container) {
+          window.EstatutoAF.montarToc(container);
         }
-      }, 100);
+      }
     });
   </script>
 </body>
