@@ -79,17 +79,27 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const panelBody = byId('#fPP\\:processosGridPanel_body');
         const table = byId('#fPP\\:processosTable');
 
-        const processRows = table
-          ? Array.from(table.querySelectorAll('tbody tr')).filter((tr) => tr.querySelectorAll('td').length > 1)
+        const primaryRows = table
+          ? Array.from(table.querySelectorAll('tr')).filter((tr) => tr.querySelectorAll('td').length > 0)
           : [];
+
+        const fallbackRows = panel
+          ? Array.from(panel.querySelectorAll('tr')).filter((tr) => tr.querySelectorAll('td').length > 0)
+          : [];
+
+        const processRows = (primaryRows.length ? primaryRows : fallbackRows)
+          .filter((tr) => !tr.querySelector('th'));
 
         const blocks = processRows.map((tr, index) => {
           const tds = Array.from(tr.querySelectorAll('td'));
           const detailsAnchor = tr.querySelector('a[href],button,[role="button"]');
-          const movementRaw = clean(tds[4]?.textContent || '');
-          const movementDate = movementRaw.match(DATE_TIME_RE)?.[0] || null;
-          const cnj = clean(tds[0]?.textContent || '').match(CNJ_RE)?.[0] || null;
           const rowText = clean(tr.textContent || '');
+          const cnj = rowText.match(CNJ_RE)?.[0] || null;
+
+          const movementRawByCell = clean(tds[4]?.textContent || '');
+          const movementRawByLabel = clean((rowText.match(/(?:última\s+movimentaç[aã]o\s*:?\s*)(.*)/i)?.[1] || ''));
+          const movementRaw = movementRawByCell || movementRawByLabel;
+          const movementDate = movementRaw.match(DATE_TIME_RE)?.[0] || rowText.match(DATE_TIME_RE)?.[0] || null;
 
           return {
             index,
@@ -99,12 +109,12 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             parties: clean(tds[3]?.textContent || ''),
             lastMovement: clean(movementRaw.replace(DATE_TIME_RE, '').replace(/[()]/g, ' ')),
             lastMovementAt: movementDate,
-            rawLastMovementText: movementRaw,
+            rawLastMovementText: movementRaw || null,
             detailsUrl: detailsAnchor?.href || null,
             rawText: rowText,
             providerMeta: {
               rowIndex: index,
-              domStrategy: 'table-row',
+              domStrategy: primaryRows.length ? 'table-row' : 'panel-row-fallback',
             },
           };
         });
