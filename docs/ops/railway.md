@@ -29,8 +29,42 @@ O projeto utiliza o arquivo `nixpacks.toml` na raiz para definir o plano de buil
 ## Observações Gerais
 
 *   **Root Directory**: É mandatório configurar o **Root Directory** como `/` no painel do Railway para que o `pnpm-lock.yaml` na raiz seja detectado e utilizado corretamente pelo processo de build.
-*   **Playwright (Consulta Processual/TRF1)**: o pacote npm está em `backend/package.json`. As dependências nativas do Linux exigidas pelo Chromium são instaladas via fase `[phases.setup]` no `nixpacks.toml` da raiz. O download do Chromium é feito na fase `[phases.build]` através do comando `pnpm --filter @sinprfes/backend run build:railway`.
+*   **Playwright (Consulta Processual/TRF1)**: o pacote npm está em `backend/package.json` (workspace `@sinprfes/backend`) e **não** em `site`/`mobile`. O Railway deve buildar com Root Directory `/` para ler `nixpacks.toml` da raiz; nesse fluxo a fase `[phases.build]` executa `pnpm --filter @sinprfes/backend run build:railway`, que roda `backend/scripts/prepare-playwright.js` no diretório `backend` e instala o Chromium (`npx playwright install chromium`) no artefato final do backend.
 *   **Node.js**: O projeto está fixado na versão **20.x**. O Railway deve detectar isso automaticamente via `.nvmrc` na raiz ou `engines` no `package.json`. Caso precise forçar, use `NIXPACKS_NODE_VERSION=20`.
 *   **Gerenciador de Pacotes**: Utilizar exclusivamente **pnpm**.
 *   **Segurança**: Nunca inclua segredos em Dockerfiles ou no código. Utilize sempre as variáveis de ambiente do painel do Railway.
 *   **Shared Code**: O build do SITE copia automaticamente a pasta `/shared` para `public/shared` para que os scripts do frontend possam acessá-la.
+
+
+## 3. Diagnóstico operacional do Playwright (Backend)
+
+No serviço de API, execute no shell do container/runtime:
+
+- `pnpm --filter @sinprfes/backend run check:playwright`
+
+Saídas esperadas:
+
+- `PLAYWRIGHT_PACKAGE_OK`
+- `PLAYWRIGHT_BROWSER_PRESENT`
+- `PLAYWRIGHT_LAUNCH_OK`
+
+Falhas classificadas:
+
+- `PLAYWRIGHT_PACKAGE_MISSING`: pacote npm ausente em `backend`.
+- `PLAYWRIGHT_BROWSER_MISSING`: executável Chromium não foi instalado no runtime.
+- `PLAYWRIGHT_SYSTEM_DEPS_MISSING`: libs Linux ausentes no host.
+- `PLAYWRIGHT_LAUNCH_FAILED`: falha real de launch não relacionada a pacote/browser/deps.
+
+## 4. Variáveis de ambiente (Playwright)
+
+Nenhuma variável de ambiente existente corrige ausência do executável Chromium por si só.
+A ausência do binário é resolvida no build (instalação via `playwright install chromium`), não por `env`.
+
+Variáveis já suportadas e opcionais para comportamento:
+
+- `PLAYWRIGHT_ENABLED`
+- `PLAYWRIGHT_BROWSER`
+- `PLAYWRIGHT_LAUNCH_TIMEOUT_MS`
+- `PLAYWRIGHT_EXTRA_ARGS`
+- `CONSULTA_PROCESSUAL_HEADLESS`
+

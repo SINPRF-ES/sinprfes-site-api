@@ -29,8 +29,8 @@ Este serviço serve os arquivos estáticos do site institucional e da área do f
 Este serviço provê a API REST em JSON para o site e para o aplicativo mobile.
 
 ### Configuração no Railway:
-- **Root Directory:** `/` (raiz do monorepo)
-- **Build Command:** `npm install -g pnpm@9.15.9 --force && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 PLAYWRIGHT_INSTALL_SYSTEM_DEPS=true pnpm install --frozen-lockfile && pnpm --filter @sinprfes/backend run build:railway`
+- **Root Directory:** `/` (raiz do monorepo, obrigatório para ler `pnpm-lock.yaml` e `nixpacks.toml`)
+- **Build Command:** deixar em branco (usar Nixpacks com `nixpacks.toml` da raiz)
 - **Start Command:** `pnpm --filter @sinprfes/backend start`
 
 ### Variáveis de Ambiente Necessárias:
@@ -44,7 +44,7 @@ Este serviço provê a API REST em JSON para o site e para o aplicativo mobile.
   - Em desenvolvimento, se a variável não estiver definida, o backend usa fallback local (`localhost`/`127.0.0.1`) + domínios oficiais.
 - *(E outras variáveis já configuradas no .env do backend)*
 
-> Nota técnica (Consulta Processual/TRF1): o Railway instala dependências a partir da raiz (`/`) e o runtime da API executa o workspace `backend`; por isso o Playwright deve ficar em `backend/package.json` e o Chromium precisa ser preparado durante o build com dependências Linux (instaladas via `apt-get` no `backend/scripts/prepare-playwright.js`) e depois `playwright install chromium`.
+> Nota técnica (Consulta Processual/TRF1): o Railway instala dependências a partir da raiz (`/`) e o runtime da API executa o workspace `backend`; por isso o Playwright deve ficar em `backend/package.json` e o Chromium é preparado durante o build Nixpacks na fase `[phases.build]` com `pnpm --filter @sinprfes/backend run build:railway` (que executa `backend/scripts/prepare-playwright.js` no diretório `backend` e faz `npx playwright install chromium`).
 
 ---
 
@@ -108,3 +108,9 @@ Após o deploy, execute os comandos abaixo para garantir que a separação está
 - A pasta `backend/public` foi removida para garantir que a API nunca sirva arquivos estáticos do site acidentalmente.
 - Os arquivos estáticos do SITE foram movidos para a subpasta `/site/public` por segurança, para evitar a exposição de arquivos do servidor (como `server.js`).
 - Durante o build do SITE, os arquivos da pasta raiz `/shared` são copiados para `/site/public/shared` para garantir que o serviço seja auto-contido.
+
+
+Validação rápida pós-deploy (shell do serviço API):
+
+- `pnpm --filter @sinprfes/backend run check:playwright`
+- Esperado: `PLAYWRIGHT_PACKAGE_OK`, `PLAYWRIGHT_BROWSER_PRESENT`, `PLAYWRIGHT_LAUNCH_OK`.

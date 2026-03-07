@@ -8,13 +8,19 @@ const REASON_CODES = {
   LAUNCH_FAILED: 'PLAYWRIGHT_LAUNCH_FAILED',
 };
 
+function isBrowserMissingExecutableError(errorMessage = '') {
+  const msg = String(errorMessage || '').toLowerCase();
+  return msg.includes("executable doesn't exist at")
+    || msg.includes('failed to launch because executable doesn\'t exist')
+    || msg.includes('browser was not found at the configured executablepath');
+}
+
 function hasMissingSystemDeps(errorMessage = '') {
   const msg = String(errorMessage || '').toLowerCase();
   return msg.includes('error while loading shared libraries')
     || msg.includes('cannot open shared object file')
     || msg.includes('libglib-2.0.so.0')
-    || msg.includes('host system is missing dependencies')
-    || msg.includes("browsertype.launch: executable doesn't exist at");
+    || msg.includes('host system is missing dependencies');
 }
 
 function extractMissingLibrary(errorMessage = '') {
@@ -99,18 +105,17 @@ async function launchBrowser(options = {}) {
   } catch (err) {
     const rawErrorMessage = String(err?.message || 'Unknown Playwright launch error');
 
+    if (isBrowserMissingExecutableError(rawErrorMessage)) {
+      return {
+        ok: false,
+        reasonCode: REASON_CODES.BROWSER_MISSING,
+        reason: 'Playwright package is present, but Chromium executable is missing from the system.',
+        errorMessage: compactErrorMessage(rawErrorMessage),
+      };
+    }
+
     if (hasMissingSystemDeps(rawErrorMessage)) {
       const missingLibrary = extractMissingLibrary(rawErrorMessage);
-      const lowerError = rawErrorMessage.toLowerCase();
-
-      if (lowerError.includes("executable doesn't exist at")) {
-        return {
-          ok: false,
-          reasonCode: REASON_CODES.BROWSER_MISSING,
-          reason: 'Playwright package is present, but Chromium executable is missing from the system.',
-          errorMessage: compactErrorMessage(rawErrorMessage),
-        };
-      }
 
       return {
         ok: false,
@@ -134,6 +139,7 @@ module.exports = {
   REASON_CODES,
   loadPlaywrightModule,
   launchBrowser,
+  isBrowserMissingExecutableError,
   hasMissingSystemDeps,
   extractMissingLibrary,
   compactErrorMessage,
