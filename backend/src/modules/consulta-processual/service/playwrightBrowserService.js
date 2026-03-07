@@ -13,12 +13,14 @@ function hasMissingSystemDeps(errorMessage = '') {
   return msg.includes('error while loading shared libraries')
     || msg.includes('cannot open shared object file')
     || msg.includes('libglib-2.0.so.0')
-    || msg.includes('host system is missing dependencies');
+    || msg.includes('host system is missing dependencies')
+    || msg.includes("browsertype.launch: executable doesn't exist at");
 }
 
 function extractMissingLibrary(errorMessage = '') {
   const text = String(errorMessage || '');
-  const match = text.match(/loading shared libraries:\s*([^:\n]+):/i)
+  // Matches "loading shared libraries: <libname>: cannot open shared object file"
+  const match = text.match(/loading shared libraries:\s*([^:\n\s]+):/i)
     || text.match(/shared object file:\s*([^\s]+)/i)
     || text.match(/\b(lib[\w.+-]+\.so(?:\.\d+)*)\b/i);
   return match?.[1] || null;
@@ -99,6 +101,17 @@ async function launchBrowser(options = {}) {
 
     if (hasMissingSystemDeps(rawErrorMessage)) {
       const missingLibrary = extractMissingLibrary(rawErrorMessage);
+      const lowerError = rawErrorMessage.toLowerCase();
+
+      if (lowerError.includes("executable doesn't exist at")) {
+        return {
+          ok: false,
+          reasonCode: REASON_CODES.BROWSER_MISSING,
+          reason: 'Playwright package is present, but Chromium executable is missing from the system.',
+          errorMessage: compactErrorMessage(rawErrorMessage),
+        };
+      }
+
       return {
         ok: false,
         reasonCode: REASON_CODES.SYSTEM_DEPS_MISSING,
