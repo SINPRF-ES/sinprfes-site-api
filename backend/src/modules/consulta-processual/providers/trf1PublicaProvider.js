@@ -23,6 +23,31 @@ function saveDebugTextFile(filePath, content) {
   }
 }
 
+
+function buildRawItemsFromExtraction(extraction = {}) {
+  const rawById = Array.isArray(extraction.rawById) ? extraction.rawById : [];
+  return rawById.map((entry = {}, index) => ({
+    source: 'trf1',
+    sourceLabel: 'TRF1',
+    processNumber: `RAW:${entry.id || index}`,
+    processClass: entry.tagName ? `RAW_${entry.tagName}` : 'RAW',
+    subject: null,
+    parties: null,
+    lastMovement: entry.text || null,
+    lastMovementAt: null,
+    rawLastMovementText: entry.text || null,
+    detailsUrl: null,
+    providerMeta: {
+      rawId: entry.id || null,
+      rawTagName: entry.tagName || null,
+      rawHtml: entry.html || null,
+      rawText: entry.text || null,
+      rawSource: 'trf1-dom',
+      rawIndex: index,
+    },
+  }));
+}
+
 class Trf1PublicaProvider extends ConsultaProcessualProvider {
   getId() { return 'trf1'; }
   getLabel() { return 'TRF1'; }
@@ -125,8 +150,35 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           /VER DETALHES DO PROCESSO/i.test(clean(el.textContent || '')),
         );
 
+        const rawNodes = [];
+        const pushRawNode = (el, fallbackId) => {
+          if (!el) return;
+          const id = clean(el.id || fallbackId || '');
+          if (!id) return;
+          rawNodes.push({
+            id,
+            tagName: (el.tagName || '').toLowerCase(),
+            text: clean(el.textContent || ''),
+            html: el.innerHTML || '',
+          });
+        };
+
+        pushRawNode(panel, 'fPP:processosGridPanel');
+        pushRawNode(panelBody, 'fPP:processosGridPanel_body');
+        pushRawNode(table, 'fPP:processosTable');
+
+        if (panel) {
+          Array.from(panel.querySelectorAll('[id]')).forEach((el) => pushRawNode(el));
+        }
+        if (table) {
+          Array.from(table.querySelectorAll('[id]')).forEach((el) => pushRawNode(el));
+        }
+
+        const rawById = Array.from(new Map(rawNodes.map((node) => [node.id, node])).values());
+
         return {
           rows: blocks,
+          rawById,
           debug: {
             html: {
               panel: panel?.innerHTML || '',
@@ -146,8 +198,10 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         };
       });
 
-      const items = parseTrf1Rows(extraction.rows);
-      const parsedCnjs = items.map((it) => it.processNumber).filter(Boolean);
+      const parsedItems = parseTrf1Rows(extraction.rows);
+      const rawItems = buildRawItemsFromExtraction(extraction);
+      const items = rawItems.length ? rawItems : parsedItems;
+      const parsedCnjs = parsedItems.map((it) => it.processNumber).filter(Boolean);
 
       if (cfg.debug) {
         const debugBaseDir = path.resolve(process.cwd(), 'backend/tmp/consulta-processual-debug');
@@ -168,7 +222,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           cpfMasked,
           debugArtifactsPrefix: prefix,
           ...extraction.debug.counts,
-          parsedItems: items.length,
+          parsedItems: parsedItems.length,
+          rawItems: rawItems.length,
+          returnedItems: items.length,
           parsedCnjs,
           panelCnjs: extraction.debug.panelCnjs,
         });
@@ -185,7 +241,8 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             source: this.getId(),
             cpfMasked,
             expectedCount,
-            parsedCount: items.length,
+            parsedCount: parsedItems.length,
+            returnedCount: items.length,
             parsedCnjs,
           });
         }
@@ -197,7 +254,8 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         source: this.getId(),
         cpfMasked,
         blocksDetected: extraction.rows.length,
-        validItems: items.length,
+        validItems: parsedItems.length,
+        returnedItems: items.length,
         cnjs: parsedCnjs,
         durationMs: Date.now() - startedAt,
       });
