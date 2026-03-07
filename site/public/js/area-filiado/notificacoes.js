@@ -393,7 +393,9 @@
     const originalText = btnSend.innerHTML;
     try {
       btnSend.disabled = true;
-      btnSend.innerHTML = "⌛ Enviando...";
+      btnSend.innerHTML = '<span aria-hidden="true" class="ui-spinner"></span> Enviando...';
+      btnSend.setAttribute("aria-busy", "true");
+
       const r = await window.Api.apiFetch("/api/push/campaigns/send", { method: "POST", body: { title: title || null, body, targetType, targetValue } });
       const data = await r.json().catch(() => ({}));
       if (r.ok) {
@@ -409,7 +411,11 @@
         carregarCampanhasGestao();
       } else alert(data.message || "Erro ao enviar. ID: " + (data.requestId || "N/A"));
     } catch (e) { alert("Erro de conexão."); }
-    finally { btnSend.disabled = false; btnSend.innerHTML = originalText; }
+    finally {
+      btnSend.disabled = false;
+      btnSend.innerHTML = originalText;
+      btnSend.removeAttribute("aria-busy");
+    }
   }
 
   async function carregarCampanhasGestao() {

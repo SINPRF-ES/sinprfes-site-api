@@ -497,6 +497,12 @@ body {
     gap: 10px;
 }
 .action-card:hover { transform: translateY(-5px); border-color: #003366; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+.action-card:focus-visible {
+    outline: 3px solid var(--ui-secondary);
+    outline-offset: 2px;
+    transform: translateY(-5px);
+    border-color: var(--ui-primary);
+}
 .action-card .icon { font-size: 2rem; }
 .action-card .label { font-weight: bold; color: #003366; }
 .action-card .subtitle { font-size: 0.8rem; color: #666; }
