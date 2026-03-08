@@ -55,6 +55,14 @@
     return `
       <div class="consulta-processual-table-wrap ui-card">
         <table class="consulta-processual-table">
+          <colgroup>
+            <col class="col-source">
+            <col class="col-number">
+            <col class="col-class">
+            <col class="col-parties">
+            <col class="col-movement">
+            <col class="col-actions">
+          </colgroup>
           <thead>
             <tr>
               <th scope="col">Origem</th>
@@ -249,10 +257,12 @@
           <div class="consulta-processual-mode-grid">
             <strong class="consulta-processual-mode-title">Tipo de consulta:</strong>
             <label class="consulta-processual-mode-option">
-              <input type="radio" name="consulta-mode" value="personal" checked> Meus processos (CPF)
+              <input type="radio" name="consulta-mode" value="personal" checked>
+              <span>Meus processos (CPF)</span>
             </label>
             <label class="consulta-processual-mode-option">
-              <input type="radio" name="consulta-mode" value="institutional"> Processos do sindicato (CNPJ)
+              <input type="radio" name="consulta-mode" value="institutional">
+              <span>Processos do sindicato (CNPJ)</span>
             </label>
           </div>
         </div>

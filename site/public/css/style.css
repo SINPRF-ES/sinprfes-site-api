@@ -767,11 +767,18 @@ body {
   margin: 0;
 }
 .consulta-processual-mode-option {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
   cursor: pointer;
   line-height: 1.35;
+}
+.consulta-processual-mode-option input {
+  margin: 2px 0 0;
+}
+.consulta-processual-mode-option span {
+  display: inline-block;
 }
 .consulta-processual-toolbar {
   display: flex;
@@ -854,11 +861,14 @@ body {
 }
 @media (min-width: 768px) {
   .consulta-processual-mode-grid {
-    grid-template-columns: auto auto auto;
+    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(0, 1fr);
     gap: 20px;
   }
   .consulta-processual-mode-option {
     align-items: center;
+  }
+  .consulta-processual-mode-option input {
+    margin-top: 0;
   }
   .consulta-processual-toolbar {
     display: grid;
@@ -905,6 +915,29 @@ body {
   .consulta-processual-table td::before {
     content: none;
   }
+
+  .consulta-processual-table .col-source {
+    width: 9%;
+  }
+  .consulta-processual-table .col-number {
+    width: 17%;
+  }
+  .consulta-processual-table .col-class {
+    width: 18%;
+  }
+  .consulta-processual-table .col-parties {
+    width: 26%;
+  }
+  .consulta-processual-table .col-movement {
+    width: 18%;
+  }
+  .consulta-processual-table .col-actions {
+    width: 12%;
+  }
+  .consulta-processual-table th:last-child,
+  .consulta-processual-table td:last-child {
+    text-align: center;
+  }
   .consulta-processual-table tbody tr:nth-child(even) {
     background: #f8fbff;
   }
@@ -914,7 +947,6 @@ body {
   .consulta-processual-table .cell-center {
     text-align: center;
     vertical-align: middle;
-    align-items: center;
   }
   .consulta-processual-table .cell-last-movement {
     min-width: 280px;
