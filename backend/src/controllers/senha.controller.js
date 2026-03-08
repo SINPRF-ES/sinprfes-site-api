@@ -17,25 +17,31 @@ function getEmailPrincipal(row) {
 
 function mascararEmail(email) {
   const emailLimpo = String(email || "").trim();
-  const [localPart = "", domainPart = ""] = emailLimpo.split("@");
+  const indiceArroba = emailLimpo.indexOf("@");
 
-  if (!localPart || !domainPart) {
+  if (indiceArroba <= 0 || indiceArroba === emailLimpo.length - 1) {
     return "";
   }
 
-  const localVisivel = localPart.slice(0, 3);
-  const localMascarado = "*".repeat(Math.max(localPart.length - localVisivel.length, 0));
+  const localPart = emailLimpo.slice(0, indiceArroba);
+  const dominioCompleto = emailLimpo.slice(indiceArroba + 1);
+  const indicePonto = dominioCompleto.indexOf(".");
+  const dominioPrincipal = indicePonto === -1 ? dominioCompleto : dominioCompleto.slice(0, indicePonto);
+  const sufixoDominio = indicePonto === -1 ? "" : dominioCompleto.slice(indicePonto);
 
-  const [dominio = "", ...restoDominio] = domainPart.split(".");
-  const tld = restoDominio.join(".");
-  const dominioVisivel = dominio.slice(0, 2);
-  const dominioMascarado = "*".repeat(Math.max(dominio.length - dominioVisivel.length, 0));
+  const mascararParte = (texto, indicesVisiveis) => {
+    const visiveis = new Set(indicesVisiveis.filter((i) => i >= 0 && i < texto.length));
+    return [...texto].map((char, idx) => {
+      if (visiveis.has(idx)) return char;
+      if (/[^a-zA-Z0-9]/.test(char)) return char;
+      return "*";
+    }).join("");
+  };
 
-  if (!tld) {
-    return `${localVisivel}${localMascarado}@${dominioVisivel}${dominioMascarado}`;
-  }
+  const localMascarado = mascararParte(localPart, [0, 1, localPart.length - 1]);
+  const dominioMascarado = mascararParte(dominioPrincipal, [0, dominioPrincipal.length - 1]);
 
-  return `${localVisivel}${localMascarado}@${dominioVisivel}${dominioMascarado}.${tld}`;
+  return `${localMascarado}@${dominioMascarado}${sufixoDominio}`;
 }
 
 exports.solicitarResetSenha = async (req, res) => {
