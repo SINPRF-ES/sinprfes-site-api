@@ -15,6 +15,29 @@ function getEmailPrincipal(row) {
   return null;
 }
 
+function mascararEmail(email) {
+  const emailLimpo = String(email || "").trim();
+  const [localPart = "", domainPart = ""] = emailLimpo.split("@");
+
+  if (!localPart || !domainPart) {
+    return "";
+  }
+
+  const localVisivel = localPart.slice(0, 3);
+  const localMascarado = "*".repeat(Math.max(localPart.length - localVisivel.length, 0));
+
+  const [dominio = "", ...restoDominio] = domainPart.split(".");
+  const tld = restoDominio.join(".");
+  const dominioVisivel = dominio.slice(0, 2);
+  const dominioMascarado = "*".repeat(Math.max(dominio.length - dominioVisivel.length, 0));
+
+  if (!tld) {
+    return `${localVisivel}${localMascarado}@${dominioVisivel}${dominioMascarado}`;
+  }
+
+  return `${localVisivel}${localMascarado}@${dominioVisivel}${dominioMascarado}.${tld}`;
+}
+
 exports.solicitarResetSenha = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   try {
@@ -93,7 +116,7 @@ exports.solicitarResetSenha = async (req, res) => {
     return res.json({
       success: true,
       message: mensagemPadrao,
-      email_destino: emailDestino,
+      email_destino: mascararEmail(emailDestino),
       requestId
     });
   } catch (err) {
