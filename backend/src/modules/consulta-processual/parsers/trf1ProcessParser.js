@@ -34,42 +34,70 @@ function parseMovementDescription(text) {
   return cleanText(String(text || '').replace(DATE_TIME_RE, '').replace(/^[()\-–—\s]+/, '').replace(/[()]+$/, ''));
 }
 
-function parseTrf1Rows(rows = []) {
+function parseTrf1Rows(rows = [], onDiscard = null) {
   if (!Array.isArray(rows)) return [];
 
-  return rows.map((row = {}) => {
-    const processNumber = extractCnj(row.processNumber || row.processTitle || row.rawText || '');
+  return rows
+    .map((row = {}) => {
+      const processNumber = extractCnj(row.processNumber || row.processTitle || row.rawText || '');
 
-    // O provider agora já traz o rawLastMovementText preferencialmente do detalhe
-    const rawMovementText = row.rawLastMovementText || row.listLastMovementText || '';
+      if (!processNumber) {
+        if (typeof onDiscard === 'function') {
+          onDiscard({
+            reason: 'missing_process_number',
+            rawSnippet: cleanText(row.rawText).substring(0, 100),
+            index: row.index,
+          });
+        }
+        return null;
+      }
 
-    // A data/hora ISO deve vir da string de movimentação (detalhe ou lista)
-    const movementAtIso = parseBrazilDateToIso(rawMovementText) || parseBrazilDateToIso(row.lastMovementAt) || parseBrazilDateToIso(row.listLastMovementAt);
+      if (!isValidProcessNumber(processNumber)) {
+        if (typeof onDiscard === 'function') {
+          onDiscard({
+            reason: 'invalid_process_number',
+            processNumber,
+            index: row.index,
+          });
+        }
+        return null;
+      }
 
-    // A descrição da movimentação (lastMovement)
-    // Se o provider já limpou (lastMovement), usamos ele, senão tentamos limpar do raw
-    let lastMovement = cleanText(row.lastMovement);
-    if (!lastMovement || lastMovement === 'null') {
-      lastMovement = parseMovementDescription(rawMovementText);
-    }
+      // O provider agora já traz o rawLastMovementText preferencialmente do detalhe
+      const rawMovementText = row.rawLastMovementText || row.listLastMovementText || '';
 
-    return normalizeItem({
-      source: 'trf1',
-      sourceLabel: 'TRF1',
-      processNumber,
-      processClass: cleanText(row.processClass) || null,
-      processTitle: cleanText(row.processTitle) || null,
-      subject: cleanText(row.subject) || null,
-      parties: cleanText(row.parties) || null,
-      lastMovement: lastMovement || null,
-      lastMovementAt: movementAtIso || null,
-      rawLastMovementText: cleanText(rawMovementText) || null,
-      listLastMovementText: cleanText(row.listLastMovementText) || null,
-      listLastMovementAt: parseBrazilDateToIso(row.listLastMovementAt || row.listLastMovementText || '') || null,
-      detailsUrl: row.detailsUrl || null,
-      providerMeta: row.providerMeta || {},
-    });
-  }).filter((item) => isValidProcessNumber(item.processNumber));
+      // A data/hora ISO deve vir da string de movimentação (detalhe ou lista)
+      const movementAtIso =
+        parseBrazilDateToIso(rawMovementText) ||
+        parseBrazilDateToIso(row.lastMovementAt) ||
+        parseBrazilDateToIso(row.listLastMovementAt);
+
+      // A descrição da movimentação (lastMovement)
+      // Se o provider já limpou (lastMovement), usamos ele, senão tentamos limpar do raw
+      let lastMovement = cleanText(row.lastMovement);
+      if (!lastMovement || lastMovement === 'null') {
+        lastMovement = parseMovementDescription(rawMovementText);
+      }
+
+      return normalizeItem({
+        source: 'trf1',
+        sourceLabel: 'TRF1',
+        processNumber,
+        processClass: cleanText(row.processClass) || null,
+        processTitle: cleanText(row.processTitle) || null,
+        subject: cleanText(row.subject) || null,
+        parties: cleanText(row.parties) || null,
+        lastMovement: lastMovement || null,
+        lastMovementAt: movementAtIso || null,
+        rawLastMovementText: cleanText(rawMovementText) || null,
+        listLastMovementText: cleanText(row.listLastMovementText) || null,
+        listLastMovementAt:
+          parseBrazilDateToIso(row.listLastMovementAt || row.listLastMovementText || '') || null,
+        detailsUrl: row.detailsUrl || null,
+        providerMeta: row.providerMeta || {},
+      });
+    })
+    .filter(Boolean);
 }
 
 module.exports = { parseTrf1Rows, parseBrazilDateToIso, extractCnj, isValidProcessNumber };

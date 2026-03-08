@@ -17,7 +17,16 @@ function normalizeItem(input = {}) {
   };
 }
 
-function createSourceResult({ source, sourceLabel, status = 'success', items = [], error = null, cached = false, cacheAgeSeconds = null }) {
+function createSourceResult({
+  source,
+  sourceLabel,
+  status = 'success',
+  items = [],
+  error = null,
+  cached = false,
+  cacheAgeSeconds = null,
+  debugSummary = null,
+}) {
   const normalizedItems = Array.isArray(items) ? items.map(normalizeItem) : [];
   return {
     source,
@@ -28,6 +37,7 @@ function createSourceResult({ source, sourceLabel, status = 'success', items = [
     ...(error ? { error } : {}),
     ...(cached ? { cached: true } : {}),
     ...(Number.isFinite(cacheAgeSeconds) ? { cacheAgeSeconds } : {}),
+    ...(debugSummary ? { debugSummary } : {}),
   };
 }
 
