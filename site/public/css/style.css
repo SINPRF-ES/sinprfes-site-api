@@ -747,43 +747,94 @@ body {
 }
 
 /* Consulta Processual */
+
+.consulta-processual-controls,
+.consulta-processual-toolbar-card {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.consulta-processual-mode-card {
+  margin-bottom: 12px;
+  padding: 12px;
+}
+.consulta-processual-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.consulta-processual-mode-title {
+  margin: 0;
+}
+.consulta-processual-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  line-height: 1.35;
+}
+.consulta-processual-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+.consulta-processual-toolbar .ui-button {
+  width: 100%;
+  justify-content: center;
+}
+.consulta-processual-toolbar .section-subtitle {
+  margin: 0;
+  text-align: left;
+}
 .consulta-processual-table-wrap {
-  overflow-x: auto;
+  overflow: hidden;
   width: 100%;
 }
 .consulta-processual-table {
   width: 100%;
-  min-width: 900px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.92rem;
-  table-layout: fixed;
 }
-.consulta-processual-table thead th {
-  position: sticky;
-  top: 0;
-  background: #f1f5fb;
-  color: var(--ui-primary);
-  font-weight: 700;
-  letter-spacing: 0.01em;
+.consulta-processual-table thead {
+  display: none;
+}
+.consulta-processual-table tbody tr {
+  display: block;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background: #fff;
 }
 .consulta-processual-table th,
 .consulta-processual-table td {
+  border: 0;
   border-bottom: 1px solid var(--ui-border);
-  padding: 10px;
+  padding: 10px 12px;
   text-align: left;
   vertical-align: top;
   overflow-wrap: anywhere;
   word-break: break-word;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.consulta-processual-table tbody tr:nth-child(even) {
-  background: #f8fbff;
+.consulta-processual-table tbody tr td:last-child {
+  border-bottom: 0;
 }
-.consulta-processual-table tbody tr:hover {
-  background: #eef5ff;
+.consulta-processual-table td::before {
+  content: attr(data-label);
+  font-weight: 700;
+  color: var(--ui-primary);
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 .consulta-processual-table .cell-center {
-  text-align: center;
-  vertical-align: middle;
+  text-align: left;
+  align-items: flex-start;
 }
 .consulta-processual-table .cell-process-number {
   font-weight: 700;
@@ -793,15 +844,82 @@ body {
   color: #334155;
   font-weight: 600;
 }
-.consulta-processual-table .cell-last-movement {
-  min-width: 280px;
-}
+.consulta-processual-table .cell-last-movement,
 .consulta-processual-table .cell-wrap {
   line-height: 1.35;
 }
-@media (max-width: 960px) {
+.consulta-processual-table .ui-button {
+  width: 100%;
+  justify-content: center;
+}
+@media (min-width: 768px) {
+  .consulta-processual-mode-grid {
+    grid-template-columns: auto auto auto;
+    gap: 20px;
+  }
+  .consulta-processual-mode-option {
+    align-items: center;
+  }
+  .consulta-processual-toolbar {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+  }
+  .consulta-processual-toolbar .ui-button {
+    width: auto;
+  }
+  .consulta-processual-toolbar .section-subtitle {
+    text-align: right;
+  }
+}
+@media (min-width: 1024px) {
   .consulta-processual-table {
-    min-width: 760px;
-    font-size: 0.88rem;
+    table-layout: fixed;
+  }
+  .consulta-processual-table thead {
+    display: table-header-group;
+  }
+  .consulta-processual-table tbody tr {
+    display: table-row;
+    border: 0;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+  .consulta-processual-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f1f5fb;
+    color: var(--ui-primary);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    border-bottom: 1px solid var(--ui-border);
+    padding: 10px;
+    text-align: left;
+  }
+  .consulta-processual-table th,
+  .consulta-processual-table td {
+    display: table-cell;
+    border-bottom: 1px solid var(--ui-border);
+    padding: 10px;
+  }
+  .consulta-processual-table td::before {
+    content: none;
+  }
+  .consulta-processual-table tbody tr:nth-child(even) {
+    background: #f8fbff;
+  }
+  .consulta-processual-table tbody tr:hover {
+    background: #eef5ff;
+  }
+  .consulta-processual-table .cell-center {
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+  }
+  .consulta-processual-table .cell-last-movement {
+    min-width: 280px;
+  }
+  .consulta-processual-table .ui-button {
+    width: auto;
   }
 }
