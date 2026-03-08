@@ -27,7 +27,12 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     const debugSummary = {
       pageLoaded: false,
       cpfFieldFound: false,
+      inputDigitsCount: 0,
+      inputValueMasked: null,
       searchTriggered: false,
+      submitSucceeded: false,
+      waitConditionMatched: null,
+      realResultLoaded: false,
       resultsContainerFound: false,
       resultsTextDetected: false,
       declaredResultsCount: 0,
@@ -89,6 +94,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         userId,
         source: this.getId(),
         cpfMasked,
+        timestamp: new Date().toISOString(),
         ...extra,
       };
       if (debugData) debugData.steps.push(payload);
@@ -103,6 +109,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         userId,
         source: this.getId(),
         cpfMasked,
+        timestamp: new Date().toISOString(),
         ...extra,
       };
       if (debugData) debugData.warnings.push(payload);
@@ -169,50 +176,169 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       }
 
       const stepCStartedAt = Date.now();
+      const cpfFieldSelector = '#fPP\\:dpDec\\:documentoParte';
       const selectedRadioSelector = 'input[name="tipoMascaraDocumento"]';
       logStep('C_fill_cpf_start', {
         cpfMaskedUsed: cpfMasked,
         selectedRadio: selectedRadioSelector,
       });
-      await page.locator(selectedRadioSelector).first().check();
-      await page.locator('#fPP\\:dpDec\\:documentoParte').fill(cpf);
-      const maskedFieldValue = await page.locator('#fPP\\:dpDec\\:documentoParte').inputValue();
+
+      const fillStrategyResult = await this.fillCpfWithFallback(page, {
+        cpfDigits: String(cpf || '').replace(/\D/g, ''),
+        cpfFieldSelector,
+        selectedRadioSelector,
+      });
+
+      const finalInputState = await page.locator(cpfFieldSelector).evaluate((input) => {
+        const value = String(input?.value || '');
+        const digits = value.replace(/\D/g, '');
+        return {
+          value,
+          onlyDigits: digits,
+          digitsCount: digits.length,
+          length: value.length,
+        };
+      });
+
+      debugSummary.inputDigitsCount = finalInputState.digitsCount;
+      debugSummary.inputValueMasked = this.maskFieldValue(finalInputState.value);
+
       logStep('C_fill_cpf_end', {
         selectedRadio: selectedRadioSelector,
-        fieldValueMasked: this.maskFieldValue(maskedFieldValue),
-        eventsDispatched: ['check', 'fill'],
+        fillStrategyTried: fillStrategyResult.strategies,
+        fillStrategyUsed: fillStrategyResult.usedStrategy,
+        fieldValueMasked: this.maskFieldValue(finalInputState.value),
+        inputDigitsCount: finalInputState.digitsCount,
+        inputOnlyDigits: finalInputState.onlyDigits,
+        inputValueLength: finalInputState.length,
+        eventsDispatched: ['check', 'focus', 'clear', 'type'],
         durationMs: Date.now() - stepCStartedAt,
       });
       await saveArtifact('02-filled.png', page, 'screenshot');
 
+      if (finalInputState.digitsCount !== 11) {
+        debugSummary.failureStage = 'input_validation';
+        emitDebugWarning('C_fill_cpf_invalid_input', {
+          reason: 'CPF input does not contain 11 digits before submit',
+          inputDigitsCount: finalInputState.digitsCount,
+          inputOnlyDigits: finalInputState.onlyDigits,
+          inputValueMasked: this.maskFieldValue(finalInputState.value),
+        });
+        throw new Error(`CPF field invalid before submit: found ${finalInputState.digitsCount} digits`);
+      }
+
       const stepDStartedAt = Date.now();
       const beforeSubmitUrl = page.url();
       const beforeSubmitDomLen = (await page.content()).length;
+      const beforeSubmitInputValue = await page.locator(cpfFieldSelector).inputValue();
+      const beforeSubmitPanelHtml = await page.locator('#fPP\\:processosGridPanel_body').evaluate((el) => el?.innerHTML || '').catch(() => '');
+      const beforeSubmitSignals = await page.evaluate(() => {
+        const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
+        const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const panelBody = document.querySelector('#fPP\:processosGridPanel_body');
+        const panel = document.querySelector('#fPP\:processosGridPanel');
+        const root = panelBody || panel || document;
+        const panelText = clean((panelBody || panel || document.body)?.innerText || '');
+        const linkSignatures = Array.from(root.querySelectorAll('a[href],a[onclick]'))
+          .map((node) => {
+            const href = (node.getAttribute('href') || '').trim();
+            const onclick = (node.getAttribute('onclick') || '').trim();
+            const text = clean(node.textContent || '');
+            return `${href}|${onclick}|${text}`;
+          })
+          .filter(Boolean);
+        return {
+          panelText,
+          linkSignatures,
+          cnjMatchesFound: (panelText.match(CNJ_RE) || []).length,
+        };
+      });
+      const networkEvents = [];
+
+      const onResponse = async (response) => {
+        try {
+          const req = response.request();
+          const url = response.url();
+          const method = req.method();
+          const resourceType = req.resourceType();
+          const isRelevant = /consultapublica|processosGridPanel|searchProcessos|richfaces|seam/i.test(url);
+          if (!isRelevant) return;
+          networkEvents.push({
+            url,
+            method,
+            resourceType,
+            status: response.status(),
+          });
+        } catch (_err) {
+          // ignore network diagnostics errors
+        }
+      };
+      page.on('response', onResponse);
+
       logStep('D_submit_search_start', {
         beforeSubmitUrl,
         beforeSubmitDomLen,
-        waitStrategy: 'waitForSelector(#fPP\\:processosGridPanel)',
-        timestamp: new Date().toISOString(),
+        beforeSubmitInputMasked: this.maskFieldValue(beforeSubmitInputValue),
+        beforeSubmitInputDigits: this.onlyDigits(beforeSubmitInputValue),
+        waitStrategy: 'waitForRealResultsUpdate',
+        beforeSubmitSignals: {
+          baselineLinksFound: Array.isArray(beforeSubmitSignals.linkSignatures) ? beforeSubmitSignals.linkSignatures.length : 0,
+          baselineCnjMatchesFound: beforeSubmitSignals.cnjMatchesFound,
+          panelTextSummary: String(beforeSubmitSignals.panelText || '').slice(0, 220),
+        },
       });
 
-      await page.locator('#fPP\\:searchProcessos').click();
+      const clickPromise = page.locator('#fPP\\:searchProcessos').click();
+      let ajaxResponse = null;
+      try {
+        ajaxResponse = await page.waitForResponse((response) => {
+          const req = response.request();
+          return req.method() === 'POST'
+            && /consultapublica|listView\.seam|searchProcessos/i.test(response.url());
+        }, { timeout: Math.min(cfg.searchTimeoutMs, 8000) });
+      } catch (_err) {
+        emitDebugWarning('D_submit_search_ajax_not_detected', { reason: 'No matching ajax response captured' });
+      }
+      await clickPromise;
       debugSummary.searchTriggered = true;
 
-      const grid = page.locator('#fPP\\:processosGridPanel');
+      let waitInfo;
       try {
-        await grid.waitFor({ state: 'visible', timeout: cfg.searchTimeoutMs });
+        waitInfo = await this.waitForRealResultsUpdate(page, {
+          timeoutMs: cfg.searchTimeoutMs,
+          previousPanelBodyHtml: beforeSubmitPanelHtml,
+          previousPanelText: beforeSubmitSignals.panelText || '',
+          previousLinkSignatures: Array.isArray(beforeSubmitSignals.linkSignatures) ? beforeSubmitSignals.linkSignatures : [],
+          previousCnjMatchesFound: Number(beforeSubmitSignals.cnjMatchesFound || 0),
+        });
+        debugSummary.waitConditionMatched = waitInfo.waitConditionMatched;
       } catch (err) {
-        debugSummary.failureStage = 'submit_wait';
+        debugSummary.failureStage = 'submit_or_wait';
         emitDebugWarning('D_submit_search_timeout', {
           timeoutMs: cfg.searchTimeoutMs,
-          waitStrategy: 'waitForSelector(#fPP\\:processosGridPanel)',
+          waitStrategy: 'waitForRealResultsUpdate',
+          errorMessage: err.message,
         });
         await saveArtifact('03-submit-timeout.png', page, 'screenshot');
+        page.off('response', onResponse);
         throw err;
       }
 
       const afterSubmitUrl = page.url();
       const afterSubmitDomLen = (await page.content()).length;
+      const afterSubmitPanelHtml = await page.locator('#fPP\\:processosGridPanel_body').evaluate((el) => el?.innerHTML || '').catch(() => '');
+      const panelDelta = Math.abs(afterSubmitPanelHtml.length - beforeSubmitPanelHtml.length);
+      const panelChanged = beforeSubmitPanelHtml !== afterSubmitPanelHtml;
+      debugSummary.submitSucceeded = true;
+
+      const ajaxResponseInfo = ajaxResponse ? {
+        url: ajaxResponse.url(),
+        status: ajaxResponse.status(),
+        method: ajaxResponse.request().method(),
+      } : null;
+
+      page.off('response', onResponse);
+
       logStep('D_submit_search_end', {
         clickExecuted: true,
         urlChanged: beforeSubmitUrl !== afterSubmitUrl,
@@ -221,9 +347,26 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         domChanged: beforeSubmitDomLen !== afterSubmitDomLen,
         beforeSubmitDomLen,
         afterSubmitDomLen,
+        panelChanged,
+        panelDelta,
+        waitConditionMatched: waitInfo.waitConditionMatched,
+        waitSignals: waitInfo.signals,
+        ajaxResponse: ajaxResponseInfo,
+        relevantNetworkResponses: networkEvents,
         durationMs: Date.now() - stepDStartedAt,
       });
       await saveArtifact('03-results.png', page, 'screenshot');
+      await saveArtifact('03-panel-before-submit.html', beforeSubmitPanelHtml);
+      await saveArtifact('03-panel-after-submit.html', afterSubmitPanelHtml);
+      await saveArtifact('03-panel-diff-summary.json', JSON.stringify({
+        beforeLength: beforeSubmitPanelHtml.length,
+        afterLength: afterSubmitPanelHtml.length,
+        panelChanged,
+        panelDelta,
+        waitInfo,
+        ajaxResponse: ajaxResponseInfo,
+        relevantNetworkResponses: networkEvents,
+      }, null, 2));
 
       const stepEStartedAt = Date.now();
       logStep('E_capture_results_start');
@@ -342,6 +485,8 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       debugSummary.linksFound = domInspection.linksFound;
       debugSummary.cnjMatchesFound = domInspection.cnjMatchesFound;
       debugSummary.rawBlocksFound = extraction.rawRows.length;
+      const realResultLoaded = this.isRealSearchResultLoaded(domInspection);
+      debugSummary.realResultLoaded = realResultLoaded;
 
       logStep('E_capture_results_end', {
         hasGridPanel: domInspection.hasGridPanel,
@@ -351,6 +496,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         declaredResultsCount: domInspection.declaredResultsCount,
         linksFound: domInspection.linksFound,
         cnjMatches: domInspection.cnjMatchesFound,
+        realResultLoaded,
         panelTextSummary: domInspection.panelTextSummary,
         durationMs: Date.now() - stepEStartedAt,
       });
@@ -361,6 +507,30 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       await saveArtifact('results-grid-body.html', extraction.html.panelBody);
       await saveArtifact('results-table.html', extraction.html.table);
       await saveArtifact('results-text.txt', extraction.panelText);
+
+      if (!realResultLoaded) {
+        debugSummary.failureStage = 'submit_or_wait';
+        emitDebugWarning('E_capture_results_not_real_loaded', {
+          reason: 'DOM is still base state or without usable signals after submit',
+          declaredResultsCount: domInspection.declaredResultsCount,
+          linksFound: domInspection.linksFound,
+          cnjMatchesFound: domInspection.cnjMatchesFound,
+          panelTextSummary: domInspection.panelTextSummary,
+        });
+
+        return createSourceResult({
+          source: this.getId(),
+          sourceLabel: this.getLabel(),
+          status: 'error',
+          items: [],
+          debugSummary,
+          debugData,
+          error: {
+            code: 'SUBMIT_OR_WAIT_FAILED',
+            message: 'Pesquisa não carregou resultado real antes do parse bruto.',
+          },
+        });
+      }
 
       const stepFStartedAt = Date.now();
       logStep('F_parse_raw_start', { candidateBlocks: extraction.rawRows.length });
@@ -515,6 +685,129 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     if (!digits) return null;
     if (digits.length <= 4) return `***${digits.slice(-2)}`;
     return `***${digits.slice(-4, -2)}***`;
+  }
+
+  onlyDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+  }
+
+  async fillCpfWithFallback(page, { cpfDigits, cpfFieldSelector, selectedRadioSelector }) {
+    const strategies = [cpfDigits, this.formatCpf(cpfDigits)];
+    const field = page.locator(cpfFieldSelector);
+
+    await page.locator(selectedRadioSelector).first().check();
+
+    for (const strategyValue of strategies) {
+      await field.click({ force: true });
+      await field.fill('');
+      await page.keyboard.press('Control+a').catch(() => {});
+      await page.keyboard.press('Backspace').catch(() => {});
+      await field.type(strategyValue, { delay: 30 });
+      const onlyDigits = this.onlyDigits(await field.inputValue());
+      if (onlyDigits.length === 11 && onlyDigits === cpfDigits) {
+        return { usedStrategy: strategyValue, strategies };
+      }
+    }
+
+    return { usedStrategy: null, strategies };
+  }
+
+  formatCpf(cpfDigits) {
+    const digits = this.onlyDigits(cpfDigits);
+    if (digits.length !== 11) return digits;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  }
+
+  async waitForRealResultsUpdate(page, {
+    timeoutMs,
+    previousPanelBodyHtml,
+    previousPanelText = '',
+    previousLinkSignatures = [],
+    previousCnjMatchesFound = 0,
+  }) {
+    const startedAt = Date.now();
+    const pollIntervalMs = 250;
+
+    while (Date.now() - startedAt < timeoutMs) {
+      const snapshot = await page.evaluate(({ prevHtml, prevPanelText, prevLinkSignatures, prevCnjMatchesFoundValue }) => {
+        const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
+        const RESULT_RE = /(\d+)\s+resultados? encontrados/i;
+        const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+        const gridPanelBody = document.querySelector('#fPP\:processosGridPanel_body');
+        const gridPanel = document.querySelector('#fPP\:processosGridPanel');
+        const root = gridPanelBody || gridPanel || document;
+        const panelText = clean((gridPanelBody || gridPanel || document.body)?.innerText || '');
+        const panelHtml = gridPanelBody?.innerHTML || '';
+        const declaredMatch = panelText.match(RESULT_RE);
+
+        const links = Array.from(root.querySelectorAll('a[href],a[onclick]')).map((node) => {
+          const href = (node.getAttribute('href') || '').trim();
+          const onclick = (node.getAttribute('onclick') || '').trim();
+          const text = clean(node.textContent || '');
+          const isProcessLike =
+            /openPopUp|processo|detalhe|downloadDocumento/i.test(onclick)
+            || /processo|detalhe|listView\.seam/i.test(href)
+            || /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/.test(text);
+          return {
+            href,
+            onclick,
+            text,
+            isProcessLike,
+            signature: `${href}|${onclick}|${text}`,
+          };
+        });
+
+        const processLikeLinks = links.filter((link) => link.isProcessLike);
+        const previousSet = new Set(Array.isArray(prevLinkSignatures) ? prevLinkSignatures : []);
+        const addedProcessLikeLinks = processLikeLinks.filter((link) => !previousSet.has(link.signature));
+        const cnjMatches = panelText.match(CNJ_RE) || [];
+
+        return {
+          panelHtmlChanged: panelHtml !== String(prevHtml || ''),
+          panelTextChanged: panelText !== String(prevPanelText || ''),
+          declaredResultsCount: Number(declaredMatch?.[1] || 0),
+          hasDeclaredResultsPositive: Number(declaredMatch?.[1] || 0) > 0,
+          cnjMatchesFound: cnjMatches.length,
+          cnjIncreased: cnjMatches.length > Number(prevCnjMatchesFoundValue || 0),
+          processLikeLinksFound: processLikeLinks.length,
+          addedProcessLikeLinksFound: addedProcessLikeLinks.length,
+          panelTextSummary: panelText.slice(0, 300),
+        };
+      }, {
+        prevHtml: previousPanelBodyHtml,
+        prevPanelText: previousPanelText,
+        prevLinkSignatures: previousLinkSignatures,
+        prevCnjMatchesFoundValue: previousCnjMatchesFound,
+      });
+
+      const waitConditionMatched =
+        (snapshot.hasDeclaredResultsPositive && 'declared_results_positive')
+        || (snapshot.cnjMatchesFound > 0 && snapshot.cnjIncreased && 'cnj_match_increased')
+        || (snapshot.addedProcessLikeLinksFound > 0 && 'new_process_links_found')
+        || (snapshot.panelHtmlChanged && snapshot.panelTextChanged && 'panel_html_changed')
+        || null;
+
+      if (waitConditionMatched) {
+        return {
+          waitConditionMatched,
+          elapsedMs: Date.now() - startedAt,
+          signals: snapshot,
+        };
+      }
+
+      await page.waitForTimeout(pollIntervalMs);
+    }
+
+    throw new Error(`Timeout waiting for real TRF1 results update (${timeoutMs}ms)`);
+  }
+
+  isRealSearchResultLoaded(domInspection = {}) {
+    return (
+      Number(domInspection.declaredResultsCount || 0) > 0
+      || Number(domInspection.cnjMatchesFound || 0) > 0
+      || Number(domInspection.linksFound || 0) > 0
+    );
   }
 
   async extractDetailMovement({

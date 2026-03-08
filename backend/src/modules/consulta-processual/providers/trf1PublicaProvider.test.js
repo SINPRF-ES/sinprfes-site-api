@@ -6,12 +6,48 @@ const Trf1PublicaProvider = require('./trf1PublicaProvider');
 const { launchBrowser } = require('../service/playwrightBrowserService');
 
 function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
+  const fieldState = { value: '' };
+  const panelState = {
+    before: '<div class="base-state">Estado inicial</div>',
+    after: '<div class="result-state">2 resultados encontrados</div>',
+    hasChanged: false,
+  };
+
   const searchPage = {
     goto: jest.fn().mockResolvedValue(undefined),
     url: jest.fn().mockReturnValue('https://trf1.test'),
     title: jest.fn().mockResolvedValue('TRF1 - Consulta Processual'),
     content: jest.fn().mockResolvedValue('<html></html>'),
     locator: jest.fn((selector) => {
+      if (selector === '#fPP\\:dpDec\\:documentoParte') {
+        return {
+          isVisible: jest.fn().mockResolvedValue(true),
+          click: jest.fn().mockResolvedValue(undefined),
+          fill: jest.fn().mockImplementation(async (value) => { fieldState.value = String(value || ''); }),
+          type: jest.fn().mockImplementation(async (value) => { fieldState.value = String(value || ''); }),
+          inputValue: jest.fn().mockImplementation(async () => fieldState.value || '068.893.157-07'),
+          evaluate: jest.fn().mockImplementation(async () => ({
+            value: fieldState.value || '068.893.157-07',
+            onlyDigits: (fieldState.value || '068.893.157-07').replace(/\D/g, ''),
+            digitsCount: 11,
+            length: (fieldState.value || '068.893.157-07').length,
+          })),
+        };
+      }
+
+      if (selector === '#fPP\\:processosGridPanel_body') {
+        return {
+          evaluate: jest.fn().mockImplementation(async () => (panelState.hasChanged ? panelState.after : panelState.before)),
+        };
+      }
+
+      if (selector === '#fPP\\:searchProcessos') {
+        return {
+          click: jest.fn().mockImplementation(async () => { panelState.hasChanged = true; }),
+          isVisible: jest.fn().mockResolvedValue(true),
+        };
+      }
+
       return {
         first: () => ({
           check: jest.fn().mockResolvedValue(undefined),
@@ -24,7 +60,33 @@ function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
         inputValue: jest.fn().mockResolvedValue('068.893.157-07'),
       };
     }),
-    evaluate: jest.fn().mockResolvedValue(extraction),
+    evaluate: jest.fn().mockImplementation(async (fn, arg) => {
+      if (arg && Object.prototype.hasOwnProperty.call(arg, 'prevHtml')) {
+        return {
+          panelHtmlChanged: panelState.hasChanged,
+          panelTextChanged: panelState.hasChanged,
+          declaredResultsCount: panelState.hasChanged ? 2 : 0,
+          hasDeclaredResultsPositive: panelState.hasChanged,
+          cnjMatchesFound: panelState.hasChanged ? 2 : 0,
+          cnjIncreased: panelState.hasChanged,
+          processLikeLinksFound: panelState.hasChanged ? 2 : 0,
+          addedProcessLikeLinksFound: panelState.hasChanged ? 2 : 0,
+          panelTextSummary: panelState.hasChanged ? '2 resultados encontrados' : 'Estado inicial',
+        };
+      }
+      return extraction;
+    }),
+    waitForResponse: jest.fn().mockResolvedValue({
+      url: () => 'https://trf1.test/consultapublica/ajax',
+      status: () => 200,
+      request: () => ({ method: () => 'POST' }),
+    }),
+    waitForTimeout: jest.fn().mockResolvedValue(undefined),
+    on: jest.fn(),
+    off: jest.fn(),
+    keyboard: {
+      press: jest.fn().mockResolvedValue(undefined),
+    },
     screenshot: jest.fn().mockResolvedValue(undefined),
     close: jest.fn().mockResolvedValue(undefined),
   };
