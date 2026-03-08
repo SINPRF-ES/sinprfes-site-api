@@ -44,23 +44,22 @@ async function extractDetailMovement(context, detailsUrl, timeoutMs) {
       const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
       const allText = clean(document.body?.innerText || '');
+
+      // Estratégia DOM-first: Localizar a tabela ou lista de movimentações
+      // No TRF1, as movimentações costumam estar em uma tabela com classe 'table' ou similar,
+      // dentro de um container identificado pelo título "Movimentações do Processo".
       const heading = Array.from(document.querySelectorAll('h1,h2,h3,h4,legend,label,td,th,span,div')).find((el) =>
         /Movimentaç[õo]es\s+do\s+Processo/i.test(clean(el.textContent || '')),
       );
 
       const getCandidates = (root) => {
         if (!root) return [];
-        const nodes = [
-          ...Array.from(root.querySelectorAll('tr')),
-          ...Array.from(root.querySelectorAll('li')),
-          ...Array.from(root.querySelectorAll('div')),
-          ...Array.from(root.querySelectorAll('td')),
-        ];
+        // Procurar por linhas de tabela (tr) ou itens de lista (li) que contenham data/hora
+        const rows = Array.from(root.querySelectorAll('tr, li, div.row, div.movimentacao'));
 
-        return nodes
-          .map((node) => clean(node.textContent || ''))
-          .filter(Boolean)
-          .map((text) => {
+        return rows
+          .map((node) => {
+            const text = clean(node.textContent || '');
             const lineMatch = text.match(MOVEMENT_RE);
             if (lineMatch) {
               return {
@@ -69,18 +68,7 @@ async function extractDetailMovement(context, detailsUrl, timeoutMs) {
                 movement: clean(lineMatch[2]),
               };
             }
-
-            const dateMatch = text.match(DATE_TIME_RE);
-            if (!dateMatch) return null;
-
-            const afterDate = clean(text.replace(dateMatch[1], '').replace(/^[\-–—:\s]+/, ''));
-            if (!afterDate) return null;
-
-            return {
-              raw: `${dateMatch[1]} - ${afterDate}`,
-              at: dateMatch[1],
-              movement: afterDate,
-            };
+            return null;
           })
           .filter(Boolean);
       };
@@ -88,30 +76,30 @@ async function extractDetailMovement(context, detailsUrl, timeoutMs) {
       const movementContainer = heading?.closest('fieldset,section,table,div,td') || document.body;
       let candidates = getCandidates(movementContainer);
 
+      // Se não achou no container imediato, tenta no pai (pode ser um fieldset com legend)
       if (!candidates.length && heading?.parentElement) {
         candidates = getCandidates(heading.parentElement);
       }
 
+      // Fallback: Parsing textual linha a linha do documento inteiro
       if (!candidates.length) {
-        const fallback = allText
-          .split(/\s{2,}|\n+/)
-          .map((line) => clean(line))
-          .filter(Boolean)
+        const lines = allText.split(/\s{2,}|\n+/);
+        candidates = lines
           .map((line) => {
-            const m = line.match(MOVEMENT_RE) || line.match(DATE_TIME_RE);
-            if (!m) return null;
-            if (line.match(MOVEMENT_RE)) {
-              const [_, at, movement] = line.match(MOVEMENT_RE);
-              return { raw: `${at} - ${clean(movement)}`, at, movement: clean(movement) };
+            const match = clean(line).match(MOVEMENT_RE);
+            if (match) {
+              return {
+                raw: `${match[1]} - ${clean(match[2])}`,
+                at: match[1],
+                movement: clean(match[2]),
+              };
             }
-            const at = m[1];
-            const movement = clean(line.replace(at, '').replace(/^[\-–—:\s]+/, ''));
-            return movement ? { raw: `${at} - ${movement}`, at, movement } : null;
+            return null;
           })
           .filter(Boolean);
-        candidates = fallback;
       }
 
+      // A primeira movimentação (index 0) é a mais recente
       const latest = candidates[0] || null;
 
       return {
@@ -190,60 +178,90 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         };
 
         const panel = document.querySelector('#fPP\\:processosGridPanel');
-        const panelBody = document.querySelector('#fPP\\:processosGridPanel_body');
         const table = document.querySelector('#fPP\\:processosTable');
-        const panelText = clean(panel?.innerText || panelBody?.innerText || table?.innerText || '');
+        const panelText = clean(panel?.innerText || '');
 
-        const anchors = Array.from((table || panel || document).querySelectorAll('a[href]'));
-        const processAnchors = anchors.filter((anchor) => CNJ_RE.test(clean(anchor.textContent || '')))
-          .map((anchor) => ({ anchor, title: clean(anchor.textContent || '') }))
-          .filter((entry) => entry.title);
+        // Extração DOM-first focada na tabela de resultados
+        const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
+        const rawRows = rows.map((row, index) => {
+          const tds = Array.from(row.querySelectorAll('td'));
+          if (tds.length < 5) return null;
 
-        const rawRows = processAnchors.map(({ anchor, title }, index) => {
-          const row = anchor.closest('tr') || anchor.closest('li') || anchor.closest('div') || anchor.parentElement;
-          const rowText = clean(row?.innerText || '');
-          const tds = row ? Array.from(row.querySelectorAll('td')) : [];
-          const processNumber = (title.match(CNJ_RE) || rowText.match(CNJ_RE) || [null])[0];
+          const anchor = tds[0].querySelector('a');
+          const processTitle = clean(tds[0].textContent || '');
+          const processNumberMatch = processTitle.match(CNJ_RE);
 
-          const classCell = clean(tds[1]?.innerText || '');
-          const partiesCell = clean(tds[3]?.innerText || '');
-          const movementCell = clean(tds[4]?.innerText || '');
+          if (!processNumberMatch || !anchor) return null;
 
-          const classLabelMatch = rowText.match(/Classe\s*:?\s*(.+?)(?:\s{2,}|Partes\s*:|Última\s+movimentaç[ãa]o\s*:|$)/i);
-          const partiesLabelMatch = rowText.match(/Partes\s*:?\s*(.+?)(?:\s{2,}|Última\s+movimentaç[ãa]o\s*:|$)/i);
-          const movementLabelMatch = rowText.match(/Última\s+movimentaç[ãa]o\s*:?\s*(.+?)$/i);
+          const processNumber = processNumberMatch[0];
+          const processClass = clean(tds[1]?.textContent || '');
+          const parties = clean(tds[3]?.textContent || '');
+          const listLastMovementText = clean(tds[4]?.textContent || '');
 
-          const listLastMovementText = movementCell || clean(movementLabelMatch?.[1] || '');
-          const listMovementDate = (listLastMovementText.match(DATE_TIME_RE) || rowText.match(DATE_TIME_RE) || [null])[0];
+          const listMovementDateMatch = listLastMovementText.match(DATE_TIME_RE);
+          const listMovementDate = listMovementDateMatch ? listMovementDateMatch[0] : null;
           const listMovement = clean(listLastMovementText.replace(DATE_TIME_RE, '').replace(/[()]/g, ' '));
 
           return {
             index,
             processNumber,
-            processClass: classCell || clean(classLabelMatch?.[1] || ''),
-            processTitle: title,
-            parties: partiesCell || clean(partiesLabelMatch?.[1] || ''),
+            processClass,
+            processTitle,
+            parties,
             detailsUrl: toAbsoluteUrl(anchor.getAttribute('href')),
-            listLastMovementText: listLastMovementText || null,
+            listLastMovementText,
             listLastMovementAt: listMovementDate,
             lastMovement: listMovement || null,
             lastMovementAt: listMovementDate,
             rawLastMovementText: listLastMovementText || null,
-            rawHtml: row?.innerHTML || '',
-            rawText: rowText,
+            rawHtml: row.innerHTML,
+            rawText: clean(row.textContent || ''),
             providerMeta: {
               rowIndex: index,
-              domStrategy: row?.tagName ? row.tagName.toLowerCase() : 'unknown',
+              domStrategy: 'table-row',
             },
           };
-        });
+        }).filter(Boolean);
+
+        // Fallback: se a tabela não for encontrada ou estiver vazia, tenta por anchors (comportamento legado melhorado)
+        let finalRows = rawRows;
+        if (finalRows.length === 0) {
+          const anchors = Array.from((table || panel || document).querySelectorAll('a[href]'));
+          const processAnchors = anchors.filter((anchor) => CNJ_RE.test(clean(anchor.textContent || '')));
+
+          finalRows = processAnchors.map((anchor, index) => {
+            const title = clean(anchor.textContent || '');
+            const row = anchor.closest('tr') || anchor.closest('li') || anchor.closest('div') || anchor.parentElement;
+            const rowText = clean(row?.innerText || '');
+            const processNumber = (title.match(CNJ_RE) || [null])[0];
+
+            if (!processNumber) return null;
+
+            const movementLabelMatch = rowText.match(/Última\s+movimentaç[ãa]o\s*:?\s*(.+?)$/i);
+            const listLastMovementText = clean(movementLabelMatch?.[1] || '');
+            const listMovementDate = (listLastMovementText.match(DATE_TIME_RE) || [null])[0];
+
+            return {
+              index,
+              processNumber,
+              processClass: clean(rowText.match(/Classe\s*:?\s*(.+?)(?:\s{2,}|Partes|$)/i)?.[1] || ''),
+              processTitle: title,
+              parties: clean(rowText.match(/Partes\s*:?\s*(.+?)(?:\s{2,}|Última|$)/i)?.[1] || ''),
+              detailsUrl: toAbsoluteUrl(anchor.getAttribute('href')),
+              listLastMovementText,
+              listLastMovementAt: listMovementDate,
+              lastMovement: clean(listLastMovementText.replace(DATE_TIME_RE, '').replace(/[()]/g, ' ')),
+              lastMovementAt: listMovementDate,
+              rawLastMovementText: listLastMovementText,
+              rawHtml: row?.innerHTML || '',
+              rawText: rowText,
+              providerMeta: { rowIndex: index, domStrategy: 'anchor-fallback' },
+            };
+          }).filter(Boolean);
+        }
 
         const uniqueRows = Array.from(
-          new Map(
-            rawRows
-              .filter((item) => item.processNumber && item.processTitle)
-              .map((item) => [item.processNumber, item]),
-          ).values(),
+          new Map(finalRows.map((item) => [item.processNumber, item])).values(),
         );
 
         const countedFromText = Number((panelText.match(RESULTS_RE) || [])[1] || NaN);
@@ -253,18 +271,15 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           debug: {
             html: {
               panel: panel?.innerHTML || '',
-              panelBody: panelBody?.innerHTML || '',
               table: table?.innerHTML || '',
             },
             counts: {
-              anchorsDetected: anchors.length,
-              processAnchorsDetected: processAnchors.length,
+              tableRows: rows.length,
               processRowsDetected: uniqueRows.length,
             },
             panelTextRaw: panelText,
             countFromText: Number.isFinite(countedFromText) ? countedFromText : null,
-            detectedCnjs: uniqueRows.map((row) => row.processNumber).filter(Boolean),
-            detectedLinks: uniqueRows.map((row) => row.detailsUrl).filter(Boolean),
+            detectedCnjs: uniqueRows.map((row) => row.processNumber),
           },
         };
       });
