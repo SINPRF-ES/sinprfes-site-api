@@ -14,12 +14,13 @@ export interface ConsultaProcessualItem {
   rawLastMovementText: string | null;
   detailsUrl: string | null;
   providerMeta: Record<string, unknown>;
+  isSindicato?: boolean;
 }
 
 export interface ConsultaProcessualSource {
   source: string;
   sourceLabel: string;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'skipped';
   count: number;
   items: ConsultaProcessualItem[];
   error?: {
@@ -30,6 +31,7 @@ export interface ConsultaProcessualSource {
 
 export interface ConsultaProcessualResponse {
   ok: boolean;
+  mode: 'personal' | 'institutional';
   queriedAt: string;
   cpfMasked: string;
   totalItems: number;
@@ -40,7 +42,7 @@ export interface ConsultaProcessualResponse {
   error?: string;
 }
 
-export async function consultarProcessosDoUsuarioLogado(): Promise<ConsultaProcessualResponse> {
-  const response = await api.get<ConsultaProcessualResponse>('/api/consulta-processual/me');
+export async function consultarProcessosDoUsuarioLogado(mode: 'personal' | 'institutional' = 'personal'): Promise<ConsultaProcessualResponse> {
+  const response = await api.get<ConsultaProcessualResponse>(`/api/consulta-processual/me?mode=${mode}`);
   return response.data;
 }

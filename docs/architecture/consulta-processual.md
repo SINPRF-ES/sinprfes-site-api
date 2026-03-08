@@ -1,35 +1,38 @@
 # Módulo Consulta Processual (Canon)
 
 ## Objetivo do módulo
-A Consulta Processual permite consultar automaticamente processos públicos vinculados ao **CPF do usuário autenticado**, usando inicialmente o provider público do **TRF1**, sem digitação manual de CPF no frontend. O módulo nasce sob arquitetura multi-provider e contrato único para Site + App.
+A Consulta Processual permite consultar automaticamente processos públicos vinculados ao **CPF do usuário autenticado** ou ao **CNPJ do Sindicato**, usando providers públicos de tribunais que utilizam o sistema PJe. O módulo possui arquitetura multi-provider e contrato único para Site + App.
 
 ## Regras de negócio consolidadas
-1. O backend usa exclusivamente o CPF do usuário logado.
-2. Não existe entrada manual de CPF nesta fase.
-3. Acesso inicial restrito a perfis **ADMIN** e **DIRETORIA** (com foco funcional em DIRETORIA).
-4. O backend consulta o provider externo.
-5. O backend entrega payload **já normalizado**.
-6. Site e App apenas renderizam dados; não reimplementam regra de negócio nem normalização.
+1. O backend usa o CPF do usuário logado (modo `personal`) ou o CNPJ do Sindicato (modo `institutional`).
+2. Não existe entrada manual de documento no frontend.
+3. Acesso restrito a perfis **ADMIN** e **DIRETORIA**. O modo `institutional` é exclusivo para estes perfis.
+4. O backend consulta múltiplos providers em paralelo (TRF1, TRF3, TRF5, TRF6).
+5. Os resultados são deduplicados globalmente pelo número do processo (CNJ).
+6. O backend entrega payload **já normalizado**.
+7. Site e App apenas renderizam dados e permitem a seleção do modo de consulta.
 
 ## Fluxo funcional canônico
 1. Usuário autenticado abre o módulo de Consulta Processual.
-2. Cliente (Site/App) chama `GET /api/consulta-processual/me`.
-3. Backend valida autenticação e permissão de acesso ao módulo.
-4. Backend recupera CPF do usuário logado na base `filiados`.
-5. Service executa providers habilitados (inicialmente TRF1).
-6. Service consolida itens em contrato canônico único.
-7. Cliente renderiza estados e dados sem parsing alternativo.
+2. Cliente (Site/App) chama `GET /api/consulta-processual/me?mode=personal|institutional`.
+3. Backend valida autenticação e permissão de acesso ao modo solicitado.
+4. Backend recupera o documento necessário (CPF do usuário ou CNPJ institucional).
+5. Service executa providers habilitados em paralelo.
+6. Service consolida e deduplica itens em contrato canônico único.
+7. Cliente renderiza estados e dados.
 
 ## Contrato da API (canônico)
 Endpoint: `GET /api/consulta-processual/me`.
+Parâmetros: `mode` (opcional, default: `personal`).
 
 Payload consolidado:
 
 ```json
 {
   "ok": true,
+  "mode": "personal",
   "queriedAt": "2026-03-08T00:00:00.000Z",
-  "cpfMasked": "***.123.***-45",
+  "documentMasked": "***.123.***-45",
   "totalItems": 2,
   "items": [],
   "sources": [],
@@ -37,70 +40,23 @@ Payload consolidado:
 }
 ```
 
-Campos obrigatórios do contrato consolidado:
-- `ok`
-- `queriedAt`
-- `cpfMasked`
-- `totalItems`
-- `items`
-- `sources`
-- `errors`
+## Arquitetura de Providers (PJe)
+O módulo utiliza uma classe base `PjeConsultaPublicaBaseProvider` que centraliza a lógica de automação com Playwright para tribunais que utilizam a interface JSF/RichFaces do PJe.
 
-## Estrutura do item canônico (`items[]`)
-Cada item normalizado deve preservar os campos abaixo:
-- `source`
-- `sourceLabel`
-- `processNumber`
-- `processClass`
-- `processTitle`
-- `parties`
-- `listLastMovementText`
-- `listLastMovementAt`
-- `lastMovement`
-- `lastMovementAt`
-- `rawLastMovementText`
-- `detailsUrl`
-- `providerMeta`
-
-## Provider TRF1 (estado atual)
-- URL consultada: `https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam`
-- Estratégia: automação backend com Playwright e parser dedicado.
-- Extração da listagem: leitura dos blocos/tabela da consulta pública para número CNJ, classe, partes, movimentação visível em lista e link de detalhe.
-- Extração de movimentação mais recente via detalhe: abertura de `detailsUrl` quando necessário para coletar texto bruto e data/hora de movimentação mais confiável.
-- Limitações conhecidas:
-  - Mudanças de HTML/selectors da origem podem exigir ajuste de parser/provider.
-  - O provider depende de disponibilidade do portal externo.
-  - Cache atual em memória por processo Node (não distribuído).
+Providers atuais:
+- **TRF1**: `https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam`
+- **TRF3**: `https://pje1g.trf3.jus.br/pje/ConsultaPublica/listView.seam`
+- **TRF5**: `https://pje.trf5.jus.br/pje/ConsultaPublica/listView.seam`
+- **TRF6**: `https://pje.trf6.jus.br/pje/ConsultaPublica/listView.seam`
 
 ## Regras de paridade (Site ↔ App)
 Paridade obrigatória para o módulo:
-1. Site e App devem consumir o **mesmo endpoint** (`/api/consulta-processual/me`).
-2. Site e App devem renderizar os **mesmos campos funcionais**:
-   - Origem
-   - Número do processo
-   - Classe
-   - Partes
-   - Última movimentação
-   - Data/Hora
-   - Ação para abrir origem (quando `detailsUrl` existir)
-3. Mesma ordem lógica das informações.
-4. Mesma restrição de acesso (apenas ADMIN/DIRETORIA).
-5. Mesma semântica de estados: inicial, loading, sucesso com resultados, sucesso sem resultados e erro.
+1. Site e App devem consumir o **mesmo endpoint**.
+2. Site e App devem permitir a alternância entre "Meus processos" e "Sindicato".
+3. Itens institucionais devem exibir um badge indicativo "SINDICATO".
+4. Mesma semântica de estados e renderização de campos.
 
 ## Segurança e privacidade
-- CPF nunca é informado manualmente pelo cliente.
-- CPF é sanitizado/validado no backend.
-- Logs e resposta pública usam CPF mascarado (`cpfMasked`).
-- Cliente não deve inferir ou reconstruir CPF real.
-
-## Preparação para expansão futura
-A arquitetura é multi-provider. Novos tribunais devem entrar por provider dedicado, **sem quebrar o contrato canônico** de `items/sources/errors` consumido por Site e App.
-
-Estrutura backend do módulo:
-- `backend/src/modules/consulta-processual/controller`
-- `backend/src/modules/consulta-processual/service`
-- `backend/src/modules/consulta-processual/providers`
-- `backend/src/modules/consulta-processual/parsers`
-- `backend/src/modules/consulta-processual/dto`
-- `backend/src/modules/consulta-processual/validators`
-- `backend/src/modules/consulta-processual/utils`
+- Documentos reais nunca são trafegados para o frontend; apenas versões mascaradas (`documentMasked`).
+- Logs internos também utilizam versões mascaradas.
+- O modo `institutional` possui trava de segurança no controller.

@@ -14,6 +14,9 @@ function getConsultaProcessualConfig() {
   return {
     enabled: parseBool(process.env.CONSULTA_PROCESSUAL_ENABLED, true),
     trf1Enabled: parseBool(process.env.CONSULTA_PROCESSUAL_TRF1_ENABLED, true),
+    trf3Enabled: parseBool(process.env.CONSULTA_PROCESSUAL_TRF3_ENABLED, true),
+    trf5Enabled: parseBool(process.env.CONSULTA_PROCESSUAL_TRF5_ENABLED, true),
+    trf6Enabled: parseBool(process.env.CONSULTA_PROCESSUAL_TRF6_ENABLED, true),
     timeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_TIMEOUT_MS, 45000),
     initialLoadTimeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_INITIAL_LOAD_TIMEOUT_MS, 30000),
     searchTimeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_SEARCH_TIMEOUT_MS, 15000),

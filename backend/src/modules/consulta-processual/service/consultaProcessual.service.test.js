@@ -25,7 +25,7 @@ describe('consultaProcessual.service', () => {
         getId: () => 'trf1',
         getLabel: () => 'TRF1',
         isEnabled: () => true,
-        consultarPorCpf: jest.fn().mockResolvedValue({
+        consultarPorDocumento: jest.fn().mockResolvedValue({
           source: 'trf1',
           sourceLabel: 'TRF1',
           status: 'success',
@@ -39,7 +39,7 @@ describe('consultaProcessual.service', () => {
 
     expect(result.ok).toBe(true);
     expect(result.sources).toHaveLength(1);
-    expect(result.items).toEqual([{ source: 'trf1', sourceLabel: 'TRF1', processNumber: '1' }]);
+    expect(result.items).toEqual([{ source: 'trf1', sourceLabel: 'TRF1', processNumber: '1', isSindicato: false }]);
     expect(result.totalItems).toBe(1);
     expect(result.cpfMasked).toContain('***');
   });
@@ -51,7 +51,7 @@ describe('consultaProcessual.service', () => {
         getId: () => 'trf1',
         getLabel: () => 'TRF1',
         isEnabled: () => true,
-        consultarPorCpf: jest.fn().mockResolvedValue({
+        consultarPorDocumento: jest.fn().mockResolvedValue({
           source: 'trf1',
           sourceLabel: 'TRF1',
           status: 'success',

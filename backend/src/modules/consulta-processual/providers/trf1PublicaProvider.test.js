@@ -35,10 +35,17 @@ function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
         };
       }
 
-      if (selector === '#fPP\\:processosGridPanel_body') {
+      if (selector === '#fPP\\:processosGridPanel_body' || selector === '#fPP\\:processosGridPanel') {
         return {
           evaluate: jest.fn().mockImplementation(async () => (panelState.hasChanged ? panelState.after : panelState.before)),
+          isVisible: jest.fn().mockResolvedValue(true),
         };
+      }
+
+      if (selector === '#fPP\\:processosTable') {
+        return {
+          isVisible: jest.fn().mockResolvedValue(true),
+        }
       }
 
       if (selector === '#fPP\\:searchProcessos') {
@@ -53,28 +60,47 @@ function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
           check: jest.fn().mockResolvedValue(undefined),
           isVisible: jest.fn().mockResolvedValue(true),
         }),
+        nth: () => ({
+          check: jest.fn().mockResolvedValue(undefined),
+        }),
         fill: jest.fn().mockResolvedValue(undefined),
         click: jest.fn().mockResolvedValue(undefined),
         waitFor: jest.fn().mockResolvedValue(undefined),
         isVisible: jest.fn().mockResolvedValue(true),
         inputValue: jest.fn().mockResolvedValue('068.893.157-07'),
+        count: jest.fn().mockResolvedValue(1),
       };
     }),
-    evaluate: jest.fn().mockImplementation(async (fn, arg) => {
-      if (arg && Object.prototype.hasOwnProperty.call(arg, 'prevHtml')) {
+    evaluate: jest.fn().mockImplementation(async (fn, ...args) => {
+      const fnStr = fn.toString();
+
+      // Check for extraction call (has rawRows in logic)
+      if (fnStr.includes('rawRows')) {
+        return extraction;
+      }
+
+      // Check for waitForResultsUpdate call (has panelHtmlChanged in logic)
+      if (fnStr.includes('panelHtmlChanged')) {
         return {
           panelHtmlChanged: panelState.hasChanged,
-          panelTextChanged: panelState.hasChanged,
-          declaredResultsCount: panelState.hasChanged ? 2 : 0,
-          hasDeclaredResultsPositive: panelState.hasChanged,
           cnjMatchesFound: panelState.hasChanged ? 2 : 0,
           cnjIncreased: panelState.hasChanged,
-          processLikeLinksFound: panelState.hasChanged ? 2 : 0,
-          addedProcessLikeLinksFound: panelState.hasChanged ? 2 : 0,
-          panelTextSummary: panelState.hasChanged ? '2 resultados encontrados' : 'Estado inicial',
+          declaredResultsPositive: panelState.hasChanged,
+          linksCount: panelState.hasChanged ? 2 : 0,
+          linksIncreased: panelState.hasChanged,
         };
       }
-      return extraction;
+
+      // Check for beforeSubmitSignals call (has cnjMatchesFound but not panelHtmlChanged)
+      if (fnStr.includes('cnjMatchesFound')) {
+        return {
+          panelText: panelState.hasChanged ? '2 resultados encontrados' : 'Estado inicial',
+          linkSignatures: [],
+          cnjMatchesFound: panelState.hasChanged ? 2 : 0,
+        };
+      }
+
+      return {};
     }),
     waitForResponse: jest.fn().mockResolvedValue({
       url: () => 'https://trf1.test/consultapublica/ajax',
@@ -99,10 +125,11 @@ function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
         evaluate: jest.fn().mockImplementation(() => {
           const currentUrl = context.__lastUrl;
           return detailsByUrl[currentUrl] || {
+            movementsCount: 0,
             lastMovement: null,
             lastMovementAt: null,
             rawLastMovementText: null,
-            debug: { detailText: '', detailHtml: '' },
+            html: '',
           };
         }),
         close: jest.fn().mockResolvedValue(undefined),
@@ -183,8 +210,10 @@ describe('Trf1PublicaProvider', () => {
             listLastMovementAt: '03/09/2025 14:53:59',
           },
         ],
+        hasGridPanel: true,
+        hasProcessTable: true,
         resultsTextDetected: true,
-        countFromText: 2,
+        declaredResultsCount: 2,
         cnjMatchesFound: 2,
         linksFound: 2,
         panelText: '2 resultados encontrados',
@@ -192,16 +221,18 @@ describe('Trf1PublicaProvider', () => {
       },
       detailsByUrl: {
         [detailsUrl1]: {
+          movementsCount: 1,
           lastMovement: 'Conclusos para decisão',
           lastMovementAt: '10/09/2025 14:27:38',
           rawLastMovementText: '10/09/2025 14:27:38 - Conclusos para decisão',
-          debug: { detailText: '...', detailHtml: '<table />' },
+          html: '<table />',
         },
         [detailsUrl2]: {
+          movementsCount: 1,
           lastMovement: 'Conclusos para decisão',
           lastMovementAt: '03/09/2025 14:53:59',
           rawLastMovementText: '03/09/2025 14:53:59 - Conclusos para decisão',
-          debug: { detailText: '...', detailHtml: '<table />' },
+          html: '<table />',
         },
       },
     }));

@@ -2,9 +2,10 @@ const pool = require('../../../config/db');
 const log = require('../../../utils/log');
 const { buildConsultaProviders } = require('../providers');
 const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConfig');
-const { maskCpf, hashCpf } = require('../utils/consultaProcessualSecurity');
+const { maskCpf, maskCnpj, hashDocument } = require('../utils/consultaProcessualSecurity');
 const { sanitizeAndValidateCpf } = require('../validators/cpfValidator');
 
+const SINDICATO_CNPJ = '39387378000125';
 const cache = new Map();
 const inFlight = new Map();
 const lastRunByUser = new Map();
@@ -40,7 +41,7 @@ function buildDebugReport({ sources = [], requestId, queriedAt }) {
       failureStage: source?.debugSummary?.failureStage || null,
       metrics: {
         pageLoaded: Boolean(source?.debugSummary?.pageLoaded),
-        cpfFieldFound: Boolean(source?.debugSummary?.cpfFieldFound),
+        documentFieldFound: Boolean(source?.debugSummary?.documentFieldFound),
         inputDigitsCount: Number(source?.debugSummary?.inputDigitsCount || 0),
         inputValueMasked: source?.debugSummary?.inputValueMasked || null,
         searchTriggered: Boolean(source?.debugSummary?.searchTriggered),
@@ -93,7 +94,7 @@ async function obterUsuarioPorId(id) {
   return rows[0] || null;
 }
 
-async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
+async function consultarPorUsuarioLogado({ userId, requestId, mode = 'personal', debug = false }) {
   const cfg = getConsultaProcessualConfig();
   const isDebug = debug || cfg.debug;
 
@@ -110,61 +111,94 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
     return { ok: false, code: 'USER_NOT_FOUND', message: 'Usuário não encontrado.' };
   }
 
-  const cpfValidation = sanitizeAndValidateCpf(user.cpf);
-  if (!cpfValidation.ok) {
-    return {
-      ok: false,
-      code: 'USER_CPF_NOT_AVAILABLE',
-      message: 'Usuário logado não possui CPF válido cadastrado para consulta processual.',
-    };
+  let document = '';
+  let documentMasked = '';
+
+  if (mode === 'institutional') {
+    document = SINDICATO_CNPJ;
+    documentMasked = maskCnpj(document);
+  } else {
+    const cpfValidation = sanitizeAndValidateCpf(user.cpf);
+    if (!cpfValidation.ok) {
+      return {
+        ok: false,
+        code: 'USER_CPF_NOT_AVAILABLE',
+        message: 'Usuário logado não possui CPF válido cadastrado para consulta processual.',
+      };
+    }
+    document = cpfValidation.cpf;
+    documentMasked = maskCpf(document);
   }
 
-  const cpf = cpfValidation.cpf;
-  const cpfMasked = maskCpf(cpf);
   const providers = buildConsultaProviders().filter((p) => p.isEnabled());
 
   log.info('ConsultaProcessualStart', {
     requestId,
     userId,
-    cpfMasked,
+    mode,
+    documentMasked,
     providers: providers.map((p) => p.getId()),
     debug: isDebug,
   });
 
   const now = Date.now();
-  const lastRun = lastRunByUser.get(userId);
+  const lastRunKey = `${userId}:${mode}`;
+  const lastRun = lastRunByUser.get(lastRunKey);
   const shouldThrottle = !isDebug && Number.isFinite(lastRun) && now - lastRun < cfg.minIntervalMs;
 
   const sources = [];
   const errors = [];
 
-  for (const provider of providers) {
-    const providerKey = `consulta_processual:${provider.getId()}:${hashCpf(cpf)}`;
+  const promises = providers.map(async (provider) => {
+    const providerKey = `consulta_processual:${provider.getId()}:${hashDocument(document)}`;
     if (!isDebug) {
       const cached = getCacheEntry(providerKey);
       if (cached) {
         const ageSeconds = Math.floor((Date.now() - cached.createdAt) / 1000);
-        sources.push({ ...cached.value, cached: true, cacheAgeSeconds: ageSeconds });
-        continue;
+        return { ...cached.value, cached: true, cacheAgeSeconds: ageSeconds };
       }
     }
 
     if (shouldThrottle) {
-      sources.push({
+      return {
         source: provider.getId(),
         sourceLabel: provider.getLabel(),
         status: 'error',
         count: 0,
         items: [],
         error: { code: 'RATE_LIMITED', message: 'Aguarde alguns segundos para nova consulta.' },
-      });
-      continue;
+      };
     }
 
-    const runningKey = `${userId}:${provider.getId()}${isDebug ? ':debug' : ''}`;
+    const runningKey = `${userId}:${mode}:${provider.getId()}${isDebug ? ':debug' : ''}`;
     let runPromise = inFlight.get(runningKey);
     if (!runPromise) {
-      runPromise = provider.consultarPorCpf({ cpf, cpfMasked, requestId, userId, debug: isDebug });
+      if (typeof provider.consultarPorDocumento === 'function') {
+        runPromise = provider.consultarPorDocumento({
+          document,
+          documentMasked,
+          requestId,
+          userId,
+          debug: isDebug,
+        });
+      } else if (document.length === 11 && typeof provider.consultarPorCpf === 'function') {
+        runPromise = provider.consultarPorCpf({
+          cpf: document,
+          cpfMasked: documentMasked,
+          requestId,
+          userId,
+          debug: isDebug,
+        });
+      } else {
+        return {
+          source: provider.getId(),
+          sourceLabel: provider.getLabel(),
+          status: 'error',
+          count: 0,
+          items: [],
+          error: { code: 'UNSUPPORTED_DOCUMENT', message: 'Provider não suporta o tipo de documento informado.' },
+        };
+      }
       inFlight.set(runningKey, runPromise);
     }
 
@@ -178,29 +212,53 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
     if (sourceResult?.status === 'success') {
       setCacheEntry(providerKey, sourceResult, cfg.cacheTtlMs);
     }
-    if (sourceResult?.error) errors.push({ source: provider.getId(), ...sourceResult.error });
+    return sourceResult;
+  });
 
-    sources.push(sourceResult);
-  }
+  const results = await Promise.all(promises);
+  lastRunByUser.set(lastRunKey, Date.now());
 
-  lastRunByUser.set(userId, Date.now());
+  results.forEach(res => {
+    sources.push(res);
+    if (res?.error) errors.push({ source: res.source, ...res.error });
+  });
 
-  const totalItems = sources.reduce((sum, s) => sum + (Array.isArray(s.items) ? s.items.length : 0), 0);
-  const items = sources.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
+  const allItems = sources.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
+
+  // Deduplicação por processNumber (CNJ)
+  const itemsMap = new Map();
+  allItems.forEach(item => {
+    if (!item.processNumber) return;
+    if (itemsMap.has(item.processNumber)) {
+      // Poderíamos combinar metadados ou escolher o mais recente, por enquanto mantemos o primeiro
+      return;
+    }
+    itemsMap.set(item.processNumber, {
+      ...item,
+      isSindicato: mode === 'institutional'
+    });
+  });
+
+  const items = Array.from(itemsMap.values());
+  const totalItems = items.length;
   const queriedAt = new Date().toISOString();
 
   log.info('ConsultaProcessualFinish', {
     requestId,
     userId,
-    cpfMasked,
+    mode,
+    documentMasked,
     sources: sources.map((s) => ({ source: s.source, status: s.status, count: s.count || 0 })),
     totalItems,
   });
 
   const payload = {
     ok: true,
+    mode,
     queriedAt,
-    cpfMasked,
+    documentMasked,
+    // Compatibilidade com frontend que espera cpfMasked
+    cpfMasked: documentMasked,
     items,
     sources,
     totalItems,

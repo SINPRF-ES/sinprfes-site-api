@@ -35,7 +35,8 @@ export default function ConsultaProcessualScreen() {
   const [items, setItems] = useState<ConsultaProcessualItem[]>([]);
   const [cpfMasked, setCpfMasked] = useState('***.***.***-**');
   const [queriedAt, setQueriedAt] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState('Clique em “Consultar processos” para iniciar a busca automática pelo CPF cadastrado.');
+  const [mode, setMode] = useState<'personal' | 'institutional'>('personal');
+  const [statusMessage, setStatusMessage] = useState('Selecione o modo e clique em “Consultar processos” para iniciar a busca automática.');
 
   useFocusEffect(
     useCallback(() => {
@@ -46,7 +47,8 @@ export default function ConsultaProcessualScreen() {
     }, [navigation, podeAcessar])
   );
 
-  const executeConsulta = useCallback(async (isPullToRefresh = false) => {
+  const executeConsulta = useCallback(async (isPullToRefresh = false, modeOverride?: 'personal' | 'institutional') => {
+    const selectedMode = modeOverride || mode;
     if (isPullToRefresh) {
       setIsRefreshing(true);
     } else {
@@ -55,7 +57,7 @@ export default function ConsultaProcessualScreen() {
     }
 
     try {
-      const payload = await consultarProcessosDoUsuarioLogado();
+      const payload = await consultarProcessosDoUsuarioLogado(selectedMode);
       if (!payload.ok) {
         const msg = payload.message || payload.error || 'Portal indisponível no momento.';
         setItems([]);
@@ -79,9 +81,10 @@ export default function ConsultaProcessualScreen() {
       if (providerErrors.length > 0 && normalizedItems.length === 0) {
         setStatusMessage('Falha temporária em todas as fontes consultadas.');
       } else if (totalItems === 0) {
-        setStatusMessage('Nenhum processo encontrado para o CPF cadastrado.');
+        setStatusMessage('Nenhum processo encontrado.');
       } else {
-        setStatusMessage(`Consulta concluída: ${totalItems} processo(s) encontrado(s). CPF: ${payload.cpfMasked || '***'}`);
+        const docLabel = selectedMode === 'institutional' ? 'CNPJ' : 'CPF';
+        setStatusMessage(`Consulta concluída: ${totalItems} processo(s). ${docLabel}: ${payload.cpfMasked || '***'}`);
       }
     } catch (_error) {
       setItems([]);
@@ -90,7 +93,7 @@ export default function ConsultaProcessualScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [mode]);
 
   const onOpenDetails = useCallback(async (url: string) => {
     try {
@@ -110,6 +113,12 @@ export default function ConsultaProcessualScreen() {
     return `Última atualização: ${formatDateTime(queriedAt)}`;
   }, [queriedAt]);
 
+  const handleModeChange = (newMode: 'personal' | 'institutional') => {
+    setMode(newMode);
+    setItems([]);
+    setStatusMessage('Modo alterado. Clique em “Consultar processos” para buscar.');
+  };
+
   return (
     <SafeScreen style={styles.container}>
       <ScrollView
@@ -118,10 +127,25 @@ export default function ConsultaProcessualScreen() {
       >
         <View style={styles.headerCard}>
           <Text style={styles.title}>Consulta Processual</Text>
-          <Text style={styles.subtitle}>Consulta automática de processos vinculados ao CPF do usuário autenticado.</Text>
+
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeButton, mode === 'personal' && styles.modeButtonActive]}
+              onPress={() => handleModeChange('personal')}
+            >
+              <Text style={[styles.modeButtonText, mode === 'personal' && styles.modeButtonTextActive]}>Meus Processos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeButton, mode === 'institutional' && styles.modeButtonActive]}
+              onPress={() => handleModeChange('institutional')}
+            >
+              <Text style={[styles.modeButtonText, mode === 'institutional' && styles.modeButtonTextActive]}>Sindicato</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.status}>{statusMessage}</Text>
           <Text style={styles.meta}>{queriedAtLabel}</Text>
-          <Text style={styles.meta}>CPF consultado: {cpfMasked}</Text>
+          <Text style={styles.meta}>{mode === 'institutional' ? 'CNPJ' : 'CPF'} consultado: {cpfMasked}</Text>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => executeConsulta(false)} disabled={isLoading}>
             {isLoading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.actionLabel}>Consultar processos</Text>}
@@ -133,8 +157,15 @@ export default function ConsultaProcessualScreen() {
           const movementAt = item.listLastMovementAt || item.lastMovementAt;
           return (
             <View key={`${item.processNumber || 'proc'}-${index}`} style={styles.processCard}>
-              <View style={styles.badgeWrap}>
-                <Text style={styles.badgeText}>{item.sourceLabel || item.source || '-'}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={styles.badgeWrap}>
+                  <Text style={styles.badgeText}>{item.sourceLabel || item.source || '-'}</Text>
+                </View>
+                {item.isSindicato && (
+                  <View style={[styles.badgeWrap, { backgroundColor: '#555' }]}>
+                    <Text style={[styles.badgeText, { color: COLORS.white }]}>SINDICATO</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.processNumber}>{item.processNumber || '-'}</Text>
               <Text style={styles.processClass}>Classe: {item.processClass || '-'}</Text>
@@ -168,8 +199,30 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
-  title: { fontSize: 20, fontWeight: '700', color: COLORS.prfBlue },
-  subtitle: { fontSize: 13, color: COLORS.textMuted },
+  title: { fontSize: 20, fontWeight: '700', color: COLORS.prfBlue, marginBottom: 4 },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 8,
+  },
+  modeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  modeButtonActive: {
+    backgroundColor: COLORS.white,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+  },
+  modeButtonText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
+  modeButtonTextActive: { color: COLORS.prfBlue, fontWeight: '700' },
   status: { fontSize: 14, color: COLORS.text, fontWeight: '600' },
   meta: { fontSize: 12, color: COLORS.textMuted },
   actionButton: {

@@ -26,6 +26,12 @@
     }
   }
 
+  function hasDiretoriaPermission() {
+    const info = getUserInfo();
+    const perfil = String(info.perfil_acesso || info.perfil || info.role || '').toUpperCase();
+    return perfil === 'ADMIN' || perfil === 'DIRETORIA';
+  }
+
   function hasDebugPermission() {
     const info = getUserInfo();
     const perfil = String(info.perfil_acesso || info.perfil || info.role || '').toUpperCase();
@@ -35,12 +41,15 @@
 
   function renderTable(items) {
     if (!items.length) {
-      return '<div class="ui-card"><p>Nenhum processo encontrado para o CPF cadastrado.</p></div>';
+      return '<div class="ui-card"><p>Nenhum processo encontrado.</p></div>';
     }
 
     const rows = items.map((item) => `
       <tr>
-        <td class="cell-center"><span class="filiado-badge badge-ativo">${escapeHtml(item.sourceLabel || item.source || '-')}</span></td>
+        <td class="cell-center">
+          <span class="filiado-badge badge-ativo">${escapeHtml(item.sourceLabel || item.source || '-')}</span>
+          ${item.isSindicato ? '<br><span class="filiado-badge" style="background-color:#555; color:#fff; font-size:10px; margin-top:4px;">SINDICATO</span>' : ''}
+        </td>
         <td class="cell-process-number">${escapeHtml(item.processNumber || '-')}</td>
         <td class="cell-process-class">${escapeHtml(item.processClass || '-')}</td>
         <td class="cell-wrap">${escapeHtml(item.parties || '-')}</td>
@@ -143,6 +152,8 @@
     const feedback = document.getElementById('consulta-processual-feedback');
     const output = document.getElementById('consulta-processual-output');
     const lastUpdated = document.getElementById('consulta-processual-last-updated');
+    const modeSelector = document.getElementById('consulta-processual-mode');
+    const mode = modeSelector ? modeSelector.value : 'personal';
 
     if (!feedback || !output) return;
 
@@ -150,7 +161,7 @@
     output.innerHTML = '<div class="ui-card"><p>Consultando...</p></div>';
 
     try {
-      const response = await global.Api.apiFetch('/api/consulta-processual/me');
+      const response = await global.Api.apiFetch(`/api/consulta-processual/me?mode=${mode}`);
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
@@ -166,13 +177,13 @@
       const totalItems = Number.isFinite(Number(data.totalItems)) ? Number(data.totalItems) : items.length;
 
       console.log('consulta-processual response', data);
-      console.log('consulta-processual items', data.items);
 
       const providerErrors = (data.sources || []).filter((s) => s.status === 'error');
       if (providerErrors.length > 0 && items.length === 0) {
         feedback.textContent = 'Falha temporária em todas as fontes consultadas.';
       } else {
-        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). CPF: ${data.cpfMasked || '***'}`;
+        const docLabel = mode === 'institutional' ? 'CNPJ' : 'CPF';
+        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docLabel}: ${data.cpfMasked || '***'}`;
       }
 
       if (lastUpdated) {
@@ -182,20 +193,23 @@
       output.innerHTML = renderTable(items);
     } catch (_err) {
       feedback.textContent = 'Erro ao consultar processos. Tente novamente em instantes.';
-      output.innerHTML = '<div class="ui-card"><p>Erro temporário ao consultar o TRF1.</p></div>';
+      output.innerHTML = '<div class="ui-card"><p>Erro temporário ao consultar os tribunais.</p></div>';
     }
   }
 
   async function executarDiagnosticoConsulta() {
     const feedback = document.getElementById('consulta-processual-feedback');
     const debugArea = ensureDebugArea();
+    const modeSelector = document.getElementById('consulta-processual-mode');
+    const mode = modeSelector ? modeSelector.value : 'personal';
+
     if (!debugArea || !feedback) return;
 
     feedback.textContent = 'Executando diagnóstico consolidado da consulta processual...';
     debugArea.innerHTML = '<div class="ui-card"><p>Gerando telemetria consolidada...</p></div>';
 
     try {
-      const response = await global.Api.apiFetch('/api/consulta-processual/debug/me');
+      const response = await global.Api.apiFetch(`/api/consulta-processual/debug/me?mode=${mode}`);
       const data = await response.json();
       if (!response.ok || !data.ok) {
         throw new Error(data.message || data.error || 'Falha na consulta de diagnóstico.');
@@ -224,14 +238,36 @@
     }
   }
 
+  function ensureModeSelector() {
+    if (!hasDiretoriaPermission()) return;
+    const container = document.querySelector('.consulta-processual-actions') || document.getElementById('btn-consulta-processual')?.parentElement;
+    if (!container || document.getElementById('consulta-processual-mode')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.marginBottom = '12px';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '10px';
+    wrapper.innerHTML = `
+      <label for="consulta-processual-mode" style="font-weight:bold;">Modo de consulta:</label>
+      <select id="consulta-processual-mode" class="ui-input" style="width:auto; margin-bottom:0;">
+        <option value="personal">Consultar meus processos (CPF)</option>
+        <option value="institutional">Consultar processos do sindicato (CNPJ)</option>
+      </select>
+    `;
+    container.insertAdjacentElement('beforebegin', wrapper);
+  }
+
   function inicializarConsultaProcessual() {
+    ensureModeSelector();
+
     const btn = document.getElementById('btn-consulta-processual');
     const btnDebug = document.getElementById('btn-consulta-processual-debug');
     const feedback = document.getElementById('consulta-processual-feedback');
     const output = document.getElementById('consulta-processual-output');
 
     if (feedback) {
-      feedback.textContent = 'Clique em “Consultar processos” para iniciar a busca automática pelo seu CPF cadastrado.';
+      feedback.textContent = 'Selecione o modo e clique em “Consultar processos” para iniciar a busca automática.';
     }
     if (output) {
       output.innerHTML = '<div class="ui-card"><p>Aguardando consulta.</p></div>';
