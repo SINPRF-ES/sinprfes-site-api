@@ -155,7 +155,6 @@ export default function ConsultaProcessualScreen() {
 
         {items.map((item, index) => {
           const movementText = item.listLastMovementText || item.lastMovement || '-';
-          const movementAt = item.listLastMovementAt || item.lastMovementAt;
           return (
             <View key={`${item.processNumber || 'proc'}-${index}`} style={styles.processCard}>
               <View style={styles.badgeRow}>
@@ -172,7 +171,6 @@ export default function ConsultaProcessualScreen() {
               <Text style={styles.processClass}>Classe: {item.processClass || '-'}</Text>
               <Text style={styles.textBlock}>Partes: {item.parties || '-'}</Text>
               <Text style={styles.textBlock}>Última movimentação: {movementText}</Text>
-              <Text style={styles.meta}>Data/Hora: {formatDateTime(movementAt)}</Text>
 
               {item.detailsUrl ? (
                 <TouchableOpacity style={styles.linkButton} onPress={() => onOpenDetails(item.detailsUrl as string)}>

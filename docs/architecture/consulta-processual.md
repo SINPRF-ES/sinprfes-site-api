@@ -1,33 +1,41 @@
-# Módulo Consulta Processual (Canon)
+# Módulo Consulta Processual (Baseline Canônico Congelado)
 
-## Objetivo do módulo
-A Consulta Processual permite consultar automaticamente processos públicos vinculados ao **CPF do usuário autenticado** ou ao **CNPJ institucional do sindicato**, integrando múltiplos tribunais (**TRF1, TRF3, TRF5, TRF6**) que utilizam o sistema PJe. O módulo opera sob arquitetura multi-provider e contrato único para Site + App.
+## Objetivo
+Este documento canoniza e congela o baseline estável atual do módulo **Consulta Processual**.
+A referência oficial deve ser preservada para evitar regressões em Site, App e Backend.
 
-## Regras de negócio consolidadas
-1. O backend utiliza o CPF do usuário logado (**PERSONAL**) ou o CNPJ fixo do sindicato (**INSTITUTIONAL**).
-2. Não existe entrada manual de documento (CPF/CNPJ) no frontend.
-3. Acesso à consulta pessoal: perfis **ADMIN** e **DIRETORIA** (foco funcional).
-4. Acesso à consulta institucional: restrito a **ADMIN** e **DIRETORIA**.
-5. O backend consulta múltiplos providers externos em paralelo.
-6. O backend realiza a **deduplicação de processos** pelo número CNJ.
-7. O backend entrega payload **já normalizado**.
-8. Site e App apenas renderizam dados; não reimplementam regra de negócio nem normalização.
+## Baseline funcional oficial
 
-## Fluxo funcional canônico
-1. Usuário autenticado abre o módulo de Consulta Processual.
-2. Cliente (Site/App) permite selecionar o modo (Pessoal ou Institucional, se permitido).
-3. Cliente chama `GET /api/consulta-processual/me?mode=[personal|institutional]`.
-4. Backend valida autenticação e permissão de acesso ao módulo/modo.
-5. Backend recupera o documento necessário (CPF do usuário ou CNPJ do sindicato `39.387.378/0001-25`).
-6. Service executa todos os providers habilitados (**TRF1, TRF3, TRF5, TRF6**) em paralelo.
-7. Service consolida e deduplica itens em contrato canônico único.
-8. Cliente renderiza estados e dados, identificando processos do sindicato com badge específico.
+### Modos canônicos do módulo
+- `personal`
+  - Usa o documento do usuário autenticado (CPF válido cadastrado).
+  - Retorna processos do próprio usuário.
+- `institutional`
+  - Usa o CNPJ fixo do sindicato.
+  - Documento institucional canônico: `39387378000125`.
+  - Representa a consulta de **Processos do sindicato**.
 
-## Contrato da API (canônico)
+### Regra de visibilidade consolidada
+- **Baseline atual (congelado):** manter proteções de acesso já implementadas para consulta institucional.
+- **Regra-alvo oficial de produção:** a consulta institucional por CNPJ do sindicato ficará visível para todos quando entrar em produção.
+- A mudança de visibilidade deve ser centralizada e configurável (sem condicionais espalhadas).
+
+### Providers no baseline
+- Provider estável oficial: **TRF1**.
+- Fora do baseline estável:
+  - `TRF3`: experimental.
+  - `TRF5`: experimental.
+  - `TRF6`: disabled.
+
+Regras:
+- Evoluções futuras não podem alterar a semântica do TRF1 estável.
+- Providers não estáveis não podem influenciar a UX principal do baseline.
+
+## Contrato canônico da API
 Endpoint: `GET /api/consulta-processual/me`.
 Parâmetro: `mode` (opcional, default `personal`).
 
-Payload consolidado:
+Payload oficial:
 
 ```json
 {
@@ -35,67 +43,65 @@ Payload consolidado:
   "queriedAt": "2026-03-08T00:00:00.000Z",
   "documentMasked": "***.123.***-45",
   "mode": "personal",
-  "totalItems": 2,
   "items": [],
   "sources": [],
+  "totalItems": 0,
   "errors": []
 }
 ```
 
-Campos obrigatórios do contrato consolidado:
+Campos canônicos do payload:
 - `ok`
 - `queriedAt`
-- `documentMasked` (substitui o antigo `cpfMasked` para generalização)
+- `documentMasked`
 - `mode`
-- `totalItems`
 - `items`
 - `sources`
+- `totalItems`
 - `errors`
 
-## Estrutura do item canônico (`items[]`)
-Cada item normalizado deve preservar os campos abaixo:
+## Estrutura canônica de cada item (`items[]`)
 - `source`
 - `sourceLabel`
 - `processNumber`
 - `processClass`
 - `processTitle`
+- `subject`
 - `parties`
-- `listLastMovementText`
-- `listLastMovementAt`
 - `lastMovement`
 - `lastMovementAt`
 - `rawLastMovementText`
+- `listLastMovementText`
+- `listLastMovementAt`
 - `detailsUrl`
 - `providerMeta`
-- `institutional` (booleano indicando se é um processo do sindicato)
+- `institutional`
 
-## Arquitetura de Providers (PJe Base)
-O módulo utiliza uma classe base `PjeConsultaPublicaBaseProvider` que centraliza a lógica de automação para tribunais que utilizam o sistema PJe (RichFaces/JSF).
-- **Providers Ativos**: TRF1, TRF3, TRF5, TRF6.
-- **Estratégia**: Automação backend com Playwright e parser genérico (`pjeProcessParser`).
-- **Extração**: Leitura de listagem pública e abertura opcional de `detailsUrl` para captura da movimentação mais recente.
-- **Deduplicação**: Realizada no `consultaProcessual.service` após a coleta de todas as fontes, garantindo que o mesmo número CNJ não apareça duplicado no payload final.
+## Regras canônicas de exibição (Site/App)
+Colunas/áreas oficiais:
+- Origem
+- Número do processo
+- Classe
+- Partes
+- Última movimentação
+- Ações
 
-## Regras de paridade (Site ↔ App)
-Paridade obrigatória para o módulo:
-1. Site e App devem consumir o **mesmo endpoint** (`/api/consulta-processual/me`).
-2. Site e App devem oferecer a troca de modo (Pessoal vs Institucional) para usuários permitidos.
-3. Site e App devem renderizar os **mesmos campos funcionais** e destacar processos institucionais com a label **SINDICATO**.
-4. Mesma restrição de acesso.
-5. Mesma semântica de estados e tratamento de erros.
+Regra oficial de UX:
+- A coluna **Data/Hora** foi removida do baseline canônico.
+- Motivo: a coluna **Última movimentação** já contém data e hora no texto exibido.
+- Portanto, a coluna exclusiva de data/hora é redundante e não faz parte do baseline.
 
-## Segurança e privacidade
-- Documentos nunca são informados manualmente pelo cliente.
-- Documentos são mascarados em logs e respostas:
-  - CPF: `***893157**` (6 dígitos centrais visíveis)
-  - CNPJ: `***3780001**` (8 dígitos finais antes do dígito verificador)
-- Acesso à consulta institucional é rigorosamente auditado no backend.
+## Regra de backend (fonte única da verdade)
+- Backend é a fonte única da verdade.
+- Scraping, parsing e normalização residem no backend.
+- Site e App apenas renderizam os dados recebidos.
+- Frontends não devem reinterpretar lógica de provider.
 
-## Estrutura backend do módulo:
-- `backend/src/modules/consulta-processual/controller`
-- `backend/src/modules/consulta-processual/service`
-- `backend/src/modules/consulta-processual/providers` (incluindo `PjeConsultaPublicaBaseProvider`)
-- `backend/src/modules/consulta-processual/parsers` (incluindo `pjeProcessParser`)
-- `backend/src/modules/consulta-processual/dto`
-- `backend/src/modules/consulta-processual/validators`
-- `backend/src/modules/consulta-processual/utils` (segurança e config)
+## Congelamento técnico (retrocompatibilidade)
+Este baseline congelado protege explicitamente:
+- contrato do endpoint;
+- campos do item;
+- ordem e semântica dos modos (`personal` e `institutional`);
+- comportamento do provider estável (`TRF1`).
+
+Qualquer evolução futura deve preservar retrocompatibilidade.

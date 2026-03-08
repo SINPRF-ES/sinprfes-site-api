@@ -1,3 +1,4 @@
+// Contrato canônico congelado de items[] para evitar regressão entre Site/App/backend.
 function normalizeItem(input = {}) {
   return {
     source: input.source || null,
