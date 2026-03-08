@@ -38,6 +38,7 @@ function buildDebugReport({ sources = [], requestId, queriedAt }) {
     return {
       source: source.source,
       status: source.status,
+      maturity: source?.providerMeta?.maturity || null,
       count: source.count || 0,
       failureStage: source?.debugSummary?.failureStage || null,
       metrics: {
@@ -140,14 +141,16 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
   }
 
   const documentMasked = maskDocument(documentToUse);
-  const providers = buildConsultaProviders().filter((p) => p.isEnabled());
+  const allProviders = buildConsultaProviders();
+  const providers = allProviders.filter((p) => p.isEnabled());
+  const disabledProviders = allProviders.filter((p) => !p.isEnabled());
 
   log.info('ConsultaProcessualStart', {
     requestId,
     userId,
     documentMasked,
     mode,
-    providers: providers.map((p) => p.getId()),
+    providers: allProviders.map((p) => ({ id: p.getId(), enabled: p.isEnabled(), maturity: p.getMaturityStatus?.() || 'experimental' })),
     debug: isDebug,
   });
 
@@ -158,6 +161,17 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
 
   const sources = [];
   const errors = [];
+
+  disabledProviders.forEach((provider) => {
+    sources.push({
+      source: provider.getId(),
+      sourceLabel: provider.getLabel(),
+      status: 'skipped',
+      count: 0,
+      items: [],
+      providerMeta: { maturity: provider.getMaturityStatus?.() || 'disabled', enabled: false },
+    });
+  });
 
   const providerPromises = providers.map(async (provider) => {
     const providerKey = `consulta_processual:${provider.getId()}:${hashDocument(documentToUse)}`;
@@ -213,9 +227,19 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
 
   lastRunByUser.set(lastRunKey, Date.now());
 
-  providerResults.forEach((sourceResult) => {
-    if (sourceResult?.error) errors.push({ source: sourceResult.source, ...sourceResult.error });
-    sources.push(sourceResult);
+  providerResults.forEach((sourceResult, index) => {
+    const provider = providers[index];
+    const maturity = provider?.getMaturityStatus?.() || sourceResult?.providerMeta?.maturity || 'experimental';
+    const normalizedSource = {
+      ...sourceResult,
+      providerMeta: {
+        ...(sourceResult?.providerMeta || {}),
+        maturity,
+        enabled: true,
+      },
+    };
+    if (normalizedSource?.error) errors.push({ source: normalizedSource.source, ...normalizedSource.error });
+    sources.push(normalizedSource);
   });
 
   const allItems = sources.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
@@ -228,7 +252,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
     userId,
     documentMasked,
     mode,
-    sources: sources.map((s) => ({ source: s.source, status: s.status, count: s.count || 0 })),
+    sources: sources.map((s) => ({ source: s.source, status: s.status, count: s.count || 0, maturity: s?.providerMeta?.maturity || null })),
     totalItems,
   });
 
