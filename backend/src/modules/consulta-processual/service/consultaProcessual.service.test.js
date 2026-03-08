@@ -25,7 +25,7 @@ describe('consultaProcessual.service', () => {
         getId: () => 'trf1',
         getLabel: () => 'TRF1',
         isEnabled: () => true,
-        consultarPorCpf: jest.fn().mockResolvedValue({
+        consultarPorDocumento: jest.fn().mockResolvedValue({
           source: 'trf1',
           sourceLabel: 'TRF1',
           status: 'success',
@@ -41,7 +41,7 @@ describe('consultaProcessual.service', () => {
     expect(result.sources).toHaveLength(1);
     expect(result.items).toEqual([{ source: 'trf1', sourceLabel: 'TRF1', processNumber: '1' }]);
     expect(result.totalItems).toBe(1);
-    expect(result.cpfMasked).toContain('***');
+    expect(result.documentMasked).toContain('***');
   });
 
   test('inclui debugReport consolidado quando debug está ativo', async () => {
@@ -51,7 +51,7 @@ describe('consultaProcessual.service', () => {
         getId: () => 'trf1',
         getLabel: () => 'TRF1',
         isEnabled: () => true,
-        consultarPorCpf: jest.fn().mockResolvedValue({
+        consultarPorDocumento: jest.fn().mockResolvedValue({
           source: 'trf1',
           sourceLabel: 'TRF1',
           status: 'success',
@@ -80,6 +80,35 @@ describe('consultaProcessual.service', () => {
     expect(result.debugReport).toBeTruthy();
     expect(result.debugReport.likelyFailureStage).toBe('normalization');
     expect(result.debugReport.sourceReports[0].discardReasons).toEqual({ missing_href: 2 });
+  });
+
+  test('suporta modo institucional com CNPJ fixo', async () => {
+    pool.query.mockResolvedValue({ rows: [{ id: 10, nome: 'Diretor', perfil_acesso: 'DIRETORIA' }] });
+    const mockConsultar = jest.fn().mockResolvedValue({
+      source: 'trf1',
+      sourceLabel: 'TRF1',
+      status: 'success',
+      count: 1,
+      items: [{ source: 'trf1', processNumber: '123' }],
+    });
+
+    buildConsultaProviders.mockReturnValue([
+      {
+        getId: () => 'trf1',
+        getLabel: () => 'TRF1',
+        isEnabled: () => true,
+        consultarPorDocumento: mockConsultar,
+      },
+    ]);
+
+    const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r3', mode: 'institutional' });
+
+    expect(result.ok).toBe(true);
+    expect(result.mode).toBe('institutional');
+    expect(mockConsultar).toHaveBeenCalledWith(expect.objectContaining({
+      document: '39387378000125',
+    }));
+    expect(result.items[0].institutional).toBe(true);
   });
 
 });
