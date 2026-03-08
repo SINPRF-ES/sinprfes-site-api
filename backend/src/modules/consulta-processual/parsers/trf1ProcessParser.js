@@ -39,9 +39,19 @@ function parseTrf1Rows(rows = []) {
 
   return rows.map((row = {}) => {
     const processNumber = extractCnj(row.processNumber || row.processTitle || row.rawText || '');
-    const movementText = row.rawLastMovementText || row.listLastMovementText || row.lastMovementText || '';
-    const movementAtRaw = row.lastMovementAt || row.listLastMovementAt || movementText;
-    const movementAtIso = parseBrazilDateToIso(movementAtRaw);
+
+    // O provider agora já traz o rawLastMovementText preferencialmente do detalhe
+    const rawMovementText = row.rawLastMovementText || row.listLastMovementText || '';
+
+    // A data/hora ISO deve vir da string de movimentação (detalhe ou lista)
+    const movementAtIso = parseBrazilDateToIso(rawMovementText) || parseBrazilDateToIso(row.lastMovementAt) || parseBrazilDateToIso(row.listLastMovementAt);
+
+    // A descrição da movimentação (lastMovement)
+    // Se o provider já limpou (lastMovement), usamos ele, senão tentamos limpar do raw
+    let lastMovement = cleanText(row.lastMovement);
+    if (!lastMovement || lastMovement === 'null') {
+      lastMovement = parseMovementDescription(rawMovementText);
+    }
 
     return normalizeItem({
       source: 'trf1',
@@ -51,11 +61,11 @@ function parseTrf1Rows(rows = []) {
       processTitle: cleanText(row.processTitle) || null,
       subject: cleanText(row.subject) || null,
       parties: cleanText(row.parties) || null,
-      lastMovement: cleanText(row.lastMovement) || parseMovementDescription(movementText) || null,
-      lastMovementAt: movementAtIso || cleanText(row.lastMovementAt) || null,
-      rawLastMovementText: cleanText(movementText) || null,
+      lastMovement: lastMovement || null,
+      lastMovementAt: movementAtIso || null,
+      rawLastMovementText: cleanText(rawMovementText) || null,
       listLastMovementText: cleanText(row.listLastMovementText) || null,
-      listLastMovementAt: parseBrazilDateToIso(row.listLastMovementAt || row.listLastMovementText || '') || cleanText(row.listLastMovementAt) || null,
+      listLastMovementAt: parseBrazilDateToIso(row.listLastMovementAt || row.listLastMovementText || '') || null,
       detailsUrl: row.detailsUrl || null,
       providerMeta: row.providerMeta || {},
     });
