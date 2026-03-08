@@ -2,13 +2,13 @@ const PjeConsultaPublicaBaseProvider = require('./PjeConsultaPublicaBaseProvider
 const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConfig');
 const { createPjeParser } = require('../parsers/pjeProcessParser');
 
-class Trf1PublicaProvider extends PjeConsultaPublicaBaseProvider {
-  getId() { return 'trf1'; }
-  getLabel() { return 'TRF1'; }
-  isEnabled() { return getConsultaProcessualConfig().trf1Enabled; }
+class Trf6PublicaProvider extends PjeConsultaPublicaBaseProvider {
+  getId() { return 'trf6'; }
+  getLabel() { return 'TRF6'; }
+  isEnabled() { return getConsultaProcessualConfig().trf6Enabled !== false; }
 
   getBaseUrl() {
-    return 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
+    return 'https://pje.trf6.jus.br/pje/ConsultaPublica/listView.seam';
   }
 
   getParser() {
@@ -16,4 +16,4 @@ class Trf1PublicaProvider extends PjeConsultaPublicaBaseProvider {
   }
 }
 
-module.exports = Trf1PublicaProvider;
+module.exports = Trf6PublicaProvider;

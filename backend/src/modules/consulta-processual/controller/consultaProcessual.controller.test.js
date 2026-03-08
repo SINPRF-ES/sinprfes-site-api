@@ -9,7 +9,7 @@ describe('consultaProcessual.controller debug endpoint', () => {
   beforeEach(() => jest.clearAllMocks());
 
   test('bloqueia perfil fora de ADMIN e DIRETORIA', async () => {
-    const req = { user: { id: 1, perfil_acesso: 'FUNCIONARIO' }, requestId: 'req-1' };
+    const req = { user: { id: 1, perfil_acesso: 'FUNCIONARIO' }, requestId: 'req-1', query: {} };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
     await controller.consultarDebugMe(req, res);
@@ -19,7 +19,7 @@ describe('consultaProcessual.controller debug endpoint', () => {
   });
 
   test('permite perfil DIRETORIA', async () => {
-    const req = { user: { id: 1, perfil_acesso: 'DIRETORIA' }, requestId: 'req-2' };
+    const req = { user: { id: 1, perfil_acesso: 'DIRETORIA' }, requestId: 'req-2', query: {} };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     service.consultarPorUsuarioLogado.mockResolvedValue({ ok: true, sources: [], totalItems: 0 });
 
@@ -29,7 +29,23 @@ describe('consultaProcessual.controller debug endpoint', () => {
       userId: 1,
       requestId: 'req-2',
       debug: true,
+      mode: 'personal',
     });
     expect(res.json).toHaveBeenCalledWith({ ok: true, sources: [], totalItems: 0 });
+  });
+
+  test('encaminha mode institutional quando presente na query', async () => {
+    const req = { user: { id: 1, perfil_acesso: 'DIRETORIA' }, requestId: 'req-3', query: { mode: 'institutional' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    service.consultarPorUsuarioLogado.mockResolvedValue({ ok: true, sources: [], totalItems: 0 });
+
+    await controller.consultarMe(req, res);
+
+    expect(service.consultarPorUsuarioLogado).toHaveBeenCalledWith({
+      userId: 1,
+      requestId: 'req-3',
+      debug: false,
+      mode: 'institutional',
+    });
   });
 });

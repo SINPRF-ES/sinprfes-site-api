@@ -35,12 +35,15 @@
 
   function renderTable(items) {
     if (!items.length) {
-      return '<div class="ui-card"><p>Nenhum processo encontrado para o CPF cadastrado.</p></div>';
+      return '<div class="ui-card"><p>Nenhum processo encontrado.</p></div>';
     }
 
     const rows = items.map((item) => `
       <tr>
-        <td class="cell-center"><span class="filiado-badge badge-ativo">${escapeHtml(item.sourceLabel || item.source || '-')}</span></td>
+        <td class="cell-center">
+          <span class="filiado-badge badge-ativo">${escapeHtml(item.sourceLabel || item.source || '-')}</span>
+          ${item.institutional ? '<br><span class="filiado-badge badge-especial" style="margin-top:4px; background-color:var(--ui-primary); color:white;">SINDICATO</span>' : ''}
+        </td>
         <td class="cell-process-number">${escapeHtml(item.processNumber || '-')}</td>
         <td class="cell-process-class">${escapeHtml(item.processClass || '-')}</td>
         <td class="cell-wrap">${escapeHtml(item.parties || '-')}</td>
@@ -143,6 +146,8 @@
     const feedback = document.getElementById('consulta-processual-feedback');
     const output = document.getElementById('consulta-processual-output');
     const lastUpdated = document.getElementById('consulta-processual-last-updated');
+    const modeSwitch = document.querySelector('input[name="consulta-mode"]:checked');
+    const mode = modeSwitch ? modeSwitch.value : 'personal';
 
     if (!feedback || !output) return;
 
@@ -150,7 +155,7 @@
     output.innerHTML = '<div class="ui-card"><p>Consultando...</p></div>';
 
     try {
-      const response = await global.Api.apiFetch('/api/consulta-processual/me');
+      const response = await global.Api.apiFetch(`/api/consulta-processual/me?mode=${mode}`);
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
@@ -165,14 +170,12 @@
         : [];
       const totalItems = Number.isFinite(Number(data.totalItems)) ? Number(data.totalItems) : items.length;
 
-      console.log('consulta-processual response', data);
-      console.log('consulta-processual items', data.items);
-
       const providerErrors = (data.sources || []).filter((s) => s.status === 'error');
       if (providerErrors.length > 0 && items.length === 0) {
         feedback.textContent = 'Falha temporária em todas as fontes consultadas.';
       } else {
-        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). CPF: ${data.cpfMasked || '***'}`;
+        const docLabel = mode === 'institutional' ? 'CNPJ' : 'CPF';
+        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docLabel}: ${data.documentMasked || '***'}`;
       }
 
       if (lastUpdated) {
@@ -182,20 +185,23 @@
       output.innerHTML = renderTable(items);
     } catch (_err) {
       feedback.textContent = 'Erro ao consultar processos. Tente novamente em instantes.';
-      output.innerHTML = '<div class="ui-card"><p>Erro temporário ao consultar o TRF1.</p></div>';
+      output.innerHTML = '<div class="ui-card"><p>Erro temporário ao consultar os tribunais.</p></div>';
     }
   }
 
   async function executarDiagnosticoConsulta() {
     const feedback = document.getElementById('consulta-processual-feedback');
     const debugArea = ensureDebugArea();
+    const modeSwitch = document.querySelector('input[name="consulta-mode"]:checked');
+    const mode = modeSwitch ? modeSwitch.value : 'personal';
+
     if (!debugArea || !feedback) return;
 
     feedback.textContent = 'Executando diagnóstico consolidado da consulta processual...';
     debugArea.innerHTML = '<div class="ui-card"><p>Gerando telemetria consolidada...</p></div>';
 
     try {
-      const response = await global.Api.apiFetch('/api/consulta-processual/debug/me');
+      const response = await global.Api.apiFetch(`/api/consulta-processual/debug/me?mode=${mode}`);
       const data = await response.json();
       if (!response.ok || !data.ok) {
         throw new Error(data.message || data.error || 'Falha na consulta de diagnóstico.');
@@ -206,7 +212,7 @@
 
       debugArea.innerHTML = `
         <div class="ui-card" style="padding:12px; margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          <strong>Modo diagnóstico:</strong> ativo (consolidado)
+          <strong>Modo diagnóstico:</strong> ativo (consolidado) | <strong>Modo:</strong> ${mode.toUpperCase()}
           <button id="btn-export-consulta-debug" class="ui-button ui-button-outline">⬇️ Exportar JSON</button>
         </div>
         ${renderDebugSummary(report)}
@@ -229,12 +235,30 @@
     const btnDebug = document.getElementById('btn-consulta-processual-debug');
     const feedback = document.getElementById('consulta-processual-feedback');
     const output = document.getElementById('consulta-processual-output');
+    const controls = document.getElementById('consulta-processual-controls');
 
     if (feedback) {
-      feedback.textContent = 'Clique em “Consultar processos” para iniciar a busca automática pelo seu CPF cadastrado.';
+      feedback.textContent = 'Escolha o tipo de consulta e clique em “Consultar processos”.';
     }
     if (output) {
       output.innerHTML = '<div class="ui-card"><p>Aguardando consulta.</p></div>';
+    }
+
+    if (controls && hasDebugPermission()) {
+      controls.style.display = 'block';
+      controls.innerHTML = `
+        <div class="ui-card" style="margin-bottom:12px; padding:12px;">
+          <div style="display:flex; gap:20px; align-items:center;">
+            <strong>Tipo de consulta:</strong>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="consulta-mode" value="personal" checked> Meus processos (CPF)
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="consulta-mode" value="institutional"> Processos do sindicato (CNPJ)
+            </label>
+          </div>
+        </div>
+      `;
     }
 
     if (btnDebug) {

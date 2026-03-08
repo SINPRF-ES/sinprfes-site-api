@@ -10,12 +10,28 @@ function maskCpf(cpf) {
   return `***${d.slice(3, 9)}**`;
 }
 
-function hashCpf(cpf) {
-  return crypto.createHash('sha256').update(onlyDigits(cpf)).digest('hex');
+function maskCnpj(cnpj) {
+  const d = onlyDigits(cnpj);
+  if (d.length !== 14) return '***';
+  return `***${d.slice(5, 12)}**`;
+}
+
+function maskDocument(doc) {
+  const d = onlyDigits(doc);
+  if (d.length === 11) return maskCpf(d);
+  if (d.length === 14) return maskCnpj(d);
+  return '***';
+}
+
+function hashDocument(doc) {
+  return crypto.createHash('sha256').update(onlyDigits(doc)).digest('hex');
 }
 
 module.exports = {
   onlyDigits,
   maskCpf,
-  hashCpf,
+  maskCnpj,
+  maskDocument,
+  hashDocument,
+  hashCpf: hashDocument, // Alias for backward compatibility if needed
 };

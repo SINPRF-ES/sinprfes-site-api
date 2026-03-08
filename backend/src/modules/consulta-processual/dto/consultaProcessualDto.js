@@ -14,6 +14,7 @@ function normalizeItem(input = {}) {
     listLastMovementAt: input.listLastMovementAt || null,
     detailsUrl: input.detailsUrl || null,
     providerMeta: input.providerMeta || {},
+    institutional: Boolean(input.institutional),
   };
 }
 

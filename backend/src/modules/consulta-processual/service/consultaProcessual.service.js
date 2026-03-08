@@ -2,12 +2,14 @@ const pool = require('../../../config/db');
 const log = require('../../../utils/log');
 const { buildConsultaProviders } = require('../providers');
 const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConfig');
-const { maskCpf, hashCpf } = require('../utils/consultaProcessualSecurity');
+const { maskDocument, hashDocument } = require('../utils/consultaProcessualSecurity');
 const { sanitizeAndValidateCpf } = require('../validators/cpfValidator');
 
 const cache = new Map();
 const inFlight = new Map();
 const lastRunByUser = new Map();
+
+const SINDICATO_CNPJ = '39387378000125';
 
 function getCacheEntry(key) {
   const item = cache.get(key);
@@ -40,7 +42,7 @@ function buildDebugReport({ sources = [], requestId, queriedAt }) {
       failureStage: source?.debugSummary?.failureStage || null,
       metrics: {
         pageLoaded: Boolean(source?.debugSummary?.pageLoaded),
-        cpfFieldFound: Boolean(source?.debugSummary?.cpfFieldFound),
+        documentFieldFound: Boolean(source?.debugSummary?.documentFieldFound),
         inputDigitsCount: Number(source?.debugSummary?.inputDigitsCount || 0),
         inputValueMasked: source?.debugSummary?.inputValueMasked || null,
         searchTriggered: Boolean(source?.debugSummary?.searchTriggered),
@@ -93,7 +95,17 @@ async function obterUsuarioPorId(id) {
   return rows[0] || null;
 }
 
-async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
+function deduplicateItems(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (!item.processNumber) return true;
+    if (seen.has(item.processNumber)) return false;
+    seen.add(item.processNumber);
+    return true;
+  });
+}
+
+async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mode = 'personal' }) {
   const cfg = getConsultaProcessualConfig();
   const isDebug = debug || cfg.debug;
 
@@ -110,61 +122,74 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
     return { ok: false, code: 'USER_NOT_FOUND', message: 'Usuário não encontrado.' };
   }
 
-  const cpfValidation = sanitizeAndValidateCpf(user.cpf);
-  if (!cpfValidation.ok) {
-    return {
-      ok: false,
-      code: 'USER_CPF_NOT_AVAILABLE',
-      message: 'Usuário logado não possui CPF válido cadastrado para consulta processual.',
-    };
+  let documentToUse;
+  const isInstitutional = mode === 'institutional';
+
+  if (isInstitutional) {
+    documentToUse = SINDICATO_CNPJ;
+  } else {
+    const cpfValidation = sanitizeAndValidateCpf(user.cpf);
+    if (!cpfValidation.ok) {
+      return {
+        ok: false,
+        code: 'USER_CPF_NOT_AVAILABLE',
+        message: 'Usuário logado não possui CPF válido cadastrado para consulta processual.',
+      };
+    }
+    documentToUse = cpfValidation.cpf;
   }
 
-  const cpf = cpfValidation.cpf;
-  const cpfMasked = maskCpf(cpf);
+  const documentMasked = maskDocument(documentToUse);
   const providers = buildConsultaProviders().filter((p) => p.isEnabled());
 
   log.info('ConsultaProcessualStart', {
     requestId,
     userId,
-    cpfMasked,
+    documentMasked,
+    mode,
     providers: providers.map((p) => p.getId()),
     debug: isDebug,
   });
 
   const now = Date.now();
-  const lastRun = lastRunByUser.get(userId);
+  const lastRunKey = `${userId}:${mode}`;
+  const lastRun = lastRunByUser.get(lastRunKey);
   const shouldThrottle = !isDebug && Number.isFinite(lastRun) && now - lastRun < cfg.minIntervalMs;
 
   const sources = [];
   const errors = [];
 
-  for (const provider of providers) {
-    const providerKey = `consulta_processual:${provider.getId()}:${hashCpf(cpf)}`;
+  const providerPromises = providers.map(async (provider) => {
+    const providerKey = `consulta_processual:${provider.getId()}:${hashDocument(documentToUse)}`;
     if (!isDebug) {
       const cached = getCacheEntry(providerKey);
       if (cached) {
         const ageSeconds = Math.floor((Date.now() - cached.createdAt) / 1000);
-        sources.push({ ...cached.value, cached: true, cacheAgeSeconds: ageSeconds });
-        continue;
+        return { ...cached.value, cached: true, cacheAgeSeconds: ageSeconds };
       }
     }
 
     if (shouldThrottle) {
-      sources.push({
+      return {
         source: provider.getId(),
         sourceLabel: provider.getLabel(),
         status: 'error',
         count: 0,
         items: [],
         error: { code: 'RATE_LIMITED', message: 'Aguarde alguns segundos para nova consulta.' },
-      });
-      continue;
+      };
     }
 
-    const runningKey = `${userId}:${provider.getId()}${isDebug ? ':debug' : ''}`;
+    const runningKey = `${userId}:${mode}:${provider.getId()}${isDebug ? ':debug' : ''}`;
     let runPromise = inFlight.get(runningKey);
     if (!runPromise) {
-      runPromise = provider.consultarPorCpf({ cpf, cpfMasked, requestId, userId, debug: isDebug });
+      runPromise = provider.consultarPorDocumento({
+        document: documentToUse,
+        documentMasked,
+        requestId,
+        userId,
+        debug: isDebug,
+      });
       inFlight.set(runningKey, runPromise);
     }
 
@@ -176,23 +201,33 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
     }
 
     if (sourceResult?.status === 'success') {
+      if (isInstitutional) {
+        sourceResult.items = (sourceResult.items || []).map((it) => ({ ...it, institutional: true }));
+      }
       setCacheEntry(providerKey, sourceResult, cfg.cacheTtlMs);
     }
-    if (sourceResult?.error) errors.push({ source: provider.getId(), ...sourceResult.error });
+    return sourceResult;
+  });
 
+  const providerResults = await Promise.all(providerPromises);
+
+  lastRunByUser.set(lastRunKey, Date.now());
+
+  providerResults.forEach((sourceResult) => {
+    if (sourceResult?.error) errors.push({ source: sourceResult.source, ...sourceResult.error });
     sources.push(sourceResult);
-  }
+  });
 
-  lastRunByUser.set(userId, Date.now());
-
-  const totalItems = sources.reduce((sum, s) => sum + (Array.isArray(s.items) ? s.items.length : 0), 0);
-  const items = sources.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
+  const allItems = sources.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
+  const items = deduplicateItems(allItems);
+  const totalItems = items.length;
   const queriedAt = new Date().toISOString();
 
   log.info('ConsultaProcessualFinish', {
     requestId,
     userId,
-    cpfMasked,
+    documentMasked,
+    mode,
     sources: sources.map((s) => ({ source: s.source, status: s.status, count: s.count || 0 })),
     totalItems,
   });
@@ -200,7 +235,8 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
   const payload = {
     ok: true,
     queriedAt,
-    cpfMasked,
+    documentMasked,
+    mode,
     items,
     sources,
     totalItems,
