@@ -112,3 +112,48 @@ describe('consultaProcessual.service', () => {
   });
 
 });
+
+
+test('inclui providers desabilitados como skipped sem contaminar retorno consolidado', async () => {
+  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
+
+  buildConsultaProviders.mockReturnValue([
+    {
+      getId: () => 'trf1',
+      getLabel: () => 'TRF1',
+      getMaturityStatus: () => 'stable',
+      isEnabled: () => true,
+      consultarPorDocumento: jest.fn().mockResolvedValue({
+        source: 'trf1',
+        sourceLabel: 'TRF1',
+        status: 'success',
+        count: 1,
+        items: [{ source: 'trf1', processNumber: 'proc-1' }],
+      }),
+    },
+    {
+      getId: () => 'trf6',
+      getLabel: () => 'TRF6',
+      getMaturityStatus: () => 'disabled',
+      isEnabled: () => false,
+    },
+  ]);
+
+  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r4' });
+
+  expect(result.ok).toBe(true);
+  expect(result.items).toHaveLength(1);
+  expect(result.sources).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      source: 'trf1',
+      status: 'success',
+      providerMeta: expect.objectContaining({ maturity: 'stable', enabled: true }),
+    }),
+    expect.objectContaining({
+      source: 'trf6',
+      status: 'skipped',
+      providerMeta: expect.objectContaining({ maturity: 'disabled', enabled: false }),
+    }),
+  ]));
+});
+

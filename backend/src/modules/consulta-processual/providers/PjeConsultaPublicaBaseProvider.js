@@ -22,6 +22,14 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
     throw new Error('Provider must implement getParser()');
   }
 
+  getMaturityStatus() {
+    return 'experimental';
+  }
+
+  classifyError(err) {
+    return { code: 'PROVIDER_ERROR', message: err.message };
+  }
+
   // PJe standard selectors (mostly RichFaces based)
   getSelectors() {
     return {
@@ -40,7 +48,13 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
     const isDebug = Boolean(debugOverride || cfg.debug);
 
     if (!this.isEnabled()) {
-      return { source: this.getId(), sourceLabel: this.getLabel(), status: 'skipped', items: [] };
+      return {
+        source: this.getId(),
+        sourceLabel: this.getLabel(),
+        status: 'skipped',
+        items: [],
+        providerMeta: { maturity: this.getMaturityStatus() },
+      };
     }
 
     const debugSummary = {
@@ -154,7 +168,13 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
           reason: browserResult.reason,
           durationMs: Date.now() - startedAt,
         });
-        return { source: this.getId(), sourceLabel: this.getLabel(), status: 'skipped', items: [] };
+        return {
+        source: this.getId(),
+        sourceLabel: this.getLabel(),
+        status: 'skipped',
+        items: [],
+        providerMeta: { maturity: this.getMaturityStatus() },
+      };
       }
 
       browser = browserResult.browser;
@@ -245,7 +265,8 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
       }
 
       const stepDStartedAt = Date.now();
-      const beforeSubmitPanelHtml = await page.locator(`[id="${selectors.gridPanelBody}"]`).evaluate((el) => el?.innerHTML || '').catch(() => '');
+      const gridPanelBodySelector = `#${String(selectors.gridPanelBody || '').replace(/:/g, '\\:')}`;
+      const beforeSubmitPanelHtml = await page.locator(gridPanelBodySelector).evaluate((el) => el?.innerHTML || '').catch(() => '');
       const beforeSubmitSignals = await page.evaluate(({ gridPanelId, gridPanelBodyId }) => {
         const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
@@ -272,7 +293,17 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         waitStrategy: 'waitForRealResultsUpdate',
       });
 
-      await page.locator(selectors.searchButton).click();
+      const clickPromise = page.locator(selectors.searchButton).click();
+      try {
+        await page.waitForResponse((response) => {
+          const req = response.request();
+          return req.method() === 'POST'
+            && /consultapublica|listView\.seam|searchProcessos/i.test(response.url());
+        }, { timeout: Math.min(cfg.searchTimeoutMs, 8000) });
+      } catch (_err) {
+        emitDebugWarning('D_submit_search_ajax_not_detected', { reason: 'No matching ajax response captured' });
+      }
+      await clickPromise;
       debugSummary.searchTriggered = true;
 
       let waitInfo;
@@ -443,8 +474,9 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         return {
           source: this.getId(),
           sourceLabel: this.getLabel(),
-          status: 'success', // Or should it be 'no_results'? TRF1 current impl returns 'error' with SUBMIT_OR_WAIT_FAILED sometimes.
+          status: 'success',
           items: [],
+          providerMeta: { maturity: this.getMaturityStatus() },
           debugSummary,
           debugData,
         };
@@ -504,6 +536,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         sourceLabel: this.getLabel(),
         status: 'success',
         items,
+        providerMeta: { maturity: this.getMaturityStatus() },
         debugSummary,
         debugData,
       };
@@ -519,9 +552,10 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         sourceLabel: this.getLabel(),
         status: 'error',
         items: [],
+        providerMeta: { maturity: this.getMaturityStatus() },
         debugSummary,
         debugData,
-        error: { code: 'PROVIDER_ERROR', message: err.message },
+        error: this.classifyError(err),
       };
     } finally {
       if (browser) await browser.close().catch(() => {});

@@ -7,6 +7,8 @@ class Trf1PublicaProvider extends PjeConsultaPublicaBaseProvider {
   getLabel() { return 'TRF1'; }
   isEnabled() { return getConsultaProcessualConfig().trf1Enabled; }
 
+  getMaturityStatus() { return 'stable'; }
+
   getBaseUrl() {
     return 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
   }
