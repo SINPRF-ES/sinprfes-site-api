@@ -22,6 +22,7 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 | **Notificações** | ✅ `NotificacoesPushScreen`| ✅ `sec-notificacoes` | `/api/push` | `PUSH_GERENCIAR` | ✅ OK |
 | **CMS** | ❌ Ausente | ✅ `sec-cms` | `/api/content-blocks`| `EDIT_CONTENT` | ✅ OK (Site) |
 | **Diagnóstico** | ✅ `LogsScreen.tsx` | ✅ `sec-diagnostico` | `/api/diagnostico`, `/api/push/health`, `/api/push/diagnostics/me` | `PUSH_GERENCIAR`, `ADMIN` | ✅ OK |
+| **Consulta Processual** | ✅ `ConsultaProcessualScreen.tsx` | ✅ `sec-consulta-processual` | `/api/consulta-processual/me` | `ADMIN`, `DIRETORIA` | ✅ OK |
 
 ---
 
@@ -80,3 +81,9 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 
 ## 🛑 Relatório de Exposição Técnica
 *Nenhuma exposição técnica crítica pendente.*
+
+### 6. Consulta Processual
+- **Endpoint:** `GET /api/consulta-processual/me`
+- **Permissões:** `ADMIN`, `DIRETORIA`
+- **Paridade Alcançada:** Site e App usam o mesmo endpoint/backend e exibem os mesmos conceitos de dados (origem, número do processo, classe, partes, última movimentação, data/hora e ação para abrir origem).
+- **Estados:** ambos possuem estado inicial, loading, sucesso com itens, sucesso sem itens e erro com semântica equivalente.

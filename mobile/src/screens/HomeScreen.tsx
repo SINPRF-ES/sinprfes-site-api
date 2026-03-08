@@ -11,7 +11,7 @@ import JogosBanner from '../components/JogosBanner';
 import { ENABLE_JOGOS } from '../config/features';
 import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
-import { isGestao } from '../utils/filiadoUtils';
+import { isDiretoria, isGestao } from '../utils/filiadoUtils';
 
 import type { DrawerParamList } from '../navigation/types';
 import { COLORS } from '../theme/colors';
@@ -24,6 +24,7 @@ type NavItem = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   screen: keyof DrawerParamList;
   requireGestao?: boolean;
+  requireDiretoria?: boolean;
   hiddenForComunicador?: boolean;
 };
 
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados', hiddenForComunicador: true },
   { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao', hiddenForComunicador: true },
   { label: 'Informes', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
+  { label: 'Consulta Processual', subtitle: 'Processos por CPF cadastrado', icon: 'scale-balance', screen: 'ConsultaProcessual', requireDiretoria: true },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
@@ -39,8 +41,9 @@ export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
   const ehGestaoUsuario = isGestao(usuario?.perfil_acesso);
+  const ehDiretoriaUsuario = isDiretoria(usuario?.perfil_acesso);
   const isComunicador = (usuario?.perfil_acesso || '').toUpperCase() === 'COMUNICADOR';
-  const displayedItems = NAV_ITEMS.filter((i) => (!i.requireGestao || ehGestaoUsuario) && !(isComunicador && i.hiddenForComunicador));
+  const displayedItems = NAV_ITEMS.filter((i) => (!i.requireGestao || ehGestaoUsuario) && (!i.requireDiretoria || ehDiretoriaUsuario) && !(isComunicador && i.hiddenForComunicador));
 
   const primeiroNome = String(usuario?.nome || 'Filiado').trim().split(' ')[0];
 

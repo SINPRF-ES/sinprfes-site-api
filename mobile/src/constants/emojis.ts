@@ -18,6 +18,7 @@ export const EMOJI = {
   SEGURANCA: "🛡️",
   ATUALIZACOES: "🔄",
   RELATORIOS: "📊",
+  CONSULTA_PROCESSUAL: "⚖️",
   NOTIFICACOES: "📢",
   NOVO_FILIADO: "👤",
   FECHAR_APP: "🔒",
