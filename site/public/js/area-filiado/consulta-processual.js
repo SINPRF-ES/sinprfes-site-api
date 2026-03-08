@@ -47,8 +47,7 @@
         <td class="cell-process-number">${escapeHtml(item.processNumber || '-')}</td>
         <td class="cell-process-class">${escapeHtml(item.processClass || '-')}</td>
         <td class="cell-wrap">${escapeHtml(item.parties || '-')}</td>
-        <td class="cell-wrap">${escapeHtml(item.listLastMovementText || item.lastMovement || '-')}</td>
-        <td class="cell-center cell-datetime">${escapeHtml(formatDateTime(item.listLastMovementAt || item.lastMovementAt))}</td>
+        <td class="cell-wrap cell-last-movement">${escapeHtml(item.listLastMovementText || item.lastMovement || '-')}</td>
         <td class="cell-center">${item.detailsUrl ? `<a class="ui-button ui-button-outline" target="_blank" rel="noopener noreferrer" href="${escapeHtml(item.detailsUrl)}">Abrir origem</a>` : '-'}</td>
       </tr>
     `).join('');
@@ -63,7 +62,6 @@
               <th>Classe</th>
               <th>Partes</th>
               <th>Última movimentação</th>
-              <th>Data/Hora</th>
               <th>Ações</th>
             </tr>
           </thead>

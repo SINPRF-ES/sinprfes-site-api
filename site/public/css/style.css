@@ -753,7 +753,7 @@ body {
 }
 .consulta-processual-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 0.92rem;
   table-layout: fixed;
@@ -793,8 +793,8 @@ body {
   color: #334155;
   font-weight: 600;
 }
-.consulta-processual-table .cell-datetime {
-  white-space: nowrap;
+.consulta-processual-table .cell-last-movement {
+  min-width: 280px;
 }
 .consulta-processual-table .cell-wrap {
   line-height: 1.35;

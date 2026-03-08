@@ -9,6 +9,8 @@ const cache = new Map();
 const inFlight = new Map();
 const lastRunByUser = new Map();
 
+// BASELINE ESTÁVEL (congelado): manter contrato do endpoint e semântica dos modos personal/institutional.
+// Alterações no provider estável (TRF1) devem preservar retrocompatibilidade do payload canônico.
 const SINDICATO_CNPJ = '39387378000125';
 
 function getCacheEntry(key) {

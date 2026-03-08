@@ -32,6 +32,8 @@ function getConsultaProcessualConfig() {
       .filter(Boolean),
     cacheTtlMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_CACHE_TTL_MS, 5 * 60 * 1000),
     minIntervalMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_MIN_INTERVAL_MS, 3000),
+    // Baseline congelado: institucional segue restrito por padrão; produção pode liberar para todos via flag central.
+    institutionalPublicVisible: parseBool(process.env.CONSULTA_PROCESSUAL_INSTITUTIONAL_PUBLIC_VISIBLE, false),
   };
 }
 
