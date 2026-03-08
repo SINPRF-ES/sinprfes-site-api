@@ -15,6 +15,35 @@ function getEmailPrincipal(row) {
   return null;
 }
 
+function mascararEmail(email) {
+  const emailLimpo = String(email || "").trim();
+  const indiceArroba = emailLimpo.indexOf("@");
+
+  if (indiceArroba <= 0 || indiceArroba === emailLimpo.length - 1) {
+    return "";
+  }
+
+  const localPart = emailLimpo.slice(0, indiceArroba);
+  const dominioCompleto = emailLimpo.slice(indiceArroba + 1);
+  const indicePonto = dominioCompleto.indexOf(".");
+  const dominioPrincipal = indicePonto === -1 ? dominioCompleto : dominioCompleto.slice(0, indicePonto);
+  const sufixoDominio = indicePonto === -1 ? "" : dominioCompleto.slice(indicePonto);
+
+  const mascararParte = (texto, indicesVisiveis) => {
+    const visiveis = new Set(indicesVisiveis.filter((i) => i >= 0 && i < texto.length));
+    return [...texto].map((char, idx) => {
+      if (visiveis.has(idx)) return char;
+      if (/[^a-zA-Z0-9]/.test(char)) return char;
+      return "*";
+    }).join("");
+  };
+
+  const localMascarado = mascararParte(localPart, [0, 1, localPart.length - 1]);
+  const dominioMascarado = mascararParte(dominioPrincipal, [0, dominioPrincipal.length - 1]);
+
+  return `${localMascarado}@${dominioMascarado}${sufixoDominio}`;
+}
+
 exports.solicitarResetSenha = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   try {
@@ -93,7 +122,7 @@ exports.solicitarResetSenha = async (req, res) => {
     return res.json({
       success: true,
       message: mensagemPadrao,
-      email_destino: emailDestino,
+      email_destino: mascararEmail(emailDestino),
       requestId
     });
   } catch (err) {
