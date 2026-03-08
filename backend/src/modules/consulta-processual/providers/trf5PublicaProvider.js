@@ -26,7 +26,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
   }
 
   getBaseUrl() {
-    return 'https://pje.trf5.jus.br/pje/ConsultaPublica/listView.seam';
+    return 'https://portalbi.trf5.jus.br/portal-bi/painel.html?id=3002';
   }
 
   async consultarPorDocumento({ document, documentMasked, requestId, userId, debug: debugOverride }) {
@@ -39,16 +39,21 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
     const debugSummary = {
       pageLoaded: false,
       domInventoryGenerated: false,
-      documentFieldCandidatesCount: 0,
+      cpfFieldCandidatesCount: 0,
+      cpfFieldAutoDetected: false,
+      cpfMaskRequired: true,
+      maskedInputAccepted: false,
       searchActionCandidatesCount: 0,
+      searchActionAutoDetected: false,
       resultsContainerCandidatesCount: 0,
-      documentFieldAutoDetected: false,
-      searchButtonAutoDetected: false,
       resultsContainerAutoDetected: false,
       autoDetectionConfidence: 0,
       submitSucceeded: false,
       waitConditionMatched: null,
       realResultLoaded: false,
+      declaredResultsCount: 0,
+      cnjMatchesFound: 0,
+      rawBlocksFound: 0,
       normalizedItemsCount: 0,
       failureStage: null,
     };
@@ -88,9 +93,13 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       browser = browserResult.browser;
       const context = await browser.newContext();
       const page = await context.newPage();
+      await page.setViewportSize({ width: 1280, height: 1024 });
 
       await page.goto(this.getBaseUrl(), { waitUntil: 'domcontentloaded', timeout: cfg.initialLoadTimeoutMs });
-      await page.waitForTimeout(600);
+
+      // Qlik Sense is heavy. Use a very long fixed wait for the first live run in the sandbox
+      await page.waitForTimeout(25000);
+      logStep('TRF5_long_wait_completed');
       debugSummary.pageLoaded = true;
       await saveArtifact('01-home.png', page, 'screenshot');
       await saveArtifact('01-home.html', await page.content());
@@ -99,16 +108,16 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       const diagnostics = await this.collectDomDiagnostics(page);
       if (debugData) debugData.domDiagnostics = diagnostics;
       debugSummary.domInventoryGenerated = true;
-      debugSummary.documentFieldCandidatesCount = diagnostics.documentFieldCandidates.length;
+      debugSummary.cpfFieldCandidatesCount = diagnostics.documentFieldCandidates.length;
       debugSummary.searchActionCandidatesCount = diagnostics.searchActionCandidates.length;
       debugSummary.resultsContainerCandidatesCount = diagnostics.resultsContainerCandidates.length;
-      debugSummary.documentFieldAutoDetected = Boolean(diagnostics.documentFieldChosen?.selector);
-      debugSummary.searchButtonAutoDetected = Boolean(diagnostics.searchActionChosen?.selector);
+      debugSummary.cpfFieldAutoDetected = Boolean(diagnostics.documentFieldChosen?.selector);
+      debugSummary.searchActionAutoDetected = Boolean(diagnostics.searchActionChosen?.selector);
       debugSummary.resultsContainerAutoDetected = Boolean(diagnostics.resultsContainerChosen?.selector);
       debugSummary.autoDetectionConfidence = diagnostics.autoDetectionConfidence;
 
       await saveArtifact('02-dom-inventory.json', JSON.stringify(diagnostics.domInventory, null, 2));
-      await saveArtifact('03-document-candidates.json', JSON.stringify({ candidates: diagnostics.documentFieldCandidates, chosen: diagnostics.documentFieldChosen }, null, 2));
+      await saveArtifact('03-cpf-candidates.json', JSON.stringify({ candidates: diagnostics.documentFieldCandidates, chosen: diagnostics.documentFieldChosen }, null, 2));
       await saveArtifact('04-search-candidates.json', JSON.stringify({ candidates: diagnostics.searchActionCandidates, chosen: diagnostics.searchActionChosen }, null, 2));
       await saveArtifact('05-results-candidates.json', JSON.stringify({ candidates: diagnostics.resultsContainerCandidates, chosen: diagnostics.resultsContainerChosen }, null, 2));
 
@@ -117,30 +126,78 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         throw new Error('TRF5 DOM diagnostics could not confidently identify document field and search action');
       }
 
-      const documentToSearch = this.onlyDigits(document) || '06889315707';
-      await this.fillDocumentWithFallback(page, {
-        docDigits: documentToSearch,
-        docFieldSelector: diagnostics.documentFieldChosen.selector,
-        radioSelector: diagnostics.documentTypeSelector || diagnostics.documentFieldChosen.formRadioSelector || 'input[type="radio"]',
-      }).catch((err) => {
-        warn('fill_document_fallback_error', { error: err.message });
-      });
+      const documentToSearch = documentMasked || '032.410.634-37';
+      logStep('TRF5_fill_document', { documentToSearch, frameIndex: diagnostics.documentFieldChosen.frameIndex });
 
-      const clickTarget = page.locator(diagnostics.searchActionChosen.selector).first();
-      await clickTarget.scrollIntoViewIfNeeded().catch(() => {});
-      await clickTarget.click({ timeout: 5000 });
-      debugSummary.submitSucceeded = true;
+      const frame = diagnostics.documentFieldChosen.frameIndex !== null
+        ? page.frames()[diagnostics.documentFieldChosen.frameIndex]
+        : page;
 
-      const waitInfo = await this.waitForTrf5Signals(page, {
-        timeoutMs: cfg.searchTimeoutMs,
+      const field = frame.locator(diagnostics.documentFieldChosen.selector).first();
+      await field.scrollIntoViewIfNeeded().catch(() => {});
+      await field.click({ force: true });
+      await field.fill('');
+      await page.waitForTimeout(1000);
+
+      // Try multiple ways to fill/trigger input events
+      await field.type(documentToSearch, { delay: 150 });
+      await field.dispatchEvent('change').catch(() => {});
+      await field.dispatchEvent('blur').catch(() => {});
+
+      const valAfter = await field.inputValue().catch(() => '') || '';
+      debugSummary.maskedInputAccepted = valAfter.includes(documentToSearch.replace(/\D/g, '')) || valAfter === documentToSearch;
+
+      // Capture baseline before search
+      const baselineSignals = await this.waitForTrf5Signals(page, { timeoutMs: 1000 });
+      const baselineCnjCount = baselineSignals?.snapshot?.cnjMatches || 0;
+      logStep('TRF5_search_trigger_start', { baselineCnjCount });
+
+      // Attempt to trigger search using multiple strategies
+      const triggerStrategies = [];
+
+      // Strategy 1: Enter on the field
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(2000);
+      triggerStrategies.push('enter_key');
+
+      // Strategy 2: Click the detected search action
+      const searchFrame = diagnostics.searchActionChosen.frameIndex !== null
+        ? page.frames()[diagnostics.searchActionChosen.frameIndex]
+        : page;
+
+      const clickTarget = searchFrame.locator(diagnostics.searchActionChosen.selector).first();
+      const clickVisible = await clickTarget.isVisible().catch(() => false);
+      if (clickVisible) {
+        await clickTarget.scrollIntoViewIfNeeded().catch(() => {});
+        await clickTarget.click({ timeout: 5000 }).catch(() => {});
+        triggerStrategies.push('click_chosen_action');
+      }
+
+      // Strategy 3: Qlik Sense often has a "tick" or "confirm" button after typing in a search box
+      const confirmButton = searchFrame.locator('.lui-icon--tick, .qv-confirm-button, [title="Confirm selection"]').first();
+      if (await confirmButton.isVisible().catch(() => false)) {
+        await confirmButton.click({ timeout: 3000 }).catch(() => {});
+        triggerStrategies.push('qlik_confirm_tick');
+      }
+
+      debugSummary.submitSucceeded = triggerStrategies.length > 0;
+      logStep('TRF5_search_trigger_end', { triggerStrategies });
+
+      const resultFrame = diagnostics.resultsContainerChosen?.frameIndex !== null
+        ? page.frames()[diagnostics.resultsContainerChosen.frameIndex]
+        : page;
+
+      const waitInfo = await this.waitForTrf5Signals(resultFrame || page, {
+        timeoutMs: 45000, // BI queries are very slow
         resultsContainerSelector: diagnostics.resultsContainerChosen?.selector || 'body',
+        baselineCnjCount,
       });
-      debugSummary.waitConditionMatched = waitInfo.waitConditionMatched;
+      debugSummary.waitConditionMatched = waitInfo?.waitConditionMatched || 'unknown';
 
       const postSubmitHtml = await page.content();
       await saveArtifact('06-post-submit.html', postSubmitHtml);
 
-      const extraction = await page.evaluate(() => {
+      const extraction = await (resultFrame || page).evaluate(() => {
         const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
         const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
         const toAbs = (href) => {
@@ -148,13 +205,13 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
           try { return new URL(href, window.location.origin).href; } catch (_e) { return null; }
         };
 
-        const rows = Array.from(document.querySelectorAll('table tr, .rich-table-row, .rf-dt-r, .datagrid-row, .ui-datatable tr'));
+        const rows = Array.from(document.querySelectorAll('table tr, .rich-table-row, .rf-dt-r, .datagrid-row, .ui-datatable tr, .v-grid-row, .v-table-row, .portal-bi-row, .search-result-item'));
         const parsedRows = rows
           .map((row, index) => {
             const text = clean(row.textContent || '');
             const processNumber = text.match(cnjRegex)?.[0] || null;
             if (!processNumber) return null;
-            const link = row.querySelector('a[href], a[onclick]');
+            const link = row.querySelector('a[href], a[onclick], [role="link"]');
             const href = link?.getAttribute('href') || null;
             return {
               index,
@@ -169,14 +226,19 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
           .filter(Boolean);
 
         const bodyText = clean(document.body?.innerText || '');
+        const resultsMatch = bodyText.match(/(\d+)\s+(processos?|resultados?|itens?)/i);
         return {
           bodyTextSample: bodyText.slice(0, 1200),
           cnjMatchesFound: (bodyText.match(cnjRegex) || []).length,
+          declaredResultsCount: resultsMatch ? parseInt(resultsMatch[1], 10) : 0,
           rows: parsedRows,
         };
       });
 
       debugSummary.realResultLoaded = extraction.cnjMatchesFound > 0 || extraction.rows.length > 0;
+      debugSummary.declaredResultsCount = extraction.declaredResultsCount;
+      debugSummary.cnjMatchesFound = extraction.cnjMatchesFound;
+      debugSummary.rawBlocksFound = extraction.rows.length;
 
       const items = extraction.rows.map((row) => normalizeItem({
         source: this.getId(),
@@ -219,95 +281,156 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
     }
   }
 
-  async waitForTrf5Signals(page, { timeoutMs, resultsContainerSelector }) {
+  async waitForTrf5Signals(page, { timeoutMs, resultsContainerSelector = 'body', baselineCnjCount = 0 }) {
     const startedAt = Date.now();
     const initial = await page.locator(resultsContainerSelector).first().innerText().catch(() => '');
+    let lastSnapshot = null;
+
     while (Date.now() - startedAt < timeoutMs) {
       const snapshot = await page.evaluate(({ selector, previousText }) => {
         const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
         const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
         const root = document.querySelector(selector) || document.body;
         const text = clean(root?.innerText || '');
+
+        // Look for loading states
+        const hasLoadingIndicator = !!document.querySelector('.qv-loader, .loading, .busy, [aria-busy="true"]');
+
         return {
           changed: text !== clean(previousText || ''),
-          hasResultsText: /(resultados? encontrados|processo|última movimentação)/i.test(text),
-          cnjMatches: (text.match(cnjRegex) || []).length,
-          hasProcessLinks: Array.from(root.querySelectorAll('a[href],a[onclick]')).some((a) => /processo|detalhe|listView\.seam|openPopUp/i.test((a.getAttribute('href') || '') + (a.getAttribute('onclick') || '') + (a.textContent || ''))),
+          hasResultsText: /(resultados? encontrados|processo|última movimentação|partes)/i.test(text),
+          cnjMatches: (text.match(cnjRegex) || []).length || 0,
+          hasLoadingIndicator,
+          hasTableRows: !!root.querySelector('tr, .v-grid-row, .qv-object-table'),
         };
       }, { selector: resultsContainerSelector, previousText: initial });
 
       const waitConditionMatched =
-        (snapshot.cnjMatches > 0 && 'cnj_detected')
-        || (snapshot.hasProcessLinks && snapshot.changed && 'process_links_detected')
+        (snapshot.cnjMatches > baselineCnjCount && 'cnj_increased')
+        || (snapshot.cnjMatches > 0 && baselineCnjCount === 0 && 'cnj_detected')
         || (snapshot.hasResultsText && snapshot.changed && 'results_text_changed')
+        || (snapshot.hasTableRows && snapshot.changed && 'table_rows_detected')
         || null;
-      if (waitConditionMatched) return { waitConditionMatched, elapsedMs: Date.now() - startedAt, snapshot };
-      await page.waitForTimeout(250);
+
+      lastSnapshot = snapshot;
+      if (waitConditionMatched && !snapshot.hasLoadingIndicator) {
+        return { waitConditionMatched, elapsedMs: Date.now() - startedAt, snapshot };
+      }
+
+      await page.waitForTimeout(500);
     }
-    return { waitConditionMatched: 'timeout_without_clear_results', elapsedMs: Date.now() - startedAt };
+    return { waitConditionMatched: 'timeout_without_clear_results', elapsedMs: Date.now() - startedAt, snapshot: lastSnapshot };
   }
 
   async collectDomDiagnostics(page) {
-    const domInventory = await page.evaluate(() => {
-      const TAGS = ['input', 'button', 'select', 'textarea', 'form', 'a'];
-      const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
-      const cssPath = (el) => {
-        if (!el || el.nodeType !== 1) return null;
-        if (el.id) return `#${CSS.escape(el.id)}`;
-        const parts = [];
-        let node = el;
-        while (node && node.nodeType === 1 && parts.length < 5) {
-          let part = node.tagName.toLowerCase();
-          if (node.className && typeof node.className === 'string') {
-            const cls = node.className.split(/\s+/).filter(Boolean).slice(0, 2).join('.');
-            if (cls) part += `.${cls}`;
-          }
-          const siblings = node.parentElement ? Array.from(node.parentElement.children).filter((c) => c.tagName === node.tagName) : [];
-          if (siblings.length > 1) part += `:nth-of-type(${siblings.indexOf(node) + 1})`;
-          parts.unshift(part);
-          node = node.parentElement;
-        }
-        return parts.join(' > ');
-      };
-      const isVisible = (el) => {
-        const style = window.getComputedStyle(el);
-        const rect = el.getBoundingClientRect();
-        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-      };
-      const maskValue = (value) => {
-        const digits = String(value || '').replace(/\D/g, '');
-        if (!digits) return null;
-        if (digits.length <= 4) return `***${digits.slice(-2)}`;
-        return `***${digits.slice(-4, -2)}***`;
-      };
+    const frames = page.frames();
+    const allElements = [];
 
-      const all = TAGS.flatMap((tag) => Array.from(document.querySelectorAll(tag)).map((el) => {
-        const label = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null;
-        const parentText = clean(el.parentElement?.innerText || '').slice(0, 180);
-        const gpText = clean(el.parentElement?.parentElement?.innerText || '').slice(0, 220);
-        const bb = el.getBoundingClientRect();
-        return {
-          tag: el.tagName.toLowerCase(),
-          type: (el.getAttribute('type') || '').toLowerCase(),
-          id: el.id || null,
-          name: el.getAttribute('name') || null,
-          placeholder: el.getAttribute('placeholder') || null,
-          text: clean(el.textContent || ''),
-          valueMasked: maskValue(el.value || el.getAttribute('value') || ''),
-          labelText: clean(label?.textContent || ''),
-          parentText,
-          grandParentText: gpText,
-          visible: isVisible(el),
-          formId: el.form?.id || null,
-          selector: cssPath(el),
-          bbox: { x: Math.round(bb.x), y: Math.round(bb.y), width: Math.round(bb.width), height: Math.round(bb.height) },
-        };
-      }));
-      return { elements: all };
-    });
+    for (let i = 0; i < frames.length; i += 1) {
+      const frame = frames[i];
+      try {
+        const frameElements = await frame.evaluate((index) => {
+          const TAGS = ['input', 'button', 'select', 'textarea', 'form', 'a', 'div', 'span'];
+          const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+          const cssPath = (el) => {
+            if (!el || el.nodeType !== 1) return null;
+            if (el.id) return `#${CSS.escape(el.id)}`;
+            const parts = [];
+            let node = el;
+            while (node && node.nodeType === 1 && parts.length < 5) {
+              let part = node.tagName.toLowerCase();
+              const clsAttr = el.getAttribute('class') || '';
+              if (clsAttr) {
+                const cls = clsAttr.split(/\s+/).filter(Boolean).slice(0, 2).join('.');
+                if (cls) part += `.${cls}`;
+              }
+              const siblings = node.parentElement ? Array.from(node.parentElement.children).filter((c) => c.tagName === node.tagName) : [];
+              if (siblings.length > 1) part += `:nth-of-type(${siblings.indexOf(node) + 1})`;
+              parts.unshift(part);
+              node = node.parentElement;
+            }
+            return parts.join(' > ');
+          };
+          const isVisible = (el) => {
+            const style = window.getComputedStyle(el);
+            const rect = el.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const maskValue = (value) => {
+            const digits = String(value || '').replace(/\D/g, '');
+            if (!digits) return null;
+            if (digits.length <= 4) return `***${digits.slice(-2)}`;
+            return `***${digits.slice(-4, -2)}***`;
+          };
 
-    const { documentFieldCandidates, documentFieldChosen } = this.rankDocumentFieldCandidates(domInventory.elements);
-    const { searchActionCandidates, searchActionChosen } = this.rankSearchCandidates(domInventory.elements, documentFieldChosen);
+          // Simple recursive shadow DOM walker
+          const getAllElements = (root, tags) => {
+            let found = [];
+            tags.forEach(tag => {
+              found.push(...Array.from(root.querySelectorAll(tag)));
+            });
+            // Also grab elements with suggestive roles or classes directly
+            found.push(...Array.from(root.querySelectorAll('[role="textbox"], [role="button"], [role="link"], .qv-input, .qv-button, .qv-object-filterpane')));
+
+            const allInRoot = Array.from(root.querySelectorAll('*'));
+            allInRoot.forEach(el => {
+              if (el.shadowRoot) {
+                found.push(...getAllElements(el.shadowRoot, tags));
+              }
+            });
+            return found;
+          };
+
+          const tagsToCollect = TAGS;
+          const allElementsRaw = getAllElements(document, tagsToCollect);
+
+          const all = allElementsRaw.map((el) => {
+            const tag = String(el.tagName || '').toLowerCase();
+            const cls = String(el.getAttribute('class') || '');
+            const txt = clean(el.textContent || '');
+            const aria = String(el.getAttribute('aria-label') || '');
+
+            // In experimental phase, collect almost everything but filter out clearly empty noise
+            if ((tag === 'div' || tag === 'span' || tag === 'a') && txt.length === 0 && aria.length === 0 && !cls.includes('qv-') && !cls.includes('lui-')) {
+              return null;
+            }
+
+            const label = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null;
+            const parentText = clean(el.parentElement?.innerText || '').slice(0, 180);
+            const gpText = clean(el.parentElement?.parentElement?.innerText || '').slice(0, 220);
+            const bb = el.getBoundingClientRect();
+            return {
+              tag,
+              type: (el.getAttribute('type') || '').toLowerCase(),
+              id: el.id || null,
+              name: el.getAttribute('name') || null,
+              placeholder: el.getAttribute('placeholder') || null,
+              title: el.getAttribute('title') || null,
+              ariaLabel: aria || null,
+              role: el.getAttribute('role') || null,
+              className: cls,
+              text: txt,
+              valueMasked: maskValue(el.value || el.getAttribute('value') || ''),
+              labelText: clean(label?.textContent || ''),
+              parentText,
+              grandParentText: gpText,
+              visible: isVisible(el),
+              formId: el.form?.id || null,
+              selector: cssPath(el),
+              bbox: { x: Math.round(bb.x), y: Math.round(bb.y), width: Math.round(bb.width), height: Math.round(bb.height) },
+              frameIndex: index,
+            };
+          });
+          return all.filter(Boolean);
+        }, i === 0 ? null : i);
+        allElements.push(...frameElements);
+      } catch (err) {
+        log.warn('Trf5DiagnosticsFrameError', { frameIndex: i, error: err.message });
+      }
+    }
+
+    const { documentFieldCandidates, documentFieldChosen } = this.rankDocumentFieldCandidates(allElements);
+    const { searchActionCandidates, searchActionChosen } = this.rankSearchCandidates(allElements, documentFieldChosen);
     const results = await this.detectResultsContainers(page);
 
     const autoDetectionConfidence = Math.max(0, Math.min(100,
@@ -315,14 +438,14 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
     ));
 
     return {
-      domInventory,
+      domInventory: { elements: allElements },
       documentFieldCandidates,
       documentFieldChosen,
       searchActionCandidates,
       searchActionChosen,
-      resultsContainerCandidates: results.resultsContainerCandidates,
-      resultsContainerChosen: results.resultsContainerChosen,
-      documentTypeSelector: this.findDocumentTypeSelector(domInventory.elements),
+      resultsContainerCandidates: results.resultsContainerCandidates || [],
+      resultsContainerChosen: results.resultsContainerChosen || null,
+      documentTypeSelector: this.findDocumentTypeSelector(allElements),
       autoDetectionConfidence,
     };
   }
@@ -333,15 +456,24 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
   }
 
   rankDocumentFieldCandidates(elements = []) {
-    const candidates = elements
-      .filter((el) => el.tag === 'input' && ['text', 'search', 'tel', ''].includes(el.type))
+    const candidates = (elements || [])
+      .filter((el) => {
+        if (!el) return false;
+        const tag = String(el.tag || '').toLowerCase();
+        const type = String(el.type || '').toLowerCase();
+        const role = String(el.role || '').toLowerCase();
+        const cls = String(el.className || '').toLowerCase();
+        return (tag === 'input' && ['text', 'search', 'tel', ''].includes(type)) || role === 'textbox' || cls.includes('qv-input') || cls.includes('lui-input');
+      })
       .map((el) => {
         const reason = [];
         let score = 0;
-        const hay = `${el.id} ${el.name} ${el.placeholder} ${el.labelText} ${el.parentText} ${el.grandParentText}`.toLowerCase();
-        if (el.visible) { score += 25; reason.push('visible_text_input'); }
-        if (/cpf\/?cnpj|cpf|cnpj/.test(hay)) { score += 40; reason.push('label_contains_cpf_cnpj'); }
-        if (/documento|parte/.test(hay)) { score += 20; reason.push('document_context'); }
+        const cls = String(el.className || '');
+        const hay = `${el.id} ${el.name} ${el.placeholder} ${el.title} ${el.ariaLabel} ${el.labelText} ${el.parentText} ${el.grandParentText} ${cls}`.toLowerCase();
+        if (el.visible) { score += 25; reason.push('visible_input'); }
+        if (/cpf\/?cnpj|cpf|cnpj/.test(hay)) { score += 45; reason.push('contains_cpf_cnpj_keywords'); }
+        if (/documento|parte|contribuinte/.test(hay)) { score += 20; reason.push('document_context'); }
+        if (cls.includes('qv-') || cls.includes('lui-')) { score += 15; reason.push('qlik_ui_classes'); }
         if (/documento|cpf|cnpj|num/.test((el.name || '').toLowerCase()) || /documento|cpf|cnpj|num/.test((el.id || '').toLowerCase())) {
           score += 15; reason.push('id_name_suggestive');
         }
@@ -355,16 +487,18 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
   rankSearchCandidates(elements = [], documentFieldChosen = null) {
     const docY = documentFieldChosen?.bbox?.y || 0;
-    const candidates = elements
-      .filter((el) => ['button', 'a', 'input'].includes(el.tag))
+    const candidates = (elements || [])
+      .filter((el) => el && ['button', 'a', 'input', 'div', 'span'].includes(String(el.tag || '').toLowerCase()))
       .map((el) => {
         const reason = [];
         let score = 0;
-        const text = `${el.text} ${el.valueMasked} ${el.labelText} ${el.name} ${el.id} ${el.parentText}`.toLowerCase();
+        const cls = String(el.className || '');
+        const text = `${el.text} ${el.valueMasked} ${el.labelText} ${el.name} ${el.id} ${el.parentText} ${el.ariaLabel} ${el.title} ${cls}`.toLowerCase();
         if (el.visible) { score += 20; reason.push('visible'); }
-        if (/(pesquisar|consultar|buscar)/i.test(text)) { score += 45; reason.push('search_text'); }
+        if (/(pesquisar|consultar|buscar|visualizar|filtrar|aplicar)/i.test(text)) { score += 45; reason.push('search_text'); }
         if (el.tag === 'input' && ['submit', 'button'].includes(el.type)) { score += 15; reason.push('submit_type'); }
-        if (el.tag === 'button') { score += 10; reason.push('button_tag'); }
+        if (el.tag === 'button' || el.role === 'button') { score += 15; reason.push('button_like'); }
+        if (cls.includes('qv-') || cls.includes('lui-')) { score += 10; reason.push('qlik_ui_classes'); }
         if (docY && Math.abs((el.bbox?.y || 0) - docY) < 260) { score += 10; reason.push('near_document_field'); }
         return { ...el, score, reason };
       })
@@ -374,7 +508,13 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
   }
 
   async detectResultsContainers(page) {
-    const candidates = await page.evaluate(() => {
+    const frames = page.frames();
+    const allCandidates = [];
+
+    for (let i = 0; i < frames.length; i += 1) {
+      const frame = frames[i];
+      try {
+        const frameCandidates = await frame.evaluate((index) => {
       const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
       const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
       const cssPath = (el) => {
@@ -390,30 +530,38 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         }
         return parts.join(' > ');
       };
-      const nodes = Array.from(document.querySelectorAll('table,div,section,article')).slice(0, 500);
-      return nodes.map((el) => {
-        const text = clean(el.innerText || '');
-        const cnjMatchesFound = (text.match(cnjRegex) || []).length;
-        return {
-          tag: el.tagName.toLowerCase(),
-          id: el.id || null,
-          className: clean(el.className || ''),
-          selector: cssPath(el),
-          textSample: text.slice(0, 240),
-          cnjMatchesFound,
-          hasTableRows: el.querySelectorAll('tr').length,
-        };
-      });
-    });
+          const nodes = Array.from(document.querySelectorAll('table,div,section,article')).slice(0, 500);
+          return nodes.map((el) => {
+            const text = clean(el.innerText || '');
+            const cnjMatchesFound = (text.match(cnjRegex) || []).length;
+            return {
+              tag: el.tagName.toLowerCase(),
+              id: el.id || null,
+              className: clean(el.className || ''),
+              selector: cssPath(el),
+              textSample: text.slice(0, 240),
+              cnjMatchesFound,
+              hasTableRows: el.querySelectorAll('tr').length,
+              frameIndex: index,
+            };
+          });
+        }, i === 0 ? null : i);
+        allCandidates.push(...frameCandidates);
+      } catch (err) {
+        log.warn('Trf5DetectResultsContainersFrameError', { frameIndex: i, error: err.message });
+      }
+    }
 
-    const ranked = candidates
+    const ranked = (allCandidates || [])
       .map((el) => {
         let score = 0;
         const reason = [];
-        const hay = `${el.id} ${el.className} ${el.textSample}`.toLowerCase();
-        if (/(resultado|processo|movimentaç|parte|grid|table)/.test(hay)) { score += 30; reason.push('results_keyword'); }
+        const cls = String(el.className || '');
+        const hay = `${el.id} ${cls} ${el.textSample}`.toLowerCase();
+        if (/(resultado|processo|movimentaç|parte|grid|table|corpo-tabela)/.test(hay)) { score += 30; reason.push('results_keyword'); }
         if (el.hasTableRows > 1) { score += 20; reason.push('table_like'); }
-        if (el.cnjMatchesFound > 0) { score += 40; reason.push('cnj_match'); }
+        if (el.cnjMatchesFound > 0) { score += 45; reason.push('cnj_match'); }
+        if (cls.includes('qv-object-table') || cls.includes('v-grid')) { score += 25; reason.push('qlik_grid_class'); }
         if (el.id && /(grid|result|process|table)/.test(el.id.toLowerCase())) { score += 10; reason.push('id_hint'); }
         return { ...el, score, reason };
       })
