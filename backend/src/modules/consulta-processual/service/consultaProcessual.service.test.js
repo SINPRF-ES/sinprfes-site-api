@@ -39,6 +39,7 @@ describe('consultaProcessual.service', () => {
 
     expect(result.ok).toBe(true);
     expect(result.sources).toHaveLength(1);
+    expect(result.items).toEqual([{ source: 'trf1', sourceLabel: 'TRF1', processNumber: '1' }]);
     expect(result.totalItems).toBe(1);
     expect(result.cpfMasked).toContain('***');
   });

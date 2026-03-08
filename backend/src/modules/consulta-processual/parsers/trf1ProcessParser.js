@@ -31,7 +31,15 @@ function parseBrazilDateToIso(text) {
 }
 
 function parseMovementDescription(text) {
-  return cleanText(String(text || '').replace(DATE_TIME_RE, '').replace(/^[()\-–—\s]+/, '').replace(/[()]+$/, ''));
+  const withoutDate = cleanText(String(text || '').replace(DATE_TIME_RE, '').replace(/^[()\-–—\s]+/, '').replace(/[()]+$/, ''));
+  const cutByMarkers = withoutDate.split(/\s+(?:Documentos?|Pagin[aá]ç[aã]o|JavaScript|Assinado\s+digitalmente|Ver\s+todos|Dados\s+do\s+processo)\b/i)[0];
+  return cleanText(cutByMarkers);
+}
+
+function normalizeProcessClass(value) {
+  const normalized = cleanText(value);
+  if (!normalized) return null;
+  return cleanText(normalized.replace(/\s+[A-Za-z][A-Za-z0-9]{2,15}$/, '')) || normalized;
 }
 
 function parseTrf1Rows(rows = [], onDiscard = null) {
@@ -108,7 +116,7 @@ function parseTrf1Rows(rows = [], onDiscard = null) {
         source: 'trf1',
         sourceLabel: 'TRF1',
         processNumber,
-        processClass: cleanText(row.processClass) || null,
+        processClass: normalizeProcessClass(row.processClass),
         processTitle: cleanText(row.processTitle) || null,
         subject: cleanText(row.subject) || null,
         parties: cleanText(row.parties) || null,

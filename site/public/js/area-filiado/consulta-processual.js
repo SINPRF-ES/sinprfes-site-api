@@ -44,8 +44,8 @@
         <td>${escapeHtml(item.processNumber || '-')}</td>
         <td>${escapeHtml(item.processClass || '-')}</td>
         <td>${escapeHtml(item.parties || '-')}</td>
-        <td>${escapeHtml(item.lastMovement || '-')}</td>
-        <td>${escapeHtml(formatDateTime(item.lastMovementAt))}</td>
+        <td>${escapeHtml(item.listLastMovementText || item.lastMovement || '-')}</td>
+        <td>${escapeHtml(formatDateTime(item.listLastMovementAt || item.lastMovementAt))}</td>
         <td>${item.detailsUrl ? `<a class="ui-button ui-button-outline" target="_blank" rel="noopener noreferrer" href="${escapeHtml(item.detailsUrl)}">Abrir origem</a>` : '-'}</td>
       </tr>
     `).join('');
@@ -160,19 +160,26 @@
         return;
       }
 
-      const allItems = (data.sources || []).flatMap((s) => s.items || []);
+      const items = Array.isArray(data.items)
+        ? data.items.filter((item) => item && item.processNumber)
+        : [];
+      const totalItems = Number.isFinite(Number(data.totalItems)) ? Number(data.totalItems) : items.length;
+
+      console.log('consulta-processual response', data);
+      console.log('consulta-processual items', data.items);
+
       const providerErrors = (data.sources || []).filter((s) => s.status === 'error');
-      if (providerErrors.length > 0 && allItems.length === 0) {
+      if (providerErrors.length > 0 && items.length === 0) {
         feedback.textContent = 'Falha temporária em todas as fontes consultadas.';
       } else {
-        feedback.textContent = `Consulta concluída: ${allItems.length} processo(s) encontrado(s). CPF: ${data.cpfMasked || '***'}`;
+        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). CPF: ${data.cpfMasked || '***'}`;
       }
 
       if (lastUpdated) {
         lastUpdated.textContent = `Última atualização: ${formatDateTime(data.queriedAt)}`;
       }
 
-      output.innerHTML = renderTable(allItems);
+      output.innerHTML = renderTable(items);
     } catch (_err) {
       feedback.textContent = 'Erro ao consultar processos. Tente novamente em instantes.';
       output.innerHTML = '<div class="ui-card"><p>Erro temporário ao consultar o TRF1.</p></div>';

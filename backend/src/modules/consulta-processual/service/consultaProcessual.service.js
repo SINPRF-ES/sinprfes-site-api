@@ -186,6 +186,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
   lastRunByUser.set(userId, Date.now());
 
   const totalItems = sources.reduce((sum, s) => sum + (Array.isArray(s.items) ? s.items.length : 0), 0);
+  const items = sources.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
   const queriedAt = new Date().toISOString();
 
   log.info('ConsultaProcessualFinish', {
@@ -200,6 +201,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
     ok: true,
     queriedAt,
     cpfMasked,
+    items,
     sources,
     totalItems,
     errors,

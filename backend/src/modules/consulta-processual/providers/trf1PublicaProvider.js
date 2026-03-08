@@ -377,6 +377,11 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/;
         const DATE_TIME_RE = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}/;
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const normalizeProcessClass = (value) => {
+          const normalized = clean(value);
+          if (!normalized) return null;
+          return clean(normalized.replace(/\s+[A-Za-z][A-Za-z0-9]{2,15}$/, '')) || normalized;
+        };
         const toAbsoluteUrl = (href) => {
           if (!href) return null;
           try {
@@ -428,7 +433,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             .find((text) => text && !CNJ_RE.test(text));
 
           const processTitle = nodeText(td1Anchor || tds[1].querySelector('a'));
-          const processClass = classCandidate || clean(td1Text.split(processNumber)[0] || '');
+          const processClass = normalizeProcessClass(classCandidate || clean(td1Text.split(processNumber)[0] || ''));
 
           const nodeTokens = Array.from(tds[1].childNodes)
             .map((node) => clean(node.textContent || ''))
@@ -845,13 +850,23 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       const detailEval = await page.evaluate(() => {
         const MOVEMENT_RE = /(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})\s*-\s*(.+)$/;
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const sanitizeMovement = (value) => {
+          const cleaned = clean(value);
+          if (!cleaned) return null;
+          const cutByMarkers = cleaned.split(/\s+(?:Documentos?|Pagin[aá]ç[aã]o|JavaScript|Assinado\s+digitalmente|Ver\s+todos|Dados\s+do\s+processo)\b/i)[0];
+          return clean(cutByMarkers);
+        };
         const normalizeFromText = (text) => {
-          const lineMatch = clean(text).match(MOVEMENT_RE);
+          const raw = String(text || '').replace(/\r/g, '');
+          const firstLine = raw.split(/\n+/).map((line) => line.trim()).find(Boolean) || raw.trim();
+          const lineMatch = firstLine.match(MOVEMENT_RE) || raw.match(MOVEMENT_RE);
           if (!lineMatch) return null;
+          const movement = sanitizeMovement(lineMatch[2]);
+          if (!movement) return null;
           return {
-            raw: `${lineMatch[1]} - ${clean(lineMatch[2])}`,
+            raw: `${lineMatch[1]} - ${movement}`,
             at: lineMatch[1],
-            movement: clean(lineMatch[2]),
+            movement,
           };
         };
 
