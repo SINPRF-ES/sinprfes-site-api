@@ -39,75 +39,51 @@ async function extractDetailMovement(context, detailsUrl, timeoutMs) {
     await page.goto(detailsUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
 
     return await page.evaluate(() => {
-      const DATE_TIME_RE = /(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/;
       const MOVEMENT_RE = /(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})\s*-\s*(.+)$/;
       const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
-      const allText = clean(document.body?.innerText || '');
+      const normalizeFromText = (text) => {
+        const lineMatch = clean(text).match(MOVEMENT_RE);
+        if (!lineMatch) return null;
+        return {
+          raw: `${lineMatch[1]} - ${clean(lineMatch[2])}`,
+          at: lineMatch[1],
+          movement: clean(lineMatch[2]),
+        };
+      };
 
-      // Estratégia DOM-first: Localizar a tabela ou lista de movimentações
-      // No TRF1, as movimentações costumam estar em uma tabela com classe 'table' ou similar,
-      // dentro de um container identificado pelo título "Movimentações do Processo".
       const heading = Array.from(document.querySelectorAll('h1,h2,h3,h4,legend,label,td,th,span,div')).find((el) =>
         /Movimentaç[õo]es\s+do\s+Processo/i.test(clean(el.textContent || '')),
       );
 
-      const getCandidates = (root) => {
-        if (!root) return [];
-        // Procurar por linhas de tabela (tr) ou itens de lista (li) que contenham data/hora
-        const rows = Array.from(root.querySelectorAll('tr, li, div.row, div.movimentacao'));
-
-        return rows
-          .map((node) => {
-            const text = clean(node.textContent || '');
-            const lineMatch = text.match(MOVEMENT_RE);
-            if (lineMatch) {
-              return {
-                raw: `${lineMatch[1]} - ${clean(lineMatch[2])}`,
-                at: lineMatch[1],
-                movement: clean(lineMatch[2]),
-              };
-            }
-            return null;
-          })
-          .filter(Boolean);
-      };
-
       const movementContainer = heading?.closest('fieldset,section,table,div,td') || document.body;
-      let candidates = getCandidates(movementContainer);
+      const movementRows = Array.from(movementContainer.querySelectorAll('tr, li, div.row, div.movimentacao'));
 
-      // Se não achou no container imediato, tenta no pai (pode ser um fieldset com legend)
-      if (!candidates.length && heading?.parentElement) {
-        candidates = getCandidates(heading.parentElement);
-      }
+      let candidates = movementRows
+        .map((node) => normalizeFromText(node.textContent || ''))
+        .filter(Boolean);
 
-      // Fallback: Parsing textual linha a linha do documento inteiro
       if (!candidates.length) {
-        const lines = allText.split(/\s{2,}|\n+/);
-        candidates = lines
-          .map((line) => {
-            const match = clean(line).match(MOVEMENT_RE);
-            if (match) {
-              return {
-                raw: `${match[1]} - ${clean(match[2])}`,
-                at: match[1],
-                movement: clean(match[2]),
-              };
-            }
-            return null;
-          })
+        const documentRows = Array.from(document.querySelectorAll('tr, li, div.row, div.movimentacao'));
+        candidates = documentRows
+          .map((node) => normalizeFromText(node.textContent || ''))
           .filter(Boolean);
       }
 
-      // A primeira movimentação (index 0) é a mais recente
-      const latest = candidates[0] || null;
+      if (!candidates.length) {
+        candidates = clean(document.body?.innerText || '')
+          .split(/\n+/)
+          .map((line) => normalizeFromText(line))
+          .filter(Boolean);
+      }
 
+      const latest = candidates[0] || null;
       return {
         lastMovement: latest?.movement || null,
         lastMovementAt: latest?.at || null,
         rawLastMovementText: latest?.raw || null,
         debug: {
-          detailText: allText,
+          detailText: clean(document.body?.innerText || ''),
           detailHtml: movementContainer?.innerHTML || '',
         },
       };
@@ -178,11 +154,13 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         };
 
         const panel = document.querySelector('#fPP\\:processosGridPanel');
+        const panelBody = panel?.querySelector('.rich-panel-body, .rf-p-b') || null;
         const table = document.querySelector('#fPP\\:processosTable');
         const panelText = clean(panel?.innerText || '');
 
         // Extração DOM-first focada na tabela de resultados
         const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
+        const detailsLinksDetected = [];
         const rawRows = rows.map((row, index) => {
           const tds = Array.from(row.querySelectorAll('td'));
           // TRF1 structure:
@@ -194,7 +172,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           // Tentamos pegar o link de detalhe do onclick do primeiro botão ou do link no td1
           const firstTdAnchor = tds[0].querySelector('a');
           const td1Anchor = tds[1].querySelector('a');
-          const anchor = firstTdAnchor || td1Anchor;
+          const anchor = td1Anchor || firstTdAnchor;
 
           let detailsUrl = null;
           if (anchor) {
@@ -208,6 +186,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
                 detailsUrl = toAbsoluteUrl(href);
             }
           }
+          if (detailsUrl) detailsLinksDetected.push(detailsUrl);
 
           const td1Text = clean(tds[1]?.textContent || '');
           const processNumberMatch = td1Text.match(CNJ_RE);
@@ -215,20 +194,25 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
 
           const processNumber = processNumberMatch[0];
 
-          // No TD1 temos: CLASSE [LINK: TITULO] PARTES
-          const td1Html = tds[1].innerHTML;
-          // Tenta separar por tags ou quebras de linha se existirem
-          // Mas vamos usar regex para limpar a classe e partes do texto total
-          const processTitle = clean(tds[1].querySelector('b, a')?.textContent || '');
+          const nodeText = (node) => clean(node?.textContent || '');
+          const strongNodes = Array.from(tds[1].querySelectorAll('b, strong'));
+          const classCandidate = strongNodes
+            .map((node) => nodeText(node))
+            .find((text) => text && !CNJ_RE.test(text));
 
-          // Se houver um link/b, a classe costuma vir antes
-          const classMatch = td1Text.match(/^(.+?)(?:CumSen|CumSenFaz|\d{7}-)/);
-          const processClass = classMatch ? clean(classMatch[1]) : 'Processo';
+          const processTitle = nodeText(td1Anchor || tds[1].querySelector('a'));
+          const processClass = classCandidate || clean(td1Text.split(processNumber)[0] || '');
 
-          // Partes costumam vir após o número CNJ ou título
-          let parties = clean(td1Text.replace(processClass, '').replace(processTitle, '').replace(processNumber, '').trim());
-          // Remove resquícios de títulos se sobraram (ex: CumSen)
-          parties = parties.replace(/^(CumSen|CumSenFaz)\s+/, '').trim();
+          const nodeTokens = Array.from(tds[1].childNodes)
+            .map((node) => clean(node.textContent || ''))
+            .filter(Boolean);
+
+          const partiesCandidate = nodeTokens
+            .find((token) => token.includes(' X ') && !token.includes(processNumber))
+            || nodeTokens[nodeTokens.length - 1]
+            || '';
+
+          const parties = clean(partiesCandidate.replace(processTitle, '').trim());
 
           const listLastMovementText = clean(tds[2]?.textContent || '');
           const listMovementDateMatch = listLastMovementText.match(DATE_TIME_RE);
@@ -280,7 +264,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
               processClass: clean(rowText.match(/Classe\s*:?\s*(.+?)(?:\s{2,}|Partes|$)/i)?.[1] || ''),
               processTitle: title,
               parties: clean(rowText.match(/Partes\s*:?\s*(.+?)(?:\s{2,}|Última|$)/i)?.[1] || ''),
-              detailsUrl: toAbsoluteUrl(anchor.getAttribute('href')),
+            detailsUrl: toAbsoluteUrl(anchor.getAttribute('href')),
               listLastMovementText,
               listLastMovementAt: listMovementDate,
               lastMovement: clean(listLastMovementText.replace(DATE_TIME_RE, '').replace(/[()]/g, ' ')),
@@ -293,6 +277,10 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           }).filter(Boolean);
         }
 
+        finalRows.forEach((row) => {
+          if (row?.detailsUrl) detailsLinksDetected.push(row.detailsUrl);
+        });
+
         const uniqueRows = Array.from(
           new Map(finalRows.map((item) => [item.processNumber, item])).values(),
         );
@@ -304,6 +292,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           debug: {
             html: {
               panel: panel?.innerHTML || '',
+              panelBody: panelBody?.innerHTML || '',
               table: table?.innerHTML || '',
             },
             counts: {
@@ -313,6 +302,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             panelTextRaw: panelText,
             countFromText: Number.isFinite(countedFromText) ? countedFromText : null,
             detectedCnjs: uniqueRows.map((row) => row.processNumber),
+            detectedLinks: Array.from(new Set(detailsLinksDetected)),
           },
         };
       });
