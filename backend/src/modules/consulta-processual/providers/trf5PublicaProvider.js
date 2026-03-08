@@ -38,6 +38,9 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
     const debugSummary = {
       pageLoaded: false,
+      documentFieldFound: false,
+      searchTriggered: false,
+      resultsContainerFound: false,
       domInventoryGenerated: false,
       cpfFieldCandidatesCount: 0,
       cpfFieldAutoDetected: false,
@@ -88,7 +91,21 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
     try {
       const browserResult = await launchBrowser({ config: cfg });
       if (!browserResult.ok) {
-        return { source: this.getId(), sourceLabel: this.getLabel(), status: 'skipped', items: [], providerMeta: { maturity: this.getMaturityStatus() } };
+        debugSummary.failureStage = 'browser_launch';
+        return {
+          source: this.getId(),
+          sourceLabel: this.getLabel(),
+          status: 'error',
+          items: [],
+          providerMeta: { maturity: this.getMaturityStatus() },
+          debugSummary,
+          debugData,
+          error: {
+            code: browserResult.code || 'BROWSER_UNAVAILABLE',
+            message: browserResult.message || 'Não foi possível iniciar o navegador para o provider TRF5.',
+            stage: 'browser_launch',
+          },
+        };
       }
       browser = browserResult.browser;
       const context = await browser.newContext();
@@ -162,6 +179,8 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       debugSummary.cpfFieldAutoDetected = Boolean(diagnostics.documentFieldChosen?.selector);
       debugSummary.searchActionAutoDetected = Boolean(diagnostics.searchActionChosen?.selector);
       debugSummary.resultsContainerAutoDetected = Boolean(diagnostics.resultsContainerChosen?.selector);
+      debugSummary.documentFieldFound = debugSummary.cpfFieldAutoDetected;
+      debugSummary.resultsContainerFound = debugSummary.resultsContainerAutoDetected;
       debugSummary.autoDetectionConfidence = diagnostics.autoDetectionConfidence;
 
       await saveArtifact('02-dom-inventory.json', JSON.stringify(diagnostics.domInventory, null, 2));
@@ -222,6 +241,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
       const valAfter = await fieldAfterClick.inputValue().catch(() => '') || '';
       debugSummary.maskedInputAccepted = valAfter.includes(documentToSearch.replace(/\D/g, '')) || valAfter === documentToSearch;
+      await saveArtifact('06-filled-cpf.png', page, 'screenshot');
 
       // Capture baseline before search
       const baselineSignals = await this.waitForTrf5Signals(page, { timeoutMs: 1000 });
@@ -257,7 +277,9 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       }
 
       debugSummary.submitSucceeded = triggerStrategies.length > 0;
+      debugSummary.searchTriggered = triggerStrategies.length > 0;
       logStep('TRF5_search_trigger_end', { triggerStrategies });
+      await saveArtifact('07-post-trigger.png', page, 'screenshot');
 
       const resultFrame = diagnostics.resultsContainerChosen?.frameIndex !== null
         ? page.frames()[diagnostics.resultsContainerChosen.frameIndex]
@@ -271,7 +293,8 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       debugSummary.waitConditionMatched = waitInfo?.waitConditionMatched || 'unknown';
 
       const postSubmitHtml = await page.content();
-      await saveArtifact('06-post-submit.html', postSubmitHtml);
+      await saveArtifact('08-post-submit.html', postSubmitHtml);
+      await saveArtifact('08-post-submit.png', page, 'screenshot');
 
       const extraction = await (resultFrame || page).evaluate(() => {
         const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;

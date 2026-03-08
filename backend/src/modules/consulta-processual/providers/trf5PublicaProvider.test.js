@@ -9,7 +9,35 @@ describe('Trf5PublicaProvider heuristics', () => {
   let provider;
 
   beforeEach(() => {
+    process.env.CONSULTA_PROCESSUAL_TRF5_ENABLED = 'true';
     provider = new Trf5PublicaProvider();
+  });
+
+  test('retorna error com debug quando browser não inicia (não deve ficar skipped)', async () => {
+    launchBrowser.mockResolvedValue({
+      ok: false,
+      code: 'PLAYWRIGHT_BROWSER_MISSING',
+      message: 'Chromium is not installed',
+    });
+
+    const result = await provider.consultarPorDocumento({
+      document: '03241063437',
+      documentMasked: '032.410.634-37',
+      requestId: 'req-trf5-browser',
+      userId: 7,
+      debug: true,
+    });
+
+    expect(result.status).toBe('error');
+    expect(result.error).toEqual(expect.objectContaining({
+      code: 'PLAYWRIGHT_BROWSER_MISSING',
+      stage: 'browser_launch',
+    }));
+    expect(result.debugSummary).toEqual(expect.objectContaining({
+      failureStage: 'browser_launch',
+      maskedInputAccepted: false,
+      searchTriggered: false,
+    }));
   });
 
   test('rankDocumentFieldCandidates prioriza campo com CPF/CNPJ', () => {

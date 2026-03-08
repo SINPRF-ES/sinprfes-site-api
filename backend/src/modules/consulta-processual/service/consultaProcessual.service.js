@@ -108,6 +108,33 @@ function deduplicateItems(items) {
   });
 }
 
+function getProviderFlagMeta(providerId) {
+  const normalizedId = String(providerId || '').toLowerCase();
+  const map = {
+    trf1: 'CONSULTA_PROCESSUAL_TRF1_ENABLED',
+    trf3: 'CONSULTA_PROCESSUAL_TRF3_ENABLED',
+    trf5: 'CONSULTA_PROCESSUAL_TRF5_ENABLED',
+    trf6: 'CONSULTA_PROCESSUAL_TRF6_ENABLED',
+  };
+  return map[normalizedId] || null;
+}
+
+function resolveProviderSkipReason({ provider, cfg }) {
+  const providerId = provider?.getId?.();
+  const maturity = provider?.getMaturityStatus?.() || 'disabled';
+  const flagName = getProviderFlagMeta(providerId);
+  const flagValue = flagName ? Boolean(cfg?.[`${providerId}Enabled`]) : null;
+
+  if (flagName && flagValue === false) {
+    if (maturity === 'experimental') {
+      return { skipReason: 'experimental_provider_disabled_by_default', flagName };
+    }
+    return { skipReason: 'feature_flag_disabled', flagName };
+  }
+
+  return { skipReason: 'provider_not_selected', flagName };
+}
+
 async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mode = 'personal' }) {
   const cfg = getConsultaProcessualConfig();
   const isDebug = debug || cfg.debug;
@@ -165,13 +192,19 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
   const errors = [];
 
   disabledProviders.forEach((provider) => {
+    const { skipReason, flagName } = resolveProviderSkipReason({ provider, cfg });
     sources.push({
       source: provider.getId(),
       sourceLabel: provider.getLabel(),
       status: 'skipped',
       count: 0,
       items: [],
-      providerMeta: { maturity: provider.getMaturityStatus?.() || 'disabled', enabled: false },
+      providerMeta: {
+        maturity: provider.getMaturityStatus?.() || 'disabled',
+        enabled: false,
+        skipReason,
+        flagName,
+      },
     });
   });
 
