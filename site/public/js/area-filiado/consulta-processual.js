@@ -40,29 +40,37 @@
 
     const rows = items.map((item) => `
       <tr>
-        <td class="cell-center">
+        <td class="cell-center" data-label="Origem">
           <span class="filiado-badge badge-ativo">${escapeHtml(item.sourceLabel || item.source || '-')}</span>
           ${item.institutional ? '<br><span class="filiado-badge badge-especial" style="margin-top:4px; background-color:var(--ui-primary); color:white;">SINDICATO</span>' : ''}
         </td>
-        <td class="cell-process-number">${escapeHtml(item.processNumber || '-')}</td>
-        <td class="cell-process-class">${escapeHtml(item.processClass || '-')}</td>
-        <td class="cell-wrap">${escapeHtml(item.parties || '-')}</td>
-        <td class="cell-wrap cell-last-movement">${escapeHtml(item.listLastMovementText || item.lastMovement || '-')}</td>
-        <td class="cell-center">${item.detailsUrl ? `<a class="ui-button ui-button-outline" target="_blank" rel="noopener noreferrer" href="${escapeHtml(item.detailsUrl)}">Abrir origem</a>` : '-'}</td>
+        <td class="cell-process-number" data-label="Número do processo">${escapeHtml(item.processNumber || '-')}</td>
+        <td class="cell-process-class" data-label="Classe">${escapeHtml(item.processClass || '-')}</td>
+        <td class="cell-wrap" data-label="Partes">${escapeHtml(item.parties || '-')}</td>
+        <td class="cell-wrap cell-last-movement" data-label="Última movimentação">${escapeHtml(item.listLastMovementText || item.lastMovement || '-')}</td>
+        <td class="cell-center" data-label="Ações">${item.detailsUrl ? `<a class="ui-button ui-button-outline" target="_blank" rel="noopener noreferrer" href="${escapeHtml(item.detailsUrl)}">Abrir origem</a>` : '-'}</td>
       </tr>
     `).join('');
 
     return `
       <div class="consulta-processual-table-wrap ui-card">
         <table class="consulta-processual-table">
+          <colgroup>
+            <col class="col-source">
+            <col class="col-number">
+            <col class="col-class">
+            <col class="col-parties">
+            <col class="col-movement">
+            <col class="col-actions">
+          </colgroup>
           <thead>
             <tr>
-              <th>Origem</th>
-              <th>Número do processo</th>
-              <th>Classe</th>
-              <th>Partes</th>
-              <th>Última movimentação</th>
-              <th>Ações</th>
+              <th scope="col">Origem</th>
+              <th scope="col">Número do processo</th>
+              <th scope="col">Classe</th>
+              <th scope="col">Partes</th>
+              <th scope="col">Última movimentação</th>
+              <th scope="col">Ações</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -245,14 +253,16 @@
     if (controls && hasDebugPermission()) {
       controls.style.display = 'block';
       controls.innerHTML = `
-        <div class="ui-card" style="margin-bottom:12px; padding:12px;">
-          <div style="display:flex; gap:20px; align-items:center;">
-            <strong>Tipo de consulta:</strong>
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-              <input type="radio" name="consulta-mode" value="personal" checked> Meus processos (CPF)
+        <div class="ui-card consulta-processual-mode-card">
+          <div class="consulta-processual-mode-grid">
+            <strong class="consulta-processual-mode-title">Tipo de consulta:</strong>
+            <label class="consulta-processual-mode-option">
+              <input type="radio" name="consulta-mode" value="personal" checked>
+              <span>Meus processos (CPF)</span>
             </label>
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-              <input type="radio" name="consulta-mode" value="institutional"> Processos do sindicato (CNPJ)
+            <label class="consulta-processual-mode-option">
+              <input type="radio" name="consulta-mode" value="institutional">
+              <span>Processos do sindicato (CNPJ)</span>
             </label>
           </div>
         </div>
