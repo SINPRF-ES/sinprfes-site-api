@@ -64,10 +64,13 @@ function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
       if (arg && Object.prototype.hasOwnProperty.call(arg, 'prevHtml')) {
         return {
           panelHtmlChanged: panelState.hasChanged,
+          panelTextChanged: panelState.hasChanged,
           declaredResultsCount: panelState.hasChanged ? 2 : 0,
           hasDeclaredResultsPositive: panelState.hasChanged,
           cnjMatchesFound: panelState.hasChanged ? 2 : 0,
-          linksFound: panelState.hasChanged ? 2 : 0,
+          cnjIncreased: panelState.hasChanged,
+          processLikeLinksFound: panelState.hasChanged ? 2 : 0,
+          addedProcessLikeLinksFound: panelState.hasChanged ? 2 : 0,
           panelTextSummary: panelState.hasChanged ? '2 resultados encontrados' : 'Estado inicial',
         };
       }

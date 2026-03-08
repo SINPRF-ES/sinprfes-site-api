@@ -94,6 +94,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         userId,
         source: this.getId(),
         cpfMasked,
+        timestamp: new Date().toISOString(),
         ...extra,
       };
       if (debugData) debugData.steps.push(payload);
@@ -108,6 +109,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         userId,
         source: this.getId(),
         cpfMasked,
+        timestamp: new Date().toISOString(),
         ...extra,
       };
       if (debugData) debugData.warnings.push(payload);
@@ -230,6 +232,27 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       const beforeSubmitDomLen = (await page.content()).length;
       const beforeSubmitInputValue = await page.locator(cpfFieldSelector).inputValue();
       const beforeSubmitPanelHtml = await page.locator('#fPP\\:processosGridPanel_body').evaluate((el) => el?.innerHTML || '').catch(() => '');
+      const beforeSubmitSignals = await page.evaluate(() => {
+        const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
+        const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const panelBody = document.querySelector('#fPP\:processosGridPanel_body');
+        const panel = document.querySelector('#fPP\:processosGridPanel');
+        const root = panelBody || panel || document;
+        const panelText = clean((panelBody || panel || document.body)?.innerText || '');
+        const linkSignatures = Array.from(root.querySelectorAll('a[href],a[onclick]'))
+          .map((node) => {
+            const href = (node.getAttribute('href') || '').trim();
+            const onclick = (node.getAttribute('onclick') || '').trim();
+            const text = clean(node.textContent || '');
+            return `${href}|${onclick}|${text}`;
+          })
+          .filter(Boolean);
+        return {
+          panelText,
+          linkSignatures,
+          cnjMatchesFound: (panelText.match(CNJ_RE) || []).length,
+        };
+      });
       const networkEvents = [];
 
       const onResponse = async (response) => {
@@ -258,7 +281,11 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         beforeSubmitInputMasked: this.maskFieldValue(beforeSubmitInputValue),
         beforeSubmitInputDigits: this.onlyDigits(beforeSubmitInputValue),
         waitStrategy: 'waitForRealResultsUpdate',
-        timestamp: new Date().toISOString(),
+        beforeSubmitSignals: {
+          baselineLinksFound: Array.isArray(beforeSubmitSignals.linkSignatures) ? beforeSubmitSignals.linkSignatures.length : 0,
+          baselineCnjMatchesFound: beforeSubmitSignals.cnjMatchesFound,
+          panelTextSummary: String(beforeSubmitSignals.panelText || '').slice(0, 220),
+        },
       });
 
       const clickPromise = page.locator('#fPP\\:searchProcessos').click();
@@ -280,6 +307,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         waitInfo = await this.waitForRealResultsUpdate(page, {
           timeoutMs: cfg.searchTimeoutMs,
           previousPanelBodyHtml: beforeSubmitPanelHtml,
+          previousPanelText: beforeSubmitSignals.panelText || '',
+          previousLinkSignatures: Array.isArray(beforeSubmitSignals.linkSignatures) ? beforeSubmitSignals.linkSignatures : [],
+          previousCnjMatchesFound: Number(beforeSubmitSignals.cnjMatchesFound || 0),
         });
         debugSummary.waitConditionMatched = waitInfo.waitConditionMatched;
       } catch (err) {
@@ -688,43 +718,74 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
   }
 
-  async waitForRealResultsUpdate(page, { timeoutMs, previousPanelBodyHtml }) {
+  async waitForRealResultsUpdate(page, {
+    timeoutMs,
+    previousPanelBodyHtml,
+    previousPanelText = '',
+    previousLinkSignatures = [],
+    previousCnjMatchesFound = 0,
+  }) {
     const startedAt = Date.now();
     const pollIntervalMs = 250;
 
     while (Date.now() - startedAt < timeoutMs) {
-      const snapshot = await page.evaluate(({ prevHtml }) => {
+      const snapshot = await page.evaluate(({ prevHtml, prevPanelText, prevLinkSignatures, prevCnjMatchesFoundValue }) => {
         const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
         const RESULT_RE = /(\d+)\s+resultados? encontrados/i;
-        const gridPanelBody = document.querySelector('#fPP\\:processosGridPanel_body');
-        const gridPanel = document.querySelector('#fPP\\:processosGridPanel');
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+        const gridPanelBody = document.querySelector('#fPP\:processosGridPanel_body');
+        const gridPanel = document.querySelector('#fPP\:processosGridPanel');
+        const root = gridPanelBody || gridPanel || document;
         const panelText = clean((gridPanelBody || gridPanel || document.body)?.innerText || '');
         const panelHtml = gridPanelBody?.innerHTML || '';
         const declaredMatch = panelText.match(RESULT_RE);
-        const links = Array.from((gridPanelBody || gridPanel || document).querySelectorAll('a[href],a[onclick]'))
-          .filter((a) => {
-            const href = (a.getAttribute('href') || '').trim();
-            const onclick = (a.getAttribute('onclick') || '').trim();
-            return Boolean(href && !href.startsWith('#')) || /openPopUp|processo|detalhe/i.test(onclick);
-          });
+
+        const links = Array.from(root.querySelectorAll('a[href],a[onclick]')).map((node) => {
+          const href = (node.getAttribute('href') || '').trim();
+          const onclick = (node.getAttribute('onclick') || '').trim();
+          const text = clean(node.textContent || '');
+          const isProcessLike =
+            /openPopUp|processo|detalhe|downloadDocumento/i.test(onclick)
+            || /processo|detalhe|listView\.seam/i.test(href)
+            || /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/.test(text);
+          return {
+            href,
+            onclick,
+            text,
+            isProcessLike,
+            signature: `${href}|${onclick}|${text}`,
+          };
+        });
+
+        const processLikeLinks = links.filter((link) => link.isProcessLike);
+        const previousSet = new Set(Array.isArray(prevLinkSignatures) ? prevLinkSignatures : []);
+        const addedProcessLikeLinks = processLikeLinks.filter((link) => !previousSet.has(link.signature));
         const cnjMatches = panelText.match(CNJ_RE) || [];
 
         return {
           panelHtmlChanged: panelHtml !== String(prevHtml || ''),
+          panelTextChanged: panelText !== String(prevPanelText || ''),
           declaredResultsCount: Number(declaredMatch?.[1] || 0),
           hasDeclaredResultsPositive: Number(declaredMatch?.[1] || 0) > 0,
           cnjMatchesFound: cnjMatches.length,
-          linksFound: links.length,
+          cnjIncreased: cnjMatches.length > Number(prevCnjMatchesFoundValue || 0),
+          processLikeLinksFound: processLikeLinks.length,
+          addedProcessLikeLinksFound: addedProcessLikeLinks.length,
           panelTextSummary: panelText.slice(0, 300),
         };
-      }, { prevHtml: previousPanelBodyHtml });
+      }, {
+        prevHtml: previousPanelBodyHtml,
+        prevPanelText: previousPanelText,
+        prevLinkSignatures: previousLinkSignatures,
+        prevCnjMatchesFoundValue: previousCnjMatchesFound,
+      });
 
       const waitConditionMatched =
         (snapshot.hasDeclaredResultsPositive && 'declared_results_positive')
-        || (snapshot.cnjMatchesFound > 0 && 'cnj_match_found')
-        || (snapshot.linksFound > 0 && 'process_links_found')
-        || (snapshot.panelHtmlChanged && 'panel_html_changed')
+        || (snapshot.cnjMatchesFound > 0 && snapshot.cnjIncreased && 'cnj_match_increased')
+        || (snapshot.addedProcessLikeLinksFound > 0 && 'new_process_links_found')
+        || (snapshot.panelHtmlChanged && snapshot.panelTextChanged && 'panel_html_changed')
         || null;
 
       if (waitConditionMatched) {
