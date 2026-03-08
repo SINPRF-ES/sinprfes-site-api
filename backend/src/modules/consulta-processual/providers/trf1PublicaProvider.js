@@ -185,19 +185,52 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
         const rawRows = rows.map((row, index) => {
           const tds = Array.from(row.querySelectorAll('td'));
-          if (tds.length < 5) return null;
+          // TRF1 structure:
+          // td0: button with onclick openPopUp
+          // td1: Class + Title + Parties
+          // td2: Last Movement
+          if (tds.length < 3) return null;
 
-          const anchor = tds[0].querySelector('a');
-          const processTitle = clean(tds[0].textContent || '');
-          const processNumberMatch = processTitle.match(CNJ_RE);
+          // Tentamos pegar o link de detalhe do onclick do primeiro botão ou do link no td1
+          const firstTdAnchor = tds[0].querySelector('a');
+          const td1Anchor = tds[1].querySelector('a');
+          const anchor = firstTdAnchor || td1Anchor;
 
-          if (!processNumberMatch || !anchor) return null;
+          let detailsUrl = null;
+          if (anchor) {
+            const onclick = anchor.getAttribute('onclick');
+            const href = anchor.getAttribute('href');
+            if (onclick && onclick.includes('openPopUp')) {
+                const match = onclick.match(/'([^']+)'\s*,\s*'([^']+)'/);
+                if (match && match[2]) detailsUrl = toAbsoluteUrl(match[2]);
+            }
+            if (!detailsUrl && href && !href.startsWith('javascript:')) {
+                detailsUrl = toAbsoluteUrl(href);
+            }
+          }
+
+          const td1Text = clean(tds[1]?.textContent || '');
+          const processNumberMatch = td1Text.match(CNJ_RE);
+          if (!processNumberMatch) return null;
 
           const processNumber = processNumberMatch[0];
-          const processClass = clean(tds[1]?.textContent || '');
-          const parties = clean(tds[3]?.textContent || '');
-          const listLastMovementText = clean(tds[4]?.textContent || '');
 
+          // No TD1 temos: CLASSE [LINK: TITULO] PARTES
+          const td1Html = tds[1].innerHTML;
+          // Tenta separar por tags ou quebras de linha se existirem
+          // Mas vamos usar regex para limpar a classe e partes do texto total
+          const processTitle = clean(tds[1].querySelector('b, a')?.textContent || '');
+
+          // Se houver um link/b, a classe costuma vir antes
+          const classMatch = td1Text.match(/^(.+?)(?:CumSen|CumSenFaz|\d{7}-)/);
+          const processClass = classMatch ? clean(classMatch[1]) : 'Processo';
+
+          // Partes costumam vir após o número CNJ ou título
+          let parties = clean(td1Text.replace(processClass, '').replace(processTitle, '').replace(processNumber, '').trim());
+          // Remove resquícios de títulos se sobraram (ex: CumSen)
+          parties = parties.replace(/^(CumSen|CumSenFaz)\s+/, '').trim();
+
+          const listLastMovementText = clean(tds[2]?.textContent || '');
           const listMovementDateMatch = listLastMovementText.match(DATE_TIME_RE);
           const listMovementDate = listMovementDateMatch ? listMovementDateMatch[0] : null;
           const listMovement = clean(listLastMovementText.replace(DATE_TIME_RE, '').replace(/[()]/g, ' '));
@@ -206,9 +239,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             index,
             processNumber,
             processClass,
-            processTitle,
+            processTitle: processTitle || `${processClass} ${processNumber}`,
             parties,
-            detailsUrl: toAbsoluteUrl(anchor.getAttribute('href')),
+            detailsUrl,
             listLastMovementText,
             listLastMovementAt: listMovementDate,
             lastMovement: listMovement || null,
@@ -218,7 +251,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             rawText: clean(row.textContent || ''),
             providerMeta: {
               rowIndex: index,
-              domStrategy: 'table-row',
+              domStrategy: 'table-row-v2',
             },
           };
         }).filter(Boolean);
