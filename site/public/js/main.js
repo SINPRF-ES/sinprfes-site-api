@@ -105,14 +105,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Registro do Service Worker para PWA
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(reg => {
-        // SW registrado com sucesso
-      })
-      .catch(err => {
-        console.warn('Registro do Service Worker falhou:', err);
+  window.addEventListener('load', async () => {
+    const appVersion = window.APP_VERSION || window.ENV_CONFIG?.APP_VERSION || 'dev';
+    console.info(`[pwa] appVersion=${appVersion}`);
+
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js', {
+        updateViaCache: 'none'
       });
+
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        if (!worker) return;
+
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            console.info('[pwa] Nova versão do Service Worker instalada. Recarregando página.');
+            window.location.reload();
+          }
+        });
+      });
+
+      // Força checagem de update ao abrir a página.
+      registration.update().catch(() => {});
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (window.__swControllerChanged) return;
+        window.__swControllerChanged = true;
+        console.info('[pwa] Controller do Service Worker atualizado.');
+      });
+    } catch (err) {
+      console.warn('Registro do Service Worker falhou:', err);
+    }
   });
 }
 

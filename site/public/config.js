@@ -11,6 +11,8 @@
   const apiUrl = String(isLocal ? LOCAL_API : PROD_API).replace(/\/+$/, "");
 
   window.API_BASE_URL = apiUrl;
+  window.APP_VERSION = window.APP_VERSION || "dev";
   window.ENV_CONFIG = window.ENV_CONFIG || {};
   window.ENV_CONFIG.API_URL = apiUrl;
+  window.ENV_CONFIG.APP_VERSION = window.APP_VERSION;
 })();

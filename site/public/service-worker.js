@@ -1,95 +1,95 @@
 /**
  * SINPRF-ES Service Worker
- * Versão: 1.0.4
+ * Versão injetada em runtime pelo servidor.
  */
 
-const CACHE_NAME = 'sinprfes-cache-v1.0.4';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/main.js',
-  '/config.js',
-  '/manifest.webmanifest'
-];
+const APP_VERSION = '__APP_VERSION__';
+const STATIC_CACHE = `sinprfes-static-${APP_VERSION}`;
+const RUNTIME_CACHE = `sinprfes-runtime-${APP_VERSION}`;
+const SW_LOG_PREFIX = '[sinprfes-sw]';
 
-// Instalação: Cacheia arquivos iniciais
+const PRECACHE_URLS = [
+  '/manifest.webmanifest',
+  '/config.js',
+  '/css/style.css',
+  '/css/ui-canon.css',
+  '/js/utils.js',
+  '/js/main.js'
+].map((url) => `${url}?v=${APP_VERSION}`);
+
 self.addEventListener('install', (event) => {
+  console.info(`${SW_LOG_PREFIX} install version=${APP_VERSION}`);
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
   );
   self.skipWaiting();
 });
 
-// Ativação: Limpa caches antigos
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.filter((cacheName) => {
-          return cacheName.startsWith('sinprfes-cache-') && cacheName !== CACHE_NAME;
-        }).map((cacheName) => {
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    const allowedCaches = new Set([STATIC_CACHE, RUNTIME_CACHE]);
+
+    await Promise.all(
+      cacheNames
+        .filter((cacheName) => cacheName.startsWith('sinprfes-') && !allowedCaches.has(cacheName))
+        .map((cacheName) => {
+          console.info(`${SW_LOG_PREFIX} deleting old cache=${cacheName}`);
           return caches.delete(cacheName);
         })
-      );
-    })
-  );
-  self.clients.claim();
+    );
+
+    await self.clients.claim();
+    console.info(`${SW_LOG_PREFIX} activate complete version=${APP_VERSION}`);
+  })());
 });
 
-// Interceptação de requests
+function isHtmlNavigationRequest(request) {
+  return request.mode === 'navigate' ||
+    (request.headers.get('accept') || '').includes('text/html');
+}
+
+function isCacheableAssetRequest(requestUrl) {
+  return requestUrl.origin === self.location.origin &&
+    (requestUrl.pathname.startsWith('/css/') ||
+      requestUrl.pathname.startsWith('/js/') ||
+      requestUrl.pathname === '/config.js' ||
+      requestUrl.pathname === '/manifest.webmanifest' ||
+      requestUrl.pathname.startsWith('/img/') ||
+      requestUrl.pathname.startsWith('/icons/'));
+}
+
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const requestUrl = new URL(request.url);
 
-  // 1. Estratégia Network-First para arquivos críticos e sem hash
-  // Incluímos .js para evitar que o cache-first entregue versões antigas de lógica
-  const isCritical = [
-    '/config.js',
-    '/manifest.webmanifest',
-    '/service-worker.js',
-    '/index.html'
-  ].includes(url.pathname) || url.pathname === '/' || url.pathname.endsWith('.js');
+  if (request.method !== 'GET') return;
 
-  if (isCritical) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Se recebermos um HTML no lugar de JS/JSON (erro de fallback), não cachear
-          const contentType = response.headers.get('content-type');
-          if (url.pathname.endsWith('.js') && contentType && contentType.includes('text/html')) {
-            return response;
-          }
-          if (url.pathname.endsWith('.webmanifest') && contentType && contentType.includes('text/html')) {
-            return response;
-          }
+  if (requestUrl.pathname.startsWith('/api/')) return;
 
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
+  // HTML sempre network-first para evitar documento defasado.
+  if (isHtmlNavigationRequest(request)) {
+    event.respondWith((async () => {
+      try {
+        const networkResponse = await fetch(request);
+        return networkResponse;
+      } catch (error) {
+        return Response.error();
+      }
+    })());
     return;
   }
 
-  // 2. Bypass para API
-  if (url.pathname.startsWith('/api')) {
-    return;
-  }
+  if (!isCacheableAssetRequest(requestUrl)) return;
 
-  // 3. Cache-First para demais assets (imagens, css, etc)
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((fetchRes) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, fetchRes.clone());
-          return fetchRes;
-        });
-      });
-    })
-  );
+  // Assets versionados: cache-first.
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    const networkResponse = await fetch(request);
+    const runtimeCache = await caches.open(RUNTIME_CACHE);
+    runtimeCache.put(request, networkResponse.clone());
+    return networkResponse;
+  })());
 });
