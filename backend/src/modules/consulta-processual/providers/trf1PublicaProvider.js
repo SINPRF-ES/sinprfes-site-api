@@ -23,29 +23,110 @@ function saveDebugTextFile(filePath, content) {
   }
 }
 
+async function extractDetailMovement(context, detailsUrl, timeoutMs) {
+  if (!detailsUrl) {
+    return {
+      lastMovement: null,
+      lastMovementAt: null,
+      rawLastMovementText: null,
+      debug: { detailText: '', detailHtml: '' },
+    };
+  }
 
-function buildRawItemsFromExtraction(extraction = {}) {
-  const rawById = Array.isArray(extraction.rawById) ? extraction.rawById : [];
-  return rawById.map((entry = {}, index) => ({
-    source: 'trf1',
-    sourceLabel: 'TRF1',
-    processNumber: `RAW:${entry.id || index}`,
-    processClass: entry.tagName ? `RAW_${entry.tagName}` : 'RAW',
-    subject: null,
-    parties: null,
-    lastMovement: entry.text || null,
-    lastMovementAt: null,
-    rawLastMovementText: entry.text || null,
-    detailsUrl: null,
-    providerMeta: {
-      rawId: entry.id || null,
-      rawTagName: entry.tagName || null,
-      rawHtml: entry.html || null,
-      rawText: entry.text || null,
-      rawSource: 'trf1-dom',
-      rawIndex: index,
-    },
-  }));
+  const page = await context.newPage();
+
+  try {
+    await page.goto(detailsUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+
+    return await page.evaluate(() => {
+      const DATE_TIME_RE = /(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/;
+      const MOVEMENT_RE = /(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})\s*-\s*(.+)$/;
+      const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+      const allText = clean(document.body?.innerText || '');
+      const heading = Array.from(document.querySelectorAll('h1,h2,h3,h4,legend,label,td,th,span,div')).find((el) =>
+        /Movimentaç[õo]es\s+do\s+Processo/i.test(clean(el.textContent || '')),
+      );
+
+      const getCandidates = (root) => {
+        if (!root) return [];
+        const nodes = [
+          ...Array.from(root.querySelectorAll('tr')),
+          ...Array.from(root.querySelectorAll('li')),
+          ...Array.from(root.querySelectorAll('div')),
+          ...Array.from(root.querySelectorAll('td')),
+        ];
+
+        return nodes
+          .map((node) => clean(node.textContent || ''))
+          .filter(Boolean)
+          .map((text) => {
+            const lineMatch = text.match(MOVEMENT_RE);
+            if (lineMatch) {
+              return {
+                raw: `${lineMatch[1]} - ${clean(lineMatch[2])}`,
+                at: lineMatch[1],
+                movement: clean(lineMatch[2]),
+              };
+            }
+
+            const dateMatch = text.match(DATE_TIME_RE);
+            if (!dateMatch) return null;
+
+            const afterDate = clean(text.replace(dateMatch[1], '').replace(/^[\-–—:\s]+/, ''));
+            if (!afterDate) return null;
+
+            return {
+              raw: `${dateMatch[1]} - ${afterDate}`,
+              at: dateMatch[1],
+              movement: afterDate,
+            };
+          })
+          .filter(Boolean);
+      };
+
+      const movementContainer = heading?.closest('fieldset,section,table,div,td') || document.body;
+      let candidates = getCandidates(movementContainer);
+
+      if (!candidates.length && heading?.parentElement) {
+        candidates = getCandidates(heading.parentElement);
+      }
+
+      if (!candidates.length) {
+        const fallback = allText
+          .split(/\s{2,}|\n+/)
+          .map((line) => clean(line))
+          .filter(Boolean)
+          .map((line) => {
+            const m = line.match(MOVEMENT_RE) || line.match(DATE_TIME_RE);
+            if (!m) return null;
+            if (line.match(MOVEMENT_RE)) {
+              const [_, at, movement] = line.match(MOVEMENT_RE);
+              return { raw: `${at} - ${clean(movement)}`, at, movement: clean(movement) };
+            }
+            const at = m[1];
+            const movement = clean(line.replace(at, '').replace(/^[\-–—:\s]+/, ''));
+            return movement ? { raw: `${at} - ${movement}`, at, movement } : null;
+          })
+          .filter(Boolean);
+        candidates = fallback;
+      }
+
+      const latest = candidates[0] || null;
+
+      return {
+        lastMovement: latest?.movement || null,
+        lastMovementAt: latest?.at || null,
+        rawLastMovementText: latest?.raw || null,
+        debug: {
+          detailText: allText,
+          detailHtml: movementContainer?.innerHTML || '',
+        },
+      };
+    });
+  } finally {
+    await page.close().catch(() => {});
+  }
 }
 
 class Trf1PublicaProvider extends ConsultaProcessualProvider {
@@ -94,91 +175,81 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       await grid.waitFor({ state: 'visible', timeout: cfg.searchTimeoutMs });
 
       const extraction = await page.evaluate(() => {
-        const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
+        const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/;
         const DATE_TIME_RE = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}/;
+        const RESULTS_RE = /(\d+)\s+resultados? encontrados/i;
 
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-        const byId = (id) => document.querySelector(id);
+        const toAbsoluteUrl = (href) => {
+          if (!href) return null;
+          try {
+            return new URL(href, window.location.origin).href;
+          } catch (_err) {
+            return null;
+          }
+        };
 
-        const panel = byId('#fPP\\:processosGridPanel');
-        const panelBody = byId('#fPP\\:processosGridPanel_body');
-        const table = byId('#fPP\\:processosTable');
+        const panel = document.querySelector('#fPP\\:processosGridPanel');
+        const panelBody = document.querySelector('#fPP\\:processosGridPanel_body');
+        const table = document.querySelector('#fPP\\:processosTable');
+        const panelText = clean(panel?.innerText || panelBody?.innerText || table?.innerText || '');
 
-        const primaryRows = table
-          ? Array.from(table.querySelectorAll('tr')).filter((tr) => tr.querySelectorAll('td').length > 0)
-          : [];
+        const anchors = Array.from((table || panel || document).querySelectorAll('a[href]'));
+        const processAnchors = anchors.filter((anchor) => CNJ_RE.test(clean(anchor.textContent || '')))
+          .map((anchor) => ({ anchor, title: clean(anchor.textContent || '') }))
+          .filter((entry) => entry.title);
 
-        const fallbackRows = panel
-          ? Array.from(panel.querySelectorAll('tr')).filter((tr) => tr.querySelectorAll('td').length > 0)
-          : [];
+        const rawRows = processAnchors.map(({ anchor, title }, index) => {
+          const row = anchor.closest('tr') || anchor.closest('li') || anchor.closest('div') || anchor.parentElement;
+          const rowText = clean(row?.innerText || '');
+          const tds = row ? Array.from(row.querySelectorAll('td')) : [];
+          const processNumber = (title.match(CNJ_RE) || rowText.match(CNJ_RE) || [null])[0];
 
-        const processRows = (primaryRows.length ? primaryRows : fallbackRows)
-          .filter((tr) => !tr.querySelector('th'));
+          const classCell = clean(tds[1]?.innerText || '');
+          const partiesCell = clean(tds[3]?.innerText || '');
+          const movementCell = clean(tds[4]?.innerText || '');
 
-        const blocks = processRows.map((tr, index) => {
-          const tds = Array.from(tr.querySelectorAll('td'));
-          const detailsAnchor = tr.querySelector('a[href],button,[role="button"]');
-          const rowText = clean(tr.textContent || '');
-          const cnj = rowText.match(CNJ_RE)?.[0] || null;
+          const classLabelMatch = rowText.match(/Classe\s*:?\s*(.+?)(?:\s{2,}|Partes\s*:|Última\s+movimentaç[ãa]o\s*:|$)/i);
+          const partiesLabelMatch = rowText.match(/Partes\s*:?\s*(.+?)(?:\s{2,}|Última\s+movimentaç[ãa]o\s*:|$)/i);
+          const movementLabelMatch = rowText.match(/Última\s+movimentaç[ãa]o\s*:?\s*(.+?)$/i);
 
-          const movementRawByCell = clean(tds[4]?.textContent || '');
-          const movementRawByLabel = clean((rowText.match(/(?:última\s+movimentaç[aã]o\s*:?\s*)(.*)/i)?.[1] || ''));
-          const movementRaw = movementRawByCell || movementRawByLabel;
-          const movementDate = movementRaw.match(DATE_TIME_RE)?.[0] || rowText.match(DATE_TIME_RE)?.[0] || null;
+          const listLastMovementText = movementCell || clean(movementLabelMatch?.[1] || '');
+          const listMovementDate = (listLastMovementText.match(DATE_TIME_RE) || rowText.match(DATE_TIME_RE) || [null])[0];
+          const listMovement = clean(listLastMovementText.replace(DATE_TIME_RE, '').replace(/[()]/g, ' '));
 
           return {
             index,
-            processNumber: cnj,
-            processClass: clean(tds[1]?.textContent || ''),
-            subject: clean(tds[2]?.textContent || ''),
-            parties: clean(tds[3]?.textContent || ''),
-            lastMovement: clean(movementRaw.replace(DATE_TIME_RE, '').replace(/[()]/g, ' ')),
-            lastMovementAt: movementDate,
-            rawLastMovementText: movementRaw || null,
-            detailsUrl: detailsAnchor?.href || null,
+            processNumber,
+            processClass: classCell || clean(classLabelMatch?.[1] || ''),
+            processTitle: title,
+            parties: partiesCell || clean(partiesLabelMatch?.[1] || ''),
+            detailsUrl: toAbsoluteUrl(anchor.getAttribute('href')),
+            listLastMovementText: listLastMovementText || null,
+            listLastMovementAt: listMovementDate,
+            lastMovement: listMovement || null,
+            lastMovementAt: listMovementDate,
+            rawLastMovementText: listLastMovementText || null,
+            rawHtml: row?.innerHTML || '',
             rawText: rowText,
             providerMeta: {
               rowIndex: index,
-              domStrategy: primaryRows.length ? 'table-row' : 'panel-row-fallback',
+              domStrategy: row?.tagName ? row.tagName.toLowerCase() : 'unknown',
             },
           };
         });
 
-        const panelText = clean(panel?.textContent || panelBody?.textContent || table?.textContent || '');
-        const panelCnjs = Array.from(new Set(panelText.match(CNJ_RE) || []));
-        const detailsButtons = Array.from(document.querySelectorAll('a,button')).filter((el) =>
-          /VER DETALHES DO PROCESSO/i.test(clean(el.textContent || '')),
+        const uniqueRows = Array.from(
+          new Map(
+            rawRows
+              .filter((item) => item.processNumber && item.processTitle)
+              .map((item) => [item.processNumber, item]),
+          ).values(),
         );
 
-        const rawNodes = [];
-        const pushRawNode = (el, fallbackId) => {
-          if (!el) return;
-          const id = clean(el.id || fallbackId || '');
-          if (!id) return;
-          rawNodes.push({
-            id,
-            tagName: (el.tagName || '').toLowerCase(),
-            text: clean(el.textContent || ''),
-            html: el.innerHTML || '',
-          });
-        };
-
-        pushRawNode(panel, 'fPP:processosGridPanel');
-        pushRawNode(panelBody, 'fPP:processosGridPanel_body');
-        pushRawNode(table, 'fPP:processosTable');
-
-        if (panel) {
-          Array.from(panel.querySelectorAll('[id]')).forEach((el) => pushRawNode(el));
-        }
-        if (table) {
-          Array.from(table.querySelectorAll('[id]')).forEach((el) => pushRawNode(el));
-        }
-
-        const rawById = Array.from(new Map(rawNodes.map((node) => [node.id, node])).values());
+        const countedFromText = Number((panelText.match(RESULTS_RE) || [])[1] || NaN);
 
         return {
-          rows: blocks,
-          rawById,
+          rows: uniqueRows,
           debug: {
             html: {
               panel: panel?.innerHTML || '',
@@ -186,22 +257,46 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
               table: table?.innerHTML || '',
             },
             counts: {
-              detailsControls: detailsButtons.length,
-              tr: panel ? panel.querySelectorAll('tr').length : 0,
-              td: panel ? panel.querySelectorAll('td').length : 0,
-              cnjBlocks: panelCnjs.length,
-              processRows: processRows.length,
+              anchorsDetected: anchors.length,
+              processAnchorsDetected: processAnchors.length,
+              processRowsDetected: uniqueRows.length,
             },
             panelTextRaw: panelText,
-            panelCnjs,
+            countFromText: Number.isFinite(countedFromText) ? countedFromText : null,
+            detectedCnjs: uniqueRows.map((row) => row.processNumber).filter(Boolean),
+            detectedLinks: uniqueRows.map((row) => row.detailsUrl).filter(Boolean),
           },
         };
       });
 
-      const parsedItems = parseTrf1Rows(extraction.rows);
-      const rawItems = buildRawItemsFromExtraction(extraction);
-      const items = parsedItems.length ? parsedItems : rawItems;
-      const parsedCnjs = parsedItems.map((it) => it.processNumber).filter(Boolean);
+      const rowsWithDetails = [];
+      const detailsDebug = [];
+      for (const row of extraction.rows) {
+        const detail = await extractDetailMovement(context, row.detailsUrl, cfg.searchTimeoutMs);
+        rowsWithDetails.push({
+          ...row,
+          lastMovement: detail.lastMovement || row.lastMovement,
+          lastMovementAt: detail.lastMovementAt || row.lastMovementAt,
+          rawLastMovementText: detail.rawLastMovementText || row.rawLastMovementText,
+          providerMeta: {
+            ...(row.providerMeta || {}),
+            listLastMovementText: row.listLastMovementText || null,
+            listLastMovementAt: row.listLastMovementAt || null,
+            detailsExtracted: Boolean(detail.rawLastMovementText),
+          },
+        });
+
+        detailsDebug.push({
+          processNumber: row.processNumber,
+          detailsUrl: row.detailsUrl,
+          rawLastMovementText: detail.rawLastMovementText,
+          detailText: detail.debug?.detailText || '',
+          detailHtml: detail.debug?.detailHtml || '',
+        });
+      }
+
+      const items = parseTrf1Rows(rowsWithDetails);
+      const parsedCnjs = items.map((it) => it.processNumber).filter(Boolean);
 
       if (cfg.debug) {
         const debugBaseDir = path.resolve(process.cwd(), 'backend/tmp/consulta-processual-debug');
@@ -213,6 +308,15 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         saveDebugTextFile(`${prefix}-panel-body.html`, extraction.debug.html.panelBody);
         saveDebugTextFile(`${prefix}-table.html`, extraction.debug.html.table);
         saveDebugTextFile(`${prefix}-panel-text.txt`, extraction.debug.panelTextRaw);
+        saveDebugTextFile(`${prefix}-detected-links.json`, JSON.stringify(extraction.debug.detectedLinks, null, 2));
+        saveDebugTextFile(`${prefix}-detected-cnjs.json`, JSON.stringify(extraction.debug.detectedCnjs, null, 2));
+        saveDebugTextFile(`${prefix}-raw-rows.json`, JSON.stringify(extraction.rows, null, 2));
+        saveDebugTextFile(`${prefix}-rows-with-details.json`, JSON.stringify(rowsWithDetails, null, 2));
+
+        detailsDebug.forEach((entry, index) => {
+          saveDebugTextFile(`${prefix}-detail-${index + 1}.txt`, entry.detailText);
+          saveDebugTextFile(`${prefix}-detail-${index + 1}.html`, entry.detailHtml);
+        });
 
         log.info('ConsultaProcessualProviderDebug', {
           event: 'ConsultaProcessualProviderDebug',
@@ -222,30 +326,23 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           cpfMasked,
           debugArtifactsPrefix: prefix,
           ...extraction.debug.counts,
-          parsedItems: parsedItems.length,
-          rawItems: rawItems.length,
-          returnedItems: items.length,
+          parsedItems: items.length,
           parsedCnjs,
-          panelCnjs: extraction.debug.panelCnjs,
+          countFromText: extraction.debug.countFromText,
         });
       }
 
-      const countedFromText = extraction.debug.panelTextRaw.match(/(\d+)\s+resultados? encontrados/i);
-      if (countedFromText) {
-        const expectedCount = Number(countedFromText[1]);
-        if (Number.isFinite(expectedCount) && expectedCount !== items.length) {
-          log.warn('ConsultaProcessualProviderCountMismatch', {
-            event: 'ConsultaProcessualProviderCountMismatch',
-            requestId,
-            userId,
-            source: this.getId(),
-            cpfMasked,
-            expectedCount,
-            parsedCount: parsedItems.length,
-            returnedCount: items.length,
-            parsedCnjs,
-          });
-        }
+      if (Number.isFinite(extraction.debug.countFromText) && extraction.debug.countFromText !== items.length) {
+        log.warn('ConsultaProcessualProviderCountMismatch', {
+          event: 'ConsultaProcessualProviderCountMismatch',
+          requestId,
+          userId,
+          source: this.getId(),
+          cpfMasked,
+          expectedCount: extraction.debug.countFromText,
+          parsedCount: items.length,
+          parsedCnjs,
+        });
       }
 
       log.info('ConsultaProcessualProviderResult', {
@@ -254,7 +351,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         source: this.getId(),
         cpfMasked,
         blocksDetected: extraction.rows.length,
-        validItems: parsedItems.length,
+        validItems: items.length,
         returnedItems: items.length,
         cnjs: parsedCnjs,
         durationMs: Date.now() - startedAt,
