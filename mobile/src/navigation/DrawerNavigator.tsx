@@ -22,6 +22,7 @@ import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
 import PushDiagnosticScreen from '../screens/PushDiagnosticScreen';
 import RepasseScreen from '../screens/RepasseScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
+import ConsultaProcessualScreen from '../screens/ConsultaProcessualScreen';
 
 import CustomDrawerContent from './CustomDrawerContent';
 import DrawerItemLabel from '../components/DrawerItemLabel';
@@ -175,6 +176,18 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ATUALIZACOES} label="Atualizações" {...props} />,
         }}
       />
+
+
+      {ehDiretoriaUsuario && (
+        <Drawer.Screen
+          name="ConsultaProcessual"
+          component={ConsultaProcessualScreen}
+          options={{
+            title: 'Consulta Processual',
+            drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.CONSULTA_PROCESSUAL} label="Consulta Processual" {...props} />,
+          }}
+        />
+      )}
 
       {ehDiretoriaUsuario && (
         <Drawer.Screen
