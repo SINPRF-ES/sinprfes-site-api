@@ -84,3 +84,19 @@ test('parseTrf1Rows descarta item sem href com motivo explícito', () => {
   expect(discards).toHaveLength(1);
   expect(discards[0].reason).toBe('missing_href');
 });
+
+
+test('parseTrf1Rows remove sufixo técnico da classe e limpa ruído de movimentação', () => {
+  const items = parseTrf1Rows([
+    {
+      processTitle: 'CumSen 0003990-96.2012.4.01.3400 - Índice de 28,86% Lei 8.622/1993 e 8.627/1993',
+      processClass: 'CUMPRIMENTO DE SENTENÇA CumSen',
+      rawLastMovementText: '10/09/2025 14:27:38 - Conclusos para decisão Documentos do processo Paginação 1 de 10',
+      detailsUrl: 'https://trf1.test/detalhe1',
+    },
+  ]);
+
+  expect(items).toHaveLength(1);
+  expect(items[0].processClass).toBe('CUMPRIMENTO DE SENTENÇA');
+  expect(items[0].lastMovement).toBe('Conclusos para decisão');
+});
