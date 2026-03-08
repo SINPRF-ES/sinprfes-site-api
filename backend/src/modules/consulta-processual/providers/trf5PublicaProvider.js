@@ -97,9 +97,57 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
       await page.goto(this.getBaseUrl(), { waitUntil: 'domcontentloaded', timeout: cfg.initialLoadTimeoutMs });
 
-      // Qlik Sense is heavy. Use a very long fixed wait for the first live run in the sandbox
-      await page.waitForTimeout(25000);
-      logStep('TRF5_long_wait_completed');
+      // Qlik Sense is heavy. Wait for the loading indicator to disappear.
+      logStep('TRF5_waiting_for_hydration');
+
+      // Wait for preloaders to hide
+      await Promise.all([
+        page.waitForSelector('.qv-preload-icons', { state: 'hidden', timeout: 45000 }),
+        page.waitForSelector('.qv-loading-mask', { state: 'hidden', timeout: 45000 }),
+      ]).catch(() => {
+        warn('TRF5_preload_wait_timeout', { message: 'Qlik preload/loading mask did not disappear' });
+      });
+
+      // Strategy: for TRF5 BI, we must FORCE a very long wait in sandbox to ensure heavy dashboards hydrate
+      // BI dashboards often take 45-60s to be fully interactive in restricted environments.
+      await page.waitForTimeout(45000);
+
+      // Wait for actual Qlik objects to start appearing in ANY frame
+      logStep('TRF5_waiting_for_qlik_objects');
+      let qlikFound = false;
+      for (let i = 0; i < 30; i++) {
+        const frames = page.frames();
+        for (const frame of frames) {
+          if (frame.isDetached()) continue;
+          const hasQlik = await frame.evaluate(() =>
+            !!document.querySelector('.qv-object, .qv-input, .qv-button, .qui-input, .lui-input, .qv-object-content, [contenteditable="true"]')
+          ).catch(() => false);
+
+          if (hasQlik) {
+            const isReady = await frame.evaluate(() => {
+                const el = document.querySelector('.qv-object, .qv-input, .qui-input, .lui-input, .qv-object-content');
+                if (!el) return false;
+                const rect = el.getBoundingClientRect();
+                // A valid object should have some dimensions
+                return rect.width > 20 && rect.height > 10;
+            }).catch(() => false);
+
+            if (isReady) {
+                qlikFound = true;
+                break;
+            }
+          }
+        }
+        if (qlikFound) break;
+        await page.waitForTimeout(4000);
+      }
+
+      if (!qlikFound) warn('TRF5_qlik_objects_not_detected');
+
+      // Additional grace period for extension rendering
+      await page.waitForTimeout(10000);
+      logStep('TRF5_hydration_wait_completed');
+
       debugSummary.pageLoaded = true;
       await saveArtifact('01-home.png', page, 'screenshot');
       await saveArtifact('01-home.html', await page.content());
@@ -133,18 +181,46 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         ? page.frames()[diagnostics.documentFieldChosen.frameIndex]
         : page;
 
-      const field = frame.locator(diagnostics.documentFieldChosen.selector).first();
+      // Use a more resilient locator: if the chosen selector has an ID, use it. Otherwise try to find it again by role/class in that frame.
+      const chosen = diagnostics.documentFieldChosen;
+      let field;
+      if (chosen.id) {
+          const escapedId = chosen.id.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1');
+          field = frame.locator(`#${escapedId}`).first();
+      } else if (chosen.tag === 'input') {
+          field = frame.locator('input.lui-input, input.qv-input, input[type="text"]').first();
+      } else {
+          field = frame.locator(chosen.selector).first();
+      }
+
       await field.scrollIntoViewIfNeeded().catch(() => {});
-      await field.click({ force: true });
-      await field.fill('');
+
+      // Multi-stage input for Qlik
+      logStep('TRF5_interacting_with_field', { selector: chosen.selector });
+      await field.click({ force: true, timeout: 10000 }).catch((e) => {
+          warn('TRF5_field_click_failed', { error: e.message });
+      });
       await page.waitForTimeout(1000);
 
-      // Try multiple ways to fill/trigger input events
-      await field.type(documentToSearch, { delay: 150 });
-      await field.dispatchEvent('change').catch(() => {});
-      await field.dispatchEvent('blur').catch(() => {});
+      // Some Qlik fields are divs that become inputs on click. Re-check frame.
+      const fieldAfterClick = frame.locator('input.lui-input, input.qv-input, [contenteditable="true"], input').first();
 
-      const valAfter = await field.inputValue().catch(() => '') || '';
+      await fieldAfterClick.fill('').catch(() => {});
+      await page.keyboard.press('Control+a').catch(() => {});
+      await page.keyboard.press('Backspace').catch(() => {});
+
+      logStep('TRF5_typing_document', { documentToSearch });
+      await fieldAfterClick.type(documentToSearch, { delay: 120 });
+      await page.waitForTimeout(1000);
+
+      // Strategy: for Qlik, sometimes we need to blur or press Enter to commit the variable
+      await fieldAfterClick.dispatchEvent('change').catch(() => {});
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1000);
+      await page.keyboard.press('Tab');
+      await page.waitForTimeout(2000);
+
+      const valAfter = await fieldAfterClick.inputValue().catch(() => '') || '';
       debugSummary.maskedInputAccepted = valAfter.includes(documentToSearch.replace(/\D/g, '')) || valAfter === documentToSearch;
 
       // Capture baseline before search
@@ -205,8 +281,8 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
           try { return new URL(href, window.location.origin).href; } catch (_e) { return null; }
         };
 
-        const rows = Array.from(document.querySelectorAll('table tr, .rich-table-row, .rf-dt-r, .datagrid-row, .ui-datatable tr, .v-grid-row, .v-table-row, .portal-bi-row, .search-result-item'));
-        const parsedRows = rows
+        const rowNodes = Array.from(document.querySelectorAll('table tr, .rich-table-row, .rf-dt-r, .datagrid-row, .ui-datatable tr, .v-grid-row, .v-table-row, .portal-bi-row, .search-result-item, .qv-st-data-grid-container tr, .qv-object-table tr, [role="row"]'));
+        let parsedRows = rowNodes
           .map((row, index) => {
             const text = clean(row.textContent || '');
             const processNumber = text.match(cnjRegex)?.[0] || null;
@@ -226,6 +302,22 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
           .filter(Boolean);
 
         const bodyText = clean(document.body?.innerText || '');
+
+        // Fallback for Qlik BI: if no rows detected but CNJs exist in body, create pseudo-rows
+        if (parsedRows.length === 0) {
+            const allCnjs = bodyText.match(cnjRegex) || [];
+            const uniqueCnjs = Array.from(new Set(allCnjs));
+            parsedRows = uniqueCnjs.map((cnj, index) => ({
+                index,
+                processNumber: cnj,
+                processTitle: cnj,
+                parties: 'Identificado via busca textual (BI)',
+                listLastMovementText: bodyText.slice(0, 500),
+                detailsUrl: null,
+                rawText: bodyText.slice(0, 1000)
+            }));
+        }
+
         const resultsMatch = bodyText.match(/(\d+)\s+(processos?|resultados?|itens?)/i);
         return {
           bodyTextSample: bodyText.slice(0, 1200),
@@ -235,12 +327,12 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         };
       });
 
-      debugSummary.realResultLoaded = extraction.cnjMatchesFound > 0 || extraction.rows.length > 0;
-      debugSummary.declaredResultsCount = extraction.declaredResultsCount;
-      debugSummary.cnjMatchesFound = extraction.cnjMatchesFound;
-      debugSummary.rawBlocksFound = extraction.rows.length;
+      debugSummary.realResultLoaded = extraction.cnjMatchesFound > 0 || (extraction.rows && extraction.rows.length > 0);
+      debugSummary.declaredResultsCount = extraction.declaredResultsCount || 0;
+      debugSummary.cnjMatchesFound = extraction.cnjMatchesFound || 0;
+      debugSummary.rawBlocksFound = extraction.rows?.length || 0;
 
-      const items = extraction.rows.map((row) => normalizeItem({
+      const items = (extraction.rows || []).map((row) => normalizeItem({
         source: this.getId(),
         sourceLabel: this.getLabel(),
         processNumber: row.processNumber,
@@ -294,22 +386,22 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         const text = clean(root?.innerText || '');
 
         // Look for loading states
-        const hasLoadingIndicator = !!document.querySelector('.qv-loader, .loading, .busy, [aria-busy="true"]');
+        const hasLoadingIndicator = !!document.querySelector('.qv-loader, .loading, .busy, [aria-busy="true"], .qv-loading-mask, .single-load-indicator');
 
         return {
           changed: text !== clean(previousText || ''),
-          hasResultsText: /(resultados? encontrados|processo|última movimentação|partes)/i.test(text),
+          hasResultsText: /(resultados? encontrados|processo|última movimentação|partes|movimentaç)/i.test(text),
           cnjMatches: (text.match(cnjRegex) || []).length || 0,
           hasLoadingIndicator,
-          hasTableRows: !!root.querySelector('tr, .v-grid-row, .qv-object-table'),
+          hasTableRows: !!root.querySelector('tr, .v-grid-row, .qv-object-table, .qv-st-data-grid-container'),
         };
       }, { selector: resultsContainerSelector, previousText: initial });
 
       const waitConditionMatched =
         (snapshot.cnjMatches > baselineCnjCount && 'cnj_increased')
         || (snapshot.cnjMatches > 0 && baselineCnjCount === 0 && 'cnj_detected')
+        || (snapshot.hasTableRows && 'table_rows_detected')
         || (snapshot.hasResultsText && snapshot.changed && 'results_text_changed')
-        || (snapshot.hasTableRows && snapshot.changed && 'table_rows_detected')
         || null;
 
       lastSnapshot = snapshot;
@@ -317,24 +409,37 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         return { waitConditionMatched, elapsedMs: Date.now() - startedAt, snapshot };
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1000);
     }
     return { waitConditionMatched: 'timeout_without_clear_results', elapsedMs: Date.now() - startedAt, snapshot: lastSnapshot };
   }
 
   async collectDomDiagnostics(page) {
-    const frames = page.frames();
+    // page.frames() returns all frames including nested ones
+    const frames = Array.from(page.frames() || []);
     const allElements = [];
 
     for (let i = 0; i < frames.length; i += 1) {
       const frame = frames[i];
       try {
-        const frameElements = await frame.evaluate((index) => {
+        // Ensure frame is still attached and accessible
+        if (frame.isDetached()) continue;
+        const url = frame.url();
+        const name = frame.name();
+
+        const frameElements = await frame.evaluate(({ index, url, name }) => {
           const TAGS = ['input', 'button', 'select', 'textarea', 'form', 'a', 'div', 'span'];
           const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+          const toAbs = (href) => {
+              if (!href) return null;
+              try { return new URL(href, window.location.origin).href; } catch (_e) { return null; }
+          };
           const cssPath = (el) => {
             if (!el || el.nodeType !== 1) return null;
-            if (el.id) return `#${CSS.escape(el.id)}`;
+            if (el.id) {
+                const escaped = el.id.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1');
+                return `#${escaped}`;
+            }
             const parts = [];
             let node = el;
             while (node && node.nodeType === 1 && parts.length < 5) {
@@ -370,9 +475,11 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
               found.push(...Array.from(root.querySelectorAll(tag)));
             });
             // Also grab elements with suggestive roles or classes directly
-            found.push(...Array.from(root.querySelectorAll('[role="textbox"], [role="button"], [role="link"], .qv-input, .qv-button, .qv-object-filterpane')));
+            found.push(...Array.from(root.querySelectorAll('[role="textbox"], [role="button"], [role="link"], [contenteditable="true"], .qv-input, .qv-button, .qv-object-filterpane, .lui-input, .lui-button')));
 
-            const allInRoot = Array.from(root.querySelectorAll('*'));
+            // Walk standard DOM but exclude script/style
+            const allInRoot = Array.from(root.querySelectorAll('*')).filter(el => !['SCRIPT', 'STYLE'].includes(el.tagName));
+
             allInRoot.forEach(el => {
               if (el.shadowRoot) {
                 found.push(...getAllElements(el.shadowRoot, tags));
@@ -383,6 +490,16 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
           const tagsToCollect = TAGS;
           const allElementsRaw = getAllElements(document, tagsToCollect);
+
+          if (allElementsRaw.length === 0) {
+              return [{
+                  tag: 'diagnostic',
+                  text: `Frame ${index} empty: ${url} (${name})`,
+                  visible: false,
+                  frameIndex: index,
+                  url
+              }];
+          }
 
           const all = allElementsRaw.map((el) => {
             const tag = String(el.tagName || '').toLowerCase();
@@ -395,10 +512,25 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
               return null;
             }
 
-            const label = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null;
+            const label = el.id ? document.querySelector(`label[for="${el.id.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')}"]`) : null;
+
+            // For Qlik, the context text is often many levels up. Walk up to 7 levels.
+            let contextText = '';
+            let current = el.parentElement;
+            for (let j = 0; j < 7 && current; j++) {
+                const t = clean(current.innerText || '');
+                if (t.length > contextText.length) contextText = t;
+                current = current.parentElement;
+            }
+
             const parentText = clean(el.parentElement?.innerText || '').slice(0, 180);
             const gpText = clean(el.parentElement?.parentElement?.innerText || '').slice(0, 220);
             const bb = el.getBoundingClientRect();
+
+            // Experimental: deep scan for frames/shadows in standard collection
+            let innerFrameUrl = null;
+            if (tag === 'iframe' || tag === 'frame') innerFrameUrl = el.getAttribute('src');
+
             return {
               tag,
               type: (el.getAttribute('type') || '').toLowerCase(),
@@ -414,16 +546,21 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
               labelText: clean(label?.textContent || ''),
               parentText,
               grandParentText: gpText,
+              contextText: contextText.slice(0, 500),
               visible: isVisible(el),
               formId: el.form?.id || null,
               selector: cssPath(el),
               bbox: { x: Math.round(bb.x), y: Math.round(bb.y), width: Math.round(bb.width), height: Math.round(bb.height) },
               frameIndex: index,
+              innerFrameUrl: innerFrameUrl ? toAbs(innerFrameUrl) : null,
+              hasShadowRoot: !!el.shadowRoot
             };
           });
           return all.filter(Boolean);
-        }, i === 0 ? null : i);
-        allElements.push(...frameElements);
+        }, { index: i === 0 ? null : i, url, name });
+        if (Array.isArray(frameElements)) {
+            allElements.push(...frameElements);
+        }
       } catch (err) {
         log.warn('Trf5DiagnosticsFrameError', { frameIndex: i, error: err.message });
       }
@@ -463,17 +600,23 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         const type = String(el.type || '').toLowerCase();
         const role = String(el.role || '').toLowerCase();
         const cls = String(el.className || '').toLowerCase();
-        return (tag === 'input' && ['text', 'search', 'tel', ''].includes(type)) || role === 'textbox' || cls.includes('qv-input') || cls.includes('lui-input');
+        const isInputLike = (tag === 'input' && ['text', 'search', 'tel', ''].includes(type)) || role === 'textbox' || cls.includes('qv-input') || cls.includes('lui-input');
+        const isSuggestiveDiv = (tag === 'div' || tag === 'span') && (cls.includes('search') || cls.includes('input') || cls.includes('qv-') || cls.includes('lui-')) && !cls.includes('loader') && !cls.includes('preload');
+        const isPreloadNoise = (cls.includes('preload') || cls.includes('loader')) && (cls.includes('icon') || cls.includes('font') || tag === 'div');
+        const isContainerNoise = (tag === 'div' || tag === 'span') && (cls.includes('wrapper') || cls.includes('inner') || cls.includes('content') || cls.includes('container') || cls.includes('blocker') || cls.includes('object') || cls.includes('article'));
+        return (isInputLike || isSuggestiveDiv) && !isPreloadNoise && !isContainerNoise;
       })
       .map((el) => {
         const reason = [];
         let score = 0;
         const cls = String(el.className || '');
-        const hay = `${el.id} ${el.name} ${el.placeholder} ${el.title} ${el.ariaLabel} ${el.labelText} ${el.parentText} ${el.grandParentText} ${cls}`.toLowerCase();
+        const tag = String(el.tag || '').toLowerCase();
+        const hay = `${el.id} ${el.name} ${el.placeholder} ${el.title} ${el.ariaLabel} ${el.labelText} ${el.parentText} ${el.grandParentText} ${el.contextText} ${cls}`.toLowerCase();
         if (el.visible) { score += 25; reason.push('visible_input'); }
-        if (/cpf\/?cnpj|cpf|cnpj/.test(hay)) { score += 45; reason.push('contains_cpf_cnpj_keywords'); }
-        if (/documento|parte|contribuinte/.test(hay)) { score += 20; reason.push('document_context'); }
-        if (cls.includes('qv-') || cls.includes('lui-')) { score += 15; reason.push('qlik_ui_classes'); }
+        if (tag === 'input' || el.role === 'textbox') { score += 120; reason.push('semantic_input'); }
+        if (cls.includes('lui-input') || cls.includes('qv-input') || cls.includes('qui-input')) { score += 80; reason.push('qlik_input_class'); }
+        if (/cpf\/?cnpj|cpf|cnpj/.test(hay)) { score += 60; reason.push('contains_cpf_cnpj_keywords'); }
+        if (/documento|parte|contribuinte/.test(hay)) { score += 25; reason.push('document_context'); }
         if (/documento|cpf|cnpj|num/.test((el.name || '').toLowerCase()) || /documento|cpf|cnpj|num/.test((el.id || '').toLowerCase())) {
           score += 15; reason.push('id_name_suggestive');
         }
@@ -493,12 +636,13 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         const reason = [];
         let score = 0;
         const cls = String(el.className || '');
-        const text = `${el.text} ${el.valueMasked} ${el.labelText} ${el.name} ${el.id} ${el.parentText} ${el.ariaLabel} ${el.title} ${cls}`.toLowerCase();
+        const tag = String(el.tag || '').toLowerCase();
+        const text = `${el.text} ${el.valueMasked} ${el.labelText} ${el.name} ${el.id} ${el.parentText} ${el.ariaLabel} ${el.title} ${el.contextText} ${cls}`.toLowerCase();
         if (el.visible) { score += 20; reason.push('visible'); }
-        if (/(pesquisar|consultar|buscar|visualizar|filtrar|aplicar)/i.test(text)) { score += 45; reason.push('search_text'); }
+        if (/(pesquisar|consultar|buscar|visualizar|filtrar|aplicar|confirmar|confirm)/i.test(text)) { score += 60; reason.push('search_text'); }
         if (el.tag === 'input' && ['submit', 'button'].includes(el.type)) { score += 15; reason.push('submit_type'); }
-        if (el.tag === 'button' || el.role === 'button') { score += 15; reason.push('button_like'); }
-        if (cls.includes('qv-') || cls.includes('lui-')) { score += 10; reason.push('qlik_ui_classes'); }
+        if (tag === 'button' || el.role === 'button' || cls.includes('button') || cls.includes('lui-button')) { score += 120; reason.push('button_like'); }
+        if (cls.includes('qv-') || cls.includes('lui-')) { score += 20; reason.push('qlik_ui_classes'); }
         if (docY && Math.abs((el.bbox?.y || 0) - docY) < 260) { score += 10; reason.push('near_document_field'); }
         return { ...el, score, reason };
       })
@@ -508,17 +652,19 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
   }
 
   async detectResultsContainers(page) {
-    const frames = page.frames();
+    const frames = Array.from(page.frames() || []);
     const allCandidates = [];
 
     for (let i = 0; i < frames.length; i += 1) {
       const frame = frames[i];
       try {
-        const frameCandidates = await frame.evaluate((index) => {
+        if (frame.isDetached()) continue;
+        const frameUrl = frame.url();
+        const frameCandidates = await frame.evaluate(({ index, url }) => {
       const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
       const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
       const cssPath = (el) => {
-        if (el.id) return `#${CSS.escape(el.id)}`;
+        if (el.id) return `#${el.id.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')}`;
         let node = el;
         const parts = [];
         while (node && node.nodeType === 1 && parts.length < 4) {
@@ -545,8 +691,10 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
               frameIndex: index,
             };
           });
-        }, i === 0 ? null : i);
-        allCandidates.push(...frameCandidates);
+        }, { index: i === 0 ? null : i, url: frameUrl });
+        if (Array.isArray(frameCandidates)) {
+            allCandidates.push(...frameCandidates);
+        }
       } catch (err) {
         log.warn('Trf5DetectResultsContainersFrameError', { frameIndex: i, error: err.message });
       }
@@ -560,8 +708,8 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         const hay = `${el.id} ${cls} ${el.textSample}`.toLowerCase();
         if (/(resultado|processo|movimentaç|parte|grid|table|corpo-tabela)/.test(hay)) { score += 30; reason.push('results_keyword'); }
         if (el.hasTableRows > 1) { score += 20; reason.push('table_like'); }
-        if (el.cnjMatchesFound > 0) { score += 45; reason.push('cnj_match'); }
-        if (cls.includes('qv-object-table') || cls.includes('v-grid')) { score += 25; reason.push('qlik_grid_class'); }
+        if (el.cnjMatchesFound > 0) { score += 60; reason.push('cnj_match'); }
+        if (cls.includes('qv-object-table') || cls.includes('v-grid') || cls.includes('data-grid')) { score += 40; reason.push('qlik_grid_class'); }
         if (el.id && /(grid|result|process|table)/.test(el.id.toLowerCase())) { score += 10; reason.push('id_hint'); }
         return { ...el, score, reason };
       })
