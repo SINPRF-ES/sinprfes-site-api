@@ -20,6 +20,7 @@ export const EMOJI = {
   RELATORIOS: "📊",
   CONSULTA_PROCESSUAL: "⚖️",
   NOTIFICACOES: "📢",
+  ENQUETES: "🗨️",
   NOVO_FILIADO: "👤",
   FECHAR_APP: "🔒",
   SAIR: "🚪",
