@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "build": "mkdir -p public/shared && cp -R ../shared/* public/shared/ || true",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:layout": "node scripts/check-public-layout-contract.js"
   },
   "dependencies": {
     "express": "^4.21.0",

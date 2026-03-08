@@ -17,14 +17,14 @@
   <style>
     /* --- Identidade Visual: Azul, Amarelo e Branco --- */
     
-    body { background-color: #f4f6f9; }
+    body { background-color: var(--ui-bg); }
 
     .page-header-gradient {
-        background: #003366; 
+        background: var(--ui-primary); 
         color: #fff; 
         padding: 45px 20px; 
         text-align: center; 
-        border-bottom: 6px solid #ffc107; 
+        border-bottom: 6px solid var(--ui-secondary); 
         margin-bottom: 40px; 
         box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
@@ -37,7 +37,7 @@
         letter-spacing: 1px;
     }
     .page-header-gradient p { 
-        color: #ffc107; 
+        color: var(--ui-secondary); 
         margin-top: 10px; 
         font-size: 1.2rem; 
         font-weight: 500;
@@ -52,12 +52,12 @@
         padding: 35px; 
         margin-bottom: 25px; 
         border: 1px solid #e0e0e0;
-        border-top: 4px solid #003366; 
+        border-top: 4px solid var(--ui-primary); 
         max-width: 1000px; margin-left: auto; margin-right: auto;
     }
 
     .section-title {
-        color: #003366; 
+        color: var(--ui-primary); 
         font-size: 1.4rem; 
         font-weight: 800; 
         border-bottom: 2px solid #ffc107; 
@@ -84,7 +84,7 @@
     }
 
     .form-group input:focus, .form-group select:focus { 
-        border-color: #003366; 
+        border-color: var(--ui-primary); 
         outline: none; 
         background-color: #f0f7ff !important; 
         color: #000 !important;
@@ -98,8 +98,8 @@
     }
     
     .btn-primary {
-        background: #003366; 
-        color: #ffc107; 
+        background: var(--ui-primary); 
+        color: var(--ui-secondary); 
         border: 2px solid #003366;
         padding: 16px 40px;
         font-size: 1.2rem; 
@@ -120,14 +120,14 @@
     .btn-outline {
         background: #fff; 
         border: 2px solid #003366; 
-        color: #003366; 
+        color: var(--ui-primary); 
         padding: 0 20px; 
         cursor: pointer; 
         font-weight: bold;
         border-radius: 0 4px 4px 0;
         transition: all 0.2s;
     }
-    .btn-outline:hover { background: #003366; color: #fff; }
+    .btn-outline:hover { background: var(--ui-primary); color: #fff; }
     
     .status-msg { margin-top: 20px; padding: 20px; border-radius: 6px; text-align: center; display: none; font-weight: bold; font-size: 1.1rem; }
     .status-success { background: #d4edda; color: #155724; border-left: 5px solid #28a745; }
@@ -156,11 +156,11 @@
         margin-top: 4px; 
         transform: scale(1.2); 
         cursor: pointer; 
-        accent-color: #003366; /* Cor do check nativo */
+        accent-color: var(--ui-primary); /* Cor do check nativo */
     }
     .checkbox-wrapper:hover { 
         background-color: #e9ecef !important; /* Cinza um pouco mais escuro no hover */
-        border-color: #003366; 
+        border-color: var(--ui-primary); 
     }
 
     /* ===============================
@@ -211,6 +211,7 @@
 
   <script src="/js/utils.js" defer></script>
   <script src="/shared/canon.js" defer></script>
+  <script src="/js/main.js" defer></script>
   <script src="/js/filiese.js" defer></script>
 </head>
 <body>
