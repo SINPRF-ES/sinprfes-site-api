@@ -8,6 +8,7 @@ jest.mock('../middlewares/auth', () => (req, _res, next) => {
 
 jest.mock('../modules/consulta-processual/controller/consultaProcessual.controller', () => ({
   consultarMe: (_req, res) => res.json({ ok: true }),
+  consultarDebugMe: (_req, res) => res.json({ ok: true, debug: true }),
 }));
 
 const router = require('./consultaProcessual.routes');
@@ -31,5 +32,14 @@ describe('consultaProcessual.routes authorization', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
+  });
+
+  test('permite rota debug para DIRETORIA', async () => {
+    const res = await request(app)
+      .get('/api/consulta-processual/debug/me')
+      .set('x-test-perfil', 'DIRETORIA');
+
+    expect(res.status).toBe(200);
+    expect(res.body.debug).toBe(true);
   });
 });

@@ -23,6 +23,63 @@ function setCacheEntry(key, value, ttlMs) {
   cache.set(key, { value, createdAt: Date.now(), expiresAt: Date.now() + ttlMs });
 }
 
+function buildDebugReport({ sources = [], requestId, queriedAt }) {
+  const timeline = [];
+  const sourceReports = (sources || []).map((source) => {
+    const steps = source?.debugData?.steps || [];
+    const warnings = source?.debugData?.warnings || [];
+    const artifacts = source?.debugData?.artifacts || [];
+
+    steps.forEach((step, index) => timeline.push({ type: 'step', source: source.source, index, ...step }));
+    warnings.forEach((warning, index) => timeline.push({ type: 'warning', source: source.source, index, ...warning }));
+
+    return {
+      source: source.source,
+      status: source.status,
+      count: source.count || 0,
+      failureStage: source?.debugSummary?.failureStage || null,
+      metrics: {
+        pageLoaded: Boolean(source?.debugSummary?.pageLoaded),
+        cpfFieldFound: Boolean(source?.debugSummary?.cpfFieldFound),
+        searchTriggered: Boolean(source?.debugSummary?.searchTriggered),
+        resultsContainerFound: Boolean(source?.debugSummary?.resultsContainerFound),
+        resultsTextDetected: Boolean(source?.debugSummary?.resultsTextDetected),
+        declaredResultsCount: Number(source?.debugSummary?.declaredResultsCount || 0),
+        linksFound: Number(source?.debugSummary?.linksFound || 0),
+        cnjMatchesFound: Number(source?.debugSummary?.cnjMatchesFound || 0),
+        rawBlocksFound: Number(source?.debugSummary?.rawBlocksFound || 0),
+        normalizedItemsCount: Number(source?.debugSummary?.normalizedItemsCount || 0),
+        detailPagesOpened: Number(source?.debugSummary?.detailPagesOpened || 0),
+      },
+      domInspection: source?.debugData?.domInspection || null,
+      discardReasons: source?.debugData?.discardReasons || {},
+      warningsCount: warnings.length,
+      artifactsCount: artifacts.length,
+      artifacts,
+    };
+  });
+
+  timeline.sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+
+  const firstFailure = sourceReports.find((s) => s.failureStage)?.failureStage || null;
+  const likelyFailureStage =
+    firstFailure
+    || (sourceReports.some((s) => s.metrics.searchTriggered && !s.metrics.resultsContainerFound) ? 'results_dom' : null)
+    || (sourceReports.some((s) => s.metrics.rawBlocksFound > 0 && s.metrics.normalizedItemsCount === 0) ? 'normalization' : null)
+    || null;
+
+  return {
+    requestId,
+    queriedAt,
+    timeline,
+    sourceReports,
+    likelyFailureStage,
+    export: {
+      jsonFileName: `consulta-processual-debug-${requestId || Date.now()}.json`,
+    },
+  };
+}
+
 async function obterUsuarioPorId(id) {
   const { rows } = await pool.query(
     'SELECT id, nome, cpf, perfil_acesso FROM filiados WHERE id = $1 LIMIT 1',
@@ -124,6 +181,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
   lastRunByUser.set(userId, Date.now());
 
   const totalItems = sources.reduce((sum, s) => sum + (Array.isArray(s.items) ? s.items.length : 0), 0);
+  const queriedAt = new Date().toISOString();
 
   log.info('ConsultaProcessualFinish', {
     requestId,
@@ -133,17 +191,23 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
     totalItems,
   });
 
-  return {
+  const payload = {
     ok: true,
-    queriedAt: new Date().toISOString(),
+    queriedAt,
     cpfMasked,
     sources,
     totalItems,
     errors,
   };
+
+  if (isDebug) {
+    payload.debugReport = buildDebugReport({ sources, requestId, queriedAt });
+  }
+
+  return payload;
 }
 
 module.exports = {
   consultarPorUsuarioLogado,
-  __testables: { getCacheEntry, setCacheEntry, cache, inFlight, lastRunByUser },
+  __testables: { getCacheEntry, setCacheEntry, cache, inFlight, lastRunByUser, buildDebugReport },
 };
