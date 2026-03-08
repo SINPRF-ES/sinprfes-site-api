@@ -26,6 +26,7 @@ function createSourceResult({
   cached = false,
   cacheAgeSeconds = null,
   debugSummary = null,
+  debugData = null,
 }) {
   const normalizedItems = Array.isArray(items) ? items.map(normalizeItem) : [];
   return {
@@ -38,6 +39,7 @@ function createSourceResult({
     ...(cached ? { cached: true } : {}),
     ...(Number.isFinite(cacheAgeSeconds) ? { cacheAgeSeconds } : {}),
     ...(debugSummary ? { debugSummary } : {}),
+    ...(debugData ? { debugData } : {}),
   };
 }
 

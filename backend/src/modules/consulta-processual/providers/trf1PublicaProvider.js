@@ -40,6 +40,13 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     };
 
     const debugBaseDir = path.resolve(process.cwd(), 'backend/tmp/consulta-processual/trf1', requestId || 'no-request');
+    const debugData = isDebug ? {
+      steps: [],
+      warnings: [],
+      artifacts: [],
+      domInspection: null,
+      discardReasons: {},
+    } : null;
     if (isDebug) debugSummary.artifactsBaseDir = debugBaseDir;
 
     const saveArtifact = async (name, content, type = 'text') => {
@@ -52,14 +59,16 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         } else {
           fs.writeFileSync(filePath, String(content || ''), 'utf8');
         }
-        log.info('ConsultaProcessualDebugArtifact', {
+        const artifactPayload = {
           event: 'ConsultaProcessualDebugArtifact',
           requestId,
           userId,
           source: this.getId(),
           artifact: name,
           path: filePath,
-        });
+        };
+        if (debugData) debugData.artifacts.push({ name, path: filePath });
+        log.info('ConsultaProcessualDebugArtifact', artifactPayload);
       } catch (err) {
         log.warn('ConsultaProcessualDebugArtifactFailed', {
           event: 'ConsultaProcessualDebugArtifactFailed',
@@ -73,7 +82,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     };
 
     const logStep = (step, extra = {}) => {
-      log.info('ConsultaProcessualDebugStep', {
+      const payload = {
         event: 'ConsultaProcessualDebugStep',
         step,
         requestId,
@@ -81,7 +90,23 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         source: this.getId(),
         cpfMasked,
         ...extra,
-      });
+      };
+      if (debugData) debugData.steps.push(payload);
+      log.info('ConsultaProcessualDebugStep', payload);
+    };
+
+    const logWarning = (step, extra = {}) => {
+      const payload = {
+        event: 'ConsultaProcessualDebugWarning',
+        step,
+        requestId,
+        userId,
+        source: this.getId(),
+        cpfMasked,
+        ...extra,
+      };
+      if (debugData) debugData.warnings.push(payload);
+      log.info('ConsultaProcessualDebugWarning', payload);
     };
 
     const logWarning = (step, extra = {}) => {
@@ -322,6 +347,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       });
 
       const domInspection = inspectResultsDom(extraction);
+      if (debugData) debugData.domInspection = domInspection;
       debugSummary.resultsContainerFound = Boolean(domInspection.hasGridPanel || domInspection.hasGridPanelBody || domInspection.hasProcessTable);
       debugSummary.resultsTextDetected = domInspection.declaredResultsTextDetected;
       debugSummary.declaredResultsCount = domInspection.declaredResultsCount;
@@ -438,6 +464,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         logWarning('normalize_item_rejected', warning);
       });
       debugSummary.normalizedItemsCount = items.length;
+      if (debugData) debugData.discardReasons = discardReasons;
       logStep('G_normalization_end', {
         rawItemsCount: rawRowsWithDetails.length,
         normalizedItemsCount: items.length,
@@ -467,6 +494,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         status: 'success',
         items,
         debugSummary,
+        debugData,
       });
     } catch (err) {
       if (!debugSummary.failureStage) debugSummary.failureStage = 'exception';
@@ -486,6 +514,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         status: 'error',
         items: [],
         debugSummary,
+        debugData,
         error: { code: 'PROVIDER_ERROR', message: err.message },
       });
     } finally {
