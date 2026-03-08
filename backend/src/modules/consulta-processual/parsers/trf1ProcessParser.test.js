@@ -16,18 +16,19 @@ describe('trf1ProcessParser', () => {
     expect(isValidProcessNumber('0003990-96.2012.4.01.3400')).toBe(true);
   });
 
-  test('parseTrf1Rows normaliza estrutura mínima e remove entradas inválidas', () => {
+  test('parseTrf1Rows normaliza estrutura e usa última movimentação do detalhe', () => {
     const items = parseTrf1Rows([
       {
         processNumber: 'resultados encontrados',
         processClass: 'Linha inválida',
       },
       {
-        processNumber: '0003990-96.2012.4.01.3400',
+        processTitle: 'CumSen 0003990-96.2012.4.01.3400 - Índice de 28,86% Lei 8.622/1993 e 8.627/1993',
         processClass: 'Cumprimento de Sentença',
         parties: 'AUTOR X RÉU',
         lastMovement: 'Conclusos para decisão',
-        lastMovementText: 'Conclusos para decisão (10/09/2025 14:27:38)',
+        rawLastMovementText: '10/09/2025 14:27:38 - Conclusos para decisão',
+        listLastMovementText: 'Conclusos para decisão (10/09/2025 14:27:38)',
       },
     ]);
 
@@ -37,9 +38,11 @@ describe('trf1ProcessParser', () => {
       sourceLabel: 'TRF1',
       processNumber: '0003990-96.2012.4.01.3400',
       processClass: 'Cumprimento de Sentença',
+      processTitle: 'CumSen 0003990-96.2012.4.01.3400 - Índice de 28,86% Lei 8.622/1993 e 8.627/1993',
       parties: 'AUTOR X RÉU',
       lastMovement: 'Conclusos para decisão',
-      rawLastMovementText: 'Conclusos para decisão (10/09/2025 14:27:38)',
+      rawLastMovementText: '10/09/2025 14:27:38 - Conclusos para decisão',
+      listLastMovementText: 'Conclusos para decisão (10/09/2025 14:27:38)',
       lastMovementAt: '2025-09-10T14:27:38.000Z',
     });
   });

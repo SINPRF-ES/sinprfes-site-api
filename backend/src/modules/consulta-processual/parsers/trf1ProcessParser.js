@@ -30,24 +30,32 @@ function parseBrazilDateToIso(text) {
   return Number.isNaN(dt.getTime()) ? null : dt.toISOString();
 }
 
+function parseMovementDescription(text) {
+  return cleanText(String(text || '').replace(DATE_TIME_RE, '').replace(/^[()\-–—\s]+/, '').replace(/[()]+$/, ''));
+}
+
 function parseTrf1Rows(rows = []) {
   if (!Array.isArray(rows)) return [];
 
   return rows.map((row = {}) => {
-    const processNumber = extractCnj(row.processNumber || row.rawText || '');
-    const movimentoTexto = row.lastMovementText || row.rawLastMovementText || '';
-    const movimentoData = row.lastMovementAt || parseBrazilDateToIso(movimentoTexto);
+    const processNumber = extractCnj(row.processNumber || row.processTitle || row.rawText || '');
+    const movementText = row.rawLastMovementText || row.listLastMovementText || row.lastMovementText || '';
+    const movementAtRaw = row.lastMovementAt || row.listLastMovementAt || movementText;
+    const movementAtIso = parseBrazilDateToIso(movementAtRaw);
 
     return normalizeItem({
       source: 'trf1',
       sourceLabel: 'TRF1',
       processNumber,
       processClass: cleanText(row.processClass) || null,
+      processTitle: cleanText(row.processTitle) || null,
       subject: cleanText(row.subject) || null,
       parties: cleanText(row.parties) || null,
-      lastMovement: cleanText(row.lastMovement) || cleanText(movimentoTexto) || null,
-      lastMovementAt: movimentoData,
-      rawLastMovementText: cleanText(movimentoTexto) || null,
+      lastMovement: cleanText(row.lastMovement) || parseMovementDescription(movementText) || null,
+      lastMovementAt: movementAtIso || cleanText(row.lastMovementAt) || null,
+      rawLastMovementText: cleanText(movementText) || null,
+      listLastMovementText: cleanText(row.listLastMovementText) || null,
+      listLastMovementAt: parseBrazilDateToIso(row.listLastMovementAt || row.listLastMovementText || '') || cleanText(row.listLastMovementAt) || null,
       detailsUrl: row.detailsUrl || null,
       providerMeta: row.providerMeta || {},
     });
