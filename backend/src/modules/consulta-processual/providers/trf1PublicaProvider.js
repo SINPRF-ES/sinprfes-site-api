@@ -109,6 +109,18 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       log.info('ConsultaProcessualDebugWarning', payload);
     };
 
+    const logWarning = (step, extra = {}) => {
+      log.info('ConsultaProcessualDebugWarning', {
+        event: 'ConsultaProcessualDebugWarning',
+        step,
+        requestId,
+        userId,
+        source: this.getId(),
+        cpfMasked,
+        ...extra,
+      });
+    };
+
     let browser;
     try {
       const stepAStartedAt = Date.now();
