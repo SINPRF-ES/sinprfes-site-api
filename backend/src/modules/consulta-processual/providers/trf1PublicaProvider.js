@@ -211,6 +211,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         inputDigitsCount: finalInputState.digitsCount,
         inputOnlyDigits: finalInputState.onlyDigits,
         inputValueLength: finalInputState.length,
+        inputOnlyDigitsMasked: this.maskFieldValue(finalInputState.onlyDigits),
         eventsDispatched: ['check', 'focus', 'clear', 'type'],
         durationMs: Date.now() - stepCStartedAt,
       });
@@ -222,7 +223,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           reason: 'CPF input does not contain 11 digits before submit',
           inputDigitsCount: finalInputState.digitsCount,
           inputOnlyDigits: finalInputState.onlyDigits,
+          inputValueLength: finalInputState.length,
           inputValueMasked: this.maskFieldValue(finalInputState.value),
+          inputOnlyDigitsMasked: this.maskFieldValue(finalInputState.onlyDigits),
         });
         throw new Error(`CPF field invalid before submit: found ${finalInputState.digitsCount} digits`);
       }
@@ -235,8 +238,8 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       const beforeSubmitSignals = await page.evaluate(() => {
         const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-        const panelBody = document.querySelector('#fPP\:processosGridPanel_body');
-        const panel = document.querySelector('#fPP\:processosGridPanel');
+        const panelBody = document.getElementById('fPP:processosGridPanel_body');
+        const panel = document.getElementById('fPP:processosGridPanel');
         const root = panelBody || panel || document;
         const panelText = clean((panelBody || panel || document.body)?.innerText || '');
         const linkSignatures = Array.from(root.querySelectorAll('a[href],a[onclick]'))
@@ -383,9 +386,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           }
         };
 
-        const gridPanel = document.querySelector('#fPP\\:processosGridPanel');
-        const gridPanelBody = document.querySelector('#fPP\\:processosGridPanel_body');
-        const processTable = document.querySelector('#fPP\\:processosTable');
+        const gridPanel = document.getElementById('fPP:processosGridPanel');
+        const gridPanelBody = document.getElementById('fPP:processosGridPanel_body');
+        const processTable = document.getElementById('fPP:processosTable');
         const panelText = clean((gridPanelBody || gridPanel || document.body)?.innerText || '');
 
         const rows = processTable ? Array.from(processTable.querySelectorAll('tbody tr')) : [];
@@ -683,6 +686,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
   maskFieldValue(value) {
     const digits = String(value || '').replace(/\D/g, '');
     if (!digits) return null;
+    if (digits.length === 11) {
+      return `***.***.${digits.slice(6, 9)}-${digits.slice(9)}`;
+    }
     if (digits.length <= 4) return `***${digits.slice(-2)}`;
     return `***${digits.slice(-4, -2)}***`;
   }
@@ -734,8 +740,8 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const RESULT_RE = /(\d+)\s+resultados? encontrados/i;
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
-        const gridPanelBody = document.querySelector('#fPP\:processosGridPanel_body');
-        const gridPanel = document.querySelector('#fPP\:processosGridPanel');
+        const gridPanelBody = document.getElementById('fPP:processosGridPanel_body');
+        const gridPanel = document.getElementById('fPP:processosGridPanel');
         const root = gridPanelBody || gridPanel || document;
         const panelText = clean((gridPanelBody || gridPanel || document.body)?.innerText || '');
         const panelHtml = gridPanelBody?.innerHTML || '';
