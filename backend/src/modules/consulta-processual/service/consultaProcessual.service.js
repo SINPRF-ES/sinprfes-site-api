@@ -41,7 +41,12 @@ function buildDebugReport({ sources = [], requestId, queriedAt }) {
       metrics: {
         pageLoaded: Boolean(source?.debugSummary?.pageLoaded),
         cpfFieldFound: Boolean(source?.debugSummary?.cpfFieldFound),
+        inputDigitsCount: Number(source?.debugSummary?.inputDigitsCount || 0),
+        inputValueMasked: source?.debugSummary?.inputValueMasked || null,
         searchTriggered: Boolean(source?.debugSummary?.searchTriggered),
+        submitSucceeded: Boolean(source?.debugSummary?.submitSucceeded),
+        waitConditionMatched: source?.debugSummary?.waitConditionMatched || null,
+        realResultLoaded: Boolean(source?.debugSummary?.realResultLoaded),
         resultsContainerFound: Boolean(source?.debugSummary?.resultsContainerFound),
         resultsTextDetected: Boolean(source?.debugSummary?.resultsTextDetected),
         declaredResultsCount: Number(source?.debugSummary?.declaredResultsCount || 0),
