@@ -45,6 +45,7 @@
   <script src="/js/area-filiado/consulta-processual.js" defer></script>
   <script src="/js/area-filiado/relatorios.js" defer></script>
   <script src="/js/area-filiado/diagnostico.js" defer></script>
+  <script src="/js/area-filiado/enquetes.js" defer></script>
 
   <!-- Inicializador Principal -->
   <script src="/js/area-filiado.js" defer></script>
@@ -68,6 +69,7 @@
           <button class="af-nav-item" data-target="sec-ressarcimento" id="nav-ressarcimento" role="tab" aria-selected="false" aria-controls="sec-ressarcimento"><span aria-hidden="true">💸</span> Ressarcimento</button>
           <button class="af-nav-item" data-target="sec-jogos" id="nav-jogos" role="tab" aria-selected="false" aria-controls="sec-jogos"><span aria-hidden="true">🏆</span> Jogos 2026</button>
           <button class="af-nav-item" data-target="sec-assembleias" id="nav-assembleias" role="tab" aria-selected="false" aria-controls="sec-assembleias"><span aria-hidden="true">🗳️</span> Assembleias e Votações</button>
+          <button class="af-nav-item" data-target="sec-enquetes" id="nav-enquetes" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-enquetes"><span aria-hidden="true">🗨️</span> Enquetes</button>
           <button class="af-nav-item" data-target="sec-estatuto" id="nav-estatuto" role="tab" aria-selected="false" aria-controls="sec-estatuto"><span aria-hidden="true">📜</span> Estatuto</button>
           <button class="af-nav-item" data-target="sec-seguranca" id="nav-seguranca" role="tab" aria-selected="false" aria-controls="sec-seguranca"><span aria-hidden="true">🔒</span> Segurança</button>
 
@@ -138,6 +140,27 @@
 
           <div id="sec-assembleias-sala" style="display:none;">
              <div id="area-assembleia-sala-conteudo"></div>
+          </div>
+        </section>
+
+        <section id="sec-enquetes" class="af-section" style="display:none;" role="tabpanel" aria-labelledby="nav-enquetes">
+          <div class="af-standard-header">
+            <h2>🗨️ Enquetes</h2>
+            <p class="section-subtitle">Módulo interno de consulta e votação transparente da diretoria.</p>
+          </div>
+
+          <div class="ui-card" style="display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center;">
+              <label style="display:flex; flex-direction:column; gap:6px; max-width:220px; width:100%;">
+                <span style="font-weight:600;">Filtro</span>
+                <select id="enquetes-filtro-status">
+                  <option value="ativas" selected>Ativas</option>
+                  <option value="encerradas">Encerradas</option>
+                </select>
+              </label>
+              <button id="btn-nova-enquete" class="ui-button ui-button-secondary" style="max-width:220px;">➕ Nova enquete</button>
+            </div>
+            <div id="enquetes-list" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px;"></div>
           </div>
         </section>
 
