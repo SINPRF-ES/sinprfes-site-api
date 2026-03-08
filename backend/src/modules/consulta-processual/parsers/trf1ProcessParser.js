@@ -40,12 +40,28 @@ function parseTrf1Rows(rows = [], onDiscard = null) {
   return rows
     .map((row = {}) => {
       const processNumber = extractCnj(row.processNumber || row.processTitle || row.rawText || '');
+      const rawSnippet = cleanText(row.rawText || row.text || '').substring(0, 160);
+
+      const rowDetailsUrl = cleanText(row.detailsUrl);
+      if (!rawSnippet && !processNumber && !rowDetailsUrl) {
+        if (typeof onDiscard === 'function') {
+          onDiscard({ reason: 'empty_block', rawSnippet, index: row.index });
+        }
+        return null;
+      }
+
+      if (/\bresultados? encontrados\b/i.test(rawSnippet) && !processNumber) {
+        if (typeof onDiscard === 'function') {
+          onDiscard({ reason: 'structural_text_misidentified_as_item', rawSnippet, index: row.index });
+        }
+        return null;
+      }
 
       if (!processNumber) {
         if (typeof onDiscard === 'function') {
           onDiscard({
             reason: 'missing_process_number',
-            rawSnippet: cleanText(row.rawText).substring(0, 100),
+            rawSnippet,
             index: row.index,
           });
         }
@@ -57,8 +73,17 @@ function parseTrf1Rows(rows = [], onDiscard = null) {
           onDiscard({
             reason: 'invalid_process_number',
             processNumber,
+            rawSnippet,
             index: row.index,
           });
+        }
+        return null;
+      }
+
+      const detailsUrl = rowDetailsUrl;
+      if (!detailsUrl) {
+        if (typeof onDiscard === 'function') {
+          onDiscard({ reason: 'missing_href', processNumber, rawSnippet, index: row.index });
         }
         return null;
       }
@@ -93,7 +118,7 @@ function parseTrf1Rows(rows = [], onDiscard = null) {
         listLastMovementText: cleanText(row.listLastMovementText) || null,
         listLastMovementAt:
           parseBrazilDateToIso(row.listLastMovementAt || row.listLastMovementText || '') || null,
-        detailsUrl: row.detailsUrl || null,
+        detailsUrl: detailsUrl || null,
         providerMeta: row.providerMeta || {},
       });
     })

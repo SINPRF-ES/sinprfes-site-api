@@ -18,6 +18,21 @@
     return dt.toLocaleString('pt-BR');
   }
 
+  function getUserInfo() {
+    try {
+      return JSON.parse(localStorage.getItem('userInfo') || '{}') || {};
+    } catch (_err) {
+      return {};
+    }
+  }
+
+  function hasDebugPermission() {
+    const info = getUserInfo();
+    const perfil = String(info.perfil_acesso || info.perfil || info.role || '').toUpperCase();
+    const perms = Array.isArray(info.permissions) ? info.permissions : [];
+    return perfil === 'ADMIN' || perfil === 'DIRETORIA' || perms.includes('*') || perms.includes('EDIT_CONTENT');
+  }
+
   function renderTable(items) {
     if (!items.length) {
       return '<div class="ui-card"><p>Nenhum processo encontrado para o CPF cadastrado.</p></div>';
@@ -55,6 +70,75 @@
     `;
   }
 
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function renderDebugSummary(report) {
+    if (!report) return '<p>Sem relatório de debug.</p>';
+
+    const sourceCards = (report.sourceReports || []).map((src) => {
+      return `
+        <div class="ui-card" style="padding:10px; border-left:4px solid ${src.failureStage ? '#d35400' : '#2ecc71'};">
+          <div><strong>Fonte:</strong> ${escapeHtml(src.source || '-')} (${escapeHtml(src.status || '-')})</div>
+          <div><strong>Falha provável:</strong> ${escapeHtml(src.failureStage || 'não identificada')}</div>
+          <div><strong>Resultados declarados:</strong> ${escapeHtml(String(src.metrics?.declaredResultsCount || 0))}</div>
+          <div><strong>Links:</strong> ${escapeHtml(String(src.metrics?.linksFound || 0))} | <strong>CNJ:</strong> ${escapeHtml(String(src.metrics?.cnjMatchesFound || 0))}</div>
+          <div><strong>Blocos brutos:</strong> ${escapeHtml(String(src.metrics?.rawBlocksFound || 0))} | <strong>Normalizados:</strong> ${escapeHtml(String(src.metrics?.normalizedItemsCount || 0))}</div>
+          <div><strong>Detalhes abertos:</strong> ${escapeHtml(String(src.metrics?.detailPagesOpened || 0))}</div>
+          <div><strong>Descartes:</strong> ${escapeHtml(JSON.stringify(src.discardReasons || {}))}</div>
+          <div><strong>Artefatos:</strong> ${escapeHtml(String(src.artifactsCount || 0))}</div>
+        </div>
+      `;
+    }).join('');
+
+    const timelineRows = (report.timeline || []).slice(0, 400).map((ev) => `
+      <tr>
+        <td>${escapeHtml(ev.type || '-')}</td>
+        <td>${escapeHtml(ev.source || '-')}</td>
+        <td>${escapeHtml(ev.step || '-')}</td>
+        <td>${escapeHtml(ev.reason || '-')}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="ui-card" style="padding:10px;">
+          <strong>Conclusão consolidada:</strong> ${escapeHtml(report.likelyFailureStage || 'não determinada')}
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:10px;">${sourceCards || '<p>Sem fontes no relatório.</p>'}</div>
+        <div class="ui-card" style="padding:10px; overflow:auto; max-height:360px;">
+          <h4 style="margin-top:0;">Timeline consolidada (steps + warnings)</h4>
+          <table class="consulta-processual-table" style="min-width:680px;">
+            <thead><tr><th>Tipo</th><th>Fonte</th><th>Etapa</th><th>Motivo</th></tr></thead>
+            <tbody>${timelineRows || '<tr><td colspan="4">Sem eventos.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function ensureDebugArea() {
+    const root = document.getElementById('consulta-processual-debug');
+    if (root) return root;
+    const output = document.getElementById('consulta-processual-output');
+    if (!output) return null;
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'consulta-processual-debug';
+    wrapper.style.marginTop = '12px';
+    output.insertAdjacentElement('afterend', wrapper);
+    return wrapper;
+  }
+
   async function executarConsulta() {
     const feedback = document.getElementById('consulta-processual-feedback');
     const output = document.getElementById('consulta-processual-output');
@@ -89,14 +173,53 @@
       }
 
       output.innerHTML = renderTable(allItems);
-    } catch (err) {
+    } catch (_err) {
       feedback.textContent = 'Erro ao consultar processos. Tente novamente em instantes.';
       output.innerHTML = '<div class="ui-card"><p>Erro temporário ao consultar o TRF1.</p></div>';
     }
   }
 
+  async function executarDiagnosticoConsulta() {
+    const feedback = document.getElementById('consulta-processual-feedback');
+    const debugArea = ensureDebugArea();
+    if (!debugArea || !feedback) return;
+
+    feedback.textContent = 'Executando diagnóstico consolidado da consulta processual...';
+    debugArea.innerHTML = '<div class="ui-card"><p>Gerando telemetria consolidada...</p></div>';
+
+    try {
+      const response = await global.Api.apiFetch('/api/consulta-processual/debug/me');
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || data.error || 'Falha na consulta de diagnóstico.');
+      }
+
+      const report = data.debugReport || null;
+      const fileName = report?.export?.jsonFileName || `consulta-processual-debug-${Date.now()}.json`;
+
+      debugArea.innerHTML = `
+        <div class="ui-card" style="padding:12px; margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <strong>Modo diagnóstico:</strong> ativo (consolidado)
+          <button id="btn-export-consulta-debug" class="ui-button ui-button-outline">⬇️ Exportar JSON</button>
+        </div>
+        ${renderDebugSummary(report)}
+      `;
+
+      const btnExport = document.getElementById('btn-export-consulta-debug');
+      if (btnExport) {
+        btnExport.addEventListener('click', () => downloadJson(fileName, data));
+      }
+
+      feedback.textContent = `Diagnóstico concluído. Estágio provável da falha: ${report?.likelyFailureStage || 'não determinado'}.`;
+    } catch (err) {
+      feedback.textContent = 'Falha ao executar diagnóstico consolidado.';
+      debugArea.innerHTML = `<div class="ui-card"><p>${escapeHtml(err.message)}</p></div>`;
+    }
+  }
+
   function inicializarConsultaProcessual() {
     const btn = document.getElementById('btn-consulta-processual');
+    const btnDebug = document.getElementById('btn-consulta-processual-debug');
     const feedback = document.getElementById('consulta-processual-feedback');
     const output = document.getElementById('consulta-processual-output');
 
@@ -107,9 +230,18 @@
       output.innerHTML = '<div class="ui-card"><p>Aguardando consulta.</p></div>';
     }
 
+    if (btnDebug) {
+      btnDebug.style.display = hasDebugPermission() ? 'inline-flex' : 'none';
+    }
+
     if (btn && !btn.dataset.boundConsultaProcessual) {
       btn.dataset.boundConsultaProcessual = '1';
       btn.addEventListener('click', executarConsulta);
+    }
+
+    if (btnDebug && !btnDebug.dataset.boundConsultaProcessualDebug) {
+      btnDebug.dataset.boundConsultaProcessualDebug = '1';
+      btnDebug.addEventListener('click', executarDiagnosticoConsulta);
     }
   }
 
