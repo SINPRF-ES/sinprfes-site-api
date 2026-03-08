@@ -31,8 +31,10 @@ async function obterUsuarioPorId(id) {
   return rows[0] || null;
 }
 
-async function consultarPorUsuarioLogado({ userId, requestId }) {
+async function consultarPorUsuarioLogado({ userId, requestId, debug = false }) {
   const cfg = getConsultaProcessualConfig();
+  const isDebug = debug || cfg.debug;
+
   if (!cfg.enabled) {
     return {
       ok: false,
@@ -59,22 +61,30 @@ async function consultarPorUsuarioLogado({ userId, requestId }) {
   const cpfMasked = maskCpf(cpf);
   const providers = buildConsultaProviders().filter((p) => p.isEnabled());
 
-  log.info('ConsultaProcessualStart', { requestId, userId, cpfMasked, providers: providers.map((p) => p.getId()) });
+  log.info('ConsultaProcessualStart', {
+    requestId,
+    userId,
+    cpfMasked,
+    providers: providers.map((p) => p.getId()),
+    debug: isDebug,
+  });
 
   const now = Date.now();
   const lastRun = lastRunByUser.get(userId);
-  const shouldThrottle = Number.isFinite(lastRun) && (now - lastRun < cfg.minIntervalMs);
+  const shouldThrottle = !isDebug && Number.isFinite(lastRun) && now - lastRun < cfg.minIntervalMs;
 
   const sources = [];
   const errors = [];
 
   for (const provider of providers) {
     const providerKey = `consulta_processual:${provider.getId()}:${hashCpf(cpf)}`;
-    const cached = getCacheEntry(providerKey);
-    if (cached) {
-      const ageSeconds = Math.floor((Date.now() - cached.createdAt) / 1000);
-      sources.push({ ...cached.value, cached: true, cacheAgeSeconds: ageSeconds });
-      continue;
+    if (!isDebug) {
+      const cached = getCacheEntry(providerKey);
+      if (cached) {
+        const ageSeconds = Math.floor((Date.now() - cached.createdAt) / 1000);
+        sources.push({ ...cached.value, cached: true, cacheAgeSeconds: ageSeconds });
+        continue;
+      }
     }
 
     if (shouldThrottle) {
@@ -89,10 +99,10 @@ async function consultarPorUsuarioLogado({ userId, requestId }) {
       continue;
     }
 
-    const runningKey = `${userId}:${provider.getId()}`;
+    const runningKey = `${userId}:${provider.getId()}${isDebug ? ':debug' : ''}`;
     let runPromise = inFlight.get(runningKey);
     if (!runPromise) {
-      runPromise = provider.consultarPorCpf({ cpf, cpfMasked, requestId, userId });
+      runPromise = provider.consultarPorCpf({ cpf, cpfMasked, requestId, userId, debug: isDebug });
       inFlight.set(runningKey, runPromise);
     }
 

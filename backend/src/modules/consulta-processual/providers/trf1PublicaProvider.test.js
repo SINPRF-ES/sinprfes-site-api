@@ -8,23 +8,24 @@ const { launchBrowser } = require('../service/playwrightBrowserService');
 function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
   const searchPage = {
     goto: jest.fn().mockResolvedValue(undefined),
+    url: jest.fn().mockReturnValue('https://trf1.test'),
+    title: jest.fn().mockResolvedValue('TRF1 - Consulta Processual'),
+    content: jest.fn().mockResolvedValue('<html></html>'),
     locator: jest.fn((selector) => {
-      if (selector === 'input[name="tipoMascaraDocumento"]') {
-        return { first: () => ({ check: jest.fn().mockResolvedValue(undefined) }) };
-      }
-      if (selector === '#fPP\\:dpDec\\:documentoParte') {
-        return { fill: jest.fn().mockResolvedValue(undefined) };
-      }
-      if (selector === '#fPP\\:searchProcessos') {
-        return { click: jest.fn().mockResolvedValue(undefined) };
-      }
-      if (selector === '#fPP\\:processosGridPanel') {
-        return { waitFor: jest.fn().mockResolvedValue(undefined) };
-      }
-      return { first: () => ({ check: jest.fn().mockResolvedValue(undefined) }) };
+      return {
+        first: () => ({
+          check: jest.fn().mockResolvedValue(undefined),
+          isVisible: jest.fn().mockResolvedValue(true),
+        }),
+        fill: jest.fn().mockResolvedValue(undefined),
+        click: jest.fn().mockResolvedValue(undefined),
+        waitFor: jest.fn().mockResolvedValue(undefined),
+        isVisible: jest.fn().mockResolvedValue(true),
+      };
     }),
     evaluate: jest.fn().mockResolvedValue(extraction),
     screenshot: jest.fn().mockResolvedValue(undefined),
+    close: jest.fn().mockResolvedValue(undefined),
   };
 
   const context = {
@@ -43,6 +44,7 @@ function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
         }),
         close: jest.fn().mockResolvedValue(undefined),
       })),
+    close: jest.fn().mockResolvedValue(undefined),
   };
 
   // capture url used by detail pages
@@ -98,7 +100,7 @@ describe('Trf1PublicaProvider', () => {
 
     launchBrowser.mockResolvedValue(buildPlaywrightOkMock({
       extraction: {
-        rows: [
+        rawRows: [
           {
             processNumber: '0003990-96.2012.4.01.3400',
             processClass: 'CUMPRIMENTO DE SENTENÇA',
@@ -118,14 +120,12 @@ describe('Trf1PublicaProvider', () => {
             listLastMovementAt: '03/09/2025 14:53:59',
           },
         ],
-        debug: {
-          html: { panel: '<div />', panelBody: '<div />', table: '<table />' },
-          counts: { anchorsDetected: 2, processAnchorsDetected: 2, processRowsDetected: 2 },
-          panelTextRaw: '2 resultados encontrados',
-          countFromText: 2,
-          detectedCnjs: ['0003990-96.2012.4.01.3400', '1061274-59.2023.4.01.3400'],
-          detectedLinks: [detailsUrl1, detailsUrl2],
-        },
+        resultsTextDetected: true,
+        countFromText: 2,
+        cnjMatchesFound: 2,
+        linksFound: 2,
+        panelText: '2 resultados encontrados',
+        html: { panel: '<div />', table: '<table />' },
       },
       detailsByUrl: {
         [detailsUrl1]: {
