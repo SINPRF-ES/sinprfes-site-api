@@ -152,8 +152,12 @@ test('inclui providers desabilitados como skipped sem contaminar retorno consoli
     expect.objectContaining({
       source: 'trf6',
       status: 'skipped',
-      providerMeta: expect.objectContaining({ maturity: 'disabled', enabled: false }),
+      providerMeta: expect.objectContaining({
+        maturity: 'disabled',
+        enabled: false,
+        skipReason: 'feature_flag_disabled',
+        flagName: 'CONSULTA_PROCESSUAL_TRF6_ENABLED',
+      }),
     }),
   ]));
 });
-
