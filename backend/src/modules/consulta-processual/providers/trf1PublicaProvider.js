@@ -95,7 +95,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       log.info('ConsultaProcessualDebugStep', payload);
     };
 
-    const logWarning = (step, extra = {}) => {
+    const emitDebugWarning = (step, extra = {}) => {
       const payload = {
         event: 'ConsultaProcessualDebugWarning',
         step,
@@ -107,18 +107,6 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       };
       if (debugData) debugData.warnings.push(payload);
       log.info('ConsultaProcessualDebugWarning', payload);
-    };
-
-    const logWarning = (step, extra = {}) => {
-      log.info('ConsultaProcessualDebugWarning', {
-        event: 'ConsultaProcessualDebugWarning',
-        step,
-        requestId,
-        userId,
-        source: this.getId(),
-        cpfMasked,
-        ...extra,
-      });
     };
 
     let browser;
@@ -215,7 +203,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         await grid.waitFor({ state: 'visible', timeout: cfg.searchTimeoutMs });
       } catch (err) {
         debugSummary.failureStage = 'submit_wait';
-        logWarning('D_submit_search_timeout', {
+        emitDebugWarning('D_submit_search_timeout', {
           timeoutMs: cfg.searchTimeoutMs,
           waitStrategy: 'waitForSelector(#fPP\\:processosGridPanel)',
         });
@@ -419,7 +407,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           artifactPrefix: `process-${i + 1}`,
           saveArtifact,
           logStep,
-          logWarning,
+          logWarning: emitDebugWarning,
         });
 
         debugSummary.detailPagesOpened += detail.opened ? 1 : 0;
@@ -461,7 +449,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       const discardReasons = {};
       const items = parseTrf1Rows(rawRowsWithDetails, (warning) => {
         discardReasons[warning.reason] = (discardReasons[warning.reason] || 0) + 1;
-        logWarning('normalize_item_rejected', warning);
+        emitDebugWarning('normalize_item_rejected', warning);
       });
       debugSummary.normalizedItemsCount = items.length;
       if (debugData) debugData.discardReasons = discardReasons;
@@ -536,10 +524,10 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     artifactPrefix,
     saveArtifact,
     logStep,
-    logWarning,
+    logWarning: emitDebugWarning,
   }) {
     if (!detailsUrl) {
-      logWarning('H_open_detail_missing_url', { reason: 'missing_href' });
+      emitDebugWarning('H_open_detail_missing_url', { reason: 'missing_href' });
       return {
         opened: false,
         finalUrl: null,
