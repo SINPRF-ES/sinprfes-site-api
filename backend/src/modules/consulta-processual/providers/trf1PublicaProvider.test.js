@@ -21,6 +21,7 @@ function buildPlaywrightOkMock({ extraction, detailsByUrl = {} }) {
         click: jest.fn().mockResolvedValue(undefined),
         waitFor: jest.fn().mockResolvedValue(undefined),
         isVisible: jest.fn().mockResolvedValue(true),
+        inputValue: jest.fn().mockResolvedValue('068.893.157-07'),
       };
     }),
     evaluate: jest.fn().mockResolvedValue(extraction),

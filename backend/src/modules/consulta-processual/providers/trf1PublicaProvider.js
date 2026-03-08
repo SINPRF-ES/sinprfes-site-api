@@ -5,6 +5,7 @@ const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConf
 const { parseTrf1Rows } = require('../parsers/trf1ProcessParser');
 const { createSourceResult } = require('../dto/consultaProcessualDto');
 const { launchBrowser } = require('../service/playwrightBrowserService');
+const { inspectResultsDom, cleanText } = require('./trf1DomInspector');
 const log = require('../../../utils/log');
 
 const TRF1_URL = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
@@ -17,7 +18,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
   async consultarPorCpf({ cpf, cpfMasked, requestId, userId, debug: debugOverride }) {
     const startedAt = Date.now();
     const cfg = getConsultaProcessualConfig();
-    const isDebug = debugOverride || cfg.debug;
+    const isDebug = Boolean(debugOverride || cfg.debug);
 
     if (!this.isEnabled()) {
       return createSourceResult({ source: this.getId(), sourceLabel: this.getLabel(), status: 'skipped', items: [] });
@@ -39,20 +40,35 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     };
 
     const debugBaseDir = path.resolve(process.cwd(), 'backend/tmp/consulta-processual/trf1', requestId || 'no-request');
+    if (isDebug) debugSummary.artifactsBaseDir = debugBaseDir;
 
     const saveArtifact = async (name, content, type = 'text') => {
       if (!isDebug) return;
       try {
         fs.mkdirSync(debugBaseDir, { recursive: true });
         const filePath = path.join(debugBaseDir, name);
-        if (type === 'screenshot' && content.screenshot) {
+        if (type === 'screenshot' && content?.screenshot) {
           await content.screenshot({ path: filePath, fullPage: true });
         } else {
           fs.writeFileSync(filePath, String(content || ''), 'utf8');
         }
-        log.info('ConsultaProcessualDebugArtifact', { requestId, userId, source: this.getId(), artifact: name, path: filePath });
+        log.info('ConsultaProcessualDebugArtifact', {
+          event: 'ConsultaProcessualDebugArtifact',
+          requestId,
+          userId,
+          source: this.getId(),
+          artifact: name,
+          path: filePath,
+        });
       } catch (err) {
-        log.warn('ConsultaProcessualDebugArtifactFailed', { requestId, userId, source: this.getId(), artifact: name, error: err.message });
+        log.warn('ConsultaProcessualDebugArtifactFailed', {
+          event: 'ConsultaProcessualDebugArtifactFailed',
+          requestId,
+          userId,
+          source: this.getId(),
+          artifact: name,
+          error: err.message,
+        });
       }
     };
 
@@ -68,10 +84,22 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       });
     };
 
+    const logWarning = (step, extra = {}) => {
+      log.info('ConsultaProcessualDebugWarning', {
+        event: 'ConsultaProcessualDebugWarning',
+        step,
+        requestId,
+        userId,
+        source: this.getId(),
+        cpfMasked,
+        ...extra,
+      });
+    };
+
     let browser;
     try {
-      // ETAPA A: Bootstrap
-      logStep('bootstrap_started');
+      const stepAStartedAt = Date.now();
+      logStep('A_bootstrap_start');
       const browserResult = await launchBrowser({ config: cfg });
       if (!browserResult.ok) {
         debugSummary.failureStage = 'bootstrap';
@@ -87,62 +115,108 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         });
         return createSourceResult({ source: this.getId(), sourceLabel: this.getLabel(), status: 'skipped', items: [] });
       }
+
       browser = browserResult.browser;
       const context = await browser.newContext();
       const page = await context.newPage();
-      logStep('bootstrap_finished', { browser: 'ok', page: 'ok' });
+      logStep('A_bootstrap_end', {
+        browserStarted: true,
+        pageCreated: true,
+        durationMs: Date.now() - stepAStartedAt,
+      });
 
-      // ETAPA B: Carregamento da tela
-      logStep('loading_page', { url: TRF1_URL });
+      const stepBStartedAt = Date.now();
+      logStep('B_load_screen_start', { url: TRF1_URL });
       await page.goto(TRF1_URL, { waitUntil: 'domcontentloaded', timeout: cfg.initialLoadTimeoutMs });
-      debugSummary.pageLoaded = true;
-
       const title = await page.title();
+      const finalUrl = page.url();
       const hasRadio = await page.locator('input[name="tipoMascaraDocumento"]').first().isVisible();
       const hasCpfField = await page.locator('#fPP\\:dpDec\\:documentoParte').isVisible();
       const hasSearchBtn = await page.locator('#fPP\\:searchProcessos').isVisible();
+      const homeHtml = await page.content();
 
-      logStep('page_loaded', { url: page.url(), title, hasRadio, hasCpfField, hasSearchBtn });
+      debugSummary.pageLoaded = true;
+      debugSummary.cpfFieldFound = hasCpfField;
+
+      logStep('B_load_screen_end', {
+        finalUrl,
+        title,
+        hasRadioCpf: hasRadio,
+        hasCpfField,
+        hasSearchButton: hasSearchBtn,
+        durationMs: Date.now() - stepBStartedAt,
+      });
+
       await saveArtifact('01-home.png', page, 'screenshot');
-      await saveArtifact('01-home.html', await page.content());
+      await saveArtifact('01-home-post-load.html', homeHtml);
 
       if (!hasRadio || !hasCpfField || !hasSearchBtn) {
-        debugSummary.failureStage = 'loading_page';
+        debugSummary.failureStage = 'screen_load';
         throw new Error('Required selectors not found on home page');
       }
-      debugSummary.cpfFieldFound = true;
 
-      // ETAPA C: Preenchimento do CPF
-      logStep('filling_cpf');
-      await page.locator('input[name="tipoMascaraDocumento"]').first().check();
+      const stepCStartedAt = Date.now();
+      const selectedRadioSelector = 'input[name="tipoMascaraDocumento"]';
+      logStep('C_fill_cpf_start', {
+        cpfMaskedUsed: cpfMasked,
+        selectedRadio: selectedRadioSelector,
+      });
+      await page.locator(selectedRadioSelector).first().check();
       await page.locator('#fPP\\:dpDec\\:documentoParte').fill(cpf);
-      logStep('cpf_filled');
+      const maskedFieldValue = await page.locator('#fPP\\:dpDec\\:documentoParte').inputValue();
+      logStep('C_fill_cpf_end', {
+        selectedRadio: selectedRadioSelector,
+        fieldValueMasked: this.maskFieldValue(maskedFieldValue),
+        eventsDispatched: ['check', 'fill'],
+        durationMs: Date.now() - stepCStartedAt,
+      });
       await saveArtifact('02-filled.png', page, 'screenshot');
 
-      // ETAPA D: Submit
-      logStep('submitting_search');
+      const stepDStartedAt = Date.now();
+      const beforeSubmitUrl = page.url();
+      const beforeSubmitDomLen = (await page.content()).length;
+      logStep('D_submit_search_start', {
+        beforeSubmitUrl,
+        beforeSubmitDomLen,
+        waitStrategy: 'waitForSelector(#fPP\\:processosGridPanel)',
+        timestamp: new Date().toISOString(),
+      });
+
       await page.locator('#fPP\\:searchProcessos').click();
       debugSummary.searchTriggered = true;
 
       const grid = page.locator('#fPP\\:processosGridPanel');
       try {
         await grid.waitFor({ state: 'visible', timeout: cfg.searchTimeoutMs });
-        logStep('search_results_visible');
-      } catch (e) {
-        debugSummary.failureStage = 'search_timeout';
-        logStep('search_timeout', { timeoutMs: cfg.searchTimeoutMs });
-        await saveArtifact('03-timeout.png', page, 'screenshot');
-        throw e;
+      } catch (err) {
+        debugSummary.failureStage = 'submit_wait';
+        logWarning('D_submit_search_timeout', {
+          timeoutMs: cfg.searchTimeoutMs,
+          waitStrategy: 'waitForSelector(#fPP\\:processosGridPanel)',
+        });
+        await saveArtifact('03-submit-timeout.png', page, 'screenshot');
+        throw err;
       }
+
+      const afterSubmitUrl = page.url();
+      const afterSubmitDomLen = (await page.content()).length;
+      logStep('D_submit_search_end', {
+        clickExecuted: true,
+        urlChanged: beforeSubmitUrl !== afterSubmitUrl,
+        beforeSubmitUrl,
+        afterSubmitUrl,
+        domChanged: beforeSubmitDomLen !== afterSubmitDomLen,
+        beforeSubmitDomLen,
+        afterSubmitDomLen,
+        durationMs: Date.now() - stepDStartedAt,
+      });
       await saveArtifact('03-results.png', page, 'screenshot');
 
-      // ETAPA E & F: Captura e Parse Bruto
-      logStep('extraction_started');
+      const stepEStartedAt = Date.now();
+      logStep('E_capture_results_start');
       const extraction = await page.evaluate(() => {
         const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/;
         const DATE_TIME_RE = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}/;
-        const RESULTS_RE = /(\d+)\s+resultados? encontrados/i;
-
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
         const toAbsoluteUrl = (href) => {
           if (!href) return null;
@@ -153,16 +227,17 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           }
         };
 
-        const panel = document.querySelector('#fPP\\:processosGridPanel');
-        const table = document.querySelector('#fPP\\:processosTable');
-        const panelText = clean(panel?.innerText || '');
+        const gridPanel = document.querySelector('#fPP\\:processosGridPanel');
+        const gridPanelBody = document.querySelector('#fPP\\:processosGridPanel_body');
+        const processTable = document.querySelector('#fPP\\:processosTable');
+        const panelText = clean((gridPanelBody || gridPanel || document.body)?.innerText || '');
 
-        const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
+        const rows = processTable ? Array.from(processTable.querySelectorAll('tbody tr')) : [];
         const detectedLinks = [];
 
         const rawRows = rows.map((row, index) => {
           const tds = Array.from(row.querySelectorAll('td'));
-          if (tds.length < 3) return { index, ignored: true, reason: 'less_than_3_tds' };
+          if (tds.length < 3) return { index, ignored: true, reason: 'less_than_3_tds', rawText: clean(row.textContent || '') };
 
           const firstTdAnchor = tds[0].querySelector('a');
           const td1Anchor = tds[1].querySelector('a');
@@ -173,18 +248,18 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             const onclick = anchor.getAttribute('onclick');
             const href = anchor.getAttribute('href');
             if (onclick && onclick.includes('openPopUp')) {
-                const match = onclick.match(/'([^']+)'\s*,\s*'([^']+)'/);
-                if (match && match[2]) detailsUrl = toAbsoluteUrl(match[2]);
+              const match = onclick.match(/'([^']+)'\s*,\s*'([^']+)'/);
+              if (match && match[2]) detailsUrl = toAbsoluteUrl(match[2]);
             }
             if (!detailsUrl && href && !href.startsWith('javascript:')) {
-                detailsUrl = toAbsoluteUrl(href);
+              detailsUrl = toAbsoluteUrl(href);
             }
           }
           if (detailsUrl) detectedLinks.push(detailsUrl);
 
           const td1Text = clean(tds[1]?.textContent || '');
           const processNumberMatch = td1Text.match(CNJ_RE);
-          if (!processNumberMatch) return { index, ignored: true, reason: 'no_cnj_in_td1', text: td1Text };
+          if (!processNumberMatch) return { index, ignored: true, reason: 'no_cnj_in_td1', text: td1Text, rawText: clean(row.textContent || '') };
 
           const processNumber = processNumberMatch[0];
           const nodeText = (node) => clean(node?.textContent || '');
@@ -206,7 +281,6 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             || '';
 
           const parties = clean(partiesCandidate.replace(processTitle, '').trim());
-
           const listLastMovementText = clean(tds[2]?.textContent || '');
           const listMovementDateMatch = listLastMovementText.match(DATE_TIME_RE);
           const listMovementDate = listMovementDateMatch ? listMovementDateMatch[0] : null;
@@ -230,53 +304,99 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           };
         });
 
-        const countedFromText = Number((panelText.match(RESULTS_RE) || [])[1] || NaN);
-        const cnjMatches = (panelText.match(new RegExp(CNJ_RE, 'g')) || []);
-
         return {
-          rawRows,
+          hasGridPanel: Boolean(gridPanel),
+          hasGridPanelBody: Boolean(gridPanelBody),
+          hasProcessTable: Boolean(processTable),
           panelText,
-          resultsTextDetected: RESULTS_RE.test(panelText),
-          countFromText: Number.isFinite(countedFromText) ? countedFromText : null,
-          cnjMatchesFound: cnjMatches.length,
+          detectedLinks,
           linksFound: Array.from(new Set(detectedLinks)).length,
+          rawRows,
           html: {
-            panel: panel?.innerHTML || '',
-            table: table?.innerHTML || '',
-          }
+            page: document.documentElement?.outerHTML || '',
+            panel: gridPanel?.innerHTML || '',
+            panelBody: gridPanelBody?.innerHTML || '',
+            table: processTable?.innerHTML || '',
+          },
         };
       });
 
-      debugSummary.resultsContainerFound = true;
-      debugSummary.resultsTextDetected = extraction.resultsTextDetected;
-      debugSummary.declaredResultsCount = extraction.countFromText || 0;
-      debugSummary.linksFound = extraction.linksFound;
-      debugSummary.cnjMatchesFound = extraction.cnjMatchesFound;
-      debugSummary.rawBlocksFound = extraction.rawRows.filter(r => !r.ignored).length;
+      const domInspection = inspectResultsDom(extraction);
+      debugSummary.resultsContainerFound = Boolean(domInspection.hasGridPanel || domInspection.hasGridPanelBody || domInspection.hasProcessTable);
+      debugSummary.resultsTextDetected = domInspection.declaredResultsTextDetected;
+      debugSummary.declaredResultsCount = domInspection.declaredResultsCount;
+      debugSummary.linksFound = domInspection.linksFound;
+      debugSummary.cnjMatchesFound = domInspection.cnjMatchesFound;
+      debugSummary.rawBlocksFound = extraction.rawRows.length;
 
-      logStep('extraction_finished', {
-        resultsTextDetected: extraction.resultsTextDetected,
-        countFromText: extraction.countFromText,
-        cnjMatchesFound: extraction.cnjMatchesFound,
-        linksFound: extraction.linksFound,
-        rawBlocksFound: debugSummary.rawBlocksFound,
+      logStep('E_capture_results_end', {
+        hasGridPanel: domInspection.hasGridPanel,
+        hasGridPanelBody: domInspection.hasGridPanelBody,
+        hasProcessTable: domInspection.hasProcessTable,
+        resultsTextDetected: domInspection.declaredResultsTextDetected,
+        declaredResultsCount: domInspection.declaredResultsCount,
+        linksFound: domInspection.linksFound,
+        cnjMatches: domInspection.cnjMatchesFound,
+        panelTextSummary: domInspection.panelTextSummary,
+        durationMs: Date.now() - stepEStartedAt,
       });
 
-      await saveArtifact('results-panel.html', extraction.html.panel);
+      await saveArtifact('04-results-area.png', page, 'screenshot');
+      await saveArtifact('results-page.html', extraction.html.page);
+      await saveArtifact('results-grid.html', extraction.html.panel);
+      await saveArtifact('results-grid-body.html', extraction.html.panelBody);
       await saveArtifact('results-table.html', extraction.html.table);
       await saveArtifact('results-text.txt', extraction.panelText);
 
-      // ETAPA H & I: Detalhes e Movimentações
-      logStep('details_extraction_started', { count: debugSummary.rawBlocksFound });
+      const stepFStartedAt = Date.now();
+      logStep('F_parse_raw_start', { candidateBlocks: extraction.rawRows.length });
+      extraction.rawRows.forEach((row, index) => {
+        logStep('F_parse_raw_block', {
+          index,
+          ignored: Boolean(row.ignored),
+          reason: row.reason || null,
+          hasCnj: Boolean(row.processNumber),
+          hasHref: Boolean(row.detailsUrl),
+          hasClass: Boolean(cleanText(row.processClass)),
+          hasParties: Boolean(cleanText(row.parties)),
+          snippet: cleanText(row.rawText || row.text || '').substring(0, 180),
+        });
+      });
+      logStep('F_parse_raw_end', {
+        rawBlocksFound: extraction.rawRows.length,
+        candidateRows: extraction.rawRows.filter((row) => !row.ignored).length,
+        durationMs: Date.now() - stepFStartedAt,
+      });
+
+      const validRawRows = extraction.rawRows.filter((row) => !row.ignored);
+      const stepHStartedAt = Date.now();
+      logStep('H_open_detail_start', { validRows: validRawRows.length });
       const rawRowsWithDetails = [];
-      const validRawRows = extraction.rawRows.filter(r => !r.ignored);
 
-      for (let i = 0; i < validRawRows.length; i++) {
+      for (let i = 0; i < validRawRows.length; i += 1) {
         const row = validRawRows[i];
-        logStep('opening_detail', { index: i, processNumber: row.processNumber, url: row.detailsUrl });
+        logStep('H_open_detail_attempt', {
+          index: i,
+          processNumber: row.processNumber,
+          detailsUrl: row.detailsUrl || null,
+        });
 
-        const detail = await this.extractDetailMovement(context, row.detailsUrl, cfg.searchTimeoutMs, isDebug);
-        debugSummary.detailPagesOpened++;
+        const detail = await this.extractDetailMovement({
+          context,
+          detailsUrl: row.detailsUrl,
+          timeoutMs: cfg.searchTimeoutMs,
+          isDebug,
+          requestId,
+          userId,
+          cpfMasked,
+          source: this.getId(),
+          artifactPrefix: `process-${i + 1}`,
+          saveArtifact,
+          logStep,
+          logWarning,
+        });
+
+        debugSummary.detailPagesOpened += detail.opened ? 1 : 0;
 
         const rowWithDetail = {
           ...row,
@@ -286,53 +406,70 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           providerMeta: {
             ...(row.providerMeta || {}),
             detailsExtracted: Boolean(detail.rawLastMovementText),
+            movementsCount: detail.movementsCount || 0,
+            hasMovementsBlock: Boolean(detail.hasMovementsBlock),
+            detailUrlFinal: detail.finalUrl || null,
           },
         };
+
         rawRowsWithDetails.push(rowWithDetail);
 
-        logStep('detail_extracted', {
+        logStep('I_parse_latest_movement', {
           index: i,
           processNumber: row.processNumber,
-          success: Boolean(detail.rawLastMovementText),
-          movementAt: rowWithDetail.lastMovementAt
+          rawMovementText: cleanText(detail.rawFirstMovement || '').substring(0, 180),
+          extractedMovementAt: detail.lastMovementAt || null,
+          extractedMovementDescription: cleanText(detail.lastMovement || '').substring(0, 140),
+          normalizedSuccess: Boolean(detail.rawLastMovementText),
+          movementsCount: detail.movementsCount || 0,
+          hasMovementsBlock: Boolean(detail.hasMovementsBlock),
         });
-
-        if (isDebug) {
-          await saveArtifact(`process-${i + 1}-detail.html`, detail.debug?.detailHtml);
-          await saveArtifact(`process-${i + 1}-text.txt`, detail.debug?.detailText);
-        }
       }
+      logStep('H_open_detail_end', {
+        detailPagesOpened: debugSummary.detailPagesOpened,
+        durationMs: Date.now() - stepHStartedAt,
+      });
 
-      // ETAPA G: Normalização
-      logStep('normalization_started');
+      const stepGStartedAt = Date.now();
+      logStep('G_normalization_start', { rawItemsCount: rawRowsWithDetails.length });
+      const discardReasons = {};
       const items = parseTrf1Rows(rawRowsWithDetails, (warning) => {
-        log.info('ConsultaProcessualDebugWarning', {
-          event: 'ConsultaProcessualDebugWarning',
-          step: 'normalize_item_rejected',
-          requestId,
-          userId,
-          source: this.getId(),
-          ...warning
-        });
+        discardReasons[warning.reason] = (discardReasons[warning.reason] || 0) + 1;
+        logWarning('normalize_item_rejected', warning);
       });
       debugSummary.normalizedItemsCount = items.length;
-      logStep('normalization_finished', { itemsCount: items.length });
-
-      // ETAPA J: Consolidação
-      logStep('consolidation_finished', {
-        totalItems: items.length,
-        itemsWithDetail: items.filter(it => it.providerMeta.detailsExtracted).length
+      logStep('G_normalization_end', {
+        rawItemsCount: rawRowsWithDetails.length,
+        normalizedItemsCount: items.length,
+        discardedCount: rawRowsWithDetails.length - items.length,
+        discardReasons,
+        durationMs: Date.now() - stepGStartedAt,
       });
+
+      logStep('J_consolidation_end', {
+        totalItemsListed: extraction.rawRows.length,
+        validItemsBeforeNormalize: rawRowsWithDetails.length,
+        itemsWithDetailExtracted: items.filter((it) => it.providerMeta.detailsExtracted).length,
+        totalReturned: items.length,
+        totalDurationMs: Date.now() - startedAt,
+      });
+
+      if (!debugSummary.failureStage && items.length === 0) {
+        if (!debugSummary.searchTriggered) debugSummary.failureStage = 'submit';
+        else if (!debugSummary.resultsContainerFound) debugSummary.failureStage = 'results_dom';
+        else if (!debugSummary.rawBlocksFound) debugSummary.failureStage = 'raw_parse';
+        else if (!debugSummary.normalizedItemsCount) debugSummary.failureStage = 'normalization';
+      }
 
       return createSourceResult({
         source: this.getId(),
         sourceLabel: this.getLabel(),
         status: 'success',
-        items: items,
-        debugSummary
+        items,
+        debugSummary,
       });
-
     } catch (err) {
+      if (!debugSummary.failureStage) debugSummary.failureStage = 'exception';
       log.error('ConsultaProcessualProviderError', {
         event: 'ConsultaProcessualProviderError',
         requestId,
@@ -342,7 +479,6 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         errorMessage: err.message,
         stack: err.stack,
       });
-      if (!debugSummary.failureStage) debugSummary.failureStage = 'exception';
 
       return createSourceResult({
         source: this.getId(),
@@ -357,18 +493,50 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     }
   }
 
-  async extractDetailMovement(context, detailsUrl, timeoutMs, _isDebug) {
-    if (!detailsUrl) return { lastMovement: null, lastMovementAt: null, rawLastMovementText: null, debug: {} };
+  maskFieldValue(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.length <= 4) return `***${digits.slice(-2)}`;
+    return `***${digits.slice(-4, -2)}***`;
+  }
+
+  async extractDetailMovement({
+    context,
+    detailsUrl,
+    timeoutMs,
+    artifactPrefix,
+    saveArtifact,
+    logStep,
+    logWarning,
+  }) {
+    if (!detailsUrl) {
+      logWarning('H_open_detail_missing_url', { reason: 'missing_href' });
+      return {
+        opened: false,
+        finalUrl: null,
+        hasMovementsBlock: false,
+        movementsCount: 0,
+        rawFirstMovement: null,
+        rawLastMovementText: null,
+        lastMovementAt: null,
+        lastMovement: null,
+      };
+    }
+
     const page = await context.newPage();
     try {
       await page.goto(detailsUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
-      return await page.evaluate(() => {
+      const detailEval = await page.evaluate(() => {
         const MOVEMENT_RE = /(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})\s*-\s*(.+)$/;
         const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
         const normalizeFromText = (text) => {
           const lineMatch = clean(text).match(MOVEMENT_RE);
           if (!lineMatch) return null;
-          return { raw: `${lineMatch[1]} - ${clean(lineMatch[2])}`, at: lineMatch[1], movement: clean(lineMatch[2]) };
+          return {
+            raw: `${lineMatch[1]} - ${clean(lineMatch[2])}`,
+            at: lineMatch[1],
+            movement: clean(lineMatch[2]),
+          };
         };
 
         const heading = Array.from(document.querySelectorAll('h1,h2,h3,h4,legend,label,td,th,span,div')).find((el) =>
@@ -388,17 +556,43 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           candidates = clean(document.body?.innerText || '').split(/\n+/).map(normalizeFromText).filter(Boolean);
         }
 
-        const latest = candidates[0] || null;
         return {
-          lastMovement: latest?.movement || null,
-          lastMovementAt: latest?.at || null,
-          rawLastMovementText: latest?.raw || null,
+          finalUrl: window.location.href,
+          hasMovementsBlock: Boolean(heading),
+          movementsCount: candidates.length,
+          rawFirstMovement: candidates[0]?.raw || null,
+          lastMovement: candidates[0]?.movement || null,
+          lastMovementAt: candidates[0]?.at || null,
+          rawLastMovementText: candidates[0]?.raw || null,
           debug: {
             detailText: clean(document.body?.innerText || ''),
-            detailHtml: movementContainer?.innerHTML || '',
+            movementText: clean(movementContainer?.innerText || ''),
+            detailHtml: document.documentElement?.outerHTML || '',
           },
         };
       });
+
+      await saveArtifact(`${artifactPrefix}-detail.png`, page, 'screenshot');
+      await saveArtifact(`${artifactPrefix}-detail.html`, detailEval.debug?.detailHtml || '');
+      await saveArtifact(`${artifactPrefix}-movements.txt`, detailEval.debug?.movementText || '');
+
+      logStep('H_open_detail_result', {
+        detailsUrl,
+        finalUrl: detailEval.finalUrl,
+        hasMovementsBlock: detailEval.hasMovementsBlock,
+        movementsCount: detailEval.movementsCount,
+      });
+
+      return {
+        opened: true,
+        finalUrl: detailEval.finalUrl,
+        hasMovementsBlock: detailEval.hasMovementsBlock,
+        movementsCount: detailEval.movementsCount,
+        rawFirstMovement: detailEval.rawFirstMovement,
+        rawLastMovementText: detailEval.rawLastMovementText,
+        lastMovementAt: detailEval.lastMovementAt,
+        lastMovement: detailEval.lastMovement,
+      };
     } finally {
       await page.close().catch(() => {});
     }

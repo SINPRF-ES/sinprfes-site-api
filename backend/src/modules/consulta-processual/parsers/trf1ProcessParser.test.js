@@ -29,6 +29,7 @@ describe('trf1ProcessParser', () => {
         lastMovement: 'Conclusos para decisão',
         rawLastMovementText: '10/09/2025 14:27:38 - Conclusos para decisão',
         listLastMovementText: 'Conclusos para decisão (10/09/2025 14:27:38)',
+        detailsUrl: 'https://trf1.test/detalhe1',
       },
       {
         processTitle: 'CumSenFaz 1061274-59.2023.4.01.3400 - Abono Pecuniário (Art. 78 Lei 8.112/1990)',
@@ -37,6 +38,7 @@ describe('trf1ProcessParser', () => {
         lastMovement: 'Conclusos para decisão',
         rawLastMovementText: '03/09/2025 14:53:59 - Conclusos para decisão',
         listLastMovementText: 'Conclusos para decisão (03/09/2025 14:53:59)',
+        detailsUrl: 'https://trf1.test/detalhe2',
       },
     ]);
 
@@ -65,4 +67,20 @@ describe('trf1ProcessParser', () => {
       lastMovementAt: '2025-09-03T14:53:59.000Z',
     });
   });
+});
+
+
+test('parseTrf1Rows descarta item sem href com motivo explícito', () => {
+  const discards = [];
+  const items = parseTrf1Rows([
+    {
+      processNumber: '0003990-96.2012.4.01.3400',
+      processClass: 'CUMPRIMENTO DE SENTENÇA',
+      rawText: '0003990-96.2012.4.01.3400 sem link',
+    },
+  ], (warning) => discards.push(warning));
+
+  expect(items).toHaveLength(0);
+  expect(discards).toHaveLength(1);
+  expect(discards[0].reason).toBe('missing_href');
 });
