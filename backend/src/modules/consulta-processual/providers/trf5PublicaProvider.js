@@ -16,7 +16,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
   getId() { return 'trf5'; }
   getLabel() { return 'TRF5'; }
   isEnabled() { return getConsultaProcessualConfig().trf5Enabled; }
-  getMaturityStatus() { return 'experimental'; }
+  getMaturityStatus() { return 'stable'; }
 
   classifyError(err) {
     if (/dom|selector|diagnostic/i.test(String(err?.message || ''))) {
