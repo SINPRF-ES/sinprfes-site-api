@@ -42,36 +42,45 @@ function buildDebugReport({ sources = [], requestId, queriedAt }) {
       warnings.forEach((warning, index) => timeline.push({ type: 'warning', source: source.source, index, ...warning }));
     }
 
-    return {
+    const minimalMetrics = {
+      pageLoaded: Boolean(source?.debugSummary?.pageLoaded),
+      documentFieldFound: Boolean(source?.debugSummary?.documentFieldFound),
+      searchTriggered: Boolean(source?.debugSummary?.searchTriggered),
+      submitSucceeded: Boolean(source?.debugSummary?.submitSucceeded),
+      declaredResultsCount: Number(source?.debugSummary?.declaredResultsCount || 0),
+      normalizedItemsCount: Number(source?.debugSummary?.normalizedItemsCount || 0),
+    };
+
+    const baseReport = {
       source: source.source,
       status: source.status,
       maturity: source?.providerMeta?.maturity || null,
       count: source.count || 0,
       failureStage: source?.debugSummary?.failureStage || null,
+      metrics: minimalMetrics,
+      debugLevel,
+    };
+
+    if (!includeDetailed) return baseReport;
+
+    return {
+      ...baseReport,
       metrics: {
-        pageLoaded: Boolean(source?.debugSummary?.pageLoaded),
-        documentFieldFound: Boolean(source?.debugSummary?.documentFieldFound),
-        inputDigitsCount: Number(source?.debugSummary?.inputDigitsCount || 0),
-        inputValueMasked: source?.debugSummary?.inputValueMasked || null,
-        searchTriggered: Boolean(source?.debugSummary?.searchTriggered),
-        submitSucceeded: Boolean(source?.debugSummary?.submitSucceeded),
+        ...minimalMetrics,
         waitConditionMatched: source?.debugSummary?.waitConditionMatched || null,
         realResultLoaded: Boolean(source?.debugSummary?.realResultLoaded),
         resultsContainerFound: Boolean(source?.debugSummary?.resultsContainerFound),
         resultsTextDetected: Boolean(source?.debugSummary?.resultsTextDetected),
-        declaredResultsCount: Number(source?.debugSummary?.declaredResultsCount || 0),
         linksFound: Number(source?.debugSummary?.linksFound || 0),
         cnjMatchesFound: Number(source?.debugSummary?.cnjMatchesFound || 0),
         rawBlocksFound: Number(source?.debugSummary?.rawBlocksFound || 0),
-        normalizedItemsCount: Number(source?.debugSummary?.normalizedItemsCount || 0),
         detailPagesOpened: Number(source?.debugSummary?.detailPagesOpened || 0),
       },
-      debugLevel,
-      domInspection: includeDetailed ? (source?.debugData?.domInspection || null) : null,
-      discardReasons: includeDetailed ? (source?.debugData?.discardReasons || {}) : {},
+      domInspection: source?.debugData?.domInspection || null,
+      discardReasons: source?.debugData?.discardReasons || {},
       warningsCount: warnings.length,
       artifactsCount: artifacts.length,
-      artifacts: includeDetailed ? artifacts : [],
+      artifacts,
     };
   });
 
@@ -281,6 +290,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
   });
 
   const providerResults = await Promise.all(providerPromises);
+  const allItems = providerResults.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
 
   lastRunByUser.set(lastRunKey, Date.now());
 
@@ -289,8 +299,10 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
     const maturity = provider?.getMaturityStatus?.() || sourceResult?.providerMeta?.maturity || 'experimental';
     const debugLevel = sourceResult?.providerMeta?.debugLevel || 'minimal';
     const includeDetailedDebug = debugLevel === 'detailed' || sourceResult?.status === 'error';
+    const shouldExposeSourceItems = includeDetailedDebug && (maturity !== 'stable' || sourceResult?.status !== 'success');
     const normalizedSource = {
       ...sourceResult,
+      items: shouldExposeSourceItems ? (sourceResult?.items || []) : [],
       debugSummary: includeDetailedDebug
         ? sourceResult?.debugSummary
         : compactDebugSummary(sourceResult?.debugSummary),
@@ -308,7 +320,6 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
     sources.push(normalizedSource);
   });
 
-  const allItems = sources.flatMap((source) => (Array.isArray(source?.items) ? source.items : []));
   const items = deduplicateItems(allItems);
   const totalItems = items.length;
   const queriedAt = new Date().toISOString();

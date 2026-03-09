@@ -70,4 +70,26 @@ describe('Trf5PublicaProvider heuristics', () => {
     expect(searchActionChosen.text).toBe('Buscar');
     expect(searchActionChosen.score).toBeGreaterThan(150);
   });
+
+  test('buildDomInspectionSummary retorna top candidatos e motivo de falha', () => {
+    const diagnostics = {
+      frameTree: [{ frameIndex: null }, { frameIndex: 1 }],
+      inputCandidates: [{}, {}],
+      documentFieldCandidates: [
+        { selector: '#a', frameIndex: null, score: 90, tag: 'input', type: 'text', visible: true, editable: true, scoreReasoning: 'context_hint:+40' },
+        { selector: '#b', frameIndex: 1, score: 70, tag: 'input', type: 'text', visible: false, editable: true, scoreReasoning: 'hidden' },
+      ],
+      clickableFilterCandidates: [
+        { selector: '.filtro', frameIndex: null, score: 100, nearestLabelText: 'Filtro' },
+      ],
+    };
+
+    const summary = provider.buildDomInspectionSummary(diagnostics);
+    expect(summary.framesScanned).toBe(2);
+    expect(summary.cpfCandidatesCount).toBe(2);
+    expect(summary.topCpfCandidates).toHaveLength(2);
+    expect(summary.topClickableCandidates[0]).toEqual(expect.objectContaining({ selector: '.filtro' }));
+    expect(summary.documentFieldFailureReason).toBe('no_candidate_scored_above_threshold');
+  });
+
 });

@@ -40,6 +40,7 @@ describe('consultaProcessual.service', () => {
     expect(result.ok).toBe(true);
     expect(result.sources).toHaveLength(1);
     expect(result.items).toEqual([{ source: 'trf1', sourceLabel: 'TRF1', processNumber: '1' }]);
+    expect(result.sources[0].items).toEqual([]);
     expect(result.totalItems).toBe(1);
     expect(result.documentMasked).toContain('***');
   });
@@ -81,6 +82,14 @@ describe('consultaProcessual.service', () => {
     expect(result.debugReport).toBeTruthy();
     expect(result.debugReport.likelyFailureStage).toBe('normalization');
     expect(result.debugReport.sourceReports[0].discardReasons).toEqual({ missing_href: 2 });
+    expect(result.debugReport.sourceReports[0].metrics).toEqual(expect.objectContaining({
+      pageLoaded: false,
+      documentFieldFound: false,
+      searchTriggered: true,
+      submitSucceeded: false,
+      declaredResultsCount: 0,
+      normalizedItemsCount: 0,
+    }));
   });
 
   test('suporta modo institucional com CNPJ fixo', async () => {
@@ -236,4 +245,14 @@ test('aplica debug seletivo: TRF1 mínimo e TRF5 detalhado', async () => {
   }));
   const trf1Source = result.sources.find((s) => s.source === 'trf1');
   expect(trf1Source.debugData).toBeNull();
+  expect(trf1Source.items).toEqual([]);
+  const trf1Report = result.debugReport.sourceReports.find((s) => s.source === 'trf1');
+  expect(Object.keys(trf1Report.metrics).sort()).toEqual([
+    'declaredResultsCount',
+    'documentFieldFound',
+    'normalizedItemsCount',
+    'pageLoaded',
+    'searchTriggered',
+    'submitSucceeded',
+  ]);
 });

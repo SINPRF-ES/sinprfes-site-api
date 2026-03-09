@@ -106,17 +106,38 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       await saveArtifact('01-home.png', page, 'screenshot');
       await saveArtifact('01-home.html', await page.content());
 
-      const diagnostics = await this.collectDomDiagnostics(page);
+      const diagnostics = await this.collectDomDiagnostics(page, { skipInteractions: true });
       await saveArtifact('02-frame-tree.json', JSON.stringify(diagnostics.frameTree, null, 2));
       await saveArtifact('03-dom-inventory.json', JSON.stringify(diagnostics.domInventory, null, 2));
       await saveArtifact('04-input-candidates.json', JSON.stringify(diagnostics.inputCandidates, null, 2));
       await saveArtifact('05-cpf-candidates-ranked.json', JSON.stringify(diagnostics.documentFieldCandidates, null, 2));
       await saveArtifact('06-clickable-filter-candidates.json', JSON.stringify(diagnostics.clickableFilterCandidates, null, 2));
 
-      const docField = diagnostics.documentFieldChosen;
-      if (!docField?.selector) {
+      let finalDiagnostics = diagnostics;
+      let docField = diagnostics.documentFieldChosen;
+      debugSummary.cpfDetectionPasses = 1;
+      debugSummary.postInteractionRescanPerformed = false;
+
+      if (!this.isCpfCandidateUsable(docField)) {
+        const rescanned = await this.tryPostInteractionRescan(page, diagnostics);
+        debugSummary.cpfDetectionPasses = rescanned.performed ? 2 : 1;
+        debugSummary.postInteractionRescanPerformed = rescanned.performed;
+        if (rescanned.performed) {
+          finalDiagnostics = rescanned.diagnostics;
+          docField = rescanned.diagnostics.documentFieldChosen;
+          await saveArtifact('07-post-filter-click-rescan-cpf-candidates.json', JSON.stringify(finalDiagnostics.documentFieldCandidates, null, 2));
+        }
+      }
+
+      const domInspectionSummary = this.buildDomInspectionSummary(finalDiagnostics);
+      if (debugData) {
+        debugData.domInspection = domInspectionSummary;
+      }
+
+      if (!this.isCpfCandidateUsable(docField)) {
         debugSummary.failureStage = 'document_field';
-        throw new Error('Campo CPF não identificado no TRF5');
+        debugSummary.documentFieldFailureReason = this.resolveDocumentFieldFailureReason(docField, finalDiagnostics);
+        throw new Error(this.buildDocumentFieldErrorMessage(debugSummary.documentFieldFailureReason, debugSummary.cpfDetectionPasses));
       }
       debugSummary.documentFieldFound = true;
 
@@ -129,10 +150,10 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       await page.waitForTimeout(800);
       const value = await field.inputValue().catch(() => '');
       debugSummary.maskedInputAccepted = value.includes('.') || value === cpfMasked;
-      await saveArtifact('07-post-interaction-home.png', page, 'screenshot');
+      await saveArtifact('08-post-interaction-home.png', page, 'screenshot');
 
       const postInteractionDiagnostics = await this.collectDomDiagnostics(page, { skipInteractions: true });
-      await saveArtifact('08-post-interaction-dom-inventory.json', JSON.stringify(postInteractionDiagnostics.domInventory, null, 2));
+      await saveArtifact('09-post-interaction-dom-inventory.json', JSON.stringify(postInteractionDiagnostics.domInventory, null, 2));
       if (!debugSummary.maskedInputAccepted) {
         debugSummary.failureStage = 'document_field';
         throw new Error('Campo CPF identificado, mas input mascarado não foi aceito no TRF5');
@@ -476,14 +497,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
     await collectFromFrames();
 
     if (!skipInteractions) {
-      const topClickable = clickableFilterCandidates
-        .map((el) => {
-          const hay = `${el.className} ${el.text} ${el.parentText} ${el.nearestLabelText}`.toLowerCase();
-          const score = (/filter|filtro|painel/.test(hay) ? 80 : 0) + (/cpf|documento|consulta/.test(hay) ? 90 : 0) + (el.visible ? 15 : 0);
-          return { ...el, score };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
+      const topClickable = clickableFilterCandidates.slice(0, 3);
 
       for (const candidate of topClickable) {
         if (!candidate.selector) continue;
@@ -495,18 +509,109 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       await collectFromFrames();
     }
 
+    const rankedClickableFilterCandidates = clickableFilterCandidates
+      .map((el) => {
+        const hay = `${el.className} ${el.text} ${el.parentText} ${el.nearestLabelText}`.toLowerCase();
+        const score = (/filter|filtro|painel/.test(hay) ? 80 : 0) + (/cpf|documento|consulta/.test(hay) ? 90 : 0) + (el.visible ? 15 : 0);
+        return { ...el, score };
+      })
+      .sort((a, b) => b.score - a.score);
     const { documentFieldCandidates, documentFieldChosen } = this.rankDocumentFieldCandidates(allElements);
     const { searchActionCandidates, searchActionChosen } = this.rankSearchCandidates(allElements, documentFieldChosen);
     return {
       frameTree,
+      shadowRootsScanned: 0,
       domInventory: { elements: allElements },
       inputCandidates,
-      clickableFilterCandidates,
+      clickableFilterCandidates: rankedClickableFilterCandidates,
       documentFieldCandidates,
       documentFieldChosen,
       searchActionCandidates,
       searchActionChosen,
     };
+  }
+
+  isCpfCandidateUsable(candidate) {
+    if (!candidate?.selector) return false;
+    if (!candidate.visible) return false;
+    if (!candidate.editable) return false;
+    return Number(candidate.score || 0) >= 120;
+  }
+
+  resolveDocumentFieldFailureReason(candidate, diagnostics = {}) {
+    if (!candidate) return 'no_candidate_scored_above_threshold';
+    if (candidate.frameIndex === -1) return 'field_inside_unresolved_iframe';
+    if (!candidate.visible) return 'candidate_found_but_hidden';
+    if (!candidate.editable || candidate.readonly || candidate.disabled) return 'candidate_found_but_not_editable';
+    if (Number(candidate.score || 0) < 120) return 'no_candidate_scored_above_threshold';
+    if (Number(diagnostics.clickableFilterCandidates?.length || 0) > 0) return 'candidate_found_only_after_click_not_attempted';
+    return 'no_candidate_scored_above_threshold';
+  }
+
+  buildDocumentFieldErrorMessage(reason, passes = 1) {
+    return `Campo CPF não identificado no TRF5 após ${passes} passes de varredura; motivo: ${reason}`;
+  }
+
+  summarizeCandidate(candidate) {
+    if (!candidate) return null;
+    return {
+      selector: candidate.selector,
+      frameIndex: candidate.frameIndex,
+      score: Number(candidate.score || 0),
+      attributes: {
+        tag: candidate.tag,
+        type: candidate.type,
+        id: candidate.id || null,
+        name: candidate.name || null,
+        className: candidate.className || null,
+        placeholder: candidate.placeholder || null,
+        ariaLabel: candidate.ariaLabel || null,
+        visible: Boolean(candidate.visible),
+        editable: Boolean(candidate.editable),
+        readonly: Boolean(candidate.readonly),
+        disabled: Boolean(candidate.disabled),
+      },
+      reason: candidate.scoreReasoning || null,
+      text: candidate.text || candidate.nearestLabelText || null,
+    };
+  }
+
+  buildDomInspectionSummary(diagnostics = {}) {
+    const topCpfCandidates = (diagnostics.documentFieldCandidates || []).slice(0, 3).map((c) => this.summarizeCandidate(c));
+    const topClickableCandidates = (diagnostics.clickableFilterCandidates || []).slice(0, 3).map((c) => ({
+      selector: c.selector,
+      frameIndex: c.frameIndex,
+      score: Number(c.score || 0),
+      label: c.nearestLabelText || c.text || c.parentText || null,
+    }));
+    const best = topCpfCandidates[0] || null;
+    const bestRaw = (diagnostics.documentFieldCandidates || [])[0] || null;
+    return {
+      framesScanned: Number(diagnostics.frameTree?.length || 0),
+      shadowRootsScanned: Number(diagnostics.shadowRootsScanned || 0),
+      inputCandidatesCount: Number(diagnostics.inputCandidates?.length || 0),
+      cpfCandidatesCount: Number(diagnostics.documentFieldCandidates?.length || 0),
+      bestCpfCandidate: best,
+      bestCpfCandidateScore: Number(best?.score || 0),
+      bestCpfCandidateReasoning: best?.reason || null,
+      clickableFilterCandidatesCount: Number(diagnostics.clickableFilterCandidates?.length || 0),
+      topCpfCandidates,
+      topClickableCandidates,
+      documentFieldFailureReason: this.resolveDocumentFieldFailureReason(bestRaw, diagnostics),
+    };
+  }
+
+  async tryPostInteractionRescan(page, diagnostics) {
+    const clickable = (diagnostics.clickableFilterCandidates || []).slice(0, 3);
+    if (!clickable.length) return { performed: false, diagnostics };
+    for (const candidate of clickable) {
+      if (!candidate.selector) continue;
+      const frame = candidate.frameIndex !== null ? page.frames()[candidate.frameIndex] : page;
+      await frame.locator(candidate.selector).first().click({ timeout: 1500 }).catch(() => {});
+      await page.waitForTimeout(450);
+    }
+    const rescanned = await this.collectDomDiagnostics(page, { skipInteractions: true });
+    return { performed: true, diagnostics: rescanned };
   }
 
   rankDocumentFieldCandidates(elements = []) {
@@ -518,16 +623,17 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       })
       .map((el) => {
         let score = 0;
+        const reasons = [];
         const hay = `${el.id} ${el.name} ${el.placeholder} ${el.title} ${el.ariaLabel} ${el.nearestLabelText} ${el.parentText} ${el.nearbySiblingText} ${el.className}`.toLowerCase();
-        if (el.visible) score += 25;
-        if (el.editable) score += 20;
-        if (/cpf\/?cnpj|cpf|cnpj/.test(hay)) score += 160;
-        if (/documento|consulta|filtro|parte|nome/.test(hay)) score += 40;
-        if (/qlik|qv-|lui-/.test(hay)) score += 20;
-        if (el.readonly || el.disabled) score -= 80;
-        if ((el.className || '').includes('lui-input')) score += 40;
-        if (el.bbox?.y < 900) score += 5;
-        return { ...el, score };
+        if (el.visible) { score += 25; reasons.push('visible:+25'); }
+        if (el.editable) { score += 20; reasons.push('editable:+20'); }
+        if (/cpf\/?cnpj|cpf|cnpj/.test(hay)) { score += 160; reasons.push('cpf_hint:+160'); }
+        if (/documento|consulta|filtro|parte|nome/.test(hay)) { score += 40; reasons.push('context_hint:+40'); }
+        if (/qlik|qv-|lui-/.test(hay)) { score += 20; reasons.push('qlik_hint:+20'); }
+        if (el.readonly || el.disabled) { score -= 80; reasons.push('readonly_or_disabled:-80'); }
+        if ((el.className || '').includes('lui-input')) { score += 40; reasons.push('lui_input:+40'); }
+        if (el.bbox?.y < 900) { score += 5; reasons.push('viewport:+5'); }
+        return { ...el, score, scoreReasoning: reasons.join(', ') };
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, 12);
