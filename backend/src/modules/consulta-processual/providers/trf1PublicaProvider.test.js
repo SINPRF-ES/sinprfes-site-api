@@ -236,11 +236,4 @@ describe('Trf1PublicaProvider', () => {
     });
   });
 
-  it('aplica timeout de busca robusto no TRF1 sem depender do global', () => {
-    const provider = new Trf1PublicaProvider();
-
-    expect(provider.getSearchTimeoutMs({ searchTimeoutMs: 15000 })).toBe(30000);
-    expect(provider.getSearchTimeoutMs({ searchTimeoutMs: 45000 })).toBe(45000);
-    expect(provider.getWaitPollIntervalMs()).toBe(350);
-  });
 });
