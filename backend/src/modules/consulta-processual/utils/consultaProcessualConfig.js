@@ -3,6 +3,11 @@ function parseBool(v, d = false) {
   return ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase());
 }
 
+function parseOptionalBool(v) {
+  if (v === undefined || v === null || v === '') return null;
+  return parseBool(v, false);
+}
+
 function parseIntSafe(v, d) {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
@@ -21,6 +26,11 @@ function getConsultaProcessualConfig() {
     initialLoadTimeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_INITIAL_LOAD_TIMEOUT_MS, 30000),
     searchTimeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_SEARCH_TIMEOUT_MS, 15000),
     debug: parseBool(process.env.CONSULTA_PROCESSUAL_DEBUG, false),
+    debugVerbose: parseBool(process.env.CONSULTA_PROCESSUAL_DEBUG_VERBOSE, false),
+    debugTrf1: parseOptionalBool(process.env.CONSULTA_PROCESSUAL_DEBUG_TRF1),
+    debugTrf3: parseOptionalBool(process.env.CONSULTA_PROCESSUAL_DEBUG_TRF3),
+    debugTrf5: parseOptionalBool(process.env.CONSULTA_PROCESSUAL_DEBUG_TRF5),
+    debugTrf6: parseOptionalBool(process.env.CONSULTA_PROCESSUAL_DEBUG_TRF6),
     headless: parseBool(process.env.CONSULTA_PROCESSUAL_HEADLESS, isProd),
     debugScreenshot: parseBool(process.env.CONSULTA_PROCESSUAL_DEBUG_SCREENSHOT, false),
     playwrightEnabled: parseBool(process.env.PLAYWRIGHT_ENABLED, true),

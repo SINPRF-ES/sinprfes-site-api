@@ -45,7 +45,14 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
   async consultarPorDocumento({ document, documentMasked, requestId, userId, debug: debugOverride }) {
     const startedAt = Date.now();
     const cfg = getConsultaProcessualConfig();
-    const isDebug = Boolean(debugOverride || cfg.debug);
+    const debugOptions = typeof debugOverride === 'object' && debugOverride !== null
+      ? debugOverride
+      : { enabled: Boolean(debugOverride || cfg.debug), includeArtifacts: Boolean(debugOverride || cfg.debug), includeDomInspection: Boolean(debugOverride || cfg.debug), includeSteps: Boolean(debugOverride || cfg.debug), includeWarnings: Boolean(debugOverride || cfg.debug), level: 'detailed' };
+    const isDebug = Boolean(debugOptions.enabled);
+    const includeArtifacts = Boolean(debugOptions.includeArtifacts);
+    const includeDomInspection = Boolean(debugOptions.includeDomInspection);
+    const includeSteps = Boolean(debugOptions.includeSteps);
+    const includeWarnings = Boolean(debugOptions.includeWarnings);
 
     if (!this.isEnabled()) {
       return {
@@ -53,7 +60,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         sourceLabel: this.getLabel(),
         status: 'skipped',
         items: [],
-        providerMeta: { maturity: this.getMaturityStatus() },
+        providerMeta: { maturity: this.getMaturityStatus(), debugLevel: debugOptions.level || 'minimal' },
       };
     }
 
@@ -85,10 +92,10 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
       domInspection: null,
       discardReasons: {},
     } : null;
-    if (isDebug) debugSummary.artifactsBaseDir = debugBaseDir;
+    if (isDebug && includeArtifacts) debugSummary.artifactsBaseDir = debugBaseDir;
 
     const saveArtifact = async (name, content, type = 'text') => {
-      if (!isDebug) return;
+      if (!isDebug || !includeArtifacts) return;
       try {
         if (!fs.existsSync(debugBaseDir)) {
           fs.mkdirSync(debugBaseDir, { recursive: true });
@@ -132,8 +139,8 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         timestamp: new Date().toISOString(),
         ...extra,
       };
-      if (debugData) debugData.steps.push(payload);
-      log.info('ConsultaProcessualDebugStep', payload);
+      if (includeSteps && debugData) debugData.steps.push(payload);
+      if (includeSteps) log.info('ConsultaProcessualDebugStep', payload);
     };
 
     const emitDebugWarning = (step, extra = {}) => {
@@ -147,8 +154,8 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         timestamp: new Date().toISOString(),
         ...extra,
       };
-      if (debugData) debugData.warnings.push(payload);
-      log.info('ConsultaProcessualDebugWarning', payload);
+      if (includeWarnings && debugData) debugData.warnings.push(payload);
+      if (includeWarnings) log.info('ConsultaProcessualDebugWarning', payload);
     };
 
     let browser;
@@ -173,7 +180,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         sourceLabel: this.getLabel(),
         status: 'skipped',
         items: [],
-        providerMeta: { maturity: this.getMaturityStatus() },
+        providerMeta: { maturity: this.getMaturityStatus(), debugLevel: debugOptions.level || 'minimal' },
       };
       }
 
@@ -453,7 +460,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
       });
 
       const domInspection = inspectResultsDom(extraction);
-      if (debugData) debugData.domInspection = domInspection;
+      if (debugData && includeDomInspection) debugData.domInspection = domInspection;
       debugSummary.resultsContainerFound = Boolean(domInspection.hasGridPanel || domInspection.hasGridPanelBody || domInspection.hasProcessTable);
       debugSummary.resultsTextDetected = domInspection.declaredResultsTextDetected;
       debugSummary.declaredResultsCount = domInspection.declaredResultsCount;
@@ -476,7 +483,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
           sourceLabel: this.getLabel(),
           status: 'success',
           items: [],
-          providerMeta: { maturity: this.getMaturityStatus() },
+          providerMeta: { maturity: this.getMaturityStatus(), debugLevel: debugOptions.level || 'minimal' },
           debugSummary,
           debugData,
         };
@@ -514,6 +521,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
           providerMeta: {
             ...(row.providerMeta || {}),
             detailsExtracted: Boolean(detail.rawLastMovementText),
+            debugLevel: debugOptions.level || 'minimal',
           },
         };
 
@@ -529,14 +537,14 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         emitDebugWarning('normalize_item_rejected', warning);
       });
       debugSummary.normalizedItemsCount = items.length;
-      if (debugData) debugData.discardReasons = discardReasons;
+      if (debugData && includeWarnings) debugData.discardReasons = discardReasons;
 
       return {
         source: this.getId(),
         sourceLabel: this.getLabel(),
         status: 'success',
         items,
-        providerMeta: { maturity: this.getMaturityStatus() },
+        providerMeta: { maturity: this.getMaturityStatus(), debugLevel: debugOptions.level || 'minimal' },
         debugSummary,
         debugData,
       };
@@ -552,7 +560,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         sourceLabel: this.getLabel(),
         status: 'error',
         items: [],
-        providerMeta: { maturity: this.getMaturityStatus() },
+        providerMeta: { maturity: this.getMaturityStatus(), debugLevel: debugOptions.level || 'minimal' },
         debugSummary,
         debugData,
         error: this.classifyError(err),
