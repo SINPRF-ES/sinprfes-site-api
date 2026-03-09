@@ -26,3 +26,7 @@
 ## 2026-02-25 - [Sequential DB Queries and Nested Lookups in Repasse Service]
 **Learning:** Sequential `await` calls for independent database queries and using `.find()` inside nested loops (creating O(N * M) complexity) significantly slow down complex data aggregation functions like `getRepasseAno`. Parallelizing queries with `Promise.all` and pre-indexing datasets with `Map` can reduce execution time by an order of magnitude as data grows.
 **Action:** Always scan for loops containing `.find()` or `.filter()` on other datasets. Replace them with `Map`-based lookups and use `Promise.all` for independent DB operations.
+
+## 2026-03-09 - [Hierarchical Parallelization in Aggregated Reports]
+**Learning:** In complex reporting services, sequential "waterfalls" often hide within sub-functions. Parallelizing high-level functions (like `buscarDadosGlobal`) is only half the battle if their dependencies (like `buscarDadosAgregados`) still contain internal sequential loops. Converting sequential `for` loops that perform I/O into `Promise.all(map(...))` is the single most effective way to handle batch data fetching in Node.js.
+**Action:** When optimizing a service method, recursively check its internal dependencies for hidden sequential I/O. Use hierarchical parallelization to ensure that both the orchestrator and the worker functions are non-blocking.
