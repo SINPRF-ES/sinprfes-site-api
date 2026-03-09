@@ -276,15 +276,29 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
     let sourceResult;
     try {
       sourceResult = await runPromise;
+      if (sourceResult?.status === 'success') {
+        if (isInstitutional) {
+          sourceResult.items = (sourceResult.items || []).map((it) => ({ ...it, institutional: true }));
+        }
+        setCacheEntry(providerKey, sourceResult, cfg.cacheTtlMs);
+      }
+    } catch (err) {
+      log.error('ConsultaProcessualProviderFatalError', {
+        source: provider.getId(),
+        requestId,
+        userId,
+        errorMessage: err.message,
+      });
+      sourceResult = {
+        source: provider.getId(),
+        sourceLabel: provider.getLabel(),
+        status: 'error',
+        items: [],
+        error: { code: 'PROVIDER_FATAL_ERROR', message: err.message },
+        providerMeta: { maturity: provider.getMaturityStatus?.() || 'experimental' },
+      };
     } finally {
       inFlight.delete(runningKey);
-    }
-
-    if (sourceResult?.status === 'success') {
-      if (isInstitutional) {
-        sourceResult.items = (sourceResult.items || []).map((it) => ({ ...it, institutional: true }));
-      }
-      setCacheEntry(providerKey, sourceResult, cfg.cacheTtlMs);
     }
     return sourceResult;
   });
