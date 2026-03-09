@@ -646,11 +646,9 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         const gridPanelBody = document.getElementById(gridPanelBodyId);
         const gridPanel = document.getElementById(gridPanelId);
         const root = gridPanelBody || gridPanel || document;
-        // Expand scope to document.body to ensure we catch results declared outside the specific panel
-        const panelText = clean((document.body)?.innerText || '');
+        const panelText = clean((gridPanelBody || gridPanel || document.body)?.innerText || '');
         const panelHtml = gridPanelBody?.innerHTML || '';
         const declaredMatch = panelText.match(RESULT_RE);
-        const isZeroResults = /\b0\s+resultados? encontrados\b/i.test(panelText);
 
         const links = Array.from(root.querySelectorAll('a[href],a[onclick]')).map((node) => {
           const href = (node.getAttribute('href') || '').trim();
@@ -679,7 +677,6 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
           panelTextChanged: panelText !== String(prevPanelText || ''),
           declaredResultsCount: Number(declaredMatch?.[1] || 0),
           hasDeclaredResultsPositive: Number(declaredMatch?.[1] || 0) > 0,
-          hasDeclaredResultsZero: isZeroResults,
           cnjMatchesFound: cnjMatches.length,
           cnjIncreased: cnjMatches.length > Number(prevCnjMatchesFoundValue || 0),
           processLikeLinksFound: processLikeLinks.length,
@@ -697,7 +694,6 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
 
       const waitConditionMatched =
         (snapshot.hasDeclaredResultsPositive && 'declared_results_positive')
-        || (snapshot.hasDeclaredResultsZero && 'declared_results_zero')
         || (snapshot.cnjMatchesFound > 0 && snapshot.cnjIncreased && 'cnj_match_increased')
         || (snapshot.addedProcessLikeLinksFound > 0 && 'new_process_links_found')
         || (snapshot.panelHtmlChanged && snapshot.panelTextChanged && 'panel_html_changed')
