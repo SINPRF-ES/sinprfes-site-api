@@ -235,4 +235,12 @@ describe('Trf1PublicaProvider', () => {
       lastMovementAt: '2025-09-03T14:53:59.000Z',
     });
   });
+
+  it('aplica timeout de busca robusto no TRF1 sem depender do global', () => {
+    const provider = new Trf1PublicaProvider();
+
+    expect(provider.getSearchTimeoutMs({ searchTimeoutMs: 15000 })).toBe(30000);
+    expect(provider.getSearchTimeoutMs({ searchTimeoutMs: 45000 })).toBe(45000);
+    expect(provider.getWaitPollIntervalMs()).toBe(350);
+  });
 });

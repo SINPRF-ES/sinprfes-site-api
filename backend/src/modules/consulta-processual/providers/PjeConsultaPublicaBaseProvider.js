@@ -22,6 +22,14 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
     throw new Error('Provider must implement getParser()');
   }
 
+  getSearchTimeoutMs(cfg) {
+    return cfg.searchTimeoutMs;
+  }
+
+  getWaitPollIntervalMs() {
+    return 250;
+  }
+
   getMaturityStatus() {
     return 'experimental';
   }
@@ -314,9 +322,10 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
       debugSummary.searchTriggered = true;
 
       let waitInfo;
+      const searchTimeoutMs = this.getSearchTimeoutMs(cfg);
       try {
         waitInfo = await this.waitForRealResultsUpdate(page, {
-          timeoutMs: cfg.searchTimeoutMs,
+          timeoutMs: searchTimeoutMs,
           previousPanelBodyHtml: beforeSubmitPanelHtml,
           previousPanelText: beforeSubmitSignals.panelText || '',
           previousLinkSignatures: Array.isArray(beforeSubmitSignals.linkSignatures) ? beforeSubmitSignals.linkSignatures : [],
@@ -327,7 +336,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
       } catch (err) {
         debugSummary.failureStage = 'submit_or_wait';
         emitDebugWarning('D_submit_search_timeout', {
-          timeoutMs: cfg.searchTimeoutMs,
+          timeoutMs: searchTimeoutMs,
           errorMessage: err.message,
         });
         await saveArtifact('03-submit-timeout.png', page, 'screenshot');
@@ -644,7 +653,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
     selectors,
   }) {
     const startedAt = Date.now();
-    const pollIntervalMs = 250;
+    const pollIntervalMs = this.getWaitPollIntervalMs();
 
     while (Date.now() - startedAt < timeoutMs) {
       const snapshot = await page.evaluate(({ prevHtml, prevPanelText, prevLinkSignatures, prevCnjMatchesFoundValue, gridPanelId, gridPanelBodyId }) => {

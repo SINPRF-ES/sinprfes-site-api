@@ -16,6 +16,14 @@ class Trf1PublicaProvider extends PjeConsultaPublicaBaseProvider {
   getParser() {
     return createPjeParser(this.getId(), this.getLabel());
   }
+
+  getSearchTimeoutMs(cfg) {
+    return Math.max(cfg.searchTimeoutMs, 30000);
+  }
+
+  getWaitPollIntervalMs() {
+    return 350;
+  }
 }
 
 module.exports = Trf1PublicaProvider;
