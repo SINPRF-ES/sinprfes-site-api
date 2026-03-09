@@ -115,6 +115,9 @@ describe('consultaProcessual.service', () => {
 
 
 test('inclui providers desabilitados como skipped sem contaminar retorno consolidado', async () => {
+  service.__testables.cache.clear();
+  service.__testables.inFlight.clear();
+  service.__testables.lastRunByUser.clear();
   pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
 
   buildConsultaProviders.mockReturnValue([
@@ -160,4 +163,35 @@ test('inclui providers desabilitados como skipped sem contaminar retorno consoli
       }),
     }),
   ]));
+});
+
+test('preserva múltiplas linhas do TRF5 com mesmo CNJ quando contexto difere', async () => {
+  service.__testables.cache.clear();
+  service.__testables.inFlight.clear();
+  service.__testables.lastRunByUser.clear();
+  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
+
+  buildConsultaProviders.mockReturnValue([
+    {
+      getId: () => 'trf5',
+      getLabel: () => 'TRF5',
+      getMaturityStatus: () => 'stable',
+      isEnabled: () => true,
+      consultarPorDocumento: jest.fn().mockResolvedValue({
+        source: 'trf5',
+        sourceLabel: 'TRF5',
+        status: 'success',
+        count: 2,
+        items: [
+          { source: 'trf5', processNumber: '0512976-13.2006.4.05.8013', providerMeta: { gradeLevel: '1º Grau' } },
+          { source: 'trf5', processNumber: '0512976-13.2006.4.05.8013', providerMeta: { gradeLevel: '2º Grau' } },
+        ],
+      }),
+    },
+  ]);
+
+  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r5' });
+
+  expect(result.ok).toBe(true);
+  expect(result.items).toHaveLength(2);
 });

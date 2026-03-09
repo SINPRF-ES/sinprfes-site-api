@@ -101,6 +101,7 @@ async function obterUsuarioPorId(id) {
 function deduplicateItems(items) {
   const seen = new Set();
   return items.filter((item) => {
+    if (String(item?.source || '').toLowerCase() === 'trf5') return true;
     if (!item.processNumber) return true;
     if (seen.has(item.processNumber)) return false;
     seen.add(item.processNumber);
