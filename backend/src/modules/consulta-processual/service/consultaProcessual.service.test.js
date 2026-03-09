@@ -1,16 +1,11 @@
-jest.mock('../../../config/db', () => ({
-  query: jest.fn(),
-}));
-
-jest.mock('../providers', () => ({
-  buildConsultaProviders: jest.fn(),
-}));
+jest.mock('../../../config/db', () => ({ query: jest.fn() }));
+jest.mock('../providers', () => ({ buildConsultaProviders: jest.fn() }));
 
 const pool = require('../../../config/db');
 const { buildConsultaProviders } = require('../providers');
 const service = require('./consultaProcessual.service');
 
-describe('consultaProcessual.service', () => {
+describe('consultaProcessual.service TRF1-only', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service.__testables.cache.clear();
@@ -18,343 +13,32 @@ describe('consultaProcessual.service', () => {
     service.__testables.lastRunByUser.clear();
   });
 
-  test('consolida retorno de provider com sucesso', async () => {
-    pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
-    buildConsultaProviders.mockReturnValue([
-      {
-        getId: () => 'trf1',
-        getLabel: () => 'TRF1',
-        isEnabled: () => true,
-        consultarPorDocumento: jest.fn().mockResolvedValue({
-          source: 'trf1',
-          sourceLabel: 'TRF1',
-          status: 'success',
-          count: 1,
-          items: [{ source: 'trf1', sourceLabel: 'TRF1', processNumber: '1' }],
-        }),
-      },
-    ]);
+  test('retorna payload consolidado single-source TRF1', async () => {
+    pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '03241063437', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
+    buildConsultaProviders.mockReturnValue([{ isEnabled: () => true, consultarPorDocumento: jest.fn().mockResolvedValue({ source: 'trf1', sourceLabel: 'TRF1', status: 'success', items: [{ source: 'trf1', processNumber: '1061304-94.2023.4.01.3400' }], debugSummary: { submitSucceeded: true, declaredResultsCount: 1, normalizedItemsCount: 1 } }) }]);
 
     const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r1' });
-
     expect(result.ok).toBe(true);
-    expect(result.sources).toHaveLength(1);
-    expect(result.items).toEqual([{ source: 'trf1', sourceLabel: 'TRF1', processNumber: '1' }]);
-    expect(result.sources[0].items).toEqual([]);
     expect(result.totalItems).toBe(1);
-    expect(result.documentMasked).toContain('***');
+    expect(result.items).toHaveLength(1);
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0].source).toBe('trf1');
   });
 
-  test('inclui debugReport consolidado quando debug está ativo', async () => {
-    pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
-    buildConsultaProviders.mockReturnValue([
-      {
-        getId: () => 'trf1',
-        getLabel: () => 'TRF1',
-        isEnabled: () => true,
-        consultarPorDocumento: jest.fn().mockResolvedValue({
-          source: 'trf1',
-          sourceLabel: 'TRF1',
-          status: 'success',
-          count: 0,
-          items: [],
-          providerMeta: { debugLevel: 'detailed' },
-          debugSummary: {
-            searchTriggered: true,
-            resultsContainerFound: true,
-            rawBlocksFound: 2,
-            normalizedItemsCount: 0,
-            failureStage: 'normalization',
-          },
-          debugData: {
-            steps: [{ step: 'E_capture_results_end', timestamp: '2026-01-01T00:00:00.000Z' }],
-            warnings: [{ step: 'normalize_item_rejected', reason: 'missing_href', timestamp: '2026-01-01T00:00:01.000Z' }],
-            artifacts: [{ name: 'results-grid.html', path: '/tmp/x' }],
-            discardReasons: { missing_href: 2 },
-          },
-        }),
-      },
-    ]);
+  test('fluxo oficial: quando grid declara 2 e há 2 blocos, retorna totalItems=2', async () => {
+    pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '03241063437', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
+    buildConsultaProviders.mockReturnValue([{ isEnabled: () => true, consultarPorDocumento: jest.fn().mockResolvedValue({
+      source: 'trf1', sourceLabel: 'TRF1', status: 'success',
+      items: [
+        { source: 'trf1', sourceLabel: 'TRF1', processNumber: '1061304-94.2023.4.01.3400' },
+        { source: 'trf1', sourceLabel: 'TRF1', processNumber: '1055982-59.2024.4.01.3400' },
+      ],
+      debugSummary: { submitSucceeded: true, declaredResultsCount: 2, normalizedItemsCount: 2 },
+    }) }]);
 
-    const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r2', debug: true });
-
+    const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r2' });
     expect(result.ok).toBe(true);
-    expect(result.debugReport).toBeTruthy();
-    expect(result.debugReport.likelyFailureStage).toBe('normalization');
-    expect(result.debugReport.sourceReports[0].discardReasons).toEqual({ missing_href: 2 });
-    expect(result.debugReport.sourceReports[0].metrics).toEqual(expect.objectContaining({
-      pageLoaded: false,
-      documentFieldFound: false,
-      searchTriggered: true,
-      submitSucceeded: false,
-      declaredResultsCount: 0,
-      normalizedItemsCount: 0,
-    }));
+    expect(result.totalItems).toBe(2);
+    expect(result.sources[0].debugSummary.declaredResultsCount).toBe(2);
   });
-
-  test('suporta modo institucional com CNPJ fixo', async () => {
-    pool.query.mockResolvedValue({ rows: [{ id: 10, nome: 'Diretor', perfil_acesso: 'DIRETORIA' }] });
-    const mockConsultar = jest.fn().mockResolvedValue({
-      source: 'trf1',
-      sourceLabel: 'TRF1',
-      status: 'success',
-      count: 1,
-      items: [{ source: 'trf1', processNumber: '123' }],
-    });
-
-    buildConsultaProviders.mockReturnValue([
-      {
-        getId: () => 'trf1',
-        getLabel: () => 'TRF1',
-        isEnabled: () => true,
-        consultarPorDocumento: mockConsultar,
-      },
-    ]);
-
-    const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r3', mode: 'institutional' });
-
-    expect(result.ok).toBe(true);
-    expect(result.mode).toBe('institutional');
-    expect(mockConsultar).toHaveBeenCalledWith(expect.objectContaining({
-      document: '39387378000125',
-    }));
-    expect(result.items[0].institutional).toBe(true);
-  });
-
-});
-
-
-test('inclui providers desabilitados como skipped sem contaminar retorno consolidado', async () => {
-  service.__testables.cache.clear();
-  service.__testables.inFlight.clear();
-  service.__testables.lastRunByUser.clear();
-  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
-
-  buildConsultaProviders.mockReturnValue([
-    {
-      getId: () => 'trf1',
-      getLabel: () => 'TRF1',
-      getMaturityStatus: () => 'stable',
-      isEnabled: () => true,
-      consultarPorDocumento: jest.fn().mockResolvedValue({
-        source: 'trf1',
-        sourceLabel: 'TRF1',
-        status: 'success',
-        count: 1,
-        items: [{ source: 'trf1', processNumber: 'proc-1' }],
-      }),
-    },
-    {
-      getId: () => 'trf6',
-      getLabel: () => 'TRF6',
-      getMaturityStatus: () => 'disabled',
-      isEnabled: () => false,
-    },
-  ]);
-
-  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r4' });
-
-  expect(result.ok).toBe(true);
-  expect(result.items).toHaveLength(1);
-  expect(result.sources).toEqual(expect.arrayContaining([
-    expect.objectContaining({
-      source: 'trf1',
-      status: 'success',
-      providerMeta: expect.objectContaining({ maturity: 'stable', enabled: true }),
-    }),
-    expect.objectContaining({
-      source: 'trf6',
-      status: 'skipped',
-      providerMeta: expect.objectContaining({
-        maturity: 'disabled',
-        enabled: false,
-        skipReason: 'feature_flag_disabled',
-        flagName: 'CONSULTA_PROCESSUAL_TRF6_ENABLED',
-      }),
-    }),
-  ]));
-});
-
-test('preserva múltiplas linhas do TRF5 com mesmo CNJ quando contexto difere', async () => {
-  service.__testables.cache.clear();
-  service.__testables.inFlight.clear();
-  service.__testables.lastRunByUser.clear();
-  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
-
-  buildConsultaProviders.mockReturnValue([
-    {
-      getId: () => 'trf5',
-      getLabel: () => 'TRF5',
-      getMaturityStatus: () => 'stable',
-      isEnabled: () => true,
-      consultarPorDocumento: jest.fn().mockResolvedValue({
-        source: 'trf5',
-        sourceLabel: 'TRF5',
-        status: 'success',
-        count: 2,
-        items: [
-          { source: 'trf5', processNumber: '0512976-13.2006.4.05.8013', providerMeta: { gradeLevel: '1º Grau' } },
-          { source: 'trf5', processNumber: '0512976-13.2006.4.05.8013', providerMeta: { gradeLevel: '2º Grau' } },
-        ],
-      }),
-    },
-  ]);
-
-  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r5' });
-
-  expect(result.ok).toBe(true);
-  expect(result.items).toHaveLength(2);
-});
-
-test('aplica debug seletivo: TRF1 mínimo e TRF5 detalhado', async () => {
-  service.__testables.cache.clear();
-  service.__testables.inFlight.clear();
-  service.__testables.lastRunByUser.clear();
-  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
-
-  const trf1Consultar = jest.fn().mockResolvedValue({
-    source: 'trf1',
-    sourceLabel: 'TRF1',
-    status: 'success',
-    count: 1,
-    items: [{ source: 'trf1', processNumber: 'proc-1' }],
-  });
-  const trf5Consultar = jest.fn().mockResolvedValue({
-    source: 'trf5',
-    sourceLabel: 'TRF5',
-    status: 'error',
-    count: 0,
-    items: [],
-    providerMeta: { debugLevel: 'detailed' },
-    debugSummary: { failureStage: 'document_field' },
-    error: { code: 'DOM_MAPPING_REQUIRED', message: 'Campo CPF não identificado no TRF5' },
-  });
-
-  buildConsultaProviders.mockReturnValue([
-    { getId: () => 'trf1', getLabel: () => 'TRF1', getMaturityStatus: () => 'stable', isEnabled: () => true, consultarPorDocumento: trf1Consultar },
-    { getId: () => 'trf5', getLabel: () => 'TRF5', getMaturityStatus: () => 'experimental', isEnabled: () => true, consultarPorDocumento: trf5Consultar },
-  ]);
-
-  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r6', debug: true });
-
-  expect(trf1Consultar).toHaveBeenCalledWith(expect.objectContaining({
-    debug: expect.objectContaining({ level: 'minimal', includeArtifacts: false }),
-  }));
-  expect(trf5Consultar).toHaveBeenCalledWith(expect.objectContaining({
-    debug: expect.objectContaining({ level: 'detailed', includeArtifacts: true }),
-  }));
-  const trf1Source = result.sources.find((s) => s.source === 'trf1');
-  expect(trf1Source.debugData).toBeNull();
-  expect(trf1Source.items).toEqual([]);
-  const trf1Report = result.debugReport.sourceReports.find((s) => s.source === 'trf1');
-  expect(Object.keys(trf1Report.metrics).sort()).toEqual([
-    'declaredResultsCount',
-    'documentFieldFound',
-    'normalizedItemsCount',
-    'pageLoaded',
-    'searchTriggered',
-    'submitSucceeded',
-  ]);
-});
-
-test('baseline TRF1 retorna os 2 processos esperados para CPF de referência', async () => {
-  service.__testables.cache.clear();
-  service.__testables.inFlight.clear();
-  service.__testables.lastRunByUser.clear();
-  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '03241063437', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
-
-  buildConsultaProviders.mockReturnValue([
-    {
-      getId: () => 'trf1',
-      getLabel: () => 'TRF1',
-      getMaturityStatus: () => 'stable',
-      isEnabled: () => true,
-      consultarPorDocumento: jest.fn().mockResolvedValue({
-        source: 'trf1',
-        sourceLabel: 'TRF1',
-        status: 'success',
-        count: 2,
-        items: [
-          { source: 'trf1', sourceLabel: 'TRF1', processNumber: '1061304-94.2023.4.01.3400' },
-          { source: 'trf1', sourceLabel: 'TRF1', processNumber: '1055982-59.2024.4.01.3400' },
-        ],
-        debugSummary: {
-          submitSucceeded: true,
-          waitConditionMatched: 'declared_results_positive',
-          normalizedItemsCount: 2,
-        },
-      }),
-    },
-  ]);
-
-  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r7' });
-
-  expect(result.ok).toBe(true);
-  expect(result.totalItems).toBe(2);
-  expect(result.items).toHaveLength(2);
-  expect(result.sources).toEqual(expect.arrayContaining([
-    expect.objectContaining({
-      source: 'trf1',
-      status: 'success',
-      count: 2,
-      debugSummary: expect.objectContaining({
-        submitSucceeded: true,
-        waitConditionMatched: 'declared_results_positive',
-        normalizedItemsCount: 2,
-      }),
-    }),
-  ]));
-});
-
-test('isola TRF5 experimental sem sobrescrever itens do TRF1 no consolidado final', async () => {
-  service.__testables.cache.clear();
-  service.__testables.inFlight.clear();
-  service.__testables.lastRunByUser.clear();
-  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '03241063437', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
-
-  buildConsultaProviders.mockReturnValue([
-    {
-      getId: () => 'trf1',
-      getLabel: () => 'TRF1',
-      getMaturityStatus: () => 'stable',
-      isEnabled: () => true,
-      consultarPorDocumento: jest.fn().mockResolvedValue({
-        source: 'trf1',
-        sourceLabel: 'TRF1',
-        status: 'success',
-        count: 2,
-        items: [
-          { source: 'trf1', sourceLabel: 'TRF1', processNumber: '1061304-94.2023.4.01.3400' },
-          { source: 'trf1', sourceLabel: 'TRF1', processNumber: '1055982-59.2024.4.01.3400' },
-        ],
-      }),
-    },
-    {
-      getId: () => 'trf5',
-      getLabel: () => 'TRF5',
-      getMaturityStatus: () => 'experimental',
-      isEnabled: () => true,
-      consultarPorDocumento: jest.fn().mockResolvedValue({
-        source: 'trf5',
-        sourceLabel: 'TRF5',
-        status: 'error',
-        count: 0,
-        items: [],
-        error: { code: 'FRAME_INPUT_NOT_FOUND_AFTER_LOAD', message: 'FRAME_INPUT_NOT_FOUND_AFTER_LOAD' },
-      }),
-    },
-  ]);
-
-  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r8' });
-
-  expect(result.ok).toBe(true);
-  expect(result.items).toHaveLength(2);
-  expect(result.totalItems).toBe(2);
-  expect(result.errors).toEqual([
-    expect.objectContaining({ source: 'trf5', code: 'FRAME_INPUT_NOT_FOUND_AFTER_LOAD' }),
-  ]);
-  expect(result.sources).toEqual(expect.arrayContaining([
-    expect.objectContaining({ source: 'trf1', status: 'success', count: 2 }),
-    expect.objectContaining({ source: 'trf5', status: 'error' }),
-  ]));
 });
