@@ -13,6 +13,7 @@ export type DrawerParamList = {
   Seguranca: undefined;
   Atualizacoes: undefined;
   ConsultaProcessual: undefined;
+  Enquetes: undefined;
 
   // Condicionais / ocultas
   Logs: undefined;

@@ -5,7 +5,7 @@ async function closeExpiredPolls(client = pool) {
     `UPDATE polls
        SET status = 'CLOSED', updated_at = NOW()
      WHERE status = 'ACTIVE'
-       AND deadline_at <= NOW()`
+       AND (NOW() AT TIME ZONE 'America/Sao_Paulo')::date > (deadline_at AT TIME ZONE 'America/Sao_Paulo')::date`
   );
 }
 
@@ -92,7 +92,9 @@ async function publishPoll(pollId) {
   await closeExpiredPolls();
   const { rows } = await pool.query(
     `UPDATE polls
-        SET status = CASE WHEN deadline_at <= NOW() THEN 'CLOSED' ELSE 'ACTIVE' END,
+        SET status = CASE
+              WHEN (NOW() AT TIME ZONE 'America/Sao_Paulo')::date > (deadline_at AT TIME ZONE 'America/Sao_Paulo')::date
+              THEN 'CLOSED' ELSE 'ACTIVE' END,
             updated_at = NOW()
       WHERE id = $1
         AND status <> 'CLOSED'
@@ -112,6 +114,7 @@ async function listPolls({ status }) {
             p.allow_multiple_answers,
             p.allow_other_option,
             p.deadline_at,
+            (p.deadline_at AT TIME ZONE 'America/Sao_Paulo')::date AS deadline_date,
             p.status,
             p.created_at,
             COUNT(DISTINCT v.user_id)::int AS participants

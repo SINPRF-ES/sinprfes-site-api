@@ -23,6 +23,7 @@ import PushDiagnosticScreen from '../screens/PushDiagnosticScreen';
 import RepasseScreen from '../screens/RepasseScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
 import ConsultaProcessualScreen from '../screens/ConsultaProcessualScreen';
+import EnquetesScreen from '../screens/EnquetesScreen';
 
 import CustomDrawerContent from './CustomDrawerContent';
 import DrawerItemLabel from '../components/DrawerItemLabel';
@@ -177,6 +178,18 @@ export default function DrawerNavigator() {
         }}
       />
 
+
+
+      {ehDiretoriaUsuario && (
+        <Drawer.Screen
+          name="Enquetes"
+          component={EnquetesScreen}
+          options={{
+            title: '🗨️ Enquetes',
+            drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ENQUETES} label="Enquetes" {...props} />,
+          }}
+        />
+      )}
 
       {ehDiretoriaUsuario && (
         <Drawer.Screen
