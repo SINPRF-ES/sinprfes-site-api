@@ -40,6 +40,10 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
     const debugSummary = {
       pageLoaded: false,
+      iframeDetected: false,
+      iframeSrcMatched: null,
+      frameUrlFinal: null,
+      frameReady: false,
       documentFieldFound: false,
       maskedInputAccepted: false,
       firstDegreeChecked: false,
@@ -100,87 +104,87 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       const page = await context.newPage();
       await page.setViewportSize({ width: 1440, height: 1200 });
       await page.goto(this.getBaseUrl(), { waitUntil: 'domcontentloaded', timeout: cfg.initialLoadTimeoutMs });
-      await page.waitForTimeout(12000);
+      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(1500);
 
       debugSummary.pageLoaded = true;
       await saveArtifact('01-home.png', page, 'screenshot');
       await saveArtifact('01-home.html', await page.content());
 
-      const diagnostics = await this.collectDomDiagnostics(page, { skipInteractions: true });
-      await saveArtifact('02-frame-tree.json', JSON.stringify(diagnostics.frameTree, null, 2));
-      await saveArtifact('03-dom-inventory.json', JSON.stringify(diagnostics.domInventory, null, 2));
-      await saveArtifact('04-input-candidates.json', JSON.stringify(diagnostics.inputCandidates, null, 2));
-      await saveArtifact('05-cpf-candidates-ranked.json', JSON.stringify(diagnostics.documentFieldCandidates, null, 2));
-      await saveArtifact('06-clickable-filter-candidates.json', JSON.stringify(diagnostics.clickableFilterCandidates, null, 2));
+      const frameSelection = await this.selectTargetFrame(page);
+      debugSummary.iframeDetected = frameSelection.iframeDetected;
+      debugSummary.iframeSrcMatched = frameSelection.iframeSrcMatched;
+      debugSummary.frameUrlFinal = frameSelection.frameUrlFinal;
+      debugSummary.frameReady = frameSelection.frameReady;
+      await saveArtifact('07-frame-selected.json', JSON.stringify({
+        iframeDetected: frameSelection.iframeDetected,
+        iframeSrcMatched: frameSelection.iframeSrcMatched,
+        frameUrlFinal: frameSelection.frameUrlFinal,
+        frameReady: frameSelection.frameReady,
+      }, null, 2));
 
-      let finalDiagnostics = diagnostics;
-      let docField = diagnostics.documentFieldChosen;
-      debugSummary.cpfDetectionPasses = 1;
-      debugSummary.postInteractionRescanPerformed = false;
-
-      if (!this.isCpfCandidateUsable(docField)) {
-        const rescanned = await this.tryPostInteractionRescan(page, diagnostics);
-        debugSummary.cpfDetectionPasses = rescanned.performed ? 2 : 1;
-        debugSummary.postInteractionRescanPerformed = rescanned.performed;
-        if (rescanned.performed) {
-          finalDiagnostics = rescanned.diagnostics;
-          docField = rescanned.diagnostics.documentFieldChosen;
-          await saveArtifact('07-post-filter-click-rescan-cpf-candidates.json', JSON.stringify(finalDiagnostics.documentFieldCandidates, null, 2));
-        }
+      if (!frameSelection.iframeDetected) {
+        debugSummary.failureStage = 'frame';
+        throw new Error('IFRAME_NOT_FOUND');
+      }
+      if (!frameSelection.frame || !frameSelection.frameReady) {
+        debugSummary.failureStage = 'frame';
+        throw new Error('IFRAME_FOUND_BUT_FRAME_READY_FALSE');
       }
 
-      const domInspectionSummary = this.buildDomInspectionSummary(finalDiagnostics);
-      if (debugData) {
-        debugData.domInspection = domInspectionSummary;
-      }
+      const frame = frameSelection.frame;
+      await saveArtifact('08-frame-post-load.png', page, 'screenshot');
 
-      if (!this.isCpfCandidateUsable(docField)) {
+      const docField = await this.locateDocumentFieldInFrame(frame);
+      if (!docField) {
         debugSummary.failureStage = 'document_field';
-        debugSummary.documentFieldFailureReason = this.resolveDocumentFieldFailureReason(docField, finalDiagnostics);
-        throw new Error(this.buildDocumentFieldErrorMessage(debugSummary.documentFieldFailureReason, debugSummary.cpfDetectionPasses));
+        throw new Error('FRAME_INPUT_NOT_FOUND_AFTER_LOAD');
       }
       debugSummary.documentFieldFound = true;
 
-      const targetFrame = docField.frameIndex !== null ? page.frames()[docField.frameIndex] : page;
-      const field = targetFrame.locator(docField.selector).first();
+      const field = docField;
       const cpfMasked = documentMasked || '032.410.634-37';
       await field.click({ force: true });
       await field.fill('');
       await field.type(cpfMasked, { delay: 80 });
       await page.waitForTimeout(800);
       const value = await field.inputValue().catch(() => '');
-      debugSummary.maskedInputAccepted = value.includes('.') || value === cpfMasked;
-      await saveArtifact('08-post-interaction-home.png', page, 'screenshot');
-
-      const postInteractionDiagnostics = await this.collectDomDiagnostics(page, { skipInteractions: true });
-      await saveArtifact('09-post-interaction-dom-inventory.json', JSON.stringify(postInteractionDiagnostics.domInventory, null, 2));
+      debugSummary.maskedInputAccepted = cleanText(value) === cpfMasked;
+      await saveArtifact('09-frame-post-fill.png', page, 'screenshot');
       if (!debugSummary.maskedInputAccepted) {
         debugSummary.failureStage = 'document_field';
-        throw new Error('Campo CPF identificado, mas input mascarado não foi aceito no TRF5');
+        throw new Error('FRAME_INTERACTION_FAILED');
       }
 
-      const checkboxResult = await this.ensureDegreeCheckboxes(page);
+      const checkboxResult = await this.ensureDegreeCheckboxesInFrame(frame);
       debugSummary.firstDegreeChecked = checkboxResult.firstDegreeChecked;
       debugSummary.secondDegreeChecked = checkboxResult.secondDegreeChecked;
       logStep('checkbox_state', checkboxResult);
-      await saveArtifact('03-after-checkbox.png', page, 'screenshot');
 
-      const searchTrigger = await this.triggerSearch(page, diagnostics.searchActionChosen);
+      const searchTrigger = await this.triggerSearchInFrame(frame);
       debugSummary.searchTriggered = searchTrigger.searchTriggered;
       debugSummary.submitSucceeded = searchTrigger.submitSucceeded;
       logStep('search_trigger', searchTrigger);
+      await saveArtifact('10-frame-post-search.png', page, 'screenshot');
+      if (!searchTrigger.searchTriggered) {
+        debugSummary.failureStage = 'search';
+        throw new Error('FRAME_SEARCH_BUTTON_NOT_FOUND');
+      }
 
-      await page.waitForTimeout(2500);
-      const waitInfo = await this.waitForTrf5Signals(page, { timeoutMs: 60000, baselineCnjCount: 0 });
+      const waitInfo = await this.waitForTrf5Signals(frame, { timeoutMs: 60000, baselineCnjCount: 0 });
       debugSummary.waitConditionMatched = waitInfo.waitConditionMatched;
       debugSummary.resultsContainerFound = waitInfo.snapshot.hasTableRows || waitInfo.snapshot.cnjMatches > 0;
+      if (!debugSummary.resultsContainerFound) {
+        debugSummary.failureStage = 'results';
+        throw new Error('FRAME_RESULTS_NOT_RENDERED_AFTER_SUBMIT');
+      }
 
-      await saveArtifact('04-after-search.png', page, 'screenshot');
-      await saveArtifact('05-results.html', await page.content());
+      await saveArtifact('11-trf5-grid.html', await frame.content());
+      const frameInnerText = await frame.locator('body').innerText().catch(() => '');
+      await saveArtifact('12-trf5-grid-text.txt', frameInnerText);
 
-      const extraction = await this.extractGridRows(page);
-      await saveArtifact('06-grid-loaded.png', page, 'screenshot');
-      await saveArtifact('06-grid-dump.txt', extraction.rows.map((r) => JSON.stringify(r)).join('\n'));
+      const extraction = await this.extractGridRows(frame);
+      await saveArtifact('13-trf5-rows.json', JSON.stringify(extraction.rows, null, 2));
 
       debugSummary.gridRowsDetected = extraction.rows.length;
       debugSummary.cnjMatchesFound = extraction.cnjMatchesFound;
@@ -236,14 +240,55 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
   }
 
   classifyError(err) {
+    if (/^IFRAME_|^FRAME_/.test(String(err?.message || ''))) {
+      return { code: err.message, message: err.message, stage: 'frame_interaction' };
+    }
     if (/dom|selector|cpf|checkbox/i.test(String(err?.message || ''))) {
       return { code: 'DOM_MAPPING_REQUIRED', message: err.message, stage: 'dom_diagnostics_required' };
     }
     return super.classifyError(err);
   }
 
-  async ensureDegreeCheckboxes(page) {
-    const checkInFrame = async (frame) => frame.evaluate(() => {
+  async selectTargetFrame(page) {
+    const iframeHandle = await page.locator('iframe[src*="Busca_Processual_Unificada.html"]').first().elementHandle().catch(() => null);
+    const iframeSrcMatched = await iframeHandle?.getAttribute('src').catch(() => null) || null;
+    const frame = await iframeHandle?.contentFrame().catch(() => null);
+    const frameUrlFinal = frame?.url?.() || null;
+    const frameReady = Boolean(frame && await frame.locator('body').count().catch(() => 0));
+    return {
+      iframeDetected: Boolean(iframeHandle),
+      iframeSrcMatched,
+      frameUrlFinal,
+      frameReady,
+      frame,
+    };
+  }
+
+  async locateDocumentFieldInFrame(frame) {
+    const selectors = [
+      'input',
+      'textarea',
+      '[role="textbox"]',
+      '[role="searchbox"]',
+      '[contenteditable="true"]',
+    ];
+
+    for (const selector of selectors) {
+      const count = await frame.locator(selector).count().catch(() => 0);
+      for (let i = 0; i < count; i += 1) {
+        const candidate = frame.locator(selector).nth(i);
+        const visible = await candidate.isVisible().catch(() => false);
+        const editable = await candidate.isEditable().catch(() => false);
+        if (!visible || !editable) continue;
+        const context = await candidate.evaluate((el) => String(el.closest('div,section,form')?.innerText || '').toLowerCase()).catch(() => '');
+        if (context.includes('buscar por nome, processo, cpf ou cnpj')) return candidate;
+      }
+    }
+    return null;
+  }
+
+  async ensureDegreeCheckboxesInFrame(frame) {
+    return frame.evaluate(() => {
       const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
       const findByLabel = (matcher) => {
         const labels = Array.from(document.querySelectorAll('label, span, div')).filter((el) => matcher(clean(el.textContent)));
@@ -272,44 +317,28 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         secondDegreeChecked: Boolean(second?.checked),
       };
     }).catch(() => ({ firstDegreeChecked: false, secondDegreeChecked: false }));
-
-    for (const frame of page.frames()) {
-      const result = await checkInFrame(frame);
-      if (result.firstDegreeChecked || result.secondDegreeChecked) return result;
-    }
-    return { firstDegreeChecked: false, secondDegreeChecked: false };
   }
 
-  async triggerSearch(page, searchActionChosen) {
+  async triggerSearchInFrame(frame) {
     const result = { trigger: 'none', searchTriggered: false, submitSucceeded: false, domChanged: false };
-    const before = cleanText(await page.innerText('body').catch(() => ''));
+    const before = cleanText(await frame.locator('body').innerText().catch(() => ''));
+    const searchButton = frame.getByRole('button', { name: /^buscar$/i }).first();
 
-    if (searchActionChosen?.selector) {
-      const frame = searchActionChosen.frameIndex !== null ? page.frames()[searchActionChosen.frameIndex] : page;
-      const button = frame.locator(searchActionChosen.selector).first();
-      if (await button.isVisible().catch(() => false)) {
-        await button.click({ timeout: 4000 }).catch(() => {});
-        result.trigger = 'button_click';
-        result.searchTriggered = true;
-      }
-    }
-
-    if (!result.searchTriggered) {
-      await page.keyboard.press('Enter');
-      result.trigger = 'enter_key';
+    if (await searchButton.isVisible().catch(() => false)) {
+      await searchButton.click({ timeout: 5000 });
+      result.trigger = 'button_click';
       result.searchTriggered = true;
     }
 
-    await page.waitForTimeout(1200);
-    const after = cleanText(await page.innerText('body').catch(() => ''));
+    await frame.page().waitForTimeout(1200);
+    const after = cleanText(await frame.locator('body').innerText().catch(() => ''));
     result.domChanged = before !== after;
-    result.submitSucceeded = true;
+    result.submitSucceeded = result.searchTriggered;
     return result;
   }
 
-  async extractGridRows(page) {
-    for (const frame of page.frames()) {
-      const extraction = await frame.evaluate(() => {
+  async extractGridRows(frame) {
+    const extraction = await frame.evaluate(() => {
         const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
         const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
         const tables = Array.from(document.querySelectorAll('table'));
@@ -352,18 +381,17 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         return { strategy: 'text-fallback', rows: [], cnjMatchesFound: cnjMatches.length };
       }).catch(() => null);
 
-      if (extraction && (extraction.rows.length > 0 || extraction.cnjMatchesFound > 0)) {
-        return extraction;
-      }
+    if (extraction && (extraction.rows.length > 0 || extraction.cnjMatchesFound > 0)) {
+      return extraction;
     }
 
     return { strategy: 'none', rows: [], cnjMatchesFound: 0 };
   }
 
-  async waitForTrf5Signals(page, { timeoutMs, baselineCnjCount = 0 }) {
+  async waitForTrf5Signals(frame, { timeoutMs, baselineCnjCount = 0 }) {
     const startedAt = Date.now();
     while (Date.now() - startedAt < timeoutMs) {
-      const snapshot = await page.evaluate(() => {
+      const snapshot = await frame.evaluate(() => {
         const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
         const text = document.body?.innerText || '';
         return {
@@ -382,7 +410,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       if (waitConditionMatched && !snapshot.hasLoadingIndicator) {
         return { waitConditionMatched, snapshot };
       }
-      await page.waitForTimeout(1000);
+      await frame.page().waitForTimeout(1000);
     }
 
     return { waitConditionMatched: 'timeout_without_clear_results', snapshot: { hasTableRows: false, cnjMatches: 0 } };
