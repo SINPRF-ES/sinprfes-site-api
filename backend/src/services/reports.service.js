@@ -80,12 +80,18 @@ async function buscarDadosAgregados(tipo, valor) {
     ${whereClause}
   `;
 
-  const { rows } = await pool.query(query, params);
-  const result = rows[0];
+  // BOLT: Parallelize main filiado count and repasse data fetching when possible.
+  const [filiadosResult, efetivoManual] = await Promise.all([
+    pool.query(query, params),
+    (tipo === "LOTACAO" || (tipo === "SITUACAO" && valor === "ATIVO"))
+      ? repasseService.getEfetivoManualLotacoes()
+      : Promise.resolve(null)
+  ]);
+
+  const result = filiadosResult.rows[0];
 
   // Adiciona dados do Repasse se for relatório por Lotação
   if (tipo === "LOTACAO") {
-    const efetivoManual = await repasseService.getEfetivoManualLotacoes();
     const totalManual = Object.prototype.hasOwnProperty.call(efetivoManual.totais, valor)
       ? efetivoManual.totais[valor]
       : null;
@@ -95,15 +101,14 @@ async function buscarDadosAgregados(tipo, valor) {
 
   // Especial: Situação ATIVO consome apenas efetivo manual para % de filiação em relatórios
   if (tipo === "SITUACAO" && valor === "ATIVO") {
-    const efetivoManual = await repasseService.getEfetivoManualLotacoes();
-    const breakdown = [];
-    for (const lot of LOTACOES_REPASSE) {
+    // BOLT: Parallelize repasse data fetching for all lotações.
+    const breakdown = await Promise.all(LOTACOES_REPASSE.map(async (lot) => {
       const totalManual = Object.prototype.hasOwnProperty.call(efetivoManual.totais, lot)
         ? efetivoManual.totais[lot]
         : null;
       const repData = await repasseService.getUltimosDadosParaRelatorioComOverride(lot, totalManual);
-      breakdown.push({ lotacao: lot, ...repData });
-    }
+      return { lotacao: lot, ...repData };
+    }));
     result.repasseBreakdown = breakdown;
   }
 
@@ -124,37 +129,38 @@ async function cleanupOldReports() {
 }
 
 async function buscarDadosGlobal() {
-  const ativo = await buscarDadosAgregados("SITUACAO", "ATIVO");
-
-  // VETERANO com faixas etárias específicas (50-80+)
-  const { rows: vetRows } = await pool.query(`
-    SELECT
-      COUNT(*)::INTEGER as total,
-      COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
-      COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem,
-      COUNT(*) FILTER (WHERE data_nascimento IS NULL)::INTEGER as idade_desconhecida,
-      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 50 AND 59)::INTEGER as range_50_59,
-      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 60 AND 69)::INTEGER as range_60_69,
-      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 70 AND 79)::INTEGER as range_70_79,
-      COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) >= 80)::INTEGER as range_80_plus
-    FROM filiados
-    WHERE situacao = 'VETERANO' AND arquivado_em IS NULL
-  `);
-
-  // PENSIONISTA (Apenas sexo)
-  const { rows: penRows } = await pool.query(`
-    SELECT
-      COUNT(*)::INTEGER as total,
-      COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
-      COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem
-    FROM filiados
-    WHERE situacao = 'PENSIONISTA' AND arquivado_em IS NULL
-  `);
+  // BOLT: Parallelize independent database queries to reduce total latency.
+  const [ativo, vetResult, penResult] = await Promise.all([
+    buscarDadosAgregados("SITUACAO", "ATIVO"),
+    // VETERANO com faixas etárias específicas (50-80+)
+    pool.query(`
+      SELECT
+        COUNT(*)::INTEGER as total,
+        COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
+        COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem,
+        COUNT(*) FILTER (WHERE data_nascimento IS NULL)::INTEGER as idade_desconhecida,
+        COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 50 AND 59)::INTEGER as range_50_59,
+        COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 60 AND 69)::INTEGER as range_60_69,
+        COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 70 AND 79)::INTEGER as range_70_79,
+        COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) >= 80)::INTEGER as range_80_plus
+      FROM filiados
+      WHERE situacao = 'VETERANO' AND arquivado_em IS NULL
+    `),
+    // PENSIONISTA (Apenas sexo)
+    pool.query(`
+      SELECT
+        COUNT(*)::INTEGER as total,
+        COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
+        COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem
+      FROM filiados
+      WHERE situacao = 'PENSIONISTA' AND arquivado_em IS NULL
+    `)
+  ]);
 
   return {
     ativo,
-    veterano: vetRows[0],
-    pensionista: penRows[0]
+    veterano: vetResult.rows[0],
+    pensionista: penResult.rows[0]
   };
 }
 
