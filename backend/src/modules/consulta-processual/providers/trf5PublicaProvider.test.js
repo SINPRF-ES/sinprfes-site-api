@@ -13,7 +13,6 @@ describe('Trf5PublicaProvider heuristics', () => {
     provider = new Trf5PublicaProvider();
   });
 
-
   test('é estável e habilitado por padrão', () => {
     delete process.env.CONSULTA_PROCESSUAL_TRF5_ENABLED;
     const defaultProvider = new Trf5PublicaProvider();
@@ -30,7 +29,6 @@ describe('Trf5PublicaProvider heuristics', () => {
     });
 
     const result = await provider.consultarPorDocumento({
-      document: '03241063437',
       documentMasked: '032.410.634-37',
       requestId: 'req-trf5-browser',
       userId: 7,
