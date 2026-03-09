@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const PjeConsultaPublicaBaseProvider = require('./PjeConsultaPublicaBaseProvider');
+const ConsultaProcessualProvider = require('./ConsultaProcessualProvider');
 const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConfig');
 const { launchBrowser } = require('../service/playwrightBrowserService');
 const { normalizeItem } = require('../dto/consultaProcessualDto');
@@ -12,7 +12,7 @@ function cleanText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
+class Trf5PublicaProvider extends ConsultaProcessualProvider {
   getId() { return 'trf5'; }
   getLabel() { return 'TRF5'; }
   isEnabled() { return getConsultaProcessualConfig().trf5Enabled; }
@@ -20,6 +20,14 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
   getBaseUrl() {
     return 'https://portalbi.trf5.jus.br/portal-bi/painel.html?id=3002';
+  }
+
+  async consultarPorCpf(ctx) {
+    return this.consultarPorDocumento({
+      document: ctx.cpf,
+      documentMasked: ctx.cpfMasked,
+      ...ctx,
+    });
   }
 
   async consultarPorDocumento({ documentMasked, requestId, userId, debug: debugOverride }) {
@@ -246,7 +254,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
     if (/dom|selector|cpf|checkbox/i.test(String(err?.message || ''))) {
       return { code: 'DOM_MAPPING_REQUIRED', message: err.message, stage: 'dom_diagnostics_required' };
     }
-    return super.classifyError(err);
+    return { code: 'PROVIDER_ERROR', message: err.message };
   }
 
   async selectTargetFrame(page) {
