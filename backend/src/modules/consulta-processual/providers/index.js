@@ -6,7 +6,7 @@ const Trf6PublicaProvider = require('./trf6PublicaProvider');
 // Baseline congelado de providers:
 // - trf1: stable (referência oficial)
 // - trf3: experimental
-// - trf5: stable
+// - trf5: experimental
 // - trf6: disabled por padrão
 // Providers fora do baseline não devem alterar a semântica principal do módulo.
 function buildConsultaProviders() {
