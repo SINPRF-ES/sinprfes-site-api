@@ -24,14 +24,17 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
 
   async consultarPorDocumento({ documentMasked, requestId, userId, debug: debugOverride }) {
     const cfg = getConsultaProcessualConfig();
-    const isDebug = Boolean(debugOverride || cfg.debug);
+    const debugOptions = typeof debugOverride === 'object' && debugOverride !== null
+      ? debugOverride
+      : { enabled: Boolean(debugOverride || cfg.debug), level: 'detailed' };
+    const isDebug = Boolean(debugOptions.enabled);
     if (!this.isEnabled()) {
       return {
         source: this.getId(),
         sourceLabel: this.getLabel(),
         status: 'skipped',
         items: [],
-        providerMeta: { maturity: this.getMaturityStatus(), enabled: false, skipReason: 'feature_flag_disabled' },
+        providerMeta: { maturity: this.getMaturityStatus(), enabled: false, skipReason: 'feature_flag_disabled', debugLevel: debugOptions.level || 'minimal' },
       };
     }
 
@@ -81,7 +84,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
           sourceLabel: this.getLabel(),
           status: 'error',
           items: [],
-          providerMeta: { maturity: this.getMaturityStatus() },
+          providerMeta: { maturity: this.getMaturityStatus(), debugLevel: debugOptions.level || 'minimal' },
           debugSummary,
           debugData,
           error: {
@@ -189,7 +192,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         sourceLabel: this.getLabel(),
         status: 'success',
         items,
-        providerMeta: { maturity: this.getMaturityStatus(), enabled: true },
+        providerMeta: { maturity: this.getMaturityStatus(), enabled: true, debugLevel: debugOptions.level || 'minimal' },
         debugSummary,
         debugData,
       };
@@ -201,7 +204,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
         sourceLabel: this.getLabel(),
         status: 'error',
         items: [],
-        providerMeta: { maturity: this.getMaturityStatus(), enabled: true },
+        providerMeta: { maturity: this.getMaturityStatus(), enabled: true, debugLevel: debugOptions.level || 'minimal' },
         debugSummary,
         debugData,
         error: this.classifyError(err),

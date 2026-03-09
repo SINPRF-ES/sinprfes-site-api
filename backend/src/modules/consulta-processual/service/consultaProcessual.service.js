@@ -2,6 +2,7 @@ const pool = require('../../../config/db');
 const log = require('../../../utils/log');
 const { buildConsultaProviders } = require('../providers');
 const { getConsultaProcessualConfig } = require('../utils/consultaProcessualConfig');
+const { resolveProviderDebugOptions } = require('../utils/providerDebugPolicy');
 const { maskDocument, hashDocument } = require('../utils/consultaProcessualSecurity');
 const { sanitizeAndValidateCpf } = require('../validators/cpfValidator');
 
@@ -30,12 +31,16 @@ function setCacheEntry(key, value, ttlMs) {
 function buildDebugReport({ sources = [], requestId, queriedAt }) {
   const timeline = [];
   const sourceReports = (sources || []).map((source) => {
+    const debugLevel = source?.providerMeta?.debugLevel || 'minimal';
+    const includeDetailed = debugLevel === 'detailed' || source.status === 'error';
     const steps = source?.debugData?.steps || [];
     const warnings = source?.debugData?.warnings || [];
     const artifacts = source?.debugData?.artifacts || [];
 
-    steps.forEach((step, index) => timeline.push({ type: 'step', source: source.source, index, ...step }));
-    warnings.forEach((warning, index) => timeline.push({ type: 'warning', source: source.source, index, ...warning }));
+    if (includeDetailed) {
+      steps.forEach((step, index) => timeline.push({ type: 'step', source: source.source, index, ...step }));
+      warnings.forEach((warning, index) => timeline.push({ type: 'warning', source: source.source, index, ...warning }));
+    }
 
     return {
       source: source.source,
@@ -61,11 +66,12 @@ function buildDebugReport({ sources = [], requestId, queriedAt }) {
         normalizedItemsCount: Number(source?.debugSummary?.normalizedItemsCount || 0),
         detailPagesOpened: Number(source?.debugSummary?.detailPagesOpened || 0),
       },
-      domInspection: source?.debugData?.domInspection || null,
-      discardReasons: source?.debugData?.discardReasons || {},
+      debugLevel,
+      domInspection: includeDetailed ? (source?.debugData?.domInspection || null) : null,
+      discardReasons: includeDetailed ? (source?.debugData?.discardReasons || {}) : {},
       warningsCount: warnings.length,
       artifactsCount: artifacts.length,
-      artifacts,
+      artifacts: includeDetailed ? artifacts : [],
     };
   });
 
@@ -134,6 +140,19 @@ function resolveProviderSkipReason({ provider, cfg }) {
   }
 
   return { skipReason: 'provider_not_selected', flagName };
+}
+
+function compactDebugSummary(debugSummary = {}) {
+  return {
+    pageLoaded: Boolean(debugSummary.pageLoaded),
+    documentFieldFound: Boolean(debugSummary.documentFieldFound),
+    searchTriggered: Boolean(debugSummary.searchTriggered),
+    submitSucceeded: Boolean(debugSummary.submitSucceeded),
+    waitConditionMatched: debugSummary.waitConditionMatched || null,
+    declaredResultsCount: Number(debugSummary.declaredResultsCount || 0),
+    normalizedItemsCount: Number(debugSummary.normalizedItemsCount || 0),
+    failureStage: debugSummary.failureStage || null,
+  };
 }
 
 async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mode = 'personal' }) {
@@ -205,6 +224,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
         enabled: false,
         skipReason,
         flagName,
+        debugLevel: 'minimal',
       },
     });
   });
@@ -233,12 +253,13 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
     const runningKey = `${userId}:${mode}:${provider.getId()}${isDebug ? ':debug' : ''}`;
     let runPromise = inFlight.get(runningKey);
     if (!runPromise) {
+      const debugOptions = resolveProviderDebugOptions({ provider, cfg, isDebugRequested: isDebug });
       runPromise = provider.consultarPorDocumento({
         document: documentToUse,
         documentMasked,
         requestId,
         userId,
-        debug: isDebug,
+        debug: debugOptions,
       });
       inFlight.set(runningKey, runPromise);
     }
@@ -266,12 +287,21 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
   providerResults.forEach((sourceResult, index) => {
     const provider = providers[index];
     const maturity = provider?.getMaturityStatus?.() || sourceResult?.providerMeta?.maturity || 'experimental';
+    const debugLevel = sourceResult?.providerMeta?.debugLevel || 'minimal';
+    const includeDetailedDebug = debugLevel === 'detailed' || sourceResult?.status === 'error';
     const normalizedSource = {
       ...sourceResult,
+      debugSummary: includeDetailedDebug
+        ? sourceResult?.debugSummary
+        : compactDebugSummary(sourceResult?.debugSummary),
+      debugData: includeDetailedDebug
+        ? sourceResult?.debugData
+        : null,
       providerMeta: {
         ...(sourceResult?.providerMeta || {}),
         maturity,
         enabled: true,
+        debugLevel,
       },
     };
     if (normalizedSource?.error) errors.push({ source: normalizedSource.source, ...normalizedSource.error });

@@ -57,6 +57,7 @@ describe('consultaProcessual.service', () => {
           status: 'success',
           count: 0,
           items: [],
+          providerMeta: { debugLevel: 'detailed' },
           debugSummary: {
             searchTriggered: true,
             resultsContainerFound: true,
@@ -194,4 +195,45 @@ test('preserva múltiplas linhas do TRF5 com mesmo CNJ quando contexto difere', 
 
   expect(result.ok).toBe(true);
   expect(result.items).toHaveLength(2);
+});
+
+test('aplica debug seletivo: TRF1 mínimo e TRF5 detalhado', async () => {
+  service.__testables.cache.clear();
+  service.__testables.inFlight.clear();
+  service.__testables.lastRunByUser.clear();
+  pool.query.mockResolvedValue({ rows: [{ id: 10, cpf: '12345678901', nome: 'Teste', perfil_acesso: 'DIRETORIA' }] });
+
+  const trf1Consultar = jest.fn().mockResolvedValue({
+    source: 'trf1',
+    sourceLabel: 'TRF1',
+    status: 'success',
+    count: 1,
+    items: [{ source: 'trf1', processNumber: 'proc-1' }],
+  });
+  const trf5Consultar = jest.fn().mockResolvedValue({
+    source: 'trf5',
+    sourceLabel: 'TRF5',
+    status: 'error',
+    count: 0,
+    items: [],
+    providerMeta: { debugLevel: 'detailed' },
+    debugSummary: { failureStage: 'document_field' },
+    error: { code: 'DOM_MAPPING_REQUIRED', message: 'Campo CPF não identificado no TRF5' },
+  });
+
+  buildConsultaProviders.mockReturnValue([
+    { getId: () => 'trf1', getLabel: () => 'TRF1', getMaturityStatus: () => 'stable', isEnabled: () => true, consultarPorDocumento: trf1Consultar },
+    { getId: () => 'trf5', getLabel: () => 'TRF5', getMaturityStatus: () => 'experimental', isEnabled: () => true, consultarPorDocumento: trf5Consultar },
+  ]);
+
+  const result = await service.consultarPorUsuarioLogado({ userId: 10, requestId: 'r6', debug: true });
+
+  expect(trf1Consultar).toHaveBeenCalledWith(expect.objectContaining({
+    debug: expect.objectContaining({ level: 'minimal', includeArtifacts: false }),
+  }));
+  expect(trf5Consultar).toHaveBeenCalledWith(expect.objectContaining({
+    debug: expect.objectContaining({ level: 'detailed', includeArtifacts: true }),
+  }));
+  const trf1Source = result.sources.find((s) => s.source === 'trf1');
+  expect(trf1Source.debugData).toBeNull();
 });
