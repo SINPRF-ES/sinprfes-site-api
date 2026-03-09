@@ -22,14 +22,6 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
     throw new Error('Provider must implement getParser()');
   }
 
-  getSearchTimeoutMs(cfg) {
-    return cfg.searchTimeoutMs;
-  }
-
-  getWaitPollIntervalMs() {
-    return 250;
-  }
-
   getMaturityStatus() {
     return 'experimental';
   }
@@ -308,24 +300,13 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
         waitStrategy: 'waitForRealResultsUpdate',
       });
 
-      const clickPromise = page.locator(selectors.searchButton).click();
-      try {
-        await page.waitForResponse((response) => {
-          const req = response.request();
-          return req.method() === 'POST'
-            && /consultapublica|listView\.seam|searchProcessos/i.test(response.url());
-        }, { timeout: Math.min(cfg.searchTimeoutMs, 8000) });
-      } catch (_err) {
-        emitDebugWarning('D_submit_search_ajax_not_detected', { reason: 'No matching ajax response captured' });
-      }
-      await clickPromise;
+      await page.locator(selectors.searchButton).click();
       debugSummary.searchTriggered = true;
 
       let waitInfo;
-      const searchTimeoutMs = this.getSearchTimeoutMs(cfg);
       try {
         waitInfo = await this.waitForRealResultsUpdate(page, {
-          timeoutMs: searchTimeoutMs,
+          timeoutMs: cfg.searchTimeoutMs,
           previousPanelBodyHtml: beforeSubmitPanelHtml,
           previousPanelText: beforeSubmitSignals.panelText || '',
           previousLinkSignatures: Array.isArray(beforeSubmitSignals.linkSignatures) ? beforeSubmitSignals.linkSignatures : [],
@@ -336,7 +317,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
       } catch (err) {
         debugSummary.failureStage = 'submit_or_wait';
         emitDebugWarning('D_submit_search_timeout', {
-          timeoutMs: searchTimeoutMs,
+          timeoutMs: cfg.searchTimeoutMs,
           errorMessage: err.message,
         });
         await saveArtifact('03-submit-timeout.png', page, 'screenshot');
@@ -653,7 +634,7 @@ class PjeConsultaPublicaBaseProvider extends ConsultaProcessualProvider {
     selectors,
   }) {
     const startedAt = Date.now();
-    const pollIntervalMs = this.getWaitPollIntervalMs();
+    const pollIntervalMs = 250;
 
     while (Date.now() - startedAt < timeoutMs) {
       const snapshot = await page.evaluate(({ prevHtml, prevPanelText, prevLinkSignatures, prevCnjMatchesFoundValue, gridPanelId, gridPanelBodyId }) => {
