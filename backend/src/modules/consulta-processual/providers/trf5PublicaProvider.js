@@ -16,7 +16,7 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
   getId() { return 'trf5'; }
   getLabel() { return 'TRF5'; }
   isEnabled() { return getConsultaProcessualConfig().trf5Enabled; }
-  getMaturityStatus() { return 'stable'; }
+  getMaturityStatus() { return 'experimental'; }
 
   getBaseUrl() {
     return 'https://portalbi.trf5.jus.br/portal-bi/painel.html?id=3002';
@@ -104,6 +104,12 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       await saveArtifact('01-home.html', await page.content());
 
       const diagnostics = await this.collectDomDiagnostics(page);
+      await saveArtifact('02-frame-tree.json', JSON.stringify(diagnostics.frameTree, null, 2));
+      await saveArtifact('03-dom-inventory.json', JSON.stringify(diagnostics.domInventory, null, 2));
+      await saveArtifact('04-input-candidates.json', JSON.stringify(diagnostics.inputCandidates, null, 2));
+      await saveArtifact('05-cpf-candidates-ranked.json', JSON.stringify(diagnostics.documentFieldCandidates, null, 2));
+      await saveArtifact('06-clickable-filter-candidates.json', JSON.stringify(diagnostics.clickableFilterCandidates, null, 2));
+
       const docField = diagnostics.documentFieldChosen;
       if (!docField?.selector) {
         debugSummary.failureStage = 'document_field';
@@ -120,7 +126,14 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       await page.waitForTimeout(800);
       const value = await field.inputValue().catch(() => '');
       debugSummary.maskedInputAccepted = value.includes('.') || value === cpfMasked;
-      await saveArtifact('02-after-input.png', page, 'screenshot');
+      await saveArtifact('07-post-interaction-home.png', page, 'screenshot');
+
+      const postInteractionDiagnostics = await this.collectDomDiagnostics(page, { skipInteractions: true });
+      await saveArtifact('08-post-interaction-dom-inventory.json', JSON.stringify(postInteractionDiagnostics.domInventory, null, 2));
+      if (!debugSummary.maskedInputAccepted) {
+        debugSummary.failureStage = 'document_field';
+        throw new Error('Campo CPF identificado, mas input mascarado não foi aceito no TRF5');
+      }
 
       const checkboxResult = await this.ensureDegreeCheckboxes(page);
       debugSummary.firstDegreeChecked = checkboxResult.firstDegreeChecked;
@@ -351,51 +364,141 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
     return { waitConditionMatched: 'timeout_without_clear_results', snapshot: { hasTableRows: false, cnjMatches: 0 } };
   }
 
-  async collectDomDiagnostics(page) {
+  async collectDomDiagnostics(page, options = {}) {
+    const { skipInteractions = false } = options;
     const frames = Array.from(page.frames() || []);
     const allElements = [];
+    const inputCandidates = [];
+    const clickableFilterCandidates = [];
+    const frameTree = [];
 
-    for (let i = 0; i < frames.length; i += 1) {
-      const frame = frames[i];
-      if (frame.isDetached()) continue;
-      const elements = await frame.evaluate(({ index }) => {
-        const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
-        const cssPath = (el) => {
-          if (el.id) return `#${el.id.replace(/(:|\.|\[|\]|,|=|@)/g, '\\\\$1')}`;
-          let node = el;
-          const parts = [];
-          while (node && node.nodeType === 1 && parts.length < 5) {
-            parts.unshift(node.tagName.toLowerCase());
-            node = node.parentElement;
-          }
-          return parts.join(' > ');
+    const collectFromFrames = async () => {
+      allElements.length = 0;
+      inputCandidates.length = 0;
+      clickableFilterCandidates.length = 0;
+      frameTree.length = 0;
+
+      for (let i = 0; i < frames.length; i += 1) {
+        const frame = frames[i];
+        if (frame.isDetached()) continue;
+
+        const frameMeta = {
+          frameIndex: i === 0 ? null : i,
+          url: frame.url(),
+          name: frame.name() || null,
+          parentFrameIndex: frame.parentFrame() ? frames.indexOf(frame.parentFrame()) : null,
         };
+        frameTree.push(frameMeta);
 
-        return Array.from(document.querySelectorAll('input,button,a,[role="button"],.lui-input,.qv-input')).map((el) => ({
-          tag: el.tagName.toLowerCase(),
-          type: (el.getAttribute('type') || '').toLowerCase(),
-          id: el.id || null,
-          name: el.getAttribute('name') || null,
-          placeholder: el.getAttribute('placeholder') || null,
-          title: el.getAttribute('title') || null,
-          ariaLabel: el.getAttribute('aria-label') || null,
-          role: el.getAttribute('role') || null,
-          className: el.getAttribute('class') || '',
-          text: clean(el.textContent || ''),
-          contextText: clean(el.parentElement?.innerText || '').slice(0, 220),
-          visible: true,
-          selector: cssPath(el),
-          bbox: { y: Math.round(el.getBoundingClientRect().y || 0) },
-          frameIndex: index,
-        }));
-      }, { index: i === 0 ? null : i }).catch(() => []);
-      allElements.push(...elements);
+        const frameElements = await frame.evaluate(({ index }) => {
+          const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+          const cssPath = (el) => {
+            if (el.id) return `#${el.id.replace(/(:|\.|\[|\]|,|=|@)/g, '\\\\$1')}`;
+            const classes = String(el.className || '').split(/\s+/).filter(Boolean).slice(0, 2);
+            if (classes.length) return `${el.tagName.toLowerCase()}.${classes.join('.')}`;
+            let node = el;
+            const parts = [];
+            while (node && node.nodeType === 1 && parts.length < 6) {
+              const nth = node.parentElement ? Array.from(node.parentElement.children).indexOf(node) + 1 : 1;
+              parts.unshift(`${node.tagName.toLowerCase()}:nth-child(${nth})`);
+              node = node.parentElement;
+            }
+            return parts.join(' > ');
+          };
+
+          const nearestLabelText = (el) => {
+            const ariaLabelledBy = el.getAttribute('aria-labelledby');
+            if (ariaLabelledBy) {
+              const text = ariaLabelledBy
+                .split(/\s+/)
+                .map((id) => document.getElementById(id)?.textContent || '')
+                .join(' ');
+              if (clean(text)) return clean(text);
+            }
+            const label = el.closest('label') || (el.id ? document.querySelector(`label[for="${el.id}"]`) : null);
+            if (label) return clean(label.textContent || '');
+            return '';
+          };
+
+          const nodes = Array.from(document.querySelectorAll('*')).slice(0, 4000);
+          return nodes
+            .filter((el) => {
+              const tag = el.tagName.toLowerCase();
+              if (['input', 'textarea', 'button', 'a'].includes(tag)) return true;
+              if (el.getAttribute('role') === 'button' || el.getAttribute('role') === 'textbox') return true;
+              if (el.getAttribute('contenteditable') === 'true') return true;
+              const cls = String(el.className || '').toLowerCase();
+              return /lui-input|qv-input|filter|qlik/.test(cls);
+            })
+            .map((el) => {
+              const rect = el.getBoundingClientRect();
+              const style = window.getComputedStyle(el);
+              const parentText = clean(el.parentElement?.innerText || '').slice(0, 300);
+              const prevText = clean(el.previousElementSibling?.textContent || '').slice(0, 120);
+              const nextText = clean(el.nextElementSibling?.textContent || '').slice(0, 120);
+              return {
+                tag: el.tagName.toLowerCase(),
+                type: (el.getAttribute('type') || '').toLowerCase(),
+                id: el.id || null,
+                name: el.getAttribute('name') || null,
+                className: el.getAttribute('class') || '',
+                placeholder: el.getAttribute('placeholder') || null,
+                title: el.getAttribute('title') || null,
+                ariaLabel: el.getAttribute('aria-label') || null,
+                ariaLabelledBy: el.getAttribute('aria-labelledby') || null,
+                role: el.getAttribute('role') || null,
+                dataAttrs: Object.fromEntries(Array.from(el.attributes).filter((a) => a.name.startsWith('data-')).map((a) => [a.name, a.value]).slice(0, 15)),
+                readonly: el.hasAttribute('readonly'),
+                disabled: el.hasAttribute('disabled'),
+                visible: style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0,
+                editable: !el.hasAttribute('readonly') && !el.hasAttribute('disabled'),
+                frameIndex: index,
+                shadowRootDepth: 0,
+                selector: cssPath(el),
+                text: clean(el.textContent || '').slice(0, 250),
+                parentText,
+                nearbySiblingText: clean(`${prevText} ${nextText}`),
+                nearestLabelText: nearestLabelText(el),
+                bbox: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
+              };
+            });
+        }, { index: i === 0 ? null : i }).catch(() => []);
+
+        allElements.push(...frameElements);
+        inputCandidates.push(...frameElements.filter((el) => ['input', 'textarea'].includes(el.tag) || el.role === 'textbox' || el.tag === 'div' && /input|textbox/i.test(el.className)));
+        clickableFilterCandidates.push(...frameElements.filter((el) => ['button', 'a', 'div', 'span'].includes(el.tag) && /filter|filtro|qlik|lui|search|consulta|aplicar|buscar/i.test(`${el.className} ${el.text} ${el.parentText}`)));
+      }
+    };
+
+    await collectFromFrames();
+
+    if (!skipInteractions) {
+      const topClickable = clickableFilterCandidates
+        .map((el) => {
+          const hay = `${el.className} ${el.text} ${el.parentText} ${el.nearestLabelText}`.toLowerCase();
+          const score = (/filter|filtro|painel/.test(hay) ? 80 : 0) + (/cpf|documento|consulta/.test(hay) ? 90 : 0) + (el.visible ? 15 : 0);
+          return { ...el, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+
+      for (const candidate of topClickable) {
+        if (!candidate.selector) continue;
+        const frame = candidate.frameIndex !== null ? frames[candidate.frameIndex] : page;
+        await frame.locator(candidate.selector).first().click({ timeout: 1500 }).catch(() => {});
+        await page.waitForTimeout(400);
+      }
+
+      await collectFromFrames();
     }
 
     const { documentFieldCandidates, documentFieldChosen } = this.rankDocumentFieldCandidates(allElements);
     const { searchActionCandidates, searchActionChosen } = this.rankSearchCandidates(allElements, documentFieldChosen);
     return {
+      frameTree,
       domInventory: { elements: allElements },
+      inputCandidates,
+      clickableFilterCandidates,
       documentFieldCandidates,
       documentFieldChosen,
       searchActionCandidates,
@@ -412,9 +515,13 @@ class Trf5PublicaProvider extends PjeConsultaPublicaBaseProvider {
       })
       .map((el) => {
         let score = 0;
-        const hay = `${el.id} ${el.name} ${el.placeholder} ${el.title} ${el.ariaLabel} ${el.contextText}`.toLowerCase();
+        const hay = `${el.id} ${el.name} ${el.placeholder} ${el.title} ${el.ariaLabel} ${el.nearestLabelText} ${el.parentText} ${el.nearbySiblingText} ${el.className}`.toLowerCase();
         if (el.visible) score += 25;
+        if (el.editable) score += 20;
         if (/cpf\/?cnpj|cpf|cnpj/.test(hay)) score += 160;
+        if (/documento|consulta|filtro|parte|nome/.test(hay)) score += 40;
+        if (/qlik|qv-|lui-/.test(hay)) score += 20;
+        if (el.readonly || el.disabled) score -= 80;
         if ((el.className || '').includes('lui-input')) score += 40;
         if (el.bbox?.y < 900) score += 5;
         return { ...el, score };

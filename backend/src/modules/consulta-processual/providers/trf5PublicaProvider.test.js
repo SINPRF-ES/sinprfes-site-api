@@ -13,11 +13,11 @@ describe('Trf5PublicaProvider heuristics', () => {
     provider = new Trf5PublicaProvider();
   });
 
-  test('é estável e habilitado por padrão', () => {
+  test('é experimental e habilitado por padrão', () => {
     delete process.env.CONSULTA_PROCESSUAL_TRF5_ENABLED;
     const defaultProvider = new Trf5PublicaProvider();
 
-    expect(defaultProvider.getMaturityStatus()).toBe('stable');
+    expect(defaultProvider.getMaturityStatus()).toBe('experimental');
     expect(defaultProvider.isEnabled()).toBe(true);
   });
 
@@ -49,8 +49,8 @@ describe('Trf5PublicaProvider heuristics', () => {
 
   test('rankDocumentFieldCandidates prioriza campo com CPF/CNPJ', () => {
     const elements = [
-      { tag: 'input', type: 'text', id: 'foo', className: '', visible: true, contextText: 'Nome', bbox: { y: 100 } },
-      { tag: 'input', type: 'text', id: 'doc', className: 'lui-input', visible: true, contextText: 'CPF da parte', bbox: { y: 150 } },
+      { tag: 'input', type: 'text', id: 'foo', className: '', visible: true, editable: true, parentText: 'Nome', nearestLabelText: '', nearbySiblingText: '', bbox: { y: 100 } },
+      { tag: 'input', type: 'text', id: 'doc', className: 'lui-input', visible: true, editable: true, parentText: 'CPF da parte', nearestLabelText: 'CPF/CNPJ', nearbySiblingText: '', bbox: { y: 150 } },
     ];
     const { documentFieldChosen } = provider.rankDocumentFieldCandidates(elements);
 
