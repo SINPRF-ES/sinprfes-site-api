@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-O módulo **🗨️ Enquetes** permite que a diretoria do SINPRF-ES crie consultas internas com voto transparente, incluindo suporte a resposta única, múltipla escolha e opção **Outro** com texto livre.
+O módulo **🗨️ Enquetes** permite que a diretoria do SINPRF-ES crie consultas internas com voto transparente, com paridade entre **site** e **app**.
 
 ## Estrutura de banco
 
@@ -12,7 +12,7 @@ O módulo **🗨️ Enquetes** permite que a diretoria do SINPRF-ES crie consult
 - `type` (`YES_NO` ou `MULTIPLE_CHOICE`)
 - `allow_multiple_answers`
 - `allow_other_option`
-- `deadline_at`
+- `deadline_at` (persistido como timestamp interno, operando em semântica de **data limite**)
 - `status` (`DRAFT`, `ACTIVE`, `CLOSED`)
 - `created_by`
 - `created_at`
@@ -46,22 +46,30 @@ O módulo **🗨️ Enquetes** permite que a diretoria do SINPRF-ES crie consult
 
 > Todos os endpoints exigem autenticação e permissão `ENQUETES_GERENCIAR`.
 
-## Regras de negócio
+## Regras de negócio (backend-first)
 
 - Backend é a fonte única da verdade para criação, publicação, votação e resultados.
 - Apenas diretoria/admin podem criar, votar e visualizar enquetes nesta fase.
-- Enquetes em `ACTIVE` são encerradas automaticamente quando `NOW() >= deadline_at`.
+- **Data limite é somente data** (timezone canônico: `America/Sao_Paulo`).
+- A enquete permanece ativa durante todo o dia da data limite e encerra no dia seguinte.
 - Voto não é secreto: os resultados retornam nomes dos votantes por opção.
-- A alteração de voto é permitida enquanto a enquete está ativa.
-- A alteração substitui integralmente o voto anterior do usuário.
+- A alteração de voto é permitida enquanto a enquete está ativa e substitui integralmente o voto anterior.
 - Para opção **Outro**, `other_text` é obrigatório quando a opção marcada é `is_other = true`.
 
-## Comportamento de votação
+## Comportamento por tipo
 
-- `YES_NO` cria automaticamente as opções `Sim` e `Não` (mais `Outro` opcional).
-- `MULTIPLE_CHOICE` requer pelo menos 2 opções.
-- Quando `allow_multiple_answers = false`, apenas 1 opção pode ser enviada.
-- Quando `allow_multiple_answers = true`, múltiplas opções podem ser enviadas.
+- `YES_NO` cria automaticamente as opções `Sim` e `Não`.
+- `YES_NO` é sempre resposta única (`allow_multiple_answers = false`), mesmo com payload inválido no frontend.
+- `MULTIPLE_CHOICE` requer pelo menos 2 opções reais (não vazias).
+- `MULTIPLE_CHOICE` pode habilitar múltiplas respostas por usuário.
+- **Outro** é disponibilizado apenas para `MULTIPLE_CHOICE` para manter coerência funcional.
+
+## UX aplicada
+
+- Campo da pergunta ampliado (textarea) no formulário de criação/edição.
+- Em múltipla escolha, o formulário já inicia com `Opção 1` e `Opção 2`, com adição dinâmica de novas opções.
+- Controle “Permitir mais de uma resposta por usuário” só aparece para múltipla escolha.
+- Paridade funcional entre site e app para filtros, criação, votação, alteração de voto e resultados transparentes.
 
 ## Transparência
 

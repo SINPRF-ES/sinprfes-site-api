@@ -1,5 +1,13 @@
 const repository = require("../repositories/polls.repository");
 
+const CANONICAL_TIMEZONE = "America/Sao_Paulo";
+const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: CANONICAL_TIMEZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 function normalizeType(type) {
   const value = String(type || "").toUpperCase().trim();
   if (value === "SIM_NAO" || value === "YES_NO") return "YES_NO";
@@ -7,22 +15,39 @@ function normalizeType(type) {
   return "";
 }
 
-function ensureFutureDate(deadlineAt) {
-  const parsed = new Date(deadlineAt);
+function normalizeDeadlineDate(deadlineValue) {
+  const raw = String(deadlineValue || "").trim();
+  if (!raw) throw new Error("Data limite é obrigatória.");
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) {
     throw new Error("Data limite inválida.");
   }
-  return parsed.toISOString();
+
+  return dateFormatter.format(parsed);
+}
+
+function ensureNotPastDeadline(deadlineDate) {
+  const today = dateFormatter.format(new Date());
+  if (deadlineDate < today) {
+    throw new Error("Data limite não pode estar no passado.");
+  }
+}
+
+function toDeadlineAt(deadlineDate) {
+  return `${deadlineDate}T23:59:59.999-03:00`;
 }
 
 function buildOptions({ type, allowOtherOption, options }) {
   if (type === "YES_NO") {
-    const base = [
+    return [
       { label: "Sim", is_other: false },
       { label: "Não", is_other: false },
     ];
-    if (allowOtherOption) base.push({ label: "Outro", is_other: true });
-    return base;
   }
 
   const normalized = (options || [])
@@ -45,13 +70,29 @@ function validatePayload(payload) {
   const type = normalizeType(payload?.type);
   if (!type) throw new Error("Tipo de enquete inválido.");
 
-  const allowMultipleAnswers = Boolean(payload?.allow_multiple_answers ?? payload?.allowMultipleAnswers);
-  const allowOtherOption = Boolean(payload?.allow_other_option ?? payload?.allowOtherOption);
+  const allowMultipleAnswersRaw = Boolean(payload?.allow_multiple_answers ?? payload?.allowMultipleAnswers);
+  const allowMultipleAnswers = type === "MULTIPLE_CHOICE" ? allowMultipleAnswersRaw : false;
 
-  const deadlineAt = ensureFutureDate(payload?.deadline_at ?? payload?.deadlineAt);
+  const allowOtherOptionRaw = Boolean(payload?.allow_other_option ?? payload?.allowOtherOption);
+  const allowOtherOption = type === "MULTIPLE_CHOICE" ? allowOtherOptionRaw : false;
+
+  const deadlineDate = normalizeDeadlineDate(payload?.deadline_date ?? payload?.deadlineDate ?? payload?.deadline_at ?? payload?.deadlineAt);
+  ensureNotPastDeadline(deadlineDate);
+  const deadlineAt = toDeadlineAt(deadlineDate);
+
   const options = buildOptions({ type, allowOtherOption, options: payload?.options || [] });
 
-  return { title, type, allowMultipleAnswers, allowOtherOption, deadlineAt, options };
+  return { title, type, allowMultipleAnswers, allowOtherOption, deadlineAt, deadlineDate, options };
+}
+
+function extractDateInTimezone(dateValue) {
+  return dateFormatter.format(new Date(dateValue));
+}
+
+function isPollClosedByDate(deadlineAt) {
+  const today = dateFormatter.format(new Date());
+  const deadlineDate = extractDateInTimezone(deadlineAt);
+  return today > deadlineDate;
 }
 
 async function createPoll({ userId, payload }) {
@@ -98,6 +139,7 @@ async function getPollById({ pollId, userId }) {
 
   return {
     ...poll,
+    deadline_date: extractDateInTimezone(poll.deadline_at),
     options: grouped,
     my_votes: myVotes,
   };
@@ -107,7 +149,7 @@ async function vote({ pollId, userId, payload }) {
   const poll = await repository.getPollById(pollId);
   if (!poll) throw new Error("Enquete não encontrada.");
   if (poll.status !== "ACTIVE") throw new Error("Enquete encerrada ou ainda não publicada.");
-  if (new Date(poll.deadline_at).getTime() <= Date.now()) throw new Error("Enquete encerrada.");
+  if (isPollClosedByDate(poll.deadline_at)) throw new Error("Enquete encerrada.");
 
   const selectedOptionIdsRaw = payload?.option_ids ?? payload?.optionIds ?? payload?.option_id ?? payload?.optionId;
   const rawList = Array.isArray(selectedOptionIdsRaw) ? selectedOptionIdsRaw : [selectedOptionIdsRaw];

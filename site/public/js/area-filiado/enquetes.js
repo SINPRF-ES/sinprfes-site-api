@@ -12,9 +12,13 @@
 
   function parseDate(value) {
     if (!value) return "-";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleDateString("pt-BR");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+      const [y, m, d] = String(value).split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "-";
+    return parsed.toLocaleDateString("pt-BR");
   }
 
   async function fetchPolls() {
@@ -37,7 +41,7 @@
     list.innerHTML = state.polls.map((poll) => `
       <article class="ui-card" style="display:flex; flex-direction:column; gap:10px;">
         <h3 style="margin:0; color:var(--azul-fundo);">${escapeHtml(poll.title)}</h3>
-        <p style="margin:0;"><strong>Prazo:</strong> ${parseDate(poll.deadline_at)}</p>
+        <p style="margin:0;"><strong>Data limite:</strong> ${parseDate(poll.deadline_date || poll.deadline_at)}</p>
         <p style="margin:0;"><strong>Participantes:</strong> ${Number(poll.participants || 0)}</p>
         <div>
           <button class="ui-button ui-button-outline" onclick="Enquetes.abrirEnquete(${poll.id})">Abrir enquete</button>
@@ -63,7 +67,7 @@
     document.getElementById("modal-generic-corpo").innerHTML = `
       <div style="display:flex; flex-direction:column; gap:12px;">
         <h3 style="margin:0;">${escapeHtml(poll.title)}</h3>
-        <p style="margin:0;"><strong>Prazo:</strong> ${parseDate(poll.deadline_at)} ${isClosed ? "(Encerrada)" : "(Ativa)"}</p>
+        <p style="margin:0;"><strong>Data limite:</strong> ${parseDate(poll.deadline_date || poll.deadline_at)} ${isClosed ? "(Encerrada)" : "(Ativa até o fim do dia)"}</p>
         <form id="enquete-voto-form" style="display:flex; flex-direction:column; gap:10px;">
           ${(poll.options || []).map((opt) => {
             const checked = selected.has(Number(opt.id)) ? "checked" : "";
@@ -146,23 +150,54 @@
     }
   }
 
+  function renderOptionsFields(root, count) {
+    root.innerHTML = "";
+    for (let index = 0; index < count; index += 1) {
+      const item = document.createElement("div");
+      item.style.display = "flex";
+      item.style.gap = "8px";
+      item.style.alignItems = "center";
+      item.innerHTML = `
+        <label style="flex:1; margin:0;">Opção ${index + 1}
+          <input name="mc_option_${index + 1}" placeholder="Texto da opção ${index + 1}" required />
+        </label>
+        ${index >= 2 ? `<button type="button" class="ui-button ui-button-outline" data-remove-index="${index}" style="margin-top:18px;">Remover</button>` : ""}
+      `;
+      root.appendChild(item);
+    }
+
+    root.querySelectorAll("button[data-remove-index]").forEach((btn) => {
+      btn.onclick = () => {
+        if (count <= 2) return;
+        renderOptionsFields(root, count - 1);
+      };
+    });
+  }
+
   function abrirModalNovaEnquete() {
     document.getElementById("modal-generic-titulo").textContent = "➕ Nova enquete";
     document.getElementById("modal-generic-corpo").innerHTML = `
       <form id="enquete-form" class="form-container" style="display:flex; flex-direction:column; gap:12px;">
-        <label>Pergunta* <input name="title" required /></label>
+        <label>Pergunta* 
+          <textarea name="title" rows="3" required placeholder="Digite a pergunta da enquete"></textarea>
+        </label>
         <label>Tipo
           <select name="type" id="enquete-type">
             <option value="YES_NO">Sim / Não</option>
             <option value="MULTIPLE_CHOICE">Múltipla escolha</option>
           </select>
         </label>
-        <label><input type="checkbox" name="allow_multiple_answers" /> Permitir mais de uma resposta por usuário</label>
-        <label><input type="checkbox" name="allow_other_option" /> Permitir resposta livre (Outro)</label>
-        <label>Opções (uma por linha, para múltipla escolha)
-          <textarea name="options" rows="4" placeholder="100&#10;200&#10;300"></textarea>
-        </label>
-        <label>Data limite* <input type="datetime-local" name="deadline_at" required /></label>
+        <div id="enquete-multiple-config" style="display:none; flex-direction:column; gap:10px;">
+          <label><input type="checkbox" name="allow_multiple_answers" /> Permitir mais de uma resposta por usuário</label>
+          <label><input type="checkbox" name="allow_other_option" /> Permitir resposta livre (Outro)</label>
+          <div>
+            <strong>Opções da enquete</strong>
+            <div id="enquete-options-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
+            <p style="margin:6px 0 0; font-size:12px;">Deseja adicionar outra opção?</p>
+            <button type="button" id="btn-add-option" class="ui-button ui-button-outline">+ Adicionar opção</button>
+          </div>
+        </div>
+        <label>Data limite* <input type="date" name="deadline_date" required /></label>
         <div style="display:flex; gap:8px; justify-content:flex-end;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
           <button type="submit" class="ui-button ui-button-secondary">Salvar enquete</button>
@@ -173,27 +208,46 @@
 
     const form = document.getElementById("enquete-form");
     const typeSelect = document.getElementById("enquete-type");
-    const optionsField = form.querySelector("textarea[name='options']");
+    const multipleConfig = document.getElementById("enquete-multiple-config");
+    const optionsList = document.getElementById("enquete-options-list");
+    const btnAddOption = document.getElementById("btn-add-option");
+
+    let optionsCount = 2;
+    renderOptionsFields(optionsList, optionsCount);
+
+    btnAddOption.onclick = () => {
+      optionsCount += 1;
+      renderOptionsFields(optionsList, optionsCount);
+    };
 
     const toggleOptionsVisibility = () => {
-      optionsField.closest("label").style.display = typeSelect.value === "MULTIPLE_CHOICE" ? "block" : "none";
+      const isMultiple = typeSelect.value === "MULTIPLE_CHOICE";
+      multipleConfig.style.display = isMultiple ? "flex" : "none";
     };
+
     typeSelect.onchange = toggleOptionsVisibility;
     toggleOptionsVisibility();
 
     form.onsubmit = async (ev) => {
       ev.preventDefault();
       const fd = new FormData(form);
+      const type = String(fd.get("type") || "YES_NO");
+      const options = [];
+
+      if (type === "MULTIPLE_CHOICE") {
+        for (let index = 1; index <= optionsCount; index += 1) {
+          const value = String(fd.get(`mc_option_${index}`) || "").trim();
+          if (value) options.push(value);
+        }
+      }
+
       const payload = {
         title: String(fd.get("title") || "").trim(),
-        type: String(fd.get("type") || "YES_NO"),
-        allow_multiple_answers: fd.get("allow_multiple_answers") === "on",
-        allow_other_option: fd.get("allow_other_option") === "on",
-        deadline_at: fd.get("deadline_at"),
-        options: String(fd.get("options") || "")
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        type,
+        allow_multiple_answers: type === "MULTIPLE_CHOICE" && fd.get("allow_multiple_answers") === "on",
+        allow_other_option: type === "MULTIPLE_CHOICE" && fd.get("allow_other_option") === "on",
+        deadline_date: String(fd.get("deadline_date") || ""),
+        options,
       };
 
       const createRes = await window.Api.apiFetch("/api/polls", { method: "POST", body: payload });
