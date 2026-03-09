@@ -13,6 +13,15 @@ describe('Trf5PublicaProvider heuristics', () => {
     provider = new Trf5PublicaProvider();
   });
 
+
+  test('é estável e habilitado por padrão', () => {
+    delete process.env.CONSULTA_PROCESSUAL_TRF5_ENABLED;
+    const defaultProvider = new Trf5PublicaProvider();
+
+    expect(defaultProvider.getMaturityStatus()).toBe('stable');
+    expect(defaultProvider.isEnabled()).toBe(true);
+  });
+
   test('retorna error com debug quando browser não inicia (não deve ficar skipped)', async () => {
     launchBrowser.mockResolvedValue({
       ok: false,
