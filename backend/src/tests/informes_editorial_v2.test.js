@@ -41,6 +41,22 @@ describe('Informes Canonical Contract Tests', () => {
     expect(res.body.data_informe).toBe('2026-03-10');
     const insertParams = pool.query.mock.calls[1][1];
     expect(insertParams[7]).toBe('2026-03-10T12:00:00.000Z');
+    const insertSql = pool.query.mock.calls[1][0];
+    expect(insertSql).toContain("'RASCUNHO'");
+  });
+
+
+  test('publicar promove informe para status PUBLICADA e status_editorial ATUAL', async () => {
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ status_editorial: 'ATUAL', is_editable: true }] })
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, status: 'PUBLICADA', status_editorial: 'ATUAL' }] });
+
+    const res = await request(app).post(`/api/informes/${VALID_UUID}/publicar`);
+
+    expect(res.status).toBe(200);
+    const updateSql = pool.query.mock.calls[1][0];
+    expect(updateSql).toContain("status = 'PUBLICADA'");
+    expect(updateSql).toContain("status_editorial = 'ATUAL'");
   });
 
   test('bloqueia definir capa em informe arquivado', async () => {
