@@ -40,6 +40,11 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       waitSignals: [],
       beforeSubmitSignals: null,
       afterSubmitSignals: null,
+      browserConsole: [],
+      pageErrors: [],
+      requestFailures: [],
+      networkRequests: [],
+      submitAttempts: [],
       failureStage: null,
     };
     const debugSummary = {
@@ -88,12 +93,52 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     let domLengthBefore = 0;
     let beforeSubmitUrl = null;
     const inputDigits = String(document || '').replace(/\D/g, '');
+    const inputMasked = String(documentMasked || document || '');
 
     try {
       const bootStart = nowMs();
       recordStep('A_bootstrap_start', { requestId, source: this.getId(), documentMasked: documentMasked || maskDocument(document) });
       context = await browserResult.browser.newContext();
       page = await context.newPage();
+      page.on('console', (msg) => {
+        if (!detailed) return;
+        debugData.browserConsole.push({ type: msg.type(), text: msg.text(), location: msg.location?.() || null, at: new Date().toISOString() });
+      });
+      page.on('pageerror', (err) => {
+        if (!detailed) return;
+        debugData.pageErrors.push({ message: err?.message || String(err), stack: err?.stack || null, at: new Date().toISOString() });
+      });
+      const requestIndex = new Map();
+      page.on('request', (request) => {
+        const event = {
+          method: request.method(),
+          url: request.url(),
+          resourceType: request.resourceType(),
+          at: nowMs(),
+        };
+        debugData.networkRequests.push(event);
+        requestIndex.set(request, event);
+      });
+      page.on('requestfinished', async (request) => {
+        const event = requestIndex.get(request);
+        if (!event) return;
+        const response = await request.response().catch(() => null);
+        event.status = response?.status?.() || null;
+        event.responseHeaders = response ? {
+          'content-type': response.headers()['content-type'] || null,
+          'set-cookie': response.headers()['set-cookie'] || null,
+          location: response.headers().location || null,
+        } : null;
+      });
+      page.on('requestfailed', (request) => {
+        const failure = {
+          method: request.method(),
+          url: request.url(),
+          errorText: request.failure()?.errorText || 'unknown',
+          at: new Date().toISOString(),
+        };
+        debugData.requestFailures.push(failure);
+      });
       recordStep('A_bootstrap_end', { browserStarted: true, pageCreated: true, durationMs: nowMs() - bootStart });
 
       const bStart = nowMs();
@@ -116,18 +161,49 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       });
 
       const cStart = nowMs();
-      recordStep('C_fill_document_start', { documentMasked: documentMasked || maskDocument(document), strategy: 'fill_digits_input' });
+      recordStep('C_fill_document_start', { documentMasked: documentMasked || maskDocument(document), strategy: 'multi_strategy_fill' });
       const cpfInput = page.locator('#fPP\\:dpDec\\:documentoParte');
-      await cpfInput.fill(inputDigits);
-      await cpfInput.dispatchEvent('input').catch(() => {});
-      await cpfInput.dispatchEvent('change').catch(() => {});
-      const valueAfterFill = await cpfInput.inputValue().catch(() => '');
+      const cpfRadio = page.locator('input[type="radio"][value*="CPF"], input[type="radio"][id*="cpf" i], input[type="radio"][name*="tipo" i]');
+      const triggerPostFillEvents = async () => {
+        await cpfInput.dispatchEvent('input').catch(() => {});
+        await cpfInput.dispatchEvent('change').catch(() => {});
+        await cpfInput.dispatchEvent('blur').catch(() => {});
+      };
+      const humanType = async (value) => {
+        await cpfInput.click({ timeout: 5000 });
+        await page.keyboard.press('Control+A').catch(() => {});
+        await page.keyboard.press('Meta+A').catch(() => {});
+        await page.keyboard.press('Backspace').catch(() => {});
+        await cpfInput.fill('').catch(() => {});
+        for (const ch of String(value || '')) {
+          await page.keyboard.type(ch, { delay: 35 });
+        }
+      };
+      await humanType(inputDigits);
+      await triggerPostFillEvents();
+      let valueAfterFill = await cpfInput.inputValue().catch(() => '');
+      const fillAttempts = [{ strategy: 'A_human_typing_digits', domValue: valueAfterFill }];
+      await cpfRadio.first().check({ force: true }).catch(() => {});
+      await cpfRadio.first().check({ force: true }).catch(() => {});
+      await humanType(inputDigits);
+      await triggerPostFillEvents();
+      valueAfterFill = await cpfInput.inputValue().catch(() => '');
+      fillAttempts.push({ strategy: 'B_radio_recheck_then_fill_digits', domValue: valueAfterFill });
+      await humanType(inputMasked);
+      await triggerPostFillEvents();
+      valueAfterFill = await cpfInput.inputValue().catch(() => '');
+      fillAttempts.push({ strategy: 'C_user_masked_value', domValue: valueAfterFill });
+      await humanType(inputDigits);
+      await triggerPostFillEvents();
+      valueAfterFill = await cpfInput.inputValue().catch(() => '');
+      fillAttempts.push({ strategy: 'D_digits_and_mask_validation', domValue: valueAfterFill, maskDetected: /\d{3}\.\d{3}\.\d{3}-\d{2}/.test(valueAfterFill) });
       await saveScreenshot(page, '02-filled.png');
       recordStep('C_fill_document_end', {
         effectiveValueMasked: maskDocument(valueAfterFill),
         digitsCount: String(valueAfterFill || '').replace(/\D/g, '').length,
         observedMaskInDom: valueAfterFill,
-        eventsDispatched: ['fill', 'input', 'change'],
+        eventsDispatched: ['input', 'change', 'blur'],
+        attempts: fillAttempts,
         durationMs: nowMs() - cStart,
       });
 
@@ -149,9 +225,11 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       });
 
       const waitTimeline = [];
+      const beforeSubmitNetworkCount = debugData.networkRequests.length;
       const gatherSignals = async () => {
         const url = page.url();
         const title = await page.title().catch(() => '');
+        const panelHtml = await page.locator('#fPP\\:processosGridPanel').innerHTML().catch(() => '');
         const panelText = await page.locator('#fPP\\:processosGridPanel').innerText().then(clean).catch(() => '');
         const bodyText = await page.locator('#fPP\\:processosGridPanel_body').innerText().then(clean).catch(() => '');
         const text = bodyText || panelText;
@@ -168,24 +246,156 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           declaredResultsCount,
           cnjMatchesFound,
           linksFound,
+          panelHtmlLength: panelHtml.length,
           inputPreservedAfterSubmit: String(documentValue || '').replace(/\D/g, '').endsWith(inputDigits.slice(-4)),
           inputValueMasked: maskDocument(documentValue),
+          hasCompatiblePost: debugData.networkRequests.slice(beforeSubmitNetworkCount).some((req) => req.method === 'POST' && /listView\.seam/.test(req.url) && typeof req.status === 'number'),
         };
       };
 
-      debugData.beforeSubmitSignals = await gatherSignals();
-      await page.locator('#fPP\\:searchProcessos').click();
-      debugSummary.searchTriggered = true;
-      let waitConditionMatched = false;
-      const waitStart = nowMs();
-      while (nowMs() - waitStart < cfg.searchTimeoutMs) {
-        const signals = await gatherSignals();
-        waitTimeline.push(signals);
-        if (signals.hasResultCountText || signals.cnjMatchesFound > 0 || signals.linksFound > 0) {
-          waitConditionMatched = true;
-          break;
+      const getSubmitButtonMetadata = async () => page.evaluate(() => {
+        const button = document.querySelector('#fPP\\:searchProcessos');
+        if (!button) return { found: false };
+        const rect = button.getBoundingClientRect();
+        const centerX = rect.left + (rect.width / 2);
+        const centerY = rect.top + (rect.height / 2);
+        const topEl = document.elementFromPoint(centerX, centerY);
+        return {
+          found: true,
+          selector: '#fPP\\:searchProcessos',
+          outerHTMLSummary: String(button.outerHTML || '').replace(/\s+/g, ' ').trim().slice(0, 600),
+          textContent: String(button.textContent || '').trim(),
+          value: button.value || null,
+          disabled: Boolean(button.disabled),
+          ariaDisabled: button.getAttribute('aria-disabled'),
+          className: button.className || null,
+          onclick: button.getAttribute('onclick') || null,
+          boundingBox: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          visible: !!(rect.width && rect.height),
+          coveredBy: topEl && topEl !== button ? (topEl.id || topEl.className || topEl.tagName) : null,
+          elementFromPoint: topEl ? { tag: topEl.tagName, id: topEl.id || null, className: topEl.className || null } : null,
+          hasJsfAjaxHint: /A4J|RichFaces|jsf|ajax/i.test(`${button.getAttribute('onclick') || ''} ${button.className || ''}`),
+          formId: button.form?.id || null,
+        };
+      }).catch(() => ({ found: false }));
+
+      const waitForObservableSignals = async (strategyName, baseline) => {
+        const startedAt = nowMs();
+        while (nowMs() - startedAt < cfg.searchTimeoutMs) {
+          const signals = await gatherSignals();
+          waitTimeline.push({ strategyName, ...signals });
+          const reasons = [];
+          if (signals.panelHtmlLength !== baseline.panelHtmlLength) reasons.push('panel_html_changed');
+          if (signals.hasResultCountText) reasons.push('result_count_text');
+          if (signals.cnjMatchesFound > baseline.cnjMatchesFound) reasons.push('cnj_matches_incremented');
+          if (signals.linksFound > baseline.linksFound) reasons.push('process_links_found');
+          if (signals.hasCompatiblePost) reasons.push('compatible_post_completed');
+          if (reasons.length) return { matched: true, reasons, signals };
+          await page.waitForTimeout(350);
         }
-        await page.waitForTimeout(350);
+        return { matched: false, reasons: [], signals: await gatherSignals() };
+      };
+
+      const submitStrategies = [
+        {
+          name: 'submit_1_human_mouse_click',
+          run: async () => {
+            const button = page.locator('#fPP\\:searchProcessos');
+            await button.scrollIntoViewIfNeeded().catch(() => {});
+            const box = await button.boundingBox();
+            if (box) {
+              await page.mouse.move(box.x + (box.width / 2), box.y + (box.height / 2));
+              await page.mouse.down();
+              await page.mouse.up();
+            }
+            await button.click({ timeout: 5000 });
+          },
+        },
+        { name: 'submit_2_force_click', run: async () => page.locator('#fPP\\:searchProcessos').click({ force: true, timeout: 5000 }) },
+        {
+          name: 'submit_3_press_enter_in_field',
+          run: async () => {
+            await cpfInput.focus();
+            await cpfInput.dispatchEvent('blur').catch(() => {});
+            await cpfInput.focus();
+            await page.keyboard.press('Enter');
+          },
+        },
+        {
+          name: 'submit_4_form_submit',
+          run: async () => {
+            const didSubmit = await page.evaluate(() => {
+              const button = document.querySelector('#fPP\\:searchProcessos');
+              const form = button?.form || document.querySelector('form[id^="fPP"]');
+              if (!form) return false;
+              if (typeof form.submit !== 'function') return false;
+              form.submit();
+              return true;
+            });
+            if (!didSubmit) throw new Error('FORM_NOT_SUBMITTABLE');
+          },
+        },
+        {
+          name: 'submit_5_jsf_richfaces_handler',
+          run: async () => {
+            const didRun = await page.evaluate(() => {
+              const button = document.querySelector('#fPP\\:searchProcessos');
+              if (!button) return false;
+              const onclick = button.getAttribute('onclick') || '';
+              const hasJsfHint = /A4J|RichFaces|jsf|ajax/i.test(onclick) || typeof window.A4J !== 'undefined' || typeof window.RichFaces !== 'undefined';
+              if (!hasJsfHint) return false;
+              if (onclick && typeof button.onclick === 'function') {
+                button.onclick(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                return true;
+              }
+              button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+              return true;
+            });
+            if (!didRun) throw new Error('NO_JSF_HANDLER_EVIDENCE');
+          },
+        },
+      ];
+
+      debugData.beforeSubmitSignals = await gatherSignals();
+      let waitConditionMatched = false;
+      for (const strategy of submitStrategies) {
+        const strategyStart = nowMs();
+        const baselineSignals = await gatherSignals();
+        const buttonMetadata = await getSubmitButtonMetadata();
+        const networkBefore = debugData.networkRequests.length;
+        try {
+          await strategy.run();
+          debugSummary.searchTriggered = true;
+          await saveScreenshot(page, '03-submit-clicked.png');
+          await saveArtifact('03-submit-clicked.html', await page.content());
+          const waited = await waitForObservableSignals(strategy.name, baselineSignals);
+          const networkAfter = debugData.networkRequests.slice(networkBefore);
+          const attempt = {
+            strategy: strategy.name,
+            result: waited.matched ? 'success' : 'failed',
+            durationMs: nowMs() - strategyStart,
+            signalsObserved: waited.reasons,
+            lastSignals: waited.signals,
+            requestsDispatched: networkAfter,
+            buttonMetadata,
+            failureReason: waited.matched ? null : 'no_observable_submit_signal',
+          };
+          debugData.submitAttempts.push(attempt);
+          if (waited.matched) {
+            waitConditionMatched = true;
+            break;
+          }
+        } catch (strategyErr) {
+          debugData.submitAttempts.push({
+            strategy: strategy.name,
+            result: 'failed',
+            durationMs: nowMs() - strategyStart,
+            signalsObserved: [],
+            requestsDispatched: debugData.networkRequests.slice(networkBefore),
+            buttonMetadata,
+            failureReason: strategyErr.message,
+          });
+        }
       }
       debugData.waitSignals = waitTimeline;
       debugSummary.waitConditionMatched = waitConditionMatched;

@@ -10,11 +10,13 @@ function mockBrowserWithTwoRows() {
       return {
         fill: jest.fn().mockResolvedValue(undefined),
         dispatchEvent: jest.fn().mockResolvedValue(undefined),
-        inputValue: jest.fn().mockResolvedValue('03241063437'),
+        inputValue: jest.fn().mockResolvedValue('032.410.634-37'),
         count: jest.fn().mockResolvedValue(1),
+        click: jest.fn().mockResolvedValue(undefined),
+        focus: jest.fn().mockResolvedValue(undefined),
       };
     }
-    if (normalized === '#fPP:searchProcessos') return { click: jest.fn().mockResolvedValue(undefined), count: jest.fn().mockResolvedValue(1) };
+    if (normalized === '#fPP:searchProcessos') return { click: jest.fn().mockResolvedValue(undefined), count: jest.fn().mockResolvedValue(1), scrollIntoViewIfNeeded: jest.fn().mockResolvedValue(undefined), boundingBox: jest.fn().mockResolvedValue({ x: 10, y: 10, width: 100, height: 30 }) };
     if (normalized === '#fPP:processosGridPanel' || normalized === '#fPP:processosGridPanel_body') {
       return {
         innerText: jest.fn().mockResolvedValue('2 resultados encontrados 1061304-94.2023.4.01.3400 1055982-59.2024.4.01.3400'),
@@ -25,11 +27,13 @@ function mockBrowserWithTwoRows() {
     if (normalized === '#fPP:processosTable a[href]') return { count: jest.fn().mockResolvedValue(2) };
     if (normalized === '#fPP:processosTable') return { innerHTML: jest.fn().mockResolvedValue('<table><tbody><tr></tr></tbody></table>') };
     if (selector === 'input[type="radio"]') return { count: jest.fn().mockResolvedValue(1) };
+    if (String(selector).includes('input[type="radio"]')) return { first: jest.fn().mockReturnValue({ check: jest.fn().mockResolvedValue(undefined) }) };
     if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('20/10/2025 20:12:22 - Juntada de petição intercorrente') };
     return { innerText: jest.fn().mockResolvedValue(''), innerHTML: jest.fn().mockResolvedValue(''), count: jest.fn().mockResolvedValue(0) };
   };
 
   const page = {
+    on: jest.fn(),
     goto: jest.fn().mockImplementation(async (u) => { currentUrl = u; }),
     url: jest.fn(() => currentUrl),
     title: jest.fn().mockResolvedValue('Consulta Pública Processual'),
@@ -38,6 +42,8 @@ function mockBrowserWithTwoRows() {
     close: jest.fn().mockResolvedValue(undefined),
     waitForTimeout: jest.fn().mockResolvedValue(undefined),
     locator: jest.fn(mockLocator),
+    keyboard: { press: jest.fn().mockResolvedValue(undefined), type: jest.fn().mockResolvedValue(undefined) },
+    mouse: { move: jest.fn().mockResolvedValue(undefined), down: jest.fn().mockResolvedValue(undefined), up: jest.fn().mockResolvedValue(undefined) },
     evaluate: jest.fn().mockResolvedValue({
       declaredResultsCount: 2,
       panelText: '2 resultados encontrados',
@@ -71,6 +77,8 @@ function mockBrowserWithTwoRows() {
     goto: jest.fn().mockResolvedValue(undefined),
     url: jest.fn().mockReturnValue('https://trf1.test/detail'),
     locator: jest.fn(mockLocator),
+    keyboard: { press: jest.fn().mockResolvedValue(undefined), type: jest.fn().mockResolvedValue(undefined) },
+    mouse: { move: jest.fn().mockResolvedValue(undefined), down: jest.fn().mockResolvedValue(undefined), up: jest.fn().mockResolvedValue(undefined) },
     screenshot: jest.fn().mockResolvedValue(undefined),
     content: jest.fn().mockResolvedValue('<html>detail</html>'),
     close: jest.fn().mockResolvedValue(undefined),
