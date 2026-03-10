@@ -27,7 +27,11 @@ async function obterUsuarioPorId(id) {
 
 function compactDebugSummary(debugSummary = {}) {
   return {
+    pageLoaded: Boolean(debugSummary.pageLoaded),
+    documentFieldFound: Boolean(debugSummary.documentFieldFound),
+    searchTriggered: Boolean(debugSummary.searchTriggered),
     submitSucceeded: Boolean(debugSummary.submitSucceeded),
+    waitConditionMatched: debugSummary.waitConditionMatched === null || debugSummary.waitConditionMatched === undefined ? null : Boolean(debugSummary.waitConditionMatched),
     declaredResultsCount: Number(debugSummary.declaredResultsCount || 0),
     normalizedItemsCount: Number(debugSummary.normalizedItemsCount || 0),
     failureStage: debugSummary.failureStage || null,
@@ -51,6 +55,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
 
   const provider = buildConsultaProviders()[0];
   const isDebug = Boolean(debug || cfg.debug || cfg.debugTrf1);
+  const trf1DebugLevel = isDebug ? ((debug === true || debug?.level === 'detailed') ? 'detailed' : cfg.trf1DebugLevel || 'minimal') : 'minimal';
   const now = Date.now();
   const lastRunKey = `${userId}:${mode}`;
   const shouldThrottle = !isDebug && Number.isFinite(lastRunByUser.get(lastRunKey)) && now - lastRunByUser.get(lastRunKey) < cfg.minIntervalMs;
@@ -69,7 +74,7 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
       const runningKey = `${userId}:${mode}:trf1:${isDebug ? 'debug' : 'normal'}`;
       let promise = inFlight.get(runningKey);
       if (!promise) {
-        promise = provider.consultarPorDocumento({ document: documentToUse, documentMasked: maskDocument(documentToUse), requestId, userId, debug: { enabled: isDebug, level: isDebug ? 'detailed' : 'minimal' } });
+        promise = provider.consultarPorDocumento({ document: documentToUse, documentMasked: maskDocument(documentToUse), requestId, userId, debug: { enabled: isDebug, level: trf1DebugLevel } });
         inFlight.set(runningKey, promise);
       }
       try {

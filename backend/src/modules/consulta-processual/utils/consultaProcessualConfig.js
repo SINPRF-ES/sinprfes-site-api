@@ -8,6 +8,11 @@ function parseIntSafe(v, d) {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
 }
 
+function parseDebugLevel(v, d = 'minimal') {
+  const lvl = String(v || d).toLowerCase();
+  return ['minimal', 'detailed'].includes(lvl) ? lvl : d;
+}
+
 function getConsultaProcessualConfig() {
   const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
   return {
@@ -18,6 +23,7 @@ function getConsultaProcessualConfig() {
     searchTimeoutMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_SEARCH_TIMEOUT_MS, 20000),
     debug: parseBool(process.env.CONSULTA_PROCESSUAL_DEBUG, false),
     debugTrf1: parseBool(process.env.CONSULTA_PROCESSUAL_DEBUG_TRF1, false),
+    trf1DebugLevel: parseDebugLevel(process.env.CONSULTA_PROCESSUAL_TRF1_DEBUG_LEVEL, 'minimal'),
     headless: parseBool(process.env.CONSULTA_PROCESSUAL_HEADLESS, isProd),
     playwrightEnabled: parseBool(process.env.PLAYWRIGHT_ENABLED, true),
     playwrightBrowser: String(process.env.PLAYWRIGHT_BROWSER || 'chromium').toLowerCase(),
