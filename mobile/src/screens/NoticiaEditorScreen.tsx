@@ -14,15 +14,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  fetchNoticia,
-  createNoticia,
-  updateNoticia,
-  publicarNoticia,
-  deleteNoticia,
-  addNoticiaMidia,
-  deleteNoticiaMidia,
-  NewsMedia,
-} from '../services/newsService';
+  fetchInforme,
+  createInforme,
+  updateInforme,
+  publicarInforme,
+  deleteInforme,
+  addInformeMidia,
+  deleteInformeMidia,
+  InformeMedia,
+} from '../services/informesService';
 import SafeScreen from '../components/SafeScreen';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -38,7 +38,7 @@ export default function NoticiaEditorScreen() {
   const [conteudo, setConteudo] = useState('');
   const [capaUrl, setCapaUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<'RASCUNHO' | 'PUBLICADA'>('RASCUNHO');
-  const [midias, setMidias] = useState<NewsMedia[]>([]);
+  const [midias, setMidias] = useState<InformeMedia[]>([]);
 
   useEffect(() => {
     if (newsId) {
@@ -49,7 +49,7 @@ export default function NoticiaEditorScreen() {
   const loadNoticia = async () => {
     setLoading(true);
     try {
-      const data = await fetchNoticia(newsId);
+      const data = await fetchInforme(newsId);
       setTitulo(data.titulo);
       setConteudo(data.conteudo);
       setCapaUrl(data.capa_url);
@@ -73,9 +73,9 @@ export default function NoticiaEditorScreen() {
     try {
       const payload = { titulo, conteudo, capa_url: capaUrl, status };
       if (newsId) {
-        await updateNoticia(newsId, payload);
+        await updateInforme(newsId, payload);
       } else {
-        const created = await createNoticia(payload);
+        const created = await createInforme(payload);
         navigation.setParams({ newsId: created.id });
       }
       queryClient.invalidateQueries({ queryKey: ['noticias'] });
@@ -100,7 +100,7 @@ export default function NoticiaEditorScreen() {
         onPress: async () => {
           setSaving(true);
           try {
-            await publicarNoticia(newsId);
+            await publicarInforme(newsId);
             setStatus('PUBLICADA');
             queryClient.invalidateQueries({ queryKey: ['noticias'] });
             Alert.alert('Sucesso', 'Informe publicado!');
@@ -123,7 +123,7 @@ export default function NoticiaEditorScreen() {
         onPress: async () => {
           setSaving(true);
           try {
-            await deleteNoticia(newsId);
+            await deleteInforme(newsId);
             queryClient.invalidateQueries({ queryKey: ['noticias'] });
             navigation.goBack();
           } catch (err) {
@@ -174,7 +174,7 @@ export default function NoticiaEditorScreen() {
     setSaving(true);
     try {
       const tipo = asset.type === 'video' ? 'VIDEO' : 'IMAGEM';
-      const midia = await addNoticiaMidia(newsId, {
+      const midia = await addInformeMidia(newsId, {
         uri: asset.uri,
         type: asset.mimeType || (tipo === 'VIDEO' ? 'video/mp4' : 'image/jpeg'),
         name: asset.fileName || `upload_${Date.now()}`,
@@ -182,7 +182,7 @@ export default function NoticiaEditorScreen() {
 
       if (isCapa) {
         setCapaUrl(midia.url);
-        await updateNoticia(newsId, { capa_url: midia.url });
+        await updateInforme(newsId, { capa_url: midia.url });
       } else {
         setMidias([...midias, midia]);
       }
@@ -195,7 +195,7 @@ export default function NoticiaEditorScreen() {
 
   const handleRemoveMidia = async (midiaId: string) => {
     try {
-      await deleteNoticiaMidia(midiaId);
+      await deleteInformeMidia(midiaId);
       setMidias(midias.filter((m) => m.id !== midiaId));
     } catch (err) {
       Alert.alert('Erro', 'Erro ao remover mídia.');

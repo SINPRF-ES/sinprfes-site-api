@@ -10,12 +10,18 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-router.get("/", authMiddleware, informesController.listar);
-router.get("/:id", authMiddleware, informesController.detalhar);
+function escopoInterno(req, _res, next) {
+  req.audienciaEscopo = "INTERNA";
+  return next();
+}
+
+router.get("/", authMiddleware, escopoInterno, informesController.listar);
+router.get("/:id", authMiddleware, escopoInterno, informesController.detalhar);
 
 router.post(
   "/",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   informesController.criar
 );
@@ -23,6 +29,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   informesController.atualizar
 );
@@ -30,13 +37,23 @@ router.put(
 router.post(
   "/:id/publicar",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   informesController.publicar
+);
+
+router.post(
+  "/:id/arquivar",
+  authMiddleware,
+  escopoInterno,
+  requirePermission("NOTICIAS_GERENCIAR"),
+  informesController.arquivar
 );
 
 router.delete(
   "/:id",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   informesController.excluir
 );
@@ -44,6 +61,7 @@ router.delete(
 router.post(
   "/:id/midias",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   upload.single("file"),
   informesController.adicionarMidia
@@ -52,6 +70,7 @@ router.post(
 router.post(
   "/:id/midias_external",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   informesController.adicionarMidiaExterna
 );
@@ -59,6 +78,7 @@ router.post(
 router.delete(
   "/midias/:midiaId",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   informesController.removerMidia
 );
@@ -66,6 +86,7 @@ router.delete(
 router.post(
   "/upload-signature",
   authMiddleware,
+  escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   informesController.obterAssinaturaUpload
 );
