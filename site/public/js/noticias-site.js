@@ -34,8 +34,15 @@ function buildInstagramCard(post) {
 function buildInstagramPagination(totalPages, currentPage) {
   if (totalPages <= 1) return '';
 
-  const buttons = Array.from({ length: totalPages }, (_, index) => {
-    const page = index + 1;
+  const visiblePages = totalPages <= 10
+    ? Array.from({ length: totalPages }, (_, index) => index + 1)
+    : [1, 2, 3, 4, 5, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+
+  const buttons = visiblePages.map((page) => {
+    if (page === 'ellipsis') {
+      return '<span class="instagram-pagination-ellipsis" aria-hidden="true">…</span>';
+    }
+
     const activeClass = page === currentPage ? ' is-active' : '';
     const ariaCurrent = page === currentPage ? ' aria-current="page"' : '';
     return `<button class="ui-button ui-button-outline instagram-page-btn${activeClass}" data-instagram-page="${page}"${ariaCurrent}>${page}</button>`;

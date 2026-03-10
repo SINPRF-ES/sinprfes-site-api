@@ -22,6 +22,13 @@
   justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.instagram-pagination-ellipsis {
+  color: #64748b;
+  font-weight: 700;
+  padding: 0 2px;
 }
 
 .instagram-page-btn.is-active,
@@ -36,9 +43,9 @@
 }
 
 .instagram-news-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   align-items: stretch;
 }
 
@@ -56,7 +63,9 @@
 
 .instagram-card a {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 14px;
   min-height: 100%;
   text-decoration: none;
   color: inherit;
@@ -64,8 +73,11 @@
 
 .instagram-image-wrapper {
   position: relative;
-  width: 100%;
-  padding-top: 100%;
+  width: min(38%, 220px);
+  min-width: 160px;
+  flex-shrink: 0;
+  padding-top: 0;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   border-radius: 10px;
   background: #e2e8f0;
@@ -80,7 +92,9 @@
 }
 
 .instagram-card-news__body {
-  margin-top: 10px;
+  padding: 2px 2px 2px 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .instagram-card-caption {
@@ -117,6 +131,16 @@
 }
 
 @media (max-width: 768px) {
+  .instagram-card a {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .instagram-image-wrapper {
+    width: 100%;
+    min-width: 0;
+  }
+
   .instagram-card-caption {
     min-height: 0;
     -webkit-line-clamp: 2;
