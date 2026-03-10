@@ -1,6 +1,6 @@
 import api from './apiService';
 
-export interface NewsMedia {
+export interface InformeMedia {
   id: string;
   noticia_id: string;
   tipo: 'IMAGEM' | 'VIDEO';
@@ -9,7 +9,7 @@ export interface NewsMedia {
   created_at: string;
 }
 
-export interface NewsPost {
+export interface InformePost {
   id: string;
   titulo: string;
   conteudo: string;
@@ -21,10 +21,10 @@ export interface NewsPost {
   updated_at: string;
   published_at: string | null;
   audiencia?: 'INTERNA' | 'PUBLICA';
-  midias?: NewsMedia[];
+  midias?: InformeMedia[];
 }
 
-export const fetchNoticias = async (statusArg?: any): Promise<NewsPost[]> => {
+export const fetchInformes = async (statusArg?: any): Promise<InformePost[]> => {
   // Garantir que status seja apenas string ou undefined (evita React Query context)
   // Se for chamado diretamente pelo useQuery, statusArg será o context object.
   const status = typeof statusArg === 'string' ? statusArg : undefined;
@@ -38,35 +38,35 @@ export const fetchNoticias = async (statusArg?: any): Promise<NewsPost[]> => {
   return data;
 };
 
-export const fetchNoticia = async (id: string): Promise<NewsPost> => {
+export const fetchInforme = async (id: string): Promise<InformePost> => {
   const { data } = await api.get(`/api/informes/${id}`);
   return data;
 };
 
-export const createNoticia = async (noticia: Partial<NewsPost>): Promise<NewsPost> => {
+export const createInforme = async (noticia: Partial<InformePost>): Promise<InformePost> => {
   const { data } = await api.post('/api/informes', noticia);
   return data;
 };
 
-export const updateNoticia = async (id: string, noticia: Partial<NewsPost>): Promise<NewsPost> => {
+export const updateInforme = async (id: string, noticia: Partial<InformePost>): Promise<InformePost> => {
   const { data } = await api.put(`/api/informes/${id}`, noticia);
   return data;
 };
 
-export const publicarNoticia = async (id: string): Promise<NewsPost> => {
+export const publicarInforme = async (id: string): Promise<InformePost> => {
   const { data } = await api.post(`/api/informes/${id}/publicar`);
   return data;
 };
 
-export const deleteNoticia = async (id: string): Promise<void> => {
+export const deleteInforme = async (id: string): Promise<void> => {
   await api.delete(`/api/informes/${id}`);
 };
 
-export const addNoticiaMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'VIDEO'): Promise<NewsMedia> => {
+export const addInformeMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'VIDEO'): Promise<InformeMedia> => {
   // 1. Obter assinatura para upload direto (Signed Upload)
   const { data: signatureData } = await api.post('/api/informes/upload-signature', {
-    folder: 'noticias',
-    tags: 'noticia'
+    folder: 'informes',
+    tags: 'informe'
   });
 
   // 2. Upload direto para o Cloudinary
@@ -80,8 +80,8 @@ export const addNoticiaMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'V
   formData.append('api_key', signatureData.api_key);
   formData.append('timestamp', signatureData.timestamp.toString());
   formData.append('signature', signatureData.signature);
-  formData.append('folder', 'noticias');
-  formData.append('tags', 'noticia');
+  formData.append('folder', 'informes');
+  formData.append('tags', 'informe');
 
   const cloudName = signatureData.cloud_name;
   const resourceType = tipo === 'VIDEO' ? 'video' : 'image';
@@ -107,6 +107,6 @@ export const addNoticiaMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'V
   return data;
 };
 
-export const deleteNoticiaMidia = async (midiaId: string): Promise<void> => {
+export const deleteInformeMidia = async (midiaId: string): Promise<void> => {
   await api.delete(`/api/informes/midias/${midiaId}`);
 };

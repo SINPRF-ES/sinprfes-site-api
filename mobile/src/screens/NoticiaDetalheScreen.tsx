@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { fetchNoticia, NewsPost } from '../services/newsService';
+import { fetchInforme, InformePost } from '../services/informesService';
 import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL } from '../config/env';
 import { FontAwesome } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
 
   const { data: noticia, isLoading, isError, refetch } = useQuery({
     queryKey: ['noticia', newsId],
-    queryFn: () => fetchNoticia(newsId),
+    queryFn: () => fetchInforme(newsId),
   });
 
   const formatDate = (dateString: string) => {

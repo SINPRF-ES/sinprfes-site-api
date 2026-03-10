@@ -1,7 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { fetchNoticias, NewsPost } from '../services/newsService';
+import { fetchInformes, InformePost } from '../services/informesService';
 import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL } from '../config/env';
 import { useNavigation } from '@react-navigation/native';
@@ -16,7 +16,7 @@ export default function NoticiasScreen() {
 
   const { data: noticias, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['noticias'],
-    queryFn: () => fetchNoticias(),
+    queryFn: () => fetchInformes(),
   });
 
   const formatDate = (dateString: string) => {
@@ -32,7 +32,7 @@ export default function NoticiasScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: NewsPost }) => {
+  const renderItem = ({ item }: { item: InformePost }) => {
     try {
       const coverUrl = item.capa_url;
       const isRascunho = item.status === 'RASCUNHO';
