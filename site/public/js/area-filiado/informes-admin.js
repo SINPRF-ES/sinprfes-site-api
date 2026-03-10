@@ -85,7 +85,7 @@
     return (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : String(v || "");
   }
 
-  function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false, mostrarMetadados = false } = {}) {
+  function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false, mostrarExcluir = false, mostrarMetadados = false } = {}) {
     const data = formatDateOnly(n.data_informe || n.data_noticia || n.published_at || n.created_at);
     return `
       <div class="informe-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
@@ -102,6 +102,7 @@
           ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="InformesAdmin.abrirModalInforme('${n.id}')">✏️ Editar informe atual</button>` : ''}
           ${mostrarPublicar ? `<button class="btn btn-primary btn-sm" onclick="InformesAdmin.publicarInformeAtual('${n.id}')">📢 Publicar informe</button>` : ''}
           ${mostrarArquivar ? `<button class="btn btn-primary btn-sm" onclick="InformesAdmin.arquivarInformeAtual('${n.id}')">📦 Arquivar informe atual</button>` : ''}
+          ${mostrarExcluir ? `<button class="btn btn-sm" style="background:#d32f2f; color:#fff; border-color:#d32f2f;" onclick="InformesAdmin.excluirInformeAtual('${n.id}')">Excluir Informe</button>` : ''}
         </div>
       </div>
     `;
@@ -120,6 +121,7 @@
       mostrarEditar: ehGestaoInformes() && informeAtual.is_editable,
       mostrarPublicar: ehGestaoInformes() && informeAtual.is_editable && informeAtual.status === "RASCUNHO",
       mostrarArquivar: ehGestaoInformes() && informeAtual.is_editable && informeAtual.status === "PUBLICADA",
+      mostrarExcluir: ehGestaoInformes() && informeAtual.is_editable,
       mostrarMetadados: ehGestaoInformes(),
     });
   }
@@ -318,6 +320,15 @@
     alert("Informe atual arquivado com sucesso. Agora você pode criar um novo informe atual.");
   }
 
+  async function excluirInformeAtual(id) {
+    if (!ehGestaoInformes()) return;
+    if (!confirm("Deseja EXCLUIR permanentemente este informe?")) return;
+    const resp = await requestJson(`/api/informes/${id}`, { method: "DELETE" });
+    if (!resp.ok) return alert(resp.data?.message || "Erro ao excluir informe.");
+    Utils.fecharModal("modal-generic");
+    await carregarInformes();
+  }
+
   global.InformesAdmin = {
     inicializarInformes,
     carregarInformes,
@@ -325,6 +336,7 @@
     abrirVisualizacaoInforme,
     publicarInformeAtual,
     arquivarInformeAtual,
+    excluirInformeAtual,
     definirCapaMidia,
     removerMidia,
   };
