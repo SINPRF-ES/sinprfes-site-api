@@ -14,6 +14,14 @@
     return ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(perfilLogado);
   }
 
+  function formatDateOnly(value) {
+    if (!value) return "";
+    const raw = String(value);
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    return raw;
+  }
+
   async function requestJson(url, options = {}) {
     const r = await window.Api.apiFetch(url, options);
     const data = await r.json().catch(() => ({}));
@@ -61,11 +69,9 @@
     const arquivadasEl = document.getElementById("informes-arquivados-admin");
     if (!atualEl || !arquivadasEl) return;
 
-    // Busca informe atual
     const respAtual = await requestJson("/api/informes?status_editorial=ATUAL");
     informeAtual = (Array.isArray(respAtual.data) ? respAtual.data[0] : respAtual.data.items?.[0]) || null;
 
-    // Busca arquivadas paginadas
     const respArq = await requestJson(`/api/informes?status_editorial=ARQUIVADA&pagina=${paginaArquivadas}`);
     informesArquivados = respArq.data.items || [];
     const pagination = respArq.data.pagination || { page: 1, totalPages: 1 };
@@ -79,7 +85,7 @@
   }
 
   function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false } = {}) {
-    const data = new Date(n.data_noticia || n.published_at || n.created_at).toLocaleDateString("pt-BR");
+    const data = formatDateOnly(n.data_informe || n.data_noticia || n.published_at || n.created_at);
     return `
       <div class="informe-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
@@ -162,6 +168,26 @@
     modal.style.display = "flex";
   }
 
+  function renderGaleriaEdicao(midias, capaMidiaId) {
+    const imagens = (midias || []).filter((m) => m.tipo === "IMAGEM");
+    if (!imagens.length) return `<p style="color:#64748b; margin:6px 0 0;">Nenhuma imagem anexada ainda.</p>`;
+    return `
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; margin-top:8px;">
+        ${imagens.map((m) => `
+          <div style="border:1px solid #e2e8f0; border-radius:8px; padding:6px;">
+            <img src="${escape(m.url)}" style="width:100%; height:90px; object-fit:cover; border-radius:6px;">
+            <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">
+              <button type="button" class="ui-button ui-button-sm ${m.id === capaMidiaId ? 'ui-button-secondary' : 'ui-button-outline'}" onclick="InformesAdmin.definirCapaMidia('${m.id}')">
+                ${m.id === capaMidiaId ? '✅ Capa' : 'Definir capa'}
+              </button>
+              <button type="button" class="ui-button ui-button-sm ui-button-outline" onclick="InformesAdmin.removerMidia('${m.id}')">Remover</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
   async function abrirModalInforme(id = null) {
     if (!ehGestaoInformes()) return alert("Apenas gestão pode editar informes.");
 
@@ -169,11 +195,14 @@
       return alert("Já existe um informe atual. Arquive o informe atual antes de criar outro.");
     }
 
-    let informe = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", destaque: false };
+    let informe = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", midias: [], capa_midia_id: null, data_informe: "" };
     if (id) {
       const detalhe = await requestJson(`/api/informes/${id}`);
       if (!detalhe.ok) return alert("Não foi possível carregar o informe para edição.");
       informe = detalhe.data;
+      if (!informe.is_editable || informe.status_editorial === "ARQUIVADA") {
+        return alert("Este informe está arquivado e não pode ser editado.");
+      }
     }
 
     const modal = document.getElementById("modal-generic");
@@ -185,8 +214,18 @@
         <div class="field-group"><label>Título</label><input class="ui-input" name="titulo" value="${escape(informe.titulo)}" required></div>
         <div class="field-group" style="margin-top:10px;"><label>Subtítulo</label><input class="ui-input" name="subtitulo" value="${escape(informe.subtitulo || "")}"></div>
         <div class="field-group" style="margin-top:10px;"><label>Conteúdo</label><textarea class="ui-textarea" name="conteudo" rows="8" required>${escape(informe.conteudo || "")}</textarea></div>
-        <div class="field-group" style="margin-top:10px;"><label>URL da capa</label><input class="ui-input" name="capa_url" value="${escape(informe.capa_url || "")}" placeholder="https://..."></div>
-        <div class="field-group" style="margin-top:10px;"><label>Data do informe</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${informe.data_noticia ? new Date(informe.data_noticia).toISOString().slice(0,16) : ""}"></div>
+        <div class="field-group" style="margin-top:10px;"><label>Data do informe</label><input class="ui-input" type="date" name="data_informe" value="${escape(informe.data_informe || "")}"></div>
+        ${id ? `
+          <div class="field-group" style="margin-top:10px;">
+            <label>Adicionar imagem na galeria</label>
+            <input class="ui-input" type="file" id="informe-upload-midia" accept="image/*">
+            <small style="color:#64748b;">A capa deve ser escolhida entre as imagens anexadas.</small>
+          </div>
+          <div class="field-group" style="margin-top:10px;">
+            <label>Galeria de imagens anexadas</label>
+            <div id="informe-galeria-edit">${renderGaleriaEdicao(informe.midias, informe.capa_midia_id)}</div>
+          </div>
+        ` : '<p style="margin-top:10px; color:#64748b;">Após criar o informe, você poderá anexar imagens e definir a capa.</p>'}
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
           <button type="submit" class="ui-button ui-button-secondary">Salvar informe atual</button>
@@ -203,20 +242,53 @@
         titulo: fd.get("titulo"),
         subtitulo: fd.get("subtitulo"),
         conteudo: fd.get("conteudo"),
-        capa_url: fd.get("capa_url"),
-        data_noticia: fd.get("data_noticia") ? new Date(fd.get("data_noticia")).toISOString() : null,
+        data_informe: fd.get("data_informe") || null,
         audiencia: "INTERNA",
       };
 
       const endpoint = id ? `/api/informes/${id}` : "/api/informes";
       const method = id ? "PUT" : "POST";
       const resp = await requestJson(endpoint, { method, body });
-      if (!resp.ok) {
-        return alert(resp.data?.message || "Não foi possível salvar.");
-      }
+      if (!resp.ok) return alert(resp.data?.message || "Não foi possível salvar.");
+
       Utils.fecharModal("modal-generic");
       await carregarInformes();
     };
+
+    if (id) {
+      const input = document.getElementById("informe-upload-midia");
+      if (input) {
+        input.addEventListener("change", async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("tipo", "IMAGEM");
+          const r = await requestJson(`/api/informes/${id}/midias`, { method: "POST", body: fd });
+          if (!r.ok) return alert(r.data?.message || "Falha ao anexar imagem.");
+          await abrirModalInforme(id);
+        });
+      }
+    }
+  }
+
+  async function definirCapaMidia(midiaId) {
+    if (!informeAtual?.id) return;
+    const resp = await requestJson(`/api/informes/${informeAtual.id}/capa`, {
+      method: "PUT",
+      body: { coverMediaId: midiaId },
+    });
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao definir capa.");
+    await abrirModalInforme(informeAtual.id);
+    await carregarInformes();
+  }
+
+  async function removerMidia(midiaId) {
+    if (!confirm("Remover esta imagem anexada?")) return;
+    const resp = await requestJson(`/api/informes/midias/${midiaId}`, { method: "DELETE" });
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao remover mídia.");
+    if (informeAtual?.id) await abrirModalInforme(informeAtual.id);
+    await carregarInformes();
   }
 
   async function arquivarInformeAtual(id) {
@@ -234,5 +306,7 @@
     abrirModalInforme,
     abrirVisualizacaoInforme,
     arquivarInformeAtual,
+    definirCapaMidia,
+    removerMidia,
   };
 })(window);

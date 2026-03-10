@@ -75,6 +75,15 @@ router.post(
   informesController.adicionarMidiaExterna
 );
 
+
+router.put(
+  "/:id/capa",
+  authMiddleware,
+  escopoInterno,
+  requirePermission("NOTICIAS_GERENCIAR"),
+  informesController.definirCapa
+);
+
 router.delete(
   "/midias/:midiaId",
   authMiddleware,
