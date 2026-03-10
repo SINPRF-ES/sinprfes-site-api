@@ -21,6 +21,7 @@ import {
   deleteInforme,
   addInformeMidia,
   deleteInformeMidia,
+  definirCapaInforme,
   InformeMedia,
 } from '../services/informesService';
 import SafeScreen from '../components/SafeScreen';
@@ -39,6 +40,8 @@ export default function NoticiaEditorScreen() {
   const [capaUrl, setCapaUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<'RASCUNHO' | 'PUBLICADA'>('RASCUNHO');
   const [midias, setMidias] = useState<InformeMedia[]>([]);
+  const [dataInforme, setDataInforme] = useState('');
+  const [isEditable, setIsEditable] = useState(true);
 
   useEffect(() => {
     if (newsId) {
@@ -55,6 +58,8 @@ export default function NoticiaEditorScreen() {
       setCapaUrl(data.capa_url);
       setStatus(data.status);
       setMidias(data.midias || []);
+      setDataInforme(data.data_informe || "");
+      setIsEditable(Boolean(data.is_editable) && data.status_editorial !== "ARQUIVADA");
     } catch (err) {
       Alert.alert('Erro', 'Não foi possível carregar o informe.');
       navigation.goBack();
@@ -71,7 +76,7 @@ export default function NoticiaEditorScreen() {
 
     setSaving(true);
     try {
-      const payload = { titulo, conteudo, capa_url: capaUrl, status };
+      const payload = { titulo, conteudo, capa_url: capaUrl, status, data_informe: dataInforme || null };
       if (newsId) {
         await updateInforme(newsId, payload);
       } else {
@@ -115,6 +120,11 @@ export default function NoticiaEditorScreen() {
   };
 
   const handleDelete = async () => {
+    if (!isEditable) {
+      Alert.alert('Bloqueado', 'Informe arquivado não pode ser excluído.');
+      return;
+    }
+
     Alert.alert('Confirmar', 'Deseja EXCLUIR permanentemente este informe?', [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -137,6 +147,10 @@ export default function NoticiaEditorScreen() {
   };
 
   const pickImage = async (isCapa = false) => {
+    if (!isEditable) {
+      Alert.alert('Bloqueado', 'Informe arquivado não permite alteração de mídia.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
@@ -180,11 +194,10 @@ export default function NoticiaEditorScreen() {
         name: asset.fileName || `upload_${Date.now()}`,
       }, tipo);
 
+      setMidias([...midias, midia]);
       if (isCapa) {
+        await definirCapaInforme(newsId, midia.id);
         setCapaUrl(midia.url);
-        await updateInforme(newsId, { capa_url: midia.url });
-      } else {
-        setMidias([...midias, midia]);
       }
     } catch (err) {
       Alert.alert('Erro', 'Erro ao fazer upload da mídia.');
@@ -194,9 +207,17 @@ export default function NoticiaEditorScreen() {
   };
 
   const handleRemoveMidia = async (midiaId: string) => {
+    if (!isEditable) {
+      Alert.alert('Bloqueado', 'Informe arquivado não permite alteração de mídia.');
+      return;
+    }
     try {
       await deleteInformeMidia(midiaId);
-      setMidias(midias.filter((m) => m.id !== midiaId));
+      const next = midias.filter((m) => m.id !== midiaId);
+      setMidias(next);
+      if (capaUrl && !next.some((m) => m.url === capaUrl)) {
+        setCapaUrl(null);
+      }
     } catch (err) {
       Alert.alert('Erro', 'Erro ao remover mídia.');
     }
@@ -231,6 +252,14 @@ export default function NoticiaEditorScreen() {
             placeholder="Digite o título do informe"
           />
 
+          <Text style={styles.label}>Data do Informe (AAAA-MM-DD)</Text>
+          <TextInput
+            style={styles.input}
+            value={dataInforme}
+            onChangeText={setDataInforme}
+            placeholder="2026-03-10"
+          />
+
           <Text style={styles.label}>Conteúdo (Markdown suportado)</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
@@ -246,7 +275,7 @@ export default function NoticiaEditorScreen() {
           {capaUrl ? (
             <View style={styles.capaPreviewContainer}>
               <Image source={{ uri: capaUrl }} style={styles.capaPreview} />
-              <TouchableOpacity style={styles.removeCapa} onPress={() => setCapaUrl(null)}>
+              <TouchableOpacity style={styles.removeCapa} onPress={async () => { setCapaUrl(null); if (newsId) await definirCapaInforme(newsId, null); }}>
                 <FontAwesome name="times-circle" size={24} color="#d32f2f" />
               </TouchableOpacity>
             </View>
@@ -271,6 +300,11 @@ export default function NoticiaEditorScreen() {
                 <TouchableOpacity style={styles.removeMidia} onPress={() => handleRemoveMidia(m.id)}>
                   <FontAwesome name="trash" size={18} color="#d32f2f" />
                 </TouchableOpacity>
+                {m.tipo === 'IMAGEM' && (
+                  <TouchableOpacity style={styles.coverMark} onPress={async () => { if (newsId) { await definirCapaInforme(newsId, m.id); setCapaUrl(m.url); } }}>
+                    <FontAwesome name={capaUrl === m.url ? 'check-circle' : 'image'} size={16} color="#003366" />
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
             <TouchableOpacity style={[styles.midiaThumb, styles.addButton]} onPress={() => pickImage(false)}>
@@ -280,17 +314,17 @@ export default function NoticiaEditorScreen() {
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={[styles.btn, styles.btnSave]} onPress={handleSave} disabled={saving}>
+          <TouchableOpacity style={[styles.btn, styles.btnSave]} onPress={handleSave} disabled={saving || !isEditable}>
             {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Salvar Rascunho</Text>}
           </TouchableOpacity>
 
-          {status === 'RASCUNHO' && newsId && (
+          {status === 'RASCUNHO' && newsId && isEditable && (
             <TouchableOpacity style={[styles.btn, styles.btnPublish]} onPress={handlePublish} disabled={saving}>
               <Text style={styles.btnText}>Publicar Agora</Text>
             </TouchableOpacity>
           )}
 
-          {newsId && (
+          {newsId && isEditable && (
             <TouchableOpacity style={[styles.btn, styles.btnDelete]} onPress={handleDelete} disabled={saving}>
               <Text style={styles.btnText}>Excluir Informe</Text>
             </TouchableOpacity>
@@ -411,6 +445,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
+  },
+  coverMark: {
+    marginTop: 6,
+    alignItems: "center",
   },
   addButton: {
     justifyContent: 'center',

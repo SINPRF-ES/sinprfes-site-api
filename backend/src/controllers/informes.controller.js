@@ -9,6 +9,38 @@ const { ehPerfilGestao } = require("../shared/canon");
 const AUDIENCIAS_VALIDAS = ["INTERNA", "PUBLICA"];
 const INFORMES_POR_PAGINA = 3;
 
+function toDateOnly(value) {
+  if (!value) return null;
+  if (typeof value === "string") {
+    const m = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function toDateOnlyTimestamp(value) {
+  const dateOnly = toDateOnly(value);
+  if (!dateOnly) return null;
+  // Meio-dia UTC evita virada indevida de dia em clientes com timezone local.
+  return `${dateOnly}T12:00:00.000Z`;
+}
+
+function serializeInformeRow(row) {
+  return {
+    ...row,
+    data_informe: toDateOnly(row.data_noticia || row.published_at || row.created_at),
+  };
+}
+
+function annotateMidiasCover(midias = [], capaMidiaId) {
+  return midias.map((midia) => ({
+    ...midia,
+    is_capa: Boolean(capaMidiaId && midia.id === capaMidiaId),
+  }));
+}
+
 function parseInformeId(req, res, requestId) {
     const id = parseUuid(String(req.params.id || ""));
     if (!id) {
@@ -163,7 +195,7 @@ exports.listar = async (req, res) => {
       });
 
       noticias.forEach(n => {
-        n.midias = midiasMap.get(n.id) || [];
+        n.midias = annotateMidiasCover(midiasMap.get(n.id) || [], n.capa_midia_id);
       });
     }
 
@@ -177,12 +209,12 @@ exports.listar = async (req, res) => {
     });
 
     if (!paginacaoPublica) {
-      return res.json(noticias);
+      return res.json(noticias.map(serializeInformeRow));
     }
 
     const totalPaginas = Math.max(1, Math.ceil(total / INFORMES_POR_PAGINA));
     return res.json({
-      items: noticias,
+      items: noticias.map(serializeInformeRow),
       pagination: {
         page: paginaAtual,
         perPage: INFORMES_POR_PAGINA,
@@ -259,7 +291,7 @@ exports.detalhar = async (req, res) => {
       [id]
     );
 
-    informe.midias = midiaRows;
+    informe.midias = annotateMidiasCover(midiaRows, informe.capa_midia_id);
 
     log.info("INFORMES_DETAIL_SUCCESS", {
       endpoint,
@@ -270,7 +302,7 @@ exports.detalhar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json({ ...informe, requestId });
+    return res.json({ ...serializeInformeRow(informe), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao detalhar informe.");
   }
@@ -285,7 +317,7 @@ exports.criar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
-    const { titulo, conteudo, capa_url, audiencia, subtitulo, destaque, data_noticia } = req.body;
+    const { titulo, conteudo, capa_url, audiencia, subtitulo, destaque, data_noticia, data_informe } = req.body;
     const audienciaFinal = resolverAudienciaEscopo(req, audiencia ? String(audiencia).toUpperCase() : "INTERNA");
 
     if (!titulo || !conteudo) {
@@ -295,6 +327,9 @@ exports.criar = async (req, res) => {
     if (!AUDIENCIAS_VALIDAS.includes(audienciaFinal)) {
       return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
     }
+
+    const dataNoticiaCanonica = toDateOnlyTimestamp(data_informe || data_noticia);
+
 
     const { rows: atuais } = await pool.query(
       `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' LIMIT 1`,
@@ -313,7 +348,7 @@ exports.criar = async (req, res) => {
       `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date)
        VALUES ($1, $2, $3, 'PUBLICADA', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))
        RETURNING *`,
-      [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), data_noticia || null]
+      [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), dataNoticiaCanonica || null]
     );
 
     log.info("INFORMES_CREATE_SUCCESS", {
@@ -324,7 +359,7 @@ exports.criar = async (req, res) => {
       profile,
       durationMs: Date.now() - start
     });
-    return res.status(201).json({ ...rows[0], requestId });
+    return res.status(201).json({ ...serializeInformeRow(rows[0]), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao criar informe.");
   }
@@ -342,13 +377,15 @@ exports.atualizar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
-    const { titulo, subtitulo, conteudo, capa_url, status, audiencia, destaque, data_noticia } = req.body;
+    const { titulo, subtitulo, conteudo, capa_url, status, audiencia, destaque, data_noticia, data_informe } = req.body;
     const audienciaEscopo = resolverAudienciaEscopo(req, null);
     const audienciaFinal = audienciaEscopo || (audiencia ? String(audiencia).toUpperCase() : null);
 
     if (audienciaFinal && !AUDIENCIAS_VALIDAS.includes(audienciaFinal)) {
       return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
     }
+
+    const dataNoticiaCanonica = toDateOnlyTimestamp(data_informe || data_noticia);
 
     const { rows: estadoRows } = await pool.query(
       "SELECT status_editorial, is_editable, audiencia FROM noticias WHERE id = $1",
@@ -397,7 +434,7 @@ exports.atualizar = async (req, res) => {
            sort_date = COALESCE($8, sort_date)
        WHERE id = $9
        RETURNING *`,
-      [titulo, subtitulo, conteudo, capa_url, status, audienciaFinal, destaque, data_noticia, id]
+      [titulo, subtitulo, conteudo, capa_url, status, audienciaFinal, destaque, dataNoticiaCanonica, id]
     );
 
     if (rows.length === 0) {
@@ -413,7 +450,7 @@ exports.atualizar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json({ ...rows[0], requestId });
+    return res.json({ ...serializeInformeRow(rows[0]), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao atualizar informe.");
   }
@@ -466,7 +503,7 @@ exports.publicar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json({ ...rows[0], requestId });
+    return res.json({ ...serializeInformeRow(rows[0]), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao publicar informe.");
   }
@@ -623,7 +660,7 @@ exports.adicionarMidia = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.status(201).json({ ...rows[0], requestId });
+    return res.status(201).json({ ...rows[0], is_capa: false, requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao adicionar mídia.");
   }
@@ -644,7 +681,7 @@ exports.removerMidia = async (req, res) => {
 
   try {
     const { rows: midiaRows } = await pool.query(
-      "SELECT n.status_editorial, n.is_editable FROM noticias n JOIN noticia_midias nm ON n.id = nm.noticia_id WHERE nm.id = $1",
+      "SELECT n.id as noticia_id, n.status_editorial, n.is_editable, n.capa_midia_id FROM noticias n JOIN noticia_midias nm ON n.id = nm.noticia_id WHERE nm.id = $1",
       [midiaId]
     );
 
@@ -652,6 +689,10 @@ exports.removerMidia = async (req, res) => {
       if (midiaRows[0].status_editorial === "ARQUIVADA" || midiaRows[0].is_editable === false) {
         return res.status(409).json({ success: false, message: "Mídia de informe arquivada não pode ser removida.", requestId });
       }
+    }
+
+    if (midiaRows.length > 0 && midiaRows[0].capa_midia_id === midiaId) {
+      await pool.query("UPDATE noticias SET capa_midia_id = NULL, capa_url = NULL WHERE id = $1", [midiaRows[0].noticia_id]);
     }
 
     const { rowCount } = await pool.query("DELETE FROM noticia_midias WHERE id = $1", [midiaId]);
@@ -726,7 +767,7 @@ exports.adicionarMidiaExterna = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.status(201).json({ ...rows[0], requestId });
+    return res.status(201).json({ ...rows[0], is_capa: false, requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao associar mídia externa.");
   }
@@ -780,5 +821,50 @@ exports.obterAssinaturaUpload = async (req, res) => {
       code: "INTERNAL_SERVER_ERROR",
       requestId
     });
+  }
+};
+
+exports.definirCapa = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const id = parseInformeId(req, res, requestId);
+  if (id === null) return;
+
+  try {
+    const { rows: estadoRows } = await pool.query(
+      "SELECT status_editorial, is_editable FROM noticias WHERE id = $1",
+      [id]
+    );
+    if (estadoRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Informe não encontrada.", requestId });
+    }
+    if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
+      return res.status(409).json({ success: false, message: "Informe arquivada não permite alteração de capa.", requestId });
+    }
+
+    const coverMediaId = parseUuid(String(req.body?.coverMediaId || ""));
+    if (!coverMediaId) {
+      await pool.query("UPDATE noticias SET capa_midia_id = NULL, capa_url = NULL WHERE id = $1", [id]);
+      return res.json({ success: true, capa_midia_id: null, capa_url: null, requestId });
+    }
+
+    const { rows: midiaRows } = await pool.query(
+      "SELECT id, url, tipo FROM noticia_midias WHERE id = $1 AND noticia_id = $2",
+      [coverMediaId, id]
+    );
+    if (midiaRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Mídia de capa não encontrada para este informe.", requestId });
+    }
+    if (midiaRows[0].tipo !== "IMAGEM") {
+      return res.status(400).json({ success: false, message: "A capa deve ser uma imagem anexada ao informe.", requestId });
+    }
+
+    await pool.query(
+      "UPDATE noticias SET capa_midia_id = $1, capa_url = $2 WHERE id = $3",
+      [coverMediaId, midiaRows[0].url, id]
+    );
+
+    return res.json({ success: true, capa_midia_id: coverMediaId, capa_url: midiaRows[0].url, requestId });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao definir capa do informe.");
   }
 };

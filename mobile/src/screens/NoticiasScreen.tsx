@@ -19,17 +19,12 @@ export default function NoticiasScreen() {
     queryFn: () => fetchInformes(),
   });
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-    } catch (e) {
-      return dateString;
-    }
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return '';
+    const raw = String(dateString);
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+    return raw;
   };
 
   const renderItem = ({ item }: { item: InformePost }) => {
@@ -55,7 +50,7 @@ export default function NoticiasScreen() {
           )}
           <View style={styles.cardContent}>
             <View style={styles.cardHeader}>
-              <Text style={styles.date}>{formatDate(item.published_at || item.created_at)}</Text>
+              <Text style={styles.date}>{formatDate(item.data_informe || item.published_at || item.created_at)}</Text>
               {isRascunho && (
                 <View style={styles.draftBadge}>
                   <Text style={styles.draftText}>RASCUNHO</Text>

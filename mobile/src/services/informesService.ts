@@ -7,6 +7,7 @@ export interface InformeMedia {
   url: string;
   ordem: number;
   created_at: string;
+  is_capa?: boolean;
 }
 
 export interface InformePost {
@@ -14,9 +15,13 @@ export interface InformePost {
   titulo: string;
   conteudo: string;
   status: 'RASCUNHO' | 'PUBLICADA';
+  status_editorial?: 'ATUAL' | 'ARQUIVADA';
+  is_editable?: boolean;
   autor_id: number;
   autor_nome?: string;
   capa_url: string | null;
+  capa_midia_id?: string | null;
+  data_informe?: string | null;
   created_at: string;
   updated_at: string;
   published_at: string | null;
@@ -24,18 +29,18 @@ export interface InformePost {
   midias?: InformeMedia[];
 }
 
+const unwrapList = (data: any): InformePost[] => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+};
+
 export const fetchInformes = async (statusArg?: any): Promise<InformePost[]> => {
-  // Garantir que status seja apenas string ou undefined (evita React Query context)
-  // Se for chamado diretamente pelo useQuery, statusArg será o context object.
   const status = typeof statusArg === 'string' ? statusArg : undefined;
-
-  // Usamos um objeto de params limpo para evitar poluição
-  const params: any = {};
+  const params: any = { audiencia: 'INTERNA' };
   if (status) params.status = status;
-  params.audiencia = 'INTERNA';
-
   const { data } = await api.get('/api/informes', { params });
-  return data;
+  return unwrapList(data);
 };
 
 export const fetchInforme = async (id: string): Promise<InformePost> => {
@@ -53,6 +58,10 @@ export const updateInforme = async (id: string, noticia: Partial<InformePost>): 
   return data;
 };
 
+export const definirCapaInforme = async (id: string, coverMediaId: string | null): Promise<void> => {
+  await api.put(`/api/informes/${id}/capa`, { coverMediaId });
+};
+
 export const publicarInforme = async (id: string): Promise<InformePost> => {
   const { data } = await api.post(`/api/informes/${id}/publicar`);
   return data;
@@ -63,13 +72,11 @@ export const deleteInforme = async (id: string): Promise<void> => {
 };
 
 export const addInformeMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'VIDEO'): Promise<InformeMedia> => {
-  // 1. Obter assinatura para upload direto (Signed Upload)
   const { data: signatureData } = await api.post('/api/informes/upload-signature', {
     folder: 'informes',
     tags: 'informe'
   });
 
-  // 2. Upload direto para o Cloudinary
   const formData = new FormData();
   // @ts-ignore
   formData.append('file', {
@@ -97,7 +104,6 @@ export const addInformeMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'V
     throw new Error('Erro ao fazer upload para o Cloudinary');
   }
 
-  // 3. Associar a mídia no nosso backend
   const { data } = await api.post(`/api/informes/${id}/midias_external`, {
     tipo,
     url: uploadResult.secure_url,

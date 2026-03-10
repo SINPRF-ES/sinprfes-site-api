@@ -19,17 +19,12 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
     queryFn: () => fetchInforme(newsId),
   });
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-    } catch (e) {
-      return dateString;
-    }
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return '';
+    const raw = String(dateString);
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+    return raw;
   };
 
   if (isLoading) {
@@ -53,6 +48,7 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
 
   const coverUrl = noticia.capa_url;
   const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  const canEdit = ehGestaoNoticias && noticia.is_editable && noticia.status_editorial !== 'ARQUIVADA';
 
   return (
     <SafeScreen style={styles.container}>
@@ -67,8 +63,8 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
 
         <View style={styles.content}>
           <View style={styles.headerRow}>
-            <Text style={styles.date}>{formatDate(noticia.published_at || noticia.created_at)}</Text>
-            {ehGestaoNoticias && (
+            <Text style={styles.date}>{formatDate(noticia.data_informe || noticia.published_at || noticia.created_at)}</Text>
+            {canEdit && (
               <TouchableOpacity
                 onPress={() => navigation.navigate('NoticiaEditor', { newsId: noticia.id })}
                 style={styles.editButton}
