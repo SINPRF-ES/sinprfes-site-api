@@ -42,7 +42,7 @@
             <h2 style="margin:0;">📰 Informes internos</h2>
             <p class="section-subtitle" style="margin:4px 0 0;">Apenas o informe atual pode ser editado. Arquivados ficam imutáveis no acervo.</p>
           </div>
-          ${ehGestao ? `<button id="btn-novo-informe" class="ui-button ui-button-secondary">+ Novo informe atual</button>` : ''}
+          ${ehGestao ? `<button id="btn-novo-informe" class="ui-button ui-button-secondary">+ Novo rascunho</button>` : ''}
         </div>
 
         <section style="margin-bottom:16px;">
@@ -84,7 +84,7 @@
     return (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : String(v || "");
   }
 
-  function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false } = {}) {
+  function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false } = {}) {
     const data = formatDateOnly(n.data_informe || n.data_noticia || n.published_at || n.created_at);
     return `
       <div class="informe-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
@@ -92,13 +92,14 @@
           <div>
             <h4 style="margin:0 0 4px; color:#003366;">${escape(n.titulo)}</h4>
             ${n.subtitulo ? `<p style="margin:0 0 6px; color:#334155;">${escape(n.subtitulo)}</p>` : ''}
-            <small style="color:#64748b;">${data} · ${escape(n.status_editorial)}</small>
+            <small style="color:#64748b;">${data} · ${escape(n.status)} · ${escape(n.status_editorial)}</small>
           </div>
           ${n.capa_url ? `<img src="${escape(n.capa_url)}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">` : ''}
         </div>
         <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline btn-sm" onclick="InformesAdmin.abrirVisualizacaoInforme('${n.id}')">📖 Visualizar</button>
           ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="InformesAdmin.abrirModalInforme('${n.id}')">✏️ Editar informe atual</button>` : ''}
+          ${mostrarPublicar ? `<button class="btn btn-primary btn-sm" onclick="InformesAdmin.publicarInformeAtual('${n.id}')">📢 Publicar informe</button>` : ''}
           ${mostrarArquivar ? `<button class="btn btn-primary btn-sm" onclick="InformesAdmin.arquivarInformeAtual('${n.id}')">📦 Arquivar informe atual</button>` : ''}
         </div>
       </div>
@@ -114,7 +115,8 @@
     }
     el.innerHTML = renderCardInforme(informeAtual, {
       mostrarEditar: ehGestaoInformes() && informeAtual.is_editable,
-      mostrarArquivar: ehGestaoInformes() && informeAtual.is_editable,
+      mostrarPublicar: ehGestaoInformes() && informeAtual.is_editable && informeAtual.status === "RASCUNHO",
+      mostrarArquivar: ehGestaoInformes() && informeAtual.is_editable && informeAtual.status === "PUBLICADA",
     });
   }
 
@@ -129,7 +131,7 @@
     let html = informesArquivados.map((n) => `
       <div style="margin-bottom:16px;">
         ${renderCardInforme(n)}
-        <p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Este informe está consolidado e não pode mais ser editado.</p>
+        ${ehGestaoInformes() ? '<p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Este informe está consolidado e não pode mais ser editado.</p>' : ''}
       </div>
     `).join("");
 
@@ -192,7 +194,7 @@
     if (!ehGestaoInformes()) return alert("Apenas gestão pode editar informes.");
 
     if (!id && informeAtual) {
-      return alert("Já existe um informe atual. Arquive o informe atual antes de criar outro.");
+      return alert("Já existe um informe no ciclo atual. Publique ou arquive o informe atual antes de criar outro.");
     }
 
     let informe = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", midias: [], capa_midia_id: null, data_informe: "" };
@@ -208,7 +210,7 @@
     const modal = document.getElementById("modal-generic");
     if (!modal) return;
 
-    document.getElementById("modal-generic-titulo").textContent = id ? "Editar informe atual" : "Novo informe atual";
+    document.getElementById("modal-generic-titulo").textContent = id ? "Editar informe atual" : "Novo rascunho de informe";
     document.getElementById("modal-generic-corpo").innerHTML = `
       <form id="form-informe-admin">
         <div class="field-group"><label>Título</label><input class="ui-input" name="titulo" value="${escape(informe.titulo)}" required></div>
@@ -228,7 +230,7 @@
         ` : '<p style="margin-top:10px; color:#64748b;">Após criar o informe, você poderá anexar imagens e definir a capa.</p>'}
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
-          <button type="submit" class="ui-button ui-button-secondary">Salvar informe atual</button>
+          <button type="submit" class="ui-button ui-button-secondary">Salvar rascunho</button>
         </div>
       </form>
     `;
@@ -291,6 +293,16 @@
     await carregarInformes();
   }
 
+
+  async function publicarInformeAtual(id) {
+    if (!ehGestaoInformes()) return;
+    if (!confirm("Publicar informe atual? Após publicar ele ficará visível para filiados.")) return;
+    const resp = await requestJson(`/api/informes/${id}/publicar`, { method: "POST" });
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao publicar informe atual.");
+    await carregarInformes();
+    alert("Informe publicado com sucesso.");
+  }
+
   async function arquivarInformeAtual(id) {
     if (!ehGestaoInformes()) return;
     if (!confirm("Arquivar informe atual? Esta ação consolida o conteúdo e bloqueia novas edições.")) return;
@@ -305,6 +317,7 @@
     carregarInformes,
     abrirModalInforme,
     abrirVisualizacaoInforme,
+    publicarInformeAtual,
     arquivarInformeAtual,
     definirCapaMidia,
     removerMidia,

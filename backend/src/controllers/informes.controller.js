@@ -138,6 +138,9 @@ exports.listar = async (req, res) => {
       const audienciaLeitura = resolverAudienciaEscopo(req, "INTERNA");
       params.push(audienciaLeitura);
       query += ` WHERE n.status = 'PUBLICADA' AND n.audiencia = $${params.length}`;
+      const statusEditorialLeitura = statusEditorialNorm || 'ATUAL';
+      params.push(statusEditorialLeitura);
+      query += ` AND n.status_editorial = $${params.length}`;
     } else {
       query += " WHERE 1=1";
       if (audienciaEscopo) {
@@ -346,7 +349,7 @@ exports.criar = async (req, res) => {
 
     const { rows } = await pool.query(
       `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date)
-       VALUES ($1, $2, $3, 'PUBLICADA', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))
+       VALUES ($1, $2, $3, 'RASCUNHO', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))
        RETURNING *`,
       [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), dataNoticiaCanonica || null]
     );
@@ -377,7 +380,7 @@ exports.atualizar = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   try {
-    const { titulo, subtitulo, conteudo, capa_url, status, audiencia, destaque, data_noticia, data_informe } = req.body;
+    const { titulo, subtitulo, conteudo, capa_url, audiencia, destaque, data_noticia, data_informe } = req.body;
     const audienciaEscopo = resolverAudienciaEscopo(req, null);
     const audienciaFinal = audienciaEscopo || (audiencia ? String(audiencia).toUpperCase() : null);
 
@@ -427,14 +430,13 @@ exports.atualizar = async (req, res) => {
            subtitulo = COALESCE($2, subtitulo),
            conteudo = COALESCE($3, conteudo),
            capa_url = COALESCE($4, capa_url),
-           status = COALESCE($5, status),
-           audiencia = COALESCE($6, audiencia),
-           destaque = COALESCE($7, destaque),
-           data_noticia = COALESCE($8, data_noticia),
-           sort_date = COALESCE($8, sort_date)
-       WHERE id = $9
+           audiencia = COALESCE($5, audiencia),
+           destaque = COALESCE($6, destaque),
+           data_noticia = COALESCE($7, data_noticia),
+           sort_date = COALESCE($7, sort_date)
+       WHERE id = $8
        RETURNING *`,
-      [titulo, subtitulo, conteudo, capa_url, status, audienciaFinal, destaque, dataNoticiaCanonica, id]
+      [titulo, subtitulo, conteudo, capa_url, audienciaFinal, destaque, dataNoticiaCanonica, id]
     );
 
     if (rows.length === 0) {
@@ -484,6 +486,8 @@ exports.publicar = async (req, res) => {
     const { rows } = await pool.query(
       `UPDATE noticias
        SET status = 'PUBLICADA',
+           status_editorial = 'ATUAL',
+           is_editable = true,
            published_at = COALESCE(published_at, NOW())
        WHERE id = $1
        RETURNING *`,
