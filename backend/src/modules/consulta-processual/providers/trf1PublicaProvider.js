@@ -9,6 +9,8 @@ const { launchBrowser } = require('../service/playwrightBrowserService');
 
 const TRF1_URL = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
 const CNJ_REGEX = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
+const MAX_DEBUG_EVENTS = 120;
+const MAX_DEBUG_ATTEMPT_REQUESTS = 10;
 
 function nowMs() { return Date.now(); }
 function clean(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
@@ -17,6 +19,19 @@ function maskDocument(v) {
   if (!digits) return '';
   if (digits.length <= 4) return '*'.repeat(digits.length);
   return `${'*'.repeat(Math.max(digits.length - 4, 0))}${digits.slice(-4)}`;
+}
+
+function compactArray(items, limit = MAX_DEBUG_EVENTS) {
+  if (!Array.isArray(items)) return [];
+  if (items.length <= limit) return items;
+  return [
+    ...items.slice(0, limit),
+    {
+      truncated: true,
+      omitted: items.length - limit,
+      reason: 'DEBUG_EVENT_LIMIT_REACHED',
+    },
+  ];
 }
 
 class Trf1PublicaProvider extends ConsultaProcessualProvider {
@@ -109,6 +124,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         debugData.pageErrors.push({ message: err?.message || String(err), stack: err?.stack || null, at: new Date().toISOString() });
       });
       const requestIndex = new Map();
+      const networkRequests = [];
       page.on('request', (request) => {
         const event = {
           method: request.method(),
@@ -116,7 +132,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           resourceType: request.resourceType(),
           at: nowMs(),
         };
-        debugData.networkRequests.push(event);
+        networkRequests.push(event);
         requestIndex.set(request, event);
       });
       page.on('requestfinished', async (request) => {
@@ -225,7 +241,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       });
 
       const waitTimeline = [];
-      const beforeSubmitNetworkCount = debugData.networkRequests.length;
+      const beforeSubmitNetworkCount = networkRequests.length;
       const readJsessionId = (value) => {
         const match = String(value || '').match(/jsessionid=([^;]+)/i) || String(value || '').match(/;jsessionid=([^?&#/]+)/i);
         return match?.[1] || null;
@@ -243,7 +259,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const declaredResultsCount = Number(resultMatch?.[1] || 0);
         const documentValue = await page.locator('#fPP\\:dpDec\\:documentoParte').inputValue().catch(() => '');
         const pageHtml = await page.content().catch(() => '');
-        const requestSlice = debugData.networkRequests.slice(beforeSubmitNetworkCount);
+        const requestSlice = networkRequests.slice(beforeSubmitNetworkCount);
         const compatiblePostRequest = requestSlice.find((req) => req.method === 'POST' && /listView\.seam/.test(req.url) && typeof req.status === 'number');
         const xhrOrFetch = requestSlice.filter((req) => ['xhr', 'fetch'].includes(req.resourceType));
         const jsessionFromNetwork = requestSlice.map((req) => readJsessionId(req.url)).find(Boolean) || null;
@@ -376,7 +392,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const strategyStart = nowMs();
         const baselineSignals = await gatherSignals();
         const buttonMetadata = await getSubmitButtonMetadata();
-        const networkBefore = debugData.networkRequests.length;
+        const networkBefore = networkRequests.length;
         try {
           await strategy.run();
           debugSummary.searchTriggered = true;
@@ -385,7 +401,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           await saveScreenshot(page, `03-submit-clicked-${strategy.name}.png`);
           await saveArtifact(`03-submit-clicked-${strategy.name}.html`, await page.content());
           const waited = await waitForObservableSignals(strategy.name, baselineSignals);
-          const networkAfter = debugData.networkRequests.slice(networkBefore);
+          const networkAfter = networkRequests.slice(networkBefore);
           const xhrOrFetchAfter = networkAfter.filter((req) => ['xhr', 'fetch'].includes(req.resourceType));
           const attempt = {
             strategy: strategy.name,
@@ -393,8 +409,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             durationMs: nowMs() - strategyStart,
             signalsObserved: waited.reasons,
             lastSignals: waited.signals,
-            requestsDispatched: networkAfter,
-            xhrOrFetchRequests: xhrOrFetchAfter,
+            requestsDispatchedCount: networkAfter.length,
+            xhrOrFetchCount: xhrOrFetchAfter.length,
+            requestSample: networkAfter.slice(0, MAX_DEBUG_ATTEMPT_REQUESTS),
             postToListViewDetected: networkAfter.some((req) => req.method === 'POST' && /listView\.seam/.test(req.url)),
             buttonMetadata,
             failureReason: waited.matched ? null : 'no_observable_submit_signal',
@@ -410,13 +427,15 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             result: 'failed',
             durationMs: nowMs() - strategyStart,
             signalsObserved: [],
-            requestsDispatched: debugData.networkRequests.slice(networkBefore),
+            requestsDispatchedCount: networkRequests.length - networkBefore,
+            requestSample: networkRequests.slice(networkBefore, networkBefore + MAX_DEBUG_ATTEMPT_REQUESTS),
             buttonMetadata,
             failureReason: strategyErr.message,
           });
         }
       }
-      debugData.waitSignals = waitTimeline;
+      debugData.waitSignals = compactArray(waitTimeline);
+      debugData.networkRequests = compactArray(networkRequests);
       debugSummary.waitConditionMatched = waitConditionMatched;
       if (!waitConditionMatched) {
         throw new Error('TRF1_WAIT_CONDITION_TIMEOUT');
