@@ -37,10 +37,10 @@
 
     container.innerHTML = `
       <div class="ui-card">
-        <div class="af-standard-header" style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:20px;">
-          <div>
-            <h2 style="margin:0;">📰 Informes internos</h2>
-            <p class="section-subtitle" style="margin:4px 0 0;">Apenas o informe atual pode ser editado. Arquivados ficam imutáveis no acervo.</p>
+        <div class="af-standard-header" style="display:flex; justify-content:${ehGestao ? "space-between" : "center"}; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:20px;">
+          <div style="${ehGestao ? "" : "width:100%; text-align:center;"}">
+            <h2 style="margin:0; text-align:center;">📰 Informes internos</h2>
+            ${ehGestao ? '<p class="section-subtitle" style="margin:4px 0 0;">Apenas o informe atual pode ser editado. Arquivados ficam imutáveis no acervo.</p>' : ''}
           </div>
           ${ehGestao ? `<button id="btn-novo-informe" class="ui-button ui-button-secondary">+ Novo rascunho</button>` : ''}
         </div>
@@ -69,10 +69,11 @@
     const arquivadasEl = document.getElementById("informes-arquivados-admin");
     if (!atualEl || !arquivadasEl) return;
 
-    const respAtual = await requestJson("/api/informes?status_editorial=ATUAL");
+    const filtroConsumo = ehGestaoInformes() ? "" : "&status=PUBLICADA";
+    const respAtual = await requestJson(`/api/informes?status_editorial=ATUAL${filtroConsumo}`);
     informeAtual = (Array.isArray(respAtual.data) ? respAtual.data[0] : respAtual.data.items?.[0]) || null;
 
-    const respArq = await requestJson(`/api/informes?status_editorial=ARQUIVADA&pagina=${paginaArquivadas}`);
+    const respArq = await requestJson(`/api/informes?status_editorial=ARQUIVADA${filtroConsumo}&pagina=${paginaArquivadas}`);
     informesArquivados = respArq.data.items || [];
     const pagination = respArq.data.pagination || { page: 1, totalPages: 1 };
 
@@ -84,7 +85,7 @@
     return (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : String(v || "");
   }
 
-  function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false } = {}) {
+  function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false, mostrarMetadados = false } = {}) {
     const data = formatDateOnly(n.data_informe || n.data_noticia || n.published_at || n.created_at);
     return `
       <div class="informe-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
@@ -92,7 +93,7 @@
           <div>
             <h4 style="margin:0 0 4px; color:#003366;">${escape(n.titulo)}</h4>
             ${n.subtitulo ? `<p style="margin:0 0 6px; color:#334155;">${escape(n.subtitulo)}</p>` : ''}
-            <small style="color:#64748b;">${data} · ${escape(n.status)} · ${escape(n.status_editorial)}</small>
+            <small style="color:#64748b;">${mostrarMetadados ? `${data} · ${escape(n.status)} · ${escape(n.status_editorial)}` : data}</small>
           </div>
           ${n.capa_url ? `<img src="${escape(n.capa_url)}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">` : ''}
         </div>
@@ -110,13 +111,16 @@
     const el = document.getElementById("informe-atual-admin");
     if (!el) return;
     if (!informeAtual) {
-      el.innerHTML = `<p style="color:#475569;">Nenhum informe atual ativo. Crie um novo informe para iniciar o ciclo editorial.</p>`;
+      el.innerHTML = ehGestaoInformes()
+        ? `<p style="color:#475569;">Nenhum informe atual ativo. Crie um novo informe para iniciar o ciclo editorial.</p>`
+        : `<p style="color:#475569;">Nenhum informe disponível no momento.</p>`;
       return;
     }
     el.innerHTML = renderCardInforme(informeAtual, {
       mostrarEditar: ehGestaoInformes() && informeAtual.is_editable,
       mostrarPublicar: ehGestaoInformes() && informeAtual.is_editable && informeAtual.status === "RASCUNHO",
       mostrarArquivar: ehGestaoInformes() && informeAtual.is_editable && informeAtual.status === "PUBLICADA",
+      mostrarMetadados: ehGestaoInformes(),
     });
   }
 
@@ -124,13 +128,15 @@
     const el = document.getElementById("informes-arquivados-admin");
     if (!el) return;
     if (!informesArquivados.length) {
-      el.innerHTML = `<p style="color:#64748b;">Sem informes arquivados até o momento.</p>`;
+      el.innerHTML = ehGestaoInformes()
+        ? `<p style="color:#64748b;">Sem informes arquivados até o momento.</p>`
+        : `<p style="color:#64748b;">Não há informes anteriores disponíveis.</p>`;
       return;
     }
 
     let html = informesArquivados.map((n) => `
       <div style="margin-bottom:16px;">
-        ${renderCardInforme(n)}
+        ${renderCardInforme(n, { mostrarMetadados: ehGestaoInformes() })}
         ${ehGestaoInformes() ? '<p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Este informe está consolidado e não pode mais ser editado.</p>' : ''}
       </div>
     `).join("");
