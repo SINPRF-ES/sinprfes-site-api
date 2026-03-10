@@ -2,7 +2,6 @@ const crypto = require("crypto");
 
 const log = require("../utils/log");
 
-const MAX_POSTS = 5;
 const PROFILE_URL = "https://instagram.com/sinprfes";
 const REQUEST_TIMEOUT_MS = 8000;
 const FEED_CACHE_MS = 15 * 60 * 1000;
@@ -181,22 +180,30 @@ async function getCurrentUser(accessToken = getActiveAccessToken()) {
 }
 
 async function getRecentMedia(accessToken = getActiveAccessToken()) {
-  const url = new URL(getApiUrl("me/media"));
-  url.searchParams.set(
-    "fields",
-    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,children{media_url,thumbnail_url,media_type}"
-  );
-  url.searchParams.set("limit", String(MAX_POSTS));
-  url.searchParams.set("access_token", accessToken);
+  const fields =
+    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,children{media_url,thumbnail_url,media_type}";
 
-  const response = await fetchWithTimeout(url.toString(), { method: "GET" });
-  const payload = await response.json();
+  const media = [];
+  let nextUrl = new URL(getApiUrl("me/media"));
+  nextUrl.searchParams.set("fields", fields);
+  nextUrl.searchParams.set("limit", "100");
+  nextUrl.searchParams.set("access_token", accessToken);
 
-  if (!response.ok) {
-    throw new Error("instagram_recent_media_fetch_failed");
+  while (nextUrl) {
+    const response = await fetchWithTimeout(nextUrl.toString(), { method: "GET" });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error("instagram_recent_media_fetch_failed");
+    }
+
+    const pageData = Array.isArray(payload?.data) ? payload.data : [];
+    media.push(...pageData);
+
+    nextUrl = payload?.paging?.next ? new URL(payload.paging.next) : null;
   }
 
-  return Array.isArray(payload?.data) ? payload.data : [];
+  return media;
 }
 
 function normalizeMediaForFrontend(mediaList = []) {
@@ -214,8 +221,7 @@ function normalizeMediaForFrontend(mediaList = []) {
         date: item.timestamp || null,
       };
     })
-    .filter((item) => item.link && item.image)
-    .slice(0, MAX_POSTS);
+    .filter((item) => item.link && item.image);
 }
 
 function getStatus() {

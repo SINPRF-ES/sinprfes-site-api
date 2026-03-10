@@ -13,6 +13,7 @@
   <title>Notícias – SINPRF-ES</title>
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="/css/ui-canon.css" />
+  <link rel="stylesheet" href="/css/components/instagram-feed.css" />
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
@@ -29,13 +30,21 @@
   <main class="page container ui-container public-page" style="margin-top: var(--ui-space-5);">
     <h1 style="color: var(--ui-primary);">Notícias</h1>
 
-    <div id="news-loading" class="ui-card" style="text-align: center;">
-      <p>Buscando as últimas atualizações...</p>
-    </div>
+    <section class="ui-card news-source-tabs" aria-label="Fontes de conteúdo de notícias">
+      <div class="news-source-tabs__controls" role="tablist" aria-label="Selecionar fonte">
+        <button class="ui-button ui-button-outline news-tab-button is-active" role="tab" aria-selected="true" aria-controls="news-panel-instagram" id="news-tab-instagram" data-news-tab="instagram">Instagram</button>
+        <button class="ui-button ui-button-outline news-tab-button" role="tab" aria-selected="false" aria-controls="news-panel-cms" id="news-tab-cms" data-news-tab="cms">Notícias do site (CMS)</button>
+      </div>
+      <p class="section-subtitle" style="margin: 12px 0 0;">As publicações do Instagram oficial e as notícias editoriais do site convivem aqui, com origem identificada.</p>
+    </section>
 
-    <div id="news-container" class="ui-stack">
-        <!-- Notícias serão carregadas aqui via JS -->
-    </div>
+    <section id="news-panel-instagram" class="news-source-panel" role="tabpanel" aria-labelledby="news-tab-instagram">
+      <div id="instagram-news-root"></div>
+    </section>
+
+    <section id="news-panel-cms" class="news-source-panel is-hidden" role="tabpanel" aria-labelledby="news-tab-cms">
+      <div id="cms-news-root"></div>
+    </section>
   </main>
 
   <!-- Rodapé padrão (injetado via main.js) -->
