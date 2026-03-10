@@ -3,18 +3,49 @@ const { launchBrowser } = require('../service/playwrightBrowserService');
 const Trf1PublicaProvider = require('./trf1PublicaProvider');
 
 function mockBrowserWithTwoRows() {
+  let currentUrl = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
+  const mockLocator = (selector) => {
+    const normalized = String(selector || '').replace(/\\/g, '');
+    if (normalized === '#fPP:dpDec:documentoParte') {
+      return {
+        fill: jest.fn().mockResolvedValue(undefined),
+        dispatchEvent: jest.fn().mockResolvedValue(undefined),
+        inputValue: jest.fn().mockResolvedValue('03241063437'),
+        count: jest.fn().mockResolvedValue(1),
+      };
+    }
+    if (normalized === '#fPP:searchProcessos') return { click: jest.fn().mockResolvedValue(undefined), count: jest.fn().mockResolvedValue(1) };
+    if (normalized === '#fPP:processosGridPanel' || normalized === '#fPP:processosGridPanel_body') {
+      return {
+        innerText: jest.fn().mockResolvedValue('2 resultados encontrados 1061304-94.2023.4.01.3400 1055982-59.2024.4.01.3400'),
+        innerHTML: jest.fn().mockResolvedValue('<div>2 resultados encontrados</div>'),
+        count: jest.fn().mockResolvedValue(1),
+      };
+    }
+    if (normalized === '#fPP:processosTable a[href]') return { count: jest.fn().mockResolvedValue(2) };
+    if (normalized === '#fPP:processosTable') return { innerHTML: jest.fn().mockResolvedValue('<table><tbody><tr></tr></tbody></table>') };
+    if (selector === 'input[type="radio"]') return { count: jest.fn().mockResolvedValue(1) };
+    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('20/10/2025 20:12:22 - Juntada de petição intercorrente') };
+    return { innerText: jest.fn().mockResolvedValue(''), innerHTML: jest.fn().mockResolvedValue(''), count: jest.fn().mockResolvedValue(0) };
+  };
+
   const page = {
-    goto: jest.fn(),
+    goto: jest.fn().mockImplementation(async (u) => { currentUrl = u; }),
+    url: jest.fn(() => currentUrl),
+    title: jest.fn().mockResolvedValue('Consulta Pública Processual'),
+    content: jest.fn().mockResolvedValue('<html><body>2 resultados encontrados</body></html>'),
+    screenshot: jest.fn().mockResolvedValue(undefined),
     close: jest.fn().mockResolvedValue(undefined),
-    locator: jest.fn((selector) => {
-      if (selector === '#fPP\\:dpDec\\:documentoParte') return { fill: jest.fn() };
-      if (selector === '#fPP\\:searchProcessos') return { click: jest.fn() };
-      if (selector === '#fPP\\:processosGridPanel_body') return { innerText: jest.fn().mockResolvedValue('') };
-      return { innerText: jest.fn().mockResolvedValue('') };
-    }),
-    waitForFunction: jest.fn().mockResolvedValue(true),
+    waitForTimeout: jest.fn().mockResolvedValue(undefined),
+    locator: jest.fn(mockLocator),
     evaluate: jest.fn().mockResolvedValue({
       declaredResultsCount: 2,
+      panelText: '2 resultados encontrados',
+      linksFound: 2,
+      hasGridPanel: true,
+      hasGridPanelBody: true,
+      hasProcessTable: true,
+      cnjMatchesFound: 2,
       rows: [
         {
           processTitle: 'CumSenFaz 1061304-94.2023.4.01.3400 - Abono Pecuniário (Art. 78 Lei 8.112/1990)',
@@ -36,7 +67,19 @@ function mockBrowserWithTwoRows() {
     }),
   };
 
-  const context = { newPage: jest.fn().mockResolvedValue(page), close: jest.fn().mockResolvedValue(undefined) };
+  const detailPage = {
+    goto: jest.fn().mockResolvedValue(undefined),
+    url: jest.fn().mockReturnValue('https://trf1.test/detail'),
+    locator: jest.fn(mockLocator),
+    screenshot: jest.fn().mockResolvedValue(undefined),
+    content: jest.fn().mockResolvedValue('<html>detail</html>'),
+    close: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const context = {
+    newPage: jest.fn().mockResolvedValueOnce(page).mockResolvedValue(detailPage),
+    close: jest.fn().mockResolvedValue(undefined),
+  };
   return { ok: true, browser: { newContext: jest.fn().mockResolvedValue(context), close: jest.fn().mockResolvedValue(undefined) } };
 }
 
