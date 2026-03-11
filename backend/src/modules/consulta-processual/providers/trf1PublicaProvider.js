@@ -481,6 +481,40 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       recordStep('E_capture_results_start', { note: 'capture grid and page structures' });
       const extraction = await page.evaluate(() => {
         const cleanInner = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+        const extractByMarkers = (text, startPattern, endPattern) => {
+          const safeText = String(text || '');
+          const startMatch = safeText.match(startPattern);
+          if (!startMatch) return '';
+          const from = safeText.slice(startMatch.index + startMatch[0].length);
+          if (!endPattern) return cleanInner(from);
+          const endMatch = from.match(endPattern);
+          return cleanInner(endMatch ? from.slice(0, endMatch.index) : from);
+        };
+        const resolveDetailUrl = (link) => {
+          if (!link) return null;
+          const href = String(link.getAttribute('href') || '').trim();
+          const onclick = String(link.getAttribute('onclick') || '').trim();
+          const dataHref = String(link.getAttribute('data-href') || '').trim();
+          const candidateUrls = [href, dataHref]
+            .filter(Boolean)
+            .filter((u) => !/^#$/i.test(u) && !/^javascript:/i.test(u));
+
+          const onclickUrlMatch = onclick.match(/window\.open\((['"])(.*?)\1/i)
+            || onclick.match(/(https?:\/\/[^'"\s]+DetalheProcessoConsultaPublica[^'"\s]*)/i)
+            || onclick.match(/((?:\/|\.\/|\.\.\/)[^'"\s]*DetalheProcessoConsultaPublica[^'"\s]*)/i);
+          if (onclickUrlMatch?.[2]) candidateUrls.push(onclickUrlMatch[2]);
+          if (onclickUrlMatch?.[1] && !onclickUrlMatch[2]) candidateUrls.push(onclickUrlMatch[1]);
+
+          for (const urlCandidate of candidateUrls) {
+            try {
+              const absolute = new URL(urlCandidate, window.location.href).href;
+              if (/DetalheProcessoConsultaPublica/i.test(absolute) || /[?&]ca=/i.test(absolute)) return absolute;
+            } catch (_err) {
+              // noop: tenta próximo candidato
+            }
+          }
+          return candidateUrls[0] ? new URL(candidateUrls[0], window.location.href).href : null;
+        };
         const panel = document.getElementById('fPP:processosGridPanel');
         const panelBody = document.getElementById('fPP:processosGridPanel_body');
         const processTable = document.querySelector('#fPP\\:processosTable');
@@ -493,18 +527,24 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           const links = Array.from(tr.querySelectorAll('a[href]')).map((a) => cleanInner(a.textContent));
           const title = links.find((t) => /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/.test(t)) || text;
 
-          let classe = cells.find((c) => c.startsWith('Classe:')) || '';
+          let classe = cells.find((c) => /^Classe\s*:/i.test(c)) || '';
           classe = cleanInner(classe.replace(/^Classe:\s*/i, ''));
 
-          let partes = cells.find((c) => c.startsWith('Partes:')) || '';
+          let partes = cells.find((c) => /^Partes\s*:/i.test(c)) || '';
           partes = cleanInner(partes.replace(/^Partes:\s*/i, ''));
 
-          let mov = cells.find((c) => c.startsWith('Última movimentação:')) || '';
+          let mov = cells.find((c) => /^Última\s+movimenta[cç][aã]o\s*:/i.test(c)) || '';
           mov = cleanInner(mov.replace(/^Última movimentação:\s*/i, ''));
 
-          if (!classe) classe = cleanInner((text.match(/Classe\s*:?\s*([^\n]+)/i) || [])[1]);
-          if (!partes) partes = cleanInner((text.match(/Partes\s*:?\s*([^\n]+)/i) || [])[1]);
-          if (!mov) mov = cleanInner((text.match(/Última\s+movimenta[cç][aã]o\s*:?\s*([^\n]+)/i) || [])[1]);
+          if (!classe) {
+            classe = extractByMarkers(text, /Classe\s*:?\s*/i, /(CumSenFaz\s+\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}|Partes\s*:|Última\s+movimenta[cç][aã]o\s*:)/i);
+          }
+          if (!partes) {
+            partes = extractByMarkers(text, /Partes\s*:?\s*/i, /Última\s+movimenta[cç][aã]o\s*:/i);
+          }
+          if (!mov) {
+            mov = extractByMarkers(text, /Última\s+movimenta[cç][aã]o\s*:?\s*/i, null);
+          }
 
           return {
             processTitle: title,
@@ -512,7 +552,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             parties: partes || null,
             listLastMovementText: mov || null,
             rawLastMovementText: mov || null,
-            detailsUrl: detailLink ? new URL(detailLink.getAttribute('href'), window.location.origin).href : null,
+            detailsUrl: resolveDetailUrl(detailLink),
             rawText: text,
           };
         });
