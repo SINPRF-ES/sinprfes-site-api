@@ -627,11 +627,31 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         try {
           const detailPage = await context.newPage();
           await detailPage.goto(it.detailsUrl, { waitUntil: 'domcontentloaded', timeout: cfg.initialLoadTimeoutMs });
-          const movementText = await detailPage.locator('body').innerText().catch(() => '');
-          const movementLines = String(movementText).split('\n').map((l) => clean(l)).filter(Boolean).slice(0, 60);
+          const detailText = await detailPage.locator('body').innerText().catch(() => '');
+          const detailLines = String(detailText).split('\n').map((l) => clean(l)).filter(Boolean);
+          const movementLines = detailLines.slice(0, 120);
           const movementLine = movementLines.find((line) => /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}/.test(line)) || '';
           const movementAt = (movementLine.match(/(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/) || [])[1] || null;
           const movementDescription = clean(movementLine.replace(/\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s*-?\s*/, '')) || null;
+          const textBlob = clean(detailText);
+          const classFromDetail = clean((textBlob.match(/Classe(?:\s+judicial)?\s*:?\s*([^\n]+?)(?:\s+(?:Assunto|Partes|Valor da causa|Distribui[çc][aã]o|[ÚU]ltima\s+movimenta[çc][aã]o))/i) || [])[1]);
+          const partiesFromDetail = clean((textBlob.match(/Partes\s*:?\s*([^\n]+?)(?:\s+(?:Representantes|Movimenta[çc][aã]o|[ÚU]ltima\s+movimenta[çc][aã]o|Valor da causa))/i) || [])[1]);
+          const latestFromDetail = clean((textBlob.match(/[ÚU]ltima\s+movimenta[çc][aã]o\s*:?\s*([^\n]+?)(?:\s+(?:Ver\s+todos|Movimenta[çc][aã]o|Documentos|Polo))/i) || [])[1]);
+
+          if (!it.processClass && classFromDetail) it.processClass = classFromDetail;
+          if (!it.parties && partiesFromDetail) it.parties = partiesFromDetail;
+          if (!it.listLastMovementText && latestFromDetail) {
+            it.listLastMovementText = latestFromDetail;
+            it.rawLastMovementText = latestFromDetail;
+          }
+          if (!it.lastMovement && movementDescription) it.lastMovement = movementDescription;
+          if (!it.lastMovementAt && movementAt) {
+            const [day, month, yearAndTime] = movementAt.split('/');
+            const [year, time] = yearAndTime.split(' ');
+            const iso = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), ...time.split(':').map(Number))).toISOString();
+            it.lastMovementAt = iso;
+          }
+
           await saveScreenshot(detailPage, `process-${i + 1}-detail.png`);
           await saveArtifact(`process-${i + 1}-detail.html`, await detailPage.content());
           await saveArtifact(`process-${i + 1}-movements.txt`, movementLines.join('\n'));
@@ -641,12 +661,17 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             finalUrl,
             hasMovementsBlock: movementLines.length > 0,
             movementsCount: movementLines.length,
+            filledFromDetail: {
+              processClass: Boolean(classFromDetail),
+              parties: Boolean(partiesFromDetail),
+              latest: Boolean(latestFromDetail),
+            },
           });
           recordStep('I_parse_latest_movement', {
-            rawMovementText: movementLine || null,
+            rawMovementText: movementLine || latestFromDetail || null,
             extractedMovementAt: movementAt,
-            extractedMovementDescription: movementDescription,
-            normalizedSuccess: Boolean(movementLine),
+            extractedMovementDescription: movementDescription || latestFromDetail || null,
+            normalizedSuccess: Boolean(movementLine || latestFromDetail),
           });
           await detailPage.close().catch(() => {});
         } catch (detailErr) {
