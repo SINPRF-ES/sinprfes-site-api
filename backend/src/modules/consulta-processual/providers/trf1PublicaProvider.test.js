@@ -28,7 +28,7 @@ function mockBrowserWithTwoRows() {
     if (normalized === '#fPP:processosTable') return { innerHTML: jest.fn().mockResolvedValue('<table><tbody><tr></tr></tbody></table>') };
     if (selector === 'input[type="radio"]') return { count: jest.fn().mockResolvedValue(1) };
     if (String(selector).includes('input[type="radio"]')) return { first: jest.fn().mockReturnValue({ check: jest.fn().mockResolvedValue(undefined) }) };
-    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('Classe: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA Partes: ALESSANDRO ARAUJO DE MELLO e outros (45) X UNIÃO FEDERAL Última movimentação: Juntada de petição intercorrente (20/10/2025 20:12:22)') };
+    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('Classe: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA (12078) Partes: ALESSANDRO ARAUJO DE MELLO e outros (45) X UNIÃO FEDERAL Última movimentação: Juntada de petição intercorrente (20/10/2025 20:12:22)') };
     return { innerText: jest.fn().mockResolvedValue(''), innerHTML: jest.fn().mockResolvedValue(''), count: jest.fn().mockResolvedValue(0) };
   };
 
@@ -102,4 +102,5 @@ test('TRF1 provider retorna os 2 processos oficiais', async () => {
   expect(result.items[0].processClass).toBe('CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA');
   expect(result.items[0].parties).toContain('ALESSANDRO ARAUJO DE MELLO');
   expect(result.items[0].listLastMovementText).toContain('Juntada de petição intercorrente');
+  expect(result.items[0].listLastMovementText).toContain('(20/10/2025 20:12:22)');
 });

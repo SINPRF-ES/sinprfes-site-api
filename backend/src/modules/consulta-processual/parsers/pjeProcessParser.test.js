@@ -29,4 +29,11 @@ describe('pjeProcessParser TRF1', () => {
       rawLastMovementText: '27/02/2025 15:37:20 - Juntada de manifestação',
     });
   });
+
+  test('remove código numérico entre parênteses da classe', () => {
+    const fixture = '<table id="fPP:processosTable"><tbody><tr><td>Classe: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA (12078)</td><td><a href="/detalhe/1">CumSenFaz 1061304-94.2023.4.01.3400 - X</a></td><td>Partes: A X B</td><td>Última movimentação: Juntada (20/10/2025 20:12:22)</td></tr></tbody></table>';
+    const items = parseTrf1RowsFromHtml(fixture, 'https://pje1g-consultapublica.trf1.jus.br');
+    expect(items[0].processClass).toBe('CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA');
+  });
+
 });

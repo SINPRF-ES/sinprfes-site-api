@@ -634,15 +634,27 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           const movementAt = (movementLine.match(/(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/) || [])[1] || null;
           const movementDescription = clean(movementLine.replace(/\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s*-?\s*/, '')) || null;
           const textBlob = clean(detailText);
-          const classFromDetail = clean((textBlob.match(/Classe(?:\s+judicial)?\s*:?\s*([^\n]+?)(?:\s+(?:Assunto|Partes|Valor da causa|Distribui[çc][aã]o|[ÚU]ltima\s+movimenta[çc][aã]o))/i) || [])[1]);
-          const partiesFromDetail = clean((textBlob.match(/Partes\s*:?\s*([^\n]+?)(?:\s+(?:Representantes|Movimenta[çc][aã]o|[ÚU]ltima\s+movimenta[çc][aã]o|Valor da causa))/i) || [])[1]);
-          const latestFromDetail = clean((textBlob.match(/[ÚU]ltima\s+movimenta[çc][aã]o\s*:?\s*([^\n]+?)(?:\s+(?:Ver\s+todos|Movimenta[çc][aã]o|Documentos|Polo))/i) || [])[1]);
+          const stripClassCode = (value) => clean(String(value || '').replace(/\s*\(\d{4,}\)\s*$/, ''));
+          const captureByLabel = (labelPattern, stopPattern) => {
+            const m = textBlob.match(new RegExp(`${labelPattern}\\s*:?\\s*([\\s\\S]+?)(?=\\s+(?:${stopPattern})\\b|$)`, 'i'));
+            return clean(m?.[1] || '');
+          };
+
+          const classFromDetail = stripClassCode(captureByLabel('Classe(?:\\s+judicial)?', 'Assunto|Partes|Valor\\s+da\\s+causa|Distribui[çc][aã]o|[ÚU]ltima\\s+movimenta[çc][aã]o|Polo'));
+          const partiesFromDetail = captureByLabel('Partes', 'Representantes|Movimenta[çc][aã]o|[ÚU]ltima\\s+movimenta[çc][aã]o|Valor\\s+da\\s+causa|Classe|Assunto|Polo');
+          const latestFromDetail = captureByLabel('[ÚU]ltima\\s+movimenta[çc][aã]o', 'Ver\\s+todos|Movimenta[çc][aã]o|Documentos|Polo|Classe|Partes');
 
           if (!it.processClass && classFromDetail) it.processClass = classFromDetail;
           if (!it.parties && partiesFromDetail) it.parties = partiesFromDetail;
-          if (!it.listLastMovementText && latestFromDetail) {
-            it.listLastMovementText = latestFromDetail;
-            it.rawLastMovementText = latestFromDetail;
+          if (!it.listLastMovementText) {
+            const latestResolved = latestFromDetail
+              || (movementDescription && movementAt ? `${movementDescription} (${movementAt})` : null)
+              || movementLine
+              || null;
+            if (latestResolved) {
+              it.listLastMovementText = latestResolved;
+              it.rawLastMovementText = latestResolved;
+            }
           }
           if (!it.lastMovement && movementDescription) it.lastMovement = movementDescription;
           if (!it.lastMovementAt && movementAt) {
