@@ -39,7 +39,8 @@ function parseMovementDescription(text) {
 function normalizeProcessClass(value) {
   const normalized = cleanText(value);
   if (!normalized) return null;
-  return cleanText(normalized.replace(/\s+[A-Za-z][A-Za-z0-9]{2,15}$/, '')) || normalized;
+  const withoutTrailingCode = normalized.replace(/\s*\(\d{4,}\)\s*$/, '');
+  return cleanText(withoutTrailingCode.replace(/\s+[A-Za-z][A-Za-z0-9]{2,15}$/, '')) || normalized;
 }
 
 function createPjeParser(source, sourceLabel) {

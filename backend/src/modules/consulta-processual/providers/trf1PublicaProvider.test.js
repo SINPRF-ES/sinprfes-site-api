@@ -28,7 +28,7 @@ function mockBrowserWithTwoRows() {
     if (normalized === '#fPP:processosTable') return { innerHTML: jest.fn().mockResolvedValue('<table><tbody><tr></tr></tbody></table>') };
     if (selector === 'input[type="radio"]') return { count: jest.fn().mockResolvedValue(1) };
     if (String(selector).includes('input[type="radio"]')) return { first: jest.fn().mockReturnValue({ check: jest.fn().mockResolvedValue(undefined) }) };
-    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('20/10/2025 20:12:22 - Juntada de petição intercorrente') };
+    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('Classe: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA (12078) Partes: ALESSANDRO ARAUJO DE MELLO e outros (45) X UNIÃO FEDERAL Última movimentação: Juntada de petição intercorrente (20/10/2025 20:12:22)') };
     return { innerText: jest.fn().mockResolvedValue(''), innerHTML: jest.fn().mockResolvedValue(''), count: jest.fn().mockResolvedValue(0) };
   };
 
@@ -55,18 +55,18 @@ function mockBrowserWithTwoRows() {
       rows: [
         {
           processTitle: 'CumSenFaz 1061304-94.2023.4.01.3400 - Abono Pecuniário (Art. 78 Lei 8.112/1990)',
-          processClass: 'CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA',
-          parties: 'ALESSANDRO ARAUJO DE MELLO e outros (45) X UNIÃO FEDERAL',
-          listLastMovementText: 'Juntada de petição intercorrente (20/10/2025 20:12:22)',
-          rawLastMovementText: '20/10/2025 20:12:22 - Juntada de petição intercorrente',
+          processClass: null,
+          parties: null,
+          listLastMovementText: null,
+          rawLastMovementText: null,
           detailsUrl: 'https://trf1.test/1',
         },
         {
           processTitle: 'CumSenFaz 1055982-59.2024.4.01.3400 - Índice de 28,86% Lei 8.622/1993 e 8.627/1993',
-          processClass: 'CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA',
-          parties: 'ALEXANDRE LEITE LOUCAO e outros (19) X UNIÃO FEDERAL',
-          listLastMovementText: 'Juntada de manifestação (27/02/2025 15:37:20)',
-          rawLastMovementText: '27/02/2025 15:37:20 - Juntada de manifestação',
+          processClass: null,
+          parties: null,
+          listLastMovementText: null,
+          rawLastMovementText: null,
           detailsUrl: 'https://trf1.test/2',
         },
       ],
@@ -99,4 +99,8 @@ test('TRF1 provider retorna os 2 processos oficiais', async () => {
   expect(result.count).toBe(2);
   expect(result.items[0].processNumber).toBe('1061304-94.2023.4.01.3400');
   expect(result.items[1].processNumber).toBe('1055982-59.2024.4.01.3400');
+  expect(result.items[0].processClass).toBe('CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA');
+  expect(result.items[0].parties).toContain('ALESSANDRO ARAUJO DE MELLO');
+  expect(result.items[0].listLastMovementText).toContain('Juntada de petição intercorrente');
+  expect(result.items[0].listLastMovementText).toContain('(20/10/2025 20:12:22)');
 });
