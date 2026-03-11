@@ -38,6 +38,51 @@ function compactDebugSummary(debugSummary = {}) {
   };
 }
 
+function buildDebugReport(source = {}) {
+  const debugData = source?.debugData || {};
+  const steps = Array.isArray(debugData.steps) ? debugData.steps : [];
+  const warnings = Array.isArray(debugData.warnings) ? debugData.warnings : [];
+  const timeline = [
+    ...steps.map((step) => ({
+      type: 'step',
+      source: source.source || 'trf1',
+      step: step.stage || null,
+      reason: step.reason || null,
+    })),
+    ...warnings.map((warning) => ({
+      type: 'warning',
+      source: source.source || 'trf1',
+      step: warning.code || null,
+      reason: warning.message || null,
+    })),
+  ].slice(0, 220);
+
+  const metrics = {
+    declaredResultsCount: Number(source?.debugSummary?.declaredResultsCount || 0),
+    normalizedItemsCount: Number(source?.debugSummary?.normalizedItemsCount || 0),
+    linksFound: Number(debugData?.afterSubmitSignals?.linksFound || 0),
+    cnjMatchesFound: Number(debugData?.afterSubmitSignals?.cnjMatchesFound || 0),
+    rawBlocksFound: Number(steps.find((s) => s.stage === 'F_parse_raw_end')?.rawBlocksFound || 0),
+    detailPagesOpened: Number(steps.filter((s) => s.stage === 'H_open_detail_result').length || 0),
+  };
+
+  return {
+    likelyFailureStage: source?.debugSummary?.failureStage || null,
+    sourceReports: [{
+      source: source.source || 'trf1',
+      status: source.status || 'unknown',
+      failureStage: source?.debugSummary?.failureStage || null,
+      metrics,
+      discardReasons: {},
+      artifactsCount: Array.isArray(debugData.artifacts) ? debugData.artifacts.length : 0,
+    }],
+    timeline,
+    export: {
+      jsonFileName: `consulta-processual-debug-${Date.now()}.json`,
+    },
+  };
+}
+
 async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mode = 'personal' }) {
   const cfg = getConsultaProcessualConfig();
   if (!cfg.enabled) return { ok: false, code: 'CONSULTA_PROCESSUAL_DISABLED', message: 'Módulo de consulta processual desabilitado.' };
@@ -96,9 +141,20 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
     documentMasked: maskDocument(documentToUse),
     mode,
     items,
-    sources: [{ ...source, items: [] , debugSummary: compactDebugSummary(source?.debugSummary || {}) }],
+    sources: [{
+      source: source?.source || 'trf1',
+      sourceLabel: source?.sourceLabel || 'TRF1',
+      status: source?.status || 'error',
+      count: Number(source?.count || 0),
+      cached: Boolean(source?.cached),
+      cacheAgeSeconds: Number.isFinite(source?.cacheAgeSeconds) ? source.cacheAgeSeconds : null,
+      error: source?.error || null,
+      debugSummary: compactDebugSummary(source?.debugSummary || {}),
+      items: [],
+    }],
     totalItems: items.length,
     errors: source?.error ? [{ source: 'trf1', ...source.error }] : [],
+    ...(isDebug ? { debugReport: buildDebugReport(source) } : {}),
   };
 
   log.info('ConsultaProcessualFinish', { requestId, userId, mode, source: source?.status, count: items.length, failureStage: source?.debugSummary?.failureStage || null });
