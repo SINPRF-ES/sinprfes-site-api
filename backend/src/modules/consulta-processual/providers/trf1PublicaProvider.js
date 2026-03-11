@@ -9,7 +9,7 @@ const { launchBrowser } = require('../service/playwrightBrowserService');
 
 const TRF1_URL = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
 const CNJ_REGEX = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g;
-const MAX_DEBUG_EVENTS = 120;
+const MAX_DEBUG_EVENTS = 60;
 const MAX_DEBUG_ATTEMPT_REQUESTS = 10;
 
 function nowMs() { return Date.now(); }
@@ -126,10 +126,12 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       const requestIndex = new Map();
       const networkRequests = [];
       page.on('request', (request) => {
+        const resType = request.resourceType();
+        if (['image', 'stylesheet', 'font', 'media'].includes(resType)) return;
         const event = {
           method: request.method(),
           url: request.url(),
-          resourceType: request.resourceType(),
+          resourceType: resType,
           at: nowMs(),
         };
         networkRequests.push(event);
@@ -486,12 +488,24 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const countMatch = panelText.match(/(\d+)\s+resultados?\s+encontrados/i);
         const rows = Array.from(document.querySelectorAll('#fPP\\:processosTable tbody tr')).map((tr) => {
           const text = cleanInner(tr.innerText);
+          const cells = Array.from(tr.querySelectorAll('td')).map((td) => cleanInner(td.innerText));
           const detailLink = tr.querySelector('a[href]');
           const links = Array.from(tr.querySelectorAll('a[href]')).map((a) => cleanInner(a.textContent));
           const title = links.find((t) => /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/.test(t)) || text;
-          const classe = cleanInner((text.match(/Classe\s*:?\s*([^\n]+)/i) || [])[1]);
-          const partes = cleanInner((text.match(/Partes\s*:?\s*([^\n]+)/i) || [])[1]);
-          const mov = cleanInner((text.match(/Última\s+movimenta[cç][aã]o\s*:?\s*([^\n]+)/i) || [])[1]);
+
+          let classe = cells.find((c) => c.startsWith('Classe:')) || '';
+          classe = cleanInner(classe.replace(/^Classe:\s*/i, ''));
+
+          let partes = cells.find((c) => c.startsWith('Partes:')) || '';
+          partes = cleanInner(partes.replace(/^Partes:\s*/i, ''));
+
+          let mov = cells.find((c) => c.startsWith('Última movimentação:')) || '';
+          mov = cleanInner(mov.replace(/^Última movimentação:\s*/i, ''));
+
+          if (!classe) classe = cleanInner((text.match(/Classe\s*:?\s*([^\n]+)/i) || [])[1]);
+          if (!partes) partes = cleanInner((text.match(/Partes\s*:?\s*([^\n]+)/i) || [])[1]);
+          if (!mov) mov = cleanInner((text.match(/Última\s+movimenta[cç][aã]o\s*:?\s*([^\n]+)/i) || [])[1]);
+
           return {
             processTitle: title,
             processClass: classe || null,
@@ -536,6 +550,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       const fStart = nowMs();
       recordStep('F_parse_raw_start', { candidateBlocks: extraction.rows.length });
       extraction.rows.forEach((row, index) => {
+        if (index >= 10) return;
         const hasCnj = CNJ_REGEX.test(String(row.processTitle || row.rawText || ''));
         CNJ_REGEX.lastIndex = 0;
         const hasHref = Boolean(row.detailsUrl);
@@ -580,8 +595,10 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           await saveScreenshot(detailPage, `process-${i + 1}-detail.png`);
           await saveArtifact(`process-${i + 1}-detail.html`, await detailPage.content());
           await saveArtifact(`process-${i + 1}-movements.txt`, movementLines.join('\n'));
+          const finalUrl = detailPage.url();
+          it.detailsUrl = finalUrl;
           recordStep('H_open_detail_result', {
-            finalUrl: detailPage.url(),
+            finalUrl,
             hasMovementsBlock: movementLines.length > 0,
             movementsCount: movementLines.length,
           });
