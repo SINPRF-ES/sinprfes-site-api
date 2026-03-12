@@ -530,17 +530,11 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           let classe = cells.find((c) => /^Classe\s*:/i.test(c)) || '';
           classe = cleanInner(classe.replace(/^Classe:\s*/i, ''));
 
-          let partes = cells.find((c) => /^Partes\s*:/i.test(c)) || '';
-          partes = cleanInner(partes.replace(/^Partes:\s*/i, ''));
-
           let mov = cells.find((c) => /^Última\s+movimenta[cç][aã]o\s*:/i.test(c)) || '';
           mov = cleanInner(mov.replace(/^Última movimentação:\s*/i, ''));
 
           if (!classe) {
             classe = extractByMarkers(text, /Classe\s*:?\s*/i, /(CumSenFaz\s+\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}|Partes\s*:|Última\s+movimenta[cç][aã]o\s*:)/i);
-          }
-          if (!partes) {
-            partes = extractByMarkers(text, /Partes\s*:?\s*/i, /Última\s+movimenta[cç][aã]o\s*:/i);
           }
           if (!mov) {
             mov = extractByMarkers(text, /Última\s+movimenta[cç][aã]o\s*:?\s*/i, null);
@@ -549,7 +543,6 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           return {
             processTitle: title,
             processClass: classe || null,
-            parties: partes || null,
             listLastMovementText: mov || null,
             rawLastMovementText: mov || null,
             detailsUrl: resolveDetailUrl(detailLink),
@@ -594,16 +587,14 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         const hasCnj = CNJ_REGEX.test(String(row.processTitle || row.rawText || ''));
         CNJ_REGEX.lastIndex = 0;
         const hasHref = Boolean(row.detailsUrl);
-        const hasParties = Boolean(row.parties);
-        const ignored = !(hasCnj || hasHref || hasParties);
+        const ignored = !(hasCnj || hasHref);
         recordStep('F_parse_raw_block', {
           index,
           ignored,
-          reason: ignored ? 'missing_cnj_href_and_parties' : null,
+          reason: ignored ? 'missing_cnj_and_href' : null,
           hasCnj,
           hasHref,
           hasClass: Boolean(row.processClass),
-          hasParties,
           snippet: clean(row.rawText || row.processTitle).slice(0, 220),
         });
       });
@@ -641,11 +632,9 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           };
 
           const classFromDetail = stripClassCode(captureByLabel('Classe(?:\\s+judicial)?', 'Assunto|Partes|Valor\\s+da\\s+causa|Distribui[çc][aã]o|[ÚU]ltima\\s+movimenta[çc][aã]o|Polo'));
-          const partiesFromDetail = captureByLabel('Partes', 'Representantes|Movimenta[çc][aã]o|[ÚU]ltima\\s+movimenta[çc][aã]o|Valor\\s+da\\s+causa|Classe|Assunto|Polo');
           const latestFromDetail = captureByLabel('[ÚU]ltima\\s+movimenta[çc][aã]o', 'Ver\\s+todos|Movimenta[çc][aã]o|Documentos|Polo|Classe|Partes');
 
           if (!it.processClass && classFromDetail) it.processClass = classFromDetail;
-          if (!it.parties && partiesFromDetail) it.parties = partiesFromDetail;
           if (!it.listLastMovementText) {
             const latestResolved = latestFromDetail
               || (movementDescription && movementAt ? `${movementDescription} (${movementAt})` : null)
@@ -675,7 +664,6 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
             movementsCount: movementLines.length,
             filledFromDetail: {
               processClass: Boolean(classFromDetail),
-              parties: Boolean(partiesFromDetail),
               latest: Boolean(latestFromDetail),
             },
           });

@@ -911,6 +911,7 @@ body {
     display: table-cell;
     border-bottom: 1px solid var(--ui-border);
     padding: 10px;
+    vertical-align: top;
   }
   .consulta-processual-table td::before {
     content: none;
@@ -923,13 +924,10 @@ body {
     width: 17%;
   }
   .consulta-processual-table .col-class {
-    width: 18%;
-  }
-  .consulta-processual-table .col-parties {
-    width: 26%;
+    width: 28%;
   }
   .consulta-processual-table .col-movement {
-    width: 18%;
+    width: 34%;
   }
   .consulta-processual-table .col-actions {
     width: 12%;
@@ -946,7 +944,7 @@ body {
   }
   .consulta-processual-table .cell-center {
     text-align: center;
-    vertical-align: middle;
+    vertical-align: top;
   }
   .consulta-processual-table .cell-last-movement {
     min-width: 280px;

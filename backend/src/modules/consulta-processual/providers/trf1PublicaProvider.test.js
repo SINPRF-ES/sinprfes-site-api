@@ -56,7 +56,6 @@ function mockBrowserWithTwoRows() {
         {
           processTitle: 'CumSenFaz 1061304-94.2023.4.01.3400 - Abono Pecuniário (Art. 78 Lei 8.112/1990)',
           processClass: null,
-          parties: null,
           listLastMovementText: null,
           rawLastMovementText: null,
           detailsUrl: 'https://trf1.test/1',
@@ -64,7 +63,6 @@ function mockBrowserWithTwoRows() {
         {
           processTitle: 'CumSenFaz 1055982-59.2024.4.01.3400 - Índice de 28,86% Lei 8.622/1993 e 8.627/1993',
           processClass: null,
-          parties: null,
           listLastMovementText: null,
           rawLastMovementText: null,
           detailsUrl: 'https://trf1.test/2',
@@ -100,7 +98,7 @@ test('TRF1 provider retorna os 2 processos oficiais', async () => {
   expect(result.items[0].processNumber).toBe('1061304-94.2023.4.01.3400');
   expect(result.items[1].processNumber).toBe('1055982-59.2024.4.01.3400');
   expect(result.items[0].processClass).toBe('CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA');
-  expect(result.items[0].parties).toContain('ALESSANDRO ARAUJO DE MELLO');
+  expect(result.items[0].parties).toBeUndefined();
   expect(result.items[0].listLastMovementText).toContain('Juntada de petição intercorrente');
   expect(result.items[0].listLastMovementText).toContain('(20/10/2025 20:12:22)');
 });

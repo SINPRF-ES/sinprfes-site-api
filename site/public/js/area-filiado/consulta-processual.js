@@ -46,7 +46,6 @@
         </td>
         <td class="cell-process-number" data-label="Número do processo">${escapeHtml(item.processNumber || '-')}</td>
         <td class="cell-process-class" data-label="Classe">${escapeHtml(item.processClass || '-')}</td>
-        <td class="cell-wrap" data-label="Partes">${escapeHtml(item.parties || '-')}</td>
         <td class="cell-wrap cell-last-movement" data-label="Última movimentação">${escapeHtml(item.listLastMovementText || item.lastMovement || '-')}</td>
         <td class="cell-center" data-label="Ações">${item.detailsUrl ? `<a class="ui-button ui-button-outline" target="_blank" rel="noopener noreferrer" href="${escapeHtml(item.detailsUrl)}">Abrir origem</a>` : '-'}</td>
       </tr>
@@ -59,7 +58,6 @@
             <col class="col-source">
             <col class="col-number">
             <col class="col-class">
-            <col class="col-parties">
             <col class="col-movement">
             <col class="col-actions">
           </colgroup>
@@ -68,7 +66,6 @@
               <th scope="col">Origem</th>
               <th scope="col">Número do processo</th>
               <th scope="col">Classe</th>
-              <th scope="col">Partes</th>
               <th scope="col">Última movimentação</th>
               <th scope="col">Ações</th>
             </tr>

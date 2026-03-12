@@ -7,7 +7,6 @@ function normalizeItem(input = {}) {
     processClass: input.processClass || null,
     processTitle: input.processTitle || null,
     subject: input.subject || null,
-    parties: input.parties || null,
     lastMovement: input.lastMovement || null,
     lastMovementAt: input.lastMovementAt || null,
     rawLastMovementText: input.rawLastMovementText || null,
