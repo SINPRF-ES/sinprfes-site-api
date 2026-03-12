@@ -9,6 +9,42 @@ const cache = new Map();
 const inFlight = new Map();
 const lastRunByUser = new Map();
 const SINDICATO_CNPJ = '39387378000125';
+const FENAPRF_CNPJ = '03658044000100';
+const FENAPRF_NOME = 'FEDERACAO NACIONAL DOS POLICIAIS RODOVIARIOS FEDERAIS';
+const SINDICATO_NOME = 'SIND.DOS POL.ROD.FEDERAIS NO EST.DO ESP.SANTO';
+
+function onlyDigits(v) {
+  return String(v || '').replace(/\D/g, '');
+}
+
+function formatDocument(v) {
+  const d = onlyDigits(v);
+  if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  return String(v || '');
+}
+
+function buildSearchTargets({ userCpf, mode }) {
+  if (mode === 'institutional') {
+    return [
+      { kind: 'document', value: SINDICATO_CNPJ },
+      { kind: 'name', value: SINDICATO_NOME },
+    ];
+  }
+
+  if (mode === 'federation') {
+    return [
+      { kind: 'document', value: FENAPRF_CNPJ },
+      {
+        kind: 'name',
+        value: FENAPRF_NOME,
+        relatedNames: [SINDICATO_NOME],
+      },
+    ];
+  }
+
+  return [{ kind: 'document', value: userCpf }];
+}
 
 function getCacheEntry(key) {
   const item = cache.get(key);
@@ -91,12 +127,13 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
   if (!user) return { ok: false, code: 'USER_NOT_FOUND', message: 'Usuário não encontrado.' };
 
   const isInstitutional = mode === 'institutional';
-  let documentToUse = SINDICATO_CNPJ;
-  if (!isInstitutional) {
-    const cpfValidation = sanitizeAndValidateCpf(user.cpf);
-    if (!cpfValidation.ok) return { ok: false, code: 'USER_CPF_NOT_AVAILABLE', message: 'Usuário logado não possui CPF válido cadastrado para consulta processual.' };
-    documentToUse = cpfValidation.cpf;
+  const cpfValidation = sanitizeAndValidateCpf(user.cpf);
+  if (!cpfValidation.ok && mode === 'personal') {
+    return { ok: false, code: 'USER_CPF_NOT_AVAILABLE', message: 'Usuário logado não possui CPF válido cadastrado para consulta processual.' };
   }
+
+  const searchTargets = buildSearchTargets({ userCpf: cpfValidation.cpf, mode });
+  const primaryTarget = searchTargets[0];
 
   const provider = buildConsultaProviders()[0];
   const isDebug = Boolean(debug || cfg.debug || cfg.debugTrf1);
@@ -111,19 +148,47 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
   } else if (shouldThrottle) {
     source = { source: 'trf1', sourceLabel: 'TRF1', status: 'error', count: 0, items: [], error: { code: 'RATE_LIMITED', message: 'Aguarde alguns segundos para nova consulta.' } };
   } else {
-    const providerKey = `consulta_processual:trf1:${hashDocument(documentToUse)}`;
+    const cacheKeyPart = primaryTarget.kind === 'document'
+      ? hashDocument(primaryTarget.value)
+      : `name:${String(primaryTarget.value || '').toUpperCase()}`;
+    const providerKey = `consulta_processual:trf1:${mode}:${cacheKeyPart}`;
     const cached = !isDebug && getCacheEntry(providerKey);
     if (cached) {
       source = { ...cached.value, cached: true, cacheAgeSeconds: Math.floor((Date.now() - cached.createdAt) / 1000) };
     } else {
+      const executeTarget = (target) => provider.consultarPorDocumento({
+        document: target.kind === 'document' ? target.value : null,
+        partyName: target.kind === 'name' ? target.value : null,
+        extraPartyNames: target.relatedNames || [],
+        searchKind: target.kind,
+        documentMasked: target.kind === 'document' ? maskDocument(target.value) : null,
+        requestId,
+        userId,
+        debug: { enabled: isDebug, level: trf1DebugLevel },
+      });
+
       const runningKey = `${userId}:${mode}:trf1:${isDebug ? 'debug' : 'normal'}`;
       let promise = inFlight.get(runningKey);
       if (!promise) {
-        promise = provider.consultarPorDocumento({ document: documentToUse, documentMasked: maskDocument(documentToUse), requestId, userId, debug: { enabled: isDebug, level: trf1DebugLevel } });
+        promise = executeTarget(primaryTarget);
         inFlight.set(runningKey, promise);
       }
       try {
         source = await promise;
+
+        const fallbackTargets = searchTargets.slice(1).flatMap((target) => {
+          if (target.kind !== 'name') return [target];
+          return [
+            { ...target, relatedNames: [] },
+            ...((target.relatedNames || []).map((name) => ({ kind: 'name', value: name, relatedNames: [] }))),
+          ];
+        });
+
+        for (const fallbackTarget of fallbackTargets) {
+          if (Number(source?.count || 0) > 0) break;
+          source = await executeTarget(fallbackTarget);
+        }
+
         if (source?.status === 'success') setCacheEntry(providerKey, source, cfg.cacheTtlMs);
       } finally {
         inFlight.delete(runningKey);
@@ -135,10 +200,12 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
 
   const items = (source?.items || []).map((it) => (isInstitutional ? { ...it, institutional: true } : it));
   const queriedAt = new Date().toISOString();
+  const visibleDocument = primaryTarget.kind === 'document' ? formatDocument(primaryTarget.value) : primaryTarget.value;
   const payload = {
     ok: true,
     queriedAt,
-    documentMasked: maskDocument(documentToUse),
+    documentMasked: visibleDocument,
+    document: visibleDocument,
     mode,
     items,
     sources: [{

@@ -39,7 +39,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
   getLabel() { return 'TRF1'; }
   isEnabled() { return getConsultaProcessualConfig().trf1Enabled; }
 
-  async consultarPorDocumento({ document, documentMasked, requestId, userId, debug }) {
+  async consultarPorDocumento({ document, documentMasked, requestId, userId, debug, searchKind = 'document', partyName = null, extraPartyNames = [] }) {
     const cfg = getConsultaProcessualConfig();
     const debugLevel = debug?.enabled ? (debug?.level || 'detailed') : 'minimal';
     const detailed = debugLevel === 'detailed';
@@ -109,6 +109,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     let beforeSubmitUrl = null;
     const inputDigits = String(document || '').replace(/\D/g, '');
     const inputMasked = String(documentMasked || document || '');
+    const targetPartyName = clean(partyName);
 
     try {
       const bootStart = nowMs();
@@ -179,9 +180,16 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
       });
 
       const cStart = nowMs();
-      recordStep('C_fill_document_start', { documentMasked: documentMasked || maskDocument(document), strategy: 'multi_strategy_fill' });
+      const isDocumentSearch = searchKind !== 'name';
+      recordStep('C_fill_document_start', {
+        documentMasked: documentMasked || maskDocument(document),
+        strategy: isDocumentSearch ? 'multi_strategy_fill' : 'fill_party_name',
+        searchKind,
+      });
       const cpfInput = page.locator('#fPP\\:dpDec\\:documentoParte');
-      const cpfRadio = page.locator('input[type="radio"][value*="CPF"], input[type="radio"][id*="cpf" i], input[type="radio"][name*="tipo" i]');
+      const cpfRadio = page.locator('input[type="radio"][value*="CPF" i], input[type="radio"][id*="cpf" i]');
+      const cnpjRadio = page.locator('input[type="radio"][value*="CNPJ" i], input[type="radio"][id*="cnpj" i]');
+      const partyNameInput = page.locator('#fPP\\:dpDec\\:nomeParte, input[id*="nomeParte" i], input[name*="nomeParte" i], input[id*="nome" i][id*="parte" i], input[name*="nome" i][name*="parte" i]');
       const triggerPostFillEvents = async () => {
         await cpfInput.dispatchEvent('input').catch(() => {});
         await cpfInput.dispatchEvent('change').catch(() => {});
@@ -197,24 +205,41 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           await page.keyboard.type(ch, { delay: 35 });
         }
       };
-      await humanType(inputDigits);
-      await triggerPostFillEvents();
-      let valueAfterFill = await cpfInput.inputValue().catch(() => '');
-      const fillAttempts = [{ strategy: 'A_human_typing_digits', domValue: valueAfterFill }];
-      await cpfRadio.first().check({ force: true }).catch(() => {});
-      await cpfRadio.first().check({ force: true }).catch(() => {});
-      await humanType(inputDigits);
-      await triggerPostFillEvents();
-      valueAfterFill = await cpfInput.inputValue().catch(() => '');
-      fillAttempts.push({ strategy: 'B_radio_recheck_then_fill_digits', domValue: valueAfterFill });
-      await humanType(inputMasked);
-      await triggerPostFillEvents();
-      valueAfterFill = await cpfInput.inputValue().catch(() => '');
-      fillAttempts.push({ strategy: 'C_user_masked_value', domValue: valueAfterFill });
-      await humanType(inputDigits);
-      await triggerPostFillEvents();
-      valueAfterFill = await cpfInput.inputValue().catch(() => '');
-      fillAttempts.push({ strategy: 'D_digits_and_mask_validation', domValue: valueAfterFill, maskDetected: /\d{3}\.\d{3}\.\d{3}-\d{2}/.test(valueAfterFill) });
+      let valueAfterFill = '';
+      const fillAttempts = [];
+      if (isDocumentSearch) {
+        const isCnpj = inputDigits.length === 14;
+        const docRadio = isCnpj ? cnpjRadio : cpfRadio;
+        await docRadio.first().check({ force: true }).catch(() => {});
+        await docRadio.first().check({ force: true }).catch(() => {});
+
+        await humanType(inputDigits);
+        await triggerPostFillEvents();
+        valueAfterFill = await cpfInput.inputValue().catch(() => '');
+        fillAttempts.push({ strategy: 'A_human_typing_digits', domValue: valueAfterFill });
+
+        await humanType(inputMasked);
+        await triggerPostFillEvents();
+        valueAfterFill = await cpfInput.inputValue().catch(() => '');
+        fillAttempts.push({ strategy: 'B_user_masked_value', domValue: valueAfterFill });
+
+        await humanType(inputDigits);
+        await triggerPostFillEvents();
+        valueAfterFill = await cpfInput.inputValue().catch(() => '');
+        fillAttempts.push({ strategy: 'C_digits_and_mask_validation', domValue: valueAfterFill, maskDetected: /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2}/.test(valueAfterFill) });
+      } else {
+        const hasPartyInput = await partyNameInput.count().then((n) => n > 0).catch(() => false);
+        if (hasPartyInput) {
+          await partyNameInput.first().click({ timeout: 5000 }).catch(() => {});
+          await partyNameInput.first().fill(targetPartyName).catch(() => {});
+          await partyNameInput.first().dispatchEvent('input').catch(() => {});
+          await partyNameInput.first().dispatchEvent('change').catch(() => {});
+          valueAfterFill = await partyNameInput.first().inputValue().catch(() => '');
+          fillAttempts.push({ strategy: 'A_fill_party_name', domValue: valueAfterFill });
+        } else {
+          addWarning('PARTY_NAME_INPUT_NOT_FOUND', 'Campo de nome da parte não foi localizado para busca nominal.');
+        }
+      }
       await saveScreenshot(page, '02-filled.png');
       recordStep('C_fill_document_end', {
         effectiveValueMasked: maskDocument(valueAfterFill),

@@ -13,13 +13,17 @@ function canUseInstitutionalMode(req) {
 }
 
 async function consultarMe(req, res) {
-  const mode = req.query.mode === 'institutional' ? 'institutional' : 'personal';
+  const mode = req.query.mode === 'institutional'
+    ? 'institutional'
+    : req.query.mode === 'federation'
+      ? 'federation'
+      : 'personal';
 
-  if (mode === 'institutional' && !canUseInstitutionalMode(req)) {
+  if ((mode === 'institutional' || mode === 'federation') && !canUseInstitutionalMode(req)) {
     return res.status(403).json({
       ok: false,
       code: 'CONSULTA_PROCESSUAL_INSTITUTIONAL_FORBIDDEN',
-      message: 'Consulta institucional restrita para ADMIN e DIRETORIA.',
+      message: 'Consulta institucional/federativa restrita para ADMIN e DIRETORIA.',
     });
   }
 
@@ -56,7 +60,11 @@ async function consultarDebugMe(req, res) {
     });
   }
 
-  const mode = req.query.mode === 'institutional' ? 'institutional' : 'personal';
+  const mode = req.query.mode === 'institutional'
+    ? 'institutional'
+    : req.query.mode === 'federation'
+      ? 'federation'
+      : 'personal';
 
   try {
     const result = await service.consultarPorUsuarioLogado({
