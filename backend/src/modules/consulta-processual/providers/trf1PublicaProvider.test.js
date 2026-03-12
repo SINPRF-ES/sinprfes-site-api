@@ -2,7 +2,7 @@ jest.mock('../service/playwrightBrowserService', () => ({ launchBrowser: jest.fn
 const { launchBrowser } = require('../service/playwrightBrowserService');
 const Trf1PublicaProvider = require('./trf1PublicaProvider');
 
-function mockBrowserWithTwoRows() {
+function mockBrowserWithTwoRows(options = {}) {
   let currentUrl = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
   const mockLocator = (selector) => {
     const normalized = String(selector || '').replace(/\\/g, '');
@@ -28,7 +28,7 @@ function mockBrowserWithTwoRows() {
     if (normalized === '#fPP:processosTable') return { innerHTML: jest.fn().mockResolvedValue('<table><tbody><tr></tr></tbody></table>') };
     if (selector === 'input[type="radio"]') return { count: jest.fn().mockResolvedValue(1) };
     if (String(selector).includes('input[type="radio"]')) return { first: jest.fn().mockReturnValue({ check: jest.fn().mockResolvedValue(undefined) }) };
-    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('Classe: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA (12078) Partes: ALESSANDRO ARAUJO DE MELLO e outros (45) X UNIÃO FEDERAL Última movimentação: Juntada de petição intercorrente (20/10/2025 20:12:22)') };
+    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue(options.detailBodyText || 'Classe: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA (12078) Partes: ALESSANDRO ARAUJO DE MELLO e outros (45) X UNIÃO FEDERAL Última movimentação: Juntada de petição intercorrente (20/10/2025 20:12:22)') };
     return { innerText: jest.fn().mockResolvedValue(''), innerHTML: jest.fn().mockResolvedValue(''), count: jest.fn().mockResolvedValue(0) };
   };
 
@@ -103,4 +103,24 @@ test('TRF1 provider retorna os 2 processos oficiais', async () => {
   expect(result.items[0].parties).toContain('ALESSANDRO ARAUJO DE MELLO');
   expect(result.items[0].listLastMovementText).toContain('Juntada de petição intercorrente');
   expect(result.items[0].listLastMovementText).toContain('(20/10/2025 20:12:22)');
+});
+
+
+test('TRF1 provider preenche partes via seção Polo Ativo/Polo Passivo no detalhe', async () => {
+  launchBrowser.mockResolvedValue(mockBrowserWithTwoRows({
+    detailBodyText: [
+      'Classe judicial: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA (12078)',
+      'Polo Ativo: ALESSANDRO ARAUJO DE MELLO',
+      'Polo Passivo: UNIÃO FEDERAL',
+      'Última movimentação: Juntada de petição intercorrente (20/10/2025 20:12:22)',
+      'Documentos',
+    ].join('\n'),
+  }));
+
+  const provider = new Trf1PublicaProvider();
+  const result = await provider.consultarPorDocumento({ document: '03241063437', requestId: 'x', userId: 1, debug: { enabled: false } });
+
+  expect(result.status).toBe('success');
+  expect(result.items[0].parties).toContain('ALESSANDRO ARAUJO DE MELLO');
+  expect(result.items[0].parties).toContain('UNIÃO FEDERAL');
 });

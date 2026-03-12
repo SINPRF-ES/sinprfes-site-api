@@ -911,6 +911,7 @@ body {
     display: table-cell;
     border-bottom: 1px solid var(--ui-border);
     padding: 10px;
+    vertical-align: top;
   }
   .consulta-processual-table td::before {
     content: none;
@@ -946,7 +947,7 @@ body {
   }
   .consulta-processual-table .cell-center {
     text-align: center;
-    vertical-align: middle;
+    vertical-align: top;
   }
   .consulta-processual-table .cell-last-movement {
     min-width: 280px;
