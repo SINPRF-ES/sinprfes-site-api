@@ -18,7 +18,6 @@ describe('pjeProcessParser TRF1', () => {
       processNumber: '1061304-94.2023.4.01.3400',
       processClass: 'CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA',
       processTitle: 'CumSenFaz 1061304-94.2023.4.01.3400 - Abono Pecuniário (Art. 78 Lei 8.112/1990)',
-      parties: 'ALESSANDRO ARAUJO DE MELLO e outros (45) X UNIÃO FEDERAL',
       lastMovement: 'Juntada de petição intercorrente',
       rawLastMovementText: '20/10/2025 20:12:22 - Juntada de petição intercorrente',
       listLastMovementText: 'Juntada de petição intercorrente (20/10/2025 20:12:22)',

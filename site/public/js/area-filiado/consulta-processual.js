@@ -177,8 +177,8 @@
       if (providerErrors.length > 0 && items.length === 0) {
         feedback.textContent = 'Falha temporária em todas as fontes consultadas.';
       } else {
-        const docLabel = mode === 'institutional' ? 'CNPJ' : 'CPF';
-        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docLabel}: ${data.documentMasked || '***'}`;
+        const docLabel = mode === 'personal' ? 'CPF' : 'CNPJ';
+        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docLabel}: ${data.document || data.documentMasked || '-'}`;
       }
 
       if (lastUpdated) {
@@ -260,6 +260,10 @@
             <label class="consulta-processual-mode-option">
               <input type="radio" name="consulta-mode" value="institutional">
               <span>Processos do sindicato (CNPJ)</span>
+            </label>
+            <label class="consulta-processual-mode-option">
+              <input type="radio" name="consulta-mode" value="federation">
+              <span>Processos da FENAPRF (CNPJ)</span>
             </label>
           </div>
         </div>

@@ -33,10 +33,10 @@ export default function ConsultaProcessualScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [items, setItems] = useState<ConsultaProcessualItem[]>([]);
-  const [docMasked, setDocMasked] = useState('***.***.***-**');
+  const [documentValue, setDocumentValue] = useState('-');
   const [queriedAt, setQueriedAt] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Escolha o tipo de consulta e clique em “Consultar processos”.');
-  const [mode, setMode] = useState<'personal' | 'institutional'>('personal');
+  const [mode, setMode] = useState<'personal' | 'institutional' | 'federation'>('personal');
 
   useFocusEffect(
     useCallback(() => {
@@ -71,7 +71,7 @@ export default function ConsultaProcessualScreen() {
         : normalizedItems.length;
 
       setItems(normalizedItems);
-      setDocMasked(payload.documentMasked || payload.cpfMasked || '***');
+      setDocumentValue(payload.document || payload.documentMasked || payload.cpfMasked || '-');
       setQueriedAt(payload.queriedAt || null);
 
       const providerErrors = (payload.sources || []).filter((source) => source.status === 'error');
@@ -80,8 +80,8 @@ export default function ConsultaProcessualScreen() {
       } else if (totalItems === 0) {
         setStatusMessage('Nenhum processo encontrado.');
       } else {
-        const docType = searchMode === 'institutional' ? 'CNPJ' : 'CPF';
-        setStatusMessage(`Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docType}: ${payload.documentMasked || payload.cpfMasked || '***'}`);
+        const docType = searchMode === 'personal' ? 'CPF' : 'CNPJ';
+        setStatusMessage(`Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docType}: ${payload.document || payload.documentMasked || payload.cpfMasked || '-'}`);
       }
     } catch (_error) {
       setItems([]);
@@ -110,7 +110,7 @@ export default function ConsultaProcessualScreen() {
     return `Última atualização: ${formatDateTime(queriedAt)}`;
   }, [queriedAt]);
 
-  const toggleMode = (newMode: 'personal' | 'institutional') => {
+  const toggleMode = (newMode: 'personal' | 'institutional' | 'federation') => {
     if (newMode === mode) return;
     setMode(newMode);
     setItems([]);
@@ -141,12 +141,18 @@ export default function ConsultaProcessualScreen() {
               >
                 <Text style={[styles.modeButtonText, mode === 'institutional' && styles.modeButtonTextActive]}>Sindicato</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, mode === 'federation' && styles.modeButtonActive]}
+                onPress={() => toggleMode('federation')}
+              >
+                <Text style={[styles.modeButtonText, mode === 'federation' && styles.modeButtonTextActive]}>FENAPRF</Text>
+              </TouchableOpacity>
             </View>
           )}
 
           <Text style={styles.status}>{statusMessage}</Text>
           <Text style={styles.meta}>{queriedAtLabel}</Text>
-          <Text style={styles.meta}>{mode === 'institutional' ? 'CNPJ' : 'CPF'} consultado: {docMasked}</Text>
+          <Text style={styles.meta}>{mode === 'personal' ? 'CPF' : 'CNPJ'} consultado: {documentValue}</Text>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => executeConsulta(false)} disabled={isLoading}>
             {isLoading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.actionLabel}>Consultar processos</Text>}
@@ -169,7 +175,6 @@ export default function ConsultaProcessualScreen() {
               </View>
               <Text style={styles.processNumber}>{item.processNumber || '-'}</Text>
               <Text style={styles.processClass}>Classe: {item.processClass || '-'}</Text>
-              <Text style={styles.textBlock}>Partes: {item.parties || '-'}</Text>
               <Text style={styles.textBlock}>Última movimentação: {movementText}</Text>
 
               {item.detailsUrl ? (

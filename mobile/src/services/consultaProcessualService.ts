@@ -6,7 +6,6 @@ export interface ConsultaProcessualItem {
   processNumber: string | null;
   processClass: string | null;
   processTitle: string | null;
-  parties: string | null;
   listLastMovementText: string | null;
   listLastMovementAt: string | null;
   lastMovement: string | null;
@@ -34,16 +33,17 @@ export interface ConsultaProcessualResponse {
   queriedAt: string;
   cpfMasked?: string;
   documentMasked?: string;
+  document?: string;
   totalItems: number;
   items: ConsultaProcessualItem[];
   sources: ConsultaProcessualSource[];
   errors: Array<{ source?: string; code?: string; message?: string }>;
   message?: string;
   error?: string;
-  mode?: 'personal' | 'institutional';
+  mode?: 'personal' | 'institutional' | 'federation';
 }
 
-export async function consultarProcessosDoUsuarioLogado(mode: 'personal' | 'institutional' = 'personal'): Promise<ConsultaProcessualResponse> {
+export async function consultarProcessosDoUsuarioLogado(mode: 'personal' | 'institutional' | 'federation' = 'personal'): Promise<ConsultaProcessualResponse> {
   const response = await api.get<ConsultaProcessualResponse>(`/api/consulta-processual/me?mode=${mode}`);
   return response.data;
 }
