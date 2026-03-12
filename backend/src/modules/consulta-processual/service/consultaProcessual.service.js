@@ -26,7 +26,10 @@ function formatDocument(v) {
 
 function buildSearchTargets({ userCpf, mode }) {
   if (mode === 'institutional') {
-    return [{ kind: 'document', value: SINDICATO_CNPJ }];
+    return [
+      { kind: 'document', value: SINDICATO_CNPJ },
+      { kind: 'name', value: SINDICATO_NOME },
+    ];
   }
 
   if (mode === 'federation') {
@@ -124,7 +127,6 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
   if (!user) return { ok: false, code: 'USER_NOT_FOUND', message: 'Usuário não encontrado.' };
 
   const isInstitutional = mode === 'institutional';
-  const isFederation = mode === 'federation';
   const cpfValidation = sanitizeAndValidateCpf(user.cpf);
   if (!cpfValidation.ok && mode === 'personal') {
     return { ok: false, code: 'USER_CPF_NOT_AVAILABLE', message: 'Usuário logado não possui CPF válido cadastrado para consulta processual.' };
@@ -154,38 +156,39 @@ async function consultarPorUsuarioLogado({ userId, requestId, debug = false, mod
     if (cached) {
       source = { ...cached.value, cached: true, cacheAgeSeconds: Math.floor((Date.now() - cached.createdAt) / 1000) };
     } else {
+      const executeTarget = (target) => provider.consultarPorDocumento({
+        document: target.kind === 'document' ? target.value : null,
+        partyName: target.kind === 'name' ? target.value : null,
+        extraPartyNames: target.relatedNames || [],
+        searchKind: target.kind,
+        documentMasked: target.kind === 'document' ? maskDocument(target.value) : null,
+        requestId,
+        userId,
+        debug: { enabled: isDebug, level: trf1DebugLevel },
+      });
+
       const runningKey = `${userId}:${mode}:trf1:${isDebug ? 'debug' : 'normal'}`;
       let promise = inFlight.get(runningKey);
       if (!promise) {
-        promise = provider.consultarPorDocumento({
-          document: primaryTarget.kind === 'document' ? primaryTarget.value : null,
-          partyName: primaryTarget.kind === 'name' ? primaryTarget.value : null,
-          extraPartyNames: primaryTarget.relatedNames || [],
-          searchKind: primaryTarget.kind,
-          documentMasked: primaryTarget.kind === 'document' ? maskDocument(primaryTarget.value) : null,
-          requestId,
-          userId,
-          debug: { enabled: isDebug, level: trf1DebugLevel },
-        });
+        promise = executeTarget(primaryTarget);
         inFlight.set(runningKey, promise);
       }
       try {
         source = await promise;
-        if (isFederation && primaryTarget.kind === 'document' && Number(source?.count || 0) === 0) {
-          const fallbackTarget = searchTargets.find((target) => target.kind === 'name');
-          if (fallbackTarget) {
-            source = await provider.consultarPorDocumento({
-              document: null,
-              partyName: fallbackTarget.value,
-              extraPartyNames: fallbackTarget.relatedNames || [],
-              searchKind: fallbackTarget.kind,
-              documentMasked: null,
-              requestId,
-              userId,
-              debug: { enabled: isDebug, level: trf1DebugLevel },
-            });
-          }
+
+        const fallbackTargets = searchTargets.slice(1).flatMap((target) => {
+          if (target.kind !== 'name') return [target];
+          return [
+            { ...target, relatedNames: [] },
+            ...((target.relatedNames || []).map((name) => ({ kind: 'name', value: name, relatedNames: [] }))),
+          ];
+        });
+
+        for (const fallbackTarget of fallbackTargets) {
+          if (Number(source?.count || 0) > 0) break;
+          source = await executeTarget(fallbackTarget);
         }
+
         if (source?.status === 'success') setCacheEntry(providerKey, source, cfg.cacheTtlMs);
       } finally {
         inFlight.delete(runningKey);

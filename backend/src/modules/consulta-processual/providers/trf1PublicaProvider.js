@@ -109,7 +109,7 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
     let beforeSubmitUrl = null;
     const inputDigits = String(document || '').replace(/\D/g, '');
     const inputMasked = String(documentMasked || document || '');
-    const targetPartyName = clean([partyName, ...(Array.isArray(extraPartyNames) ? extraPartyNames : [])].filter(Boolean).join(' '));
+    const targetPartyName = clean(partyName);
 
     try {
       const bootStart = nowMs();
