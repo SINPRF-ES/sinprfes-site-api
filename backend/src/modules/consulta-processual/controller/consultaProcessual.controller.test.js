@@ -83,4 +83,19 @@ describe('consultaProcessual.controller debug endpoint', () => {
       mode: 'institutional',
     });
   });
+
+  test('encaminha mode federation quando presente na query', async () => {
+    const req = { user: { id: 1, perfil_acesso: 'DIRETORIA' }, requestId: 'req-6', query: { mode: 'federation' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    service.consultarPorUsuarioLogado.mockResolvedValue({ ok: true, sources: [], totalItems: 0 });
+
+    await controller.consultarMe(req, res);
+
+    expect(service.consultarPorUsuarioLogado).toHaveBeenCalledWith({
+      userId: 1,
+      requestId: 'req-6',
+      debug: false,
+      mode: 'federation',
+    });
+  });
 });

@@ -117,7 +117,6 @@ function createPjeParser(source, sourceLabel) {
           processClass: normalizeProcessClass(row.processClass),
           processTitle: cleanText(row.processTitle) || null,
           subject: cleanText(row.subject) || null,
-          parties: cleanText(row.parties) || null,
           lastMovement: lastMovement || null,
           lastMovementAt: movementAtIso || null,
           rawLastMovementText: cleanText(rawMovementText) || null,
@@ -141,12 +140,10 @@ function parseTrf1RowsFromHtml(html, baseUrl = 'https://pje1g-consultapublica.tr
     const title = (tr.match(/<a[^>]*>([\s\S]*?)<\/a>/i) || [])[1]?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || null;
     const href = (tr.match(/<a[^>]*href=["']([^"']+)["']/i) || [])[1] || null;
     const processClass = (cleanHtml.match(/Classe:\s*([^]+?)\s+(?:CumSen|Partes:|Última movimentação:)/i) || [])[1]?.trim() || (cleanHtml.match(/Classe:\s*([^]+?)\s+Partes:/i) || [])[1]?.trim() || null;
-    const parties = (cleanHtml.match(/Partes:\s*([^]+?)\s+Última movimentação:/i) || [])[1]?.trim() || null;
     const listLastMovementText = (cleanHtml.match(/Última movimentação:\s*([^]+)$/i) || [])[1]?.trim() || null;
     return {
       processTitle: title,
       processClass,
-      parties,
       listLastMovementText,
       rawLastMovementText: listLastMovementText ? listLastMovementText.replace(/^(.*)\((\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})\)$/, '$2 - $1').trim() : null,
       detailsUrl: href ? new URL(href, baseUrl).href : null,
