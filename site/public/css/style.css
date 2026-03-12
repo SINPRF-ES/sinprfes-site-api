@@ -924,13 +924,10 @@ body {
     width: 17%;
   }
   .consulta-processual-table .col-class {
-    width: 18%;
-  }
-  .consulta-processual-table .col-parties {
-    width: 26%;
+    width: 28%;
   }
   .consulta-processual-table .col-movement {
-    width: 18%;
+    width: 34%;
   }
   .consulta-processual-table .col-actions {
     width: 12%;
