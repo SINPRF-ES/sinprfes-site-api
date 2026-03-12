@@ -635,13 +635,29 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           const movementDescription = clean(movementLine.replace(/\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s*-?\s*/, '')) || null;
           const textBlob = clean(detailText);
           const stripClassCode = (value) => clean(String(value || '').replace(/\s*\(\d{4,}\)\s*$/, ''));
+          const captureSectionFromLines = (labelRegex, stopRegexes = []) => {
+            const startIdx = detailLines.findIndex((line) => labelRegex.test(line));
+            if (startIdx < 0) return '';
+            const collected = [];
+            for (let idx = startIdx; idx < detailLines.length; idx += 1) {
+              const line = detailLines[idx];
+              if (idx > startIdx && stopRegexes.some((re) => re.test(line))) break;
+              collected.push(line);
+            }
+            const merged = clean(collected.join(' '));
+            return clean(merged.replace(labelRegex, '').replace(/^[:\-\s]+/, ''));
+          };
           const captureByLabel = (labelPattern, stopPattern) => {
             const m = textBlob.match(new RegExp(`${labelPattern}\\s*:?\\s*([\\s\\S]+?)(?=\\s+(?:${stopPattern})\\b|$)`, 'i'));
             return clean(m?.[1] || '');
           };
 
           const classFromDetail = stripClassCode(captureByLabel('Classe(?:\\s+judicial)?', 'Assunto|Partes|Valor\\s+da\\s+causa|Distribui[çc][aã]o|[ÚU]ltima\\s+movimenta[çc][aã]o|Polo'));
-          const partiesFromDetail = captureByLabel('Partes', 'Representantes|Movimenta[çc][aã]o|[ÚU]ltima\\s+movimenta[çc][aã]o|Valor\\s+da\\s+causa|Classe|Assunto|Polo');
+          const partiesFromDetail = captureByLabel('Partes', 'Representantes|Movimenta[çc][aã]o|[ÚU]ltima\\s+movimenta[çc][aã]o|Valor\\s+da\\s+causa|Classe|Assunto|Polo')
+            || captureSectionFromLines(/^(Partes|Polo\s+Ativo|Polo\s+Passivo)\s*:?/i, [
+              /^(Representantes|Movimenta[çc][aã]o|[ÚU]ltima\s+movimenta[çc][aã]o|Documentos)\b/i,
+              /^(Classe|Assunto|Valor\s+da\s+causa|Distribui[çc][aã]o)\b/i,
+            ]);
           const latestFromDetail = captureByLabel('[ÚU]ltima\\s+movimenta[çc][aã]o', 'Ver\\s+todos|Movimenta[çc][aã]o|Documentos|Polo|Classe|Partes');
 
           if (!it.processClass && classFromDetail) it.processClass = classFromDetail;
