@@ -626,6 +626,18 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
           const movementDescription = clean(movementLine.replace(/\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s*-?\s*/, '')) || null;
           const textBlob = clean(detailText);
           const stripClassCode = (value) => clean(String(value || '').replace(/\s*\(\d{4,}\)\s*$/, ''));
+          const captureSectionFromLines = (labelRegex, stopRegexes = []) => {
+            const startIdx = detailLines.findIndex((line) => labelRegex.test(line));
+            if (startIdx < 0) return '';
+            const collected = [];
+            for (let idx = startIdx; idx < detailLines.length; idx += 1) {
+              const line = detailLines[idx];
+              if (idx > startIdx && stopRegexes.some((re) => re.test(line))) break;
+              collected.push(line);
+            }
+            const merged = clean(collected.join(' '));
+            return clean(merged.replace(labelRegex, '').replace(/^[:\-\s]+/, ''));
+          };
           const captureByLabel = (labelPattern, stopPattern) => {
             const m = textBlob.match(new RegExp(`${labelPattern}\\s*:?\\s*([\\s\\S]+?)(?=\\s+(?:${stopPattern})\\b|$)`, 'i'));
             return clean(m?.[1] || '');
