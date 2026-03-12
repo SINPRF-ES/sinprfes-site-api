@@ -9,25 +9,28 @@ The site service handles both the institutional frontend and the `/api` proxy.
 ### 1) Single source of truth for asset version
 
 - `APP_VERSION` is read by `site/server.js` (environment variable).
-- If not provided, fallback is `2026.03.08-01`.
-- The server injects this version into all HTML responses for local CSS/JS/manifest/config URLs (`?v=APP_VERSION`).
+- If not provided, fallback uses deploy metadata (`DEPLOY_VERSION`, `RAILWAY_GIT_COMMIT_SHA`, `SOURCE_VERSION`) and finally `dev-<timestamp>` to guarantee unique version per deploy/restart.
+- The server injects this version into all HTML responses for local CSS/JS/images/icons/manifest/config URLs (`?v=APP_VERSION`).
 
 > Deploy rule: every release that changes layout/CSS/JS/PWA **must bump `APP_VERSION`**.
 
 ### 2) Cache headers
 
-- **HTML (all public pages):** `Cache-Control: no-cache, no-store, must-revalidate`
-- **Versioned CSS/JS:** `Cache-Control: public, max-age=31536000, immutable`
-- **Service Worker (`/service-worker.js`):** `Cache-Control: no-cache, no-store, must-revalidate`
-- **Manifest (`/manifest.webmanifest`):** `Cache-Control: no-cache, must-revalidate`
-- **Config (`/config.js`):** `Cache-Control: no-store, no-cache, must-revalidate`
+- **HTML (all public pages):** `Cache-Control: no-cache, no-store, must-revalidate`.
+- **Versioned assets (`?v=`):** `Cache-Control: public, max-age=31536000, immutable`.
+- **Unversioned JS/CSS/images/fonts:** `Cache-Control: no-cache, must-revalidate` (safe default against stale iOS cache).
+- **Service Worker (`/service-worker.js`):** `Cache-Control: no-cache, no-store, must-revalidate`.
+- **Manifest (`/manifest.webmanifest`):** `Cache-Control: no-cache, must-revalidate`.
+- **Config (`/config.js`) and `/version.json`:** `Cache-Control: no-store, no-cache, must-revalidate`.
 
 ### 3) Service Worker strategy
 
 - Cache names are versioned by `APP_VERSION`.
 - `activate` deletes incompatible old caches (`sinprfes-*`).
 - HTML/navigation requests are **network-first** (no cache-first for documents).
-- Static assets (CSS/JS/images/icons/manifest/config) are cached safely with versioned URLs.
+- Versioned assets use cache-first; unversioned assets use network-first fallback.
+- Client registration forces `updateViaCache: "none"`, listens to `updatefound` and `controllerchange`, and reloads once when a new worker controls the page.
+- `/version.json` is used as a defensive fallback to detect version drift on iOS/PWA installs.
 - `skipWaiting()` + `clients.claim()` are enabled for predictable upgrades.
 
 ### 4) Cloudflare

@@ -4,11 +4,13 @@
  */
 
 const APP_VERSION = '__APP_VERSION__';
+const SW_DEBUG = __SW_DEBUG__;
 const STATIC_CACHE = `sinprfes-static-${APP_VERSION}`;
 const RUNTIME_CACHE = `sinprfes-runtime-${APP_VERSION}`;
 const SW_LOG_PREFIX = '[sinprfes-sw]';
 
 const PRECACHE_URLS = [
+  '/index.html',
   '/manifest.webmanifest',
   '/config.js',
   '/css/style.css',
@@ -17,32 +19,10 @@ const PRECACHE_URLS = [
   '/js/main.js'
 ].map((url) => `${url}?v=${APP_VERSION}`);
 
-self.addEventListener('install', (event) => {
-  console.info(`${SW_LOG_PREFIX} install version=${APP_VERSION}`);
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const cacheNames = await caches.keys();
-    const allowedCaches = new Set([STATIC_CACHE, RUNTIME_CACHE]);
-
-    await Promise.all(
-      cacheNames
-        .filter((cacheName) => cacheName.startsWith('sinprfes-') && !allowedCaches.has(cacheName))
-        .map((cacheName) => {
-          console.info(`${SW_LOG_PREFIX} deleting old cache=${cacheName}`);
-          return caches.delete(cacheName);
-        })
-    );
-
-    await self.clients.claim();
-    console.info(`${SW_LOG_PREFIX} activate complete version=${APP_VERSION}`);
-  })());
-});
+function debugLog(message, ...args) {
+  if (!SW_DEBUG && self.location.hostname !== 'localhost') return;
+  console.info(`${SW_LOG_PREFIX} ${message}`, ...args);
+}
 
 function isHtmlNavigationRequest(request) {
   return request.mode === 'navigate' ||
@@ -59,22 +39,60 @@ function isCacheableAssetRequest(requestUrl) {
       requestUrl.pathname.startsWith('/icons/'));
 }
 
+function isVersionedRequest(requestUrl) {
+  if (requestUrl.searchParams.get('v')) return true;
+  return /\.[a-f0-9]{8,}\.(?:js|css|png|jpg|jpeg|svg|webp|woff2?)$/i.test(requestUrl.pathname);
+}
+
+self.addEventListener('install', (event) => {
+  debugLog(`install version=${APP_VERSION}`);
+  event.waitUntil(
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    const allowedCaches = new Set([STATIC_CACHE, RUNTIME_CACHE]);
+
+    await Promise.all(
+      cacheNames
+        .filter((cacheName) => cacheName.startsWith('sinprfes-') && !allowedCaches.has(cacheName))
+        .map((cacheName) => {
+          debugLog(`deleting old cache=${cacheName}`);
+          return caches.delete(cacheName);
+        })
+    );
+
+    await self.clients.claim();
+    debugLog(`activate complete version=${APP_VERSION}`);
+  })());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const requestUrl = new URL(request.url);
 
   if (request.method !== 'GET') return;
-
   if (requestUrl.pathname.startsWith('/api/')) return;
+  if (requestUrl.pathname === '/version.json') return;
 
-  // HTML sempre network-first para evitar documento defasado.
   if (isHtmlNavigationRequest(request)) {
     event.respondWith((async () => {
       try {
-        const networkResponse = await fetch(request);
-        return networkResponse;
+        return await fetch(request, { cache: 'no-store' });
       } catch (error) {
-        return Response.error();
+        const cache = await caches.open(STATIC_CACHE);
+        const fallback = await cache.match(`/index.html?v=${APP_VERSION}`);
+        return fallback || Response.error();
       }
     })());
     return;
@@ -82,14 +100,25 @@ self.addEventListener('fetch', (event) => {
 
   if (!isCacheableAssetRequest(requestUrl)) return;
 
-  // Assets versionados: cache-first.
   event.respondWith((async () => {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-
-    const networkResponse = await fetch(request);
     const runtimeCache = await caches.open(RUNTIME_CACHE);
-    runtimeCache.put(request, networkResponse.clone());
-    return networkResponse;
+
+    if (isVersionedRequest(requestUrl)) {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+
+      const networkResponse = await fetch(request);
+      runtimeCache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+
+    try {
+      const networkResponse = await fetch(request, { cache: 'no-store' });
+      runtimeCache.put(request, networkResponse.clone());
+      return networkResponse;
+    } catch (error) {
+      const cached = await runtimeCache.match(request);
+      return cached || Response.error();
+    }
   })());
 });

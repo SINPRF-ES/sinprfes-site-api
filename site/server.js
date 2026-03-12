@@ -5,10 +5,11 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 const port = process.env.PORT || 8080;
-const APP_VERSION = process.env.APP_VERSION || '2026.03.08-01';
+const APP_VERSION = process.env.APP_VERSION || process.env.DEPLOY_VERSION || process.env.RAILWAY_GIT_COMMIT_SHA || process.env.SOURCE_VERSION || `dev-${Date.now()}`;
+const SW_DEBUG = process.env.PWA_DEBUG === '1';
 const publicDir = path.join(__dirname, 'public');
 
-const versionedAssetPattern = /\b(href|src)="(\/(?:css|js)\/[^"]+|\/manifest\.webmanifest|\/config\.js)(?:\?[^\"]*)?"/g;
+const versionedAssetPattern = /\b(href|src)="(\/(?:css|js|img|icons)\/[^"]+|\/manifest\.webmanifest|\/config\.js)(?:\?[^\"]*)?"/g;
 
 function addVersionToAssetUrl(url) {
   const parsedUrl = new URL(url, 'http://localhost');
@@ -36,6 +37,14 @@ async function sendVersionedHtml(res, fileName) {
 // Health Check para o Service SITE
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'site', appVersion: APP_VERSION });
+});
+
+
+app.get('/version.json', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  return res.json({ appVersion: APP_VERSION, generatedAt: new Date().toISOString() });
 });
 
 // 1.1 Inserir rota explícita /config.js ANTES do proxy e do static
@@ -72,7 +81,10 @@ app.get('/service-worker.js', async (req, res, next) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Service-Worker-Allowed', '/');
-    return res.send(swTemplate.replace(/__APP_VERSION__/g, APP_VERSION));
+    const swPayload = swTemplate
+      .replace(/__APP_VERSION__/g, APP_VERSION)
+      .replace(/__SW_DEBUG__/g, SW_DEBUG ? 'true' : 'false');
+    return res.send(swPayload);
   } catch (error) {
     return next(error);
   }
@@ -123,13 +135,20 @@ app.use('/api', createProxyMiddleware({
 
 app.use((req, res, next) => {
   const ext = path.extname(req.path).toLowerCase();
+  const hasVersionParam = typeof req.query.v === 'string' && req.query.v.length > 0;
 
-  if (ext === '.css' || ext === '.js') {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  if (req.path === '/service-worker.js' || req.path === '/config.js' || req.path === '/version.json') {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   } else if (ext === '.html') {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   } else if (req.path === '/manifest.webmanifest') {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  } else if (ext === '.css' || ext === '.js' || ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.svg' || ext === '.webp' || ext === '.woff2' || ext === '.woff') {
+    if (hasVersionParam) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
   }
 
   next();
@@ -190,4 +209,5 @@ app.listen(port, () => {
   console.log(`SINPRF-ES Site rodando na porta ${port}`);
   console.log(`Proxy configurado: /api/* -> ${API_BASE_URL}/api/*`);
   console.log(`[cache] APP_VERSION=${APP_VERSION}`);
+  console.log(`[cache] SW_DEBUG=${SW_DEBUG}`);
 });

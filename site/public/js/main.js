@@ -107,35 +107,69 @@ document.addEventListener("DOMContentLoaded", () => {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     const appVersion = window.APP_VERSION || window.ENV_CONFIG?.APP_VERSION || 'dev';
-    console.info(`[pwa] appVersion=${appVersion}`);
+    const debugPwa = window.location.hostname === 'localhost' || localStorage.getItem('DEBUG_PWA') === '1';
+
+    const pwaLog = (...args) => {
+      if (!debugPwa) return;
+      console.info('[pwa]', ...args);
+    };
+
+    pwaLog(`appVersion=${appVersion}`);
 
     try {
       const registration = await navigator.serviceWorker.register('/service-worker.js', {
         updateViaCache: 'none'
       });
 
+      pwaLog('service worker registrado', registration.scope);
+
       registration.addEventListener('updatefound', () => {
+        pwaLog('updatefound disparado');
+
         const worker = registration.installing;
         if (!worker) return;
 
         worker.addEventListener('statechange', () => {
+          pwaLog('novo worker statechange', worker.state);
+
           if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-            console.info('[pwa] Nova versão do Service Worker instalada. Recarregando página.');
-            window.location.reload();
+            pwaLog('nova versão instalada, solicitando skipWaiting');
+            worker.postMessage({ type: 'SKIP_WAITING' });
           }
         });
+      });
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (window.__swControllerChanged) return;
+        window.__swControllerChanged = true;
+        pwaLog('controllerchange detectado; recarregando aplicação');
+        window.location.reload();
       });
 
       // Força checagem de update ao abrir a página.
       registration.update().catch(() => {});
 
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (window.__swControllerChanged) return;
-        window.__swControllerChanged = true;
-        console.info('[pwa] Controller do Service Worker atualizado.');
-      });
+      // Fallback extra: compara versão remota para evitar travamento em iOS.
+      try {
+        const response = await fetch('/version.json', { cache: 'no-store' });
+        if (response.ok) {
+          const payload = await response.json();
+          const remoteVersion = payload?.appVersion;
+          pwaLog('versão remota detectada', remoteVersion);
+
+          if (remoteVersion && remoteVersion !== appVersion && !sessionStorage.getItem('pwa-version-reloaded')) {
+            sessionStorage.setItem('pwa-version-reloaded', '1');
+            pwaLog('versão divergente detectada; recarregando aplicação');
+            window.location.reload();
+          }
+        }
+      } catch (_err) {
+        // silencioso em produção
+      }
     } catch (err) {
-      console.warn('Registro do Service Worker falhou:', err);
+      if (debugPwa) {
+        console.warn('Registro do Service Worker falhou:', err);
+      }
     }
   });
 }
