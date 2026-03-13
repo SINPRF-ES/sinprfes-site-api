@@ -26,6 +26,7 @@
   <script src="/js/area-filiado/parentesco-utils.js" defer></script>
 
   <!-- Módulos de Seção -->
+  <script src="/js/area-filiado/navigation-config.js" defer></script>
   <script src="/js/area-filiado/navegacao.js" defer></script>
   <script src="/js/area-filiado/home.js" defer></script>
   <script src="/js/area-filiado/seguranca.js" defer></script>
@@ -53,35 +54,17 @@
 <body class="af-body">
   <div class="af-container">
     <div class="af-main-layout">
+      <button id="af-mobile-menu-toggle" class="af-mobile-menu-toggle" type="button" aria-label="Abrir menu" aria-controls="af-sidebar" aria-expanded="false">☰</button>
+      <div id="af-mobile-sidebar-backdrop" class="af-mobile-sidebar-backdrop" hidden></div>
+
       <!-- Sidebar / Nav -->
-      <nav class="af-sidebar">
+      <nav class="af-sidebar" id="af-sidebar" aria-label="Menu principal">
         <div class="af-sidebar-header">
           <div class="af-sidebar-logo-wrap"><img src="/img/placeholder-sinprf.png" alt="Logo SINPRF/ES" class="af-sidebar-logo"></div>
           <span class="af-sidebar-title">SINPRF/ES</span>
         </div>
 
-        <div class="af-sidebar-nav" role="tablist" aria-orientation="vertical">
-          <button class="af-nav-item active" data-target="sec-home" id="nav-home" role="tab" aria-selected="true" aria-controls="sec-home"><span aria-hidden="true">🏠</span> Página Inicial</button>
-          <button class="af-nav-item" data-target="sec-noticias" id="nav-noticias" role="tab" aria-selected="false" aria-controls="sec-noticias"><span aria-hidden="true">📰</span> Informes</button>
-          <button class="af-nav-item" data-target="sec-meus-dados" id="nav-meus-dados" role="tab" aria-selected="false" aria-controls="sec-meus-dados"><span aria-hidden="true">👤</span> Meus Dados</button>
-          <button class="af-nav-item" data-target="sec-filiados" id="nav-filiados" role="tab" aria-selected="false" aria-controls="sec-filiados"><span aria-hidden="true">👥</span> Filiados</button>
-          <button class="af-nav-item" data-target="sec-publicacoes" id="nav-publicacoes" role="tab" aria-selected="false" aria-controls="sec-publicacoes"><span aria-hidden="true">📚</span> Publicações</button>
-          <button class="af-nav-item" data-target="sec-ressarcimento" id="nav-ressarcimento" role="tab" aria-selected="false" aria-controls="sec-ressarcimento"><span aria-hidden="true">💸</span> Ressarcimento</button>
-          <button class="af-nav-item" data-target="sec-jogos" id="nav-jogos" role="tab" aria-selected="false" aria-controls="sec-jogos"><span aria-hidden="true">🏆</span> Jogos 2026</button>
-          <button class="af-nav-item" data-target="sec-assembleias" id="nav-assembleias" role="tab" aria-selected="false" aria-controls="sec-assembleias"><span aria-hidden="true">🗳️</span> Assembleias e Votações</button>
-          <button class="af-nav-item" data-target="sec-enquetes" id="nav-enquetes" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-enquetes"><span aria-hidden="true">🗨️</span> Enquetes</button>
-          <button class="af-nav-item" data-target="sec-estatuto" id="nav-estatuto" role="tab" aria-selected="false" aria-controls="sec-estatuto"><span aria-hidden="true">📜</span> Estatuto</button>
-          <button class="af-nav-item" data-target="sec-seguranca" id="nav-seguranca" role="tab" aria-selected="false" aria-controls="sec-seguranca"><span aria-hidden="true">🔒</span> Segurança</button>
-
-          <!-- Gestão -->
-          <button class="af-nav-item" data-target="sec-notificacoes" id="nav-notificacoes" role="tab" aria-selected="false" aria-controls="sec-notificacoes"><span aria-hidden="true">📢</span> Notificações</button>
-          <button class="af-nav-item" data-target="sec-repasse" id="nav-repasse" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-repasse"><span aria-hidden="true">💱</span> Repasse</button>
-          <button class="af-nav-item" data-target="sec-relatorios" id="nav-relatorios" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-relatorios"><span aria-hidden="true">📊</span> Relatórios</button>
-          <button class="af-nav-item" data-target="sec-consulta-processual" id="nav-consulta-processual" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-consulta-processual"><span aria-hidden="true">⚖️</span> Consulta Processual</button>
-          <button class="af-nav-item" id="nav-novo-filiado" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-filiados"><span aria-hidden="true">➕</span> Novo Filiado</button>
-          <button class="af-nav-item" data-target="sec-cms" id="nav-cms" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-cms"><span aria-hidden="true">🌐</span> Site (CMS)</button>
-          <button class="af-nav-item" data-target="sec-diagnostico" id="nav-diagnostico" style="display:none;" role="tab" aria-selected="false" aria-controls="sec-diagnostico"><span aria-hidden="true">🛠️</span> Diagnóstico</button>
-        </div>
+        <div class="af-sidebar-nav" id="af-sidebar-nav" role="tablist" aria-orientation="vertical"></div>
 
         <div class="af-sidebar-footer">
           <button id="btn-logout" class="af-logout-btn" aria-label="Sair da conta"><span aria-hidden="true">🚪</span> Sair</button>
