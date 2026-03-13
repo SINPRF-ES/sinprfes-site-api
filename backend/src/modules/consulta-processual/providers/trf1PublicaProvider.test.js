@@ -122,3 +122,92 @@ test('TRF1 provider preenche partes via seção Polo Ativo/Polo Passivo no detal
   expect(result.items[0].parties).toContain('ALESSANDRO ARAUJO DE MELLO');
   expect(result.items[0].parties).toContain('UNIÃO FEDERAL');
 });
+
+test('TRF1 provider abre detalhe para todos os itens até o limite configurado', async () => {
+  let currentUrl = 'https://pje1g-consultapublica.trf1.jus.br/consultapublica/ConsultaPublica/listView.seam';
+  const detailUrlsVisited = [];
+
+  const mockLocator = (selector) => {
+    const normalized = String(selector || '').replace(/\\/g, '');
+    if (normalized === '#fPP:dpDec:documentoParte') {
+      return {
+        fill: jest.fn().mockResolvedValue(undefined),
+        dispatchEvent: jest.fn().mockResolvedValue(undefined),
+        inputValue: jest.fn().mockResolvedValue('03.658.044/0001-00'),
+        count: jest.fn().mockResolvedValue(1),
+        click: jest.fn().mockResolvedValue(undefined),
+        focus: jest.fn().mockResolvedValue(undefined),
+      };
+    }
+    if (normalized === '#fPP:searchProcessos') return { click: jest.fn().mockResolvedValue(undefined), count: jest.fn().mockResolvedValue(1), scrollIntoViewIfNeeded: jest.fn().mockResolvedValue(undefined), boundingBox: jest.fn().mockResolvedValue({ x: 10, y: 10, width: 100, height: 30 }) };
+    if (normalized === '#fPP:processosGridPanel' || normalized === '#fPP:processosGridPanel_body') {
+      return {
+        innerText: jest.fn().mockResolvedValue('3 resultados encontrados'),
+        innerHTML: jest.fn().mockResolvedValue('<div>3 resultados encontrados</div>'),
+        count: jest.fn().mockResolvedValue(1),
+      };
+    }
+    if (normalized === '#fPP:processosTable a[href]') return { count: jest.fn().mockResolvedValue(3) };
+    if (normalized === '#fPP:processosTable') return { innerHTML: jest.fn().mockResolvedValue('<table><tbody><tr></tr></tbody></table>') };
+    if (selector === 'input[type="radio"]') return { count: jest.fn().mockResolvedValue(1) };
+    if (String(selector).includes('input[type="radio"]')) return { first: jest.fn().mockReturnValue({ check: jest.fn().mockResolvedValue(undefined) }) };
+    if (selector === 'body') return { innerText: jest.fn().mockResolvedValue('Classe: CUMPRIMENTO DE SENTENÇA CONTRA A FAZENDA PÚBLICA Última movimentação: Atualização processual (20/10/2025 20:12:22)') };
+    return { innerText: jest.fn().mockResolvedValue(''), innerHTML: jest.fn().mockResolvedValue(''), count: jest.fn().mockResolvedValue(0) };
+  };
+
+  const page = {
+    on: jest.fn(),
+    goto: jest.fn().mockImplementation(async (u) => { currentUrl = u; }),
+    url: jest.fn(() => currentUrl),
+    title: jest.fn().mockResolvedValue('Consulta Pública Processual'),
+    content: jest.fn().mockResolvedValue('<html><body>3 resultados encontrados</body></html>'),
+    screenshot: jest.fn().mockResolvedValue(undefined),
+    close: jest.fn().mockResolvedValue(undefined),
+    waitForTimeout: jest.fn().mockResolvedValue(undefined),
+    locator: jest.fn(mockLocator),
+    keyboard: { press: jest.fn().mockResolvedValue(undefined), type: jest.fn().mockResolvedValue(undefined) },
+    mouse: { move: jest.fn().mockResolvedValue(undefined), down: jest.fn().mockResolvedValue(undefined), up: jest.fn().mockResolvedValue(undefined) },
+    evaluate: jest.fn().mockResolvedValue({
+      declaredResultsCount: 3,
+      panelText: '3 resultados encontrados',
+      linksFound: 3,
+      hasGridPanel: true,
+      hasGridPanelBody: true,
+      hasProcessTable: true,
+      cnjMatchesFound: 3,
+      rows: [
+        { processTitle: '0000001-10.2024.4.01.3400', detailsUrl: 'https://trf1.test/1', processClass: null, listLastMovementText: null, rawLastMovementText: null },
+        { processTitle: '0000002-10.2024.4.01.3400', detailsUrl: 'https://trf1.test/2', processClass: null, listLastMovementText: null, rawLastMovementText: null },
+        { processTitle: '0000003-10.2024.4.01.3400', detailsUrl: 'https://trf1.test/3', processClass: null, listLastMovementText: null, rawLastMovementText: null },
+      ],
+    }),
+  };
+
+  const detailPage = {
+    goto: jest.fn().mockImplementation(async (u) => { detailUrlsVisited.push(u); }),
+    url: jest.fn().mockReturnValue('https://trf1.test/detail'),
+    locator: jest.fn(mockLocator),
+    keyboard: { press: jest.fn().mockResolvedValue(undefined), type: jest.fn().mockResolvedValue(undefined) },
+    mouse: { move: jest.fn().mockResolvedValue(undefined), down: jest.fn().mockResolvedValue(undefined), up: jest.fn().mockResolvedValue(undefined) },
+    screenshot: jest.fn().mockResolvedValue(undefined),
+    content: jest.fn().mockResolvedValue('<html>detail</html>'),
+    close: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const context = {
+    newPage: jest.fn().mockResolvedValueOnce(page).mockResolvedValue(detailPage),
+    close: jest.fn().mockResolvedValue(undefined),
+  };
+
+  launchBrowser.mockResolvedValue({ ok: true, browser: { newContext: jest.fn().mockResolvedValue(context), close: jest.fn().mockResolvedValue(undefined) } });
+  process.env.CONSULTA_PROCESSUAL_MAX_DETAIL_PAGES = '30';
+
+  const provider = new Trf1PublicaProvider();
+  const result = await provider.consultarPorDocumento({ document: '03658044000100', requestId: 'x', userId: 1, debug: { enabled: false } });
+
+  expect(result.status).toBe('success');
+  expect(result.items).toHaveLength(3);
+  expect(detailUrlsVisited).toEqual(['https://trf1.test/1', 'https://trf1.test/2', 'https://trf1.test/3']);
+
+  delete process.env.CONSULTA_PROCESSUAL_MAX_DETAIL_PAGES;
+});

@@ -251,20 +251,22 @@
       controls.style.display = 'block';
       controls.innerHTML = `
         <div class="ui-card consulta-processual-mode-card">
-          <div class="consulta-processual-mode-grid">
+          <div class="consulta-processual-mode-row">
             <strong class="consulta-processual-mode-title">Tipo de consulta:</strong>
-            <label class="consulta-processual-mode-option">
-              <input type="radio" name="consulta-mode" value="personal" checked>
-              <span>Meus processos (CPF)</span>
-            </label>
-            <label class="consulta-processual-mode-option">
-              <input type="radio" name="consulta-mode" value="institutional">
-              <span>Processos do sindicato (CNPJ)</span>
-            </label>
-            <label class="consulta-processual-mode-option">
-              <input type="radio" name="consulta-mode" value="federation">
-              <span>Processos da FENAPRF (CNPJ)</span>
-            </label>
+            <div class="consulta-processual-mode-grid" role="radiogroup" aria-label="Tipo de consulta">
+              <label class="consulta-processual-mode-option">
+                <input type="radio" name="consulta-mode" value="personal" checked>
+                <span>Meus processos (CPF)</span>
+              </label>
+              <label class="consulta-processual-mode-option">
+                <input type="radio" name="consulta-mode" value="institutional">
+                <span>Processos do sindicato (CNPJ)</span>
+              </label>
+              <label class="consulta-processual-mode-option">
+                <input type="radio" name="consulta-mode" value="federation">
+                <span>Processos da FENAPRF (CNPJ)</span>
+              </label>
+            </div>
           </div>
         </div>
       `;

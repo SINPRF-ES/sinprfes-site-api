@@ -31,6 +31,7 @@ function getConsultaProcessualConfig() {
     playwrightExtraArgs: String(process.env.PLAYWRIGHT_EXTRA_ARGS || '--no-sandbox,--disable-setuid-sandbox').split(',').map((it) => it.trim()).filter(Boolean),
     cacheTtlMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_CACHE_TTL_MS, 5 * 60 * 1000),
     minIntervalMs: parseIntSafe(process.env.CONSULTA_PROCESSUAL_MIN_INTERVAL_MS, 3000),
+    maxDetailPages: parseIntSafe(process.env.CONSULTA_PROCESSUAL_MAX_DETAIL_PAGES, 30),
     institutionalPublicVisible: parseBool(process.env.CONSULTA_PROCESSUAL_INSTITUTIONAL_PUBLIC_VISIBLE, false),
   };
 }
