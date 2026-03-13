@@ -245,8 +245,12 @@ body {
 
 /* Área do Filiado - Layout & Navigation */
 .af-body { margin: 0; padding: 0; background: var(--ui-bg); overflow-x: hidden; }
+.af-body.af-mobile-menu-open { overflow: hidden; }
 .af-container { display: flex; flex-direction: column; min-height: 100dvh; }
 .af-main-layout { display: flex; flex: 1; position: relative; }
+
+.af-mobile-menu-toggle,
+.af-mobile-sidebar-backdrop { display: none; }
 
 .af-sidebar {
     width: 260px;
@@ -509,9 +513,50 @@ body {
 
 @media (max-width: 768px) {
     .af-main-layout { flex-direction: column; }
-    .af-sidebar { width: 100%; height: auto; position: static; }
-    .af-sidebar-nav { display: flex; overflow-x: auto; padding: 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .af-nav-item { padding: 15px 20px; white-space: nowrap; flex-shrink: 0; }
+    .af-mobile-menu-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      top: calc(12px + env(safe-area-inset-top));
+      left: 12px;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid var(--ui-border);
+      background: #fff;
+      color: var(--ui-primary);
+      font-size: 1.3rem;
+      z-index: 1201;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+    }
+    .af-mobile-sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1198;
+      background: rgba(0, 0, 0, 0.48);
+    }
+    .af-sidebar {
+      width: min(84vw, 340px);
+      height: 100dvh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      transform: translateX(-100%);
+      transition: transform 0.24s ease;
+      z-index: 1200;
+    }
+    .af-sidebar.is-mobile-open { transform: translateX(0); }
+    .af-sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 12px 0 calc(20px + env(safe-area-inset-bottom));
+      min-height: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .af-nav-item { padding: 14px 16px; white-space: normal; flex-shrink: 0; }
     .af-content { padding: 20px; }
 }
 

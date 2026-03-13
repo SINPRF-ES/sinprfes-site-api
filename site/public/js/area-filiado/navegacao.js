@@ -6,6 +6,42 @@
 (function (global) {
   if (global.Navegacao) return;
 
+  function configurarDrawerMobile() {
+    const sidebar = document.getElementById('af-sidebar');
+    const toggle = document.getElementById('af-mobile-menu-toggle');
+    const backdrop = document.getElementById('af-mobile-sidebar-backdrop');
+    if (!sidebar || !toggle || !backdrop) return;
+
+    const mobileMq = window.matchMedia('(max-width: 768px)');
+
+    function setOpen(open) {
+      if (!mobileMq.matches) {
+        sidebar.classList.remove('is-mobile-open');
+        backdrop.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      sidebar.classList.toggle('is-mobile-open', open);
+      backdrop.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      document.body.classList.toggle('af-mobile-menu-open', open);
+    }
+
+    toggle.addEventListener('click', () => setOpen(!sidebar.classList.contains('is-mobile-open')));
+    backdrop.addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    });
+    mobileMq.addEventListener('change', () => setOpen(false));
+
+    sidebar.addEventListener('click', (event) => {
+      const clickedNav = event.target.closest('.af-nav-item');
+      if (clickedNav) setOpen(false);
+    });
+
+    setOpen(false);
+  }
+
   function configurarNavegacao(callbackMudanca) {
     const navButtons = document.querySelectorAll(".af-nav-item");
 
@@ -72,7 +108,8 @@
   }
 
   global.Navegacao = {
-    configurarNavegacao
+    configurarNavegacao,
+    configurarDrawerMobile
   };
 
 })(typeof window !== "undefined" ? window : global);

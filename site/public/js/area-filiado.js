@@ -23,7 +23,8 @@
     }
 
     const { obterUserInfo, exibirAlertaFlutuante } = window.Utils || {};
-    const { configurarNavegacao } = window.Navegacao || {};
+    const { configurarNavegacao, configurarDrawerMobile } = window.Navegacao || {};
+    const { renderSidebarNav, syncVisibility } = window.AreaFiliadoNavigation || {};
     const { inicializarHome } = window.Home || {};
     const { carregarMeusDados } = window.MeusDados || {};
     const { inicializarFiliados, abrirNovoFiliado } = window.FiliadosAdmin || {};
@@ -76,39 +77,14 @@
      * @param {Object} info - Objeto userInfo com perfil e permissions.
      */
     function atualizarVisibilidadeAbas(info) {
-      const p = (info.perfil_acesso || info.perfil || "FILIADO").toUpperCase();
-      const perms = info.permissions || [];
-      const hasPerm = (perm) => perms.includes("*") || perms.includes(perm);
-      const isComunicador = p === "COMUNICADOR";
-
-      const abasConfig = [
-        { id: "nav-filiados", visivel: !isComunicador },
-        { id: "nav-publicacoes", visivel: !isComunicador },
-        { id: "nav-jogos", visivel: !isComunicador },
-        { id: "nav-assembleias", visivel: !isComunicador },
-        { id: "nav-repasse", visivel: !isComunicador },
-        { id: "nav-noticias", visivel: true },
-        { id: "nav-cms", visivel: hasPerm('EDIT_CONTENT') },
-        { id: "nav-notificacoes", visivel: hasPerm('PUSH_GERENCIAR') },
-        { id: "nav-diagnostico", visivel: hasPerm('PUSH_GERENCIAR') },
-        { id: "nav-relatorios", visivel: hasPerm('RELATORIOS_VER') },
-        { id: "nav-consulta-processual", visivel: hasPerm('CONSULTA_PROCESSUAL_CONSULTAR') },
-        { id: "nav-enquetes", visivel: hasPerm('ENQUETES_GERENCIAR') },
-        { id: "nav-novo-filiado", visivel: !isComunicador && hasPerm('CREATE_FILIADO') }
-      ];
-
-      abasConfig.forEach((aba) => {
-        const el = document.getElementById(aba.id);
-        if (el) {
-          el.style.display = aba.visivel ? "block" : "none";
-        } else {
-          console.warn(`[WARNING] Item de navegação esperado não encontrado: ${aba.id}`);
-        }
-      });
+      if (syncVisibility) syncVisibility(info);
     }
 
     console.log("Perfil inicial (Cache):", perfil);
+    const sidebarNav = document.getElementById('af-sidebar-nav');
+    if (renderSidebarNav) renderSidebarNav(sidebarNav);
     atualizarVisibilidadeAbas(userInfo);
+    if (configurarDrawerMobile) configurarDrawerMobile();
 
     // 2. Configura Navegação Global
     if (configurarNavegacao) {
