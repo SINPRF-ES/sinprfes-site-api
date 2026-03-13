@@ -635,8 +635,8 @@ class Trf1PublicaProvider extends ConsultaProcessualProvider {
         discardReasons: discardedCount ? ['parser_filters'] : [],
       });
 
-      const validRows = items.filter((it) => it.detailsUrl).slice(0, 2);
-      recordStep('H_open_detail_start', { validRows: validRows.length });
+      const validRows = items.filter((it) => it.detailsUrl).slice(0, cfg.maxDetailPages);
+      recordStep('H_open_detail_start', { validRows: validRows.length, maxDetailPages: cfg.maxDetailPages });
       for (let i = 0; i < validRows.length; i += 1) {
         const it = validRows[i];
         recordStep('H_open_detail_attempt', { index: i, processNumber: it.processNumber, detailsUrl: it.detailsUrl });

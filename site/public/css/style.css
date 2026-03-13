@@ -802,11 +802,15 @@ body {
   margin-bottom: 12px;
   padding: 12px;
 }
+.consulta-processual-mode-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .consulta-processual-mode-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
-  align-items: center;
 }
 .consulta-processual-mode-title {
   margin: 0;
@@ -905,9 +909,18 @@ body {
   justify-content: center;
 }
 @media (min-width: 768px) {
+  .consulta-processual-mode-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+  }
+  .consulta-processual-mode-title {
+    min-width: 180px;
+  }
   .consulta-processual-mode-grid {
-    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(0, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    flex: 1;
   }
   .consulta-processual-mode-option {
     align-items: center;
