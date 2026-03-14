@@ -18,6 +18,7 @@ function escopoPublico(req, _res, next) {
 
 // Leitura
 router.get("/", escopoPublico, optionalAuth, noticiasController.listar);
+router.get("/public/:publicRef", escopoPublico, optionalAuth, noticiasController.detalharPublicaPorRef);
 router.get("/:id", escopoPublico, optionalAuth, noticiasController.detalhar);
 
 // Gestão
