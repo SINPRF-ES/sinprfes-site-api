@@ -9,6 +9,75 @@ const { ehPerfilGestao } = require("../shared/canon");
 const AUDIENCIAS_VALIDAS = ["INTERNA", "PUBLICA"];
 const NOTICIAS_POR_PAGINA = 3;
 
+function slugifyTitulo(titulo) {
+  const base = String(titulo || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 160);
+
+  return base || "noticia";
+}
+
+function formatPublicRefTimestamp(dateValue) {
+  const date = new Date(dateValue);
+  const yyyy = date.getUTCFullYear();
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mi = String(date.getUTCMinutes()).padStart(2, "0");
+  const ss = String(date.getUTCSeconds()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
+}
+
+async function gerarIndexacaoPublicaNoticia(client, noticia) {
+  const noticiaId = noticia.id;
+  const publishedAt = noticia.published_at || noticia.data_noticia || noticia.created_at || new Date();
+  const tsPart = formatPublicRefTimestamp(publishedAt);
+  const baseSlug = slugifyTitulo(noticia.titulo);
+
+  let slugFinal = baseSlug;
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const slugCandidate = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
+    const { rows } = await client.query(
+      `SELECT 1
+       FROM noticias
+       WHERE audiencia = 'PUBLICA'
+         AND slug = $1
+         AND id <> $2
+       LIMIT 1`,
+      [slugCandidate, noticiaId]
+    );
+
+    if (rows.length === 0) {
+      slugFinal = slugCandidate;
+      break;
+    }
+  }
+
+  let publicRefFinal = `${tsPart}-${slugFinal}`;
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const publicRefCandidate = attempt === 0 ? publicRefFinal : `${tsPart}-${slugFinal}-${attempt + 1}`;
+    const { rows } = await client.query(
+      `SELECT 1 FROM noticias WHERE public_ref = $1 AND id <> $2 LIMIT 1`,
+      [publicRefCandidate, noticiaId]
+    );
+
+    if (rows.length === 0) {
+      publicRefFinal = publicRefCandidate;
+      break;
+    }
+  }
+
+  return {
+    slug: slugFinal,
+    publicRef: publicRefFinal,
+  };
+}
+
 function parseNoticiaId(req, res, requestId) {
     const id = parseUuid(String(req.params.id || ""));
     if (!id) {
@@ -309,12 +378,41 @@ exports.criar = async (req, res) => {
       });
     }
 
-    const { rows } = await pool.query(
-      `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date)
-       VALUES ($1, $2, $3, 'PUBLICADA', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))
-       RETURNING *`,
-      [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), data_noticia || null]
-    );
+    const publishedAtBase = data_noticia || new Date().toISOString();
+    const client = await pool.connect();
+    let createdRow;
+
+    try {
+      await client.query("BEGIN");
+      const { rows: createdRows } = await client.query(
+        `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date, published_at)
+         VALUES ($1, $2, $3, 'PUBLICADA', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()), COALESCE($8, NOW()))
+         RETURNING *`,
+        [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), publishedAtBase]
+      );
+
+      createdRow = createdRows[0];
+
+      if (audienciaFinal === "PUBLICA") {
+        const indexacao = await gerarIndexacaoPublicaNoticia(client, createdRow);
+        const { rows: indexedRows } = await client.query(
+          `UPDATE noticias
+           SET slug = $1,
+               public_ref = $2
+           WHERE id = $3
+           RETURNING *`,
+          [indexacao.slug, indexacao.publicRef, createdRow.id]
+        );
+        createdRow = indexedRows[0];
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
 
     log.info("NOTICIAS_CREATE_SUCCESS", {
       endpoint,
@@ -324,7 +422,7 @@ exports.criar = async (req, res) => {
       profile,
       durationMs: Date.now() - start
     });
-    return res.status(201).json({ ...rows[0], requestId });
+    return res.status(201).json({ ...createdRow, requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao criar notícia.");
   }
@@ -444,17 +542,45 @@ exports.publicar = async (req, res) => {
       return res.status(409).json({ success: false, message: "Notícia arquivada não pode ser publicada novamente.", requestId });
     }
 
-    const { rows } = await pool.query(
-      `UPDATE noticias
-       SET status = 'PUBLICADA',
-           published_at = COALESCE(published_at, NOW())
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
+    const client = await pool.connect();
+    let publishRows;
+    try {
+      await client.query("BEGIN");
+      const { rows: baseRows } = await client.query(
+        `UPDATE noticias
+         SET status = 'PUBLICADA',
+             published_at = COALESCE(published_at, NOW())
+         WHERE id = $1
+         RETURNING *`,
+        [id]
+      );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+      if (baseRows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+      }
+
+      let noticiaPublicada = baseRows[0];
+      if (noticiaPublicada.audiencia === "PUBLICA" && !noticiaPublicada.public_ref) {
+        const indexacao = await gerarIndexacaoPublicaNoticia(client, noticiaPublicada);
+        const { rows: indexedRows } = await client.query(
+          `UPDATE noticias
+           SET slug = $1,
+               public_ref = $2
+           WHERE id = $3
+           RETURNING *`,
+          [indexacao.slug, indexacao.publicRef, noticiaPublicada.id]
+        );
+        noticiaPublicada = indexedRows[0];
+      }
+
+      publishRows = [noticiaPublicada];
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
 
     log.info("NOTICIAS_PUBLISH_SUCCESS", {
@@ -466,9 +592,46 @@ exports.publicar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json({ ...rows[0], requestId });
+    return res.json({ ...publishRows[0], requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao publicar notícia.");
+  }
+};
+
+exports.detalharPublicaPorRef = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
+  const publicRef = String(req.params.publicRef || "").trim();
+
+  if (!publicRef) {
+    return res.status(400).json({ success: false, message: "Referência pública inválida.", requestId });
+  }
+
+  try {
+    const { rows: newsRows } = await pool.query(
+      `SELECT n.*, f.nome AS autor_nome
+       FROM noticias n
+       LEFT JOIN filiados f ON n.autor_id = f.id
+       WHERE n.public_ref = $1
+         AND n.audiencia = 'PUBLICA'
+         AND n.status = 'PUBLICADA'
+       LIMIT 1`,
+      [publicRef]
+    );
+
+    if (newsRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
+    }
+
+    const noticia = newsRows[0];
+    const { rows: midiaRows } = await pool.query(
+      "SELECT * FROM noticia_midias WHERE noticia_id = $1 ORDER BY ordem ASC",
+      [noticia.id]
+    );
+
+    noticia.midias = midiaRows;
+    return res.json({ ...noticia, requestId });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao detalhar notícia.");
   }
 };
 

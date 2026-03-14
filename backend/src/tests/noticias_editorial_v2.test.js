@@ -32,8 +32,21 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
 
   test('Caso 1: Criar notícia atual', async () => {
     pool.query
-      .mockResolvedValueOnce({ rows: [] }) // Check existing current news
-      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'TEST_N1', status_editorial: 'ATUAL', is_editable: true }] }); // Insert news
+      .mockResolvedValueOnce({ rows: [] }); // Check existing current news
+
+    const txClient = {
+      query: jest.fn(),
+      release: jest.fn(),
+    };
+    pool.connect.mockResolvedValue(txClient);
+
+    txClient.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'TEST_N1', status_editorial: 'ATUAL', is_editable: true, audiencia: 'PUBLICA' }] }) // Insert
+      .mockResolvedValueOnce({ rows: [] }) // check slug uniqueness
+      .mockResolvedValueOnce({ rows: [] }) // check public_ref uniqueness
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'TEST_N1', status_editorial: 'ATUAL', is_editable: true, audiencia: 'PUBLICA', slug: 'test-n1', public_ref: '20260314-145900-test-n1' }] }) // index update
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(app)
       .post('/api/noticias')
@@ -105,5 +118,25 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
     expect(res.body.items.length).toBe(3);
     expect(res.body.pagination).toBeDefined();
     expect(res.body.pagination.totalPages).toBe(4); // ceil(10/3)
+  });
+
+  test('Detalhe público por public_ref retorna notícia publicada', async () => {
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, public_ref: '20260312-143000-teste-noticia', audiencia: 'PUBLICA', status: 'PUBLICADA' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'm1', noticia_id: VALID_UUID, tipo: 'IMAGEM', url: 'https://cdn/image.jpg' }] });
+
+    const res = await request(app).get('/api/noticias/public/20260312-143000-teste-noticia');
+
+    expect(res.status).toBe(200);
+    expect(res.body.public_ref).toBe('20260312-143000-teste-noticia');
+    expect(Array.isArray(res.body.midias)).toBe(true);
+  });
+
+  test('Detalhe público por public_ref retorna 404 quando não existe/publicada', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).get('/api/noticias/public/20260312-143000-inexistente');
+
+    expect(res.status).toBe(404);
   });
 });

@@ -112,6 +112,14 @@ app.get(/^\/[^/]+\.html$/, async (req, res, next) => {
   }
 });
 
+app.get('/noticias/:publicRef', async (_req, res, next) => {
+  try {
+    return await sendVersionedHtml(res, 'noticia.html');
+  } catch (error) {
+    return next(error);
+  }
+});
+
 // Proxy do site -> API
 const API_BASE_URL = process.env.API_BASE_URL || 'https://api.sinprfes.org.br';
 
