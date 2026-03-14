@@ -121,7 +121,13 @@
 
             try {
                 const res = await window.Api.apiFetch(`/api/publicacoes/arquivo/${idArquivo}`);
-                if (!res.ok) throw new Error("Erro API");
+
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({}));
+                    const requestId = errorData.requestId || "N/A";
+                    throw new Error(`Falha no carregamento (Status: ${res.status}, Request ID: ${requestId})`);
+                }
+
                 const blob = await res.blob();
 
                 // Detecta tipo para nome do arquivo no download
@@ -142,8 +148,9 @@
                 iframe.style.display = 'block';
             } catch (error) {
                 console.error(error);
-                alert("Não foi possível carregar o documento.");
+                alert(error.message || "Não foi possível carregar o documento.");
                 modal.classList.remove('open');
+                if (window.Utils?.unlockScroll) window.Utils.unlockScroll();
             }
         }
 
@@ -152,28 +159,17 @@
             if (folderId) url += `?folderId=${folderId}`;
 
             const r = await window.Api.apiFetch(url);
-            if(!r.ok) throw new Error("Erro API");
+            if(!r.ok) {
+                const errorData = await r.json().catch(() => ({}));
+                const requestId = errorData.requestId || "N/A";
+                throw new Error(`Erro ao listar documentos (Request ID: ${requestId})`);
+            }
             const payload = await r.json();
+
+            // O Backend agora é o single source of truth para filtragem de pastas.
             let lista = Array.isArray(payload)
                 ? payload
                 : (Array.isArray(payload?.publicacoes) ? payload.publicacoes : []);
-
-            // Filtragem de Pastas Técnicas (Apps, Noticias) para não-gestão
-            const perfil = (options.perfil || "").toUpperCase();
-            const perfisGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"];
-            if (!perfisGestao.includes(perfil)) {
-                const pastasOcultas = ["APPS", "APP", "NOTICIAS", "NOTÍCIAS", "NOTICIA", "NOTÍCIA"];
-                lista = lista.filter(item => {
-                    // Ocultar pastas técnicas apenas na raiz, conforme comportamento do App
-                    if (item.isFolder && !folderId) {
-                        const tituloNorm = (item.titulo || "").toUpperCase().trim();
-                        if (pastasOcultas.includes(tituloNorm)) {
-                            return false;
-                        }
-                    }
-                    return true;
-                });
-            }
 
             // Ordenação Alfabética (Case-Insensitive)
             if (lista && Array.isArray(lista)) {

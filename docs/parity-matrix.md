@@ -60,6 +60,12 @@ Este documento apresenta o estado atual de paridade entre as plataformas App (Mo
 - **Estratégia:** Unificação da lógica de sumário (TOC) via `site/public/js/area-filiado/estatuto.js`.
 - **Paridade Alcançada:** O site externo agora utiliza o mesmo gerador dinâmico de sumário da área interna, garantindo que qualquer alteração no documento base seja refletida instantaneamente em ambas as áreas com navegação lateral fixa e responsiva.
 
+### 6. Biblioteca Digital (Publicações)
+- **Endpoints:** `/api/publicacoes`, `/api/publicacoes/arquivo/:id`
+- **Segurança:** Todas as rotas agora exigem `authMiddleware`.
+- **Paridade Alcançada:** A filtragem de pastas técnicas (ex: `APPS`, `NOTICIAS`) foi movida do frontend para o Backend (`publicacoes.controller.js`).
+- **Single Source of Truth:** O Backend agora centraliza a lógica de visibilidade de pastas baseada no perfil do usuário (`isGestao`), garantindo paridade automática entre App e Site.
+
 ---
 
 ## 🚨 Drift Analysis

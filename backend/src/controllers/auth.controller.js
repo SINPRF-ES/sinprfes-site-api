@@ -2,6 +2,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
+const { v4: uuidv4 } = require("uuid");
 const { normalizarCpf } = require("../utils/format");
 const log = require("../utils/log");
 const Textos = require("../utils/textos"); // 🟢 TEXTOS
@@ -32,40 +33,41 @@ function gerarToken(filiado) {
 }
 
 exports.login = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   try {
     const { cpf, senha, token_2fa } = req.body || {};
 
     if (!cpf || !senha) {
       return res
         .status(400)
-        .json({ error: Textos.AUTH.INFORME_CREDENCIAIS }); // ✨
+        .json({ error: Textos.AUTH.INFORME_CREDENCIAIS, requestId }); // ✨
     }
 
     const cpfNormalizado = normalizarCpf(cpf);
     const filiado = await buscarPorCpf(cpfNormalizado);
 
     if (!filiado || !filiado.senha_hash) {
-      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "CredenciaisInvalidas" });
+      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "CredenciaisInvalidas", requestId });
       return res
         .status(400)
-        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS }); // ✨
+        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS, requestId }); // ✨
     }
 
     // Verificação de Estado do Cadastro (Arquivado)
     if (filiado.arquivado_em) {
-        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, status: "arquivado" });
+        log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, status: "arquivado", requestId });
         return res
           .status(403)
-          .json({ error: Textos.AUTH.CADASTRO_INATIVO });
+          .json({ error: Textos.AUTH.CADASTRO_INATIVO, requestId });
     }
 
     const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);
 
     if (!senhaOk) {
-      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "SenhaIncorreta" });
+      log.warn("AuthLoginFalha", { cpf: cpfNormalizado, motivo: "SenhaIncorreta", requestId });
       return res
         .status(400)
-        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS }); // ✨
+        .json({ error: Textos.AUTH.CREDENCIAIS_INVALIDAS, requestId }); // ✨
     }
 
     // Se tiver 2FA cadastrado, exige o token
@@ -74,6 +76,7 @@ exports.login = async (req, res) => {
         return res.status(400).json({
           error: Textos.AUTH.CODIGO_2FA_REQUERIDO, // ✨
           requires_2fa: true,
+          requestId
         });
       }
 
@@ -85,9 +88,10 @@ exports.login = async (req, res) => {
       });
 
       if (!valido) {
-        log.warn("AuthLogin2FAFalha", { cpf: cpfNormalizado });
+        log.warn("AuthLogin2FAFalha", { cpf: cpfNormalizado, requestId });
         return res.status(400).json({
           error: Textos.AUTH.CODIGO_2FA_INVALIDO, // ✨
+          requestId
         });
       }
     }
@@ -111,7 +115,7 @@ exports.login = async (req, res) => {
       userId: filiado.id, 
       perfil: filiado.perfil_acesso,
       ip: req.ip,
-      requestId: req.requestId,
+      requestId,
       hasRefreshToken: true
     });
 
@@ -123,11 +127,12 @@ exports.login = async (req, res) => {
       token,
       refreshToken,
       perfil_acesso: perfil,
-      permissions
+      permissions,
+      requestId
     });
   } catch (err) {
-    log.error("AuthLoginErroInterno", { error: err, requestId: req.requestId });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN }); // ✨
+    log.error("AuthLoginErroInterno", { error: err, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN, requestId }); // ✨
   }
 };
 
@@ -161,23 +166,24 @@ exports.ativar2fa = async (req, res) => {
 };
 
 exports.refresh = async (req, res) => {
+  const requestId = req.requestId || uuidv4();
   try {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ error: "Refresh token não informado." });
+      return res.status(400).json({ error: "Refresh token não informado.", requestId });
     }
 
     const tokenRecord = await authService.verifyRefreshToken(refreshToken);
 
     if (!tokenRecord) {
-      log.warn("AuthRefreshFalha", { ip: req.ip, reason: "InvalidOrExpired" });
-      return res.status(401).json({ error: "Sessão expirada. Por favor, faça login novamente." });
+      log.warn("AuthRefreshFalha", { ip: req.ip, reason: "InvalidOrExpired", requestId });
+      return res.status(401).json({ error: "Sessão expirada. Por favor, faça login novamente.", requestId });
     }
 
     const filiado = await buscarPorId(tokenRecord.filiado_id);
     if (!filiado || filiado.arquivado_em) {
-      return res.status(401).json({ error: "Usuário inativo ou não encontrado." });
+      return res.status(401).json({ error: "Usuário inativo ou não encontrado.", requestId });
     }
 
     // Gera novo Access Token
@@ -194,15 +200,16 @@ exports.refresh = async (req, res) => {
 
     const newRefreshToken = await authService.rotateRefreshToken(tokenRecord.id, filiado.id, deviceInfo);
 
-    log.info("AuthRefreshSucesso", { userId: filiado.id, requestId: req.requestId });
+    log.info("AuthRefreshSucesso", { userId: filiado.id, requestId });
 
     return res.json({
       token: accessToken,
       refreshToken: newRefreshToken,
+      requestId
     });
   } catch (err) {
-    log.error("AuthRefreshErroInterno", { error: err, requestId: req.requestId });
-    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN });
+    log.error("AuthRefreshErroInterno", { error: err, requestId });
+    return res.status(500).json({ error: Textos.ERROS_INTERNOS.LOGIN, requestId });
   }
 };
 
