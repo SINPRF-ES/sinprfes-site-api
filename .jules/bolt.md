@@ -15,9 +15,18 @@
 ## 2026-01-29 - [Optimization of Assembly Check-in Broadcast]
 **Learning:** High-frequency endpoints like `checkin` (during the start of an event) should avoid fetching the full application state if only a small subset is needed for the real-time broadcast. In this codebase, `buscarEstadoCompleto` was a major bottleneck because it fetched proposals and speaker lists unnecessarily.
 **Action:** Always prefer targeted service calls over "get everything" state functions in real-time event handlers. Ensure WebSocket payloads match exactly what the client expects to avoid broken "live" features.
+
 ## 2026-02-03 - [FlatList Search Optimization]
 **Learning:** Calling expensive normalization functions (`normalizeText`, `onlyDigits`) inside a `filter` that runs on every keystroke (O(N) * M) causes significant UI lag in large lists. Memoizing the list items (`React.memo`) is insufficient if callbacks passed to them (`onEdit`, `renderItem`) are recreated on every render.
 **Action:** Pre-calculate normalized search fields once when data is fetched/processed. Stabilize callbacks with `useCallback`. Tune `FlatList` props (`windowSize`, `removeClippedSubviews`) to manage memory and render pressure.
+
+## 2026-02-15 - [Explicit String Normalization]
+**Learning:** Type mismatches in email service providers can cause silent failures or obscure errors. Ensuring all dynamic metadata (like target emails or phone numbers) are explicitly cast to `String()` before manipulation or transmission prevents runtime crashes.
+**Action:** Added explicit `String()` casts to `extrairEmailDestino` in `email.service.js`, and standardized casting in `push.service.js` and `enviarEmailBase`.
+
+## 2026-02-17 - [Database Constraint Error Mapping]
+**Learning:** PostgreSQL constraint violations (e.g., unique index, foreign key) or schema errors (missing column) should be caught and mapped to HTTP 400 (Client Error) instead of 500. This prevents "internal server error" noise for expected validation failures at the DB level.
+**Action:** Implemented `handleDbError` in `filiados.controller.js` to catch codes starting with '23' or '42703' and return 400.
 
 ## 2026-02-23 - [Controller Media Grouping Optimization]
 **Learning:** Nested loops ($O(N \times M)$) in controllers when associating related entities (like news and media) are a hidden performance tax that grows with data size. Using a `Map` to pre-group related items reduces complexity to $O(N+M)$ and is a consistent pattern for high-performance Node.js backends.
