@@ -89,6 +89,9 @@ app.use((req, res, next) => {
 // Limite de tamanho do corpo JSON (Proteção contra DoS)
 app.use(express.json({ limit: "100kb" }));
 
+const isTestUploadEnabled =
+  process.env.ENABLE_TEST_UPLOAD === "true" || process.env.NODE_ENV !== "production";
+
 /**
  * ==============================
  * 🧪 TESTE MINIO (POST /api/test-upload)
@@ -100,6 +103,13 @@ app.use(express.json({ limit: "100kb" }));
  * - MINIO_SECRET_KEY (senha do svc)
  */
 app.post("/api/test-upload", async (req, res) => {
+  if (!isTestUploadEnabled) {
+    return res.status(404).json({
+      success: false,
+      error: "Rota não encontrada"
+    });
+  }
+
   try {
     const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
