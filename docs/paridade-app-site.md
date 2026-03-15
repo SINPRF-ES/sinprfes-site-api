@@ -29,7 +29,7 @@ No App, a "Página Inicial" tem cards de ações rápidas. O Site abre direto na
 Também, "Novo Filiado" é um item de menu separado no App, mas no Site está embutido na aba de Filiados.
 
 ### Gap B: Notícias para Membros
-No Site, a aba "Notícias" no Area do Filiado só aparece para gestores. Membros comuns não têm acesso às notícias de forma integrada (usam o site público).
+✅ **Resolvido.** A aba "Informes" agora está habilitada para todos os membros na Área do Filiado, integrando tanto os informes internos quanto os informes públicos do site.
 
 ### Gap C: Centro de Notificações
 O usuário solicitou explicitamente: "Notificações (lista, detalhe, leitura, preferências, badge)". Isso não existe de forma unificada para o filiado nem no App nem no Site atualmente (o App apenas recebe Push).
@@ -37,6 +37,6 @@ O usuário solicitou explicitamente: "Notificações (lista, detalhe, leitura, p
 ## 3. Plano de Implementação
 
 - **Wave A**: Unificar Navegação (Home Cards e Sidebar).
-- **Wave B**: Habilitar Notícias para todos os membros no Area do Filiado.
+- **Wave B**: ✅ Habilitar Notícias para todos os membros no Area do Filiado.
 - **Wave C**: Implementar Backend e Frontend para o Centro de Notificações.
 - **Wave D**: Auditoria fina de Repasse e Relatórios.

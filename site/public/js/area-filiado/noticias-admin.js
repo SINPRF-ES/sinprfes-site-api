@@ -1,6 +1,6 @@
 /**
- * Módulo Notícias Admin (área externa)
- * Regra canônica: apenas 1 notícia atual editável por vez.
+ * Módulo Informes Admin (área externa)
+ * Regra canônica: apenas 1 informe externo atual editável por vez.
  */
 
 (function (global) {
@@ -31,19 +31,19 @@
       <div class="ui-card">
         <div class="af-standard-header" style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:20px;">
           <div>
-            <h2 style="margin:0;">📰 Notícias externas (CMS)</h2>
-            <p class="section-subtitle" style="margin:4px 0 0;">Apenas a notícia atual pode ser editada. Arquivadas ficam imutáveis no acervo.</p>
+            <h2 style="margin:0;">📰 Informes externos (CMS)</h2>
+            <p class="section-subtitle" style="margin:4px 0 0;">Apenas o informe atual pode ser editado. Arquivados ficam imutáveis no acervo.</p>
           </div>
-          ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary">+ Nova notícia atual</button>` : ''}
+          ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary">+ Novo informe externo</button>` : ''}
         </div>
 
         <section style="margin-bottom:16px;">
-          <h3 style="margin:0 0 10px; color:#003366;">Notícia atual</h3>
+          <h3 style="margin:0 0 10px; color:#003366;">Informe externo atual</h3>
           <div id="noticia-atual-admin"><p style="color:#666;">Carregando...</p></div>
         </section>
 
         <section>
-          <h3 style="margin:0 0 10px; color:#003366;">Notícias arquivadas</h3>
+          <h3 style="margin:0 0 10px; color:#003366;">Informes externos arquivados</h3>
           <div id="noticias-arquivadas-admin"><p style="color:#666;">Carregando...</p></div>
         </section>
       </div>
@@ -61,7 +61,7 @@
     const arquivadasEl = document.getElementById("noticias-arquivadas-admin");
     if (!atualEl || !arquivadasEl) return;
 
-    // Busca notícia atual
+    // Busca informe externo atual
     const respAtual = await requestJson("/api/noticias?status_editorial=ATUAL");
     noticiaAtual = (Array.isArray(respAtual.data) ? respAtual.data[0] : respAtual.data.items?.[0]) || null;
 
@@ -92,8 +92,8 @@
         </div>
         <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirVisualizacaoNoticia('${n.id}')">📖 Visualizar</button>
-          ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar notícia atual</button>` : ''}
-          ${mostrarArquivar ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.arquivarNoticiaAtual('${n.id}')">📦 Arquivar notícia atual</button>` : ''}
+          ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar informe externo atual</button>` : ''}
+          ${mostrarArquivar ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.arquivarNoticiaAtual('${n.id}')">📦 Arquivar informe externo atual</button>` : ''}
         </div>
       </div>
     `;
@@ -103,7 +103,7 @@
     const el = document.getElementById("noticia-atual-admin");
     if (!el) return;
     if (!noticiaAtual) {
-      el.innerHTML = `<p style="color:#475569;">Nenhuma notícia atual ativa. Crie uma nova notícia para iniciar o ciclo editorial.</p>`;
+      el.innerHTML = `<p style="color:#475569;">Nenhuma informe externo atual ativa. Crie uma nova informe para iniciar o ciclo editorial.</p>`;
       return;
     }
     el.innerHTML = renderCardNoticia(noticiaAtual, {
@@ -116,14 +116,14 @@
     const el = document.getElementById("noticias-arquivadas-admin");
     if (!el) return;
     if (!noticiasArquivadas.length) {
-      el.innerHTML = `<p style="color:#64748b;">Sem notícias arquivadas até o momento.</p>`;
+      el.innerHTML = `<p style="color:#64748b;">Sem informes externos arquivados até o momento.</p>`;
       return;
     }
 
     let html = noticiasArquivadas.map((n) => `
       <div style="margin-bottom:16px;">
         ${renderCardNoticia(n)}
-        <p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Esta notícia está consolidada e não pode mais ser editada.</p>
+        <p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Esta informe está consolidada e não pode mais ser editada.</p>
       </div>
     `).join("");
 
@@ -145,11 +145,11 @@
 
   async function abrirVisualizacaoNoticia(id) {
     const { ok, data } = await requestJson(`/api/noticias/${id}`);
-    if (!ok) return alert("Não foi possível abrir a notícia.");
+    if (!ok) return alert("Não foi possível abrir o informe.");
 
     const modal = document.getElementById("modal-generic");
     if (!modal) return;
-    document.getElementById("modal-generic-titulo").textContent = data.titulo || "Notícia";
+    document.getElementById("modal-generic-titulo").textContent = data.titulo || "Informe";
     document.getElementById("modal-generic-corpo").innerHTML = `
       <article>
         ${data.capa_url ? `<img src="${escape(data.capa_url)}" style="width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
@@ -163,33 +163,33 @@
   }
 
   async function abrirModalNoticia(id = null) {
-    if (!ehGestaoNoticias()) return alert("Apenas gestão pode editar notícias.");
+    if (!ehGestaoNoticias()) return alert("Apenas gestão pode editar informes.");
 
     if (!id && noticiaAtual) {
-      return alert("Já existe uma notícia atual. Arquive a notícia atual antes de criar outra.");
+      return alert("Já existe uma informe externo atual. Arquive a informe externo atual antes de criar outra.");
     }
 
     let noticia = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", destaque: false };
     if (id) {
       const detalhe = await requestJson(`/api/noticias/${id}`);
-      if (!detalhe.ok) return alert("Não foi possível carregar a notícia para edição.");
+      if (!detalhe.ok) return alert("Não foi possível carregar a informe para edição.");
       noticia = detalhe.data;
     }
 
     const modal = document.getElementById("modal-generic");
     if (!modal) return;
 
-    document.getElementById("modal-generic-titulo").textContent = id ? "Editar notícia atual" : "Nova notícia atual";
+    document.getElementById("modal-generic-titulo").textContent = id ? "Editar informe externo atual" : "Nova informe externo atual";
     document.getElementById("modal-generic-corpo").innerHTML = `
       <form id="form-noticia-admin">
         <div class="field-group"><label>Título</label><input class="ui-input" name="titulo" value="${escape(noticia.titulo)}" required></div>
         <div class="field-group" style="margin-top:10px;"><label>Subtítulo</label><input class="ui-input" name="subtitulo" value="${escape(noticia.subtitulo || "")}"></div>
         <div class="field-group" style="margin-top:10px;"><label>Conteúdo</label><textarea class="ui-textarea" name="conteudo" rows="8" required>${escape(noticia.conteudo || "")}</textarea></div>
         <div class="field-group" style="margin-top:10px;"><label>URL da capa</label><input class="ui-input" name="capa_url" value="${escape(noticia.capa_url || "")}" placeholder="https://..."></div>
-        <div class="field-group" style="margin-top:10px;"><label>Data da notícia</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${noticia.data_noticia ? new Date(noticia.data_noticia).toISOString().slice(0,16) : ""}"></div>
+        <div class="field-group" style="margin-top:10px;"><label>Data da informe</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${noticia.data_noticia ? new Date(noticia.data_noticia).toISOString().slice(0,16) : ""}"></div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
-          <button type="submit" class="ui-button ui-button-secondary">Salvar notícia atual</button>
+          <button type="submit" class="ui-button ui-button-secondary">Salvar informe externo atual</button>
         </div>
       </form>
     `;
@@ -221,11 +221,11 @@
 
   async function arquivarNoticiaAtual(id) {
     if (!ehGestaoNoticias()) return;
-    if (!confirm("Arquivar notícia atual? Esta ação consolida o conteúdo e bloqueia novas edições.")) return;
+    if (!confirm("Arquivar informe atual? Esta ação consolida o conteúdo e bloqueia novas edições.")) return;
     const resp = await requestJson(`/api/noticias/${id}/arquivar`, { method: "POST" });
-    if (!resp.ok) return alert(resp.data?.message || "Falha ao arquivar notícia atual.");
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao arquivar informe externo atual.");
     await carregarNoticias();
-    alert("Notícia atual arquivada com sucesso. Agora você pode criar uma nova notícia atual.");
+    alert("Informe externo arquivado com sucesso. Agora você pode criar um novo informe externo.");
   }
 
   global.NoticiasAdmin = {
