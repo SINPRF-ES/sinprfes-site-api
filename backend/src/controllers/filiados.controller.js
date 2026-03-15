@@ -149,8 +149,7 @@ exports.getFiliadoById = async (req, res) => {
 
     return res.json({ ...dadosFiliado, requestId });
   } catch (err) {
-    log.error("FiliadosGetByIdErro", { error: err, requestId, atorId, targetId: idAlvo });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.CARREGAR_DADOS);
   }
 };
 
@@ -180,8 +179,7 @@ exports.getMe = async (req, res) => {
       requestId
     });
   } catch (err) {
-    log.error("FiliadosGetMeErro", { error: err, requestId, atorId });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.CARREGAR_DADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.CARREGAR_DADOS);
   }
 };
 
@@ -208,8 +206,7 @@ exports.listarFiliados = async (req, res) => {
       requestId
     });
   } catch (err) {
-    log.error("FiliadosListarErro", { error: err, requestId, atorId });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.LISTAR_FILIADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.LISTAR_FILIADOS);
   }
 };
 
@@ -654,7 +651,7 @@ exports.criarFiliado = async (req, res) => {
     try {
       await enviarEmailBoasVindasFiliado(novo);
     } catch (emailErr) {
-      log.error("FiliadoEmailBoasVindasErro", { error: emailErr, requestId });
+      log.error("FiliadoEmailBoasVindasErro", { error: emailErr, requestId, atorId });
     }
 
     log.info("FiliadoCriado", { atorId, newId: novo.id, requestId });
@@ -760,8 +757,7 @@ exports.uploadAvatarMe = async (req, res) => {
 
     return res.json({ success: true, message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado, requestId });
   } catch (err) {
-    log.error("FiliadosUploadAvatarMeErro", { error: err, requestId, atorId });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -800,8 +796,7 @@ exports.uploadAvatarPorId = async (req, res) => {
 
     return res.json({ success: true, message: "Avatar atualizado.", avatar_url: up.avatar_url, filiado: atualizado, requestId });
   } catch (err) {
-    log.error("FiliadosUploadAvatarPorIdErro", { error: err, requestId, atorId, targetId: idAlvo });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -820,8 +815,7 @@ exports.desativar2fa = async (req, res) => {
     log.info("Filiado2FADesativado", { atorId, requestId });
     return res.json({ success: true, message: "2FA desativado com sucesso.", twofa_ativo: false, requestId });
   } catch (err) {
-    log.error("Filiado2FADesativarErro", { error: err, requestId, atorId });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -841,8 +835,7 @@ exports.removerAvatarMe = async (req, res) => {
     await atualizarFiliadoPorId(atorId, { avatar_url: null, avatar_public_id: null });
     return res.json({ success: true, message: "Foto removida com sucesso.", avatar_url: null, requestId });
   } catch (err) {
-    log.error("RemoverAvatarMeErro", { error: err, requestId, atorId });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
 
@@ -865,7 +858,6 @@ exports.removerAvatarPorId = async (req, res) => {
     await atualizarFiliadoPorId(id, { avatar_url: null, avatar_public_id: null });
     return res.json({ success: true, message: "Foto removida com sucesso.", avatar_url: null, requestId });
   } catch (err) {
-    log.error("RemoverAvatarPorIdErro", { error: err, requestId, atorId, targetId: id });
-    return res.status(500).json({ success: false, message: Textos.ERROS_INTERNOS.ATUALIZAR_DADOS, requestId });
+    return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.ATUALIZAR_DADOS);
   }
 };
