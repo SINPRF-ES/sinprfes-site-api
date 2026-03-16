@@ -7,7 +7,7 @@ const sharp = require("sharp");
  * @param {Object} options Configurações de otimização
  * @param {number} options.width Largura desejada (default: 300)
  * @param {number} options.height Altura desejada (default: 300)
- * @param {string} options.fit Modo de redimensionamento do sharp (default: 'cover')
+ * @param {string} options.fit Modo de redimensionamento do sharp (default: 'inside')
  * @param {number} options.quality Qualidade inicial WebP (default: 82)
  * @param {number} options.maxSize Tamanho máximo em bytes (default: 2MB)
  */
@@ -15,7 +15,7 @@ const imageOptimizer = (options = {}) => {
   const {
     width = 300,
     height = 300,
-    fit = "cover",
+    fit = "inside",
     quality: initialQuality = 82,
     maxSize = 2 * 1024 * 1024,
   } = options;
