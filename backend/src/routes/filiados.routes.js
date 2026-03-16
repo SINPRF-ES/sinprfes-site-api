@@ -34,7 +34,7 @@ router.post(
   "/me/avatar",
   authMiddleware,
   upload.single("avatar"),
-  imageOptimizer({ width: 200, height: 200 }),
+  imageOptimizer({ width: 200, height: 200, fit: "cover" }),
   filiadosController.uploadAvatarMe
 );
 
@@ -80,7 +80,7 @@ router.post(
   authMiddleware,
   requirePermission("EDIT_FILIADO"),
   upload.single("avatar"),
-  imageOptimizer({ width: 200, height: 200 }),
+  imageOptimizer({ width: 200, height: 200, fit: "cover" }),
   filiadosController.uploadAvatarPorId
 );
 
