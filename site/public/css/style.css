@@ -23,6 +23,12 @@ body.public-shell {
     width: 100%;
 }
 
+#site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10000;
+}
+
 body.public-shell .ui-container {
     width: 100%;
 }
@@ -87,11 +93,11 @@ body {
 }
 
 .site-header {
-    position: fixed;
+    position: sticky;
     top: 0;
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: 10000;
     background: var(--ui-primary);
     color: white;
     padding: var(--ui-space-3) 0;
