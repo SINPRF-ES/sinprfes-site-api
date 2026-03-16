@@ -116,6 +116,9 @@ body {
 
 .logo-img {
     height: 50px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 4px;
 }
 
 .logo-text {

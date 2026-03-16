@@ -43,25 +43,25 @@ const DEFAULT_BLOCKS = [
     updated_at: new Date().toISOString()
   },
   {
-    id: 'news-1',
-    page: 'noticias',
+    id: 'convenios-1',
+    page: 'convenios',
     ordenacao: 1,
-    title: 'T1',
-    body: 'Espaço para o primeiro bloco da página de notícias.',
+    title: 'Convênio exemplo',
+    body: 'Descrição do convênio e condições para filiados.',
     media_type: 'image',
     media_url: '',
     is_active: true,
     updated_at: new Date().toISOString()
   },
   {
-    id: 'news-2',
-    page: 'noticias',
+    id: 'convenios-2',
+    page: 'convenios',
     ordenacao: 2,
-    title: 'T2',
-    body: 'Espaço para o segundo bloco da página de notícias.',
+    title: 'Outro convênio',
+    body: 'Use este bloco para cadastrar novos parceiros e benefícios.',
     media_type: 'image',
     media_url: '',
-    is_active: true,
+    is_active: false,
     updated_at: new Date().toISOString()
   }
 ];
@@ -177,7 +177,7 @@ const updateBlock = async (req, res) => {
   if (title && title.length > 120) return res.status(400).json({ error: "Título muito longo (máx 120)" });
   if (body && body.length > 5000) return res.status(400).json({ error: "Corpo muito longo (máx 5000)" });
   if (media_type && !['image', 'video'].includes(media_type)) return res.status(400).json({ error: "Tipo de mídia inválido" });
-  if (page && !['home', 'noticias'].includes(page)) return res.status(400).json({ error: "Página inválida" });
+  if (page && !['home', 'convenios'].includes(page)) return res.status(400).json({ error: "Página inválida" });
   if (media_url) {
     if (typeof media_url !== 'string' || media_url.length > 500) return res.status(400).json({ error: "URL de mídia inválida ou muito longa" });
     if (media_url.toLowerCase().includes('javascript:')) return res.status(400).json({ error: "URL de mídia perigosa detectada" });

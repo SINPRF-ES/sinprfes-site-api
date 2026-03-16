@@ -10,33 +10,37 @@
   <meta name="apple-mobile-web-app-title" content="SINPRF-ES" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
-  <title>Início – SINPRF-ES</title>
+  <title>Convênios – SINPRF-ES</title>
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="/css/ui-canon.css" />
-  <link rel="stylesheet" href="/css/components/instagram-feed.css" />
   <link rel="icon" type="image/png" href="/img/placeholder-sinprf.png" />
   <script src="/js/utils.js" defer></script>
   <script src="/js/main.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js" defer></script>
-  <script src="/js/informes-renderer.js" defer></script>
-  <script src="/js/noticias-site.js" defer></script>
 </head>
-
 <body>
   <div id="site-header"></div>
 
-  <main class="page container ui-container public-page" style="margin-top: var(--ui-space-5);">
-    <h1 style="color: var(--ui-primary); text-align: center;">Início</h1>
+  <div class="ui-container">
+    <main class="page-content public-page">
+      <section class="ui-card public-card">
+        <h1 class="section-title">
+          <span class="emoji">🤝</span>
+          <span>Convênios</span>
+        </h1>
+        <p class="section-subtitle" style="color: var(--ui-text-muted); margin-bottom: var(--ui-space-3);">
+          Conheça os convênios disponíveis para os filiados do SINPRF-ES.
+        </p>
+      </section>
 
-    <section id="news-panel-instagram" class="news-source-panel">
-      <div id="instagram-news-root"></div>
-    </section>
+      <div id="cms-convenios-blocks"></div>
 
-    <section id="news-panel-cms" class="news-source-panel cms-news-placeholder" aria-hidden="true">
-      <div id="cms-news-root"></div>
-    </section>
-  </main>
+      <section class="ui-card public-card" style="margin-top: var(--ui-space-4);">
+        <p style="font-style: italic; color: var(--ui-text-muted); margin: 0;">
+          *valores sujeitos à mudança por parte do conveniado, favor entrar em contato com nossa secretaria para confirmar os valores
+        </p>
+      </section>
+    </main>
+  </div>
 
   <div id="site-footer"></div>
 </body>

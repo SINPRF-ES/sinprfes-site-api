@@ -55,16 +55,16 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
 
           <nav class="main-nav">
-            <a href="/index.html" class="nav-link ${isActive("index.html")}">Início</a>
-            <a href="/diretoria.html" class="nav-link ${isActive("diretoria.html")}">Diretoria</a>
+            <a href="/index.html" class="nav-link ${isActive("index.html") || isActive("noticias.html")}">Início</a>
             <a href="/estatuto.html" class="nav-link ${isActive("estatuto.html")}">Estatuto</a>
-            <a href="/noticias.html" class="nav-link ${isActive("noticias.html")}">Notícias</a>
+            <a href="/diretoria.html" class="nav-link ${isActive("diretoria.html")}">Diretoria</a>
+            <a href="/convenios.html" class="nav-link ${isActive("convenios.html")}">Convênios</a>
             <a href="/contato.html" class="nav-link ${isActive("contato.html")}">Contato</a>
+            <a href="/filiese.html" class="nav-link ${isActive("filiese.html")}">Filie-se</a>
           </nav>
 
           <div class="header-actions">
-            <a href="/filiese.html" class="ui-button ui-button-outline header-btn-outline">Filie-se</a>
-            <a href="/area-filiado.html" class="ui-button ui-button-secondary">Página Inicial</a>
+            <a href="/area-filiado.html" class="ui-button ui-button-secondary">Área do Filiado</a>
           </div>
         </div>
       </header>
@@ -214,5 +214,11 @@ async function renderCmsBlocksPublic(page, mountSelector) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderCmsBlocksPublic('home', '#cms-home-blocks');
+  if (document.querySelector('#cms-home-blocks')) {
+    renderCmsBlocksPublic('home', '#cms-home-blocks');
+  }
+
+  if (document.querySelector('#cms-convenios-blocks')) {
+    renderCmsBlocksPublic('convenios', '#cms-convenios-blocks');
+  }
 });
