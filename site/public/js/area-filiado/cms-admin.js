@@ -7,9 +7,9 @@
 
         async init() {
             const btnHome = document.getElementById('cms-page-home');
-            const btnNoticias = document.getElementById('cms-page-noticias');
+            const btnConvenios = document.getElementById('cms-page-convenios');
             if (btnHome) btnHome.onclick = () => this.loadBlocks('home');
-            if (btnNoticias) btnNoticias.onclick = () => this.loadBlocks('noticias');
+            if (btnConvenios) btnConvenios.onclick = () => this.loadBlocks('convenios');
             this.loadBlocks(this.page);
         },
 
