@@ -72,9 +72,11 @@ export const deleteInforme = async (id: string): Promise<void> => {
 };
 
 export const addInformeMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'VIDEO'): Promise<InformeMedia> => {
+  const resourceType = tipo === 'VIDEO' ? 'video' : 'image';
   const { data: signatureData } = await api.post('/api/informes/upload-signature', {
     folder: 'informes',
-    tags: 'informe'
+    tags: 'informe',
+    resource_type: resourceType,
   });
 
   const formData = new FormData();
@@ -89,9 +91,11 @@ export const addInformeMidia = async (id: string, file: any, tipo: 'IMAGEM' | 'V
   formData.append('signature', signatureData.signature);
   formData.append('folder', 'informes');
   formData.append('tags', 'informe');
+  if (signatureData.params?.transformation) {
+    formData.append('transformation', signatureData.params.transformation);
+  }
 
   const cloudName = signatureData.cloud_name;
-  const resourceType = tipo === 'VIDEO' ? 'video' : 'image';
 
   const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
     method: 'POST',

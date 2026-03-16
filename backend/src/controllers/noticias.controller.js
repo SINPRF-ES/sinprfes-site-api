@@ -908,13 +908,17 @@ exports.obterAssinaturaUpload = async (req, res) => {
       return res.status(403).json({ success: false, message: "Acesso negado.", requestId });
     }
 
-    const { folder, tags } = req.body;
+    const { folder, tags, resource_type } = req.body;
 
     // Configurações canônicas de upload para Notícias
     const params = {
       folder: folder || "noticias",
       tags: tags || "noticia",
     };
+
+    if (resource_type !== "video") {
+      params.transformation = cloudinary.STANDARD_IMAGE_TRANSFORMATION_STRING;
+    }
 
     const signatureData = cloudinary.gerarAssinaturaUpload(params);
     log.info("NOTICIAS_GET_SIGNATURE_SUCCESS", {

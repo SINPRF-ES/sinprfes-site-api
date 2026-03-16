@@ -134,11 +134,18 @@ const obterAssinaturaUpload = async (req, res) => {
     const params = {
       folder: folder || 'sinprfes/avatars/cms',
       tags: tags || 'cms,site-publico',
+      transformation: cloudinary.STANDARD_IMAGE_TRANSFORMATION_STRING,
       timestamp: Math.floor(Date.now() / 1000)
     };
 
     const signatureData = cloudinary.gerarAssinaturaUpload(params);
-    return res.json({ success: true, ...signatureData, folder: params.folder, tags: params.tags });
+    return res.json({
+      success: true,
+      ...signatureData,
+      folder: params.folder,
+      tags: params.tags,
+      transformation: params.transformation,
+    });
   } catch (err) {
     console.error('Erro ao gerar assinatura CMS:', err);
     return res.status(500).json({ success: false, error: 'Erro ao gerar assinatura de upload' });
