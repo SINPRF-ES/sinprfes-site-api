@@ -193,12 +193,15 @@ async function renderCmsBlocksPublic(page, mountSelector) {
     if (!Array.isArray(blocks) || blocks.length === 0) return;
 
     mount.innerHTML = blocks.map((block) => {
+      const isConvenios = page === 'convenios';
       const title = window.Utils?.escapeHTML ? window.Utils.escapeHTML(block.title || '') : (block.title || '');
       const body = block.body || '';
       const media = block.media_url
         ? (block.media_type === 'video'
           ? `<video controls style="width:100%; border-radius:8px; margin-bottom:12px;"><source src="${block.media_url}" /></video>`
-          : `<img src="${block.media_url}" alt="${title}" style="width:100%; max-height:420px; object-fit:cover; border-radius:8px; margin-bottom:12px;" />`)
+          : (isConvenios
+            ? `<div class="cms-convenio-media-frame"><img class="cms-convenio-media" src="${block.media_url}" alt="${title}" /></div>`
+            : `<img src="${block.media_url}" alt="${title}" style="width:100%; max-height:420px; object-fit:cover; border-radius:8px; margin-bottom:12px;" />`))
         : '';
       return `
         <section class="ui-card public-card" style="margin-top: var(--ui-space-4);">
