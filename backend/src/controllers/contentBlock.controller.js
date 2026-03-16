@@ -218,8 +218,59 @@ const updateBlock = async (req, res) => {
   }
 };
 
+const createBlock = async (req, res) => {
+  const { page, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao } = req.body || {};
+  const updatedBy = req.user.id;
+
+  if (!['home', 'convenios'].includes(page)) return res.status(400).json({ error: 'Página inválida' });
+  if (title && title.length > 120) return res.status(400).json({ error: 'Título muito longo (máx 120)' });
+  if (body && body.length > 5000) return res.status(400).json({ error: 'Corpo muito longo (máx 5000)' });
+  if (media_type && !['image', 'video'].includes(media_type)) return res.status(400).json({ error: 'Tipo de mídia inválido' });
+  if (media_url) {
+    if (typeof media_url !== 'string' || media_url.length > 500) return res.status(400).json({ error: 'URL de mídia inválida ou muito longa' });
+    if (media_url.toLowerCase().includes('javascript:')) return res.status(400).json({ error: 'URL de mídia perigosa detectada' });
+  }
+
+  await waitLock();
+  try {
+    const blocks = readData();
+    const pageBlocks = blocks.filter((block) => block.page === page);
+    const maxOrder = pageBlocks.reduce((acc, block) => Math.max(acc, Number(block.ordenacao) || 0), 0);
+    const maxSuffix = pageBlocks.reduce((acc, block) => {
+      const match = String(block.id).match(new RegExp(`^${page}-(\\d+)$`));
+      const value = match ? Number(match[1]) : 0;
+      return Math.max(acc, Number.isFinite(value) ? value : 0);
+    }, 0);
+
+    const newBlock = {
+      id: `${page}-${maxSuffix + 1}`,
+      page,
+      ordenacao: Number.isFinite(Number(ordenacao)) ? Number(ordenacao) : maxOrder + 1,
+      title: title || 'Novo convênio',
+      body: sanitizeBody(body || ''),
+      media_type: media_type || 'image',
+      media_url: media_url || '',
+      link_url: link_url || '',
+      link_text: link_text || '',
+      is_active: typeof is_active === 'boolean' ? is_active : true,
+      updated_at: new Date().toISOString(),
+      updated_by: updatedBy
+    };
+
+    blocks.push(newBlock);
+    await writeDataAtomic(blocks);
+    return res.status(201).json(newBlock);
+  } catch (err) {
+    console.error('Erro ao criar bloco de conteúdo:', err);
+    return res.status(500).json({ error: 'Erro interno ao criar conteúdo' });
+  } finally {
+    releaseLock();
+  }
+};
+
 module.exports = {
   getBlocks,
   updateBlock,
+  createBlock,
   obterAssinaturaUpload
 };
