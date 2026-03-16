@@ -4,6 +4,7 @@ const informesController = require("../controllers/informes.controller");
 const authMiddleware = require("../middlewares/auth");
 const requirePermission = require("../middlewares/requirePermission");
 const multer = require("multer");
+const imageOptimizer = require("../middlewares/imageOptimizer");
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -64,6 +65,7 @@ router.post(
   escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   upload.single("file"),
+  imageOptimizer({ width: 300, height: 300 }),
   informesController.adicionarMidia
 );
 
