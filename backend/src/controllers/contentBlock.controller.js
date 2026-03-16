@@ -225,6 +225,33 @@ const updateBlock = async (req, res) => {
   }
 };
 
+const uploadMedia = async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ success: false, error: 'Arquivo não enviado' });
+    }
+
+    const isVideo = req.file.mimetype && req.file.mimetype.startsWith('video/');
+    const resourceType = isVideo ? 'video' : 'image';
+
+    const result = await cloudinary.uploadFileBuffer(req.file.buffer, {
+      folder: 'sinprfes/avatars/cms',
+      resource_type: resourceType,
+      tags: 'cms,site-publico',
+      standardizeImage: false // Já foi padronizado pelo middleware se for imagem
+    });
+
+    return res.json({
+      success: true,
+      url: result.secure_url,
+      public_id: result.public_id
+    });
+  } catch (err) {
+    console.error('Erro no upload CMS:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao processar upload' });
+  }
+};
+
 const createBlock = async (req, res) => {
   const { page, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao } = req.body || {};
   const updatedBy = req.user.id;
@@ -279,5 +306,6 @@ module.exports = {
   getBlocks,
   updateBlock,
   createBlock,
-  obterAssinaturaUpload
+  obterAssinaturaUpload,
+  uploadMedia
 };

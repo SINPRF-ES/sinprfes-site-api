@@ -9,8 +9,7 @@ const authMiddleware = require("../middlewares/auth");
 const requirePermission = require("../middlewares/requirePermission");
 
 const filiadosController = require("../controllers/filiados.controller");
-
-const sharp = require("sharp");
+const imageOptimizer = require("../middlewares/imageOptimizer");
 
 // =============================================================================
 // Upload (avatar)
@@ -24,48 +23,6 @@ const upload = multer({
   },
 });
 
-async function converterAvatarParaWebp(req, res, next) {
-  try {
-    if (!req.file || !req.file.buffer) return next();
-
-    const who = req.params.id ? `id${req.params.id}` : `me${req.user?.id || "0"}`;
-    const filename = `${who}-${Date.now()}.webp`;
-
-    let quality = 82;
-    let buffer = await sharp(req.file.buffer)
-      .rotate()
-      .resize(200, 200, { fit: "cover" })
-      .webp({ quality })
-      .toBuffer();
-
-    const MAX = 2 * 1024 * 1024;
-    while (buffer.length > MAX && quality > 55) {
-      quality -= 7;
-      buffer = await sharp(req.file.buffer)
-        .rotate()
-        .resize(200, 200, { fit: "cover" })
-        .webp({ quality })
-        .toBuffer();
-    }
-
-    if (buffer.length > MAX) {
-      return res.status(413).json({
-        error: "Não foi possível otimizar a imagem abaixo de 2MB.",
-      });
-    }
-
-    // Não persiste em disco (filesystem em nuvem costuma ser efêmero). Mantém em memória para upload no storage.
-    req.file.buffer = buffer;
-    req.file.filename = filename;
-    req.file.mimetype = "image/webp";
-    req.file.size = buffer.length;
-
-    next();
-  } catch (err) {
-    next(err);
-  }
-}
-
 // =============================================================================
 // ROTAS DO PRÓPRIO USUÁRIO (/me)
 // =============================================================================
@@ -77,7 +34,7 @@ router.post(
   "/me/avatar",
   authMiddleware,
   upload.single("avatar"),
-  converterAvatarParaWebp,
+  imageOptimizer({ width: 200, height: 200 }),
   filiadosController.uploadAvatarMe
 );
 
@@ -123,7 +80,7 @@ router.post(
   authMiddleware,
   requirePermission("EDIT_FILIADO"),
   upload.single("avatar"),
-  converterAvatarParaWebp,
+  imageOptimizer({ width: 200, height: 200 }),
   filiadosController.uploadAvatarPorId
 );
 

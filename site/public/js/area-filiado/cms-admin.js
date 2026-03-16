@@ -150,38 +150,30 @@
             if (!file) return;
             const statusEl = document.getElementById(`status-${id}`);
             const urlEl = document.getElementById(`url-${id}`);
-            if (statusEl) statusEl.textContent = 'Preparando upload...';
+            if (statusEl) statusEl.textContent = 'Enviando e otimizando...';
 
             try {
-                const signRes = await window.Api.apiFetch('/api/content-blocks/upload-signature', {
-                    method: 'POST',
-                    body: { folder: CMS_FOLDER, tags: 'cms,site-publico' }
-                });
-                if (!signRes?.ok) throw new Error('Falha ao obter assinatura de upload');
-                const sign = await signRes.json();
-
                 const fd = new FormData();
                 fd.append('file', file);
-                fd.append('api_key', sign.api_key);
-                fd.append('timestamp', String(sign.timestamp));
-                fd.append('signature', sign.signature);
-                fd.append('folder', sign.folder || CMS_FOLDER);
-                if (sign.tags) fd.append('tags', sign.tags);
-                if (sign.transformation) fd.append('transformation', sign.transformation);
 
-                const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloud_name}/auto/upload`, {
+                const uploadRes = await window.Api.apiFetch('/api/content-blocks/upload-media', {
                     method: 'POST',
                     body: fd
                 });
-                if (!uploadRes.ok) throw new Error('Falha no upload Cloudinary');
+
+                if (!uploadRes?.ok) {
+                    const errData = await uploadRes.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Falha no upload');
+                }
 
                 const up = await uploadRes.json();
-                if (urlEl) urlEl.value = up.secure_url || up.url || '';
+                if (urlEl) urlEl.value = up.url || '';
                 if (statusEl) {
-                    statusEl.textContent = 'Upload concluído.';
+                    statusEl.textContent = 'Upload concluído com sucesso.';
                     statusEl.style.color = 'green';
                 }
             } catch (err) {
+                console.error('CMSAdmin.uploadMedia.Error', err);
                 if (statusEl) {
                     statusEl.textContent = `Erro: ${err.message}`;
                     statusEl.style.color = 'red';
