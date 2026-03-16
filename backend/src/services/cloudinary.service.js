@@ -7,13 +7,12 @@ cloudinary.config(process.env.CLOUDINARY_URL);
 const STANDARD_IMAGE_TRANSFORMATION = {
   width: 300,
   height: 300,
-  crop: "fill",
-  gravity: "auto",
+  crop: "limit",
   fetch_format: "auto",
   quality: "auto",
 };
 
-const STANDARD_IMAGE_TRANSFORMATION_STRING = "c_fill,g_auto,w_300,h_300/f_auto,q_auto";
+const STANDARD_IMAGE_TRANSFORMATION_STRING = "c_limit,w_300,h_300/f_auto,q_auto";
 
 /**
  * Upload de avatar com:
