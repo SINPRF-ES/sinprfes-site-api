@@ -33,6 +33,12 @@
     return perfil === 'ADMIN' || perfil === 'DIRETORIA' || perms.includes('*') || perms.includes('EDIT_CONTENT');
   }
 
+  function canUseInstitutionalMode() {
+    const info = getUserInfo();
+    const perfil = String(info.perfil_acesso || info.perfil || info.role || '').toUpperCase();
+    return perfil === 'ADMIN' || perfil === 'DIRETORIA';
+  }
+
   function renderTable(items) {
     if (!items.length) {
       return '<div class="ui-card"><p>Nenhum processo encontrado.</p></div>';
@@ -178,7 +184,7 @@
         feedback.textContent = 'Falha temporária em todas as fontes consultadas.';
       } else {
         const docLabel = mode === 'personal' ? 'CPF' : 'CNPJ';
-        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docLabel}: ${data.document || data.documentMasked || '-'}`;
+        feedback.textContent = `Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docLabel}: ${data.document || '-'}`;
       }
 
       if (lastUpdated) {
@@ -247,7 +253,7 @@
       output.innerHTML = '<div class="ui-card"><p>Aguardando consulta.</p></div>';
     }
 
-    if (controls && hasDebugPermission()) {
+    if (controls && canUseInstitutionalMode()) {
       controls.style.display = 'block';
       controls.innerHTML = `
         <div class="ui-card consulta-processual-mode-card">
@@ -270,6 +276,9 @@
           </div>
         </div>
       `;
+    } else if (controls) {
+      controls.style.display = 'none';
+      controls.innerHTML = '';
     }
 
     if (btnDebug) {
