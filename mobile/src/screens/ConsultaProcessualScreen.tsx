@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import SafeScreen from '../components/SafeScreen';
 import { COLORS } from '../theme/colors';
@@ -26,9 +25,8 @@ function formatDateTime(value?: string | null) {
 }
 
 export default function ConsultaProcessualScreen() {
-  const navigation = useNavigation();
   const { usuario } = useAuth();
-  const podeAcessarSindicato = isDiretoria(usuario?.perfil_acesso);
+  const podeVerOpcoesInstitucionais = isDiretoria(usuario?.perfil_acesso);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -37,13 +35,6 @@ export default function ConsultaProcessualScreen() {
   const [queriedAt, setQueriedAt] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Escolha o tipo de consulta e clique em “Consultar processos”.');
   const [mode, setMode] = useState<'personal' | 'institutional' | 'federation'>('personal');
-
-  useFocusEffect(
-    useCallback(() => {
-      // No strict restriction for the screen itself now, but institutional is gated.
-      // If user is not diretoria, they can only do personal search.
-    }, [])
-  );
 
   const executeConsulta = useCallback(async (isPullToRefresh = false, searchMode = mode) => {
     if (isPullToRefresh) {
@@ -71,7 +62,7 @@ export default function ConsultaProcessualScreen() {
         : normalizedItems.length;
 
       setItems(normalizedItems);
-      setDocumentValue(payload.document || payload.documentMasked || payload.cpfMasked || '-');
+      setDocumentValue(payload.document || '-');
       setQueriedAt(payload.queriedAt || null);
 
       const providerErrors = (payload.sources || []).filter((source) => source.status === 'error');
@@ -81,7 +72,7 @@ export default function ConsultaProcessualScreen() {
         setStatusMessage('Nenhum processo encontrado.');
       } else {
         const docType = searchMode === 'personal' ? 'CPF' : 'CNPJ';
-        setStatusMessage(`Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docType}: ${payload.document || payload.documentMasked || payload.cpfMasked || '-'}`);
+        setStatusMessage(`Consulta concluída: ${totalItems} processo(s) encontrado(s). ${docType}: ${payload.document || '-'}`);
       }
     } catch (_error) {
       setItems([]);
@@ -127,7 +118,7 @@ export default function ConsultaProcessualScreen() {
           <Text style={styles.title}>Consulta Processual</Text>
           <Text style={styles.subtitle}>Consulta automática de processos em fontes públicas integradas (TRFs).</Text>
 
-          {podeAcessarSindicato && (
+          {podeVerOpcoesInstitucionais && (
             <View style={styles.modeToggle}>
               <TouchableOpacity
                 style={[styles.modeButton, mode === 'personal' && styles.modeButtonActive]}
