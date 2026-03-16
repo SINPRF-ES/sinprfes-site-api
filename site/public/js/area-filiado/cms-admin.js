@@ -167,6 +167,7 @@
                 fd.append('signature', sign.signature);
                 fd.append('folder', sign.folder || CMS_FOLDER);
                 if (sign.tags) fd.append('tags', sign.tags);
+                if (sign.transformation) fd.append('transformation', sign.transformation);
 
                 const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloud_name}/auto/upload`, {
                     method: 'POST',

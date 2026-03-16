@@ -4,6 +4,17 @@ const streamifier = require("streamifier");
 
 cloudinary.config(process.env.CLOUDINARY_URL);
 
+const STANDARD_IMAGE_TRANSFORMATION = {
+  width: 300,
+  height: 300,
+  crop: "fill",
+  gravity: "auto",
+  fetch_format: "auto",
+  quality: "auto",
+};
+
+const STANDARD_IMAGE_TRANSFORMATION_STRING = "c_fill,g_auto,w_300,h_300/f_auto,q_auto";
+
 /**
  * Upload de avatar com:
  * - public_id fixo por filiado (URL estável)
@@ -54,12 +65,23 @@ function deleteAvatarByPublicId(publicId) {
 }
 
 function uploadFileBuffer(buffer, options = {}) {
+  const { standardizeImage = true, ...uploadOptions } = options;
+  const isImageResource = !uploadOptions.resource_type || uploadOptions.resource_type === "image";
+  const hasCustomTransform = Boolean(uploadOptions.transformation || uploadOptions.eager);
+
+  const finalOptions = {
+    resource_type: "auto",
+    ...uploadOptions,
+  };
+
+  if (standardizeImage && isImageResource && !hasCustomTransform) {
+    finalOptions.resource_type = "image";
+    finalOptions.transformation = [STANDARD_IMAGE_TRANSFORMATION];
+  }
+
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      {
-        resource_type: "auto",
-        ...options,
-      },
+      finalOptions,
       (err, result) => {
         if (err) return reject(err);
         resolve(result);
@@ -95,6 +117,7 @@ function gerarAssinaturaUpload(params) {
     signature,
     cloud_name: cloudinary.config().cloud_name,
     api_key: cloudinary.config().api_key,
+    params,
   };
 }
 
@@ -104,4 +127,5 @@ module.exports = {
   uploadFileBuffer,
   getSignedUrl,
   gerarAssinaturaUpload,
+  STANDARD_IMAGE_TRANSFORMATION_STRING,
 };
