@@ -34,7 +34,7 @@ const imageOptimizer = (options = {}) => {
       let quality = initialQuality;
       let buffer = await sharp(req.file.buffer)
         .rotate()
-        .resize(width, height, { fit })
+        .resize(width, height, { fit, withoutEnlargement: true })
         .webp({ quality })
         .toBuffer();
 
@@ -43,7 +43,7 @@ const imageOptimizer = (options = {}) => {
         quality -= 8;
         buffer = await sharp(req.file.buffer)
           .rotate()
-          .resize(width, height, { fit })
+          .resize(width, height, { fit, withoutEnlargement: true })
           .webp({ quality })
           .toBuffer();
       }

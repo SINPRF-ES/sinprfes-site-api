@@ -4,10 +4,7 @@
     "page": "home",
     "title": "T1",
     "is_active": true,
-    "ordenacao": 1,
-    "body": "<p>Hello</p>",
-    "updated_at": "2026-03-16T18:32:36.527Z",
-    "updated_by": 1
+    "ordenacao": 1
   },
   {
     "id": "2",
@@ -15,27 +12,5 @@
     "title": "T2",
     "is_active": false,
     "ordenacao": 2
-  },
-  {
-    "id": "convenios-1",
-    "page": "convenios",
-    "ordenacao": 1,
-    "title": "Convênio exemplo",
-    "body": "Descrição do convênio e condições para filiados.",
-    "media_type": "image",
-    "media_url": "",
-    "is_active": true,
-    "updated_at": "2026-03-16T18:32:36.526Z"
-  },
-  {
-    "id": "convenios-2",
-    "page": "convenios",
-    "ordenacao": 2,
-    "title": "Outro convênio",
-    "body": "Use este bloco para cadastrar novos parceiros e benefícios.",
-    "media_type": "image",
-    "media_url": "",
-    "is_active": false,
-    "updated_at": "2026-03-16T18:32:36.526Z"
   }
 ]
