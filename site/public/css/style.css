@@ -220,9 +220,12 @@ body {
     max-width: 400px;
     margin: 50px auto;
     padding: 30px;
-    background-color: var(--white);
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: 8px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Palette: Password Toggle Styles */
@@ -257,7 +260,9 @@ body {
 
 .af-sidebar {
     width: 260px;
-    background: var(--ui-primary);
+    background: rgba(0, 51, 102, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     color: var(--ui-primary-contrast);
     display: flex;
     flex-direction: column;
@@ -273,7 +278,8 @@ body {
     width: 52px;
     height: 52px;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -339,6 +345,8 @@ body {
 .history-card,
 #lista-filiados > .ui-card {
     background: var(--ui-surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--ui-border);
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
@@ -491,10 +499,12 @@ body {
 /* Quick Actions Grid (Home) */
 .home-quick-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 25px; }
 .action-card {
-    background: #fff;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     padding: 20px;
     border-radius: 12px;
-    border: 1px solid #eee;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     text-align: center;
     cursor: pointer;
     transition: 0.2s;
@@ -601,10 +611,13 @@ body {
 
 .filiado-card {
     background: var(--ui-surface);
-    border: 1px solid var(--ui-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-left: 5px solid #cbd5e1;
     border-radius: 12px;
     padding: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
 .filiado-header {

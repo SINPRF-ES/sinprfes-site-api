@@ -2,8 +2,8 @@
 
 :root {
   /* Colors */
-  --ui-bg: #eef2f7;
-  --ui-surface: #ffffff;
+  --ui-bg: rgba(238, 242, 247, 0.6);
+  --ui-surface: rgba(255, 255, 255, 0.85);
   --ui-text: #1f2937;
   --ui-text-muted: #475569;
   --ui-primary: #003366;
@@ -40,6 +40,42 @@ body {
   color: var(--ui-text);
   background-color: var(--ui-bg);
   margin: 0;
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  background-image: url('../img/bg-smoky.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  filter: blur(4px);
+  transform: scale(1.05);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  background: var(--ui-bg);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+#site-header, #site-footer, main, .af-container {
+  position: relative;
+  z-index: 2;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -74,10 +110,12 @@ h1, h2, h3, h4, h5, h6 {
 /* Components */
 .ui-card {
   background: var(--ui-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: var(--ui-radius);
-  box-shadow: var(--ui-shadow);
+  box-shadow: 0 8px 32px rgba(0, 51, 102, 0.1);
   padding: var(--ui-space-4);
-  border: 1px solid var(--ui-border);
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 /* Buttons */
@@ -159,7 +197,9 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius);
   font-size: 1rem;
-  background-color: var(--ui-surface);
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
 }
