@@ -171,10 +171,18 @@ exports.listar = async (req, res) => {
       const audienciaLeitura = resolverAudienciaEscopo(req, "PUBLICA");
       params.push(audienciaLeitura);
       query += ` WHERE n.status = 'PUBLICADA' AND n.audiencia = $${params.length}`;
+      if (statusEditorialNorm) {
+        params.push(statusEditorialNorm);
+        query += ` AND n.status_editorial = $${params.length}`;
+      }
     } else if (!isGestao) {
       const audienciaLeitura = resolverAudienciaEscopo(req, "INTERNA");
       params.push(audienciaLeitura);
       query += ` WHERE n.status = 'PUBLICADA' AND n.audiencia = $${params.length}`;
+      if (statusEditorialNorm) {
+        params.push(statusEditorialNorm);
+        query += ` AND n.status_editorial = $${params.length}`;
+      }
     } else {
       query += " WHERE 1=1";
       if (audienciaEscopo) {
@@ -369,14 +377,6 @@ exports.criar = async (req, res) => {
       `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' LIMIT 1`,
       [audienciaFinal]
     );
-    if (atuais.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: `Já existe uma notícia atual para a audiência ${audienciaFinal}. Arquive a notícia atual antes de criar outra.`,
-        code: "CURRENT_NEWS_ALREADY_EXISTS",
-        requestId,
-      });
-    }
 
     const publishedAtBase = data_noticia || new Date().toISOString();
     const client = await pool.connect();
@@ -384,6 +384,21 @@ exports.criar = async (req, res) => {
 
     try {
       await client.query("BEGIN");
+
+      if (atuais.length > 0) {
+        await client.query(
+          `UPDATE noticias
+           SET status_editorial = 'ARQUIVADA',
+               is_editable = false,
+               archived_at = NOW(),
+               status = 'PUBLICADA',
+               published_at = COALESCE(published_at, NOW()),
+               sort_date = COALESCE(sort_date, published_at, created_at)
+           WHERE id = $1`,
+          [atuais[0].id]
+        );
+      }
+
       const { rows: createdRows } = await client.query(
         `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date, published_at)
          VALUES ($1, $2, $3, 'PUBLICADA', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()), COALESCE($8, NOW()))
@@ -546,10 +561,29 @@ exports.publicar = async (req, res) => {
     let publishRows;
     try {
       await client.query("BEGIN");
+
+      await client.query(
+        `UPDATE noticias
+         SET status_editorial = 'ARQUIVADA',
+             is_editable = false,
+             archived_at = NOW(),
+             status = 'PUBLICADA',
+             published_at = COALESCE(published_at, NOW()),
+             sort_date = COALESCE(sort_date, published_at, created_at)
+         WHERE audiencia = (SELECT audiencia FROM noticias WHERE id = $1)
+           AND status_editorial = 'ATUAL'
+           AND id <> $1`,
+        [id]
+      );
+
       const { rows: baseRows } = await client.query(
         `UPDATE noticias
          SET status = 'PUBLICADA',
-             published_at = COALESCE(published_at, NOW())
+             published_at = COALESCE(published_at, NOW()),
+             status_editorial = 'ATUAL',
+             is_editable = true,
+             archived_at = NULL,
+             sort_date = COALESCE(sort_date, published_at, created_at)
          WHERE id = $1
          RETURNING *`,
         [id]

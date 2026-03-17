@@ -56,15 +56,30 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
     expect(res.body.status_editorial).toBe('ATUAL');
   });
 
-  test('Caso 7: Bloquear segunda notícia atual para a mesma audiência', async () => {
+  test('Caso 7: Publicar nova notícia arquiva a atual automaticamente', async () => {
     pool.query.mockResolvedValue({ rows: [{ id: VALID_UUID }] }); // Found existing current news
+
+    const txClient = {
+      query: jest.fn(),
+      release: jest.fn(),
+    };
+    pool.connect.mockResolvedValue(txClient);
+
+    txClient.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [] }) // archive previous current
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'TEST_N2', status_editorial: 'ATUAL', is_editable: true, audiencia: 'PUBLICA' }] }) // Insert new current
+      .mockResolvedValueOnce({ rows: [] }) // check slug uniqueness
+      .mockResolvedValueOnce({ rows: [] }) // check public_ref uniqueness
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'TEST_N2', status_editorial: 'ATUAL', is_editable: true, audiencia: 'PUBLICA', slug: 'test-n2', public_ref: '20260314-150000-test-n2' }] }) // index update
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(app)
       .post('/api/noticias')
       .send({ titulo: 'TEST_N2', conteudo: 'C', audiencia: 'PUBLICA' });
 
-    expect(res.status).toBe(409);
-    expect(res.body.code).toBe('CURRENT_NEWS_ALREADY_EXISTS');
+    expect(res.status).toBe(201);
+    expect(res.body.status_editorial).toBe('ATUAL');
   });
 
   test('Caso 8: Arquivar notícia', async () => {
