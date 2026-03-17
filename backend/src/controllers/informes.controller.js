@@ -339,26 +339,6 @@ exports.criar = async (req, res) => {
     try {
       await client.query("BEGIN");
 
-      const { rows: atuais } = await client.query(
-        `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' FOR UPDATE`,
-        [audienciaFinal]
-      );
-
-      if (atuais.length > 0) {
-        const idsToArchive = atuais.map(r => r.id);
-        await client.query(
-          `UPDATE noticias
-           SET status_editorial = 'ARQUIVADA',
-               is_editable = false,
-               archived_at = NOW(),
-               status = 'PUBLICADA',
-               published_at = COALESCE(published_at, NOW()),
-               sort_date = COALESCE(sort_date, published_at, created_at)
-           WHERE id = ANY($1)`,
-          [idsToArchive]
-        );
-      }
-
       const { rows: createdRows } = await client.query(
         `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date)
          VALUES ($1, $2, $3, 'RASCUNHO', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))

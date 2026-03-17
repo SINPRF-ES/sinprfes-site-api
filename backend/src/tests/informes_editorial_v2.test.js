@@ -37,7 +37,6 @@ describe('Informes Canonical Contract Tests', () => {
 
     mClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
-      .mockResolvedValueOnce({ rows: [] }) // SELECT FOR UPDATE
       .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'I1', data_noticia: '2026-03-10T12:00:00.000Z' }] }) // INSERT
       .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
@@ -47,9 +46,9 @@ describe('Informes Canonical Contract Tests', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data_informe).toBe('2026-03-10');
-    const insertParams = mClient.query.mock.calls[2][1];
+    const insertParams = mClient.query.mock.calls[1][1];
     expect(insertParams[7]).toBe('2026-03-10T12:00:00.000Z');
-    const insertSql = mClient.query.mock.calls[2][0];
+    const insertSql = mClient.query.mock.calls[1][0];
     expect(insertSql).toContain("'RASCUNHO'");
   });
 
