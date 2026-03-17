@@ -22,7 +22,7 @@
 
   async function inicializarNoticias(perfil) {
     perfilLogado = (perfil || "").toUpperCase();
-    const container = document.getElementById("sec-noticias");
+    const container = document.getElementById("sec-noticias-admin");
     if (!container) return;
 
     const ehGestao = ehGestaoNoticias();

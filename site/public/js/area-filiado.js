@@ -107,7 +107,7 @@
         else if (abaAlvo === "sec-jogos" && inicializarJogos) inicializarJogos(perfil);
         else if (abaAlvo === "sec-publicacoes" && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
         else if (abaAlvo === "sec-assembleias" && inicializarAssembleias) inicializarAssembleias(perfil);
-        else if (abaAlvo === "sec-noticias") {
+        else if (abaAlvo === "sec-informes") {
           if (inicializarInformes) inicializarInformes(perfil);
         }
         else if (abaAlvo === "sec-informes-admin") {

@@ -16,7 +16,7 @@
 
         const actions = [
             { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: '👤', target: 'sec-meus-dados' },
-            { label: 'Informes', subtitle: 'Avisos e comunicados', icon: '📰', target: 'sec-noticias' },
+            { label: 'Informes', subtitle: 'Avisos e comunicados', icon: '📰', target: 'sec-informes' },
             { label: 'Ressarcimento', subtitle: 'Solicite seu reembolso', icon: '💸', target: 'sec-ressarcimento' },
         ];
 

@@ -30,7 +30,7 @@
 
   async function inicializarInformes(perfil) {
     perfilLogado = (perfil || "").toUpperCase();
-    const container = document.getElementById("sec-informes-admin");
+    const container = document.getElementById("sec-informes") || document.getElementById("sec-informes-admin");
     if (!container) return;
 
     const ehGestao = ehGestaoInformes();
