@@ -81,6 +81,11 @@
       if (syncVisibility) syncVisibility(info);
     }
 
+    function podeListarFiliados(info) {
+      const perms = Array.isArray(info?.permissions) ? info.permissions : [];
+      return perms.includes("*") || perms.includes("LIST_FILIADOS");
+    }
+
     console.log("Perfil inicial (Cache):", perfil);
     const sidebarNav = document.getElementById('af-sidebar-nav');
     if (renderSidebarNav) renderSidebarNav(sidebarNav);
@@ -170,7 +175,11 @@
             atualizarVisibilidadeAbas(dadosFrescos);
 
             // Re-render de módulos que dependem de perfil
-            if (inicializarFiliados) inicializarFiliados(perfil);
+            // Evita chamar /api/filiados para perfis sem permissão (ex.: COMUNICADOR),
+            // o que gerava 403 no console sem impacto funcional.
+            if (inicializarFiliados && podeListarFiliados(dadosFrescos)) {
+              inicializarFiliados(perfil);
+            }
 
             // Re-sincroniza notificações apenas quando a aba já está ativa
             if (document.querySelector(".af-section.active")?.id === "sec-notificacoes") {
