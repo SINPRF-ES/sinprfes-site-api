@@ -96,18 +96,20 @@ function buildNewsCard(item) {
   const title = escapeHtml(item.titulo || 'Notícia');
   const subtitle = escapeHtml(item.subtitulo || '');
   const preview = escapeHtml(toPreview(item.conteudo));
-  const href = `/noticias/${encodeURIComponent(item.public_ref)}`;
+  const href = (typeof item.public_ref === 'string' && item.public_ref.length > 0)
+    ? `/noticias/${encodeURIComponent(item.public_ref)}`
+    : null;
   const image = item.capa_url ? `<img src="${item.capa_url}" alt="${title}" loading="lazy">` : '<div style="height:180px;background:#f1f5f9;border-radius:10px;"></div>';
   return `
     <article class="instagram-card instagram-card-news">
-      <a href="${href}" aria-label="Abrir notícia: ${title}">
+      <a ${href ? `href="${href}"` : ''} aria-label="Abrir notícia: ${title}">
         <div class="instagram-image-wrapper">${image}</div>
         <div class="instagram-card-news__body">
           <p class="instagram-card-caption" style="font-weight:700;">${title}</p>
           ${subtitle ? `<p class="instagram-card-news__meta">${subtitle}</p>` : ''}
           <p class="instagram-card-news__meta">${formatDate(item.published_at || item.data_noticia || item.created_at)}</p>
           <p class="instagram-card-news__meta" style="line-height:1.4;">${preview}</p>
-          <span class="instagram-open-cta">Ler matéria completa</span>
+          <span class="instagram-open-cta">${href ? 'Ler matéria completa' : 'Matéria sem link público'}</span>
         </div>
       </a>
     </article>
@@ -115,10 +117,16 @@ function buildNewsCard(item) {
 }
 
 async function fetchNoticias(API_BASE, statusEditorial, pagina = 1) {
-  const response = await fetch(`${API_BASE}/api/noticias?pagina=${pagina}&status_editorial=${encodeURIComponent(statusEditorial)}`);
+  const query = new URLSearchParams({
+    pagina: String(pagina),
+    status_editorial: statusEditorial,
+    status: 'PUBLICADA',
+    audiencia: 'PUBLICA'
+  });
+  const response = await fetch(`${API_BASE}/api/noticias?${query.toString()}`);
   const payload = await response.json();
   return {
-    items: (Array.isArray(payload?.items) ? payload.items : []).filter((item) => typeof item.public_ref === 'string' && item.public_ref.length > 0),
+    items: Array.isArray(payload?.items) ? payload.items : [],
     pagination: payload?.pagination || { page: 1, totalPages: 1 }
   };
 }

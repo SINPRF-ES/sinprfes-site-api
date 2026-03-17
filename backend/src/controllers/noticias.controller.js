@@ -78,6 +78,23 @@ async function gerarIndexacaoPublicaNoticia(client, noticia) {
   };
 }
 
+async function garantirIndexacaoPublica(client, noticia) {
+  if (!noticia || noticia.audiencia !== "PUBLICA" || noticia.public_ref) {
+    return noticia;
+  }
+
+  const indexacao = await gerarIndexacaoPublicaNoticia(client, noticia);
+  const { rows } = await client.query(
+    `UPDATE noticias
+     SET slug = $1,
+         public_ref = $2
+     WHERE id = $3
+     RETURNING *`,
+    [indexacao.slug, indexacao.publicRef, noticia.id]
+  );
+  return rows[0] || noticia;
+}
+
 function parseNoticiaId(req, res, requestId) {
     const id = parseUuid(String(req.params.id || ""));
     if (!id) {
@@ -219,7 +236,20 @@ exports.listar = async (req, res) => {
       query += ` OFFSET $${params.length}`;
     }
 
-    const { rows: noticias } = await pool.query(query, params);
+    let { rows: noticias } = await pool.query(query, params);
+
+    const noticiasSemRefPublica = noticias.filter((n) => n.audiencia === "PUBLICA" && n.status === "PUBLICADA" && !n.public_ref);
+    if (noticiasSemRefPublica.length > 0) {
+      const client = await pool.connect();
+      try {
+        for (const noticia of noticiasSemRefPublica) {
+          const noticiaAtualizada = await garantirIndexacaoPublica(client, noticia);
+          noticias = noticias.map((item) => (item.id === noticiaAtualizada.id ? noticiaAtualizada : item));
+        }
+      } finally {
+        client.release();
+      }
+    }
 
     // Busca as mídias para todas as notícias listadas
     if (noticias.length > 0) {
@@ -409,18 +439,7 @@ exports.criar = async (req, res) => {
 
       createdRow = createdRows[0];
 
-      if (audienciaFinal === "PUBLICA") {
-        const indexacao = await gerarIndexacaoPublicaNoticia(client, createdRow);
-        const { rows: indexedRows } = await client.query(
-          `UPDATE noticias
-           SET slug = $1,
-               public_ref = $2
-           WHERE id = $3
-           RETURNING *`,
-          [indexacao.slug, indexacao.publicRef, createdRow.id]
-        );
-        createdRow = indexedRows[0];
-      }
+      createdRow = await garantirIndexacaoPublica(client, createdRow);
 
       await client.query("COMMIT");
     } catch (error) {
@@ -518,6 +537,16 @@ exports.atualizar = async (req, res) => {
       return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
     }
 
+    let noticiaAtualizada = rows[0];
+    if (noticiaAtualizada.audiencia === "PUBLICA" && !noticiaAtualizada.public_ref) {
+      const client = await pool.connect();
+      try {
+        noticiaAtualizada = await garantirIndexacaoPublica(client, noticiaAtualizada);
+      } finally {
+        client.release();
+      }
+    }
+
     log.info("NOTICIAS_UPDATE_SUCCESS", {
       endpoint,
       method,
@@ -527,7 +556,7 @@ exports.atualizar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json({ ...rows[0], requestId });
+    return res.json({ ...noticiaAtualizada, requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao atualizar notícia.");
   }
@@ -605,19 +634,7 @@ exports.publicar = async (req, res) => {
         return res.status(404).json({ success: false, message: "Notícia não encontrada.", requestId });
       }
 
-      let noticiaPublicada = baseRows[0];
-      if (noticiaPublicada.audiencia === "PUBLICA" && !noticiaPublicada.public_ref) {
-        const indexacao = await gerarIndexacaoPublicaNoticia(client, noticiaPublicada);
-        const { rows: indexedRows } = await client.query(
-          `UPDATE noticias
-           SET slug = $1,
-               public_ref = $2
-           WHERE id = $3
-           RETURNING *`,
-          [indexacao.slug, indexacao.publicRef, noticiaPublicada.id]
-        );
-        noticiaPublicada = indexedRows[0];
-      }
+      let noticiaPublicada = await garantirIndexacaoPublica(client, baseRows[0]);
 
       publishRows = [noticiaPublicada];
       await client.query("COMMIT");
