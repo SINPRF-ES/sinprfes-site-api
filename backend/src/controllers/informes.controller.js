@@ -333,26 +333,47 @@ exports.criar = async (req, res) => {
 
     const dataNoticiaCanonica = toDateOnlyTimestamp(data_informe || data_noticia);
 
+    const client = await pool.connect();
+    let createdRow;
 
-    const { rows: atuais } = await pool.query(
-      `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' LIMIT 1`,
-      [audienciaFinal]
-    );
-    if (atuais.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: `Já existe uma informe atual para a audiência ${audienciaFinal}. Arquive a informe atual antes de criar outra.`,
-        code: "CURRENT_NEWS_ALREADY_EXISTS",
-        requestId,
-      });
+    try {
+      await client.query("BEGIN");
+
+      const { rows: atuais } = await client.query(
+        `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' FOR UPDATE`,
+        [audienciaFinal]
+      );
+
+      if (atuais.length > 0) {
+        const idsToArchive = atuais.map(r => r.id);
+        await client.query(
+          `UPDATE noticias
+           SET status_editorial = 'ARQUIVADA',
+               is_editable = false,
+               archived_at = NOW(),
+               status = 'PUBLICADA',
+               published_at = COALESCE(published_at, NOW()),
+               sort_date = COALESCE(sort_date, published_at, created_at)
+           WHERE id = ANY($1)`,
+          [idsToArchive]
+        );
+      }
+
+      const { rows: createdRows } = await client.query(
+        `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date)
+         VALUES ($1, $2, $3, 'RASCUNHO', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))
+         RETURNING *`,
+        [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), dataNoticiaCanonica || null]
+      );
+
+      createdRow = createdRows[0];
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
-
-    const { rows } = await pool.query(
-      `INSERT INTO noticias (titulo, subtitulo, conteudo, status, autor_id, capa_url, audiencia, destaque, data_noticia, status_editorial, is_editable, sort_date)
-       VALUES ($1, $2, $3, 'RASCUNHO', $4, $5, $6, $7, COALESCE($8, NOW()), 'ATUAL', true, COALESCE($8, NOW()))
-       RETURNING *`,
-      [titulo, subtitulo || null, conteudo, req.user.id, capa_url, audienciaFinal, Boolean(destaque), dataNoticiaCanonica || null]
-    );
 
     log.info("INFORMES_CREATE_SUCCESS", {
       endpoint,
@@ -362,7 +383,7 @@ exports.criar = async (req, res) => {
       profile,
       durationMs: Date.now() - start
     });
-    return res.status(201).json({ ...serializeInformeRow(rows[0]), requestId });
+    return res.status(201).json({ ...serializeInformeRow(createdRow), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao criar informe.");
   }
@@ -483,19 +504,60 @@ exports.publicar = async (req, res) => {
       return res.status(409).json({ success: false, message: "Informe arquivada não pode ser publicada novamente.", requestId });
     }
 
-    const { rows } = await pool.query(
-      `UPDATE noticias
-       SET status = 'PUBLICADA',
-           status_editorial = 'ATUAL',
-           is_editable = true,
-           published_at = COALESCE(published_at, NOW())
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
+    const client = await pool.connect();
+    let publishRows;
 
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrada.", requestId });
+    try {
+      await client.query("BEGIN");
+
+      const { rows: atuais } = await client.query(
+        `SELECT id FROM noticias
+         WHERE audiencia = (SELECT audiencia FROM noticias WHERE id = $1)
+           AND status_editorial = 'ATUAL'
+           AND id <> $1
+         FOR UPDATE`,
+        [id]
+      );
+
+      if (atuais.length > 0) {
+        const idsToArchive = atuais.map(r => r.id);
+        await client.query(
+          `UPDATE noticias
+           SET status_editorial = 'ARQUIVADA',
+               is_editable = false,
+               archived_at = NOW(),
+               status = 'PUBLICADA',
+               published_at = COALESCE(published_at, NOW()),
+               sort_date = COALESCE(sort_date, published_at, created_at)
+           WHERE id = ANY($1)`,
+          [idsToArchive]
+        );
+      }
+
+      const { rows: baseRows } = await client.query(
+        `UPDATE noticias
+         SET status = 'PUBLICADA',
+             status_editorial = 'ATUAL',
+             is_editable = true,
+             published_at = COALESCE(published_at, NOW()),
+             sort_date = COALESCE(sort_date, published_at, created_at)
+         WHERE id = $1
+         RETURNING *`,
+        [id]
+      );
+
+      if (baseRows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ success: false, message: "Informe não encontrada.", requestId });
+      }
+
+      publishRows = baseRows;
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
 
     log.info("INFORMES_PUBLISH_SUCCESS", {
@@ -507,7 +569,7 @@ exports.publicar = async (req, res) => {
       id,
       durationMs: Date.now() - start
     });
-    return res.json({ ...serializeInformeRow(rows[0]), requestId });
+    return res.json({ ...serializeInformeRow(publishRows[0]), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao publicar informe.");
   }

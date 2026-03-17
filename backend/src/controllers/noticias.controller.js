@@ -373,11 +373,6 @@ exports.criar = async (req, res) => {
       return res.status(400).json({ success: false, message: "Audiência inválida. Use INTERNA ou PUBLICA.", requestId });
     }
 
-    const { rows: atuais } = await pool.query(
-      `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' LIMIT 1`,
-      [audienciaFinal]
-    );
-
     const publishedAtBase = data_noticia || new Date().toISOString();
     const client = await pool.connect();
     let createdRow;
@@ -385,7 +380,13 @@ exports.criar = async (req, res) => {
     try {
       await client.query("BEGIN");
 
+      const { rows: atuais } = await client.query(
+        `SELECT id FROM noticias WHERE audiencia = $1 AND status_editorial = 'ATUAL' FOR UPDATE`,
+        [audienciaFinal]
+      );
+
       if (atuais.length > 0) {
+        const idsToArchive = atuais.map(r => r.id);
         await client.query(
           `UPDATE noticias
            SET status_editorial = 'ARQUIVADA',
@@ -394,8 +395,8 @@ exports.criar = async (req, res) => {
                status = 'PUBLICADA',
                published_at = COALESCE(published_at, NOW()),
                sort_date = COALESCE(sort_date, published_at, created_at)
-           WHERE id = $1`,
-          [atuais[0].id]
+           WHERE id = ANY($1)`,
+          [idsToArchive]
         );
       }
 
@@ -562,19 +563,29 @@ exports.publicar = async (req, res) => {
     try {
       await client.query("BEGIN");
 
-      await client.query(
-        `UPDATE noticias
-         SET status_editorial = 'ARQUIVADA',
-             is_editable = false,
-             archived_at = NOW(),
-             status = 'PUBLICADA',
-             published_at = COALESCE(published_at, NOW()),
-             sort_date = COALESCE(sort_date, published_at, created_at)
+      const { rows: atuais } = await client.query(
+        `SELECT id FROM noticias
          WHERE audiencia = (SELECT audiencia FROM noticias WHERE id = $1)
            AND status_editorial = 'ATUAL'
-           AND id <> $1`,
+           AND id <> $1
+         FOR UPDATE`,
         [id]
       );
+
+      if (atuais.length > 0) {
+        const idsToArchive = atuais.map(r => r.id);
+        await client.query(
+          `UPDATE noticias
+           SET status_editorial = 'ARQUIVADA',
+               is_editable = false,
+               archived_at = NOW(),
+               status = 'PUBLICADA',
+               published_at = COALESCE(published_at, NOW()),
+               sort_date = COALESCE(sort_date, published_at, created_at)
+           WHERE id = ANY($1)`,
+          [idsToArchive]
+        );
+      }
 
       const { rows: baseRows } = await client.query(
         `UPDATE noticias

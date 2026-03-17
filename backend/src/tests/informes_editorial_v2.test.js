@@ -29,9 +29,17 @@ describe('Informes Canonical Contract Tests', () => {
   });
 
   test('normaliza data_informe como data-only no payload de criação', async () => {
-    pool.query
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'I1', data_noticia: '2026-03-10T12:00:00.000Z' }] });
+    const mClient = {
+      query: jest.fn(),
+      release: jest.fn(),
+    };
+    pool.connect.mockResolvedValue(mClient);
+
+    mClient.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [] }) // SELECT FOR UPDATE
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'I1', data_noticia: '2026-03-10T12:00:00.000Z' }] }) // INSERT
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(app)
       .post('/api/informes')
@@ -39,22 +47,33 @@ describe('Informes Canonical Contract Tests', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data_informe).toBe('2026-03-10');
-    const insertParams = pool.query.mock.calls[1][1];
+    const insertParams = mClient.query.mock.calls[2][1];
     expect(insertParams[7]).toBe('2026-03-10T12:00:00.000Z');
-    const insertSql = pool.query.mock.calls[1][0];
+    const insertSql = mClient.query.mock.calls[2][0];
     expect(insertSql).toContain("'RASCUNHO'");
   });
 
 
   test('publicar promove informe para status PUBLICADA e status_editorial ATUAL', async () => {
-    pool.query
-      .mockResolvedValueOnce({ rows: [{ status_editorial: 'ATUAL', is_editable: true }] })
-      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, status: 'PUBLICADA', status_editorial: 'ATUAL' }] });
+    const mClient = {
+      query: jest.fn(),
+      release: jest.fn(),
+    };
+    pool.connect.mockResolvedValue(mClient);
+
+    pool.query.mockResolvedValueOnce({ rows: [{ status_editorial: 'ATUAL', is_editable: true }] }); // estadoRows
+
+    mClient.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 'OLD_ID' }] }) // SELECT FOR UPDATE
+      .mockResolvedValueOnce({ rows: [] }) // update previous
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, status: 'PUBLICADA', status_editorial: 'ATUAL', data_noticia: '2026-03-10' }] }) // UPDATE
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(app).post(`/api/informes/${VALID_UUID}/publicar`);
 
     expect(res.status).toBe(200);
-    const updateSql = pool.query.mock.calls[1][0];
+    const updateSql = mClient.query.mock.calls[3][0];
     expect(updateSql).toContain("status = 'PUBLICADA'");
     expect(updateSql).toContain("status_editorial = 'ATUAL'");
   });

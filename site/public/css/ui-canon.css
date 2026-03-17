@@ -118,6 +118,36 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+/* Embed Mode overrides */
+.is-embed body::before,
+.is-embed body::after {
+  display: none !important;
+}
+
+.is-embed body {
+  background-color: transparent !important;
+  background-image: none !important;
+  padding: 0 !important;
+}
+
+.is-embed .public-page {
+  margin-top: 0 !important;
+  padding: 0 !important;
+}
+
+.is-embed .ui-card {
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: #ffffff !important;
+  border: 1px solid var(--ui-border) !important;
+}
+
+.is-embed .public-page > h1,
+.is-embed .public-card:first-of-type {
+  display: none !important;
+}
+
 /* Buttons */
 .ui-spinner {
   display: inline-block;
