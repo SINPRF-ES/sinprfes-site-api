@@ -30,7 +30,7 @@
 
   async function inicializarInformes(perfil) {
     perfilLogado = (perfil || "").toUpperCase();
-    const container = document.getElementById("sec-noticias");
+    const container = document.getElementById("sec-informes-admin");
     if (!container) return;
 
     const ehGestao = ehGestaoInformes();
@@ -42,7 +42,7 @@
             <h2 style="margin:0; text-align:center;">📰 Informes internos</h2>
             ${ehGestao ? '<p class="section-subtitle" style="margin:4px 0 0;">Apenas o informe atual pode ser editado. Arquivados ficam imutáveis no acervo.</p>' : ''}
           </div>
-          ${ehGestao ? `<button id="btn-novo-informe" class="ui-button ui-button-secondary">+ Novo rascunho de informe</button>` : ''}
+          ${ehGestao ? `<button id="btn-novo-informe" class="ui-button ui-button-secondary">+ Inserir novo informe atual</button>` : ''}
         </div>
 
         <section style="margin-bottom:16px;">
@@ -87,7 +87,7 @@
   }
 
   function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false, mostrarExcluir = false, mostrarMetadados = false } = {}) {
-    const data = formatDateOnly(n.data_informe || n.data_noticia || n.published_at || n.created_at);
+    const data = formatDateOnly(n.data_informe || n.published_at || n.created_at);
     return `
       <div class="informe-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
@@ -200,7 +200,7 @@
   }
 
   async function abrirModalInforme(id = null) {
-    if (!ehGestaoInformes()) return alert("Apenas gestão pode editar informes.");
+    if (!ehGestaoInformes()) return alert("Apenas gestão pode gerenciar informes.");
 
     if (!id && informeAtual) {
       return alert("Já existe um informe no ciclo atual. Publique ou arquive o informe atual antes de criar outro.");
@@ -219,7 +219,7 @@
     const modal = document.getElementById("modal-generic");
     if (!modal) return;
 
-    document.getElementById("modal-generic-titulo").textContent = id ? "Editar informe atual" : "Novo rascunho de informe";
+    document.getElementById("modal-generic-titulo").textContent = id ? "Editar informe atual" : "Inserir novo informe atual";
     document.getElementById("modal-generic-corpo").innerHTML = `
       <form id="form-informe-admin">
         <div class="field-group"><label>Título</label><input class="ui-input" name="titulo" value="${escape(informe.titulo)}" required></div>

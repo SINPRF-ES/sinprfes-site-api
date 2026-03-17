@@ -8,7 +8,7 @@ import { COLORS } from '../theme/colors';
 import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
-import NoticiasScreen from '../screens/NoticiasScreen';
+import InformesScreen from '../screens/InformesScreen';
 import AssembleiaStack from './AssembleiaStack';
 import LogsScreen from '../screens/LogsScreen';
 import SegurancaScreen from '../screens/SegurancaScreen';
@@ -80,8 +80,8 @@ export default function DrawerNavigator() {
       />
 
       <Drawer.Screen
-        name="Noticias"
-        component={NoticiasScreen}
+        name="Informes"
+        component={InformesScreen}
         options={{
           title: 'Informes',
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.NOTICIAS} label="Informes" {...props} />,

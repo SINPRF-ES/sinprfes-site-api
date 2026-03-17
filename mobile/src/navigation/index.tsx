@@ -23,8 +23,8 @@ import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
 import EditarFiliadoScreen from '../screens/EditarFiliadoScreen';
 import PdfViewerScreen from '../screens/PdfViewerScreen';
 import FileViewerScreen from '../screens/FileViewerScreen';
-import NoticiaDetalheScreen from '../screens/NoticiaDetalheScreen';
-import NoticiaEditorScreen from '../screens/NoticiaEditorScreen';
+import InformeDetalheScreen from '../screens/InformeDetalheScreen';
+import InformeEditorScreen from '../screens/InformeEditorScreen';
 
 import UpdateAutoChecker from '../components/UpdateAutoChecker';
 
@@ -40,8 +40,8 @@ export type RootStackParamList = {
   EditarFiliado: { filiadoId: number };
   PdfViewer: { localUri: string; title: string };
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
-  NoticiaDetalhe: { newsId: string };
-  NoticiaEditor: { newsId: string | null };
+  InformeDetalhe: { newsId: string };
+  InformeEditor: { newsId: string | null };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -142,8 +142,8 @@ export default function RootNavigation() {
               options={({ route }) => ({ title: route.params.title || 'Visualizador' })}
             />
 
-            <Stack.Screen name="NoticiaDetalhe" component={NoticiaDetalheScreen} options={{ title: 'Notícia' }} />
-            <Stack.Screen name="NoticiaEditor" component={NoticiaEditorScreen} options={{ title: 'Editor de Notícia' }} />
+            <Stack.Screen name="InformeDetalhe" component={InformeDetalheScreen} options={{ title: 'Informe' }} />
+            <Stack.Screen name="InformeEditor" component={InformeEditorScreen} options={{ title: 'Editor de Informe' }} />
           </>
         )}
       </Stack.Navigator>
