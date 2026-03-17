@@ -55,12 +55,10 @@ FROM noticia_midias nm
 JOIN noticias n ON nm.noticia_id = n.id
 WHERE n.audiencia = 'INTERNA';
 
--- 5. Create unique index for current informes (one per domain rule)
--- Note: Previously we had a unique index on 'audiencia' for 'PUBLICA'.
--- Now we just need to ensure we don't have multiple 'ATUAL' in informes if that's the rule.
--- The prompt says "novo informe assume como atual", which implies a rotation.
--- We'll add an index to help enforce this if needed, but the controller handles rotation.
-CREATE INDEX IF NOT EXISTS ix_informes_status_editorial ON informes (status_editorial) WHERE status_editorial = 'ATUAL';
+-- 5. Enforce single current informe at database level
+CREATE UNIQUE INDEX IF NOT EXISTS ux_informes_single_atual
+ON informes ((1))
+WHERE status_editorial = 'ATUAL';
 
 -- 6. Clean up NOTICIAS table
 -- Delete migrated internal records
