@@ -151,4 +151,38 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
 
     expect(res.status).toBe(404);
   });
+
+  test('Listagem pública corrige notícia sem public_ref para evitar descompasso CMS x site', async () => {
+    const noticiaSemRef = {
+      id: VALID_UUID,
+      titulo: 'Notícia sem referência pública',
+      audiencia: 'PUBLICA',
+      status: 'PUBLICADA',
+      created_at: '2026-03-12T14:30:00.000Z',
+      status_editorial: 'ATUAL',
+      public_ref: null,
+      slug: null,
+    };
+
+    const txClient = {
+      query: jest.fn(),
+      release: jest.fn(),
+    };
+
+    pool.connect.mockResolvedValue(txClient);
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ total: 1 }] })
+      .mockResolvedValueOnce({ rows: [noticiaSemRef] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    txClient.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ ...noticiaSemRef, slug: 'noticia-sem-referencia-publica', public_ref: '20260312-143000-noticia-sem-referencia-publica' }] });
+
+    const res = await request(app).get('/api/noticias?pagina=1&status_editorial=ATUAL');
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0].public_ref).toBe('20260312-143000-noticia-sem-referencia-publica');
+  });
 });

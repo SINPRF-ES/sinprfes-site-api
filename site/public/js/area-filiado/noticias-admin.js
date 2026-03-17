@@ -34,7 +34,7 @@
             <h2 style="margin:0;">📰 Informes externos (CMS)</h2>
             <p class="section-subtitle" style="margin:4px 0 0;">Apenas o informe atual pode ser editado. Arquivados ficam imutáveis no acervo.</p>
           </div>
-          ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary">+ Novo informe externo</button>` : ''}
+          ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary">+ Inserir nova notícia atual</button>` : ''}
         </div>
 
         <section style="margin-bottom:16px;">
@@ -92,7 +92,7 @@
         </div>
         <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirVisualizacaoNoticia('${n.id}')">📖 Visualizar</button>
-          ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar informe externo atual</button>` : ''}
+          ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar notícia atual</button>` : ''}
           ${mostrarArquivar ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.arquivarNoticiaAtual('${n.id}')">📦 Arquivar informe externo atual</button>` : ''}
         </div>
       </div>
@@ -103,7 +103,7 @@
     const el = document.getElementById("noticia-atual-admin");
     if (!el) return;
     if (!noticiaAtual) {
-      el.innerHTML = `<p style="color:#475569;">Nenhuma informe externo atual ativa. Crie uma nova informe para iniciar o ciclo editorial.</p>`;
+      el.innerHTML = `<p style="color:#475569;">Nenhuma notícia externa atual ativa. Use “Inserir nova notícia atual” para iniciar o ciclo editorial.</p>`;
       return;
     }
     el.innerHTML = renderCardNoticia(noticiaAtual, {
@@ -166,7 +166,8 @@
     if (!ehGestaoNoticias()) return alert("Apenas gestão pode editar informes.");
 
     if (!id && noticiaAtual) {
-      return alert("Já existe uma informe externo atual. Arquive a informe externo atual antes de criar outra.");
+      const confirmar = confirm("Já existe uma notícia atual. Ao inserir uma nova, a atual será arquivada automaticamente e movida para o arquivo de notícias. Deseja continuar?");
+      if (!confirmar) return;
     }
 
     let noticia = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", destaque: false };
@@ -179,7 +180,7 @@
     const modal = document.getElementById("modal-generic");
     if (!modal) return;
 
-    document.getElementById("modal-generic-titulo").textContent = id ? "Editar informe externo atual" : "Nova informe externo atual";
+    document.getElementById("modal-generic-titulo").textContent = id ? "Editar notícia externa atual" : "Inserir nova notícia externa atual";
     document.getElementById("modal-generic-corpo").innerHTML = `
       <form id="form-noticia-admin">
         <div class="field-group"><label>Título</label><input class="ui-input" name="titulo" value="${escape(noticia.titulo)}" required></div>
@@ -189,7 +190,7 @@
         <div class="field-group" style="margin-top:10px;"><label>Data da informe</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${noticia.data_noticia ? new Date(noticia.data_noticia).toISOString().slice(0,16) : ""}"></div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
-          <button type="submit" class="ui-button ui-button-secondary">Salvar informe externo atual</button>
+          <button type="submit" class="ui-button ui-button-secondary">Salvar notícia atual</button>
         </div>
       </form>
     `;
@@ -214,6 +215,16 @@
       if (!resp.ok) {
         return alert(resp.data?.message || "Não foi possível salvar.");
       }
+
+      const noticiaPersistida = resp.data || {};
+      if (!id) {
+        const verificacao = await requestJson("/api/noticias?status_editorial=ATUAL");
+        const atual = Array.isArray(verificacao.data) ? verificacao.data[0] : verificacao.data.items?.[0];
+        if (!atual || atual.id !== noticiaPersistida.id) {
+          return alert("A notícia foi salva, mas não foi confirmada como notícia atual. A operação foi interrompida para evitar falso positivo.");
+        }
+      }
+
       Utils.fecharModal("modal-generic");
       await carregarNoticias();
     };

@@ -74,7 +74,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
                         <h4 style="margin:0; color:var(--ui-primary);">ID: ${block.id}</h4>
                         <label style="font-size:0.85rem; cursor: pointer; color:#334155; display:flex; align-items:center; gap:8px;">
-                            <input type="checkbox" style="width:auto;" id="active-${block.id}" ${block.is_active ? 'checked' : ''}> Exibir no frontend
+                            <input type="checkbox" style="width:auto;" id="active-${block.id}" ${block.is_active ? 'checked' : ''}> Exibir no site
                         </label>
                     </div>
 
