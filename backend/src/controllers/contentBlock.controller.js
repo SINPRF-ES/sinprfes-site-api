@@ -1,132 +1,114 @@
 // src/controllers/contentBlock.controller.js
-const fs = require('fs');
-const fsPromises = require('fs').promises;
 const cloudinary = require('../services/cloudinary.service');
-const path = require('path');
+const pool = require('../config/db');
 
-// Basic sanitization
+const VALID_PAGES = ['home', 'convenios'];
+
+const DEFAULT_BLOCKS_BY_PAGE = {
+  home: [
+    {
+      title: 'Bem-vindo ao SINPRF-ES',
+      body: 'Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo.',
+      media_type: 'image',
+      media_url: '',
+      link_url: '',
+      link_text: '',
+      is_active: true,
+      ordenacao: 1,
+      slot: 'home-1'
+    },
+    {
+      title: 'Ações e Informes',
+      body: 'Acompanhe as ações institucionais e os principais informes aos filiados.',
+      media_type: 'image',
+      media_url: '',
+      link_url: '',
+      link_text: '',
+      is_active: false,
+      ordenacao: 2,
+      slot: 'home-2'
+    }
+  ],
+  convenios: [
+    {
+      title: 'Convênio exemplo',
+      body: 'Descrição do convênio e condições para filiados.',
+      media_type: 'image',
+      media_url: '',
+      link_url: '',
+      link_text: '',
+      is_active: true,
+      ordenacao: 1,
+      slot: 'convenios-1'
+    },
+    {
+      title: 'Outro convênio',
+      body: 'Use este bloco para cadastrar novos parceiros e benefícios.',
+      media_type: 'image',
+      media_url: '',
+      link_url: '',
+      link_text: '',
+      is_active: false,
+      ordenacao: 2,
+      slot: 'convenios-2'
+    }
+  ]
+};
+
 const sanitizeBody = (html) => {
   if (!html) return '';
   return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '') // Remove inline handlers with "
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '') // Remove inline handlers with '
-    .replace(/on\w+\s*=\s*[^\s>]+/gi, '') // Remove inline handlers without quotes
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/on\w+\s*=\s*[^\s>]+/gi, '')
     .replace(/href\s*=\s*"javascript:[^"]*"/gi, '')
     .replace(/href\s*=\s*'javascript:[^']*'/gi, '')
     .replace(/href\s*=\s*javascript:[^\s>]+/gi, '');
 };
 
-const DATA_PATH = path.join(__dirname, '../../data/content_blocks.json');
-
-const DEFAULT_BLOCKS = [
-  {
-    id: '1',
-    page: 'home',
-    ordenacao: 1,
-    title: 'Bem-vindo ao SINPRF-ES',
-    body: 'Sindicato dos Policiais Rodoviários Federais no Estado do Espírito Santo.',
-    media_type: 'image',
-    media_url: '',
-    is_active: true,
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '2',
-    page: 'home',
-    ordenacao: 2,
-    title: 'Ações e Informes',
-    body: 'Acompanhe as ações institucionais e os principais informes aos filiados.',
-    media_type: 'image',
-    media_url: '',
-    is_active: false,
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: 'convenios-1',
-    page: 'convenios',
-    ordenacao: 1,
-    title: 'Convênio exemplo',
-    body: 'Descrição do convênio e condições para filiados.',
-    media_type: 'image',
-    media_url: '',
-    is_active: true,
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: 'convenios-2',
-    page: 'convenios',
-    ordenacao: 2,
-    title: 'Outro convênio',
-    body: 'Use este bloco para cadastrar novos parceiros e benefícios.',
-    media_type: 'image',
-    media_url: '',
-    is_active: false,
-    updated_at: new Date().toISOString()
-  }
-];
-
-function ensureDefaultBlocks(blocks) {
-  if (!Array.isArray(blocks)) return [...DEFAULT_BLOCKS];
-  const merged = [...blocks];
-  const ids = new Set(merged.map((b) => String(b.id)));
-  for (const block of DEFAULT_BLOCKS) {
-    if (!ids.has(String(block.id))) {
-      merged.push({ ...block, updated_at: new Date().toISOString() });
-    }
-  }
-  return merged;
-}
-
-// Simple memory mutex to prevent concurrent writes
-let isWriting = false;
-const waitLock = () => new Promise(resolve => {
-  const check = () => {
-    if (!isWriting) {
-      isWriting = true;
-      resolve();
-    } else {
-      setTimeout(check, 10);
-    }
-  };
-  check();
+const mapRow = (row) => ({
+  id: String(row.id),
+  page: row.page,
+  title: row.title,
+  body: row.body,
+  media_type: row.media_type,
+  media_url: row.media_url,
+  link_url: row.link_url,
+  link_text: row.link_text,
+  is_active: row.is_active,
+  ordenacao: row.ordenacao,
+  updated_at: row.updated_at
 });
 
-const releaseLock = () => {
-  isWriting = false;
-};
+const ensurePageDefaults = async (page, updatedBy) => {
+  const defaultRows = DEFAULT_BLOCKS_BY_PAGE[page] || [];
+  if (!defaultRows.length) return;
 
-// Helper to read data
-const readData = () => {
-  try {
-    if (!fs.existsSync(DATA_PATH)) {
-      const initialData = ensureDefaultBlocks([]);
-      if (!fs.existsSync(path.dirname(DATA_PATH))) {
-        fs.mkdirSync(path.dirname(DATA_PATH), { recursive: true });
-      }
-      fs.writeFileSync(DATA_PATH, JSON.stringify(initialData, null, 2));
-      return initialData;
-    }
-    const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
-    return ensureDefaultBlocks(data);
-  } catch (err) {
-    console.error("CRITICAL: Erro ao ler ou parsear JSON de blocos de conteúdo:", err);
-    throw new Error("Erro ao carregar dados do CMS (JSON Corrompido)");
+  const countRes = await pool.query('SELECT COUNT(*)::int AS count FROM content_blocks WHERE page = $1', [page]);
+  const count = countRes.rows?.[0]?.count || 0;
+  if (count > 0) return;
+
+  for (const block of defaultRows) {
+    await pool.query(
+      `INSERT INTO content_blocks (page, slot, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [
+        page,
+        block.slot,
+        block.title,
+        block.body,
+        block.media_type,
+        block.media_url,
+        block.link_url,
+        block.link_text,
+        block.is_active,
+        block.ordenacao,
+        updatedBy || null
+      ]
+    );
   }
 };
-
-// Helper to write data (Atomic)
-const writeDataAtomic = async (data) => {
-  const tempPath = DATA_PATH + '.tmp';
-  try {
-    await fsPromises.writeFile(tempPath, JSON.stringify(data, null, 2), 'utf8');
-    await fsPromises.rename(tempPath, DATA_PATH);
-  } catch (err) {
-    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-    throw err;
-  }
-};
-
 
 const obterAssinaturaUpload = async (req, res) => {
   try {
@@ -154,24 +136,37 @@ const obterAssinaturaUpload = async (req, res) => {
 
 const getBlocks = async (req, res) => {
   const { page, includeInactive } = req.query;
+  if (page && !VALID_PAGES.includes(page)) return res.status(400).json({ error: 'Página inválida' });
+
   try {
-    let blocks = readData();
-
-    // Filtro por página
     if (page) {
-      blocks = blocks.filter(b => b.page === page);
+      await ensurePageDefaults(page);
     }
 
-    // Filtro por ativo (a menos que explicitamente solicitado incluir inativos)
+    const params = [];
+    const where = [];
+
+    if (page) {
+      params.push(page);
+      where.push(`page = $${params.length}`);
+    }
+
     if (includeInactive !== 'true') {
-      blocks = blocks.filter(b => b.is_active);
+      where.push('is_active = true');
     }
 
-    blocks.sort((a, b) => a.ordenacao - b.ordenacao);
-    res.json(blocks);
+    const query = `
+      SELECT id, page, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao, updated_at
+      FROM content_blocks
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY page ASC, ordenacao ASC, id ASC
+    `;
+
+    const result = await pool.query(query, params);
+    return res.json(result.rows.map(mapRow));
   } catch (err) {
-    console.error("Erro ao buscar blocos de conteúdo:", err);
-    res.status(500).json({ error: "Erro interno ao buscar conteúdo" });
+    console.error('Erro ao buscar blocos de conteúdo:', err);
+    return res.status(500).json({ error: 'Erro interno ao buscar conteúdo' });
   }
 };
 
@@ -180,48 +175,52 @@ const updateBlock = async (req, res) => {
   const { title, body, media_type, media_url, link_url, link_text, is_active, ordenacao, page } = req.body;
   const updatedBy = req.user.id;
 
-  // Strict Validation
-  if (title && title.length > 120) return res.status(400).json({ error: "Título muito longo (máx 120)" });
-  if (body && body.length > 5000) return res.status(400).json({ error: "Corpo muito longo (máx 5000)" });
-  if (media_type && !['image', 'video'].includes(media_type)) return res.status(400).json({ error: "Tipo de mídia inválido" });
-  if (page && !['home', 'convenios'].includes(page)) return res.status(400).json({ error: "Página inválida" });
+  if (title && title.length > 120) return res.status(400).json({ error: 'Título muito longo (máx 120)' });
+  if (body && body.length > 5000) return res.status(400).json({ error: 'Corpo muito longo (máx 5000)' });
+  if (media_type && !['image', 'video'].includes(media_type)) return res.status(400).json({ error: 'Tipo de mídia inválido' });
+  if (page && !VALID_PAGES.includes(page)) return res.status(400).json({ error: 'Página inválida' });
   if (media_url) {
-    if (typeof media_url !== 'string' || media_url.length > 500) return res.status(400).json({ error: "URL de mídia inválida ou muito longa" });
-    if (media_url.toLowerCase().includes('javascript:')) return res.status(400).json({ error: "URL de mídia perigosa detectada" });
+    if (typeof media_url !== 'string' || media_url.length > 500) return res.status(400).json({ error: 'URL de mídia inválida ou muito longa' });
+    if (media_url.toLowerCase().includes('javascript:')) return res.status(400).json({ error: 'URL de mídia perigosa detectada' });
   }
 
-  await waitLock();
   try {
-    let blocks = readData();
-    const index = blocks.findIndex(b => b.id == id);
+    const result = await pool.query(
+      `UPDATE content_blocks
+       SET
+         title = COALESCE($1, title),
+         body = COALESCE($2, body),
+         media_type = COALESCE($3, media_type),
+         media_url = COALESCE($4, media_url),
+         link_url = COALESCE($5, link_url),
+         link_text = COALESCE($6, link_text),
+         is_active = COALESCE($7, is_active),
+         ordenacao = COALESCE($8, ordenacao),
+         page = COALESCE($9, page),
+         updated_by = $10,
+         updated_at = NOW()
+       WHERE id = $11
+       RETURNING id, page, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao, updated_at`,
+      [
+        title,
+        body !== undefined ? sanitizeBody(body) : null,
+        media_type,
+        media_url,
+        link_url,
+        link_text,
+        typeof is_active === 'boolean' ? is_active : null,
+        Number.isFinite(Number(ordenacao)) ? Number(ordenacao) : null,
+        page,
+        updatedBy,
+        id
+      ]
+    );
 
-    if (index === -1) {
-      releaseLock();
-      return res.status(404).json({ error: "Bloco não encontrado" });
-    }
-
-    // Update block
-    blocks[index] = {
-      ...blocks[index],
-      title: title !== undefined ? title : blocks[index].title,
-      body: body !== undefined ? sanitizeBody(body) : blocks[index].body,
-      media_type: media_type !== undefined ? media_type : blocks[index].media_type,
-      media_url: media_url !== undefined ? media_url : blocks[index].media_url,
-      link_url: link_url !== undefined ? link_url : blocks[index].link_url,
-      link_text: link_text !== undefined ? link_text : blocks[index].link_text,
-      is_active: is_active !== undefined ? is_active : blocks[index].is_active,
-      ordenacao: ordenacao !== undefined ? ordenacao : blocks[index].ordenacao,
-      updated_at: new Date().toISOString(),
-      updated_by: updatedBy
-    };
-
-    await writeDataAtomic(blocks);
-    res.json(blocks[index]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Bloco não encontrado' });
+    return res.json(mapRow(result.rows[0]));
   } catch (err) {
-    console.error("Erro ao atualizar bloco de conteúdo:", err);
-    res.status(500).json({ error: "Erro interno ao atualizar conteúdo" });
-  } finally {
-    releaseLock();
+    console.error('Erro ao atualizar bloco de conteúdo:', err);
+    return res.status(500).json({ error: 'Erro interno ao atualizar conteúdo' });
   }
 };
 
@@ -238,7 +237,7 @@ const uploadMedia = async (req, res) => {
       folder: 'sinprfes/avatars/cms',
       resource_type: resourceType,
       tags: 'cms,site-publico',
-      standardizeImage: false // Já foi padronizado pelo middleware se for imagem
+      standardizeImage: false
     });
 
     return res.json({
@@ -256,7 +255,7 @@ const createBlock = async (req, res) => {
   const { page, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao } = req.body || {};
   const updatedBy = req.user.id;
 
-  if (!['home', 'convenios'].includes(page)) return res.status(400).json({ error: 'Página inválida' });
+  if (!VALID_PAGES.includes(page)) return res.status(400).json({ error: 'Página inválida' });
   if (title && title.length > 120) return res.status(400).json({ error: 'Título muito longo (máx 120)' });
   if (body && body.length > 5000) return res.status(400).json({ error: 'Corpo muito longo (máx 5000)' });
   if (media_type && !['image', 'video'].includes(media_type)) return res.status(400).json({ error: 'Tipo de mídia inválido' });
@@ -265,40 +264,38 @@ const createBlock = async (req, res) => {
     if (media_url.toLowerCase().includes('javascript:')) return res.status(400).json({ error: 'URL de mídia perigosa detectada' });
   }
 
-  await waitLock();
   try {
-    const blocks = readData();
-    const pageBlocks = blocks.filter((block) => block.page === page);
-    const maxOrder = pageBlocks.reduce((acc, block) => Math.max(acc, Number(block.ordenacao) || 0), 0);
-    const maxSuffix = pageBlocks.reduce((acc, block) => {
-      const match = String(block.id).match(new RegExp(`^${page}-(\\d+)$`));
-      const value = match ? Number(match[1]) : 0;
-      return Math.max(acc, Number.isFinite(value) ? value : 0);
-    }, 0);
+    await ensurePageDefaults(page, updatedBy);
 
-    const newBlock = {
-      id: `${page}-${maxSuffix + 1}`,
-      page,
-      ordenacao: Number.isFinite(Number(ordenacao)) ? Number(ordenacao) : maxOrder + 1,
-      title: title || 'Novo convênio',
-      body: sanitizeBody(body || ''),
-      media_type: media_type || 'image',
-      media_url: media_url || '',
-      link_url: link_url || '',
-      link_text: link_text || '',
-      is_active: typeof is_active === 'boolean' ? is_active : true,
-      updated_at: new Date().toISOString(),
-      updated_by: updatedBy
-    };
+    const maxOrderResult = await pool.query('SELECT COALESCE(MAX(ordenacao), 0) AS max_order FROM content_blocks WHERE page = $1', [page]);
+    const maxOrder = Number(maxOrderResult.rows?.[0]?.max_order || 0);
+    const finalOrder = Number.isFinite(Number(ordenacao)) ? Number(ordenacao) : maxOrder + 1;
 
-    blocks.push(newBlock);
-    await writeDataAtomic(blocks);
-    return res.status(201).json(newBlock);
+    const slot = `${page}-${Date.now()}`;
+
+    const result = await pool.query(
+      `INSERT INTO content_blocks (page, slot, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, page, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao, updated_at`,
+      [
+        page,
+        slot,
+        title || 'Novo convênio',
+        sanitizeBody(body || ''),
+        media_type || 'image',
+        media_url || '',
+        link_url || '',
+        link_text || '',
+        typeof is_active === 'boolean' ? is_active : true,
+        finalOrder,
+        updatedBy
+      ]
+    );
+
+    return res.status(201).json(mapRow(result.rows[0]));
   } catch (err) {
     console.error('Erro ao criar bloco de conteúdo:', err);
     return res.status(500).json({ error: 'Erro interno ao criar conteúdo' });
-  } finally {
-    releaseLock();
   }
 };
 
