@@ -27,7 +27,7 @@ import {
 import SafeScreen from '../components/SafeScreen';
 import { useQueryClient } from '@tanstack/react-query';
 
-export default function NoticiaEditorScreen() {
+export default function InformeEditorScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const queryClient = useQueryClient();
@@ -45,11 +45,11 @@ export default function NoticiaEditorScreen() {
 
   useEffect(() => {
     if (newsId) {
-      loadNoticia();
+      loadInforme();
     }
   }, [newsId]);
 
-  const loadNoticia = async () => {
+  const loadInforme = async () => {
     setLoading(true);
     try {
       const data = await fetchInforme(newsId);
@@ -83,7 +83,7 @@ export default function NoticiaEditorScreen() {
         const created = await createInforme(payload);
         navigation.setParams({ newsId: created.id });
       }
-      queryClient.invalidateQueries({ queryKey: ['noticias'] });
+      queryClient.invalidateQueries({ queryKey: ['informes'] });
       Alert.alert('Sucesso', 'Informe salvo com sucesso.');
     } catch (err) {
       Alert.alert('Erro', 'Erro ao salvar informe.');
@@ -107,7 +107,7 @@ export default function NoticiaEditorScreen() {
           try {
             await publicarInforme(newsId);
             setStatus('PUBLICADA');
-            queryClient.invalidateQueries({ queryKey: ['noticias'] });
+            queryClient.invalidateQueries({ queryKey: ['informes'] });
             Alert.alert('Sucesso', 'Informe publicado!');
           } catch (err) {
             Alert.alert('Erro', 'Erro ao publicar informe.');
@@ -134,7 +134,7 @@ export default function NoticiaEditorScreen() {
           setSaving(true);
           try {
             await deleteInforme(newsId);
-            queryClient.invalidateQueries({ queryKey: ['noticias'] });
+            queryClient.invalidateQueries({ queryKey: ['informes'] });
             navigation.goBack();
           } catch (err) {
             Alert.alert('Erro', 'Erro ao excluir informe.');
@@ -156,19 +156,17 @@ export default function NoticiaEditorScreen() {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
-      videoMaxDuration: 30, // Limite de 30s no picker se suportado
+      videoMaxDuration: 30,
     });
 
     if (!result.canceled) {
       const asset = result.assets[0];
 
-      // Validações Mobile-side
       if (asset.type === 'video') {
         if (asset.duration && asset.duration > 30) {
           Alert.alert('Vídeo muito longo', 'A duração máxima permitida é de 30 segundos.');
           return;
         }
-        // fileSize em bytes. 50MB = 50 * 1024 * 1024
         if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
           Alert.alert('Vídeo muito grande', 'O tamanho máximo permitido é de 50MB.');
           return;

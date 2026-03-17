@@ -1,21 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, Dimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { fetchInforme, InformePost } from '../services/informesService';
+import { fetchInforme } from '../services/informesService';
 import { useAuth } from '../hooks/useAuth';
-import { API_BASE_URL } from '../config/env';
 import { FontAwesome } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import SafeScreen from '../components/SafeScreen';
 
 const { width } = Dimensions.get('window');
 
-export default function NoticiaDetalheScreen({ route, navigation }: any) {
+export default function InformeDetalheScreen({ route, navigation }: any) {
   const { newsId } = route.params;
-  const { token, usuario } = useAuth();
+  const { usuario } = useAuth();
 
-  const { data: noticia, isLoading, isError, refetch } = useQuery({
-    queryKey: ['noticia', newsId],
+  const { data: informe, isLoading, isError, refetch } = useQuery({
+    queryKey: ['informe', newsId],
     queryFn: () => fetchInforme(newsId),
   });
 
@@ -35,7 +34,7 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
     );
   }
 
-  if (isError || !noticia) {
+  if (isError || !informe) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Erro ao carregar os detalhes do informe.</Text>
@@ -46,9 +45,9 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
     );
   }
 
-  const coverUrl = noticia.capa_url;
-  const ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
-  const canEdit = ehGestaoNoticias && noticia.is_editable && noticia.status_editorial !== 'ARQUIVADA';
+  const coverUrl = informe.capa_url;
+  const ehGestaoInformes = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+  const canEdit = ehGestaoInformes && informe.is_editable && informe.status_editorial !== 'ARQUIVADA';
 
   return (
     <SafeScreen style={styles.container}>
@@ -63,10 +62,10 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
 
         <View style={styles.content}>
           <View style={styles.headerRow}>
-            <Text style={styles.date}>{formatDate(noticia.data_informe || noticia.published_at || noticia.created_at)}</Text>
+            <Text style={styles.date}>{formatDate(informe.data_informe || informe.published_at || informe.created_at)}</Text>
             {canEdit && (
               <TouchableOpacity
-                onPress={() => navigation.navigate('NoticiaEditor', { newsId: noticia.id })}
+                onPress={() => navigation.navigate('InformeEditor', { newsId: informe.id })}
                 style={styles.editButton}
               >
                 <FontAwesome name="edit" size={18} color="#003366" />
@@ -75,18 +74,18 @@ export default function NoticiaDetalheScreen({ route, navigation }: any) {
             )}
           </View>
 
-          <Text style={styles.title}>{noticia.titulo}</Text>
+          <Text style={styles.title}>{informe.titulo}</Text>
 
           <View style={styles.markdownContainer}>
             <Markdown style={markdownStyles}>
-              {noticia.conteudo}
+              {informe.conteudo}
             </Markdown>
           </View>
 
-          {noticia.midias && noticia.midias.length > 0 && (
+          {informe.midias && informe.midias.length > 0 && (
             <View style={styles.gallerySection}>
               <Text style={styles.galleryTitle}>Mídias</Text>
-              {noticia.midias.map((item: any) => (
+              {informe.midias.map((item: any) => (
                 <View key={item.id} style={styles.mediaItem}>
                   {item.tipo === 'IMAGEM' ? (
                     <Image
@@ -169,23 +168,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     lineHeight: 32,
   },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 20,
-  },
-  tag: {
-    backgroundColor: '#eef2f7',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  tagText: {
-    fontSize: 12,
-    color: '#003366',
-    fontWeight: '600',
-  },
   markdownContainer: {
     marginBottom: 30,
   },
@@ -198,9 +180,6 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
-  galleryList: {
-    paddingRight: 20,
-  },
   galleryImage: {
     width: '100%',
     height: 250,
@@ -209,15 +188,6 @@ const styles = StyleSheet.create({
   },
   mediaItem: {
     marginBottom: 20,
-  },
-  videoPlaceholder: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
   videoItem: {
     position: 'relative',
@@ -236,11 +206,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontWeight: 'bold',
     color: '#fff',
-  },
-  videoUrl: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
   },
   errorText: {
     fontSize: 16,

@@ -3,19 +3,18 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndi
 import { useQuery } from '@tanstack/react-query';
 import { fetchInformes, InformePost } from '../services/informesService';
 import { useAuth } from '../hooks/useAuth';
-import { API_BASE_URL } from '../config/env';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
-export default function NoticiasScreen() {
+export default function InformesScreen() {
   const navigation = useNavigation<any>();
-  const { token, usuario } = useAuth();
+  const { usuario } = useAuth();
 
-  const { data: noticias, isLoading, isError, refetch, isRefetching } = useQuery({
-    queryKey: ['noticias'],
+  const { data: informes, isLoading, isError, refetch, isRefetching } = useQuery({
+    queryKey: ['informes'],
     queryFn: () => fetchInformes(),
   });
 
@@ -35,7 +34,7 @@ export default function NoticiasScreen() {
       return (
         <TouchableOpacity
           style={[styles.card, isRascunho && styles.draftCard]}
-          onPress={() => navigation.navigate('NoticiaDetalhe', { newsId: item.id })}
+          onPress={() => navigation.navigate('InformeDetalhe', { newsId: item.id })}
         >
           {coverUrl ? (
             <Image
@@ -63,25 +62,25 @@ export default function NoticiasScreen() {
         </TouchableOpacity>
       );
     } catch (err) {
-      logger.error('Error rendering News item', err, { newsId: item?.id });
+      logger.error('Error rendering Informe item', err, { newsId: item?.id });
       return null;
     }
   };
 
-  let ehGestaoNoticias = false;
+  let ehGestaoInformes = false;
   try {
-    ehGestaoNoticias = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+    ehGestaoInformes = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
   } catch (err) {
-    logger.error('Error checking management permission in NoticiasScreen', err);
+    logger.error('Error checking management permission in InformesScreen', err);
   }
 
   useLayoutEffect(() => {
     const actions: MenuAction[] = [];
 
-    if (ehGestaoNoticias) {
+    if (ehGestaoInformes) {
       actions.push({
         label: 'Criar informe',
-        onPress: () => navigation.navigate('NoticiaEditor', { newsId: null }),
+        onPress: () => navigation.navigate('InformeEditor', { newsId: null }),
         icon: 'plus'
       });
     }
@@ -95,7 +94,7 @@ export default function NoticiasScreen() {
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,
     });
-  }, [navigation, ehGestaoNoticias, refetch]);
+  }, [navigation, ehGestaoInformes, refetch]);
 
   if (isLoading) {
     return (
@@ -121,7 +120,7 @@ export default function NoticiasScreen() {
   return (
     <SafeScreen style={styles.container}>
       <FlatList
-        data={noticias}
+        data={informes}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
@@ -234,22 +233,6 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
     marginBottom: 12,
-  },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tag: {
-    backgroundColor: '#eef2f7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  tagText: {
-    fontSize: 11,
-    color: '#003366',
-    fontWeight: '600',
   },
   emptyContainer: {
     padding: 40,

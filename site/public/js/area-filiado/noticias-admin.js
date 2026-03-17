@@ -154,11 +154,11 @@
     document.getElementById("modal-generic-corpo").innerHTML = `
       <article>
         ${data.capa_url ? `<img src="${escape(data.capa_url)}" style="width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
-        <div class="markdown-body informe-markdown"></div>
+        <div class="markdown-body news-markdown"></div>
         <div style="margin-top:14px; text-align:right;"><button class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Fechar</button></div>
       </article>
     `;
-    const md = document.querySelector("#modal-generic-corpo .informe-markdown");
+    const md = document.querySelector("#modal-generic-corpo .news-markdown");
     if (window.InformesRenderer?.mountRenderedMarkdown) window.InformesRenderer.mountRenderedMarkdown(md, data.conteudo || "");
     modal.style.display = "flex";
   }
