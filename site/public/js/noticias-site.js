@@ -143,16 +143,42 @@ async function renderHomeCurrentNews(API_BASE, mountEl) {
       return;
     }
 
+    const item = items[0];
+    const title = escapeHtml(item.titulo || 'Notícia');
+    const subtitle = escapeHtml(item.subtitulo || '');
+    const date = formatDate(item.published_at || item.data_noticia || item.created_at);
+    const content = item.conteudo || '';
+    const href = (typeof item.public_ref === 'string' && item.public_ref.length > 0)
+      ? `/noticias/${encodeURIComponent(item.public_ref)}`
+      : null;
+
     mountEl.innerHTML = `
       <section class="ui-card">
         <header class="instagram-news-header instagram-news-header--centered">
           <h2 class="section-title"><span class="emoji">📰</span><span>Notícia em destaque</span></h2>
         </header>
-        <div class="instagram-news-grid">
-          ${buildNewsCard(items[0])}
+        <div class="current-news-container">
+          ${item.capa_url ? `
+          <div class="current-news-media" style="margin-bottom: var(--ui-space-3);">
+            <img src="${item.capa_url}" alt="${title}" style="width:100%; max-height:450px; object-fit:cover; border-radius:var(--ui-radius);">
+          </div>` : ''}
+          <div class="current-news-body">
+            <h3 style="margin-top:0; color:var(--ui-primary);">${title}</h3>
+            ${subtitle ? `<p style="font-weight:600; color:var(--ui-text-muted);">${subtitle}</p>` : ''}
+            <p style="font-size:0.85rem; color:var(--ui-text-muted); margin-bottom:var(--ui-space-3);">${date}</p>
+            <div class="markdown-body informe-markdown" style="margin-bottom:var(--ui-space-3); line-height:1.6;"></div>
+            ${href ? `<a href="${href}" class="ui-button ui-button-outline">Ler matéria completa</a>` : ''}
+          </div>
         </div>
       </section>
     `;
+
+    const mdEl = mountEl.querySelector('.informe-markdown');
+    if (mdEl && window.InformesRenderer?.mountRenderedMarkdown) {
+      window.InformesRenderer.mountRenderedMarkdown(mdEl, content);
+    } else if (mdEl) {
+      mdEl.textContent = content;
+    }
   } catch (_error) {
     mountEl.innerHTML = '<section class="ui-card instagram-fallback"><p>Não foi possível carregar a notícia em destaque.</p></section>';
   }

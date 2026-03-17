@@ -592,13 +592,16 @@ exports.publicar = async (req, res) => {
     try {
       await client.query("BEGIN");
 
+      const { rows: targetAudiencia } = await client.query("SELECT audiencia FROM noticias WHERE id = $1", [id]);
+      const audienciaTarget = targetAudiencia[0]?.audiencia;
+
       const { rows: atuais } = await client.query(
         `SELECT id FROM noticias
-         WHERE audiencia = (SELECT audiencia FROM noticias WHERE id = $1)
+         WHERE audiencia = $1
            AND status_editorial = 'ATUAL'
-           AND id <> $1
+           AND id <> $2
          FOR UPDATE`,
-        [id]
+        [audienciaTarget, id]
       );
 
       if (atuais.length > 0) {
