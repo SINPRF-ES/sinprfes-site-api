@@ -15,35 +15,30 @@ async function gerarPublicRefInforme(client, informe) {
   const yyyy = date.getUTCFullYear();
   const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(date.getUTCDate()).padStart(2, "0");
-  const hh = String(date.getUTCHours()).padStart(2, "0");
-  const mi = String(date.getUTCMinutes()).padStart(2, "0");
-  const ss = String(date.getUTCSeconds()).padStart(2, "0");
-  const tsPart = `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
+  const datePart = `${yyyy}${mm}${dd}`;
+  const prefix = `${datePart}-informe-`;
 
-  const slugPart = String(informe.titulo || "informe")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 160) || "informe";
+  const { rows } = await client.query(
+    `SELECT public_ref
+     FROM informes
+     WHERE public_ref LIKE $1 || '%'
+     ORDER BY public_ref DESC
+     LIMIT 1`,
+    [prefix]
+  );
 
-  let publicRefFinal = `${tsPart}-${slugPart}`;
-  for (let attempt = 0; attempt < 200; attempt += 1) {
-    const candidate = attempt === 0 ? publicRefFinal : `${publicRefFinal}-${attempt + 1}`;
-    const { rows } = await client.query(
-      `SELECT 1 FROM informes WHERE public_ref = $1 AND id <> $2 LIMIT 1`,
-      [candidate, informe.id]
-    );
-
-    if (rows.length === 0) {
-      publicRefFinal = candidate;
-      break;
+  let nextSeq = 1;
+  if (rows.length > 0) {
+    const lastRef = rows[0].public_ref;
+    const parts = lastRef.split("-");
+    const lastSeqString = parts[parts.length - 1];
+    const lastSeq = parseInt(lastSeqString, 10);
+    if (!Number.isNaN(lastSeq)) {
+      nextSeq = lastSeq + 1;
     }
   }
 
-  return publicRefFinal;
+  return `${prefix}${String(nextSeq).padStart(2, "0")}`;
 }
 
 async function garantirPublicRef(client, informe) {
