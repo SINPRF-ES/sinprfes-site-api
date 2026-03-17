@@ -34,6 +34,7 @@
     const { inicializarAssembleias } = window.Assembleias || {};
     const { inicializarRepasse } = window.Repasse || {};
     const { inicializarInformes } = window.InformesAdmin || {};
+    const { inicializarNoticias } = window.NoticiasAdmin || {};
     const { inicializarRelatorios } = window.Relatorios || {};
     const { inicializarConsultaProcessual } = window.ConsultaProcessual || {};
     const { inicializarEnquetes } = window.Enquetes || {};
@@ -101,7 +102,10 @@
         else if (abaAlvo === "sec-jogos" && inicializarJogos) inicializarJogos(perfil);
         else if (abaAlvo === "sec-publicacoes" && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
         else if (abaAlvo === "sec-assembleias" && inicializarAssembleias) inicializarAssembleias(perfil);
-        else if (abaAlvo === "sec-noticias" && inicializarInformes) inicializarInformes(perfil);
+        else if (abaAlvo === "sec-noticias") {
+          if (inicializarNoticias) inicializarNoticias(perfil);
+          else if (inicializarInformes) inicializarInformes(perfil);
+        }
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
         else if (abaAlvo === "sec-notificacoes") {
