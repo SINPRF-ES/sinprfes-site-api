@@ -73,9 +73,13 @@ body::after {
   pointer-events: none;
 }
 
-#site-header, #site-footer, main, .af-container {
+#site-footer, main, .af-container {
   position: relative;
   z-index: 2;
+}
+
+#site-header {
+  z-index: 10000;
 }
 
 h1, h2, h3, h4, h5, h6 {
