@@ -13,6 +13,15 @@ if (typeof window.API_BASE_URL === "undefined") {
     : ""); // Default to empty (relative) on production for site proxy
 }
 
+// Sentinel: Aplicar modo embed o mais cedo possível para evitar flicker
+(function applyEmbedMode() {
+  const params = new URLSearchParams(window.location.search);
+  const isEmbed = params.get("embed") === "1" || params.get("app") === "1";
+  if (isEmbed) {
+    document.documentElement.classList.add("is-embed");
+  }
+})();
+
 document.addEventListener("DOMContentLoaded", () => {
   const headerEl = document.getElementById("site-header");
   const footerEl = document.getElementById("site-footer");
@@ -27,11 +36,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Check for embed mode (app)
-  const isEmbed = new URLSearchParams(window.location.search).get("embed") === "1" ||
-                  new URLSearchParams(window.location.search).get("app") === "1";
+  const isEmbed = document.documentElement.classList.contains("is-embed");
 
   if (isEmbed) {
-    document.documentElement.classList.add("is-embed");
     document.body.style.paddingTop = "0";
     if (headerEl) headerEl.style.display = "none";
     if (footerEl) footerEl.style.display = "none";
@@ -55,7 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
 
           <nav class="main-nav">
-            <a href="/index.html" class="nav-link ${isActive("index.html") || isActive("noticias.html")}">Início</a>
+            <a href="/index.html" class="nav-link ${isActive("index.html")}">Início</a>
+            <a href="/noticias.html" class="nav-link ${isActive("noticias.html")}">Notícias</a>
             <a href="/estatuto.html" class="nav-link ${isActive("estatuto.html")}">Estatuto</a>
             <a href="/diretoria.html" class="nav-link ${isActive("diretoria.html")}">Diretoria</a>
             <a href="/convenios.html" class="nav-link ${isActive("convenios.html")}">Convênios</a>

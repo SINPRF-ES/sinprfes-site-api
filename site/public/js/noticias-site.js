@@ -114,11 +114,13 @@ function buildNewsCard(item) {
   `;
 }
 
-async function fetchNoticias(API_BASE, statusEditorial) {
-  const response = await fetch(`${API_BASE}/api/noticias?pagina=1&status_editorial=${encodeURIComponent(statusEditorial)}`);
+async function fetchNoticias(API_BASE, statusEditorial, pagina = 1) {
+  const response = await fetch(`${API_BASE}/api/noticias?pagina=${pagina}&status_editorial=${encodeURIComponent(statusEditorial)}`);
   const payload = await response.json();
-  const items = Array.isArray(payload?.items) ? payload.items : [];
-  return items.filter((item) => typeof item.public_ref === 'string' && item.public_ref.length > 0);
+  return {
+    items: (Array.isArray(payload?.items) ? payload.items : []).filter((item) => typeof item.public_ref === 'string' && item.public_ref.length > 0),
+    pagination: payload?.pagination || { page: 1, totalPages: 1 }
+  };
 }
 
 async function renderHomeCurrentNews(API_BASE, mountEl) {
@@ -127,7 +129,7 @@ async function renderHomeCurrentNews(API_BASE, mountEl) {
   mountEl.innerHTML = '<section class="ui-card"><p style="color:#64748b;">Carregando notícia em destaque...</p></section>';
 
   try {
-    const items = await fetchNoticias(API_BASE, 'ATUAL');
+    const { items } = await fetchNoticias(API_BASE, 'ATUAL');
     if (items.length === 0) {
       mountEl.innerHTML = '<section class="ui-card"><h2>📰 Notícia em destaque</h2><p>Nenhuma notícia pública em destaque no momento.</p></section>';
       return;
@@ -148,17 +150,32 @@ async function renderHomeCurrentNews(API_BASE, mountEl) {
   }
 }
 
-async function renderNoticiasArquivo(API_BASE, mountEl) {
+async function renderNoticiasArquivo(API_BASE, mountEl, pagina = 1) {
   if (!mountEl) return;
 
   mountEl.innerHTML = '<section class="ui-card"><p style="color:#64748b;">Carregando arquivo de notícias...</p></section>';
 
   try {
-    const items = await fetchNoticias(API_BASE, 'ARQUIVADA');
+    const { items, pagination } = await fetchNoticias(API_BASE, 'ARQUIVADA', pagina);
 
     if (items.length === 0) {
       mountEl.innerHTML = '<section class="ui-card"><p>Nenhuma notícia arquivada até o momento.</p></section>';
       return;
+    }
+
+    let paginationHtml = '';
+    if (pagination.totalPages > 1) {
+      paginationHtml = `
+        <div class="cms-pagination" style="display:flex; justify-content:center; gap:8px; margin-top:24px;">
+          ${Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => `
+            <button class="ui-button ui-button-sm ${p === pagination.page ? 'ui-button-secondary' : 'ui-button-outline'}"
+                    onclick="window.renderNoticiasArquivo('${API_BASE}', document.querySelector('#cms-news-root'), ${p})"
+                    ${p === pagination.page ? 'disabled' : ''}>
+              ${p}
+            </button>
+          `).join('')}
+        </div>
+      `;
     }
 
     mountEl.innerHTML = `
@@ -169,12 +186,16 @@ async function renderNoticiasArquivo(API_BASE, mountEl) {
         <div class="instagram-news-grid">
           ${items.map((item) => buildNewsCard(item)).join('')}
         </div>
+        ${paginationHtml}
       </section>
     `;
   } catch (_error) {
     mountEl.innerHTML = '<section class="ui-card instagram-fallback"><p>Não foi possível carregar o arquivo de notícias.</p></section>';
   }
 }
+
+// Expose to window for pagination buttons
+window.renderNoticiasArquivo = renderNoticiasArquivo;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const API_BASE = (window.Utils && window.Utils.resolveApiBase)

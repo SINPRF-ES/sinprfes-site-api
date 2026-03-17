@@ -31,9 +31,6 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
   });
 
   test('Caso 1: Criar notícia atual', async () => {
-    pool.query
-      .mockResolvedValueOnce({ rows: [] }); // Check existing current news
-
     const txClient = {
       query: jest.fn(),
       release: jest.fn(),
@@ -42,6 +39,7 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
 
     txClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [] }) // SELECT FOR UPDATE (atuais)
       .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'TEST_N1', status_editorial: 'ATUAL', is_editable: true, audiencia: 'PUBLICA' }] }) // Insert
       .mockResolvedValueOnce({ rows: [] }) // check slug uniqueness
       .mockResolvedValueOnce({ rows: [] }) // check public_ref uniqueness
@@ -57,8 +55,6 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
   });
 
   test('Caso 7: Publicar nova notícia arquiva a atual automaticamente', async () => {
-    pool.query.mockResolvedValue({ rows: [{ id: VALID_UUID }] }); // Found existing current news
-
     const txClient = {
       query: jest.fn(),
       release: jest.fn(),
@@ -67,6 +63,7 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
 
     txClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 'OLD_ID' }] }) // SELECT FOR UPDATE (atuais)
       .mockResolvedValueOnce({ rows: [] }) // archive previous current
       .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'TEST_N2', status_editorial: 'ATUAL', is_editable: true, audiencia: 'PUBLICA' }] }) // Insert new current
       .mockResolvedValueOnce({ rows: [] }) // check slug uniqueness

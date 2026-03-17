@@ -55,10 +55,6 @@
           <div id="informes-arquivados-admin"><p style="color:#666;">Carregando...</p></div>
         </section>
 
-        <section id="informes-publicos-integrados" style="margin-top:24px; border-top:1px dashed #ccc; padding-top:16px;">
-          <h3 style="margin:0 0 10px; color:#003366;">Informes do Site (Públicos)</h3>
-          <div id="informes-publicos-list"><p style="color:#666;">Carregando...</p></div>
-        </section>
       </div>
     `;
 
@@ -67,42 +63,6 @@
     }
 
     await carregarInformes();
-    await carregarInformesPublicos();
-  }
-
-  async function carregarInformesPublicos(pagina = 1) {
-    const listEl = document.getElementById("informes-publicos-list");
-    if (!listEl) return;
-
-    const resp = await requestJson(`/api/noticias?status=PUBLICADA&pagina=${pagina}`);
-    const itens = resp.data.items || [];
-    const pagination = resp.data.pagination || { page: 1, totalPages: 1 };
-
-    if (!itens.length) {
-      listEl.innerHTML = `<p style="color:#64748b;">Nenhum informe público disponível.</p>`;
-      return;
-    }
-
-    let html = itens.map((n) => `
-      <div style="margin-bottom:16px;">
-        ${renderCardInforme(n)}
-      </div>
-    `).join("");
-
-    if (pagination && pagination.totalPages > 1) {
-      html += `
-        <div class="cms-pagination" style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
-          ${Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(p => `
-            <button class="ui-button ui-button-sm ${p === pagination.page ? 'ui-button-secondary' : 'ui-button-outline'}"
-                    onclick="InformesAdmin.carregarInformesPublicos(${p})" ${p === pagination.page ? 'disabled' : ''}>
-              ${p}
-            </button>
-          `).join("")}
-        </div>
-      `;
-    }
-
-    listEl.innerHTML = html;
   }
 
   async function carregarInformes(paginaArquivadas = 1) {
@@ -373,7 +333,6 @@
   global.InformesAdmin = {
     inicializarInformes,
     carregarInformes,
-    carregarInformesPublicos,
     abrirModalInforme,
     abrirVisualizacaoInforme,
     publicarInformeAtual,
