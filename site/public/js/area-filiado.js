@@ -108,8 +108,13 @@
         else if (abaAlvo === "sec-publicacoes" && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
         else if (abaAlvo === "sec-assembleias" && inicializarAssembleias) inicializarAssembleias(perfil);
         else if (abaAlvo === "sec-noticias") {
+          if (inicializarInformes) inicializarInformes(perfil);
+        }
+        else if (abaAlvo === "sec-informes-admin") {
+          if (inicializarInformes) inicializarInformes(perfil);
+        }
+        else if (abaAlvo === "sec-noticias-admin") {
           if (inicializarNoticias) inicializarNoticias(perfil);
-          else if (inicializarInformes) inicializarInformes(perfil);
         }
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);

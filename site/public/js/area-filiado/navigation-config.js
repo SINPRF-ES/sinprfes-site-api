@@ -3,7 +3,7 @@
 
   const NAVIGATION_ITEMS = [
     { id: 'nav-home', target: 'sec-home', label: 'Página Inicial', icon: '🏠', order: 10, section: 'principal' },
-    { id: 'nav-noticias', target: 'sec-noticias', label: 'Informes', icon: '📰', order: 20, section: 'principal' },
+    { id: 'nav-noticias', target: 'sec-noticias', label: 'Informes', icon: '📢', order: 20, section: 'principal' },
     { id: 'nav-convenios', target: 'sec-convenios', label: 'Convênios', icon: '🤝', order: 25, section: 'principal' },
     { id: 'nav-meus-dados', target: 'sec-meus-dados', label: 'Meus Dados', icon: '👤', order: 30, section: 'principal' },
     { id: 'nav-filiados', target: 'sec-filiados', label: 'Filiados', icon: '👥', order: 40, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
@@ -19,6 +19,8 @@
     { id: 'nav-relatorios', target: 'sec-relatorios', label: 'Relatórios', icon: '📊', order: 140, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
     { id: 'nav-consulta-processual', target: 'sec-consulta-processual', label: 'Consulta Processual', icon: '⚖️', order: 150, section: 'gestao', visible: ({ hasPerm }) => hasPerm('CONSULTA_PROCESSUAL_CONSULTAR') },
     { id: 'nav-novo-filiado', target: null, label: 'Novo Filiado', icon: '➕', order: 160, section: 'gestao', controls: 'sec-filiados', visible: ({ isComunicador, hasPerm }) => !isComunicador && hasPerm('CREATE_FILIADO') },
+    { id: 'nav-informes-admin', target: 'sec-informes-admin', label: 'Informes (Interno)', icon: '🗂️', order: 165, section: 'gestao', visible: ({ hasPerm }) => hasPerm('EDIT_CONTENT') },
+    { id: 'nav-noticias-admin', target: 'sec-noticias-admin', label: 'Notícias do Site', icon: '📰', order: 166, section: 'gestao', visible: ({ hasPerm }) => hasPerm('EDIT_CONTENT') },
     { id: 'nav-cms', target: 'sec-cms', label: 'Site (CMS)', icon: '🌐', order: 170, section: 'gestao', visible: ({ hasPerm }) => hasPerm('EDIT_CONTENT') },
     { id: 'nav-diagnostico', target: 'sec-diagnostico', label: 'Diagnóstico', icon: '🛠️', order: 180, section: 'gestao', visible: ({ hasPerm }) => hasPerm('PUSH_GERENCIAR') },
   ];
