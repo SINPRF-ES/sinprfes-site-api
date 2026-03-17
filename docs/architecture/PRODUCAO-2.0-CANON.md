@@ -199,8 +199,14 @@ Os seguintes componentes estão estáveis e não devem ser modificados sem aprov
 
 ## 9. Funcionalidades Consolidadas (V2.0)
 
-- **Módulo Notícias Internas (CMS):** Perfil `COMUNICADOR` com princípio de *least privilege*. Ausência de acesso a dados de terceiros. Conteúdo consumido via API pelo site público, sem edição de HTML por usuários não técnicos. Blocos persistidos em `data/content_blocks.json`.
+- **Módulo Notícias Internas (CMS):** Perfil `COMUNICADOR` com princípio de *least privilege*. Ausência de acesso a dados de terceiros. Conteúdo consumido via API pelo site público, sem edição de HTML por usuários não técnicos. Blocos do CMS público (Início e Convênios) persistidos em PostgreSQL (`content_blocks`), sem dependência de arquivo efêmero de container.
 - **Central de Notificações (Push History):** Sincronização entre histórico de campanhas e visualização personalizada para o filiado no Site e no App.
+
+### 9.1 Persistência canônica de publicações (não-efêmera)
+- **Informes internos (Área do Filiado):** Persistência em PostgreSQL na base canônica de notícias/informes (`noticias`, `noticia_midias`), com consumo interno autenticado via API.
+- **Notícias externas (Início do site):** Leitura pública via API backend sobre PostgreSQL, sem armazenamento institucional em frontend/localStorage.
+- **Convênios e blocos CMS do site público:** Persistência em PostgreSQL na tabela `content_blocks` (`page = 'convenios'` e `page = 'home'`).
+- **Regra obrigatória:** Publicações institucionais não podem ter fonte de verdade em JSON local de container, memória de processo, cache transitório ou artefato de build.
 
 ## 10. Roadmap e Melhorias Futuras
 
