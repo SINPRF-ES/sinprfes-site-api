@@ -4,6 +4,7 @@
   const NAVIGATION_ITEMS = [
     { id: 'nav-home', target: 'sec-home', label: 'Página Inicial', icon: '🏠', order: 10, section: 'principal' },
     { id: 'nav-noticias', target: 'sec-noticias', label: 'Informes', icon: '📰', order: 20, section: 'principal' },
+    { id: 'nav-convenios', target: 'sec-convenios', label: 'Convênios', icon: '🤝', order: 25, section: 'principal' },
     { id: 'nav-meus-dados', target: 'sec-meus-dados', label: 'Meus Dados', icon: '👤', order: 30, section: 'principal' },
     { id: 'nav-filiados', target: 'sec-filiados', label: 'Filiados', icon: '👥', order: 40, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-publicacoes', target: 'sec-publicacoes', label: 'Publicações', icon: '📚', order: 50, section: 'principal', visible: ({ isComunicador }) => !isComunicador },

@@ -5,16 +5,17 @@ jest.mock('../services/cloudinary.service', () => ({
   STANDARD_IMAGE_TRANSFORMATION_STRING: 'c_fill,w_300,h_300'
 }));
 
+jest.mock('../config/db', () => ({
+  query: jest.fn()
+}));
+
 const contentBlockController = require('./contentBlock.controller');
 const cloudinary = require('../services/cloudinary.service');
-const fs = require('fs');
-const path = require('path');
+const pool = require('../config/db');
 
-const DATA_PATH = path.join(__dirname, '../../data/content_blocks.json');
-
-describe('ContentBlock Controller (JSON)', () => {
+describe('ContentBlock Controller (PostgreSQL)', () => {
   beforeEach(() => {
-    // Mock user
+    jest.clearAllMocks();
     this.req = {
       query: {},
       params: {},
@@ -25,31 +26,27 @@ describe('ContentBlock Controller (JSON)', () => {
       json: jest.fn(),
       status: jest.fn().mockReturnThis()
     };
-
-    // Ensure data directory exists
-    if (!fs.existsSync(path.dirname(DATA_PATH))) {
-      fs.mkdirSync(path.dirname(DATA_PATH), { recursive: true });
-    }
-
-    // Reset data
-    const initialData = [
-      { id: '1', page: 'home', title: 'T1', is_active: true, ordenacao: 1 },
-      { id: '2', page: 'home', title: 'T2', is_active: false, ordenacao: 2 }
-    ];
-    fs.writeFileSync(DATA_PATH, JSON.stringify(initialData, null, 2));
   });
 
   test('getBlocks should return only active blocks by default', async () => {
     this.req.query = { page: 'home' };
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ count: 1 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 10, page: 'home', title: 'T1', is_active: true, ordenacao: 1 }] });
+
     await contentBlockController.getBlocks(this.req, this.res);
-    expect(this.res.json).toHaveBeenCalledWith(expect.arrayContaining([
-      expect.objectContaining({ id: '1' })
-    ]));
-    expect(this.res.json.mock.calls[0][0]).toHaveLength(1);
+
+    expect(this.res.json).toHaveBeenCalledWith([
+      expect.objectContaining({ id: '10', title: 'T1', page: 'home' })
+    ]);
   });
 
   test('getBlocks should return all blocks if includeInactive=true', async () => {
     this.req.query = { page: 'home', includeInactive: 'true' };
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ count: 2 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 1 }, { id: 2 }] });
+
     await contentBlockController.getBlocks(this.req, this.res);
     expect(this.res.json.mock.calls[0][0]).toHaveLength(2);
   });
@@ -57,6 +54,7 @@ describe('ContentBlock Controller (JSON)', () => {
   test('updateBlock should fail if title is too long', async () => {
     this.req.params = { id: '1' };
     this.req.body = { title: 'a'.repeat(121) };
+
     await contentBlockController.updateBlock(this.req, this.res);
     expect(this.res.status).toHaveBeenCalledWith(400);
   });
@@ -64,10 +62,18 @@ describe('ContentBlock Controller (JSON)', () => {
   test('updateBlock should sanitize body', async () => {
     this.req.params = { id: '1' };
     this.req.body = { body: '<script>alert(1)</script><p>Hello</p>' };
+
+    pool.query.mockResolvedValueOnce({
+      rows: [{ id: 1, page: 'home', body: '<p>Hello</p>' }]
+    });
+
     await contentBlockController.updateBlock(this.req, this.res);
-    expect(this.res.json).toHaveBeenCalledWith(expect.objectContaining({
-      body: '<p>Hello</p>'
-    }));
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE content_blocks'),
+      expect.arrayContaining([expect.anything(), '<p>Hello</p>'])
+    );
+    expect(this.res.json).toHaveBeenCalledWith(expect.objectContaining({ body: '<p>Hello</p>' }));
   });
 
   test('uploadMedia should return 400 when no file is provided', async () => {
