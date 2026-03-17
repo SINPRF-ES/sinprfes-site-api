@@ -42,7 +42,7 @@
             <h2 style="margin:0; text-align:center;">📰 Informes internos</h2>
             ${ehGestao ? '<p class="section-subtitle" style="margin:4px 0 0;">Apenas o informe atual pode ser editado. Arquivados ficam imutáveis no acervo.</p>' : ''}
           </div>
-          ${ehGestao ? `<button id="btn-novo-informe" class="ui-button ui-button-secondary">+ Novo rascunho</button>` : ''}
+          ${ehGestao ? `<button id="btn-novo-informe" class="ui-button ui-button-secondary">+ Novo rascunho de informe</button>` : ''}
         </div>
 
         <section style="margin-bottom:16px;">
@@ -51,7 +51,7 @@
         </section>
 
         <section>
-          <h3 style="margin:0 0 10px; color:#003366;">Informes arquivados</h3>
+          <h3 style="margin:0 0 10px; color:#003366;">Arquivo de informes</h3>
           <div id="informes-arquivados-admin"><p style="color:#666;">Carregando...</p></div>
         </section>
 
@@ -253,8 +253,7 @@
         titulo: fd.get("titulo"),
         subtitulo: fd.get("subtitulo"),
         conteudo: fd.get("conteudo"),
-        data_informe: fd.get("data_informe") || null,
-        audiencia: "INTERNA",
+        data_informe: fd.get("data_informe") || null
       };
 
       const endpoint = id ? `/api/informes/${id}` : "/api/informes";

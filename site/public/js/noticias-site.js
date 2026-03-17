@@ -120,8 +120,7 @@ async function fetchNoticias(API_BASE, statusEditorial, pagina = 1) {
   const query = new URLSearchParams({
     pagina: String(pagina),
     status_editorial: statusEditorial,
-    status: 'PUBLICADA',
-    audiencia: 'PUBLICA'
+    status: 'PUBLICADA'
   });
   const response = await fetch(`${API_BASE}/api/noticias?${query.toString()}`);
   const payload = await response.json();
