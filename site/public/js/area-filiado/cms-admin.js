@@ -1,7 +1,5 @@
 // public/js/area-filiado/cms-admin.js
 (function() {
-    const CMS_FOLDER = 'sinprfes/avatars/cms';
-
     const CMSAdmin = {
         page: 'home',
         blocks: [],
@@ -23,7 +21,7 @@
 
             try {
                 if (this.page === 'home') {
-                    const res = await window.Api.apiFetch('/api/noticias?audiencia=PUBLICA&status_editorial=ATUAL');
+                    const res = await window.Api.apiFetch('/api/noticias?status_editorial=ATUAL');
                     if (!res) throw new Error('Falha na conexão');
                     if (res.status === 401) return;
                     if (res.status === 403) {
@@ -33,6 +31,8 @@
                     if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
                     const data = await res.json();
                     const noticias = Array.isArray(data) ? data : (data.items || []);
+
+                    // Ordena por data para garantir que pegamos a mais recente se houver múltiplas (inconsistência)
                     const noticiasAtuais = [...noticias]
                         .sort((a, b) => new Date(b.sort_date || b.published_at || b.created_at || 0).getTime() - new Date(a.sort_date || a.published_at || a.created_at || 0).getTime());
 
@@ -111,12 +111,12 @@
                 container.innerHTML += '<p>Nenhum bloco encontrado para esta página.</p>';
             }
 
-            if (!blocks.length) {
-                document.getElementById('cms-save-all')?.addEventListener('click', () => this.saveAll());
-                document.getElementById('cms-add-block')?.addEventListener('click', () => this.createConvenio());
-                document.getElementById('cms-add-news')?.addEventListener('click', () => this.prepareCreateNews());
-                return;
-            }
+            // Garante que os botões funcionem mesmo sem blocos renderizados
+            document.getElementById('cms-save-all')?.addEventListener('click', () => this.saveAll());
+            document.getElementById('cms-add-block')?.addEventListener('click', () => this.createConvenio());
+            document.getElementById('cms-add-news')?.addEventListener('click', () => this.prepareCreateNews());
+
+            if (!blocks.length) return;
 
             blocks.forEach((block) => {
                 const div = document.createElement('div');
@@ -184,10 +184,6 @@
                     input.onchange = (e) => this.uploadMedia(block.id, e.target.files?.[0]);
                 }
             });
-
-            document.getElementById('cms-save-all')?.addEventListener('click', () => this.saveAll());
-            document.getElementById('cms-add-block')?.addEventListener('click', () => this.createConvenio());
-            document.getElementById('cms-add-news')?.addEventListener('click', () => this.prepareCreateNews());
         },
 
         renderOrderOptions(currentOrder, total) {
@@ -296,8 +292,7 @@
                     method: 'POST',
                     body: {
                         titulo: 'Nova Notícia (Título Provisório)',
-                        conteudo: 'Conteúdo da nova notícia...',
-                        audiencia: 'PUBLICA'
+                        conteudo: 'Conteúdo da nova notícia...'
                     }
                 });
                 if (!res?.ok) {
@@ -342,8 +337,7 @@
                         body = {
                             titulo: data.title,
                             conteudo: data.body,
-                            capa_url: data.media_url,
-                            audiencia: 'PUBLICA'
+                            capa_url: data.media_url
                         };
                     }
 
