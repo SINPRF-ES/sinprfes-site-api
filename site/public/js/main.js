@@ -46,10 +46,16 @@ document.addEventListener("DOMContentLoaded", () => {
     bodyEl.classList.add("public-shell");
   }
 
+  function syncPublicShellOffsets() {
+    const header = document.querySelector('.site-header');
+    const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+    document.documentElement.style.setProperty('--public-header-offset', `${headerHeight}px`);
+  }
+
   // ---------------- HEADER ----------------
   if (headerEl && !isEmbed) {
+    headerEl.classList.add('site-header');
     headerEl.innerHTML = `
-      <header class="site-header">
         <div class="ui-container header-content">
           <div class="logo-area">
             <a href="/index.html" class="logo-link">
@@ -61,6 +67,12 @@ document.addEventListener("DOMContentLoaded", () => {
             </a>
           </div>
 
+          <button class="mobile-nav-toggle" aria-label="Abrir menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
           <nav class="main-nav">
             <a href="/index.html" class="nav-link ${isActive("index.html")}">Início</a>
             <a href="/noticias.html" class="nav-link ${isActive("noticias.html")}">Notícias</a>
@@ -69,14 +81,39 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/convenios.html" class="nav-link ${isActive("convenios.html")}">Convênios</a>
             <a href="/contato.html" class="nav-link ${isActive("contato.html")}">Contato</a>
             <a href="/filiese.html" class="nav-link ${isActive("filiese.html")}">Filie-se</a>
+            <div class="mobile-only-actions">
+              <a href="/area-filiado.html" class="ui-button ui-button-secondary">Área do Filiado</a>
+            </div>
           </nav>
 
           <div class="header-actions">
             <a href="/area-filiado.html" class="ui-button ui-button-secondary">Área do Filiado</a>
           </div>
         </div>
-      </header>
     `;
+
+    // Toggle menu mobile
+    const toggleBtn = headerEl.querySelector('.mobile-nav-toggle');
+    const mainNav = headerEl.querySelector('.main-nav');
+    if (toggleBtn && mainNav) {
+      toggleBtn.addEventListener('click', () => {
+        toggleBtn.classList.toggle('active');
+        mainNav.classList.toggle('active');
+        document.body.classList.toggle('nav-open');
+      });
+    }
+
+    // Fechar menu ao clicar em link (útil para âncoras, se houver)
+    mainNav.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        toggleBtn.classList.remove('active');
+        mainNav.classList.remove('active');
+        document.body.classList.remove('nav-open');
+      });
+    });
+
+    // Sentinel: Sincroniza offsets imediatamente após injetar o header
+    syncPublicShellOffsets();
   }
 
   // ---------------- FOOTER ----------------
@@ -92,12 +129,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </footer>
     `;
-  }
-
-  function syncPublicShellOffsets() {
-    const header = document.querySelector('.site-header');
-    const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
-    document.documentElement.style.setProperty('--public-header-offset', `${headerHeight}px`);
   }
 
   if (!isEmbed) {
