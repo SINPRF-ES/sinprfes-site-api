@@ -5,6 +5,7 @@
     const CMSAdmin = {
         page: 'home',
         blocks: [],
+        homeInconsistencies: 0,
 
         async init() {
             const btnHome = document.getElementById('cms-page-home');
@@ -32,7 +33,11 @@
                     if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
                     const data = await res.json();
                     const noticias = Array.isArray(data) ? data : (data.items || []);
-                    this.blocks = noticias.map(n => ({
+                    const noticiasAtuais = [...noticias]
+                        .sort((a, b) => new Date(b.sort_date || b.published_at || b.created_at || 0).getTime() - new Date(a.sort_date || a.published_at || a.created_at || 0).getTime());
+
+                    this.homeInconsistencies = Math.max(0, noticiasAtuais.length - 1);
+                    this.blocks = noticiasAtuais.slice(0, 1).map(n => ({
                         id: n.id,
                         title: n.titulo,
                         body: n.conteudo,
@@ -42,6 +47,7 @@
                         is_active: true
                     }));
                 } else {
+                    this.homeInconsistencies = 0;
                     const res = await window.Api.apiFetch(`/api/content-blocks?page=${this.page}&includeInactive=true`);
                     if (!res) throw new Error('Falha na conexão');
                     if (res.status === 401) return;
@@ -66,10 +72,6 @@
             container.innerHTML = '';
 
             const blocks = [...this.blocks].sort((a, b) => (a.ordenacao || 0) - (b.ordenacao || 0));
-            if (!blocks.length) {
-                container.innerHTML = '<p>Nenhum bloco encontrado para esta página.</p>';
-                return;
-            }
 
             const toolbar = document.createElement('div');
             toolbar.style.display = 'flex';
@@ -88,11 +90,32 @@
             `;
             container.appendChild(toolbar);
 
+            if (isHome && this.homeInconsistencies > 0) {
+                const warning = document.createElement('div');
+                warning.style.padding = '10px 12px';
+                warning.style.border = '1px solid #fbbf24';
+                warning.style.background = '#fffbeb';
+                warning.style.color = '#92400e';
+                warning.style.borderRadius = '8px';
+                warning.style.marginBottom = '12px';
+                warning.innerHTML = `Foram encontradas ${this.homeInconsistencies + 1} notícias marcadas como <strong>ATUAL</strong>. Exibindo apenas a mais recente para manter o card único da Home.`;
+                container.appendChild(warning);
+            }
+
             if (isHome && !blocks.length) {
                 const emptyMsg = document.createElement('p');
                 emptyMsg.style.color = '#64748b';
                 emptyMsg.textContent = 'Nenhuma notícia atual encontrada. Clique em "+ Incluir nova notícia" para começar.';
                 container.appendChild(emptyMsg);
+            } else if (!isHome && !blocks.length) {
+                container.innerHTML += '<p>Nenhum bloco encontrado para esta página.</p>';
+            }
+
+            if (!blocks.length) {
+                document.getElementById('cms-save-all')?.addEventListener('click', () => this.saveAll());
+                document.getElementById('cms-add-block')?.addEventListener('click', () => this.createConvenio());
+                document.getElementById('cms-add-news')?.addEventListener('click', () => this.prepareCreateNews());
+                return;
             }
 
             blocks.forEach((block) => {
