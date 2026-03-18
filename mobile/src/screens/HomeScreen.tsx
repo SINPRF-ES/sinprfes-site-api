@@ -33,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados', hiddenForComunicador: true },
   { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao', hiddenForComunicador: true },
   { label: 'Informes', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
-  { label: 'Consulta Processual', subtitle: 'Processos por CPF cadastrado', icon: 'scale-balance', screen: 'ConsultaProcessual', requireDiretoria: true },
+  { label: 'Consulta Processual', subtitle: 'Processos por CPF cadastrado', icon: 'scale-balance', screen: 'ConsultaProcessual', hiddenForComunicador: true },
 ];
 
 export default function HomeScreen({ navigation }: Props) {

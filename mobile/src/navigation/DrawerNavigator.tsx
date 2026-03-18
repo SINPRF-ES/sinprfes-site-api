@@ -180,7 +180,7 @@ export default function DrawerNavigator() {
 
 
 
-      {ehDiretoriaUsuario && (
+      {!isComunicador && (
         <Drawer.Screen
           name="Enquetes"
           component={EnquetesScreen}
@@ -191,7 +191,7 @@ export default function DrawerNavigator() {
         />
       )}
 
-      {ehDiretoriaUsuario && (
+      {!isComunicador && (
         <Drawer.Screen
           name="ConsultaProcessual"
           component={ConsultaProcessualScreen}

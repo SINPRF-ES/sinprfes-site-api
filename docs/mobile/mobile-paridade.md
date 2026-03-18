@@ -36,7 +36,7 @@ Este documento mapeia o estado atual do aplicativo mobile em relação às verda
 | **Publicações** | Share Native PDF | ✅ Concluído | Integrado com `react-native-pdf`. |
 | **Ressarcimento** | Paridade Completa | ✅ Concluído | Suporte multi-anexo (PDF/IMG). |
 | **Jogos 2026** | Inscrição + Gestão | ✅ Concluído | Table scrollable + Idade (2026-ano). |
-| **🗨️ Enquetes** | Listagem + criação + votação + resultados transparentes (diretoria) | ✅ Concluído | Data limite por dia, opções dinâmicas (mín. 2), regra única para site/app. |
+| **🗨️ Enquetes** | Listagem + votação + resultados para filiados; criação para gestão | ✅ Concluído | Data limite por dia, opções dinâmicas (mín. 2), regra única para site/app. |
 
 ## 3. Regras de Interface (Visual Parity)
 - **Meus Dados / Edição:**

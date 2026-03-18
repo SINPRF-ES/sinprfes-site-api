@@ -44,12 +44,13 @@ O módulo **🗨️ Enquetes** permite que a diretoria do SINPRF-ES crie consult
 - `POST /api/polls/:id/vote`
 - `GET /api/polls/:id/results`
 
-> Todos os endpoints exigem autenticação e permissão `ENQUETES_GERENCIAR`.
+> Todos os endpoints exigem autenticação. Criação/edição/publicação exigem `ENQUETES_GERENCIAR`; listagem, detalhe, voto e resultados ficam disponíveis para filiados autenticados.
 
 ## Regras de negócio (backend-first)
 
 - Backend é a fonte única da verdade para criação, publicação, votação e resultados.
-- Apenas diretoria/admin podem criar, votar e visualizar enquetes nesta fase.
+- Apenas diretoria/admin podem criar, editar e publicar enquetes.
+- Filiados autenticados podem listar, visualizar resultados e votar em enquetes publicadas.
 - **Data limite é somente data** (timezone canônico: `America/Sao_Paulo`).
 - A enquete permanece ativa durante todo o dia da data limite e encerra no dia seguinte.
 - Voto não é secreto: os resultados retornam nomes dos votantes por opção.

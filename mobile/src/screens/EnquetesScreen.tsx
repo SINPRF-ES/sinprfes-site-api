@@ -18,7 +18,11 @@ const formatDate = (value?: string) => {
 
 export default function EnquetesScreen() {
   const { usuario } = useAuth();
-  const isDiretoria = useMemo(() => ['ADMIN', 'DIRETORIA'].includes(String(usuario?.perfil_acesso || '').toUpperCase()), [usuario?.perfil_acesso]);
+  const isComunicador = useMemo(() => String(usuario?.perfil_acesso || '').toUpperCase() === 'COMUNICADOR', [usuario?.perfil_acesso]);
+  const canManage = useMemo(() => {
+    const permissions = Array.isArray(usuario?.permissions) ? usuario.permissions : [];
+    return permissions.includes('*') || permissions.includes('ENQUETES_GERENCIAR');
+  }, [usuario]);
 
   const [status, setStatus] = useState<'ativas' | 'encerradas'>('ativas');
   const [loading, setLoading] = useState(false);
@@ -50,8 +54,8 @@ export default function EnquetesScreen() {
   }, [status]);
 
   React.useEffect(() => {
-    if (isDiretoria) load();
-  }, [load, isDiretoria]);
+    if (!isComunicador) load();
+  }, [load, isComunicador]);
 
   const openPoll = async (id: number) => {
     try {
@@ -134,8 +138,8 @@ export default function EnquetesScreen() {
     }
   };
 
-  if (!isDiretoria) {
-    return <SafeScreen style={styles.container}><View style={styles.card}><Text style={styles.text}>Acesso restrito à diretoria.</Text></View></SafeScreen>;
+  if (isComunicador) {
+    return <SafeScreen style={styles.container}><View style={styles.card}><Text style={styles.text}>Módulo indisponível para o perfil comunicador.</Text></View></SafeScreen>;
   }
 
   return (
@@ -147,7 +151,9 @@ export default function EnquetesScreen() {
             <TouchableOpacity style={[styles.tab, status === 'ativas' && styles.tabActive]} onPress={() => setStatus('ativas')}><Text>Ativas</Text></TouchableOpacity>
             <TouchableOpacity style={[styles.tab, status === 'encerradas' && styles.tabActive]} onPress={() => setStatus('encerradas')}><Text>Encerradas</Text></TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.btn} onPress={() => setShowCreate(true)}><Text style={styles.btnText}>+ Nova enquete</Text></TouchableOpacity>
+          {canManage && (
+            <TouchableOpacity style={styles.btn} onPress={() => setShowCreate(true)}><Text style={styles.btnText}>+ Nova enquete</Text></TouchableOpacity>
+          )}
         </View>
 
         {loading ? <ActivityIndicator color={COLORS.prfBlue} /> : polls.map((poll) => (
