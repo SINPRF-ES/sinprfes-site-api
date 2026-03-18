@@ -3,5 +3,6 @@ export interface Usuario {
   cpf: string;
   nome: string;
   perfil_acesso: string;
+  permissions?: string[];
   [key: string]: unknown;
 }
