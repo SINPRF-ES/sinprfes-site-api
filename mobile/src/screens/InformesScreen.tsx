@@ -26,6 +26,13 @@ export default function InformesScreen() {
     return raw;
   };
 
+  const formatFriendlyRef = (ref?: string | null) => {
+    if (!ref) return '';
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i);
+    if (!match) return ref;
+    return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
+  };
+
   const renderItem = ({ item }: { item: InformePost }) => {
     try {
       const coverUrl = item.capa_url;
@@ -34,7 +41,7 @@ export default function InformesScreen() {
       return (
         <TouchableOpacity
           style={[styles.card, isRascunho && styles.draftCard]}
-          onPress={() => navigation.navigate('InformeDetalhe', { newsId: item.id })}
+          onPress={() => navigation.navigate('InformeDetalhe', item.public_ref ? { publicRef: item.public_ref } : { newsId: item.id })}
         >
           {coverUrl ? (
             <Image
@@ -49,7 +56,10 @@ export default function InformesScreen() {
           )}
           <View style={styles.cardContent}>
             <View style={styles.cardHeader}>
-              <Text style={styles.date}>{formatDate(item.data_informe || item.published_at || item.created_at)}</Text>
+              <View style={styles.cardMeta}>
+                <Text style={styles.date}>{formatDate(item.data_informe || item.published_at || item.created_at)}</Text>
+                {!!item.public_ref && <Text style={styles.refText}>{formatFriendlyRef(item.public_ref)}</Text>}
+              </View>
               {isRascunho && (
                 <View style={styles.draftBadge}>
                   <Text style={styles.draftText}>RASCUNHO</Text>
@@ -193,6 +203,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 5,
+    gap: 8,
+  },
+  cardMeta: {
+    flex: 1,
   },
   draftBadge: {
     backgroundColor: '#ffc107',
@@ -221,6 +235,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginBottom: 5,
+  },
+  refText: {
+    fontSize: 11,
+    color: '#003366',
+    fontWeight: '600',
+    marginBottom: 4,
   },
   title: {
     fontSize: 18,

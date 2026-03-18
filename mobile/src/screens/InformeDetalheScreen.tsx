@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, Dimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { fetchInforme } from '../services/informesService';
+import { fetchInforme, fetchInformeByRef } from '../services/informesService';
 import { useAuth } from '../hooks/useAuth';
 import { FontAwesome } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
@@ -10,12 +10,15 @@ import SafeScreen from '../components/SafeScreen';
 const { width } = Dimensions.get('window');
 
 export default function InformeDetalheScreen({ route, navigation }: any) {
-  const { newsId } = route.params;
+  const { newsId, publicRef } = route.params || {};
   const { usuario } = useAuth();
 
   const { data: informe, isLoading, isError, refetch } = useQuery({
-    queryKey: ['informe', newsId],
-    queryFn: () => fetchInforme(newsId),
+    queryKey: ['informe', newsId || publicRef],
+    queryFn: () => {
+      if (publicRef) return fetchInformeByRef(publicRef);
+      return fetchInforme(newsId);
+    },
   });
 
   const formatDate = (dateString?: string | null) => {
@@ -24,6 +27,13 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
     const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (match) return `${match[3]}/${match[2]}/${match[1]}`;
     return raw;
+  };
+
+  const formatFriendlyRef = (ref?: string | null) => {
+    if (!ref) return '';
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i);
+    if (!match) return ref;
+    return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   };
 
   if (isLoading) {
@@ -62,7 +72,10 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
 
         <View style={styles.content}>
           <View style={styles.headerRow}>
-            <Text style={styles.date}>{formatDate(informe.data_informe || informe.published_at || informe.created_at)}</Text>
+            <View style={styles.headerMeta}>
+              <Text style={styles.date}>{formatDate(informe.data_informe || informe.published_at || informe.created_at)}</Text>
+              {!!informe.public_ref && <Text style={styles.refText}>{formatFriendlyRef(informe.public_ref)}</Text>}
+            </View>
             {canEdit && (
               <TouchableOpacity
                 onPress={() => navigation.navigate('InformeEditor', { newsId: informe.id })}
@@ -142,6 +155,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    gap: 12,
+  },
+  headerMeta: {
+    flex: 1,
   },
   editButton: {
     flexDirection: 'row',
@@ -159,7 +176,12 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 14,
     color: '#888',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  refText: {
+    fontSize: 12,
+    color: '#003366',
+    fontWeight: '600',
   },
   title: {
     fontSize: 24,

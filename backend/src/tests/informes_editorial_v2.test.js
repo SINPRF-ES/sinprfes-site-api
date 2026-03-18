@@ -104,4 +104,16 @@ describe('Informes Canonical Contract Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.capa_midia_id).toBe(VALID_MEDIA_UUID);
   });
+
+  test('detalha informe autenticado por public_ref', async () => {
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, public_ref: '20260310-informe-01', status: 'PUBLICADA', capa_midia_id: null }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).get('/api/informes/ref/20260310-informe-01');
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(VALID_UUID);
+    expect(res.body.public_ref).toBe('20260310-informe-01');
+  });
 });
