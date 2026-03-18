@@ -45,9 +45,14 @@
       .sort((a, b) => a.order - b.order)
       .map((item) => {
         const isActive = item.id === 'nav-home';
+        const isHighlight = item.id === 'nav-novo-filiado';
         const controls = item.controls || item.target || 'sec-home';
         const targetAttr = item.target ? ` data-target="${item.target}"` : '';
-        return `<button class="af-nav-item${isActive ? ' active' : ''}"${targetAttr} id="${item.id}" role="tab" aria-selected="${isActive ? 'true' : 'false'}" aria-controls="${controls}"><span aria-hidden="true">${item.icon}</span> ${item.label}</button>`;
+        const classes = ['af-nav-item'];
+        if (isActive) classes.push('active');
+        if (isHighlight) classes.push('pulse-highlight');
+
+        return `<button class="${classes.join(' ')}"${targetAttr} id="${item.id}" role="tab" aria-selected="${isActive ? 'true' : 'false'}" aria-controls="${controls}"><span aria-hidden="true">${item.icon}</span> ${item.label}</button>`;
       })
       .join('');
   }

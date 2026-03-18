@@ -614,7 +614,11 @@ async function criarFiliadoInicial(dados, perfilCriador) {
  * Auditoria (tabela própria): registra evento.
  * Se a tabela não existir, falha silenciosamente para não quebrar o fluxo principal.
  */
-async function registrarEventoAuditoria({
+/**
+ * Auditoria (tabela própria): registra evento.
+ * Offloaded: Não bloqueia o fluxo principal (Background Task).
+ */
+function registrarEventoAuditoria({
   filiadoId,
   acao,
   motivo = null,
@@ -623,28 +627,30 @@ async function registrarEventoAuditoria({
   payloadAntes = null,
   payloadDepois = null,
 }) {
-  try {
-    const query = `
-      INSERT INTO filiados_eventos
-        (filiado_id, acao, motivo, ator_id, ator_perfil, payload_antes, payload_depois, criado_em)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, NOW())
-    `;
-    const params = [
+  const query = `
+    INSERT INTO filiados_eventos
+      (filiado_id, acao, motivo, ator_id, ator_perfil, payload_antes, payload_depois, criado_em)
+    VALUES
+      ($1, $2, $3, $4, $5, $6, $7, NOW())
+  `;
+  const params = [
+    filiadoId,
+    acao,
+    motivo,
+    atorId,
+    atorPerfil,
+    payloadAntes ? JSON.stringify(payloadAntes) : null,
+    payloadDepois ? JSON.stringify(payloadDepois) : null,
+  ];
+
+  // Executa em background sem await para otimizar latência do usuário
+  pool.query(query, params).catch((e) => {
+    log.error("AUDIT_LOG_FAILED", {
       filiadoId,
       acao,
-      motivo,
-      atorId,
-      atorPerfil,
-      payloadAntes ? JSON.stringify(payloadAntes) : null,
-      payloadDepois ? JSON.stringify(payloadDepois) : null,
-    ];
-
-    await pool.query(query, params);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn("Auditoria não registrada (verifique migração filiados_eventos).", e?.message || e);
-  }
+      errorMessage: e.message
+    });
+  });
 }
 
 /**
@@ -669,7 +675,8 @@ async function arquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
 
   const depois = await buscarPorId(id);
 
-  await registrarEventoAuditoria({
+  // Background audit
+  registrarEventoAuditoria({
     filiadoId: id,
     acao: "ARQUIVAR",
     motivo,
@@ -704,7 +711,8 @@ async function desarquivarFiliadoPorId(id, { atorId, atorPerfil, motivo }) {
 
   const depois = await buscarPorId(id);
 
-  await registrarEventoAuditoria({
+  // Background audit
+  registrarEventoAuditoria({
     filiadoId: id,
     acao: "DESARQUIVAR",
     motivo: motivo || null,

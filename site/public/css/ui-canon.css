@@ -398,3 +398,15 @@ a:hover {
 .btn-row {
   justify-content: center;
 }
+
+/* Navigation Highlights (Palette) */
+.pulse-highlight {
+  animation: pulse-border 2s infinite;
+  border-left: 4px solid var(--ui-secondary) !important;
+}
+
+@keyframes pulse-border {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(255, 204, 0, 0.1); }
+  100% { background-color: transparent; }
+}
