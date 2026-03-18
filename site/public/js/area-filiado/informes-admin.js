@@ -24,8 +24,8 @@
 
   function formatFriendlyRef(ref) {
     if (!ref) return "";
-    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i);
-    if (!match) return String(ref);
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-(?:informe|noticia)-(\d+)$/i);
+    if (!match) return "Informe interno";
     return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   }
 
@@ -109,7 +109,7 @@
             <h4 style="margin:0 0 4px; color:#003366;">${escape(n.titulo)}</h4>
             ${n.subtitulo ? `<p style="margin:0 0 6px; color:#334155;">${escape(n.subtitulo)}</p>` : ''}
             <small style="color:#64748b;">${mostrarMetadados ? `${data} · ${escape(n.status)} · ${escape(n.status_editorial)}` : data}</small>
-            ${n.public_ref ? `<div style="margin-top:6px;"><small style="display:block; color:#003366; font-weight:600;">${escape(friendlyRef)}</small><small style="display:block; color:#64748b; font-family:monospace;">${escape(n.public_ref)}</small></div>` : ''}
+            ${n.public_ref ? `<div style="margin-top:6px;"><small style="display:block; color:#003366; font-weight:600;">${escape(friendlyRef)}</small></div>` : ''}
           </div>
           ${n.capa_url ? `<img src="${escape(n.capa_url)}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">` : ''}
         </div>

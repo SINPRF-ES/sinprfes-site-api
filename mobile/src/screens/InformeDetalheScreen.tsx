@@ -31,8 +31,8 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
 
   const formatFriendlyRef = (ref?: string | null) => {
     if (!ref) return '';
-    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i);
-    if (!match) return ref;
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-(?:informe|noticia)-(\d+)$/i);
+    if (!match) return 'Informe interno';
     return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   };
 
