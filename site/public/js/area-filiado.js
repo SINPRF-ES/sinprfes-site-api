@@ -61,6 +61,10 @@
 
     let userInfo = obterUserInfoFresco();
     let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
+    const informeRefPath = (() => {
+      const match = window.location.pathname.match(/^\/area-filiado\/informes\/([^/]+)$/);
+      return match ? decodeURIComponent(match[1]) : null;
+    })();
 
     function inicializarNotificacoesComPerfil(perfilAtual) {
       if (!Notificacoes) return;
@@ -94,7 +98,7 @@
 
     // 2. Configura Navegação Global
     if (configurarNavegacao) {
-      configurarNavegacao((abaAlvo) => {
+      configurarNavegacao(async (abaAlvo) => {
         console.log("Navegando para:", abaAlvo);
         const userInfoAtu = obterUserInfoFresco();
         const permsAtu = userInfoAtu.permissions || [];
@@ -108,10 +112,20 @@
         else if (abaAlvo === "sec-publicacoes" && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
         else if (abaAlvo === "sec-assembleias" && inicializarAssembleias) inicializarAssembleias(perfil);
         else if (abaAlvo === "sec-informes") {
-          if (inicializarInformes) inicializarInformes(perfil);
+          if (inicializarInformes) {
+            await inicializarInformes(perfil);
+            if (informeRefPath && window.InformesAdmin?.abrirVisualizacaoInformePorRef) {
+              await window.InformesAdmin.abrirVisualizacaoInformePorRef(informeRefPath);
+            }
+          }
         }
         else if (abaAlvo === "sec-informes-admin") {
-          if (inicializarInformes) inicializarInformes(perfil);
+          if (inicializarInformes) {
+            await inicializarInformes(perfil);
+            if (informeRefPath && window.InformesAdmin?.abrirVisualizacaoInformePorRef) {
+              await window.InformesAdmin.abrirVisualizacaoInformePorRef(informeRefPath);
+            }
+          }
         }
         else if (abaAlvo === "sec-noticias-admin") {
           if (inicializarNoticias) inicializarNoticias(perfil);
@@ -193,6 +207,13 @@
           } else {
             console.log("Sessão sincronizada (sem alterações no perfil).");
           }
+        }
+      }
+
+      if (informeRefPath) {
+        const btnInformes = document.getElementById("nav-informes") || document.getElementById("nav-informes-admin");
+        if (btnInformes) {
+          btnInformes.click();
         }
       }
 

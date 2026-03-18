@@ -286,6 +286,55 @@ exports.detalhar = async (req, res) => {
   }
 };
 
+exports.detalharPorRef = async (req, res) => {
+  const start = Date.now();
+  const requestId = req.requestId || uuidv4();
+  const publicRef = String(req.params.publicRef || "").trim();
+  const method = "GET";
+  const endpoint = `/api/informes/ref/${publicRef}`;
+  const userId = req.user?.id;
+  const profile = req.user?.perfil_acesso;
+
+  if (!publicRef) {
+    return res.status(400).json({ success: false, message: "Referência de informe inválida.", requestId });
+  }
+
+  try {
+    const { rows: informeRows } = await pool.query(
+      `SELECT i.*, f.nome as autor_nome
+       FROM informes i
+       LEFT JOIN filiados f ON i.autor_id = f.id
+       WHERE i.public_ref = $1
+       LIMIT 1`,
+      [publicRef]
+    );
+
+    if (informeRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+    }
+
+    const informe = informeRows[0];
+    const isGestao = verificarGestao(req);
+    const podeVisualizar = isGestao || informe.status === "PUBLICADA";
+
+    if (!podeVisualizar) {
+      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+    }
+
+    const { rows: midiaRows } = await pool.query(
+      "SELECT * FROM informe_midias WHERE informe_id = $1 ORDER BY ordem ASC",
+      [informe.id]
+    );
+
+    informe.midias = annotateMidiasCover(midiaRows, informe.capa_midia_id);
+
+    log.info("INFORMES_DETAIL_BY_REF_SUCCESS", { endpoint, method, requestId, userId, profile, publicRef, durationMs: Date.now() - start });
+    return res.json({ ...serializeInformeRow(informe), requestId });
+  } catch (err) {
+    return handleDbError(err, res, requestId, "Erro ao detalhar informe por referência.");
+  }
+};
+
 exports.criar = async (req, res) => {
   const start = Date.now();
   const method = "POST";
