@@ -14,7 +14,6 @@ import {
 import SafeScreen from '../components/SafeScreen';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../hooks/useAuth';
-import { isDiretoria } from '../utils/filiadoUtils';
 import { consultarProcessosDoUsuarioLogado, type ConsultaProcessualItem } from '../services/consultaProcessualService';
 
 function formatDateTime(value?: string | null) {
@@ -26,7 +25,7 @@ function formatDateTime(value?: string | null) {
 
 export default function ConsultaProcessualScreen() {
   const { usuario } = useAuth();
-  const podeVerOpcoesInstitucionais = isDiretoria(usuario?.perfil_acesso);
+  const podeVerOpcoesInstitucionais = Boolean(usuario);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);

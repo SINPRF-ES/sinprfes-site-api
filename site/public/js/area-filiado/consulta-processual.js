@@ -34,9 +34,7 @@
   }
 
   function canUseInstitutionalMode() {
-    const info = getUserInfo();
-    const perfil = String(info.perfil_acesso || info.perfil || info.role || '').toUpperCase();
-    return perfil === 'ADMIN' || perfil === 'DIRETORIA';
+    return true;
   }
 
   function renderTable(items) {
