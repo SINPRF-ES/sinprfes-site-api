@@ -22,6 +22,18 @@
     return raw;
   }
 
+  function formatFriendlyRef(ref) {
+    if (!ref) return "";
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-(?:informe|noticia)-(\d+)$/i);
+    if (!match) return "Informe interno";
+    return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
+  }
+
+  function getFriendlyInformeUrl(publicRef) {
+    if (!publicRef) return "";
+    return `/area-filiado/informes/${encodeURIComponent(publicRef)}`;
+  }
+
   async function requestJson(url, options = {}) {
     const r = await window.Api.apiFetch(url, options);
     const data = await r.json().catch(() => ({}));
@@ -88,6 +100,8 @@
 
   function renderCardInforme(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false, mostrarExcluir = false, mostrarMetadados = false } = {}) {
     const data = formatDateOnly(n.data_informe || n.published_at || n.created_at);
+    const friendlyRef = formatFriendlyRef(n.public_ref);
+    const friendlyUrl = getFriendlyInformeUrl(n.public_ref);
     return `
       <div class="informe-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
@@ -95,11 +109,13 @@
             <h4 style="margin:0 0 4px; color:#003366;">${escape(n.titulo)}</h4>
             ${n.subtitulo ? `<p style="margin:0 0 6px; color:#334155;">${escape(n.subtitulo)}</p>` : ''}
             <small style="color:#64748b;">${mostrarMetadados ? `${data} · ${escape(n.status)} · ${escape(n.status_editorial)}` : data}</small>
+            ${n.public_ref ? `<div style="margin-top:6px;"><small style="display:block; color:#003366; font-weight:600;">${escape(friendlyRef)}</small></div>` : ''}
           </div>
           ${n.capa_url ? `<img src="${escape(n.capa_url)}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">` : ''}
         </div>
         <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline btn-sm" onclick="InformesAdmin.abrirVisualizacaoInforme('${n.id}')">📖 Visualizar</button>
+          ${n.public_ref ? `<a class="btn btn-outline btn-sm" href="${friendlyUrl}">🔗 Link amigável</a>` : ''}
           ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="InformesAdmin.abrirModalInforme('${n.id}')">✏️ Editar informe atual</button>` : ''}
           ${mostrarPublicar ? `<button class="btn btn-primary btn-sm" onclick="InformesAdmin.publicarInformeAtual('${n.id}')">📢 Publicar informe</button>` : ''}
           ${mostrarArquivar ? `<button class="btn btn-primary btn-sm" onclick="InformesAdmin.arquivarInformeAtual('${n.id}')">📦 Arquivar informe atual</button>` : ''}
@@ -177,6 +193,12 @@
     const md = document.querySelector("#modal-generic-corpo .informe-markdown");
     if (window.InformesRenderer?.mountRenderedMarkdown) window.InformesRenderer.mountRenderedMarkdown(md, data.conteudo || "");
     modal.style.display = "flex";
+  }
+
+  async function abrirVisualizacaoInformePorRef(publicRef) {
+    const { ok, data } = await requestJson(`/api/informes/ref/${encodeURIComponent(publicRef)}`);
+    if (!ok) return alert("Não foi possível abrir o informe.");
+    return abrirVisualizacaoInforme(data.id);
   }
 
   function renderGaleriaEdicao(midias, capaMidiaId) {
@@ -334,6 +356,7 @@
     carregarInformes,
     abrirModalInforme,
     abrirVisualizacaoInforme,
+    abrirVisualizacaoInformePorRef,
     publicarInformeAtual,
     arquivarInformeAtual,
     excluirInformeAtual,

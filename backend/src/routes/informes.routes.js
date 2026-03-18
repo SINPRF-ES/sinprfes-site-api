@@ -17,6 +17,7 @@ function escopoInterno(req, _res, next) {
 }
 
 router.get("/", authMiddleware, escopoInterno, informesController.listar);
+router.get("/ref/:publicRef", authMiddleware, escopoInterno, informesController.detalharPorRef);
 router.get("/:id", authMiddleware, escopoInterno, informesController.detalhar);
 
 router.post(

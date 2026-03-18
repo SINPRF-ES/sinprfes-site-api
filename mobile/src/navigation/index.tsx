@@ -40,7 +40,7 @@ export type RootStackParamList = {
   EditarFiliado: { filiadoId: number };
   PdfViewer: { localUri: string; title: string };
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
-  InformeDetalhe: { newsId: string };
+  InformeDetalhe: { newsId?: string; publicRef?: string };
   InformeEditor: { newsId: string | null };
 };
 

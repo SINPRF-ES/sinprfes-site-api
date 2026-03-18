@@ -12,6 +12,7 @@ export interface InformeMedia {
 
 export interface InformePost {
   id: string;
+  public_ref?: string | null;
   titulo: string;
   conteudo: string;
   status: 'RASCUNHO' | 'PUBLICADA';
@@ -45,6 +46,11 @@ export const fetchInformes = async (statusArg?: any): Promise<InformePost[]> => 
 
 export const fetchInforme = async (id: string): Promise<InformePost> => {
   const { data } = await api.get(`/api/informes/${id}`);
+  return data;
+};
+
+export const fetchInformeByRef = async (publicRef: string): Promise<InformePost> => {
+  const { data } = await api.get(`/api/informes/ref/${encodeURIComponent(publicRef)}`);
   return data;
 };
 
