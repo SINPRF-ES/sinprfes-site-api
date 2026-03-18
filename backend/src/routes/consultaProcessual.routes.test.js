@@ -17,12 +17,13 @@ describe('consultaProcessual.routes authorization', () => {
   const app = express();
   app.use('/api/consulta-processual', router);
 
-  test('bloqueia perfil sem permissão', async () => {
+  test('permite FILIADO autenticado na consulta própria', async () => {
     const res = await request(app)
       .get('/api/consulta-processual/me')
       .set('x-test-perfil', 'FILIADO');
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 
   test('permite DIRETORIA', async () => {
