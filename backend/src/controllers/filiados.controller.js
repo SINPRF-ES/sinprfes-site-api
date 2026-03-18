@@ -123,9 +123,9 @@ function validarESanitizarDependentes(body) {
  * GET /api/filiados/:id
  */
 exports.getFiliadoById = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
@@ -157,9 +157,9 @@ exports.getFiliadoById = async (req, res) => {
  * GET /api/filiados/me
  */
 exports.getMe = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   try {
     const filiado = await buscarPorId(atorId);
@@ -187,9 +187,9 @@ exports.getMe = async (req, res) => {
  * GET /api/filiados
  */
 exports.listarFiliados = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   try {
     const perfilAcesso = (req.user.perfil_acesso || "FILIADO").toUpperCase();
@@ -216,9 +216,9 @@ exports.listarFiliados = async (req, res) => {
  * Implementa whitelist rigorosa baseada no perfil do usuário (Defesa em Profundidade).
  */
 exports.atualizarMeusDados = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   const perfilAtor = (req.user?.perfil_acesso || "").toUpperCase();
 
@@ -353,9 +353,9 @@ exports.atualizarMeusDados = async (req, res) => {
  * DELETE /api/filiados/:id/dependentes
  */
 exports.excluirDependentes = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   try {
     const idAlvo = parseFiliadoId(req, res, requestId);
@@ -430,9 +430,9 @@ exports.excluirDependentesMe = async (req, res) => {
  * PUT /api/filiados/:id
  */
 exports.atualizarFiliado = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
@@ -563,9 +563,9 @@ exports.atualizarFiliado = async (req, res) => {
  * POST /api/filiados
  */
 exports.criarFiliado = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   try {
     const perfilCriador = (req.user.perfil_acesso || "").toUpperCase();
@@ -669,9 +669,9 @@ exports.criarFiliado = async (req, res) => {
  * POST /api/filiados/:id/arquivar
  */
 exports.arquivarFiliado = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
@@ -703,9 +703,9 @@ exports.arquivarFiliado = async (req, res) => {
  * POST /api/filiados/:id/desarquivar
  */
 exports.desarquivarFiliado = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
@@ -735,9 +735,9 @@ exports.desarquivarFiliado = async (req, res) => {
  * POST /api/filiados/me/avatar
  */
 exports.uploadAvatarMe = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   try {
     if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: "Arquivo não enviado.", requestId });
@@ -765,9 +765,9 @@ exports.uploadAvatarMe = async (req, res) => {
  * POST /api/filiados/:id/avatar
  */
 exports.uploadAvatarPorId = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   const idAlvo = parseFiliadoId(req, res, requestId);
   if (idAlvo === null) return;
@@ -804,9 +804,9 @@ exports.uploadAvatarPorId = async (req, res) => {
  * POST /api/filiados/2fa/desativar
  */
 exports.desativar2fa = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   try {
     const atualizado = await salvarTwoFaSecret(atorId, null);
@@ -820,9 +820,9 @@ exports.desativar2fa = async (req, res) => {
 };
 
 exports.removerAvatarMe = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   try {
     const antes = await buscarPorId(atorId);
@@ -840,9 +840,9 @@ exports.removerAvatarMe = async (req, res) => {
 };
 
 exports.removerAvatarPorId = async (req, res) => {
-  const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
-  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
+  const requestId = req.requestId || uuidv4();
 
   const id = parseFiliadoId(req, res, requestId);
   if (id === null) return;

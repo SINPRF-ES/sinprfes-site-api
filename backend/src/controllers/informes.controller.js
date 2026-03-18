@@ -11,7 +11,7 @@ const INFORMES_POR_PAGINA = 3;
 async function gerarPublicRefInforme(client, informe) {
   if (informe.public_ref) return informe.public_ref;
 
-  const date = new Date(informe.published_at || informe.data_noticia || informe.created_at || new Date());
+  const date = new Date(informe.published_at || informe.data_informe || informe.created_at || new Date());
   const yyyy = date.getUTCFullYear();
   const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(date.getUTCDate()).padStart(2, "0");
@@ -76,9 +76,11 @@ function toDateOnlyTimestamp(value) {
 
 function serializeInformeRow(row) {
   if (!row) return row;
+  const data_informe = toDateOnly(row.data_informe || row.published_at || row.created_at);
+  const { data_noticia, ...rest } = row;
   return {
-    ...row,
-    data_informe: toDateOnly(row.data_noticia || row.published_at || row.created_at),
+    ...rest,
+    data_informe
   };
 }
 
@@ -299,7 +301,7 @@ exports.criar = async (req, res) => {
       return res.status(400).json({ success: false, message: "Título e conteúdo são obrigatórios.", requestId });
     }
 
-    const dataNoticiaCanonica = toDateOnlyTimestamp(data_informe);
+    const dataInformeCanonico = toDateOnlyTimestamp(data_informe);
 
     const client = await pool.connect();
     let createdRow;
@@ -328,10 +330,10 @@ exports.criar = async (req, res) => {
       }
 
       const { rows: createdRows } = await client.query(
-        `INSERT INTO informes (titulo, subtitulo, conteudo, status, autor_id, capa_url, destaque, data_noticia, status_editorial, is_editable, sort_date)
+        `INSERT INTO informes (titulo, subtitulo, conteudo, status, autor_id, capa_url, destaque, data_informe, status_editorial, is_editable, sort_date)
          VALUES ($1, $2, $3, 'RASCUNHO', $4, $5, $6, COALESCE($7, NOW()), 'ATUAL', true, COALESCE($7, NOW()))
          RETURNING *`,
-        [titulo, subtitulo || null, conteudo, req.user.id, capa_url, Boolean(destaque), dataNoticiaCanonica || null]
+        [titulo, subtitulo || null, conteudo, req.user.id, capa_url, Boolean(destaque), dataInformeCanonico || null]
       );
 
       createdRow = createdRows[0];
@@ -363,7 +365,7 @@ exports.atualizar = async (req, res) => {
 
   try {
     const { titulo, subtitulo, conteudo, capa_url, destaque, data_informe } = req.body;
-    const dataNoticiaCanonica = toDateOnlyTimestamp(data_informe);
+    const dataInformeCanonico = toDateOnlyTimestamp(data_informe);
 
     const { rows: estadoRows } = await pool.query(
       "SELECT status_editorial, is_editable FROM informes WHERE id = $1",
@@ -386,11 +388,11 @@ exports.atualizar = async (req, res) => {
            conteudo = COALESCE($3, conteudo),
            capa_url = COALESCE($4, capa_url),
            destaque = COALESCE($5, destaque),
-           data_noticia = COALESCE($6, data_noticia),
+           data_informe = COALESCE($6, data_informe),
            sort_date = COALESCE($6, sort_date)
        WHERE id = $7
        RETURNING *`,
-      [titulo, subtitulo, conteudo, capa_url, destaque, dataNoticiaCanonica, id]
+      [titulo, subtitulo, conteudo, capa_url, destaque, dataInformeCanonico, id]
     );
 
     if (rows.length === 0) {

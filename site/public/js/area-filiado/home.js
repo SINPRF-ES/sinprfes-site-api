@@ -29,6 +29,7 @@
 
         if (ehGestao) {
             actions.push({ label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: '📊', target: 'sec-relatorios' });
+            actions.push({ label: 'Consulta Processual', subtitle: 'PJe e Tribunais', icon: '⚖️', target: 'sec-consulta-processual' });
         }
 
         grid.innerHTML = actions.map(a => {

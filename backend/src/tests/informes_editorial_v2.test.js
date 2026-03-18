@@ -37,7 +37,8 @@ describe('Informes Canonical Contract Tests', () => {
 
     mClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
-      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'I1', data_noticia: '2026-03-10T12:00:00.000Z' }] }) // INSERT
+      .mockResolvedValueOnce({ rows: [] }) // SELECT FOR UPDATE
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, titulo: 'I1', data_informe: '2026-03-10T12:00:00.000Z' }] }) // INSERT
       .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(app)
@@ -46,9 +47,10 @@ describe('Informes Canonical Contract Tests', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data_informe).toBe('2026-03-10');
-    const insertParams = mClient.query.mock.calls[1][1];
-    expect(insertParams[7]).toBe('2026-03-10T12:00:00.000Z');
-    const insertSql = mClient.query.mock.calls[1][0];
+    // console.log(mClient.query.mock.calls);
+    const insertParams = mClient.query.mock.calls[2][1];
+    expect(insertParams[6]).toBe('2026-03-10T12:00:00.000Z');
+    const insertSql = mClient.query.mock.calls[2][0];
     expect(insertSql).toContain("'RASCUNHO'");
   });
 
@@ -66,7 +68,9 @@ describe('Informes Canonical Contract Tests', () => {
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
       .mockResolvedValueOnce({ rows: [{ id: 'OLD_ID' }] }) // SELECT FOR UPDATE
       .mockResolvedValueOnce({ rows: [] }) // update previous
-      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, status: 'PUBLICADA', status_editorial: 'ATUAL', data_noticia: '2026-03-10' }] }) // UPDATE
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, status: 'PUBLICADA', status_editorial: 'ATUAL', data_informe: '2026-03-10' }] }) // UPDATE
+      .mockResolvedValueOnce({ rows: [] }) // gerarPublicRefInforme select
+      .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, public_ref: '20260310-informe-01' }] }) // UPDATE public_ref
       .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(app).post(`/api/informes/${VALID_UUID}/publicar`);
