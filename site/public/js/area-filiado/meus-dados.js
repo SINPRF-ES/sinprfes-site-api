@@ -649,6 +649,8 @@
     limparErros();
 
     const status = document.getElementById("meus-dados-status");
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const originalBtnHtml = btnSubmit ? btnSubmit.innerHTML : "Salvar Dados";
 
     // Funções utilitárias locais para garantir limpeza dos dados
     const onlyDigits = (v) => (v || "").toString().replace(/\D/g, "");
@@ -670,6 +672,11 @@
     }
 
     status.textContent = "Salvando...";
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span aria-hidden="true" class="ui-spinner"></span> Salvando...';
+      btnSubmit.setAttribute("aria-busy", "true");
+    }
 
     // ✅ COLETA DE DADOS (Camada 1: Pick from Whitelist)
     // Ref: shared/canon.js -> ME_EDITABLE_FIELDS_FILIADO
@@ -786,6 +793,12 @@
     } catch (err) {
       console.error(err);
       status.textContent = "Erro de conexão.";
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalBtnHtml;
+        btnSubmit.removeAttribute("aria-busy");
+      }
     }
   };
 
@@ -808,9 +821,10 @@
             const file = inputFile.files && inputFile.files[0];
             if (!file) return;
 
-            const originalText = btnSalvarFoto.innerText;
+            const originalHtml = btnSalvarFoto.innerHTML;
             btnSalvarFoto.disabled = true;
-            btnSalvarFoto.innerText = "Enviando...";
+            btnSalvarFoto.innerHTML = '<span aria-hidden="true" class="ui-spinner"></span> Enviando...';
+            btnSalvarFoto.setAttribute("aria-busy", "true");
 
             const fd = new FormData();
             fd.append("avatar", file);
@@ -828,16 +842,18 @@
                 alert("Erro de conexão.");
             } finally {
                 btnSalvarFoto.disabled = false;
-                btnSalvarFoto.innerText = originalText;
+                btnSalvarFoto.innerHTML = originalHtml;
+                btnSalvarFoto.removeAttribute("aria-busy");
             }
         };
 
         btnRemoverFoto.onclick = async () => {
           if (!confirm("Remover a foto de perfil?")) return;
 
+          const originalHtml = btnRemoverFoto.innerHTML;
           btnRemoverFoto.disabled = true;
-          const txt = btnRemoverFoto.innerText;
-          btnRemoverFoto.innerText = "Removendo...";
+          btnRemoverFoto.innerHTML = '<span aria-hidden="true" class="ui-spinner"></span> Removendo...';
+          btnRemoverFoto.setAttribute("aria-busy", "true");
 
           try {
             const r = await window.Api.apiFetch("/api/filiados/me/avatar", { method: "DELETE" });
@@ -853,12 +869,15 @@
             alert("Erro de conexão.");
           } finally {
             btnRemoverFoto.disabled = false;
-            btnRemoverFoto.innerText = txt;
+            btnRemoverFoto.innerHTML = originalHtml;
+            btnRemoverFoto.removeAttribute("aria-busy");
           }
         };
     }
 
     async function buscarCep() {
+        const btn = document.getElementById("btn-buscar-cep");
+        const originalHtml = btn ? btn.innerHTML : "🔍";
         const onlyDigitsFn = (v) => window.Formatters ? window.Formatters.onlyDigits(v) : (v || "").replace(/\D/g, "");
         const cep = onlyDigitsFn(document.getElementById("me-cep").value || "");
         if (cep.length !== 8) {
@@ -867,6 +886,11 @@
         }
 
         try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span aria-hidden="true" class="ui-spinner" style="margin-right: 0; width: 0.9rem; height: 0.9rem; border-width: 1.5px;"></span>';
+                btn.setAttribute("aria-busy", "true");
+            }
             const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
             const d = await r.json();
             if (d?.erro) {
@@ -879,6 +903,12 @@
             document.getElementById("me-uf").value = d.uf || "";
         } catch (e) {
             alert("Erro ao buscar CEP.");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                btn.removeAttribute("aria-busy");
+            }
         }
     }
 
