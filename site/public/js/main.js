@@ -122,10 +122,24 @@ document.addEventListener("DOMContentLoaded", () => {
     footerEl.innerHTML = `
       <footer class="site-footer">
         <div class="ui-container footer-content">
-          <p>&copy; ${ano} SINPRF-ES – Sindicato dos Policiais Rodoviários Federais no Espírito Santo.</p>
-          <p class="footer-small">
-            Desenvolvido para uso institucional. Todos os direitos reservados.
-          </p>
+          <div class="footer-brand">
+            <img src="/img/placeholder-sinprf.png" alt="SINPRF-ES" class="footer-brand__logo">
+            <div>
+              <strong>SINPRF-ES</strong>
+              <p>Sindicato dos Policiais Rodoviários Federais no Espírito Santo.</p>
+            </div>
+          </div>
+          <div class="footer-links">
+            <a href="/noticias.html">Notícias</a>
+            <a href="/diretoria.html">Diretoria</a>
+            <a href="/convenios.html">Convênios</a>
+            <a href="/contato.html">Contato</a>
+            <a href="/area-filiado.html">Área do Filiado</a>
+          </div>
+          <div class="footer-legal">
+            <p>&copy; ${ano} SINPRF-ES. Portal institucional.</p>
+            <p class="footer-small">Desenvolvido para comunicação oficial, acesso a serviços e divulgação pública de informações do sindicato.</p>
+          </div>
         </div>
       </footer>
     `;
