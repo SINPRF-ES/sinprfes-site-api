@@ -131,8 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div class="footer-links">
             <a href="/noticias.html">Notícias</a>
-            <a href="/diretoria.html">Diretoria</a>
-            <a href="/convenios.html">Convênios</a>
             <a href="/contato.html">Contato</a>
             <a href="/area-filiado.html">Área do Filiado</a>
           </div>
