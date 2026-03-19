@@ -162,6 +162,10 @@ exports.diagnosticsScopes = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const atorId = req.user?.id;
 
+  if (!atorId) {
+    return res.status(401).json({ success: false, error: "Usuário não autenticado (req.user ausente).", requestId });
+  }
+
   try {
     const scopes = await pushService.getScopesDiagnostics();
     log.info("PushDiagnosticsScopesAcessado", { requestId, atorId });
