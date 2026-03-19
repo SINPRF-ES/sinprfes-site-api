@@ -1230,19 +1230,6 @@ body {
     box-shadow: 0 24px 50px rgba(10, 39, 68, 0.18);
 }
 
-.home-eyebrow,
-.home-section__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.8rem;
-    border-radius: 999px;
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
 .home-eyebrow {
     background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.92);
@@ -1280,107 +1267,24 @@ body {
     border-color: #fff;
 }
 
-.home-hero__trust {
-    list-style: none;
-    padding: 0;
+.home-hero__media {
     margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-
-.home-hero__trust li {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.92rem;
-    color: rgba(255, 255, 255, 0.92);
-}
-
-.home-hero__trust li::before {
-    content: '•';
-    color: var(--ui-secondary);
-    font-size: 1.2rem;
-    line-height: 1;
-}
-
-.home-hero__panel {
-    background: rgba(255, 255, 255, 0.92);
+    min-height: 100%;
+    overflow: hidden;
     border-radius: 24px;
     border: 1px solid rgba(15, 76, 129, 0.12);
     box-shadow: 0 18px 42px rgba(15, 76, 129, 0.12);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 1.2rem;
+    background: #0a2744;
 }
 
-.home-hero__panel-label {
-    margin: 0;
-    font-size: 0.82rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ui-primary);
-}
-
-.home-hero__panel-list,
-.home-services-list {
-    display: grid;
-    gap: 0.75rem;
-    margin: 0;
-    padding: 0;
-}
-
-.home-hero__panel-list {
-    list-style: none;
-}
-
-.home-hero__panel-list li,
-.home-service-item {
-    padding: 0.95rem 1rem;
-    border-radius: 14px;
-    background: #fff;
-    border: 1px solid rgba(0, 59, 115, 0.08);
-}
-
-.home-hero__panel-list li {
-    color: var(--ui-text);
-    position: relative;
-    padding-left: 2.6rem;
-}
-
-.home-hero__panel-list li::before {
-    content: '•';
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--ui-primary);
-    font-size: 1.25rem;
-}
-
-.home-section__link::after {
-    content: '→';
-    font-weight: 700;
-}
-
-.home-hero__panel-highlight {
-    padding: 1.1rem 1.15rem;
-    border-radius: 18px;
-    background: linear-gradient(180deg, rgba(234, 243, 251, 0.92), rgba(255, 255, 255, 0.96));
-    border: 1px solid rgba(0, 59, 115, 0.08);
-}
-
-.home-hero__panel-highlight strong {
+.home-hero__media img {
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    object-fit: cover;
     display: block;
-    color: var(--ui-primary);
-    margin-bottom: 0.35rem;
 }
 
-.home-hero__panel-highlight p,
-.home-section__heading p,
-.home-services-copy p,
 .home-pillar span {
     margin: 0;
     color: var(--ui-text-muted);
@@ -1399,14 +1303,7 @@ body {
     gap: 1rem;
 }
 
-.home-section__eyebrow {
-    background: rgba(234, 243, 251, 1);
-    color: var(--ui-primary);
-    margin-bottom: 0.85rem;
-}
-
 .home-section__heading h2,
-.home-services-copy h2,
 .home-institutional h2 {
     font-size: clamp(1.7rem, 3vw, 2.45rem);
     line-height: 1.15;
@@ -1624,27 +1521,6 @@ body {
     color: #0a2744;
 }
 
-.home-services-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.95fr);
-    gap: 1.2rem;
-    align-items: start;
-}
-
-.home-services-list {
-    border-radius: 24px;
-}
-
-.home-service-item strong {
-    display: block;
-    color: #0a2744;
-    margin-bottom: 0.35rem;
-}
-
-.home-service-item p {
-    margin: 0;
-    color: var(--ui-text-muted);
-}
 
 .site-footer {
     background: linear-gradient(180deg, rgba(10, 39, 68, 0.98), rgba(0, 51, 102, 0.98));
@@ -1721,7 +1597,6 @@ body {
     }
 
     .home-news-layout,
-    .home-services-grid,
     .home-hero__grid {
         grid-template-columns: 1fr;
     }
@@ -1750,9 +1625,8 @@ body {
     }
 
     .home-hero__content,
-    .home-hero__panel,
+    .home-hero__media,
     .home-institutional,
-    .home-services-list,
     .home-featured-news,
     .home-recent-news,
     .instagram-news-shell {
