@@ -11,6 +11,15 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString('pt-BR');
 }
 
+function toPreview(value, maxLength = 180) {
+  if (!value) return 'Conteúdo em atualização.';
+  const plain = window.InformesRenderer?.renderInformesPlainText
+    ? window.InformesRenderer.renderInformesPlainText(value)
+    : String(value).replace(/[#*_>`~-]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!plain) return 'Conteúdo em atualização.';
+  return plain.length > maxLength ? `${plain.slice(0, maxLength)}…` : plain;
+}
+
 function buildInstagramCard(post) {
   const title = escapeHtml(post.title || 'Post no Instagram');
   const shortCaption = title.length > 150 ? `${title.slice(0, 150)}…` : title;
@@ -35,7 +44,7 @@ async function renderInstagramFeed(API_BASE, mountEl) {
   if (!mountEl) return;
 
   mountEl.innerHTML = `
-    <section class="ui-card">
+    <section class="ui-card instagram-news-shell">
       <header class="instagram-news-header instagram-news-header--centered">
         <h2 class="section-title"><span class="emoji">📸</span><span>Instagram oficial</span></h2>
       </header>
@@ -58,10 +67,10 @@ async function renderInstagramFeed(API_BASE, mountEl) {
 
     const visiblePosts = [...posts]
       .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
-      .slice(0, 5);
+      .slice(0, 4);
 
     mountEl.innerHTML = `
-      <section class="ui-card">
+      <section class="ui-card instagram-news-shell">
         <header class="instagram-news-header instagram-news-header--centered">
           <h2 class="section-title"><span class="emoji">📸</span><span>Instagram oficial</span></h2>
         </header>
@@ -75,21 +84,12 @@ async function renderInstagramFeed(API_BASE, mountEl) {
     `;
   } catch (error) {
     mountEl.innerHTML = `
-      <section class="ui-card instagram-fallback">
+      <section class="ui-card instagram-news-shell instagram-fallback">
         <p>Não foi possível carregar as publicações agora. Acesse o perfil oficial:</p>
         <a class="btn-instagram" href="${INSTAGRAM_PROFILE_URL}" target="_blank" rel="noopener noreferrer">Ver no Instagram</a>
       </section>
     `;
   }
-}
-
-function toPreview(value) {
-  if (!value) return 'Conteúdo em atualização.';
-  const plain = window.InformesRenderer?.renderInformesPlainText
-    ? window.InformesRenderer.renderInformesPlainText(value)
-    : String(value).replace(/[#*_>`~-]/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!plain) return 'Conteúdo em atualização.';
-  return plain.length > 180 ? `${plain.slice(0, 180)}…` : plain;
 }
 
 function buildNewsCard(item) {
@@ -116,6 +116,32 @@ function buildNewsCard(item) {
   `;
 }
 
+function buildRecentNewsCard(item) {
+  const title = escapeHtml(item.titulo || 'Notícia');
+  const preview = escapeHtml(toPreview(item.conteudo, 110));
+  const date = formatDate(item.published_at || item.data_noticia || item.created_at);
+  const href = (typeof item.public_ref === 'string' && item.public_ref.length > 0)
+    ? `/noticias/${encodeURIComponent(item.public_ref)}`
+    : null;
+  const thumb = item.capa_url
+    ? `<img src="${item.capa_url}" alt="${title}" loading="lazy">`
+    : '';
+
+  const tag = href ? 'a' : 'article';
+  const attrs = href ? `href="${href}"` : '';
+
+  return `
+    <${tag} class="home-recent-news-card" ${attrs}>
+      <div class="home-recent-news-card__thumb">${thumb}</div>
+      <div class="home-recent-news-card__body">
+        <span>${date}</span>
+        <h4>${title}</h4>
+        <p>${preview}</p>
+      </div>
+    </${tag}>
+  `;
+}
+
 async function fetchNoticias(API_BASE, statusEditorial, pagina = 1) {
   const query = new URLSearchParams({
     pagina: String(pagina),
@@ -130,56 +156,82 @@ async function fetchNoticias(API_BASE, statusEditorial, pagina = 1) {
   };
 }
 
-async function renderHomeCurrentNews(API_BASE, mountEl) {
-  if (!mountEl) return;
+async function renderHomeNews(API_BASE, featuredEl, recentEl) {
+  if (!featuredEl || !recentEl) return;
 
-  mountEl.innerHTML = '<section class="ui-card"><p style="color:#64748b;">Carregando notícia em destaque...</p></section>';
+  featuredEl.innerHTML = '<section class="home-featured-news ui-card"><div class="home-featured-news__body"><p class="home-featured-news__empty">Carregando notícia em destaque...</p></div></section>';
+  recentEl.innerHTML = '<section class="home-recent-news ui-card"><div class="home-recent-news__header"><h3>Mais recentes</h3></div><p class="home-recent-news__empty">Carregando notícias recentes...</p></section>';
 
   try {
-    const { items } = await fetchNoticias(API_BASE, 'ATUAL');
-    if (items.length === 0) {
-      mountEl.innerHTML = '<section class="ui-card"><h2>📰 Notícia em destaque</h2><p>Nenhuma notícia pública em destaque no momento.</p></section>';
+    const [featuredPayload, archivedPayload] = await Promise.all([
+      fetchNoticias(API_BASE, 'ATUAL'),
+      fetchNoticias(API_BASE, 'ARQUIVADA')
+    ]);
+
+    const featuredItem = featuredPayload.items[0] || archivedPayload.items[0] || null;
+    const secondaryItems = [...featuredPayload.items.slice(1), ...archivedPayload.items]
+      .filter(Boolean)
+      .slice(0, 3);
+
+    if (!featuredItem) {
+      featuredEl.innerHTML = '<section class="home-featured-news ui-card"><div class="home-featured-news__body"><p class="home-featured-news__empty">Nenhuma notícia pública disponível no momento.</p></div></section>';
+      recentEl.innerHTML = '<section class="home-recent-news ui-card"><div class="home-recent-news__header"><h3>Mais recentes</h3></div><p class="home-recent-news__empty">Novas publicações aparecerão aqui assim que estiverem disponíveis.</p></section>';
       return;
     }
 
-    const item = items[0];
-    const title = escapeHtml(item.titulo || 'Notícia');
-    const subtitle = escapeHtml(item.subtitulo || '');
-    const date = formatDate(item.published_at || item.data_noticia || item.created_at);
-    const content = item.conteudo || '';
-    const href = (typeof item.public_ref === 'string' && item.public_ref.length > 0)
-      ? `/noticias/${encodeURIComponent(item.public_ref)}`
+    const title = escapeHtml(featuredItem.titulo || 'Notícia');
+    const subtitle = escapeHtml(featuredItem.subtitulo || '');
+    const date = formatDate(featuredItem.published_at || featuredItem.data_noticia || featuredItem.created_at);
+    const summary = escapeHtml(toPreview(featuredItem.conteudo, 260));
+    const href = (typeof featuredItem.public_ref === 'string' && featuredItem.public_ref.length > 0)
+      ? `/noticias/${encodeURIComponent(featuredItem.public_ref)}`
       : null;
+    const media = featuredItem.capa_url
+      ? `<div class="home-featured-news__media"><img src="${featuredItem.capa_url}" alt="${title}" loading="lazy"></div>`
+      : '<div class="home-featured-news__media"></div>';
 
-    mountEl.innerHTML = `
-      <section class="ui-card">
-        <header class="instagram-news-header instagram-news-header--centered">
-          <h2 class="section-title"><span class="emoji">📰</span><span>Notícia em destaque</span></h2>
-        </header>
-        <div class="current-news-container">
-          ${item.capa_url ? `
-          <div class="current-news-media" style="margin-bottom: var(--ui-space-3);">
-            <img src="${item.capa_url}" alt="${title}" style="width:100%; max-height:450px; object-fit:cover; border-radius:var(--ui-radius);">
-          </div>` : ''}
-          <div class="current-news-body">
-            <h3 style="margin-top:0; color:var(--ui-primary);">${title}</h3>
-            ${subtitle ? `<p style="font-weight:600; color:var(--ui-text-muted);">${subtitle}</p>` : ''}
-            <p style="font-size:0.85rem; color:var(--ui-text-muted); margin-bottom:var(--ui-space-3);">${date}</p>
-            <div class="markdown-body informe-markdown" style="margin-bottom:var(--ui-space-3); line-height:1.6;"></div>
-            ${href ? `<a href="${href}" class="ui-button ui-button-outline">Ler matéria completa</a>` : ''}
+    featuredEl.innerHTML = `
+      <article class="home-featured-news ui-card">
+        ${media}
+        <div class="home-featured-news__body">
+          <div class="home-featured-news__meta">
+            <span>Destaque principal</span>
+            <span>${date}</span>
           </div>
+          <h3>${title}</h3>
+          ${subtitle ? `<p class="home-featured-news__subtitle">${subtitle}</p>` : ''}
+          <p class="home-featured-news__summary">${summary}</p>
+          ${href ? `<div class="home-featured-news__actions"><a href="${href}" class="ui-button ui-button-primary">Ler notícia completa</a></div>` : ''}
+        </div>
+      </article>
+    `;
+
+    if (secondaryItems.length === 0) {
+      recentEl.innerHTML = `
+        <section class="home-recent-news ui-card">
+          <div class="home-recent-news__header">
+            <h3>Mais recentes</h3>
+            <p>As próximas atualizações públicas aparecerão aqui.</p>
+          </div>
+        </section>
+      `;
+      return;
+    }
+
+    recentEl.innerHTML = `
+      <section class="home-recent-news ui-card">
+        <div class="home-recent-news__header">
+          <h3>Mais recentes</h3>
+          <p>Outras publicações para manter a navegação informativa sem sobrecarregar a primeira dobra.</p>
+        </div>
+        <div class="home-recent-news__list">
+          ${secondaryItems.map((item) => buildRecentNewsCard(item)).join('')}
         </div>
       </section>
     `;
-
-    const mdEl = mountEl.querySelector('.informe-markdown');
-    if (mdEl && window.InformesRenderer?.mountRenderedMarkdown) {
-      window.InformesRenderer.mountRenderedMarkdown(mdEl, content);
-    } else if (mdEl) {
-      mdEl.textContent = content;
-    }
   } catch (_error) {
-    mountEl.innerHTML = '<section class="ui-card instagram-fallback"><p>Não foi possível carregar a notícia em destaque.</p></section>';
+    featuredEl.innerHTML = '<section class="home-featured-news ui-card"><div class="home-featured-news__body"><p class="home-featured-news__empty">Não foi possível carregar o destaque no momento.</p></div></section>';
+    recentEl.innerHTML = '<section class="home-recent-news ui-card"><div class="home-recent-news__header"><h3>Mais recentes</h3></div><p class="home-recent-news__empty">Não foi possível carregar as notícias recentes.</p></section>';
   }
 }
 
@@ -227,7 +279,6 @@ async function renderNoticiasArquivo(API_BASE, mountEl, pagina = 1) {
   }
 }
 
-// Expose to window for pagination buttons
 window.renderNoticiasArquivo = renderNoticiasArquivo;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -238,7 +289,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const page = (document.body?.dataset?.newsPage || '').trim().toLowerCase();
 
   if (page === 'home') {
-    await renderHomeCurrentNews(API_BASE, document.querySelector('#cms-news-root'));
+    await renderHomeNews(
+      API_BASE,
+      document.querySelector('#home-featured-news-root'),
+      document.querySelector('#home-recent-news-root')
+    );
     await renderInstagramFeed(API_BASE, document.querySelector('#instagram-news-root'));
     return;
   }
