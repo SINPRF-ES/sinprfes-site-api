@@ -16,9 +16,11 @@ async function sendCampaign({ title, body, targetType, targetValue, data, create
   let noTokenOrDenied = 0;
   let diagnostics = null;
   try {
-    tokens = await pushService.resolvePushTargets(targetType, targetValue);
-    noTokenOrDenied = await pushService.countNoTokenTargets(targetType, targetValue);
-    diagnostics = await pushService.getResolveDiagnostics(targetType, targetValue);
+    [tokens, noTokenOrDenied, diagnostics] = await Promise.all([
+      pushService.resolvePushTargets(targetType, targetValue),
+      pushService.countNoTokenTargets(targetType, targetValue),
+      pushService.getResolveDiagnostics(targetType, targetValue)
+    ]);
   } catch (e) {
     log.error("PushCampaign.ErroObterTokens", { requestId, error: e.message });
     throw e;

@@ -3,14 +3,17 @@ const log = require("../utils/log");
 
 async function limparLogs(req, res) {
   const start = Date.now();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
   const requestId = req.requestId;
+
   try {
     const { recordsDeleted } = req.body;
 
     // Auditoria via log estruturado conforme diretriz
     log.info("DIAGNOSTICO_LOGS_LIMPOS_GLOBAL", {
       requestId,
-      userId: req.user?.id,
+      userId: atorId,
       perfil: req.user?.perfil_acesso,
       action: "diagnostico.logs.clear",
       recordsDeleted: recordsDeleted || 0,
@@ -27,7 +30,7 @@ async function limparLogs(req, res) {
   } catch (err) {
     log.error("DiagnosticoLimparLogsErro", {
       requestId,
-      userId: req.user?.id,
+      userId: atorId,
       errorMessage: err.message,
       stack: err.stack,
       durationMs: Date.now() - start
@@ -43,14 +46,17 @@ async function limparLogs(req, res) {
 
 async function registrarLog(req, res) {
   const start = Date.now();
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado" });
   const requestId = req.requestId;
+
   try {
     const { source, event, meta } = req.body;
 
     // Log estruturado no backend
     log.info(`MOBILE_DIAGNOSTICO_${(event || 'UNKNOWN').toUpperCase()}`, {
       requestId,
-      userId: req.user?.id,
+      userId: atorId,
       profile: req.user?.perfil_acesso,
       source: source || 'mobile',
       event: event,
@@ -62,7 +68,7 @@ async function registrarLog(req, res) {
   } catch (err) {
     log.error("DiagnosticoRegistrarLogErro", {
       requestId,
-      userId: req.user?.id,
+      userId: atorId,
       errorMessage: err.message,
       stack: err.stack,
       durationMs: Date.now() - start

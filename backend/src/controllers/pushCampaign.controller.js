@@ -218,13 +218,14 @@ exports.listMyNotifications = async (req, res) => {
   } catch (e) {
     log.error("PushCampaign.ListMyNotificationsErro", {
         requestId,
-        userId,
+        userId: atorId,
         error: e.message
     });
     return res.status(500).json({
       success: false,
       message: "Erro ao listar notificações.",
-      code: "INTERNAL_SERVER_ERROR"
+      code: "INTERNAL_SERVER_ERROR",
+      requestId
     });
   }
 };

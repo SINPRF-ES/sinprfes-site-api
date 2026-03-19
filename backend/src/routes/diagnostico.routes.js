@@ -15,6 +15,6 @@ const authorize = (req, res, next) => {
 };
 
 router.post("/limpar-logs", auth, authorize, diagnosticLimiter, controller.limparLogs);
-router.post("/log", controller.registrarLog);
+router.post("/log", auth, controller.registrarLog);
 
 module.exports = router;
