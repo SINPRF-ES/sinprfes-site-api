@@ -130,7 +130,7 @@
         else if (abaAlvo === "sec-noticias-admin") {
           if (inicializarNoticias) inicializarNoticias(perfil);
         }
-        else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init();
+        else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init(perfil);
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
         else if (abaAlvo === "sec-notificacoes") {
           if (!hasPerm('PUSH_GERENCIAR')) {

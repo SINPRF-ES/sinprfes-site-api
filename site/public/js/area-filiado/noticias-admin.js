@@ -9,9 +9,35 @@
   let perfilLogado = null;
   let noticiaAtual = null;
   let noticiasArquivadas = [];
+  let containerConfig = {};
 
   function ehGestaoNoticias() {
     return ["ADMIN", "DIRETORIA", "FUNCIONARIO", "COMUNICADOR"].includes(perfilLogado);
+  }
+
+  function escape(v) {
+    return (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : String(v || "");
+  }
+
+  function formatDateOnly(value) {
+    if (!value) return "";
+    const raw = String(value);
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    const date = new Date(raw);
+    return Number.isNaN(date.getTime()) ? raw : date.toLocaleDateString("pt-BR");
+  }
+
+  function formatFriendlyRef(ref) {
+    if (!ref) return "";
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-(?:noticia|informe)-(\d+)$/i);
+    if (!match) return "Notícia do site";
+    return `Notícia #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
+  }
+
+  function getFriendlyNewsUrl(publicRef) {
+    if (!publicRef) return "";
+    return `/noticia.html?ref=${encodeURIComponent(publicRef)}`;
   }
 
   async function requestJson(url, options = {}) {
@@ -20,35 +46,43 @@
     return { ok: r.ok, status: r.status, data };
   }
 
-  async function inicializarNoticias(perfil) {
+  async function inicializarNoticias(perfil, config = {}) {
     perfilLogado = (perfil || "").toUpperCase();
-    const container = document.getElementById("sec-noticias-admin");
+    containerConfig = {
+      containerId: "sec-noticias-admin",
+      titulo: "📰 Notícias (CMS Público)",
+      subtitulo: "Apenas a notícia atual pode ser editada. Arquivadas ficam imutáveis no acervo.",
+      esconderCardExterno: false,
+      ...config,
+    };
+
+    const container = document.getElementById(containerConfig.containerId);
     if (!container) return;
 
     const ehGestao = ehGestaoNoticias();
-
-    container.innerHTML = `
-      <div class="ui-card">
-        <div class="af-standard-header" style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:20px;">
-          <div>
-            <h2 style="margin:0;">📰 Notícias (CMS Público)</h2>
-            <p class="section-subtitle" style="margin:4px 0 0;">Apenas a notícia atual pode ser editada. Arquivadas ficam imutáveis no acervo.</p>
+    const innerHtml = `
+      <div ${containerConfig.esconderCardExterno ? '' : 'class="ui-card"'}>
+        <div class="af-standard-header" style="display:flex; justify-content:${ehGestao ? "space-between" : "center"}; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:20px;">
+          <div style="${ehGestao ? "" : "width:100%; text-align:center;"}">
+            <h2 style="margin:0; text-align:center;">${containerConfig.titulo}</h2>
+            <p class="section-subtitle" style="margin:4px 0 0;">${containerConfig.subtitulo}</p>
           </div>
           ${ehGestao ? `<button id="btn-nova-noticia" class="ui-button ui-button-secondary">+ Inserir nova notícia atual</button>` : ''}
         </div>
 
         <section style="margin-bottom:16px;">
-          <h3 style="margin:0 0 10px; color:#003366;">Notícia atual</h3>
+          <h3 style="margin:0 0 10px; color:#003366; text-align:center;">Notícia atual</h3>
           <div id="noticia-atual-admin"><p style="color:#666;">Carregando...</p></div>
         </section>
 
         <section>
-          <h3 style="margin:0 0 10px; color:#003366;">Arquivo de notícias</h3>
+          <h3 style="margin:0 0 10px; color:#003366; text-align:center;">Arquivo de notícias</h3>
           <div id="noticias-arquivadas-admin"><p style="color:#666;">Carregando...</p></div>
         </section>
       </div>
     `;
 
+    container.innerHTML = innerHtml;
     if (ehGestao) {
       document.getElementById("btn-nova-noticia").onclick = () => abrirModalNoticia();
     }
@@ -61,11 +95,9 @@
     const arquivadasEl = document.getElementById("noticias-arquivadas-admin");
     if (!atualEl || !arquivadasEl) return;
 
-    // Busca notícia atual
     const respAtual = await requestJson("/api/noticias?status_editorial=ATUAL");
     noticiaAtual = (Array.isArray(respAtual.data) ? respAtual.data[0] : respAtual.data.items?.[0]) || null;
 
-    // Busca arquivadas paginadas
     const respArq = await requestJson(`/api/noticias?status_editorial=ARQUIVADA&pagina=${paginaArquivadas}`);
     noticiasArquivadas = respArq.data.items || [];
     const pagination = respArq.data.pagination || { page: 1, totalPages: 1 };
@@ -74,27 +106,29 @@
     renderizarArquivadas(pagination);
   }
 
-  function escape(v) {
-    return (window.Utils?.escapeHTML) ? window.Utils.escapeHTML(v) : String(v || "");
-  }
+  function renderCardNoticia(n, { mostrarEditar = false, mostrarArquivar = false, mostrarPublicar = false, mostrarExcluir = false, mostrarMetadados = false } = {}) {
+    const data = formatDateOnly(n.data_noticia || n.published_at || n.created_at);
+    const friendlyRef = formatFriendlyRef(n.public_ref);
+    const friendlyUrl = getFriendlyNewsUrl(n.public_ref);
 
-  function renderCardNoticia(n, { mostrarEditar = false, mostrarArquivar = false } = {}) {
-    const data = new Date(n.data_noticia || n.published_at || n.created_at).toLocaleDateString("pt-BR");
     return `
       <div class="noticia-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
           <div>
             <h4 style="margin:0 0 4px; color:#003366;">${escape(n.titulo)}</h4>
             ${n.subtitulo ? `<p style="margin:0 0 6px; color:#334155;">${escape(n.subtitulo)}</p>` : ''}
-            <small style="color:#64748b;">${data} · ${escape(n.status_editorial)}</small>
-            ${n.public_ref ? `<br><small style="color:var(--ui-primary); font-family:monospace;">ref: ${escape(n.public_ref)}</small>` : ''}
+            <small style="color:#64748b;">${mostrarMetadados ? `${data} · ${escape(n.status)} · ${escape(n.status_editorial)}` : data}</small>
+            ${n.public_ref ? `<div style="margin-top:6px;"><small style="display:block; color:#003366; font-weight:600;">${escape(friendlyRef)}</small></div>` : ''}
           </div>
           ${n.capa_url ? `<img src="${escape(n.capa_url)}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">` : ''}
         </div>
         <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirVisualizacaoNoticia('${n.id}')">📖 Visualizar</button>
+          ${n.public_ref ? `<a class="btn btn-outline btn-sm" href="${friendlyUrl}" target="_blank" rel="noopener">🔗 Link amigável</a>` : ''}
           ${mostrarEditar ? `<button class="btn btn-outline btn-sm" onclick="NoticiasAdmin.abrirModalNoticia('${n.id}')">✏️ Editar notícia atual</button>` : ''}
+          ${mostrarPublicar ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.publicarNoticiaAtual('${n.id}')">📢 Publicar notícia</button>` : ''}
           ${mostrarArquivar ? `<button class="btn btn-primary btn-sm" onclick="NoticiasAdmin.arquivarNoticiaAtual('${n.id}')">📦 Arquivar notícia atual</button>` : ''}
+          ${mostrarExcluir ? `<button class="btn btn-sm" style="background:#d32f2f; color:#fff; border-color:#d32f2f;" onclick="NoticiasAdmin.excluirNoticiaAtual('${n.id}')">Excluir notícia</button>` : ''}
         </div>
       </div>
     `;
@@ -104,12 +138,17 @@
     const el = document.getElementById("noticia-atual-admin");
     if (!el) return;
     if (!noticiaAtual) {
-      el.innerHTML = `<p style="color:#475569;">Nenhuma notícia atual ativa. Use “Inserir nova notícia atual” para iniciar o ciclo editorial.</p>`;
+      el.innerHTML = ehGestaoNoticias()
+        ? `<p style="color:#475569;">Nenhuma notícia atual ativa. Use “Inserir nova notícia atual” para iniciar o ciclo editorial.</p>`
+        : `<p style="color:#475569;">Nenhuma notícia disponível no momento.</p>`;
       return;
     }
     el.innerHTML = renderCardNoticia(noticiaAtual, {
       mostrarEditar: ehGestaoNoticias() && noticiaAtual.is_editable,
-      mostrarArquivar: ehGestaoNoticias() && noticiaAtual.is_editable,
+      mostrarPublicar: ehGestaoNoticias() && noticiaAtual.is_editable && noticiaAtual.status === "RASCUNHO",
+      mostrarArquivar: ehGestaoNoticias() && noticiaAtual.is_editable && noticiaAtual.status === "PUBLICADA",
+      mostrarExcluir: ehGestaoNoticias() && noticiaAtual.is_editable,
+      mostrarMetadados: ehGestaoNoticias(),
     });
   }
 
@@ -117,14 +156,16 @@
     const el = document.getElementById("noticias-arquivadas-admin");
     if (!el) return;
     if (!noticiasArquivadas.length) {
-      el.innerHTML = `<p style="color:#64748b;">Sem notícias arquivadas até o momento.</p>`;
+      el.innerHTML = ehGestaoNoticias()
+        ? `<p style="color:#64748b;">Sem notícias arquivadas até o momento.</p>`
+        : `<p style="color:#64748b;">Não há notícias anteriores disponíveis.</p>`;
       return;
     }
 
     let html = noticiasArquivadas.map((n) => `
       <div style="margin-bottom:16px;">
-        ${renderCardNoticia(n)}
-        <p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Esta notícia está consolidada e não pode mais ser editada.</p>
+        ${renderCardNoticia(n, { mostrarMetadados: ehGestaoNoticias() })}
+        ${ehGestaoNoticias() ? '<p style="margin:-4px 0 0; font-size:0.85rem; color:#b91c1c;">Esta notícia está consolidada e não pode mais ser editada.</p>' : ''}
       </div>
     `).join("");
 
@@ -176,6 +217,9 @@
       const detalhe = await requestJson(`/api/noticias/${id}`);
       if (!detalhe.ok) return alert("Não foi possível carregar a notícia para edição.");
       noticia = detalhe.data;
+      if (!noticia.is_editable || noticia.status_editorial === "ARQUIVADA") {
+        return alert("Esta notícia está arquivada e não pode ser editada.");
+      }
     }
 
     const modal = document.getElementById("modal-generic");
@@ -212,9 +256,7 @@
       const endpoint = id ? `/api/noticias/${id}` : "/api/noticias";
       const method = id ? "PUT" : "POST";
       const resp = await requestJson(endpoint, { method, body });
-      if (!resp.ok) {
-        return alert(resp.data?.message || "Não foi possível salvar.");
-      }
+      if (!resp.ok) return alert(resp.data?.message || "Não foi possível salvar.");
 
       const noticiaPersistida = resp.data || {};
       if (!id) {
@@ -230,6 +272,16 @@
     };
   }
 
+  async function publicarNoticiaAtual(id) {
+    if (!ehGestaoNoticias()) return;
+    if (!confirm("Publicar notícia atual? O link amigável será gerado neste momento.")) return;
+    const resp = await requestJson(`/api/noticias/${id}/publicar`, { method: "POST" });
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao publicar notícia atual.");
+    await carregarNoticias();
+    const link = resp.data?.public_ref ? getFriendlyNewsUrl(resp.data.public_ref) : '';
+    alert(link ? `Notícia publicada com sucesso! Link amigável: ${window.location.origin}${link}` : "Notícia publicada com sucesso.");
+  }
+
   async function arquivarNoticiaAtual(id) {
     if (!ehGestaoNoticias()) return;
     if (!confirm("Arquivar notícia atual? Esta ação consolida o conteúdo e bloqueia novas edições.")) return;
@@ -239,10 +291,22 @@
     alert("Notícia arquivada com sucesso. Agora você pode criar uma nova notícia atual.");
   }
 
+  async function excluirNoticiaAtual(id) {
+    if (!ehGestaoNoticias()) return;
+    if (!confirm("Excluir notícia atual? Esta ação remove o rascunho atual permanentemente.")) return;
+    const resp = await requestJson(`/api/noticias/${id}`, { method: "DELETE" });
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao excluir notícia atual.");
+    await carregarNoticias();
+    alert("Notícia excluída com sucesso.");
+  }
+
   global.NoticiasAdmin = {
     inicializarNoticias,
+    carregarNoticias,
     abrirModalNoticia,
     abrirVisualizacaoNoticia,
+    publicarNoticiaAtual,
     arquivarNoticiaAtual,
+    excluirNoticiaAtual,
   };
 })(window);
