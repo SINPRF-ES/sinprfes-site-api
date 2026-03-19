@@ -81,18 +81,24 @@ const mapRow = (row) => ({
   updated_at: row.updated_at
 });
 
+const toInteger = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
 const ensurePageDefaults = async (page, updatedBy) => {
   const defaultRows = DEFAULT_BLOCKS_BY_PAGE[page] || [];
   if (!defaultRows.length) return;
 
   const countRes = await pool.query('SELECT COUNT(*)::int AS count FROM content_blocks WHERE page = $1', [page]);
-  const count = countRes.rows?.[0]?.count || 0;
+  const count = toInteger(countRes.rows?.[0]?.count);
   if (count > 0) return;
 
   for (const block of defaultRows) {
     await pool.query(
       `INSERT INTO content_blocks (page, slot, title, body, media_type, media_url, link_url, link_text, is_active, ordenacao, updated_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       ON CONFLICT (page, slot) DO NOTHING`,
       [
         page,
         block.slot,

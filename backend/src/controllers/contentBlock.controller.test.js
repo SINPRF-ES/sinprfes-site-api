@@ -51,6 +51,31 @@ describe('ContentBlock Controller (PostgreSQL)', () => {
     expect(this.res.json.mock.calls[0][0]).toHaveLength(2);
   });
 
+  test('getBlocks should seed defaults when count returns numeric string zero', async () => {
+    this.req.query = { page: 'convenios', includeInactive: 'true' };
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: 1, page: 'convenios', title: 'Convênio exemplo', is_active: true, ordenacao: 1 }] });
+
+    await contentBlockController.getBlocks(this.req, this.res);
+
+    expect(pool.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('ON CONFLICT (page, slot) DO NOTHING'),
+      expect.arrayContaining(['convenios', 'convenios-1'])
+    );
+    expect(pool.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('ON CONFLICT (page, slot) DO NOTHING'),
+      expect.arrayContaining(['convenios', 'convenios-2'])
+    );
+    expect(this.res.json).toHaveBeenCalledWith([
+      expect.objectContaining({ id: '1', page: 'convenios', title: 'Convênio exemplo' })
+    ]);
+  });
+
   test('updateBlock should fail if title is too long', async () => {
     this.req.params = { id: '1' };
     this.req.body = { title: 'a'.repeat(121) };
