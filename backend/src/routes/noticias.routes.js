@@ -61,7 +61,7 @@ router.post("/:id/midias",
   authMiddleware,
   requirePermission("NOTICIAS_GERENCIAR"),
   upload.single("file"),
-  imageOptimizer({ width: 300, height: 300 }),
+  imageOptimizer({ width: 300, height: 300, minOptimizeBytes: 300 * 1024 }),
   noticiasController.adicionarMidia
 );
 

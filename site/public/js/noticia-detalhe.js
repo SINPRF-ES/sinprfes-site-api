@@ -34,8 +34,24 @@ function renderNewsMedia(midias, capaUrl) {
       <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px;">
         ${itens.map((m) => (
           m.tipo === 'VIDEO'
-            ? `<video src="${escapeHtml(m.url)}" controls style="width:100%; border-radius:10px; background:#000;"></video>`
-            : `<img src="${escapeHtml(m.url)}" alt="Mídia da notícia" style="width:100%; border-radius:10px;">`
+            ? `
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <video src="${escapeHtml(m.url)}" controls style="width:100%; border-radius:10px; background:#000;"></video>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" target="_blank" rel="noopener">Ver original</a>
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" download>Baixar mídia</a>
+                </div>
+              </div>
+            `
+            : `
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <img src="${escapeHtml(m.url)}" alt="Mídia da notícia" style="width:100%; border-radius:10px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" target="_blank" rel="noopener">Ver original</a>
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" download>Baixar mídia</a>
+                </div>
+              </div>
+            `
         )).join('')}
       </div>
     </section>
