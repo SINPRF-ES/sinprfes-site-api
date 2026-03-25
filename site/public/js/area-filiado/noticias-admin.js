@@ -204,6 +204,45 @@
     modal.style.display = "flex";
   }
 
+  function renderMidiasEdicao(midias, capaUrl) {
+    const itens = midias || [];
+    if (!itens.length) return `<p style="color:#64748b; margin:6px 0 0;">Nenhuma mídia anexada ainda.</p>`;
+    return `
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-top:8px;">
+        ${itens.map((m) => `
+          <div style="border:1px solid #e2e8f0; border-radius:8px; padding:6px;">
+            ${m.tipo === "VIDEO"
+              ? `<video src="${escape(m.url)}" controls style="width:100%; height:96px; object-fit:cover; border-radius:6px;"></video>`
+              : `<img src="${escape(m.url)}" style="width:100%; height:96px; object-fit:cover; border-radius:6px;">`
+            }
+            <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">
+              <small style="color:#475569;">${m.tipo === "VIDEO" ? "🎬 Vídeo" : "🖼️ Imagem"}</small>
+              ${m.tipo === "IMAGEM" ? `
+                <button
+                  type="button"
+                  class="ui-button ui-button-sm ${m.url === capaUrl ? "ui-button-secondary" : "ui-button-outline"}"
+                  onclick="NoticiasAdmin.definirCapaMidia(decodeURIComponent('${encodeURIComponent(m.url)}'))">
+                  ${m.url === capaUrl ? "✅ Capa selecionada" : "Definir como capa"}
+                </button>
+              ` : '<small style="color:#94a3b8;">Vídeos não podem ser capa.</small>'}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function definirCapaMidia(url) {
+    const capaInput = document.querySelector('#form-noticia-admin input[name="capa_url"]');
+    if (!capaInput) return;
+    capaInput.value = url || "";
+
+    const galeria = document.getElementById("noticia-midias-edit");
+    if (galeria && noticiaAtual?.midias) {
+      galeria.innerHTML = renderMidiasEdicao(noticiaAtual.midias, capaInput.value);
+    }
+  }
+
   async function abrirModalNoticia(id = null) {
     if (!ehGestaoNoticias()) return alert("Apenas gestão pode editar notícias.");
 
@@ -212,7 +251,7 @@
       if (!confirmar) return;
     }
 
-    let noticia = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", destaque: false };
+    let noticia = { titulo: "", subtitulo: "", conteudo: "", capa_url: "", destaque: false, midias: [] };
     if (id) {
       const detalhe = await requestJson(`/api/noticias/${id}`);
       if (!detalhe.ok) return alert("Não foi possível carregar a notícia para edição.");
@@ -232,6 +271,17 @@
         <div class="field-group" style="margin-top:10px;"><label>Subtítulo</label><input class="ui-input" name="subtitulo" value="${escape(noticia.subtitulo || "")}"></div>
         <div class="field-group" style="margin-top:10px;"><label>Conteúdo</label><textarea class="ui-textarea" name="conteudo" rows="8" required>${escape(noticia.conteudo || "")}</textarea></div>
         <div class="field-group" style="margin-top:10px;"><label>URL da capa</label><input class="ui-input" name="capa_url" value="${escape(noticia.capa_url || "")}" placeholder="https://..."></div>
+        ${id ? `
+          <div class="field-group" style="margin-top:10px;">
+            <label>Upload de mídia (imagem ou vídeo)</label>
+            <input class="ui-input" type="file" id="noticia-upload-midia" accept="image/*,video/*">
+            <small style="color:#64748b;">Envie arquivos para compor a matéria sem depender apenas de URL externa.</small>
+          </div>
+          <div class="field-group" style="margin-top:10px;">
+            <label>Mídias anexadas</label>
+            <div id="noticia-midias-edit">${renderMidiasEdicao(noticia.midias, noticia.capa_url || "")}</div>
+          </div>
+        ` : '<p style="margin-top:10px; color:#64748b;">Após criar a notícia, você poderá anexar imagens e vídeos por upload.</p>'}
         <div class="field-group" style="margin-top:10px;"><label>Data da notícia</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${noticia.data_noticia ? new Date(noticia.data_noticia).toISOString().slice(0,16) : ""}"></div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
@@ -270,6 +320,24 @@
       Utils.fecharModal("modal-generic");
       await carregarNoticias();
     };
+
+    if (id) {
+      noticiaAtual = noticia;
+      const input = document.getElementById("noticia-upload-midia");
+      if (input) {
+        input.addEventListener("change", async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("tipo", file.type.startsWith("video/") ? "VIDEO" : "IMAGEM");
+          const r = await requestJson(`/api/noticias/${id}/midias`, { method: "POST", body: fd });
+          if (!r.ok) return alert(r.data?.message || "Falha ao anexar mídia.");
+          await abrirModalNoticia(id);
+          await carregarNoticias();
+        });
+      }
+    }
   }
 
   async function publicarNoticiaAtual(id) {
@@ -304,6 +372,7 @@
     inicializarNoticias,
     carregarNoticias,
     abrirModalNoticia,
+    definirCapaMidia,
     abrirVisualizacaoNoticia,
     publicarNoticiaAtual,
     arquivarNoticiaAtual,
