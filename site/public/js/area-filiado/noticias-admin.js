@@ -35,6 +35,27 @@
     return `Notícia #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   }
 
+  function formatDatetimeLocalSaoPaulo(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const fmt = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return fmt.format(date).replace(" ", "T");
+  }
+
+  function datetimeLocalToSaoPauloIso(value) {
+    if (!value) return null;
+    return `${value}:00-03:00`;
+  }
+
   function getFriendlyNewsUrl(publicRef) {
     if (!publicRef) return "";
     return `/noticia.html?ref=${encodeURIComponent(publicRef)}`;
@@ -225,6 +246,12 @@
                   ${m.url === capaUrl ? "✅ Capa selecionada" : "Definir como capa"}
                 </button>
               ` : '<small style="color:#94a3b8;">Vídeos não podem ser capa.</small>'}
+              <button
+                type="button"
+                class="ui-button ui-button-sm ui-button-outline"
+                onclick="NoticiasAdmin.removerMidia('${m.id}')">
+                Remover mídia
+              </button>
             </div>
           </div>
         `).join("")}
@@ -282,7 +309,7 @@
             <div id="noticia-midias-edit">${renderMidiasEdicao(noticia.midias, noticia.capa_url || "")}</div>
           </div>
         ` : '<p style="margin-top:10px; color:#64748b;">Após criar a notícia, você poderá anexar imagens e vídeos por upload.</p>'}
-        <div class="field-group" style="margin-top:10px;"><label>Data da notícia</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${noticia.data_noticia ? new Date(noticia.data_noticia).toISOString().slice(0,16) : ""}"></div>
+        <div class="field-group" style="margin-top:10px;"><label>Data da notícia</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${formatDatetimeLocalSaoPaulo(noticia.data_noticia)}"></div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
           <button type="submit" class="ui-button ui-button-secondary">Salvar notícia atual</button>
@@ -300,7 +327,7 @@
         subtitulo: fd.get("subtitulo"),
         conteudo: fd.get("conteudo"),
         capa_url: fd.get("capa_url"),
-        data_noticia: fd.get("data_noticia") ? new Date(fd.get("data_noticia")).toISOString() : null
+        data_noticia: datetimeLocalToSaoPauloIso(fd.get("data_noticia"))
       };
 
       const endpoint = id ? `/api/noticias/${id}` : "/api/noticias";
@@ -368,12 +395,23 @@
     alert("Notícia excluída com sucesso.");
   }
 
+  async function removerMidia(midiaId) {
+    if (!ehGestaoNoticias()) return;
+    if (!noticiaAtual?.id) return;
+    if (!confirm("Remover esta mídia da notícia?")) return;
+    const resp = await requestJson(`/api/noticias/midias/${midiaId}`, { method: "DELETE" });
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao remover mídia.");
+    await abrirModalNoticia(noticiaAtual.id);
+    await carregarNoticias();
+  }
+
   global.NoticiasAdmin = {
     inicializarNoticias,
     carregarNoticias,
     abrirModalNoticia,
     definirCapaMidia,
     abrirVisualizacaoNoticia,
+    removerMidia,
     publicarNoticiaAtual,
     arquivarNoticiaAtual,
     excluirNoticiaAtual,
