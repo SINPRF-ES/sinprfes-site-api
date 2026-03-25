@@ -12,11 +12,11 @@
         <div class="ui-card">
           <div class="af-standard-header">
             <h2>🌐 Gerenciar Conteúdo do Site</h2>
-            <p class="section-subtitle">Use a mesma experiência editorial dos informes para a notícia atual do site e para o arquivo de notícias. Convênios continuam disponíveis nesta área.</p>
+            <p class="section-subtitle">Central única do CMS: edite a notícia atual do site e também os convênios, sem módulos duplicados.</p>
           </div>
 
           <div class="field-row" style="justify-content:center; gap:10px; margin: 0 auto 20px;">
-            <button type="button" id="cms-page-home" class="ui-button ${this.page === 'home' ? 'ui-button-secondary' : 'ui-button-outline'}">Editar Início</button>
+            <button type="button" id="cms-page-home" class="ui-button ${this.page === 'home' ? 'ui-button-secondary' : 'ui-button-outline'}">Editar Notícias</button>
             <button type="button" id="cms-page-convenios" class="ui-button ${this.page === 'convenios' ? 'ui-button-secondary' : 'ui-button-outline'}">Editar Convênios</button>
           </div>
 
