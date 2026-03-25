@@ -620,7 +620,11 @@ exports.adicionarMidia = async (req, res) => {
     }
 
     const resourceType = tipo === "VIDEO" ? "video" : "image";
-    const result = await cloudinary.uploadFileBuffer(req.file.buffer, { resource_type: resourceType, folder: "noticias" });
+    const result = await cloudinary.uploadFileBuffer(req.file.buffer, {
+      resource_type: resourceType,
+      folder: "noticias",
+      standardizeImage: false,
+    });
 
     const { rows } = await pool.query(
       `INSERT INTO noticia_midias (noticia_id, tipo, url, ordem)
