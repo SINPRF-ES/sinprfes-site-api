@@ -25,6 +25,39 @@ function formatNewsDate(value) {
   });
 }
 
+function renderNewsMedia(midias, capaUrl) {
+  const itens = (midias || []).filter((m) => m && m.url && m.url !== capaUrl);
+  if (!itens.length) return '';
+  return `
+    <section style="margin-top:22px;">
+      <h2 style="color:var(--ui-primary); font-size:1.15rem; margin:0 0 12px;">Mídias da matéria</h2>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px;">
+        ${itens.map((m) => (
+          m.tipo === 'VIDEO'
+            ? `
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <video src="${escapeHtml(m.url)}" controls style="width:100%; border-radius:10px; background:#000;"></video>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" target="_blank" rel="noopener">Ver original</a>
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" download>Baixar mídia</a>
+                </div>
+              </div>
+            `
+            : `
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <img src="${escapeHtml(m.url)}" alt="Mídia da notícia" style="width:100%; border-radius:10px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" target="_blank" rel="noopener">Ver original</a>
+                  <a class="ui-button ui-button-outline" href="${escapeHtml(m.url)}" download>Baixar mídia</a>
+                </div>
+              </div>
+            `
+        )).join('')}
+      </div>
+    </section>
+  `;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('noticia-detalhe-root');
   if (!root) return;
@@ -53,6 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <p style="color:#64748b; margin-top:0; margin-bottom:18px;">${formatNewsDate(noticia.published_at || noticia.data_noticia || noticia.created_at)}</p>
         ${noticia.capa_url ? `<img src="${noticia.capa_url}" alt="${escapeHtml(noticia.titulo || 'Capa da notícia')}" style="width:100%; border-radius:12px; margin-bottom:18px;">` : ''}
         <div id="noticia-conteudo" style="line-height:1.7; color:#1f2937;"></div>
+        ${renderNewsMedia(noticia.midias, noticia.capa_url)}
       </article>
     `;
 
