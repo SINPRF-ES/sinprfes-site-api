@@ -204,7 +204,7 @@
     modal.style.display = "flex";
   }
 
-  function renderMidiasEdicao(midias) {
+  function renderMidiasEdicao(midias, capaUrl) {
     const itens = midias || [];
     if (!itens.length) return `<p style="color:#64748b; margin:6px 0 0;">Nenhuma mídia anexada ainda.</p>`;
     return `
@@ -215,11 +215,32 @@
               ? `<video src="${escape(m.url)}" controls style="width:100%; height:96px; object-fit:cover; border-radius:6px;"></video>`
               : `<img src="${escape(m.url)}" style="width:100%; height:96px; object-fit:cover; border-radius:6px;">`
             }
-            <small style="display:block; margin-top:6px; color:#475569;">${m.tipo === "VIDEO" ? "🎬 Vídeo" : "🖼️ Imagem"}</small>
+            <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">
+              <small style="color:#475569;">${m.tipo === "VIDEO" ? "🎬 Vídeo" : "🖼️ Imagem"}</small>
+              ${m.tipo === "IMAGEM" ? `
+                <button
+                  type="button"
+                  class="ui-button ui-button-sm ${m.url === capaUrl ? "ui-button-secondary" : "ui-button-outline"}"
+                  onclick="NoticiasAdmin.definirCapaMidia(decodeURIComponent('${encodeURIComponent(m.url)}'))">
+                  ${m.url === capaUrl ? "✅ Capa selecionada" : "Definir como capa"}
+                </button>
+              ` : '<small style="color:#94a3b8;">Vídeos não podem ser capa.</small>'}
+            </div>
           </div>
         `).join("")}
       </div>
     `;
+  }
+
+  function definirCapaMidia(url) {
+    const capaInput = document.querySelector('#form-noticia-admin input[name="capa_url"]');
+    if (!capaInput) return;
+    capaInput.value = url || "";
+
+    const galeria = document.getElementById("noticia-midias-edit");
+    if (galeria && noticiaAtual?.midias) {
+      galeria.innerHTML = renderMidiasEdicao(noticiaAtual.midias, capaInput.value);
+    }
   }
 
   async function abrirModalNoticia(id = null) {
@@ -258,7 +279,7 @@
           </div>
           <div class="field-group" style="margin-top:10px;">
             <label>Mídias anexadas</label>
-            <div id="noticia-midias-edit">${renderMidiasEdicao(noticia.midias)}</div>
+            <div id="noticia-midias-edit">${renderMidiasEdicao(noticia.midias, noticia.capa_url || "")}</div>
           </div>
         ` : '<p style="margin-top:10px; color:#64748b;">Após criar a notícia, você poderá anexar imagens e vídeos por upload.</p>'}
         <div class="field-group" style="margin-top:10px;"><label>Data da notícia</label><input class="ui-input" type="datetime-local" name="data_noticia" value="${noticia.data_noticia ? new Date(noticia.data_noticia).toISOString().slice(0,16) : ""}"></div>
@@ -301,6 +322,7 @@
     };
 
     if (id) {
+      noticiaAtual = noticia;
       const input = document.getElementById("noticia-upload-midia");
       if (input) {
         input.addEventListener("change", async () => {
@@ -350,6 +372,7 @@
     inicializarNoticias,
     carregarNoticias,
     abrirModalNoticia,
+    definirCapaMidia,
     abrirVisualizacaoNoticia,
     publicarNoticiaAtual,
     arquivarNoticiaAtual,
