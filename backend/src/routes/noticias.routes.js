@@ -7,9 +7,12 @@ const requirePermission = require("../middlewares/requirePermission");
 const multer = require("multer");
 const imageOptimizer = require("../middlewares/imageOptimizer");
 
+const CLOUDINARY_UPLOAD_LIMIT_BYTES = 50 * 1024 * 1024;
+const CLOUDINARY_OPTIMIZE_TRIGGER_BYTES = Math.floor(CLOUDINARY_UPLOAD_LIMIT_BYTES * 0.9);
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for videos
+  limits: { fileSize: CLOUDINARY_UPLOAD_LIMIT_BYTES }, // limite de upload alinhado ao Cloudinary
 });
 
 function escopoPublico(req, _res, next) {
@@ -61,7 +64,7 @@ router.post("/:id/midias",
   authMiddleware,
   requirePermission("NOTICIAS_GERENCIAR"),
   upload.single("file"),
-  imageOptimizer({ width: 300, height: 300 }),
+  imageOptimizer({ width: 300, height: 300, minOptimizeBytes: CLOUDINARY_OPTIMIZE_TRIGGER_BYTES }),
   noticiasController.adicionarMidia
 );
 

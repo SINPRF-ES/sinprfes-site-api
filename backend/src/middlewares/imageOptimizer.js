@@ -10,6 +10,7 @@ const sharp = require("sharp");
  * @param {string} options.fit Modo de redimensionamento do sharp (default: 'inside')
  * @param {number} options.quality Qualidade inicial WebP (default: 82)
  * @param {number} options.maxSize Tamanho máximo em bytes (default: 2MB)
+ * @param {number} options.minOptimizeBytes Tamanho mínimo para aplicar otimização (default: 0)
  */
 const imageOptimizer = (options = {}) => {
   const {
@@ -18,6 +19,7 @@ const imageOptimizer = (options = {}) => {
     fit = "inside",
     quality: initialQuality = 82,
     maxSize = 2 * 1024 * 1024,
+    minOptimizeBytes = 0,
   } = options;
 
   return async (req, res, next) => {
@@ -26,6 +28,11 @@ const imageOptimizer = (options = {}) => {
 
       // Se não for imagem, ignora (ex: vídeo em notícias)
       if (!req.file.mimetype || !req.file.mimetype.startsWith("image/")) {
+        return next();
+      }
+
+      // Evita recompressão desnecessária de imagens já leves/adequadas
+      if (Number(req.file.size || 0) > 0 && Number(req.file.size) < Number(minOptimizeBytes || 0)) {
         return next();
       }
 
