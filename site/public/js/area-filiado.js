@@ -128,7 +128,8 @@
           }
         }
         else if (abaAlvo === "sec-noticias-admin") {
-          if (inicializarNoticias) inicializarNoticias(perfil);
+          if (CMSAdmin && CMSAdmin.init) CMSAdmin.init(perfil);
+          else if (inicializarNoticias) inicializarNoticias(perfil);
         }
         else if (abaAlvo === "sec-cms" && CMSAdmin && CMSAdmin.init) CMSAdmin.init(perfil);
         else if (abaAlvo === "sec-repasse" && inicializarRepasse) inicializarRepasse(perfil);
