@@ -19,6 +19,7 @@ export type DrawerParamList = {
   Logs: undefined;
   Repasse: undefined;
   Relatorios: undefined;
+  Estatisticas: undefined;
   NotificacoesPush: undefined;
   CriarFiliado: undefined;
   PushDiagnostic: undefined;
