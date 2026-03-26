@@ -370,14 +370,6 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await carregarRefreshToken();
-        if (!refreshToken) {
-          isRefreshing = false;
-          logger.warn('API_401_REFRESH_SKIPPED: No refresh token available', { url });
-          await triggerSessionExpired('missing_refresh_token', url);
-          return Promise.reject(error);
-        }
-
         logger.info('API_401_REFRESH_START', { url });
 
         const newToken = await refreshAccessToken();
@@ -397,6 +389,12 @@ api.interceptors.response.use(
           status: refreshError.response?.status,
           message: refreshError.message
         });
+
+        if (refreshError?.message === 'NO_REFRESH_TOKEN') {
+          logger.warn('API_401_REFRESH_SKIPPED: No refresh token available', { url });
+          await triggerSessionExpired('missing_refresh_token', url);
+          return Promise.reject(refreshError);
+        }
 
         if (!shouldForceLogoutAfterRefreshError(refreshError)) {
           return Promise.reject(refreshError);

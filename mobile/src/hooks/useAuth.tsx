@@ -16,6 +16,7 @@ import {
   carregarBiometriaHabilitada,
   definirBiometriaHabilitada,
   carregarRefreshToken,
+  temRefreshTokenGravado,
   carregarLastStrongAuthAt,
   salvarLastStrongAuthAt,
   isBiometricPromptCooldownActive,
