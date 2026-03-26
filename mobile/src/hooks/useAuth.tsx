@@ -18,6 +18,8 @@ import {
   carregarRefreshToken,
   carregarLastStrongAuthAt,
   salvarLastStrongAuthAt,
+  isBiometricPromptCooldownActive,
+  isBiometricPromptPending as isSecureStorePromptPending,
 } from '../services/storageService';
 import { AuthStore } from '../services/authStore';
 import { refreshAccessToken } from '../services/apiService';
@@ -84,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const sessao = await carregarSessao();
         const bio = await carregarBiometriaHabilitada();
-        const hasRefreshToken = !!(await carregarRefreshToken());
+        const hasRefreshToken = await temRefreshTokenGravado();
         const lastStrongAuthAt = await carregarLastStrongAuthAt();
         const strongAuthExpired = !lastStrongAuthAt || (Date.now() - lastStrongAuthAt > THIRTY_DAYS_MS);
 
@@ -138,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('[Auth.loadSession.error]', error.message);
             const status = error?.response?.status;
             if (status === 401) {
-              const hasRefresh = !!(await carregarRefreshToken());
+              const hasRefresh = await temRefreshTokenGravado();
               if (!hasRefresh) {
                 setToken(null);
                 setUsuario(null);
@@ -204,14 +206,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function desbloquearComBiometria(): Promise<boolean> {
-    if (isBiometricRequestPending.current) {
+    if (isBiometricRequestPending.current || isSecureStorePromptPending()) {
       console.log('[Biometria.guard] Ignorando pedido: já existe uma solicitação pendente');
       return false;
     }
 
     const now = Date.now();
-    if (now - lastBiometricRequestAt.current < 5000) {
-      console.log('[Biometria.guard] Ignorando pedido: intervalo muito curto (< 5s)');
+    const isCooldownActive = isBiometricPromptCooldownActive();
+    if (isCooldownActive || (now - lastBiometricRequestAt.current < 5000)) {
+      console.log('[Biometria.guard] Ignorando pedido: intervalo muito curto (cooldown ativo)');
       return false;
     }
 
