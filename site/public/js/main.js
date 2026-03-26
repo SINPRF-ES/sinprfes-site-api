@@ -22,7 +22,78 @@ if (typeof window.API_BASE_URL === "undefined") {
   }
 })();
 
+
+function inferirOrigemAcesso() {
+  const params = new URLSearchParams(window.location.search);
+  const utmSource = params.get('utm_source');
+  const utmMedium = params.get('utm_medium');
+  const utmCampaign = params.get('utm_campaign');
+
+  if (utmSource || utmMedium || utmCampaign) {
+    const partes = [utmSource, utmMedium, utmCampaign].filter(Boolean).join(' / ');
+    return { tipo: 'utm', valor: partes || 'utm' };
+  }
+
+  const ref = document.referrer || '';
+  if (ref) {
+    try {
+      const host = new URL(ref).hostname;
+      if (host && host !== window.location.hostname) {
+        return { tipo: 'referencia_externa', valor: host };
+      }
+      return { tipo: 'navegacao_interna', valor: host || 'interno' };
+    } catch (_) {
+      return { tipo: 'referencia', valor: ref.slice(0, 120) };
+    }
+  }
+
+  if (window.location.pathname === '/' || window.location.pathname.endsWith('/index.html')) {
+    return { tipo: 'acesso_direto_home', valor: 'home' };
+  }
+
+  return { tipo: 'acesso_direto', valor: window.location.pathname };
+}
+
+async function registrarAcessoPublico() {
+  const path = window.location.pathname || '/';
+  if (path.startsWith('/area-filiado')) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `analytics:hit:${path}:${today}`;
+  if (sessionStorage.getItem(key)) return;
+
+  const API_BASE = (window.Utils && window.Utils.resolveApiBase)
+    ? window.Utils.resolveApiBase()
+    : (window.API_BASE_URL || window.ENV_CONFIG?.API_URL || '').replace(/\/+$/, '');
+
+  const origem = inferirOrigemAcesso();
+  const params = new URLSearchParams(window.location.search);
+  const payload = {
+    path,
+    origem_tipo: origem.tipo,
+    origem_valor: origem.valor,
+    referrer_host: document.referrer ? (() => { try { return new URL(document.referrer).hostname; } catch (_) { return null; } })() : null,
+    utm_source: params.get('utm_source'),
+    utm_medium: params.get('utm_medium'),
+    utm_campaign: params.get('utm_campaign'),
+  };
+
+  try {
+    await fetch(`${API_BASE}/api/public/analytics/hit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+    sessionStorage.setItem(key, '1');
+  } catch (_) {
+    // Silencioso para não impactar a UX do site público.
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  registrarAcessoPublico();
+
   const headerEl = document.getElementById("site-header");
   const footerEl = document.getElementById("site-footer");
   const bodyEl = document.body;
