@@ -17,6 +17,7 @@
     { id: 'nav-notificacoes', target: 'sec-notificacoes', label: 'Notificações', icon: '📢', order: 120, section: 'gestao', visible: ({ hasPerm }) => hasPerm('PUSH_GERENCIAR') },
     { id: 'nav-repasse', target: 'sec-repasse', label: 'Repasse', icon: '💱', order: 130, section: 'gestao', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-relatorios', target: 'sec-relatorios', label: 'Relatórios', icon: '📊', order: 140, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
+    { id: 'nav-estatisticas', target: 'sec-estatisticas', label: 'Estatísticas', icon: '📈', order: 145, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
     { id: 'nav-consulta-processual', target: 'sec-consulta-processual', label: 'Consulta Processual', icon: '⚖️', order: 150, section: 'gestao', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-novo-filiado', target: null, label: 'Novo Filiado', icon: '➕', order: 160, section: 'gestao', controls: 'sec-filiados', visible: ({ isComunicador, hasPerm }) => !isComunicador && hasPerm('CREATE_FILIADO') },
     { id: 'nav-cms', target: 'sec-cms', label: 'Site (CMS)', icon: '🌐', order: 170, section: 'gestao', visible: ({ hasPerm }) => hasPerm('EDIT_CONTENT') },
