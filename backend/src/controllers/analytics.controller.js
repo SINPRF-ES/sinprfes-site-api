@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { ehPerfilGestao } = require('../shared/canon');
+const { syncCloudflareEdge, getCloudflareEdgeConfig } = require('../services/cloudflareEdge.service');
 
 function toNullableString(value, maxLen = 300) {
   if (value === undefined || value === null) return null;
@@ -16,6 +17,22 @@ function extractIp(req) {
   if (forwarded) return String(forwarded).split(',')[0].trim();
 
   return req.socket?.remoteAddress || null;
+}
+
+function getTimezone() {
+  return process.env.ANALYTICS_TIMEZONE || 'America/Sao_Paulo';
+}
+
+function assertGestao(req, res) {
+  const requestId = req.requestId || 'n/d';
+  const perfil = String(req.user?.perfil_acesso || '').toUpperCase();
+
+  if (!ehPerfilGestao(perfil)) {
+    res.status(403).json({ success: false, error: 'Acesso restrito à gestão.', requestId });
+    return false;
+  }
+
+  return true;
 }
 
 async function registrarAcesso(req, res) {
@@ -49,46 +66,117 @@ async function registrarAcesso(req, res) {
 
 async function obterResumo(req, res) {
   const requestId = req.requestId || 'n/d';
-  const perfil = String(req.user?.perfil_acesso || '').toUpperCase();
+  if (!assertGestao(req, res)) return;
 
-  if (!ehPerfilGestao(perfil)) {
-    return res.status(403).json({ success: false, error: 'Acesso restrito à gestão.', requestId });
-  }
+  const timezone = getTimezone();
 
   try {
     const [totaisRes, origensRes, paginasRes] = await Promise.all([
       pool.query(
-        `SELECT
+        `WITH tz AS (
+          SELECT
+            (NOW() AT TIME ZONE $1)::date AS hoje_local,
+            date_trunc('month', NOW() AT TIME ZONE $1)::date AS mes_inicio_local
+        )
+        SELECT
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE accessed_at >= date_trunc('day', NOW()))::int AS diario,
-          COUNT(*) FILTER (WHERE accessed_at >= date_trunc('month', NOW()))::int AS mensal
-        FROM site_access_logs`
+          COUNT(*) FILTER (
+            WHERE (accessed_at AT TIME ZONE $1)::date = tz.hoje_local
+          )::int AS diario,
+          COUNT(*) FILTER (
+            WHERE (accessed_at AT TIME ZONE $1)::date >= tz.mes_inicio_local
+          )::int AS mensal
+        FROM site_access_logs, tz`,
+        [timezone]
       ),
       pool.query(
         `SELECT origem_tipo, COALESCE(origem_valor, '(não informado)') AS origem_valor, COUNT(*)::int AS acessos
          FROM site_access_logs
-         WHERE accessed_at >= NOW() - INTERVAL '30 days'
          GROUP BY origem_tipo, COALESCE(origem_valor, '(não informado)')
          ORDER BY acessos DESC
-         LIMIT 10`
+         LIMIT 15`
       ),
       pool.query(
         `SELECT COALESCE(path, '(sem rota)') AS path, COUNT(*)::int AS acessos
          FROM site_access_logs
-         WHERE accessed_at >= NOW() - INTERVAL '30 days'
          GROUP BY COALESCE(path, '(sem rota)')
          ORDER BY acessos DESC
-         LIMIT 10`
+         LIMIT 15`
       )
     ]);
+
+    let cloudflare = {
+      enabled: getCloudflareEdgeConfig().enabled,
+      available: false,
+      timezone,
+      metricas: { total: 0, diario: 0, mensal: 0, cache_hit_ratio: 0, ameacas_total: 0, page_views_total: 0 },
+      recorte: { inicio: null, fim: null, dias: 0 },
+    };
+
+    try {
+      const cfRes = await pool.query(
+        `WITH tz AS (
+          SELECT
+            (NOW() AT TIME ZONE $1)::date AS hoje_local,
+            date_trunc('month', NOW() AT TIME ZONE $1)::date AS mes_inicio_local
+        ),
+        span AS (
+          SELECT MIN(metric_date) AS inicio, MAX(metric_date) AS fim, COUNT(*)::int AS dias
+          FROM cloudflare_edge_daily
+        )
+        SELECT
+          COALESCE(SUM(requests_total), 0)::bigint AS total,
+          COALESCE(SUM(requests_total) FILTER (WHERE metric_date = tz.hoje_local), 0)::bigint AS diario,
+          COALESCE(SUM(requests_total) FILTER (WHERE metric_date >= tz.mes_inicio_local), 0)::bigint AS mensal,
+          COALESCE(SUM(cached_requests), 0)::bigint AS cached_total,
+          COALESCE(SUM(threats_total), 0)::bigint AS ameacas_total,
+          COALESCE(SUM(page_views), 0)::bigint AS page_views_total,
+          span.inicio,
+          span.fim,
+          span.dias
+        FROM cloudflare_edge_daily, tz, span
+        GROUP BY span.inicio, span.fim, span.dias`,
+        [timezone]
+      );
+
+      const row = cfRes.rows[0] || {};
+      const total = Number(row.total || 0);
+      const cachedTotal = Number(row.cached_total || 0);
+      const cacheHitRatio = total > 0 ? Number(((cachedTotal / total) * 100).toFixed(2)) : 0;
+
+      cloudflare = {
+        enabled: getCloudflareEdgeConfig().enabled,
+        available: true,
+        timezone,
+        metricas: {
+          total,
+          diario: Number(row.diario || 0),
+          mensal: Number(row.mensal || 0),
+          cache_hit_ratio: cacheHitRatio,
+          ameacas_total: Number(row.ameacas_total || 0),
+          page_views_total: Number(row.page_views_total || 0),
+        },
+        recorte: {
+          inicio: row.inicio || null,
+          fim: row.fim || null,
+          dias: Number(row.dias || 0),
+        },
+      };
+    } catch (cfError) {
+      if (cfError?.code !== '42P01') {
+        console.error('[analytics] falha ao consultar cloudflare_edge_daily', { requestId, error: cfError?.message });
+      }
+    }
 
     return res.json({
       success: true,
       requestId,
+      timezone,
       metricas: totaisRes.rows[0] || { total: 0, diario: 0, mensal: 0 },
       origens: origensRes.rows,
       paginas: paginasRes.rows,
-      janela_origens_dias: 30,
+      janela_origens_dias: 'all',
+      cloudflare,
     });
   } catch (error) {
     console.error('[analytics] falha ao consultar resumo', { requestId, error: error?.message });
@@ -96,7 +184,20 @@ async function obterResumo(req, res) {
   }
 }
 
+async function sincronizarCloudflare(req, res) {
+  const requestId = req.requestId || 'n/d';
+  if (!assertGestao(req, res)) return;
+
+  const result = await syncCloudflareEdge('manual_api');
+  if (!result.ok) {
+    return res.status(500).json({ success: false, requestId, ...result });
+  }
+
+  return res.json({ success: true, requestId, ...result });
+}
+
 module.exports = {
   registrarAcesso,
   obterResumo,
+  sincronizarCloudflare,
 };
