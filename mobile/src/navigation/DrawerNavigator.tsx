@@ -22,6 +22,7 @@ import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
 import PushDiagnosticScreen from '../screens/PushDiagnosticScreen';
 import RepasseScreen from '../screens/RepasseScreen';
 import RelatoriosScreen from '../screens/RelatoriosScreen';
+import EstatisticasScreen from '../screens/EstatisticasScreen';
 import ConsultaProcessualScreen from '../screens/ConsultaProcessualScreen';
 import EnquetesScreen from '../screens/EnquetesScreen';
 
@@ -233,6 +234,15 @@ export default function DrawerNavigator() {
             options={{
               title: 'Diagnóstico de Push',
               drawerItemStyle: { display: 'none' },
+            }}
+          />
+
+          <Drawer.Screen
+            name="Estatisticas"
+            component={EstatisticasScreen}
+            options={{
+              title: 'Estatísticas',
+              drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ESTATISTICAS} label="Estatísticas" {...props} />,
             }}
           />
 
