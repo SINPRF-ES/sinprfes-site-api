@@ -14,6 +14,11 @@ const BIOMETRIC_CREDENTIAL_KEY = 'sinprf_biometric_token';
 const LAST_UPDATE_CHECK_KEY = '@sinprf/last_update_check';
 const LAST_STRONG_AUTH_AT_KEY = '@sinprf/last_strong_auth_at';
 
+// Single-flight e Cooldown para Biometria (SecureStore)
+let pendingRefreshPromise: Promise<string | null> | null = null;
+let lastRefreshResult: { token: string | null; timestamp: number } | null = null;
+const REFRESH_COOLDOWN_MS = 5000; // 5 segundos
+
 export async function salvarSessao(sessao: Sessao): Promise<void> {
   try {
     await SecureStore.setItemAsync(TOKEN_KEY, sessao.token);
@@ -87,13 +92,46 @@ export async function carregarTokenBiometrico(): Promise<string | null> {
   return await SecureStore.getItemAsync(BIOMETRIC_CREDENTIAL_KEY);
 }
 
+export function isBiometricPromptCooldownActive(): boolean {
+  if (!lastRefreshResult) return false;
+  return (Date.now() - lastRefreshResult.timestamp < REFRESH_COOLDOWN_MS);
+}
+
+export function isBiometricPromptPending(): boolean {
+  return !!pendingRefreshPromise;
+}
+
 export async function carregarRefreshToken(): Promise<string | null> {
-  try {
-    return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-  } catch (e) {
-    logger.error('[Storage.carregarRefreshToken]', e);
-    return null;
+  const now = Date.now();
+
+  // 1. Se houver um resultado recente em cache (cooldown), retorna ele
+  if (lastRefreshResult && (now - lastRefreshResult.timestamp < REFRESH_COOLDOWN_MS)) {
+    logger.info('[Storage.carregarRefreshToken] Retornando resultado do cache (cooldown)');
+    return lastRefreshResult.token;
   }
+
+  // 2. Se já houver uma solicitação em curso (single-flight), aguarda ela
+  if (pendingRefreshPromise) {
+    logger.info('[Storage.carregarRefreshToken] Aguardando solicitação pendente (single-flight)');
+    return pendingRefreshPromise;
+  }
+
+  // 3. Caso contrário, inicia uma nova solicitação
+  pendingRefreshPromise = (async () => {
+    try {
+      const token = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      lastRefreshResult = { token, timestamp: Date.now() };
+      return token;
+    } catch (e) {
+      logger.error('[Storage.carregarRefreshToken]', e);
+      lastRefreshResult = { token: null, timestamp: Date.now() };
+      return null;
+    } finally {
+      pendingRefreshPromise = null;
+    }
+  })();
+
+  return pendingRefreshPromise;
 }
 
 export async function temRefreshTokenGravado(): Promise<boolean> {

@@ -15,6 +15,7 @@ import { AuthStore } from './authStore';
 let isRefreshing = false;
 let failedQueue: any[] = [];
 let lastAuthErrorTimestamp = 0;
+let pendingRefreshAccessTokenPromise: Promise<string> | null = null;
 
 const triggerSessionExpired = async (reason: string, url?: string) => {
   const now = Date.now();
@@ -50,28 +51,40 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 export async function refreshAccessToken(): Promise<string> {
-  const refreshToken = await carregarRefreshToken();
-  if (!refreshToken) {
-    throw new Error('NO_REFRESH_TOKEN');
+  if (pendingRefreshAccessTokenPromise) {
+    return pendingRefreshAccessTokenPromise;
   }
 
-  const refreshResponse = await api.post('/api/auth/refresh', { refreshToken });
-  const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data || {};
+  pendingRefreshAccessTokenPromise = (async () => {
+    try {
+      const refreshToken = await carregarRefreshToken();
+      if (!refreshToken) {
+        throw new Error('NO_REFRESH_TOKEN');
+      }
 
-  if (!newToken) {
-    throw new Error('INVALID_REFRESH_RESPONSE');
-  }
+      const refreshResponse = await api.post('/api/auth/refresh', { refreshToken });
+      const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data || {};
 
-  const sessaoAtual = await carregarSessao();
-  if (sessaoAtual) {
-    await salvarSessao({
-      ...sessaoAtual,
-      token: newToken,
-      refreshToken: newRefreshToken,
-    });
-  }
+      if (!newToken) {
+        throw new Error('INVALID_REFRESH_RESPONSE');
+      }
 
-  return newToken;
+      const sessaoAtual = await carregarSessao();
+      if (sessaoAtual) {
+        await salvarSessao({
+          ...sessaoAtual,
+          token: newToken,
+          refreshToken: newRefreshToken,
+        });
+      }
+
+      return newToken;
+    } finally {
+      pendingRefreshAccessTokenPromise = null;
+    }
+  })();
+
+  return pendingRefreshAccessTokenPromise;
 }
 
 /**
