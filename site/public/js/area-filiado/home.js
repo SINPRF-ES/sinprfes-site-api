@@ -30,6 +30,7 @@
 
         if (ehGestao) {
             actions.push({ label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: '📊', target: 'sec-relatorios' });
+            actions.push({ label: 'Estatísticas', subtitle: 'Acessos do site', icon: '📈', target: 'sec-estatisticas' });
             actions.push({ label: 'Consulta Processual', subtitle: 'PJe e Tribunais', icon: '⚖️', target: 'sec-consulta-processual' });
         }
 

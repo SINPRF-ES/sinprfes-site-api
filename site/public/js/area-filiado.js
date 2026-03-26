@@ -36,6 +36,7 @@
     const { inicializarInformes } = window.InformesAdmin || {};
     const { inicializarNoticias } = window.NoticiasAdmin || {};
     const { inicializarRelatorios } = window.Relatorios || {};
+    const { inicializarEstatisticas } = window.EstatisticasGestao || {};
     const { inicializarConsultaProcessual } = window.ConsultaProcessual || {};
     const { inicializarEnquetes } = window.Enquetes || {};
     const { CMSAdmin } = window || {};
@@ -146,6 +147,7 @@
           window.Diagnostico.inicializar();
         }
         else if (abaAlvo === "sec-relatorios" && inicializarRelatorios) inicializarRelatorios(perfil);
+        else if (abaAlvo === "sec-estatisticas" && inicializarEstatisticas) inicializarEstatisticas();
         else if (abaAlvo === "sec-consulta-processual" && inicializarConsultaProcessual) inicializarConsultaProcessual();
         else if (abaAlvo === "sec-enquetes" && inicializarEnquetes) inicializarEnquetes();
         else if (abaAlvo === "sec-estatuto" && window.EstatutoAF) window.EstatutoAF.inicializarEstatuto();
