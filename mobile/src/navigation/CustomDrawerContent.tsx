@@ -1,13 +1,43 @@
 // mobile/src/navigation/CustomDrawerContent.tsx
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
+import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
 import { COLORS } from '../theme/colors';
+
+const SECTION_META = {
+  principal: { title: 'Área do Filiado', emoji: '🏠', backgroundColor: 'rgba(255, 255, 255, 0.85)' },
+  servicos: { title: 'Serviços e Participação', emoji: '🧩', backgroundColor: 'rgba(0, 51, 102, 0.08)' },
+  gestao: { title: 'Gestão', emoji: '🛠️', backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+} as const;
+
+const NAV_STRUCTURE = [
+  { key: 'inicio', routeName: 'Início', label: 'Página Inicial', emoji: '🏠', section: 'principal', order: 10 },
+  { key: 'meus-dados', routeName: 'MeusDados', label: 'Meus Dados', emoji: '👤', section: 'principal', order: 20 },
+  { key: 'filiados', routeName: 'Filiados', label: 'Filiados', emoji: '👥', section: 'principal', order: 30 },
+  { key: 'informes', routeName: 'Noticias', label: 'Informes', emoji: '📢', section: 'principal', order: 40 },
+  { key: 'publicacoes', routeName: 'Publicacoes', label: 'Publicações', emoji: '📚', section: 'principal', order: 50 },
+  { key: 'convenios', routeName: 'Convenios', label: 'Convênios', emoji: '🤝', section: 'principal', order: 60 },
+  { key: 'estatuto', routeName: 'Estatuto', label: 'Estatuto', emoji: '📜', section: 'principal', order: 70 },
+  { key: 'seguranca', routeName: 'Seguranca', label: 'Segurança', emoji: '🔒', section: 'principal', order: 80 },
+  { key: 'atualizacoes', routeName: 'Atualizacoes', label: 'Atualizações', emoji: '🔄', section: 'principal', order: 90 },
+  { key: 'ressarcimento', routeName: 'Ressarcimento', label: 'Ressarcimento', emoji: '💸', section: 'servicos', order: 100 },
+  { key: 'assembleias', routeName: 'Votacao', label: 'Assembleias e Votações', emoji: '🗳️', section: 'servicos', order: 110 },
+  { key: 'enquetes', routeName: 'Enquetes', label: 'Enquetes', emoji: '🗨️', section: 'servicos', order: 120 },
+  { key: 'jogos', routeName: 'Jogos2026', label: 'Jogos 2026', emoji: '🏆', section: 'servicos', order: 130 },
+  { key: 'repasse', routeName: 'Repasse', label: 'Repasse', emoji: '💱', section: 'servicos', order: 140 },
+  { key: 'consulta-processual', routeName: 'ConsultaProcessual', label: 'Consulta Processual', emoji: '⚖️', section: 'gestao', order: 150 },
+  { key: 'estatisticas', routeName: 'Estatisticas', label: 'Estatísticas', emoji: '📈', section: 'gestao', order: 160 },
+  { key: 'relatorios', routeName: 'Relatorios', label: 'Relatórios', emoji: '📊', section: 'gestao', order: 170 },
+  { key: 'notificacoes', routeName: 'NotificacoesPush', label: 'Notificações', emoji: '📢', section: 'gestao', order: 180 },
+  { key: 'novo-filiado', routeName: 'CriarFiliado', label: 'Novo Filiado', emoji: '➕', section: 'gestao', order: 190 },
+  { key: 'cms', routeName: 'CMSSite', label: 'Site (CMS)', emoji: '🌐', section: 'gestao', order: 200 },
+  { key: 'diagnostico', routeName: 'Logs', label: 'Diagnóstico', emoji: '🛠️', section: 'gestao', order: 210 },
+] as const;
 
 function formatarData(data: string) {
   if (!data) return '';
@@ -33,6 +63,8 @@ const CustomDrawerContent = (props) => {
   const insets = useSafeAreaInsets();
   const ehGestao = checkIsGestao(usuario?.perfil_acesso);
   const ehDiretoria = checkIsDiretoria(usuario?.perfil_acesso);
+  const currentRouteName = props.state?.routes?.[props.state.index]?.name;
+  const routeSet = new Set((props.state?.routes || []).map((route) => route.name));
 
   const handleLogoutPress = () => {
     Alert.alert(
@@ -52,6 +84,20 @@ const CustomDrawerContent = (props) => {
       ]
     );
   };
+
+  const groupedNavItems = NAV_STRUCTURE
+    .filter((item) => routeSet.has(item.routeName))
+    .filter((item) => {
+      if (item.routeName === 'NotificacoesPush' || item.routeName === 'CriarFiliado') return ehGestao;
+      if (item.routeName === 'Logs') return ehDiretoria;
+      return true;
+    })
+    .sort((a, b) => a.order - b.order)
+    .reduce((acc, item) => {
+      if (!acc[item.section]) acc[item.section] = [];
+      acc[item.section].push(item);
+      return acc;
+    }, {} as Record<string, Array<typeof NAV_STRUCTURE[number]>>);
 
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
@@ -102,29 +148,32 @@ const CustomDrawerContent = (props) => {
         <View style={styles.separator} />
 
       <View style={styles.listContainer}>
-        <DrawerItemList {...props} />
-      </View>
+        {(Object.keys(SECTION_META) as Array<keyof typeof SECTION_META>).map((sectionKey) => {
+          const sectionItems = groupedNavItems[sectionKey] || [];
+          if (!sectionItems.length) return null;
 
-      {ehGestao && (
-        <>
-          <View style={styles.separator} />
-          <Text style={styles.sectionHeader}>{EMOJI.GESTAO} Gestão</Text>
-          <DrawerItem
-            label={(props) => <DrawerItemLabel emoji={EMOJI.NOTIFICACOES} label="Notificações" {...props} />}
-            onPress={() => props.navigation.navigate('NotificacoesPush')}
-          />
-          <DrawerItem
-            label={(props) => <DrawerItemLabel emoji={EMOJI.NOVO_FILIADO} label="Novo Filiado" {...props} />}
-            onPress={() => props.navigation.navigate('CriarFiliado')}
-          />
-          {ehDiretoria && (
-            <DrawerItem
-              label={(props) => <DrawerItemLabel emoji={EMOJI.DIAGNOSTICO} label="Diagnóstico" {...props} />}
-              onPress={() => props.navigation.navigate('Logs')}
-            />
-          )}
-        </>
-      )}
+          const sectionMeta = SECTION_META[sectionKey];
+          return (
+            <View key={sectionKey} style={[styles.sectionBlock, { backgroundColor: sectionMeta.backgroundColor }]}>
+              <Text style={styles.sectionHeader}>{sectionMeta.emoji} {sectionMeta.title}</Text>
+              {sectionItems.map((item) => {
+                const isFocused = currentRouteName === item.routeName;
+                return (
+                  <DrawerItem
+                    key={item.key}
+                    focused={isFocused}
+                    activeTintColor={COLORS.prfBlue}
+                    inactiveTintColor={COLORS.text}
+                    activeBackgroundColor="rgba(0, 51, 102, 0.12)"
+                    label={(labelProps) => <DrawerItemLabel emoji={item.emoji} label={item.label} {...labelProps} />}
+                    onPress={() => props.navigation.navigate(item.routeName as never)}
+                  />
+                );
+              })}
+            </View>
+          );
+        })}
+      </View>
 
       <View style={styles.separator} />
 
@@ -200,10 +249,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.prfBlue,
     marginLeft: 16,
+    marginTop: 4,
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     fontSize: 12,
+  },
+  sectionBlock: {
+    borderRadius: 12,
+    marginHorizontal: 10,
+    marginBottom: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.08)',
+    overflow: 'hidden',
   },
   closeAppContainer: {
     paddingHorizontal: 15,

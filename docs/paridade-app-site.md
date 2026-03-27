@@ -54,4 +54,5 @@ As seções abaixo seguem a ordem de exibição e o agrupamento visual (com core
 
 - **RBAC e Visibilidade**:
   - O módulo **Repasse** foi movido da seção de Gestão para Serviços, tornando-se visível para todos os filiados, embora as funções de edição permaneçam restritas via permissões de backend.
-  - A visibilidade de itens no App agora é filtrada dinamicamente no `CustomDrawerContent.tsx` com base nas permissões reais do usuário, espelhando a lógica do `navigation-config.js` do site.
+  - A visibilidade de itens no App agora é filtrada dinamicamente no `CustomDrawerContent.tsx` com base nas rotas realmente disponíveis no `DrawerNavigator`, mantendo coerência com o RBAC.
+  - Os itens de gestão renderizados no Drawer (ex.: **Notificações**, **Novo Filiado**, **Diagnóstico**) exibem estado ativo corretamente.

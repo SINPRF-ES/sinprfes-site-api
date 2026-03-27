@@ -381,7 +381,15 @@ body {
 .af-sidebar-title { font-weight: 800; font-size: 1.2rem; letter-spacing: 0.5px; }
 
 .af-sidebar-nav { flex: 1; padding: 15px 0; overflow-y: auto; }
-.af-nav-section { margin-bottom: 10px; }
+.af-nav-section {
+    margin: 0 10px 10px;
+    border-radius: 10px;
+    padding: 6px 0;
+    border: 1px solid rgba(255,255,255,0.12);
+}
+.af-nav-section[data-section="principal"] { background: rgba(255,255,255,0.08); }
+.af-nav-section[data-section="servicos"] { background: rgba(0, 51, 102, 0.2); }
+.af-nav-section[data-section="gestao"] { background: rgba(0, 0, 0, 0.15); }
 .af-nav-section-title {
     display: flex;
     align-items: center;
