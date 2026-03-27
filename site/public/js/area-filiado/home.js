@@ -21,8 +21,8 @@
         ];
 
         if (!isComunicador) {
+            actions.splice(1, 0, { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: '👥', target: 'sec-filiados' });
             actions.push({ label: 'Assembleias', subtitle: 'Votações e sessões', icon: '🗳️', target: 'sec-assembleias' });
-            actions.push({ label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: '👥', target: 'sec-filiados' });
             actions.push({ label: 'Jogos 2026', subtitle: 'Inscrição e info', icon: '🏆', target: 'sec-jogos' });
             actions.push({ label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: '📚', target: 'sec-publicacoes' });
             actions.push({ label: 'Repasse', subtitle: 'Apoio e alocações', icon: '💱', target: 'sec-repasse' });

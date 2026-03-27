@@ -1,16 +1,29 @@
-// src/screens/ConveniosScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { WebView } from 'react-native-webview';
+
 import SafeScreen from '../components/SafeScreen';
+import { API_BASE_URL } from '../config/env';
+import { COLORS } from '../theme/colors';
+
+function getSiteBaseUrl(): string {
+  return API_BASE_URL.replace('://api.', '://').replace(/\/+$/, '');
+}
 
 export default function ConveniosScreen() {
+  const conveniosUrl = `${getSiteBaseUrl()}/convenios.html?embed=1`;
+
   return (
     <SafeScreen style={styles.container}>
-      <Text style={styles.title}>Convênios</Text>
-      <Text style={styles.subtitle}>
-        Esta seção está em desenvolvimento. Em breve, você poderá consultar
-        a lista de convênios e parceiros aqui.
-      </Text>
+      <WebView
+        source={{ uri: conveniosUrl }}
+        startInLoadingState
+        renderLoading={() => (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={COLORS.prfBlue} />
+          </View>
+        )}
+      />
     </SafeScreen>
   );
 }
@@ -18,21 +31,12 @@ export default function ConveniosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  loading: {
+    flex: 1,
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f2f4f8',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-    color: '#003366',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#555',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
   },
 });

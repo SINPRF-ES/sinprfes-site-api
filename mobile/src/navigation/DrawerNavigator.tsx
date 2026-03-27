@@ -14,6 +14,7 @@ import LogsScreen from '../screens/LogsScreen';
 import SegurancaScreen from '../screens/SegurancaScreen';
 import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
+import ConveniosScreen from '../screens/ConveniosScreen';
 import RessarcimentoScreen from '../screens/RessarcimentoScreen';
 import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
@@ -25,6 +26,7 @@ import RelatoriosScreen from '../screens/RelatoriosScreen';
 import EstatisticasScreen from '../screens/EstatisticasScreen';
 import ConsultaProcessualScreen from '../screens/ConsultaProcessualScreen';
 import EnquetesScreen from '../screens/EnquetesScreen';
+import CmsScreen from '../screens/CmsScreen';
 
 import CustomDrawerContent from './CustomDrawerContent';
 import DrawerItemLabel from '../components/DrawerItemLabel';
@@ -43,6 +45,8 @@ export default function DrawerNavigator() {
   const ehGestaoUsuario = isGestao(usuario?.perfil_acesso);
   const ehDiretoriaUsuario = isDiretoria(usuario?.perfil_acesso);
   const isComunicador = (usuario?.perfil_acesso || '').toUpperCase() === 'COMUNICADOR';
+  const permissions = Array.isArray((usuario as any)?.permissions) ? (usuario as any).permissions : [];
+  const hasPerm = (perm: string) => permissions.includes('*') || permissions.includes(perm);
 
   useEffect(() => {
     logger.info('NAV_GATE_EVAL', {
@@ -81,20 +85,20 @@ export default function DrawerNavigator() {
       />
 
       <Drawer.Screen
-        name="Informes"
-        component={InformesScreen}
-        options={{
-          title: 'Informes',
-          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.NOTICIAS} label="Informes" {...props} />,
-        }}
-      />
-
-      <Drawer.Screen
         name="MeusDados"
         component={MeusDadosScreen}
         options={{
           title: 'Meus Dados',
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.MEUS_DADOS} label="Meus Dados" {...props} />,
+        }}
+      />
+
+      <Drawer.Screen
+        name="Noticias"
+        component={InformesScreen}
+        options={{
+          title: 'Informes',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.NOTICIAS} label="Informes" {...props} />,
         }}
       />
 
@@ -119,6 +123,15 @@ export default function DrawerNavigator() {
         }}
       />
       )}
+
+      <Drawer.Screen
+        name="Convenios"
+        component={ConveniosScreen}
+        options={{
+          title: 'Convênios',
+          drawerLabel: (props) => <DrawerItemLabel emoji="🤝" label="Convênios" {...props} />,
+        }}
+      />
 
       <Drawer.Screen
         name="Ressarcimento"
@@ -272,6 +285,17 @@ export default function DrawerNavigator() {
               drawerItemStyle: { display: 'none' },
             }}
           />
+
+          {hasPerm('EDIT_CONTENT') && (
+            <Drawer.Screen
+              name="CMSSite"
+              component={CmsScreen}
+              options={{
+                title: 'Site (CMS)',
+                drawerLabel: (props) => <DrawerItemLabel emoji="🌐" label="Site (CMS)" {...props} />,
+              }}
+            />
+          )}
         </>
       )}
     </Drawer.Navigator>
